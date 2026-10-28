@@ -194,6 +194,8 @@ struct ViewMode
 {
     static float4 computeMipColor( float lod );
     static float3 computeLightComplexityColor( uint visitCount );
+    static float3 computeLodLevelColor( uint entry );
+    static float3 computeLodFadeColor( uint entry );
     static float4 computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
     static float3 overrideLightingAlbedo( float3 albedo ); // LightingOnly 만 표면 색을 회색으로 바꾼다
     static void applyToSurface( inout float4 inoutLitColor, inout float4 inoutAlbedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
@@ -1835,7 +1837,7 @@ static uint LightGrid::computeVisitCount( float3 worldPosition )
 // 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
 #if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW ) ||               \
     defined( SW_VIEWMODE_ROUGHNESS ) || defined( SW_VIEWMODE_METALLIC ) || defined( SW_VIEWMODE_MIPMAPS ) || defined( SW_VIEWMODE_LIGHTCOMPLEXITY ) || \
-    defined( SW_VIEWMODE_WIREOVERLAY )
+    defined( SW_VIEWMODE_WIREOVERLAY ) || defined( SW_VIEWMODE_LODLEVEL ) || defined( SW_VIEWMODE_LODFADE )
     #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
     #define SW_VIEWMODE_SKIPS_LIGHTING 0
@@ -1857,6 +1859,20 @@ static float3 ViewMode::overrideLightingAlbedo( float3 albedo )
 }
 #endif
 
+// 보기 모드 LodLevel · LodFade — 그리는 인스턴스의 가시 목록 항목(컬링이 쓴 LOD 단계 3 비트 + 크로스페이드 코드 5 비트)을 정점 단계가 픽셀로 넘긴 값이다.
+// 항목을 못 받은 셰이더(머티리얼 셰이더가 아닌 것)는 kInvalidIndex 그대로라 회색으로 보인다. 정점 → 픽셀 칸은 머티리얼 셰이더(materialshader.hlsli)만 가진다.
+// 매크로로 남긴 이유: 칸은 구조체 **필드 선언**이라 함수가 될 수 없다(SW_APPEARANCE_VARYING 과 같다). 퍼뮤테이션이 칸의 유무를 가른다.
+#if defined( SW_VIEWMODE_LODLEVEL ) || defined( SW_VIEWMODE_LODFADE )
+static uint g_ViewModeLodEntry = 0xFFFFFFFFu;
+    #define SW_LODDEBUG_VARYING                       nointerpolation uint _lodEntryBits : TEXCOORD7;
+    #define SW_LODDEBUG_WRITE( output, instanceSlot ) ( output )._lodEntryBits = InstanceData::resolveEntry( instanceSlot );
+    #define SW_LODDEBUG_READ( input )                 g_ViewModeLodEntry = ( input )._lodEntryBits;
+#else
+    #define SW_LODDEBUG_VARYING
+    #define SW_LODDEBUG_WRITE( output, instanceSlot )
+    #define SW_LODDEBUG_READ( input )
+#endif
+
 static const float  kViewModeDepthRange         = 100.0f;                        // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
 static const float  kViewModeOverdrawStep       = 0.08f;                         // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
 static const float  kViewModeLightComplexityMax = 16.0f;                         // Light Complexity 보기: 이 라이트 수부터 빨강
@@ -1870,6 +1886,32 @@ static float3 ViewMode::computeLightComplexityColor( uint visitCount )
     const float3 warm   = lerp( float3( 1.0f, 0.9f, 0.0f ), float3( 1.0f, 0.0f, 0.0f ), saturate( ratio * 3.0f - 2.0f ) );
     const float3 middle = lerp( cold, float3( 1.0f, 0.9f, 0.0f ), saturate( ratio * 3.0f - 1.0f ) );
     return ( visitCount == 0u ) ? float3( 0.0f, 0.0f, 0.0f ) : ( ratio > 2.0f / 3.0f ? warm : middle );
+}
+
+static const float3 kViewModeLodLevelColor[8] = { float3( 0.10f, 0.80f, 0.20f ), float3( 0.60f, 0.85f, 0.15f ), float3( 0.95f, 0.90f, 0.10f ), float3( 0.95f, 0.50f, 0.10f ),
+                                                  float3( 0.90f, 0.10f, 0.10f ), float3( 0.70f, 0.15f, 0.80f ), float3( 0.15f, 0.30f, 0.95f ), float3( 0.10f, 0.80f, 0.85f ) };
+
+/** @brief LOD 단계(가시 항목의 3 비트)를 색으로 바꿉니다 — 0 초록 · 1 연두 · 2 노랑 · 3 주황 · 4 빨강 · 5 보라 · 6 파랑 · 7 청록. 항목을 못 받았으면(kInvalidIndex 칸) 회색이다. */
+static float3 ViewMode::computeLodLevelColor( uint entry )
+{
+    return entry == 0xFFFFFFFFu ? float3( 0.5f, 0.5f, 0.5f ) : kViewModeLodLevelColor[( entry >> kVisibleEntryLevelShift ) & kVisibleEntryLevelMask];
+}
+
+/**
+ * @brief 크로스페이드 코드(가시 항목의 위쪽 5비트 — 직전 단계 비트 16 | 진행 L = 1 ~ 15)를 색으로 바꿉니다.
+ * @details 전환 없음(코드 0)은 어두운 회색, 새 단계는 초록 · 직전 단계는 빨강이고 진행 L 이 클수록 밝다(새 단계는 L / 16 의 픽셀이 남고 직전 단계는 상보 패턴이 남는다 — 두 색이 겹치지도 비지도 않으면 디더가 맞는 것이다).
+ *          항목을 못 받았으면 회색이다.
+ */
+static float3 ViewMode::computeLodFadeColor( uint entry )
+{
+    if ( entry == 0xFFFFFFFFu )
+        return float3( 0.5f, 0.5f, 0.5f );
+    const uint  code     = entry >> kVisibleEntryFadeShift;
+    const float progress = float( code & 15u ) / 15.0f;
+    const float shade    = 0.3f + 0.7f * progress;
+    if ( code == 0u )
+        return float3( 0.15f, 0.15f, 0.15f );
+    return ( code & 16u ) != 0u ? float3( 0.95f, 0.15f, 0.10f ) * shade : float3( 0.10f, 0.90f, 0.25f ) * shade;
 }
 
 /**
@@ -1902,6 +1944,16 @@ static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 
 static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
 {
     return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+}
+#elif defined( SW_VIEWMODE_LODLEVEL )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
+    return float4( ViewMode::computeLodLevelColor( g_ViewModeLodEntry ), 1.0f );
+}
+#elif defined( SW_VIEWMODE_LODFADE )
+static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+{
+    return float4( ViewMode::computeLodFadeColor( g_ViewModeLodEntry ), 1.0f );
 }
 #elif defined( SW_VIEWMODE_WIREOVERLAY )
 static float4 ViewMode::computeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )

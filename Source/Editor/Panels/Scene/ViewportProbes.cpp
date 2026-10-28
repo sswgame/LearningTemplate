@@ -426,7 +426,7 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorOverlayFlags, "Editor.OverlayFlags", "Overlay bar gv_editorProbeOverlay: 1 when visible, plus 10 when collapsed",
                          &readOverlayFlags );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &readGizmoOperation );
-    SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity",
+    SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw, 6 LightingOnly, 7 Roughness, 8 Metallic, 9 Mipmaps, 10 LightComplexity, 11 ShadedWireframe, 12 LodLevel, 13 LodFadeCode, 14 MarkerSlots",
                          &readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &readGameViewMode );

@@ -169,6 +169,7 @@ MaterialInterpolants VSMain( VertexInput input, uint vertexId : SV_VertexID )
     output._position          = clipPosition;
     output.storeVaryings( context, worldPosition, clipPosition );
     SW_APPEARANCE_WRITE( output, context._instance )
+    SW_LODDEBUG_WRITE( output, input._instanceSlot )
     return output;
 }
 
@@ -217,6 +218,7 @@ void PixelContext::readMaterial( MaterialInterpolants input )
 static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontFace )
 {
     PixelContext context;
+    SW_LODDEBUG_READ( input )
     context._position      = input._position;
     context._color         = input._color;
     context._uv            = input._uv;

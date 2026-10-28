@@ -34,11 +34,12 @@ SW_ROOT_CONSTANTS_END
 
 struct PSInput
 {
-    float4               _position : SV_POSITION;
-    float2               _local : TEXCOORD0; // 사각형 안 픽셀(0..너비, 0..높이) — 넓힌 가장자리는 밖
-    float2               _uv : TEXCOORD1;
-    float2               _screen : TEXCOORD2; // 대상 픽셀(둥근 자르기)
-    nointerpolation uint _quadIndex : TEXCOORD3;
+    float4                _position : SV_POSITION;
+    float2                _local : TEXCOORD0; // 사각형 안 픽셀(0..너비, 0..높이) — 넓힌 가장자리는 밖
+    float2                _uv : TEXCOORD1;
+    float2                _screen : TEXCOORD2; // 대상 픽셀(둥근 자르기)
+    nointerpolation uint  _quadIndex : TEXCOORD3;
+    nointerpolation float _markerDebug : TEXCOORD4; // 보기 모드 MarkerSlots — 앵커의 네 번째 값(0 끔 · 1 칸 있음 · 2 칸 없음 · 3 칸이 버퍼 밖)
 };
 
 static const float2 kCornerTable[6] = { float2( 0.0f, 0.0f ), float2( 1.0f, 0.0f ), float2( 0.0f, 1.0f ),
@@ -81,16 +82,19 @@ PSInput VSMain( VertexInput input, uint vertexId : SV_VertexID, uint instanceId 
     const float2 local  = lerp( float2( -expand, -expand ), quad._rect.zw + expand, corner );
     float2       screen = quad._rect.xy + local.x * quad._axis.xy + local.y * quad._axis.zw;
     // 화면 마커 — 사각형은 앵커 점 기준으로 칠했다. 앵커가 움직여도 사각형 버퍼는 그대로다(앵커 원소만 올린다).
+    float markerDebug = 0.0f;
     if ( quad._anchor != kInvalidIndex )
     {
         const float4 anchor = g_SwCanvasQuads[quad._anchor]._rect;
         screen              = anchor.xy + screen * anchor.z;
+        markerDebug         = anchor.w;
     }
-    output._position  = float4( screen.x / SW_ROOT( g_SwCanvasTargetWidth ) * 2.0f - 1.0f, 1.0f - screen.y / SW_ROOT( g_SwCanvasTargetHeight ) * 2.0f, 0.0f, 1.0f );
-    output._local     = local;
-    output._uv        = lerp( quad._uvRect.xy, quad._uvRect.zw, local / max( quad._rect.zw, float2( 1e-5f, 1e-5f ) ) );
-    output._screen    = screen;
-    output._quadIndex = quadIndex;
+    output._position    = float4( screen.x / SW_ROOT( g_SwCanvasTargetWidth ) * 2.0f - 1.0f, 1.0f - screen.y / SW_ROOT( g_SwCanvasTargetHeight ) * 2.0f, 0.0f, 1.0f );
+    output._local       = local;
+    output._uv          = lerp( quad._uvRect.xy, quad._uvRect.zw, local / max( quad._rect.zw, float2( 1e-5f, 1e-5f ) ) );
+    output._screen      = screen;
+    output._quadIndex   = quadIndex;
+    output._markerDebug = markerDebug;
     return output;
 }
 
@@ -143,6 +147,12 @@ float4 PSMain( PSInput input ) : SV_TARGET
         const float2 clipHalf   = ( quad._clipRect.zw - quad._clipRect.xy ) * 0.5f;
         const float2 clipCenter = ( quad._clipRect.zw + quad._clipRect.xy ) * 0.5f;
         coverage *= saturate( 0.5f - computeRoundedBoxDistance( input._screen - clipCenter, clipHalf, quad._params.wwww ) );
+    }
+    // 보기 모드 MarkerSlots — 마커 위젯을 인스턴스 칸 유무의 색조로 칠한다(1 초록 · 2 빨강 · 3 자홍).
+    if ( input._markerDebug > 0.5f )
+    {
+        const float3 tint = input._markerDebug < 1.5f ? float3( 0.10f, 0.90f, 0.25f ) : ( input._markerDebug < 2.5f ? float3( 0.95f, 0.15f, 0.10f ) : float3( 1.0f, 0.0f, 1.0f ) );
+        color.rgb         = lerp( color.rgb, tint, 0.6f );
     }
     const float  alpha     = color.a * coverage;
     const float3 corrected = ColorVision::applyCorrection( color.rgb, SW_ROOT( g_SwCanvasColorVision ) );

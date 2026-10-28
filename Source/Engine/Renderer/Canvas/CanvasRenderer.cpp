@@ -236,7 +236,7 @@ namespace sw
     }
 
     void CanvasRenderer::recordMarkerProjection( IRHICommandList& cmd, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSrv, RHIDescriptorIndex placeholderSrv,
-                                                 GpuAssertMonitor& inoutAssert )
+                                                 GpuAssertMonitor& inoutAssert, bool bShowInstanceSlots )
     {
         if ( _markerCount == 0 )
             return;
@@ -268,6 +268,9 @@ namespace sw
             cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
         cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSrv : placeholderSrv, 1 );
         cmd.bindComputeUav( _quadBuffer._uav, 0 );
+        // 루트 상수 하나(canvasmarker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
+        const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
+        cmd.setComputeRootConstants( 0, 1, &debugMode );
         inoutAssert.bind( cmd ); // canvasmarker.hlsl 의 assert(u3) — assert 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( _quadBuffer._buffer, RHIBufferState::ShaderResource );

@@ -150,7 +150,8 @@ struct MaterialInterpolants
     #endif
     MaterialVaryings _user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
 #endif
-    SW_APPEARANCE_VARYING // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
+    SW_APPEARANCE_VARYING   // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
+        SW_LODDEBUG_VARYING // 보기 모드 LodLevel · LodFade 만 가시 항목을 넘긴다(binding.hlsli 보기 모드 절)
 
         // 정점 진입점이 칸을 채우는 단계와 픽셀 진입점의 본문(materialshadermain.hlsli). 패스 · 기능 스위치에 맞는 정의만 있다.
         void

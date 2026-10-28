@@ -16,6 +16,12 @@
  * 입력 행 배치는 아래 kRow*, C++: CanvasRenderer::recordMarkerProjection — dispatchCompute( ceil(마커 수 / 64), 1, 1 ).
  */
 
+SW_ROOT_CONSTANTS_BEGIN
+{
+    uint g_MarkerDebugMode; // 1 = 보기 모드 MarkerSlots — 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(canvas.hlsl 이 위젯을 칠한다). 0 = 끔
+};
+SW_ROOT_CONSTANTS_END
+
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_MarkerRows, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_MarkerInstances, 1 ); // GPUScene 인스턴스 버퍼 — 인스턴스 칸이 있는 마커만 읽는다(C++ 은 칸이 없으면 자리표를 건다)
 SW_DECLARE_RW_STRUCTURED_BUFFER( CanvasQuad, g_MarkerQuadsRW, 0 );
@@ -123,5 +129,8 @@ void CSMain( uint3 dispatchId : SV_DispatchThreadID )
         if ( bVisible )
             rect = float4( round( position.x * uiScale ), round( position.y * uiScale ), scale, 0.0f ); // 물리 픽셀 정수(글자가 흐려지지 않게 — UIScreenMarkers::publishCanvasAnchors 와 같다)
     }
+    // 보기 모드 MarkerSlots — 1 인스턴스 칸이 있고 인스턴스 버퍼 안이다 · 2 칸이 없다(월드 점을 게임 스레드가 보낸다) · 3 칸이 인스턴스 버퍼 밖이다. 0 이면 끔이다.
+    if ( SW_ROOT( g_MarkerDebugMode ) != 0u )
+        rect.w = instanceSlot == kNoInstance ? 2.0f : ( instanceSlot < getMarkerInstanceCount() ? 1.0f : 3.0f );
     g_MarkerQuadsRW[index]._rect = rect;
 }
