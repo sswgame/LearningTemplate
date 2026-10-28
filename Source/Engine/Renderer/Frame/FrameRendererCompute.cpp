@@ -326,8 +326,12 @@ namespace sw
             return;
 
         bool bAllViewsCulled = true;
+        // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿 타일이 없으면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
+        const bool bMainShadowSlotUnused = _cascadeCullCount > 0 && _frameShadow._listLocalTile.empty();
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
+            if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewType::Shadow ) )
+                continue;
             bAllViewsCulled = dispatchCullView( viewIndex, _arrView[viewIndex], instanceCount, nullptr ) && bAllViewsCulled;
         }
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
@@ -340,6 +344,13 @@ namespace sw
             const bool bShadowCulled = bViewCulled && dispatchCullView( pView->_shadowCullSlot, pView->_shadowCullInput, instanceCount, nullptr );
             if ( bShadowCulled == false )
                 pView->_bRenderThisFrame = SW_FALSE;
+        }
+        // 주 시점 캐스케이드마다 자기 절두체(그 캐스케이드의 그림자 행렬)로 거른다. 정렬은 그림자에 필요 없어 상수 버퍼가 없다(dispatchCullView 가 건너뛴다).
+        for ( uint32 cascadeIndex = 0; cascadeIndex < _cascadeCullCount; ++cascadeIndex )
+        {
+            RenderView& cascadeInput = _arrCascadeCullInput[cascadeIndex];
+            cascadeInput.setViewProjection( _mainView._shadow._arrCascadeTile[cascadeIndex]._viewProj );
+            bAllViewsCulled = dispatchCullView( _cascadeCullSlotBase + cascadeIndex, cascadeInput, instanceCount, nullptr ) && bAllViewsCulled;
         }
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
     }

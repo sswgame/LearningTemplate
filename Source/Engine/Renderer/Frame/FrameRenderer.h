@@ -549,6 +549,11 @@ namespace sw
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
+        /**
+         * @brief 주 시점의 캐스케이드별 컬링 슬롯 수를 정하고 상수 버퍼를 맞춥니다(`-gv_shadowCascadeCulling=1` 이고 캐스케이드가 둘 이상일 때만 켭니다).
+         * @return 슬롯 수(0 이면 쓰지 않음)
+         */
+        uint32 prepareCascadeCullInputs();
         /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
         ViewTarget& findOrAddExtraView( uint64 viewID );
         /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
@@ -694,6 +699,8 @@ namespace sw
         void executeGBufferPass( const PassExecuteInput& input );
         /** @brief 투명 큐(메시 투명 배치와 입자)입니다. */
         void executeTransparentPass( const PassExecuteInput& input );
+        /** @brief 장면 색 사본입니다. 원본 색 입력을 선언한 컬러 출력으로 복사합니다(반투명 앞 — 물의 굴절이 읽는다). 셰이더 · PSO 가 없습니다. */
+        void executeSceneColorCopyPass( const PassExecuteInput& input );
         /** @brief 인버티드 헐 외곽선입니다. 와이어프레임 · 표면 값 보기에서는 빠집니다. */
         void executeMeshOutlinePass( const PassExecuteInput& input );
         /** @brief 인스턴스 강조 외곽선 패스(HighlightOutline · HighlightSense)를 실행합니다 — 패스의 강조 방식인 인스턴스만 정점이 남습니다. */
@@ -1136,6 +1143,13 @@ namespace sw
          *          것인가" 를 사람이 기억해야 하고, 컬링 상수 버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어쓴다.
          */
         RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
+        /**
+         * @brief 주 시점 방향광 캐스케이드마다의 그림자 컬링 입력(절두체 · 자기 컬링 상수 버퍼)입니다. 앞 `_cascadeCullCount` 개만 씁니다.
+         * @details 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다(`_cascadeCullSlotBase` + 캐스케이드 번호). 추가 뷰(CCTV · PiP)는 작은 장면이라 합친 칸 하나를 그대로 쓴다.
+         */
+        RenderView _arrCascadeCullInput[shaderslot::kShadowCascadeMax];
+        uint32     _cascadeCullSlotBase{ 0 }; ///< 캐스케이드 컬링 슬롯의 첫 번호
+        uint32     _cascadeCullCount{ 0 };    ///< 이번 프레임 캐스케이드 컬링 슬롯 수. 0 이면 합친 칸(`_shadowCullSlot`) 하나로 모든 타일을 거른다
 
         /// @brief 정점 변형(인스턴스 애니메이션, 모프, 스킨, VAT) 컴퓨트의 상수 버퍼, 풀, 스크래치, 시계입니다.
         FrameMeshDeformState _deform;

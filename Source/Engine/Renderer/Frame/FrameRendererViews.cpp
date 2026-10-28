@@ -8,6 +8,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -23,6 +24,13 @@
 namespace sw
 {
     SW_LOG_CALLER( "FrameRenderer" );
+
+    /**
+     * @brief `-gv_shadowCascadeCulling=1`: 주 시점의 방향광 그림자를 캐스케이드마다 따로 컬링합니다(캐스케이드마다 컬링 슬롯 하나) — 같은 바이너리로 전/후를 비교합니다.
+     * @details 0(기본)이면 모든 타일을 덮는 합친 상자 하나로 거른다. 캐스케이드가 둘 이상일 때만 뜻이 있다. 이득은 `perf-compare --cases shadowCascadeCulling` 이 정한다.
+     *          기동 때 정한다(슬롯 수가 바뀌면 컬링 버퍼를 다시 만든다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_shadowCascadeCulling, false, "방향광 그림자를 캐스케이드마다 따로 컬링한다(0 이면 모든 타일을 덮는 상자 하나 — 전/후 비교용)" );
 
     void FrameRenderer::prepareExtraViews( const vector<RenderViewRequest>& listRequest )
     {
@@ -52,7 +60,30 @@ namespace sw
             _listExtraView[viewIndex]->_cullSlot       = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView;
             _listExtraView[viewIndex]->_shadowCullSlot = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView + 1u;
         }
-        _gpuScene.setCullViewCount( _pDevice, kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) * kCullSlotsPerExtraView );
+        // 캐스케이드 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다. 슬롯 수가 바뀌면(캐스케이드 수 · 스위치) 새 칸의 버퍼는 다음 업로드가 만든다.
+        _cascadeCullSlotBase = kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) * kCullSlotsPerExtraView;
+        _cascadeCullCount    = prepareCascadeCullInputs();
+        _gpuScene.setCullViewCount( _pDevice, _cascadeCullSlotBase + _cascadeCullCount );
+    }
+
+    uint32 FrameRenderer::prepareCascadeCullInputs()
+    {
+        // 캐스케이드 하나뿐이면 합친 칸이 곧 그 캐스케이드라 나눌 이득이 없다. 그림자 없는 뷰(`makeUnshadowedView`)도 캐스케이드 1 이다.
+        const ViewShadowData& shadow       = _mainView._shadow;
+        const bool            bHasCascades = shadow._bValid == SW_TRUE && shadow._cascadeCount >= 2;
+        const bool            bEnabled     = gv_shadowCascadeCulling && _pDevice != nullptr && bHasCascades;
+        if ( bEnabled == false )
+            return 0;
+        for ( uint32 cascadeIndex = 0; cascadeIndex < shadow._cascadeCount; ++cascadeIndex )
+        {
+            RenderView& input = _arrCascadeCullInput[cascadeIndex];
+            if ( input._cullCb.isValid() || input._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) )
+                continue;
+            // 만들지 못하면 이 프레임은 합친 칸으로 돌아간다(같은 결과, 컬링만 덜 좁다). 칸마다 부분적으로 섞어 쓰지 않는다.
+            SW_LOG_ERROR( "Failed to create the cull constant buffer of shadow cascade %# - the combined shadow cull slot is used this frame", cascadeIndex );
+            return 0;
+        }
+        return shadow._cascadeCount;
     }
 
     FrameRenderer::ViewTarget& FrameRenderer::findOrAddExtraView( uint64 viewID )

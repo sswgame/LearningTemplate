@@ -174,6 +174,12 @@ namespace sw
             pView->_cullInput._sortCb.release( _pDevice );
             releaseViewTransparentOrder( *pView );
         }
+        // 주 시점 캐스케이드 컬링 상수버퍼도 마찬가지다(prepareCascadeCullInputs 가 다시 만든다).
+        for ( RenderView& cascadeInput : _arrCascadeCullInput )
+        {
+            cascadeInput._cullCb.release( _pDevice );
+        }
+        _cascadeCullCount = 0;
         _transparentRankPlaceholder.release( _pDevice );
         _occlusionTilesPlaceholder.release( _pDevice );
         _occlusionReadback.shutdown();
