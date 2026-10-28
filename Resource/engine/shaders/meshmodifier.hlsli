@@ -16,6 +16,7 @@
  *     [11..13] 로컬 → 모디파이어 법선 행렬(역전치)의 행 0..2
  *     [14..16] 모디파이어 → 로컬 법선 행렬의 행 0..2
  *     그 뒤 매개변수: 선언 순서대로 스칼라는 x, Vector3 는 xyz(`MeshModifier::packGPUParams` 기본 배치)
+ *       곡선(Curve)은 [0,1] 을 SW_MODIFIER_CURVE_SAMPLES 등분한 표본이 float4 SW_MODIFIER_CURVE_SAMPLES/4 개에 들어간다(`ModifierContext::curve` 가 선형 보간)
  *
  * 주의: 함수는 한 출구로 쓴다(early return 없음). OpenGL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다(RHIBackendInfo.h).
  */
@@ -23,6 +24,8 @@
 #define SW_ENGINE_MESHMODIFIER_HLSLI
 
 #define SW_MODIFIER_RECORD_FLOAT4 17
+// 곡선 매개변수의 표본 수 — C++ `MeshModifier::kGPUCurveSampleCount` 와 같다(4 의 배수)
+#define SW_MODIFIER_CURVE_SAMPLES 32
 
 // 종류 번호 — C++ 표 `MeshModifierGPUProgram.cpp` 의 순서와 같다(테스트가 supportsGPU 집합과 맞는지 본다)
 #define SW_MODIFIER_BEND            0
@@ -59,6 +62,7 @@
 #define SW_MODIFIER_PIVOTADJUST     31
 #define SW_MODIFIER_DISPLACELIMITS  32
 #define SW_MODIFIER_BEZIERATTRACTOR 33
+#define SW_MODIFIER_RUBBER          34
 
 static const float kModifierEpsilon = 1e-6f;
 // 원주율은 common.hlsli 의 kPi · kTwoPi 를 쓴다(meshmorph.hlsl 이 common.hlsli 를 먼저 포함한다).
@@ -78,6 +82,7 @@ struct ModifierContext
     int paramInt( uint index );
     uint paramAxis( uint index );
     float axisLength();
+    float curve( uint index, float x );
 };
 
 /** @brief 모디파이어 프로그램의 점 변형 — C++ 모디파이어(`deformPoint`)를 한 줄씩 옮긴 것이다. 진입은 applyProgram 하나다. */
@@ -121,6 +126,7 @@ struct MeshDeform
     static float3 waving( float3 location, ModifierContext context );
     static float3 displaceLimits( float3 location, ModifierContext context );
     static float3 bezierAttractor( float3 location, ModifierContext context );
+    static float3 rubber( float3 location, ModifierContext context );
     static float3 deformPoint( uint kind, float3 location, float3 surfaceNormal, ModifierContext context );
     static float3 transformPoint( float3 location, uint row );
     static float3 transformVector( float3 direction, uint row );
@@ -135,6 +141,21 @@ float ModifierContext::param( uint index )
 float3 ModifierContext::param3( uint index )
 {
     return g_DeformPrograms[_paramBase + index].xyz;
+}
+
+/**
+ * MeshModifier::evaluateCurve 의 표본판 — 매개변수 index(float4 단위)부터 SW_MODIFIER_CURVE_SAMPLES 개 표본을 선형 보간한다. x 는 [0,1] 로 자른다.
+ * 곡선을 균등 표본으로 싣는 것은 키 목록(가변 길이 + 접선)을 싣는 것보다 모양이 고정이라 기록 길이를 미리 안다. 키 사이 3차 보간은 32 등분으로 근사한다.
+ */
+float ModifierContext::curve( uint index, float x )
+{
+    const float position = saturate( x ) * (float)( SW_MODIFIER_CURVE_SAMPLES - 1 );
+    const uint  lower    = min( (uint)position, (uint)( SW_MODIFIER_CURVE_SAMPLES - 2 ) );
+    const float ratio    = position - (float)lower;
+    const uint  base     = _paramBase + index;
+    const float low      = g_DeformPrograms[base + lower / 4u][lower % 4u];
+    const float high     = g_DeformPrograms[base + ( lower + 1u ) / 4u][( lower + 1u ) % 4u];
+    return lerp( low, high, ratio );
 }
 
 /** MeshModifier::getInt — floor(x + 0.5) */
@@ -883,8 +904,25 @@ static float3 MeshDeform::deformPoint( uint kind, float3 location, float3 surfac
         case SW_MODIFIER_BEZIERATTRACTOR:
             result = MeshDeform::bezierAttractor( location, context );
             break;
+        case SW_MODIFIER_RUBBER:
+            result = MeshDeform::rubber( location, context );
+            break;
         default:
             break;
+    }
+    return result;
+}
+
+/** Rubber — 주축 밀림 = 양 · w(t), 단면 배율 = 1/√(1 + |양 · w| / L). w 는 감쇠 곡선(매개변수 1 부터 곡선 표본) */
+static float3 MeshDeform::rubber( float3 location, ModifierContext context )
+{
+    const float amount = context.param( 0u );
+    float3      result = location;
+    if ( abs( amount ) >= kModifierEpsilon )
+    {
+        const float weight   = context.curve( 1u, saturate( MeshDeform::axisFraction( location, context ) ) );
+        const float thinning = 1.0f / sqrt( 1.0f + abs( amount * weight ) / context.axisLength() );
+        result               = MeshDeform::set( location * thinning, context._axis, MeshDeform::get( location, context._axis ) + amount * weight );
     }
     return result;
 }

@@ -2,7 +2,7 @@
  * @file RubberModifier.cpp
  * @brief 주축 방향으로 고무처럼 늘어지는 모디파이어입니다. 주축 밀림 = 양 · w, 단면 배율 = 1/√(1 + |양| · w / L) 이고 w = 감쇠 곡선(t) 입니다.
  * @details t 는 주축 위 비율(상자 아래 0 · 위 1, [0,1] 로 자른다), L 은 상자의 주축 길이다. 많이 밀린 곳일수록 가늘어진다.
- *          양 0 이면 항등이다. 곡선 매개변수가 있어 GPU 로 옮기지 않는다.
+ *          양 0 이면 항등이다. GPU 로 옮긴다 — 감쇠 곡선은 32 개 균등 표본으로 싣는다(`packGPUParams` 기본 배치).
  */
 #include "pch.h"
 
@@ -26,6 +26,8 @@ namespace sw::editor
             _falloffParam{ addParam( MeshModifierParamDef{ "Falloff", MeshModifierParamKind::Curve, 0.0f, 1.0f, float3{ 0.0f, 1.0f, 0.0f } }.withLayout( nullptr, "Weight curve from bottom (0) to top (1) of the mesh" ) ) }
         {
         }
+
+        bool supportsGPU() const override { return true; }
 
         const utf8* getDescription() const override { return "Stretches the mesh along the main axis like rubber, thinning the stretched part."; }
 

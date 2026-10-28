@@ -26,6 +26,6 @@
 ### MeshModifierCpuPreviewCost
 제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
 왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 못 줄여 더하지 않았다.
-착수 조건: 측정 없이 착수 가능. 베지어 끌개는 올렸다(`bezierattractor`). 남은 것은 곡선 · 텍스처 · 격자 · 충돌 같은 외부 입력을 쓰는 모디파이어(Rubber 의 `Curve` 매개변수는 GPU 프로그램에 곡선 표본 싣는 길이 먼저 필요)다.
+착수 조건: 측정 없이 착수 가능. 베지어 끌개(`bezierattractor`)와 Rubber(`rubber`)는 올렸다. 곡선 매개변수(`Curve`)는 `packGPUParams` 기본 배치가 [0,1] 32 개 균등 표본(float4 8 개)으로 싣고 셰이더 `ModifierContext::curve` 가 선형 보간한다(키 목록을 싣는 것보다 기록 길이가 고정이라 단순하다. Constant 보간 곡선의 계단은 32 등분으로 무뎌진다). 남은 것은 스플라인 참조(`CurveDeform` · `CurveSculpt` · `RopeDeform`) · 텍스처 · 격자 · 충돌 같은 외부 입력을 읽는 모디파이어다 — 입력을 GPU 버퍼로 올리는 길(프로그램 옆 보조 버퍼)이 먼저 필요하다.
 남은 첫 일: `Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표(`MeshModifierGPUProgram`)에 올린다. `CpuMesh` 가 크면 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents`)을 본다.
 함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다.

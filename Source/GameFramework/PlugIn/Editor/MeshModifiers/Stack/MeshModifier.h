@@ -339,11 +339,14 @@ namespace sw::editor
          *          CPU 구현이 기준이다 — 베이크 · 테스트는 늘 CPU 로 돈다.
          */
         virtual bool supportsGPU() const { return false; }
+        /** @brief GPU 프로그램에 싣는 곡선 매개변수의 표본 수입니다(4 의 배수. 셰이더 `SW_MODIFIER_CURVE_SAMPLES` 와 같다). */
+        static constexpr uint32 kGPUCurveSampleCount = 32;
         /** @brief `MeshModifierPoint::_originalPosition` 이 필요하면 true 입니다. 기본은 false(복사 비용을 내지 않는다)입니다. */
         virtual bool needsOriginalPosition() const { return false; }
         /**
          * @brief GPU 구조 버퍼에 넣을 평탄한 매개변수를 @p outListValue 뒤에 붙입니다. `supportsGPU` 가 false 면 아무것도 붙이지 않고 false 입니다.
-         * @details 기본 배치: 스칼라(Float · Int · Bool · Axis)는 선언 순서대로 float4 의 x 에 하나씩, Vector3 는 xyz, 그 밖의 종류는 건너뛴다.
+         * @details 기본 배치: 스칼라(Float · Int · Bool · Axis)는 선언 순서대로 float4 의 x 에 하나씩, Vector3 는 xyz, Curve 는 [0,1] 균등 표본 `kGPUCurveSampleCount` 개
+         *          (float4 `kGPUCurveSampleCount / 4` 개 — `evaluateCurve` 로 뽑아 셰이더가 선형 보간한다), 그 밖의 종류는 건너뛴다.
          *          파생이 다른 배치가 필요하면 재정의한다. 공간 행렬 · 주축 · 상자는 모디파이어 스택이 따로 넣는다.
          */
         virtual bool packGPUParams( vector<float4>& outListValue ) const;

@@ -21,7 +21,7 @@ namespace sw::editor
                                                               "push", "poke", "displace", "bubble", "bulge", "cylindrify", "globe", "hump",
                                                               "radialskew", "skew", "spherify", "squeeze", "scale", "sinuscurve", "rolled", "simplemod",
                                                               "crumple", "dynamicripple", "pageflip", "treebend", "vertnoise", "zstretchnoise", "waving", "pivotadjust",
-                                                              "displacelimits", "bezierattractor" };
+                                                              "displacelimits", "bezierattractor", "rubber" };
 
             /** @brief 행렬의 행 0..@p rowCount-1 을 xyz 로 붙입니다(행 벡터 규약 v·M, 행 3 은 평행 이동). */
             static void pushRows( const float4x4& matrix, uint32 rowCount, vector<float4>& outListProgram )

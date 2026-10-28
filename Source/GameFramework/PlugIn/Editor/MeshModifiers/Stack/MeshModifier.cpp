@@ -386,6 +386,18 @@ namespace sw::editor
                 outListValue.push_back( float4{ value._x, 0.0f, 0.0f, 0.0f } );
             else if ( kind == MeshModifierParamKind::Vector3 )
                 outListValue.push_back( float4{ value._x, value._y, value._z, 0.0f } );
+            else if ( kind == MeshModifierParamKind::Curve )
+            {
+                float32 arrSample[kGPUCurveSampleCount];
+                for ( uint32 sample = 0; sample < kGPUCurveSampleCount; ++sample )
+                {
+                    arrSample[sample] = evaluateCurve( static_cast<uint32>( index ), static_cast<float32>( sample ) / static_cast<float32>( kGPUCurveSampleCount - 1 ) );
+                }
+                for ( uint32 sample = 0; sample < kGPUCurveSampleCount; sample += 4 )
+                {
+                    outListValue.push_back( float4{ arrSample[sample], arrSample[sample + 1], arrSample[sample + 2], arrSample[sample + 3] } );
+                }
+            }
         }
         return true;
     }
