@@ -17,6 +17,7 @@
 
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminProtocol.h"
 
@@ -82,7 +83,7 @@ namespace sw
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );
-        void  completeSeed( AdminResult result );
+        void  completeSeed( AdminResult result, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:

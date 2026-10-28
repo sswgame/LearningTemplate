@@ -164,8 +164,5 @@ SW_TEST_CASE( ServiceStoreSQLiteTest, ServerRuntimeOpensTheSQLiteStoreThroughThe
     OnlineServerRuntime runtime;
     string              error;
     SW_EXPECT_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
-    {
-        SW_TEST_DEFENSIVE_SCOPE( "shutting down while the first remote config reload is still queued reports that reload as failed" ); // 닫힌 연결로 끝난 대기 작업의 경고만 받는다(SQLConnectionPool::shutdown)
-        runtime.shutdown();
-    }
+    runtime.shutdown(); // 대기 중인 첫 원격 설정 읽기는 종료로 취소되어 경고 없이 끝난다(표시 없이 로그 게이트가 지킨다)
 }

@@ -119,7 +119,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { _result = LedgerAudit::computeReport( connection, _report ); }
-            void complete() override { _pService->completeLedgerAudit( _result, _report ); }
+            void complete() override { _pService->completeLedgerAudit( _result, _report, getCompletion() ); }
 
         private:
             LedgerAuditReport  _report;
@@ -141,7 +141,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs.count(), _listChange ); }
-            void complete() override { _pService->completeRefund( _result, _listChange ); }
+            void complete() override { _pService->completeRefund( _result, _listChange, getCompletion() ); }
 
         private:
             ReceiptRefundNotice          _notice;
@@ -404,13 +404,16 @@ namespace sw
         _pStore->submit( make_unique<EconomyLedgerAuditWork>( this ) );
     }
 
-    void EconomyService::completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report )
+    void EconomyService::completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion )
     {
         _bAuditPending      = SW_FALSE;
         const bool bRead    = result == ServiceStoreResult::Ok;
         _bLastAuditBalanced = bRead && report.isBalanced() ? SW_TRUE : SW_FALSE;
         if ( bRead == false )
-            SW_LOG_ERROR( "EconomyService: the ledger audit could not read the store" );
+        {
+            if ( completion.isCancelled() == false ) // 종료 때문에 취소된 검사는 오류가 아니다
+                SW_LOG_ERROR( "EconomyService: the ledger audit could not read the store" );
+        }
         else if ( report.isBalanced() == false )
             SW_LOG_ERROR( "EconomyService: the ledger is not balanced (negative escrows %#, unreadable records %#)", report._negativeEscrowCount, report._unreadableRecordCount );
         if ( bRead && _pMetricRegistry != nullptr )
@@ -491,14 +494,15 @@ namespace sw
         }
     }
 
-    void EconomyService::completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange )
+    void EconomyService::completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         --_pendingRefundCount;
         for ( const EconomyBalanceChange& change : listChange )
         {
             notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } );
         }
-        if ( result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded )
+        const bool bFailed = result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded;
+        if ( bFailed && completion.isCancelled() == false ) // 종료 때문에 취소된 회수는 오류가 아니다(스토어가 다시 보낸다)
             SW_LOG_ERROR( "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
         if ( _pMetricRegistry == nullptr )
             return;

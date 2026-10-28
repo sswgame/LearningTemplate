@@ -31,6 +31,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
@@ -184,7 +185,7 @@ namespace sw
         /** @brief 저장 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
         void applyHistoryRead( uint64 requestTag, ChatResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
-        void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount );
+        void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, ServiceStoreCompletion completion );
         void applyReport( uint64 requestTag, ChatResult result );
 
     private:

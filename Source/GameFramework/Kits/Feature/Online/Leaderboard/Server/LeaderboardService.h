@@ -27,6 +27,7 @@
 
 #include "GameFramework/Base/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardTypes.h"
 
@@ -182,7 +183,7 @@ namespace sw
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
-        void applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat );
+        void applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
         void applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked );
         void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );

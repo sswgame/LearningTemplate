@@ -149,6 +149,23 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ServiceStoreCompletion
+     * @brief 서비스의 저장소 완료 함수(`complete` 가 부르는 `apply*` · `complete*`)가 일의 결과와 함께 받는 끝 상태입니다.
+     * @details 저장소 실패를 로그로 내는 완료 함수는 이것을 받아 `isCancelled` 가 false 일 때만 경고 · 오류를 낸다. 종료 때문에 취소된 일은 고장이 아니기 때문이다.
+     *          `bool` 둘(`bReadOk`, `bCancelled`)이 나란히 오면 뒤바뀌어도 컴파일되므로 이름 있는 형식으로 받는다.
+     *          린트 `CheckStoreCompletionLog` 가 이 형식을 받는 함수(와 `IServiceStoreWork` 의 `complete`)가 로그를 내면서 `isCancelled` 를 한 번도 묻지 않는 것을 막는다.
+     */
+    struct ServiceStoreCompletion
+    {
+        bool _bCancelled{ false };
+
+        bool isCancelled() const { return _bCancelled; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class IServiceStoreWork
      * @brief 저장 왕복 하나입니다.
      * @details 입력은 맡기기 전에 이 객체에 복사해 둔다.
@@ -183,6 +200,8 @@ namespace sw
         void markCancelled() { _bCancelled = true; }
         /** @brief 종료 중이라 취소됐는지입니다. `complete` 에서 읽습니다(저장소 스레드의 표시는 완료 큐의 락을 거쳐 보인다). */
         bool isCancelled() const { return _bCancelled; }
+        /** @brief 서비스의 완료 함수에 넘기는 끝 상태입니다. `complete` 에서 부릅니다. */
+        ServiceStoreCompletion getCompletion() const { return ServiceStoreCompletion{ _bCancelled }; }
 
     private:
         LogContext _logContext{};

@@ -33,7 +33,8 @@ namespace sw
                     SW_LOG_INFO( "Retention swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );
                 if ( swept != ServiceStoreResult::Ok )
                 {
-                    SW_LOG_ERROR( "Retention sweep of table '%#' failed", rule._table.c_str() );
+                    if ( isCancelled() == false ) // 종료 때문에 취소된 일은 오류로 남기지 않는다(취소 표시는 run 앞에 선다)
+                        SW_LOG_ERROR( "Retention sweep of table '%#' failed", rule._table.c_str() );
                     _result = swept; // 다른 테이블은 이어서 쓴다
                 }
             }

@@ -327,7 +327,7 @@ namespace sw
             void complete() override
             {
                 if ( _bCache == SW_TRUE )
-                    _pService->applyStatCache( _accountID, _result == LeaderboardResult::Ok, std::move( _listStat ) );
+                    _pService->applyStatCache( _accountID, _result == LeaderboardResult::Ok, getCompletion(), std::move( _listStat ) );
                 else
                     _pService->applyStats( _requestTag, _result, std::move( _listStat ) );
             }
@@ -1330,7 +1330,7 @@ namespace sw
         _mapAccountStats.erase( accountID );
     }
 
-    void LeaderboardService::applyStatCache( AccountID accountID, bool bReadOk, vector<LeaderboardStat>&& listStat )
+    void LeaderboardService::applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat )
     {
         --_pendingCount;
         const auto statsIt = _mapAccountStats.find( accountID );
@@ -1338,7 +1338,8 @@ namespace sw
             return; // 그사이 떠났다
         if ( bReadOk == false )
         {
-            SW_LOG_WARNING( "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
+            if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않는다
+                SW_LOG_WARNING( "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
             return;
         }
         for ( LeaderboardStat& stat : listStat )
