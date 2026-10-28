@@ -340,8 +340,12 @@ namespace sw
                 // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.
                 const auto    baseIt     = outNode._prefab.empty() ? inputs._mapPrefabBaseState.end() : inputs._mapPrefabBaseState.find( outNode._prefab );
                 const string* pBaseState = ( baseIt != inputs._mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
-                if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, outNode._prefabOverrideXML ) == false )
+                string        overridesError;
+                const bool    bOverridesMade = pBaseState != nullptr && PrefabOverrides::computeOverrides( state, *pBaseState, outNode._prefabOverrideXML, overridesError );
+                if ( bOverridesMade == false )
                 {
+                    if ( overridesError.empty() == false )
+                        SW_LOG_WARNING( "Prefab instance '%#' is saved with its full state because its overrides could not be computed: %#", outNode._name, overridesError.c_str() );
                     outNode._prefabOverrideXML.clear();
                     outNode._embeddedXML = state;
                 }

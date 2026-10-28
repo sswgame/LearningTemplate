@@ -354,17 +354,34 @@ namespace sw
         return outStateXML.empty() == false;
     }
 
-    bool PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML )
+    bool PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML, string& outError )
     {
         outOverrideXML.clear();
+        outError.clear();
         XMLDocument instanceDoc;
         XMLDocument baseDoc;
-        if ( instanceDoc.parse( instanceStateXML ) == false || baseDoc.parse( baseStateXML ) == false )
+        if ( instanceDoc.parse( instanceStateXML ) == false )
+        {
+            outError = "the instance state is not XML: " + string( instanceDoc.getLastError() );
             return false;
+        }
+        if ( baseDoc.parse( baseStateXML ) == false )
+        {
+            outError = "the prefab base state is not XML: " + string( baseDoc.getLastError() );
+            return false;
+        }
         const XMLNode instanceRoot = instanceDoc.getRoot();
         const XMLNode baseRoot     = baseDoc.getRoot();
-        if ( instanceRoot.isValid() == false || baseRoot.isValid() == false )
+        if ( instanceRoot.isValid() == false )
+        {
+            outError = "the instance state has no root element";
             return false;
+        }
+        if ( baseRoot.isValid() == false )
+        {
+            outError = "the prefab base state has no root element";
+            return false;
+        }
 
         XMLDocument outDoc;
         XMLNode     outRoot = outDoc.appendRoot( kRootName );
