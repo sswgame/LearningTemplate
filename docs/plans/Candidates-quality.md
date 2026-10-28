@@ -12,7 +12,6 @@
 | ImageIntakeChecks | 노멀 맵 열 장 다시 굽기 | 바로 가능 |
 | LogGateRemainders | 종료 때 `Task fencing timeout` 원인 | 다시 보일 때 |
 | WriteGateRemainders | 쓰기 게이트 밖 추적 파일 쓰기 | 새 쓰기 길이 생길 때 |
-| ShardExitCodeAfterPass | 통과 뒤 종료 실패 · 멈춤 관찰 | 다시 날 때 |
 
 ## 테스트 · 검증
 
@@ -41,9 +40,3 @@
 왜 필요한가: 셰이더(`toon.hlsl`)는 glTF 규약(초록이 위)인데 `textures_raw/surfaces/*_normal.jpg` 열 장(Poly Haven `nor_gl`)을 `invert_green: true` 로 구워 DDS 초록이 원본과 반대였다. 설정은 고쳤고 `EditorTexturePipelineTest.RepositoryNormalMapsKeepTheEngineGreenConvention` 이 지킨다. 구운 열 장과 `import.stamp` 는 아직 옛 규칙의 것이다.
 착수 조건: 없음(이 열 장을 쓰는 머티리얼은 아직 없다).
 남은 첫 일: 열 장을 다시 구워 커밋하고 이 절을 지운다.
-
-### ShardExitCodeAfterPass
-제목: 통과 뒤 0 이 아닌 종료 코드와 종료 멈춤
-왜 필요한가: 테스트가 모두 통과한 뒤 종료에서 지는 CI 실패가 세 번 났다(Windows Debug Shard3 한 번, 리눅스 Shipping Shard2 는 `stop()` 안에서 180 초 한도, Shard5 는 `TestHostRuntime::stop` 의 `destroyAll` 에서 멈춤). 이 PC 에서 15 회 순차 · 12 회 동시 돌려도 재현되지 않았고, 종료 경로는 단계마다 `[TestHost] stopping: …` 과 끝의 `[TestHost] shut down - exit code N` 을 이미 찍어 코드를 더 읽어서는 좁혀지지 않는다.
-착수 조건: 같은 실패가 다시 날 때.
-남은 첫 일: 마지막 줄 `shut down - exit code N` 이 없으면 `TestHostRuntime::stop` 안(마지막 `stopping:` 단계)이고 있으면 정적 소멸자다.

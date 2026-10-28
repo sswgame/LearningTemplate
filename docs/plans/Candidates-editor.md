@@ -10,8 +10,7 @@
 |---|---|---|
 | PopupWindowCapture | 캡처 영역을 팝업 OS 창까지 넓히기 | 팝업을 캡처로 확인할 시나리오가 생길 때 |
 | PreviewWindowsRemaining | 미리보기 틀을 쓰는 나머지 툴 창 | 그 창의 편집 대상이 디자이너 일이 될 때 |
-| PreviewVertexPoolSharing | 미리보기 렌더러의 정점 풀 공유 | 메모리 · 재오픈 시간이 눈에 띌 때 |
-| MeshModifierCpuPreviewCost | 메시 모디파이어 CPU 미리보기 비용 | 10 만 정점 끌기가 프레임을 16 ms 넘게 늘릴 때 |
+| MeshModifierCpuPreviewCost | 메시 모디파이어 CPU 미리보기 비용 | 측정 없이 착수 가능 |
 
 ## 도구
 
@@ -33,15 +32,9 @@
 - 클립 창 시나리오: Empty 게임에 스켈레탈 애니메이터 프리팹이 없어 못 썼다.
 함정: 같은 파일을 두 편집기가 쥐지 않는다(카탈로그 편집기가 쥔 종류는 보기 전용). 닫기 확인 · 창 Undo 는 틀이 맡는다.
 
-### PreviewVertexPoolSharing
-제목: 미리보기 렌더러의 정점 풀 · 머티리얼 버퍼 공유
-왜 필요한가: 미리보기 씬마다 `FrameRenderer` 하나를 두고 PSO 캐시만 주 렌더러와 공유해 정점 풀 · 머티리얼 버퍼가 렌더러마다 따로다. 풀을 나누면 bindless 인덱스 공간이 갈라져 값을 따져 보아야 한다.
-착수 조건: 미리보기 창 여럿의 GPU 메모리나 창 재오픈 첫 프레임 시간이 눈에 띌 때.
-남은 첫 일: 공유 전 커밋과 견주어 정점 풀까지 나눌 값이 있는지 정한다(탐침 `Editor.ScenePreviewRenderers`).
-
 ### MeshModifierCpuPreviewCost
 제목: 메시 모디파이어 CPU 미리보기의 비용 줄이기
 왜 필요한가: GPU 프로그램 표에 없는 모디파이어가 스택에 있으면 미리보기가 매번 CPU 로 스택을 적용하고 새 메시(탄젠트 + 정점 풀 재업로드)를 만든다. 정점 갱신 API 는 렌더 스냅샷 수명 때문에 이 비용을 못 줄여 더하지 않았다.
-착수 조건: 큰 메시(10 만 정점) 끌기가 Release 프로파일러(`Editor.MeshModifiers.*`)에서 프레임을 16 ms 넘게 늘릴 때.
+착수 조건: 측정 없이 착수 가능.
 남은 첫 일: `Apply` 가 크면 CPU 로 내려가는 모디파이어를 GPU 프로그램 표(`MeshModifierGPUProgram`)에 올린다. `CpuMesh` 가 크면 탄젠트 재계산을 건너뛰는 옵션(`Mesh::setVerticesWithTangents`)을 본다.
 함정: 메시를 제자리에서 바꾸지 않는다 — 렌더 스냅샷이 옛 메시를 쥔다.

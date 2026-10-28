@@ -8,28 +8,12 @@
 
 | 절 | 한 줄 설명 | 착수 조건 유형 |
 |---|---|---|
-| PacketCompressionRecheck | 채팅 · 스트림 프레임 압축 재판단 | 키트가 실제 기록을 낼 때 |
-| EncryptedTickCost | 암호화 켠 서버 틱 비용 숫자 | 바로 가능(Release 벤치) |
 | ConfigRangeRejectRemaining | 설정 범위 밖 값을 조용히 맞추는 곳 | 새 설정 구조체가 생길 때 |
-| DestructionNetSessionScene | 파괴 복제 실제 세션 확인 | 바로 가능 |
+| DestructionNetSessionScene | 파괴 복제 실제 세션 해시 맞대기 | 바로 가능 |
 | NetworkExtensionIdeas | 물리 예측 · 음성 · 치팅 방어 · 오케스트레이션 | 요구하는 게임이 생길 때 |
 | StoreProviderIntegration | Steam · Epic 연동 | 출시 플랫폼 결정 |
 | PackPatchSigning | 패치 목록 서명의 기동 연결 | 스팀 밖 채널이 생길 때 |
 | OperationsAndDeployment | 서버 운영 · 배포 | 보류(사용자 결정) |
-
-## 성능 · 비용
-
-### PacketCompressionRecheck
-제목: 패킷 압축의 남은 확인
-왜 필요한가: UDP 압축을 껐다. 압축 시간은 컴파일러 · libc 에 따라 다르다.
-착수 조건: 채팅 키트가 실제 기록을 낼 때.
-남은 첫 일: 채팅 수치를 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
-
-### EncryptedTickCost
-제목: 암호화 켠 서버 틱 시간 측정
-왜 필요한가: Core 창구(`Network/Security/`) · OpenSSL 3.6 · 스트림 TLS 1.3 · UDP 보안 · TLS 인증서 배선은 있는데 암호화의 비용 숫자가 없다.
-착수 조건: 없음.
-남은 첫 일: `NetReplicationBenchTest.SixteenClientsThousandEntitiesAtSixtyHertzEncrypted` 를 Release 로 세 번 돌려 평문 판과의 `[Bench]` 줄 차를 한 줄로 적는다.
 
 ## 정리
 
@@ -43,10 +27,10 @@
 ## 기능
 
 ### DestructionNetSessionScene
-제목: 파괴 복제의 실제 세션 확인과 사건 지연 측정
+제목: 파괴 복제의 실제 세션 확인
 왜 필요한가: 파괴 복제는 가상 서버에서만 확인했다. 실제 세션(`DestructionNetSessionComponent`), 해시 로그 비교(`Scripts/dev/CompareDestructionHashLogs.py`), 씬 `destructionnet.scene.xml` 은 들어갔지만 빌드 · 실행 확인 전이다.
 착수 조건: 없음.
-남은 첫 일: `py -3 Scripts/dev/RunDestructionNetPair.py --preset Ninja-Release` 로 서버와 클라이언트를 한 기계에서 띄워 해시를 맞댄다. 이어 250 ms · 손실 15 % 의 사건 지연 평균 · 최대를 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 전/후 잰다. 파괴 사건은 "신뢰 · 순서 없음" 채널이고, 남은 최대는 한 메시지가 거듭 잃는 몫이며 덩어리 멈춤 확정도 옮길 수 있다 — 재고 나서.
+남은 첫 일: `py -3 Scripts/dev/RunDestructionNetPair.py --preset Ninja-Release` 로 서버와 클라이언트를 한 기계에서 띄워 해시를 맞댄다.
 함정: 같은 입력의 해시는 Windows Debug · Release · Shipping 이 같고(`EventLogHashMatchesTheRecordedValueOnEveryBuild`), 리눅스 clang 은 확인하지 않았다.
 
 ### NetworkExtensionIdeas
@@ -78,6 +62,5 @@
 남은 첫 일(풀린 뒤):
 - 서버용 크래시 보고 전송 동의를 운영 설정으로(O1).
 - 서버 로그 JSON lines · OpenTelemetry 내보내기 · 감사 줄의 추적 id 칸(O2).
-- 부하 봇(`Tools/OnlineLoadBot`) 첫 측정(O5): Release · 서버 한 대 · 봇 1000/5000 의 동작별 p99 와 서버 틱 p99.
 - 오케스트레이터(Agones · 쿠버네티스) · 서버 등록 · 매칭 할당 연결.
 - 게임 UDP 접속 표 서명 키 · 계정 티켓 주 키의 배포 · 교체 절차, 실제 금칙어 목록(O6).
