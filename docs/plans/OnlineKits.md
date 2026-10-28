@@ -31,7 +31,7 @@
 | F2 | 백필 | 끝남(빌드 미확인) |
 | F3 | 재접속 유예 | 끝남(빌드 미확인) |
 | F4 | 파티 채팅 | 끝남(빌드 미확인) |
-| F5 | 게임 포트 접속 인증기(접속 티켓) | 끝남(서버 쪽 빌드 미확인). 클라이언트 구동기 `AccountTicketConnector` · `net.ticketconnect` 코드 끝, 빌드 전. 두 프로세스 시나리오 드라이버만 남음 |
+| F5 | 게임 포트 접속 인증기(접속 티켓) | 끝남(Debug 빌드). 두 프로세스 드라이버 `py -3 -m Scripts net-pair run` 과 개발용 시드 계정 옵션이 들어갔다. 서버 쪽(기동 · 시드 · 경고 0)은 돌려 확인했고 클라이언트 쪽 끝단은 App 이 엔진 기본 텍스처 에셋 없이 못 떠(다른 작업의 에셋 변경) 아직 못 돌렸다 |
 | G1 | A/B 실험 | 끝남(빌드 미확인) |
 | G2 | 우편 푸시 | 끝남(빌드 미확인) |
 | G3 | 이벤트 운영 화면 | 끝남(빌드 미확인) |
@@ -94,7 +94,7 @@ FCM HTTP v1(`Provider/Fcm/FcmPushProvider`, 서비스 계정 OAuth 는 `ServiceA
 - 묶이기 전에 온 접속은 거절하고 서비스가 선 뒤에도 안 묶였으면 `ServerApp` 이 기동을 멈춘다(폴백 없음).
 - 클라이언트: `GameNetSession::makeTicketClientParams( 주소, 티켓, 인자 )`. `-gv_netConnectAddress` 는 자격 없는 길이라 티켓 서버에는 `SecurityMismatch` 로 거절된다. 거절된 티켓은 지워 새 티켓 없이 `reconnect` 하지 않는다.
 - **두 프로세스 시설(빌드 전)**: (1) `Server` 는 이미 서버 설정 옆 `<이름>.online.json` 의 `_listKit`(계정 · `gameConnect`)과 `_servicePort` 로 계정 키트 조립과 로그인 포트를 띄운다 — 새 명령줄 길은 더하지 않는다(설정이 정본이고 인자를 하나 더 두면 같은 값이 둘이 된다). (2) `App` 쪽은 `AccountTicketConnector`(`Account/Shared/API/AccountTicketConnect.h`)가 로그인 서비스 포트에 연결해 Hello → 로그인 → 티켓을 시한 안에 막고 받으며, 개발 명령 `net.ticketconnect <로그인 host:port> <계정> <비밀번호> <서버 id> <게임 host:port> [빌드]` 가 `makeTicketClientParams` 로 암호화 UDP 세션을 연다(`-gv_standardInputCommands=1` 로 띄운 App 의 표준 입력으로 보낸다). 티켓이 계정 세션에 묶여 로그인 연결은 프로세스가 끝날 때까지 쥔다.
-- **남은 것**: `Scripts/common/NetPairRun.py` 의 두 프로세스 드라이버(서버 설정 · 온라인 설정 · 테스트 계정 시드를 준비하고 위 명령을 보내 `[Error]` 없이 접속이 열리는지 본다)는 계정 시드 시설이 없어 만들지 못했다. 시나리오 시설이 서면 U1 의 화면 시나리오도 같은 시설을 쓴다.
+- **두 프로세스 드라이버(Debug 빌드)**: `Scripts/net/NetPairRun.py`(`py -3 -m Scripts net-pair run|check`)가 `Saved/NetPairRun/` 에 서버 설정 · 온라인 설정을 쓰고, 서버(`-server-config`)와 App(`-gv_standardInputCommands=1`)을 띄워 `net.ticketconnect` 를 보내 서버 로그의 `Net session client <n> connected` 와 두 로그의 `[Error]` · `[Warning]` 없음, 서버 종료 코드 0 을 본다. 테스트 계정은 서버 인자가 아니라 계정 키트 옵션 `seedTestAccounts`(`이름:비밀번호,…`, 첫 틱에 가입, 이미 있으면 그대로)로 심는다 — 설정이 정본이라 인자를 하나 더 두면 같은 값이 둘이 되고, Shipping 은 그 옵션을 기동 오류로 거절한다(`lightPasswordHash` 와 같은 규칙). 티켓 연결기가 평문으로 붙던 결함도 고쳤다: 서버 서비스 스트림은 늘 TLS 라 `AccountTicketConnector` 가 클라이언트 TLS 컨텍스트(`_tlsTrustFile`, 비면 Dev 개발용 인증서)를 쓴다. **남은 것:** 클라이언트 App 이 뜨는 환경에서 한 번 끝까지 돌린다(지금은 엔진 기본 텍스처 에셋 부재로 App 이 기동을 멈춘다). 시나리오 시설이 섰으므로 U1 의 화면 시나리오도 같은 드라이버 모양을 쓴다.
 
 ### I6 — GM 전용 호스트 포트
 
