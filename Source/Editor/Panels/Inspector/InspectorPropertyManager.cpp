@@ -269,6 +269,106 @@ namespace sw::editor
             return true;
         }
 
+        // 아래 위젯 함수들은 `drawValueWidget` 의 값 종류별 분기를 한 함수씩 뺀 것이다(종류마다 읽고 되쓰는 규칙이 달라 한 함수에 두면 분기가 길어진다).
+
+        /** @brief 행렬: 행 네 개를 한 그룹으로 둡니다. 되돌리기 추적이 마지막 항목(그룹)을 봅니다. */
+        template <typename T>
+        bool drawMatrixWidget( const utf8* pLabel, T& value )
+        {
+            bool bChanged = false;
+            ImGui::PushID( pLabel );
+            ImGui::BeginGroup();
+            for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
+            {
+                ImGui::PushID( rowIndex );
+                bChanged |= ImGui::DragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
+                ImGui::PopID();
+            }
+            ImGui::EndGroup();
+            ImGui::PopID();
+            return bChanged;
+        }
+
+        /** @brief 회전: 오일러 각(도)으로 편집하고 바뀐 프레임에만 쿼터니언으로 되씁니다. */
+        template <typename T>
+        bool drawRotationWidget( const utf8* pLabel, T& value )
+        {
+            float3 degrees = value.getEulerAngles() * MathUtil::kRadianToDegree;
+            if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
+                return false;
+            value = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
+            return true;
+        }
+
+        /** @brief 핸들(오브젝트 · 컴포넌트 · 슬롯): 핸들 종류마다 담긴 숫자를 그대로 입력란으로 보입니다. */
+        template <typename T>
+        bool drawHandleWidget( const utf8* pLabel, T& value )
+        {
+            if constexpr ( std::is_same_v<T, GameObjectHandle> )
+            {
+                uint64 objectID = value.objectID();
+                if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectID ) == false )
+                    return false;
+                value = GameObjectHandle::make( objectID );
+                return true;
+            }
+            else if constexpr ( std::is_same_v<T, ComponentHandle> )
+            {
+                uint64 arrID[2] = { value.objectID(), value.componentID() };
+                if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrID, 2 ) == false )
+                    return false;
+                value = ComponentHandle::makeOwned( arrID[0], arrID[1] );
+                return true;
+            }
+            else
+            {
+                static_assert( std::is_same_v<T, SlotHandle>, "Handle widget: unknown handle type" );
+                uint32 arrPart[2] = { value.index(), value.generation() };
+                if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U32, arrPart, 2 ) == false )
+                    return false;
+                value = SlotHandle::make( arrPart[0], arrPart[1] );
+                return true;
+            }
+        }
+
+        /**
+         * @brief 압축 값: 성분 실수로 풀어 편집하고 `fromFloats` 로 다시 담습니다. 바뀐 프레임에만 다시 담으므로 편집하지 않은 값은 비트가 그대로입니다.
+         * @details 범위(`kRangeMin` · `kRangeMax`)로 제한하므로 위젯이 `fromFloats` 의 자르기 · 무한대에 닿지 않는다.
+         */
+        template <typename T>
+        bool drawPackedWidget( const utf8* pLabel, T& value )
+        {
+            using Traits        = PackedValueTraits<T>;
+            PackedFloats floats = Traits::toFloats( value );
+            if ( ImGui::DragScalarN( pLabel, ImGuiDataType_Float, floats._arrValue, static_cast<int32>( Traits::kComponentCount ), Traits::kDragSpeed, &Traits::kRangeMin,
+                                     &Traits::kRangeMax, "%.4f" ) == false )
+                return false;
+            value = Traits::fromFloats( floats );
+            return true;
+        }
+
+        /** @brief 방향: 저장된 좌표 (u, v) 가 아니라 방향으로 편집합니다. 영벡터를 만들면 +z 로 갑니다(`OctahedralNormal::fromNormal`). */
+        template <typename T>
+        bool drawDirectionWidget( const utf8* pLabel, T& value )
+        {
+            float3 direction = value.toNormal();
+            if ( ImGui::DragFloat3( pLabel, &direction._x, 0.01f ) == false )
+                return false;
+            value = OctahedralNormal::fromNormal( direction );
+            return true;
+        }
+
+        /** @brief 태그: Enter 로 확정하는 글 입력란입니다. 빈 글은 빈 태그입니다. */
+        template <typename T>
+        bool drawTagWidget( const utf8* pLabel, T& value )
+        {
+            fixed_string<constant::kMaxBuffer256> buf{ value.isValid() ? value.getString() : "" };
+            if ( ImGui::InputText( pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+                return false;
+            value = buf.empty() ? TagID{} : TagID::request( buf.c_str() );
+            return true;
+        }
+
         /**
          * @brief 내장 값 하나를 편집하는 위젯입니다. 메타데이터(범위, 단위, 색, 애셋 경로)를 모르는 기본 형태입니다.
          * @details CallInEditor 인자 입력란은 항상 이 위젯을 쓰고, 메타데이터가 필요 없는 분기(행렬, 회전, 핸들, 태그)의 프로퍼티도
@@ -305,86 +405,19 @@ namespace sw::editor
             else if constexpr ( kWidget == InspectorValueWidget::Vector4 )
                 return ImGui::DragFloat4( pLabel, &value._x, 0.01f );
             else if constexpr ( kWidget == InspectorValueWidget::Matrix )
-            {
-                // 행 네 개를 한 그룹으로 둔다. 되돌리기 추적이 마지막 항목(그룹)을 본다.
-                bool bChanged = false;
-                ImGui::PushID( pLabel );
-                ImGui::BeginGroup();
-                for ( int32 rowIndex = 0; rowIndex < 4; ++rowIndex )
-                {
-                    ImGui::PushID( rowIndex );
-                    bChanged |= ImGui::DragFloat4( "##row", value.data() + rowIndex * 4, 0.01f );
-                    ImGui::PopID();
-                }
-                ImGui::EndGroup();
-                ImGui::PopID();
-                return bChanged;
-            }
+                return drawMatrixWidget( pLabel, value );
             else if constexpr ( kWidget == InspectorValueWidget::Rotation )
-            {
-                float3 degrees = value.getEulerAngles() * MathUtil::kRadianToDegree;
-                if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
-                    return false;
-                value = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
-                return true;
-            }
+                return drawRotationWidget( pLabel, value );
             else if constexpr ( kWidget == InspectorValueWidget::Handle )
-            {
-                if constexpr ( std::is_same_v<T, GameObjectHandle> )
-                {
-                    uint64 objectID = value.objectID();
-                    if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectID ) == false )
-                        return false;
-                    value = GameObjectHandle::make( objectID );
-                    return true;
-                }
-                else if constexpr ( std::is_same_v<T, ComponentHandle> )
-                {
-                    uint64 arrID[2] = { value.objectID(), value.componentID() };
-                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrID, 2 ) == false )
-                        return false;
-                    value = ComponentHandle::makeOwned( arrID[0], arrID[1] );
-                    return true;
-                }
-                else
-                {
-                    static_assert( std::is_same_v<T, SlotHandle>, "Handle widget: unknown handle type" );
-                    uint32 arrPart[2] = { value.index(), value.generation() };
-                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U32, arrPart, 2 ) == false )
-                        return false;
-                    value = SlotHandle::make( arrPart[0], arrPart[1] );
-                    return true;
-                }
-            }
+                return drawHandleWidget( pLabel, value );
             else if constexpr ( kWidget == InspectorValueWidget::Packed )
-            {
-                // 성분 실수로 풀어 편집하고 `fromFloats` 로 다시 담는다. 바뀐 프레임에만 다시 담으므로 편집하지 않은 값은 비트가 그대로다.
-                // 범위(`kRangeMin` · `kRangeMax`)로 제한하므로 위젯이 `fromFloats` 의 자르기 · 무한대에 닿지 않는다.
-                using Traits        = PackedValueTraits<T>;
-                PackedFloats floats = Traits::toFloats( value );
-                if ( ImGui::DragScalarN( pLabel, ImGuiDataType_Float, floats._arrValue, static_cast<int32>( Traits::kComponentCount ), Traits::kDragSpeed, &Traits::kRangeMin,
-                                         &Traits::kRangeMax, "%.4f" ) == false )
-                    return false;
-                value = Traits::fromFloats( floats );
-                return true;
-            }
+                return drawPackedWidget( pLabel, value );
             else if constexpr ( kWidget == InspectorValueWidget::Direction )
-            {
-                // 저장된 좌표 (u, v) 가 아니라 방향으로 편집한다. 영벡터를 만들면 +z 로 간다(`OctahedralNormal::fromNormal`).
-                float3 direction = value.toNormal();
-                if ( ImGui::DragFloat3( pLabel, &direction._x, 0.01f ) == false )
-                    return false;
-                value = OctahedralNormal::fromNormal( direction );
-                return true;
-            }
+                return drawDirectionWidget( pLabel, value );
             else
             {
                 static_assert( kWidget == InspectorValueWidget::Tag, "drawValueWidget: no widget for this InspectorValueWidget" );
-                fixed_string<constant::kMaxBuffer256> buf{ value.isValid() ? value.getString() : "" };
-                if ( ImGui::InputText( pLabel, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
-                    return false;
-                value = buf.empty() ? TagID{} : TagID::request( buf.c_str() );
-                return true;
+                return drawTagWidget( pLabel, value );
             }
         }
 
