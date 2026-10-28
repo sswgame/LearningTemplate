@@ -104,13 +104,14 @@ namespace sw
         return context;
     }
 
-    unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( string_view trustFile, string_view serverName, string& outError )
+    unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( string_view trustFile, string_view serverName, string& outError, string_view alpnProtocol )
     {
         using Internal = NetSecurityInternal;
         TLSContextConfig settings;
-        settings._role       = TLSRole::Client;
-        settings._serverName = string( serverName );
-        string trustPath     = makeProjectPath( trustFile );
+        settings._role         = TLSRole::Client;
+        settings._serverName   = string( serverName );
+        settings._alpnProtocol = string( alpnProtocol );
+        string trustPath       = makeProjectPath( trustFile );
         if ( trustPath.empty() )
         {
             string privateKeyPath;

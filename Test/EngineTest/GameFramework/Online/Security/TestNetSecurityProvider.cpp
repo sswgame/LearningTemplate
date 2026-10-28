@@ -250,6 +250,60 @@ SW_TEST_CASE( NetSecurityProviderTest, TLSHandshakeCarriesDataAndRefusesDowngrad
     SW_EXPECT_TRUE( strangerClient->getState() == TLSSessionState::Failed );
 }
 
+SW_TEST_CASE( NetSecurityProviderTest, TLSAlpnNegotiatesTheConfiguredProtocolOnly )
+{
+    INetSecurityProvider& provider = NetSecurity::getProvider();
+    string                certificatePem;
+    string                privateKeyPem;
+    SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 30, certificatePem, privateKeyPem ) );
+
+    const auto makeContext = [&]( TLSRole role, const string& alpn ) -> unique_ptr<ITLSContext>
+    {
+        TLSContextConfig settings;
+        settings._role         = role;
+        settings._alpnProtocol = alpn;
+        if ( role == TLSRole::Server )
+        {
+            settings._certificatePem = certificatePem;
+            settings._privateKeyPem  = privateKeyPem;
+        }
+        else
+        {
+            settings._trustPem   = certificatePem;
+            settings._serverName = "localhost";
+        }
+        string error;
+        return provider.createTLSContext( settings, error );
+    };
+    const auto negotiate = [&]( const string& serverAlpn, const string& clientAlpn, string& outServerProtocol, string& outClientProtocol ) -> bool
+    {
+        unique_ptr<ITLSContext> server = makeContext( TLSRole::Server, serverAlpn );
+        unique_ptr<ITLSContext> client = makeContext( TLSRole::Client, clientAlpn );
+        if ( server == nullptr || client == nullptr )
+            return false;
+        unique_ptr<ITLSSession> serverSession = server->createSession();
+        unique_ptr<ITLSSession> clientSession = client->createSession();
+        pumpTLS( *clientSession, *serverSession );
+        outServerProtocol = serverSession->getNegotiatedProtocol();
+        outClientProtocol = clientSession->getNegotiatedProtocol();
+        return serverSession->getState() == TLSSessionState::Established && clientSession->getState() == TLSSessionState::Established;
+    };
+
+    string serverProtocol;
+    string clientProtocol;
+    SW_ASSERT_TRUE( negotiate( "h2", "h2", serverProtocol, clientProtocol ) );
+    SW_EXPECT_TRUE( serverProtocol == "h2" );
+    SW_EXPECT_TRUE( clientProtocol == "h2" );
+
+    // 한쪽이 협상하지 않으면 합의가 없다 — 핸드셰이크는 서고 프로토콜 이름만 비어 있다(거절은 HTTP/2 계층이 한다).
+    SW_ASSERT_TRUE( negotiate( "h2", "", serverProtocol, clientProtocol ) );
+    SW_EXPECT_TRUE( serverProtocol.empty() && clientProtocol.empty() );
+    SW_ASSERT_TRUE( negotiate( "", "h2", serverProtocol, clientProtocol ) );
+    SW_EXPECT_TRUE( serverProtocol.empty() && clientProtocol.empty() );
+    SW_ASSERT_TRUE( negotiate( "http/1.1", "h2", serverProtocol, clientProtocol ) );
+    SW_EXPECT_TRUE( serverProtocol.empty() && clientProtocol.empty() );
+}
+
 SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsAreEmpty )
 {
     string error;

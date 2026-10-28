@@ -63,6 +63,8 @@ namespace sw
         /** @brief close_notify 를 보냅니다(보낼 레코드는 `takeCiphertext` 로). */
         virtual void        close()                = 0;
         virtual const utf8* getFailureText() const = 0;
+        /** @brief 핸드셰이크가 끝난 뒤 협상된 ALPN 프로토콜 이름입니다. 협상하지 않았거나 합의가 없으면 빈 문자열(`TLSContextConfig::_alpnProtocol`). */
+        virtual string getNegotiatedProtocol() const = 0;
     };
 } // namespace sw
 

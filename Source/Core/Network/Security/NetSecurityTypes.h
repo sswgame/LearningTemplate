@@ -129,6 +129,7 @@ namespace sw
         string     _trustPem{};                   ///< 클라이언트 전용. 이 인증서로 서버 체인을 검증한다(CA 번들 또는 서버 인증서 자체).
         string     _serverName{};                 ///< 클라이언트 전용. SNI 와 이름 검사에 쓴다(비우면 이름 검사 없이 체인만 검증한다).
         string     _pinnedCertificateSha256Hex{}; ///< 클라이언트 전용. 있으면 서버 끝 인증서의 SHA-256(소문자 16진 64자)이 같아야 한다.
+        string     _alpnProtocol{};               ///< ALPN 프로토콜 이름 하나(예: "h2"). 비우면 협상하지 않는다. 서버는 이 이름을 제시한 클라이언트만 고르고, 클라이언트는 이 이름만 제시한다.
         TLSRole    _role{ TLSRole::Server };
         TLSVersion _minVersion{ TLSVersion::TLS13 }; ///< 1.3 만 쓴다. 낮추는 것은 다운그레이드 테스트 용도뿐이다.
         TLSVersion _maxVersion{ TLSVersion::TLS13 };

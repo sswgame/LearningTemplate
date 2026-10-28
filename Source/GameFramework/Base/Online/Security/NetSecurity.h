@@ -43,7 +43,7 @@ namespace sw
          * @brief 클라이언트 TLS 컨텍스트 — @p trustFile(CA 번들 또는 서버 인증서 그 자체)로 서버를 검증하고, @p serverName 이 있으면 이름도 본다.
          *        @p trustFile 을 비우면 Dev 에서만 개발용 인증서를 신뢰 + 고정(SHA-256)한다.
          */
-        static unique_ptr<ITLSContext> createClientTLSContext( string_view trustFile, string_view serverName, string& outError );
+        static unique_ptr<ITLSContext> createClientTLSContext( string_view trustFile, string_view serverName, string& outError, string_view alpnProtocol = {} );
         /** @brief Dev — 개발용 인증서 · 키가 없으면 만듭니다(서버 · 클라이언트가 같은 PC · 같은 폴더를 보는 경우). 쓴 경로를 돌려준다. Shipping 은 늘 false. */
         [[nodiscard]] static bool ensureDevCertificate( string& outCertificateFile, string& outPrivateKeyFile, string& outError );
     };

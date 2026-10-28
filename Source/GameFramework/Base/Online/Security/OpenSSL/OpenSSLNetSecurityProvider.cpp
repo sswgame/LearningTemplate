@@ -473,6 +473,18 @@ namespace sw
                     _state = TLSSessionState::Closed;
             }
 
+            string getNegotiatedProtocol() const override
+            {
+                if ( _pSsl == nullptr || _state != TLSSessionState::Established )
+                    return {};
+                const uint8* pProtocol = nullptr;
+                uint32       length    = 0;
+                SSL_get0_alpn_selected( _pSsl, &pProtocol, &length );
+                if ( pProtocol == nullptr )
+                    return {};
+                return string( reinterpret_cast<const utf8*>( pProtocol ), length );
+            }
+
         private:
             bool fail( const string& text )
             {
@@ -547,9 +559,23 @@ namespace sw
             OpenSSLContext( SSL_CTX* pContext, const TLSContextConfig& settings )
                 : _serverName{ settings._serverName }
                 , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
+                , _alpnWire{ makeAlpnWire( settings._alpnProtocol ) }
                 , _pContext{ pContext }
                 , _role{ settings._role }
             {
+                // 콜백 인자가 이 객체의 멤버라 객체가 선 뒤에 건다(복사 · 이동이 막혀 주소가 바뀌지 않는다)
+                if ( _role == TLSRole::Server && _alpnWire.empty() == false )
+                    SSL_CTX_set_alpn_select_cb( _pContext, &selectAlpn, &_alpnWire );
+            }
+
+            /** @brief ALPN 와이어 형식(길이 1 바이트 + 이름)입니다. 이름이 비었거나 255 바이트를 넘으면 빈 문자열. */
+            static string makeAlpnWire( const string& protocol )
+            {
+                if ( protocol.empty() || protocol.size() > 255 )
+                    return {};
+                string wire( 1, static_cast<utf8>( protocol.size() ) );
+                wire += protocol;
+                return wire;
             }
             ~OpenSSLContext() override { SSL_CTX_free( _pContext ); }
 
@@ -560,8 +586,23 @@ namespace sw
             TLSRole                 getRole() const override { return _role; }
 
         private:
+            /** @brief 서버의 ALPN 선택 — 클라이언트가 제시한 목록에 설정한 이름이 있으면 고르고 없으면 ALPN 없이 진행한다(거절은 부르는 쪽이 협상 결과를 보고 정한다). */
+            static int32 selectAlpn( SSL* pSsl, const uint8** ppOut, uint8* pOutLength, const uint8* pIn, uint32 inLength, void* pArg )
+            {
+                (void)pSsl;
+                const string* pWire   = static_cast<const string*>( pArg );
+                uint8*        pPicked = nullptr;
+                const int32   result  = SSL_select_next_proto( &pPicked, pOutLength, reinterpret_cast<const uint8*>( pWire->data() ),
+                                                               static_cast<uint32>( pWire->size() ), pIn, inLength );
+                if ( result != OPENSSL_NPN_NEGOTIATED )
+                    return SSL_TLSEXT_ERR_NOACK;
+                *ppOut = pPicked;
+                return SSL_TLSEXT_ERR_OK;
+            }
+
             string   _serverName;
             string   _pinnedSha256Hex;
+            string   _alpnWire;
             SSL_CTX* _pContext;
             TLSRole  _role;
         };
@@ -721,6 +762,9 @@ namespace sw
             // 신뢰 목록에 포함된 끝 인증서(개발용 자체 서명 · 고정한 서버 인증서)를 CA 없이 그대로 믿는다.
             X509_VERIFY_PARAM_set_flags( SSL_CTX_get0_param( pContext ), X509_V_FLAG_PARTIAL_CHAIN );
             SSL_CTX_set_verify( pContext, SSL_VERIFY_PEER, nullptr );
+            const string alpnWire = OpenSSLContext::makeAlpnWire( settings._alpnProtocol );
+            if ( alpnWire.empty() == false )
+                bReady = SSL_CTX_set_alpn_protos( pContext, reinterpret_cast<const uint8*>( alpnWire.data() ), static_cast<uint32>( alpnWire.size() ) ) == 0; // 0 이 성공
         }
         if ( bReady == false )
         {
