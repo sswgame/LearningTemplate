@@ -12,7 +12,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Actor/Combat/TurnOrder.h"
+#include "GameFramework/Base/Character/Combat/TurnOrder.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"

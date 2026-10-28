@@ -6,7 +6,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/HealthListenerComponent.h"
+#include "GameFramework/Base/Character/Combat/Health/HealthListenerComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

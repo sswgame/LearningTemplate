@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Character/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 

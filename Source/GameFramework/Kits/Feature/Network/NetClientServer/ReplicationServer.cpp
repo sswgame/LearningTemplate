@@ -7,7 +7,7 @@
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw

@@ -16,9 +16,9 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Controller/AIControllerComponent.h"
+#include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"

@@ -14,9 +14,9 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Actor/Combat/Weapon/WeaponMath.h"
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 

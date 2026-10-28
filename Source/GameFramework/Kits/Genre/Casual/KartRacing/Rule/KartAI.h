@@ -7,7 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 

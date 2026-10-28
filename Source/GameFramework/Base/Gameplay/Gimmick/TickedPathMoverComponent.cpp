@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Actor/Control/ControlSystem.h"
+#include "GameFramework/Base/Character/Control/ControlSystem.h"
 
 namespace sw
 {

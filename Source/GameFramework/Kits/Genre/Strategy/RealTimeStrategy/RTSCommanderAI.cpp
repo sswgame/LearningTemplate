@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/BehaviorTaskRegistry.h"
+#include "GameFramework/Base/Character/AI/BehaviorTaskRegistry.h"
 
 namespace sw
 {

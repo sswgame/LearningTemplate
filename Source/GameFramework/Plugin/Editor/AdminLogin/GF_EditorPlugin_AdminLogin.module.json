@@ -1,0 +1,28 @@
+{
+    "_name": "GF_EditorPlugin_AdminLogin",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "GM 도구 로그인 조립 — GM Tool 패널(Admin 확장)은 계정 키트를 모르므로, 계정 · GM 키트를 함께 아는 이 확장이 패널의 계정 이름 · 비밀번호 칸을 계정 키트의 로그인 도우미에 잇는다(연결이 Ready 가 되면 로그인, 응답은 프레임마다 꺼낸다)",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GF_Admin"
+        },
+        {
+            "_name": "GF_Account"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

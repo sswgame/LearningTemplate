@@ -13,8 +13,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/Component/TileMapRendererComponent.h"
 
-#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
 

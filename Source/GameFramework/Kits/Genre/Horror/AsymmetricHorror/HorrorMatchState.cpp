@@ -8,7 +8,7 @@
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/AIPerception.h"
+#include "GameFramework/Base/Character/AI/AIPerception.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"

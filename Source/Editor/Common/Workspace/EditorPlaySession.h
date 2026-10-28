@@ -168,7 +168,7 @@ namespace sw::editor
         static bool isPlaying();
         /** @brief 일시정지 상태이면 true 입니다. */
         static bool isPaused();
-        /** @brief 정지(편집 모드) 상태이면 true 입니다. 확장 모듈(`GF_EditorPlugIn_*`)의 패널이 런타임 상태 유무를 가르는 데 쓰므로 내보낸다. */
+        /** @brief 정지(편집 모드) 상태이면 true 입니다. 확장 모듈(`GF_EditorPlugin_*`)의 패널이 런타임 상태 유무를 가르는 데 쓰므로 내보낸다. */
         SW_EDITOR_API static bool isStopped();
         /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다(`EditorSessionPolicy`). */
         static bool areSceneEditsAllowed();

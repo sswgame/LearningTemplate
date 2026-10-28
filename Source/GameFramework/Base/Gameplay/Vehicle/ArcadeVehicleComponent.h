@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

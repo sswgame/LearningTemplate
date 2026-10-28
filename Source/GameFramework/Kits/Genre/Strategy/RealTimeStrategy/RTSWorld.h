@@ -16,10 +16,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Navigation/FlowField.h"
-#include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
-#include "GameFramework/Base/Actor/Navigation/NavAgent.h"
-#include "GameFramework/Base/Actor/Navigation/NavGrid.h"
+#include "GameFramework/Base/Character/Navigation/FlowField.h"
+#include "GameFramework/Base/Character/Navigation/GridPathfinder.h"
+#include "GameFramework/Base/Character/Navigation/NavAgent.h"
+#include "GameFramework/Base/Character/Navigation/NavGrid.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"

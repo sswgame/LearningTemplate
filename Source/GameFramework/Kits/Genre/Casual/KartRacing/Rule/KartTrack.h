@@ -15,7 +15,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"

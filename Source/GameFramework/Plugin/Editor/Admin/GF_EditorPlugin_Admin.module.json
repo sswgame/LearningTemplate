@@ -1,0 +1,25 @@
+{
+    "_name": "GF_EditorPlugin_Admin",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "GM 도구 키트의 에디터 확장 — 계정 조회 · 자산 지급과 회수 · 제재 · 감사 열람 패널(서버 없이도 메모리 제공자로 동작)",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GF_Admin"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

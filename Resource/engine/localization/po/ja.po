@@ -59,402 +59,402 @@ msgctxt "Discard"
 msgid "Discard"
 msgstr "破棄"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnActive"
 msgid "Active"
 msgstr "有効"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnBase"
 msgid "Base"
 msgstr "基本値"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCooldown"
 msgid "Cooldown"
 msgstr "クールダウン"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCount"
 msgid "Count"
 msgstr "数"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnCurrent"
 msgid "Current"
 msgstr "現在値"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnName"
 msgid "Name"
 msgstr "名前"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnRemaining"
 msgid "Remaining"
 msgstr "残り"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnStacks"
 msgid "Stacks"
 msgstr "スタック"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnTag"
 msgid "Tag"
 msgstr "タグ"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
 msgid "Select an object with an AbilitySystemComponent, or pick one above."
 msgstr "AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintPlayOnly"
 msgid "Runtime ability state exists only during play. Press Play to inspect it."
 msgstr "実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.Infinite"
 msgid "Infinite"
 msgstr "無限"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.NoComponentsInScene"
 msgid "No AbilitySystemComponent in the active scene"
 msgstr "アクティブなシーンに AbilitySystemComponent がありません"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.PickTarget"
 msgid "Pick an ability system..."
 msgstr "アビリティシステムを選択..."
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionAbilities"
 msgid "Granted Abilities"
 msgstr "付与されたアビリティ"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionAttributes"
 msgid "Attributes"
 msgstr "アトリビュート"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionEffects"
 msgid "Active Effects"
 msgstr "有効なエフェクト"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.SectionTags"
 msgid "Owned Tags"
 msgstr "所有タグ"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
 msgid "Add Item"
 msgstr "項目を追加"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddModifier"
 msgid "Add Modifier"
 msgstr "モディファイアを追加"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Axis"
 msgid "Axis"
 msgstr "軸"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Bake"
 msgid "Bake"
 msgstr "ベイク"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.CPUOnly"
 msgid "(CPU only)"
 msgstr "(CPU のみ)"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Center"
 msgid "Center"
 msgstr "中心"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ControlPoints"
 msgid "Control Points"
 msgstr "制御点"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.CurveEditHint"
 msgid "Click to edit the curve"
 msgstr "クリックしてカーブを編集"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.DuplicateRow"
 msgid "Duplicate row"
 msgstr "行を複製"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.EnterNestedStack"
 msgid "Edit this group's nested stack"
 msgstr "このグループのネストされたスタックを編集"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ExportWarp"
 msgid "Export as World Warp"
 msgstr "ワールドワープとして書き出す"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.FitBounds"
 msgid "Fit to Bounds"
 msgstr "境界に合わせる"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.GPUPreviewBlockedBy"
 msgid "CPU only:"
 msgstr "CPU のみ:"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.GPUPreviewBlockedByStack"
 msgid "CPU only (Recompute Normals)"
 msgstr "CPU のみ (法線の再計算)"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintPickTarget"
 msgid "Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 msgstr "メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintSelectModifier"
 msgid "Select a modifier in the stack."
 msgstr "スタックからモディファイアを選択してください。"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.HintTargetGone"
 msgid "The target object no longer exists."
 msgstr "対象のオブジェクトはもう存在しません。"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Mirror"
 msgid "Mirror"
 msgstr "ミラー"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.MoveRowDown"
 msgid "Move row down"
 msgstr "行を下へ移動"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.MoveRowUp"
 msgid "Move row up"
 msgstr "行を上へ移動"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Name"
 msgid "Name"
 msgstr "名前"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedDepth"
 msgid "Depth"
 msgstr "深さ"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedEmpty"
 msgid "Empty - add modifiers to group them."
 msgstr "空です。モディファイアを追加してグループにします。"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedStack"
 msgid "Nested Stack"
 msgstr "ネストされたスタック"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NestedUp"
 msgid "Up"
 msgstr "上へ"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.NoTarget"
 msgid "No target"
 msgstr "対象なし"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PlayPreviewTime"
 msgid "Play"
 msgstr "再生"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PointIndex"
 msgid "Point"
 msgstr "点"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PointPosition"
 msgid "Position"
 msgstr "位置"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.PreviewTime"
 msgid "Preview Time"
 msgstr "プレビュー時間"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.RecomputeNormals"
 msgid "Recompute Normals"
 msgstr "法線の再計算"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Redo"
 msgid "Redo"
 msgstr "やり直し"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReferenceNoMatch"
 msgid "No object has component:"
 msgstr "次のコンポーネントを持つオブジェクトがありません:"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReferenceNone"
 msgid "(None)"
 msgstr "(なし)"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ReloadStack"
 msgid "Reload Stack"
 msgstr "スタックを再読み込み"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.RemoveRow"
 msgid "Remove row"
 msgstr "行を削除"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ResetLattice"
 msgid "Reset Lattice"
 msgstr "ラティスをリセット"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ResetParams"
 msgid "Reset Parameters"
 msgstr "パラメーターをリセット"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Rotation"
 msgid "Rotation"
 msgstr "回転"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.SaveStack"
 msgid "Save Stack"
 msgstr "スタックを保存"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ShadedPreview"
 msgid "Shaded Preview"
 msgstr "シェーディングプレビュー"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.ShadedPreviewTooltip"
 msgid "Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 msgstr "スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.SpaceReference"
 msgid "Reference Object"
 msgstr "参照オブジェクト"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.Undo"
 msgid "Undo"
 msgstr "元に戻す"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.UseSelection"
 msgid "Use Selection"
 msgstr "選択を使用"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.UseSelectionForParam"
 msgid "Use Selection"
 msgstr "選択を使用"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.WarpExportPath"
 msgid "Warp File (.mfwarp)"
 msgstr "ワープファイル (.mfwarp)"
 
-#: Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp
+#: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.WorldSpace"
 msgid "World Space"
 msgstr "ワールド空間"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnActivity"
 msgid "Activity"
 msgstr "行動"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnPlace"
 msgid "Place"
 msgstr "場所"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnSource"
 msgid "Source"
 msgstr "出典"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnTime"
 msgid "Time"
 msgstr "時刻"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.ColumnTravel"
 msgid "Travel"
 msgstr "移動"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.EmptyHint"
 msgid "No schedule system is running. Start play with NPCs that have schedules."
 msgstr "スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.EmptyPlan"
 msgid "No plan for today"
 msgstr "今日の予定はありません"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.FollowClock"
 msgid "Follow game clock"
 msgstr "ゲーム時計に合わせる"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.GameTime"
 msgid "Game time"
 msgstr "ゲーム時刻"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.NpcListTitle"
 msgid "NPCs"
 msgstr "NPC"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.RawTimeline"
 msgid "Raw timeline"
 msgstr "生のタイムライン"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.SelectNpcHint"
 msgid "Select an NPC on the left"
 msgstr "左で NPC を選択してください"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.SystemIndex"
 msgid "Schedule system"
 msgstr "スケジュールシステム"
 
-#: Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp
+#: Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp
 msgctxt "EdSchedule.WhyNow"
 msgid "Why this activity now"
 msgstr "今この行動をする理由"

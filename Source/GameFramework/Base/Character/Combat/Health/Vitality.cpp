@@ -1,0 +1,412 @@
+#include "pch.h"
+
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 이번 걸음 중 지연이 끝난 뒤의 시간입니다(@p elapsed 는 이번 걸음을 더한 뒤의 값). */
+        float32 computeRegenTime( float32 elapsed, float32 delay, float32 deltaTime )
+        {
+            return MathUtil::clamp( elapsed - delay, 0.0f, deltaTime );
+        }
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    Vitality::Vitality()
+        : _settings{}
+        , _eventBuffer{}
+        , _health{ 0.0f }
+        , _shield{ 0.0f }
+        , _downedHealth{ 0.0f }
+        , _poise{ 0.0f }
+        , _sinceDamage{ 0.0f }
+        , _sincePoiseDamage{ 0.0f }
+        , _poiseBreak{}
+        , _invulnerable{}
+        , _reviveElapsed{ 0.0f }
+        , _reviveSpeedScale{ 1.0f }
+        , _reviverID{ -1 }
+        , _lastInstigatorID{ -1 }
+        , _downCount{ 0 }
+        , _state{ VitalityState::Alive }
+        , _bReviving{ SW_FALSE }
+        , _bDamageImmune{ SW_FALSE }
+    {
+        // 기본 설정은 선언된 범위 안이다(테스트 `VitalityDefaultSettingsAreInRange` 가 지킨다) — 검사하지 않고 바로 쓴다.
+        applySettings( VitalitySettings{} );
+    }
+
+    bool Vitality::initialize( const VitalitySettings& settings )
+    {
+        const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
+        if ( rangeError.empty() == false )
+        {
+            SW_LOG_ERROR( "Vitality: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        applySettings( settings );
+        return true;
+    }
+
+    void Vitality::reset()
+    {
+        applySettings( VitalitySettings( _settings ) );
+    }
+
+    void Vitality::applySettings( const VitalitySettings& settings )
+    {
+        _settings = settings;
+        _eventBuffer.clear();
+        _downCount = 0;
+        respawn();
+    }
+
+    void Vitality::respawn()
+    {
+        _state            = VitalityState::Alive;
+        _health           = _settings._maxHealth;
+        _shield           = _settings._maxShield;
+        _downedHealth     = 0.0f;
+        _poise            = _settings._poiseMax;
+        _sinceDamage      = 0.0f;
+        _sincePoiseDamage = 0.0f;
+        _poiseBreak.clear();
+        _invulnerable.clear();
+        _reviveElapsed    = 0.0f;
+        _reviveSpeedScale = 1.0f;
+        _reviverID        = -1;
+        _bReviving        = SW_FALSE;
+        _lastInstigatorID = -1;
+    }
+
+    void Vitality::setMaxHealth( float32 maxHealth, bool bFill )
+    {
+        if ( maxHealth <= 0.0f )
+            return;
+        _settings._maxHealth = maxHealth;
+        if ( isAlive() && bFill )
+        {
+            const float32 healed = maxHealth - _health;
+            _health              = maxHealth;
+            if ( healed > 0.0f )
+                pushEvent( VitalityEventType::Healed, healed, -1 );
+            return;
+        }
+        _health = MathUtil::min( _health, maxHealth );
+    }
+
+    VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
+    {
+        VitalityDamageResult result;
+        amount      = MathUtil::max( 0.0f, amount );
+        poiseDamage = MathUtil::max( 0.0f, poiseDamage );
+        if ( ignoresDamage() )
+        {
+            result._bIgnored = SW_TRUE;
+            return result;
+        }
+        _lastInstigatorID = instigatorID;
+        _sinceDamage      = 0.0f;
+
+        if ( _state == VitalityState::Downed )
+        {
+            // 기절 중 — 실드 · 경직은 없다. 출혈 체력을 깎고, 설정이면 부활을 끊는다.
+            result._healthDamage = MathUtil::min( amount, _downedHealth );
+            _downedHealth -= result._healthDamage;
+            if ( result._healthDamage > 0.0f )
+                pushEvent( VitalityEventType::Damaged, result._healthDamage, instigatorID );
+            const bool bReviveInterrupted = amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE;
+            if ( bReviveInterrupted )
+            {
+                pushEvent( VitalityEventType::ReviveInterrupted, 0.0f, instigatorID );
+                stopRevive();
+            }
+            if ( _downedHealth <= 0.0f && amount > 0.0f )
+            {
+                enterDead( instigatorID );
+                result._bDied = SW_TRUE;
+            }
+            return result;
+        }
+
+        // 실드가 먼저, 넘친 만큼 체력.
+        const bool bHadShield  = _shield > 0.0f;
+        result._shieldAbsorbed = MathUtil::min( amount, _shield );
+        _shield -= result._shieldAbsorbed;
+        result._healthDamage = MathUtil::min( amount - result._shieldAbsorbed, _health );
+        _health -= result._healthDamage;
+        if ( result._shieldAbsorbed + result._healthDamage > 0.0f )
+            pushEvent( VitalityEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
+        if ( bHadShield && _shield <= 0.0f )
+        {
+            _shield               = 0.0f;
+            result._bShieldBroken = SW_TRUE;
+            pushEvent( VitalityEventType::ShieldBroken, 0.0f, instigatorID );
+        }
+
+        // 경직 — 붕괴 중에는 더 쌓지 않는다(붕괴가 끝나면 가득 찬다).
+        const bool bPoiseDamageApplies = _settings._poiseMax > 0.0f && poiseDamage > 0.0f && isPoiseBroken() == false;
+        if ( bPoiseDamageApplies )
+        {
+            _sincePoiseDamage = 0.0f;
+            _poise            = MathUtil::max( 0.0f, _poise - poiseDamage );
+            if ( _poise <= 0.0f )
+            {
+                _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, 1.0e-6f ) );
+                result._bPoiseBroken = SW_TRUE;
+                pushEvent( VitalityEventType::PoiseBroken, poiseDamage, instigatorID );
+            }
+        }
+
+        if ( _health <= 0.0f && amount > 0.0f )
+        {
+            _health                   = 0.0f;
+            const bool bDownLimitLeft = _settings._maxDownCount == 0 || _downCount < _settings._maxDownCount;
+            const bool bEnterDowned   = _settings._bDownedEnabled == SW_TRUE && bDownLimitLeft && _settings._downedHealth > 0.0f;
+            if ( bEnterDowned )
+            {
+                enterDowned( instigatorID );
+                result._bDowned = SW_TRUE;
+            }
+            else
+            {
+                enterDead( instigatorID );
+                result._bDied = SW_TRUE;
+            }
+        }
+        return result;
+    }
+
+    float32 Vitality::heal( float32 amount )
+    {
+        if ( _state != VitalityState::Alive || amount <= 0.0f )
+            return 0.0f;
+        const float32 healed = MathUtil::min( amount, _settings._maxHealth - _health );
+        _health += healed;
+        if ( healed > 0.0f )
+            pushEvent( VitalityEventType::Healed, healed, -1 );
+        return healed;
+    }
+
+    float32 Vitality::addShield( float32 amount )
+    {
+        if ( _state != VitalityState::Alive || amount <= 0.0f )
+            return 0.0f;
+        const float32 added = MathUtil::min( amount, _settings._maxShield - _shield );
+        _shield += added;
+        return added;
+    }
+
+    void Vitality::update( float32 deltaTime )
+    {
+        if ( deltaTime <= 0.0f || _state == VitalityState::Dead )
+            return;
+        _invulnerable.update( deltaTime );
+
+        if ( _state == VitalityState::Downed )
+        {
+            if ( isReviving() )
+            {
+                // 살리는 동안은 출혈이 멈춘다.
+                _reviveElapsed += deltaTime * _reviveSpeedScale;
+                if ( _reviveElapsed >= _settings._reviveTime )
+                    finishRevive();
+                return;
+            }
+            _downedHealth = MathUtil::max( 0.0f, _downedHealth - _settings._bleedoutRate * deltaTime );
+            if ( _downedHealth <= 0.0f )
+                enterDead( _lastInstigatorID );
+            return;
+        }
+
+        _sinceDamage += deltaTime;
+        const float32 shieldRegenTime = computeRegenTime( _sinceDamage, _settings._shieldRegenDelay, deltaTime );
+        _shield                       = MathUtil::min( _settings._maxShield, _shield + _settings._shieldRegenRate * shieldRegenTime );
+        const float32 healthRegenTime = computeRegenTime( _sinceDamage, _settings._healthRegenDelay, deltaTime );
+        _health                       = MathUtil::min( _settings._maxHealth, _health + _settings._healthRegenRate * healthRegenTime );
+
+        if ( _settings._poiseMax <= 0.0f )
+            return;
+        if ( isPoiseBroken() )
+        {
+            if ( _poiseBreak.update( deltaTime ) )
+            {
+                _poise            = _settings._poiseMax;
+                _sincePoiseDamage = 0.0f;
+                pushEvent( VitalityEventType::PoiseRecovered, 0.0f, -1 );
+            }
+            return;
+        }
+        _sincePoiseDamage += deltaTime;
+        const float32 poiseRegenTime = computeRegenTime( _sincePoiseDamage, _settings._poiseRegenDelay, deltaTime );
+        _poise                       = MathUtil::min( _settings._poiseMax, _poise + _settings._poiseRegenRate * poiseRegenTime );
+    }
+
+    bool Vitality::startRevive( int32 reviverID, float32 speedScale )
+    {
+        if ( _state != VitalityState::Downed )
+            return false;
+        _reviveSpeedScale = MathUtil::max( 0.0f, speedScale );
+        _reviverID        = reviverID;
+        if ( isReviving() == false )
+        {
+            _bReviving = SW_TRUE;
+            pushEvent( VitalityEventType::ReviveStarted, 0.0f, reviverID );
+        }
+        if ( _settings._reviveTime <= 0.0f )
+            finishRevive();
+        return true;
+    }
+
+    void Vitality::stopRevive()
+    {
+        if ( isReviving() == false )
+            return;
+        _bReviving        = SW_FALSE;
+        _reviverID        = -1;
+        _reviveSpeedScale = 1.0f;
+        if ( _settings._bKeepReviveProgress == SW_FALSE )
+            _reviveElapsed = 0.0f;
+    }
+
+    void Vitality::setInvulnerable( float32 seconds )
+    {
+        _invulnerable.extendTo( seconds );
+    }
+
+    void Vitality::kill( int32 instigatorID )
+    {
+        if ( _state == VitalityState::Dead )
+            return;
+        enterDead( instigatorID );
+    }
+
+    void Vitality::drainEvents( vector<VitalityEvent>& outListEvent )
+    {
+        _eventBuffer.drainTo( outListEvent );
+    }
+
+    float32 Vitality::getHealthRatio() const
+    {
+        return _health / _settings._maxHealth;
+    }
+
+    float32 Vitality::getReviveProgress() const
+    {
+        if ( _settings._reviveTime <= 0.0f )
+            return _state == VitalityState::Downed ? 0.0f : 1.0f;
+        return MathUtil::saturate( _reviveElapsed / _settings._reviveTime );
+    }
+
+    void Vitality::enterDowned( int32 instigatorID )
+    {
+        _state        = VitalityState::Downed;
+        _health       = 0.0f;
+        _shield       = 0.0f;
+        _downedHealth = _settings._downedHealth;
+        _poiseBreak.clear();
+        _reviveElapsed = 0.0f;
+        _reviverID     = -1;
+        _bReviving     = SW_FALSE;
+        ++_downCount;
+        pushEvent( VitalityEventType::Downed, 0.0f, instigatorID );
+    }
+
+    void Vitality::enterDead( int32 instigatorID )
+    {
+        _state        = VitalityState::Dead;
+        _health       = 0.0f;
+        _shield       = 0.0f;
+        _downedHealth = 0.0f;
+        _poiseBreak.clear();
+        _reviverID = -1;
+        _bReviving = SW_FALSE;
+        pushEvent( VitalityEventType::Died, 0.0f, instigatorID );
+    }
+
+    void Vitality::finishRevive()
+    {
+        const int32 reviverID = _reviverID;
+        _state                = VitalityState::Alive;
+        _health               = _settings._maxHealth * _settings._reviveHealthRatio;
+        _shield               = 0.0f;
+        _downedHealth         = 0.0f;
+        _poise                = _settings._poiseMax;
+        _sinceDamage          = 0.0f;
+        _sincePoiseDamage     = 0.0f;
+        _reviveElapsed        = 0.0f;
+        _reviveSpeedScale     = 1.0f;
+        _reviverID            = -1;
+        _bReviving            = SW_FALSE;
+        _invulnerable.extendTo( _settings._invulnerableAfterRevive );
+        pushEvent( VitalityEventType::Revived, _health, reviverID );
+    }
+
+    void Vitality::pushEvent( VitalityEventType type, float32 amount, int32 instigatorID )
+    {
+        VitalityEvent event;
+        event._type         = type;
+        event._amount       = amount;
+        event._instigatorID = instigatorID;
+        _eventBuffer.push( event );
+    }
+
+    void Vitality::writeState( Archive& outArchive ) const
+    {
+        outArchive << _health;
+        outArchive << _shield;
+        outArchive << _downedHealth;
+        outArchive << _poise;
+        outArchive << _sinceDamage;
+        outArchive << _sincePoiseDamage;
+        StateArchiveUtil::writeCountdown( outArchive, _poiseBreak );
+        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        outArchive << _reviveElapsed;
+        outArchive << _reviveSpeedScale;
+        outArchive << _reviverID;
+        outArchive << _lastInstigatorID;
+        outArchive << _downCount;
+        outArchive << static_cast<uint8>( _state );
+        outArchive << _bReviving;
+    }
+
+    bool Vitality::readState( Archive& archive )
+    {
+        Vitality restored;
+        restored._settings      = _settings;
+        restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
+        uint8 state             = 0;
+        archive >> restored._health;
+        archive >> restored._shield;
+        archive >> restored._downedHealth;
+        archive >> restored._poise;
+        archive >> restored._sinceDamage;
+        archive >> restored._sincePoiseDamage;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._poiseBreak ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        archive >> restored._reviveElapsed;
+        archive >> restored._reviveSpeedScale;
+        archive >> restored._reviverID;
+        archive >> restored._lastInstigatorID;
+        archive >> restored._downCount;
+        archive >> state;
+        archive >> restored._bReviving;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._health && 0.0f <= restored._shield && 0 <= restored._downCount &&
+                            state <= static_cast<uint8>( VitalityState::Dead ) && restored._bReviving <= SW_TRUE;
+        if ( bValid == false )
+            return false;
+        restored._state = static_cast<VitalityState>( state );
+        *this           = std::move( restored );
+        return true;
+    }
+} // namespace sw

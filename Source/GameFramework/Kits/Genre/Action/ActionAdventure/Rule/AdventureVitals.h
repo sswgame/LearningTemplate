@@ -11,8 +11,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

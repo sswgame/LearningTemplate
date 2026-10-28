@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"

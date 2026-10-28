@@ -1,7 +1,7 @@
 /**
  * @file ShooterDirectorComponent.h
  * @brief Shooter3D 의 규칙을 돌리는 컴포넌트입니다. 페이싱 감독이 정한 스켈레톤 스폰, 쓰러뜨린 수, 막는 상자, 효과 풀(탄착, 총구 섬광, 탄도선), 로그를 맡습니다.
- * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 무기 규칙(연사, 탄창, 재장전, 퍼짐, 반동)은 기반 코드(`GameFramework/Base/Actor/Combat`)가,
+ * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 무기 규칙(연사, 탄창, 재장전, 퍼짐, 반동)은 기반 코드(`GameFramework/Base/Character/Combat`)가,
  *          이동, 사격, 체력은 플레이어 컴포넌트(`ShooterPlayerComponent`)가, 적 하나의 움직임은 `ShooterEnemyComponent` 가 맡는다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 쓰러진 적을 세고, 시체를 정리하고, 이번 프레임의 적 위치와 플레이어 위치를 기록한다.
@@ -19,9 +19,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AIDirector.h"
-#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
-#include "GameFramework/Base/Actor/AI/SpawnDirector.h"
+#include "GameFramework/Base/Character/AI/Director/AIDirector.h"
+#include "GameFramework/Base/Character/AI/Director/AIDirectorProfile.h"
+#include "GameFramework/Base/Character/AI/SpawnDirector.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 

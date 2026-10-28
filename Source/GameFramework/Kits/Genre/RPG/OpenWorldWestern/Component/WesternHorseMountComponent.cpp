@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"

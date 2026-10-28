@@ -1,6 +1,6 @@
 /**
  * @file EditorExports.h
- * @brief EditorModule SHARED DLL 의 SW_EDITOR_API 입니다(Dev 전용 — 확장 모듈 `GF_EditorPlugIn_*` · `SWGameEditor` 가 링크합니다).
+ * @brief EditorModule SHARED DLL 의 SW_EDITOR_API 입니다(Dev 전용 — 확장 모듈 `GF_EditorPlugin_*` · `SWGameEditor` 가 링크합니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"

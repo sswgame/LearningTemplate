@@ -22,11 +22,11 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/FrameData.h"
-#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
-#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Character/Combat/FrameData.h"
+#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Character/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"

@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 

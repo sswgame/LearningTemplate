@@ -12,7 +12,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Character/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"

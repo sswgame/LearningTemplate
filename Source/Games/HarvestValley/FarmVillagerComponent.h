@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Navigation/NavAgent.h"
+#include "GameFramework/Base/Character/Navigation/NavAgent.h"
 
 namespace sw
 {

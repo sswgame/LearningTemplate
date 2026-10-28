@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Character/Combat/LockOnSelector.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"

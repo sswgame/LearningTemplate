@@ -14,8 +14,8 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
 
-    #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
-    #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+    #include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
+    #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
     #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
     #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
     #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"

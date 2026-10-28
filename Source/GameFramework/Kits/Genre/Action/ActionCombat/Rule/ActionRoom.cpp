@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Combat/Damage/DamageMath.h"
+#include "GameFramework/Base/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"

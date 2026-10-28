@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"

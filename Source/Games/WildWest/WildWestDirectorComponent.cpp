@@ -12,8 +12,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"

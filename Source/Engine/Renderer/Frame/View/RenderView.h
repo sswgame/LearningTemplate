@@ -14,7 +14,7 @@
 #include "Engine/Object/Component/CameraDepthOfFieldValues.h"
 #include "Engine/Object/Component/CameraPostProcessValues.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Renderer/Light/ShadowSetup.h"
+#include "Engine/Renderer/Lighting/ShadowSetup.h"
 
 namespace sw
 {

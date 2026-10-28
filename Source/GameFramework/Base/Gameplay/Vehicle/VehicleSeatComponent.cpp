@@ -6,8 +6,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "GameFramework/Base/Actor/Control/ControlSystem.h"
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/ControlSystem.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
 
 namespace sw

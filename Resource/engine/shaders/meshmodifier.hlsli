@@ -1,7 +1,7 @@
 /**
  * meshmodifier.hlsli — 메시 모디파이어 스택의 GPU 실행기(uber). meshmorph.hlsl 이 include 한다.
  *
- * CPU 정본은 확장 모듈 `GF_EditorPlugIn_MeshModifiers`(Source/GameFramework/PlugIn/Editor/MeshModifiers)다. 여기 함수는 그 `deformPoint` 를
+ * CPU 정본은 확장 모듈 `GF_EditorPlugin_MeshModifiers`(Source/GameFramework/Plugin/Editor/MeshModifiers)다. 여기 함수는 그 `deformPoint` 를
  * 한 줄씩 옮긴 것이고, 결과가 CPU 와 같은지는 MeshModifierGPUTest.ProgramMatchesCPU 가 네 백엔드에서 그림으로 본다.
  * 모디파이어마다 셰이더를 만들지 않고 종류 번호 + 매개변수 목록을 차례로 건다(uber 셰이더 하나).
  *

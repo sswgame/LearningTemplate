@@ -11,7 +11,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/Vfx/VfxEffectDef.h"
 

@@ -23,8 +23,8 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Actor/Control/InputActionCheckUtil.h"
+#include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Character/Control/InputActionCheckUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 

@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BrCatalog.h"

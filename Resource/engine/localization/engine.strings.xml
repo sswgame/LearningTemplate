@@ -45,405 +45,405 @@
 		</entry>
 		<entry key="EdAbilityDebug.ColumnActive" source="Active">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnBase" source="Base">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnCooldown" source="Cooldown">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnCount" source="Count">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnCurrent" source="Current">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnName" source="Name">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnRemaining" source="Remaining">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnStacks" source="Stacks">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.ColumnTag" source="Tag">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.HintNoTarget" source="Select an object with an AbilitySystemComponent, or pick one above.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.HintPlayOnly"
 		       source="Runtime ability state exists only during play. Press Play to inspect it.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.Infinite" source="Infinite">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.NoComponentsInScene" source="No AbilitySystemComponent in the active scene">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.PickTarget" source="Pick an ability system...">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.SectionAbilities" source="Granted Abilities">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.SectionAttributes" source="Attributes">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.SectionEffects" source="Active Effects">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdAbilityDebug.SectionTags" source="Owned Tags">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.AddItem" source="Add Item">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.AddModifier" source="Add Modifier">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Axis" source="Axis">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Bake" source="Bake">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.CPUOnly" source="(CPU only)">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Center" source="Center">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ControlPoints" source="Control Points">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.CurveEditHint" source="Click to edit the curve">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.DuplicateRow" source="Duplicate row">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.EnterNestedStack" source="Edit this group's nested stack">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ExportWarp" source="Export as World Warp">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.FitBounds" source="Fit to Bounds">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.GPUPreviewBlockedBy" source="CPU only:">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.GPUPreviewBlockedByStack" source="CPU only (Recompute Normals)">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.HintPickTarget"
 		       source="Select an object whose mesh component uses a .mesh asset, then press Use Selection.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.HintSelectModifier" source="Select a modifier in the stack.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.HintTargetGone" source="The target object no longer exists.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Mirror" source="Mirror">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.MoveRowDown" source="Move row down">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.MoveRowUp" source="Move row up">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Name" source="Name">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.NestedDepth" source="Depth">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.NestedEmpty" source="Empty - add modifiers to group them.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.NestedStack" source="Nested Stack">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.NestedUp" source="Up">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.NoTarget" source="No target">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.PlayPreviewTime" source="Play">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.PointIndex" source="Point">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.PointPosition" source="Position">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.PreviewTime" source="Preview Time">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.RecomputeNormals" source="Recompute Normals">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Redo" source="Redo">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ReferenceNoMatch" source="No object has component:">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ReferenceNone" source="(None)">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ReloadStack" source="Reload Stack">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.RemoveRow" source="Remove row">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ResetLattice" source="Reset Lattice">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ResetParams" source="Reset Parameters">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Rotation" source="Rotation">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.SaveStack" source="Save Stack">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ShadedPreview" source="Shaded Preview">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.ShadedPreviewTooltip"
 		       source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.SpaceReference" source="Reference Object">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.Undo" source="Undo">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.UseSelection" source="Use Selection">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.UseSelectionForParam" source="Use Selection">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.WarpExportPath" source="Warp File (.mfwarp)">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdMeshModifiers.WorldSpace" source="World Space">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnActivity" source="Activity">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnPlace" source="Place">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnSource" source="Source">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnTime" source="Time">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnTravel" source="Travel">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.EmptyHint" source="No schedule system is running. Start play with NPCs that have schedules.">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.EmptyPlan" source="No plan for today">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.FollowClock" source="Follow game clock">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.GameTime" source="Game time">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.NpcListTitle" source="NPCs">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.RawTimeline" source="Raw timeline">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.SelectNpcHint" source="Select an NPC on the left">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.SystemIndex" source="Schedule system">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.WhyNow" source="Why this activity now">
 			<origins>
-				<item>Source/GameFramework/PlugIn/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/Base/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Keep" source="Keep" context="TextWidget._text">

@@ -1,0 +1,25 @@
+{
+    "_name": "GF_EditorPlugin_MeshModifiers",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "메시 모디파이어 스택 에디터 확장 — 휘기 · 비틀기 · 격자(FFD) 같은 변형을 순서대로 쌓아 미리 보고, 메시 옆 사이드카(.modifiers.json)에 저장하고, 새 .mesh 로 굽는다",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

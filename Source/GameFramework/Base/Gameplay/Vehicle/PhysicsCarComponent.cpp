@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/WheeledVehicleComponent.h"
 
-#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 
 namespace sw
 {

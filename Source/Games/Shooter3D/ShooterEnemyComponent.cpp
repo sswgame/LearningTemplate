@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 

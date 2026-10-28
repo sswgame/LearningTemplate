@@ -20,8 +20,8 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/BehaviorTreeAsset.h"
-#include "GameFramework/Base/Actor/AI/IBehaviorTreeDebugSource.h"
+#include "GameFramework/Base/Character/AI/BehaviorTreeAsset.h"
+#include "GameFramework/Base/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"

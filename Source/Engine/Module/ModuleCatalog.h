@@ -32,7 +32,7 @@ namespace sw
         Game,            ///< 게임 모듈(`SWGame`)이며 프로젝트다
         Editor,          ///< 에디터 모듈(Dev 전용)
         RHI,             ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
-        EditorExtension, ///< 에디터 확장(`GF_EditorPlugIn_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
+        EditorExtension, ///< 에디터 확장(`GF_EditorPlugin_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
     };
 
     /** @brief 모듈이 도는 플랫폼 비트입니다(매니페스트 `_listPlatform` 의 낱말이 열거자 이름이다). */

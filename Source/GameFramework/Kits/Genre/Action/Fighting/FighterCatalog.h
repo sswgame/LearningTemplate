@@ -15,8 +15,8 @@
 #include "Engine/Asset/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/FrameData.h"
-#include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
+#include "GameFramework/Base/Character/Combat/FrameData.h"
+#include "GameFramework/Base/Character/Input/InputCommandBuffer.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 

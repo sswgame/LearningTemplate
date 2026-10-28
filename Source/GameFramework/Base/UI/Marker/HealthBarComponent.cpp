@@ -11,7 +11,7 @@
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Base/Character/Combat/Health/HealthSourceComponent.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Actor/Combat/Damage/DamageMath.h"
+#include "GameFramework/Base/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"

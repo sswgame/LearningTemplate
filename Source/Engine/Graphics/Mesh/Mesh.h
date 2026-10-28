@@ -226,7 +226,7 @@ namespace sw
 
         /**
          * @brief 모프 컴퓨트가 기본 물결 대신 실행할 변형 프로그램(float4 목록)을 넣습니다. 빈 목록이면 프로그램을 뗍니다. 내용 번호는 바뀌지 않습니다.
-         * @details 메시 모디파이어 미리보기(`GF_EditorPlugIn_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 기준이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
+         * @details 메시 모디파이어 미리보기(`GF_EditorPlugin_MeshModifiers`)가 쓴다 — 모양은 `meshmodifier.hlsli` 머리 주석이 기준이다. GPU 모프(`setGPUMorphEnabled`)가 켜진 메시에만 걸린다.
          *          게임 스레드가 아무 때나 바꾸고 렌더 스레드는 프레임마다 사본을 잡아 읽으므로(잠금) 정점 버퍼를 다시 만들지 않고 매개변수만 바꿀 수 있다.
          *          목록은 엔진 안에서 복사해 든다 — 넘긴 쪽(확장 모듈)이 내려가도 소멸 코드가 엔진에 남는다.
          */

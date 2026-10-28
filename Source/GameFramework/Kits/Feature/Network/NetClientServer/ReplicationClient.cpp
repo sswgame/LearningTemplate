@@ -8,7 +8,7 @@
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw

@@ -9,8 +9,8 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Renderer/Light/GPULightBuffer.h"
-#include "Engine/Renderer/Light/ShadowSetup.h"
+#include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw

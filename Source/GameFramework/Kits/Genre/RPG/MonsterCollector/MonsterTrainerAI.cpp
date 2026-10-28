@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterTrainerAI.h"
 
-#include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
+#include "GameFramework/Base/Character/Combat/Damage/ElementChart.h"
 
 namespace sw
 {

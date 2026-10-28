@@ -13,8 +13,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/SpawnDirector.h"
-#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Character/AI/SpawnDirector.h"
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/GameFrameworkExports.h"

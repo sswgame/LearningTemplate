@@ -11,7 +11,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
+#include "GameFramework/Base/Character/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"

@@ -7,7 +7,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
+#include "GameFramework/Base/Character/Control/Controller/AIControllerComponent.h"
 
 namespace sw
 {

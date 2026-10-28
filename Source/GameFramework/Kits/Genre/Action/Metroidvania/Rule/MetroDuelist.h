@@ -12,8 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

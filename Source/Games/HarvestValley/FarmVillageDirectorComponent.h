@@ -19,13 +19,13 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
-#include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
-#include "GameFramework/Base/Actor/Navigation/NavAgent.h"
-#include "GameFramework/Base/Actor/Navigation/NavGrid.h"
+#include "GameFramework/Base/Character/AI/Schedule/ScheduleCatalog.h"
+#include "GameFramework/Base/Character/AI/Schedule/SchedulePathing.h"
+#include "GameFramework/Base/Character/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Base/Character/AI/Schedule/ScheduleSystem.h"
+#include "GameFramework/Base/Character/Navigation/GridPathfinder.h"
+#include "GameFramework/Base/Character/Navigation/NavAgent.h"
+#include "GameFramework/Base/Character/Navigation/NavGrid.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 
 namespace sw

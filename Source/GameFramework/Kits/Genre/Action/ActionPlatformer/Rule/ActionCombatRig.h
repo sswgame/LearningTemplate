@@ -14,8 +14,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Actor/Combat/FrameData.h"
-#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Character/Combat/FrameData.h"
+#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

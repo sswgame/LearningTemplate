@@ -16,8 +16,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/FrameData.h"
-#include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
+#include "GameFramework/Base/Character/Combat/FrameData.h"
+#include "GameFramework/Base/Character/Input/InputCommandBuffer.h"
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"

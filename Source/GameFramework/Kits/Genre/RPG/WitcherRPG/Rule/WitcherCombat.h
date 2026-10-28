@@ -11,7 +11,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 

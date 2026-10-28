@@ -4,7 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 

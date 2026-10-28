@@ -258,7 +258,7 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		return()
 	endif()
 	file(GLOB_RECURSE listKitSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
-	# 키트의 에디터 확장은 PlugIn/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugIn_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
+	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
 	list(FILTER listKitSource EXCLUDE REGEX "/Editor/")
 	sw_addModuleLibrary(${KIT_NAME}
 		KIND kit
@@ -378,7 +378,7 @@ function(sw_addGameModule MODULE_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 에디터 확장 모듈(GF_EditorPlugIn_<이름> · SWGameEditor) — Dev 전용 SHARED. EditorModule 을 링크하고(언리얼 <X>Editor 모듈이 UnrealEd 를 링크하는 것과 같다),
+# 에디터 확장 모듈(GF_EditorPlugin_<이름> · SWGameEditor) — Dev 전용 SHARED. EditorModule 을 링크하고(언리얼 <X>Editor 모듈이 UnrealEd 를 링크하는 것과 같다),
 # 매니페스트의 의존 가운데 키트 · GameFramework 를 링크한다(목록을 CMake 에 다시 적지 않는다 — 매니페스트가 원본). ImGui 결속 소스를 만들어 넣는다
 # (손으로 빠뜨릴 수 없게 — `cmake/Engine/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트)도 일반 import 다(모듈 호스트가 이름을 바꾼다).
 # ------------------------------------------------------------------------------

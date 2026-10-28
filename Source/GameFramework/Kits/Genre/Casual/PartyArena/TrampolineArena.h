@@ -23,7 +23,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Character/Input/TimingJudge.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
