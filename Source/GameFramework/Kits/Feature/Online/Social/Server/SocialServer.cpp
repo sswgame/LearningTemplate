@@ -8,8 +8,8 @@
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
-#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
 
 namespace sw
 {

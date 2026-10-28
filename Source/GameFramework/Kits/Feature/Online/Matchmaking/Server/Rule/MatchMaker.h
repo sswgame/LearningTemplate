@@ -18,7 +18,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingTypes.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 
 namespace sw
 {

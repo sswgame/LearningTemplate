@@ -9,7 +9,7 @@
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
 
 namespace sw
 {

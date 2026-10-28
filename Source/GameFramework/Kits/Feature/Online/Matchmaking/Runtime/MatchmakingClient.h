@@ -1,0 +1,95 @@
+/**
+ * @file MatchmakingClient.h
+ * @brief 매칭 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 파티, 로비, 대기열 요청을 보내고 알림(파티, 초대, 로비, 매칭 결과)을 모아 둡니다.
+ * @details - 요청마다 완료 델리게이트를 `tick` 스레드에서 정확히 한 번 부른다. 업무 결과는 `_reply._result` 에 있고, 전송 오류와 공통 오류는 `_errorCode` 에 있으며 이때 결과는 `fromErrorCode` 로 구한다.
+ *          - 매칭 결과가 `Found` 이면 게임은 계정 클라이언트로 그 서버(`_serverID`, 16진)의 접속 티켓을 받아 `_address:_port` 에 UDP 로 접속한다.
+ *          - 마지막으로 받은 파티 스냅샷(알림이나 응답)을 보관한다. 멤버가 비어 있으면 파티가 없는 것이다.
+ *
+ *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트, 경제와 서버 디렉터리 클라이언트와 같은 구조이다.
+ */
+#pragma once
+#include "Core/Common/Types.h"
+#include "Core/Container/DrainGate.h"
+#include "Core/Container/EventBuffer.h"
+#include "Core/Container/vector.h"
+
+#include "GameFramework/Base/Online/Service/OnlineKitClient.h"
+#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
+
+namespace sw
+{
+    /**
+     * @class MatchmakingClient
+     * @brief 연결 하나의 매칭 클라이언트입니다.
+     */
+    class SW_KIT_API MatchmakingClient final : public OnlineKitClient<MatchmakingProtocol, MatchmakingReply>
+    {
+    public:
+        MatchmakingClient();
+
+        uint64 createParty( const ReplyDelegate& onReply );
+        uint64 inviteToParty( AccountID targetID, const ReplyDelegate& onReply );
+        uint64 acceptPartyInvite( uint64 partyID, const ReplyDelegate& onReply );
+        uint64 leaveParty( const ReplyDelegate& onReply );
+        uint64 kickFromParty( AccountID targetID, const ReplyDelegate& onReply );
+        /** @brief @p request 의 이름, 모드, 정원, 설정으로 로비를 만듭니다. */
+        uint64 createLobby( const LobbySnapshot& request, const ReplyDelegate& onReply );
+        uint64 listLobbies( string_view modeID, const ReplyDelegate& onReply );
+        uint64 joinLobby( uint64 lobbyID, const ReplyDelegate& onReply );
+        uint64 leaveLobby( uint64 lobbyID, const ReplyDelegate& onReply );
+        uint64 setLobbyReady( uint64 lobbyID, bool bReady, const ReplyDelegate& onReply );
+        uint64 startLobby( uint64 lobbyID, const ReplyDelegate& onReply );
+        /** @brief 대기열에 줄을 섭니다. 파티장이면 파티 전체가 섭니다. 결과는 매칭 결과 알림으로 옵니다. */
+        uint64 joinQueue( string_view modeID, string_view region, const ReplyDelegate& onReply );
+        uint64 leaveQueue( const ReplyDelegate& onReply );
+
+        /**
+         * @brief 파티 · 초대 · 로비 · 매칭 결과 버퍼를 꺼낼 권한을 @p outLease 에 받습니다.
+         * @details 네 버퍼가 한 표를 씁니다(한 클라이언트의 알림은 한 모델이 받는다). 클라이언트마다 한 곳만 받을 수 있어 이미 다른 표가 있으면 false 입니다.
+         */
+        [[nodiscard]] bool claimNotifications( DrainLease& outLease ) { return _notificationGate.claim( outLease ); }
+        /** @brief 아래 `drain*` 는 모두 `claimNotifications` 로 받은 표를 넘겨야 합니다(아니면 어서션이고 꺼내지 않습니다). */
+        void drainPartyUpdates( const DrainLease& lease, vector<PartySnapshot>& outListParty )
+        {
+            if ( isDrainLeaseHeld( lease ) )
+                _partyBuffer.drainTo( outListParty );
+        }
+        void drainInvites( const DrainLease& lease, vector<PartyInvite>& outListInvite )
+        {
+            if ( isDrainLeaseHeld( lease ) )
+                _inviteBuffer.drainTo( outListInvite );
+        }
+        void drainLobbyUpdates( const DrainLease& lease, vector<LobbySnapshot>& outListLobby )
+        {
+            if ( isDrainLeaseHeld( lease ) )
+                _lobbyBuffer.drainTo( outListLobby );
+        }
+        void drainMatchResults( const DrainLease& lease, vector<MatchAssignment>& outListAssignment )
+        {
+            if ( isDrainLeaseHeld( lease ) )
+                _matchBuffer.drainTo( outListAssignment );
+        }
+        /** @brief 마지막으로 받은 내 파티입니다. 멤버가 비어 있으면 파티가 없는 것입니다. */
+        const PartySnapshot& getParty() const { return _party; }
+
+        // IOnlineClientService
+        const OnlineProtocolEntry& getProtocol() const override { return MatchmakingProtocol::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override;
+
+    private:
+        bool isDrainLeaseHeld( const DrainLease& lease ) const
+        {
+            SW_ASSERT( _notificationGate.isHeldBy( lease ) );
+            return _notificationGate.isHeldBy( lease );
+        }
+
+        DrainGate                    _notificationGate;
+        EventBuffer<PartySnapshot>   _partyBuffer;
+        EventBuffer<PartyInvite>     _inviteBuffer;
+        EventBuffer<LobbySnapshot>   _lobbyBuffer;
+        EventBuffer<MatchAssignment> _matchBuffer;
+        PartySnapshot                _party;
+    };
+} // namespace sw

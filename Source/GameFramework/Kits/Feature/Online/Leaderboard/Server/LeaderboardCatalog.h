@@ -21,7 +21,7 @@
 
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardTypes.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
 
 namespace sw
 {

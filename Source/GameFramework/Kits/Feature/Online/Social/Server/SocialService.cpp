@@ -11,8 +11,8 @@
 #include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
-#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
 
 #include <algorithm>
 

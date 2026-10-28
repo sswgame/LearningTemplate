@@ -21,8 +21,8 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/CacheRecordUpdater.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
 
 namespace sw
 {

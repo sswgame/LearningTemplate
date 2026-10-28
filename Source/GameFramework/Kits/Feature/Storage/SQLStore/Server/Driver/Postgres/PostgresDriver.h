@@ -10,7 +10,7 @@
  */
 #pragma once
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 
 namespace sw
 {

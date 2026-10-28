@@ -17,8 +17,8 @@
 
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeTypes.h"
 
 namespace sw
 {

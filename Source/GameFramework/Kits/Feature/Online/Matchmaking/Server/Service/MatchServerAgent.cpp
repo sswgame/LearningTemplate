@@ -4,8 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"
 
 namespace sw
 {

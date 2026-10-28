@@ -22,7 +22,7 @@
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 
 namespace sw
 {

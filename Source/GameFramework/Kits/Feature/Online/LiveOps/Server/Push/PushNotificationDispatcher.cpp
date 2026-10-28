@@ -8,7 +8,7 @@
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsProtocol.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 
 #include <algorithm>
 

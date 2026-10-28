@@ -25,8 +25,8 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 
 namespace sw
 {

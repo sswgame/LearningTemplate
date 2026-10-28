@@ -19,8 +19,8 @@
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
 
 namespace sw
 {

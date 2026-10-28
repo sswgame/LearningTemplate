@@ -1,0 +1,250 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
+
+#include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
+
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
+
+#include <algorithm>
+
+namespace sw
+{
+    SW_LOG_CALLER( "SQLConnectionPool" );
+
+    namespace
+    {
+        struct SQLConnectionPoolInternal
+        {
+            static constexpr int64 kFirstRetryDelayMs = 100;
+            static constexpr int64 kMaxRetryDelayMs   = 5000;
+
+            /** @brief 닫힌 연결입니다. 모든 호출이 ConnectionLost 를 반환하며, 다시 여는 중이거나 종료 중인 작업에 씁니다. */
+            class ClosedConnection final : public ISQLConnection
+            {
+            public:
+                SQLResult execute( string_view sql, const SQLValue* pParam, int32 paramCount, SQLRowSet* pOutRowSet ) override
+                {
+                    (void)sql;
+                    (void)pParam;
+                    (void)paramCount;
+                    if ( pOutRowSet != nullptr )
+                        pOutRowSet->clear();
+                    return SQLResult::ConnectionLost;
+                }
+
+                SQLResult executeScript( string_view sql ) override
+                {
+                    (void)sql;
+                    return SQLResult::ConnectionLost;
+                }
+
+                const SQLDialect& getDialect() const override
+                {
+                    static const SQLDialect s_dialect{};
+                    return s_dialect;
+                }
+
+                const utf8* getLastErrorText() const override { return "connection is closed"; }
+                bool        isAlive() const override { return false; }
+            };
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SQLConnectionPool::SQLConnectionPool()
+        : _listWorker{}
+        , _listQueuedJob{}
+        , _listCompleted{}
+        , _settings{}
+        , _mutex{}
+        , _jobReady{}
+        , _pDriver{}
+        , _pendingCount{ 0 }
+        , _bStopping{ SW_FALSE }
+    {
+    }
+
+    SQLConnectionPool::~SQLConnectionPool()
+    {
+        shutdown();
+        // 회수하지 않은 작업은 complete 없이 버린다. 맡긴 서비스가 먼저 종료되어 complete 가 가리킬 대상이 없기 때문이며, 메모리 구현도 같다.
+        ScopedLock<mutex> lock{ _mutex };
+        _listCompleted.clear();
+    }
+
+    bool SQLConnectionPool::initialize( ISQLDriver* pDriver, const SQLConnectionPoolConfig& settings, string& outError )
+    {
+        if ( pDriver == nullptr )
+        {
+            outError = "SQL connection pool has no driver";
+            return false;
+        }
+        // 연결 수는 설정이 정한다 — 범위 밖 값을 조용히 1로 맞추면 설정을 틀리게 준 쪽이 모른다(폴백 금지).
+        if ( settings._workerCount < 1 )
+        {
+            outError = "SQL connection pool needs _workerCount >= 1";
+            return false;
+        }
+        unique_ptr<ISQLConnection> probe = pDriver->openConnection( settings._connection, settings._secret, outError );
+        if ( probe == nullptr )
+            return false;
+        probe.reset();
+        _pDriver.set( pDriver );
+        _settings.set( settings );
+        {
+            // 일꾼 대기 술어가 잠금 아래에서 읽는다 — 시작 전 초기화도 잠금 아래에서 한다.
+            ScopedLock<mutex> lock{ _mutex };
+            _bStopping = SW_FALSE;
+        }
+        _listWorker.reserve( static_cast<size_t>( settings._workerCount ) );
+        for ( int32 workerIndex = 0; workerIndex < settings._workerCount; ++workerIndex )
+        {
+            _listWorker.emplace_back( &SQLConnectionPool::runWorker, this, workerIndex );
+        }
+        return true;
+    }
+
+    void SQLConnectionPool::shutdown()
+    {
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _bStopping = SW_TRUE;
+        }
+        _jobReady.notify_all();
+        for ( sw::thread& worker : _listWorker )
+        {
+            if ( worker.joinable() )
+                worker.join();
+        }
+        _listWorker.clear();
+        // 워커가 없거나(초기화 전) 남긴 작업은 닫힌 연결로 실행해 완료 큐에 넣는다.
+        SQLConnectionPoolInternal::ClosedConnection closed;
+        for ( ;; )
+        {
+            unique_ptr<ISQLJob> job;
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                if ( _listQueuedJob.empty() )
+                    break;
+                job = std::move( _listQueuedJob.front() );
+                _listQueuedJob.pop_front();
+            }
+            job->cancel(); // 종료 때문에 실행하지 못한 일이다 — 연결 고장과 다르다
+            job->run( closed );
+            ScopedLock<mutex> lock{ _mutex };
+            _listCompleted.push_back( std::move( job ) );
+        }
+        _settings.reset(); // 비밀값까지 비운다 — 다시 initialize 할 수 있다
+        _pDriver.reset();
+    }
+
+    void SQLConnectionPool::submit( unique_ptr<ISQLJob> job )
+    {
+        bool bStopping  = false;
+        bool bCancelled = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            ++_pendingCount;
+            bCancelled = _bStopping == SW_TRUE; // 시작하지 않은 풀(워커 없음)은 취소가 아니라 쓸 수 없는 풀이다
+            bStopping  = bCancelled || _listWorker.empty();
+            if ( bStopping == false )
+                _listQueuedJob.push_back( std::move( job ) );
+        }
+        if ( bStopping == false )
+        {
+            _jobReady.notify_one();
+            return;
+        }
+        SQLConnectionPoolInternal::ClosedConnection closed;
+        if ( bCancelled )
+            job->cancel();
+        job->run( closed );
+        ScopedLock<mutex> lock{ _mutex };
+        _listCompleted.push_back( std::move( job ) );
+    }
+
+    int32 SQLConnectionPool::pollCompletions()
+    {
+        // complete 안에서 새 작업을 맡길 수 있다. 그래서 꺼낸 목록을 락 밖에서 순회한다. 메모리 구현과 같은 순서 규약이다.
+        vector<unique_ptr<ISQLJob>> listReady;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            listReady.swap( _listCompleted );
+            _pendingCount -= static_cast<int32>( listReady.size() );
+        }
+        for ( unique_ptr<ISQLJob>& job : listReady )
+        {
+            job->complete();
+        }
+        return static_cast<int32>( listReady.size() );
+    }
+
+    int32 SQLConnectionPool::getPendingCount() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _pendingCount;
+    }
+
+    void SQLConnectionPool::runWorker( int32 workerIndex )
+    {
+        StringBuilder<constant::kMaxBuffer32> threadName;
+        threadName.appendFormat( "SQLWorker%#", workerIndex );
+        ThreadName::setCurrentThreadName( threadName.c_str() );
+
+        SQLConnectionPoolInternal::ClosedConnection closed;
+        string                                      error;
+        unique_ptr<ISQLConnection>                  connection   = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
+        int64                                       retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
+        Deadline                                    retryAt      = Deadline::afterMilliseconds( 0 );
+        if ( connection == nullptr )
+            SW_LOG_WARNING( "SQL worker %# could not connect: %#", workerIndex, error.c_str() );
+        for ( ;; )
+        {
+            unique_ptr<ISQLJob> job;
+            bool                bStopping = false;
+            {
+                UniqueLock<mutex> lock{ _mutex };
+                _jobReady.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
+                { return _bStopping == SW_TRUE || _listQueuedJob.empty() == false; } );
+                if ( _listQueuedJob.empty() )
+                    return; // 종료 중이고 남은 작업이 없다
+                job = std::move( _listQueuedJob.front() );
+                _listQueuedJob.pop_front();
+                bStopping = _bStopping == SW_TRUE;
+            }
+            const bool bNeedsReconnect  = connection == nullptr || connection->isAlive() == false;
+            const bool bShouldReconnect = bNeedsReconnect && bStopping == false && retryAt.isExpired();
+            if ( bShouldReconnect )
+            {
+                connection = _pDriver->openConnection( _settings->_connection, _settings->_secret, error );
+                if ( connection == nullptr )
+                {
+                    SW_LOG_WARNING( "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
+                    retryDelayMs = std::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
+                    retryAt      = Deadline::afterMilliseconds( retryDelayMs );
+                }
+                else
+                {
+                    retryDelayMs = SQLConnectionPoolInternal::kFirstRetryDelayMs;
+                }
+            }
+            const bool bUsable = connection != nullptr && connection->isAlive() && bStopping == false;
+            if ( bUsable )
+                job->run( *connection );
+            else
+            {
+                if ( bStopping )
+                    job->cancel(); // 종료 중이라 닫힌 연결로 끝내는 일은 취소다(재연결 중인 일은 연결 고장으로 남는다)
+                job->run( closed );
+            }
+            ScopedLock<mutex> lock{ _mutex };
+            _listCompleted.push_back( std::move( job ) );
+        }
+    }
+} // namespace sw

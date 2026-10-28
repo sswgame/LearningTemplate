@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeTypes.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 
 namespace sw
 {

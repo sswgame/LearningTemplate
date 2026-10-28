@@ -19,7 +19,7 @@
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 
 namespace sw
 {

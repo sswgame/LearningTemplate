@@ -7,7 +7,7 @@
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
-#include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
 
 namespace sw
 {

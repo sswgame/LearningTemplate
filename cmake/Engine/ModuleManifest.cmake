@@ -530,7 +530,7 @@ function(sw_sortModulesByDependency LIST_VAR)
 endfunction()
 
 # 종류가 KIND 인 모듈의 폴더를 의존 순서로(동점은 이름 순) OUT_VAR 에 — 꺼진 것도 든다(그 폴더의 팩토리가 "짓지 않는다" 로 적고 건너뛴다).
-# 의존 순서인 이유: 서버 · 클라이언트 키트가 같은 기능의 공유 키트 타깃을 링크한다(`sw_linkSharedKit` — 그 타깃이 먼저 있어야 한다).
+# 의존 순서인 이유: 서버 · 클라이언트 키트가 같은 기능의 런타임 키트 타깃을 링크한다(`sw_linkRuntimeKit` — 그 타깃이 먼저 있어야 한다).
 function(sw_getModuleDirectoriesOfKind KIND OUT_VAR)
 	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
 	set(swOfKind "")

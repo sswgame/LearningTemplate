@@ -18,7 +18,7 @@
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLConnectionPool.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 
 namespace sw
 {

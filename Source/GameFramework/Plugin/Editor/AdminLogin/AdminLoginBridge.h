@@ -16,7 +16,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountGMLogin.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountGMLogin.h"
 
 namespace sw
 {

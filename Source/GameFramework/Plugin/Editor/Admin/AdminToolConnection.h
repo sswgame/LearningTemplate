@@ -18,7 +18,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminClient.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminClient.h"
 
 namespace sw::editor
 {

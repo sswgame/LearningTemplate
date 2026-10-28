@@ -7,7 +7,7 @@
  *          `SW_KIT_API` 는 키트 DLL 자기 헤더(`GameFramework/Kits`)만 쓴다. 키트 TU 는 `SW_GF_EXPORTS` 를 정의하지 않고 `SW_KIT_EXPORTS` 를 정의하므로
  *          include 한 Base 선언은 dllimport 로 남는다 — Base 클래스의 암시적 생성자 · 소멸자를 키트 DLL 이 다시 내보내지 않는다(옛 C-3).
  *          `SW_KIT_SERVER_API` 는 서버 키트(`GF_Server_<X>`, 폴더 `Server/`)의 자기 헤더만 쓴다. 서버 키트 TU 는 `SW_KIT_SERVER_EXPORTS` 만 정의하므로 같이 include 한
- *          공유 키트 헤더의 `SW_KIT_API` 는 dllimport 로 남는다 — 서버 키트 DLL 이 공유 키트 클래스를 다시 내보내지 않는다(C-3).
+ *          런타임 키트 헤더의 `SW_KIT_API` 는 dllimport 로 남는다 — 서버 키트 DLL 이 런타임 키트 클래스를 다시 내보내지 않는다(C-3).
  *          모든 키트 TU 가 `SW_KIT_IMPORTS` 를 정의한다(PCH 와 같은 명령줄 정의) — 자기 내보내기 매크로가 먼저 읽힌다.
  *          그 밖의 플랫폼: default visibility.
  */

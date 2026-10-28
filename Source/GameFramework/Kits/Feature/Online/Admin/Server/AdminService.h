@@ -19,7 +19,7 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 
 namespace sw
 {

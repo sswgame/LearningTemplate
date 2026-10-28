@@ -30,7 +30,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
 
 namespace sw
 {

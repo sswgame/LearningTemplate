@@ -9,7 +9,7 @@
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
 
 namespace sw
 {

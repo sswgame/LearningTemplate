@@ -6,7 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatProtocol.h"
 
 namespace sw
 {

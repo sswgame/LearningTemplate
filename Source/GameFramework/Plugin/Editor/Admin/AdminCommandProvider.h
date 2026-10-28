@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminClient.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminClient.h"
 
 namespace sw::editor
 {

@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 
 namespace sw
 {

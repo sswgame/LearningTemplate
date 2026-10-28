@@ -9,7 +9,7 @@
 
 #include "Editor/Common/GUI/IEditorPanel.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 
 namespace sw::editor
 {

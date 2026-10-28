@@ -22,8 +22,8 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxProtocol.h"
 
 namespace sw
 {

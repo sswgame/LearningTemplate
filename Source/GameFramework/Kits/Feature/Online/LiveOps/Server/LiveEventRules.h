@@ -8,7 +8,7 @@
 #include "Core/Common/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 
 namespace sw
 {

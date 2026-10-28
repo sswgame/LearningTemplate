@@ -4,9 +4,9 @@
 
 #include "Core/Log/LogContext.h"
 
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQLMigrationRunner.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
 
 namespace sw
 {

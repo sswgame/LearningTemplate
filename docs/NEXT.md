@@ -50,6 +50,6 @@
 |---|---|
 | A3 | 낮은 층의 파일 읽기: Serialization · Config · Telemetry · CoreServices · Profiling → `AssetIO` · `AssetPaths` · `AssetID`(약 24 줄). 언리얼 `IPlatformFile` 처럼 낮은 층에 읽기 인터페이스, Asset 이 구현 등록. `Object → Animation/Sprite` · `Graphics → Physics`(MeshCache) · `Telemetry → UserSettings` · `CoreServices → RHIRenderResource` · `Reflection → Localization`. 목표: 기준선 0 |
 | B | 층을 따라 Engine 을 링크 단위로(Foundation · RHI · World · 기능별 · Renderer). 서버의 렌더러 빼기가 모듈 하나 빼기로 |
-| C | 키트 폴더에 에디터 확장 모으기(`GameFramework/Plugin/Editor/<X>` → 키트 `Editor/`, `sw_addKit` 이 이미 `Editor/CMakeLists.txt` 를 부른다). 온라인 키트는 `Shared/` · `Server/` 구조라 `Editor/` 자리를 먼저 정한다 |
+| C | 키트 폴더에 에디터 확장 모으기(`GameFramework/Plugin/Editor/<X>` → 키트 `Editor/`, `sw_addKit` 이 이미 `Editor/CMakeLists.txt` 를 부른다). 온라인 키트는 `Runtime/` · `Server/` 옆에 `Editor/` 를 둔다 |
 | 남은 처리기 인터페이스 | 프로토콜 인터페이스(`INetMessageHandler` · `IStreamHandler` · `IStreamEndpointListener`)는 규칙상 둔다. `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보 |
 | 그 밖 | 없는 스크립트를 부르는 곳(에셋 검증 `Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 셰이더 재쿠킹 · 실행 확인 |
