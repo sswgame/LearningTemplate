@@ -411,17 +411,33 @@ namespace sw
         return true;
     }
 
-    bool GlobalVariableInfo::setValueFromCommandLine( string_view strValue )
+    bool GlobalVariableInfo::setValueFromCommandLine( string_view strValue, string& outError )
     {
+        outError.clear();
+        if ( _pData == nullptr )
+        {
+            outError = _name + " has no storage to write";
+            return false;
+        }
         // 사람이 쓰는 명령줄은 열거자 이름만 받는다. 숫자는 열거자를 더하거나 순서를 바꾸면 뜻이 달라지고, 변수의 크기보다 큰 수는 조용히 잘려 다른 열거자가 된다.
         int32 number{ 0 };
         if ( _type == GlobalVariableType::Enum && StringUtil::parseInt( strValue, number ) )
         {
-            SW_LOG_ERROR( "-%#=%# : %# takes an enumerator name of %#, not a number (a number changes meaning when enumerators are added or reordered)",
-                          _name.c_str(), string{ strValue }.c_str(), _name.c_str(), _enumType.c_str() );
+            outError = _name + " takes an enumerator name of " + _enumType + ", not a number (a number changes meaning when enumerators are added or reordered)";
             return false;
         }
-        return setValueFromString( strValue );
+        if ( setValueFromString( strValue ) )
+            return true;
+        // 읽지 못한 이유는 타입이 정한다. 호출하는 쪽이 고정 문구로 덮으면 이름 없는 열거자 · 타입 불일치 · 파서 없음이 같은 말로 보인다.
+        if ( _type == GlobalVariableType::Enum )
+        {
+            const bool bParserBound = _pEnumTextParser != nullptr && _pEnumTextParser->isBound();
+            outError                = bParserBound ? ( _enumType + " has no enumerator named '" + string{ strValue } + "'" )
+                                                   : ( "no enumerator name table is registered for " + _enumType + ", so '" + string{ strValue } + "' cannot be read" );
+        }
+        else
+            outError = "'" + string{ strValue } + "' cannot be read as " + getTypeName() + " for " + _name;
+        return false;
     }
 
     /**
@@ -571,11 +587,9 @@ namespace sw
                 //
                 // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
                 // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
-                if ( iter->second->setValueFromCommandLine( pendingValue ) == false )
-                {
-                    SW_LOG_WARNING( "-%#=%# : the value does not match the variable type. Ignored",
-                                    strName.c_str(), pendingValue.c_str() );
-                }
+                string valueError;
+                if ( iter->second->setValueFromCommandLine( pendingValue, valueError ) == false )
+                    SW_LOG_WARNING( "-%#=%# : %#. Ignored", strName.c_str(), pendingValue.c_str(), valueError.c_str() );
             }
         }
 
@@ -694,11 +708,13 @@ namespace sw
         for ( const auto& [name, text] : _mapPendingEnumText )
         {
             GlobalVariableInfo* pInfo = findVariable( name );
-            if ( pInfo == nullptr || pInfo->setValueFromCommandLine( text ) == false )
-            {
-                SW_LOG_ERROR( "-%#=%# : not applied, %# has no enumerator of that name", name.c_str(), text.c_str(), pInfo != nullptr ? pInfo->_enumType.c_str() : "the variable" );
-                bAllApplied = false;
-            }
+            string              valueError;
+            if ( pInfo == nullptr )
+                valueError = "no variable of that name is registered";
+            if ( pInfo != nullptr && pInfo->setValueFromCommandLine( text, valueError ) )
+                continue;
+            SW_LOG_ERROR( "-%#=%# : not applied, %#", name.c_str(), text.c_str(), valueError.c_str() );
+            bAllApplied = false;
         }
         _mapPendingEnumText.clear();
         return bAllApplied;

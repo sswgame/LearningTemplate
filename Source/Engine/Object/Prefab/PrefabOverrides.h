@@ -62,9 +62,10 @@ namespace sw
 
         /**
          * @brief 인스턴스 상태와 기준 상태의 차이를 `<PrefabOverrides>` XML 로 만듭니다. 다른 점이 없으면 @p outOverrideXML 은 빈 글입니다.
+         * @param outError 읽지 못한 쪽(인스턴스 · 기준)과 이유를 적습니다. 부른 쪽이 알립니다.
          * @return 두 상태 가운데 하나라도 오브젝트 상태 XML 로 읽지 못하면 false 입니다(그때 부른 쪽은 전체 상태를 저장한다).
          */
-        [[nodiscard]] static bool computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML );
+        [[nodiscard]] static bool computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML, string& outError );
 
         /**
          * @brief 기준 상태에 덮어쓴 것을 얹어 인스턴스의 오브젝트 상태 XML 을 만듭니다. @p overrideXML 이 비면 기준 상태 그대로입니다.

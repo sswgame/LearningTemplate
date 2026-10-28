@@ -121,9 +121,14 @@ namespace sw
     {
         MeshAssetData meshData;
         Skeleton      skeleton;
-        if ( MeshAssetFormat::loadFromResource( ResourceID{ list._meshPath }, meshData ) == false || skeleton.loadFromResource( ResourceID{ list._skeletonPath } ) == false )
+        if ( MeshAssetFormat::loadFromResource( ResourceID{ list._meshPath }, meshData ) == false )
         {
-            SW_LOG_ERROR( "Vertex animation cook: could not read mesh '%#' or skeleton '%#'", list._meshPath.c_str(), list._skeletonPath.c_str() );
+            SW_LOG_ERROR( "Vertex animation cook: could not read mesh '%#'", list._meshPath.c_str() );
+            return false;
+        }
+        if ( skeleton.loadFromResource( ResourceID{ list._skeletonPath } ) == false )
+        {
+            SW_LOG_ERROR( "Vertex animation cook: could not read skeleton '%#'", list._skeletonPath.c_str() );
             return false;
         }
         shared_ptr<Mesh> mesh = Mesh::create();

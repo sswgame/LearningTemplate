@@ -27,13 +27,16 @@ namespace sw
 
             /**
              * @brief 순서표의 칸 글 "x,y" 를 읽습니다. x 는 수이거나 배치의 칸 이름(`road` = 남북 도로, `farm` = 농장 왼쪽)입니다.
-             * @return 모양이 틀리면 false 입니다(부르는 쪽이 원소와 함께 알린다).
+             * @return 모양이 틀리면 false 이고 @p outError 에 어느 칸이 왜 틀렸는지 적습니다(부르는 쪽이 원소와 함께 알린다).
              */
-            [[nodiscard]] static bool parseCell( const NileCityLayout& layout, string_view text, int2& outCell )
+            [[nodiscard]] static bool parseCell( const NileCityLayout& layout, string_view text, int2& outCell, string& outError )
             {
                 const size_t comma = text.find( ',' );
                 if ( comma == string_view::npos )
+                {
+                    outError = "cell '" + string( text ) + "' has no comma (expected x,y)";
                     return false;
+                }
                 const string_view xText = StringUtil::trim( text.substr( 0, comma ) );
                 const string_view yText = StringUtil::trim( text.substr( comma + 1 ) );
                 int32             x{ 0 };
@@ -42,20 +45,29 @@ namespace sw
                 else if ( xText == "farm" )
                     x = layout._farmX;
                 else if ( StringUtil::parseInt( xText, x ) == false )
+                {
+                    outError = "cell '" + string( text ) + "': x '" + string( xText ) + "' is neither a number nor road / farm";
                     return false;
+                }
                 int32 y{ 0 };
                 if ( StringUtil::parseInt( yText, y ) == false )
+                {
+                    outError = "cell '" + string( text ) + "': y '" + string( yText ) + "' is not a number";
                     return false;
+                }
                 outCell = int2{ x, y };
                 return true;
             }
 
-            /** @brief 구역 번호(1 · 2 · 3)의 시작 인구입니다. 1 구역은 처음부터, 2 · 3 구역은 배치의 인구 임계값이다. 모르는 번호면 false 입니다. */
-            [[nodiscard]] static bool findBlockPopulation( const NileCityLayout& layout, int32 block, int32& outPopulation )
+            /** @brief 구역 번호(1 · 2 · 3)의 시작 인구입니다. 1 구역은 처음부터, 2 · 3 구역은 배치의 인구 임계값이다. 모르는 번호면 false 이고 이유를 적습니다. */
+            [[nodiscard]] static bool findBlockPopulation( const NileCityLayout& layout, int32 block, int32& outPopulation, string& outError )
             {
                 const int32 arrBlockPopulation[] = { 0, layout._secondBlockPeople, layout._thirdBlockPeople };
                 if ( block < 1 || block > 3 )
+                {
+                    outError = "block " + to_string( block ) + " is not 1..3";
                     return false;
+                }
                 outPopulation = arrBlockPopulation[block - 1];
                 return true;
             }
@@ -206,11 +218,14 @@ namespace sw
             int2                       fromCell{};
             int2                       toCell{};
             int32                      population{ 0 };
-            const bool                 bResolved = Internal::parseCell( layout, def._from, fromCell ) && ( def._to.empty() || Internal::parseCell( layout, def._to, toCell ) ) &&
-                                   Internal::findBlockPopulation( layout, def._block, population );
+            string                     resolveError;
+            const bool                 bResolved = Internal::parseCell( layout, def._from, fromCell, resolveError ) &&
+                                   ( def._to.empty() || Internal::parseCell( layout, def._to, toCell, resolveError ) ) &&
+                                   Internal::findBlockPopulation( layout, def._block, population, resolveError );
             if ( bResolved == false )
             {
-                SW_LOG_ERROR( "[Nile] auto plan '%#': step from '%#' to '%#' (block %#) does not resolve on this layout", planPath, def._from, def._to, def._block );
+                SW_LOG_ERROR( "[Nile] auto plan '%#': step from '%#' to '%#' (block %#) does not resolve on this layout: %#", planPath, def._from, def._to, def._block,
+                              resolveError.c_str() );
                 _listStep.clear();
                 return false;
             }

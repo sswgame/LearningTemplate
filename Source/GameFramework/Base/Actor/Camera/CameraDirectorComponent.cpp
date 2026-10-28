@@ -221,9 +221,14 @@ namespace sw
         }
         const string_view    mapPath       = pDefaultAssets->_photoModeInputMap.get();
         unique_ptr<InputMap> photoInputMap = make_unique<InputMap>();
-        if ( photoInputMap->loadFromResource( ResourceID{ mapPath } ) == false || CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
+        if ( photoInputMap->loadFromResource( ResourceID{ mapPath } ) == false )
         {
-            SW_LOG_ERROR( "Photo mode input map '%#' did not load - not entered", mapPath );
+            SW_LOG_ERROR( "Photo mode input map '%#' could not be read - not entered", mapPath );
+            return false;
+        }
+        if ( CameraDirectorComponentInternal::hasPhotoActions( *photoInputMap, mapPath ) == false )
+        {
+            SW_LOG_ERROR( "Photo mode input map '%#' lacks the photo actions listed above - not entered", mapPath );
             return false;
         }
         photoInputMap->setInputManager( game::findSubsystem<InputManager>() );

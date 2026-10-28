@@ -112,7 +112,13 @@ namespace sw::editor
 
         CoasterLayoutCatalog catalog;
         ParkLayout           layout;
-        if ( catalog.loadFromResource( ResourceID{ coasterPath } ) == false || layout.loadFromXMLText( text, catalog, _layoutPath ) == false )
+        if ( catalog.loadFromResource( ResourceID{ coasterPath } ) == false )
+        {
+            SW_LOG_WARNING( "The coaster catalog '%#' could not be loaded - the park layout preview is empty", coasterPath );
+            clearPreview( false );
+            return true;
+        }
+        if ( layout.loadFromXMLText( text, catalog, _layoutPath ) == false )
         {
             SW_LOG_WARNING( "%# did not load through the ThemePark kit - the park layout preview is empty", _layoutPath.c_str() );
             clearPreview( false );

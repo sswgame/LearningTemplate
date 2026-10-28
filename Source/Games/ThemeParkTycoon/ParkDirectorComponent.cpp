@@ -195,9 +195,14 @@ namespace sw
     bool ParkDirectorComponent::startGame()
     {
         ParkLayout layout;
-        if ( _layoutCatalog.loadFromResource( ResourceID{ _coasterDataPath } ) == false || layout.loadFromResource( ResourceID{ _parkDataPath }, _layoutCatalog ) == false )
+        if ( _layoutCatalog.loadFromResource( ResourceID{ _coasterDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Park] park data could not be loaded - the park cannot open" );
+            SW_LOG_WARNING( "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
+            return false;
+        }
+        if ( layout.loadFromResource( ResourceID{ _parkDataPath }, _layoutCatalog ) == false )
+        {
+            SW_LOG_WARNING( "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _settings._gatePosition = layout.getGatePosition();

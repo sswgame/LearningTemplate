@@ -555,12 +555,14 @@ namespace sw
                     options._bOmitExternalParent = true; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
+                    string                     overridesError;
                     const bool                 bOverridesMade =
-                        PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML ) &&
+                        PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML, overridesError ) &&
                         pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
                     {
-                        SW_LOG_WARNING( "Overrides of nested prefab instance '%#' could not be computed - it is not written to the prefab", node._name );
+                        SW_LOG_WARNING( "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,
+                                        overridesError.empty() ? "its nested part overrides could not be collected" : overridesError.c_str() );
                         continue;
                     }
                     listCaptured.push_back( NestedPartEntry{ pPart, static_cast<int32>( outListNode.size() ) } );
@@ -1357,9 +1359,13 @@ namespace sw
         const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
         string       overrideXML;
         string       newInstanceState;
-        const bool   bStateMade = PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML ) &&
-                                PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState );
-        if ( bStateMade == false )
+        string       overridesError;
+        if ( PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML, overridesError ) == false )
+        {
+            SW_LOG_WARNING( "Prefab instance '%#' could not be refreshed: %#", pInstance->getName().c_str(), overridesError.c_str() );
+            return false;
+        }
+        if ( PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState ) == false )
             return false;
         const ObjectIdentity identity = ObjectStateSerializer::captureIdentity( pInstance );
         ObjectLoadContext    context{ SerializePurpose::Authoring };
@@ -1619,8 +1625,12 @@ namespace sw
             if ( baseIt == mapBaseState.end() )
                 continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
             PrefabPartOverride part{ partPath, {} };
-            if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML ) == false )
+            string             overridesError;
+            if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML, overridesError ) == false )
+            {
+                SW_LOG_WARNING( "Nested part '%#' overrides could not be computed: %#", partPath.c_str(), overridesError.c_str() );
                 return false;
+            }
             if ( part._overrideXML.empty() == false )
                 outListPartOverride.push_back( std::move( part ) );
         }

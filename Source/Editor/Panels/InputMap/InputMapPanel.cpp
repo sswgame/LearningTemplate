@@ -972,8 +972,10 @@ namespace sw::editor
             if ( input.getVirtualInput() == &_replay )
                 input.detachVirtualInput();
             const string diskPath = ResourcePaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
-            if ( diskPath.empty() || _replay.loadFromFile( diskPath ) == false )
-                SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
+            if ( diskPath.empty() )
+                SW_LOG_ERROR( "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
+            else if ( _replay.loadFromFile( diskPath ) == false )
+                SW_LOG_ERROR( "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LoadReplayTip" ) );
 

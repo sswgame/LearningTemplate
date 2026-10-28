@@ -261,7 +261,13 @@ SW_TEST_CASE( GlobalVariableTest, EnumRejectsNumbersOnTheCommandLine )
 
     sw::GlobalVariableInfo* pInfo = manager.findVariable( "gv_testEnumNumber" );
     SW_ASSERT_NOT_NULL( pInfo );
-    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "1" ) );
+    sw::string reason;
+    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "1", reason ) );
+    SW_EXPECT_FALSE( reason.empty() ); // 거절은 이유와 함께 돌아온다
+    SW_EXPECT_EQUAL( 0, numberValue );
+    reason.clear();
+    SW_EXPECT_FALSE( pInfo->setValueFromCommandLine( "NoSuchMode", reason ) ); // 파서가 이름을 받지 않는다
+    SW_EXPECT_FALSE( reason.empty() );
     SW_EXPECT_EQUAL( 0, numberValue );
     SW_EXPECT_TRUE( pInfo->setValueFromString( "1" ) ); // 안쪽 글(에디터 · 프리셋)은 숫자를 받는다
     SW_EXPECT_EQUAL( 1, numberValue );

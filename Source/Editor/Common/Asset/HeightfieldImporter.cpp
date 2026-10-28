@@ -119,9 +119,14 @@ namespace sw::editor
                 vector<uint16> listSample;
                 int32          width{ 0 };
                 int32          height{ 0 };
-                if ( FileUtil::readFile( holePath, bytes ) == false || ImageUtil::loadGray16FromMemory( bytes.data(), bytes.size(), listSample, width, height ) == false )
+                if ( FileUtil::readFile( holePath, bytes ) == false )
                 {
-                    SW_LOG_ERROR( "Heightfield hole mask '%#' could not be read", holePath.c_str() );
+                    SW_LOG_ERROR( "Heightfield hole mask '%#' could not be opened", holePath.c_str() );
+                    return false;
+                }
+                if ( ImageUtil::loadGray16FromMemory( bytes.data(), bytes.size(), listSample, width, height ) == false )
+                {
+                    SW_LOG_ERROR( "Heightfield hole mask '%#' is not a readable 16-bit grayscale image", holePath.c_str() );
                     return false;
                 }
                 const uint32 cells       = inoutData._resolution - 1;

@@ -238,10 +238,12 @@ namespace sw
         {
             SocketKindTable       kinds;
             shared_ptr<SocketSet> sockets = make_shared<SocketSet>();
-            if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) && sockets->loadFromResource( ResourceID{ _socketSetPath }, kinds ) )
-                _ownSockets = std::move( sockets );
-            else
+            if ( kinds.loadFromResource( ResourceID{ SocketKindTable::kDefaultPath } ) == false )
+                SW_LOG_ERROR( "Socket kinds '%#' could not be loaded for the rig sockets '%#'", SocketKindTable::kDefaultPath, _socketSetPath.c_str() );
+            else if ( sockets->loadFromResource( ResourceID{ _socketSetPath }, kinds ) == false )
                 SW_LOG_ERROR( "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
+            else
+                _ownSockets = std::move( sockets );
         }
         bindRig();
     }

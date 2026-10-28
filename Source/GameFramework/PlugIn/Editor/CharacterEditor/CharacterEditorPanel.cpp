@@ -426,9 +426,14 @@ namespace sw::editor
     {
         ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
         const string readPath = ResourcePaths::findLooseFile( string_view( _path.c_str() ) ).getDiskPath();
-        if ( readPath.empty() || _sockets.loadFromFile( readPath ) == false )
+        if ( readPath.empty() )
         {
-            _status = "Socket file could not be loaded (see log)";
+            _status = "Socket file '" + string{ _path.c_str() } + "' has no file on disk to load";
+            return false;
+        }
+        if ( _sockets.loadFromFile( readPath ) == false )
+        {
+            _status = "Socket file '" + readPath + "' could not be loaded (see log)";
             return false;
         }
         _status.clear();
