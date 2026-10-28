@@ -119,6 +119,32 @@ SW_TEST_CASE( ComplexShapingTest, AlefAfterBehIsFinalAndLoneLetterIsIsolated )
 }
 
 /**
+ * @brief [ComplexShapingTest] 바 바 알리프(ببا)는 복합 문자 빌드에서 어두 · 어중 · 알리프 어말(2 · 3 · 6)이고, 알리프 뒤의 바(اب)는 알리프가 뒤로 잇지 않아 두 글자 모두 독립형(5 · 1)이다
+ * @details 어중형 바 뒤에 알리프가 와도 어말형이 되는 것(3 글자 연결)과, 알리프가 연결을 끊는 것(이어지지 않는 자리는 어느 빌드든 같다)을 함께 본다. 기본 빌드는 앞의 글자가 모두 독립형이다.
+ */
+SW_TEST_CASE( ComplexShapingTest, AlefJoinsFromBehChainAndBreaksTheChainAfterItself )
+{
+    sw::vector<sw::ShapedGlyph> listChain;
+    SW_ASSERT_TRUE_MSG( ComplexShapingTestUtil::shapeRun( "\xD8\xA8\xD8\xA8\xD8\xA7", sw::TextDirection::RightToLeft, listChain ), "test font not readable" );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listChain.size() ) );
+#if defined( SW_TEXT_COMPLEX_SHAPING )
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kBehInitial, listChain[0]._glyphIndex );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kBehMedial, listChain[1]._glyphIndex );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kAlefFinal, listChain[2]._glyphIndex );
+#else
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kBehIsolated, listChain[0]._glyphIndex );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kBehIsolated, listChain[1]._glyphIndex );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kAlefIsolated, listChain[2]._glyphIndex );
+#endif
+
+    sw::vector<sw::ShapedGlyph> listBroken;
+    SW_ASSERT_TRUE_MSG( ComplexShapingTestUtil::shapeRun( "\xD8\xA7\xD8\xA8", sw::TextDirection::RightToLeft, listBroken ), "test font not readable" );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listBroken.size() ) );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kAlefIsolated, listBroken[0]._glyphIndex );
+    SW_EXPECT_EQUAL( ComplexShapingTestUtil::kBehIsolated, listBroken[1]._glyphIndex );
+}
+
+/**
  * @brief [ComplexShapingTest] 배치는 연결형 모양을 눈에 보이는 순서로 놓는다 — RTL 문단 "بب" 는 왼쪽부터 어말(전진 6) · 어두(전진 5)이고 둘째 글리프는 x = 6 이다(기본 빌드는 독립형 둘, x = 7)
  * @details 크기 10. 가짜가 아닌 FreeType 래스터라이저의 `FontService` 로 돌려 래스터라이저가 고른 셰이퍼가 `TextLayoutEngine` 까지 이어지는지 본다.
  */
