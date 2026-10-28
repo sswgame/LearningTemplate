@@ -82,6 +82,9 @@ namespace sw
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
+        , _bCheckpoints{ SW_FALSE }
+        , _pCmdSetCheckpoint{ nullptr }
+        , _pGetCheckpointData{ nullptr }
         , _bFrameAcquireWaitPending{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
         , _arrTimestampSubmitted{}

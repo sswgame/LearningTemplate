@@ -186,6 +186,17 @@ namespace sw
          */
         virtual bool debugRemoveDevice() { return false; }
         /**
+         * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 하나, Vulkan 은 파이프라인 단계마다 하나씩이다.
+         * @param pOutId   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
+         * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGpuBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
+         */
+        virtual uint32 readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+        {
+            (void)pOutId;
+            (void)capacity;
+            return 0;
+        }
+        /**
          * @brief 검증 레이어가 이 디바이스에 알린 경고 · 오류 수입니다. Debug 의 DX12 만 셉니다(D3D12 디버그 레이어, 메시지가 난 자리에서 로그로도 남긴다). 다른 백엔드와 배포본은 0 입니다.
          * @details 디버그 레이어의 메시지 큐는 장치 실패 때만 비우므로 평소 로그에 보이지 않는다. 테스트가 "이 그리기는 검증 경고를 내지 않는다" 를 단언할 때 쓴다.
          */

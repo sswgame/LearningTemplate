@@ -2,10 +2,12 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -29,7 +31,13 @@ namespace sw
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO( "Debug layer enabled." );
             }
-
+        }
+    #endif
+    #if !defined( SW_SHIPPING )
+        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
+        // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
+        if ( GpuBreadcrumbs::isEnabled() )
+        {
             Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
             if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )
             {
@@ -72,6 +80,9 @@ namespace sw
 
         if ( FAILED( D3D12CreateDevice( softwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
+    #if !defined( SW_SHIPPING )
+        createBreadcrumbBuffer();
+    #endif
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
         _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
         // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
@@ -257,8 +268,62 @@ namespace sw
         RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
     }
 
+    #if !defined( SW_SHIPPING )
+    void D3D12RHIDevice::createBreadcrumbBuffer()
+    {
+        if ( GpuBreadcrumbs::isEnabled() == false || _device == nullptr )
+            return;
+        // 읽기 힙(CPU 가 읽는 시스템 메모리) 4 바이트 - GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
+        const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) );
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource(breadcrumb)" ) == false )
+        {
+            SW_LOG_WARNING( "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
+            return;
+        }
+        void*       pMapped = nullptr;
+        D3D12_RANGE noRead{ 0, 0 };
+        if ( isHrSuccess( _breadcrumbBuffer->Map( 0, &noRead, &pMapped ), "Map(breadcrumb)" ) == false || pMapped == nullptr )
+        {
+            _breadcrumbBuffer.Reset();
+            return;
+        }
+        *static_cast<uint32*>( pMapped ) = 0;
+        _pBreadcrumbMapped               = static_cast<const volatile uint32*>( pMapped );
+        _breadcrumbAddress               = _breadcrumbBuffer->GetGPUVirtualAddress();
+        SW_LOG_INFO( "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
+    }
+
+    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    {
+        if ( _pBreadcrumbMapped == nullptr || pOutId == nullptr || capacity == 0 )
+            return 0;
+        const uint32 marker = *_pBreadcrumbMapped;
+        if ( marker == 0 )
+            return 0;
+        pOutId[0] = marker;
+        return 1;
+    }
+    #else
+    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    {
+        (void)pOutId;
+        (void)capacity;
+        return 0;
+    }
+    #endif
+
     void D3D12RHIDevice::shutdownInternal()
     {
+    #if !defined( SW_SHIPPING )
+        if ( _breadcrumbBuffer != nullptr && _pBreadcrumbMapped != nullptr )
+            _breadcrumbBuffer->Unmap( 0, nullptr );
+        _pBreadcrumbMapped = nullptr;
+        _breadcrumbAddress = 0;
+        _breadcrumbBuffer.Reset();
+    #endif
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassLedger.clear();

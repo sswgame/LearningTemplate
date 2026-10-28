@@ -8,6 +8,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
@@ -41,7 +42,10 @@ namespace sw
     void D3D11RHIDevice::markDeviceLost( const utf8* pCause, HRESULT hr )
     {
         if ( _transferSerials.markLost() )
+        {
             SW_LOG_ERROR( "The D3D11 device was lost (%#, hr=0x%#) - later transfer submits are rejected and GPU waits stop", pCause, static_cast<uint32>( hr ) );
+            GpuBreadcrumbs::reportDeviceLost( "Direct3D 11", nullptr, 0 ); // GPU 쪽 표지가 없다 - CPU 가 마지막으로 기록한 패스만 싣는다
+        }
     }
 
     bool D3D11RHIDevice::isDeviceRemoved()

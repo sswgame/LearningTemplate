@@ -190,7 +190,8 @@ namespace sw
          * @brief 장치를 잃은 상태로 둡니다(개발 명령 `rhi.removeDevice`). Vulkan 에는 장치를 제거하는 API 가 없어, 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 처음 돌려준
          *        뒤와 같은 상태(`isDeviceLost`)를 만든다. 그 뒤로 제출 · 대기 · 표시를 하지 않고 프레임을 건너뛰며, 종료는 기다리지 않고 끝난다.
          */
-        bool debugRemoveDevice() override;
+        bool   debugRemoveDevice() override;
+        uint32 readLastBreadcrumbs( uint32* pOutId, uint32 capacity ) override;
         /**
          * @brief 큐 호출이 `VK_ERROR_DEVICE_LOST` 를 돌려줬거나 `debugRemoveDevice` 가 불렸으면 true 입니다. 어느 스레드에서 읽어도 된다.
          * @details 저장소는 `_transferSerials` 의 손실 표시 하나다. 세운 뒤에는 펜스 · 큐 · 장치 대기를 부르지 않는다. 사양은 손실 뒤의 대기가 유한 시간에 돌아온다고 하지만
@@ -252,6 +253,7 @@ namespace sw
             caps._bMultiDrawIndirect = _bMultiDrawIndirect;
             caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill     = _bFillModeNonSolid;
+            caps._bGpuBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
             // 텍스처 업로드 · 되읽기는 영속 매핑 링으로만 간다(링이 없으면 초기화가 실패한다).
             caps._bPersistentStagingRing  = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
             caps._bPersistentReadbackRing = _readbackRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
@@ -691,6 +693,11 @@ namespace sw
         uint16 _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
+        /// @brief 디바이스에 VK_NV_device_diagnostic_checkpoints 를 켰는가(GPU 브레드크럼 - `vkCmdSetCheckpointNV` 로 패스 id 를 남기고 소실 뒤 `vkGetQueueCheckpointDataNV` 로 읽는다).
+        ///        없으면(AMD · 인텔 드라이버) 켜지 않는다 - 대체 확장 VK_AMD_buffer_marker 는 쓰지 않는다(그 표지는 호스트 보임 버퍼를 따로 관리해야 하고 이 엔진에는 그 자리가 없다).
+        uint8 _bCheckpoints;
+        void* _pCmdSetCheckpoint;  ///< `vkCmdSetCheckpointNV` 입니다(이 헤더는 vulkan.h 를 include 하지 않아 void* 로 쥔다). `_bCheckpoints` 일 때만 읽는다
+        void* _pGetCheckpointData; ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
         uint8         _bFrameAcquireWaitPending;
         atomic<uint8> _bTimestampEnabled;                                                                      ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.

@@ -8,6 +8,7 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -482,6 +483,30 @@ namespace sw
             }
         }
 #endif
+#if !defined( SW_SHIPPING )
+        // VK_NV_device_diagnostic_checkpoints(진단 전용): GPU 브레드크럼 - 패스마다 `vkCmdSetCheckpointNV` 로 id 를 남기고 소실 뒤 큐에서 읽는다(`readLastBreadcrumbs`).
+        // 그래픽스 큐 패밀리가 체크포인트를 지원하는 단계(checkpointExecutionStageMask)가 있어야 쓴다. 없으면 켜지 않는다 - 이 능력이 없는 드라이버는 CPU 가 마지막으로 기록한 패스만 보고한다.
+        if ( GpuBreadcrumbs::isEnabled() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
+        {
+            uint32 familyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, nullptr );
+            vector<VkQueueFamilyCheckpointPropertiesNV> listCheckpointProperties( familyCount );
+            vector<VkQueueFamilyProperties2>            listFamilyProperties( familyCount );
+            for ( uint32 familyIndex = 0; familyIndex < familyCount; ++familyIndex )
+            {
+                listCheckpointProperties[familyIndex].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_CHECKPOINT_PROPERTIES_NV;
+                listFamilyProperties[familyIndex].sType     = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+                listFamilyProperties[familyIndex].pNext     = &listCheckpointProperties[familyIndex];
+            }
+            vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, listFamilyProperties.data() );
+            const bool bFamilySupports = _graphicsQueueFamilyIndex < familyCount && listCheckpointProperties[_graphicsQueueFamilyIndex].checkpointExecutionStageMask != 0;
+            if ( bFamilySupports )
+            {
+                listDeviceExtension.push_back( VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME );
+                _bCheckpoints = SW_TRUE;
+            }
+        }
+#endif
         createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
         createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
 
@@ -491,6 +516,20 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+#if !defined( SW_SHIPPING )
+        if ( _bCheckpoints != SW_FALSE )
+        {
+            _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
+            _pGetCheckpointData = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkGetQueueCheckpointDataNV" ) );
+            if ( _pCmdSetCheckpoint == nullptr || _pGetCheckpointData == nullptr )
+            {
+                SW_LOG_WARNING( "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
+                _bCheckpoints = SW_FALSE;
+            }
+            else
+                SW_LOG_INFO( "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
+        }
+#endif
         return true;
     }
 

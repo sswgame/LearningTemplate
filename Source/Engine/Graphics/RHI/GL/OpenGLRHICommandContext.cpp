@@ -914,6 +914,12 @@ namespace sw
         glMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
     }
 
+    void OpenGLRHICommandContext::writeBreadcrumb( uint32 markerId )
+    {
+        // OpenGL 은 컨텍스트를 잃은 뒤 GPU 가 닿은 자리를 읽을 길이 없다(`RHICapabilities::_bGpuBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
+        (void)markerId;
+    }
+
     void OpenGLRHICommandContext::beginEventMarker( const utf8* pName )
     {
         if ( _pDevice->_bInitialized == SW_FALSE || pName == nullptr )

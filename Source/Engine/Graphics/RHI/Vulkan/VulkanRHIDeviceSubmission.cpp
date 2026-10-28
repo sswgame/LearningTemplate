@@ -2,6 +2,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -77,6 +78,10 @@ namespace sw
         if ( bDeviceLost == false )
             return;
         SW_LOG_ERROR( "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
+        // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
+        uint32       arrBreadcrumb[GpuBreadcrumbs::kMaxReported]{};
+        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GpuBreadcrumbs::kMaxReported );
+        GpuBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
         reportDeviceFault();
     }
 
@@ -88,6 +93,44 @@ namespace sw
                         "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
         _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
         return true;
+    }
+
+    uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutId, uint32 capacity )
+    {
+#if !defined( SW_SHIPPING )
+        if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutId == nullptr || capacity == 0 )
+            return 0;
+        uint32                               dataCount            = 0;
+        const PFN_vkGetQueueCheckpointDataNV pfnGetCheckpointData = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>( _pGetCheckpointData );
+        pfnGetCheckpointData( _graphicsQueue, &dataCount, nullptr );
+        if ( dataCount == 0 )
+            return 0;
+        vector<VkCheckpointDataNV> listData( dataCount );
+        for ( VkCheckpointDataNV& data : listData )
+        {
+            data.sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
+        }
+        pfnGetCheckpointData( _graphicsQueue, &dataCount, listData.data() );
+        // 파이프라인 단계마다 그 단계가 마지막으로 지난 체크포인트가 온다 - 같은 id 는 한 번만 싣는다.
+        uint32 filled = 0;
+        for ( uint32 index = 0; index < dataCount && filled < capacity; ++index )
+        {
+            const uint32 markerId = static_cast<uint32>( reinterpret_cast<uintptr_t>( listData[index].pCheckpointMarker ) );
+            bool         bKnown   = markerId == 0;
+            for ( uint32 knownIndex = 0; knownIndex < filled; ++knownIndex )
+            {
+                if ( pOutId[knownIndex] == markerId )
+                    bKnown = true;
+            }
+            if ( bKnown == false )
+                pOutId[filled++] = markerId;
+        }
+        return filled;
+#else
+        (void)pOutId;
+        (void)capacity;
+        return 0;
+#endif
     }
 
     void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )

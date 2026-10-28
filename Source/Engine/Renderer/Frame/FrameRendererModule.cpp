@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -342,6 +343,7 @@ namespace sw
     {
         if ( context._pCmd == nullptr )
             return;
+        GpuBreadcrumbs::mark( *context._pCmd, pass._graphName.view() );
         context._pCmd->beginEventMarker( pass._graphName.c_str() );
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;

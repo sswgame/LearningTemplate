@@ -714,6 +714,12 @@ namespace sw
         return _annotation.Get();
     }
 
+    void D3D11RHICommandContext::writeBreadcrumb( uint32 markerId )
+    {
+        // DX11 은 소실 뒤에도 읽을 수 있는 디바이스측 쓰기 수단이 없다(`RHICapabilities::_bGpuBreadcrumbs` 거짓). 소실 보고는 CPU 가 마지막으로 기록한 패스를 싣는다.
+        (void)markerId;
+    }
+
     void D3D11RHICommandContext::beginEventMarker( const utf8* pName )
     {
         if ( pName == nullptr )

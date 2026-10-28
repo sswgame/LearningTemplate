@@ -742,6 +742,24 @@ namespace sw
         commandListForRecord()->ExecuteIndirect( _pDevice->_dispatchCommandSignature.Get(), 1, pArgs, argumentBufferOffset, nullptr, 0 );
     }
 
+    void D3D12RHICommandContext::writeBreadcrumb( uint32 markerId )
+    {
+    #if !defined( SW_SHIPPING )
+        if ( _pCmdList == nullptr || _pDevice->_breadcrumbAddress == 0 )
+            return;
+        // WriteBufferImmediate 는 ID3D12GraphicsCommandList2 다 - 없는 런타임은 표지를 쓰지 않는다.
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
+        if ( FAILED( commandListForRecord()->QueryInterface( IID_PPV_ARGS( list2.GetAddressOf() ) ) ) )
+            return;
+        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress, markerId };
+        // MARKER_IN: 앞선 명령이 **시작**하는 시점에 쓴다 - 소실 뒤 값은 GPU 가 시작한 마지막 패스다.
+        const D3D12_WRITEBUFFERIMMEDIATE_MODE mode = D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
+        list2->WriteBufferImmediate( 1, &param, &mode );
+    #else
+        (void)markerId;
+    #endif
+    }
+
     void D3D12RHICommandContext::beginEventMarker( const utf8* pName )
     {
         if ( _pCmdList == nullptr || pName == nullptr )

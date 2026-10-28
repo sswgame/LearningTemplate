@@ -249,5 +249,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         virtual void beginEventMarker( const utf8* pName ) = 0;
         virtual void endEventMarker()                      = 0;
+        /**
+         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerId 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GpuBreadcrumbs::mark` 가 패스 이름 표의 id 로 부른다).
+         * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
+         *          아무것도 하지 않는다(`RHICapabilities::_bGpuBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다.
+         */
+        virtual void writeBreadcrumb( uint32 markerId ) = 0;
     };
 } // namespace sw

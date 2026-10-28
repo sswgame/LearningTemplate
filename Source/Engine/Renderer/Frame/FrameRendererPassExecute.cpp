@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Debug/GpuBreadcrumbs.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -363,6 +364,8 @@ namespace sw
             const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
             Memory::copy( arrPassName, passName.data(), copyLen );
             arrPassName[copyLen] = '\0';
+            // GPU 브레드크럼 - 디바이스 소실 때 마지막으로 닿은 패스 이름을 싣는다(꺼져 있으면 아무것도 하지 않는다).
+            GpuBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
             context._pCmd->beginEventMarker( arrPassName );
         }
         context._resourceRegistry.reset();

@@ -1033,6 +1033,19 @@ namespace sw
         }
     }
 
+    void VulkanRHICommandContext::writeBreadcrumb( uint32 markerId )
+    {
+#if !defined( SW_SHIPPING )
+        VkCommandBuffer cmd = commandBuffer();
+        if ( _pDevice->_bCheckpoints == SW_FALSE || cmd == VK_NULL_HANDLE )
+            return;
+        // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
+        reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerId ) ) );
+#else
+        (void)markerId;
+#endif
+    }
+
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )
     {
         // 디버그 라벨 함수가 없어도(검증 레이어 없는 실행) 패스 이름은 남긴다 — 디바이스 손실 로그가 이것을 읽는다.

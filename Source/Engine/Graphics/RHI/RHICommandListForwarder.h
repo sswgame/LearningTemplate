@@ -89,6 +89,7 @@ namespace sw
         }
         void beginEventMarker( const utf8* pName ) override { _pContext->beginEventMarker( pName ); }
         void endEventMarker() override { _pContext->endEventMarker(); }
+        void writeBreadcrumb( uint32 markerId ) override { _pContext->writeBreadcrumb( markerId ); }
 
     protected:
         /// @brief 파생 클래스가 생성자에서 자기 컨텍스트를 가리키게 설정합니다.
