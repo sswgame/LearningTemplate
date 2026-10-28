@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UI/Automation/UIAutomationSteps.h"
+#include "Engine/UI/Scenario/UIScenarioSteps.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -19,7 +19,7 @@ namespace sw
 {
     namespace
     {
-        struct UIAutomationStepsInternal
+        struct UIScenarioStepsInternal
         {
             static constexpr utf8 kNone[] = "none";
 
@@ -45,7 +45,7 @@ namespace sw
             {
                 const UISystem& ui = engine::getSubsystem<UISystem>();
                 string          failure;
-                if ( UIAutomationSteps::isExpectUIMet( ui, step, failure ) == false )
+                if ( UIScenarioSteps::isExpectUIMet( ui, step, failure ) == false )
                     runner.recordFailure( step, failure );
                 return true;
             }
@@ -81,15 +81,15 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIAutomationStepsInternal::isLoadingScreenBlocking );
-    SW_AUTOMATION_STEP( uiLayoutDump, UIAutomationSteps::kLayoutDumpKind, &UIAutomationStepsInternal::runLayoutDump, &UIAutomationStepsInternal::validateLayoutDump,
+    SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIScenarioStepsInternal::isLoadingScreenBlocking );
+    SW_AUTOMATION_STEP( uiLayoutDump, UIScenarioSteps::kLayoutDumpKind, &UIScenarioStepsInternal::runLayoutDump, &UIScenarioStepsInternal::validateLayoutDump,
                         false );
-    SW_AUTOMATION_STEP( uiExpect, UIAutomationSteps::kExpectUIKind, &UIAutomationStepsInternal::runExpectUI, &UIAutomationSteps::validateExpectUI, false );
+    SW_AUTOMATION_STEP( uiExpect, UIScenarioSteps::kExpectUIKind, &UIScenarioStepsInternal::runExpectUI, &UIScenarioSteps::validateExpectUI, false );
 } // namespace sw
 
 namespace sw
 {
-    bool UIAutomationSteps::validateExpectUI( const AutomationStep& step, string& outError )
+    bool UIScenarioSteps::validateExpectUI( const AutomationStep& step, string& outError )
     {
         if ( step._listAttribute.empty() )
         {
@@ -114,9 +114,9 @@ namespace sw
         return true;
     }
 
-    bool UIAutomationSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )
+    bool UIScenarioSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )
     {
-        using Internal = UIAutomationStepsInternal;
+        using Internal = UIScenarioStepsInternal;
         bool bPassed   = true;
         if ( const string* pFocus = step.findAttribute( "focus" ); pFocus != nullptr )
         {
