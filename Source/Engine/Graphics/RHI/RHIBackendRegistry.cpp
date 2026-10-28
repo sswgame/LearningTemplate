@@ -8,15 +8,15 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Modules/RHIModuleABI.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIModuleABI.h"
 
 #if defined( SW_SHIPPING )
     #if defined( SW_RHI_TARGET_DX12 )
-        #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+        #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
     #elif defined( SW_RHI_TARGET_DX11 )
-        #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+        #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
     #elif defined( SW_RHI_TARGET_VULKAN )
         #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
     #elif defined( SW_RHI_TARGET_OPENGL )

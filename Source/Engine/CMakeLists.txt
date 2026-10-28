@@ -11,7 +11,7 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 종류 · 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(Modules/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RHIBackends.cmake 가 백엔드 폴더로 안다).
+# RHI MODULE 엔트리(백엔드 폴더의 Module/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RHIBackends.cmake 가 백엔드 폴더로 안다).
 # Dev 는 RHI_* MODULE 이, Shipping 은 아래 5) 가 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
@@ -21,7 +21,7 @@ else()
 endif()
 
 set(coreExclude
-	"Graphics/RHI/Modules/"
+	"Graphics/RHI/.+/Module/"   # 백엔드 모듈 엔트리(RHI_* MODULE 이 짓는다)
 	"Physics/Jolt/[^/]+\\.cpp$"   # EngineJolt_objects 가 짓는다(아래 9))
 )
 
@@ -316,10 +316,14 @@ add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
 # 10) RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다. 런타임 로드라 링크하지 않는다.
-# Shipping 은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
+# 백엔드 폴더 하나가 장치 소스와 모듈 엔트리(`<백엔드>/Module/` — CMakeLists · ModuleEntry · 매니페스트)를 함께 든다.
+# Shipping 은 모듈 엔트리를 짓지 않는다 — 소스 검사 게이트에 적는다.
 # ------------------------------------------------------------------------------
-if(SW_SHIPPING_BUILD)
-	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/Modules")
-else()
-	add_subdirectory(Graphics/RHI/Modules)
-endif()
+foreach(backendName IN LISTS SW_RHI_BACKEND_NAMES)
+	set(swBackendModuleDir "Graphics/RHI/${SW_RHI_BACKEND_${backendName}_SOURCE_FOLDER}/Module")
+	if(SW_SHIPPING_BUILD)
+		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${swBackendModuleDir}")
+	else()
+		add_subdirectory(${swBackendModuleDir})
+	endif()
+endforeach()

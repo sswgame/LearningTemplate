@@ -20,9 +20,9 @@
 
     "rhi_backends": [
         { "name": "DirectX11", "shader_folder": "dx11", "shader_target": "DXBC_D3D11", "command_line_argument": "DIRECTX_11", "command_line_name": "dx11",
-          "module": "RHI_DX11", "source_folder": "DX11", "graphics_libs": "sw_graphics_dx11_libs", "shipping_define": "SW_RHI_TARGET_DX11" },
+          "module": "RHI_DX11", "source_folder": "DX/DX11", "graphics_libs": "sw_graphics_dx11_libs", "shipping_define": "SW_RHI_TARGET_DX11" },
         { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "command_line_name": "dx12",
-          "module": "RHI_DX12", "source_folder": "DX12", "graphics_libs": "sw_graphics_dx12_libs", "shipping_define": "SW_RHI_TARGET_DX12" },
+          "module": "RHI_DX12", "source_folder": "DX/DX12", "graphics_libs": "sw_graphics_dx12_libs", "shipping_define": "SW_RHI_TARGET_DX12" },
         { "name": "Vulkan", "shader_folder": "vulkan", "shader_target": "SPIRV_Vulkan", "command_line_argument": "VULKAN", "command_line_name": "vk",
           "module": "RHI_Vulkan", "source_folder": "Vulkan", "graphics_libs": "sw_graphics_vulkan_libs", "shipping_define": "SW_RHI_TARGET_VULKAN" },
         { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "command_line_name": "gl",

@@ -101,10 +101,13 @@ def makeBackendInternal(row: dict) -> RhiBackendSpec:
         graphicsLibs=str(row["graphics_libs"]),
         shippingDefine=str(row["shipping_define"]),
     )
-    for identifier in (backend.name, backend.shaderTarget, backend.commandLineArgument, backend.moduleName, backend.sourceFolder,
+    for identifier in (backend.name, backend.shaderTarget, backend.commandLineArgument, backend.moduleName,
                        backend.graphicsLibs, backend.shippingDefine):
         if not _kIdentifierPattern.match(identifier):
             raise ValueError(f"rhi_backends '{backend.name}': '{identifier}' 는 C++ 식별자가 아닙니다")
+    # 소스 폴더는 `Source/Engine/Graphics/RHI` 아래 경로다(공용 코드를 묶은 `DX/DX12` 처럼 한 단계 더 들어갈 수 있다) — 마디마다 식별자다.
+    if not all(_kIdentifierPattern.match(segment) for segment in backend.sourceFolder.split("/")):
+        raise ValueError(f"rhi_backends '{backend.name}': '{backend.sourceFolder}' 는 식별자를 '/' 로 이은 폴더 경로가 아닙니다")
     for lowerName in (backend.shaderFolder, backend.commandLineName):
         if not _kLowerNamePattern.match(lowerName):
             raise ValueError(f"rhi_backends '{backend.name}': '{lowerName}' 는 소문자 이름이 아닙니다")

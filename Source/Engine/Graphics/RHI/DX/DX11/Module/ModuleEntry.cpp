@@ -1,0 +1,6 @@
+#include "pch.h"
+
+#include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/RHIModuleEntry.h"
+
+SW_IMPLEMENT_RHI_MODULE( sw::D3D11RHIDevice )

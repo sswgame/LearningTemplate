@@ -242,7 +242,7 @@ function(sw_addRHIBackendModule BACKEND_NAME)
 		DEV_TYPE MODULE
 		EXPORTS MODULE
 		LOG_TAG "RHI"
-		FOLDER "Source/Engine/Graphics/RHI/Modules"
+		FOLDER "Source/Engine/Graphics/RHI"
 		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${listDeviceSource}
 		LINK_PRIVATE Engine ${SW_RHI_BACKEND_${BACKEND_NAME}_GRAPHICS_LIBS} sw_third_party_includes
 		DEFINITIONS SW_ENGINE_INTERNAL

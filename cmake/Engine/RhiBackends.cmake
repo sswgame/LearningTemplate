@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file cmake/Engine/RHIBackends.cmake
 # @brief RHI 백엔드 표의 CMake 쪽 — 원본은 Config/Engine/CookContract.json 의 rhi_backends(configure 가 generated/sw/config/CookContract.cmake 로 옮긴다)
-# @note 백엔드의 장치 소스는 `Source/Engine/Graphics/RHI/<source_folder>/` 아래 .cpp 전부다 — 목록을 따로 적지 않는다.
+# @note 백엔드의 장치 소스는 `Source/Engine/Graphics/RHI/<source_folder>/` 아래 .cpp 전부다(모듈 엔트리 `Module/` 는 뺀다) — 목록을 따로 적지 않는다.
 #       RHI_* MODULE(Dev)과 Engine 정적 링크(Shipping)가 같은 함수로 묻는다.
 # ==============================================================================
 include_guard(GLOBAL)
@@ -16,6 +16,7 @@ endif()
 function(sw_getRHIBackendSources NAME OUT_VAR)
 	file(GLOB_RECURSE listSource CONFIGURE_DEPENDS
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/*.cpp")
+	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 만 짓는다(Shipping 정적 링크에는 없다)
 	set(${OUT_VAR} ${listSource} PARENT_SCOPE)
 endfunction()
 
