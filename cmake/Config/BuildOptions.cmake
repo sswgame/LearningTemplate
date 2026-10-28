@@ -48,7 +48,7 @@ endif()
 
 # 리눅스 클라이언트의 Wayland 창 계층(`Engine/Window/Linux/Wayland`). 켜면 wayland-client · wayland-cursor · xkbcommon · wayland-protocols ·
 # wayland-scanner 가 모두 있어야 한다(없으면 구성이 선다). 실행에서 고르는 것은 환경 변수 `SW_WINDOW_BACKEND=wayland` 이다(기본은 X11).
-# 확인은 CI 리눅스 잡(headless weston)에서만 한다 — 로컬 WSL 빌드는 하지 않는다(결정 기록 5-12).
+# 확인은 헤드리스 weston 이 있는 리눅스 환경에서만 한다 — 이 PC 에서는 리눅스 빌드를 하지 않는다.
 option(SW_ENABLE_WAYLAND "리눅스 클라이언트에 Wayland 창 계층을 짓는다" OFF)
 
 # 리눅스 클라이언트의 AT-SPI 스크린 리더 브리지(`Engine/UI/Accessibility/Linux`). 켜면 libdbus-1(pkg-config `dbus-1`)이 있어야 한다(없으면 구성이 선다).
@@ -91,9 +91,9 @@ option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 �
 set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
 set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 
-# 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 걸고 `Test/FuzzTest/LoaderFuzzer` 를 짓는다. 리눅스 clang + ASan 만
-# (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다). 프리셋 `CI-Fuzz`, 밤마다 `.github/workflows/fuzz.yml`.
-option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측" OFF)
+# 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 건다(퍼저 대상은 테스트 프레임워크를 다시 만들 때 정한다). 리눅스 clang + ASan 만
+# (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다).
+option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 엔진 커버리지 계측(libFuzzer)" OFF)
 
 # 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 그렇다고 Shipping 에서 테스트를
 # 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 테스트 집합을 돈다).
@@ -142,7 +142,7 @@ endif()
 option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
 
 # 복합 문자 셰이핑 — HarfBuzz(셰이퍼, MIT) + SheenBidi(전체 UAX #9 수준, Apache 2.0). 엔진 인터페이스(ITextShaper · TextBidi) 뒤에 있고
-# 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다(CheckThirdPartyIsolation). 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
+# 헤더는 Source/Engine/Text/HarfBuzz · Text/SheenBidi 에서만 include 한다. 켜면 두 패키지가 필수다(못 찾으면 구성이 선다).
 # 기본 꺼짐: vcpkg 설치 트리를 워크트리끼리 나눠 쓰므로 패키지는 main 에서 먼저 설치한다(docs/plans/ThirdPartyGaps.md). 설치한 뒤 ON 으로 바꾼다.
 option(SW_ENABLE_COMPLEX_TEXT "HarfBuzz + SheenBidi 복합 문자 셰이핑(아랍어 연결형 · 전체 양방향). 끄면 단순 셰이퍼 · 단순 양방향" OFF)
 # 두 패키지는 vcpkg.json 의 선택 기능 `complex-text` 에 있다 — 기능 없이 켜면 패키지가 설치되지 않은 채 find_package 에서야 선다. 이유를 말하고 먼저 선다.

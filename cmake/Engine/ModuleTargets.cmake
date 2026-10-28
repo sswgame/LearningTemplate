@@ -504,7 +504,7 @@ function(sw_addEditorExtensionModel TARGET_NAME)
 	set_property(GLOBAL APPEND PROPERTY SW_EDITOR_EXTENSION_MODEL_SOURCES ${listModelSource})
 endfunction()
 
-# 올라온 모델 소스 전부(절대 경로)를 OUT_VAR 에 돌려준다. 확장 폴더(Source/GameFramework/PlugIn/Editor)가 구성된 뒤, 곧 `Test/` 가 구성될 때 읽는다.
+# 올라온 모델 소스 전부(절대 경로)를 OUT_VAR 에 돌려준다. 확장 폴더(Source/GameFramework/PlugIn/Editor)가 구성된 뒤 읽는다(옛 `Test/` 가 읽었고 지금은 부르는 곳이 없다).
 function(sw_getEditorExtensionModelSources OUT_VAR)
 	get_property(listModelSource GLOBAL PROPERTY SW_EDITOR_EXTENSION_MODEL_SOURCES)
 	set(${OUT_VAR} ${listModelSource} PARENT_SCOPE)

@@ -114,20 +114,17 @@ sw_addModuleBuildStamp()
 sw_configureAppDependencies(App)
 sw_configureAppDependencies(Server)
 
-# 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — `CheckSourceGlob` 이 읽는다.
+# 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
 sw_writeUnbuiltSourceList()
 
 # ------------------------------------------------------------------------------
 # 5) 테스트 — GPU 불필요 lint는 nogpu 라벨
 # ------------------------------------------------------------------------------
-if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
+if(SW_ENABLE_TESTING)
 	include(CTest)
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
-	# 테스트 실행 파일은 기본 `all` 에 넣지 않는다 — 개발 빌드가 테스트 TU 까지 짓지 않게. `AllTests` 타깃 · 테스트 프리셋(build 프리셋의 `targets`) ·
-	# ctest 의 빌드 픽스처가 짓는다(`sw_registerTestBuildFixture`, 이유는 docs/09_Decisions.md).
-	add_subdirectory(Test EXCLUDE_FROM_ALL)
-	sw_registerTestBuildFixture()
+	# 실행 파일 테스트(`Test/`)는 지금 없다 — 새 프레임워크가 생기면 여기서 `add_subdirectory(Test EXCLUDE_FROM_ALL)` 한다.
 	# 린트 테스트 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
 	sw_registerGeneratedLintTests()
 endif()

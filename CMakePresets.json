@@ -30,36 +30,6 @@
       }
     },
     {
-      "name": "base-wsl",
-      "hidden": true,
-      "inherits": "base-vcpkg",
-      "environment": {
-        "CC": "clang",
-        "CXX": "clang++"
-      },
-      "vendor": {
-        "microsoft.com/VisualStudioRemoteSettings/CMake/1.0": {
-          "remoteCopySources": true,
-          "remoteCopySourcesMethod": "rsync",
-          "remoteCopySourcesExclusionList": [
-            ".vs",
-            ".git",
-            "${sourceDir}/Tools/vcpkg/buildtrees",
-            "${sourceDir}/Tools/vcpkg/packages",
-            "${sourceDir}/Tools/vcpkg/downloads"
-          ]
-        }
-      }
-    },
-    {
-      "name": "base-ci",
-      "hidden": true,
-      "inherits": "base-vcpkg",
-      "cacheVariables": {
-        "SW_ENABLE_UNITY_BUILD": "ON"
-      }
-    },
-    {
       "name": "base-shipping",
       "hidden": true,
       "cacheVariables": {
@@ -75,26 +45,6 @@
       "cacheVariables": {
         "SW_GAMES": "ALL",
         "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "Ninja-Debug-Lean",
-      "displayName": "Windows Ninja Debug — Lean",
-      "description": "Ninja-Debug 와 같고 활성 게임과 SW_GAMES 로 고른 게임이 의존으로 닿는 키트만 짓는다 (SW_BUILD_UNUSED_KITS=OFF, 기본은 활성 게임만 — -DSW_GAMES=NileCity;Shooter3D 로 더한다)",
-      "inherits": "Ninja-Debug",
-      "cacheVariables": {
-        "SW_GAMES": "",
-        "SW_BUILD_UNUSED_KITS": "OFF"
-      }
-    },
-    {
-      "name": "Ninja-Debug-ASAN",
-      "displayName": "Windows Ninja Debug + ASan (Clang-cl)",
-      "description": "Debug build with AddressSanitizer (clang-cl /fsanitize=address)",
-      "inherits": "base-windows",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_SANITIZER": "ON"
       }
     },
     {
@@ -133,158 +83,12 @@
       "cacheVariables": {
         "SW_TARGET_TYPE": "Server"
       }
-    },
-    {
-      "name": "WSL-Debug",
-      "displayName": "WSL Ninja Debug (Clang)",
-      "description": "WSL Ubuntu Debug build using Ninja + Clang",
-      "inherits": "base-wsl",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "WSL-Release",
-      "displayName": "WSL Ninja Release (Clang)",
-      "description": "WSL Ubuntu Release build using Ninja + Clang",
-      "inherits": "base-wsl",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "WSL-Shipping",
-      "displayName": "WSL Ninja Shipping (Clang)",
-      "description": "WSL Ubuntu Shipping build using Ninja + Clang",
-      "inherits": [
-        "base-wsl",
-        "base-shipping"
-      ]
-    },
-    {
-      "name": "WSL-Debug-Server",
-      "displayName": "WSL Ninja Debug - Dedicated Server (Clang)",
-      "description": "리눅스 전용 서버 Debug — X11 · Vulkan · GL 을 링크하지 않는다",
-      "inherits": "WSL-Debug",
-      "cacheVariables": {
-        "SW_TARGET_TYPE": "Server"
-      }
-    },
-    {
-      "name": "WSL-Shipping-Server",
-      "displayName": "WSL Ninja Shipping - Dedicated Server (Clang)",
-      "description": "리눅스 전용 서버 배포본",
-      "inherits": "WSL-Shipping",
-      "cacheVariables": {
-        "SW_TARGET_TYPE": "Server"
-      }
-    },
-    {
-      "name": "CI-Debug",
-      "displayName": "CI Debug (Ninja)",
-      "description": "CI Debug. Windows job sets clang-cl; Linux uses the system compiler.",
-      "inherits": "base-ci",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "CI-Release",
-      "displayName": "CI Release (Ninja)",
-      "description": "CI Release for the nightly load job (.github/workflows/load.yml) - budgets are judged only in Release.",
-      "inherits": "base-ci",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
-      }
-    },
-    {
-      "name": "CI-Shipping",
-      "displayName": "CI Shipping (Ninja, clang-cl on Windows)",
-      "description": "CI Shipping. Windows job sets clang-cl like CI-Debug; Linux uses the system compiler plus distro libclang.",
-      "inherits": [
-        "base-ci",
-        "base-shipping"
-      ]
-    },
-    {
-      "name": "CI-Shipping-Server",
-      "displayName": "CI Shipping - Dedicated Server",
-      "description": "CI 전용 서버 배포본(Windows · Linux 잡)",
-      "inherits": "CI-Shipping",
-      "cacheVariables": {
-        "SW_TARGET_TYPE": "Server"
-      }
-    },
-    {
-      "name": "CI-Debug-ASAN",
-      "displayName": "CI Debug + ASan (Ninja)",
-      "description": "CI Debug with AddressSanitizer enabled",
-      "inherits": "base-ci",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_SANITIZER": "ON"
-      }
-    },
-    {
-      "name": "CI-Debug-STL",
-      "displayName": "CI Debug + STL containers (Ninja)",
-      "description": "CI Debug with SW_ENABLE_STL_CONTAINER (std::allocator as the container allocator) so the option keeps compiling",
-      "inherits": "CI-Debug",
-      "cacheVariables": {
-        "SW_ENABLE_STL_CONTAINER": "ON"
-      }
-    },
-    {
-      "name": "CI-Debug-TSAN",
-      "displayName": "CI Debug + TSan (Ninja, Linux Clang)",
-      "description": "CI Debug with ThreadSanitizer enabled (Linux Clang only). Ports that synchronize their own threads (Jolt, Box2D) are built with -fsanitize=thread by the x64-linux-tsan triplet (cmake/Modules/Toolchain/VcpkgTsan), installed under this preset's own build folder. CC/CXX pin the port compiler to the project's clang.",
-      "inherits": [
-        "base-ci",
-        "base-wsl"
-      ],
-      "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "x64-linux-tsan",
-        "VCPKG_HOST_TRIPLET": "x64-linux",
-        "VCPKG_INSTALLED_DIR": "${sourceDir}/build/${presetName}/vcpkg_installed",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/VcpkgTsan;${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "SW_VCPKG_FORCE_INSTALL": "ON",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "SW_ENABLE_SANITIZER": "ON",
-        "SW_SANITIZER_KIND": "thread"
-      }
-    },
-    {
-      "name": "CI-Fuzz",
-      "displayName": "CI Fuzz (Ninja, Linux Clang + ASan + libFuzzer)",
-      "description": "Coverage-guided fuzzing of the loader target table (Test/FuzzTest/LoaderFuzzer). Linux clang only - the Windows clang_rt.fuzzer is /MT only. Built nightly by .github/workflows/fuzz.yml.",
-      "inherits": "CI-Debug-ASAN",
-      "cacheVariables": {
-        "SW_ENABLE_FUZZING": "ON",
-        "SW_ENABLE_UNITY_BUILD": "OFF"
-      }
     }
   ],
   "buildPresets": [
     {
-      "name": "with-tests",
-      "hidden": true,
-      "targets": [
-        "all",
-        "AllTests"
-      ]
-    },
-    {
       "name": "Ninja-Debug",
       "configurePreset": "Ninja-Debug"
-    },
-    {
-      "name": "Ninja-Debug-Lean",
-      "configurePreset": "Ninja-Debug-Lean"
-    },
-    {
-      "name": "Ninja-Debug-ASAN",
-      "inherits": "with-tests",
-      "configurePreset": "Ninja-Debug-ASAN"
     },
     {
       "name": "Ninja-Release",
@@ -292,7 +96,6 @@
     },
     {
       "name": "Ninja-Shipping",
-      "inherits": "with-tests",
       "configurePreset": "Ninja-Shipping"
     },
     {
@@ -301,70 +104,7 @@
     },
     {
       "name": "Ninja-Shipping-Server",
-      "inherits": "with-tests",
       "configurePreset": "Ninja-Shipping-Server"
-    },
-    {
-      "name": "WSL-Debug",
-      "configurePreset": "WSL-Debug"
-    },
-    {
-      "name": "WSL-Release",
-      "configurePreset": "WSL-Release"
-    },
-    {
-      "name": "WSL-Shipping",
-      "inherits": "with-tests",
-      "configurePreset": "WSL-Shipping"
-    },
-    {
-      "name": "WSL-Debug-Server",
-      "configurePreset": "WSL-Debug-Server"
-    },
-    {
-      "name": "WSL-Shipping-Server",
-      "inherits": "with-tests",
-      "configurePreset": "WSL-Shipping-Server"
-    },
-    {
-      "name": "CI-Debug",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Debug"
-    },
-    {
-      "name": "CI-Debug-ASAN",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Debug-ASAN"
-    },
-    {
-      "name": "CI-Debug-STL",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Debug-STL"
-    },
-    {
-      "name": "CI-Debug-TSAN",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Debug-TSAN"
-    },
-    {
-      "name": "CI-Release",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Release"
-    },
-    {
-      "name": "CI-Shipping",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Shipping"
-    },
-    {
-      "name": "CI-Fuzz",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Fuzz"
-    },
-    {
-      "name": "CI-Shipping-Server",
-      "inherits": "with-tests",
-      "configurePreset": "CI-Shipping-Server"
     }
   ],
   "testPresets": [
@@ -385,76 +125,6 @@
       "filter": {
         "include": {
           "label": "lint"
-        }
-      }
-    },
-    {
-      "name": "Ninja-Debug-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "Ninja-Debug",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "Ninja-Debug-Server-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "Ninja-Debug-Server",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "Ninja-Debug-ASAN-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "Ninja-Debug-ASAN",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "WSL-Debug-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "WSL-Debug",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "WSL-Debug-Server-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "WSL-Debug-Server",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "CI-Debug-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "CI-Debug",
-      "filter": {
-        "include": {
-          "label": "nogpu"
-        }
-      }
-    },
-    {
-      "name": "CI-Debug-ASAN-nogpu",
-      "inherits": "parallel",
-      "configurePreset": "CI-Debug-ASAN",
-      "filter": {
-        "include": {
-          "label": "nogpu"
         }
       }
     }
