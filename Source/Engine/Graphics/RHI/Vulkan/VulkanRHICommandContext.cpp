@@ -76,8 +76,8 @@ namespace sw
                 case RHIBufferState::VertexOrConstant:
                 {
                     access = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT;
-                    stage  = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                    // 컴퓨트가 읽는 상수 버퍼(`bindComputeConstantBuffer`)도 이 상태다 — DX12 의 VERTEX_AND_CONSTANT_BUFFER 가 모든 스테이지를 덮는 것과 같게 컴퓨트 스테이지를 더한다.
+                    stage = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                     break;
                 }
                 case RHIBufferState::Index:

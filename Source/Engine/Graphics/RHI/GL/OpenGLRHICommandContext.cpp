@@ -360,10 +360,19 @@ namespace sw
                 break;
             }
             case RHIBufferState::ShaderResource:
-            case RHIBufferState::VertexOrConstant:
-            case RHIBufferState::Index:
             {
                 glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+                break;
+            }
+            case RHIBufferState::VertexOrConstant:
+            {
+                // 정점 가져오기와 유니폼 읽기는 SSBO 배리어 비트로 덮이지 않는다(GL 사양 7.11.2) — Vulkan 의 VERTEX_ATTRIBUTE_READ · UNIFORM_READ 와 같은 접근이다.
+                glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT | GL_UNIFORM_BARRIER_BIT );
+                break;
+            }
+            case RHIBufferState::Index:
+            {
+                glMemoryBarrier( GL_ELEMENT_ARRAY_BARRIER_BIT );
                 break;
             }
             case RHIBufferState::UnorderedAccess:

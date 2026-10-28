@@ -201,7 +201,25 @@ namespace sw
          * @param argumentBufferOffset 그 버퍼 안의 바이트 오프셋입니다.
          */
         virtual void dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0 ) = 0;
-        virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState )                 = 0;
+        /**
+         * @brief 버퍼를 @p newState 로 쓰기 전에 앞선 접근이 끝나고 보이게 합니다.
+         * @details 백엔드마다 상태를 이렇게 옮긴다. 네 백엔드의 `switch` 는 `default:` 없이 모든 `RHIBufferState` 를 다뤄(DX11 은 UAV 를 뗄지, 나머지는 아래 값) 새 상태를 더하면
+         *          컴파일 경고로 모든 백엔드가 결정을 요구한다. 텍스처 상태는 RHI 계약에 없다(백엔드가 렌더 패스 · 복사 안에서 스스로 옮긴다).
+         *
+         *          | 상태 | DX11 | DX12 (리소스 상태) | Vulkan (접근 / 스테이지) | GL (`glMemoryBarrier`) |
+         *          |---|---|---|---|---|
+         *          | Common | 컴퓨트 UAV 를 뗀다 | COMMON | 0 / TOP_OF_PIPE | 없음 |
+         *          | ShaderResource | UAV 를 뗀다 | NON_PIXEL · PIXEL_SHADER_RESOURCE | SHADER_READ / 정점 · 프래그먼트 · 컴퓨트 | SHADER_STORAGE · SHADER_IMAGE_ACCESS |
+         *          | UnorderedAccess | 없음(`bindComputeUav` 가 건다) | UNORDERED_ACCESS | SHADER_WRITE · READ / 컴퓨트 · 프래그먼트 | SHADER_STORAGE |
+         *          | IndirectArgument | UAV 를 뗀다 | INDIRECT_ARGUMENT | INDIRECT_COMMAND_READ / DRAW_INDIRECT | SHADER_STORAGE · COMMAND |
+         *          | CopyDest | UAV 를 뗀다 | COPY_DEST | TRANSFER_WRITE / TRANSFER | BUFFER_UPDATE |
+         *          | CopySource | UAV 를 뗀다 | COPY_SOURCE | TRANSFER_READ / TRANSFER | BUFFER_UPDATE |
+         *          | VertexOrConstant | UAV 를 뗀다 | VERTEX_AND_CONSTANT_BUFFER | VERTEX_ATTRIBUTE_READ · UNIFORM_READ / 정점 입력 · 정점 · 프래그먼트 · 컴퓨트 | VERTEX_ATTRIB_ARRAY · UNIFORM |
+         *          | Index | UAV 를 뗀다 | INDEX_BUFFER | INDEX_READ / 정점 입력 | ELEMENT_ARRAY |
+         *
+         *          GL 은 버퍼를 가리지 않고 전역 배리어를 낸다. 컴퓨트가 쓴 버퍼를 SSBO 가 아니라 UBO 로 읽으려면 `VertexOrConstant` 로 넘겨야 `UNIFORM` 비트가 걸린다.
+         */
+        virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) = 0;
         /**
          * @brief 버퍼 앞쪽 @p sizeBytes 를 읽기 버퍼(`IRHIResourceFactory::createReadbackBuffer`)로 복사합니다. GPU 가 끝낸 뒤 CPU 가 읽는 비동기 되읽기의 기록 쪽입니다.
          * @param source    복사할 버퍼. 부르기 전에 `transitionBuffer( source, RHIBufferState::CopySource )` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다).

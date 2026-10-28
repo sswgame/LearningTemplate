@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Support/RHIStagingAllocator.h"
+#include "Engine/Graphics/RHI/Support/RHIStagingBudget.h"
 #include "Engine/Graphics/RHI/Support/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Support/RHITransferSerials.h"
 
@@ -441,4 +442,96 @@ SW_TEST_CASE( RHIStagingRingTest, UnacceptedSubmitMapsBusyAndRejectedWithoutATic
     SW_EXPECT_FALSE( rejected.isAccepted() );
     SW_EXPECT_FALSE( busy._ticket.isValid() );
     SW_EXPECT_FALSE( rejected._ticket.isValid() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] DX11 업로드 예산(`RHIStagingBudget`): 복사 중인 합이 예산을 넘지 않고, 돌려준 바이트만큼 다시 받는다
+ * @details 예산은 오프셋이 없는 총량이라 조각 남음으로 거절하지 않는다 — 합이 들어가면 받는다. 못 받은 요청이 `outReservedBytes` 를 0 으로 둔다.
+ */
+SW_TEST_CASE( RHIStagingRingTest, UploadBudgetKeepsTheInFlightSumWithinTheBudget )
+{
+    sw::RHIStagingBudget budget;
+    budget.initialize( 1000, 0 );
+
+    uint64 a{ 99 };
+    uint64 b{ 99 };
+    uint64 c{ 99 };
+    SW_ASSERT_TRUE( budget.tryReserve( 600, 0, a ) );
+    SW_ASSERT_TRUE( budget.tryReserve( 400, 0, b ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 600 ), a );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1000 ), budget.getInFlightBytes() );
+    SW_EXPECT_FALSE( budget.tryReserve( 1, 0, c ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), c ); // 못 받으면 0 이다
+
+    budget.release( a );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 400 ), budget.getInFlightBytes() );
+    SW_ASSERT_TRUE( budget.tryReserve( 500, 0, c ) ); // 앞에서 돌려받은 600 안에 들어간다
+    SW_EXPECT_FALSE( budget.tryReserve( 101, 0, a ) );
+    SW_EXPECT_TRUE( budget.tryReserve( 100, 0, a ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1000 ), budget.getInFlightBytes() );
+
+    budget.release( a );
+    budget.release( b );
+    budget.release( c );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), budget.getInFlightBytes() );
+    SW_EXPECT_TRUE( budget.tryReserve( 0, 0, a ) ); // 0 바이트는 아무것도 잡지 않고 받는다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), budget.getInFlightBytes() );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 예산보다 큰 한 장은 아무것도 복사 중이지 않을 때 예산 전부를 잡고, 못 받은 동안 작은 요청을 막아 굶지 않는다
+ * @details 작은 업로드가 끊이지 않으면 복사 중인 합이 0 이 되는 순간이 없어 큰 한 장이 영원히 `Busy` 다 — 장부(`RHIStagingAllocator`)의 단독 구간 예약과 같은 규칙.
+ */
+SW_TEST_CASE( RHIStagingRingTest, UploadBudgetWholeRequestWaitsForEmptyAndBlocksSmallOnesMeanwhile )
+{
+    constexpr int64      kLongReservationMicroseconds = 1000ll * 1000; // 테스트가 쓰는 시각 안에서 끝나지 않는 예약
+    sw::RHIStagingBudget budget;
+    budget.initialize( 1000, kLongReservationMicroseconds );
+
+    uint64 small{ 0 };
+    uint64 whole{ 0 };
+    uint64 probe{ 0 };
+    SW_ASSERT_TRUE( budget.tryReserve( 100, 10, small ) );
+    SW_EXPECT_FALSE( budget.tryReserve( 5000, 10, whole ) ); // 복사 중인 것이 있다 — 기다리면 받는다
+    SW_EXPECT_FALSE( budget.tryReserve( 10, 20, probe ) );   // 큰 요청이 기다린다 — 자리가 있어도 새 작은 요청은 받지 않는다
+    budget.release( small );
+    SW_EXPECT_FALSE( budget.tryReserve( 10, 30, probe ) ); // 비었어도 큰 요청이 다시 오기 전에는 예약이 산다
+
+    SW_ASSERT_TRUE( budget.tryReserve( 5000, 40, whole ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1000 ), whole ); // 예산 전부를 잡는다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1000 ), budget.getInFlightBytes() );
+    SW_EXPECT_FALSE( budget.tryReserve( 10, 50, probe ) ); // 혼자 들어갔다 — 다른 업로드는 자리가 없다
+    budget.release( whole );
+    SW_EXPECT_TRUE( budget.tryReserve( 10, 60, probe ) ); // 큰 요청을 받으면서 예약이 끝났다
+    budget.release( probe );
+
+    // 예산과 같은 크기도 예산 전부를 잡는 요청이다.
+    SW_ASSERT_TRUE( budget.tryReserve( 100, 70, small ) );
+    SW_EXPECT_FALSE( budget.tryReserve( 1000, 70, whole ) );
+    SW_EXPECT_FALSE( budget.tryReserve( 10, 80, probe ) );
+}
+
+/**
+ * @brief [RHIStagingRingTest] 다시 오지 않는 큰 요청의 예약은 끝나 작은 요청을 다시 받고, 예약 시간 0 은 예약하지 않는다
+ */
+SW_TEST_CASE( RHIStagingRingTest, UploadBudgetAbandonedWholeRequestStopsBlockingSmallOnes )
+{
+    sw::RHIStagingBudget budget;
+    budget.initialize( 1000, 100 );
+
+    uint64 held{ 0 };
+    uint64 whole{ 0 };
+    uint64 probe{ 0 };
+    SW_ASSERT_TRUE( budget.tryReserve( 100, 1000, held ) );
+    SW_EXPECT_FALSE( budget.tryReserve( 2000, 1000, whole ) ); // 예약은 1100 까지
+    SW_EXPECT_FALSE( budget.tryReserve( 10, 1099, probe ) );
+    SW_EXPECT_TRUE( budget.tryReserve( 10, 1100, probe ) ); // 큰 요청이 다시 오지 않았다 — 막지 않는다
+    SW_EXPECT_EQUAL( static_cast<uint64>( 110 ), budget.getInFlightBytes() );
+    budget.release( held );
+    budget.release( probe );
+
+    budget.initialize( 1000, 0 );
+    SW_ASSERT_TRUE( budget.tryReserve( 100, 1000, held ) );
+    SW_EXPECT_FALSE( budget.tryReserve( 2000, 1000, whole ) );
+    SW_EXPECT_TRUE( budget.tryReserve( 10, 1000, probe ) ); // 예약 시간 0 — 큰 요청이 작은 요청을 막지 않는다
 }

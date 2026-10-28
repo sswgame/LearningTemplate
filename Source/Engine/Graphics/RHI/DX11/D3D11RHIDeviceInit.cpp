@@ -49,8 +49,8 @@ namespace sw
             SW_LOG_ERROR( "The upload staging budget is 0 (gv_rhiStagingRingMegabytes) - Direct3D 11 does not start" );
             return false;
         }
-        _uploadStagingBudgetBytes = desc._stagingRingBytes;
-        _directUploadMaxBytes     = desc._directUploadMaxBytes;
+        _uploadStagingBudget.initialize( desc._stagingRingBytes );
+        _directUploadMaxBytes = desc._directUploadMaxBytes;
 
         // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
         // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다
