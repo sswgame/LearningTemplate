@@ -2,37 +2,31 @@
 
 > 질문: 남은 일을 어떤 순서로 하는가?
 > 독자: 다음 일을 고르는 통합 담당과 작업자.
-> 결론: 이 문서는 순서와 병렬 여부만 가진다. 일의 설계 · 진행 · 상태는 링크한 계획 문서의 머리 줄이 원본이다. 끝난 일은 이 목록에서 지운다.
+> 결론: 이 문서는 순서와 병렬 여부만 가진다. 설계 · 진행 · 상태는 링크한 계획 문서의 머리 줄이 원본이고, 끝난 일은 이 표에서 지운다.
 
-일의 식별자는 이름입니다. 계획 문서의 파일 이름이거나 `Candidates-<영역>.md` 의 `### 이름` 절입니다. 옛 번호(`C-30` 등)는 `py -3 -m Scripts plans --find <옛번호>` 로 풉니다.
-작업 전에 항목의 현재 완성도를 코드로 확인합니다. 같은 파일을 건드리는 단위는 같은 작업자에게 묶습니다. GPU 확인이 필요한 단위는 구현만 하고 통합에서 캡처합니다.
-`[병렬 가능]` 은 다른 작업자와 같은 시간대에 병합해도 건드리는 파일이 겹치지 않는다는 뜻이고, `[단독: 이유]` 는 혼자 하는 시간대가 필요하다는 뜻입니다.
+- 일의 식별자는 이름이다(계획 문서 파일 이름 또는 `Candidates-<영역>.md` 의 `### 이름` 절). 옛 번호는 `py -3 -m Scripts plans --find <옛번호>` 로 푼다.
+- 착수 전에 항목의 현재 완성도를 코드로 확인한다. 같은 파일을 건드리는 단위는 한 작업자에게 묶는다. GPU 확인이 필요한 단위는 구현만 하고 통합에서 캡처한다.
+- 병렬 열: `병렬` 은 다른 작업과 같은 시간대에 병합해도 파일이 겹치지 않는다는 뜻이고, `단독` 은 혼자 하는 시간대가 필요하다는 뜻이다(이유를 적는다).
 
-## 지금 순서
+| # | 계획 | 한 줄 설명 | 병렬 | 선행 |
+|---|------|-----------|------|------|
+| 1 | [DataDriven](DataDriven.md) 7.5 | 데이터화 마무리 | 단독: 기본값 · 로더 형식 변경으로 여러 모듈 재빌드 | 없음 |
+| 2 | [LeakDetection](LeakDetection.md) | 누수 탐지 | 단독: `Memory.h` 변경 재빌드, 측정은 Release 에서 혼자 | 1 |
+| 3 | [ClusteredLighting](ClusteredLighting.md) | 클러스터드 라이팅 | 단독: 측정은 Release 에서 혼자 | 없음 |
+| 4 | [EnvironmentRemainders](EnvironmentRemainders.md) | 환경(지형 · 식생 · 물)의 남은 것 | 단독: 측정은 Release 에서 혼자 | 없음 |
+| 5 | [TerrainEditCost](TerrainEditCost.md), [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost) | 지형 · 식생 비용, 서버 파괴 호스트 | 단독: 셰이더 재베이크, 측정은 Release 에서 혼자 | 4 |
+| 6 | [OnlineKits](OnlineKits.md) | 온라인 키트 마감 | 병렬 | 없음 |
+| 7 | [ShooterCharacterIntegration](ShooterCharacterIntegration.md) · [ServerDebug](ServerDebug.md) · [WildWestHorseMount](WildWestHorseMount.md) | Shooter3D 캐릭터, 서버 디버깅, 승마 키트 | 병렬 | 없음 |
+| 8 | [MsdfGlyphs](MsdfGlyphs.md) | 런타임 UI 글리프 | 병렬 | 없음 |
+| 9 | [PreloadAndLod](PreloadAndLod.md) | 프리로딩 · LOD | 단독: `.mesh` 판 올림 · 셰이더 재베이크 | 5 |
+| 10 | [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md) | Wayland 창 계층, 서버 타깃에서 렌더러 빼기 | 병렬 | 없음 |
+| 11 | [LongFunctions](LongFunctions.md) | 긴 함수 정리 | 단독: 헤더 · include 변경 재빌드 | 1 ~ 2 |
+| 12 | [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md) | 결정 측정 열, 이월 확인, 조용한 폴백 감사(정리 → 기능 순) | 병렬 | 없음 |
+| 13 | [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md) | 렌더 패스 등록 창구, 파일 넘는 오브젝트 참조, 서드파티 빈자리 | 병렬 | 없음 |
+| 14 | [AutomationSplit](AutomationSplit.md) | Automation 분리 | 병렬: 셰이더 · 층 게이트와 파일이 다르다 | 없음 |
+| 15 | [RhiAsyncUploads](RhiAsyncUploads.md) | RHI 비동기 업로드(U5 GPU 확인은 통합, U7 · U8 · U9 · U11 남은 몫, 이어 U10 · U12 ~ U14) | 병렬: 단위마다 소유 폴더가 다르다(계획 문서 표) | 없음 |
+| 16 | [PackedTypes](PackedTypes.md) | 저장 전용 압축 타입 P4(G 버퍼 법선, GPU 확인 · 재쿠킹은 통합) → P5 → P6 | 단독: P4 는 셰이더 재베이크 | 없음 |
+| 17 | [RuntimeQualityAdjust](RuntimeQualityAdjust.md) | 부하 검증의 남은 것과 자동 품질 조정 | 병렬 | 없음 |
+| 18 | [BuildSpeed](BuildSpeed.md) | 빌드 속도 12 단계(리플렉션 헤더 팬아웃) | 단독: 다른 작업이 모두 끝난 뒤 혼자, 빌드 중 측정 무효 | 1 ~ 17 |
 
-1. **설계는 끝났고 코드가 없거나 검증이 남은 단위**
-   - 데이터화 [DataDriven](DataDriven.md) 7.5. [단독: 기본값 · 로더 형식을 바꿔 여러 모듈이 다시 빌드됨]
-2. **새 시스템**
-   - 누수 탐지 [LeakDetection](LeakDetection.md). [단독: `Memory.h` 를 바꿔 여러 모듈이 다시 빌드됨, 측정은 Release 에서 혼자]
-   - 클러스터드 라이팅 [ClusteredLighting](ClusteredLighting.md). [단독: 측정은 Release 에서 혼자]
-   - 환경 남은 것 [EnvironmentRemainders](EnvironmentRemainders.md). [단독: 측정은 Release 에서 혼자]
-3. **기능 묶음**
-   3. 지형 · 식생 [TerrainEditCost](TerrainEditCost.md), 서버 파괴 호스트 [DestructionNetSessionScene](Candidates-network.md#destructionnetsessionscene) → [EncryptedTickCost](Candidates-network.md#encryptedtickcost). [단독: 셰이더 재베이크, 측정은 Release 에서 혼자]
-   4. 온라인 키트 마감 [OnlineKits](OnlineKits.md). [병렬 가능]
-   5. 애니메이션 · 게임플레이: Shooter3D [ShooterCharacterIntegration](ShooterCharacterIntegration.md), 서버 디버깅 [ServerDebug](ServerDebug.md), 게임플레이 키트 [WildWestHorseMount](WildWestHorseMount.md). [병렬 가능]
-   7. 런타임 UI: [MsdfGlyphs](MsdfGlyphs.md). [병렬 가능]
-   11. 프리로딩 · LOD [PreloadAndLod](PreloadAndLod.md). [단독: `.mesh` 판 올림 · 셰이더 재베이크]
-   12. 뒤 순서: [WaylandWindowLayer](WaylandWindowLayer.md) · [DedicatedServerNoRenderer](DedicatedServerNoRenderer.md). [병렬 가능]
-4. **파일이 겹쳐 미룬 정리**(위 1 ~ 2 뒤에): [LongFunctions](LongFunctions.md). [단독: 헤더 · include 를 바꿔 여러 모듈이 다시 빌드됨]
-5. **새로 쓴 정리**(정리 → 기능 순서): [DecisionMeasurementColumn](Candidates-project.md#decisionmeasurementcolumn) · [CarriedOverChecks](Candidates-project.md#carriedoverchecks) · [SilentFallbackAudit](SilentFallbackAudit.md). [병렬 가능]
-8. **조건부에서 착수한 일**: [ModuleRenderPass](ModuleRenderPass.md) · [CrossFileObjectReference](CrossFileObjectReference.md) · [ThirdPartyGaps](ThirdPartyGaps.md). [병렬 가능]
-9. **빌드 속도 12 단계**(리플렉션 헤더 팬아웃) [BuildSpeed](BuildSpeed.md). [단독: 다른 작업이 모두 끝난 뒤 혼자, 빌드가 도는 동안은 측정이 무효]
-10. **2026-10-23 사용자와 정한 일**
-    - Automation 분리 [AutomationSplit](AutomationSplit.md). [병렬 가능: 셰이더 · 층 게이트와 파일이 다르다]
-11. **병렬 · 비동기 트랙의 남은 단위**(2026-10-25 통합 I 에서 들어온 설계)
-    - RHI 비동기 업로드 [RhiAsyncUploads](RhiAsyncUploads.md) — B0 골격 번들은 통합 L, U8 · U9 의 프레임 경로 몫(글리프 아틀라스 · 텍스처 구간 갱신)은 통합 M, Vulkan 비동기 전송(U6)은 통합 N 에서 들어갔다. DX12 비동기 전송(U5)은 코드가 끝났고 GPU 확인은 통합이 돌린다. U7(테스트) · U8 남은 몫(새 텍스처 업로드 세 단계) · U9 남은 몫(렌더 타깃 읽기 티켓) · U11(PSO 상태)을 단위별로, 그 뒤 U10 · U12 ~ U14. [병렬 가능: 단위마다 소유 폴더가 다르다(계획 문서 표), GPU 확인은 통합]
-    - 저장 전용 압축 타입 [PackedTypes](PackedTypes.md) P4(G 버퍼 법선 — 설계는 문서에 있고 코드는 GPU 확인과 재쿠킹을 하는 통합이 쓴다) → P5 → P6. [단독: P4 는 셰이더 재베이크]
-
-## 지금 하지 않는 것
-
-조건부 · 보류 · 관찰 항목은 영역별 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있고 순서에 올리지 않는다. 조건이 오면 해당 후보 문서에서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md).
+순서에 올리지 않는 조건부 · 보류 · 관찰 항목은 후보 문서의 `## 조건부` / `## 보류` / `## 관찰` 절에 있다. 조건이 오면 거기서 골라 온다: [engine](Candidates-engine.md) · [graphics](Candidates-graphics.md) · [gameplay](Candidates-gameplay.md) · [editor](Candidates-editor.md) · [network](Candidates-network.md) · [ui](Candidates-ui.md) · [quality](Candidates-quality.md) · [project](Candidates-project.md) · [audio-ai-localization](Candidates-audio-ai-localization.md).
