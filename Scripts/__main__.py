@@ -63,6 +63,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("scenario-logs", "dev.RunScenarioLogs", "시나리오 보고로 로그 허용 목록(allowedlogs.json)을 지킨다 — 낡은 항목 · 처리하지 않은 로그(종료 코드 15)를 --check 가 세고 --regen 이 초안 항목을 만든다"),
     Subcommand("scenario", "qa.ScenarioRun", "시나리오 하나를 선언한 <Launch> 인자 그대로 백엔드마다 돌려(GPU 공유 잠금) 종료 코드를 뜻으로 풀고 failures · unconfirmed · unhandledLogs 를 한 표로 보인다"),
     Subcommand("scenario-waits", "qa.ScenarioWaitCost", "시나리오 파일의 고정 프레임 대기를 정적으로 세어 가장 긴 시나리오 · 조건 대기(WaitUntil)로 바꿀 후보를 찾는다(보고의 timeline 으로 잰 값과 견준다)"),
+    Subcommand("test-costs", "qa.TestCostCalibration", "ctest 로그(LastTest.log)의 실제 케이스 시간으로 샤드 비용표(Test/TestPolicy.json)를 보정하는 제안을 내고 샤드 겹침을 잰다(--apply 가 표 숫자만 쓴다)"),
     Subcommand("scenario-thresholds", "qa.ScenarioThresholds", "어림값 문턱(ExpectImage provisional)을 보고의 잰 값(measured)으로 승격하는 제안 표를 만들고 --apply 로 시나리오에 쓴다"),
     Subcommand("scenario-seq", "qa.ScenarioSequence", "시나리오를 차례로 새 프로세스로 돌린다(앞 실행이 디스크에 남긴 사용자 설정 같은 상태를 뒤 실행이 읽는다 — 재시작 뒤 유지 확인)"),
     Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
