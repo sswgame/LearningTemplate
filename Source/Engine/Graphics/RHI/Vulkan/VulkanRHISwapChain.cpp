@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
 
+#include "Core/Log/LogOnce.h"
+
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -502,7 +504,7 @@ namespace sw
         const VkResult result = vkAcquireNextImageKHR( device, _swapChain, UINT64_MAX,
                                                        _listImageAvailableSemaphore[frameSlot], VK_NULL_HANDLE, &_imageIndex );
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
-            SW_LOG_ERROR( "vkAcquireNextImageKHR failed! Error code: %#", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ONCE( "vkAcquireNextImageKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );
     }
 
@@ -524,7 +526,7 @@ namespace sw
 
         const VkResult result = vkQueuePresentKHR( queue, &presentInfo );
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
-            SW_LOG_ERROR( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ONCE( "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );
     }
 

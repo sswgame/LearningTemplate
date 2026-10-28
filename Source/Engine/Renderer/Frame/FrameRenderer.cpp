@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -403,7 +404,7 @@ namespace sw
 
         if ( _pCmd == nullptr )
         {
-            SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
+            SW_LOG_ERROR_ONCE( "%#: createCommandList returned null", pCallerName );
             return false;
         }
 
