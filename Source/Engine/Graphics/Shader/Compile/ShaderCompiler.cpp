@@ -771,9 +771,19 @@ namespace sw
         }
     }
 
-    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& desc )
+    ShaderCompileResult ShaderCompiler::compileHlsl( const ShaderCompileDesc& requestDesc )
     {
         using Internal = ShaderCompilerInternal;
+        // 에뮬 슬롯 표(shaderslot::emulated)를 `SW_EMU_SLOT_<이름>=<슬롯>` 로 모든 컴파일에 더한다 — binding.hlsli 의 Bindless::sampleIndex 가 읽는다.
+        // 값이 캐시 키(computeCachePath)에 들어가므로 표를 바꾸면 디스크 캐시가 다시 컴파일된다.
+        ShaderCompileDesc desc = requestDesc;
+        for ( const shaderslot::emulated::EngineTextureBinding& binding : shaderslot::emulated::kEngineTextureBindings )
+        {
+            ShaderMacroDefine define;
+            define._name  = string( shaderslot::emulated::kSlotMacroPrefix ) + binding._pName;
+            define._value = to_string( binding._slot );
+            desc._listDefine.push_back( std::move( define ) );
+        }
         ShaderCompileResult result{};
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );

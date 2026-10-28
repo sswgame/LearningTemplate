@@ -384,6 +384,58 @@ namespace sw
                            kLightTypeFreeform2DEdge != kLightTypeShadow2D && kLightTypeFreeform2DEdge != kLightTypeProbeVolume &&
                            kLightTypeFreeform2DEdge != kLightTypeReflectionProbe,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
+        /**
+         * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯 표입니다 — 이 표가 **유일한 원본**입니다.
+         * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 코드가 거는 쿠키 · 노출). 한 슬롯을 여러 이름이 나눠 쓴다.
+         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<슬롯>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHlsl`) `binding.hlsli` 의
+         *          `Bindless::sampleIndex` 가 그 매크로를 읽는다(패치 `ShaderPatches/05a-…` 가 적용되면) — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
+         *          C++ 의 역할 → 슬롯(`getEmulatedTextureSlot`)과 실행의 슬롯 바인딩도 이 표를 따른다.
+         */
+        namespace emulated
+        {
+            struct EngineTextureBinding
+            {
+                const utf8* _pName;
+                uint32      _slot;
+            };
+
+            inline constexpr const utf8* kSlotMacroPrefix = "SW_EMU_SLOT_";
+
+            inline constexpr EngineTextureBinding kEngineTextureBindings[] = {
+                {         "ShadowMap",             SW_SLOT_ENGINE_TEX0},
+                {       "SourceColor",             SW_SLOT_ENGINE_TEX0},
+                {     "GBufferAlbedo",             SW_SLOT_ENGINE_TEX1},
+                {  "AmbientOcclusion",             SW_SLOT_ENGINE_TEX1},
+                {"Light2DCookieAtlas",             SW_SLOT_ENGINE_TEX1},
+                {     "GBufferNormal",             SW_SLOT_ENGINE_TEX2},
+                {       "BloomBright",             SW_SLOT_ENGINE_TEX2},
+                {      "AutoExposure",             SW_SLOT_ENGINE_TEX2},
+                {        "SceneDepth",             SW_SLOT_ENGINE_TEX3},
+                {   "GBufferMaterial", SW_SLOT_ENGINE_GBUFFER_MATERIAL},
+            };
+
+            /** @brief 이름의 슬롯을 돌려줍니다. 표에 없으면 false 입니다. */
+            [[nodiscard]] constexpr bool tryFindSlot( const utf8* pName, uint32& outSlot )
+            {
+                for ( const EngineTextureBinding& binding : kEngineTextureBindings )
+                {
+                    const utf8* pLeft  = binding._pName;
+                    const utf8* pRight = pName;
+                    while ( *pLeft != '\0' && *pLeft == *pRight )
+                    {
+                        ++pLeft;
+                        ++pRight;
+                    }
+                    if ( *pLeft == *pRight )
+                    {
+                        outSlot = binding._slot;
+                        return true;
+                    }
+                }
+                return false;
+            }
+        } // namespace emulated
+
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kEngineGBufferMaterialTexture >= kSrvSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,
                        "G버퍼 머티리얼 슬롯(에뮬)은 SRV 띠 위, Vulkan t 밴드 안, 머티리얼 슬롯 앞이어야 한다 — 띠가 자라 닿으면 DX11 · GL 에서 버퍼와 텍스처가 한 레지스터를 다툰다" );

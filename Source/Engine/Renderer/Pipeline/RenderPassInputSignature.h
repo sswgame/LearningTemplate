@@ -36,8 +36,8 @@ namespace sw
     /**
      * @enum EmulatedTextureSlot
      * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯입니다. 네이티브 bindless(DX12 · Vulkan)는 쓰지 않습니다.
-     * @details 표는 `getEmulatedTextureSlot` 하나이고 셰이더(`binding.hlsli` 의 `Bindless::sampleIndex`)와 실행
-     *          (`FrameRenderer::commitBindlessTextureBindings`)이 같은 표를 따른다. 한 슬롯을 여러 역할이 나눠 쓰므로 한 패스가 같은
+     * @details 표는 `shaderslot::emulated::kEngineTextureBindings`(ShaderBindingSlots.h) 하나이고 셰이더(컴파일러가 낸
+     *          `SW_EMU_SLOT_*` 매크로를 `Bindless::sampleIndex` 가 읽는다)와 실행(`FrameRenderer::commitBindlessTextureBindings`)이 같은 표를 따른다. 한 슬롯을 여러 역할이 나눠 쓰므로 한 패스가 같은
      *          슬롯의 두 역할을 함께 읽으면 하나가 조용히 빠진다 — 파이프라인 로드(`RenderPipelineAsset::validate`)가 오류로 거절한다.
      */
     enum class EmulatedTextureSlot : uint8
@@ -51,29 +51,7 @@ namespace sw
     };
 
     /** @brief 역할이 에뮬 백엔드에서 쓰는 슬롯입니다. */
-    constexpr EmulatedTextureSlot getEmulatedTextureSlot( RenderPassInputRole role )
-    {
-        switch ( role )
-        {
-            case RenderPassInputRole::SourceColor:
-            case RenderPassInputRole::ShadowMap:
-                return EmulatedTextureSlot::Slot0;
-            case RenderPassInputRole::GBufferAlbedo:
-            case RenderPassInputRole::AmbientOcclusion:
-                return EmulatedTextureSlot::Slot1;
-            case RenderPassInputRole::GBufferNormal:
-            case RenderPassInputRole::BloomBright:
-                return EmulatedTextureSlot::Slot2;
-            case RenderPassInputRole::SceneDepth:
-                return EmulatedTextureSlot::Slot3;
-            case RenderPassInputRole::GBufferMaterial:
-                return EmulatedTextureSlot::GBufferMaterial;
-            case RenderPassInputRole::Invalid:
-            case RenderPassInputRole::Count:
-                return EmulatedTextureSlot::None;
-        }
-        return EmulatedTextureSlot::None;
-    }
+    EmulatedTextureSlot getEmulatedTextureSlot( RenderPassInputRole role );
 
     /** @brief 역할의 셰이더 이름을 반환합니다. `g_<Name>Index` 의 `<Name>` 이자 FrameResourceRegistry 의 키입니다. */
     const utf8* getRenderPassInputRoleName( RenderPassInputRole role );

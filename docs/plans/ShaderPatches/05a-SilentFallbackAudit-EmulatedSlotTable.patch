@@ -1,0 +1,124 @@
+diff --git a/Resource/engine/shaders/binding.hlsli b/Resource/engine/shaders/binding.hlsli
+index e8d605b64..f1eb3fb73 100644
+--- a/Resource/engine/shaders/binding.hlsli
++++ b/Resource/engine/shaders/binding.hlsli
+@@ -136,6 +143,7 @@ struct Bindless
+ {
+     static uint textureSlot( uint index );
+     static uint rwTextureSlot( uint index );
++    static uint emulatedSlot( uint index ); // 에뮬 백엔드(DX11 · GL)만 정의가 있다 — 엔진 텍스처 인덱스가 걸리는 슬롯(없으면 kUnmappedEngineTextureSlot)
+     static float4 sampleIndex( uint index, float2 uv );
+     static float4 sampleIndexWith( uint index, uint samplerId, float2 uv );
+     static float sampleShadowComparison( uint index, float2 uv, float depth );
+@@ -911,24 +940,60 @@ static float4 PassTexture::sampleGbufferMaterialSlot( float2 uv )
+ /**
+  * @brief 에뮬 백엔드(DX11 · GL)의 슬롯 표에 없는 엔진 텍스처 인덱스를 읽었을 때 내는 오류 색(자홍)입니다.
+  * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 이 색이 보이면
+- *          그 인덱스를 표(C++ getEmulatedTextureSlot — RenderPassInputSignature.h, 아래 sampleIndex 는 같은 표를 손으로 따른다)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
++ *          그 인덱스를 C++ 표(`shaderslot::emulated::kEngineTextureBindings` — ShaderBindingSlots.h)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
+  */
+ static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
++static const uint   kUnmappedEngineTextureSlot  = 0xFFFFFFFFu;
++
++        // 슬롯 번호는 셰이더 컴파일러가 C++ 표에서 내는 `SW_EMU_SLOT_<이름>` 매크로다(ShaderCompiler::compileHlsl) — 여기에 손으로 맞춘 번호가 없다.
++        // 매크로가 없으면 셰이더를 컴파일하는 경로가 표를 넣지 않은 것이라 조용히 0 으로 읽지 않고 멈춘다.
++        #if !defined( SW_EMU_SLOT_ShadowMap ) || !defined( SW_EMU_SLOT_SourceColor ) || !defined( SW_EMU_SLOT_GBufferAlbedo ) || !defined( SW_EMU_SLOT_AmbientOcclusion ) ||      \
++            !defined( SW_EMU_SLOT_Light2DCookieAtlas ) || !defined( SW_EMU_SLOT_GBufferNormal ) || !defined( SW_EMU_SLOT_BloomBright ) || !defined( SW_EMU_SLOT_AutoExposure ) || \
++            !defined( SW_EMU_SLOT_SceneDepth ) || !defined( SW_EMU_SLOT_GBufferMaterial )
++            #error "SW_EMU_SLOT_* is missing - ShaderCompiler::compileHlsl injects it from shaderslot::emulated::kEngineTextureBindings"
++        #endif
++
++/** @brief 엔진 텍스처 인덱스가 걸리는 슬롯 번호(t0..t3 · G버퍼 머티리얼)입니다. 표에 없는 인덱스면 `kUnmappedEngineTextureSlot` 입니다. */
++static uint Bindless::emulatedSlot( uint index )
++{
++    if ( index == g_ShadowMapIndex )
++        return SW_EMU_SLOT_ShadowMap;
++    if ( index == g_SourceColorIndex )
++        return SW_EMU_SLOT_SourceColor;
++    if ( index == g_GBufferAlbedoIndex )
++        return SW_EMU_SLOT_GBufferAlbedo;
++    if ( index == g_AmbientOcclusionIndex )
++        return SW_EMU_SLOT_AmbientOcclusion;
++    if ( index == g_Light2DCookieAtlasIndex )
++        return SW_EMU_SLOT_Light2DCookieAtlas;
++    if ( index == g_GBufferNormalIndex )
++        return SW_EMU_SLOT_GBufferNormal;
++    if ( index == g_BloomBrightIndex )
++        return SW_EMU_SLOT_BloomBright;
++    if ( index == g_AutoExposureIndex )
++        return SW_EMU_SLOT_AutoExposure;
++    if ( index == g_SceneDepthIndex )
++        return SW_EMU_SLOT_SceneDepth;
++    if ( index == g_GBufferMaterialIndex )
++        return SW_EMU_SLOT_GBufferMaterial;
++    return kUnmappedEngineTextureSlot;
++}
+ 
+ static float4 Bindless::sampleIndex( uint index, float2 uv )
+ {
+     if ( index == kInvalidIndex )
+         return float4( 0, 0, 0, 1 );
+-    // FrameRenderer 가 [shadow/source, albedo/ao/light2dCookie, normal/bloomBright/autoExposure, depth] 순으로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩 (commitBindlessTextureBindings 와 같은 표).
+-    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
++    // FrameRenderer 가 같은 C++ 표(commitBindlessTextureBindings)로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩한다.
++    const uint slot = Bindless::emulatedSlot( index );
++    if ( slot == SW_SLOT_ENGINE_TEX0 )
+         return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
+-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX1 )
+         return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
+-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX2 )
+         return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
+-    if ( index == g_SceneDepthIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX3 )
+         return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
+-    if ( index == g_GBufferMaterialIndex )
++    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
+         return PassTexture::sampleGbufferMaterialSlot( uv );
+     return kUnmappedEngineTextureColor;
+ }
+@@ -949,15 +1014,16 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
+ {
+     if ( index == kInvalidIndex )
+         return float4( 0, 0, 0, 1 );
+-    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
++    const uint slot = Bindless::emulatedSlot( index );
++    if ( slot == SW_SLOT_ENGINE_TEX0 )
+         return Bindless::sampleSlotWith( g_SwSlot0, samplerId, uv );
+-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX1 )
+         return Bindless::sampleSlotWith( g_SwSlot1, samplerId, uv );
+-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX2 )
+         return Bindless::sampleSlotWith( g_SwSlot2, samplerId, uv );
+-    if ( index == g_SceneDepthIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX3 )
+         return Bindless::sampleSlotWith( g_SwSlot3, samplerId, uv );
+-    if ( index == g_GBufferMaterialIndex )
++    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
+         return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, samplerId, uv );
+     return kUnmappedEngineTextureColor;
+ }
+@@ -981,15 +1047,16 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerId, float2 uv )
+         return Bindless::sampleIndex( index, uv );
+     if ( index == kInvalidIndex )
+         return float4( 0, 0, 0, 1 );
+-    if ( index == g_ShadowMapIndex || index == g_SourceColorIndex )
++    const uint slot = Bindless::emulatedSlot( index );
++    if ( slot == SW_SLOT_ENGINE_TEX0 )
+         return Bindless::sampleSlotPoint( g_SwSlot0, uv );
+-    if ( index == g_GBufferAlbedoIndex || index == g_AmbientOcclusionIndex || index == g_Light2DCookieAtlasIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX1 )
+         return Bindless::sampleSlotPoint( g_SwSlot1, uv );
+-    if ( index == g_GBufferNormalIndex || index == g_BloomBrightIndex || index == g_AutoExposureIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX2 )
+         return Bindless::sampleSlotPoint( g_SwSlot2, uv );
+-    if ( index == g_SceneDepthIndex )
++    if ( slot == SW_SLOT_ENGINE_TEX3 )
+         return Bindless::sampleSlotPoint( g_SwSlot3, uv );
+-    if ( index == g_GBufferMaterialIndex )
++    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
+         return Bindless::sampleSlotPoint( g_SwSlotGBufferMaterial, uv );
+     return kUnmappedEngineTextureColor;
+ }

@@ -24,6 +24,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -1177,4 +1178,26 @@ SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
         }
     }
     SW_EXPECT_TRUE_MSG( listOffender.empty(), ( "루트 상수 상한을 숫자로 따로 적은 백엔드: " + listOffender ).c_str() );
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] 에뮬 슬롯 표(`shaderslot::emulated`)가 역할 → 슬롯의 유일한 원본이다 — 모든 역할이 표에 있고 같은 슬롯 번호로 풀린다
+ * @details 셰이더는 같은 표를 `SW_EMU_SLOT_<이름>` 매크로로 읽는다(`ShaderCompiler::compileHlsl`). 역할이 표에서 빠지면 `getEmulatedTextureSlot` 이
+ *          None 을 돌려 같은 슬롯 충돌 검사가 조용히 건너뛴다 — 여기서 이름으로 실패한다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, EmulatedSlotTableCoversEveryRole )
+{
+    for ( uint32 roleIndex = static_cast<uint32>( sw::RenderPassInputRole::SourceColor ); roleIndex < static_cast<uint32>( sw::RenderPassInputRole::Count ); ++roleIndex )
+    {
+        const sw::RenderPassInputRole role = static_cast<sw::RenderPassInputRole>( roleIndex );
+        uint32                        slot{ 0 };
+        SW_EXPECT_TRUE_MSG( sw::shaderslot::emulated::tryFindSlot( sw::getRenderPassInputRoleName( role ), slot ), sw::getRenderPassInputRoleName( role ) );
+        SW_EXPECT_TRUE_MSG( sw::getEmulatedTextureSlot( role ) != sw::EmulatedTextureSlot::None, sw::getRenderPassInputRoleName( role ) );
+    }
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::ShadowMap ) == sw::EmulatedTextureSlot::Slot0 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::SourceColor ) == sw::EmulatedTextureSlot::Slot0 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::SceneDepth ) == sw::EmulatedTextureSlot::Slot3 );
+    SW_EXPECT_TRUE( sw::getEmulatedTextureSlot( sw::RenderPassInputRole::GBufferMaterial ) == sw::EmulatedTextureSlot::GBufferMaterial );
+    uint32 unknownSlot{ 0 };
+    SW_EXPECT_FALSE( sw::shaderslot::emulated::tryFindSlot( "NotARole", unknownSlot ) );
 }
