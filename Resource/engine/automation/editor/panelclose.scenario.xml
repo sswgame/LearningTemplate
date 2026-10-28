@@ -10,6 +10,7 @@
 	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="25"><DevCommand line="layout.reset"/><Variable name="gv_editorProbePanel" value="input_map"/></At>
 	<At frame="40"><DevCommand line="panel.focus input_map"/></At>
+	<At frame="41"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="300"/></At>
 	<At frame="70"><Expect probe="Editor.PanelOpen" equals="1"/><Expect probe="Editor.PanelDirty" equals="0"/></At>
 
 	<!-- ① 편집 -->
@@ -45,16 +46,19 @@
 		<CaptureEditorUI file="panelclose/confirmX.png"/>
 	</At>
 	<At frame="241"><EditorClick mark="unsaved.discard"/></At>
+	<At frame="242"><WaitUntil probe="Editor.PanelOpen" equals="0" timeoutFrames="300"/></At>
 	<At frame="261"><Expect probe="Editor.PanelOpen" equals="0"/></At>
 
 	<!-- ④ 다시 열면 깨끗하다 -->
 	<At frame="265"><DevCommand line="panel.focus input_map"/></At>
+	<At frame="266"><WaitUntil probe="Editor.PanelOpen" equals="1" timeoutFrames="300"/></At>
 	<At frame="295">
 		<Expect probe="Editor.PanelOpen" equals="1"/>
 		<Expect probe="Editor.PanelDirty" equals="0"/>
 		<CaptureEditorUI file="panelclose/reopened.png"/>
 	</At>
 	<At frame="300"><DevCommand line="panel.close input_map"/></At>
+	<At frame="301"><WaitUntil probe="Editor.PanelOpen" equals="0" timeoutFrames="300"/></At>
 	<At frame="320"><Expect probe="Editor.PanelOpen" equals="0"/></At>
 	<At frame="325"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>
