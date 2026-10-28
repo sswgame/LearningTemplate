@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: Ninja-Debug · Ninja-Release(모든 게임 12 · 모듈 76) 모두 오류 0 이다. 용어 · 약어 · 폴더 · 다중 상속 정리의 큰 묶음은 끝났다. 다음은 3 절의 전수 감사 목록(정적 전용 타입 393 · 평평한 대형 폴더 · 모호한 폴더 · 파일 이름)을 4 절의 규칙대로 처리하고, 그 뒤 A3(낮은 층 파일 읽기) → B(Engine 링크 분할) → C(키트에 에디터 확장 모으기)다.
+> 결론: Ninja-Debug · Ninja-Release(모든 게임 12 · 모듈 76) 모두 오류 0 이다. 용어 · 약어 · 폴더 · 다중 상속 정리의 큰 묶음은 끝났다. 다음은 3 절의 남은 감사 항목(평평한 대형 폴더 · 남은 모호한 폴더 · 파일 이름)을 4 절의 규칙대로 처리하고, 그 뒤 A3(낮은 층 파일 읽기) → B(Engine 링크 분할) → C(키트에 에디터 확장 모으기)다.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -25,24 +25,28 @@
 | 다중 상속: 구현 상속 · 믹스인은 합성(`SubscriptionList` 멤버, 언로드 처리기 등록 + 구독, 콜백 하나짜리 인터페이스는 델리게이트), 서비스 인터페이스는 서브시스템을 상속(`IModuleLoader : ISubsystem`). 순수 인터페이스 여러 개 구현(ISP) · 바깥 API 요구는 허용 | |
 | 폴더: 한 기능의 하위는 하위 폴더(`Core/Log/Sink`, `RHI/DX/DX11`, `RHI/<백엔드>/Module`, `Automation/{Watch,Scenario,Runner}`). 프로그램은 `Source/Programs`, `Tools/` 는 내려받는 외부 도구만 | 언리얼 Source/Programs |
 | 약어는 대문자(`GPU` · `ID` · `VFX`), 첫 낱말은 소문자(`gpuTime`) | NamingCpp |
+| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` · 호스트 범위 · `DevConsoleHost`). 네트워크 끝점은 `NetEndpoint*`, 에디터 패널 진입점은 `IEditorPanelService`. `OnlineServiceHost`(한 프로세스의 서비스 묶음) · `WindowsServiceHost`(Windows 서비스 프로세스)는 같은 뜻이라 둔다 | 같은 단어 한 뜻 |
+| Runtime = 모든 호스트에서 도는 것(키트 `Runtime/` — 언리얼 플러그인 모듈 형식 Runtime · ServerOnly) · 실행 중(편집 · 쿡 시점의 반대). 모듈 C-ABI 계약은 `Source/ModuleAPI`(옛 RuntimeAPI) | 언리얼 모듈 형식 |
+| Automation = 시나리오 자동 테스트(`Engine/Automation`). UI 의 시나리오 단계는 `UI/Scenario/UIScenarioSteps` — "UI Automation" 은 Windows 접근성 API(UIA)만 | 언리얼 Automation System |
+| 정적 함수만 있는 타입은 인자로 대상을 받는 상태 없는 라이브러리면 도메인 이름 그대로(`BinarySerializer` · `Ledger` · `EditorLayoutStore`). 고칠 것은 서브시스템 상태 위의 정적 파사드뿐 — 하나로 합쳤다(`EditorPlaySession` 이 서브시스템). 프로세스 전역 상태(Logger · Memory · 프로파일러)는 `ScopeOwned` · `atomic` 규칙이 맡는다 | 언리얼 FJsonSerializer · FPaths · UGameplayStatics |
+| 폴더 이름: `Engine/Foundation`(옛 Common, 우산 `Foundation.h`) · `UI/WidgetTree` · `Serialization/{Serializer,Diff}` · `Foundation/GameData` · `Panels/{DataTable,Dialogue}` · `Destruction/Fracture` | 내용으로 이름 |
 
-## 3. 전수 감사 — 남은 같은 모양의 문제 (2026-10-29 측정)
+## 3. 전수 감사 — 남은 것 (2026-10-29)
 
-다시 재려면 `py -3 Scripts/dev/StructureAudit.py`(아래 항목을 같은 기준으로 다시 낸다).
+다시 재려면 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/StructureAudit.py`. 정적 전용 타입 목록(C 절)은 2 절 규칙으로 닫았다 — 참고용.
 
-1. **정적 함수만 있는 타입 393 개**(Util · Internal 접미사 아님). 함수만 있는데 이름이 인스턴스처럼 읽힌다 — `EditorPlaySession`(정적 37), `EditorWidgets`(34), `EditorSceneCommands`(26), `EditorChrome`(23), `EditorAssetTypeRegistry`(23), `BinarySerializer`(17), `Ledger`(14), `MonsterRules`(10) … 상위 폴더: `Editor/Viewport` · `Editor/Common/{GUI,Workspace,Asset,Widgets,Commands/*}` · `Engine/{Audio,Reflection,Serialization/Format,Scene,Text}` · `GameFramework/Base/{Gameplay/Appearance,Online/Ledger}`.
-2. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위, 31 개가 `Editor*`) · `Editor/Common/GUI`(32, 30 개 `Editor*`) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `Engine/Destruction`(`Fracture*` 10 개 묶음) · `GameFramework/Base/Gameplay/Appearance`(21).
-3. **모호한 폴더 이름 25 개**: `Core/Common` · `Editor/Common` · `Engine/Common` · `Engine/Serialization/{Base,Object}` · `Engine/UI/Base` · `GameFramework/Base` · `GameFramework/Plugin/Editor/Base` · `Editor/Panels/Data` · `GameFramework/Base/Foundation/Data` · 온라인 키트의 `Shared` 11 개 · `Engine/Graphics/RHI/Support`.
-4. **모호한 파일 이름 19 개**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `*Base`(`GameInstanceBase` · `FractureComponentBase`) · `Engine/Foundation/Foundation.h` · `ReflectionCore`.
-5. **에디터 접두어 반복**: `Editor/` 아래 타입 · 파일이 거의 모두 `Editor*` — 네임스페이스(`sw::editor`)와 폴더가 이미 말해 준다.
+1. **평평한 대형 폴더**: `Editor/Common/Workspace`(35 단위) · `Editor/Common/GUI`(32) · `Core/Container`(40) · `Engine/Reflection`(26) · `Engine/Audio`(25) · `Engine/Graphics/RHI`(21) · `GameFramework/Base/Gameplay/Appearance`(21).
+2. **남은 모호한 폴더**: `Core/Common`(include 2,291 곳 — 가장 낮은 층이라 내용별로 나눌지 정한다) · `Editor/Common` · `GameFramework/Base`(키트 C 단계와 함께) · `GameFramework/Plugin/Editor/Base` · `Engine/Graphics/RHI/Support`(스테이징 · 전송 · 진단 묶음으로 나눌 후보).
+3. **모호한 파일 이름**: `*Data`(`FrameData` · `HeightfieldData` …) · `*Info`(`CultureInfo` · `RHIBackendInfo` …) · `GameInstanceBase` · `ReflectionCore`. `FractureComponentBase` 는 추상 기반이라 둔다.
+4. **둔 것**: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일 — 언리얼도 접두어를 둔다), App 폴더(9 단위, 실행 파일 호스트 부품만 — 언리얼 Launch), `Resources/App.rc`(Windows 리소스 — 바깥 API 용어).
 
 ## 4. 처리 규칙 (3 절에 적용)
 
-- 정적 함수만 있는 타입: 여러 번역 단위가 쓰면 `XxxUtil`(Helpers 규칙), 실제로 상태(숨은 전역)를 감싼 정면이면 `XxxRegistry` · `XxxService` 처럼 역할 이름. 이름만 인스턴스인 것(`EditorPlaySession`)은 `EditorPlaySessionUtil` 이나 실제 인스턴스로.
-- 평평한 폴더: 첫 낱말 묶음 4 개 이상이면 하위 폴더(`Destruction/Fracture/`). 부모 이름을 반복하는 접두어는 하위 폴더로 옮길 때 같이 떼는 것을 검토한다(타입 이름은 전역 유일해야 하므로 `sw::editor` 안에서만).
-- 모호한 폴더: 무엇이 들었는지로 — `Common` 은 가장 낮은 층 공용 형식이면 `Foundation`, 아니면 내용별로 흩는다. 온라인 키트 `Shared` 는 클라이언트 · 서버가 같이 쓰는 프로토콜이라 `Protocol` 또는 키트 이름 중 하나로 통일.
+- 평평한 폴더: 첫 낱말 묶음 4 개 이상이면 하위 폴더(`Destruction/Fracture/`). 타입 이름 접두어는 떼지 않는다.
+- 모호한 폴더: 무엇이 들었는지로 — 가장 낮은 층 공용 형식이면 `Foundation`, 아니면 내용별로 흩는다.
 - 파일 이름: 주 타입 이름과 같게. `*Data` · `*Info` 는 Def · Desc · Settings 등 NamingCpp 의 타입 접미사 표로.
-- 한 묶음마다 `move-source` / `rename-symbol` → Ninja-Debug → 커밋, 묶음 몇 개마다 Ninja-Release.
+- `move-source` 는 CMake 소스 목록 · 문서 경로를 고치지 않는다 — 옮긴 뒤 `git grep` 으로 옛 경로를 찾는다. 현지화 출처(`Content/editor/localization`)는 린트가 다시 쓴다.
+- 단계마다 코드 → 린트 → 커밋, 묶음 끝에 Ninja-Debug · Ninja-Release 한 번.
 
 ## 5. 그 다음
 
