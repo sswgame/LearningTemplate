@@ -44,7 +44,7 @@ W7 은 남는 허용 목록입니다 — 씬 활성화, 종료, 창 크기 · �
 
 ### 2.2 C. RHI 업로드와 되읽기: 제출 → 티켓 → 폴링
 
-`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 여섯 개로 바꿉니다(ABI 34 유지, B0 안에서 design-reviewer 검토 반영).
+`IRHIResourceFactory` 의 동기 함수 세 개(`uploadTexture2D`, `uploadTexture2DRegion`, `readbackTexture2D`)를 지우고 아래 여섯 개로 바꿉니다(ABI 34 유지, B0 안에서 설계 검토 반영).
 
 | 함수 | 뜻 | 대체하는 것 |
 |---|---|---|
@@ -170,7 +170,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 **파일 소유.** U7 `Test/EngineTest/Graphics`, U8 `Graphics/Texture/`, U9 캔버스 · 캡처 · `RenderThread` · 에디터 캡처, U10 `Graphics/Material/` · `Engine.cpp` · `GPUSceneBuilder.cpp` · `FrameRenderer.cpp`, U11 · U12 `RenderPSOCache.*` · `FrameRendererPSO.cpp` · `FrameRendererDraw.cpp`, U13 `TextureCache.cpp` + DX11 · GL bindless, U14 호출처 전부(혼자). `FrameRenderer.cpp` 는 U10 만 고치고 U11 · U12 는 `warmPinnedMaterialPSOs` 호출 줄을 건드리지 않습니다.
 
 
-**단위별 내용과 검증.** GPU 검증은 통합이 `gpu-verifier`(Shipping, 네 백엔드)로 한 번에 돌리고 항목은 구현하는 단위가 검증 묶음 에 더합니다.
+**단위별 내용과 검증.** GPU 검증은 통합이 Shipping 네 백엔드로 한 번에 돌리고 항목은 구현하는 단위가 검증 묶음 에 더합니다.
 
 - **U7.** `RHIDeviceTest` 계약 테스트: 제출 → `Pending` 또는 `Complete` → 폴링, 프레임 없이 폴링만 도는 경로(진행 보장), 구간 갱신 뒤 업로드된 내용이 보임(순서), 업로드 직후 텍스처 파괴, `Busy` 경로, 장치 손실 뒤 `Failed`(Vulkan 은 `VulkanLostDeviceStopsWaitingOnTheGPU` 와 같은 모양), 읽기를 가져가지 않고 버리는 경로, 끝나지 않은 전송이 있는 텍스처의 bindless 등록 거절. GPU 네 백엔드.
 - **U8.** 텍스처 로드를 세 단계로 나눕니다: 워커 읽기 → RT 펌프의 `beginUpload`(텍스처 생성과 `submitTextureUpload`) → 이후 프레임의 `finishUpload`(`pollTransfer` 가 `Complete` 면 bindless 등록과 발행). `Busy` 는 다음 프레임에 다시 제출하고 프레임당 상한은 제출 수에 적용합니다. `updateStreaming` 의 위쪽 밉 교체도 같은 세 단계. 동기 `acquire` 와 `wait()` 는 블로킹 헬퍼로 `beginUpload → 대기 → finishUpload` 를 합니다(B0 의 `Texture2D::createTextureWithMips` · `loadFromCPUBytes` 의 `uploadTexture2DAndWait` 를 이 흐름으로). 걸림돌: `AssetLoadBlock` 의 완료 단계가 한 번에 끝나는 모양이라 펌프(RT)가 제출한 뒤 다른 스레드의 `wait()` 가 같은 블록의 완료를 집지 않게 하는 "업로드 중" 단계를 `AssetHandle` 에 더해야 합니다(`Resource/` 도 이 단위 소유에 더함). 검증: `RenderPassGPUTest.AsyncTextureStreamsTopMipsAfterBase`, `StreamingUploadsTheTextureNotedAsLargestOnScreenFirst`, `AssetStreamingTest.*`, 텍스처가 있는 시나리오(`kaykitcharacters`) 네 백엔드, 스크린샷으로 회색 → 진짜 텍스처.
@@ -204,7 +204,7 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 
 | 위험 | 영향 | 완화 |
 |---|---|---|
-| 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | B0 병합 뒤의 시그니처 변경은 ABI 를 다시 높인다(`design-reviewer` 검토 결과는 B0 안에서 반영함) |
+| 시그니처를 구현 뒤에 바꾸면 ABI 를 다시 높여 모든 백엔드를 재빌드 | 되돌리기 어려운 결정 | B0 병합 뒤의 시그니처 변경은 ABI 를 다시 높인다(설계 검토 결과는 B0 안에서 반영함) |
 | B0 의 프레임 경로 호출처가 `...AndWait` 로 GPU 를 기다린다 | DX11, DX12, GL 에서 로드가 많은 프레임이 느려진다 | 글리프 아틀라스와 구간 갱신은 비동기로 바꿨다(`rhi-transfer-u9-canvas-gpu` 통과, 최악 60 ~ 90 ms → 1 ~ 4 ms). 새 텍스처 업로드(U8)와 렌더 타깃 읽기(U9)가 남았고 측정 질문 2, 4 가 크기를 본다 |
 | Vulkan · DX12 전송이 RT 기록과 텍스처 상태를 두고 겹친다 | 레이아웃 · 리소스 상태 불일치 | 계약 3(렌더 타깃 전송은 RT 기록 밖에서만). 확인 `rhi-transfer-vk-u6` · `rhi-transfer-dx12-u5` 의 디버그 레이어 오류 0 |
 | PSO 빌더의 스레드 안전성 | 백엔드나 셰이더 컴파일러의 잠금 누락 | 네 백엔드 점검이 끝나기 전 U12 를 시작하지 않는다. `-gv_psoAsync=0` 으로 동기 생성과 비교 |

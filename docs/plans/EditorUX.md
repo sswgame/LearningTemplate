@@ -4,7 +4,7 @@
 
 2026-10-28: 기능별 테스트 · 시나리오(`Test/` · `Resource/**/automation/`)를 새 프레임워크를 만들려고 전부 지웠다. 이 문서의 테스트 · 시나리오 · `ctest` · `AppTestUtil` 언급은 옛 구조를 가리키며, 새 틀이 정해지면 다시 쓴다.
 
-에디터의 색, 간격, 모서리는 테마 토큰 파일 하나에서 나오고, 화면은 캡처로 확인하고, 캡처는 읽기 전용 에이전트가 체크리스트로 점검합니다. Figma는 이 흐름에 값을 넣어 주는 선택 입력입니다.
+에디터의 색, 간격, 모서리는 테마 토큰 파일 하나에서 나오고, 화면은 캡처로 확인하고, 캡처는 체크리스트로 점검합니다. Figma는 이 흐름에 값을 넣어 주는 선택 입력입니다.
 이유: 색을 코드에 숫자로 박으면 테마를 바꿔도 그 색만 남아 글자가 안 보이고, UI 결함은 로그가 초록이어도 화면에서만 보이므로 캡처 판정 기준이 글로 있어야 하며, Figma 값을 손으로 옮기면 틀리므로 검사가 붙은 스크립트가 맡습니다.
 
 ## 1. 이 기반의 그림
@@ -16,7 +16,7 @@ flowchart LR
     T -->|check| C["키 집합 · 색 형식 · 수 범위 · 대비비"]
     T --> S["에디터 스타일<br/>(EditorThemeUtil 접근자)"]
     S --> P["패널 그리기"]
-    P -->|UI 캡처 PNG| R["ux-reviewer 에이전트"]
+    P -->|UI 캡처 PNG| R["체크리스트 점검"]
     R -->|결함 테이블| P
     L["CheckEditorStyleLiterals<br/>(린트 게이트)"] -.->|숫자 리터럴 색 차단| P
 ```
@@ -24,7 +24,7 @@ flowchart LR
 - **토큰 파일이 원본입니다.** `Resource/editor/theme/<이름>.tokens.json` 다섯 개(dark, charcoal, midnight, light, highcontrast)에 색, 모서리, 간격, 선 두께, 글자 크기, 밀도 배율이 있습니다.
 - **Figma는 선택입니다.** 로그인하지 않아도 토큰 수정, 검사, 캡처, 점검이 동작합니다.
 - **코드는 토큰만 읽습니다.** `EditorThemeUtil` 접근자로 값을 얻고, 숫자 리터럴로 색을 만들면 린트가 막습니다.
-- **점검은 읽기 전용입니다.** `ux-reviewer` 는 결함 테이블만 냅니다.
+- **점검은 읽기 전용입니다.** 점검은 결함 테이블만 냅니다.
 
 ## 2. 토큰 도구 따라 하기
 
@@ -59,7 +59,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 
 ## 3. UX 체크리스트
 
-`ux-reviewer` 와 사람 리뷰어가 같은 기준을 씁니다. 판정은 캡처 1장 기준이고 숫자는 실제 픽셀(밀도 1.0, 글자 16px)입니다.
+사람 리뷰어가 이 기준을 씁니다. 판정은 캡처 1장 기준이고 숫자는 실제 픽셀(밀도 1.0, 글자 16px)입니다.
 
 | 항목 | 결함으로 보는 기준 |
 |---|---|
@@ -80,7 +80,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 ## 4. Figma 연동
 
 인증은 사용자만 할 수 있습니다. `.mcp.json` 에 `figma` 서버(원격 `https://mcp.figma.com/mcp`, HTTP)가 이미 있고 비밀 값은 없습니다. Claude Code 를 새로 시작해 `/mcp` 에서 `figma` 를 고르고 Authenticate(OAuth)합니다. 데스크톱 Dev Mode MCP(`http://127.0.0.1:3845/mcp`, `claude mcp add --transport http figma-desktop …`)는 조직 요건이 있을 때의 대안이고 저장소에는 넣지 않았습니다.
-인증하지 않으면 `figma` 서버가 연결되지 않을 뿐 `editor-theme` 명령, 린트, 캡처, `ux-reviewer` 에는 영향이 없습니다. Figma 값이 필요하면 변수 JSON을 내려받아 `import-figma` 에 줍니다.
+인증하지 않으면 `figma` 서버가 연결되지 않을 뿐 `editor-theme` 명령, 린트, 캡처에는 영향이 없습니다. Figma 값이 필요하면 변수 JSON을 내려받아 `import-figma` 에 줍니다.
 
 - 읽기 도구(문서에서 확인): `get_design_context`, `get_variable_defs`, `get_screenshot`, `get_metadata`, `search_design_system`, `get_libraries`. 이 문서의 절차는 앞의 둘을 쓴다(`get_code` 도구는 없다). Figma 도움말은 변수 JSON 가져오기 · 내보내기를 기본 기능으로 소개하지 않는다.
 - 추정(직접 테스트하지 못함): REST 응답 모양(`meta.variables`, `valuesByMode`, `VARIABLE_ALIAS`, 색 `{r,g,b,a}` 0 ~ 1)은 REST 문서 지식에 따랐고 테스트는 같은 모양의 직접 만든 응답을 쓴다. `export-figma` 의 DTCG 를 Figma 에 가져오는 길은 DTCG 를 읽는 플러그인(Tokens Studio 계열)을 거칠 것으로 추정한다(안 되면 형식을 플러그인에 맞춘다). 변수 REST 가 모든 요금제에서 열려 있는지와, 원격 서버가 링크의 노드 ID 로 프레임을 고르는지는 첫 사용 때 확인한다(막혀 있으면 `get_variable_defs` 결과를 DTCG 모양으로 옮겨 `import-figma`).
@@ -93,7 +93,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 2. **토큰으로 옮깁니다.** 변수가 토큰 이름과 맞으면 `import-figma`. 경고로 나온 모르는 변수는 토큰을 새로 더할지 사람에게 묻고, 임의로 키를 만들지 않습니다.
 3. **패널을 고칩니다.** 색, 간격, 모서리는 `EditorThemeUtil` 접근자로만 읽습니다. 값이 토큰에 없으면 토큰 파일 다섯 개와 접근자에 같은 커밋에서 키를 더합니다.
 4. **캡처로 확인합니다.** `App -EnableEditor -gv_screenshotEditor=<경로>.png`(`-gv_screenshotEditorFrame=N`, 기본 60). 자동 시나리오는 `<CaptureEditorUI file="..." maxMagentaFraction="0" maxClippedWindows="N"/>`(6절). 패널 전체는 `engine/automation/editor/uiaudit.scenario.xml`(GPU 잠금 공유, `gpu-verifier` 가 맡을 수 있다).
-5. **점검을 시킵니다.** `ux-reviewer` 에 캡처 경로와 패널 이름을 줍니다. 보고는 `우선순위 | 패널 | 캡처 파일 | 결함 | 근거(좌표/영역) | 제안` 테이블이고 P0 · P1 은 고치고 4로 돌아갑니다.
+5. **점검을 시킵니다.** 캡처 경로와 패널 이름으로 점검합니다. 보고는 `우선순위 | 패널 | 캡처 파일 | 결함 | 근거(좌표/영역) | 제안` 테이블이고 P0 · P1 은 고치고 4로 돌아갑니다.
 6. **마무리합니다.** `editor-theme check` 와 `CheckEditorStyleLiterals` 통과.
 
 ## 6. 에디터 UI 캡처의 원리
@@ -103,7 +103,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 - **플로팅 창까지 담습니다.** 멀티 뷰포트의 정점이 OS 화면 좌표라 메인과 플로팅 뷰포트의 목록을 한 그리기 데이터로 이어 붙이고 표시 영역을 모두를 감싸는 사각형으로 둡니다(창 사이 바탕은 검정).
 - **네 백엔드가 같습니다.** 같은 ImGui 렌더러 백엔드 · 백버퍼 포맷이고 OpenGL 은 읽은 뒤 뒤집습니다. 창 위치 · 가림 · 포커스와 무관합니다.
 - **지표 둘.** `maxMagentaFraction`(마젠타 R≥230 · B≥230 · G≤40 비율 상한 — 빠진 텍스처), `maxClippedWindows`(내용이 창보다 큰데 그 방향 스크롤바가 없는 창의 상한, 실패 줄과 로그 `Editor UI capture` 에 이름).
-- **골든(그림 비교)은 하지 않습니다.** 글꼴 래스터와 DPI 가 기계마다 다르기 때문입니다. 같은 기계 전후 비교는 PNG 를 사람이나 `ux-reviewer` 가 봅니다.
+- **골든(그림 비교)은 하지 않습니다.** 글꼴 래스터와 DPI 가 기계마다 다르기 때문입니다. 같은 기계 전후 비교는 PNG 를 사람이 봅니다.
 
 ## 6-1. 린트: 숫자 리터럴 색 차단
 
@@ -118,7 +118,7 @@ py -3 -m Scripts editor-theme export-figma Resource/editor/theme/dark.tokens.jso
 - **Figma의 알파는 `#RRGGBBAA` 로 들어옵니다.** `tableRowBgAlt` 같은 오버레이는 알파가 있어야 의미가 있으니 알파를 버리는 도구를 거치지 않습니다.
 - **대비비 검사는 불투명 색 기준이고 세 쌍만 봅니다.** `text` 대 `windowBg` · `panelBg` · `frameBg` 와 `textMuted` 대 `windowBg`. 알파 배경 위 글자, 강조색 · `headerBg` 위 글자는 캡처로 봅니다.
 - **캡처는 해상도와 DPI를 적습니다.** 조건이 없으면 점검 판정을 믿지 않습니다.
-- **`ux-reviewer` 는 눈으로 보는 점검입니다.** 1px 판정은 축소 이미지에서 틀리므로 원본 크기 PNG 를 주고 판정 불가 항목은 판정 불가로 적게 합니다.
+- **체크리스트 점검은 눈으로 보는 점검입니다.** 1px 판정은 축소 이미지에서 틀리므로 원본 크기 PNG 를 주고 판정 불가 항목은 판정 불가로 적게 합니다.
 - **토큰 키를 더하면 다섯 곳이 같이 바뀝니다.** 토큰 파일 다섯 개, C++ 로더 구조체, `MakeEditorTheme.py` 의 `kSchema`, 접근자(하나만 바꾸면 `check` 가 키 집합 오류로 알린다).
 
 ## 8. 감사 결과

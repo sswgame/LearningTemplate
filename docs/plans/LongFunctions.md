@@ -28,7 +28,7 @@
 |---|---|---|---|---|---|
 | L3 이후 | 영역(폴더)마다 기준 1 ~ 4 를 적용합니다. 영역 하나가 단위 하나이고, 그 폴더를 다른 작업이 건드리는 중이면 미룹니다 | 영역마다 다름 | 그 영역의 다른 계획 단위(예: 자동화는 데이터 주도 D8) | 그 영역의 테스트, 동작 변경 없음 | 핫 패스 함수를 나눌 때만 Release 전후 측정 |
 
-L3 의 단순한 중복 합치기는 `mech-worker` 에 맡길 수 있습니다.
+L3 의 단순한 중복 합치기는 기계적인 작업이라 따로 맡길 수 있습니다.
 
 끝난 영역(2026-10-18 ~ 25, 대부분 빌드 미확인): `Source/Editor/Panels` · `Editor/Common` · `Editor/Viewport` · `Core/Network` · `Core/File` · `GameFramework/Kits`(`Feature/Online` 포함) · `GameFramework/Base` · `Engine/Input` · `Destruction` · `Character` · `Audio` · `Localization` · `Physics` · `Games/Empty` · `Engine/Graphics` · `Renderer`, 그리고 `wt/plangfxq` 두 묶음(직렬화 · 애니메이션 · 씬 · 텍스트 · 네비 · 에디터 임포터 · 엔진 갱신 등 약 100 개). 단계 함수로 나눴고, 짧은 `switch` 디스패처 · 기동 순서 열은 유지로 판정해 함수 주석에 이유를 적었다. `drawAdaptiveGrid` 는 테마 토큰 작업(editorux) 때 함께 나눈다.
 남은 긴 함수와 판정은 3절 표가 정본이다(영역별 이력의 "남은 N 개" 셈은 다시 뽑으면 어긋났다). 영역을 맡기 전에 3절 표에서 그 영역 행만 봅니다.
