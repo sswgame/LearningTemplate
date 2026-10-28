@@ -334,15 +334,17 @@ namespace sw
         constexpr RHIBufferUsage kStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
         constexpr RHIBufferUsage kArgsUsage =
             RHIBufferUsage::UnorderedAccess | RHIBufferUsage::IndirectArgs | RHIBufferUsage::Raw | RHIBufferUsage::ShaderResource;
-        uint32 arrInitialArgs[SW_VFX_ARGS_WORD_COUNT]{};
-        arrInitialArgs[0]        = GPUParticle::kVertexCount;
+        // 다중 그룹 경로는 고정 단어 뒤에 그룹마다 한 칸(생존 수 · 시작 위치)이 더 든다.
+        const uint32   argsWordCount = SW_VFX_ARGS_WORD_COUNT + ( usesMultiGroup( def ) ? getGroupCount( def ) : 0u );
+        vector<uint32> listInitialArgs( argsWordCount, 0u );
+        listInitialArgs[0]       = GPUParticle::kVertexCount;
         const uint32 stateCount  = def._maxParticles * Internal::kStateHalfCount;
         const bool   bStateReady = state._stateBuffer.ensureCapacity( &device, Internal::kStateStride, stateCount, kStateUsage, false, true, nullptr ) &&
                                  state._stateBuffer._uav != kInvalidDescriptorIndex;
         const bool bParticleReady = state._particleBuffer.ensureCapacity( &device, static_cast<uint32>( sizeof( GPUParticle ) ), def._maxParticles, kStateUsage, true, true, nullptr ) &&
                                     state._particleBuffer._uav != kInvalidDescriptorIndex && state._particleBuffer._srv != kInvalidDescriptorIndex;
         // 인자 버퍼는 메시 인스턴스 쓰기가 살아 있는 수를 읽으므로 SRV 도 둔다.
-        const bool bArgsReady = state._argsBuffer.ensureCapacity( &device, static_cast<uint32>( sizeof( uint32 ) ), SW_VFX_ARGS_WORD_COUNT, kArgsUsage, true, true, arrInitialArgs ) &&
+        const bool bArgsReady = state._argsBuffer.ensureCapacity( &device, static_cast<uint32>( sizeof( uint32 ) ), argsWordCount, kArgsUsage, true, true, listInitialArgs.data() ) &&
                                 state._argsBuffer._uav != kInvalidDescriptorIndex && state._argsBuffer._srv != kInvalidDescriptorIndex;
         const bool bBuffersReady = bStateReady && bParticleReady && bArgsReady;
         if ( bBuffersReady == false )
@@ -369,11 +371,13 @@ namespace sw
             _listParamWord.resize( static_cast<size_t>( paramRow ) * Internal::kWordsPerRow );
             return;
         }
-        Dispatch& dispatch = _listDispatch.emplace_back();
-        dispatch._pState   = &state;
-        dispatch._paramRow = paramRow;
-        dispatch._bLights  = bLights;
-        state._bNeedsReset = false;
+        Dispatch& dispatch  = _listDispatch.emplace_back();
+        dispatch._pState    = &state;
+        dispatch._paramRow  = paramRow;
+        dispatch._bLights   = bLights;
+        dispatch._bReset    = state._bNeedsReset;
+        dispatch._stepCount = stepCount;
+        state._bNeedsReset  = false;
     }
 
     uint32 VfxGPUSimulation::appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VfxGPULightRange& lightRange )
@@ -482,6 +486,56 @@ namespace sw
         dispatch._groupCount   = ( poolSize + SW_VFX_MESH_INSTANCE_THREAD_COUNT - 1u ) / SW_VFX_MESH_INSTANCE_THREAD_COUNT;
     }
 
+    bool VfxGPUSimulation::usesMultiGroup( const VfxEmitterDef& def )
+    {
+        return def._maxParticles >= SW_VFX_MULTI_GROUP_MIN_POOL;
+    }
+
+    uint32 VfxGPUSimulation::getGroupCount( const VfxEmitterDef& def )
+    {
+        return ( def._maxParticles + SW_VFX_SIMULATE_THREAD_COUNT - 1u ) / SW_VFX_SIMULATE_THREAD_COUNT;
+    }
+
+    void VfxGPUSimulation::recordEmitterPasses( IRHICommandList& cmd, const Dispatch& dispatch ) const
+    {
+        const EmitterState& state = *dispatch._pState;
+        // 루트 상수 둘: 매개변수 구간의 첫 행, 패스 번호 | 단계 번호 << SW_VFX_PASS_STEP_SHIFT(vfxsimulate.hlsl).
+        const auto recordPass = [&]( uint32 pass, uint32 stepIndex, uint32 groupCount )
+        {
+            const uint32 arrRoot[2]{ dispatch._paramRow, pass | ( stepIndex << SW_VFX_PASS_STEP_SHIFT ) };
+            cmd.setComputeRootConstants( 0, 2, arrRoot );
+            cmd.dispatchCompute( groupCount, 1, 1 );
+        };
+        if ( usesMultiGroup( state._clock.getDef() ) == false )
+        {
+            recordPass( SW_VFX_PASS_SINGLE, 0u, 1u );
+            return;
+        }
+        // 다중 그룹: 패스마다 앞 패스가 쓴 상태 · 인자 버퍼를 읽는다 - 패스 사이에 UAV 장벽을 둔다. 한 단계 = 적분 -> 접두사 합 -> 압축.
+        const uint32 groupCount = getGroupCount( state._clock.getDef() );
+        const auto   barrier    = [&]()
+        {
+            cmd.uavBarrier( state._stateBuffer._buffer );
+            cmd.uavBarrier( state._argsBuffer._buffer );
+        };
+        if ( dispatch._bReset )
+        {
+            recordPass( SW_VFX_PASS_BEGIN, 0u, 1u );
+            barrier();
+        }
+        for ( uint32 stepIndex = 0; stepIndex < dispatch._stepCount; ++stepIndex )
+        {
+            recordPass( SW_VFX_PASS_INTEGRATE, stepIndex, groupCount );
+            barrier();
+            recordPass( SW_VFX_PASS_SCAN, stepIndex, 1u );
+            barrier();
+            recordPass( SW_VFX_PASS_COMPACT, stepIndex, groupCount );
+            barrier();
+        }
+        recordPass( SW_VFX_PASS_OUTPUT, 0u, groupCount );
+        cmd.uavBarrier( state._particleBuffer._buffer );
+    }
+
     void VfxGPUSimulation::recordDispatches( IRHICommandList& cmd, RHIPipelineStateHandle simulationPSO, RHIPipelineStateHandle meshInstancePSO ) const
     {
         const bool bNothingToDispatch = ( _listDispatch.empty() && _listMeshDispatch.empty() ) || simulationPSO == 0 || _paramBuffer.isValid() == false;
@@ -522,8 +576,7 @@ namespace sw
                 cmd.bindComputeUav( _frameInput._lightUav, 3 );
             if ( bBindDepth )
                 cmd.bindComputeUav( depth._uav, shaderslot::kComputeTextureUav0 );
-            cmd.setComputeRootConstants( 0, 1, &dispatch._paramRow );
-            cmd.dispatchCompute( 1, 1, 1 );
+            recordEmitterPasses( cmd, dispatch );
             if ( bWritesLights )
                 cmd.uavBarrier( _frameInput._lightBuffer ); // 다음 방출기가 같은 버퍼의 다른 슬롯 범위를 쓴다 — 범위가 겹치지 않아도 상태 추적을 맞춘다
             // 투명 패스가 t11 로 읽고 간접 인자로 그린다. 상태 버퍼는 다음 디스패치만 읽으므로 UAV 로 둔다.

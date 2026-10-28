@@ -58,6 +58,20 @@
 #define SW_VFX_ARGS_WORD_ALIVE   4u
 #define SW_VFX_ARGS_WORD_HALF    5u
 #define SW_VFX_ARGS_WORD_DROPPED 6u
-#define SW_VFX_ARGS_WORD_COUNT   8u
+// 다중 그룹 경로(풀이 SW_VFX_MULTI_GROUP_MIN_POOL 이상)의 단계 사이 값 — 같은 단어 뒤로 그룹마다 개수(나중엔 시작 위치)가 이어 붙는다.
+#define SW_VFX_ARGS_WORD_SCRATCH_TOTAL 7u // 단계 하나의 압축 전 입자 수(살아 있던 수 + 새로 만든 수) — 압축 디스패치가 읽는다
+#define SW_VFX_ARGS_WORD_COUNT         8u // 고정 단어 수
+#define SW_VFX_ARGS_WORD_GROUP_FIRST   8u // 그룹 g 의 칸은 이 번호 + g. 다중 그룹 방출기만 그룹 수만큼 버퍼를 늘린다
+
+// 다중 그룹 경로: 풀 크기가 이 수 이상이면 단계마다 디스패치 셋(적분 · 접두사 합 · 압축)으로 돈다. 아니면 그룹 하나가 한 디스패치로 모든 단계를 돈다(두 경로는 같은 결과다).
+#define SW_VFX_MULTI_GROUP_MIN_POOL 4096u
+// 루트 상수 g_VfxPass = 패스 번호 | ( 단계 번호 << SW_VFX_PASS_STEP_SHIFT ).
+#define SW_VFX_PASS_SINGLE     0u // 한 디스패치가 모든 단계와 렌더 입력까지(풀이 작을 때)
+#define SW_VFX_PASS_BEGIN      1u // (그룹 1, 다중 그룹) 재생 시작이면 살아 있는 수 · 반쪽 · 버린 수를 지우고 인자를 비운다
+#define SW_VFX_PASS_INTEGRATE  2u // (그룹 = 풀 / 스레드 수 올림) 단계의 생성 · 적분 · 생존 표시와 그룹별 살아 있는 수
+#define SW_VFX_PASS_SCAN       3u // (그룹 1) 그룹별 수의 접두사 합 → 시작 위치, 살아 있는 수 · 반쪽 · 버린 수 · 간접 인자 갱신
+#define SW_VFX_PASS_COMPACT    4u // (그룹 = 풀 / 스레드 수 올림) 그룹마다 자기 시작 위치로 안정 압축
+#define SW_VFX_PASS_OUTPUT     5u // (그룹 = 풀 / 스레드 수 올림) 렌더 입력 · 파티클 라이트 쓰기
+#define SW_VFX_PASS_STEP_SHIFT 8u
 
 #endif // SW_ENGINE_VFXSIMULATE_HLSLI

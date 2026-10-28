@@ -84,7 +84,7 @@ namespace sw
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VfxEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
      *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 컴퓨트 프리패스(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
-     *          방출기마다 그룹 하나를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfxmeshinstance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
+     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfxmeshinstance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VfxParticleRenderer::drawBatches`).
      *          이번 프레임에 없는 재생 번호의 상태는 놓는다(멈췄거나 다시 재생했거나 컴포넌트가 사라졌다). 다시 나타나면 처음부터 다시 돌아 같은 결과에 닿는다.
      */
@@ -153,6 +153,8 @@ namespace sw
             const EmitterState* _pState{ nullptr }; ///< 이번 프레임 안에서만 빌린다(`_mapState` 가 소유)
             uint32              _paramRow{ 0 };
             bool                _bLights{ false }; ///< 파티클 라이트를 GPU 구간에 쓴다(u3 에 라이트 버퍼를 건다)
+            bool                _bReset{ false };  ///< 재생 시작(다중 그룹 경로가 시작 패스를 돈다)
+            uint32              _stepCount{ 0 };   ///< 이번 디스패치가 도는 단계 수(다중 그룹 경로가 단계마다 패스 셋을 기록한다)
         };
 
         /** @brief 이번 프레임의 메시 인스턴스 쓰기 하나입니다. */
@@ -162,6 +164,13 @@ namespace sw
             uint32              _paramRow{ 0 };
             uint32              _groupCount{ 0 };
         };
+
+        /** @brief 풀이 커서 단계마다 디스패치 셋으로 도는 방출기입니다(`SW_VFX_MULTI_GROUP_MIN_POOL` — 두 경로는 같은 결과다). */
+        static bool usesMultiGroup( const VfxEmitterDef& def );
+        /** @brief 다중 그룹 경로가 한 패스에 거는 그룹 수입니다(풀 / 스레드 수 올림). */
+        static uint32 getGroupCount( const VfxEmitterDef& def );
+        /** @brief 방출기 하나의 시뮬레이션 패스들을 기록합니다(그룹 하나 경로는 디스패치 하나, 다중 그룹은 패스마다 하나와 UAV 장벽). */
+        void recordEmitterPasses( IRHICommandList& cmd, const Dispatch& dispatch ) const;
 
         /** @brief GPU 로 돌릴 방출기가 있는데 시뮬레이션 컴퓨트 PSO 가 없으면 한 번만 오류를 남깁니다(`prepareFrame` 의 한 단계). */
         void reportMissingSimulationPipeline( bool bAnyGPUBatch );
