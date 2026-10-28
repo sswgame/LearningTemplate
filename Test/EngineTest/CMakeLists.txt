@@ -4,3 +4,5 @@
 # ==============================================================================
 
 sw_addTestExecutable(EngineTest LINK Engine LABELS nogpu)
+# 시나리오 파일 검사(Automation/TestScenarioFiles.cpp)가 저장소의 Content 를 읽는다.
+target_compile_definitions(EngineTest PRIVATE "SW_TEST_CONTENT_DIR=\"${CMAKE_SOURCE_DIR}/Content\"")

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 첫 씬이 다 섰는지: 씬 전환이 끝나고(Scene.Transitioning 0), 걸린 에셋 로드가 모두 끝나고(Assets.Pending 0), 오브젝트가 있고,
+  몇 프레임 동안 변환이 그대로인지(입력 없이 정지한 씬은 Scene.TransformHash 가 바뀌지 않는다 — 결정성의 그물). 어느 게임 프리셋에서나 돈다.
+  실행: App -scenario=engine/automation/sceneready.scenario.xml -unattended
+-->
+<Scenario name="engine.sceneready" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="1"><WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/></At>
+	<At frame="2"><WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/></At>
+	<At frame="3">
+		<Expect watch="Scene.ObjectCount" atLeast="1"/>
+		<Expect watch="RenderView.HiddenCount" equals="0"/>
+		<ExpectLog contains="Quit requested" count="0"/>
+		<Pass/>
+	</At>
+</Scenario>

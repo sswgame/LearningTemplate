@@ -79,7 +79,7 @@ namespace sw
             }
 
             /** @brief 감시 값 대상 오브젝트의 외형 컴포넌트입니다. 없으면 @p outValue 에 까닭을 적고 nullptr 입니다. */
-            static const CharacterAppearanceComponent* findProbeTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            static const CharacterAppearanceComponent* findWatchTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const GameObject* pObject = query.findTargetObject();
                 if ( pObject == nullptr )
@@ -96,7 +96,7 @@ namespace sw
             /** @brief 조립한 외형의 프리셋 id 입니다. 아직 조립하지 않았으면 빈 글입니다. */
             [[nodiscard]] static bool readPreset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const CharacterAppearanceComponent* pAppearance = findProbeTarget( query, outValue );
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
                 if ( pAppearance == nullptr )
                     return false;
                 outValue.setText( pAppearance->getResolvedAppearance()._presetID.c_str() );
@@ -106,7 +106,7 @@ namespace sw
             /** @brief 합친 메시의 구간 수입니다(몸 구간 + 합친 부품). 합치지 않았으면 0 입니다. */
             [[nodiscard]] static bool readMergedSections( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const CharacterAppearanceComponent* pAppearance = findProbeTarget( query, outValue );
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
                 if ( pAppearance == nullptr )
                     return false;
                 outValue.setNumber( static_cast<float64>( pAppearance->getMergedSectionCount() ) );
@@ -116,7 +116,7 @@ namespace sw
             /** @brief 조립한 외형에서 슬롯(@p query 의 key)에 입은 아이템 id 입니다. 빈 슬롯이면 `(empty)` 입니다. */
             [[nodiscard]] static bool readSlotItem( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                const CharacterAppearanceComponent* pAppearance = findProbeTarget( query, outValue );
+                const CharacterAppearanceComponent* pAppearance = findWatchTarget( query, outValue );
                 if ( pAppearance == nullptr )
                     return false;
                 const hashed_string slot( query._key );

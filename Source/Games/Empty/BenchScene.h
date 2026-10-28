@@ -174,11 +174,11 @@ namespace sw
         /** @brief `-gv_benchSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다. */
         void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
         /**
-         * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(BenchSceneProbes.cpp).
+         * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(BenchSceneWatches.cpp).
          */
         [[nodiscard]] bool attachNameplate( GameObject& object, uint32 index ) const;
         /**
-         * @brief 벤치 프레임을 세고, `-gv_benchProbeFrame` 프레임에 한 번 일어나는 감시 값을 시작합니다. 감시 값은 `-gv_benchUiHangulGlyphs` 의 새 한글 글리프와 `-gv_benchSceneLoadPath` 의 비동기 씬 로드입니다.
+         * @brief 벤치 프레임을 세고, `-gv_benchWatchFrame` 프레임에 한 번 일어나는 감시 값을 시작합니다. 감시 값은 `-gv_benchUiHangulGlyphs` 의 새 한글 글리프와 `-gv_benchSceneLoadPath` 의 비동기 씬 로드입니다.
          */
         void updateProbes( GameObjectManager* pObjects );
         /**

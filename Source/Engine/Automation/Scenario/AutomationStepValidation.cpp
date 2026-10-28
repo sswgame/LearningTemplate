@@ -54,6 +54,14 @@ namespace sw
             return AutomationStepDependency::GlobalVariable;
         }
 
+        // 입력 단계(`Tap` · `Press` · `Release`)의 검사 함수가 `slot` 의 키 · 버튼 이름을 리플렉션 enum 표(`KeyCodeUtil::fromName` — 엔진 서비스의 TypeRegistry)에 묻는다.
+        const string* pSlot = step.findAttribute( "slot" );
+        if ( pSlot != nullptr && engine::areEngineServicesBound() == false )
+        {
+            outName = *pSlot;
+            return AutomationStepDependency::InputSlot;
+        }
+
         if ( step._kind == AutomationEnvironmentSteps::kDevCommandKind )
         {
             const string* pLine = step.findAttribute( "line" );
@@ -112,6 +120,8 @@ namespace sw
                 return "global variable not registered in this process";
             case AutomationStepDependency::DevCommand:
                 return "dev command not registered in this process";
+            case AutomationStepDependency::InputSlot:
+                return "input slot names need the engine services (TypeRegistry)";
         }
         return "unknown";
     }

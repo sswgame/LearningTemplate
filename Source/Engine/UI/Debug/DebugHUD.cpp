@@ -29,7 +29,7 @@
     #include "Engine/UserSettings/UserSettingsManager.h"
     #include "Engine/UserSettings/UserSettingsVariables.h"
 
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDProbeSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
+SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDWatchSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
 
 namespace sw
 {
@@ -256,7 +256,7 @@ namespace sw
             {
                 (void)pManager;
                 const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
-                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDProbeSection ) ? 1.0 : 0.0;
+                outValue             = pHUD != nullptr && pHUD->isSectionDrawn( gv_debugHUDWatchSection ) ? 1.0 : 0.0;
                 return pHUD != nullptr;
             }
         };
@@ -630,7 +630,7 @@ namespace sw
     SW_AUTOMATION_WATCH( debugHUDCorner, "DebugHUD.Corner", "Corner the HUD panel was laid out in (0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right)",
                          &DebugHUDInternal::readCorner );
     SW_AUTOMATION_WATCH( debugHUDSectionCount, "DebugHUD.SectionCount", "Sections the debug HUD screen draws right now", &DebugHUDInternal::readSectionCount );
-    SW_AUTOMATION_WATCH( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDProbeSection",
+    SW_AUTOMATION_WATCH( debugHUDSectionShown, "DebugHUD.SectionShown", "1 while the debug HUD draws the section named by gv_debugHUDWatchSection",
                          &DebugHUDInternal::readSectionShown );
 } // namespace sw
 

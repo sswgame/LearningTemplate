@@ -28,6 +28,7 @@ namespace sw
         Watch,          ///< `watch` 속성의 감시 값이 등록돼 있지 않습니다.
         GlobalVariable, ///< `Variable` · `ExpectVariable` 의 `name` 이 등록된 전역 변수가 아닙니다(엔진 서비스가 묶이지 않은 경우 포함).
         DevCommand,     ///< `DevCommand` 의 첫 낱말이 등록된 개발 명령이 아닙니다(Shipping 처럼 개발 명령이 없는 구성 포함).
+        InputSlot,      ///< 입력 단계의 `slot` 이름(키 · 마우스 버튼)을 풀 리플렉션 enum 표가 없습니다(엔진 서비스가 묶이지 않았다).
     };
 
     /** @brief `findValidator` 의 답입니다. */
@@ -54,7 +55,7 @@ namespace sw
         /**
          * @brief @p step 의 검사가 기대는 이름 가운데 이 프로세스에 등록되지 않은 첫 번째의 종류를 반환합니다. 모두 있으면 `Resolved` 입니다.
          * @param outName 등록되지 않은 이름(단계 종류 · 감시 값 · 변수 · 개발 명령)입니다. 모두 있으면 단계 종류를 적습니다.
-         * @details 이름을 묻는 검사 함수는 `validateWatchReference` · `findRequiredVariable`(`AutomationRunnerSteps.cpp`)과 `validateDevCommand`(`AutomationEnvironmentSteps.cpp`)다.
+         * @details 이름을 묻는 검사 함수는 `validateWatchReference` · `findRequiredVariable` · `parseSlotStep`(`AutomationRunnerSteps.cpp`)과 `validateDevCommand`(`AutomationEnvironmentSteps.cpp`)다.
          *          그 검사에 이름을 묻는 곳이 늘면 여기에도 더한다 — 빠뜨리면 실행기 없는 검사가 "틀렸다" 로 드러나 알려 준다(조용히 통과하지 않는다).
          */
         [[nodiscard]] static AutomationStepDependency findUnresolvedDependency( const AutomationStep& step, string& outName );

@@ -417,10 +417,10 @@ namespace sw::editor
 
             static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kProbeName       = "EditorSelfTestRowProbe";
-                constexpr uint32      kMaxMarkWaitStep = 10;
-                EditorContext&        editorContext    = editor::getSubsystem<EditorContext>();
-                GameObjectManager*    pManager         = editor::getActiveObjectManager();
+                constexpr const utf8* kRowTestObjectName = "EditorSelfTestRowProbe";
+                constexpr uint32      kMaxMarkWaitStep   = 10;
+                EditorContext&        editorContext      = editor::getSubsystem<EditorContext>();
+                GameObjectManager*    pManager           = editor::getActiveObjectManager();
                 if ( context.expect( pManager != nullptr, "no active scene" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
@@ -431,7 +431,7 @@ namespace sw::editor
                 {
                     if ( pHierarchy != nullptr )
                         pHierarchy->setFilterText( "" );
-                    GameObject* pObj = pManager->createGameObject( hashed_string( kProbeName ) );
+                    GameObject* pObj = pManager->createGameObject( hashed_string( kRowTestObjectName ) );
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
                     objectID = pObj->getObjectID();
@@ -441,8 +441,8 @@ namespace sw::editor
 
                 EditorSelfTestMark row{};
                 EditorSelfTestMark toggle{};
-                const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kProbeName, row ) &&
-                                     EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kProbeName, toggle );
+                const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kRowTestObjectName, row ) &&
+                                     EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kRowTestObjectName, toggle );
                 if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
                     return EditorSelfTestStep::Continue;
                 if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )

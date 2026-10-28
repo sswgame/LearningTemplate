@@ -52,7 +52,8 @@ Bin/CoreTest.exe --list
 
 형식은 `Source/Engine/Automation/Scenario/AutomationScenario.h` 와 단계 등록(`SW_AUTOMATION_STEP`), 감시 값 등록(`SW_AUTOMATION_WATCH`)이 정본이다.
 시간 축은 `<At frame="N">` 이고, 단계(`DevCommand` · `Variable` · `Tap` · `Press` · `Release` · `Expect watch=…` · `WaitUntil` …)를 그 프레임에 둔다.
-`ctest -L hostgpu` 가 `Content/` 아래 시나리오마다 App 을 띄운다(창과 GPU 가 있는 PC에서).
+`ctest -L hostgpu` 가 `Content/engine/automation/` 과 활성 게임의 `Content/game/<게임>/automation/` **바로 아래** 시나리오마다 App 을 띄운다(창과 GPU 가 있는 PC 에서, `Test/Scenario/CMakeLists.txt`). 조건이 붙은 시나리오(네 백엔드가 모두 있어야 하는 `rhiswap/`)는 하위 폴더에 두고 손으로 돌린다.
+엔진 없이도 `EngineTest` 의 `ScenarioFilesTest` 가 엔진 시나리오를 실행기와 같은 읽기 · 단계 검사에 넣는다 — 속성 오류(모르는 속성, 빠진 `provisional` …)는 GPU 없이 잡힌다. 이 실행 파일에 등록되지 않은 이름(App · 에디터 · 게임의 단계 · 감시 값, 엔진 서비스가 있어야 푸는 전역 변수 · 개발 명령 · 입력 슬롯)은 `AutomationStepValidation::findUnresolvedDependency` 가 알려 건너뛰고 실행 때 실행기가 본다.
 
 ## 왜 이 모양인가
 
