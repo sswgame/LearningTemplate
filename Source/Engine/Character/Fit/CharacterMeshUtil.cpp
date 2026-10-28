@@ -213,6 +213,108 @@ namespace sw
                 }
                 return listMorphTarget;
             }
+
+            /** @brief 부품을 검사하고 스킨 유무 · 본 수가 같은지 봅니다 — 섞이면 한 메시로 스키닝할 수 없다. 아니면 까닭을 @p outReason 에 적고 false 입니다. */
+            [[nodiscard]] static bool validateMergeParts( vector_reference<const MeshMergePart> listPart, string& outReason )
+            {
+                for ( const MeshMergePart& part : listPart )
+                {
+                    if ( checkMergePart( part, outReason ) == false )
+                        return false;
+                }
+                const Mesh&  first         = *listPart[0]._pMesh;
+                const bool   bSkinned      = first.hasSkin();
+                const uint32 skinBoneCount = first.getSkinBoneCount();
+                for ( const MeshMergePart& part : listPart )
+                {
+                    const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBoneCount() != skinBoneCount );
+                    if ( bMixedSkin )
+                    {
+                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone count - parts merge within one skeleton only";
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            /**
+             * @brief 부품마다 머티리얼 그룹을 정합니다. 그룹(구간)은 처음 나온 순서입니다.
+             * @param outListPartGroup 부품 순서대로 그 부품의 그룹입니다.
+             * @param outListGroup 처음 나온 순서의 그룹 목록입니다.
+             * @return 그룹이 비면 까닭을 @p outReason 에 적고 false 입니다.
+             */
+            [[nodiscard]] static bool groupMergeParts( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, vector<hashed_string>& outListPartGroup,
+                                                       vector<hashed_string>& outListGroup, string& outReason )
+            {
+                const size_t partCount = listPart.size();
+                outListPartGroup.assign( partCount, hashed_string{} );
+                outListGroup.clear();
+                for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
+                {
+                    MeshMergeSource source;
+                    source._name              = listPart[partIndex]._name;
+                    source._material          = listPart[partIndex]._material;
+                    const hashed_string group = pHooks != nullptr ? pHooks->getMaterialGroup( source ) : listPart[partIndex]._name;
+                    if ( group.empty() )
+                    {
+                        outReason = string( "merge part '" ) + listPart[partIndex]._name.c_str() + "' got an empty material group";
+                        return false;
+                    }
+                    outListPartGroup[partIndex] = group;
+                    bool bKnown                 = false;
+                    for ( const hashed_string& known : outListGroup )
+                    {
+                        bKnown = bKnown || known == group;
+                    }
+                    if ( bKnown == false )
+                        outListGroup.push_back( group );
+                }
+                return true;
+            }
+
+            /** @brief 부품의 정점을 뒤에 이어 붙입니다. 훅이 있으면 UV 를 옮깁니다. */
+            static void appendPartVertices( const MeshMergePart& part, const IMeshMergeHooks* pHooks, vector<RHIVertex>& inoutListVertex )
+            {
+                MeshMergeSource source;
+                source._name     = part._name;
+                source._material = part._material;
+                for ( RHIVertex vertex : part._pMesh->getVertices() )
+                {
+                    if ( pHooks != nullptr )
+                    {
+                        const float2 uv  = pHooks->remapUv( source, float2{ vertex._arrUv[0], vertex._arrUv[1] } );
+                        vertex._arrUv[0] = uv._x;
+                        vertex._arrUv[1] = uv._y;
+                    }
+                    inoutListVertex.push_back( vertex );
+                }
+            }
+
+            /** @brief 모프 타깃을 이름으로 합칩니다 — 없는 부품은 0 이라 그 부품의 차이만 옮겨 담는다. @p firstVertex 는 이 부품의 첫 정점이 합친 메시에서 갖는 번호입니다. */
+            static void mergeMorphTargets( const Mesh& mesh, uint32 firstVertex, vector<MeshMorphTarget>& inoutListTarget )
+            {
+                for ( const MeshMorphTarget& target : mesh.getMorphTargets() )
+                {
+                    MeshMorphTarget* pMerged = nullptr;
+                    for ( MeshMorphTarget& existing : inoutListTarget )
+                    {
+                        if ( existing._name == target._name )
+                            pMerged = &existing;
+                    }
+                    if ( pMerged == nullptr )
+                    {
+                        MeshMorphTarget created;
+                        created._name = target._name;
+                        inoutListTarget.push_back( std::move( created ) );
+                        pMerged = &inoutListTarget.back();
+                    }
+                    for ( MeshMorphDelta delta : target._listDelta )
+                    {
+                        delta._vertexIndex += firstVertex;
+                        pMerged->_listDelta.push_back( delta );
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -387,43 +489,18 @@ namespace sw
 
         // 부품을 검사하고 스킨 유무 · 본 수가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
         string reason;
-        for ( const MeshMergePart& part : listPart )
-        {
-            if ( Internal::checkMergePart( part, reason ) == false )
-                return Internal::failMerge( pOutError, reason );
-        }
+        if ( Internal::validateMergeParts( listPart, reason ) == false )
+            return Internal::failMerge( pOutError, reason );
         const Mesh&  first         = *listPart[0]._pMesh;
         const bool   bSkinned      = first.hasSkin();
         const uint32 skinBoneCount = first.getSkinBoneCount();
-        for ( const MeshMergePart& part : listPart )
-        {
-            const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBoneCount() != skinBoneCount );
-            if ( bMixedSkin )
-                return Internal::failMerge( pOutError,
-                                            string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone count - parts merge within one skeleton only" );
-        }
 
         // 그룹(구간)은 처음 나온 순서이고, 같은 그룹의 부품은 입력 순서로 이어 붙는다.
         const size_t          partCount = listPart.size();
-        vector<hashed_string> listPartGroup( partCount );
+        vector<hashed_string> listPartGroup;
         vector<hashed_string> listGroup;
-        for ( size_t partIndex = 0; partIndex < partCount; ++partIndex )
-        {
-            MeshMergeSource source;
-            source._name              = listPart[partIndex]._name;
-            source._material          = listPart[partIndex]._material;
-            const hashed_string group = pHooks != nullptr ? pHooks->getMaterialGroup( source ) : listPart[partIndex]._name;
-            if ( group.empty() )
-                return Internal::failMerge( pOutError, string( "merge part '" ) + listPart[partIndex]._name.c_str() + "' got an empty material group" );
-            listPartGroup[partIndex] = group;
-            bool bKnown              = false;
-            for ( const hashed_string& known : listGroup )
-            {
-                bKnown = bKnown || known == group;
-            }
-            if ( bKnown == false )
-                listGroup.push_back( group );
-        }
+        if ( Internal::groupMergeParts( listPart, pHooks, listPartGroup, listGroup, reason ) == false )
+            return Internal::failMerge( pOutError, reason );
 
         vector<RHIVertex>       listVertex;
         vector<MeshSkinVertex>  listSkin;
@@ -442,43 +519,10 @@ namespace sw
                 const Mesh&  mesh        = *listPart[partIndex]._pMesh;
                 const uint32 firstVertex = static_cast<uint32>( listVertex.size() );
                 bAnyGPUMorph             = bAnyGPUMorph || mesh.isGPUMorphEnabled();
-                MeshMergeSource source;
-                source._name     = listPart[partIndex]._name;
-                source._material = listPart[partIndex]._material;
-                for ( RHIVertex vertex : mesh.getVertices() )
-                {
-                    if ( pHooks != nullptr )
-                    {
-                        const float2 uv  = pHooks->remapUv( source, float2{ vertex._arrUv[0], vertex._arrUv[1] } );
-                        vertex._arrUv[0] = uv._x;
-                        vertex._arrUv[1] = uv._y;
-                    }
-                    listVertex.push_back( vertex );
-                }
+                Internal::appendPartVertices( listPart[partIndex], pHooks, listVertex );
                 if ( bSkinned )
                     listSkin.insert( listSkin.end(), mesh.getSkinVertices().begin(), mesh.getSkinVertices().end() );
-                // 모프 타깃은 이름으로 합친다 — 없는 부품은 0 이라 그 부품의 차이만 옮겨 담는다.
-                for ( const MeshMorphTarget& target : mesh.getMorphTargets() )
-                {
-                    MeshMorphTarget* pMerged = nullptr;
-                    for ( MeshMorphTarget& existing : listTarget )
-                    {
-                        if ( existing._name == target._name )
-                            pMerged = &existing;
-                    }
-                    if ( pMerged == nullptr )
-                    {
-                        MeshMorphTarget created;
-                        created._name = target._name;
-                        listTarget.push_back( std::move( created ) );
-                        pMerged = &listTarget.back();
-                    }
-                    for ( MeshMorphDelta delta : target._listDelta )
-                    {
-                        delta._vertexIndex += firstVertex;
-                        pMerged->_listDelta.push_back( delta );
-                    }
-                }
+                Internal::mergeMorphTargets( mesh, firstVertex, listTarget );
             }
             section._vertexCount = static_cast<uint32>( listVertex.size() ) - section._firstVertex;
             listSection.push_back( section );
