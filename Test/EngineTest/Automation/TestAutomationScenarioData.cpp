@@ -162,6 +162,10 @@ namespace
                 SW_EXPECT_TRUE_MSG( bLoaded, ( "시나리오를 읽지 못해 단계를 하나도 보지 못했습니다: " + resourceID + " - " + loadError ).c_str() );
                 return false;
             }
+            // 데스크톱 전역 상태를 쓰는 단계(OS 커서 클립 등)는 혼합 입력 시나리오(`<타깃>_Desktop` 에서 혼자 돈다)에서만 쓴다.
+            sw::string desktopError;
+            const bool bDesktopValid = sw::AutomationStepValidation::validateDesktopSteps( scenario, desktopError );
+            SW_EXPECT_TRUE_MSG( bDesktopValid, ( resourceID + ": " + desktopError ).c_str() );
             bool bFullySeen = true;
             for ( const sw::AutomationStep& step : scenario.getSteps() )
             {

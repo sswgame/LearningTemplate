@@ -46,6 +46,12 @@ namespace sw
         AutomationStepPrepareFunction  _pPrepare;     ///< nullptr 이면 준비하지 않습니다.
         AutomationStepHoldFunction     _pHold;        ///< nullptr 이면 차례가 오면 늘 돌립니다.
         bool                           _bBeforeInput; ///< 참이면 그 프레임의 입력 재생 전에 돕니다(액션 계층 주입). 거짓이면 씬 틱 뒤에 돕니다.
+        /**
+         * @brief 참이면 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면)를 읽거나 쓰는 단계입니다(`SW_AUTOMATION_STEP_DESKTOP`).
+         * @details 이런 단계는 겹쳐 도는 다른 프로세스의 창과 서로 방해하므로 혼합 입력(`input="mixed"`) 시나리오에서만 쓸 수 있고, 그 시나리오가 `<타깃>_Desktop` 에서 혼자 돈다
+         *          (`AutomationStepValidation::validateDesktopSteps`).
+         */
+        bool _bUsesDesktop{ false };
     };
 } // namespace sw
 
@@ -159,6 +165,17 @@ namespace sw
     static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                   \
     {                                                                                                                               \
         &sw_automationStep_##id                                                                                                     \
+    }
+
+/**
+ * @brief 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면 · 클립보드)를 읽거나 쓰는 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안).
+ * @details `SW_AUTOMATION_STEP` 와 같되 `_bUsesDesktop` 이 참입니다. 이 단계를 쓴 시나리오가 `input="mixed"` 가 아니면 단계 검증이 거절합니다.
+ */
+#define SW_AUTOMATION_STEP_DESKTOP( id, pKind, pRun, pValidate, bBeforeInput )                                                            \
+    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, nullptr, nullptr, bBeforeInput, true }; \
+    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                         \
+    {                                                                                                                                     \
+        &sw_automationStep_##id                                                                                                           \
     }
 
 /** @brief 준비 · 차례 함수까지 든 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 엔진 단계(입력 · 조건 기다리기 · 스크린샷 확인)가 씁니다. */

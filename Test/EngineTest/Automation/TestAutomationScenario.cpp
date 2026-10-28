@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Automation/AutomationStepValidation.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -444,6 +445,28 @@ SW_TEST_CASE( AutomationScenarioTest, RequireForegroundHoldsTheStartAndSkipsWith
     SW_EXPECT_EQUAL( 0u, Internal::s_beforeInputRunCount );
     SW_EXPECT_EQUAL( 4u, Internal::s_runFrameCount ); // 시한 3 프레임을 기다린 뒤 넷째 프레임에 끝난다
     input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 데스크톱 전역 상태를 쓰는 단계(`ExpectCursorClip`)는 혼합 입력(`input="mixed"`) 시나리오에서만 통과한다
+ * @details 겹쳐 도는 다른 프로세스의 창과 OS 커서 클립이 서로 방해하므로 그런 시나리오는 `<타깃>_Desktop` 에서 혼자 돈다. 표시는 단계 등록(`SW_AUTOMATION_STEP_DESKTOP`)에 있어
+ *          새 데스크톱 단계도 같은 검증을 받는다. 데스크톱을 쓰지 않는 단계는 어느 입력 모드에서나 통과한다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, DesktopStepsNeedMixedInput )
+{
+    sw::AutomationScenario scenario;
+    sw::string             error;
+    sw::string             reason;
+
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="exclusive"><At frame="0"><ExpectCursorClip state="free"/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_FALSE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+    SW_EXPECT_TRUE_MSG( reason.find( "input=\"mixed\"" ) != sw::string::npos, reason.c_str() );
+
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="mixed"><At frame="0"><ExpectCursorClip state="free"/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
+
+    SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="t" input="exclusive"><At frame="0"><Pass/></At></Scenario>)", "", error ), error.c_str() );
+    SW_EXPECT_TRUE( sw::AutomationStepValidation::validateDesktopSteps( scenario, reason ) );
 }
 
 /**
