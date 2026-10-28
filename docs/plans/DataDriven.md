@@ -2,7 +2,7 @@
 
 > 상태: 구현중 · 선행: 없음 · 영역: engine · 옛번호: C-30, C-36 · 진행: 13/14
 
-값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 결정은 [결정 기록](../09_Decisions.md) 5-4 "유지보수성을 위한 데이터화"이고, 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
+값의 정본은 데이터 파일이고 코드 · 헤더는 형식만 가진다. 필수 값이 없으면 조용히 기본값 · 대체로 가지 않고 오류로 멈춘다. 이 문서는 6 영역 조사(2026-10-16)가 드러낸 위반을 근본 원인부터 없애는 순서다. 진행 표는 린트 게이트 `CheckDataDrivenStructure`의 `--summary` 가 정본이다(기준선이 줄면 진척).
 
 ## 1. 근본 원인
 
@@ -33,14 +33,15 @@
 | 묶음 | 내용 | 순서 |
 |---|---|---|
 | W1 엔진 기본 에셋 | 남은 것은 7.5 의 P1 | 셰이더 묶음 병합 뒤 |
-| W5 도구 | `Scripts/common/Config.py` 의 `{}` 반환 · `FileScan.py` 조용한 통과 · `AssetValidation` 기본값 · CMake `ERROR_VARIABLE` 뒤 빈 값 · `DEFAULT_VALUE` | 지금(빌드 없음, `TestTargets.cmake` 는 testspeed 뒤) |
-| W6 테스트 | `EngineDefaultAssets{}` 기본 생성 · 정본 경로 리터럴 · 폴백을 단언하는 테스트 | W1 · W2 뒤 |
-| W7 셰이더 잔여 | 죽은 `ALPHA_TEST` 가지 · `material_keywords` 주석 무시 · 셰이더 안 조용한 대체(AO · 월드 · 키 라이트) 설계 판단 · 파이프라인 XML · 재질 반복 | 셰이더 묶음 뒤 |
+| W5 도구 | 끝(2026-10-28 확인): `Config.py` 는 `requireConfig` · `readOptionalConfig` 둘뿐(없음은 `None`), `FileScan.py` 는 못 읽으면 멈춤, `AssetValidation` 은 검사별 필수 키 · 모르는 키 거절(`getCheckNames` 표), CMake JSON 읽기는 `JsonValue.cmake` 하나, `DEFAULT_VALUE` 는 `SilentFallback:cmake` 게이트가 0 건으로 막는다. 남은 `ERROR_VARIABLE` 셋(`StageModuleRuntimeDlls` · `PythonUtils` · `Vcpkg` 계획)은 결과 코드를 보고 실패를 알린다 | 끝 |
+| W6 테스트 | `EngineDefaultAssets{}` 기본 생성은 컴파일되지 않는다(끝). 테스트의 경로는 `test::getEngineDefaultAssets()` 로 읽는다 — 엔진 기본 표에 든 파일(소켓 종류 · 절단면 채널 · 파괴 프로필 · 툰 템플릿 · 스프라이트 머티리얼)의 상수를 지우고 테스트도 표로 옮겼다(2026-10-28). 폴백을 단언하는 테스트 훑기는 남았다 | 일부 |
+| W7 셰이더 잔여 | 끝(2026-10-28): 죽은 `ALPHA_TEST` 가지는 셰이더 소스에 없다(RHI 주석만 남음 — RHI 소관), `material_keywords` 는 주석을 지우고 보며 엔진 패스가 읽는 머티리얼 define 은 살아 있는 것으로 센다(`MATERIAL_OUTLINE`, 파이썬 테스트 둘), AO · 월드 · 키 라이트는 판단을 내렸다(선택 자원의 부재는 항등, 키 라이트는 이미 없음). 남은 것: 파이프라인 XML 선언(P2 와 같은 일)과 네 백엔드 골든은 GPU 호스트 | 끝(골든 제외) |
 
 ## 4. 정한 판단
 
-- `REFLECT( Alias = 옛이름 )` 와 별칭 읽기 경로는 없애지 않고 갖춰 둔다(결정 기록 5-4 "이름 변경 리다이렉트", 2026-10-18 사용자 결정): 출시 데이터가 생겼을 때 바로 쓰도록 기능은 두되 제품 데이터 · 게임 코드에는 쓰지 않는다. 옛 형식 리더만 쓰는 XML · JSON · bin 이중 읽기 경로는 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
-- 도구 훅(`.claude/hooks`)의 fail-open 은 훅 오류로 세션이 막히지 않게 하려는 것이라 남기고 이유를 주석에 적는다.
+- `REFLECT( Alias = 옛이름 )` 와 별칭 읽기 경로는 없애지 않고 갖춰 둔다(2026-10-18 사용자 결정): 출시 데이터가 생겼을 때 바로 쓰도록 기능은 두되 제품 데이터 · 게임 코드에는 쓰지 않는다. 옛 형식 리더만 쓰는 XML · JSON · bin 이중 읽기 경로는 데이터를 다시 쓰고 없앤다. 스키마 버전 이행(SchemaMigrate)은 별개라 남긴다.
+- 셰이더 안의 "없으면 항등" 은 폴백이 아니라 선택 자원의 부재다(2026-10-28): 파이프라인이 선언하지 않은 선택 입력(SSAO 결과 → 가림 없음 1, 인스턴스 구조버퍼 없는 풀스크린 → `g_World`, 라이트 그리드 없음 → 전체 목록)은 `kInvalidIndex` 로 부재를 나타내고 항등으로 읽는다(켜지 않은 포스트 효과와 같다). 필수 입력이 없을 때 다른 값으로 대신하는 것(3D 라이트가 없을 때 키 라이트)은 이미 없앴고 다시 들이지 않는다.
+- 도구 훅의 fail-open 은 훅 오류로 세션이 막히지 않게 하려는 것이라 남기고 이유를 주석에 적는다.
 
 ## 5. W2 에서 남긴 것
 
@@ -60,17 +61,23 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
 
 ### 7.1 지금 수치
 
-2026-10-21(`wt/datadriven`) 게이트 값(2026-10-18 값). 원본은 각 게이트의 출력입니다.
+2026-10-28(main) 게이트 값(괄호는 2026-10-18 값). 원본은 각 게이트의 출력입니다. 남은 것의 성격은 표 아래에 적었다.
 
 | 게이트 | 종류 | 값 |
 |---|---|---|
 | `CheckDataDrivenLiterals` | `AttributeFallback` | 없음(D9 — 폴백 읽기를 지워 형식으로 막혔다, 종류를 게이트에서 뺐다)(886) |
 | `CheckDataDrivenLiterals` | `TuningConstexpr` | 45(48) |
-| `CheckDataDrivenStructure` | `AssetPathLiteral` | 19(40) |
-| `CheckDataDrivenStructure` | `SilentFallback` | 30(122) |
-| `CheckDataDrivenStructure` | `DiscardedLoadResult` | 87(164) |
-| `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 70(75) |
-| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 1(P3 — 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로)(0) |
+| `CheckDataDrivenStructure` | `AssetPathLiteral` | 12(40) |
+| `CheckDataDrivenStructure` | `SilentFallback` | 15(122) |
+| `CheckDataDrivenStructure` | `DiscardedLoadResult` | 64(164) |
+| `CheckDataDrivenStructure` | `MagicNameLiteral`(보고만) | 72(75) |
+| `CheckDataDrivenStructure` | `LiteralGetDefault`(보고만) | 27(P3 — 필수 키는 `[]` 와 이름 있는 오류, 선택 키는 없음을 형식으로)(0) |
+
+남은 것(2026-10-28 훑은 결과, 기준선은 올리지 않았다):
+
+- `AssetPathLiteral` 12: 설정 표의 `kResourcePath` 가 정적 `SW_RESOURCE_DATA_KIND` 등록(`LipSync` · `AnimationCrowd` · `AnimationLOD`)에 들어가 있어 등록이 서브시스템보다 먼저라 표로 못 옮긴다 — 등록 형식(경로를 늦게 푸는 길)을 바꾸는 일. 나머지는 부트 순서가 얽힌 설정(`PhysicsSystem` · `Render2DSettings` · `NavMeshSettings` · `IAudioService` · `AutomationLogPolicy`), 에디터 팩 자기 경로(`EditorPaths::kLocalizationProject` — `EditorToolDefaults` 칸으로 옮기려면 그 테스트 JSON 도 고친다), 데모 · 벤치(`UIDemoScreen` · `BenchScene`).
+- `SilentFallback` 15: 렌더러(`FrameRenderer*` · `GPUSceneBuilder` — 렌더러 소관), RHI 로그, 값이 없을 때의 항등을 인자로 받는 모양(`AudioCurvePoint::evaluate` · `GimmickCircuit::readNumber` · `ScheduleCatalog::readClock`). 뒤 셋은 `std::optional` 반환으로 바꾸고 호출부가 없음을 정하게 한다.
+- `DiscardedLoadResult` 64: 끈적한 오류 상태로 결과를 쌓는 읽기(`Archive` 는 `readLatched` 하나로 모았고 `AnimationClip::readRaw` 는 `void` 로 바꿨다), 건너뛰기 · 채움 읽기, 편집기 패널의 "깨진 글도 연다" 호출. `loadFromAttributes` 는 읽은 개수를 돌려주는 함수라 이름이 로드 결과로 잡히는 것이다.
 
 ### 7.2 근본 원인: 읽기 API 가 폴백을 형식으로 가지고 있다
 
@@ -84,7 +91,7 @@ C-30(데이터 속성의 리터럴 기본값)과 C-36(경로 리터럴, 조용�
   1. 스키마 읽기: `GameDataXML::readFields` 가 리플렉션 Def 를 읽습니다. 기본값은 Def 의 초기값이고 `PROPERTY( Required )` 와 `Min` · `Max` 가 검사됩니다. 데이터 카탈로그는 모두 이 길로 갑니다.
   2. 필수 손 읽기: `[[nodiscard]] std::optional<T> readRequiredAttribute<T>( name )`. 없거나 깨지면 원소와 속성 이름으로 오류를 남기고 `nullopt`.
   3. 선택 손 읽기: `[[nodiscard]] bool readOptionalAttribute<T>( name, std::optional<T>& out )`. 없으면 `out` 이 비고 true, 깨진 값은 오류와 false. "없음"은 기본값이 아니라 형식(`std::optional`)으로 남습니다.
-  `JSONValue` 도 같은 세 길입니다(`KeyValueFile` 은 [구조 단순화](결정 기록 5-4) TX3 에서 지웠다).
+  `JSONValue` 도 같은 세 길입니다(`KeyValueFile` 은 TX3(구조 단순화)에서 지웠다).
 - **이름으로 찾는 값은 로드할 때 키를 확인합니다.** 이름을 핸들로 바꾸고 대상 테이블에 없으면 로드 오류. 핸들로 바꿀 수 없는 찾기(블랙보드처럼 실행 중에 키가 생기는 것)는 `std::optional<T>` 을 돌려줍니다.
 - **로드 결과는 세 값입니다.** 정상인 `Absent` · `NotTracked` 가 따로 있어 `(void)` 로 버릴 이유가 없습니다(`ConfigReadResult`(Loaded · Missing · Invalid), `ReloadOutcome`(Reloaded · NotTracked · Failed)). `Failed` 는 함수 안에서 오류를 한 번 남기고 호출부는 `switch` 로 고릅니다.
 - **자동화 단계는 한 번만 읽습니다.** 구현은 검사와 실행이 같은 `parse*` 함수를 쓰는 모양이다(단계 레지스트리의 함수 포인터 모양을 바꾸지 않기 위해).
@@ -124,4 +131,4 @@ C-30 ④(에디터 색과 아이콘 테이블, UI 크기 리터럴)는 디자인
 
 ### 7.6 사용자 결정
 
-없습니다. 폴백 인자를 지우는 것은 방침(결정 기록 5-4)의 적용이고, 데이터는 다시 쓰면 됩니다.
+없습니다. 폴백 인자를 지우는 것은 방침의 적용이고, 데이터는 다시 쓰면 됩니다.

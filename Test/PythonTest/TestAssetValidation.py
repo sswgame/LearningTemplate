@@ -268,6 +268,23 @@ class CheckTest(AssetValidationFixture):
         self.assertEqual(1, len(messages), messages)
         self.assertIn("NOBODY_READS", messages[0])
 
+    def testMaterialKeywordInCommentOnlyIsDead(self) -> None:
+        # 주석에만 나오는 키워드는 셰이더가 읽지 않는다 — 주석을 지우지 않으면 죽은 퍼뮤테이션이 통과한다.
+        self.put("Resource/engine/shaders/lit.hlsl", "// USE_FOG is gone\n/* USE_FOG\n   again */\n#if USE_REAL\n#endif\n")
+        self.put("Resource/a/x.material", '<MaterialDesc shaderPath="engine/shaders/lit.hlsl"><_permutations><_staticSwitches>'
+                 '<item name="Fog" keyword="USE_FOG"/><item name="Real" keyword="USE_REAL"/></_staticSwitches></_permutations></MaterialDesc>')
+        messages = self.findMessages({"name": "k", "check": "material_keywords", "include_patterns": ["*.material"]})
+        self.assertEqual(1, len(messages), messages)
+        self.assertIn("USE_FOG", messages[0])
+
+    def testMaterialKeywordReadByAnEnginePassIsLive(self) -> None:
+        # 외곽선 패스처럼 엔진이 머티리얼 define 으로 배치를 고르는 키워드는 셰이더 `#if` 가 없어도 죽은 것이 아니다.
+        self.put("Resource/engine/shaders/lit.hlsl", "// MATERIAL_OUTLINE only in a comment\n")
+        self.put("Source/Engine/Renderer/Pipeline/PassInfo.h", 'inline constexpr const char* kMaterialOutlineDefine = "MATERIAL_OUTLINE";\n')
+        self.put("Resource/a/x.material", '<MaterialDesc shaderPath="engine/shaders/lit.hlsl"><_permutations><_staticSwitches>'
+                 '<item name="Outline" keyword="MATERIAL_OUTLINE"/></_staticSwitches></_permutations></MaterialDesc>')
+        self.assertEqual([], self.findMessages({"name": "k", "check": "material_keywords", "include_patterns": ["*.material"]}))
+
     def testReferenceTokenStartsAtChunkStart(self) -> None:
         # 덩어리 첫 글자에서만 시작해도 토큰은 같다 — 한글 뒤의 `d.json` 은 한글이 덩어리 글자가 아니라 덩어리가 `d` 에서 시작한다.
         text = "see engine/models/a.mesh and models/b.material.bak, xmodels/c.prefab.xml 한글d.json"

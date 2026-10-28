@@ -62,6 +62,9 @@ _kReferenceTokenRe = re.compile(
 _kReferenceExtensionRe = re.compile(r"\.(?:mesh|material|prefab\.xml|scene\.xml|dds|ogg|wav|xml|json|hlsl|hlsli)\b")
 #: 셰이더 글의 낱말.
 _kWordRe = re.compile(r"\w+")
+#: HLSL 주석(`/* … */` · `// …`). 키워드가 주석에만 나오면 쓰이는 것이 아니다 — 주석을 지우지 않으면 죽은 퍼뮤테이션이 통과한다.
+_kShaderCommentRe = re.compile(r"/\*.*?\*/|//[^\n]*", re.DOTALL)
+_kQuotedDefineRe = re.compile(r'"([A-Z][A-Z0-9_]*)"')
 
 #: `REFLECT(` 뒤의 첫 class/struct 이름.
 #: 인자 안의 문자열(`Tooltip = "… (…) …"`)에 든 괄호는 건너뛴다.
@@ -163,6 +166,7 @@ class ValidationContext:
     _mapGuidByPath: dict[str, str] | None = None
     _shaderText: str | None = None
     _uniqueShaderWord: set[str] | None = None
+    _uniqueEngineDefine: set[str] | None = None
     _mapTypeParent: dict[str, str] | None = None
     _uniqueDirectory: set[str] | None = None
     _mapIdCache: dict[tuple[str, tuple[str, ...], str], set[str]] = field(default_factory=dict)
@@ -280,14 +284,25 @@ class ValidationContext:
         return self._mapGuidByPath
 
     def getShaderText(self) -> str:
-        """모든 셰이더 소스(.hlsl · .hlsli)를 이어 붙인 것 — 키워드가 어딘가의 `#if` 에 쓰이는지 본다."""
+        """모든 셰이더 소스(.hlsl · .hlsli)를 주석을 지우고 이어 붙인 것 — 키워드가 어딘가의 `#if` 에 쓰이는지 본다."""
         if self._shaderText is None:
             listText = []
             for relPath in self.listAllPath:
                 if Path(relPath).suffix in kShaderSourceExtensions:
-                    listText.append((self.resourceRoot / relPath).read_text(encoding="utf-8", errors="replace"))
+                    text = (self.resourceRoot / relPath).read_text(encoding="utf-8", errors="replace")
+                    listText.append(_kShaderCommentRe.sub("", text))
             self._shaderText = "\n".join(listText)
         return self._shaderText
+
+    def getEngineDefineNames(self) -> set[str]:
+        """엔진 헤더(`Source/Engine/Renderer` · `Graphics`)의 문자열 리터럴 대문자 이름 — 셰이더 `#if` 가 아니라 엔진이 읽는 머티리얼 define(`MATERIAL_OUTLINE` 등)."""
+        if self._uniqueEngineDefine is None:
+            self._uniqueEngineDefine = set()
+            for folder in ("Renderer", "Graphics"):
+                for headerPath in (self.repositoryRoot / "Source" / "Engine" / folder).rglob("*.h"):
+                    text = headerPath.read_text(encoding="utf-8", errors="replace")
+                    self._uniqueEngineDefine.update(_kQuotedDefineRe.findall(text))
+        return self._uniqueEngineDefine
 
     def getShaderWords(self) -> set[str]:
         """셰이더 소스에 나오는 낱말(`\\w+`) — 키워드가 쓰이는지 정규식 검색 대신 집합으로 묻는다."""
@@ -642,8 +657,8 @@ def checkMaterialKeywordsInternal(rule: Rule, relPath: str, context: ValidationC
     switches = root.find("_permutations/_staticSwitches")
     for item in (switches.findall("item") if switches is not None else []):
         keyword = item.get("keyword")
-        if keyword and not isShaderWordUsedInternal(keyword, context):
-            listMessage.append(f"static switch '{item.get('name')}' keyword '{keyword}' is not used by any shader (dead permutation)")
+        if keyword and not isShaderWordUsedInternal(keyword, context) and keyword not in context.getEngineDefineNames():
+            listMessage.append(f"static switch '{item.get('name')}' keyword '{keyword}' is not used by any shader or engine pass (dead permutation)")
     return listMessage
 
 
