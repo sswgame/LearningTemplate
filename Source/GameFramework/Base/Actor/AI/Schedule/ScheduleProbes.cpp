@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"

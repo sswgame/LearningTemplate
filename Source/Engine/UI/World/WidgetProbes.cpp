@@ -1,12 +1,12 @@
 /**
  * @file WidgetProbes.cpp
- * @brief 화면 마커의 자동화 탐침입니다(`UI.*`). 탐침 레지스트리(`Engine/Probe`)가 UI 보다 아래라 UI 가 자기 탐침을 등록합니다.
+ * @brief 화면 마커의 자동화 탐침입니다(`UI.*`). 탐침 레지스트리(`Engine/Automation/Probe`)가 UI 보다 아래라 UI 가 자기 탐침을 등록합니다.
  */
 #include "pch.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/World/WidgetComponent.h"

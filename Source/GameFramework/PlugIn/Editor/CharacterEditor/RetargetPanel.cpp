@@ -16,7 +16,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 

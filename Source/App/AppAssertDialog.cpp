@@ -8,8 +8,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

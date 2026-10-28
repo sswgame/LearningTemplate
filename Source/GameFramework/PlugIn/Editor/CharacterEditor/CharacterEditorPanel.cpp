@@ -18,6 +18,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -30,7 +31,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"

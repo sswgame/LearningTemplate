@@ -14,7 +14,7 @@
     #include "Core/Math/MathUtil.h"
     #include "Core/String/fixed_string.h"
 
-    #include "Engine/Probe/AutomationProbe.h"
+    #include "Engine/Automation/Probe/AutomationProbe.h"
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Canvas/CanvasPainter.h"
     #include "Engine/Input/Map/InputMap.h"

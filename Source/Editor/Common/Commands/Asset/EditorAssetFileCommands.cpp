@@ -17,9 +17,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"

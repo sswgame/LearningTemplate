@@ -17,10 +17,10 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/ScenarioRecorder.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/ScenarioRecorder.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 

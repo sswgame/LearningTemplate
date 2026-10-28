@@ -1,13 +1,13 @@
 /**
  * @file TerrainProbes.cpp
- * @brief 지형의 자동화 탐침입니다. 탐침 레지스트리(`Engine/Probe`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다.
+ * @brief 지형의 자동화 탐침입니다. 탐침 레지스트리(`Engine/Automation/Probe`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다.
  */
 #include "pch.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

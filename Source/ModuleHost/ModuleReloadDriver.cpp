@@ -14,7 +14,7 @@
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
 
-    #include "Engine/Probe/AutomationProbe.h"
+    #include "Engine/Automation/Probe/AutomationProbe.h"
     #include "Engine/Common/EngineServices.h"
 #endif
 

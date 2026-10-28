@@ -2,12 +2,12 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
 
 namespace sw
 {

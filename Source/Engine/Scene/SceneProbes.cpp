@@ -1,6 +1,6 @@
 /**
  * @file SceneProbes.cpp
- * @brief 씬의 자동화 탐침입니다(`Scene.*`). 탐침 레지스트리(`Engine/Probe`)가 Scene 보다 아래라 씬이 자기 탐침을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 탐침입니다(`Scene.*`). 탐침 레지스트리(`Engine/Automation/Probe`)가 Scene 보다 아래라 씬이 자기 탐침을 등록합니다 — 실행기가 대신 정의하지 않습니다.
  */
 #include "pch.h"
 
@@ -9,11 +9,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw

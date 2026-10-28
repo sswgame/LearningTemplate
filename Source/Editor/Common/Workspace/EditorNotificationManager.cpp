@@ -9,7 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 #include <cstdlib>
 

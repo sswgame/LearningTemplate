@@ -4,10 +4,10 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

@@ -21,9 +21,9 @@
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceIO.h"
 
 #include <imgui.h>

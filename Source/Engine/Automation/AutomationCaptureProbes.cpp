@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 namespace sw
 {

@@ -7,11 +7,11 @@
 #include "Core/Container/string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Navigation/INavMover.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
 #include "GameFramework/Base/Actor/AI/Blackboard.h"

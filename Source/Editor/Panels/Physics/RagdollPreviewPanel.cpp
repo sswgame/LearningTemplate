@@ -16,6 +16,7 @@
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
@@ -24,7 +25,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceID.h"

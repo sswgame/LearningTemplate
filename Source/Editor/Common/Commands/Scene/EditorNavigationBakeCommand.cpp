@@ -13,8 +13,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw::editor
 {

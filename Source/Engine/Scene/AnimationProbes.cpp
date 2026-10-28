@@ -1,13 +1,13 @@
 /**
  * @file AnimationProbes.cpp
  * @brief 애니메이션 시스템의 자동화 탐침입니다(`Animation.*`) — 군중 공유(`AnimationCrowd`)가 유닛을 어떻게 나눴는지 시나리오가 단언합니다. 프로파일 카운터
- *        `GT.Animation.crowd*Units` 와 같은 값입니다. 탐침 레지스트리(`Engine/Probe`)가 아래층이라 애니메이션이 자기 탐침을 등록합니다.
+ *        `GT.Animation.crowd*Units` 와 같은 값입니다. 탐침 레지스트리(`Engine/Automation/Probe`)가 아래층이라 애니메이션이 자기 탐침을 등록합니다.
  */
 #include "pch.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/SceneAnimation/AnimationSystem.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 namespace sw
 {

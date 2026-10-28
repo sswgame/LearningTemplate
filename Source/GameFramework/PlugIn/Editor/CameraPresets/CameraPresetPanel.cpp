@@ -13,10 +13,10 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Scene/Scene.h"
 

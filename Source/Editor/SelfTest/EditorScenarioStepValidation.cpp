@@ -4,8 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationStepValidation.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
 namespace sw::editor
 {

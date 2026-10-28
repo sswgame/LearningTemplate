@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"

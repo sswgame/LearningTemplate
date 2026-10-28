@@ -13,12 +13,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationStepContext.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
 
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"

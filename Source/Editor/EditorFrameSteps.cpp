@@ -23,9 +23,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"

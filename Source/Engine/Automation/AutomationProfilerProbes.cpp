@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
 #if SW_PROFILER_TRACE_ENABLED

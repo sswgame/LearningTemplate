@@ -7,6 +7,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Container/unordered_set.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitPartData.h"
@@ -25,7 +26,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 

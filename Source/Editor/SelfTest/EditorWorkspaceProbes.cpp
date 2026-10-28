@@ -1,7 +1,7 @@
 /**
  * @file EditorWorkspaceProbes.cpp
  * @brief 편집 작업 공간 전체(플레이 상태 · 선택 · 되돌리기 · 씬 변경)를 읽는 에디터 탐침(`Editor.*`)입니다. 한 패널의 것이 아니라 패널을 넘는 값이라 자체 테스트 폴더에 둡니다(작업 공간 폴더는 ImGui 를 모르는 코어라 EditorTest 도 받는데, 이 탐침들은 EditorModule 에서만 읽는다).
- * @details 탐침 레지스트리(`Engine/Probe`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
+ * @details 탐침 레지스트리(`Engine/Automation/Probe`)가 기능 층보다 아래라 기능이 자기 탐침을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
  *          `EditorProbeSupport.h` 에 있습니다.
  */
 #include "pch.h"
@@ -17,11 +17,11 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorProbeSupport.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/CommandStack.h"

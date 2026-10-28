@@ -11,10 +11,10 @@
 
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationStepContext.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
-#include "Engine/Scenario/AutomationStepValidation.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
 namespace sw::editor
 {

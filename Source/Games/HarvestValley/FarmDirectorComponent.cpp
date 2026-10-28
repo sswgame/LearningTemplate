@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/StateHashBuilder.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -15,7 +16,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"

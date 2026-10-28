@@ -14,7 +14,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Resource/ResourceID.h"
 #include "Engine/Resource/ResourcePaths.h"

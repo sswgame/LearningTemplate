@@ -17,9 +17,9 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationStepContext.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 
 namespace sw::editor
 {

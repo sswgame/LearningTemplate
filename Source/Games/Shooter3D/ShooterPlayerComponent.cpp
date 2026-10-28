@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -14,7 +15,6 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsSettings.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"

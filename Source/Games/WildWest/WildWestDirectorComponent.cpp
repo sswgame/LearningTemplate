@@ -5,11 +5,11 @@
 #include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"

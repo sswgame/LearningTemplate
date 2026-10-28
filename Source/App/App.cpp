@@ -17,7 +17,7 @@
     #error "SW_AUTOMATION_ENABLED comes from CMake (cmake/Engine/BuildLayout.cmake, option SW_ENABLE_AUTOMATION)"
 #endif
 #if SW_AUTOMATION_ENABLED
-    #include "Engine/Automation/AutomationSession.h"
+    #include "Engine/Automation/Runner/AutomationSession.h"
 #endif
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -31,7 +31,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"

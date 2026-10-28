@@ -9,8 +9,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Probe/AutomationProbe.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"

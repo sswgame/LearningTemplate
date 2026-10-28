@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 namespace sw::editor
 {

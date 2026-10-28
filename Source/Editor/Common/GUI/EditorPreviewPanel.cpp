@@ -8,8 +8,8 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

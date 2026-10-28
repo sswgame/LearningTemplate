@@ -23,7 +23,7 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Probe/AutomationProbe.h"
+#include "Engine/Automation/Probe/AutomationProbe.h"
 
 #include <imgui.h>
 

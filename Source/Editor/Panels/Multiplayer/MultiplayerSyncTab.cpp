@@ -15,8 +15,8 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Scene/SceneStateHash.h"
 
 #include <imgui.h>

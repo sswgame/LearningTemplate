@@ -27,18 +27,18 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationScratch.h"
 
 namespace sw::editor
 {

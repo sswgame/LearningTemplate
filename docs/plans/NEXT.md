@@ -30,7 +30,7 @@
 
 ## 3. 새로 세울 것 (사용자와 정한다)
 
-- **테스트 · 시나리오 프레임워크**: 옛 것은 `Test/` 와 `Resource/**/automation` 과 함께 지웠다. 소스 쪽 시나리오 런타임 · 탐침(`Source/Engine/{Probe,Scenario,Automation}`, `Editor/SelfTest`, 각 기능의 `*Probes.cpp`)은 아직 남아 있다 — 새 틀을 정할 때 같이 갈아엎을 후보다(밖에서 쓰는 곳: 탐침 include 89 곳, SelfTest 84 곳, Scenario 25 곳).
+- **테스트 · 시나리오 프레임워크**: 옛 것은 `Test/` 와 `Resource/**/automation` 과 함께 지웠다. 소스 쪽 시나리오 런타임 · 탐침(`Source/Engine/Automation`, `Editor/SelfTest`, 각 기능의 `*Probes.cpp`)은 아직 남아 있다 — 새 틀을 정할 때 같이 갈아엎을 후보다(밖에서 쓰는 곳: 탐침 include 89 곳, SelfTest 84 곳, Scenario 25 곳).
 - **에이전트 구성 · 작업 방식 · 문서**: `.claude/` 와 `docs/` 를 비웠으니 새로 짠다. README · 엔진 설명 문서도 새로 쓴다.
 - **프로젝트 설정 창**: `ProjectSettingsPanel` 이 지운 `docs/Config/ConfigReference.json` 을 런타임에 읽는다(없으면 `<Engine>` 페이지만 뜸). 처리안: A) C++ 반사 레지스트리 + 설정 파일 위치 표로 목록을 직접 만든다(권장, 원칙 1) B) 색인 생성기를 되살린다 C) `<Engine>` 페이지만 남기고 읽기를 지운다.
 - **옛 도구의 낡은 언급**: `Resource/**/*.sources.json` 의 `_comment` · `BuildCaches.json` · `Source` 주석에 지운 도구 이름이 남아 있다.

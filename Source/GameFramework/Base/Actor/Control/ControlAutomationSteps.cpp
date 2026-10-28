@@ -11,11 +11,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scenario/AutomationScenario.h"
-#include "Engine/Scenario/AutomationStepContext.h"
-#include "Engine/Scenario/AutomationStepRegistry.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/IntentPlayback.h"

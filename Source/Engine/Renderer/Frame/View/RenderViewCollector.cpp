@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -14,7 +15,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/SceneAnimation/AnimationLOD.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"

@@ -1,16 +1,16 @@
 /**
  * @file ObjectProbes.cpp
  * @brief 활성 씬의 오브젝트를 이름(`target`)으로 읽는 자동화 탐침입니다 — `Object.X` · `Object.Y` · `Object.Z` · `Object.Exists` · `Object.Property` · `Object.DistanceTo`.
- * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Probe/AutomationProbe.h`)이 정한다.
+ * @details 대상 고르기 규칙은 `AutomationTarget`(`Engine/Automation/Probe/AutomationProbe.h`)이 정한다.
  */
 #include "pch.h"
 
 #include "Core/Container/string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/Probe/AutomationProbe.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
