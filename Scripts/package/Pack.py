@@ -169,7 +169,7 @@ def runCook(request: PackageRequest, projectRoot: Path, binDir: Path) -> None:
 
 def findBackendSwitchInternal(rhi: str) -> str:
     """쿠킹 표의 백엔드 이름(`DirectX12`)을 App 명령줄 이름(`dx12`)으로 바꿉니다. 모르는 이름이면 실패다."""
-    from common.CookContract import CookContractSpec
+    from common.CookTable import CookContractSpec
     backend = CookContractSpec.load().findBackend(rhi)
     if backend is None:
         raise PackageError(f"unknown RHI backend '{rhi}'")

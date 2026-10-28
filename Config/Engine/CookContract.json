@@ -3,7 +3,7 @@
         "쿠킹이 C++ 과 Python 에서 같이 쓰는 표 둘의 단일 출처(SSOT)다.",
         "C++ 은 configure 때 Scripts/generate/CookContract.py 가 만든 sw/config/CookContract.gen.h 의 X-macro 로 읽고",
         "(ArgumentList.xxx · RHIBackendUtil · ShaderCooker · PackCooker · ResourcePaths), Python 도구(Pack 등)는",
-        "Scripts/common/CookContract.py 로 이 파일을 직접 읽는다. 쿠커(PackCooker)는 같은 X-macro 를 읽어 컴파일 때 표를 따라온다.",
+        "Scripts/common/CookTable.py 로 이 파일을 직접 읽는다. 쿠커(PackCooker)는 같은 X-macro 를 읽어 컴파일 때 표를 따라온다.",
         "",
         "rhi_backends: 줄 순서 = RHIBackend 열거값(Config/RHIBackendType.h, static_assert 로 맞춘다).",
         "  name = RHIBackend 열거자, shader_folder = Resource/**/shaders/bin/<폴더>, shader_target = ShaderTargetFormat 열거자,",

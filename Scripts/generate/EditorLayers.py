@@ -20,6 +20,7 @@ CMake 는 결과를 읽는다(`ProjectConstants.py` → `ConfigVars.cmake` 와 �
 from __future__ import annotations
 
 import sys
+import tomllib
 from pathlib import Path
 from typing import Sequence
 
@@ -28,10 +29,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.ProjectConstants import kDirSourceEditor  # noqa: E402
 from generate.GeneratorOutput import GeneratorError, runGenerator, writeGeneratedFile  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
-from generate.TomlRules import RuleDataError, kKindInteger, kKindReason, readRuleFile  # noqa: E402
 
 kTag = "EditorLayers"
-kRuleName = "EditorLayers"
+kRuleFile = Path(__file__).resolve().parent / "rules" / "EditorLayers.toml"
 kRootLayerName = "<root>"
 kCommonFolder = "Common"
 
@@ -63,20 +63,20 @@ def listActualLayersInternal(editorDir: Path) -> list[str]:
 
 def generateEditorLayers(outputPath: Path) -> None:
     try:
-        data = readRuleFile(kRuleName, {"tier": kKindInteger, "prelude": kKindReason}, requiredKeys=("tier",))
-    except RuleDataError as exception:
-        raise GeneratorError(str(exception)) from exception
-    mapTier: dict[str, int] = data["tier"]
+        data = tomllib.loads(kRuleFile.read_text(encoding="utf-8"))
+        mapTier: dict[str, int] = data["tier"]
+    except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
+        raise GeneratorError(f"{kRuleFile.name}: 읽지 못했다 ({exception!r}) — [tier] 표가 있어야 한다") from exception
     root = getProjectRoot()
     editorDir = root / kDirSourceEditor
     listActual = listActualLayersInternal(editorDir)
     listMissing = [layer for layer in listActual if layer not in mapTier]
     listStale = [layer for layer in mapTier if layer not in listActual]
     if listMissing:
-        raise GeneratorError(f"티어 표에 없는 에디터 층: {', '.join(listMissing)} — {kRuleName}.toml 의 [tier] 에 티어를 정해 넣으세요")
+        raise GeneratorError(f"티어 표에 없는 에디터 층: {', '.join(listMissing)} — {kRuleFile.name} 의 [tier] 에 티어를 정해 넣으세요")
     if listStale:
-        raise GeneratorError(f"폴더가 없는 티어 표 줄: {', '.join(listStale)} — {kRuleName}.toml 의 [tier] 에서 지우세요")
-    for include in data["prelude"]:
+        raise GeneratorError(f"폴더가 없는 티어 표 줄: {', '.join(listStale)} — {kRuleFile.name} 의 [tier] 에서 지우세요")
+    for include in data.get("prelude", {}):
         if not include.startswith("Editor/") or not (root / "Source" / include).is_file():
             raise GeneratorError(f"[prelude] 의 파일이 없습니다: {include}")
 
@@ -85,7 +85,7 @@ def generateEditorLayers(outputPath: Path) -> None:
     for tier in listTier:
         listLayer = [layer for layer in listActual if mapTier[layer] == tier]
         listLine.append(f'set(SW_EDITOR_TIER_{tier}_LAYERS "{";".join(listLayer)}")')
-    listLine.append(f'set(SW_EDITOR_PRELUDE_HEADERS "{";".join(data["prelude"])}")')
+    listLine.append(f'set(SW_EDITOR_PRELUDE_HEADERS "{";".join(data.get("prelude", {}))}")')
     listLine.append("")
     writeGeneratedFile(outputPath, "\n".join(listLine), tag=kTag, summary=f"{len(listActual)} layers · {len(listTier)} tiers")
 
