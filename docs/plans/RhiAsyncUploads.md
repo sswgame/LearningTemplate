@@ -1,6 +1,6 @@
 # RHI 비동기 업로드 · 머티리얼 초기화 · PSO 준비 상태
 
-> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 8/15
+> 상태: 구현중 · 선행: 없음 · 영역: graphics · 옛번호: 없음 · 진행: 12/15
 
 > 질문: 게임 스레드와 렌더 스레드가 GPU 완료를 기다리는 지점을 어떤 계약으로 없애고, 무엇부터 바꾸는가?
 > 독자: RHI 백엔드와 렌더러를 고치는 작업자, 통합 담당.
@@ -128,12 +128,12 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 | 단위 | 내용 | 선행 | GPU |
 |---|---|---|---|
 | U7 | 계약 GPU 테스트(옛 호출 이전은 B0 가 했다) | B0 | 예 |
-| U8 | 새 텍스처 업로드의 세 단계(B0 는 `uploadTexture2DAndWait`, 구간 갱신 몫은 끝남) | B0 | 예 |
-| U9 | 렌더 타깃 읽기 티켓(B0 는 `readbackTexture2DAndWait`, 글리프 아틀라스 몫은 끝남) | B0 | 예 |
+| U8 | 새 텍스처 업로드의 세 단계(코드 끝남, GPU 확인 전 — 아래 "끝난 단위: U8") | B0 | 예 |
+| U9 | 렌더 타깃 읽기 티켓(코드 끝남, GPU 확인 전 — 글리프 아틀라스 몫은 이미 끝남) | B0 | 예 |
 | U10 | 머티리얼 GPU 상태와 프레임 경계 초기화 | U8 | 예 |
-| U11 | PSO 상태 데이터와 드로우 규칙 | 없음 | 예 |
+| U11 | PSO 상태 데이터와 드로우 규칙(코드 끝남, GPU 확인 전) | 없음 | 예 |
 | U12 | PSO 백그라운드 빌더 | U11, U5, U6, DX11 · GL 의 워커 안전성 점검 | 예 |
-| U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거 | U8 | 예 |
+| U13 | 렌더 타깃 크기 변경의 `waitIdle` 제거(코드 끝남, GPU 확인 전) | U8 | 예 |
 | U14 | `waitIdle` 이유 인자와 게이트 | U13 | 아니오 |
 
 **끝난 단위: B0 골격 번들.** U1(계약, ABI 34, 블로킹 헬퍼), U2(Vulkan 일회성 제출의 펜스 대기), U3(DX11), U4(GL)가 끝났고 U5 ~ U9 는 **골격**까지 들어갔습니다: 네 백엔드가 새 계약을 구현하고 옛 호출처와 테스트가 `...AndWait` 위에서 컴파일됩니다. GPU 네 백엔드 확인(`RHIDeviceTest`, `RenderPassGPUTest` 캡처)은 통합 L 에서 Release 로 통과했고(2026-10-25), 남은 확인은 매니페스트 id `rhi-transfer-b0-measure`(측정 질문 넷)입니다. 통합 L 이 GL 폴링을 고쳤습니다(컨텍스트 없는 스레드의 `pollTransfer` 가 컨텍스트가 비어 있으면 한 번 집어 펜스를 봄 — 게임 스레드가 동기 로드로 막혀 RT 가 프레임을 돌리지 않으면 10 초 시간 초과까지 멈추던 것). nogpu `RHITransferTest.*` 는 `ctest-nogpu` 가 돕니다.
@@ -149,6 +149,14 @@ DX12 의 인덱스 반환 지연(`deferFreeBindlessIndex`)과 Vulkan 의 해제 
 **끝난 단위: GL-1(GL 스테이징 링).** 업로드(밉 전체, BC 포함)와 구간 갱신은 영속 매핑 PBO 링에 컨텍스트 밖에서 복사하고 컨텍스트는 PBO 바인딩 · `glTexSubImage*` · 펜스에만 빌립니다. 4.4 가 없으면 업로드는 모두 `Rejected`(클라이언트 메모리 경로 없음), 장치 손실은 제출 진입의 `isLost` 가 `Rejected` 로 돌려줍니다(`RHIStagingRingTest.LostDeviceRejectsInsteadOfBusyWhenTheRingIsFull`). 상수 · 구조 · 정점 버퍼 갱신은 `glBufferSubData` 그대로입니다([결정 기록 5-5](../decisions/5-5_GraphicsRHI.md)). 확인 `rhi-transfer-gl1-staging-ring`.
 
 **끝난 단위: U6(Vulkan 비동기 전송).** 제출 안에서 기다리지 않고, 링 둘(업로드 · 되읽기)과 전송 작업 위에서 시리얼은 큐 락 안에서 매기며 완료는 펜스를 앞에서부터 걷어 올립니다(계약 5 · 7 · 8). 링보다 큰 전송은 단독 버퍼(`RHIStagingRingGPUTest.VulkanTransferLargerThanTheRingIsAcceptedAlone`). 결과 옮기기는 DX12 · Vulkan · GL 공용 `RHIStagingRingUtil::settleAllocation` · `RHITransferSubmit::fromUnaccepted` 한 곳입니다. 복사 오프셋은 텍셀 블록 바이트와 4 의 최소공배수로 맞춥니다(R8 작은 밉 · 12 바이트 텍셀 때문). 전송 중 파괴한 텍스처의 해제는 `_transferReleaseQueue` 가 미룹니다. GPU 확인 `rhi-transfer-vk-u6` 은 통합 N 에서 통과했고(Debug 검증 레이어 오류 0, UI 예제 프레임 벽시계 5.4 → 2.8 ms), `RT.Upload.waitIdle` 은 이제 프레임 밖 버퍼 갱신 · 시계 읽기만 잽니다.
+
+**끝난 단위: U8(텍스처 업로드의 세 단계, 코드만 — 빌드 · GPU 확인은 통합).** 워커 읽기 → RT 펌프(`TextureCache::completePendingLoads`)의 `Texture2D::beginUploadFromImage`(텍스처 생성 · `submitTextureUpload`, 기다리지 않음) → 이후 프레임의 펌프가 `finishUpload`(`pollTransfer` 가 `Complete` 면 `registerBindlessTexture` 와 공개). `AssetLoadBlock` 에 "업로드 중" 단계(`kPhaseUploading`)와 완료 한 걸음의 결과 `AssetCompletionStep`(`Done` · `Failed` · `Submitted` · `Busy`)를 더했다 — 제출 뒤에는 펌프의 `runUploadPollIfPending` 과 `wait()` 가 CAS 로 집은 **한 스레드만** 확인하고, 펌프가 제출한 블록을 다른 스레드의 `wait()` 가 집으면 그 자리에서 `finishUpload` 를 블로킹으로 합니다. `Busy` 는 블록이 완료 대기로 돌아가 다음 펌프가 다시 내며(텍스처는 지우고 다시 만든다), 프레임당 상한은 **제출 수**입니다. 동기 `acquire` · `loadFromImage` · `loadFromCPUBytes` 는 같은 `begin` + `finish` 를 블로킹으로 합니다(`AndWait` 를 부르지 않는다). 위쪽 밉 교체도 같은 세 단계입니다(`beginUpgradeResidency` → `updateStreaming` 이 폴링하는 `_listUpgrading` → `finishUpgradeResidency`, 올리는 중 표시 `_bUpgrading` 는 끝날 때 내림 — `updateStreaming` 의 반환값은 이제 **끝낸** 수이고 상한 0 은 폴링만 한다). 올리는 중인 CPU 텍스처의 구간 갱신(`writeCPUBytes`)은 처음 업로드 뒤에 덮이도록 그대로 제출합니다. 테스트: `RenderPassGPUTest.AsyncTextureBecomesReadyThroughThePumpWithoutWait`(새), `StreamingUploadsTheTextureNotedAsLargestOnScreenFirst`(한 호출이 제출 · 폴링은 상한 0 으로). 남은 위험: 핫 리로드의 `reload` 는 `_bUpgrading` 이 내려가길 기다리므로 폴링할 RT 가 없으면 멈춘다(도구 경로). 같은 이유로 에디터 썸네일은 `runCompletionIfPending` 뒤 `Loading` 으로 남고 이후 RT 펌프가 끝낸다.
+
+**끝난 단위: U11(PSO 상태 데이터, 코드만 — 빌드 · GPU 확인은 통합).** `RenderPSOCache::MaterialPSOState`(`Absent` · `Building` · `Ready` · `Failed`)를 변형 항목에 두고 항목은 `building()` · `ready( pso, bOwned )` · `failed()` 로만 만듭니다(핸들 0 의 `ready` 는 `failed`). `beginMaterialPSO( key )` 가 "처음 올린 쪽만 만든다" 를 한 번에 정하고(`hasMaterialPSO` 후 `setMaterialPSO` 의 두 걸음은 만드는 스레드가 둘이면 같은 키를 두 번 만든다), `findMaterialPSO` 는 `Ready` 의 핸들만, `findMaterialPSOState` 가 0 의 이유를 답합니다. `FrameRenderer::psoForBatch` 는 `pOutState` 로 상태를 내주고 `drawBatchGroup` 이 `Building` 인 배치를 `RT.PSO.pendingBatches` 로 셉니다(생성이 아직 RT 에서 동기라 값은 늘 0 이어야 한다 — 이 0 이 U12 의 비교 기준). `findMaterialPSO` 주석도 G11 이후 동작으로 고쳤습니다. 상태 전이는 nogpu `RenderPSOCacheTest.MaterialVariantStateGoesFromBuildingToReadyOrFailed`. 남은 U12: `requestMaterialPSO( key, desc )` · 빌더 스레드 · 완료 목록 합치기.
+
+**끝난 단위: U13(렌더 타깃 크기 변경, 코드만 — 빌드 · GPU 확인은 통합).** `TextureCache::resizeRenderTarget` 의 `waitIdle`(W6)을 지웠다. 옛 GPU 텍스처 · SRV 는 `Texture2D::detachRHI` 로 해제하지 않고 떼어 스트리밍 교체와 같은 지연 해제 줄(`_retired`, 게임 스레드의 `releaseRetiredTextures` → `releaseHandle` 이 이미 만든 패킷이 끝난 뒤 돌려줌)에 넘기고 새 텍스처는 새 핸들 · 인덱스를 받습니다 — 그래서 DX11 · GL 이 `unregisterBindlessTexture` 에서 인덱스를 곧바로 돌려줘도 새 텍스처가 옛 인덱스를 물려받아 이전 프레임을 오염시키지 않습니다(설계가 요구한 "DX11 · GL 인덱스 반환의 GPU 완료 뒤 미룸" 을 백엔드가 아니라 이 호출처가 지연 해제로 채웠다). 새 인덱스는 세대를 올려 빌려 간 머티리얼이 다시 받습니다(기존). 핫 리로드의 `waitIdle` 은 도구 경로라 남깁니다. 확인은 기존 `CanvasTargetRecreatesTextureWhenWidgetResizes`(옛 텍스처 해제 줄을 비우는 한 줄을 더함)와 에디터 캔버스 시나리오. **[확인 전]** DX11 · GL 에서 `releaseHandle` 의 "넘긴 프레임 + 1" 이 GPU 가 옛 SRV 를 다 읽은 뒤인지(스트리밍 교체가 이미 같은 가정을 쓴다).
+
+**끝난 단위: U9(렌더 타깃 읽기 티켓, 코드만 — 빌드 · GPU 확인은 통합).** `RenderThread::readRequestedRenderTarget` 가 요청 프레임에 기다리지 않는다. 요청을 받으면 `submitTextureReadback` 만 하고(`PendingRenderTargetRead` — 티켓을 직접 쥐고 소멸할 때 `discardTextureReadback`; `PendingReadback` 은 쥔 동안 같은 스레드의 `...AndWait` 를 단언으로 막아 스크린샷과 겹치므로 쓰지 않았다) 이후 프레임의 같은 함수가 `pollTransfer` 로 보고 `Complete` 면 `takeTextureReadback` 해 레지스트리에 게시한다. 읽는 중에는 새 요청을 레지스트리에 둔 채 받지 않고, `Busy` 면 같은 요청을 다음 프레임에 다시 내며, `Rejected` · `Failed` · 죽은 핸들은 조용한 실패로 게시합니다. `stop()` 이 팩토리보다 오래 살지 않게 남은 티켓을 버립니다(인라인 제출 경로 포함). 스크린샷과 에디터 캡처는 블로킹 헬퍼를 그대로 씁니다. 새 테스트는 없습니다 — 렌더 스레드 읽기는 장치가 있는 에디터 시나리오(`uiaudit.scenario.xml`)와 `uidemo.scenario.xml`, `-gv_screenshot` 캡처 경로로 봅니다. 같은 결함 후보: 에디터 `RenderTargetPanel` 의 `...AndWait`(`RenderTargetViewUtil.h`)는 UI 스레드의 도구 경로라 남겼다.
 
 **끝난 단위: U5(DX12 비동기 전송).** 텍스처 전송이 프레임 슬롯 복사 리스트와 프레임 제출 락(`_uploadSlotMutex`)을 거치지 않고, 전송 작업 · 전송 펜스 · 업로드 링을 씁니다(링 구간 정렬은 `D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT` 512). 제출은 `_transferSubmitMutex` 안에서 `ExecuteCommandLists` · `Signal` · 시리얼 발급을 합니다(락 순서 `_transferSubmitMutex` → 펜스 줄 잎 락). 텍스처의 마지막 전송 시리얼은 `max` 로 기록합니다. `_uploadSlotMutex` 는 구조 버퍼 복사 · 프레임 리스트 제출 · 프레임 펜스만 지킵니다([결정 5-5](../decisions/5-5_GraphicsRHI.md) `withNativeContext` 항목, 확인 `rhi-native-context-guard`). GPU 확인은 `rhi-transfer-dx12-u5`. 남은 것: DX12 되읽기 링(잦아지면, M1 이 정함), GL 의 `allocateReadbackSpan` 이 `RHIStagingRingUtil` 을 쓰지 않는 것(GL 되읽기 링을 만질 때 합침).
 
