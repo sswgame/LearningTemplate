@@ -59,11 +59,9 @@ Debug 항목 `ctest-lint` · `ctest-race` · `app-hang-watch` 는 606a0c07a 에�
 
 남은 후보(통합 T에서 드러남): 시나리오가 `scratch/` 밖의 추적 파일에 쓰는 것을 막는 형식이 없다(`asset.openScratch` 는 여는 쪽만 막고 Quick Open 은 열림) — 자동화 실행 중 Resource 원본 쓰기를 오류로 만드는 저장 입구 게이트 · `uipreviewdesigner.scenario.xml` 이 원본 `save_probe.ui.xml` 을 연다 · `findNearestPoly` 로 시작 · 끝 점을 붙이는 `RecastNavMesh::findPath` 등이 상자 밖 점에 붙을 수 있다 · `AutomationRunnerWatchTest.WallClockLimitEndsAHeldScenarioAndWritesTheReport`(벽시계 0.05 초)와 `catalogeditor` 는 병렬 부하에서 한 번씩 졌다(단독 통과) — 대기를 시간 대신 상태로 · `ServerRuntimeOpensTheSQLiteStore…` 는 표시만 달았다(종료 중 취소된 첫 reload 가 경고로 나옴 — `ServiceStoreResult` 에서 취소와 진짜 실패를 가르는 것이 근본책). 새 거절 경로 테스트는 로그 판정기가 넓어져 표시를 같이 달아야 한다.
 
-| 브랜치 | 내용 · 병합 뒤 할 일 |
-|---|---|
-| `wt/verifycmd`(4) | 측정대기 계획 문서 63 개를 닫고 매니페스트를 201→151 로 줄인다(문서 삭제 · 결정은 5-2~5-11 로 이전). 병합 뒤: `status-board --write`(지운 문서 링크 약 30 곳), 이 문서의 지운 `Vfx.md` 링크 정리, 셰이더 5 개 주석 정리(다음 쿠킹 때), 새 perf-compare 케이스 · `cook-pack-timing-release` · `write-snapshot` 인자를 첫 실행에서 확인. `need_command` 가 0 이면 `plans --check` 가 거절하게 막는 것이 구조적 마무리 |
-| `wt/verifyopt`(1) | 검증 시간 최적화(`shards` · `requires` · `functional` · 야간 `--measure`)를 `Scripts/common/VerifyManifest.py` · `RunVerifyBatch.py` · `RunTests.py` · `VerifyBatch.json` · 문서에 담았다. 빌드 · 실행 안 해 봤다. **충돌**: `VerifyBatch.json` 의 `app-scenarios-release`(이 브랜치는 `shards`, 통합 S 는 `ctest -L hostgpu`) — 통합 S 쪽을 기준으로 정하고, `scenario-timeline-measure` · `scenario-thresholds-promote` 에 `requires` · 인자를 `AppRuns` 로, `shooter3d-keyrebind-restart` 에 `functional: true`, 야간은 `--measure`. 병합 뒤 겹침 실행이 실제로 줄이는지 시간을 잰다 |
-| `wt/lockfmt` 끝 4 커밋 | f7ae810d7 · 0fca6afe8 · 015883359 · 119664da2 (동결 뒤 커밋이라 통합 S 에 안 들어갔다) |
+**통합 U(2026-10-28, 끝)**: `verifycmd` · `verifyopt` · `lockfmt` 끝 4 커밋을 병합했다. 고친 것: 종료 보고가 창보다 오래 사는 저장소를 창 안에서 다시 잡던 모양(`RegistrationList` 저장소 보관·복귀, 호스트 범위를 부트스트랩보다 먼저 비움 — 결정 5-3), OnlineLoadBot 의 `Engine::shutdown` 호출. 검증: Debug · Shipping · Release 빌드 통과, Shipping ctest 통과, 린트 통과(상태판 재생성).
+
+남은 후보(통합 U에서 드러남): 부하가 큰 전체 실행에서만 진다 — `AppScenarioTest.RecordsMatchAcrossBackends` 의 crowd 시나리오가 frame 301 의 `Animation.CrowdSoloUnits` · `ActiveUnits` 를 dx11/vk 에서 다르게 기록(단독 실행은 통과, 공유 그룹 성립 시점이 시간에 의존), 218 단계 에디터 체인(DX12)의 `panelclose` 가 `Editor.PanelOpen` 을 기다리지 않고 확인(단독 통과). 둘 다 `WaitUntil` 로 상태가 선 뒤에 기록 · 확인하게 고칠 것. 종료 보고 후보: Engine 멤버(`_listFrameObserver` · `_runTitle`)의 부트스트랩 해제를 `~Engine` 으로 옮기기, 소유자 없는 `inline static` 맵 · 캐시를 `ScopeOwned` 로, 프로세스 정적 `NameRegistry` 표의 보관·복귀, `IModuleUnloadListener` 목록을 침입형으로.
 
 작업 구조(한 에이전트 단계별 진행)는 [11 작업 방식](../11_Workflow.md) 머리에 반영했다. 남은 것: 같은 구조로 `/integrate` · `/worker-brief` 스킬과 11 의 "작업자" 절을 맞춘다.
 
