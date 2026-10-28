@@ -1,48 +1,43 @@
 # 다음 세션 인계
 
-<!-- next-format: one-page -->
-
 > 질문: 지금 어디까지 왔고, 다음 세션이 처음에 할 일은 무엇인가?
 > 독자: 새로 시작하는 세션(에이전트와 사람).
-> 결론: 통합 V(작업자 브랜치 14 개)와 뒤이은 설정 소유 변경 · 테스트 수정이 main 에 들어가 push 됐다(ca6208524). 기능별 테스트 · 시나리오(`Test/` · `Resource/**/automation/`)는 새 프레임워크를 만들려고 전부 지웠다 — 새 설계는 사용자와 다음 세션이 정한다(옛 테스트 · 시나리오에 기댄 확인 항목과 남은 일은 이 문서에서 걷었다). 끝난 통합의 일지는 `git log` 가 정본이라 여기 두지 않는다.
+> 결론: 2026-10-28 에 저장소를 크게 비웠다(CI · 훅 · 스킬 · 에이전트 정의 · 테스트 · 시나리오 · 생성 산출물 · 낡은 문서) — 코드는 이 사이 작업자들이 빌드 없이 넣은 것이라 컴파일된 적이 없다. 첫 일은 빌드를 세워 컴파일 오류를 잡는 것이다(아래 1절).
 
-이 문서는 지금 상태 한 장만 둔다.
+이 문서는 지금 상태 한 장만 둔다. 순서는 [Roadmap](Roadmap.md), 설계는 계획 문서(`py -3 -m Scripts plans`)다.
 
-## 1. 지금 상태 — 통합 V (2026-10-28, main 에 push 완료)
+## 1. 첫 일 — 컴파일 확인
 
-1 차(net-load · gfx-baseline · cand-sweep · old-defects · scratch-gate · vtools · keep-assets)와 2 차(wpath · svc-cancel · parse-core · ui-wrap · py-compat · rhi-leftovers · pair-scene)를 병합해 main 에 fast-forward 로 push 했다. CI 수정 커밋 01e3e4e06(Vulkan 확장 개수 · Python 3.12 `read_text` · 없는 sysfs 카드 조사)과 사용자가 지운 `prof.out` 도 들어갔다. push 직전 증거는 세 구성의 빌드 통과와 `full-build` 뿐이고 아래 "못 돌린 검증"은 안 했다.
+이번 묶음의 C++ · 셰이더는 사용자 지시("테스트 없이")로 한 번도 빌드하지 않았다. 순서: ① `cmake --preset Ninja-Debug` 로 구성이 서는지(테스트 타깃 · `AllTests` · `Test/` 를 걷었으니 구성이 깨질 수 있다. `cmake/Engine/TestTargets.cmake` 는 린트용 `sw_registerScriptTest` 하나뿐) ② 빌드를 짓고 컴파일 오류를 묶음별로 고친다. 의심 지점(작업자 보고 기준):
 
-워크트리는 모두 지웠다(주 작업 트리만 남는다). 병합 안 된 `wt/integ-merge` 의 커밋 12 개를 보존했던 태그는 내용을 확인한 뒤 지웠다 — 5 패치 가운데 `d3338bc16`(모듈이 정의한 설정을 `ConfigManager` 에 등록하지 않고 서비스가 `readConfigFileInto` 로 직접 소유)만 main 에 없어 9d2c3d83f 로 가져왔고 `unloadConfig` 는 지웠다. 나머지는 main 에 같은 수정이 있거나(`releaseConfig` = `unloadConfig`) 낡은 문서다. `ResourceID` 호출처 수정(`f505cecc3`)은 15 개 파일을 하나씩 대조하지 않았고 main 이 세 구성에서 빌드되는 것으로 갈음했다.
+- RHI 업로드(U7~U14): `AssetLoadBlock::settleCompletionStep` 단계 전이 · `Texture2D::detachRHI` 단언 · 핫 리로드가 `_bUpgrading` 을 기다리는 길.
+- 팩 패치 서명 · 슬롯 배치: `PackPatch.cpp` 의 `to_chars` · `ResourcePakWriter.cpp` 의 `PreviousSlotTable` · 팩 헤더가 보안 타입을 include 해 늘린 의존.
+- Wayland W3(25 파일, Linux 전용이라 Windows 에서 못 짓는다): `WaylandShmBuffer` · 스플래시 · 개발 콘솔 · xdg-shell 생성 헤더.
+- AutomationSplit: 분할한 `AutomationRunnerSteps.cpp` · `AutomationRunnerJudge.cpp` 의 선언 순서와 include · `SW_LOG_CALLER` 중복(유니티 빌드).
+- OnlineKits H2: `HTTP2Client.cpp` 의 잠금 속성과 `unordered_map` 순회 중 정리 · ALPN 콜백 타입.
+- ServerDebug: `ServerApp.cpp` 틱 종료 훅(`makeStatsReport`) · `JSONLinesLogOutput` · `ServerConfig.h` 새 `PROPERTY` 5 개 · `StateHashHistory` 의 private 상속.
+- PackedTypes P4 · P5: `RHIFormat::R16G16_SNORM`(GL 컬러 첨부 지원 · Vulkan 샘플링 비트) · `MeshAssetFormat` 압축 정점(kVersion 4, 옛 리더 없음).
+- 에디터: 메시 · 클립 미리보기 창 · `IBehaviorTreeDebugSource` 어댑터 · `SkirmishDirectorComponent` include 순서.
+- DataDriven: `SocketKindTable::loadDefault` · 함수 로컬 static 이 엔진 서비스 전에 불리면 멈춤.
+- 그 밖에 `Scripts/common/BuildTree.py` 가 지워진 `AllTests` 타깃을 가리킨다(빌드 도구를 쓰기 전에 고친다).
 
+## 2. 지금 상태
 
+- **지워진 것**: `.github`(CI) · `.claude`(훅 · 에이전트 정의 · settings · 스킬 넷) · `docs` 의 번호 문서 · 설정 참조(`docs/Config`) · 결정 기록(`docs/decisions`) · `README`/`StatusBoard` 들 · `Test/` 전체와 `Resource/**/automation` 시나리오 · `Scripts` 대부분 · 린트 게이트 84 개(`CheckIncludeOrder` + clang-format 만 남음) · CMake 프리셋의 `CI-*` · `WSL-*` · `Lean` · `ASAN`.
+- **남은 Scripts**: `setup/` · 쿠킹 계약 · CMake 가 부르는 생성기 · `MakePackage`(에디터 패키징 패널이 부름) · `qa/ValidateAssets`(에디터 에셋 검증이 부름) · `plans` · `doc` 읽기 도구 · 린트(IncludeOrder + clang-format 훅).
+- **`Resource` 의 생성물 전부 삭제**: `*/shaders/bin` · `*/models` · `*/textures` · `*/heightfields` · 모든 `import.stamp`. 사용자가 다시 뽑는다 — 셰이더는 `App --cook-shaders`, 모델 · 텍스처는 `--import-models` 등. 셰이더 소스(`.hlsl`)는 남아 있다. PackedTypes P4 의 셰이더(옥타헤드럴 법선)와 굴절 E2 의 셰이더 변경이 같은 파일(`binding.hlsli`)에 섞여 있으니 쿠킹 때 한 번에 확인한다. 굴절 셰이더 일부는 패치(`docs/plans/ShaderPatches/06-…`)로 남아 있다.
+- **WildWest 말**: Quaternius Farm Animals(CC0)의 `Horse` 로 교체(Idle · Walk · Run). 크기 0.4 · 좌석 높이 1.62 는 계산값이라 화면으로 맞춘다.
+- **푸시**: main 은 origin 보다 앞서 있을 수 있다 — `git fetch` 로 보고 force 없이 push.
 
+## 3. 새로 세울 것 (사용자와 정한다)
 
-**병합 뒤 확인 목록**
-- 종료 때 서비스 경고가 나는지(`ServerRuntimeOpensTheSQLiteStore…` 의 방어 범위 표시를 지웠다 — 코드 경로만 근거).
-- `py -3 -m Scripts paired-net-pair --preset Ninja-Release` 첫 실행 — `ClipLengthMismatch` · 헤드리스 서버의 SkeletalMesh · 파괴 러너가 새로 보는 `[Error]` 판정의 오탐. 클라이언트의 `ParticipantNotReady` 는 보관 뒤 300 프레임까지 재시도한다.
+- **테스트 · 시나리오 프레임워크**: 옛 것은 `Test/` 와 `Resource/**/automation` 과 함께 지웠다. 소스 쪽 시나리오 런타임 · 탐침(`Source/Engine/{Probe,Scenario,Automation}`, `Editor/SelfTest`, 각 기능의 `*Probes.cpp`)은 아직 남아 있다 — 새 틀을 정할 때 같이 갈아엎을 후보다(밖에서 쓰는 곳: 탐침 include 89 곳, SelfTest 84 곳, Scenario 25 곳).
+- **에이전트 구성 · 작업 방식 · 문서**: `.claude/` 와 `docs/` 를 비웠으니 새로 짠다. README · 엔진 설명 문서도 새로 쓴다.
+- **프로젝트 설정 창**: `ProjectSettingsPanel` 이 지운 `docs/Config/ConfigReference.json` 을 런타임에 읽는다(없으면 `<Engine>` 페이지만 뜸). 처리안: A) C++ 반사 레지스트리 + 설정 파일 위치 표로 목록을 직접 만든다(권장, 원칙 1) B) 색인 생성기를 되살린다 C) `<Engine>` 페이지만 남기고 읽기를 지운다.
+- **옛 도구의 낡은 언급**: `Resource/**/*.sources.json` 의 `_comment` · `BuildCaches.json` · `Source` 주석에 지운 도구 이름이 남아 있다.
 
-## 2. 남은 일
+## 4. 남은 계획
 
-| 무엇 | 첫 일 한 줄 | 계획 문서 |
-|---|---|---|
-| 1. 렌더 기준 재측정 | DoF · 모션 블러 건너뛰기는 이미 코드에 있다(`kSkipsWithoutPostProcess` 등). 통합 빌드로 `perf-frame` · `load-baseline-suite` · `load-auto-render-scale` 를 `quality` 를 적어 다시 뜨고 Empty `GPU.Frame` 468 → 1089 us 와 GPU 메모리 56.8 → 176.9 MB 가 줄었는지 숫자로 본다(숨기기 위한 재기록 금지) | [Candidates-graphics](Candidates-graphics.md) |
-| 2. 누수 탐지 L2~L4 | L2 는 Release 측정, L3 는 실행 테스트, L4 는 L2 결과로 값을 정한다 — L2 부터 | [LeakDetection](LeakDetection.md) |
-| 4. 야간 Linux Load 실패 | 4d3249e 야간은 `availableExtCount` 컴파일 오류로 졌고 01e3e4e06 이 고쳤다. 그 전 실행의 connect × Mid `solo:2x1` 거절은 `parseCompactMode` 가 이유를 돌려주게 했으니 다음 야간 문구로 원인을 본다 | `Candidates-*.md` |
-| 7. 사용자 몫 | Steam/Epic SDK · H-3 운영 문서는 보류. 컴파일 셰이더 git 보관은 유지로 확정(2026-10-28). 말 모델은 Quaternius CC0 로 들어갔다(화면 확인만 남음) | [WildWestHorseMount](WildWestHorseMount.md) |
+`py -3 -m Scripts plans` 가 목록이다. 이번에 코드는 들어갔지만 빌드 · 쿠킹 · 화면 확인이 안 된 것: RhiAsyncUploads(U10 · U12 남음) · ServerDebug(O4 · O7 · S5 부하 봇 · S7 되감기 · S8 남음) · OnlineKits(F5 · A5 남음) · PackedTypes(P6 `.vat` 선행) · EnvironmentRemainders(E2 화면 공간 두께) · PreloadAndLod(P9 GPU 인스턴스 LOD 미구현) · PackPatchSigning(시작 마운트 · `-make-patch` 연결 미구현) · ShooterCharacterIntegration(S7 망토 데이터 전환) · ThirdPartyGaps(T2 설치 확인 · T3b) · LongFunctions(예비 항목).
 
-`D:/w` 에 작업자 워크트리와 산출물이 남아 있다. 통합이 main 에 들어간 뒤 `Scripts/dev` 정리 스크립트로 지운다(워크트리 기준 4 개).
-
-## 3. 남은 후보 (이번 통합에서 드러남, 아직 안 한 것)
-
-- 쓰기 게이트는 `Resource` 루트 아래만 지킨다 — `docs/` · `Config/` 같은 루트 밖 추적 파일을 자동화가 쓰는 길과 `fopen` · `ofstream` 직접 쓰기는 못 막는다. `FileUtil::writeTextFile` 은 빈 글도 쓴다(저장 입구마다 거절).
-- `RemoteConfig` 밖 서비스는 `ServiceStoreCompletion` 으로 취소를 가르지만 저장소 스레드의 `run` 안 로그는 린트 밖이다(`ServiceRetentionJob` 한 곳은 손으로).
-- 이유가 사라지는 파서 조사를 못 한 곳: `Source/Server` · `Source/App` · `Source/ModuleHost` · `Tools`(`ReflectionParser` 등), 상태 아카이브 읽기 40 여 곳, `(void)load…` 40 여 곳(안쪽 로그가 이유를 남긴다고 주석).
-- `ArrowButton` · 체크박스 앞 `SameLine` 은 게이트가 보게 넓혔으나 `InspectorPanel` 의 "Active" · `TileMapPanel` 의 "Erase" 는 `{ }` 가 끼어 게이트도 못 본다. 콤보 · 입력 칸 앞은 폭을 따로 정해 안 봤다.
-- `uavBarrier` · `copyBufferToReadback` 선행 상태의 백엔드별 매핑 대조(표는 `transitionBuffer` 만 있다). Vulkan 프레임 밖 펜스 대기는 `RhiAsyncUploads` 계획이 맡는다(M1 측정에서 `RT.Upload.waitIdle` 가 보이면).
-- `PairedAnimationSystem::startMatchingSession` · `InteractorComponent::startPairedAnimation` 의 `ParticipantNotReady` 처리. DX11 굶음 방지 두 스레드 GPU 케이스(방법만 `Candidates-graphics.md` 에 있다).
-- crowd 기록의 뒤쪽(+240 · +300 프레임) 두 기록도 `WaitUntil` 이 붙잡은 길이에 따라 상태가 갈릴 수 있어 같은 종류의 흔들림이 남았다.
-- `CheckPythonMinimumVersion` 의 새 기능 표는 표에 있는 이름만 잡는다. 저장소 기준 최소 버전은 3.10(`Constants.py`) 이고 CI 의 리눅스 러너는 3.12 쯤이다.
-
-사용자 결정(2026-10-27 · 28): 장르 키트 21 개(232 파일) 유지, 컴파일 셰이더 git 보관 유지, 평문 UDP 정책 병합 승인.
-
-**사용자 영향(통합 V)**: 자동화 실행 중 `Resource` 원본 쓰기는 오류(`<Scratch>` 선언 또는 `scratch/` 아래만) · `asset.import` 의 임시 폴더가 `scratch/import` · 컴퓨트 디스패치는 PSO 없으면 멈춤 · 배포본이 `SW_USER_DATA_ROOT` 로 사용자 데이터 위치를 돌릴 수 있음 · 무인 골든 · 기준은 `quality` 를 기록하고 다르면 거절 · `Ninja-Release` 가 모든 게임을 지음.
+사용자 결정(2026-10-27 · 28): 장르 키트 21 개 유지, 컴파일 셰이더 git 보관 유지(이후 생성물은 모두 지움), 측정 · 사람 눈 확인 · 장비 확인만 남은 항목은 후보에서 지운다(나중에 다시 측정).
