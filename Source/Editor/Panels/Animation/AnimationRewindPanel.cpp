@@ -146,13 +146,13 @@ namespace sw::editor
         if ( ImGui::SliderFloat( "Window (s)", &seconds, 1.0f, 60.0f, "%.0f" ) )
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "WindowTip" ) );
-        ImGui::SameLine();
         bool bDraw = _bDrawSkeleton == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Skeleton" ) );
         if ( ImGui::Checkbox( "Skeleton", &bDraw ) )
             _bDrawSkeleton = bDraw ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "SkeletonTip" ) );
-        ImGui::SameLine();
         bool bAll = _bAllTracks == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All" ) );
         if ( ImGui::Checkbox( "All", &bAll ) )
             _bAllTracks = bAll ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationRewind", "AllTracksTip" ) );

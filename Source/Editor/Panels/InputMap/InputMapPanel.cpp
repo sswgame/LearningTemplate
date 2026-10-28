@@ -473,7 +473,7 @@ namespace sw::editor
         }
         bool bNegate = binding._bNegate;
         if ( bLineStart == false )
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Negate" ) );
         if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
             markDocumentDirty();
     }

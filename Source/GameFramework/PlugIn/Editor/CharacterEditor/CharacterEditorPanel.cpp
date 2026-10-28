@@ -806,7 +806,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "charactereditor.clip" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop##PreviewClip" ) );
         ImGui::Checkbox( "Loop##PreviewClip", &_bClipLoop );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play##PreviewClip" ) );
         ImGui::BeginDisabled( _selectedClip.empty() );

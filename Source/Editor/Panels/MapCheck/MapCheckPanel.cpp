@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -216,20 +217,20 @@ namespace sw::editor
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
 
-        ImGui::SameLine();
         bool                                 bShowErrors = _bShowErrors == SW_TRUE;
         fixed_string<constant::kMaxBuffer64> errorLabel;
         formatstring( errorLabel.data(), errorLabel.capacity(), "Errors (%#)", _counts._errorCount );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( errorLabel.c_str() ) );
         if ( ImGui::Checkbox( errorLabel.c_str(), &bShowErrors ) )
         {
             _bShowErrors = bShowErrors ? SW_TRUE : SW_FALSE;
             _bRowsDirty  = SW_TRUE;
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "ShowErrors" ) );
-        ImGui::SameLine();
         bool                                 bShowWarnings = _bShowWarnings == SW_TRUE;
         fixed_string<constant::kMaxBuffer64> warningLabel;
         formatstring( warningLabel.data(), warningLabel.capacity(), "Warnings (%#)", _counts._warningCount );
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( warningLabel.c_str() ) );
         if ( ImGui::Checkbox( warningLabel.c_str(), &bShowWarnings ) )
         {
             _bShowWarnings = bShowWarnings ? SW_TRUE : SW_FALSE;

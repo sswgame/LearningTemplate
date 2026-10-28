@@ -673,8 +673,8 @@ namespace sw::editor
             ImGui::PushID( wire._graphID );
             ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[static_cast<size_t>( fromIndex )]._id.c_str(), wire._fromPort.c_str(),
                          _model.getNodes()[static_cast<size_t>( toIndex )]._id.c_str(), wire._toPort.c_str() );
-            ImGui::SameLine();
             bool bInvert = wire._bInvert;
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Invert" ) );
             if ( ImGui::Checkbox( "Invert", &bInvert ) )
             {
                 ImGui::PopID();

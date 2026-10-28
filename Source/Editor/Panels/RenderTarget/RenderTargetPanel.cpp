@@ -272,8 +272,8 @@ namespace sw::editor
             _bRefreshRequested = SW_TRUE;
         EditorSelfTestMarks::note( "renderTargets.refresh" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "RefreshTip" ) );
-        ImGui::SameLine();
         bool bAuto = _bAutoRefresh != SW_FALSE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto" ) );
         if ( ImGui::Checkbox( "Auto", &bAuto ) )
             _bAutoRefresh = bAuto ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "renderTargets.auto" );
@@ -334,7 +334,7 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "renderTargets.linearize" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "LinearizeTip" ) );
-            ImGui::SameLine();
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto range" ) );
             if ( ImGui::Checkbox( "Auto range", &bAutoRange ) )
             {
                 _viewSettings._bAutoDepthRange = bAutoRange ? SW_TRUE : SW_FALSE;
@@ -369,7 +369,7 @@ namespace sw::editor
         {
             const RenderTargetChannel channel = static_cast<RenderTargetChannel>( channelIndex );
             if ( channelIndex > 0 )
-                ImGui::SameLine();
+                EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( RenderTargetViewUtil::getChannelLabel( channel ) ) );
             if ( ImGui::RadioButton( RenderTargetViewUtil::getChannelLabel( channel ), _viewSettings._channel == channel ) && _viewSettings._channel != channel )
             {
                 _viewSettings._channel = channel;

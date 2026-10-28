@@ -309,10 +309,10 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EditorMultiplayer", "ProfilerKinds" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All processes" ) );
         ImGui::Checkbox( "All processes", &_bAllProcessKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsAllProcesses" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Sent" ) );
         ImGui::Checkbox( "Sent", &_bSentKinds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ProfilerKindsSent" ) );
         drawKindShares( track );

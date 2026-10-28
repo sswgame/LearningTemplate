@@ -203,9 +203,9 @@ namespace sw::editor
             pEdit          = "Remove Animation Layer";
         }
         EditorSelfTestMarks::note( "animationGraph.layer.remove" );
-        ImGui::SameLine();
         // 레이어는 적은 순서대로 얹으므로 순서가 결과를 바꾼다(뒤의 레이어가 위다).
         ImGui::BeginDisabled( bSelected == false || _selectedLayer == 0 );
+        EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##layerUp", ImGuiDir_Up ) )
         {
             AnimationGraphLayerEditorInternal::swapItems( listLayer, _selectedLayer, -1 );
@@ -213,7 +213,7 @@ namespace sw::editor
             pEdit = "Reorder Animation Layers";
         }
         ImGui::EndDisabled();
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         ImGui::BeginDisabled( bSelected == false || _selectedLayer + 1 >= layerCount );
         if ( ImGui::ArrowButton( "##layerDown", ImGuiDir_Down ) )
         {

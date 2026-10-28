@@ -493,17 +493,17 @@ namespace sw::editor
         ImGui::TextUnformatted( "Frames:" );
         for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )
         {
-            ImGui::SameLine();
             fixed_string<constant::kMaxBuffer16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( label.c_str() ) );
             if ( ImGui::RadioButton( label.c_str(), _timelineFrameCount == frameChoice ) )
             {
                 _timelineFrameCount = frameChoice;
                 _bTimelineZoomed    = SW_FALSE;
             }
         }
-        ImGui::SameLine();
         bool bFrozen = _bTimelineFrozen == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze" ) );
         if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
             _bTimelineFrozen = bFrozen ? SW_TRUE : SW_FALSE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
@@ -1249,8 +1249,8 @@ namespace sw::editor
                 _timelineFrameCount = frameChoice;
             ImGui::PopID();
         }
-        ImGui::SameLine();
         bool bFrozen = _bCallTreeFrozen == SW_TRUE;
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze##callTree" ) );
         if ( ImGui::Checkbox( "Freeze##callTree", &bFrozen ) )
             _bCallTreeFrozen = bFrozen ? SW_TRUE : SW_FALSE;
 

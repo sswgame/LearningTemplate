@@ -291,8 +291,8 @@ namespace sw::editor
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
                                             SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
 
-            ImGui::SameLine();
             bool bGroup = ( _bGroupByModule == SW_TRUE );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Group by Module" ) );
             if ( ImGui::Checkbox( "Group by Module", &bGroup ) )
                 _bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );

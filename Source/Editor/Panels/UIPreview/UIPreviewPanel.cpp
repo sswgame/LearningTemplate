@@ -984,7 +984,7 @@ namespace sw::editor
         EditorChrome::setNextItemWidthColumns( 19.0f );
         ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Layout rects" ) );
         ImGui::Checkbox( "Layout rects", &_bShowLayout );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "LayoutRectsTip" ) );
     }
@@ -1123,7 +1123,7 @@ namespace sw::editor
             _bAnimationPaused = false;
         }
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "stop" );
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop" ) );
         ImGui::Checkbox( "Loop", &_bAnimationLoop );
         ImGui::SameLine();
 

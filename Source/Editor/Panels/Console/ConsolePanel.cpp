@@ -91,9 +91,9 @@ namespace sw::editor
             /** @brief 레벨 보기 토글 칩 하나("이름 (줄 수)")를 그립니다. @p pMark 가 있으면 시나리오용 레이블을 남깁니다. */
             static void drawLevelChip( bool& inoutEnabled, const utf8* pName, size_t count, const Color& color, const utf8* pTooltip, const utf8* pMark )
             {
-                ImGui::SameLine();
                 fixed_string<constant::kMaxBuffer32> label;
                 formatstring( label.data(), label.capacity(), "%# (%#)", pName, static_cast<uint64>( count ) );
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
                 if ( EditorWidgets::drawToggleButton( label.c_str(), inoutEnabled, color ) )
                     inoutEnabled = ( inoutEnabled == false );
                 if ( pMark != nullptr )
@@ -367,22 +367,22 @@ namespace sw::editor
         EditorSelfTestMarks::note( "console.clear" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Auto-scroll" ) );
         ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Collapse" ) );
         if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
             _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorSelfTestMarks::note( "console.collapse" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear on Play" ) );
         if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, EditorThemeUtil::getSuccessColor() ) )
             _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
 
-        ImGui::SameLine();
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Error Pause" ) );
         if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, EditorThemeUtil::getErrorColor() ) )
             _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
