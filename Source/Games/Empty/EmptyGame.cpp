@@ -7,6 +7,7 @@
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Module/ModuleRenderPassRegistry.h"
 
+    #include "Games/Empty/EmptyRenderDemo.h"
     #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #endif
 
@@ -24,15 +25,12 @@ namespace sw
     bool EmptyGame::onInitialize()
     {
 #if defined( SW_WITH_CLIENT_CODE )
-        // 모듈 렌더 패스 시연(ModuleRenderPass M2): 파이프라인 `game/empty/pipeline/modulepasspipeline.xml` 의 `_type="Module"` 패스가 이 이름을 찾는다. 그 파이프라인을 고르지 않은
-        // 실행에서는 이름만 등록돼 있고 아무도 부르지 않는다. 넘기는 것은 이름과 상수(데이터)뿐이다 — 상수 이름 `g_OutlineColor` 는 셰이더가 틴트로 빌린 엔진 패스 상수 칸이다.
+        // 모듈 렌더 확장 시연(ModuleRenderPass M3 · M4): 렌더 스레드 확장 객체(패스 둘)와 큐브 프록시를 등록한다. 패스의 셰이더는 파이프라인
+        // `game/empty/pipeline/modulepasspipeline.xml` 의 `_listModuleShader` 가 선언한다 — 그 파이프라인을 고르지 않은 실행에서는 두 패스가 오류를 한 번 남기고 빠진다.
+        // 소멸(핫 리로드 · 종료)은 렌더 스레드의 모듈 구간이 끝나기를 기다린 뒤 등록을 푼다.
         ModuleRenderPassRegistry* pPassRegistry = game::findSubsystem<ModuleRenderPassRegistry>();
         if ( pPassRegistry != nullptr )
-        {
-            _modulePassDemo = make_unique<ModuleRenderPassRegistration>( *pPassRegistry, "Empty.ModulePassDemo" );
-            if ( _modulePassDemo->isRegistered() )
-                (void)_modulePassDemo->setConstant( "g_OutlineColor", float4{ 1.0f, 0.25f, 0.25f, 1.0f } ); // 붉은 틴트, 비율 1
-        }
+            _renderDemo = make_unique<EmptyRenderDemo>( *pPassRegistry );
 #endif
 
         // 이 템플릿이 하는 일은 벤치 하네스를 시작하는 것뿐입니다. 새 게임을 시작할 때는 아래 두 줄과

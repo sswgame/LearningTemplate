@@ -1,7 +1,8 @@
 <!--
-	모듈 렌더 패스 시연 파이프라인(ModuleRenderPass M2) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)에 `_type="Module"` 패스 하나(ModuleDemo)를 모션 블러와 Present 사이에 끼운 것이다.
-	게임 모듈이 등록한 패스 이름(`Empty.ModulePassDemo`)과 패스 상수가 셰이더(`engine/shaders/modulepassdemo.hlsl`)로 간다. 시나리오 `game/empty/automation/modulepass.scenario.xml` 이
-	`gv_renderPipeline` 로 고른다. 모듈 경계를 넘는 것은 이름과 상수(데이터)뿐이다.
+	모듈 렌더 확장 시연 파이프라인(ModuleRenderPass M3 · M4) — 포워드 파이프라인(`engine/pipeline/forwardpipeline.xml`)과 같은 패스 목록이다. 모듈 패스는 이 XML 에 적지 않는다:
+	게임 모듈(EmptyGame)이 `IModuleRenderExtension` 을 등록하고, 렌더러가 프레임마다 그 확장이 선언한 패스(`Empty.DrawDemo` · `Empty.TintDemo`)를 같은 RenderGraph 에 끼운다
+	(PrePostProcess 자리 = 피사계 심도 앞). 이 파일이 하는 일은 모듈이 쓸 셰이더를 `_listModuleShader` 로 선언하는 것뿐이다.
+	시나리오 `game/empty/automation/modulepass.scenario.xml` 이 `gv_renderPipeline` 로 고른다.
 -->
 <RenderPipelineDesc _name="ModulePassPipeline" _shadingModel="Forward">
 	<_listAttachment>
@@ -13,10 +14,6 @@
 		                      _clearColor="0.12,0.15,0.18,1"
 		                      _bClear="true" />
 		<RenderPassAttachment _name="MotionBlurColor"
-		                      _format="R16G16B16A16_FLOAT"
-		                      _clearColor="0.12,0.15,0.18,1"
-		                      _bClear="true" />
-		<RenderPassAttachment _name="ModuleDemoColor"
 		                      _format="R16G16B16A16_FLOAT"
 		                      _clearColor="0.12,0.15,0.18,1"
 		                      _bClear="true" />
@@ -201,26 +198,6 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 모듈 패스 시연(ModuleRenderPass M2) — 게임 모듈(EmptyGame)이 `ModuleRenderPassRegistration` 으로 이름 `Empty.ModulePassDemo` 를 등록하고 패스 상수를 넘긴다.
-		     셰이더는 이 패스의 `_shaderPath`, 입력은 선언한 첨부의 역할(SourceColor), 대상은 첫 출력이다. 등록하지 않았으면 오류를 한 번 남기고 그리지 않는다(Present 가 비어 있는 첨부를 읽는다). -->
-		<RenderGraphPassDesc _name="ModuleDemo"
-		                     _type="Module"
-		                     _modulePass="Empty.ModulePassDemo"
-		                     _shaderPath="engine/shaders/modulepassdemo.hlsl"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="None"
-		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
-			<_listInput>
-				<item>MotionBlurColor</item>
-			</_listInput>
-			<_listOutput>
-				<item>ModuleDemoColor</item>
-			</_listOutput>
-			<_listPermutation />
-		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
 		                     _shaderPath="engine/shaders/postchain.hlsl"
@@ -231,7 +208,7 @@
 		                     _bEnableDepthWrite="false"
 		                     _bEnableBlend="false">
 			<_listInput>
-				<item>ModuleDemoColor</item>
+				<item>MotionBlurColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
 			<_listOutput>
@@ -262,4 +239,9 @@
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>
 	</_listRenderPassRef>
+	<!-- 모듈 확장(EmptyGame 의 `Empty.RenderExtension`)이 패스 프로그램으로 고르는 셰이더 — 쿠커가 굽는다. 목록에 없는 셰이더를 요청한 모듈 패스는 오류로 막힌다. -->
+	<_listModuleShader>
+		<item>engine/shaders/modulepassdemo.hlsl</item>
+		<item>engine/shaders/moduledrawdemo.hlsl</item>
+	</_listModuleShader>
 </RenderPipelineDesc>
