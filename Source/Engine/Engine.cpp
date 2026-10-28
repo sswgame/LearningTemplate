@@ -426,6 +426,11 @@ namespace sw
         engine::unbindEngineServices();
         // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 라이브러리 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
+        // 남은 렌더 리소스는 누수다(레지스트리 저장소는 마지막 리소스가 사라질 때 스스로 돌아간다 — 남았으면 돌아가지 않은 채로 보고에 보인다).
+        // 코어 범위(정적 저장소)를 닫기 전, 렌더 리소스를 가질 수 있는 범위가 모두 사라진 자리에서 센다 — 코어 층은 그래픽을 모른다.
+        const uint32 registeredResourceCount = RHIRenderResource::getRegisteredCount();
+        if ( registeredResourceCount != 0 )
+            SW_LOG_WARNING( "%# RHI render resources are still registered at shutdown - a mesh, texture or material leaked", registeredResourceCount );
         _coreScope.destroyAll();
         _pCommandLineSubsystem = nullptr;
         _pMemoryBudget         = nullptr;

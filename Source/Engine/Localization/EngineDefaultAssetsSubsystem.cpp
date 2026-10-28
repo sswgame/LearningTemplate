@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Reflection/ReflectionSubsystem.h"
 
 namespace sw
 {
@@ -50,7 +51,7 @@ namespace sw
 
     span<const utf8* const> EngineDefaultAssetsSubsystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName, ReflectionSubsystem::kSubsystemName }; // 엔진 데이터의 enum 이름 풀이가 리플렉션 바인딩 뒤다
         return kArrDependency;
     }
 } // namespace sw

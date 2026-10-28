@@ -3,7 +3,6 @@
 #include "Engine/Reflection/ReflectionSubsystem.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -29,7 +28,7 @@ namespace sw
 
     span<const utf8* const> ReflectionSubsystem::getSubsystemDependents() const
     {
-        static constexpr const utf8* kArrDependent[] = { ConfigManager::kSubsystemName, EngineDefaultAssetsSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { ConfigManager::kSubsystemName }; // 엔진 기본 에셋(위 층)은 자기 의존 칸에 리플렉션을 적는다
         return kArrDependent;
     }
 

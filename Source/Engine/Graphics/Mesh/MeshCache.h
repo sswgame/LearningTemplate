@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -51,8 +52,7 @@ namespace sw
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 종료될 때 이 캐시가 보관하는 GPU 자원이 남지 않습니다. 같은 경로는 같은 `Mesh` 이므로
      *          배치 키(메시 포인터)가 갈라지지 않습니다. 씬 로드 워커에서 불러도 됩니다(내부에서 잠급니다).
      *
-     *          `.mesh` 형식을 아는 것은 이 캐시이므로, 물리 셰이프 캐시(`PhysicsMeshShapeCache`, 아래 티어)의 `.mesh` 읽기 함수도 이 캐시가 생성자에서 등록하고
-     *          메시를 다시 읽거나 비울 때 그 캐시도 비웁니다. `AssetManager` 가 있는 프로세스(게임, 에디터, 서버, 테스트 호스트)라면 어디서나 `_meshPath` 셰이프를 읽을 수 있습니다.
+     *          메시를 다시 읽거나 비우면 무효화 고리(`MeshInvalidationHook`)를 불러, 메시에서 기하를 만든 위 층 캐시(물리 셰이프)도 비우게 합니다.
      */
     class SW_API MeshCache final : public IAssetCache
     {
@@ -101,3 +101,32 @@ namespace sw
         static MeshHandle requestWith( string_view path, AssetLoadStart start );
     };
 } // namespace sw
+
+namespace sw
+{
+    /** @brief 메시가 다시 읽히거나 비워졌을 때 불리는 함수입니다. */
+    using MeshInvalidatedFunction = void ( * )();
+
+    /**
+     * @struct MeshInvalidationHook
+     * @brief 메시에서 기하를 만들어 따로 들고 있는 위 층 캐시(물리 셰이프)가 정적 초기화에서 거는 무효화 고리입니다(`SW_MESH_INVALIDATION_HOOK`).
+     * @details `MeshCache` 는 다시 읽기(`reload`)와 비우기(`clear`) 뒤에 모두 부른다. 위 층이 아래 층에 거는 방향이라 그래픽스가 물리를 include 하지 않는다
+     *          (`BuiltInAssetCacheRegistry` 와 같은 모양). 고리는 내리지 않으므로 Engine 이미지 안에서만 건다.
+     */
+    struct SW_API MeshInvalidationHook
+    {
+        explicit MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated );
+        MeshInvalidationHook( const MeshInvalidationHook& )            = delete;
+        MeshInvalidationHook& operator=( const MeshInvalidationHook& ) = delete;
+
+        /** @brief 건 고리를 모두 부릅니다(`MeshCache` 가 부른다). */
+        static void notifyAll();
+    };
+} // namespace sw
+
+/** @brief 메시 무효화 고리 @p pfn 을 겁니다(그 캐시의 .cpp, 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
+#define SW_MESH_INVALIDATION_HOOK( id, pfn )                             \
+    static const ::sw::MeshInvalidationHook sw_meshInvalidationHook_##id \
+    {                                                                    \
+        pfn                                                              \
+    }

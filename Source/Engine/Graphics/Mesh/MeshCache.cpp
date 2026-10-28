@@ -16,7 +16,6 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 
 namespace sw
 {
@@ -91,21 +90,6 @@ namespace sw
 
             /** @brief 캐시 키(획득 · 리로드가 넘긴 경로)를 로더에 넘길 리소스 id 로 바꾸는 한 곳입니다. 메시 캐시의 키는 리소스 id 만 담는다. */
             [[nodiscard]] static AssetID toAssetID( string_view path ) { return AssetID{ path }; }
-
-            /** @brief 물리 셰이프 캐시의 읽기 함수입니다. `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. */
-            [[nodiscard]] static bool loadTrianglePositions( const AssetID& assetID, vector<float3>& outListPosition )
-            {
-                vector<RHIVertex> listVertex;
-                if ( MeshAssetFormat::loadFromAsset( assetID, listVertex ) == false )
-                    return false;
-                outListPosition.clear();
-                outListPosition.reserve( listVertex.size() );
-                for ( const RHIVertex& vertex : listVertex )
-                {
-                    outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
-                }
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -167,7 +151,6 @@ namespace sw
     MeshCache::MeshCache()
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
     {
-        PhysicsMeshShapeCache::setLoadFunction( &MeshCacheInternal::loadTrianglePositions );
     }
 
     MeshHandle MeshCache::request( string_view path )
@@ -254,7 +237,7 @@ namespace sw
     {
         const string_view relativePath = assetID.view();
         (void)reloadShared( relativePath, pDevice ); // 사용 중인 메시가 없으면 다시 읽을 것이 없다. 다음에 읽는 쪽이 새 내용을 읽는다
-        PhysicsMeshShapeCache::clear();              // 물리 캐시는 렌더 메시와 따로 보관한다. 이미 만든 바디는 이전 기하 그대로다
+        MeshInvalidationHook::notifyAll();           // 메시에서 기하를 만든 위 층 캐시(물리 셰이프)를 비운다. 이미 만든 바디는 이전 기하 그대로다
     }
 
     size_t MeshCache::getCachedCount() const
@@ -281,11 +264,38 @@ namespace sw
             pState->_warned._uniquePath = unordered_set<string>{};
         }
         MeshCacheInternal::getStats().recordClear();
-        PhysicsMeshShapeCache::clear();
+        MeshInvalidationHook::notifyAll();
     }
 } // namespace sw
 
 namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( MeshCache );
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 무효화 고리 목록입니다. 정적 초기화에서 채우므로 함수 안 정적으로 둔다(초기화 순서). Engine 이미지 안에서만 채운다. */
+        vector<MeshInvalidatedFunction>& getMeshInvalidationHooks()
+        {
+            static vector<MeshInvalidatedFunction> s_listHook;
+            return s_listHook;
+        }
+    } // namespace
+
+    MeshInvalidationHook::MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated )
+    {
+        SW_ASSERT( pfnInvalidated != nullptr );
+        getMeshInvalidationHooks().push_back( pfnInvalidated );
+    }
+
+    void MeshInvalidationHook::notifyAll()
+    {
+        for ( MeshInvalidatedFunction pfnInvalidated : getMeshInvalidationHooks() )
+        {
+            pfnInvalidated();
+        }
+    }
 } // namespace sw

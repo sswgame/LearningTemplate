@@ -4,9 +4,8 @@
  * @details 셰이프 서술자(`PhysicsShapeDesc3D`)가 `_meshPath` 를 갖고 점을 직접 적지 않았으면, 바디를 만드는 백엔드와 디버그 그리기가 이 캐시에서
  *          점과 인덱스를 받는다. 언리얼이 스태틱 메시의 렌더 정점에서 충돌(`UBodySetup` 의 볼록 · 복잡 충돌)을 만드는 것과 같은 자리다.
  *
- *          **티어.** 물리는 그래픽스(메시 에셋 형식)보다 아래라 `.mesh` 를 직접 읽지 못한다. 그래서 `.mesh` 를 아는 위층의 `MeshCache` 가 만들어질 때
- *          읽기 함수 하나를 `setLoadFunction` 으로 넣고, 메시를 다시 읽거나 비울 때 `clear` 를 부른다 — `RaceDetectContext::setReportFunction` 과 같은 모양이다.
- *          `AssetManager` 없이 물리만 세운 곳(넣지 않았으면)에서 `_meshPath` 셰이프는 오류다.
+ *          **층.** 물리(층 6)가 그래픽스의 메시 에셋 형식(`MeshAssetFormat`, 층 4)으로 `.mesh` 를 직접 읽는다. 메시를 다시 읽거나 비우면
+ *          `MeshCache` 가 등록된 무효화 고리(`SW_MESH_INVALIDATION_HOOK`)를 불러 이 표를 비운다 — 그래픽스는 물리를 모른다.
  *
  *          **스레드.** 모든 함수는 어느 스레드에서 불러도 된다(씬 로드 워커가 미리 `acquire` 해 두면 게임 스레드의 바디 생성이 파일을 읽지 않는다).
  *          파일 읽기는 잠금 밖에서 하고, 표만 잠근다. 읽지 못한 경로는 경로마다 한 번만 오류를 남기고 기억한다(디버그 그리기가 프레임마다 다시 읽지 않게) —
@@ -52,14 +51,6 @@ namespace sw
     class SW_API PhysicsMeshShapeCache
     {
     public:
-        /** @brief `.mesh` 하나를 인덱스 없는 삼각형 목록(삼각형마다 위치 셋)으로 읽는 함수입니다. 읽지 못하면 false 입니다. */
-        using LoadTriangleListFunction = bool ( * )( const AssetID& assetID, vector<float3>& outListPosition );
-
-        /** @brief 읽기 함수를 넣습니다(`MeshCache` 생성자). nullptr 이면 뺍니다. 이미 읽은 표는 그대로입니다. */
-        static void setLoadFunction( LoadTriangleListFunction pfnLoad );
-        /** @brief 지금 들어 있는 읽기 함수입니다(없으면 nullptr). */
-        static LoadTriangleListFunction getLoadFunction();
-
         /**
          * @brief 경로의 기하를 나눠 받습니다. 처음이면 읽어 합치고, 읽을 수 없으면 nullptr 입니다(경로마다 오류 한 번).
          * @details 표는 강한 참조라 `clear` 전까지 남는다(셰이프는 메시가 바뀔 때까지 같은 기하를 쓴다). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남는다.

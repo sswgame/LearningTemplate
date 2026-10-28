@@ -1,7 +1,4 @@
-CoreServices/StaticStorageSubsystem.cpp -> Engine/Graphics/RHI/RHIRenderResource.h
-Graphics/Mesh/MeshCache.cpp -> Engine/Physics/Collision/PhysicsMeshShapeCache.h
 Object/Component/2D/ShadowCaster2DComponent.cpp -> Engine/TileMap/Component/TileMapRendererComponent.h
 Object/Component/2D/SpriteComponent.cpp -> Engine/Animation/Sprite/SpriteClipAsset.h
 Object/Component/2D/SpriteComponent.cpp -> Engine/Animation/Sprite/SpriteClipCache.h
 Object/Component/3D/MeshLODSystem.h -> Engine/Animation/Scene/AnimationLOD.h
-Reflection/ReflectionSubsystem.cpp -> Engine/Localization/EngineDefaultAssetsSubsystem.h

@@ -2,7 +2,6 @@
 
 #include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CacheStats.h"
@@ -10,6 +9,9 @@
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Spatial/PositionWelder.h"
 
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw
@@ -47,8 +49,6 @@ namespace sw
                 mutex                                                         _mutex;
                 unordered_map<string, shared_ptr<const PhysicsMeshShapeData>> _mapPathToData;
                 unordered_map<string, uint64>                                 _mapFailedPathToEpoch; ///< 읽지 못한 경로 → 그때의 만든 횟수
-                /** @brief 삼각형 목록을 읽는 함수입니다(`setLoadFunction`). 표와 함께 엔진 수명 범위가 소유한다 — 메시 캐시가 서면 다시 건다. */
-                atomic<PhysicsMeshShapeCache::LoadTriangleListFunction> _pfnLoad{ nullptr };
 
                 /** @brief 표가 사라지면(엔진 수명 범위가 닫힘) 계측의 항목 수에서 자기 몫을 뺍니다. */
                 ~Table() { getStats().addItemCount( -static_cast<int64>( _mapPathToData.size() ) ); }
@@ -56,6 +56,21 @@ namespace sw
 
             /** @brief 표는 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 찾을 때 만들어진다). */
             inline static ScopeOwned<Table> s_table{};
+
+            /** @brief `.mesh` 정점(삼각형 목록)의 위치만 꺼냅니다. 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool loadTrianglePositions( const AssetID& assetID, vector<float3>& outListPosition )
+            {
+                vector<RHIVertex> listVertex;
+                if ( MeshAssetFormat::loadFromAsset( assetID, listVertex ) == false )
+                    return false;
+                outListPosition.clear();
+                outListPosition.reserve( listVertex.size() );
+                for ( const RHIVertex& vertex : listVertex )
+                {
+                    outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
+                }
+                return true;
+            }
 
             /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 다른 철자도 같은 칸에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
@@ -65,20 +80,6 @@ namespace sw
 
 namespace sw
 {
-    void PhysicsMeshShapeCache::setLoadFunction( LoadTriangleListFunction pfnLoad )
-    {
-        PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.getOrCreate();
-        // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다) — 읽는 함수를 맡길 표가 없다.
-        if ( pTable != nullptr )
-            pTable->_pfnLoad.store( pfnLoad, std::memory_order_release );
-    }
-
-    PhysicsMeshShapeCache::LoadTriangleListFunction PhysicsMeshShapeCache::getLoadFunction()
-    {
-        const PhysicsMeshShapeCacheInternal::Table* const pTable = PhysicsMeshShapeCacheInternal::s_table.find();
-        return pTable != nullptr ? pTable->_pfnLoad.load( std::memory_order_acquire ) : nullptr; // 표가 없으면 아무도 함수를 걸지 않았다
-    }
-
     shared_ptr<const PhysicsMeshShapeData> PhysicsMeshShapeCache::acquire( string_view path )
     {
         shared_ptr<const PhysicsMeshShapeData> result;
@@ -111,9 +112,8 @@ namespace sw
         PhysicsMeshShapeCacheInternal::getStats().recordMiss();
 
         // 읽기와 합치기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        const LoadTriangleListFunction pfnLoad = table._pfnLoad.load( std::memory_order_acquire );
-        vector<float3>                 listPosition;
-        const bool                     bLoaded = pfnLoad != nullptr && pfnLoad( PhysicsMeshShapeCacheInternal::toAssetID( path ), listPosition ) && listPosition.size() >= 3;
+        vector<float3> listPosition;
+        const bool     bLoaded = PhysicsMeshShapeCacheInternal::loadTrianglePositions( PhysicsMeshShapeCacheInternal::toAssetID( path ), listPosition ) && listPosition.size() >= 3;
         if ( bLoaded == false )
         {
             bool bFirstFailure = false;
@@ -124,9 +124,7 @@ namespace sw
                 failedInserted.first->second     = creationEpoch; // 다시 읽어도 못 읽었다 — 새 횟수로 기억한다(오류는 처음 한 번만 남긴다)
                 bFirstFailure                    = failedInserted.second;
             }
-            if ( bFirstFailure && pfnLoad == nullptr )
-                SW_LOG_ERROR( "Physics shape mesh '%#' needs a load function - PhysicsMeshShapeCache::setLoadFunction was never called", path );
-            else if ( bFirstFailure )
+            if ( bFirstFailure )
                 SW_LOG_ERROR( "Physics shape mesh '%#' could not be loaded or has no triangle - the shape is not created", path );
             return result;
         }
@@ -214,4 +212,9 @@ namespace sw
         ScopedLock<mutex> lock{ pTable->_mutex };
         return pTable->_mapPathToData.size();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_MESH_INVALIDATION_HOOK( PhysicsMeshShapeCache, &PhysicsMeshShapeCache::clear );
 } // namespace sw
