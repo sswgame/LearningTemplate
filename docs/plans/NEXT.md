@@ -19,12 +19,12 @@
 - PackedTypes P4 · P5: `RHIFormat::R16G16_SNORM`(GL 컬러 첨부 지원 · Vulkan 샘플링 비트) · `MeshAssetFormat` 압축 정점(kVersion 4, 옛 리더 없음).
 - 에디터: 메시 · 클립 미리보기 창 · `IBehaviorTreeDebugSource` 어댑터 · `SkirmishDirectorComponent` include 순서.
 - DataDriven: `SocketKindTable::loadDefault` · 함수 로컬 static 이 엔진 서비스 전에 불리면 멈춤.
-- 그 밖에 `Scripts/common/BuildTree.py` 가 지워진 `AllTests` 타깃을 가리킨다(빌드 도구를 쓰기 전에 고친다).
+- 그 밖에 `Scripts` 에 이미 없는 파일을 가리키는 곳: 에디터 에셋 검증(`Scripts/qa/ValidateAssets.py` · `common/AssetValidation.py`) · 프로젝트 설정 창(`GenerateConfigReference.py`) · 아이콘 폰트(`GenerateEditorIcons.py` · `common/EditorIconFont.py`) · `BuildCaches.json` · `BuildLayout.cmake`(`dev/RunBuildBaseline.py`). 새로 쓰거나 호출 쪽을 지운다.
 
 ## 2. 지금 상태
 
 - **지워진 것**: `.github`(CI) · `.claude`(훅 · 에이전트 정의 · settings · 스킬 넷) · `docs` 의 번호 문서 · 설정 참조(`docs/Config`) · 결정 기록(`docs/decisions`) · `README`/`StatusBoard` 들 · `Test/` 전체와 `Resource/**/automation` 시나리오 · `Scripts` 대부분 · 린트 게이트 84 개(`CheckIncludeOrder` + clang-format 만 남음) · CMake 프리셋의 `CI-*` · `WSL-*` · `Lean` · `ASAN`.
-- **남은 Scripts**: `setup/` · 쿠킹 계약 · CMake 가 부르는 생성기 · `MakePackage`(에디터 패키징 패널이 부름) · `qa/ValidateAssets`(에디터 에셋 검증이 부름) · `plans` · `doc` 읽기 도구 · 린트(IncludeOrder + clang-format 훅).
+- **남은 Scripts**: `setup/` · `generate/`(CMake 가 부르는 생성기) · `lint/` · `net/` · `dev/DestructionNetPair` · `package/Pack` · `common/`. `__main__.py` 의 `_kSubcommand` 가 명령 목록의 정본이다(`plans` · `doc` 명령은 없다).
 - **`Resource` 의 생성물 전부 삭제**: `*/shaders/bin` · `*/models` · `*/textures` · `*/heightfields` · 모든 `import.stamp`. 사용자가 다시 뽑는다 — 셰이더는 `App --cook-shaders`, 모델 · 텍스처는 `--import-models` 등. 셰이더 소스(`.hlsl`)는 남아 있다. PackedTypes P4 의 셰이더(옥타헤드럴 법선)와 굴절 E2 의 셰이더 변경이 같은 파일(`binding.hlsli`)에 섞여 있으니 쿠킹 때 한 번에 확인한다.
 - **푸시**: main 은 origin 보다 앞서 있을 수 있다 — `git fetch` 로 보고 force 없이 push.
 

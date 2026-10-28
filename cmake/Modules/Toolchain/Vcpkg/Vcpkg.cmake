@@ -500,7 +500,7 @@ endif()
 # sw_flag_libraries에 넣어 sw_add_* 타겟이 PRIVATE 링크
 # 주의: vcpkg include 폴더를 여기서 모든 타깃에 걸지 않는다. 서드파티 헤더는 그 라이브러리 타깃(ThirdParty/<이름>)을 링크해 얻는다.
 #   이 블록은 project() 전에 돌고 매니페스트 설치는 project() 안에서 일어나므로, 폴더가 있을 때만 걸면 새 러너(CI)의 첫 구성에는 빠지고
-#   설치가 남아 있는 PC 에는 걸린다 — 로컬에서만 통과하는 include 누락(EngineTest 의 stb_image.h)이 그렇게 생겼다.
+#   설치가 남아 있는 PC 에는 걸린다 — 로컬에서만 통과하는 include 누락이 그렇게 생겼다.
 # ------------------------------------------------------------------------------
 if(NOT TARGET sw_toolchain_vcpkg)
     add_library(sw_toolchain_vcpkg INTERFACE)

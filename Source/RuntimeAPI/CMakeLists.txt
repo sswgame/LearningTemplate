@@ -7,7 +7,7 @@
 add_library(RuntimeAPI INTERFACE)
 
 # 헤더는 `RuntimeAPI/...` 전체 경로로 쓴다 — 이 폴더는 include 경로가 아니다(`sw_verifySourceIncludeRoots`).
-# Export/ 의 매크로는 모듈 자신의 서비스 로케이터(Editor/, GameFramework/)를 끌어오므로
-# Source/ 가 include 경로에 있어야 한다. 그 선언은 sw_public_source_includes 하나가 갖는다(여기서 따로 적지 않는다).
+# 헤더가 Core/ 를 include 하므로 Source/ 가 include 경로에 있어야 한다. 그 선언은 sw_public_source_includes 하나가 갖는다(여기서 따로 적지 않는다).
+# 모듈 자신의 로케이터(Editor/, GameFramework/)를 끌어오는 접착 매크로는 RuntimeAPI 에 두지 않는다(계약 계층은 위를 모른다).
 target_link_libraries(RuntimeAPI INTERFACE sw_public_source_includes)
 set_target_properties(RuntimeAPI PROPERTIES FOLDER "Source/RuntimeAPI")
