@@ -34,7 +34,7 @@ namespace sw
 
             static bool run( const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() < 5 || listArgument.size() > 6 )
+                if ( listArgument.size() < 5 || listArgument.size() > 7 )
                     return false;
                 GameNetSession* pSession = game::findSubsystem<GameNetSession>();
                 if ( pSession == nullptr )
@@ -58,7 +58,8 @@ namespace sw
                 request._loginName    = listArgument[1];
                 request._password     = listArgument[2];
                 request._serverID     = listArgument[3];
-                request._gameBuild    = listArgument.size() == 6 ? listArgument[5] : "1.0.0";
+                request._gameBuild    = listArgument.size() >= 6 ? listArgument[5] : "1.0.0";
+                request._tlsTrustFile = listArgument.size() == 7 ? listArgument[6] : "";
     #if SW_PLATFORM_WINDOWS
                 request._platform = "windows";
     #else
@@ -85,7 +86,7 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( NetTicketConnect, "net.ticketconnect", "net.ticketconnect <loginHost:port> <account> <password> <serverID> <gameHost:port> [build]",
+    SW_DEV_COMMAND( NetTicketConnect, "net.ticketconnect", "net.ticketconnect <loginHost:port> <account> <password> <serverID> <gameHost:port> [build [trustFile]]",
                     "Log in to the login service, get a game connect ticket and open the encrypted client session with it", &AccountTicketConnectCommandInternal::run );
 } // namespace sw
 #endif

@@ -8,6 +8,8 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "AccountTicketConnect" );
@@ -30,7 +32,8 @@ namespace sw
 namespace sw
 {
     AccountTicketConnector::AccountTicketConnector()
-        : _pTransport{}
+        : _tlsContext{}
+        , _pTransport{}
         , _client{}
         , _account{}
         , _bServiceRegistered{ false }
@@ -46,6 +49,7 @@ namespace sw
     {
         _client.shutdown();
         _pTransport.reset();
+        _tlsContext.reset();
     }
 
     bool AccountTicketConnector::acquire( AccountTicketRequest request, NetConnectCredentials& outCredentials, string& outError )
@@ -83,10 +87,15 @@ namespace sw
             }
             _bServiceRegistered = true;
         }
+        // 서버의 서비스 스트림은 늘 TLS 1.3 이다 — 평문으로 붙으면 핸드셰이크가 닫힌다.
+        _tlsContext = NetSecurity::createClientTLSContext( request._tlsTrustFile, "", outError );
+        if ( _tlsContext == nullptr )
+            return false;
         OnlineServiceClientConfig settings;
-        settings._transportSettings._ioThreadCount = 0; // 이 함수의 `update` 가 전송을 돌린다
-        settings._serverAddress                    = loginAddress;
-        settings._gameBuild                        = request._gameBuild;
+        settings._endpointSettings._security._pTLSContext = _tlsContext.get();
+        settings._transportSettings._ioThreadCount        = 0; // 이 함수의 `update` 가 전송을 돌린다
+        settings._serverAddress                           = loginAddress;
+        settings._gameBuild                               = request._gameBuild;
         if ( _client.initialize( _pTransport.get(), settings, outError ) == false )
             return false;
 

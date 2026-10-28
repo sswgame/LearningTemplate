@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -29,6 +30,7 @@ namespace sw
         string _serverID{};                   ///< 티켓을 받을 게임 서버 이름(서버 조립 `gameConnect` 의 `serverName` 과 같아야 한다)
         string _gameBuild{};                  ///< Hello 와 로그인에 싣는 게임 빌드 글
         string _platform{};                   ///< 로그인에 싣는 플랫폼 글(`[a-z0-9_]`)
+        string _tlsTrustFile{};               ///< 로그인 서버의 TLS 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). 비면 Dev 만 `Saved/Certificates/` 의 개발용 인증서를 못 박아 믿는다(서버 서비스 스트림은 늘 TLS 이다)
         int64  _timeoutMilliseconds{ 10000 }; ///< 연결부터 티켓까지 통틀어 기다리는 시한
     };
 
@@ -54,6 +56,7 @@ namespace sw
         void shutdown();
 
     private:
+        unique_ptr<ITLSContext>      _tlsContext; ///< 로그인 연결의 TLS(클라이언트 `_client` 가 빌린다 — 먼저 선언해 나중에 지운다)
         unique_ptr<IStreamTransport> _pTransport;
         OnlineServiceClient          _client;
         AccountClient                _account;
