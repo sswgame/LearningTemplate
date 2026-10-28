@@ -1365,10 +1365,19 @@ namespace sw
 
     bool FractureComponentBase::updateGroups( float32 deltaTime )
     {
-        using Internal                   = FractureComponentBaseInternal;
-        bool                      bMoved = false;
         vector<PhysicsBodyHandle> listDestroy;
         uint32                    liveBodyCount = 0;
+        bool                      bMoved        = advanceGroups( deltaTime, listDestroy, liveBodyCount );
+        bMoved                                  = evictOverBudget( listDestroy, liveBodyCount ) || bMoved;
+        if ( listDestroy.empty() == false )
+            _physics->destroyBodies( listDestroy );
+        return bMoved;
+    }
+
+    bool FractureComponentBase::advanceGroups( float32 deltaTime, vector<PhysicsBodyHandle>& outListDestroy, uint32& outLiveBodyCount )
+    {
+        using Internal = FractureComponentBaseInternal;
+        bool bMoved    = false;
         for ( FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._bAnchored == SW_TRUE || runtime._bGone == SW_TRUE )
@@ -1391,7 +1400,7 @@ namespace sw
                 const bool bRemoveOnSleep = runtime._sleepTime >= _profile._sleepRemoveTime && runtime._volume < _profile._keepCollisionVolume;
                 if ( bRemoveOnSleep )
                 {
-                    listDestroy.push_back( runtime._body );
+                    outListDestroy.push_back( runtime._body );
                     changeDebrisBodyCount( -1 );
                     runtime._body    = PhysicsBodyHandle{};
                     runtime._bFrozen = SW_TRUE;
@@ -1411,16 +1420,21 @@ namespace sw
                     runtime._bGone = SW_TRUE;
                     if ( runtime._body.isValid() )
                     {
-                        listDestroy.push_back( runtime._body );
+                        outListDestroy.push_back( runtime._body );
                         changeDebrisBodyCount( -1 );
                         runtime._body = PhysicsBodyHandle{};
                     }
                 }
             }
             if ( runtime._body.isValid() )
-                ++liveBodyCount;
+                ++outLiveBodyCount;
         }
+        return bMoved;
+    }
 
+    bool FractureComponentBase::evictOverBudget( vector<PhysicsBodyHandle>& outListDestroy, uint32 liveBodyCount )
+    {
+        bool bMoved = false;
         // 예산: 이 오브젝트(프로필의 maxBodies)나 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
         const uint32 globalLimit = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_destructionMaxDebrisBodies ) ) );
         uint32       globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
@@ -1455,15 +1469,13 @@ namespace sw
                 break;
             FractureGroupRuntime* pOldest = &_listRuntime[listEvictOrder[evictCursor++]];
             pOldest->_bFading             = SW_TRUE;
-            listDestroy.push_back( pOldest->_body );
+            outListDestroy.push_back( pOldest->_body );
             changeDebrisBodyCount( -1 );
             pOldest->_body = PhysicsBodyHandle{};
             --liveBodyCount;
             globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
             bMoved      = true;
         }
-        if ( listDestroy.empty() == false )
-            _physics->destroyBodies( listDestroy );
         return bMoved;
     }
 

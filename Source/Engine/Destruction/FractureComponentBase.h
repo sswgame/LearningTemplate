@@ -285,6 +285,10 @@ namespace sw
         void rebuildLeafRuntimeMap();
         /** @brief 떨어진 그룹의 자세를 읽고 수명, 수면, 페이드, 예산을 진행합니다. 움직인 것이 있으면 true 입니다. */
         bool updateGroups( float32 deltaTime );
+        /** @brief `updateGroups` 의 진행 단계입니다. 그룹마다 자세 · 수면 · 수명 · 페이드를 진행하고 없앨 바디를 @p outListDestroy 에 모으며 살아 있는 바디 수를 @p outLiveBodyCount 에 더합니다. 움직인 것이 있으면 true 입니다. */
+        bool advanceGroups( float32 deltaTime, vector<PhysicsBodyHandle>& outListDestroy, uint32& outLiveBodyCount );
+        /** @brief `updateGroups` 의 예산 단계입니다. 오브젝트 · 전역 바디 수를 넘으면 작은 것 · 오래된 것부터 페이드시키고 없앨 바디를 @p outListDestroy 에 모읍니다. 바꾼 것이 있으면 true 입니다. */
+        bool evictOverBudget( vector<PhysicsBodyHandle>& outListDestroy, uint32 liveBodyCount );
         /** @brief 잎마다 본 로컬 변환을 다시 구해 렌더 유닛에 씁니다. */
         void writePiecePoses();
         /** @brief 렌더 유닛의 스킨드 메시와 정적(베이크한) 메시를 전환합니다. */
