@@ -4,14 +4,12 @@
 
 ## Existing facilities
 
-Read this before writing a helper for a common job. If the job is not here, search the header tree first, then add the
-facility to Core or Engine once instead of writing a local copy. The direct API is made unreachable by type where possible
-(`DataPath` has no literal constructor); review covers only the gap a type cannot close.
+Search here before writing a helper for a common job. If the job is missing, search the header tree, then add the facility to Core or Engine once instead of a local copy. Where a type can make the direct API unreachable it does (`DataPath` has no literal constructor); review covers the rest.
 
 | Need | Use (header · API) | Do not use |
 | --- | --- | --- |
 | Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR` · `SW_LOG_WARNING` · `SW_LOG_INFO` · `SW_LOG_TRACE` (`_ID` variants); once per scope: `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` |
-| Report below the Log tier or before the logger starts | `Core/Common/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (falls back to stderr until the logger registers a reporter) | `fprintf( stderr, … )` |
+| Report below the Log tier or before the logger starts | `Core/Common/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (stderr until the logger registers) | `fprintf( stderr, … )` |
 | Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
 | Assert | `Core/Common/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
 | Current time, elapsed time, wait deadline | `Core/Time/MonotonicClock.h` `MonotonicClock::nowNanoseconds` · `Stopwatch` · `Deadline::afterMilliseconds` · `sleepUntilNanoseconds` | `std::chrono::steady_clock` · `high_resolution_clock` · `system_clock` |
@@ -25,7 +23,7 @@ facility to Core or Engine once instead of writing a local copy. The direct API 
 | User data and config folder | `Core/File/UserDataPath.h` `getDataDirectory` · `getConfigDirectory` · `resolve` | `getenv( "HOME" )` · `%LOCALAPPDATA%` by hand |
 | Path text (join, extension, normalize) | `Core/File/FileUtil.h` `joinPath` · `getExtension` · `removeExtension` · `getFileNamePart` · `getDirectoryPart` · `normalizeSeparators` · `splitPath`; part under a root: `tryMakePathUnderRoot` | `std::filesystem::path`, `rfind( '.' )` · `find_last_of( '/' )` loops |
 | Read or write a whole file | `Core/File/FileUtil.h` `readFile` · `readTextFile` · `writeFile` · `writeTextFile` (`[[nodiscard]] bool`) | `fopen` · `_wfopen` · `std::ifstream` · `std::ofstream` |
-| Change files (append, copy, delete, recycle bin) | `Core/File/FileUtil.h` `appendTextFile` · `copyFile` · `removeFile` · `tryRemoveFile` · `removeDirectory` · `moveToRecycleBin` — all pass the automation write gate `isWriteAllowed`; a third-party save that opens the path itself (DDS, SQLite) asks `FileUtil::isWriteAllowed` first | `rename` · `unlink` · `mkdir` · `MoveFile` · `DeleteFile` · `open( … O_WRONLY )` · `PlatformFileUtil::openFile` / `replaceFile` / `moveToRecycleBin` |
+| Change files (append, copy, delete, recycle bin) | `Core/File/FileUtil.h` `appendTextFile` · `copyFile` · `removeFile` · `tryRemoveFile` · `removeDirectory` · `moveToRecycleBin` — all pass the automation write gate `isWriteAllowed`; a third-party save that opens the path itself (DDS, SQLite) asks `isWriteAllowed` first | `rename` · `unlink` · `mkdir` · `MoveFile` · `DeleteFile` · `open( … O_WRONLY )` · `PlatformFileUtil::openFile` / `replaceFile` / `moveToRecycleBin` |
 | Read a file that reports size 0 (`/proc`, `/sys`) | `Core/File/FileUtil.h` `readStreamTextFile` | `fopen` + `fgets` |
 | Read a file without blocking | `Core/File/AsyncFileIO.h` (priority, cancel, `TaskFuture`) | a thread that reads |
 | Walk a folder, file stamps | `Core/File/FileUtil.h` `collectFiles` · `collectFolders` · `forEachDirectoryEntry` · `getFileWriteTime` | `std::filesystem::directory_iterator` |
@@ -33,7 +31,7 @@ facility to Core or Engine once instead of writing a local copy. The direct API 
 | Parse a number or bool | `Core/Container/StringUtil.h` `parseInt` · `parseInt64` · `parseUint64` · `parseFloat` · `parseDouble` · `tryParseBool` · `parseIntList`; exactly N floats: `parseExactFloats` | `atoi` · `strtol` · `strtod` · `std::stoi` · `sscanf` |
 | Split text into a list | `Core/Container/StringUtil.h` `split( text, separators, StringSplitOptions{ _bTrim, _bDropEmpty } )`; one token at a time without allocation: `forEachToken`; lines: `forEachLine` | `find` · `substr` loops, a local `splitList` / `splitTokens` |
 | Trim, compare, case | `Core/Container/StringUtil.h` `trim` · `startsWith` · `endsWith` · `toLower` · `matchesWildcard` | hand loops over `char` |
-| UTF-8 and UTF-16 | `Core/Container/StringUtil.h` `utf8ToUtf16` · `utf16ToUtf8` · `isValidUtf8`; `Core/Container/Utf8Util.h` | `MultiByteToWideChar` at call sites |
+| UTF-8 and UTF-16 | `Core/Container/StringUtil.h` `utf8ToUtf16` · `utf16ToUtf8` · `isValidUtf8` | `MultiByteToWideChar` at call sites |
 | Format text, hex, colors, Base64 | `Core/Container/formatString.h` `formatstring` (`%x`, `%X`, `Format::hex`); build: `Core/String/StringBuilder.h`; colors: `Core/Math/Color.h` `Color::fromHex` · `toHex`; Base64: `Core/String/Base64Util.h` | `snprintf` chains, own hex tables |
 | Bytes or fixed-width integers as hex | `Core/String/HexUtil.h` `encodeBytes` · `appendBytes` · `appendUint64` · `decodeBytes` (`HexCase`) | a `"0123456789abcdef"` table and nibble shifts |
 | Hash, interned name | `Core/Common/HashUtil.h` `combine` · `computeStringHash64` · `mix64`; `Core/String/hashed_string.h` | literal FNV or golden-ratio constants |
