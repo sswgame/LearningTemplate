@@ -153,6 +153,136 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 부품 메시를 모두 읽습니다(부품 순서). 읽지 못하면 까닭을 남기고 false 입니다. */
+            [[nodiscard]] static bool loadPartMeshes( const OutfitAtlasSpec& spec, vector<shared_ptr<Mesh>>& outListMesh )
+            {
+                outListMesh.clear();
+                for ( const OutfitAtlasPartSpec& part : spec._listPart )
+                {
+                    shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh );
+                    if ( mesh == nullptr )
+                    {
+                        SW_LOG_ERROR( "Outfit atlas part '%#': mesh '%#' could not be read", part._name.c_str(), part._mesh.c_str() );
+                        return false;
+                    }
+                    outListMesh.push_back( std::move( mesh ) );
+                }
+                return true;
+            }
+
+            /** @brief 맵마다 이미지를 읽고, 첫 맵의 크기로 배치합니다. 다른 맵은 부품마다 같은 크기여야 합니다. */
+            [[nodiscard]] static bool loadMapImagesAndPack( const OutfitAtlasSpec& spec, uint32 atlasSize, uint32 padding, vector<vector<RawImageData>>& outListMapImage,
+                                                            vector<OutfitAtlasRect>& outListRect )
+            {
+                outListMapImage.clear();
+                outListMapImage.resize( spec._listMap.size() );
+                vector<OutfitAtlasSource> listSource;
+                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                {
+                    if ( loadImages( spec, spec._listMap[mapIndex], outListMapImage[mapIndex] ) == false )
+                        return false;
+                    for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                    {
+                        const RawImageData& image = outListMapImage[mapIndex][partIndex];
+                        if ( mapIndex == 0 )
+                        {
+                            OutfitAtlasSource source;
+                            source._part   = spec._listPart[partIndex]._name;
+                            source._width  = static_cast<uint32>( image._width );
+                            source._height = static_cast<uint32>( image._height );
+                            listSource.push_back( source );
+                            continue;
+                        }
+                        const bool bSameSize = listSource[partIndex]._width == static_cast<uint32>( image._width ) && listSource[partIndex]._height == static_cast<uint32>( image._height );
+                        if ( bSameSize == false )
+                        {
+                            SW_LOG_ERROR( "Outfit atlas map '%#': texture of part '%#' is %#x%# but the first map made it %#x%# - every map must share one layout",
+                                          spec._listMap[mapIndex]._name.c_str(), spec._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
+                                          listSource[partIndex]._height );
+                            return false;
+                        }
+                    }
+                }
+                string error;
+                if ( OutfitAtlasLayout::pack( listSource, atlasSize, padding, outListRect, &error ) == false )
+                {
+                    SW_LOG_ERROR( "Outfit atlas layout: %#", error.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 부품 메시를 하나로 병합합니다 — 훅이 부품을 한 그룹(구간)으로 모으고 UV 를 배치대로 옮깁니다. 타일링 UV 가 있으면 false 입니다. */
+            [[nodiscard]] static bool mergeParts( const OutfitAtlasSpec& spec, const vector<shared_ptr<Mesh>>& listMesh, uint32 atlasSize, const vector<OutfitAtlasRect>& listRect,
+                                                  MeshMergeResult& outMerged )
+            {
+                const OutfitAtlasHooks hooks( spec._group, atlasSize, listRect );
+                vector<MeshMergePart>  listMergePart;
+                for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                {
+                    listMergePart.push_back( MeshMergePart{ spec._listPart[partIndex]._name, hashed_string{}, listMesh[partIndex].get() } );
+                }
+                string error;
+                if ( CharacterMeshUtil::mergeMeshes( listMergePart, &hooks, outMerged, &error ) == false )
+                {
+                    SW_LOG_ERROR( "Outfit atlas merge: %#", error.c_str() );
+                    return false;
+                }
+                if ( hooks.getClampedUvCount() > 0 )
+                {
+                    SW_LOG_ERROR( "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUvCount() );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 맵마다 아틀라스 이미지를 합성합니다. 쓰기 전에 모두 메모리에서 끝내므로 도중에 실패해도 반쪽 결과를 남기지 않습니다. */
+            [[nodiscard]] static bool composeAtlases( const OutfitAtlasSpec& spec, uint32 atlasSize, uint32 padding, const vector<vector<RawImageData>>& listMapImage,
+                                                      const vector<OutfitAtlasRect>& listRect, vector<vector<uint8>>& outListAtlas )
+            {
+                outListAtlas.clear();
+                outListAtlas.resize( spec._listMap.size() );
+                string error;
+                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                {
+                    OutfitAtlasComposer::initialize( atlasSize, outListAtlas[mapIndex] );
+                    for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                    {
+                        const RawImageData& image = listMapImage[mapIndex][partIndex];
+                        if ( OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ), static_cast<uint32>( image._height ),
+                                                        outListAtlas[mapIndex], &error ) == false )
+                        {
+                            SW_LOG_ERROR( "Outfit atlas compose: %#", error.c_str() );
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 아틀라스 이미지와 병합한 메시를 디스크에 쓰고 결과를 채웁니다. */
+            [[nodiscard]] static bool writeOutputs( const OutfitAtlasSpec& spec, uint32 atlasSize, const vector<vector<uint8>>& listAtlas, const MeshMergeResult& merged,
+                                                    OutfitAtlasBakeResult& outResult )
+            {
+                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                {
+                    const string diskPath = toDiskPath( spec._listMap[mapIndex]._output );
+                    if ( ImageFileWriter::writePngRgba8( diskPath, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    {
+                        SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", diskPath.c_str() );
+                        return false;
+                    }
+                    outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
+                }
+                const string meshDiskPath = toDiskPath( spec._outputMesh );
+                if ( MeshAssetFormat::saveToFile( meshDiskPath, makeAssetData( *merged._mesh ) ) == false )
+                {
+                    SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", meshDiskPath.c_str() );
+                    return false;
+                }
+                return true;
+            }
+
             static bool runBake( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
@@ -222,110 +352,27 @@ namespace sw::editor
             return false;
         }
 
-        // 부품 메시를 읽는다.
         vector<shared_ptr<Mesh>> listMesh;
-        for ( const OutfitAtlasPartSpec& part : spec._listPart )
-        {
-            shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh );
-            if ( mesh == nullptr )
-            {
-                SW_LOG_ERROR( "Outfit atlas part '%#': mesh '%#' could not be read", part._name.c_str(), part._mesh.c_str() );
-                return false;
-            }
-            listMesh.push_back( std::move( mesh ) );
-        }
+        if ( Internal::loadPartMeshes( spec, listMesh ) == false )
+            return false;
 
-        // 맵마다 이미지를 읽고, 첫 맵의 크기로 배치한다. 다른 맵은 부품마다 같은 크기여야 한다.
         const uint32                 atlasSize = static_cast<uint32>( spec._size );
         const uint32                 padding   = static_cast<uint32>( spec._padding );
-        vector<vector<RawImageData>> listMapImage( spec._listMap.size() );
-        vector<OutfitAtlasSource>    listSource;
-        for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
-        {
-            if ( Internal::loadImages( spec, spec._listMap[mapIndex], listMapImage[mapIndex] ) == false )
-                return false;
-            for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
-            {
-                const RawImageData& image = listMapImage[mapIndex][partIndex];
-                if ( mapIndex == 0 )
-                {
-                    OutfitAtlasSource source;
-                    source._part   = spec._listPart[partIndex]._name;
-                    source._width  = static_cast<uint32>( image._width );
-                    source._height = static_cast<uint32>( image._height );
-                    listSource.push_back( source );
-                    continue;
-                }
-                const bool bSameSize = listSource[partIndex]._width == static_cast<uint32>( image._width ) && listSource[partIndex]._height == static_cast<uint32>( image._height );
-                if ( bSameSize == false )
-                {
-                    SW_LOG_ERROR( "Outfit atlas map '%#': texture of part '%#' is %#x%# but the first map made it %#x%# - every map must share one layout",
-                                  spec._listMap[mapIndex]._name.c_str(), spec._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
-                                  listSource[partIndex]._height );
-                    return false;
-                }
-            }
-        }
-        vector<OutfitAtlasRect> listRect;
-        string                  error;
-        if ( OutfitAtlasLayout::pack( listSource, atlasSize, padding, listRect, &error ) == false )
-        {
-            SW_LOG_ERROR( "Outfit atlas layout: %#", error.c_str() );
+        vector<vector<RawImageData>> listMapImage;
+        vector<OutfitAtlasRect>      listRect;
+        if ( Internal::loadMapImagesAndPack( spec, atlasSize, padding, listMapImage, listRect ) == false )
             return false;
-        }
 
-        // 병합한 메시 — 훅이 부품을 한 그룹(구간)으로 모으고 UV 를 배치대로 옮긴다.
-        const OutfitAtlasHooks hooks( spec._group, atlasSize, listRect );
-        vector<MeshMergePart>  listMergePart;
-        for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
-        {
-            listMergePart.push_back( MeshMergePart{ spec._listPart[partIndex]._name, hashed_string{}, listMesh[partIndex].get() } );
-        }
         MeshMergeResult merged;
-        if ( CharacterMeshUtil::mergeMeshes( listMergePart, &hooks, merged, &error ) == false )
-        {
-            SW_LOG_ERROR( "Outfit atlas merge: %#", error.c_str() );
+        if ( Internal::mergeParts( spec, listMesh, atlasSize, listRect, merged ) == false )
             return false;
-        }
-        if ( hooks.getClampedUvCount() > 0 )
-        {
-            SW_LOG_ERROR( "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUvCount() );
-            return false;
-        }
 
         // 합성은 쓰기 전에 모두 메모리에서 끝낸다 — 도중에 실패해도 반쪽 결과를 남기지 않는다.
-        vector<vector<uint8>> listAtlas( spec._listMap.size() );
-        for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
-        {
-            OutfitAtlasComposer::initialize( atlasSize, listAtlas[mapIndex] );
-            for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
-            {
-                const RawImageData& image = listMapImage[mapIndex][partIndex];
-                if ( OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ), static_cast<uint32>( image._height ),
-                                                listAtlas[mapIndex], &error ) == false )
-                {
-                    SW_LOG_ERROR( "Outfit atlas compose: %#", error.c_str() );
-                    return false;
-                }
-            }
-        }
-
-        for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
-        {
-            const string diskPath = Internal::toDiskPath( spec._listMap[mapIndex]._output );
-            if ( ImageFileWriter::writePngRgba8( diskPath, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
-            {
-                SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", diskPath.c_str() );
-                return false;
-            }
-            outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
-        }
-        const string meshDiskPath = Internal::toDiskPath( spec._outputMesh );
-        if ( MeshAssetFormat::saveToFile( meshDiskPath, Internal::makeAssetData( *merged._mesh ) ) == false )
-        {
-            SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", meshDiskPath.c_str() );
+        vector<vector<uint8>> listAtlas;
+        if ( Internal::composeAtlases( spec, atlasSize, padding, listMapImage, listRect, listAtlas ) == false )
             return false;
-        }
+        if ( Internal::writeOutputs( spec, atlasSize, listAtlas, merged, outResult ) == false )
+            return false;
         outResult._partCount   = static_cast<uint32>( spec._listPart.size() );
         outResult._vertexCount = merged._mesh->getVertexCount();
         outResult._meshPath    = spec._outputMesh;
