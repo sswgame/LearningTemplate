@@ -930,7 +930,14 @@ namespace sw
     {
         if ( absPath.empty() )
             return false;
-        return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, context ) );
+        // 직렬화가 글을 못 만들면 빈 글이다 - 그대로 쓰면 있던 파일이 비워진다.
+        const string text = serialize( pInstance, typeInfo, context );
+        if ( text.empty() )
+        {
+            SW_LOG_ERROR( "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
+            return false;
+        }
+        return FileUtil::writeTextFile( absPath, text );
     }
 
     bool XMLSerializer::loadFile( const ResourceID& resourceID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )

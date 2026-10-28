@@ -69,10 +69,11 @@ namespace sw::editor
 
             static bool runExplorerDryRun( const vector<string>& listArgument, string& outReply )
             {
-                const bool bValidArgument = listArgument.size() == 1 && ( listArgument[0] == "0" || listArgument[0] == "1" );
-                if ( bValidArgument == false || editor::findSubsystem<EditorStateStore>() == nullptr )
+                bool       bDryRun       = false;
+                const bool bReadArgument = listArgument.size() == 1 && StringUtil::tryParseBool( listArgument[0], bDryRun );
+                if ( bReadArgument == false || editor::findSubsystem<EditorStateStore>() == nullptr )
                     return false;
-                getEditorState<ExplorerState>()._bDryRun = listArgument[0] == "1";
+                getEditorState<ExplorerState>()._bDryRun = bDryRun;
                 outReply                                 = "explorer dry run " + listArgument[0];
                 return true;
             }
@@ -466,7 +467,7 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorExplorerCommandWellFormed, "Editor.ExplorerCommandWellFormed",
                          "1 when the last file explorer command selects a quoted path using the platform separator (Windows: backslashes only)",
                          &EditorAssetFileCommandsInternal::readExplorerCommandWellFormed );
-    SW_DEV_COMMAND( ExplorerDryRun, "explorer.dryRun", "explorer.dryRun <0|1>", "Record Show in Explorer commands without starting the file explorer",
+    SW_DEV_COMMAND( ExplorerDryRun, "explorer.dryRun", "explorer.dryRun <on|off>", "Record Show in Explorer commands without starting the file explorer",
                     &EditorAssetFileCommandsInternal::runExplorerDryRun );
     SW_DEV_COMMAND( NotifyReveal, "notify.reveal", "notify.reveal <absolute path>", "Push a toast with a Show in Explorer button for the path",
                     &EditorAssetFileCommandsInternal::runNotifyReveal );

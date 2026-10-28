@@ -869,15 +869,21 @@ namespace sw
         submit( request, 0 );
     }
 
-    bool GuildService::setLevelTable( const vector<int64>& listLevelExperience )
+    bool GuildService::setLevelTable( const vector<int64>& listLevelExperience, string& outError )
     {
         if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
+        {
+            outError = "the level table has " + to_string( listLevelExperience.size() ) + " levels, at most " + to_string( static_cast<int32>( GuildLimit::kMaxLevelCount ) ) + " are allowed";
             return false;
+        }
         int64 previous = 0;
         for ( const int64 experience : listLevelExperience )
         {
             if ( experience <= previous )
+            {
+                outError = "level experience " + to_string( experience ) + " must be positive and greater than the previous " + to_string( previous );
                 return false;
+            }
             previous = experience;
         }
         _listLevelExperience = listLevelExperience;

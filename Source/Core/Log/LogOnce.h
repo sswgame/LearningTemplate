@@ -65,6 +65,19 @@ namespace sw
         if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
             SW_LOG_ERROR( __VA_ARGS__ );                                                                                                        \
     } while ( 0 )
+/**
+ * @brief 이 호출 지점 × @p name 마다 한 번 Error 를 남깁니다. 프레임마다 도는 길이 장면 · 자원 이름에 따라 실패할 때, 호출 지점당 한 번(`SW_LOG_ERROR_ONCE`)이면 두 번째 이름이
+ *        가려지므로 이름별로 한 번씩 알립니다.
+ * @param name `data()` 와 `size()` 를 가진 이름(`string` · `string_view`)입니다. 나머지 인자는 `SW_LOG_ERROR` 와 같습니다.
+ */
+#define SW_LOG_ERROR_ONCE_FOR( name, ... )                                                                                                          \
+    do                                                                                                                                              \
+    {                                                                                                                                               \
+        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite,                                                                                  \
+                                      ::sw::HashUtil::combine( ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ),            \
+                                                               ::sw::HashUtil::computeStringHash64( ( name ).data(), ( name ).size(), false ) ) ) ) \
+            SW_LOG_ERROR( __VA_ARGS__ );                                                                                                            \
+    } while ( 0 )
 /** @brief `SW_LOG_ERROR_ONCE` 의 Warning 판입니다. */
 #define SW_LOG_WARNING_ONCE( ... )                                                                                                              \
     do                                                                                                                                          \

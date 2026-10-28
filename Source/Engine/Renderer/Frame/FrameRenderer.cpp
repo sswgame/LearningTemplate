@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -403,7 +404,7 @@ namespace sw
 
         if ( _pCmd == nullptr )
         {
-            SW_LOG_ERROR( "%#: createCommandList returned null", pCallerName );
+            SW_LOG_ERROR_ONCE( "%#: createCommandList returned null", pCallerName );
             return false;
         }
 
@@ -559,7 +560,8 @@ namespace sw
         CameraComponent* pMainCamera = scene.pickActiveGameCamera() ? scene.getActiveGameCamera() : nullptr;
         if ( pMainCamera == nullptr )
         {
-            SW_LOG_ERROR( "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
+            // 프레임마다 도는 길이라 장면 이름별로 한 번만 알린다.
+            SW_LOG_ERROR_ONCE_FOR( scene.getName(), "Scene '%#' has no usable camera - nothing is drawn", scene.getName() );
             return false;
         }
         Scene* const pScene = &scene;

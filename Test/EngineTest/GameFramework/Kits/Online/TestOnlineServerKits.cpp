@@ -215,15 +215,18 @@ SW_TEST_CASE( OnlineServerKitsTest, LeaderboardAndMatchModeDataAreRead )
     SW_ASSERT_EQUAL( modes.getModes().size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( modes.getModes()[0]._maxWaitMs, int64( 60000 ) );
     MatchModeDefinition compact;
-    SW_EXPECT_TRUE( MatchModeCatalog::parseCompactMode( "squad:2x4", compact ) );
+    string              compactError;
+    SW_EXPECT_TRUE( MatchModeCatalog::parseCompactMode( "squad:2x4", compact, compactError ) );
     SW_EXPECT_TRUE( compact._modeID == "squad" && compact._teamCount == 2 && compact._teamSize == 4 );
-    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2", compact ) );
-    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( ":2x2", compact ) );
-    // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 가 기준이다 — 0 과 상한 + 1 은 읽을 때 거절한다.
-    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:0x4", compact ) );
-    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:17x4", compact ) );
-    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2x17", compact ) );
-    SW_EXPECT_TRUE( MatchModeCatalog::parseCompactMode( "squad:16x16", compact ) );
+    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2", compact, compactError ) );
+    SW_EXPECT_FALSE( compactError.empty() );
+    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( ":2x2", compact, compactError ) );
+    // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 가 기준이다 — 0 과 상한 + 1 은 읽을 때 거절하고 이유를 남긴다.
+    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:0x4", compact, compactError ) );
+    SW_EXPECT_FALSE( compactError.empty() );
+    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:17x4", compact, compactError ) );
+    SW_EXPECT_FALSE( MatchModeCatalog::parseCompactMode( "squad:2x17", compact, compactError ) );
+    SW_EXPECT_TRUE( MatchModeCatalog::parseCompactMode( "squad:16x16", compact, compactError ) );
 }
 
 /**

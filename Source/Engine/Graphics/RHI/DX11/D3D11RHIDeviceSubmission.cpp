@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
@@ -327,7 +328,8 @@ namespace sw
             const HRESULT hr = _swapChain.present( vsync );
             if ( FAILED( hr ) )
             {
-                SW_LOG_ERROR( "Present failed hr=%#", static_cast<uint32>( hr ) );
+                // 장치 제거는 자동 복구가 없어 이후 매 프레임 여기로 들어온다 - 첫 실패만 남긴다(DX12 의 _bDeviceRemovedLogged 와 같은 뜻). 손실 표시는 markDeviceLost 가 한 번 남긴다.
+                SW_LOG_ERROR_ONCE( "Present failed hr=%#", static_cast<uint32>( hr ) );
                 // 장치 제거 · 리셋으로 실패했으면 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
                 if ( hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET )
                     markDeviceLost( "Present", hr );

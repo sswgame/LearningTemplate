@@ -34,8 +34,8 @@ namespace sw
     public:
         const vector<MatchModeDefinition>& getModes() const { return _listMode; }
 
-        /** @brief `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`)을 읽습니다. 나머지 값은 기본값입니다. 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool parseCompactMode( string_view text, MatchModeDefinition& outMode );
+        /** @brief `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`)을 읽습니다. 나머지 값은 기본값입니다. 형식이 틀리거나 범위 밖이면 false 이고 @p outError 에 이유를 적습니다(범위를 못 보는 프로세스면 그 사실). */
+        [[nodiscard]] static bool parseCompactMode( string_view text, MatchModeDefinition& outMode, string& outError );
 
     private:
         static constexpr const utf8* kXMLRootName = "MatchModeCatalog";

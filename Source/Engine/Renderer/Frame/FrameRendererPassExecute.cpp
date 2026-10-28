@@ -283,7 +283,7 @@ namespace sw
 
         if ( context._pCmd == nullptr )
         {
-            SW_LOG_ERROR( "executePass: no active IRHICommandList" );
+            SW_LOG_ERROR_ONCE( "executePass: no active IRHICommandList" );
             return;
         }
 
