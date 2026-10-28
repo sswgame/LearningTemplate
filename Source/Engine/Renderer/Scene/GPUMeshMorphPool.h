@@ -35,8 +35,12 @@
  * 그 구간에 올린다(`updateStructuredBufferRegions`). 나간 메시의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받는다. 칸 번호(레스트 노멀의 w)는
  * 메시가 풀에 있는 동안 바뀌지 않는다. 모프 구간의 길이는 **용량**이라 빈 자리가 섞인다 — 컴퓨트는 빈 자리도 돌지만 아무도 그 결과를 읽지 않는다.
  * 스킨 구간은 모프 용량 뒤에서 시작하므로 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 바뀌지 않는다.
- * 남은 것: 스킨 **원본**(레스트 · 가중치 · 모프 차이)은 원본 집합이 바뀌면 통째로 다시 올린다. 원본은 캐릭터 종류마다 하나라 같은 캐릭터의 사본이
- * 들고 나는 것으로는 다시 올리지 않는다.
+ *
+ * [스킨 원본의 구간 갱신]
+ * 스킨 원본도 같은 구조다. 원본(스킨 데이터 번호)마다 레스트 구간 · 차이 구간(둘 다 레스트 버퍼 `_skinRest` 안, 원소 하나 = float4 셋)과 가중치 구간(`_skinWeight`)을
+ * `SpanAllocator` 로 따로 받고, 새로 들어온 원본의 구간만 올린다. 나간 원본의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받고, 다 차면 1.5 배로 다시 만들어 전부 올린다.
+ * 가중치 안의 차이 시작 번호는 **원본의 차이 구간 시작에 대한 상대 번호**라 다른 원본이 들고 나도 바뀌지 않는다. 구간 시작 셋(가중치 · 레스트 · 차이)은 인스턴스 표 줄이 싣는다.
+ * 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓰며 `_refCount` 로 센다. 언리얼 GPU Skin Cache 가 스켈레탈 메시마다 버퍼 구간을 나누고, 유니티 GPU skinning 이 메시 단위 버퍼 구간을 두는 것과 같은 선이다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -88,12 +92,13 @@ namespace sw
     struct GPUSkinInstanceRow
     {
         uint32 _resultOffset{ 0 };     ///< 스킨 구간 안에서 이 인스턴스의 결과 시작(정점)
-        uint32 _sourceBase{ 0 };       ///< 원본 레스트와 가중치 버퍼에서의 시작(정점)
+        uint32 _sourceBase{ 0 };       ///< 원본 가중치 구간의 시작(가중치 버퍼의 정점)
         uint32 _vertexCount{ 0 };      ///< 정점 수
         uint32 _paletteBase{ 0 };      ///< 팔레트에서의 시작 본
         uint32 _morphWeightBase{ 0 };  ///< 둘째 uint4. 팔레트 버퍼를 float 배열로 볼 때 이 인스턴스 모프 가중치의 시작
         uint32 _morphTargetCount{ 0 }; ///< 모프 타깃 수
-        uint32 _arrReserved[2]{ 0, 0 };
+        uint32 _restBase{ 0 };         ///< 원본 레스트 구간의 시작(레스트 버퍼의 정점)
+        uint32 _deltaBase{ 0 };        ///< 원본 모프 차이 구간의 시작(레스트 버퍼의 원소 — 가중치 안 차이 시작은 이 구간 기준 상대 번호)
     };
 } // namespace sw
 
@@ -171,14 +176,16 @@ namespace sw
         uint32 getSkinBoneCount() const { return _skinBoneCount; }
         /** @brief 결과 구간을 받은 스킨 인스턴스 수입니다. */
         uint32 getSkinInstanceCount() const { return static_cast<uint32>( _listSkinRow.size() ); }
-        /** @brief 업로드한 스킨 원본(스킨 데이터 번호가 다른 메시) 수입니다. 같은 캐릭터의 사본이 레스트를 나눠 쓰는지 테스트가 확인합니다. */
-        uint32 getSkinSourceCount() const { return static_cast<uint32>( _listSourceDataID.size() ); }
+        /** @brief 풀에 든 스킨 원본(스킨 데이터 번호가 다른 메시) 수입니다. 같은 캐릭터의 사본이 레스트를 나눠 쓰는지 테스트가 확인합니다. */
+        uint32 getSkinSourceCount() const { return static_cast<uint32>( _mapSkinSource.size() ); }
         /** @brief 업로드한 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
-        /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나가 float4 셋이고, 그 뒤에 모프 차이 하나가 float4 셋입니다). */
+        /** @brief 스킨 원본의 레스트 버퍼입니다(원소 하나가 float4 셋 — 원본마다 레스트 정점 구간과 모프 차이 구간이 있습니다). */
         const RHIStructuredBufferSlot& getSkinRestBuffer() const { return _skinRest; }
-        /** @brief 레스트 버퍼에서 모프 차이가 시작하는 원소(float4)입니다. */
-        uint32 getSkinDeltaBase() const { return _skinDeltaBase; }
+        /** @brief 스킨 원본 구간을 새 버퍼로 다시 채운 횟수입니다. 부분 갱신이 통째로 올리기로 새지 않는지 테스트가 봅니다. */
+        uint32 getSkinRepackCount() const { return _skinRepackCount; }
+        /** @brief 지난 `update` 가 스킨 원본 버퍼(레스트 · 가중치)에 올린 바이트 수입니다. */
+        uint32 getLastSkinUploadBytes() const { return _lastSkinUploadBytes; }
         /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나가 float4 셋이며 가중치 4개, 원본 본 번호 4개, 모프 차이 구간(시작과 수)을 담습니다). */
         const RHIStructuredBufferSlot& getSkinWeightBuffer() const { return _skinWeight; }
         /** @brief 스킨 인스턴스 테이블입니다(인스턴스 하나가 uint4 둘이며 `GPUSkinInstanceRow` 입니다). */
@@ -204,15 +211,39 @@ namespace sw
             uint32 _slot{ kInvalidBase }; ///< 칸 번호(`_listPoolMorph` 의 자리). 레스트 노멀의 w 가 이 번호 + 1 이다
         };
 
+        /// @brief 스킨 원본 하나의 기록입니다(스킨 데이터 번호가 키). 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓴다.
+        struct SkinSource
+        {
+            const Mesh* _pMesh{ nullptr };         ///< 이번 update 에서 본 대표 메시(그 호출 동안만 유효합니다)
+            uint64      _seenStamp{ 0 };           ///< 이 원본을 마지막으로 본 `update` 의 번호
+            uint32      _refCount{ 0 };            ///< 이번 update 에서 이 원본을 쓰는 스킨 메시 수
+            uint32      _restBase{ kInvalidBase }; ///< 레스트 구간 시작(레스트 버퍼의 정점). 못 들어갔으면 kInvalidBase
+            uint32      _restCount{ 0 };           ///< 레스트 구간 길이 = 그릴 정점 수(LOD 0 + 낮은 단계)
+            uint32      _deltaBase{ 0 };           ///< 차이 구간 시작(레스트 버퍼의 원소)
+            uint32      _deltaCount{ 0 };
+            uint32      _weightBase{ 0 }; ///< 가중치 구간 시작(가중치 버퍼의 정점)
+        };
+
         /// @brief 풀 상한(결과 정점 수)입니다. 언리얼의 `r.SkinCache.SceneMemoryLimitInMB` 에 해당하며, 여기서는 고정값입니다.
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
         /// @brief 모프 구간의 최소 용량(정점 수)입니다. 미리보기 메시 하나가 들어올 때마다 다시 채우지 않게 합니다.
         static constexpr uint32 kMinMorphVertices = 4u * 1024u;
+        /// @brief 스킨 원본 버퍼 상한과 최소 용량(원소 수, 하나 = 48바이트)입니다. 상한을 넘는 원본은 오류를 남기고 그 메시는 그리지 않습니다.
+        static constexpr uint32 kMaxSkinSourceElements = 16u * 1024u * 1024u;
+        static constexpr uint32 kMinSkinSourceElements = 4u * 1024u;
 
         /** @brief 목록이 지난 update 와 같은지(포인터와 내용 번호) 확인합니다. */
         static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
-        /** @brief 스킨 원본 집합을 맞춥니다. 바뀌었으면 레스트와 가중치를 다시 올립니다. */
+        /** @brief 스킨 원본 집합을 맞춥니다. 새로 들어온 원본의 구간만 올리고, 나간 원본의 구간은 미뤄 돌려받습니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
+        /** @brief 새 원본에 레스트 · 차이 · 가중치 구간을 줍니다. @return 자리가 모자라거나 상한을 넘으면 false 입니다(호출자가 다시 채웁니다). */
+        [[nodiscard]] bool allocateSkinSource( struct SkinSource& inoutSource );
+        /** @brief 원본의 레스트 · 차이 · 가중치를 올릴 조각으로 모읍니다(`flushSkinSourceUpload` 가 올립니다). */
+        void appendSkinSourceData( const struct SkinSource& source );
+        /** @brief 모은 조각을 레스트 · 가중치 버퍼에 올립니다. */
+        void flushSkinSourceUpload( IRHIDevice* pDevice );
+        /** @brief 스킨 원본 구간을 더 큰 새 버퍼로 다시 채웁니다. 살아 있는 원본을 앞에서부터 다시 잇습니다. */
+        void repackSkinSources( IRHIDevice* pDevice );
         /** @brief 스킨 원본을 맞추고 스킨 메시마다 인스턴스 행(결과 구간 · 원본 구간 · 팔레트 시작)과 `_mapSkinBase` 를 다시 만듭니다. `_vertexCount` 를 정합니다. */
         void buildSkinInstanceRows( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
         /** @brief 결과 버퍼 · 스킨 인스턴스 표 · 팔레트 버퍼의 용량을 맞추고 못 만든 것을 오류로 남깁니다. */
@@ -264,9 +295,17 @@ namespace sw
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)와 그 테이블 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
         vector<GPUSkinInstanceRow> _listSkinRow;
-        /// @brief 업로드한 스킨 원본(스킨 데이터 번호)과 그 원본 버퍼의 시작(정점)입니다.
-        vector<uint64> _listSourceDataID;
-        vector<uint32> _listSourceBase;
+        /// @brief 풀에 든 스킨 원본(스킨 데이터 번호 → 기록)과 구간 할당기(레스트 버퍼 · 가중치 버퍼, 단위 = 원소 하나)입니다.
+        unordered_map<uint64, SkinSource> _mapSkinSource;
+        SpanAllocator                     _skinRestAllocator;
+        SpanAllocator                     _skinWeightAllocator;
+        /// @brief 이번 update 에서 새로 들어온 원본, 올릴 데이터와 조각입니다(프레임마다 할당하지 않습니다).
+        vector<uint64>              _listScratchSkinAdded;
+        vector<uint64>              _listScratchSkinRemoved;
+        vector<GPUMorphVertex>      _listScratchSkinRest;
+        vector<float4>              _listScratchSkinWeight;
+        vector<RHIBufferCopyRegion> _listScratchSkinRestRegion;
+        vector<RHIBufferCopyRegion> _listScratchSkinWeightRegion;
         /// @brief 메시에서 이번 프레임 팔레트 항목 위치를 찾는 맵입니다(`uploadSkinPalettes` 가 프레임마다 다시 만들며, 인스턴스마다 목록을 훑지 않기 위한 것입니다).
         unordered_map<const Mesh*, uint32> _mapScratchPaletteIndex;
         /// @brief 팔레트를 풀 순서로 다시 모으는 버퍼입니다(프레임마다 재사용합니다).
@@ -275,7 +314,8 @@ namespace sw
         uint32         _skinVertexBase{ 0 };
         uint32         _skinBoneCount{ 0 };
         uint32         _skinSourceVertexCount{ 0 };
-        uint32         _skinDeltaBase{ 0 };
+        uint32         _skinRepackCount{ 0 };
+        uint32         _lastSkinUploadBytes{ 0 };
         uint32         _skinMorphWeightCount{ 0 }; ///< 인스턴스 모프 가중치의 합(팔레트 뒤에 float4 로 싣는다)
         uint64         _updateCount{ 0 };          ///< update 를 부른 수(= 제출한 프레임 수). 돌려받은 모프 구간의 대기 번호다
         uint32         _morphLiveVertexCount{ 0 };

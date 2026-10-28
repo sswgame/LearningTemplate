@@ -290,7 +290,6 @@ namespace sw
         skinParams._skinVertexCount   = _deform._meshMorphPool.getSkinVertexCount();
         skinParams._skinBoneCount     = _deform._meshMorphPool.getSkinBoneCount();
         skinParams._skinInstanceCount = _deform._meshMorphPool.getSkinInstanceCount();
-        skinParams._skinDeltaBase     = _deform._meshMorphPool.getSkinDeltaBase();
         _deform._meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
         // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다(배리어가 빠지면 DX12 와 Vulkan 에서 예전 값이 나온다).

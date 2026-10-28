@@ -3,8 +3,9 @@
 /**
  * meshskin.hlsl — GPU 스키닝 (컴퓨트). 언리얼 GPU Skin Cache 의 자리다.
  *
- * 모프 풀(GPUMeshMorphPool)의 **스킨 구간**을 맡는다. 스킨 데이터는 원본(스킨 데이터 번호가 같은 메시들)마다 한 벌(레스트 · 가중치 · 모프 차이)이고,
- * 그리는 메시마다의 인스턴스 표(결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작 · 모프 가중치 시작 · 타깃 수)가 둘을 잇는다. 스레드 하나 = 스킨 구간의
+ * 모프 풀(GPUMeshMorphPool)의 **스킨 구간**을 맡는다. 스킨 데이터는 원본(스킨 데이터 번호가 같은 메시들)마다 한 벌(레스트 구간 · 가중치 구간 · 모프 차이 구간 — 풀의 SpanAllocator 가 따로 내준다)이고,
+ * 그리는 메시마다의 인스턴스 표(결과 시작 · 가중치 구간 시작 · 정점 수 · 팔레트 시작 · 모프 가중치 시작 · 타깃 수 · 레스트 구간 시작 · 차이 구간 시작)이 둘을 잇는다.
+ * 가중치 안의 차이 시작 번호는 그 원본의 차이 구간 기준 상대 번호다. 스레드 하나 = 스킨 구간의
  * 결과 정점 하나 — 인스턴스를 이분 탐색으로 찾아 원본 레스트 정점에 모프 차이를 가중치만큼 더하고(블렌드 셰이프 — 언리얼 모프 타깃과 같은 순서:
  * 모프 다음 스키닝), 본 넷의 팔레트 행렬로 섞어 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길(MorphPool::loadVertex)로 결과를 읽는다.
  *
@@ -25,10 +26,10 @@ SW_DECLARE_CBUFFER( SkinParams, SW_SLOT_COMPUTE_CB )
     uint g_SkinVertexCount;   // 스킨 구간의 정점 수(모든 인스턴스의 합)
     uint g_SkinBoneCount;     // 팔레트의 본 수 — 범위 밖 번호를 막는다
     uint g_SkinInstanceCount; // 인스턴스 표의 줄 수
-    uint g_SkinDeltaBase;     // 레스트 버퍼에서 모프 차이가 시작하는 원소(float4)
     uint g_SkinPad0;
     uint g_SkinPad1;
     uint g_SkinPad2;
+    uint g_SkinPad3;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
@@ -87,12 +88,13 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     const uint4 instance      = g_SkinInstances[instanceIndex * SW_SKIN_UINT4_PER_INSTANCE];
     const uint4 morph         = g_SkinInstances[instanceIndex * SW_SKIN_UINT4_PER_INSTANCE + 1u];
     const uint  local         = min( skinIndex - instance.x, instance.z - 1u );
-    const uint  source        = instance.y + local;
+    const uint  source        = instance.y + local; // 가중치 구간 안 정점
+    const uint  restSource    = morph.z + local;    // 레스트 구간 안 정점
     const uint  paletteBase   = instance.w;
 
-    float3       position   = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-    float3       normal     = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
-    const float4 tangent    = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 2u];
+    float3       position   = g_RestVertices[restSource * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+    float3       normal     = g_RestVertices[restSource * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+    const float4 tangent    = g_RestVertices[restSource * SW_MORPH_FLOAT4_PER_VERTEX + 2u];
     const float4 weights    = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX];
     const float4 joints     = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 1u];
     const float4 deltaRange = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 2u];
@@ -102,7 +104,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
     const uint deltaCount = ( morph.y > 0u ) ? min( (uint)deltaRange.y, SW_SKIN_MAX_DELTAS_PER_VERTEX ) : 0u;
     for ( uint deltaIndex = 0u; deltaIndex < deltaCount; ++deltaIndex )
     {
-        const uint   element     = g_SkinDeltaBase + ( deltaStart + deltaIndex ) * SW_MORPH_FLOAT4_PER_VERTEX;
+        const uint   element     = ( morph.w + deltaStart + deltaIndex ) * SW_MORPH_FLOAT4_PER_VERTEX; // 차이 구간 시작 + 이 원본 기준 상대 번호
         const float4 delta       = g_RestVertices[element];
         const float3 deltaNormal = g_RestVertices[element + 1u].xyz;
         const uint   target      = (uint)delta.w;
