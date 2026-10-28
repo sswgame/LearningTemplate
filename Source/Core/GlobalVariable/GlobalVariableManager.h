@@ -153,8 +153,9 @@ namespace sw
          * @brief 명령줄에서 받은 글을 `setValueFromString` 처럼 쓰되, enum 변수는 숫자를 오류로 거절합니다(열거자 이름만 받는다).
          * @details 숫자는 열거자를 더하거나 순서를 바꾸면 뜻이 달라지고, 변수 크기를 넘으면 조용히 잘려 다른 열거자가 된다. 에디터 · 프리셋 ·
          *          사용자 설정이 주고받는 안쪽 글은 `setValueFromString` 이라 숫자를 계속 받는다.
+         * @param outError 거절하면 이유를 적습니다(숫자를 줬다 · 이름 없는 열거자 · 열거자 이름표 없음 · 타입에 안 맞음). 알리는 일은 부르는 쪽이 한다.
          */
-        bool setValueFromCommandLine( string_view strValue );
+        [[nodiscard]] bool setValueFromCommandLine( string_view strValue, string& outError );
         /** @brief *_pData 를 _defaultValue 로 되돌립니다. */
         void resetToDefault();
     };
