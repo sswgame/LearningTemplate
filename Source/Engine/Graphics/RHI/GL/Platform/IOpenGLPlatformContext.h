@@ -16,6 +16,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/IRenderSurface.h"
+
 namespace sw
 {
     struct RHISwapChainDesc;
@@ -23,9 +25,9 @@ namespace sw
     /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍입니다. */
     struct OpenGLContextHandles
     {
-        /** @brief HDC(Windows), Display*(Linux). */
+        /** @brief HDC(Windows), Display*(Linux X11), EGLDisplay(Linux Wayland). */
         void* _pDeviceContext{ nullptr };
-        /** @brief HGLRC(Windows), GLXContext(Linux). */
+        /** @brief HGLRC(Windows), GLXContext(Linux X11), EGLContext(Linux Wayland). */
         void* _pRenderContext{ nullptr };
     };
 } // namespace sw
@@ -39,8 +41,11 @@ namespace sw
     class IOpenGLPlatformContext
     {
     public:
-        /** @brief 이 플랫폼의 구현을 만듭니다. 지원하지 않는 플랫폼이면 nullptr 입니다. */
-        static unique_ptr<IOpenGLPlatformContext> create();
+        /**
+         * @brief 이 플랫폼 · 표면 종류의 구현을 만듭니다. 지원하지 않는 조합이면 이유를 로그로 남기고 nullptr 입니다.
+         * @param surfaceKind 창 시스템입니다. 리눅스에서 X11 은 GLX, Wayland 는 EGL 입니다(Windows 는 값을 보지 않는다).
+         */
+        static unique_ptr<IOpenGLPlatformContext> create( NativeSurfaceKind surfaceKind );
 
         IOpenGLPlatformContext()          = default;
         virtual ~IOpenGLPlatformContext() = default;
@@ -77,6 +82,16 @@ namespace sw
          *          GLX 는 아무것도 하지 않습니다. 되찾을지는 플랫폼이 정합니다.
          */
         virtual void reacquireForFrame() = 0;
+
+        /**
+         * @brief 창 크기가 바뀌었음을 알립니다. 기본은 아무것도 하지 않습니다.
+         * @details WGL · GLX 는 창이 곧 드로어블이라 OS 가 크기를 따르게 한다. EGL 의 Wayland 는 렌더링 표면(`wl_egl_window`)의 크기를 클라이언트가 직접 알려야 한다.
+         */
+        virtual void resize( uint32 width, uint32 height )
+        {
+            (void)width;
+            (void)height;
+        }
 
         /** @brief 백버퍼를 화면에 내보냅니다. */
         virtual void present() = 0;

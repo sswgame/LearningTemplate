@@ -1,15 +1,15 @@
 # Wayland 창 계층
 
-> 상태: 구현중 · 선행: 없음 · 영역: engine · 진행: 1/2
+> 상태: 구현중 · 선행: 없음 · 영역: engine · 진행: 2/2
 
-`Engine/Window/Linux` 가 X11 뿐이었다. Wayland(리눅스의 현대 창 시스템) 백엔드를 컴포지터 없이 지을 수 있는 코드까지 모두 넣었다. 리눅스 빌드는 이 PC 에서 하지 않아 **한 번도 컴파일되지 않았고**, 남은 구현은 EGL 로 GL 을 여는 일(RHI 영역)뿐이다.
+`Engine/Window/Linux` 가 X11 뿐이었다. Wayland(리눅스의 현대 창 시스템) 백엔드를 컴포지터 없이 지을 수 있는 코드까지 모두 넣었다. 리눅스 빌드는 이 PC 에서 하지 않아 **한 번도 컴파일되지 않았고**, EGL 로 GL 을 여는 길(`EglPlatformContext`)도 넣었다. 남은 것은 컴파일 확인뿐이다.
 
 ## 진행
 
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | W1 | 빌드 옵션 · 프로토콜 생성 · `WaylandWindow` · 입력 갈래 · 표면 종류 · Vulkan WSI · GL 거절 | 코드 끝, 컴파일 확인 전 |
-| W3 | 클립보드 · 화면 배율 · 포인터 잠금 · 커서 모양, 에디터 ImGui 백엔드 · 스플래시 · 개발 콘솔 | 코드 끝, 컴파일 확인 전. EGL 로 GL 은 남음 |
+| W3 | 클립보드 · 화면 배율 · 포인터 잠금 · 커서 모양, 에디터 ImGui 백엔드 · 스플래시 · 개발 콘솔 | 코드 끝, 컴파일 확인 전(EGL 로 GL 포함) |
 
 첫 일: 리눅스에서 컴파일한다. 실패하면 생성 헤더 이름(`<XML 이름>-client-protocol.h`, 커서 모양은 `tablet-unstable-v2` 도 링크돼야 한다)과 바인드 판 상수부터 본다.
 
@@ -18,7 +18,7 @@
 - **고르기.** 환경 변수 `SW_WINDOW_BACKEND` = `x11`(없을 때도) | `wayland`. 모르는 값 · 짓지 않은 계층은 오류로 멈춘다.
 - **짓기.** `SW_ENABLE_WAYLAND`(기본 끔)를 켜면 wayland-client · wayland-cursor · xkbcommon 을 pkg-config 로 찾고, wayland-protocols 의 XML 을 wayland-scanner 로 C 코드로 만들어(`sw_wayland_protocols`, 1.32 이상) `SW_WITH_WAYLAND` 를 정의한다. 하나라도 없으면 구성이 선다. 서버 빌드에 Wayland 코드가 새지 않게 하는 정적 게이트는 `CheckX11Isolation` 4번 규칙이다.
 - **표면의 종류는 타입에 있다.** `IRenderSurface::getSurfaceKind`(Win32 · X11 · Wayland)가 핸들의 뜻을 말하고 스왑체인 서술이 싣는다.
-  - Vulkan 은 Wayland 면 `VK_KHR_wayland_surface` 만 받는다(X11 확장으로 대신하지 않는다). GL 은 GLX 라 X11 이 아닌 표면을 오류로 거절한다(EGL 길이 없다).
+  - Vulkan 은 Wayland 면 `VK_KHR_wayland_surface` 만 받는다(X11 확장으로 대신하지 않는다). GL 은 표면 종류로 문맥 API 를 고른다 — X11 은 GLX(`GlxPlatformContext`), Wayland 는 EGL(`EglPlatformContext`: `wl_egl_window` 위 윈도 서피스, 코어 4.6 에서 3.3 으로 물러남, 크기 변경은 `IOpenGLPlatformContext::resize` 로 `wl_egl_window_resize`, VSync 끄기는 `eglSwapInterval(0)`). 그 밖의 조합은 오류로 멈춘다.
   - 핸들은 종류 확인과 값 확인이 한 함수인 `tryGet*`(`[[nodiscard]]`, 다른 종류면 nullptr)로만 얻는다. 핸들만 꺼내는 함수는 보호 구역이라 `wl_display*` 를 `Display*` 로 읽는 호출을 바깥에서 쓸 수 없다. RHI · 에디터 ImGui 뷰포트도 같은 모양이다.
   - X11 이 아닌 창이 오면: X11 개발 콘솔은 만들지 않고(Wayland 는 서브표면 판), 에디터 ImGui X11 백엔드는 오류로 멈추며(Wayland 는 팩토리가 `ImGuiWaylandPlatformBackend` 를 고른다), 클립보드는 지원 안 함, 커서 모양은 한 번 알리고 건너뛴다.
 - **창.** `WaylandWindow` 가 xdg-shell 최상위 창을 만들고 첫 configure 를 기다린다. 크기는 컴포지터가 준 값(0 이면 클라이언트), 닫기는 `xdg_toplevel.close`. 이벤트는 막지 않고 읽는다. 창 자리 · 숨기기는 Wayland 클라이언트가 할 수 없어 자리 함수는 비고 숨기기는 오류다.
@@ -32,7 +32,7 @@
 
 ## 2. 남은 것과 한계
 
-- **EGL 로 GL**(RHI 영역): 에디터의 GL 렌더러는 EGL 이 없는 한 Wayland 에서 못 쓴다(Vulkan 만).
+- **EGL 컴파일에서 볼 곳:** `EglPlatformContext.cpp`(`EGL_NO_X11` 뒤 `<EGL/egl.h>` 의 1.5 이름 — `eglGetPlatformDisplay` · `EGL_CONTEXT_MAJOR_VERSION` · `EGL_CONTEXT_OPENGL_DEBUG`, Mesa 21 이상), `gladLoadGL()` 은 EGL 문맥에서도 GLVND `libGL` 의 주소 조회로 함수를 채운다(없으면 `eglGetProcAddress` 로더로 바꿔야 한다). 에디터 GL 렌더러의 멀티 뷰포트 훅은 GLX 용이라 Wayland 에서는 뷰포트를 끄는 것이 전제다.
 - **컴파일에서 볼 곳:** `WaylandShmBuffer.cpp`(`memfd_create` 는 glibc 2.27 이상), `WaylandSplashWindow.cpp` · `WaylandDevConsoleWindow.cpp`(리스너 값 초기화, `wl_subcompositor` 판 1), 헤더에 선언만 둔 `struct wl_*`.
 - **확인 시설 없음:** 클립보드 왕복(weston headless 에 `wl-copy`/`wl-paste`)과 포인터 잠금 왕복(가상 포인터)은 시나리오로 만들지 못했다.
 - 글꼴 후보 이름 목록이 `WaylandTextPainter.cpp` 에 있다(`editortooldefaults.json` 과 같은 이름 — 에디터 설정을 엔진이 못 읽어 따로 둔다, 바뀌면 함께 고친다). 라틴 고정폭 글꼴이 없는 기계에서는 콘솔을 세우지 않고 스플래시는 글 없이 그린다.

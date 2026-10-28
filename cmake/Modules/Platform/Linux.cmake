@@ -48,11 +48,11 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 
 	# ------------------------------------------------------------------------------
 	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · cursor-shape · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
-	# 패키지: libwayland-dev · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
+	# 패키지: libwayland-dev(wayland-egl 포함) · libegl-dev(GL 컨텍스트 `EglPlatformContext`) · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
 	# ------------------------------------------------------------------------------
 	if(SW_ENABLE_WAYLAND)
 		find_package(PkgConfig REQUIRED)
-		pkg_check_modules(SW_WAYLAND REQUIRED IMPORTED_TARGET wayland-client wayland-cursor xkbcommon)
+		pkg_check_modules(SW_WAYLAND REQUIRED IMPORTED_TARGET wayland-client wayland-cursor wayland-egl egl xkbcommon)
 		pkg_get_variable(SW_WAYLAND_PROTOCOLS_DIR wayland-protocols pkgdatadir)
 		if(NOT SW_WAYLAND_PROTOCOLS_DIR)
 			message(FATAL_ERROR "SW_ENABLE_WAYLAND: wayland-protocols (pkgdatadir) not found")
