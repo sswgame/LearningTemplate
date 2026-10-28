@@ -170,7 +170,7 @@ namespace sw
         // 줄 모양은 `Scripts/qa/Load.py` 가 읽는다 — 바꾸면 그 정규식도 고친다.
         SW_LOG_INFO( "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
                      _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
-        // VSync 를 켠 실행이면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상 놓친 프레임 수다(Test/QA/VerifyBatch.json `vsync-frame-miss` 가 읽는다).
+        // VSync 를 켠 실행이면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상 놓친 프레임 수다.
         [[maybe_unused]] const FramePacing pacing = computePacing( _arrPacingBin, kPacingBinCount );
         SW_LOG_INFO( "[Profile] pacing  median %# us  over1.5x %#  over2.5x %#", pacing._medianMicro, pacing._overOneAndHalfMedian, pacing._overTwoAndHalfMedian );
     }
