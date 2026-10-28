@@ -1,7 +1,7 @@
 /**
  * @file AutomationStepArgs.h
  * @brief 판정 단계(`Expect` · `WaitUntil` · `ExpectLog` · `ExpectImage` …)의 인자 읽기와 값 비교입니다.
- * @details 엔진 단계의 검사 함수(`AutomationRunnerSteps.cpp`)와 실행기의 판정(`AutomationRunnerJudge.cpp`)이 같은 읽기 하나를 씁니다 —
+ * @details 엔진 단계의 검사 함수(`AutomationRunnerSteps.cpp`)와 실행기의 판정(`AutomationJudge.cpp`)이 같은 읽기 하나를 씁니다 —
  *          검사가 읽어 본 뒤 실행이 결과를 버리며 다시 읽던 것을 없앱니다. 기본값은 구조체의 초기값 하나입니다.
  */
 #pragma once

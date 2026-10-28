@@ -9,13 +9,12 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Automation/AutomationHangWatch.h"
-#include "Engine/Automation/AutomationLogCapture.h"
-#include "Engine/Automation/AutomationLogPolicy.h"
+#include "Engine/Automation/AutomationJudge.h"
 #include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/Automation/AutomationStepTimeline.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
-#include "Engine/Probe/AutomationProbe.h"
 #include "Engine/Resource/ResourceID.h"
 #include "Engine/Scenario/AutomationScenario.h"
 #include "Engine/Scenario/AutomationStepContext.h"
@@ -35,7 +34,8 @@ namespace sw
      *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
      *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
      *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
-     *          로그 수집은 `AutomationLogCapture`, 보고 경로 · 지표 줄 · 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다.
+     *          판정(비교 · 실패 · 로그 게이트)은 `AutomationJudge`, 진행 상태(프레임 · 단계 순번 · 대기 · 시한)는 `AutomationStepTimeline`, 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다 —
+     *          실행기는 시작 · 프레임 · 끝맺음을 잇는 얇은 몸통이다.
      */
     class SW_API AutomationRunner final : public AutomationStepContext
     {
@@ -83,11 +83,11 @@ namespace sw
         /**
          * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
          */
-        [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
+        [[nodiscard]] bool takePendingScreenshotPath( string& outPath ) { return _run.takePendingScreenshotPath( outPath ); }
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
-        void setCompletedScreenshotCount( uint32 completedCount ) { _screenshotCompletedCount = completedCount; }
+        void setCompletedScreenshotCount( uint32 completedCount ) { _run._screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
-        const vector<string>& getMetricLines() const { return _reportWriter.getMetricLines(); }
+        const vector<string>& getMetricLines() const { return _judge.getMetricLines(); }
 
         // --- 단계 문맥(`AutomationStepContext`): 단계 함수가 쓰는 좁은 면입니다 ---
 
@@ -106,7 +106,7 @@ namespace sw
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
         string resolveOutputPath( string_view file ) const override;
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
-        uint32 getFrameIndex() const override { return _frameIndex; }
+        uint32 getFrameIndex() const override { return _run._frameIndex; }
         /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */
         uint32 convertSecondsToFrames( float32 seconds ) const override;
         /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
@@ -121,9 +121,9 @@ namespace sw
 
         bool isActive() const { return _result == AutomationOutcome::Running; }
         /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
-        const string& getCurrentStepKind() const { return _currentStepKind; }
+        const string& getCurrentStepKind() const { return _run._currentStepKind; }
         /** @brief 그 단계가 파일에서 몇 번째인지(0 부터)입니다. */
-        uint32 getCurrentStepNumber() const { return _currentStepNumber; }
+        uint32 getCurrentStepNumber() const { return _run._currentStepNumber; }
         /**
          * @brief 끝맺음(요약 줄, 보고, 가상 입력 떼기)까지 마쳤는지 묻습니다.
          * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
@@ -132,54 +132,21 @@ namespace sw
         bool                      hasEnded() const { return _bEnded == SW_TRUE; }
         AutomationOutcome         getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
-        const vector<string>&     getFailures() const { return _listFailure; }
+        const vector<string>&     getFailures() const { return _judge.getFailures(); }
         /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
-        const vector<string>& getUnconfirmed() const { return _listUnconfirmed; }
+        const vector<string>& getUnconfirmed() const { return _judge.getUnconfirmed(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
-        const vector<string>& getUnhandledLogs() const { return _listUnhandledLog; }
+        const vector<string>& getUnhandledLogs() const { return _judge.getUnhandledLogs(); }
         const string&         getFinishReason() const { return _finishReason; }
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
         /** @brief 탐침 값 한 줄을 보고의 `records` 에 남깁니다(`<Record>`). 백엔드끼리 같아야 하는 값이다(AppScenarioTest 가 비교한다). */
-        void                  addRecordLine( string line );
-        const vector<string>& getRecordLines() const { return _reportWriter.getRecordLines(); }
+        void                  addRecordLine( string line ) { _judge.addRecordLine( std::move( line ) ); }
+        const vector<string>& getRecordLines() const { return _judge.getRecordLines(); }
 
     private:
-        /**
-         * @struct ProbeWatch
-         * @brief `<ExpectVisited>` 가 보는 탐침 하나(탐침 · 대상 · 키)의 값 이력입니다. 시작 프레임부터 프레임마다 읽어 값이 바뀔 때만 적습니다.
-         */
-        struct ProbeWatch
-        {
-            vector<string> _listValue{}; ///< 바뀐 값(끝의 0 을 정리한 글)
-            vector<uint32> _listFrame{}; ///< 그 값이 처음 보인 시나리오 프레임
-            string         _probe{};
-            string         _target{};
-            string         _key{};
-        };
-
-        /**
-         * @struct RememberedValue
-         * @brief `<Remember as="이름">` 이 남긴 탐침 값(끝의 0 을 정리한 글)입니다. 경계(플레이 · 백엔드 교체 · 모듈 리로드)를 넘긴 뒤 `sameAs` · `differsFrom` 이 비교합니다.
-         * @details 실행기는 엔진 쪽이라 모듈 리로드와 백엔드 교체를 넘어 남는다. 시나리오가 시작할 때 비운다.
-         */
-        struct RememberedValue
-        {
-            string _name{};
-            string _text{};
-        };
-
-        /** @brief 단계의 탐침 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
-        [[nodiscard]] bool readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const;
-        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 탐침마다 이력을 만듭니다. */
-        void prepareWatches();
-        /** @brief 이력마다 이번 프레임 값을 읽어 바뀌었으면 적습니다(씬 틱 뒤, 단계 전). */
-        void sampleWatches();
-        void runExpectVisited( const AutomationStep& step );
-        void runRecord( const AutomationStep& step );
-        void runRemember( const AutomationStep& step );
-        /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
+        /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 판정 · 진행 상태(스크린샷 대기열 · 종료 시한)를 직접 만진다. */
         friend struct AutomationRunnerEngineSteps;
 
         /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
@@ -188,12 +155,6 @@ namespace sw
         [[nodiscard]] bool prepareScratchFolders();
         /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
         [[nodiscard]] bool prepare( string& outError );
-        void               runExpect( const AutomationStep& step );
-        /**
-         * @brief 탐침 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다.
-         * @details 값이 있으면 @p outMessage 는 `<탐침> <규칙>, got <값>` 이다.
-         */
-        [[nodiscard]] bool compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const;
         /**
          * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 밉니다).
          * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.
@@ -204,18 +165,8 @@ namespace sw
          * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
          */
         [[nodiscard]] bool holdClockForBackgroundWork( InputManager& input );
-        void               runExpectLog( const AutomationStep& step );
-        void               runExpectImage( const AutomationStep& step );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
-        /**
-         * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
-         *        통과(`Passed`)한 시나리오는 그 줄이 있으면 결과를 `UnhandledLog`(15)로 바꾸고, 이미 진 시나리오의 결과는 그대로 둡니다(원인은 단언 · 시한이다).
-         * @details 처리는 `AutomationLogPolicy`(전역 허용 목록의 이 시나리오 항목 + 이 시나리오의 `<ExpectLog>`)가 정한다. id 없는 줄은 허용 목록으로 가릴 수 없다.
-         *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
-         *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `_listAllowedLogID` 에 남아 보고에 적힌다.
-         */
-        void applyLogGate();
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
         void startLoadWindow();
         /** @brief 벽시계 감시를 시작합니다(시나리오를 읽기 시작할 때 한 번). 시작 시각(단조 시계 · 유닉스 · 지역 달력 글)을 잡습니다. */
@@ -252,51 +203,24 @@ namespace sw
 
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
-        AutomationLogCapture     _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy      _logPolicy;             ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        AutomationReportWriter   _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
-        AutomationTimeline       _timeline;              ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
-        vector<string>           _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>           _listUnconfirmed;       ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
-        vector<string>           _listUnhandledLog;      ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
-        vector<string>           _listAllowedLogID;      ///< 이 실행에서 허용 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
-        vector<string>           _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        vector<ProbeWatch>       _listWatch;             ///< `<ExpectVisited>` 가 보는 탐침 이력
-        vector<RememberedValue>  _listRemembered;        ///< `<Remember>` 가 남긴 값
+        AutomationJudge          _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 탐침 이력). 시간 · 입력은 모른다
+        AutomationStepTimeline   _run;          ///< 진행 상태(프레임 · 단계 순번 · 대기 · 시한 · 스크린샷 대기열). 판정은 읽지 않는다
+        AutomationReportWriter   _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
+        AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         string                   _outputDirectory;
         string                   _finishReason;
-        string                   _currentStepKind;        ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
         AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
         AutomationHangWatchdog   _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
         GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        float64                  _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        float64                  _loadDeadlineSeconds;    ///< 부하 시나리오(`<Load>`)의 멈춤 그물 — 측정 창이 이때까지 끝내지 못하면 시간 초과다(단조 시계 초). 0 이면 부하 시나리오가 아니다.
-        float64                  _wallStartSeconds;       ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
-        float64                  _wallEndSeconds;         ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
-        float64                  _lastFrameEndSeconds;    ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(`_timeline` 에 프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
-        int64                    _startedUnixMs;          ///< 같은 시각의 유닉스 밀리초(보고용)
-        size_t                   _nextStepIndex;
-        uint32                   _frameIndex;
-        uint32                   _currentStepNumber; ///< `_currentStepKind` 의 파일 순번
-        uint32                   _waitFrameCount;    ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                   _screenshotRequestedCount;
-        uint32                   _screenshotCompletedCount;
-        uint32                   _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
-        uint32                   _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다(`holdScreenshot`)
-        uint32                   _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(`holdUntilReady`, 그동안 `_frameIndex` 는 그대로다)
-        uint32                   _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임(`holdClockForBackgroundWork`)
-        uint32                   _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
-        float64                  _clockHoldStartSeconds;  ///< 그 붙잡기가 시작된 단조 시계 초
-        string                   _clockHolderName;        ///< 붙잡은 조건의 이름(로그)
+        int64                    _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
         AutomationOutcome        _result;
         uint8                    _bStarted        : 1;
         uint8                    _bEnded          : 1;
-        uint8                    _bClockHeld      : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
         uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8   _reserved        : 3;
+        [[maybe_unused]] uint8   _reserved        : 4;
     };
 } // namespace sw

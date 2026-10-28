@@ -16,7 +16,7 @@
 #include "Engine/Automation/AutomationExitCode.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationRunTitle.h"
-#include "Engine/Automation/AutomationRunner.h"
+#include "Engine/Automation/AutomationJudge.h"
 #include "Engine/Automation/AutomationStepArgs.h"
 #include "Engine/Automation/AutomationThresholdBasis.h"
 #include "Engine/Common/EngineServices.h"
@@ -42,17 +42,31 @@ namespace sw
 {
     SW_LOG_CALLER( "Automation" );
 
-    void AutomationRunner::runExpect( const AutomationStep& step )
+    AutomationJudge::AutomationJudge()
+        : _logCapture{}
+        , _logPolicy{}
+        , _listFailure{}
+        , _listUnconfirmed{}
+        , _listUnhandledLog{}
+        , _listAllowedLogID{}
+        , _listMetricLine{}
+        , _listRecordLine{}
+        , _listWatch{}
+        , _listRemembered{}
+    {
+    }
+
+    void AutomationJudge::runExpect( AutomationStepContext& context, const AutomationStep& step )
     {
         bool   bMatched = false;
         string message;
-        if ( compareProbe( step, bMatched, message ) == false )
-            recordFailure( step, message );
+        if ( compareProbe( context, step, bMatched, message ) == false )
+            context.recordFailure( step, message );
         else if ( bMatched == false )
-            recordFailure( step, "Expect " + message );
+            context.recordFailure( step, "Expect " + message );
     }
 
-    bool AutomationRunner::readProbeValue( const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const
+    bool AutomationJudge::readProbeValue( const AutomationStepContext& context, const AutomationStep& step, AutomationProbeValue& outValue, string& outMessage ) const
     {
         const string&                      probeName     = *step.findAttribute( "probe" );
         const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
@@ -64,7 +78,7 @@ namespace sw
         }
         const string*              pTarget = step.findAttribute( "target" );
         const string*              pKey    = step.findAttribute( "key" );
-        const AutomationProbeQuery query   = AutomationProbeQuery::make( findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
+        const AutomationProbeQuery query   = AutomationProbeQuery::make( context.findActiveObjectManager(), pTarget != nullptr ? string_view{ *pTarget } : string_view{},
                                                                        pKey != nullptr ? string_view{ *pKey } : string_view{} );
           string subject = probeName;
         if ( pTarget != nullptr )
@@ -81,12 +95,12 @@ namespace sw
         return true;
     }
 
-    bool AutomationRunner::compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    bool AutomationJudge::compareProbe( const AutomationStepContext& context, const AutomationStep& step, bool& outMatched, string& outMessage ) const
     {
         using Internal = AutomationStepArgsUtil;
         AutomationProbeValue value{};
         outMatched = false;
-        if ( readProbeValue( step, value, outMessage ) == false )
+        if ( readProbeValue( context, step, value, outMessage ) == false )
             return false;
         const string valueText = Internal::makeValueText( value );
         const string subject   = outMessage;
@@ -141,16 +155,16 @@ namespace sw
         return true;
     }
 
-    void AutomationRunner::addRecordLine( string line )
+    void AutomationJudge::addRecordLine( string line )
     {
         SW_LOG_INFO( "[Scenario] record %#", line.c_str() );
-        _reportWriter.addRecordLine( std::move( line ) );
+        _listRecordLine.push_back( std::move( line ) );
     }
 
-    void AutomationRunner::prepareWatches()
+    void AutomationJudge::prepareWatches( const AutomationScenario& scenario )
     {
         _listWatch.clear();
-        for ( const AutomationStep& step : _scenario.getSteps() )
+        for ( const AutomationStep& step : scenario.getSteps() )
         {
             if ( string_view{ step._kind } != "ExpectVisited" )
                 continue;
@@ -170,7 +184,7 @@ namespace sw
         }
     }
 
-    void AutomationRunner::sampleWatches()
+    void AutomationJudge::sampleWatches( AutomationStepContext& context )
     {
         for ( ProbeWatch& watch : _listWatch )
         {
@@ -183,17 +197,17 @@ namespace sw
                 step._listAttribute.push_back( AutomationAttribute{ "key", watch._key } );
             AutomationProbeValue value{};
             string               message;
-            if ( readProbeValue( step, value, message ) == false )
+            if ( readProbeValue( context, step, value, message ) == false )
                 continue;
             string text = AutomationStepArgsUtil::makeValueText( value );
             if ( watch._listValue.empty() == false && watch._listValue.back() == text )
                 continue;
             watch._listValue.push_back( std::move( text ) );
-            watch._listFrame.push_back( _frameIndex );
+            watch._listFrame.push_back( context.getFrameIndex() );
         }
     }
 
-    void AutomationRunner::runExpectVisited( const AutomationStep& step )
+    void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
         const string*     pTarget = step.findAttribute( "target" );
         const string*     pKey    = step.findAttribute( "key" );
@@ -211,7 +225,7 @@ namespace sw
         uint32 since = 0; // 적지 않으면 처음부터 본다
         if ( AutomationStepArgsUtil::readUint( step, "since", since, error ) == false )
         {
-            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
         const string*  pIs = step.findAttribute( "is" );
@@ -254,34 +268,34 @@ namespace sw
         string subject = string( probe );
         if ( target.empty() == false || key.empty() == false )
             subject += "(" + string( target ) + ( target.empty() || key.empty() ? "" : ", " ) + string( key ) + ")";
-        recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
-                                 "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
+        context.recordFailure( step, subject + " never went through '" + want + "' since frame " + to_string( since ) + " (missing '" + listWant[wantIndex] +
+                                         "'), saw: " + ( seen.empty() ? string( "no value" ) : seen ) );
     }
 
-    void AutomationRunner::runRecord( const AutomationStep& step )
+    void AutomationJudge::runRecord( AutomationStepContext& context, const AutomationStep& step )
     {
         AutomationProbeValue value{};
         string               message;
-        if ( readProbeValue( step, value, message ) == false )
+        if ( readProbeValue( context, step, value, message ) == false )
         {
-            recordFailure( step, "Record " + message );
+            context.recordFailure( step, "Record " + message );
             return;
         }
-        addRecordLine( "frame " + to_string( _frameIndex ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
+        addRecordLine( "frame " + to_string( context.getFrameIndex() ) + " " + message + " = " + AutomationStepArgsUtil::makeValueText( value ) );
     }
 
-    void AutomationRunner::runRemember( const AutomationStep& step )
+    void AutomationJudge::runRemember( AutomationStepContext& context, const AutomationStep& step )
     {
         AutomationProbeValue value{};
         string               message;
-        if ( readProbeValue( step, value, message ) == false )
+        if ( readProbeValue( context, step, value, message ) == false )
         {
-            recordFailure( step, "Remember " + message );
+            context.recordFailure( step, "Remember " + message );
             return;
         }
         const string& name = *step.findAttribute( "as" );
         string        text = AutomationStepArgsUtil::makeValueText( value );
-        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", _frameIndex, name.c_str(), text.c_str(), message.c_str() );
+        SW_LOG_INFO( "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
         for ( RememberedValue& remembered : _listRemembered )
         {
             if ( remembered._name == name )
@@ -293,7 +307,7 @@ namespace sw
         _listRemembered.push_back( RememberedValue{ name, std::move( text ) } );
     }
 
-    void AutomationRunner::runExpectLog( const AutomationStep& step )
+    void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
         const string*                         pID     = step.findAttribute( "id" );
         const string&                         needle  = pID != nullptr ? *pID : *step.findAttribute( "contains" ); // 검사 함수가 둘 중 하나를 요구했다
@@ -302,59 +316,59 @@ namespace sw
         AutomationStepArgsUtil::ExpectLogArgs args;
         if ( AutomationStepArgsUtil::parseExpectLog( step, args, error ) == false )
         {
-            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
         const uint32 matchCount = pID != nullptr ? _logCapture.countLinesWithID( needle, args._since ) : _logCapture.countMatchingLines( needle, args._since );
         if ( args._bExactCount )
         {
             if ( matchCount != args._expected )
-                recordFailure( step, string( pTarget ) + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+                context.recordFailure( step, string( pTarget ) + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
             return;
         }
         if ( matchCount < args._expected )
-            recordFailure( step, string( pTarget ) + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+            context.recordFailure( step, string( pTarget ) + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
     }
 
-    void AutomationRunner::runExpectImage( const AutomationStep& step )
+    void AutomationJudge::runExpectImage( AutomationStepContext& context, const AutomationStep& step )
     {
         using Internal = AutomationStepArgsUtil;
         string                    error;
         Internal::ExpectImageArgs args;
         if ( Internal::parseExpectImage( step, args, error ) == false )
         {
-            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
         const string* pRegion = step.findAttribute( "region" );
 
-        const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
+        const string    path = context.resolveOutputPath( *step.findAttribute( "file" ) );
         AutomationImage image;
         AutomationImage reference;
         const string*   pReference = step.findAttribute( "reference" );
         if ( AutomationImageMetric::loadPpm( path, image, error ) == false ||
-             ( pReference != nullptr && AutomationImageMetric::loadPpm( resolveOutputPath( *pReference ), reference, error ) == false ) )
+             ( pReference != nullptr && AutomationImageMetric::loadPpm( context.resolveOutputPath( *pReference ), reference, error ) == false ) )
         {
-            recordFailure( step, "could not read the image: " + error );
+            context.recordFailure( step, "could not read the image: " + error );
             return;
         }
         float64 value = 0.0;
         if ( AutomationImageMetric::measure( image, args._region, args._metric, args._ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
         {
-            recordFailure( step, error );
+            context.recordFailure( step, error );
             return;
         }
         // 값은 항상 적는다. 임계값을 정할 때 숫자를 보기 위해서다.
         string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
                       Internal::formatNumber( value );
         SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
-        _reportWriter.addMetricLine( std::move( line ) );
+        _listMetricLine.push_back( std::move( line ) );
 
         string     rule;
         const bool bOk = Internal::matchesNumber( args._comparison, value, rule );
         if ( bOk == false )
         {
-            recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
+            context.recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
             return;
         }
         if ( args._basis._kind == AutomationThresholdBasisKind::Provisional )
@@ -367,7 +381,7 @@ namespace sw
         }
     }
 
-    void AutomationRunner::applyLogGate()
+    void AutomationJudge::applyLogGate( AutomationOutcome& inOutResult, string& outReason )
     {
         AutomationLogJudgement judgement = _logCapture.judgeLines( _logPolicy );
         if ( engine::areEngineServicesBound() )
@@ -387,15 +401,48 @@ namespace sw
             return;
         _listUnhandledLog = std::move( judgement._listUnhandled );
         // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
-        if ( _result != AutomationOutcome::Passed )
+        if ( inOutResult != AutomationOutcome::Passed )
             return;
         for ( const string& line : _listUnhandledLog )
         {
             _listFailure.push_back( "unhandled log: " + line );
         }
-        _result       = AutomationOutcome::UnhandledLog;
-        _finishReason = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
-                        " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
-                        string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+        inOutResult = AutomationOutcome::UnhandledLog;
+        outReason   = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
+                    " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
+                    string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+    }
+
+    void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
+    {
+        string line = step.describe() + ": " + string( message );
+        SW_LOG_WARNING( "[Scenario] %#", line.c_str() );
+        _listFailure.push_back( std::move( line ) );
+    }
+
+    bool AutomationJudge::prepare( const AutomationScenario& scenario, string& outError )
+    {
+        if ( _logPolicy.loadAllowList( outError ) == false )
+            return false; // 허용 목록이 틀리면 폴백 없이 읽기 오류(11)로 멈춘다
+        _logPolicy.selectScenario( scenario.getName() );
+        for ( const AutomationStep& step : scenario.getSteps() )
+        {
+            if ( step._kind != "ExpectLog" )
+                continue;
+            AutomationStepArgsUtil::ExpectLogArgs args;
+            string                                argsError;
+            const bool                            bParsed = AutomationStepArgsUtil::parseExpectLog( step, args, argsError );
+            const bool                            bAbsent = bParsed && args._bExactCount && args._expected == 0;
+            if ( bAbsent )
+                continue; // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
+            if ( const string* pID = step.findAttribute( "id" ); pID != nullptr )
+                _logPolicy.declareExpectedID( *pID );
+            else
+                _logPolicy.declareExpected( *step.findAttribute( "contains" ) ); // 검사 함수가 id · contains 중 하나를 요구했다
+        }
+        prepareWatches( scenario );
+        _listRemembered.clear();
+        _logCapture.start();
+        return true;
     }
 } // namespace sw

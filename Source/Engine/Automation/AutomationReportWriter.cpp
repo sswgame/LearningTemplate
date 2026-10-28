@@ -72,8 +72,6 @@ namespace sw
 {
     AutomationReportWriter::AutomationReportWriter()
         : _reportPath{}
-        , _listMetricLine{}
-        , _listRecordLine{}
     {
     }
 
@@ -117,8 +115,8 @@ namespace sw
         writeAutomationReportList( writer, "unconfirmed", params._pListUnconfirmed );
         writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
         writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
-        writeAutomationReportList( writer, "metrics", &_listMetricLine );
-        writeAutomationReportList( writer, "records", &_listRecordLine );
+        writeAutomationReportList( writer, "metrics", params._pListMetric );
+        writeAutomationReportList( writer, "records", params._pListRecord );
         writer.endObject();
         SW_ASSERT( writer.isComplete() );
         json += '\n';

@@ -13,7 +13,12 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Automation/AutomationSession.h"
+#ifndef SW_AUTOMATION_ENABLED
+    #error "SW_AUTOMATION_ENABLED comes from CMake (cmake/Engine/BuildLayout.cmake, option SW_ENABLE_AUTOMATION)"
+#endif
+#if SW_AUTOMATION_ENABLED
+    #include "Engine/Automation/AutomationSession.h"
+#endif
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -252,10 +257,12 @@ namespace sw
     bool App::initializeHostScope()
     {
         // 자동화 구동기는 App 만 든다 — 범위를 세우기(Server 와 같은 한 곳) 전에 더한다. 엔진이 선 뒤 `begin` 으로 시작한다.
+#if SW_AUTOMATION_ENABLED
         {
             SW_MEMORY_SCOPE( EngineMisc );
             _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
         }
+#endif
         _pModuleImageHost = ModuleImageHostSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ), "App" );
         return _pModuleImageHost != nullptr;
     }
@@ -433,6 +440,7 @@ namespace sw
         }
     }
 
+#if SW_AUTOMATION_ENABLED
     void App::startAutomationSession( const CommandLineManager& commandLineManager )
     {
         string recordPath;
@@ -455,6 +463,26 @@ namespace sw
         if ( _pAutomationSession->isBusy() )
             _automationFrameSubscription = _engine.registerFrameObserver( _pAutomationSession );
     }
+
+    bool App::isAutomationBusy() const
+    {
+        return _pAutomationSession != nullptr && _pAutomationSession->isBusy();
+    }
+#else
+    void App::startAutomationSession( const CommandLineManager& commandLineManager )
+    {
+        // 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`)은 시나리오 인자를 조용히 무시하지 않는다 — 폴백 없이 이유를 남기고 시나리오 없이 돈다.
+        string     value;
+        const bool bAsked = commandLineManager.getArgument( CommandLineArgument::SCENARIO, value ) || commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, value );
+        if ( bAsked )
+            SW_LOG_ERROR( "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime). Ignored" );
+    }
+
+    bool App::isAutomationBusy() const
+    {
+        return false;
+    }
+#endif
 
     void App::bindHostCallbacks()
     {
@@ -593,7 +621,7 @@ namespace sw
             // 고른 상태가 창 · 에디터 상태(최소화 · 유휴 · 포커스)보다 앞선다.
             {
                 FramePacingInputs pacingInputs;
-                pacingInputs._bAutomationRun = _pAutomationSession->isBusy() || _engine.isProfileRunActive();
+                pacingInputs._bAutomationRun = isAutomationBusy() || _engine.isProfileRunActive();
                 pacingInputs._bListenHost    = bListenHost;
                 pacingInputs._bMinimized     = _pWindow->isMinimized();
                 pacingInputs._bFocused       = _pWindow->hasFocus();

@@ -42,6 +42,14 @@ if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 endif()
 
+# 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — 실행기 · 세션 · 판정 · 보고와 그 도구만 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 탐침 등록(*Probes)은
+# 엔진 프레임이 읽거나 기능이 등록하는 것이라 남는다.
+if(NOT SW_ENABLE_AUTOMATION)
+	sw_excludeUnbuiltSources(ENGINE_SOURCES
+		"/Source/Engine/Automation/Automation(Judge|Runner|RunnerSteps|Session|ScenarioChain|HangWatch|HangCommand|LogCapture|LogPolicy|ReportWriter|ImageMetric|ThresholdBasis|StepArgs|StepTimeline)\\.(cpp|h)$")
+	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
+endif()
+
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
 # .cpp 만 뺀다 — 헤더의 값 타입(뷰 요청 · 델리게이트)은 `Engine.h` 를 거쳐 서버도 읽는다. 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(swUnbuiltFolderRegex "")

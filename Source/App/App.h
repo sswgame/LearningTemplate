@@ -89,6 +89,8 @@ namespace sw
          *          돌릴 시나리오가 없으면(목록이 빔) 세션을 시작하지 않고 관찰자로도 붙이지 않습니다.
          */
         void startAutomationSession( const CommandLineManager& commandLineManager );
+        /** @brief 자동화 세션이 시나리오를 돌리는 중인가(`SW_ENABLE_AUTOMATION=OFF` 구성은 늘 false). 프레임 페이싱이 읽는다. */
+        bool isAutomationBusy() const;
 
         /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 부품이 선 뒤). */
         void bindHostCallbacks();

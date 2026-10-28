@@ -557,35 +557,35 @@ namespace sw
         static bool runExpect( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runExpect( step );
+            runner._judge.runExpect( runner, step );
             return true;
         }
 
         static bool runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runExpectVisited( step );
+            runner._judge.runExpectVisited( runner, step );
             return true;
         }
 
         static bool runRecord( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runRecord( step );
+            runner._judge.runRecord( runner, step );
             return true;
         }
 
         static bool runRemember( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runRemember( step );
+            runner._judge.runRemember( runner, step );
             return true;
         }
 
         static bool runExpectLog( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runExpectLog( step );
+            runner._judge.runExpectLog( runner, step );
             return true;
         }
 
@@ -597,15 +597,14 @@ namespace sw
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
             (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
-            runner._listPendingScreenshot.push_back( path );
-            ++runner._screenshotRequestedCount;
+            runner._run.requestScreenshot( path );
             return true;
         }
 
         static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner.runExpectImage( step );
+            runner._judge.runExpectImage( runner, step );
             return true;
         }
 
@@ -619,7 +618,7 @@ namespace sw
                 SW_LOG_ERROR( "[Scenario] %#", error.c_str() );
                 return false;
             }
-            runner._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
+            runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose == false )
                 return true;
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
@@ -682,10 +681,10 @@ namespace sw
             AutomationRunner& runner = asRunner( context );
             if ( AutomationRunnerStepsInternal::capturesWithoutSettling( step ) )
                 return AutomationStepHold::Run;
-            const bool bSettled             = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
-            runner._assetSettledFrameCount  = bSettled ? runner._assetSettledFrameCount + 1 : 0;
-            const bool               bReady = runner._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
-            const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames );
+            const bool bSettled                 = AutomationCaptureUtil::isReadyForCapture( runner.findActiveObjectManager() );
+            runner._run._assetSettledFrameCount = bSettled ? runner._run._assetSettledFrameCount + 1 : 0;
+            const bool               bReady     = runner._run._assetSettledFrameCount > AutomationRunnerStepsInternal::kAssetSettleTrailFrames;
+            const AutomationStepHold hold       = runner.holdUntilReady( step, input, bReady, AutomationTimeLimits::kMaxAssetSettleFrames );
             if ( hold == AutomationStepHold::Run )
             {
                 if ( bReady == false )
@@ -694,7 +693,7 @@ namespace sw
                     runner.recordFailure( step, pBlocker != nullptr ? string( "the screen did not settle before the screenshot was due (still covered by " ) + pBlocker + ")"
                                                                     : string( "assets were still loading when the screenshot was due (Assets.Pending never reached 0)" ) );
                 }
-                runner._assetSettledFrameCount = 0;
+                runner._run._assetSettledFrameCount = 0;
             }
             return hold;
         }
@@ -704,10 +703,10 @@ namespace sw
         {
             AutomationRunner& runner = asRunner( context );
             (void)input;
-            const bool bPending = runner._listPendingScreenshot.empty() == false || runner._screenshotCompletedCount < runner._screenshotRequestedCount;
+            const bool bPending = runner._run.hasPendingScreenshot();
             if ( bPending == false )
                 return AutomationStepHold::Run;
-            if ( ++runner._imageWaitFrameCount <= AutomationTimeLimits::kMaxImageWaitFrames )
+            if ( ++runner._run._imageWaitFrameCount <= AutomationTimeLimits::kMaxImageWaitFrames )
                 return AutomationStepHold::Hold;
             runner.recordFailure( step, "the screenshot never completed (is there a renderer?)" );
             return AutomationStepHold::Skip;
