@@ -1,0 +1,73 @@
+<Scene formatVersion="2" name="VfxGPULights128">
+	<!-- 슬롯 스윕(VfxGPULightSlotSweep)의 측정 씬 — vfxgpulights 와 같은 무대이고 효과만 파티클 라이트 슬롯 128 짜리(engine/vfx/gpusparklights128)다. 시나리오는 없다(측정 전용).
+	     perf-compare --cases vfxGpuLights128 이 RT.Vfx.Simulate 를 슬롯 32(vfxgpulights)와 견주게 한다. -->
+	<WorldSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</WorldSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,2.5,-3"
+					                 _localRotation="0.5,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.1"
+					                 _farZ="60"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="0.05"
+					                           _ambient="0.02"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Effect">
+			<GameObject _schemaVersion="0" _name="Effect" _bActive="true">
+				<_listComponent>
+					<VfxComponent _localPosition="0,0.5,2"
+					              _localRotation="0,0,0"
+					              _localScale="1,1,1"
+					              _attachOwner="None"
+					              _attachComponent="None"
+					              _effectPath="engine/vfx/gpusparklights128.vfx.xml"
+					              _seed="1"
+					              _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

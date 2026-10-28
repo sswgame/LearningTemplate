@@ -11,7 +11,7 @@
 `--app-before` 의 바이너리(전 커밋을 전체 빌드한 것)와 `--app` 을 같은 인자로 돌린다 — 없으면 그 케이스는 건너뛴다.
 테스트 벤치 케이스는 App 옆의 `EngineTest` 를 `--test_filter` 로 돌려 `[Bench]` 줄(min · p50 · p90 · max us)을 읽는다.
 
-재는 법은 docs/08_Verification.md 2 절을 따른다: Release, VSync 끔(기본), 전 · 후를 **번갈아**, 판들의 중앙값. 측정하는 동안 다른 빌드를 막는다.
+재는 법: Release, VSync 끔(기본), 전 · 후를 **번갈아**, 판들의 중앙값. 측정하는 동안 다른 빌드를 막는다.
 값은 기계마다 다르므로 같은 PC 의 전 · 후만 견준다. 표 머리에 PC 이름과 CPU 를 적는다.
 """
 
@@ -104,7 +104,7 @@ kListCase: tuple[PerfCase, ...] = (
                ("-gv_benchCharacterColumns=10",), (f"-gv_benchCharacters={50 * (1 + followerCount)}",), ("-gv_benchCharacters=50", f"-gv_benchCharacterFollowers={followerCount}"),
                ("GT.Frame", "GT.Animation.evaluate", "GT.Animation.phasePose"), ("GT.Animation.componentCount", "GT.Animation.maxComponentSize"))
       for followerCount in (2, 4)),
-    # KayKit 머티리얼 뒤 GT.Animation 기준(KayKitMaterials K2): 같은 인자의 벤치 세 장면. 기준값(B 만)이고 값은 08_Verification 의 애니메이션 측정 절 기준과 견준다.
+    # KayKit 머티리얼 뒤 GT.Animation 기준(KayKitMaterials K2): 같은 인자의 벤치 세 장면. 기준값(B 만)이다.
     PerfCase("kaykitCharactersBaseline", "app", "single", "KayKit 기사 100 명 줄 — 머티리얼이 입혀진 뒤의 GT.Animation 기준", ("-gv_benchCharacters=100", "-gv_benchCharacterColumns=10"),
              listScope=("GT.Frame", "GT.Animation.evaluate")),
     PerfCase("kaykitRigBaseline", "app", "single", "KayKit 후처리 리그 기사 20 명 — 머티리얼이 입혀진 뒤의 GT.Animation 기준", ("-gv_benchRig=20",),
@@ -115,6 +115,8 @@ kListCase: tuple[PerfCase, ...] = (
              ("-gv_deferred=1", "-gv_benchMeshes=2000"), listScope=("GPU.Frame", "GPU.PostBloom", "GPU.BloomDownsample")),
     PerfCase("shadowPassShare", "app", "single", "그림자 패스의 몫(기준값, GraphicsMeasurements M3) — 큐브 4000. GPU.Shadow 가 GPU.Frame 의 한 자리 퍼센트면 캐스케이드별 컬링은 이득이 없다",
              ("-gv_deferred=1", "-gv_benchMeshes=4000"), listScope=("GPU.Frame", "GPU.Shadow")),
+    PerfCase("shadowCascadeCulling", "app", "switch", "방향광 그림자 캐스케이드별 컬링 — 큐브 4000, -gv_shadowCascadeCulling=0(합친 상자 하나)이 전. 이득이 없으면 스위치와 슬롯을 지운다",
+             ("-gv_deferred=1", "-gv_benchMeshes=4000"), ("-gv_shadowCascadeCulling=0",), ("-gv_shadowCascadeCulling=1",), ("GPU.Frame", "GPU.Shadow")),
     PerfCase("hangulGlyphsCPU", "test", "single", "한글 새 글리프 400 개의 CPU 래스터화 · SDF(기준값, 시스템 한글 글꼴이 없으면 건너뜀)",
              ("--test_filter=GlyphBenchTest.*",)),
     PerfCase("cubeBench20k", "app", "single", "큐브 2만 개 움직이는 씬의 게임 스레드 틱(기준값, 엔진 분할 E3 의 ScenePrimitive 슬롯 — 트랜스폼 전파 핫 패스에 가상 호출이 없어야 한다)",
@@ -124,8 +126,25 @@ kListCase: tuple[PerfCase, ...] = (
              ("-gv_firstScene=game/empty/maps/clothshowcase.scene.xml",), listScope=("GT.Frame", "RT.GPUScene.vertexPool")),
     PerfCase("realtimeProbe", "app", "single", "실시간 GI 씬의 프로브 갱신 컴퓨트(기준값, 실시간 전역 조명 R6) — 프로브 수 · 광선 수 스윕의 기준",
              ("-gv_firstScene=game/empty/maps/realtimegi.scene.xml",), listScope=("GPU.Frame", "GPU.Compute", "RT.Probe.Update")),
+    # 프로브 수 · 광선 수 · 갱신 주기 스윕(RealtimeProbeUpdateSweep) — A 는 기준 씬(간격 1 m, 광선 64, 주기 4). 프로브 수는 씬 파일(간격 0.5 · 2 m), 광선 수 · 주기는 gv 로 바꾼다.
+    # 수렴 속도는 이 케이스가 재지 못한다 — 갱신 시간만 낸다(수렴은 시나리오 realtimegi 의 화소 비교로 따로 본다).
+    *(PerfCase(name, "app", "switch", note, (), ("-gv_firstScene=game/empty/maps/realtimegi.scene.xml",), ("-gv_firstScene=game/empty/maps/realtimegi" + sceneSuffix + ".scene.xml",) + listExtra,
+               ("GPU.Frame", "GPU.Compute", "RT.Probe.Update"))
+      for name, note, sceneSuffix, listExtra in (
+          ("realtimeProbeDense", "실시간 프로브 갱신 — 프로브 2023 개(간격 0.5 m) 대 기준 324 개", "_dense", ()),
+          ("realtimeProbeSparse", "실시간 프로브 갱신 — 프로브 50 개(간격 2 m) 대 기준 324 개", "_sparse", ()),
+          ("realtimeProbeRays16", "실시간 프로브 갱신 — 프로브당 광선 16 대 기준 64", "", ("-gv_realtimeProbeRayCount=16",)),
+          ("realtimeProbeRays256", "실시간 프로브 갱신 — 프로브당 광선 256 대 기준 64", "", ("-gv_realtimeProbeRayCount=256",)),
+          ("realtimeProbePeriod1", "실시간 프로브 갱신 — 갱신 주기 1 프레임 대 기준 4", "", ("-gv_realtimeProbeUpdatePeriod=1",)),
+          ("realtimeProbePeriod16", "실시간 프로브 갱신 — 갱신 주기 16 프레임 대 기준 4", "", ("-gv_realtimeProbeUpdatePeriod=16",)),
+      )),
     PerfCase("vfxGpuLights", "app", "single", "GPU 파티클 라이트 씬의 컴퓨트 프리패스(기준값, 기본 슬롯) — 슬롯 32 · 128 · 256 스윕의 기준",
              ("-gv_firstScene=game/empty/maps/vfxgpulights.scene.xml",), listScope=("GPU.Frame", "GPU.Compute", "RT.Vfx.Simulate")),
+    # 슬롯 스윕(VfxGPULightSlotSweep) — 슬롯 수는 효과 파일의 `_light._maxLights` 라 슬롯별 씬이 있다(씬 · 효과만 다르고 입자 풀은 같다). A 는 슬롯 32(기본 씬), B 는 128 · 256.
+    *(PerfCase(f"vfxGpuLights{slotCount}", "app", "switch", f"GPU 파티클 라이트 슬롯 {slotCount} 대 32 — 컴퓨트 프리패스 시간. 슬롯 상한(kMaxGPULight)을 줄일지 정하는 근거",
+               (), ("-gv_firstScene=game/empty/maps/vfxgpulights.scene.xml",), (f"-gv_firstScene=game/empty/maps/vfxgpulights{slotCount}.scene.xml",),
+               ("GPU.Frame", "GPU.Compute", "RT.Vfx.Simulate"))
+      for slotCount in (128, 256)),
 ) + tuple(
     # 클러스터드 라이팅 측정(ClusteredLighting.md S3) — 디퍼드, 큐브 4000, 라이트 16 · 128 · 1024. A 는 그리드 없음(gv_lightCulling=None), B 는 CPU · GPU 생산자(열거자 이름만 받는다).
     # 디퍼드 조명 패스의 이름은 deferredpipeline.xml 의 "Shading" 이다(GPU.<패스 이름>). GPU 생산자의 디스패치는 컴퓨트 프리패스(GPU.Compute)에 든다.

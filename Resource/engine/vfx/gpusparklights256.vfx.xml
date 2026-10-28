@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 슬롯 스윕 표본(VfxGPULightSlotSweep) — gpusparklights 와 같은 방출기이고 파티클 라이트 슬롯만 256 이다(GPU 구간 상한 `GPULightBuffer::kMaxGPULight` 와 같다). 입자 풀(256)은 그대로라 시뮬레이션 비용은 같고 슬롯 비용만 다르다.
+     측정: py -3 -m Scripts perf-compare --cases vfxGpuLights256 (씬 game/empty/maps/vfxgpulights256.scene.xml). 기준은 슬롯 32(gpusparklights). -->
+<VfxEffectDef>
+	<_listEmitter>
+		<VfxEmitterDef _name="LitEmbers" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Additive" _bLooping="true"
+		               _maxParticles="256" _duration="1" _spawnRate="120" _lifetimeMin="1.5" _lifetimeMax="2"
+		               _velocityMin="-1, 1, -1" _velocityMax="1, 3, 1" _gravity="0, -9.8, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.02" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.02" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.5" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.15" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="1" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+			<_collision _mode="Bounce" _method="SceneDepth" _depthThickness="0.3" _restitution="0.4" _friction="0.2"/>
+			<_light _maxLights="256" _radius="2.5" _intensity="6"/>
+		</VfxEmitterDef>
+	</_listEmitter>
+</VfxEffectDef>
