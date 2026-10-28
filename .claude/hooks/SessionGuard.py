@@ -18,8 +18,7 @@ import subprocess
 import sys
 import time
 
-kTranscriptWarnBytes = 2 * 1024 * 1024    # 대화 기록이 이만큼 크면 묶음 경계에서 새 세션을 권한다
-kTranscriptStrongBytes = 3 * 1024 * 1024 # 이만큼이면 지금 인계 문서를 쓰고 새 세션으로 가라고 권한다
+kTranscriptWarnBytes = 2 * 1024 * 1024    # 대화 기록이 이만큼 크면 압축 횟수를 읽는다
 kHardLimitStepsBytes = ( 4 * 1024 * 1024, 8 * 1024 * 1024, 16 * 1024 * 1024 )  # 단계마다 한 번 프롬프트를 막는다(비용이 세션 길이에 비례 — 경고만으로는 무시됐다)
 kHardLimitCompactions = 2                 # 압축이 이만큼이면 최소 1단계
 kHardBlockDirName = "sw-session-guard"    # 공통 .git 아래. 세션 아이디별 <id>.json 에 마지막으로 막은 단계를 남긴다
@@ -233,7 +232,6 @@ def onUserPromptSubmit( data, root ):
     modelNotes = []
 
     size, compactCount = inspectTranscript( data.get( "transcript_path", "" ) )
-    mb = size / ( 1024 * 1024 )
     markerDir = findMarkerDir( root ) if hardLimitStage( size, compactCount ) else ""
     sessionId = data.get( "session_id", "" )
     handoffPath = os.path.join( root, kHandoffPath )
@@ -243,12 +241,6 @@ def onUserPromptSubmit( data, root ):
         sys.exit( kExitBlockPrompt )
     if markerDir and isHandoffPending( markerDir, sessionId, handoffPath ):
         modelNotes.append( handoffInstruction() )
-    if size >= kTranscriptStrongBytes or compactCount >= 2:
-        userNotes.append( f"대화가 매우 깁니다({mb:.0f} MB, 압축 {compactCount} 회). 인계 문서({kHandoffPath})를 쓰고 새 세션을 시작하는 편이 토큰이 덜 듭니다." )
-        modelNotes.append( "한도: 대화가 매우 길다. 지금 하던 일을 끊기 좋은 곳에서 멈추고, docs/plans/NEXT.md 에 인계를 쓴 뒤 사용자에게 새 세션을 권할 것." )
-    elif size >= kTranscriptWarnBytes or compactCount >= 1:
-        userNotes.append( f"대화가 길어졌습니다({mb:.0f} MB, 압축 {compactCount} 회). 이번 묶음이 끝나면 새 세션을 권합니다." )
-        modelNotes.append( "한도: 대화가 길다. 이번 묶음이 끝나면 인계 문서를 쓰고 사용자에게 새 세션을 권할 것." )
 
     builds = countBuildProcesses()
     if builds > kMaxConcurrentBuilds:
