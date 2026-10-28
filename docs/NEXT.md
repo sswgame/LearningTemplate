@@ -25,7 +25,7 @@
 | 다중 상속: 구현 상속 · 믹스인은 합성(`SubscriptionList` 멤버, 언로드 처리기 등록 + 구독, 콜백 하나짜리 인터페이스는 델리게이트), 서비스 인터페이스는 서브시스템을 상속(`IModuleLoader : ISubsystem`). 순수 인터페이스 여러 개 구현(ISP) · 바깥 API 요구는 허용 | |
 | 폴더: 한 기능의 하위는 하위 폴더(`Core/Log/Sink`, `RHI/DX/DX11`, `RHI/<백엔드>/Module`, `Automation/{Watch,Scenario,Runner}`). 프로그램은 `Source/Programs`, `Tools/` 는 내려받는 외부 도구만 | 언리얼 Source/Programs |
 | 약어는 대문자(`GPU` · `ID` · `VFX`), 첫 낱말은 소문자(`gpuTime`) | NamingCpp |
-| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` · 호스트 범위 · `DevConsoleHost`). 네트워크 끝점은 `NetEndpoint*`, 에디터 패널 진입점은 `IEditorPanelService`. `OnlineServiceHost`(한 프로세스의 서비스 묶음) · `WindowsServiceHost`(Windows 서비스 프로세스)는 같은 뜻이라 둔다 | 같은 단어 한 뜻 |
+| Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` · 호스트 범위 · `DevConsoleHost`). 네트워크 끝점은 `NetEndpoint*`, 에디터 패널 진입점은 `IEditorPanelService`. `OnlineServiceHost`(한 프로세스의 서비스 묶음) · `WindowsServiceHost`(Windows 서비스 프로세스)는 같은 뜻이라 둔다. 온라인 키트의 서버 쪽 서비스는 `IOnlineServerService`(짝 `IOnlineClientService`) — `HostService` 와 겹치지 않게 | 같은 단어 한 뜻 |
 | Runtime = 모든 호스트에서 도는 것(키트 `Runtime/` — 언리얼 플러그인 모듈 형식 Runtime · ServerOnly) · 실행 중(편집 · 쿡 시점의 반대). 모듈 C-ABI 계약은 `Source/ModuleAPI`(옛 RuntimeAPI) | 언리얼 모듈 형식 |
 | Automation = 시나리오 자동 테스트(`Engine/Automation`). UI 의 시나리오 단계는 `UI/Scenario/UIScenarioSteps` — "UI Automation" 은 Windows 접근성 API(UIA)만 | 언리얼 Automation System |
 | 정적 함수만 있는 타입은 인자로 대상을 받는 상태 없는 라이브러리면 도메인 이름 그대로(`BinarySerializer` · `Ledger` · `EditorLayoutStore`). 고칠 것은 서브시스템 상태 위의 정적 파사드뿐 — 하나로 합쳤다(`EditorPlaySession` 이 서브시스템). 프로세스 전역 상태(Logger · Memory · 프로파일러)는 `ScopeOwned` · `atomic` 규칙이 맡는다 | 언리얼 FJsonSerializer · FPaths · UGameplayStatics |
