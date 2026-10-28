@@ -16,6 +16,9 @@
     #include "Engine/Window/IWindow.h"
 
     #include <dbus/dbus.h>
+    #include <X11/Xlib.h>
+
+    #include "Core/Common/X11MacroUndef.h"
 
 namespace sw
 {
@@ -143,8 +146,9 @@ namespace sw
         class Bridge final : public IUIAccessibilityBridge
         {
         public:
-            explicit Bridge( UISystem& ui )
+            Bridge( UISystem& ui, IWindow& window )
                 : _ui{ ui }
+                , _window{ window }
             {
             }
 
@@ -685,6 +689,22 @@ namespace sw
                 return bOk ? DBUS_HANDLER_RESULT_HANDLED : replyError( pMessage, DBUS_ERROR_UNKNOWN_METHOD, "unsupported Accessible method or index" );
             }
 
+            /** @brief 창 클라이언트 원점의 화면 좌표입니다. X11 창만 알 수 있고(`XTranslateCoordinates`) 나머지는 0, 0 을 둡니다. */
+            void readWindowOrigin( int32& outX, int32& outY ) const
+            {
+                X11SurfaceHandles handles;
+                if ( _window.tryGetX11Surface( handles ) == false || handles._pDisplay == nullptr )
+                    return;
+                Display* pDisplay = static_cast<Display*>( handles._pDisplay );
+                int      x        = 0;
+                int      y        = 0;
+                ::Window child    = 0;
+                if ( XTranslateCoordinates( pDisplay, static_cast<::Window>( handles._window ), DefaultRootWindow( pDisplay ), 0, 0, &x, &y, &child ) == 0 )
+                    return;
+                outX = static_cast<int32>( x );
+                outY = static_cast<int32>( y );
+            }
+
             DBusHandlerResult handleComponent( DBusMessage* pMessage, const string& member, const AtSpiInternal::Target& target )
             {
                 using namespace AtSpiInternal;
@@ -701,9 +721,16 @@ namespace sw
                     dbus_message_unref( pRep );
                     return DBUS_HANDLER_RESULT_HANDLED;
                 }
-                // 사각형은 게임 창 클라이언트 기준 UI 단위다. 화면 좌표로 옮기는 창 위치는 더하지 않는다(알려진 한계 — 확대기 · 강조 상자가 창 위치만큼 어긋난다).
-                const int32     x    = static_cast<int32>( node._bounds._x );
-                const int32     y    = static_cast<int32>( node._bounds._y );
+                // 사각형은 게임 창 클라이언트 기준 UI 단위다. 요청의 좌표계가 화면(ATSPI_COORD_TYPE_SCREEN = 0)이면 창 클라이언트의 화면 위치를 더한다(확대기 · 강조 상자가 맞는다).
+                // 창 좌표(1) · 부모 좌표(2, 최상위 노드는 창과 같다)는 그대로 둔다. X11 이 아니면(Wayland 는 클라이언트에 전역 좌표를 주지 않는다) 원점 0 이다.
+                dbus_uint32_t coordType = 0;
+                dbus_message_get_args( pMessage, nullptr, DBUS_TYPE_UINT32, &coordType, DBUS_TYPE_INVALID );
+                int32 originX = 0;
+                int32 originY = 0;
+                if ( coordType == 0 && member != "GetSize" )
+                    readWindowOrigin( originX, originY );
+                const int32     x    = static_cast<int32>( node._bounds._x ) + originX;
+                const int32     y    = static_cast<int32>( node._bounds._y ) + originY;
                 const int32     w    = static_cast<int32>( node._bounds._z );
                 const int32     h    = static_cast<int32>( node._bounds._w );
                 DBusMessage*    pRep = dbus_message_new_method_return( pMessage );
@@ -800,6 +827,7 @@ namespace sw
             }
 
             UISystem&               _ui;
+            IWindow&                _window;
             DBusConnection*         _pSession{ nullptr }; ///< 세션 버스(접근성 버스 주소와 스크린 리더 켜짐 신호를 받는다)
             DBusConnection*         _pBus{ nullptr };     ///< 접근성 버스(객체를 내보내는 연결)
             string                  _busName{};           ///< 접근성 버스에서의 이 앱 고유 이름
@@ -809,9 +837,9 @@ namespace sw
         };
     } // namespace
 
-    unique_ptr<IUIAccessibilityBridge> AtSpiAccessibility::createBridge( UISystem& ui, [[maybe_unused]] IWindow& window )
+    unique_ptr<IUIAccessibilityBridge> AtSpiAccessibility::createBridge( UISystem& ui, IWindow& window )
     {
-        unique_ptr<Bridge> pBridge = make_unique<Bridge>( ui );
+        unique_ptr<Bridge> pBridge = make_unique<Bridge>( ui, window );
         if ( pBridge->connect() == false )
             return nullptr;
         return pBridge;
