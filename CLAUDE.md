@@ -23,5 +23,5 @@
 
 ## 보조 도구
 
-- graphify: 코드 질문은 저장소 루트에서 `graphify query "<질문>"` · `path "<A>" "<B>"` · `explain "<개념>"` 으로 범위를 먼저 좁히고코드를 고친 뒤 `graphify update Source` 를 돌린다.
+- graphify: 코드 질문은 저장소 루트에서 `graphify query "<질문>"` · `path "<A>" "<B>"` · `explain "<개념>"` 으로 범위를 먼저 좁히고, 코드를 고친 뒤 `graphify update Source` 를 돌린다.
 - ponytail: 스킬이 있으면 모든 작업에서 `Skill` 로 부른다. 구조 개편을 시킬 때는 "구조는 장기 이득이면 과감히 바꾼다"는 뜻을 요청에 적는다(스킬의 "기존 구조 유지" 지침과 부딪힌다).
