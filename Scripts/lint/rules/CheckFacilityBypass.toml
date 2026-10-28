@@ -5,6 +5,8 @@
 stdout = 3
 random = 1
 fileOpen = 0
+fileMutate = 0
+libraryWrite = 0
 processSpawn = 0
 numberParse = 0
 
@@ -22,5 +24,17 @@ numberParse = 0
 "numberParse:Source/Core/Container/StringUtil.cpp" = "StringUtil::parse* 자신 — from_chars 를 부르는 유일한 자리"
 "fileOpen:Source/Core/File/PlatformFileUtil.cpp" = "FileUtil 의 플랫폼 구현 — 파일을 여는 유일한 자리"
 "fileOpen:Test/EngineTest/Resource/TestResource.cpp" = "잠긴 파일을 흉내 낸다 — 공유 삭제 없이 연 핸들이 필요하고 FileUtil 은 늘 공유 삭제를 허용해 연다"
+"fileMutate:Source/Core/File/PlatformFileUtil.cpp" = "FileUtil 의 플랫폼 구현 — 파일을 바꾸는 OS 호출이 있는 유일한 자리"
+"fileMutate:Source/Core/File/FileUtil.cpp" = "쓰기 입구 — `isWriteAllowed` 를 지난 뒤 PlatformFileUtil 의 쓰기 연산을 부르는 유일한 호출부"
+"fileMutate:Source/Core/LogSink/FileLogOutput.cpp" = "로그 파일을 줄마다 열고 닫지 않고 스트림으로 쥔다 — FileUtil 은 실패를 SW_LOG 로 알려서 로거 안에서 부르면 되돌아 들어간다. 로그 폴더는 리소스 밖이다"
+"fileMutate:Source/Core/Diagnostics/CrashContext.cpp" = "크래시 기록 — 신호 · 예외 처리기 안이라 할당 없이 OS 호출로 바로 써야 한다(FileUtil 은 힙을 쓴다). 크래시 폴더는 리소스 밖이다"
+"fileMutate:Source/Core/Diagnostics/Windows/WindowsCrashHandler.cpp" = "미니덤프 · 크래시 메시지 — 예외 처리기 안이라 할당 없이 OS 호출로 바로 쓴다. 덤프 폴더는 리소스 밖이다"
+"fileMutate:Source/Core/Process/Windows/WindowsProcess.cpp" = "자식 프로세스의 표준 입력 파이프에 쓰고 NUL 장치를 연다 — 파일이 아니다"
+"fileMutate:Source/Core/Process/Posix/PosixProcess.cpp" = "자식 프로세스의 표준 입출력을 /dev/null 로 잇는다 — 파일이 아니다"
+"fileMutate:Source/GameFramework/Base/Online/Local/LocalDeviceKeyProvider.cpp" = "키 파일(사용자 데이터 폴더)의 권한만 소유자 전용으로 줄인다 — 내용은 앞서 writeFile 이 게이트를 지나 썼고 FileUtil 에는 소유자 전용 권한 설정이 없다"
+"fileMutate:Source/Engine/Input/Linux/LinuxGamepadDevice.cpp" = "/dev/input 장치 노드를 읽고 힘 되먹임 이벤트를 쓴다 — 장치이지 데이터 파일이 아니다"
+"libraryWrite:Source/Editor/Common/Asset/TextureImporter.cpp" = "DirectXTex 의 DDS 저장 — 쓰기 전에 FileUtil::isWriteAllowed 를 묻는다(커밋된 DDS 를 자동화 실행이 덮지 않게)"
+"libraryWrite:Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/Driver/SQLite/SQLiteDriver.cpp" = "SQLite 연결을 여는 유일한 자리 — 열기 전에 FileUtil::isWriteAllowed 를 묻는다(메모리 DB 는 파일이 아니라 건너뛴다)"
+"libraryWrite:Source/Editor/Common/GUI/EditorDockLayout.cpp" = "ImGui 도킹 배치(imgui.ini)를 사용자 에디터 상태 폴더(Saved/Editor)에 쓴다 — 리소스 원본이 아니라 쓰기 게이트가 지킬 대상이 아니다"
 "processSpawn:Source/Core/Process/Posix/PosixProcess.cpp" = "sw::Process 의 POSIX 구현(fork · exec)"
 "processSpawn:Source/Core/Process/Windows/WindowsProcess.cpp" = "sw::Process 의 Windows 구현(CreateProcessW)"

@@ -8,6 +8,9 @@
     stdout        printf · fprintf · puts · fputs · std::cout · std::cerr   →  SW_LOG_* (로그 티어 아래는 SW_LOW_LEVEL_*)
     random        rand · srand · std::mt19937 · std::random_device           →  MathUtil::getRandom* · XorShift32 · GameRandom
     fileOpen      fopen · _wfopen · std::ifstream · std::ofstream · fstream  →  FileUtil::read*/write* · ResourceIO · AsyncFileIO
+    fileMutate    std::rename · ::unlink · ::mkdir · MoveFile · DeleteFile · open(O_WRONLY…) · PlatformFileUtil::openFile/replaceFile/moveToRecycleBin
+                  →  FileUtil::writeFile · appendTextFile · copyFile · removeFile · removeDirectory · moveToRecycleBin(쓰기 게이트 `FileUtil::isWriteAllowed` 를 지난다)
+    libraryWrite  DirectX::SaveTo*File · sqlite3_open · ImGui::SaveIniSettingsToDisk · IniFilename =  →  쓰기 전에 `FileUtil::isWriteAllowed` 를 직접 묻는다
     processSpawn  system · popen · CreateProcess · ShellExecute · exec* · fork  →  sw::Process(execute · launch · launchDetached)
     numberParse   atoi · strtol · strtod · std::stoi · std::from_chars · sscanf …               →  StringUtil::parseInt · parseInt64 · parseFloat · tryParseBool …
 
@@ -66,6 +69,22 @@ _kListRule: tuple[BypassRule, ...] = (
                re.compile(_kCallHead + r"(?:fopen|fopen_s|_wfopen|_wfopen_s|freopen|_fsopen|_wfsopen)\s*\(|\bstd::(?:basic_|w)?[io]?fstream\b"),
                "FileUtil::readFile · readTextFile · writeFile · writeTextFile (크기 0 의사 파일은 readStreamTextFile, 리소스는 ResourceIO, 비동기는 AsyncFileIO)",
                "fopen 은 pch 의 `<cstdio>` 에, fstream 은 표준 헤더에 있어 숨길 수 없다(FileUtil 구현이 같은 이름을 써야 한다)"),
+    BypassRule("fileMutate",
+               re.compile(r"(?<![\w.>])(?:std::|::)(?:rename|unlink|rmdir|mkdir|chmod|chown|truncate|symlink)\s*\("
+                          r"|(?<![\w.>])(?:std::|::)remove\s*\((?:[^,()]|\([^()]*\))*\)"   # 인자 하나짜리 파일 삭제만 — std::remove(first, last, v) 알고리즘은 뺀다
+                          r"|\b(?:_wrename|_wremove|_unlink|_wunlink|_rmdir|_wrmdir|_mkdir|_wmkdir|_chmod|_wchmod|_chsize_s|mkstemp|ftruncate|futimens|utimes|renameat|openat|open64|_wopen|_sopen_s|_wsopen_s)\s*\("
+                          r"|(?<![\w.>:])(?:CreateDirectory(?:Ex)?[AW]?|DeleteFile[AW]?|MoveFile(?:Ex|Transacted)?[AW]?|CopyFile(?:Ex|2)?[AW]?|ReplaceFile[AW]?|RemoveDirectory[AW]?"
+                          r"|SHFileOperation[AW]?|SetFileAttributes[AW]?|SetEndOfFile|SetFileTime|CreateHardLink[AW]?|CreateSymbolicLink[AW]?|WriteFile(?:Ex)?)\s*\("
+                          r"|(?<![\w.>:])CreateFile[AW]?\s*\([^;]*\b(?:GENERIC_WRITE|GENERIC_ALL|FILE_APPEND_DATA|DELETE)\b"
+                          r"|(?<![\w.>])(?:::)?open\s*\([^;]*\bO_(?:WRONLY|RDWR|CREAT|TRUNC|APPEND)\b"
+                          r"|\bPlatformFileUtil::(?:openFile|replaceFile|moveToRecycleBin)\b"),
+               "FileUtil::writeFile · appendTextFile · copyFile · removeFile · removeDirectory · moveToRecycleBin (자동화 쓰기 게이트 FileUtil::isWriteAllowed 를 지난다)",
+               "`<cstdio>` · `<unistd.h>` · `<windows.h>` 는 pch 와 플랫폼 TU 가 다른 이유로 include 해야 해서 숨길 수 없고, `PlatformFileUtil` 은 읽기 연산과 한 구조체라 쓰기만 따로 감추면 "
+               "FileUtil · 로그 싱크가 friend 로 풀어야 한다. 게이트 없이 파일을 바꾸면 자동화 실행이 리소스 원본을 바꿀 수 있다"),
+    BypassRule("libraryWrite",
+               re.compile(r"\bDirectX::SaveTo\w+File\b|\bsqlite3_open(?:_v2|16)?\s*\(|\bImGui::(?:SaveIniSettingsToDisk|LogToFile)\b|\bstbi_write_\w+\s*\(|\bIniFilename\s*=[^=]"),
+               "쓰기 전에 FileUtil::isWriteAllowed( 경로 ) 를 묻는다(서드파티가 경로를 스스로 열어 쓰므로 FileUtil 입구를 지나지 않는다)",
+               "서드파티 헤더는 CheckThirdPartyIsolation 이 이미 한 폴더로 모았지만, 그 함수들은 경로 글을 받아 스스로 열어서 FileUtil 입구 형식으로 감쌀 수 없다"),
     BypassRule("processSpawn",
                re.compile(_kCallHead + r"(?:system|_wsystem|popen|_popen|_wpopen)\s*\(|(?<![\w.>:])(?:CreateProcess[AW]?|ShellExecute(?:Ex)?[AW]?|WinExec|execl|execlp|execle|execv|execvp|execve|execvpe|posix_spawnp?|fork)\s*\("),
                "sw::Process::execute · launch · launchDetached (Core/Process/Process.h)",
@@ -110,7 +129,7 @@ def findBypassCalls(source: SourceFile) -> list[CountedFinding]:
 class CheckFacilityBypassGate(BaselineSourceGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    description = "Core · Engine 기능을 두고 printf · rand · fopen · system · atoi 를 직접 부르는 곳(훅은 추가한 줄만, 전체는 규칙별 기준선 초과만)"
+    description = "Core · Engine 기능을 두고 printf · rand · fopen · system · atoi · 파일 바꾸기 API 를 직접 부르는 곳(훅은 추가한 줄만, 전체는 규칙별 기준선 초과만)"
     buildComment = "Checking that code uses engine facilities instead of direct C runtime calls..."
     timeoutSeconds = 120
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
@@ -121,6 +140,7 @@ class CheckFacilityBypassGate(BaselineSourceGate):
     baselineRules = tuple(rule.key for rule in _kListRule)
     baselineExceededHint = "새 호출은 docs/agents/ExistingFacilities.md 의 '쓸 것' 으로"
     hint = ("  대신 쓸 것은 docs/agents/ExistingFacilities.md 의 표다 — 로그 SW_LOG_*, 난수 MathUtil::getRandom*, 파일 FileUtil::read*/write*,\n"
+            "  파일을 바꾸는 직접 호출(fileMutate · libraryWrite)은 FileUtil 의 쓰기 입구로 — 서드파티가 경로를 스스로 여는 곳은 쓰기 전에 FileUtil::isWriteAllowed 를 묻는다,\n"
             "  프로세스 sw::Process, 숫자 파싱 StringUtil::parse*. 그 기능을 구현하는 파일이면 Scripts/lint/rules/CheckFacilityBypass.toml 의\n"
             "  [exemption] 에 `<규칙>:<경로>` 로 이유와 함께 적는다. 전체를 보려면 --whole-files 또는 --list.")
     selfTestCases = [
@@ -137,6 +157,18 @@ class CheckFacilityBypassGate(BaselineSourceGate):
          "expectedViolation": "Source/Probe/C.cpp:3: fileOpen `fopen`",
          "files": {"Source/Probe/C.cpp": "void f()\n{\n    FILE* p = fopen( \"a\", \"rb\" );\n    std::ifstream s( \"b\" );\n}\n"},
          "args": ["--files", "Source/Probe/C.cpp", "--whole-files"]},
+        {"name": "std::rename · ::unlink · MoveFileExW · O_WRONLY open · 알고리즘 std::remove · 멤버 rename 선언은 통과",
+         "expectedViolation": "Source/Probe/G.cpp:3: fileMutate `std::rename`",
+         "unexpectedViolation": "G.cpp:8:",
+         "files": {"Source/Probe/G.cpp": ("void f( const char* a, const char* b )\n{\n    std::rename( a, b );\n    ::unlink( a );\n    MoveFileExW( w, v, 0 );\n"
+                                          "    int fd = open( a, O_WRONLY | O_CREAT, 0644 );\n    std::remove( a );\n    v.erase( std::remove( v.begin(), v.end(), 1 ), v.end() );\n"
+                                          "    static bool rename( GameObject* p, const utf8* n );\n}\n")},
+         "args": ["--files", "Source/Probe/G.cpp", "--whole-files"]},
+        {"name": "PlatformFileUtil 쓰기 연산 · SQLite · DDS 저장은 게이트를 거친 자리만 예외",
+         "expectedViolation": "Source/Probe/H.cpp:4: libraryWrite `sqlite3_open_v2`",
+         "files": {"Source/Probe/H.cpp": ("void f()\n{\n    PlatformFileUtil::replaceFile( a, b );\n    sqlite3_open_v2( p, &d, 6, nullptr );\n"
+                                          "    DirectX::SaveToDDSFile( i, n, m, 0, w );\n}\n")},
+         "args": ["--files", "Source/Probe/H.cpp", "--whole-files"]},
         {"name": "popen · 멤버 system() 은 통과",
          "expectedViolation": "Source/Probe/D.cpp:3: processSpawn `popen`",
          "unexpectedViolation": "D.cpp:4",
