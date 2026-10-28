@@ -8,16 +8,16 @@
 
 | 절 | 한 줄 설명 | 착수 조건 유형 |
 |---|---|---|
-| LinuxManualChecks | X11 입력 자동 테스트 | XTest 테스트를 계획 문서로 올릴 때 |
+| LinuxManualChecks | X11 입력 자동 테스트(주입기 코드 끝) | Linux 컴파일 확인 후 시나리오 작성 |
 | LogGateRemainders | 종료 때 `Task fencing timeout` 원인 | 다시 보일 때 |
 
 ## 테스트 · 검증
 
 ### LinuxManualChecks
 제목: 리눅스 X11 입력의 자동 테스트
-왜 필요한가: X11 입력(좌표 · `XkbSetDetectableAutoRepeat`)이 자동으로 돌지 않는다.
-착수 조건: XTest 입력 테스트를 계획 문서로 올릴 때.
-남은 첫 일: 소비자가 먼저다 — 테스트 틀이 지워졌고 시나리오 런타임이 새 프레임워크로 바뀔 예정이라, XTest(`libxtst`) 주입기를 지금 들이면 쓰는 곳 없는 서드파티 링크(`libxtst-dev` 필수화)만 생긴다. 새 틀이 서면 그 위에서 입력을 넣을 XTest 와 호스트 테스트를 설계한다. 자동 반복은 서버가 키를 누르고 있는 동안 만드는 이벤트라 `XSendEvent` 로 흉내 낼 수 없다.
+상태: 코드 끝, Linux 컴파일 확인 전 — XTest 주입기(`Engine/Window/Linux/XTestInputInjector`, 개발 명령 `input.xtest move|button|key`, CMake `SW_ENABLE_XTEST` 선택 의존, libxtst 없으면 기능만 끈다)를 넣었다. 이 PC 는 Windows 라 컴파일하지 못했다.
+상용 엔진과 같은 선: 언리얼 Automation Driver · 유니티 Input Test Fixture 처럼 앱 안 이벤트 합성이 아니라 장치 층에서 입력을 넣는다(자동 반복은 `XSendEvent` 로 흉내 낼 수 없다).
+남은 일: 리눅스(Xvfb)에서 `-DSW_ENABLE_XTEST=ON` 으로 지어 컴파일 확인 → `input.xtest` 로 좌표 · `XkbSetDetectableAutoRepeat` 를 확인하는 시나리오 · 호스트 테스트를 새 시나리오 틀 위에 만든다.
 
 ### LogGateRemainders
 제목: 로그 게이트의 남은 것

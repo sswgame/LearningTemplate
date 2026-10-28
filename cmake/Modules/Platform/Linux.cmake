@@ -47,6 +47,19 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	endif()
 
 	# ------------------------------------------------------------------------------
+	# XTest 입력 주입기(`SW_ENABLE_XTEST`, 선택 의존) — X 서버에 마우스 · 키를 넣어 X11 창 입력을 시험한다. 패키지: libxtst-dev(apt 로 깐다).
+	# 라이선스: libXtst 는 MIT 계열이다. 동적 링크이고 배포물에 싣지 않는 시스템 라이브러리다. 없으면 오류로 멈추지 않고 기능을 끈다(주입기는 개발 도구).
+	if(SW_ENABLE_XTEST)
+		pkg_check_modules(SW_XTST IMPORTED_TARGET GLOBAL xtst)
+		if(SW_XTST_FOUND)
+			target_link_libraries(sw_platform_linux INTERFACE PkgConfig::SW_XTST)
+			target_compile_definitions(sw_platform_linux INTERFACE SW_WITH_XTEST)
+			message(STATUS "[Linux] XTest input injector enabled (libxtst ${SW_XTST_VERSION})")
+		else()
+			message(STATUS "[Linux] XTest injector not available (libxtst not found) - input.xtest reports it is off")
+		endif()
+	endif()
+
 	# 1-1) Wayland(선택, `SW_ENABLE_WAYLAND`) — 창 · 입력 · 커서. 프로토콜 클라이언트 코드(xdg-shell · fractional-scale · cursor-shape · pointer-constraints · relative-pointer)는 구성 때 wayland-scanner 로 만든다.
 	# 패키지: libwayland-dev(wayland-egl 포함) · libegl-dev(GL 컨텍스트 `EglPlatformContext`) · libxkbcommon-dev · wayland-protocols(apt 로 깐다). Vulkan 표면은 vcpkg vulkan-loader[wayland] 가 낸다.
 	# ------------------------------------------------------------------------------

@@ -54,6 +54,10 @@ option(SW_ENABLE_WAYLAND "리눅스 클라이언트에 Wayland 창 계층을 짓
 # 확인은 Orca + at-spi2 를 올린 세션에서만 한다(docs/plans/Candidates-ui.md AtSpiBridge). 확인 전이라 기본은 끈다.
 option(SW_ENABLE_ATSPI "리눅스 클라이언트에 AT-SPI 접근성 브리지를 짓는다" OFF)
 
+# 리눅스 X11 입력 주입기(`Engine/Window/Linux/XTestInputInjector`, 개발 명령 `input.xtest`). 선택 의존이다 — 켰는데 libxtst(pkg-config `xtst`)가 없으면
+# 구성을 세우지 않고 기능만 끈 채 "XTest 주입기 없음"을 알린다(`XTestInputInjector::isCompiledIn()` false). 패키지: libxtst-dev.
+option(SW_ENABLE_XTEST "리눅스 클라이언트에 XTest 입력 주입기를 짓는다(libxtst 가 없으면 기능을 끈다)" OFF)
+
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
 	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
 endif()

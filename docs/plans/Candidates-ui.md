@@ -8,7 +8,7 @@
 
 | 절 | 한 줄 설명 | 착수 조건 |
 |---|---|---|
-| AtSpiBridge | 리눅스 스크린 리더(AT-SPI) 브리지의 좌표 보정 | 즉시 착수 가능 |
+| AtSpiBridge | 리눅스 스크린 리더(AT-SPI) 브리지(코드 끝, Linux 컴파일 확인 전) | 리눅스 환경 |
 | MarkerComputeProjection | 화면 마커 투영 · 컬링을 컴퓨트로 | 게임 HUD 마커 2,000 개 초과 |
 
 ## 기능
@@ -18,6 +18,7 @@
 왜 필요한가: Windows 는 UI Automation 브리지가 있지만 리눅스 클라이언트는 Orca 같은 스크린 리더에 닿는 길이 없다. 접근성 트리와 브리지 계약은 플랫폼과 무관해 AT-SPI 구현(`AtSpiAccessibilityBridge.cpp`, `-DSW_ENABLE_ATSPI=ON`, 기본 끔)만 있고 리눅스에서 지어 본 적이 없다.
 착수 조건: 없음.
 화면 좌표 보정은 했다(X11 은 `XTranslateCoordinates`, 요청의 coord type 이 screen 일 때만 더한다. Wayland 는 클라이언트에 전역 좌표가 없어 0).
+상태: 코드 끝, Linux 컴파일 확인 전(CMake `SW_ENABLE_ATSPI` · pkg-config `dbus-1` 처리는 Wayland 와 같은 모양으로 `Linux.cmake` 에 있다).
 남은 첫 일: 리눅스 CI 에서 `-DSW_ENABLE_ATSPI=ON` 으로 지어 컴파일 · Orca 확인(이 기계는 libdbus 가 없다).
 함정: 브리지는 위젯을 쥐지 않고 스냅샷에서 (화면 핸들, 위젯 번호)로 찾는다(UIA 와 같다). 스크린 리더가 안 붙었으면 일하지 않는다(`isClientActive`).
 
