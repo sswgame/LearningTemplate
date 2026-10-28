@@ -16,7 +16,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
-#include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Reflection/ReflectionSubsystem.h"
 
 namespace sw
 {

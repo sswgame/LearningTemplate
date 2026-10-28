@@ -14,9 +14,9 @@
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/Utility/FloatCurve.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

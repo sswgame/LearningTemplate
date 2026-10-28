@@ -6,7 +6,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Module/ModuleImageHost.h"
 #include "Engine/Module/ModuleImagesSubsystem.h"
-#include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw

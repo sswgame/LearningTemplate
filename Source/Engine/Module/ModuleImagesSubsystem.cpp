@@ -9,7 +9,7 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/ModuleImageHost.h"
-#include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneManager.h"
 

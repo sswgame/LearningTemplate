@@ -13,9 +13,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Resource/ResourceID.h"
-#include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/GameFrameworkExports.h"

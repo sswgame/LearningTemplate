@@ -12,8 +12,8 @@
 
 #include "Engine/Automation/AutomationOutcome.h"
 #include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/EngineFrameObserver.h"
 #include "Engine/Scenario/ScenarioRecorder.h"
-#include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw
 {

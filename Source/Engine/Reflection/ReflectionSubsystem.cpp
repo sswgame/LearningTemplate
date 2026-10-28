@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Module/ReflectionSubsystem.h"
+#include "Engine/Reflection/ReflectionSubsystem.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"

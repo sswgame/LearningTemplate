@@ -23,7 +23,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Curve/FloatCurve.h"
 
 namespace sw
 {

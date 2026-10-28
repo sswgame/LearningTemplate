@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Curve/FloatCurve.h"
 
 #include <cmath>
 

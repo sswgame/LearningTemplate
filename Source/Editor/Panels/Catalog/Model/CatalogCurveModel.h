@@ -12,7 +12,7 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Curve/FloatCurve.h"
 
 namespace sw::editor
 {

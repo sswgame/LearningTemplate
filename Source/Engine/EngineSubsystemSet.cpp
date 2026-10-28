@@ -67,7 +67,7 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/EditSessionState.h"
+#include "Engine/Module/EditSessionState.h"
 
 namespace sw::engine
 {

@@ -1,5 +1,5 @@
 /**
- * @file Engine/Module/ReflectionSubsystem.h
+ * @file Engine/Reflection/ReflectionSubsystem.h
  * @brief 기동 순서의 Reflection 자리입니다 — 이 프로세스에 올라온 타입 등록기를 모으고 명령줄의 enum 이름을 적용합니다. 타입 표(`TypeRegistry`)를 소유합니다.
  * @details 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고, 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며
  *          제 이름으로 등록한다. 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다 — 모르는 이름이면 기본값으로 돌지 않고 멈춘다.

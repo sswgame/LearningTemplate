@@ -18,11 +18,11 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Common/EngineSubsystemHost.h"
+#include "Engine/EngineFrameObserver.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Resource/ResourceID.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
-#include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw
 {

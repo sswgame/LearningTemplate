@@ -110,7 +110,7 @@
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
-#include "Engine/Utility/EngineFrameObserver.h"
+#include "Engine/EngineFrameObserver.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"

@@ -15,6 +15,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 #include "Editor/SelfTest/EditorProbeSupport.h"
 
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -23,7 +24,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectReference.h"
-#include "Engine/Utility/FloatCurve.h"
 
 namespace sw::editor
 {

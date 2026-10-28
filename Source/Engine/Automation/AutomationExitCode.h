@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Automation/AutomationOutcome.h"
-#include "Engine/Utility/EngineFrameObserver.h"
+#include "Engine/EngineFrameObserver.h"
 
 namespace sw
 {

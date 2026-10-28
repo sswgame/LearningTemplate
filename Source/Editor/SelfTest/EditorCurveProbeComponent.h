@@ -3,9 +3,9 @@
  * @brief 커브 편집기 시나리오가 다는 테스트 컴포넌트입니다(에디터 안에만 있고 "Add Component" 메뉴에 나오지 않는다).
  */
 #pragma once
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Utility/FloatCurve.h"
 
 namespace sw::editor
 {

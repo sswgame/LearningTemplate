@@ -20,10 +20,10 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Utility/FloatCurve.h"
 
 #include "GameFramework/PlugIn/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/PlugIn/Editor/MeshModifiers/Modifiers/DeformableModifier.h"

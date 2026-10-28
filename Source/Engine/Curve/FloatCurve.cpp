@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Curve/FloatCurve.h"
 
 #include "Core/Math/MathUtil.h"
 

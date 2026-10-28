@@ -10,7 +10,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Widgets/EditorCurveView.h"
 
-#include "Engine/Utility/FloatCurve.h"
+#include "Engine/Curve/FloatCurve.h"
 
 namespace sw::editor
 {

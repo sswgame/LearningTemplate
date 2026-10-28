@@ -10,8 +10,8 @@
 #include "Engine/Engine.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Module/EditSessionState.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Utility/EditSessionState.h"
 
 #include "sw/config/ConfigConstants.h"
 

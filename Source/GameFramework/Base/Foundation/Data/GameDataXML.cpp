@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -12,7 +13,6 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-#include "Engine/Utility/FloatCurve.h"
 
 namespace sw
 {
