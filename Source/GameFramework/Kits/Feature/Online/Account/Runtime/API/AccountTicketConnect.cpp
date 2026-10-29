@@ -9,6 +9,8 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
+
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
@@ -33,6 +35,8 @@ namespace sw
 
 namespace sw
 {
+    SW_MODULE_SUBSYSTEM( Engine, AccountTicketConnector, AccountTicketConnector );
+
     AccountTicketConnector::AccountTicketConnector()
         : _tlsContext{}
         , _pTransport{}

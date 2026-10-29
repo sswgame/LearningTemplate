@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -37,15 +38,25 @@ namespace sw
     /**
      * @class AccountTicketConnector
      * @brief 로그인 연결 하나를 들고 티켓을 받아 줍니다.
+     * @details 계정 키트의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 엔진 범위 아래 키트의 자식 범위에 서서 `game::getSubsystem<AccountTicketConnector>()` 로 찾힌다.
+     *          티켓이 계정 세션에 묶여 로그인 연결을 쥐어야 하므로 연결의 수명은 엔진 기동 단계와 같고, 키트가 내려가면 자식 범위째 닫힌다(함수 정적 객체가 DLL 소멸까지 쥐지 않는다).
+     *          언리얼 `UGameInstanceSubsystem` 의 온라인 세션 도우미와 같은 자리지만 게임을 다시 세워도 로그인이 남게 엔진 범위다.
      */
-    class SW_KIT_API AccountTicketConnector
+    class SW_KIT_API AccountTicketConnector final : public ISubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "AccountTicketConnector";
+
         AccountTicketConnector();
-        ~AccountTicketConnector();
+        ~AccountTicketConnector() override;
 
         AccountTicketConnector( const AccountTicketConnector& )            = delete;
         AccountTicketConnector& operator=( const AccountTicketConnector& ) = delete;
+
+        // ISubsystem — 세울 것이 없다(연결은 `acquire` 가 연다). 종료가 연결을 닫는다.
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override { shutdown(); }
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 로그인해 티켓을 받습니다. 시한 안에 끝나지 않거나 서버가 거절하면 이유를 @p outError 에 적고 false 입니다(자격 없이 붙는 길로 대신하지 않는다).

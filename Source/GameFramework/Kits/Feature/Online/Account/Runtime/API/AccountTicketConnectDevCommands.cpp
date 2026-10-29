@@ -23,13 +23,6 @@ namespace sw
         {
             static constexpr int64 kTimeoutMilliseconds = 10000;
 
-            /** @brief 티켓 연결의 수명입니다. 티켓이 계정 세션에 묶여 있어 로그인 연결을 프로세스가 끝날 때까지 쥔다(명령은 한 번에 하나만 성공한다). */
-            static AccountTicketConnector& getConnector()
-            {
-                static AccountTicketConnector s_connector;
-                return s_connector;
-            }
-
             static bool run( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() < 5 || listArgument.size() > 7 )
@@ -66,7 +59,9 @@ namespace sw
                 request._timeoutMilliseconds = kTimeoutMilliseconds;
                 NetConnectCredentials credentials;
                 string                error;
-                if ( getConnector().acquire( std::move( request ), credentials, error ) == false )
+                // 티켓이 계정 세션에 묶여 있어 로그인 연결을 쥔 도우미는 키트의 모듈 서브시스템이다(엔진 범위 — 명령은 한 번에 하나만 성공한다).
+                AccountTicketConnector& connector = game::getSubsystem<AccountTicketConnector>();
+                if ( connector.acquire( std::move( request ), credentials, error ) == false )
                 {
                     outReply = "ticketconnect: " + error;
                     return true;
@@ -75,7 +70,7 @@ namespace sw
                 if ( pSession->makeTicketClientParams( gameAddress, credentials, params ) == false || pSession->initialize( params ) == false )
                 {
                     outReply = "ticketconnect: the ticket client session did not open (reason in the log)";
-                    getConnector().shutdown();
+                    connector.shutdown();
                     return true;
                 }
                 outReply = "ticketconnect: connecting to " + listArgument[4] + " with the account ticket";
