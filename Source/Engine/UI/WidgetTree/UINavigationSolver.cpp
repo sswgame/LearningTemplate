@@ -25,12 +25,9 @@ namespace sw
                     return;
                 if ( UINavigationSolver::canReceiveFocus( widget ) )
                     inoutListWidget.push_back( &widget );
-                const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-                if ( pPanel == nullptr )
-                    return;
-                for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                for ( const unique_ptr<Widget>& child : widget.getChildren() )
                 {
-                    collectFocusable( *pPanel->getChild( index ), inoutListWidget );
+                    collectFocusable( *child, inoutListWidget );
                 }
             }
 

@@ -81,13 +81,10 @@ namespace sw
         if ( reason != WidgetDirty::kNone )
             widget.invalidate( reason );
 
-        uint32             restyledCount = 1;
-        const PanelWidget* pPanel        = castTo<const PanelWidget>( &widget );
-        if ( pPanel == nullptr )
-            return restyledCount;
-        for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+        uint32 restyledCount = 1;
+        for ( const unique_ptr<Widget>& pChild : widget.getChildren() )
         {
-            Widget& child = *pPanel->getChild( index );
+            Widget& child = *pChild;
             if ( bPropagate || ( child._dirtyFlags & WidgetDirty::kStyle ) != 0 )
                 restyledCount += restyle( child, styleSet, bNavigationMode );
         }

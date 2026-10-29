@@ -35,12 +35,9 @@ namespace sw
                           geometry._size._x * physicalScale, geometry._size._y * physicalScale );
             inoutText += line.c_str();
 
-            const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-            if ( pPanel == nullptr )
-                return;
-            for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+            for ( const unique_ptr<Widget>& child : widget.getChildren() )
             {
-                appendWidget( *pPanel->getChild( index ), depth + 1, physicalScale, inoutText );
+                appendWidget( *child, depth + 1, physicalScale, inoutText );
             }
         }
     } // namespace

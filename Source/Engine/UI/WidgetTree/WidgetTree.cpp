@@ -17,12 +17,9 @@ namespace sw
         void collectRecursive( Widget& widget, vector<Widget*>& inoutListWidget )
         {
             inoutListWidget.push_back( &widget );
-            const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-            if ( pPanel == nullptr )
-                return;
-            for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+            for ( const unique_ptr<Widget>& child : widget.getChildren() )
             {
-                collectRecursive( *pPanel->getChild( index ), inoutListWidget );
+                collectRecursive( *child, inoutListWidget );
             }
         }
     } // namespace

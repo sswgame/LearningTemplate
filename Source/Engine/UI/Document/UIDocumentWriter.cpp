@@ -134,12 +134,11 @@ namespace sw
                 }
 
                 // 조각의 내용은 조각 문서의 것이므로 요소만 쓴다.
-                const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-                if ( pPanel == nullptr || castTo<const UserWidget>( &widget ) != nullptr )
+                if ( castTo<const UserWidget>( &widget ) != nullptr )
                     return;
-                for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                for ( const unique_ptr<Widget>& child : widget.getChildren() )
                 {
-                    writeWidget( *pPanel->getChild( index ), element, listBinding );
+                    writeWidget( *child, element, listBinding );
                 }
             }
         };

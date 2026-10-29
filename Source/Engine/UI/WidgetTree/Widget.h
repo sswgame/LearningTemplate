@@ -3,6 +3,7 @@
  * @brief 런타임 UI 의 노드 하나를 정의합니다. 이름, 보임, 사용 여부, 불투명도, 렌더 변환, 무효화, 이벤트 가상 함수를 가집니다.
  */
 #pragma once
+#include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -123,6 +124,11 @@ namespace sw
         // --- 그리기 ---------------------------------------------------------------
         /** @brief 자식을 가지는 패널이면 그 패널, 아니면 nullptr 를 반환합니다. 그리기 순회가 위젯마다 묻는데, `castTo` 의 타입 조회보다 쌉니다. */
         virtual PanelWidget* asPanel() { return nullptr; }
+        /**
+         * @brief 자식 목록입니다(패널이 아니면 빈 목록). 트리를 걷기만 하는 코드(붙이기 · 떼기, 수집, 스타일 · 레이아웃 플래그, 덤프)는 패널로 캐스트하지 않고 이것을 돈다.
+         * @details 언리얼 `SWidget::GetChildren` · Godot `Node::get_children` 과 같은 자리다. 패널만의 질문(자르기, 그리기 순서, 배치)은 `asPanel` 로 묻는다.
+         */
+        virtual span<const unique_ptr<Widget>> getChildren() const { return {}; }
         /** @brief 글리프 아틀라스를 쓰는 위젯(텍스트 위젯)이면 true 입니다. 아틀라스 페이지를 비우면(세대가 오르면) 그리기 캐시를 다시 칠합니다. */
         virtual bool usesGlyphAtlas() const { return false; }
         /**

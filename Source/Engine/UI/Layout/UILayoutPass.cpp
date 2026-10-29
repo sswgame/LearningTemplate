@@ -247,12 +247,9 @@ namespace sw
         if ( ( widget._dirtyFlags & UILayoutPassInternal::kClearBits ) == 0 )
             return;
         widget._dirtyFlags &= ~UILayoutPassInternal::kClearBits;
-        const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
-        if ( pPanel == nullptr )
-            return;
-        for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+        for ( const unique_ptr<Widget>& child : widget.getChildren() )
         {
-            clearLayoutFlags( *pPanel->getChild( index ) );
+            clearLayoutFlags( *child );
         }
     }
 

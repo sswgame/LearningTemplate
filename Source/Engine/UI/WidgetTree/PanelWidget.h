@@ -45,8 +45,9 @@ namespace sw
         /**
          * @brief 그리기 순서가 자식 순서와 다를 수 있는 패널이면 true 입니다(z 순서를 쓰는 `CanvasPanel`). false 면 그리기 순서와 자식 순서가 같아 목록을 만들지 않습니다.
          */
-        virtual bool hasCustomPaintOrder() const { return false; }
-        PanelWidget* asPanel() override { return this; }
+        virtual bool                   hasCustomPaintOrder() const { return false; }
+        PanelWidget*                   asPanel() override { return this; }
+        span<const unique_ptr<Widget>> getChildren() const override { return _listChild; }
         /** @brief 그리는 순서(뒤가 위)의 자식 인덱스를 담습니다. 히트 테스트는 그 역순입니다. 기본은 자식 순서입니다. */
         virtual void collectPaintOrder( vector<uint32>& outListIndex ) const;
         /** @brief 자식을 자르는 패널(스크롤 패널)이면 true 입니다. 히트 테스트와 그리기가 함께 따릅니다. */

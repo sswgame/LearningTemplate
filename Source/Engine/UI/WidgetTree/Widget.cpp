@@ -338,13 +338,10 @@ namespace sw
         _dirtyFlags               = WidgetDirty::kNone;
         pTree->notifyDirty( *this, pendingDirty );
         onAttachedToTree();
-        PanelWidget* pPanel = castTo<PanelWidget>( this );
-        if ( pPanel != nullptr )
+        PanelWidget* const pPanel = asPanel(); // 자식이 있으면 패널이다 — 자식의 부모로 넘긴다
+        for ( const unique_ptr<Widget>& child : getChildren() )
         {
-            for ( const unique_ptr<Widget>& child : pPanel->_listChild )
-            {
-                child->attachToTree( pTree, pPanel );
-            }
+            child->attachToTree( pTree, pPanel );
         }
     }
 
@@ -352,13 +349,9 @@ namespace sw
     {
         if ( _pTree == nullptr )
             return;
-        PanelWidget* pPanel = castTo<PanelWidget>( this );
-        if ( pPanel != nullptr )
+        for ( const unique_ptr<Widget>& child : getChildren() )
         {
-            for ( const unique_ptr<Widget>& child : pPanel->_listChild )
-            {
-                child->detachFromTree();
-            }
+            child->detachFromTree();
         }
         onDetachedFromTree();
         _styleTransition.reset(); // 트리의 전환 목록은 다음 진행에서 이 번호를 버린다
