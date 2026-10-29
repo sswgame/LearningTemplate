@@ -384,35 +384,15 @@ namespace sw
 
         onRenderWorkersDrained();
 
-        // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 제한 시간은 LiveReloadManager 의 폴백과 공유한다.
+        // 모듈을 언로드하기 전에 비동기 태스크가 모두 끝나기를 기다린다. 기한은 없다(오래 걸리면 남은 태스크가 주기적으로 오류로 남는다).
         // **엔진 전체 대기가 맞다(모듈이 낸 태스크만 기다리지 않는다).** 입구를 한 곳으로 모아 태스크 단계(`TaskStageHandle`)에 넣는 구조는 만들 수 없다:
         // 모듈 코드는 태스크 본문(`emplaceTask` 에 넘기는 델리게이트)으로만 들어오지 않는다. 엔진이 낸 태스크(씬 틱 병렬 일 · `runParallel`)가 가상 함수로
         // 컴포넌트·델리게이트를 불러 모듈 라이브러리에 들어가고, 델리게이트는 어디서나 만들어져 어디로나 넘어간다. 낸 쪽 · 델리게이트 주소로 가르면 옛 라이브러리에
-        // 들어가는 태스크를 놓쳐 언로드 뒤 해제된 코드를 실행한다. 그래서 영구 태스크는 두지 않는 것이 계약이다(엔진 소스에는 없다). 있으면 제한 시간 뒤
-        // 아래 오류가 도는 태스크 이름과 함께 드러낸다.
+        // 들어가는 태스크를 놓쳐 언로드 뒤 해제된 코드를 실행한다. 그래서 영구 태스크는 두지 않는 것이 계약이다(엔진 소스에는 없다). 있으면 대기의
+        // 주기 진단이 도는 태스크 이름과 함께 드러낸다.
         if ( engine::areEngineServicesBound() )
         {
-            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-            if ( taskManager.waitAll( LiveReloadManager::kModuleDrainTimeoutMs ) == false )
-            {
-                // 종료 앞이면 리로드가 없으니 그래프를 깨뜨릴 까닭이 없다 — 남은 태스크 수와 이름만 남겨 어떤 배경 일이 오래 도는지 좁힌다(스택은 `Scripts stacks <pid>`).
-                if ( reason == DrainReason::Shutdown )
-                {
-                    SW_LOG_ERROR( "Task fencing timeout (%# ms) at shutdown — %# task(s) still running (first unfinished: '%#'); the task manager joins them next.", LiveReloadManager::kModuleDrainTimeoutMs,
-                                  taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
-                }
-                else if ( reason == DrainReason::Restart )
-                {
-                    SW_LOG_ERROR( "Task fencing timeout (%# ms) before a game restart — %# task(s) still running (first unfinished: '%#').", LiveReloadManager::kModuleDrainTimeoutMs,
-                                  taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
-                }
-                else
-                {
-                    SW_LOG_ERROR( "Task fencing timeout (%# ms) before module reload (%# task(s) still running, first unfinished: '%#') — marking the LiveReload graph broken.",
-                                  LiveReloadManager::kModuleDrainTimeoutMs, taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
-                    markReloadGraphBroken( "task fencing timeout before unload" );
-                }
-            }
+            engine::getSubsystem<TaskManager>().waitAll( "GameModuleManager::drainRenderWorkers" );
         }
     }
 

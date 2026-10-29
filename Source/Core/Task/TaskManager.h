@@ -219,11 +219,11 @@ namespace sw
         uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
 
         /**
-         * @brief 등록된 모든 비동기 태스크가 끝날 때까지 기다립니다.
-         * @param timeoutMs 최대 대기 시간(밀리초). 0 이면 끝날 때까지 무제한으로 기다립니다.
-         * @return 모든 태스크가 끝났으면 true, 시간이 다 되면 false
+         * @brief 만들어진 태스크가 모두 끝날 때까지 기다립니다(기다리는 동안 다른 일을 돕는다). 기한은 없다 — `kStageWaitReportMs` 마다 @p owner 와 남은 수 ·
+         *        남은 태스크 이름 하나를 오류로 남긴다(`waitStage` 와 같은 정책 — 시간으로 포기하면 해제된 코드 · 객체를 태스크가 만지게 된다).
+         * @details 남이 낸 일까지 기다리므로 주인이 자기 일만 기다릴 때는 스테이지를 쓴다. 엔진 종료 · 모듈 언로드처럼 "어떤 태스크도 남으면 안 되는" 자리만 쓴다.
          */
-        bool waitAll( uint32 timeoutMs = 0 );
+        void waitAll( string_view owner );
 
         /** @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). `waitAll` 이 시간 초과일 때 원인을 로그에 적는 진단용입니다. */
         [[nodiscard]] string describeUnfinishedTask();

@@ -69,14 +69,6 @@ namespace sw
         using ReloadHoldDelegate = Delegate<bool()>;
 
         /**
-         * @brief 모듈을 언로드하기 전에 실행 중인 태스크를 비우는 제한 시간(ms)입니다. 넘으면 리로드 그래프를 깨진 상태로 표시합니다.
-         * @details GameModuleManager::drainRenderWorkers(App 경로)와 drainTasksBeforeUnload(헤드리스 폴백)가 함께 쓴다. 백엔드 교체도 같은 비우기를 지난다.
-         *          무거운 씬을 막 연 뒤(지형 · 식생 · 텍스처 업로드 태스크)나 다른 GPU 실행과 함께 돌 때는 5 초를 넘길 수 있다 — 넘기면 그래프가 깨져
-         *          프로세스를 다시 띄워야 하므로, 정상 작업이 끝날 만큼 넉넉히 둔다(멈춘 태스크를 가려내는 그물일 뿐이다).
-         */
-        static constexpr uint32 kModuleDrainTimeoutMs = 30000;
-
-        /**
          * @brief 교체된 옛 라이브러리의 언로드를 몇 번의 연쇄 리로드(배치)만큼 미룰지 정합니다.
          * @details 옛 코드를 가리키는 것(델리게이트, 함수 포인터, vtable, 문자열 리터럴)이 어딘가 남아 있어도, 라이브러리가 로드돼 있는
          *          동안은 크래시가 나지 않고 옛 동작이 한 번 더 돈다. 섀도 복사본이라 로드해 두어도 원본 파일은 잠기지 않는다.

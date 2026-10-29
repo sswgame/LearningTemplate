@@ -269,20 +269,11 @@ namespace sw
         if ( _bInitialized == false )
             return;
 
-        bool   bDrainTimedOut{ false };
-        string unfinishedTaskName;
         BLOCK( "Wait For Active Tasks" )
         {
-            // 끝나지 않는 태스크(영구 태스크 · 멈춘 태스크)가 있으면 무제한 대기는 종료를 영영 막는다. 시간 제한을 두고 원인 태스크를 오류로 드러낸 뒤 워커를 멈추러 간다.
-            // 엔진 소스에는 영구 태스크가 없다.
-            constexpr uint32 kShutdownDrainTimeoutMs = 30000;
-            if ( waitAll( kShutdownDrainTimeoutMs ) == false )
-            {
-                bDrainTimedOut     = true;
-                unfinishedTaskName = describeUnfinishedTask();
-                SW_LOG_ERROR( "Task manager shutdown waited %# ms but %# task(s) are still running (first unfinished: '%#') - stopping workers", kShutdownDrainTimeoutMs,
-                              getActiveTaskCount(), unfinishedTaskName );
-            }
+            // 끝날 때까지 기다린다 — 도는 태스크를 두고 워커를 세우면 그 태스크가 곧 해제될 매니저 · 노드 풀을 만진다. 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다.
+            // 영구 태스크는 두지 않는 것이 계약이다(엔진 소스에는 없다).
+            waitAll( "TaskManager::shutdown" );
         }
 
         BLOCK( "Stop Worker Threads" )
@@ -290,25 +281,6 @@ namespace sw
             _bStop.store( true, std::memory_order_seq_cst );
             // 잠든 워커는 자기 워드로, 스핀 중인 워커는 세대로 알아챈다. 모두 깨운다.
             wakeSleepingWorkers();
-
-            if ( bDrainTimedOut )
-            {
-                // 시간 초과 뒤에도 그 태스크를 돌리는 워커는 `join` 에서 끝나지 않는다(`std::thread::join` 은 시간 제한이 없고 스레드를 강제로 끝낼 수도 없다).
-                // 정책은 **오류로 멈춤**이다. 분리(detach)해 이어 가면 그 스레드가 곧 해제될 매니저 · 노드 풀을 만지는 정의 안 된 동작이 되고, 폴백 없이
-                // 문제를 숨긴다. 그래서 짧은 유예 안에 워커가 모두 나오지 않으면 막은 태스크 이름을 남기고 프로세스를 끝낸다(크래시 리포트가 멈춘 자리를 보여 준다).
-                constexpr uint32 kShutdownJoinGraceMs = 10000;
-                constexpr uint32 kPollMilliseconds    = 1;
-                const Stopwatch  joinStopwatch;
-                while ( _runningWorkerCount.load( std::memory_order_acquire ) > 0 )
-                {
-                    if ( joinStopwatch.getElapsedMilliseconds() >= static_cast<int64>( kShutdownJoinGraceMs ) )
-                    {
-                        SW_FATAL( "Task manager shutdown: %# worker(s) did not exit within %# ms after stop - task '%#' blocks the join; aborting instead of hanging",
-                                  _runningWorkerCount.load( std::memory_order_acquire ), kShutdownJoinGraceMs, unfinishedTaskName );
-                    }
-                    std::this_thread::sleep_for( std::chrono::milliseconds( kPollMilliseconds ) );
-                }
-            }
 
             for ( const unique_ptr<WorkerSlot>& slot : std::as_const( _listWorkerSlot ) )
             {
@@ -1043,32 +1015,29 @@ namespace sw
         }
     }
 
-    bool TaskManager::waitAll( uint32 timeoutMs )
+    void TaskManager::waitAll( const string_view owner )
     {
-        const Stopwatch stopwatch;
-        WaitSpinState   spinState{};
+        Stopwatch     reportStopwatch;
+        WaitSpinState spinState{};
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
             if ( helpOrSpin( spinState, true ) )
                 continue;
-
-            uint32 waitMilli = 0;
-            if ( timeoutMs > 0 )
+            const int64 elapsed = reportStopwatch.getElapsedMilliseconds();
+            if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
             {
-                const int64 elapsed = stopwatch.getElapsedMilliseconds();
-                if ( elapsed >= static_cast<int64>( timeoutMs ) )
-                    return _activeTaskCount.load( std::memory_order_acquire ) == 0;
-                waitMilli = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
+                SW_LOG_ERROR( "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, _activeTaskCount.load( std::memory_order_acquire ),
+                              kStageWaitReportMs, describeUnfinishedTask() );
+                reportStopwatch = Stopwatch{};
+                continue;
             }
-
-            // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 작업 · clear 가 알린다).
+            // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 작업 · clear 가 알린다). 진단 주기에 맞춰 깬다.
             const uint32 epoch = prepareBroadcastWait();
             if ( _activeTaskCount.load( std::memory_order_seq_cst ) > 0 )
-                commitBroadcastWait( epoch, waitMilli );
+                commitBroadcastWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
             else
                 cancelBroadcastWait();
         }
-        return true;
     }
 
     string TaskManager::describeUnfinishedTask()

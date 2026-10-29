@@ -950,7 +950,6 @@ namespace sw
     {
         // App 경로에서는 _drainWorkers(= GameModuleManager::drainRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
         // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.
-        constexpr uint32 kDrainTimeoutMs = LiveReloadManager::kModuleDrainTimeoutMs;
 
         // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 라이브러리에 들어가지 못하게 한다.
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
@@ -969,14 +968,7 @@ namespace sw
         // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::drainRenderWorkers` 의 같은 주석).
         if ( engine::areEngineServicesBound() )
         {
-            TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-            if ( taskManager.waitAll( kDrainTimeoutMs ) == false )
-            {
-                SW_LOG_ERROR( "Task drain timeout (%# ms) before module unload (%# task(s) still running, first unfinished: '%#')", kDrainTimeoutMs, taskManager.getActiveTaskCount(),
-                              taskManager.describeUnfinishedTask() );
-                markGraphBroken( "task drain timeout before unload" );
-                return false;
-            }
+            engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::drainBeforeUnload" );
         }
         return _bReloadGraphBroken == SW_FALSE;
     }

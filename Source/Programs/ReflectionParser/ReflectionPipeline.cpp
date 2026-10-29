@@ -471,7 +471,7 @@ namespace sw
             handle.submit();
         }
 
-        taskManager.waitAll();
+        taskManager.waitAll( "ReflectionPipeline" );
         taskManager.shutdown();
         return errorCount.load();
     }
