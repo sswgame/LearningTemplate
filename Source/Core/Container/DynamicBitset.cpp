@@ -3,6 +3,7 @@
 #include "Core/Container/DynamicBitset.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include <ostream>
 
@@ -32,7 +33,7 @@ namespace sw
         for ( uint32 blockIndex = 0; blockIndex < blockCount; ++blockIndex )
         {
             const uint32 firstBit = blockIndex << kBlockShift;
-            const uint32 bitEnd   = std::min( firstBit + kBitsPerBlock, bitCount );
+            const uint32 bitEnd   = MathUtil::min( firstBit + kBitsPerBlock, bitCount );
             BlockType    block{ 0 };
             BlockType    invalid{ 0 };
             for ( uint32 bitIndex = firstBit; bitIndex < bitEnd; ++bitIndex )

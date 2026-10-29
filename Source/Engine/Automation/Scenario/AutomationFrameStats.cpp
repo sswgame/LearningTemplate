@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -57,7 +58,7 @@ namespace sw
         const auto percentile = [&listMilliseconds, count]( float64 fraction )
         {
             const size_t rank = static_cast<size_t>( std::ceil( fraction * static_cast<float64>( count ) ) );
-            return listMilliseconds[std::clamp<size_t>( rank, 1, count ) - 1];
+            return listMilliseconds[MathUtil::clamp<size_t>( rank, 1, count ) - 1];
         };
         summary._frameCount             = static_cast<uint32>( count );
         summary._averageMilliseconds    = total / static_cast<float64>( count );

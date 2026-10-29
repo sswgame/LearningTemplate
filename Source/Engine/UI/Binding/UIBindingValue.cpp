@@ -48,7 +48,7 @@ namespace sw
                     if ( std::isfinite( number ) == false )
                         return false;
                     PackedFloats floats{};
-                    floats._arrValue[0]    = static_cast<float32>( std::clamp( number, static_cast<float64>( Traits::kRangeMin ), static_cast<float64>( Traits::kRangeMax ) ) );
+                    floats._arrValue[0]    = static_cast<float32>( MathUtil::clamp( number, static_cast<float64>( Traits::kRangeMin ), static_cast<float64>( Traits::kRangeMax ) ) );
                     const NumberType value = Traits::fromFloats( floats );
                     if ( std::memcmp( &field, &value, sizeof( NumberType ) ) == 0 )
                         return false;

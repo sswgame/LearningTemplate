@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
@@ -409,9 +410,9 @@ namespace sw
             entry._address         = status._descriptor._address;
             entry._port            = status._descriptor._port;
             entry._state           = status._state;
-            const int32 capacity   = std::max( 1, status._descriptor._capacity );
-            entry._fillPercent     = static_cast<uint8>( std::min( ServerDirectoryServiceInternal::kPercentScale,
-                                                                   status._load * ServerDirectoryServiceInternal::kPercentScale / capacity ) );
+            const int32 capacity   = MathUtil::max( 1, status._descriptor._capacity );
+            entry._fillPercent     = static_cast<uint8>( MathUtil::min( ServerDirectoryServiceInternal::kPercentScale,
+                                                                        status._load * ServerDirectoryServiceInternal::kPercentScale / capacity ) );
         }
         return ServerDirectoryResult::Ok;
     }

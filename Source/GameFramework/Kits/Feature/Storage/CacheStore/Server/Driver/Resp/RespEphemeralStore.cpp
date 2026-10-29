@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -32,7 +33,7 @@ namespace sw
             {
                 if ( backoffMs <= 0 )
                     return kFirstBackoffMs;
-                return std::min( backoffMs * 2, maxBackoffMs );
+                return MathUtil::min( backoffMs * 2, maxBackoffMs );
             }
 
             static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond ); }
@@ -775,7 +776,7 @@ namespace sw
                 ScopedLock<mutex> lock{ _mutex };
                 _subscribeConnection.takePushValues( listValue );
                 if ( _subscribeConnection.getState() == RespConnectionState::Closed )
-                    _subscriptionAckCount = std::max( _subscriptionAckCount, _subscriptionSentCount );
+                    _subscriptionAckCount = MathUtil::max( _subscriptionAckCount, _subscriptionSentCount );
             }
             for ( const RespValue& value : listValue )
             {

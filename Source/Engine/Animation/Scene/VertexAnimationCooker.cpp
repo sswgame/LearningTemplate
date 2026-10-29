@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
@@ -201,7 +202,7 @@ namespace sw
             if ( StringUtil::endsWith( filePath, VertexAnimationCookList::kExtension, true ) == false )
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
-            const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
+            const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             // 목록은 무엇을 구울지 정하려고 먼저 읽는다. 이 읽기는 기록하지 않는다 — 클립 작업마다 목록을 다시 읽어 그 작업의 입력으로 남긴다.

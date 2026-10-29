@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespCodec.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include <algorithm>
 #include <charconv>
@@ -251,7 +252,7 @@ namespace sw
                 // 원소 하나는 적어도 표시 + CRLF 3 바이트다. 미리 잡는 수는 받은 바이트가 담을 수 있는 원소 수까지다 — 머리 한 줄 `*1048576` 이
                 // 바이트가 오기 전에 원소 2^20 개를 잡지 않는다. 원소는 읽은 만큼만 늘린다(깨진 원소 · 너무 깊은 중첩은 바이트를 기다리지 않고 오류다).
                 const size_t      availableBytes = _buffer.size() - afterLine;
-                const size_t      reserveCount   = std::min( static_cast<size_t>( count ), availableBytes / RespCodecInternal::kMinValueBytes );
+                const size_t      reserveCount   = MathUtil::min( static_cast<size_t>( count ), availableBytes / RespCodecInternal::kMinValueBytes );
                 vector<RespValue> listElement;
                 listElement.reserve( reserveCount );
                 size_t elementOffset = afterLine;

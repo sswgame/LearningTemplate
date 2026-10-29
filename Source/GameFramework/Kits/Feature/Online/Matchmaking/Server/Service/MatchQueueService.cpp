@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
@@ -161,7 +162,7 @@ namespace sw
         if ( lookup == AccountStatLookup::NotLoaded )
             return false;
         if ( lookup == AccountStatLookup::Found )
-            outRating = static_cast<int32>( std::clamp<int64>( value, INT32_MIN, INT32_MAX ) );
+            outRating = static_cast<int32>( MathUtil::clamp<int64>( value, INT32_MIN, INT32_MAX ) );
         return true;
     }
 
@@ -516,7 +517,7 @@ namespace sw
         const int32 lobbyRating = modeIt != _mapMode.end() ? modeIt->second._initialRating : 0; // 모르는 모드는 아래 배치가 거절한다
         for ( const LobbyMember& member : lobby._listMember )
         {
-            const size_t team = static_cast<size_t>( std::clamp( member._team, 0, PartyLobbyLimit::kLobbyTeamCount - 1 ) );
+            const size_t team = static_cast<size_t>( MathUtil::clamp( member._team, 0, PartyLobbyLimit::kLobbyTeamCount - 1 ) );
             match._listTeam[team]._listMember.push_back( MatchMember{ member._accountID, lobbyRating } ); // 로비 경기는 실력으로 고르지 않는다
         }
         ServerStatus picked;

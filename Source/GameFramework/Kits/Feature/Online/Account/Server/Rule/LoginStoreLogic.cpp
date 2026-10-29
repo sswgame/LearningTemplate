@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/SecureUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/HexUtil.h"
 
@@ -1389,7 +1390,7 @@ namespace sw
             if ( bOldLive )
             {
                 oldSession._revokeReason = LoginRevokeReason::DuplicateLogin;
-                oldSession._expiresAtMs  = std::min( oldSession._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
+                oldSession._expiresAtMs  = MathUtil::min( oldSession._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
                 inoutTransaction.put( Internal::getSessionTable(), oldSessionKey, Internal::encodeSession( oldSession ), oldSessionRaw._version );
                 outReplacedSessionID = oldSessionID;
             }
@@ -1445,7 +1446,7 @@ namespace sw
         if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
             return LoginResult::StoreUnavailable;
         session._revokeReason = reason;
-        session._expiresAtMs  = std::min( session._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
+        session._expiresAtMs  = MathUtil::min( session._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
         inoutTransaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
         inoutTransaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
         outSessionID = sessionID;

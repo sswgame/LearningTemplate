@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -114,7 +115,7 @@ namespace sw
                 summary._arrPhaseNanos[phase] += record._arrPhaseNanos[phase];
                 arrSlot[phase] = pEntry->_arrProfilerSlot[phase];
             }
-            summary._maxTotalNanos = std::max( summary._maxTotalNanos, total );
+            summary._maxTotalNanos = MathUtil::max( summary._maxTotalNanos, total );
             summary._bytes += record._bytes;
             ++summary._count;
             summary._asyncCount += record._bAsync != SW_FALSE ? 1u : 0u;

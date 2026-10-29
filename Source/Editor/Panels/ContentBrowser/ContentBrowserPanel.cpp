@@ -821,7 +821,7 @@ namespace sw::editor
 
         constexpr ImGuiTableFlags kTableFlags  = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
         const float32             dpiScale     = EditorThemeUtil::getDPIScale();
-        const size_t              visibleCount = std::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
+        const size_t              visibleCount = MathUtil::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
         const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
         string                    openPath;
         if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( EditorChrome::measureTextExtent( EditorTextExtent::ofText( 75.0f, 0.0f ) ).x, tableHeight ) ) )

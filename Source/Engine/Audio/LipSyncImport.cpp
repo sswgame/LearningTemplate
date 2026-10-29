@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Audio/AudioClip.h"
@@ -37,7 +38,7 @@ namespace sw
         for ( const string& filePath : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( filePath );
-            const string relative   = normalized.substr( std::min( normalizedRoot.size() + 1, normalized.size() ) );
+            const string relative   = normalized.substr( MathUtil::min( normalizedRoot.size() + 1, normalized.size() ) );
             if ( isVoiceAudio( relative ) == false )
                 continue;
             vector<uint8> bytes;

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/HTTP/HTTP2Connection.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include <algorithm>
 
@@ -158,7 +159,7 @@ namespace sw
             while ( stream._bRequestEnded == SW_FALSE )
             {
                 const size_t remaining = stream._sendBytes.size() - stream._sendOffset;
-                const int64  allowed   = std::min( { static_cast<int64>( remaining ), stream._sendWindow, _connectionSendWindow, static_cast<int64>( _peerMaxFrameSize ) } );
+                const int64  allowed   = MathUtil::min( MathUtil::min( static_cast<int64>( remaining ), stream._sendWindow ), MathUtil::min( _connectionSendWindow, static_cast<int64>( _peerMaxFrameSize ) ) );
                 if ( allowed <= 0 )
                     break; // 창이 찰 때까지 기다린다(WINDOW_UPDATE)
                 const bool bLast = static_cast<size_t>( allowed ) == remaining;

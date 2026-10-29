@@ -2,6 +2,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -123,7 +124,7 @@ namespace sw::editor
                 string common = listName.front();
                 for ( const string& name : listName )
                 {
-                    const size_t shorter = std::min( common.size(), name.size() );
+                    const size_t shorter = MathUtil::min( common.size(), name.size() );
                     size_t       length  = 0;
                     while ( length < shorter && common[length] == name[length] )
                     {

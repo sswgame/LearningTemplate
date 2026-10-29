@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include <algorithm>
 
@@ -107,7 +108,7 @@ namespace sw
             if ( length == 0 )
                 continue;
             Node& node        = _listNode[static_cast<size_t>( nodeIndex )];
-            node._matchLength = std::max( node._matchLength, length );
+            node._matchLength = MathUtil::max( node._matchLength, length );
             ++_wordCount;
         }
         computeFailLinks();
@@ -137,7 +138,7 @@ namespace sw
                 Node&       child     = _listNode[static_cast<size_t>( childIndex )];
                 child._fail           = failChild >= 0 ? failChild : 0;
                 // 긴 낱말의 경로 위에 있는 짧은 낱말(abcd 안의 bc)은 실패 링크로만 보인다. 물려받아야 잡을 수 있다.
-                child._matchLength = std::max( child._matchLength, _listNode[static_cast<size_t>( child._fail )]._matchLength );
+                child._matchLength = MathUtil::max( child._matchLength, _listNode[static_cast<size_t>( child._fail )]._matchLength );
                 listQueue.push_back( childIndex );
             }
         }

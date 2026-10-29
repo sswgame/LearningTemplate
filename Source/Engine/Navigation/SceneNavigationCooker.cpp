@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
@@ -115,7 +116,7 @@ namespace sw
             if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
-            const string relativePath   = normalizedFile.substr( std::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
+            const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
             if ( Internal::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             const string      outputID   = NavMeshAsset::makeCookedPath( relativePath );

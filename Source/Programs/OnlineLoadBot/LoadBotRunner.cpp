@@ -2,6 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -56,7 +57,7 @@ namespace sw
             _scenario._botCount = settings._botCountOverride;
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
-        transportSettings._maxConnections = std::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
+        transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
         StreamEndpointConfig endpointSettings;
         endpointSettings._security._pTLSContext = settings._pTLSContext;
         const bool bTransportSetupFailed        = pTransport == nullptr || _endpoint.initialize( pTransport, endpointSettings ) == false || pTransport->initialize( &_endpoint, transportSettings ) == false;
@@ -116,7 +117,7 @@ namespace sw
     int64 LoadBotRunner::computeLaunchMs( int32 botIndex ) const
     {
         const int64 rampUpMs = static_cast<int64>( _scenario._rampUpSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;
-        return rampUpMs * botIndex / std::max( 1, _scenario._botCount );
+        return rampUpMs * botIndex / MathUtil::max( 1, _scenario._botCount );
     }
 
     bool LoadBotRunner::update()

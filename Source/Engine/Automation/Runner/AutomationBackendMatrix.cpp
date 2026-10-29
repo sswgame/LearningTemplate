@@ -6,6 +6,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -206,7 +207,7 @@ namespace sw
         // 프로세스 시한 — 자식 안의 감시(행 보고)가 먼저 닿고, 그래도 끝나지 않은 자식만 여기서 죽인다. 부모가 기다리기만 하면 멈춘 자식 하나에 CTest 시한이
         // 부모만 죽이고 자식은 고아로 남는다(Windows 는 부모가 죽어도 자식을 거두지 않는다).
         // 시한은 단계마다다 — 체인(`-scenario=a,b,c`)은 단계 수만큼 길다.
-        const int64    stageCount   = std::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
+        const int64    stageCount   = MathUtil::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
         const int64    killSeconds  = static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * stageCount;
         const Deadline killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
         int32          firstFailure = 0;

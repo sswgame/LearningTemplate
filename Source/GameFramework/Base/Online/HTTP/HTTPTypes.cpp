@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/HexUtil.h"
 
 namespace sw
@@ -421,7 +422,7 @@ namespace sw
 
     bool HTTPMessageParser::takeBodyBytes( Phase nextPhase )
     {
-        const size_t take = std::min( _buffer.size(), static_cast<size_t>( _remainingBytes ) );
+        const size_t take = MathUtil::min( _buffer.size(), static_cast<size_t>( _remainingBytes ) );
         _bodyBytes.insert( _bodyBytes.end(), _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
         _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( take ) );
         _remainingBytes -= static_cast<int64>( take );
@@ -587,7 +588,7 @@ namespace sw
         static constexpr size_t kChunkBytes = 7;
         for ( size_t offset = 0; offset < response._bodyBytes.size(); offset += kChunkBytes )
         {
-            const size_t take = std::min( kChunkBytes, response._bodyBytes.size() - offset );
+            const size_t take = MathUtil::min( kChunkBytes, response._bodyBytes.size() - offset );
             Internal::appendText( outBytes, Internal::makeHex( take ) );
             Internal::appendText( outBytes, "\r\n" );
             outBytes.insert( outBytes.end(), response._bodyBytes.begin() + static_cast<ptrdiff_t>( offset ), response._bodyBytes.begin() + static_cast<ptrdiff_t>( offset + take ) );

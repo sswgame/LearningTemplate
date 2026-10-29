@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveEventRules.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Directory/ServerRecord.h"
@@ -47,8 +48,8 @@ namespace sw
         const int64 occurrenceMs = ServiceScheduler::computeLatestOccurrence( makeSchedule( definition ), nowMs );
         if ( occurrenceMs < 0 || nowMs >= occurrenceMs + definition._activeDurationMs )
             return false;
-        outWindowStartMs = std::max( occurrenceMs, definition._startMs );
-        outWindowEndMs   = std::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
+        outWindowStartMs = MathUtil::max( occurrenceMs, definition._startMs );
+        outWindowEndMs   = MathUtil::min( occurrenceMs + definition._activeDurationMs, definition._endMs );
         return true;
     }
 

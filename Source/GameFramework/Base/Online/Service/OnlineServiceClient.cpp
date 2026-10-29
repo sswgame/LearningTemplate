@@ -5,6 +5,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
@@ -324,14 +325,14 @@ namespace sw
         notifyServices( &IOnlineClientService::onClientDisconnected );
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoffMs;
-        _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : std::min( _backoffMs * 2, _settings._maxBackoffMs );
+        _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : MathUtil::min( _backoffMs * 2, _settings._maxBackoffMs );
     }
 
     void OnlineServiceClient::sendHello()
     {
         // 몸: [스키마 해시 u64 리틀 엔디언][게임 빌드 blob][플랫폼 u8]. 해시는 B 가 아닌 고정 형식이라 스키마가 바뀌어도 서버가 늘 읽는다.
         BitWriter    rest;
-        const size_t buildSize = std::min( _settings._gameBuild.size(), static_cast<size_t>( OnlineProtocolConstant::kMaxBuildTextSize ) );
+        const size_t buildSize = MathUtil::min( _settings._gameBuild.size(), static_cast<size_t>( OnlineProtocolConstant::kMaxBuildTextSize ) );
         rest.writeBlob( reinterpret_cast<const uint8*>( _settings._gameBuild.data() ), static_cast<int32>( buildSize ) );
         rest.writeBits( _settings._platform, 8 );
         vector<uint8> helloBytes;
@@ -345,7 +346,7 @@ namespace sw
 
     void OnlineServiceClient::sendQueuedCall( QueuedCall& call )
     {
-        const int64       remainingMs = std::max<int64>( 1, call._deadlineMs - _nowMs );
+        const int64       remainingMs = MathUtil::max<int64>( 1, call._deadlineMs - _nowMs );
         NetRequestOptions options     = call._options;
         options._timeoutSeconds       = static_cast<float64>( remainingMs ) / constant::kMillisecondsPerSecond;
         _pSendingCall                 = &call;
@@ -399,7 +400,7 @@ namespace sw
         _connection = _pEndpoint->connect( _settings._serverAddress );
         _state      = _connection.isValid() ? OnlineClientState::Connecting : OnlineClientState::Disconnected;
         if ( _connection.isValid() == false )
-            _nextConnectMs = _nowMs + std::max( _backoffMs, OnlineServiceClientInternal::kFirstBackoffMs );
+            _nextConnectMs = _nowMs + MathUtil::max( _backoffMs, OnlineServiceClientInternal::kFirstBackoffMs );
     }
 
     void OnlineServiceClient::onHelloResponse( const NetResponse& response )

@@ -2,6 +2,7 @@
 
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 
@@ -156,7 +157,7 @@ namespace sw
                     size_t begin = 0;
                     while ( begin <= searchPath.size() && outImage._path.empty() )
                     {
-                        const size_t end       = std::min( searchPath.find( ':', begin ), searchPath.size() );
+                        const size_t end       = MathUtil::min( searchPath.find( ':', begin ), searchPath.size() );
                         const string directory = end == begin ? string( "." ) : searchPath.substr( begin, end - begin ); // 빈 칸은 현재 폴더(POSIX)
                         const string candidate = directory + "/" + command._executable;
                         if ( access( candidate.c_str(), X_OK ) == 0 )

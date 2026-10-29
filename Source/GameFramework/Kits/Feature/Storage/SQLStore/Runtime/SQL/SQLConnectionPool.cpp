@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -226,7 +227,7 @@ namespace sw
                 if ( connection == nullptr )
                 {
                     SW_LOG_WARNING( "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
-                    retryDelayMs = std::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
+                    retryDelayMs = MathUtil::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
                     retryAt      = Deadline::afterMilliseconds( retryDelayMs );
                 }
                 else

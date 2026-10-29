@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
@@ -95,10 +96,10 @@ namespace sw
 
             static void addCounts( SocialCounts& inoutCounts, const SocialCounts& delta )
             {
-                inoutCounts._friendCount   = std::max( 0, inoutCounts._friendCount + delta._friendCount );
-                inoutCounts._incomingCount = std::max( 0, inoutCounts._incomingCount + delta._incomingCount );
-                inoutCounts._outgoingCount = std::max( 0, inoutCounts._outgoingCount + delta._outgoingCount );
-                inoutCounts._blockedCount  = std::max( 0, inoutCounts._blockedCount + delta._blockedCount );
+                inoutCounts._friendCount   = MathUtil::max( 0, inoutCounts._friendCount + delta._friendCount );
+                inoutCounts._incomingCount = MathUtil::max( 0, inoutCounts._incomingCount + delta._incomingCount );
+                inoutCounts._outgoingCount = MathUtil::max( 0, inoutCounts._outgoingCount + delta._outgoingCount );
+                inoutCounts._blockedCount  = MathUtil::max( 0, inoutCounts._blockedCount + delta._blockedCount );
             }
 
             /** @brief 레코드를 읽습니다. 저장소를 쓸 수 없으면 false 를 반환하고, 레코드가 없는 것은 true 이며 버전이 `kAbsentVersion` 입니다. */

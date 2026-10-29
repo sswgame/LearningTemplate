@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include <algorithm>
 #include <charconv>
@@ -400,8 +401,8 @@ namespace sw
                 if ( pScoreSet == nullptr )
                     break;
                 const vector<EphemeralScoredMember> listRanked = makeRanking( *pScoreSet );
-                const size_t                        beginIndex = std::min( static_cast<size_t>( request._offset ), listRanked.size() );
-                const size_t                        endIndex   = std::min( beginIndex + static_cast<size_t>( request._count ), listRanked.size() );
+                const size_t                        beginIndex = MathUtil::min( static_cast<size_t>( request._offset ), listRanked.size() );
+                const size_t                        endIndex   = MathUtil::min( beginIndex + static_cast<size_t>( request._count ), listRanked.size() );
                 outReply._listMember.assign( listRanked.begin() + static_cast<ptrdiff_t>( beginIndex ), listRanked.begin() + static_cast<ptrdiff_t>( endIndex ) );
                 break;
             }

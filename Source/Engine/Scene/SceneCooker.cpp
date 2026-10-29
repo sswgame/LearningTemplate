@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
@@ -562,7 +563,7 @@ namespace sw
         {
             if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
                 continue;
-            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( std::min( normalizedRoot.size() + 1, scenePath.size() ) );
+            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( MathUtil::min( normalizedRoot.size() + 1, scenePath.size() ) );
             if ( SceneCookerInternal::isEditorOnlyScene( relativeScene ) )
                 continue;
 

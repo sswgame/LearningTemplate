@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
@@ -71,7 +72,7 @@ namespace sw
             uint32 lastPass{ 0 };
             for ( const ModuleObjectRegistrar* pRegistrar : listAttached )
             {
-                lastPass = std::max( lastPass, pRegistrar->getDetachPass() );
+                lastPass = MathUtil::max( lastPass, pRegistrar->getDetachPass() );
             }
             for ( uint32 pass = 0; pass <= lastPass; ++pass )
             {

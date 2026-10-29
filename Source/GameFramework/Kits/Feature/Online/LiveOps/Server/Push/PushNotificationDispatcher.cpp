@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
@@ -372,7 +373,7 @@ namespace sw
                             _mapDelivery.erase( deliveryIt );
                             break;
                         }
-                        delivery._nextAttemptMs = nowMs.count() + std::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
+                        delivery._nextAttemptMs = nowMs.count() + MathUtil::max( result._retryAfterMs, PushLimit::kFirstBackoffMs << ( delivery._attempt - 1 ) );
                         break;
                     }
                     case PushDeliveryStatus::Rejected:

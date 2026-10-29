@@ -4,6 +4,7 @@
 
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Defines.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -29,7 +30,7 @@ namespace sw
             /** @brief 칸 하나를 너비에 맞춰 붙입니다(글은 왼쪽, 수는 오른쪽 정렬). */
             static void appendCell( string& outText, string_view cell, int32 width, bool bLeft )
             {
-                const int32 padCount = std::max( 0, width - static_cast<int32>( cell.size() ) );
+                const int32 padCount = MathUtil::max( 0, width - static_cast<int32>( cell.size() ) );
                 if ( bLeft )
                     outText += cell;
                 outText.append( static_cast<size_t>( padCount ), ' ' );
@@ -76,7 +77,7 @@ namespace sw
     void LoadBotMetrics::recordLatency( LoadBotAction action, int64 latencyUs, string_view errorKey )
     {
         const size_t actionIndex = static_cast<size_t>( action );
-        _listSampleByAction[actionIndex].push_back( std::max<int64>( latencyUs, 0 ) );
+        _listSampleByAction[actionIndex].push_back( MathUtil::max<int64>( latencyUs, 0 ) );
         if ( errorKey.empty() )
             return;
         ++_listErrorCountByAction[actionIndex];
@@ -112,7 +113,7 @@ namespace sw
             return 0;
         const int64  sampleCount = static_cast<int64>( listSortedSample.size() );
         const int64  rank        = ( static_cast<int64>( percentile ) * sampleCount + 99 ) / 100; // 올림 — 가장 가까운 순위
-        const size_t index       = static_cast<size_t>( std::min( sampleCount, std::max<int64>( rank, 1 ) ) - 1 );
+        const size_t index       = static_cast<size_t>( MathUtil::min( sampleCount, MathUtil::max<int64>( rank, 1 ) ) - 1 );
         return listSortedSample[index];
     }
 

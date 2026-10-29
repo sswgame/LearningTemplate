@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -52,7 +54,7 @@ namespace sw
     {
         _mapNestedPart[objectID] = part;
         // 복원한 순서보다 뒤에 기록하는 부품이 늘 뒤에 오게 한다.
-        _nextRegistration = std::max( _nextRegistration, part._registrationOrder + 1 );
+        _nextRegistration = MathUtil::max( _nextRegistration, part._registrationOrder + 1 );
     }
 
     bool PrefabInstanceRegistry::makePartPath( uint64 objectID, uint64 rootObjectID, string& outPath ) const

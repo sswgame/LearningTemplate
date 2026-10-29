@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/Store/ServiceRetention.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -17,7 +19,7 @@ namespace sw
         const int64 cutoffMs = nowMs - inoutRule._retentionMs;
         while ( outReport._scannedCount < maxScanCount && outReport._deletedCount < maxDeleteCount )
         {
-            const int32              pageSize = std::min( kPageSize, maxScanCount - outReport._scannedCount );
+            const int32              pageSize = MathUtil::min( kPageSize, maxScanCount - outReport._scannedCount );
             vector<ServiceRecord>    listRecord;
             const ServiceStoreResult listed = connection.listRecords( inoutRule._table, inoutRule._keyPrefix, inoutRule._cursor, pageSize, false, listRecord );
             if ( listed != ServiceStoreResult::Ok )

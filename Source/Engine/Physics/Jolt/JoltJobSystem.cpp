@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -154,7 +155,7 @@ namespace sw
         {
             if ( _pTaskManager != nullptr )
             {
-                const uint32  slotIndex                = std::min( _pTaskManager->getCurrentThreadScratchSlot(), kMaxExecutorSlotCount - 1 );
+                const uint32  slotIndex                = MathUtil::min( _pTaskManager->getCurrentThreadScratchSlot(), kMaxExecutorSlotCount - 1 );
                 ExecutorSlot& slot                     = _arrExecutorSlot[slotIndex];
                 const int32   previousSlot             = JoltJobSystemInternal::t_executingSlot;
                 JoltJobSystemInternal::t_executingSlot = static_cast<int32>( slotIndex );

@@ -130,8 +130,8 @@ namespace sw
     {
         const uint32 x0 = static_cast<uint32>( region._x0 * static_cast<float32>( image._width ) );
         const uint32 y0 = static_cast<uint32>( region._y0 * static_cast<float32>( image._height ) );
-        const uint32 x1 = std::min( image._width, static_cast<uint32>( region._x1 * static_cast<float32>( image._width ) + 0.5f ) );
-        const uint32 y1 = std::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
+        const uint32 x1 = MathUtil::min( image._width, static_cast<uint32>( region._x1 * static_cast<float32>( image._width ) + 0.5f ) );
+        const uint32 y1 = MathUtil::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
         if ( x1 <= x0 || y1 <= y0 )
         {
             outError = "the region covers no pixel of the " + to_string( image._width ) + "x" + to_string( image._height ) + " image";
@@ -139,19 +139,19 @@ namespace sw
         }
         const uint32 sourceWidth  = x1 - x0;
         const uint32 sourceHeight = y1 - y0;
-        const uint32 width        = std::min( sourceWidth, kGoldenMaxWidth );
-        const uint32 height       = std::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
+        const uint32 width        = MathUtil::min( sourceWidth, kGoldenMaxWidth );
+        const uint32 height       = MathUtil::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
         outReduced._width         = width;
         outReduced._height        = height;
         outReduced._listRGB.assign( static_cast<size_t>( width ) * height * 3u, 0 );
         for ( uint32 y = 0; y < height; ++y )
         {
             const uint32 sy0 = y0 + static_cast<uint32>( static_cast<uint64>( y ) * sourceHeight / height );
-            const uint32 sy1 = std::max( sy0 + 1, y0 + static_cast<uint32>( static_cast<uint64>( y + 1 ) * sourceHeight / height ) );
+            const uint32 sy1 = MathUtil::max( sy0 + 1, y0 + static_cast<uint32>( static_cast<uint64>( y + 1 ) * sourceHeight / height ) );
             for ( uint32 x = 0; x < width; ++x )
             {
                 const uint32 sx0       = x0 + static_cast<uint32>( static_cast<uint64>( x ) * sourceWidth / width );
-                const uint32 sx1       = std::max( sx0 + 1, x0 + static_cast<uint32>( static_cast<uint64>( x + 1 ) * sourceWidth / width ) );
+                const uint32 sx1       = MathUtil::max( sx0 + 1, x0 + static_cast<uint32>( static_cast<uint64>( x + 1 ) * sourceWidth / width ) );
                 uint64       arrSum[3] = { 0, 0, 0 };
                 for ( uint32 sy = sy0; sy < sy1; ++sy )
                 {

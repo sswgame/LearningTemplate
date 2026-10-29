@@ -11,6 +11,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
@@ -389,7 +390,7 @@ namespace sw::test
         size_t start        = 0;
         while ( start <= filter.size() )
         {
-            const size_t      end     = std::min( filter.find( ',', start ), filter.size() );
+            const size_t      end     = MathUtil::min( filter.find( ',', start ), filter.size() );
             const string_view pattern = filter.substr( start, end - start );
             if ( pattern.empty() == false )
             {
@@ -498,7 +499,7 @@ namespace sw::test
         thread       watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( &Internal::watchCaseDeadline );
-        const uint32   repeatCount = std::max( options._repeatCount, 1u );
+        const uint32   repeatCount = MathUtil::max( options._repeatCount, 1u );
         uint32         failedCount = 0;
         uint32         ranCount    = 0;
         string         caseReport;

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -164,7 +165,7 @@ namespace sw
                     }
                     case LeaderboardUpdate::Sum:
                     {
-                        return std::clamp( oldValue + value, -LeaderboardLimit::kMaxAbsScore, LeaderboardLimit::kMaxAbsScore );
+                        return MathUtil::clamp( oldValue + value, -LeaderboardLimit::kMaxAbsScore, LeaderboardLimit::kMaxAbsScore );
                     }
                     default:
                     {
@@ -689,7 +690,7 @@ namespace sw
                 for ( size_t first = 0; first < _listPage.size(); first += static_cast<size_t>( Internal::kPlayersPerCommit ) )
                 {
                     ServiceTransaction transaction;
-                    const size_t       last = std::min( _listPage.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
+                    const size_t       last = MathUtil::min( _listPage.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
                     for ( size_t index = first; index < last; ++index )
                     {
                         if ( stagePlayer( connection, transaction, _listPage[index], _firstRank + static_cast<int32>( index ) ) == false )
@@ -858,12 +859,12 @@ namespace sw
             case LeaderboardReset::Daily:
             {
                 schedule._kind = ScheduleKind::Daily;
-                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
+                return static_cast<uint64>( MathUtil::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
             }
             case LeaderboardReset::Weekly:
             {
                 schedule._kind = ScheduleKind::Weekly;
-                return static_cast<uint64>( std::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
+                return static_cast<uint64>( MathUtil::max<int64>( 0, ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() ) ) );
             }
             case LeaderboardReset::Season:
             {
@@ -1034,7 +1035,7 @@ namespace sw
         }
         if ( periodEndMs <= 0 )
             return 0;
-        return std::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs.count() );
+        return MathUtil::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs.count() );
     }
 
     void LeaderboardService::submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore )
@@ -1205,7 +1206,7 @@ namespace sw
         }
         const int32 myIndex           = static_cast<int32>( reply._integer );
         const int32 radius            = query._read._count;
-        const int32 offset            = std::max( 0, myIndex - radius );
+        const int32 offset            = MathUtil::max( 0, myIndex - radius );
         const int32 count             = myIndex + radius + 1 - offset;
         query._read._offset           = offset;
         const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ),
@@ -1578,7 +1579,7 @@ namespace sw
             return;
         }
         const size_t                first = progress._nextIndex;
-        const size_t                last  = std::min( progress._listRanked.size(), first + static_cast<size_t>( LeaderboardServiceInternal::kPlayersPerPage ) );
+        const size_t                last  = MathUtil::min( progress._listRanked.size(), first + static_cast<size_t>( LeaderboardServiceInternal::kPlayersPerPage ) );
         vector<LeaderboardScoreRow> listPage( progress._listRanked.begin() + static_cast<ptrdiff_t>( first ), progress._listRanked.begin() + static_cast<ptrdiff_t>( last ) );
         progress._nextIndex = last;
         _dependencies._pStore->submit( sw::make_unique<SeasonSettlementPageWork>( this, settlementID, progress._board, progress._season, std::move( listPage ),

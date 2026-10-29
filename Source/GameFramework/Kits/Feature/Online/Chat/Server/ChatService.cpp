@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -737,7 +738,7 @@ namespace sw
         const bool bNothingToFlush = _dependencies._pStore == nullptr || _bHistoryWriting == SW_TRUE || _listHistoryQueue.empty();
         if ( bNothingToFlush )
             return;
-        const size_t        takeCount = std::min( _listHistoryQueue.size(), static_cast<size_t>( _settings._historyFlushMax ) );
+        const size_t        takeCount = MathUtil::min( _listHistoryQueue.size(), static_cast<size_t>( _settings._historyFlushMax ) );
         vector<ChatMessage> listMessage( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
         _listHistoryQueue.erase( _listHistoryQueue.begin(), _listHistoryQueue.begin() + static_cast<ptrdiff_t>( takeCount ) );
         vector<string> listTrimChannel;

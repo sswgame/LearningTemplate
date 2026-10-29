@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogContext.h"
+#include "Core/Math/MathUtil.h"
 
 #include <algorithm>
 
@@ -186,7 +187,7 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _mutex };
         _armedFault     = fault;
-        _faultSkipCount = std::max( skipCount, 0 );
+        _faultSkipCount = MathUtil::max( skipCount, 0 );
     }
 
     bool MemoryServiceDatabase::isFaultArmed() const

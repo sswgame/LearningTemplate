@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -533,7 +534,7 @@ namespace sw
                 VectorUtil::removeAtSwap( _listClipboardIncr, index );
                 return true;
             }
-            const size_t chunkBytes = std::min( transfer._text.size() - transfer._offset, X11ClipboardWait::getMaxSingleTransferBytes( pDisplay ) / 2 );
+            const size_t chunkBytes = MathUtil::min( transfer._text.size() - transfer._offset, X11ClipboardWait::getMaxSingleTransferBytes( pDisplay ) / 2 );
             XChangeProperty( pDisplay, requestor, static_cast<Atom>( transfer._property ), XInternAtom( pDisplay, "UTF8_STRING", 0 ), 8, PropModeReplace,
                              reinterpret_cast<const uint8*>( transfer._text.c_str() + transfer._offset ), static_cast<int32>( chunkBytes ) );
             XFlush( pDisplay );

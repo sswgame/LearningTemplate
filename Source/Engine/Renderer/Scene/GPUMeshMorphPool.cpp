@@ -5,6 +5,7 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -344,8 +345,8 @@ namespace sw
         }
         const auto grownCapacity = []( uint32 live )
         {
-            const uint32 capacity = std::max( live + live / 2u, kMinSkinSourceElements );
-            return std::min( capacity, kMaxSkinSourceElements );
+            const uint32 capacity = MathUtil::max( live + live / 2u, kMinSkinSourceElements );
+            return MathUtil::min( capacity, kMaxSkinSourceElements );
         };
         const uint32 restCapacity   = grownCapacity( liveRest );
         const uint32 weightCapacity = grownCapacity( liveWeight );

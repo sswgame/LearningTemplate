@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 
@@ -92,9 +93,9 @@ namespace sw
 
     int32 MatchMaker::computeRatingWindow( const MatchTicket& ticket, int64 nowMs ) const
     {
-        const int64 waitedSeconds = std::max<int64>( 0, nowMs - ticket._enqueuedMs ) / constant::kMillisecondsPerSecond;
+        const int64 waitedSeconds = MathUtil::max<int64>( 0, nowMs - ticket._enqueuedMs ) / constant::kMillisecondsPerSecond;
         const int64 window        = static_cast<int64>( _definition._baseRatingWindow ) + waitedSeconds * _definition._ratingWindowPerSecond;
-        return static_cast<int32>( std::min<int64>( window, _definition._maxRatingWindow ) );
+        return static_cast<int32>( MathUtil::min<int64>( window, _definition._maxRatingWindow ) );
     }
 
     MatchmakingResult MatchMaker::addBackfill( const MatchBackfillRequest& request )
@@ -243,7 +244,7 @@ namespace sw
                 continue;
             const MatchTicket& ticket   = _listTicket[static_cast<size_t>( index )];
             const int32        distance = std::abs( ticket.computeAverageRating() - anchorRating );
-            if ( distance > std::max( anchorWindow, computeRatingWindow( ticket, nowMs ) ) )
+            if ( distance > MathUtil::max( anchorWindow, computeRatingWindow( ticket, nowMs ) ) )
                 continue;
             const bool bRelax = bAnchorRelax || nowMs - ticket._enqueuedMs >= _definition._regionRelaxMs;
             if ( bRelax == false && ticket._region != anchor._region )
