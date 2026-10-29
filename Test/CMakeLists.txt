@@ -28,4 +28,14 @@ else()
 	endforeach()
 endif()
 
+# 편집기 자체 테스트 — 편집기를 띄워 자체 테스트(`SW_EDITOR_SELF_TEST`) 모두와 편집기 단위 테스트(`Source/Editor/**/Tests/`, 자체 테스트 `editor.unitTests` 가 돌린다)를 돌리고
+# 결과를 종료 코드로 낸다(`QuitRequest` — 하나라도 지면 실패 코드). 편집기 단위 테스트는 엔진의 `App --test` 가 돌지 못한다 — 편집기 모듈이 기동 뒤에 올라온다.
+# 창과 GPU 가 있어야 하므로 hostgpu. 배포 · 전용 서버 구성에는 편집기가 없다.
+if(TARGET EditorModule)
+	add_test(NAME EditorTests
+		COMMAND $<TARGET_FILE:App> -EnableEditor -gv_editorSelfTest=* -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/EditorTests.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(EditorTests PROPERTIES LABELS hostgpu TIMEOUT 900 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+endif()
+
 add_subdirectory(Scenario)
