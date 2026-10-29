@@ -95,6 +95,11 @@ namespace sw
     struct SW_API TypeLookupCache
     {
         TypeCacheSlot<TypeInfo> _slot;
+        /**
+         * @brief 세대 카운터의 주소입니다. 첫 `findSlow` 가 받아 둔다(그 전에는 nullptr 이라 적중하지 않는다).
+         * @details 적중 경로가 `getTypeTableGeneration` 의 함수 지역 정적(부를 때마다 스레드 안전 초기화 확인)을 거치지 않게 칸이 스스로 든다. 카운터는 Engine 안의 정적 저장소라 주소가 고정이다.
+         */
+        mutable atomic<const atomic<uint32>*> _pGenerationCounter{ nullptr };
 
         /**
          * @brief fqn 의 TypeInfo 입니다. 지금 세대에 찾아 둔 답이 있으면 그것(해제됐으면 nullptr), 없으면 `findSlow` 로 찾습니다. 미등록이면 nullptr 입니다.
@@ -110,7 +115,11 @@ namespace sw
          * @brief 지금 세대에 찾아 둔 답이 있으면 @p outType 에 담고(없음이면 nullptr) true 입니다. `TypeInfo` 를 읽지 않는다 — `REFLECT_BODY` 의 인라인 `StaticType()` 이 쓴다.
          * @details 죽은 타입은 `findSlow` 가 nullptr 로 적고, 해제 · 되살림은 모두 세대를 올리므로(`unregisterTypesByModule` · `registerClass`) 적중한 답은 살아 있다.
          */
-        bool tryGetCached( const TypeInfo*& outType ) const { return _slot.tryGet( getTypeTableGeneration(), outType ); }
+        bool tryGetCached( const TypeInfo*& outType ) const
+        {
+            const atomic<uint32>* const pCounter = _pGenerationCounter.load( std::memory_order_acquire );
+            return pCounter != nullptr && _slot.tryGet( pCounter->load( std::memory_order_acquire ), outType );
+        }
         /** @brief 지금 세대의 답이 없을 때 레지스트리에서 찾아 기록합니다(해제된 타입은 nullptr 로). 레지스트리가 없으면 칸을 건드리지 않고 nullptr 을 반환합니다. */
         const TypeInfo* findSlow( const hashed_string& fqn ) const;
     };

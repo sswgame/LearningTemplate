@@ -125,7 +125,7 @@ namespace sw
     /**
      * @brief T 의 정적 TypeInfo 입니다. 코드젠의 `StaticType()` 이나 `ReflectTypeTraits` 특수화가 있으면 그것, 없으면 nullptr 입니다.
      * @details `castTo` 가 To 쪽을 이것으로 풉니다. 컴포넌트 목록을 도는 조회 루프는 이것을 **루프 밖에서 한 번** 구해
-     *          `castTo( pSrc, pToType )` 에 넘깁니다. 캐시 조회 하나(약 4 ns)를 컴포넌트마다 치르지 않습니다.
+     *          `castTo( pSrc, pToType )` 에 넘깁니다. 캐시 조회 하나(인라인 `StaticType()`, 1 ns 안쪽)를 컴포넌트마다 치르지 않습니다.
      */
     template <typename T>
     const TypeInfo* findStaticType()
@@ -176,8 +176,9 @@ namespace sw
             if ( pSrcType == nullptr )
                 pSrcType = findStaticType<From>();
 
-            // 파생 검사는 조상 표의 인라인 비교다(`isTypeDerivedFrom`). 측정(2026-10-30, Release): 줄 밖 호출이던 때 이 판 약 3.2 ns,
-            // 인라인 비교면 약 1.6 ns. `castTo<T>( p )` 는 여기에 `StaticType()` 조회(약 3 ns)를 더한다 — 루프는 타입을 밖에서 한 번 구해 넘긴다.
+            // 파생 검사는 조상 표의 인라인 비교다(`isTypeDerivedFrom`). 측정(2026-10-30, Release, 엔진 컴포넌트): 이 판 약 1.2–1.4 ns,
+            // `castTo<T>( p )` 약 2 ns(인라인 `StaticType()` 포함 — 처음 줄 밖 호출 셋일 때는 3.2 · 5.4 ns). 핫패스의 개별 캐스트에 써도 된다.
+            // "타입 T 인 것을 모두 돌기" 는 캐스트가 싸도 전체 수에 비례하므로 등록부(`PrimitiveRegistry` 등)를 쓴다.
             if ( isTypeDerivedFrom( pSrcType, pToType ) == false )
                 return nullptr;
             if constexpr ( std::is_base_of_v<From, To> )
