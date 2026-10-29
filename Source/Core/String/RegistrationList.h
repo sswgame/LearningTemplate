@@ -4,9 +4,11 @@
  *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -141,7 +143,8 @@ namespace sw
      *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
      *
      *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 레지스트리(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
-     *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
+     *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 같은 까닭으로 목록은 스스로 구독을 내주지 않습니다 — 구독이 풀리는 길은
+     *          주인의 잠금과 뒷정리(카메라 일련번호 · 오디오 방출기)를 지나야 하므로 주인이 `SubscriptionList` 로 낸다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
      *          틱 · 콜라이더)는 이 구조가 아닙니다.
      */
     template <typename T>
@@ -520,16 +523,25 @@ namespace sw
      * @class NameRegistry
      * @brief 이름(`hashed_string`, 대소문자 무시) → 값을 **소유하는** 레지스트리입니다. 값은 등록 순서로 연속 배열에 둡니다.
      * @details 값을 보관해야 하는 테이블(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 구조로 씁니다. 빈 이름은 받지 않습니다.
-     *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `removeIf` · `clear` 까지만 유효합니다.
-     *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다.
+     *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `addOwned` · `removeIf` · `clear` · 구독 해제까지만 유효합니다.
+     *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다(`addOwned` 의 구독도 같은 스레드에서 놓는다).
+     *          **주인 있는 등록(`addOwned`)**: 모듈 · 게임이 건 값을 구독이 소유한다. 같은 이름을 덮으면 앞 값을 그림자로 두고, 구독이 풀리면 그림자로 돌아간다
+     *          (언리얼 모듈 등록의 Register/Unregister 짝을 소유 구독 하나로). 레지스트리마다 손으로 두던 "이름 → 주인 번호" 표와 번호 카운터를 대신한다.
      */
     template <typename T>
-    class NameRegistry
+    class NameRegistry : public SubscriptionSource
     {
     public:
         NameRegistry()
-            : _listName{}
+            : SubscriptionSource{}
+            , _listName{}
             , _listValue{}
+            , _listOwnerID{}
+            , _listShadowName{}
+            , _listShadowValue{}
+            , _listShadowOwnerID{}
+            , _ownerIDAllocator{}
+            , _revision{ 0 }
         {
         }
 
@@ -538,8 +550,7 @@ namespace sw
         {
             if ( name.empty() || findIndex( name ) != kNotFound )
                 return false;
-            _listName.push_back( name );
-            _listValue.push_back( std::move( value ) );
+            pushEntry( name, std::move( value ), 0 );
             return true;
         }
 
@@ -563,12 +574,42 @@ namespace sw
             const size_t index = findIndex( name );
             if ( index != kNotFound )
             {
-                _listName[index]  = name;
-                _listValue[index] = std::move( value );
+                _listName[index]    = name;
+                _listValue[index]   = std::move( value );
+                _listOwnerID[index] = 0; // 주인 없는 값이 덮었다 — 앞 주인의 구독은 이제 아무것도 거두지 않는다
+                ++_revision;
                 return;
             }
-            _listName.push_back( name );
-            _listValue.push_back( std::move( value ) );
+            pushEntry( name, std::move( value ), 0 );
+        }
+
+        /**
+         * @brief 값을 올리고 그 등록을 소유하는 구독을 돌려줍니다. 같은 이름이 있으면 앞 값을 그림자로 두고 바꿉니다(나중 것이 이긴다 — 핫 리로드의 새 인스턴스가 먼저 건다).
+         * @details 구독이 풀리면 그 이름의 지금 값이 이 구독의 것일 때만 거두고, 그 이름의 그림자가 있으면 가장 나중 것으로 돌아갑니다(엔진 기본을 덮은 게임 값이 풀리면 기본으로).
+         *          그림자 쪽 주인이 먼저 풀리면 그 그림자만 버립니다. 빈 이름은 공용 거절 로그를 남기고 빈 구독입니다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다.
+         */
+        [[nodiscard]] Subscription addOwned( const hashed_string& name, T value, const utf8* pWhat )
+        {
+            if ( name.empty() )
+            {
+                reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
+                return {};
+            }
+            const uint64 ownerID = _ownerIDAllocator.allocate();
+            const size_t index   = findIndex( name );
+            if ( index == kNotFound )
+            {
+                pushEntry( name, std::move( value ), ownerID );
+                return issueSubscription( ownerID );
+            }
+            _listShadowName.push_back( _listName[index] );
+            _listShadowValue.push_back( std::move( _listValue[index] ) );
+            _listShadowOwnerID.push_back( _listOwnerID[index] );
+            _listValue[index]   = std::move( value );
+            _listOwnerID[index] = ownerID;
+            ++_revision;
+            return issueSubscription( ownerID );
         }
 
         /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
@@ -594,8 +635,7 @@ namespace sw
             {
                 if ( predicate( static_cast<const T&>( _listValue[index - 1] ) ) == false )
                     continue;
-                _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-                _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                eraseEntry( index - 1 );
                 ++removedCount;
             }
             return removedCount;
@@ -607,17 +647,25 @@ namespace sw
             const size_t index = findIndex( name );
             if ( index == kNotFound )
                 return false;
-            _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
-            _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index ) );
+            eraseEntry( index );
             return true;
         }
 
-        /** @brief 모두 제거합니다. */
+        /** @brief 모두 제거합니다(그림자도). 주인 있는 등록의 구독은 무효가 됩니다. */
         void clear()
         {
+            detachAllSubscriptions();
             _listName.clear();
             _listValue.clear();
+            _listOwnerID.clear();
+            _listShadowName.clear();
+            _listShadowValue.clear();
+            _listShadowOwnerID.clear();
+            ++_revision;
         }
+
+        /** @brief 표가 바뀔 때마다(올리기 · 바꾸기 · 빼기 · 구독 해제) 오르는 번호입니다. 값을 복사해 간 쪽이 다시 읽을 때를 안다. */
+        uint32 getRevision() const { return _revision; }
 
         /** @brief 올라 있는 값 수입니다. */
         uint32 getCount() const { return static_cast<uint32>( _listValue.size() ); }
@@ -625,6 +673,35 @@ namespace sw
         const hashed_string& getNameAt( uint32 index ) const { return _listName[index]; }
         /** @brief 값 전부(등록 순서)입니다. */
         const vector<T>& getItems() const { return _listValue; }
+
+    protected:
+        /** @brief 주인 있는 등록의 구독 @p ownerID 가 풀렸습니다. 지금 값의 주인이면 거두고 그림자로 돌아가며, 그림자의 주인이면 그 그림자만 버립니다. */
+        void releaseSubscription( uint64 ownerID ) override
+        {
+            for ( size_t index = 0; index < _listOwnerID.size(); ++index )
+            {
+                if ( _listOwnerID[index] != ownerID )
+                    continue;
+                const size_t shadowIndex = findLastShadow( _listName[index] );
+                if ( shadowIndex == kNotFound )
+                {
+                    eraseEntry( index );
+                    return;
+                }
+                _listValue[index]   = std::move( _listShadowValue[shadowIndex] );
+                _listOwnerID[index] = _listShadowOwnerID[shadowIndex];
+                eraseShadow( shadowIndex );
+                ++_revision;
+                return;
+            }
+            for ( size_t shadowIndex = 0; shadowIndex < _listShadowOwnerID.size(); ++shadowIndex )
+            {
+                if ( _listShadowOwnerID[shadowIndex] != ownerID )
+                    continue;
+                eraseShadow( shadowIndex );
+                return;
+            }
+        }
 
     private:
         static constexpr size_t kNotFound = static_cast<size_t>( -1 );
@@ -641,8 +718,47 @@ namespace sw
             return kNotFound;
         }
 
+        size_t findLastShadow( const hashed_string& name ) const
+        {
+            for ( size_t index = _listShadowName.size(); index > 0; --index )
+            {
+                if ( _listShadowName[index - 1] == name )
+                    return index - 1;
+            }
+            return kNotFound;
+        }
+
+        void pushEntry( const hashed_string& name, T&& value, uint64 ownerID )
+        {
+            _listName.push_back( name );
+            _listValue.push_back( std::move( value ) );
+            _listOwnerID.push_back( ownerID );
+            ++_revision;
+        }
+
+        void eraseEntry( size_t index )
+        {
+            _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index ) );
+            _listOwnerID.erase( _listOwnerID.begin() + static_cast<ptrdiff_t>( index ) );
+            ++_revision;
+        }
+
+        void eraseShadow( size_t index )
+        {
+            _listShadowName.erase( _listShadowName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowValue.erase( _listShadowValue.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowOwnerID.erase( _listShadowOwnerID.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+
     private:
-        vector<hashed_string> _listName;  ///< 값마다 올린 이름(같은 인덱스)
-        vector<T>             _listValue; ///< 값(등록 순서)
+        vector<hashed_string> _listName;          ///< 값마다 올린 이름(같은 인덱스)
+        vector<T>             _listValue;         ///< 값(등록 순서)
+        vector<uint64>        _listOwnerID;       ///< 값마다 주인 구독 번호(`addOwned`). 주인 없는 값은 0
+        vector<hashed_string> _listShadowName;    ///< `addOwned` 가 덮은 앞 값의 이름(덮은 순서)
+        vector<T>             _listShadowValue;   ///< 덮인 앞 값 — 덮은 주인이 풀리면 돌아온다
+        vector<uint64>        _listShadowOwnerID; ///< 덮인 앞 값의 주인 구독 번호(주인 없으면 0)
+        IDAllocator<uint64>   _ownerIDAllocator;  ///< 주인 구독 번호(0 은 주인 없음)
+        uint32                _revision;          ///< `getRevision`
     };
 } // namespace sw

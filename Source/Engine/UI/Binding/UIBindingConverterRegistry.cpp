@@ -63,25 +63,21 @@ namespace sw
 {
     UIBindingConverterRegistry::UIBindingConverterRegistry()
         : _registry{}
-        , _listEngineConverter{}
-        , _listOwner{}
-        , _nextOwnerID{ 1 }
-        , _revision{ 0 }
     {
         registerEngineConverters();
     }
 
     void UIBindingConverterRegistry::registerEngineConverters()
     {
-        using Internal       = UIBindingConverterRegistryInternal;
-        _listEngineConverter = {
+        using Internal                                = UIBindingConverterRegistryInternal;
+        const UIBindingConverter arrEngineConverter[] = {
             UIBindingConverter{ "Percent",  &Internal::convertPercent, UIBindingValueKind::Number, UIBindingValueKind::Text},
             UIBindingConverter{  "Invert",   &Internal::convertInvert,   UIBindingValueKind::Bool, UIBindingValueKind::Bool},
             UIBindingConverter{"NotEmpty", &Internal::convertNotEmpty,   UIBindingValueKind::Text, UIBindingValueKind::Bool},
             UIBindingConverter{  "IsZero",   &Internal::convertIsZero, UIBindingValueKind::Number, UIBindingValueKind::Bool},
             UIBindingConverter{ "Seconds",  &Internal::convertSeconds, UIBindingValueKind::Number, UIBindingValueKind::Text},
         };
-        for ( const UIBindingConverter& converter : _listEngineConverter )
+        for ( const UIBindingConverter& converter : arrEngineConverter )
         {
             _registry.addOrReplace( converter._name, converter, "UI binding converter" );
         }
@@ -89,33 +85,12 @@ namespace sw
 
     Subscription UIBindingConverterRegistry::registerConverter( const UIBindingConverter& converter )
     {
-        _registry.addOrReplace( converter._name, converter, "UI binding converter" );
-        ++_revision;
-        const uint64 id = _nextOwnerID++;
-        if ( ConverterOwner* pOwner = VectorUtil::findBy<&ConverterOwner::_name>( _listOwner, converter._name ) )
-            pOwner->_id = id; // 교체 — 옛 구독은 이제 아무것도 거두지 않는다
-        else
-            _listOwner.push_back( ConverterOwner{ converter._name, id } );
-        return _subscriptions.issue( id );
-    }
-
-    void UIBindingConverterRegistry::releaseSubscription( uint64 id )
-    {
-        const std::optional<size_t> index = VectorUtil::findIndexBy<&ConverterOwner::_id>( _listOwner, id );
-        if ( index.has_value() == false )
-            return; // 다른 쪽이 그 사이 교체했다 — 그 등록을 지우지 않는다
-        const hashed_string name = _listOwner[*index]._name;
-        ++_revision;
-        _listOwner.erase( _listOwner.begin() + static_cast<ptrdiff_t>( *index ) );
-        if ( const UIBindingConverter* pEngine = VectorUtil::findBy<&UIBindingConverter::_name>( _listEngineConverter, name ) )
-            _registry.addOrReplace( name, *pEngine, "UI binding converter" ); // 덮었던 엔진 기본으로 돌아간다
-        else
-            _registry.addOrReplace( name, UIBindingConverter{ name, nullptr, UIBindingValueKind::None, UIBindingValueKind::None }, "UI binding converter" );
+        return _registry.addOwned( converter._name, converter, "UI binding converter" );
     }
 
     const UIBindingConverter* UIBindingConverterRegistry::findConverter( const hashed_string& name ) const
     {
         const UIBindingConverter* pConverter = _registry.find( name );
-        return ( pConverter != nullptr && pConverter->_pConvert != nullptr ) ? pConverter : nullptr; // 거둔 이름은 빈 함수로 남아 있다
+        return ( pConverter != nullptr && pConverter->_pConvert != nullptr ) ? pConverter : nullptr; // 함수 없이 올린 변환기는 없는 것으로 본다
     }
 } // namespace sw

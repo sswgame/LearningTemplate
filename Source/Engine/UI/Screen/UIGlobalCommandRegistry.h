@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
@@ -38,7 +37,8 @@ namespace sw
 
         /**
          * @brief 명령 @p command 의 처리 함수를 등록하고 그 구독을 돌려줍니다. 같은 이름이 있으면 교체합니다. 구독이 사라지면 거둡니다.
-         * @details 교체된 옛 구독은 놓아도 지금 등록을 지우지 않는다 — 핫 리로드는 새 게임 인스턴스를 먼저 세우고 옛 인스턴스를 내린다.
+         * @details 교체된 옛 등록은 그림자로 남아 옛 구독이 놓으면 버려지고, 새 구독이 먼저 풀리면 옛 것이 돌아온다(`NameRegistry::addOwned`) —
+         *          핫 리로드는 새 게임 인스턴스를 먼저 세우고 옛 인스턴스를 내린다.
          */
         [[nodiscard]] Subscription registerCommand( const hashed_string& command, const UICommandDelegate& handler );
         /** @brief 그 이름의 처리 함수가 있으면 true 입니다(일시정지 메뉴가 버튼을 보일지 정할 때 묻습니다). */
@@ -47,22 +47,6 @@ namespace sw
         [[nodiscard]] bool tryExecute( const hashed_string& command, Widget& source ) const;
 
     private:
-        /** @brief 명령 하나의 지금 등록 구독 번호입니다. 교체되면 새 번호로 바뀐다. */
-        struct CommandOwner
-        {
-            hashed_string _command{};
-            uint64        _id{ 0 };
-        };
-
-        /** @brief 등록 구독 @p id 가 풀렸습니다. 그 명령의 지금 등록이 이 구독이면 거둡니다. */
-        void releaseSubscription( uint64 id );
-
-        NameRegistry<UICommandDelegate> _registry;
-        vector<CommandOwner>            _listOwner;   ///< 명령마다 지금 등록의 구독 번호(명령은 몇 개뿐이다)
-        uint64                          _nextOwnerID; ///< 다음 등록 구독 번호(0 은 쓰지 않는다)
-
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UIGlobalCommandRegistry::releaseSubscription>( this ) };
+        NameRegistry<UICommandDelegate> _registry; ///< 등록은 주인 있는 값(`addOwned`) — 구독이 풀리면 거두거나 덮었던 값으로 돌아간다
     };
 } // namespace sw
