@@ -8,7 +8,6 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -83,17 +82,14 @@ namespace sw::editor
 
     AnimationGraphPanel::AnimationGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetType{ AnimationGraphAsset::kAssetType }, "Move Animation Graph Nodes", "animation-graph-layout", &ed::SetCurrentEditor }
-        , _previewGraph{}
-        , _previewPlayer{}
+        , _preview{}
         , _layerEditor{}
-        , _previewStateName{}
         , _nameEditBuffer{}
         , _parameterEditBuffer{}
         , _listSelectionOrder{}
         , _selectedNodeID{ 0 }
         , _selectedLinkID{ 0 }
         , _canvasLinkID{ 0 }
-        , _flowLinkID{ 0 }
     {
         _nodeGraph.setPinTypeColors( {
             Color{ 0.45f, 0.85f, 0.55f, 1.0f }
@@ -110,7 +106,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
 
-        updatePreview( ImGui::GetIO().DeltaTime );
+        _preview.update( ImGui::GetIO().DeltaTime, getLoadedAssetPath() );
 
         drawAnimationToolbar();
 
@@ -205,37 +201,20 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
             if ( ImGui::Button( "Play" ) )
-            {
-                syncPreviewGraph();
-                (void)_previewPlayer.play( hashed_string{}, false, 0.0f ); // 클립이 없어 재생은 비고 상태 이름만 옮긴다
-                _bPreviewPlaying    = SW_TRUE;
-                _previewHoldSeconds = 0.0f;
-                EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
-                notePreviewTransition();
-            }
+                _preview.play( _graph, getLoadedAssetPath() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "PlayTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance" ) );
             if ( ImGui::Button( "Advance" ) )
-            {
-                syncPreviewGraph();
-                if ( _previewPlayer.advance() == false )
-                    _bPreviewPlaying = SW_FALSE;
-                else
-                    EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
-                notePreviewTransition();
-            }
+                _preview.advance( _graph, getLoadedAssetPath() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AdvanceTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
             if ( ImGui::Button( "Stop" ) )
-            {
-                _previewPlayer.stop();
-                _bPreviewPlaying = SW_FALSE;
-            }
+                _preview.stop();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StopTip" ) );
 
             ImGui::SameLine();
-            if ( _previewPlayer.getCurrentStateName().empty() == false )
-                ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _previewPlayer.getCurrentStateName().c_str(),
+            if ( _preview.getCurrentStateName().empty() == false )
+                ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _preview.getCurrentStateName().c_str(),
                                      _graph._listNode.size(), _graph._listLink.size() );
             else
                 ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _graph._listNode.size(), _graph._listLink.size(),
@@ -273,7 +252,7 @@ namespace sw::editor
         {
             const ed::NodeId nodeID = toNodeID( node._id );
             ed::BeginNode( nodeID );
-            if ( _previewPlayer.getCurrentStateName().c_str() == node._name && _previewPlayer.getCurrentStateName().empty() == false )
+            if ( _preview.isCurrentState( node._name ) )
                 ImGui::TextColored( EditorColorUtil::toImVec4( AnimationGraphPanelInternal::kCurrentStateText ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
@@ -321,11 +300,8 @@ namespace sw::editor
                       bConditioned ? 2.5f : 1.5f );
         }
         // 미리보기가 전이를 탔으면 그 링크에 흐름을 보인다(플레이 중 현재 전이 강조).
-        if ( _flowLinkID != 0 )
-        {
-            ed::Flow( toLinkID( _flowLinkID ) );
-            _flowLinkID = 0;
-        }
+        if ( const int32 flowLinkID = _preview.takeFlowLinkID(); flowLinkID != 0 )
+            ed::Flow( toLinkID( flowLinkID ) );
     }
 
     void AnimationGraphPanel::drawNodeContextMenu()
@@ -421,7 +397,7 @@ namespace sw::editor
         AnimationGraphAsset       data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
         adoptLoadedGraph( std::move( data ), result );
-        _previewPlayer.stop();
+        _preview.resetForDocument();
         _layerEditor.clearSelection();
         return result;
     }
@@ -453,44 +429,6 @@ namespace sw::editor
     bool AnimationGraphPanel::saveDocument()
     {
         return saveGraphData();
-    }
-
-    void AnimationGraphPanel::syncPreviewGraph()
-    {
-        _previewGraph = captureGraphData();
-        _previewPlayer.setGraph( &_previewGraph );
-    }
-
-    void AnimationGraphPanel::notePreviewTransition()
-    {
-        const string current{ _previewPlayer.getCurrentStateName().c_str() };
-        if ( current != _previewStateName && _previewStateName.empty() == false )
-        {
-            const AnimationGraphNode* pFrom = _previewGraph.findNodeByName( _previewStateName );
-            const AnimationGraphNode* pTo   = _previewGraph.findNodeByName( current );
-            for ( const GraphLink& link : _graph._listLink )
-            {
-                const bool bLinkBetweenNodes = pFrom != nullptr && pTo != nullptr && link._fromNode == pFrom->_id && link._toNode == pTo->_id;
-                if ( bLinkBetweenNodes )
-                    _flowLinkID = link._id;
-            }
-        }
-        _previewStateName = current;
-    }
-
-    void AnimationGraphPanel::updatePreview( float32 deltaSeconds )
-    {
-        if ( _bPreviewPlaying == SW_FALSE )
-            return;
-        _previewHoldSeconds += deltaSeconds;
-        if ( _previewHoldSeconds < 0.75f )
-            return;
-        _previewHoldSeconds = 0.0f;
-        if ( _previewPlayer.advance() == false )
-            _bPreviewPlaying = SW_FALSE;
-        else
-            EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
-        notePreviewTransition();
     }
 
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )
