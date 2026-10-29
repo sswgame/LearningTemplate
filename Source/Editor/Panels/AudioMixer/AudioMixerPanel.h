@@ -1,21 +1,17 @@
 /**
  * @file AudioMixerPanel.h
  * @brief 오디오 믹서 창입니다(Window > Audio Mixer). 버스마다 피크 미터, 볼륨 페이더, 음소거, 솔로를 보이고 고치며, 이벤트와 클립을 미리 듣습니다.
+ * @details 버스 상태 · 피크 표시 값 · 감시 값 · 이벤트 목록은 `AudioMixerModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 클립 경로 입력란만 든다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-
-#include "Engine/Audio/AudioEngineState.h"
+#include "Editor/Panels/AudioMixer/Model/AudioMixerModel.h"
 
 namespace sw
 {
-    class AudioEngine;
     class IAudioService;
 } // namespace sw
 
@@ -55,12 +51,7 @@ namespace sw::editor
         void drawBusStrip( IAudioService& audio, uint32 busIndex );
 
     private:
-        vector<AudioBusStatus>                _listBusStatus;
-        vector<float32>                       _listHeldPeak;        ///< 버스마다 천천히 내려가는 피크 표시 값(선형)
-        vector<hashed_string>                 _listEventName;       ///< 이름 순. 엔진이나 라이브러리 세대가 바뀔 때만 다시 모은다
-        const AudioEngine*                    _pEventNameEngine;    ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
-        uint32                                _eventNameGeneration; ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
-        uint32                                _selectedEvent;
+        AudioMixerModel                       _model;
         fixed_string<constant::kMaxBuffer256> _clipPath;
     };
 } // namespace sw::editor
