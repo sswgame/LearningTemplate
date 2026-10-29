@@ -1,10 +1,11 @@
 /**
  * @file AppearanceDataWatcher.h
- * @brief 외형 데이터 폴더(`<게임>/data/appearance/`)를 감시해, 파일을 고치면 실행 중인 `AppearanceDatabase` 를 다시 읽습니다(핫 리로드).
+ * @brief 외형 데이터 폴더(`<게임>/data/appearance/`)를 감시해, 파일을 고치면 실행 중인 `AppearanceDatabase` 를 다시 읽습니다(핫 리로드 — 개발 빌드만).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -14,7 +15,8 @@
 namespace sw
 {
     class AppearanceDatabase;
-    class IFileWatcher;
+    class FileWatchDispatcher;
+    struct FileChangeEvent;
     class ItemCatalog;
 
     /**
@@ -22,7 +24,7 @@ namespace sw
      * @brief 게임 인스턴스가 하나 들고 `onUpdate` 에서 `update` 를 부릅니다. 바뀐 `.xml` 이 있으면 프레임에 한 번 `AppearanceDatabase::reloadFromFolder` 를 부릅니다.
      * @details 다시 읽은 데이터는 구독한 외형 컴포넌트가 다시 조립한다(`CharacterAppearanceComponent`). 검사를 통과하지 못한 다시 읽기는 오류로 알리고 지금 데이터를 둔다.
      *          팩 빌드처럼 폴더가 디스크에 없으면 감시할 것이 없다 — `initialize` 가 false 를 돌려주고 그 까닭을 정보로 남긴다(오류가 아니다).
-     *          감시가 끊기면(`FileWatchPollResult::_bWatchLost`) 오류로 한 번 알리고 감시를 내린다.
+     *          감시는 엔진의 파일 감시(`FileWatchDispatcher`, 개발 빌드만)로 한다 — 감시 경로가 하나다. 배포 빌드는 감시하지 않는다(`initialize` 가 false).
      */
     class SW_GF_API AppearanceDataWatcher
     {
@@ -41,10 +43,20 @@ namespace sw
         void               shutdown();
         /** @brief 쌓인 변경을 꺼내 @p database 를 다시 읽습니다(@p pItemCatalog 는 아이템 외형 확인용). 게임 스레드에서 부릅니다. */
         void update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog );
-        bool isWatching() const { return _pWatcher != nullptr; }
+#if !defined( SW_SHIPPING )
+        bool isWatching() const { return _pDispatcher != nullptr; }
+#else
+        bool isWatching() const { return false; }
+#endif
 
     private:
-        unique_ptr<IFileWatcher> _pWatcher;
-        string                   _folder; ///< 다시 읽을 리소스 경로
+        void onFileChanged( const FileChangeEvent& changeEvent );
+
+#if !defined( SW_SHIPPING ) // 배포 빌드는 감시하지 않는다 — 파일 감시(Engine/AssetReload)를 짓지 않는다
+        unique_ptr<FileWatchDispatcher> _pDispatcher;
+        Subscription                    _watch;
+        string                          _folder;            ///< 다시 읽을 리소스 경로
+        bool                            _bChanged{ false }; ///< 지난 update 뒤로 .xml 이 바뀌었다
+#endif
     };
 } // namespace sw

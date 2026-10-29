@@ -4,33 +4,27 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/IFileWatcher.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/File/Windows/WindowsFileWatcher.h"
-#elif defined( SW_PLATFORM_LINUX )
-    #include "Core/File/Linux/LinuxFileWatcher.h"
+#if !defined( SW_SHIPPING )
+    #include "Engine/AssetReload/FileWatchDispatcher.h"
 #endif
+
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AppearanceDataWatcher" );
 
-    AppearanceDataWatcher::AppearanceDataWatcher()
-        : _pWatcher{ nullptr }
-        , _folder{}
-    {
-    }
+    AppearanceDataWatcher::AppearanceDataWatcher() = default;
 
     AppearanceDataWatcher::~AppearanceDataWatcher()
     {
         shutdown();
     }
 
+#if !defined( SW_SHIPPING )
     bool AppearanceDataWatcher::initialize( string_view folder )
     {
         shutdown();
@@ -41,53 +35,66 @@ namespace sw
             SW_LOG_INFO( "Appearance hot reload is off - '%#' is not on disk as loose files (packed data)", string( folder ).c_str() );
             return false;
         }
-        const string absoluteFolder = FileUtil::getDirectoryPart( looseSlots.getDiskPath() );
-#if defined( SW_PLATFORM_WINDOWS )
-        unique_ptr<IFileWatcher> pWatcher = make_unique<WindowsFileWatcher>();
-#elif defined( SW_PLATFORM_LINUX )
-        unique_ptr<IFileWatcher> pWatcher = make_unique<LinuxFileWatcher>();
-#else
-        unique_ptr<IFileWatcher> pWatcher = nullptr;
-#endif
-        if ( pWatcher == nullptr || pWatcher->startWatching( absoluteFolder, true ) == false )
-            return false; // 감시자가 이유를 오류로 남겼다
-        _pWatcher = std::move( pWatcher );
-        _folder   = string( folder );
+        const string                    absoluteFolder = FileUtil::getDirectoryPart( looseSlots.getDiskPath() );
+        unique_ptr<FileWatchDispatcher> pDispatcher    = make_unique<FileWatchDispatcher>();
+        if ( pDispatcher->initialize( absoluteFolder ) == false )
+            return false; // 감시자가 이유를 남겼다
+        _watch       = pDispatcher->registerWatch( absoluteFolder, { ".xml" }, FileWatchMatchDelegate::create<&AppearanceDataWatcher::onFileChanged>( this ) );
+        _pDispatcher = std::move( pDispatcher );
+        _folder      = string( folder );
+        _bChanged    = false;
         return true;
     }
 
     void AppearanceDataWatcher::shutdown()
     {
-        if ( _pWatcher != nullptr )
-            _pWatcher->stopWatching();
-        _pWatcher.reset();
+        _watch.reset();
+        if ( _pDispatcher != nullptr )
+            _pDispatcher->shutdown();
+        _pDispatcher.reset();
+    }
+
+    void AppearanceDataWatcher::onFileChanged( const FileChangeEvent& changeEvent )
+    {
+        (void)changeEvent; // 확장자는 감시가 거른다 — 바뀌었다는 사실만 쓴다
+        _bChanged = true;
     }
 
     void AppearanceDataWatcher::update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog )
     {
-        if ( _pWatcher == nullptr )
+        if ( _pDispatcher == nullptr )
             return;
-        vector<FileChangeEvent>   listEvent;
-        const FileWatchPollResult result = _pWatcher->pollEvents( listEvent );
-        if ( result._bWatchLost )
-        {
-            SW_LOG_ERROR( "Appearance hot reload lost its watch on '%#' - edits are no longer picked up", _folder.c_str() );
-            shutdown();
+        _pDispatcher->update();
+        if ( _bChanged == false )
             return;
-        }
-        bool bChanged = false;
-        for ( const FileChangeEvent& changeEvent : listEvent )
-        {
-            // 합성 리스캔(빈 파일 이름)도 바뀐 것으로 본다.
-            const bool bXML = changeEvent._filename.empty() || StringUtil::endsWith( string_view( changeEvent._filename ), ".xml", true );
-            bChanged        = bChanged || bXML;
-        }
-        if ( bChanged == false )
-            return;
+        _bChanged = false;
         string report;
         if ( database.reloadFromFolder( string_view( _folder ), pItemCatalog, report ) )
             SW_LOG_INFO( "Appearance data reloaded from '%#'", _folder.c_str() );
         else
             SW_LOG_ERROR( "Appearance data in '%#' did not pass validation - kept the running data: %#", _folder.c_str(), report.c_str() );
     }
+#else
+    // 배포 빌드는 데이터가 팩에 들고 파일 감시를 짓지 않는다(Engine/AssetReload 는 개발 빌드만).
+    bool AppearanceDataWatcher::initialize( string_view folder )
+    {
+        (void)folder;
+        return false;
+    }
+
+    void AppearanceDataWatcher::shutdown()
+    {
+    }
+
+    void AppearanceDataWatcher::onFileChanged( const FileChangeEvent& changeEvent )
+    {
+        (void)changeEvent;
+    }
+
+    void AppearanceDataWatcher::update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog )
+    {
+        (void)database;
+        (void)pItemCatalog;
+    }
+#endif
 } // namespace sw
