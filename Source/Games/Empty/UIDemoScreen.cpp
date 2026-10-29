@@ -7,6 +7,7 @@
 
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/UISystem.h"
@@ -18,6 +19,8 @@
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextInputWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
+
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiDemo, false,
                                  "UI 테스트 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
@@ -146,7 +149,7 @@ namespace sw
                 hint._text            = "[action=UI.Accept] Select";
                 hint._durationSeconds = 600.0f;
                 hint._kind            = UINotificationKind::Hint;
-                uiSystem.getNotifications().post( hint );
+                game::getSubsystem<UINotificationService>().post( hint );
                 return screen;
             }
         };

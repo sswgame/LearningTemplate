@@ -14,6 +14,7 @@
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Input/UIClipboardService.h"
+#include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
@@ -296,7 +297,7 @@ namespace sw
         UINotificationDesc notice{};
         notice._text = SW_LOCTEXT( "Notification", "ClipboardWriteFailed", "Could not copy to the clipboard." );
         notice._kind = UINotificationKind::Warning;
-        pUI->getNotifications().post( notice );
+        engine::getSubsystem<UINotificationService>().post( notice );
     }
 
     bool TextInputWidget::handleEditAction( const hashed_string& action )

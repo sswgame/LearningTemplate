@@ -66,6 +66,9 @@
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
+#include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/Screen/UISubtitleService.h"
+#include "Engine/UI/Screen/UITooltipService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -237,6 +240,10 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<UIGlobalCommandRegistry>() );
         startup.addSubsystem( sw::make_unique<UIBindingConverterRegistry>() );
         parts._pUISystem = &startup.addSubsystem( sw::make_unique<UISystem>() );
+        // 화면 스택 위의 UI 서비스 — 화면 스택에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens`)에 건다.
+        startup.addSubsystem( sw::make_unique<UISubtitleService>() );
+        startup.addSubsystem( sw::make_unique<UITooltipService>() );
+        startup.addSubsystem( sw::make_unique<UINotificationService>() );
         return parts;
     }
 } // namespace sw::engine

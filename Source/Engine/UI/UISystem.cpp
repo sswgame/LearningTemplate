@@ -102,7 +102,8 @@ namespace sw
         , _styleSheetReloadedSubscription{}
         , _theme{}
         , _listReopenDocument{}
-        , _notifications{ *this }
+        , _onUpdateBeforeScreens{}
+        , _onUpdateAfterScreens{}
         , _actionGlyphs{}
         , _input{}
         , _worldPointer{}
@@ -112,8 +113,6 @@ namespace sw
         , _pUserSettings{ nullptr }
         , _textLayout{}
         , _scaleSettings{}
-        , _subtitles{ *this }
-        , _tooltips{ *this }
         , _viewport{}
         , _paintState{}
         , _markers{}
@@ -162,9 +161,6 @@ namespace sw
     void UISystem::shutdown()
     {
         _accessibilityBridge.reset();
-        _subtitles.clear();
-        _tooltips.clear();
-        _notifications.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있으므로 등록과 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
         {
@@ -279,11 +275,9 @@ namespace sw
         syncThemeSetting();
         syncScreenSwitches();
         reopenClosedScreens();
-        _subtitles.update( deltaSeconds );
-        if ( _bOnScreenSuppressed == SW_FALSE )
-            _tooltips.update( deltaSeconds ); // 화면을 막는 동안(에디터 멈춤)은 포인터도 막혀 있다 — 툴팁과 커서를 건드리지 않는다
+        _onUpdateBeforeScreens.broadcast( deltaSeconds ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
         updateScreens( deltaSeconds );
-        _notifications.update( deltaSeconds );
+        _onUpdateAfterScreens.broadcast( deltaSeconds ); // 알림
         applyPendingCloses();
         updateBindings();
         // 애니메이션: 문서 애니메이션과 트윈이 프로퍼티를 쓴다(스타일과 레이아웃 앞이라, 쓴 필드의 무효화를 이번 프레임에 처리한다). 실제 프레임 시간을 쓴다(일시정지 메뉴도 움직인다).

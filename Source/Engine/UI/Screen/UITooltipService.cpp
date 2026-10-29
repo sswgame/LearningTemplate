@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEventRouter.h"
@@ -26,14 +27,35 @@ namespace sw
         };
     } // namespace
 
-    UITooltipService::UITooltipService( UISystem& uiSystem )
-        : _uiSystem{ uiSystem }
+    UITooltipService::UITooltipService()
+        : _pUI{ nullptr }
+        , _updateSubscription{}
         , _screen{ kInvalidUIScreenHandle }
         , _hoverOwner{ kInvalidWidgetID }
         , _shownOwner{ kInvalidWidgetID }
         , _hoverSeconds{ 0.0f }
         , _bDocumentFailed{ false }
     {
+    }
+
+    SubsystemInitResult UITooltipService::initializeSubsystem()
+    {
+        _pUI                = &engine::getSubsystem<UISystem>();
+        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UITooltipService::update, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UITooltipService::shutdownSubsystem()
+    {
+        _updateSubscription.reset();
+        clear(); // 화면 스택이 아직 있다(이것이 먼저 내려간다) — 연 화면을 닫는다
+        _pUI = nullptr;
+    }
+
+    span<const utf8* const> UITooltipService::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName };
+        return kArrDependency;
     }
 
     float2 UITooltipService::computePlacement( const float2& pointer, const float2& tooltipSize, const float2& screenSize )
@@ -98,7 +120,10 @@ namespace sw
 
     void UITooltipService::update( float32 deltaSeconds )
     {
-        const UIInputRouter&  input        = _uiSystem.getInputRouter();
+        // 화면 그리기를 막는 동안(에디터 멈춤)은 포인터도 막혀 있다 — 툴팁과 커서를 건드리지 않는다.
+        if ( _pUI->isOnScreenSuppressed() )
+            return;
+        const UIInputRouter&  input        = _pUI->getInputRouter();
         const UIPointerState& pointer      = input.getPointerState();
         const WidgetTree*     pHoverTree   = pointer.getHoverTree();
         const bool            bPointerMode = input.getInputMode() == UIInputMode::Pointer;
@@ -141,9 +166,9 @@ namespace sw
         {
             if ( _bDocumentFailed )
                 return;
-            const string& documentPath = _uiSystem.getEngineDocuments()._tooltip;
-            _screen                    = _uiSystem.openScreen( documentPath );
-            if ( _uiSystem.findScreen( _screen ) == nullptr )
+            const string& documentPath = _pUI->getEngineDocuments()._tooltip;
+            _screen                    = _pUI->openScreen( documentPath );
+            if ( _pUI->findScreen( _screen ) == nullptr )
             {
                 SW_LOG_ERROR( "[UI] Tooltip screen '%#' could not be opened - tooltips are not shown", documentPath.c_str() );
                 _screen          = kInvalidUIScreenHandle;
@@ -151,7 +176,7 @@ namespace sw
                 return;
             }
         }
-        UIScreen* pScreen = _uiSystem.findScreen( _screen );
+        UIScreen* pScreen = _pUI->findScreen( _screen );
         if ( pScreen == nullptr )
         {
             _screen = kInvalidUIScreenHandle; // 누군가 닫았으므로 다음 프레임에 다시 연다
@@ -170,14 +195,14 @@ namespace sw
         if ( _shownOwner != owner.getID() )
             pText->setText( owner.getTooltip() );
         // 크기는 지난 배치의 것이다. 처음 띄운 프레임은 아직 배치 전(0)이라 자리를 확정할 수 없으므로 한 프레임 보이지 않게 둔다(화면 변에서 한 프레임 번쩍이지 않는다).
-        const float2&          pointerPosition  = _uiSystem.getInputRouter().getLastPointerPosition();
+        const float2&          pointerPosition  = _pUI->getInputRouter().getLastPointerPosition();
         const float2&          bodySize         = pBody->getGeometry()._size;
         const bool             bLaidOut         = bodySize._x > 0.0f && bodySize._y > 0.0f;
         const WidgetVisibility wantedVisibility = bLaidOut ? WidgetVisibility::Visible : WidgetVisibility::Hidden;
         if ( pBody->getVisibility() != wantedVisibility )
             pBody->setVisibility( wantedVisibility );
         WidgetRenderTransform transform = pBody->getRenderTransform();
-        transform._translation          = computePlacement( pointerPosition, bodySize, _uiSystem.getViewport()._size );
+        transform._translation          = computePlacement( pointerPosition, bodySize, _pUI->getViewport()._size );
         pBody->setRenderTransform( transform );
         _shownOwner = owner.getID();
     }
@@ -185,7 +210,7 @@ namespace sw
     void UITooltipService::hide()
     {
         if ( _screen != kInvalidUIScreenHandle )
-            _uiSystem.closeScreen( _screen );
+            _pUI->closeScreen( _screen );
         _screen     = kInvalidUIScreenHandle;
         _shownOwner = kInvalidWidgetID;
     }

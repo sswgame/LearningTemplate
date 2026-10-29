@@ -3,9 +3,12 @@
  * @brief 런타임 UI 의 툴팁과 커서 모양입니다. 호버 경로에서 가장 가까운 위젯의 설명 글(`Widget::getTooltip`)을 머문 뒤 띄우고, 커서 모양(`Widget::getCursorShape`)을 OS 커서로 냅니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/Window/CursorShape.h"
@@ -20,7 +23,7 @@ namespace sw
 
     /**
      * @class UITooltipService
-     * @brief 툴팁 화면(`UIEngineDocuments::_tooltip`, 오버레이 레이어)을 열고 닫고, 커서 모양을 정합니다. `UISystem` 의 일부입니다(`UISystem::getTooltips`).
+     * @brief 툴팁 화면(`UIEngineDocuments::_tooltip`, 오버레이 레이어)을 열고 닫고, 커서 모양을 정합니다. 엔진 범위 서브시스템 `UITooltips` 입니다.
      * @details 언리얼 Slate 의 툴팁(`SToolTip`, 지연 후 커서 옆) · 위젯 `Cursor` 속성과 같은 자리다.
      *          - 툴팁: 호버 경로의 잎에서 루트로 올라가 처음 만난 비어 있지 않은 설명 글이 주인이다. 같은 주인 위에 `gv_uiTooltipDelay` 초 머물면 띄우고,
      *            주인이 바뀌거나 포인터 입력이 아니게 되면(탐색 방식) 닫는다. 위치는 포인터 오른쪽 아래(`kPointerOffset`, UI 단위)이며 문서의 `Body` 위젯을 옮긴다.
@@ -34,13 +37,21 @@ namespace sw
         static constexpr float32 kPointerOffsetX = 16.0f;
         static constexpr float32 kPointerOffsetY = 20.0f;
 
-        explicit UITooltipService( UISystem& uiSystem );
-        UITooltipService( const UITooltipService& )            = delete;
-        UITooltipService& operator=( const UITooltipService& ) = delete;
+        UITooltipService();
 
-        /** @brief 호버 경로로 커서 모양을 정하고, 머문 시간을 세어 툴팁을 열고 닫고 옮깁니다. `UISystem::update` 가 화면 틱 앞에서 부릅니다. */
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UITooltipService>()`, 게임은 `game::getSubsystem<UITooltipService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UITooltips";
+        SubsystemInitResult          initializeSubsystem() override;
+        void                         shutdownSubsystem() override;
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>      getSubsystemDependencies() const override;
+        SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+
+        /** @brief 호버 경로로 커서 모양을 정하고, 머문 시간을 세어 툴팁을 열고 닫고 옮깁니다. UI 갱신의 화면 틱 앞 칸이 부릅니다(화면 그리기를 막은 동안은 건너뛴다). */
         void update( float32 deltaSeconds );
-        /** @brief 툴팁을 닫고 머문 시간을 지웁니다(`UISystem::shutdown`). */
+        /** @brief 툴팁을 닫고 머문 시간을 지웁니다(종료 `shutdownSubsystem`). */
         void clear();
 
         /**
@@ -68,7 +79,8 @@ namespace sw
         /** @brief 툴팁 화면을 닫습니다. */
         void hide();
 
-        UISystem&      _uiSystem;
+        UISystem*      _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)
+        Subscription   _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
         UIScreenHandle _screen;
         WidgetID       _hoverOwner;      ///< 지금 머무는 주인(설명 글을 가진 위젯)
         WidgetID       _shownOwner;      ///< 툴팁을 띄운 주인

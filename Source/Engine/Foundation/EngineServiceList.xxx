@@ -59,6 +59,9 @@ SW_ENGINE_SERVICE( class, UISystem, Required, GameVisible )
 SW_ENGINE_SERVICE( class, UIClipboardService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, UIGlobalCommandRegistry, Required, GameVisible )
 SW_ENGINE_SERVICE( class, UIBindingConverterRegistry, Required, GameVisible )
+// 화면 스택 위에서 자기 화면을 여닫는 UI 서비스(알림 · 자막) — UISystem 에 의존하고 UI 갱신 칸에 건다(Client 호스트). 툴팁은 찾는 쪽이 없어 행이 없다.
+SW_ENGINE_SERVICE( class, UINotificationService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, UISubtitleService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 // 서브시스템 Telemetry(Client 호스트)다.

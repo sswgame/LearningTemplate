@@ -102,6 +102,7 @@
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
+#include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -622,7 +623,7 @@ namespace sw
         {
             vector<AudioSubtitleCue> listCue;
             _pAudioService->getEngine().takeSubtitleCues( listCue );
-            _pUISystem->getSubtitles().postAudioCues( listCue );
+            engine::getSubsystem<UISubtitleService>().postAudioCues( listCue );
         }
         _pUISystem->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }

@@ -5,10 +5,13 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
@@ -46,7 +49,7 @@ namespace sw
 {
     /**
      * @class UINotificationService
-     * @brief `UISystem` 의 알림과 토스트입니다(`UISystem::getNotifications`, 언리얼 Lyra 의 CommonUI 메시지 스택과 유니티 토스트에 해당).
+     * @brief `UISystem` 의 알림과 토스트입니다(`엔진 범위 서브시스템 `UINotifications``, 언리얼 Lyra 의 CommonUI 메시지 스택과 유니티 토스트에 해당).
      * @details 보이는 알림은 `kMaxVisible` 개까지이고(오래된 것이 위), 나머지는 대기열(우선순위, 온 순서)에 둔다. 화면은 오버레이 레이어 문서 `engine/ui/notifications.ui.xml` 이며,
      *          입력과 포커스를 받지 않으므로 게임과 메뉴를 막지 않는다. 보일 것이 없으면 화면을 닫는다. 항목은 조각 `engine/ui/parts/notification.ui.xml`
      *          (`Message`, `Count`, 루트의 스타일 클래스 `notification <종류>`)로 만든다. 게임 스레드에서만 쓴다.
@@ -63,13 +66,21 @@ namespace sw
         static constexpr uint32  kMaxVisible  = 3;
         static constexpr float32 kFadeSeconds = 0.2f; ///< 들어올 때와 나갈 때 불투명도가 변하는 시간입니다.
 
-        explicit UINotificationService( UISystem& ui );
-        UINotificationService( const UINotificationService& )            = delete;
-        UINotificationService& operator=( const UINotificationService& ) = delete;
+        UINotificationService();
+
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UINotificationService>()`, 게임은 `game::getSubsystem<UINotificationService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // 기동이 UI 갱신 칸(`UISystem::onUpdateAfterScreens`)에 걸고 종료가 줄을 비우고 푼다.
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UINotifications";
+        SubsystemInitResult          initializeSubsystem() override;
+        void                         shutdownSubsystem() override;
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>      getSubsystemDependencies() const override;
+        SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDesc& desc );
-        /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(`UISystem::update` 가 부른다). */
+        /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */
         void clear();
@@ -121,10 +132,11 @@ namespace sw
         void removeEntryWidget( WidgetID widget );
 
     private:
-        vector<Entry>       _listVisible; ///< 보이는 알림입니다(위부터).
-        vector<Entry>       _listQueued;  ///< 기다리는 알림입니다.
-        vector<FadingEntry> _listFading;  ///< 사라지는 중인 항목의 위젯입니다.
-        UISystem&           _ui;
+        vector<Entry>       _listVisible;        ///< 보이는 알림입니다(위부터).
+        vector<Entry>       _listQueued;         ///< 기다리는 알림입니다.
+        vector<FadingEntry> _listFading;         ///< 사라지는 중인 항목의 위젯입니다.
+        UISystem*           _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr — `post` 는 쌓기만 한다)
+        Subscription        _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateAfterScreens`) 구독
         uint64              _nextOrder;
         UIScreenHandle      _screen;
     };

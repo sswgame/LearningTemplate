@@ -6,6 +6,7 @@
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -26,12 +27,9 @@
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Render/UICanvasPaintState.h"
 #include "Engine/UI/Render/UIPaintPass.h"
-#include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenMarkers.h"
-#include "Engine/UI/Screen/UISubtitleService.h"
-#include "Engine/UI/Screen/UITooltipService.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
@@ -54,6 +52,9 @@ namespace sw
 
 namespace sw
 {
+    /** @brief UI 갱신(`UISystem::update`)의 정해진 자리에서 도는 UI 서비스의 함수 칸입니다. 인자는 실제 프레임 시간(초)입니다. */
+    using UIUpdateDelegate = MulticastDelegate<void( float32 deltaSeconds )>;
+
     /**
      * @class UISystem
      * @brief 런타임 UI 의 엔진 서비스입니다(`engine::getSubsystem<UISystem>()`, 게임은 `game::findSubsystem<UISystem>()`).
@@ -178,9 +179,6 @@ namespace sw
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
         /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것(기동이 엔진 서비스를 넘긴다)이고, 받지 않았으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
         UserSettingsManager* findUserSettings() const;
-        /** @brief 알림과 토스트입니다. 오버레이 레이어에서 세 개까지 쌓고, 대기열을 두며, 같은 글은 합칩니다. 게임과 키트가 `post` 합니다. */
-        UINotificationService&       getNotifications() { return _notifications; }
-        const UINotificationService& getNotifications() const { return _notifications; }
         /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵, UI 맵, 지금 장치 종류). */
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
@@ -291,12 +289,16 @@ namespace sw
          */
         bool tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
 
-        // --- 자막 ---------------------------------------------------------------
-        /** @brief 자막입니다. 오버레이 레이어 아래 가운데에 최대 둘까지 표시하며, 사용자 설정의 끔/켬, 크기, 배경을 따릅니다. */
-        UISubtitleService&       getSubtitles() { return _subtitles; }
-        const UISubtitleService& getSubtitles() const { return _subtitles; }
-        /** @brief 툴팁과 커서 모양입니다. 호버 경로의 위젯 설명 글을 머문 뒤 띄우고, 위젯 커서 모양을 OS 커서로 냅니다. */
-        const UITooltipService& getTooltips() const { return _tooltips; }
+        // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
+        /**
+         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
+         * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationService>()` 처럼
+         *          찾는다). 기동에서 이 칸에 걸고 종료에서 푼다 — 언리얼 Slate 의 `OnPreTick` · Godot `SceneTree.process_frame` 신호와 같은 자리다.
+         *          화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 포인터를 보는 서비스(툴팁)는 스스로 거른다.
+         */
+        UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
+        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
+        UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
@@ -456,19 +458,18 @@ namespace sw
         Subscription                       _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
         Subscription                       _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
         UIThemeController                  _theme;
-        vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
-        UINotificationService              _notifications;
-        UIActionGlyphSource                _actionGlyphs;        ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
-        UIInputRouter                      _input;               ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        UIWorldPointerRouter               _worldPointer;        ///< World 위젯의 광선 입력 상태입니다.
-        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge; ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
+        vector<string>                     _listReopenDocument;    ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
+        UIUpdateDelegate                   _onUpdateBeforeScreens; ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
+        UIUpdateDelegate                   _onUpdateAfterScreens;  ///< 화면 틱 뒤의 UI 서비스(알림)
+        UIActionGlyphSource                _actionGlyphs;          ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
+        UIInputRouter                      _input;                 ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
+        UIWorldPointerRouter               _worldPointer;          ///< World 위젯의 광선 입력 상태입니다.
+        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge;   ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
         FontService*                       _pFontService;
         const LocalizationManager*         _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         UserSettingsManager*               _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         unique_ptr<TextLayoutEngine>       _textLayout;
         UIScaleSettings                    _scaleSettings;
-        UISubtitleService                  _subtitles;
-        UITooltipService                   _tooltips;
         UIViewport                         _viewport;
         UICanvasPaintState                 _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
         UIScreenMarkers                    _markers;    ///< 화면 마커 화면과 앵커 표입니다.

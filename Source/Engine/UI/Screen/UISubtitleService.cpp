@@ -8,6 +8,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioEngineState.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
@@ -33,8 +34,9 @@ namespace sw
 
 namespace sw
 {
-    UISubtitleService::UISubtitleService( UISystem& uiSystem )
-        : _uiSystem{ uiSystem }
+    UISubtitleService::UISubtitleService()
+        : _pUI{ nullptr }
+        , _updateSubscription{}
         , _listActive{}
         , _listQueued{}
         , _authoredBackground{}
@@ -47,6 +49,26 @@ namespace sw
     }
 
     UISubtitleService::~UISubtitleService() = default;
+
+    SubsystemInitResult UISubtitleService::initializeSubsystem()
+    {
+        _pUI                = &engine::getSubsystem<UISystem>();
+        _updateSubscription = _pUI->onUpdateBeforeScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UISubtitleService::update, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UISubtitleService::shutdownSubsystem()
+    {
+        _updateSubscription.reset();
+        clear(); // 화면 스택이 아직 있다(이것이 먼저 내려간다) — 연 화면을 닫는다
+        _pUI = nullptr;
+    }
+
+    span<const utf8* const> UISubtitleService::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName };
+        return kArrDependency;
+    }
 
     uint32 UISubtitleService::post( string_view speaker, string_view text, float32 durationSeconds )
     {
@@ -102,7 +124,7 @@ namespace sw
         }
         if ( _screen == kInvalidUIScreenHandle && openScreen() == false )
             return;
-        UIScreen* pScreen = _uiSystem.findScreen( _screen );
+        UIScreen* pScreen = _pUI->findScreen( _screen );
         if ( pScreen == nullptr )
         {
             _screen = kInvalidUIScreenHandle; // 누군가 닫았으므로 다음 프레임에 다시 연다
@@ -138,9 +160,9 @@ namespace sw
     {
         if ( _bDocumentFailed )
             return false;
-        const string& documentPath = _uiSystem.getEngineDocuments()._subtitles;
-        _screen                    = _uiSystem.openScreen( documentPath );
-        UIScreen* pScreen          = _uiSystem.findScreen( _screen );
+        const string& documentPath = _pUI->getEngineDocuments()._subtitles;
+        _screen                    = _pUI->openScreen( documentPath );
+        UIScreen* pScreen          = _pUI->findScreen( _screen );
         if ( pScreen == nullptr )
         {
             SW_LOG_ERROR( "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
@@ -171,7 +193,7 @@ namespace sw
     {
         if ( _screen == kInvalidUIScreenHandle )
             return;
-        _uiSystem.closeScreen( _screen );
+        _pUI->closeScreen( _screen );
         _screen = kInvalidUIScreenHandle;
     }
 

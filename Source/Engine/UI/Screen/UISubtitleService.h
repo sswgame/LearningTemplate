@@ -6,9 +6,12 @@
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/UIBrush.h"
 
@@ -34,7 +37,7 @@ namespace sw
 {
     /**
      * @class UISubtitleService
-     * @brief 자막 줄을 받아 오버레이 레이어의 자막 화면(`engine/ui/subtitles.ui.xml`)에 최대 둘까지 보여 줍니다. `UISystem` 의 일부입니다(`UISystem::getSubtitles`).
+     * @brief 자막 줄을 받아 오버레이 레이어의 자막 화면(`engine/ui/subtitles.ui.xml`)에 최대 둘까지 보여 줍니다. 엔진 범위 서브시스템 `UISubtitles` 입니다.
      * @details 언리얼의 `FSubtitleManager` 에 해당한다. 줄은 최대 둘이 동시에 보이고(오래된 것이 위), 넘치는 줄은 대기열에서 기다렸다가 자리가 나면
      *          그때부터 시간을 센다. 사용자 설정은 매 프레임 읽는다. `gv_subtitles` 를 끄면 화면은 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터 보인다).
      *          `gv_subtitleSize`(0, 1, 2)는 문서에 적힌 글 크기에 0.85, 1, 1.3 을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
@@ -51,10 +54,18 @@ namespace sw
         static constexpr float32 kReadingSecondsPerCharacter = 0.06f;
         // 자막 화면 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
 
-        explicit UISubtitleService( UISystem& uiSystem );
-        ~UISubtitleService();
-        UISubtitleService( const UISubtitleService& )            = delete;
-        UISubtitleService& operator=( const UISubtitleService& ) = delete;
+        UISubtitleService();
+        ~UISubtitleService() override;
+
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UISubtitleService>()`, 게임은 `game::getSubsystem<UISubtitleService>()`). 화면 스택(`UISystem`)에 의존하고,
+        // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UISubtitles";
+        SubsystemInitResult          initializeSubsystem() override;
+        void                         shutdownSubsystem() override;
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const>      getSubsystemDependencies() const override;
+        SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /**
          * @brief 줄 하나를 올립니다. 자리가 있으면 다음 `update` 부터 보이고, 없으면 대기열 끝에 섭니다.
@@ -67,9 +78,9 @@ namespace sw
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDesc::_subtitleSpeakerKey`)다.
          */
         void postAudioCues( const vector<AudioSubtitleCue>& listCue );
-        /** @brief 줄을 모두 지우고 화면을 닫습니다(`UISystem::shutdown` 과 장면 전환 때 부릅니다). */
+        /** @brief 줄을 모두 지우고 화면을 닫습니다(종료 `shutdownSubsystem` 과 장면 전환 때 부릅니다). */
         void clear();
-        /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. `UISystem::update` 가 부릅니다. */
+        /** @brief 시간을 흘리고(꺼져 있어도) 대기열을 당긴 뒤, 설정을 따라 화면을 열고 닫고 줄 위젯을 맞춥니다. UI 갱신의 화면 틱 앞 칸이 부릅니다. */
         void update( float32 deltaSeconds );
 
         /** @brief 텍스트 @p text 의 읽기 시간입니다. max( 2 초, 글자(코드 포인트) 수 × 0.06 초 ) 로 계산합니다. */
@@ -94,7 +105,8 @@ namespace sw
         /** @brief 줄 슬롯 @p slot 을 줄 @p pLine 으로 맞춥니다(nullptr 이면 접습니다). 바뀐 필드만 씁니다. */
         void applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity );
 
-        UISystem&              _uiSystem;
+        UISystem*              _pUI;                     ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr — `post` 는 쌓기만 한다)
+        Subscription           _updateSubscription;      ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
         vector<UISubtitleLine> _listActive;              ///< 보이는 줄입니다(오래된 것이 앞).
         vector<UISubtitleLine> _listQueued;              ///< 자리를 기다리는 줄입니다(먼저 온 것이 앞).
         UIBrush                _authoredBackground;      ///< 문서에 적힌 줄 바탕입니다(알파는 설정이 바꿉니다).

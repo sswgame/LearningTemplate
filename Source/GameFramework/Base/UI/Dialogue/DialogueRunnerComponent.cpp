@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
+#include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -208,7 +209,7 @@ namespace sw
             UISystem*  pUISystem     = _pUISystemOverride != nullptr ? _pUISystemOverride : game::findSubsystem<UISystem>();
             const bool bPostSubtitle = pUISystem != nullptr && pUISystem->isInitialized() && _currentText.empty() == false;
             if ( bPostSubtitle )
-                (void)pUISystem->getSubtitles().post( _currentSpeaker, _currentText );
+                (void)game::getSubsystem<UISubtitleService>().post( _currentSpeaker, _currentText ); // 자막은 화면 스택 위의 엔진 서비스다
         }
         if ( _onLine.isBound() == false )
             return;

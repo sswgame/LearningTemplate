@@ -68,7 +68,7 @@ namespace sw
         desc._durationSeconds = _durationSeconds;
         desc._kind            = UINotificationKind::Hint;
         desc._priority        = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
-        pUI->getNotifications().post( desc );
+        game::getSubsystem<UINotificationService>().post( desc );
         _bFired = true;
         return true;
     }

@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/UISystem.h"
@@ -59,14 +60,35 @@ namespace sw
         };
     } // namespace
 
-    UINotificationService::UINotificationService( UISystem& ui )
+    UINotificationService::UINotificationService()
         : _listVisible{}
         , _listQueued{}
         , _listFading{}
-        , _ui{ ui }
+        , _pUI{ nullptr }
+        , _updateSubscription{}
         , _nextOrder{ 0 }
         , _screen{ kInvalidUIScreenHandle }
     {
+    }
+
+    SubsystemInitResult UINotificationService::initializeSubsystem()
+    {
+        _pUI                = &engine::getSubsystem<UISystem>();
+        _updateSubscription = _pUI->onUpdateAfterScreens().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UINotificationService::update, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UINotificationService::shutdownSubsystem()
+    {
+        _updateSubscription.reset();
+        clear(); // 화면 스택이 아직 있다(이것이 먼저 내려간다) — 연 화면을 닫는다
+        _pUI = nullptr;
+    }
+
+    span<const utf8* const> UINotificationService::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName };
+        return kArrDependency;
     }
 
     void UINotificationService::post( const UINotificationDesc& desc )
@@ -148,14 +170,14 @@ namespace sw
         const bool bIdleScreenOpen = _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle;
         if ( bIdleScreenOpen )
         {
-            _ui.closeScreen( _screen );
+            _pUI->closeScreen( _screen );
             _screen = kInvalidUIScreenHandle;
         }
     }
 
     void UINotificationService::announceVisible()
     {
-        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _ui.findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr )
             return;
         for ( Entry& entry : _listVisible )
@@ -166,7 +188,7 @@ namespace sw
             if ( pMessage == nullptr || pMessage->getDisplayText().empty() )
                 continue; // 아직 배치 전이다 — 다음 갱신에 다시 본다
             const UIAnnouncePriority priority = entry._desc._kind == UINotificationKind::Warning ? UIAnnouncePriority::Assertive : UIAnnouncePriority::Polite;
-            _ui.announce( pMessage->getDisplayText(), priority );
+            _pUI->announce( pMessage->getDisplayText(), priority );
             entry._bAnnounced = true;
         }
     }
@@ -176,8 +198,8 @@ namespace sw
         _listVisible.clear();
         _listQueued.clear();
         _listFading.clear();
-        if ( _screen != kInvalidUIScreenHandle && _ui.findScreen( _screen ) != nullptr )
-            _ui.closeScreen( _screen );
+        if ( _screen != kInvalidUIScreenHandle && _pUI->findScreen( _screen ) != nullptr )
+            _pUI->closeScreen( _screen );
         _screen = kInvalidUIScreenHandle;
     }
 
@@ -194,11 +216,11 @@ namespace sw
 
     UIScreen* UINotificationService::acquireScreen()
     {
-        UIScreen* pScreen = _ui.findScreen( _screen );
+        UIScreen* pScreen = _pUI->findScreen( _screen );
         if ( pScreen != nullptr && pScreen->isClosing() == false )
             return pScreen;
-        _screen = _ui.openScreen( _ui.getEngineDocuments()._notifications );
-        return _ui.findScreen( _screen );
+        _screen = _pUI->openScreen( _pUI->getEngineDocuments()._notifications );
+        return _pUI->findScreen( _screen );
     }
 
     void UINotificationService::showEntry( Entry& entry )
@@ -210,13 +232,13 @@ namespace sw
         PanelWidget* pStack = pScreen->getTree().findWidget<PanelWidget>( Internal::kStackName );
         if ( pStack == nullptr )
         {
-            SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", _ui.getEngineDocuments()._notifications.c_str(), Internal::kStackName );
+            SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
             return;
         }
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = _ui.getDocumentCache().findOrLoad( _ui.getEngineDocuments()._notificationEntry, error );
+        const shared_ptr<const UIDocumentAsset> document = _pUI->getDocumentCache().findOrLoad( _pUI->getEngineDocuments()._notificationEntry, error );
         vector<UIBindingDesc>                   listBinding;
-        unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, _ui.getDocumentCache(), listBinding, error ) : nullptr;
+        unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, _pUI->getDocumentCache(), listBinding, error ) : nullptr;
         if ( widget == nullptr )
         {
             SW_LOG_ERROR( "[UI] Notification entry failed: %#", error.c_str() );
@@ -232,7 +254,7 @@ namespace sw
         entry._widget = widget->getID();
         widget->setOpacity( 0.0f ); // 페이드로 들어온다(움직임 줄이기이면 아래 트윈이 바로 1 을 쓴다)
         (void)pStack->addChild( std::move( widget ) );
-        if ( _ui.tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
+        if ( _pUI->tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
         {
             if ( Widget* pAdded = pScreen->getTree().findWidgetByID( entry._widget ); pAdded != nullptr )
                 pAdded->setOpacity( 1.0f ); // 트윈을 걸지 못하면 보이지 않는 채로 남지 않게 한다
@@ -243,7 +265,7 @@ namespace sw
     void UINotificationService::refreshEntry( const Entry& entry )
     {
         using Internal    = UINotificationServiceInternal;
-        UIScreen* pScreen = _ui.findScreen( _screen );
+        UIScreen* pScreen = _pUI->findScreen( _screen );
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중이다
@@ -258,11 +280,11 @@ namespace sw
 
     void UINotificationService::startFadeOut( const Entry& entry )
     {
-        UIScreen* pScreen = _ui.findScreen( _screen );
+        UIScreen* pScreen = _pUI->findScreen( _screen );
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pWidget == nullptr )
             return; // 위젯을 만들지 못했던 항목이다
-        if ( gv_uiReduceMotion || _ui.tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
+        if ( gv_uiReduceMotion || _pUI->tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
         {
             removeEntryWidget( entry._widget );
             return;
@@ -275,7 +297,7 @@ namespace sw
 
     void UINotificationService::removeEntryWidget( WidgetID widget )
     {
-        UIScreen*    pScreen = _ui.findScreen( _screen );
+        UIScreen*    pScreen = _pUI->findScreen( _screen );
         Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pParent != nullptr )
