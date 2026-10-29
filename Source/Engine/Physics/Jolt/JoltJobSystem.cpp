@@ -4,7 +4,6 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
 
@@ -33,12 +32,18 @@ namespace sw
         , _jobs{}
         , _listQueuedJob{}
         , _queueMutex{}
-        , _pendingTaskCount{ 0 }
+        , _pTaskManager{ nullptr }
+        , _jobTaskStage{}
         , _maxConcurrency{ 1 }
     {
         _jobs.Init( maxJobCount, maxJobCount );
         if ( engine::areEngineServicesBound() )
-            _maxConcurrency = engine::getSubsystem<TaskManager>().getWorkerCount() + 1;
+        {
+            _pTaskManager = &engine::getSubsystem<TaskManager>();
+            // 스테이지는 만들 때 한 번만 쓴다 — 이후 `addTask` 는 원자 연산이라 여러 스레드가 동시에 `QueueJob` 해도 된다.
+            _jobTaskStage   = _pTaskManager->createStage( "JoltJobs" );
+            _maxConcurrency = _pTaskManager->getWorkerCount() + 1;
+        }
     }
 
     JoltJobSystem::~JoltJobSystem()
@@ -49,19 +54,9 @@ namespace sw
             pJob->Execute();
             pJob->Release();
         }
-        // 끝없이 양보하며 도는 대기는 나간 태스크가 영영 안 돌면(큐가 비워진 태스크 매니저 · 멈춘 잡) 종료를 영영 막는다. 시간 제한을 두고 넘으면 오류로 멈춘다:
-        // 나간 태스크가 이 객체를 쥐고 있어 그냥 지우면 해제된 메모리를 만지는 정의 안 된 동작이 된다. 폴백(그냥 지우고 이어 가기)은 두지 않는다.
-        constexpr int64 kDrainTimeoutMs = 30000;
-        const Stopwatch stopwatch;
-        while ( _pendingTaskCount.load( std::memory_order_acquire ) != 0 )
-        {
-            if ( stopwatch.getElapsedMilliseconds() >= kDrainTimeoutMs )
-            {
-                SW_FATAL( "JoltJobSystem destroyed but %# job task(s) never finished within %# ms - aborting instead of hanging",
-                          _pendingTaskCount.load( std::memory_order_acquire ), kDrainTimeoutMs );
-            }
-            std::this_thread::yield();
-        }
+        // 이미 나간 태스크가 이 객체를 쥐고 있다. 끝날 때까지 기다린다(기한을 두고 포기하지 않는다 — 오래 걸리면 `waitStage` 가 주기적으로 남은 태스크를 오류로 남긴다).
+        if ( _pTaskManager != nullptr )
+            _pTaskManager->waitStage( _jobTaskStage, "JoltJobSystem" );
     }
 
     int32 JoltJobSystem::GetMaxConcurrency() const
@@ -97,18 +92,15 @@ namespace sw
             ScopedLock<mutex> lock{ _queueMutex };
             _listQueuedJob.push_back( pJob );
         }
-        if ( engine::areEngineServicesBound() == false )
+        if ( _pTaskManager == nullptr )
         {
             runQueuedJob();
             return;
         }
-        _pendingTaskCount.fetch_add( 1, std::memory_order_acq_rel );
-        TaskManager& taskManager = engine::getSubsystem<TaskManager>();
-        TaskHandle   handle      = taskManager.emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
+        TaskHandle handle = _pTaskManager->emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
         if ( handle.isValid() == false )
         {
             // 태스크를 낼 수 없다(풀이 바닥났거나 종료 중이다). 여기서 실행한다.
-            _pendingTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
             Job* pQueued = popQueuedJob();
             if ( pQueued != nullptr )
             {
@@ -119,7 +111,8 @@ namespace sw
         }
         // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
         handle.setPriority( TaskPriority::High );
-        taskManager.submit( handle );
+        _jobTaskStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약)
+        _pTaskManager->submit( handle );
     }
 
     void JoltJobSystem::QueueJobs( Job** ppJob, JPH::uint jobCount )
@@ -138,6 +131,7 @@ namespace sw
     void JoltJobSystem::WaitForJobs( Barrier* pBarrier )
     {
         JPH::JobSystemWithBarrier::WaitForJobs( pBarrier );
+        // 칸별 수를 스테이지 대기로 바꾸지 않는다 — 스테이지는 다른 스텝의 잡 태스크까지 세고, 잡 안에서 부르면 자기 태스크를 기다린다(Unity JobHandle 도 장벽 하나만 기다린다).
         // 장벽에 붙기 전에 끝난 잡은 장벽이 기다리지 않는다. 지금 실행 중인 칸마다 그 실행이 나올 때까지 기다려 선후를 맺는다(파일 머리말 주의).
         for ( uint32 slotIndex = 0; slotIndex < kMaxExecutorSlotCount; ++slotIndex )
         {
@@ -157,9 +151,9 @@ namespace sw
         Job* pJob = popQueuedJob();
         if ( pJob != nullptr )
         {
-            if ( engine::areEngineServicesBound() )
+            if ( _pTaskManager != nullptr )
             {
-                const uint32  slotIndex                = std::min( engine::getSubsystem<TaskManager>().getCurrentThreadScratchSlot(), kMaxExecutorSlotCount - 1 );
+                const uint32  slotIndex                = std::min( _pTaskManager->getCurrentThreadScratchSlot(), kMaxExecutorSlotCount - 1 );
                 ExecutorSlot& slot                     = _arrExecutorSlot[slotIndex];
                 const int32   previousSlot             = JoltJobSystemInternal::t_executingSlot;
                 JoltJobSystemInternal::t_executingSlot = static_cast<int32>( slotIndex );
@@ -174,8 +168,6 @@ namespace sw
             }
             pJob->Release();
         }
-        if ( engine::areEngineServicesBound() )
-            _pendingTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
     JPH::JobSystem::Job* JoltJobSystem::popQueuedJob()

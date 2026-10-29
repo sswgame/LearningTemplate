@@ -19,6 +19,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Task/TaskTypes.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/FixedSizeFreeList.h>
@@ -26,6 +27,8 @@
 
 namespace sw
 {
+    class TaskManager;
+
     /** @class JoltJobSystem @brief 엔진 태스크로 도는 Jolt 잡 시스템입니다. 파일 머리말 참고. */
     class JoltJobSystem final : public JPH::JobSystemWithBarrier
     {
@@ -63,7 +66,9 @@ namespace sw
         JPH::FixedSizeFreeList<Job> _jobs;
         deque<Job*> _listQueuedJob  SW_GUARDED_BY( _queueMutex );
         mutable mutex               _queueMutex;
-        atomic<uint32>              _pendingTaskCount; ///< 내고 아직 끝나지 않은 엔진 태스크 수(소멸이 기다린다)
-        uint32                      _maxConcurrency;
+        TaskManager*                _pTaskManager; ///< 엔진 서비스가 묶여 있지 않으면 nullptr 이다(잡을 그 자리에서 실행한다)
+        /** @brief 이 잡 시스템이 낸 엔진 태스크 전부입니다. 소멸이 `waitStage` 로 기다린다(따로 센 수를 양보하며 돌지 않는다 — 태스크 매니저의 대기 · 진단을 쓴다). */
+        TaskStageHandle _jobTaskStage;
+        uint32          _maxConcurrency;
     };
 } // namespace sw
