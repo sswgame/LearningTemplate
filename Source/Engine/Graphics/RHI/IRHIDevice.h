@@ -10,7 +10,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
-#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -247,7 +246,7 @@ namespace sw
          * @note 정적 테이블은 RHIAvailability::query 입니다. DX12 와 Vulkan 의 네이티브 bindless 는
          *       supportsNativeBindlessSampling() 과 getCapabilities() override 가 런타임에 확정합니다.
          */
-        virtual RHICapabilities getCapabilities() const { return RHIAvailability::query( getBackendType() ); }
+        virtual RHICapabilities getCapabilities() const;
         /**
          * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
          * @details **수명주기 전용**이다. 펜스 대기(GPU 백프레셔), 스왑체인 이미지 획득, 기록 시작만 하고 렌더 타깃은 바인딩하지 않는다.

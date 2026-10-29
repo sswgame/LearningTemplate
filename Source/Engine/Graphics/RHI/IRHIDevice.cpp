@@ -14,6 +14,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Window/IRenderSurface.h"
@@ -81,6 +82,11 @@ namespace sw
 
 namespace sw
 {
+    RHICapabilities IRHIDevice::getCapabilities() const
+    {
+        return RHIAvailability::query( getBackendType() ); // 정적 테이블 — 런타임에 갈리는 능력은 백엔드가 override 한다
+    }
+
     void IRHIDevice::reportBarrierDuringRecording( [[maybe_unused]] const utf8* pWhat ) const
     {
 #if defined( SW_DEBUG )
