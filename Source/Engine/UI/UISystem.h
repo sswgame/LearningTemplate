@@ -504,6 +504,7 @@ namespace sw
         UIScreenHandle           _nextScreenHandle;
         uint32                   _nextPushOrder;
         uint32                   _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
+        uint32                   _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
         InputGlyphStyle          _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
         uint8                    _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
         uint8                    _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.

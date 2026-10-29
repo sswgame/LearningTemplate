@@ -237,6 +237,8 @@ namespace sw
         ConfigManager* _pConfigManager;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 설정 표가 먼저 사라지면 무효가 된다. */
         Subscription _configReloadedSubscription;
+        /** @brief 엔진이 붙인 압축 코덱(LZ4 · Zstd · Zlib)의 등록 구독입니다(`EngineCompressionCodecUtil::registerAll`). */
+        vector<Subscription> _listCodecSubscription;
         /** @brief 디버그 키 액션 맵입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         DebugKeyActions _debugKeyActions;
         /**

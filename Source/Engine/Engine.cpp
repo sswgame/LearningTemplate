@@ -149,6 +149,7 @@ namespace sw
         , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
         , _configReloadedSubscription{}
+        , _listCodecSubscription{}
         , _debugKeyActions{}
         , _listFrameObserver{}
         , _runTitle{}
@@ -267,7 +268,7 @@ namespace sw
             startupSetup._bDedicatedServer = bDedicatedServer;
             startupSetup._bRenderer        = true;
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
-            EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
+            _listCodecSubscription         = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
             _pConfigManager             = startupParts._pConfigManager;
             _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );

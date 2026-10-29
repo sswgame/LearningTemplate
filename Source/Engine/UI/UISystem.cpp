@@ -127,6 +127,7 @@ namespace sw
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
+        , _converterRevision{ 0 }
         , _glyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _bPauseRequested{ SW_FALSE }
         , _bPendingClose{ SW_FALSE }
@@ -739,8 +740,7 @@ namespace sw
     uint32 UISystem::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
         uint32 closedCount = 0;
-        // 언로드되는 모듈의 변환기 함수와 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다).
-        const bool bConverterRemoved = _bindingConverters.removeCodeWithin( pBegin, pEnd ) > 0;
+        // 언로드되는 모듈의 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다). 변환기는 모듈이 든 구독이 거둔다(표의 번호가 올라 다시 묶인다).
         (void)_globalCommands.removeCodeWithin( pBegin, pEnd ); // 제거한 수는 쓰지 않는다. 화면이 따로 다시 연결할 것이 없다
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
@@ -750,8 +750,6 @@ namespace sw
                 SW_LOG_WARNING( "[UI] Screen %# released its view model for module reload - the game sets it again after the reload", screen->_handle );
                 screen->setViewModel( nullptr );
             }
-            else if ( bConverterRemoved )
-                screen->getBindingSet().markRebind();
         }
         for ( uint32 index = static_cast<uint32>( _listScreen.size() ); index > 0; --index )
         {
@@ -798,7 +796,16 @@ namespace sw
         }
         _textRevision       = textRevision;
         _bTextRevisionKnown = SW_TRUE;
-        uint32 polledCount  = 0;
+        // 바인딩은 변환기를 값(함수 포인터)으로 복사한다 — 표가 바뀌면(등록 · 구독 해제) 모든 화면을 다시 묶는다.
+        if ( _bindingConverters.getRevision() != _converterRevision )
+        {
+            _converterRevision = _bindingConverters.getRevision();
+            for ( const unique_ptr<UIScreen>& screen : _listScreen )
+            {
+                screen->getBindingSet().markRebind();
+            }
+        }
+        uint32 polledCount = 0;
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             UIBindingSet& bindingSet = screen->getBindingSet();

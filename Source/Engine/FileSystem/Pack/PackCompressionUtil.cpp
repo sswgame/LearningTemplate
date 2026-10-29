@@ -19,10 +19,11 @@ namespace sw
                     : _registry{}
                 {
                     _registry.initialize();
-                    EngineCompressionCodecUtil::registerAll( _registry );
+                    _listCodecSubscription = EngineCompressionCodecUtil::registerAll( _registry );
                 }
 
                 CompressionCodecRegistry _registry;
+                vector<Subscription>     _listCodecSubscription; ///< 레지스트리 뒤에 선언해 먼저 사라진다
             };
             static EngineCodecRegistry s_engineCodecRegistry;
             return s_engineCodecRegistry._registry;

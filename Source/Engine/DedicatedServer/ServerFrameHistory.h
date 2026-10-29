@@ -4,7 +4,7 @@
  * @details 틱마다 한 칸을 덮어쓰는 비용뿐이라(할당 없음) 늘 켜 둔다. 게임 스레드 하나가 쓰고 읽는다 — 잠금이 없다. 메시지 종류별 바이트는 칸마다 싣지 않고
  *          덤프하는 순간의 누적 셈(`GameNetSession::makeStatsReport`)을 덤프 본문에 붙인다(칸마다 싣는 비용 · 프로파일러 탭의 "지난 보고" 상태를 건드리는 일을 피한다).
  *          크래시 때는 새 파일을 쓰지 않는다 — 죽어 가는 프로세스에서 할당 · 파일 쓰기를 하지 않는다. 대신 크래시 핸들러가 문맥 파일을 쓸 때 이 링 버퍼를 직접 읽어
- *          최근 칸들을 그 파일 끝에 싣는다(`writeCrashTail` — `setCrashExtraTextWriter` 에 건다). 틱마다 문맥 값을 갱신하는 비용도 없고 마지막 틱까지 남는다.
+ *          최근 칸들을 그 파일 끝에 싣는다(`writeCrashTail` — `bindCrashExtraTextWriter` 에 건다). 틱마다 문맥 값을 갱신하는 비용도 없고 마지막 틱까지 남는다.
  */
 #pragma once
 #include "Core/Container/string.h"

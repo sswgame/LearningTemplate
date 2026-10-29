@@ -169,21 +169,22 @@ namespace sw
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓰므로 엔드포인트를 종료한 뒤 지운다).
         unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
         unique_ptr<ProcessMetrics>        _processMetrics;
-        unique_ptr<ServerServiceManager>  _serverServices;            ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
-        Subscription                      _reloadStopsServices;       ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
-        string                            _serverConfigPath;          ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext              _serverServiceContext;      ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
-        const ServerConfig*               _pServerConfig;             // ConfigManager 가 소유한다
-        MetricHistogram*                  _pTickHistogram;            ///< server_tick_seconds. 틱 본문 시간.
-        MetricCounter*                    _pDroppedTickCounter;       ///< server_dropped_ticks_total
-        MetricGauge*                      _pServiceConnectionGauge;   ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
-        MetricGauge*                      _pTickUtilizationGauge;     ///< server_tick_utilization_ratio. 최근 1 초 틱 본문 시간 ÷ 흐른 시간(O5)
-        unique_ptr<ServerFrameHistory>    _frameHistory;              ///< 최근 N 틱 기록(O1)
-        int64                             _lastFrameDumpMs;           ///< 마지막 덤프의 단조 밀리초(느린 틱 덤프의 간격 제한)
-        int64                             _loadWindowStartMs;         ///< 틱 사용률 창의 시작
-        int64                             _loadWindowBusyNanoseconds; ///< 창 안의 틱 본문 시간 합
-        int64                             _lastLoadWarningMs;         ///< 마지막 사용률 경고(1 분에 한 번)
-        int64                             _drainDeadlineMs;           ///< 드레인 기한(단조 밀리초)
+        unique_ptr<ServerServiceManager>  _serverServices;             ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
+        Subscription                      _reloadStopsServices;        ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
+        string                            _serverConfigPath;           ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
+        ServerServiceContext              _serverServiceContext;       ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
+        const ServerConfig*               _pServerConfig;              // ConfigManager 가 소유한다
+        MetricHistogram*                  _pTickHistogram;             ///< server_tick_seconds. 틱 본문 시간.
+        MetricCounter*                    _pDroppedTickCounter;        ///< server_dropped_ticks_total
+        MetricGauge*                      _pServiceConnectionGauge;    ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
+        MetricGauge*                      _pTickUtilizationGauge;      ///< server_tick_utilization_ratio. 최근 1 초 틱 본문 시간 ÷ 흐른 시간(O5)
+        unique_ptr<ServerFrameHistory>    _frameHistory;               ///< 최근 N 틱 기록(O1)
+        Subscription                      _crashExtraTextSubscription; ///< 크래시 문맥 파일에 `_frameHistory` 를 싣는 함수의 구독(이력보다 먼저 푼다)
+        int64                             _lastFrameDumpMs;            ///< 마지막 덤프의 단조 밀리초(느린 틱 덤프의 간격 제한)
+        int64                             _loadWindowStartMs;          ///< 틱 사용률 창의 시작
+        int64                             _loadWindowBusyNanoseconds;  ///< 창 안의 틱 본문 시간 합
+        int64                             _lastLoadWarningMs;          ///< 마지막 사용률 경고(1 분에 한 번)
+        int64                             _drainDeadlineMs;            ///< 드레인 기한(단조 밀리초)
         uint64                            _tickCount;
         int64                             _startNanoseconds;
         int64                             _tickNanoseconds;          ///< 한 틱 주기

@@ -10,10 +10,12 @@
 
 namespace sw
 {
-    void EngineCompressionCodecUtil::registerAll( CompressionCodecRegistry& inoutRegistry )
+    vector<Subscription> EngineCompressionCodecUtil::registerAll( CompressionCodecRegistry& inoutRegistry )
     {
-        inoutRegistry.registerCodec( make_unique<Lz4CompressionCodec>() );
-        inoutRegistry.registerCodec( make_unique<ZstdCompressionCodec>() );
-        inoutRegistry.registerCodec( make_unique<ZlibCompressionCodec>() );
+        vector<Subscription> listSubscription;
+        listSubscription.push_back( inoutRegistry.registerCodec( make_unique<Lz4CompressionCodec>() ) );
+        listSubscription.push_back( inoutRegistry.registerCodec( make_unique<ZstdCompressionCodec>() ) );
+        listSubscription.push_back( inoutRegistry.registerCodec( make_unique<ZlibCompressionCodec>() ) );
+        return listSubscription;
     }
 } // namespace sw

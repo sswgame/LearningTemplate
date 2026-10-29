@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -87,8 +88,11 @@ namespace sw
      */
     using CrashExtraTextWriter = uint32 ( * )( void* pUser, utf8* pOutText, uint32 capacity );
 
-    /** @brief 문맥 파일 끝에 글을 붙일 함수를 겁니다(하나뿐 — 다시 걸면 바꿉니다). @p pWriter 가 nullptr 이면 풉니다. 소유자는 @p pUser 를 지우기 전에 풀어야 합니다. */
-    SW_API void setCrashExtraTextWriter( CrashExtraTextWriter pWriter, void* pUser );
+    /**
+     * @brief 문맥 파일 끝에 글을 붙일 함수를 걸고 그 구독을 돌려줍니다(칸은 하나 — 다시 걸면 바꾸고 옛 구독은 아무것도 풀지 않는다).
+     * @details 소유자는 @p pUser 와 같은 수명으로 구독을 든다 — 구독이 사라지면 풀리므로 지운 버퍼를 크래시 경로가 읽을 수 없다.
+     */
+    [[nodiscard]] SW_API Subscription bindCrashExtraTextWriter( CrashExtraTextWriter pWriter, void* pUser );
 
     /**
      * @brief 리포트 파일 경로 `<폴더>/crash_<세션ID>.<확장자>` 를 만듭니다.

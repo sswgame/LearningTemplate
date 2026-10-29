@@ -4,6 +4,8 @@
  */
 #pragma once
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 
 namespace sw
@@ -27,7 +29,7 @@ namespace sw
             CompressionCodecType::Zlib,
         };
 
-        /** @brief 위 목록의 코덱을 모두 등록합니다. 같은 타입이 이미 있으면 덮어씁니다. */
-        static void registerAll( CompressionCodecRegistry& inoutRegistry );
+        /** @brief 위 목록의 코덱을 모두 등록하고 그 구독들을 돌려줍니다(부르는 쪽이 레지스트리와 같은 수명으로 든다). 같은 타입이 이미 있으면 덮어씁니다. */
+        [[nodiscard]] static vector<Subscription> registerAll( CompressionCodecRegistry& inoutRegistry );
     };
 } // namespace sw

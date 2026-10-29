@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
@@ -36,9 +37,30 @@ namespace sw
         constexpr uint32 kDefaultReportDeadlineSeconds = 20;
         atomic<uint32>   s_reportDeadlineSeconds{ kDefaultReportDeadlineSeconds };
 
-        /// @brief 문맥 파일 끝에 글을 붙일 함수와 그 인자입니다(`setCrashExtraTextWriter`). 크래시 경로는 읽기만 한다.
+        /// @brief 문맥 파일 끝에 글을 붙일 함수와 그 인자입니다(`bindCrashExtraTextWriter`). 크래시 경로는 읽기만 한다.
         atomic<CrashExtraTextWriter> s_pExtraTextWriter{ nullptr };
         atomic<void*>                s_pExtraTextUser{ nullptr };
+        /// @brief 지금 걸린 함수의 구독 번호입니다. 풀린 구독이 이 번호일 때만 칸을 비운다.
+        atomic<uint64> s_extraTextWriterID{ 0 };
+        atomic<uint64> s_nextExtraTextWriterID{ 1 };
+
+        /** @brief 문맥 글 함수 구독이 풀렸습니다. 지금 걸린 것이 그 구독이면 칸을 비웁니다. */
+        void releaseCrashExtraTextWriter( uint64 id )
+        {
+            uint64 expected = id;
+            if ( s_extraTextWriterID.compare_exchange_strong( expected, 0 ) )
+            {
+                s_pExtraTextWriter.store( nullptr );
+                s_pExtraTextUser.store( nullptr );
+            }
+        }
+
+        /** @brief 문맥 글 함수의 구독 목록입니다(프로세스에 하나). */
+        SubscriptionList& getCrashExtraTextWriterSubscriptions()
+        {
+            static SubscriptionList s_list{ SubscriptionList::ReleaseFunction::create<&releaseCrashExtraTextWriter>() };
+            return s_list;
+        }
 
         /// @brief `CrashTestKind::AssertFailure` 가 거짓으로 만드는 단언 식입니다(컴파일러가 단언을 상수로 접지 못하게 volatile).
         ///        단언이 빠지는 빌드(Release · Shipping)에서는 읽는 곳이 없다.
@@ -262,11 +284,14 @@ namespace sw
         s_reportFolder = folderPath;
     }
 
-    void setCrashExtraTextWriter( CrashExtraTextWriter pWriter, void* pUser )
+    Subscription bindCrashExtraTextWriter( CrashExtraTextWriter pWriter, void* pUser )
     {
         s_pExtraTextWriter.store( nullptr ); // 인자가 바뀌는 동안 크래시 경로가 옛 함수에 새 인자를 넘기지 않게 먼저 푼다
         s_pExtraTextUser.store( pUser );
         s_pExtraTextWriter.store( pWriter );
+        const uint64 id = s_nextExtraTextWriterID.fetch_add( 1 );
+        s_extraTextWriterID.store( id );
+        return getCrashExtraTextWriterSubscriptions().issue( id );
     }
 
     uint32 getCrashReportDeadlineSeconds()

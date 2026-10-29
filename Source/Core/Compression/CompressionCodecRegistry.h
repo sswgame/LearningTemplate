@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -63,20 +64,17 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "Compression";
         /**
          * @brief 기동 순서의 자리 — 내장 코덱을 갖추고 슬롯(`setActive`)에 연결합니다. 맨 먼저 서므로 맨 나중에 소멸한다(팩을 내리는 Resource 해제까지 코덱이 산다).
-         * @details 종료는 코덱을 거두지 않는다 — 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(`registerCodec`). 외부 라이브러리 코덱은 호스트가 기동 전에 붙인다.
+         * @details 종료는 코덱을 거두지 않는다 — 등록한 쪽이 든 구독이 거둔다(`registerCodec`). 외부 라이브러리 코덱은 호스트가 기동 전에 붙인다.
          */
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 코덱을 등록합니다. 같은 타입이 이미 있으면 교체합니다.
-         * @warning 로드 가능한 모듈(EditorModule · SWGame · GF_* · RHI_*)에서 등록했다면 **그 모듈의 shutdown 에서 반드시
-         *          `unregisterCodec` 을 부르십시오.** 기본 레지스트리는 `Engine.dll` 에 있어 모듈보다 오래 삽니다. 모듈이 내려간 뒤
-         *          여기 남은 코덱의 vtable 과 소멸자는 언맵된 주소를 가리킵니다. Undo 스택이나 전역 변수와 같은 종류의 함정입니다.
+         * @brief 코덱을 등록하고 그 구독을 돌려줍니다. 같은 타입이 이미 있으면 교체합니다. 구독이 사라지면 거둡니다(교체된 옛 구독은 지금 등록을 지우지 않는다).
+         * @details 레지스트리는 `Engine.dll` 에 있어 모듈보다 오래 산다 — 모듈이 등록한 코덱(vtable 이 모듈에 있다)은 모듈의 객체가 든 구독과 함께 빠진다.
          */
-        void registerCodec( unique_ptr<ICompressionCodec> codec );
-        void unregisterCodec( CompressionCodecType type );
+        [[nodiscard]] Subscription registerCodec( unique_ptr<ICompressionCodec> codec );
 
         ICompressionCodec* getCodec( CompressionCodecType type ) const;
         ICompressionCodec* getCodec( string_view name ) const;
@@ -89,10 +87,14 @@ namespace sw
 
     private:
         void registerBuiltinCodecs() SW_REQUIRES_LOCK( _mutex );
+        /** @brief 등록 구독 @p id 가 풀렸습니다. 그 타입의 지금 등록이 이 구독이면 거둡니다. */
+        void releaseSubscription( uint64 id );
 
     private:
         mutable mutex                                                                _mutex;
         unordered_map<CompressionCodecType, unique_ptr<ICompressionCodec>> _mapCodec SW_GUARDED_BY( _mutex );
+        unordered_map<CompressionCodecType, uint64> _mapOwner                        SW_GUARDED_BY( _mutex ); ///< 타입마다 지금 등록의 구독 번호(내장은 없다)
+        uint64 _nextOwnerID                                                          SW_GUARDED_BY( _mutex ){ 1 };
         /**
          * @brief 기본 코덱 종류입니다. `_mutex` 로 보호할 수 없어서 원자 변수로 둡니다.
          * @details `getDefaultCodec()` 은 이 값을 읽은 직후 `getCodec()` 을 부르고, 그쪽이 `_mutex` 를 잡습니다. 여기서도 같은 뮤텍스를
@@ -100,5 +102,8 @@ namespace sw
          *          경로라 보호 없이 둘 수도 없습니다.
          */
         atomic<CompressionCodecType> _defaultCodecType;
+
+        /** @brief 이 객체가 내준 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CompressionCodecRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw

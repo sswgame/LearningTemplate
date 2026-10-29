@@ -100,7 +100,7 @@ namespace sw
             /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다(문맥 파일 버퍼 8KB 안에서 — 한 줄 70 바이트쯤). */
             static constexpr uint32 kCrashTailTicks = 40;
 
-            /** @brief 크래시 핸들러가 부르는 글쓰기(`setCrashExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
+            /** @brief 크래시 핸들러가 부르는 글쓰기(`bindCrashExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
             static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
             {
                 const ServerFrameHistory* pHistory = static_cast<const ServerFrameHistory*>( pUser );
@@ -173,6 +173,7 @@ namespace sw
         , _pServiceConnectionGauge{ nullptr }
         , _pTickUtilizationGauge{ nullptr }
         , _frameHistory{ nullptr }
+        , _crashExtraTextSubscription{}
         , _lastFrameDumpMs{ 0 }
         , _loadWindowStartMs{ 0 }
         , _loadWindowBusyNanoseconds{ 0 }
@@ -461,7 +462,7 @@ namespace sw
         _frameHistory->initialize( static_cast<uint32>( _pServerConfig->_frameHistoryTicks ) );
         // 크래시 때 이력을 새 파일로 쓰지 않고, 크래시 핸들러가 문맥 파일을 쓰며 이 링 버퍼를 읽어 끝에 싣는다(풀기는 `shutdownObservability`).
         if ( _frameHistory->getCapacity() > 0 )
-            setCrashExtraTextWriter( &ServerAppInternal::writeFrameCrashTail, _frameHistory.get() );
+            _crashExtraTextSubscription = bindCrashExtraTextWriter( &ServerAppInternal::writeFrameCrashTail, _frameHistory.get() );
         _processMetrics = make_unique<ProcessMetrics>();
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
         if ( _pServerConfig->_opsPort == 0 )
@@ -504,7 +505,7 @@ namespace sw
         _pDroppedTickCounter     = nullptr;
         _pServiceConnectionGauge = nullptr;
         _pTickUtilizationGauge   = nullptr;
-        setCrashExtraTextWriter( nullptr, nullptr ); // 이력을 지우기 전에 푼다 — 크래시 경로가 지운 버퍼를 읽지 않게
+        _crashExtraTextSubscription.reset(); // 이력을 지우기 전에 푼다 — 크래시 경로가 지운 버퍼를 읽지 않게
         _frameHistory.reset();
         _healthRegistry.reset();
         _metricRegistry.reset();

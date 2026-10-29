@@ -62,22 +62,35 @@ namespace sw
         _mapCodec.clear();
     }
 
-    void CompressionCodecRegistry::registerCodec( unique_ptr<ICompressionCodec> codec )
+    Subscription CompressionCodecRegistry::registerCodec( unique_ptr<ICompressionCodec> codec )
     {
         if ( codec == nullptr )
-            return;
+            return {};
 
         const CompressionCodecType type = codec->getCodecType();
         SW_LOG_INFO( "Registered codec: %# (type=%#)", codec->getCodecName(), static_cast<uint32>( type ) );
 
-        ScopedLock<mutex> lock{ _mutex };
-        _mapCodec[type] = std::move( codec );
+        uint64 id{ 0 };
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _mapCodec[type] = std::move( codec );
+            id              = _nextOwnerID++;
+            _mapOwner[type] = id; // 교체 — 옛 구독은 이제 아무것도 거두지 않는다
+        }
+        return _subscriptions.issue( id );
     }
 
-    void CompressionCodecRegistry::unregisterCodec( CompressionCodecType type )
+    void CompressionCodecRegistry::releaseSubscription( uint64 id )
     {
         ScopedLock<mutex> lock{ _mutex };
-        _mapCodec.erase( type );
+        for ( auto it = _mapOwner.begin(); it != _mapOwner.end(); ++it )
+        {
+            if ( it->second != id )
+                continue;
+            _mapCodec.erase( it->first );
+            _mapOwner.erase( it );
+            return;
+        }
     }
 
     ICompressionCodec* CompressionCodecRegistry::getCodec( CompressionCodecType type ) const
