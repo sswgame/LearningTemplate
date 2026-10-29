@@ -55,7 +55,6 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
@@ -83,18 +82,13 @@
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
     #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
-    #if !defined( SW_SHIPPING )
-        #include "Engine/Renderer/LiveShaderSubsystem.h"
-    #endif
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThread.h"
     #include "Engine/Renderer/ScreenshotRequestQueue.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
-#if !defined( SW_SHIPPING )
-    #include "Engine/AssetReload/ConfigReloadSubsystem.h"
-#endif
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/EngineStartupExtension.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
@@ -174,8 +168,6 @@ namespace sw
         , _pPacketBuilder{ nullptr }
         , _pRenderThread{ nullptr }
 #if !defined( SW_SHIPPING )
-        , _pShaderRecompiler{ nullptr }
-        , _pConfigReload{ nullptr }
 #endif
     {
     }
@@ -268,7 +260,10 @@ namespace sw
             startupSetup._bDedicatedServer = bDedicatedServer;
             startupSetup._bRenderer        = true;
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
-            _listCodecSubscription         = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
+            // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
+            if ( IEngineStartupExtension* const pExtension = locateSubsystem<IEngineStartupExtension>( pHostScope ) )
+                pExtension->addStartupSubsystems( _startup, startupParts );
+            _listCodecSubscription = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
             _pConfigManager             = startupParts._pConfigManager;
             _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );
@@ -303,12 +298,6 @@ namespace sw
         _pRHI          = _pRHISubsystem->findRHI();
         _rhiInitResult = _pRHISubsystem->getInitResult();
         _pRenderThread = startupParts._pRenderThread->findRenderThread();
-    #if !defined( SW_SHIPPING ) // 배포본은 라이브 리로드가 없다(서브시스템도 서지 않는다)
-        _pShaderRecompiler = startupParts._pLiveShader->findShaderRecompiler();
-    #endif
-#endif
-#if !defined( SW_SHIPPING )
-        _pConfigReload = startupParts._pConfigReload; // 설정 리로드는 서버에도 선다(배포 빌드는 짓지 않는다)
 #endif
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
@@ -417,10 +406,6 @@ namespace sw
         _pFrameRenderer = nullptr;
         _pPacketBuilder = nullptr;
         _pRenderThread  = nullptr;
-#if !defined( SW_SHIPPING )
-        _pShaderRecompiler = nullptr;
-        _pConfigReload     = nullptr;
-#endif
         _pConfigManager = nullptr;
         // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
         _services.destroyAll();
@@ -570,20 +555,8 @@ namespace sw
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
             _pFontService->getGlyphCache().beginFrame();
-        BLOCK( "핫 리로드 / 씬 트랜지션 / 이벤트" )
+        BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
         {
-#if !defined( SW_SHIPPING )
-    #if defined( SW_DEBUG )
-            if ( _pRHI != nullptr )
-            {
-                if ( ShaderRecompiler* pShaderRecompiler = getShaderRecompiler() )
-                    pShaderRecompiler->update();
-            }
-    #endif
-            pollShaderReloadHotkey();
-            if ( _pConfigReload != nullptr )
-                _pConfigReload->update();
-#endif
             engine::getSubsystem<AssetStreamingQueue>().update();
 
             if ( _pSceneManager != nullptr )
@@ -893,15 +866,6 @@ namespace sw
         return bRestarted;
     }
 
-    ShaderRecompiler* Engine::getShaderRecompiler() const
-    {
-#if defined( SW_SHIPPING )
-        return nullptr;
-#else
-        return _pShaderRecompiler;
-#endif
-    }
-
     void Engine::setPresentHook( PresentHookDelegate presentHook )
     {
 #if defined( SW_WITH_CLIENT_CODE )
@@ -932,24 +896,6 @@ namespace sw
     unique_ptr<InputMap> Engine::createShellInputMap( const AssetID& assetID )
     {
         return DebugKeyActions::createInputMap( assetID );
-    }
-
-    void Engine::pollShaderReloadHotkey()
-    {
-#if defined( SW_DEBUG )
-        // 셰이더 리로드는 **Engine 자신의** 개발 도구다(ShaderRecompiler 를 여기서 소유한다). 그래서
-        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 디버그 키 맵(`DebugKeyActions`)은 입력 사실만 내주므로 단축키의 뜻은 소유자인 여기서 읽는다.
-        // 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
-        if ( _pRHI == nullptr )
-            return;
-        if ( _debugKeyActions.wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
-            return;
-        if ( ShaderRecompiler* pShaderRecompiler = getShaderRecompiler() )
-        {
-            pShaderRecompiler->triggerReloadAll();
-            SW_LOG_INFO( "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
-        }
-#endif
     }
 
     bool Engine::wasDebugActionTriggered( string_view actionName ) const

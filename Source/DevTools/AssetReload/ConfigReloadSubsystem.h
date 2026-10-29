@@ -27,7 +27,7 @@ namespace sw
     using ConfigFileReloadDelegate = Delegate<ReloadOutcome( string_view fullPath )>;
 
     /** @class ConfigReloadSubsystem @brief `Config/` 감시와 설정 파일 리로드입니다. */
-    class SW_API ConfigReloadSubsystem final : public ISubsystem
+    class ConfigReloadSubsystem final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ConfigReload";

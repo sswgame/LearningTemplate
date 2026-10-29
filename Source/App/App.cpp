@@ -20,6 +20,10 @@
     #include "Engine/Automation/Runner/AutomationSession.h"
     #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #endif
+#if !defined( SW_SHIPPING )
+    #include "DevTools/DevToolsHost.h"
+#endif
+#include "Engine/EngineStartupExtension.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -113,6 +117,8 @@ namespace sw
         : _host{}
         , _pModuleImageHost{ nullptr }
         , _pAutomationSession{ nullptr }
+        , _pDevTools{ nullptr }
+        , _devToolsFrameSubscription{}
         , _engine{}
         , _moduleReload{}
         , _devConsole{}
@@ -157,6 +163,11 @@ namespace sw
             return false;
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
+#if !defined( SW_SHIPPING )
+        // 엔진이 섰다 — 개발 도구를 프레임 관찰자로 붙인다(프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
+        _pDevTools->setEngine( &_engine );
+        _devToolsFrameSubscription = _engine.registerFrameObserver( _pDevTools );
+#endif
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가
@@ -266,6 +277,16 @@ namespace sw
         }
 #endif
         // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
+#if !defined( SW_SHIPPING )
+        // 개발 도구(셰이더 · 설정 리로드) — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
+        }
+        const bool bDevToolsBound = _host.bind<IEngineStartupExtension>( _pDevTools );
+        SW_ASSERT( bDevToolsBound );
+        (void)bDevToolsBound;
+#endif
         const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
         SW_ASSERT( bStateStoreBound );
         (void)bStateStoreBound;
@@ -533,12 +554,18 @@ namespace sw
         if ( _pAutomationSession != nullptr )
             _pAutomationSession->onDetachedFromEngine();
         _automationFrameSubscription.reset();
+#if !defined( SW_SHIPPING )
+        _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
+        if ( _pDevTools != nullptr )
+            _pDevTools->setEngine( nullptr );
+#endif
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         // 엔진이 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).
         _engine.shutdown( _host );
         _pModuleImageHost   = nullptr;
         _pAutomationSession = nullptr;
+        _pDevTools          = nullptr;
 
         // 주 창은 엔진 범위의 MainWindow 서브시스템이 소유한다 — 엔진 종료(RHI 가 내려간 뒤)가 파괴했다. 관찰 포인터만 비운다.
         _pWindow = nullptr;

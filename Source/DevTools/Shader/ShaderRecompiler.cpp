@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
+#include "DevTools/Shader/ShaderRecompiler.h"
 
 #include "Core/Concurrency/mutex.h"
 

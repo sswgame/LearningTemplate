@@ -29,8 +29,6 @@ namespace sw
     class FontService;
     class FrameRendererSubsystem;
     class InputManager;
-    class LiveShaderSubsystem;
-    class ConfigReloadSubsystem;
     class MemoryBudgetSubsystem;
     class RenderThreadSubsystem;
     class RHISubsystem;
@@ -93,7 +91,7 @@ namespace sw
         {
             HeadlessTaskState&                       _headlessState;
             bool                                     _bDedicatedServer{ false };
-            bool                                     _bRenderer{ false }; ///< 창 · RHI · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬 디바이스를 둔다(클라이언트 코드 빌드만)
+            bool                                     _bRenderer{ false }; ///< 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스를 둔다(클라이언트 코드 빌드만)
             unique_ptr<ReflectionSubsystem>          _reflection{};
             unique_ptr<EngineDefaultAssetsSubsystem> _defaultAssets{};
             unique_ptr<IAudioService>                _audio{};
@@ -107,11 +105,9 @@ namespace sw
         {
             CompressionCodecRegistry* _pCodecRegistry{ nullptr };
             ConfigManager*            _pConfigManager{ nullptr };
-            ConfigReloadSubsystem*    _pConfigReload{ nullptr }; ///< 배포 빌드는 nullptr
             RHISubsystem*             _pRHI{ nullptr };
             FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
             RenderThreadSubsystem*    _pRenderThread{ nullptr };
-            LiveShaderSubsystem*      _pLiveShader{ nullptr };
             InputManager*             _pInputManager{ nullptr };
             IAudioService*            _pAudio{ nullptr };
             SceneManager*             _pSceneManager{ nullptr };

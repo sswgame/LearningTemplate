@@ -37,6 +37,10 @@ target_link_libraries(App
 		ModuleAPI
 		sw_global_options
 )
+# 개발 도구(셰이더 · 설정 리로드) — 호스트 범위의 `DevToolsHost` 가 엔진 확장점에 붙는다. 배포 호스트는 링크하지 않는다.
+if(NOT SW_SHIPPING_BUILD)
+	target_link_libraries(App PRIVATE DevTools)
+endif()
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
 
 sw_configurePCH(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

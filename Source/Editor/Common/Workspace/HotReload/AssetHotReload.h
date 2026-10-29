@@ -9,10 +9,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "DevTools/AssetReload/FileWatchDispatcher.h"
+
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/AssetReload/FileWatchDispatcher.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 

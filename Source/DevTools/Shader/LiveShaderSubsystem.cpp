@@ -1,9 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Renderer/LiveShaderSubsystem.h"
+#include "DevTools/Shader/LiveShaderSubsystem.h"
+
+#include "DevTools/Shader/ShaderRecompiler.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
-#include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 #include "Engine/Renderer/RenderThread.h"

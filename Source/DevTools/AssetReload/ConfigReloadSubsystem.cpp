@@ -1,12 +1,13 @@
 #include "pch.h"
 
-#include "Engine/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/AssetReload/FileWatchDispatcher.h"
+#include "DevTools/AssetReload/FileWatchDispatcher.h"
+
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/FileSystem/AssetPaths.h"
 

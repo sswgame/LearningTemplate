@@ -2,11 +2,14 @@
 
 #include "Server/ServerApp.h"
 
+#include "Engine/EngineStartupExtension.h"
+
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
+    #include "DevTools/DevToolsHost.h"
     #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
 
@@ -148,6 +151,8 @@ namespace sw
 
     ServerApp::ServerApp()
         : _host{}
+        , _pDevTools{ nullptr }
+        , _devToolsFrameSubscription{}
         , _pModuleImageHost{ nullptr }
         , _engine{}
         , _gameModuleManager{ nullptr }
@@ -221,6 +226,16 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
+#if !defined( SW_SHIPPING )
+        // 개발 도구(셰이더 · 설정 리로드) — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
+        }
+        const bool bDevToolsBound = _host.bind<IEngineStartupExtension>( _pDevTools );
+        SW_ASSERT( bDevToolsBound );
+        (void)bDevToolsBound;
+#endif
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
@@ -229,6 +244,11 @@ namespace sw
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
         }
+#if !defined( SW_SHIPPING )
+        // 엔진이 섰다 — 개발 도구를 프레임 관찰자로 붙인다(프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
+        _pDevTools->setEngine( &_engine );
+        _devToolsFrameSubscription = _engine.registerFrameObserver( _pDevTools );
+#endif
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() == false;
@@ -1038,8 +1058,14 @@ namespace sw
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
+#if !defined( SW_SHIPPING )
+        _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
+        if ( _pDevTools != nullptr )
+            _pDevTools->setEngine( nullptr );
+#endif
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
+        _pDevTools        = nullptr;
         Logger::clearClockNumber();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();

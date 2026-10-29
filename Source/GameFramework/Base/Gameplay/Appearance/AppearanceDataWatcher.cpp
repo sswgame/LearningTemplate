@@ -8,7 +8,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 
 #if !defined( SW_SHIPPING )
-    #include "Engine/AssetReload/FileWatchDispatcher.h"
+    #include "DevTools/AssetReload/FileWatchDispatcher.h"
 #endif
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"

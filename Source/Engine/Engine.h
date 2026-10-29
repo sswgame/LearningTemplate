@@ -52,8 +52,6 @@ namespace sw
     class RHIBackendRegistry;
     class RHISubsystem;
     class SceneManager;
-    class ShaderRecompiler;
-    class ConfigReloadSubsystem;
     class TaskManager;
     class TypeRegistry;
     class UISystem;
@@ -198,10 +196,6 @@ namespace sw
     private:
         /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
         [[nodiscard]] bool rebindSceneAfterDeviceRecreate();
-        /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
-        ShaderRecompiler* getShaderRecompiler() const;
-        /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
-        void pollShaderReloadHotkey();
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
@@ -291,15 +285,6 @@ namespace sw
         RenderPacketBuilder* _pPacketBuilder;
         /** @brief 서브시스템 `RenderThread` 의 렌더 스레드입니다(소유는 그 단계 — 처음 설 때부터 해제까지 빌려 쓴다). 전용 서버에는 없다. */
         RenderThread* _pRenderThread;
-        /**
-         * @brief 셰이더 라이브 리로드입니다(서브시스템 `LiveShader` 소유 — 빌려 쓴다). **Shipping 에는 없고** Debug 클라이언트에서만 실제로 만들어진다.
-         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
-         *          아니므로 돌리는 쪽(Engine)이 갖습니다.
-         */
-#if !defined( SW_SHIPPING )
-        ShaderRecompiler*      _pShaderRecompiler;
-        ConfigReloadSubsystem* _pConfigReload; ///< 설정 파일 리로드(개발 빌드만 — 배포는 nullptr)
-#endif
 
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

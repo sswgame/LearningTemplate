@@ -25,7 +25,7 @@ namespace sw
      *          빠뜨렸을 때 단축키가 빈 목록을 돕니다).
      *          `.hlsl` 파일 감시로 **자동** 재컴파일하는 경로는 두지 않습니다.
      */
-    class SW_API ShaderRecompiler
+    class ShaderRecompiler
     {
     public:
         /** @brief 빈 대기 큐로 시작합니다. */

@@ -37,6 +37,11 @@
 
 namespace sw
 {
+    class DevToolsHost;
+} // namespace sw
+
+namespace sw
+{
     enum class ShutdownCause : uint8;
 
     struct ServerConfig;
@@ -150,6 +155,8 @@ namespace sw
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem*        _pModuleImageHost;
+        DevToolsHost*                 _pDevTools;                 ///< 호스트 범위의 개발 도구(배포 빌드는 늘 nullptr)
+        Subscription                  _devToolsFrameSubscription; ///< 개발 도구의 프레임 관찰 구독
         Engine                        _engine;
         unique_ptr<GameModuleManager> _gameModuleManager;
         /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */

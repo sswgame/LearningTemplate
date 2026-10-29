@@ -33,6 +33,7 @@ namespace sw
     struct NativeWindowEvent;
 
     class AutomationSession;
+    class DevToolsHost;
     class CommandLineManager;
     class EditorModuleManager;
     class IWindow;
@@ -138,6 +139,8 @@ namespace sw
         ModuleLoaderSubsystem* _pModuleImageHost;
         /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
         AutomationSession* _pAutomationSession;
+        DevToolsHost*      _pDevTools;                 ///< 호스트 범위의 개발 도구(배포 빌드는 늘 nullptr)
+        Subscription       _devToolsFrameSubscription; ///< 개발 도구의 프레임 관찰 구독
         Engine             _engine;
         /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
         Subscription _automationFrameSubscription;

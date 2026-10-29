@@ -26,7 +26,7 @@ namespace sw
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.
      * @note Windows 는 ReadDirectoryChangesW, Linux 는 inotify, 그 밖의 플랫폼은 mtime 폴링으로 대신합니다.
      */
-    class SW_API FileWatchDispatcher
+    class FileWatchDispatcher
     {
     public:
         /** @brief 워치 목록을 비운 채 시작합니다. */

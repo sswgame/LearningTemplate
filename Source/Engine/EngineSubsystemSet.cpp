@@ -10,10 +10,6 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Config/ConfigManager.h"
-
-#if !defined( SW_SHIPPING )
-    #include "Engine/AssetReload/ConfigReloadSubsystem.h"
-#endif
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
@@ -49,9 +45,6 @@
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-    #if !defined( SW_SHIPPING )
-        #include "Engine/Renderer/LiveShaderSubsystem.h"
-    #endif
     #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -167,7 +160,7 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<ModuleUnloadStageSubsystem>( &startup ) );
         startup.addSubsystem( sw::make_unique<ModuleLoadStageSubsystem>( &startup ) );
 #if defined( SW_WITH_CLIENT_CODE )
-        // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다). 객체를 서로 참조로 넘긴다.
+        // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 씬의 디바이스 — 클라이언트 호스트의 것이다(전용 서버는 거른다). 객체를 서로 참조로 넘긴다.
         // Server 타깃은 렌더러 폴더(`Engine/Renderer/`)를 짓지 않는다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`) — 단계를 넣지도 않는다.
         if ( setup._bRenderer )
         {
@@ -184,9 +177,6 @@ namespace sw::engine
             parts._pFrameRendererSubsystem                 = &frameRendererSubsystem;
             (void)startup.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
             parts._pRenderThread = &startup.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
-    #if !defined( SW_SHIPPING ) // 셰이더 라이브 리로드는 개발 도구다 — 배포 빌드는 빈 서브시스템도 세우지 않는다(_pLiveShader 는 nullptr)
-            parts._pLiveShader = &startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *parts._pRenderThread ) );
-    #endif
             startup.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
         }
 #endif
@@ -195,9 +185,6 @@ namespace sw::engine
         {
             SW_MEMORY_SCOPE( EngineMisc );
             parts._pConfigManager = &startup.addSubsystem( sw::make_unique<ConfigManager>() );
-#if !defined( SW_SHIPPING ) // 설정 파일 리로드는 개발 도구다(배포 빌드는 Engine/AssetReload 를 짓지 않는다)
-            parts._pConfigReload = &startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
-#endif
         }
         // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
         (void)startup.bind( &parts._pConfigManager->getHostEngineConfig() ); // 새 범위 - 겹치지 않는다

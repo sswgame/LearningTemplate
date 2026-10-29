@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
 
+#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorColor.h"
@@ -19,7 +21,6 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/AssetReload/ConfigReloadSubsystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
