@@ -16,6 +16,7 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TextAddress.h"
+#include "Engine/Reflection/TypeAncestry.h"
 
 namespace sw
 {
@@ -870,7 +871,19 @@ namespace sw
     /// @brief 등록된 타입의 정보입니다. FQN, 프로퍼티, 메서드, 생성 가능 여부를 담습니다.
     struct SW_API TypeInfo
     {
-        size_t _size;
+        /**
+         * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 테이블과 자기 깊이입니다. **맨 앞 멤버다** — `castTo` 가
+         *        이 타입을 전방 선언만 보고 그 주소에서 읽는다(`TypeAncestry::of`, Reflection.cpp 의 `static_assert` 가 지킨다).
+         * @details 캐스트의 핫패스는 이 테이블만 본다. `테이블[pTarget 의 깊이] == pTarget 의 이름` 이면 파생 관계다.
+         *          포인터가 아니라 이름을 비교하므로, 레지스트리 밖 사본(테스트 목이 손으로 만든 `StaticType()`)도 이름이 같으면 같은 타입으로 본다.
+         *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
+         *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
+         *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
+         *          원자값으로 둔 이유는 `_pParentType` 과 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
+         *          등록과 캐스트가 동시에 실행되는 경우는 `_pParentType` 과 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
+         */
+        TypeAncestry _ancestry;
+        size_t       _size;
         /** @brief `$ctor` 로 placement new 한 인스턴스를 소멸시킵니다. 없으면 nullptr 입니다. */
         void ( *_destroyInstance )( void* ) = nullptr;
         /**
@@ -918,19 +931,6 @@ namespace sw
          */
         mutable atomic<uint32> _parentMissGeneration;
         uint32                 _typeID;
-        /**
-         * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 테이블입니다. 자기 위치는 `_ancestorDepth` 가 가리킵니다.
-         * @details 캐스트의 핫패스는 이 테이블만 본다. `테이블[pTarget 의 깊이] == pTarget 의 이름` 이면 파생 관계다.
-         *          포인터가 아니라 이름을 비교하므로, 레지스트리 밖 사본(테스트 목이 손으로 만든 `StaticType()`)도 이름이 같으면 같은 타입으로 본다.
-         *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
-         *          등록이나 해제로 부모 체인이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고,
-         *          등록 배치가 끝날 때(`populateLookupCaches`)나 첫 상속 검사가 테이블을 다시 만든다.
-         *          원자값으로 둔 이유는 `_pParentType` 과 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
-         *          등록과 캐스트가 동시에 실행되는 경우는 `_pParentType` 과 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
-         */
-        mutable atomic<uint32> _arrAncestorNameIndex[constant::reflection::kAncestorDisplayDepth];
-        /** @brief 조상 테이블에서 자기 위치의 깊이입니다. Unknown 이면 아직 만들지 않은 것이고, None 이면 만들 수 없어 부모 포인터를 따라갑니다. */
-        mutable atomic<uint8> _ancestorDepth;
         /**
          * @brief 레지스트리에 살아 있는 타입인지 나타냅니다. 모듈을 해제하면 항목을 지우지 않고 이 값을 내립니다(묘비).
          * @details `TypeInfo` 의 주소는 고정이다. 레지스트리가 `unique_ptr` 로 보관하고, 테이블이 커져도 옮기지 않으며, 해제해도
@@ -1013,14 +1013,8 @@ namespace sw
                 return false;
             if ( pTarget == this )
                 return true;
-            const uint8 selfDepth   = _ancestorDepth.load( std::memory_order_acquire );
-            const uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
-            if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
-            {
-                return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
-                                                       pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
-            }
-            return isDerivedFromSlow( pTarget );
+            bool bDerived = false;
+            return _ancestry.tryCompare( pTarget->_ancestry, bDerived ) ? bDerived : isDerivedFromSlow( pTarget );
         }
         /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
@@ -1038,7 +1032,7 @@ namespace sw
         /** @brief 조상 테이블이 만들어져 있으면 true 입니다. 이때 상속 검사는 부모를 따라가지 않고 O(1) 로 답합니다. */
         bool hasAncestorDisplay() const
         {
-            return _ancestorDepth.load( std::memory_order_acquire ) < constant::reflection::kAncestorDisplayDepth;
+            return _ancestry._ancestorDepth.load( std::memory_order_acquire ) < constant::reflection::kAncestorDisplayDepth;
         }
         /**
          * @brief 부모 포인터를 따라 조상 테이블을 만듭니다. 체인을 모두 찾았고 테이블 깊이 안에 들어오면 true 입니다.
@@ -1051,7 +1045,7 @@ namespace sw
         /** @brief 조상 테이블을 비웁니다. 체인이 바뀔 수 있는 등록과 해제 뒤에 `TypeRegistry` 가 부릅니다. */
         void clearAncestorDisplay() const
         {
-            _ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
+            _ancestry._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
          * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록, 그 이름 맵, POD 판정)를 비웁니다. 다음 조회는 현재 부모로 다시 만듭니다.

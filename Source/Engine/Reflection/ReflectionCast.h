@@ -4,17 +4,27 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/TypeAncestry.h"
 
 namespace sw
 {
-    struct TypeInfo;
+    /** @brief 조상 표가 없는 쪽이 있을 때의 파생 검사입니다(`TypeInfo::isDerivedFromSlow` — 표를 만들거나 부모를 따라간다). 둘 다 nullptr 이 아니어야 한다. */
+    SW_API bool isTypeDerivedFromSlow( const TypeInfo* pType, const TypeInfo* pTarget );
 
     /**
-     * @brief pType 이 pTarget 이거나 그 파생이면 true 입니다. 둘 중 하나가 nullptr 이면 false 입니다(`TypeInfo::isDerivedFrom`).
-     * @details 본문은 .cpp 에 둔다. 이 헤더가 `ReflectionTypes.h`(약 700 TU 에 닿는다)를 끌지 않게 하려는 것이다.
-     *          캐스트는 같은 타입이면 이것을 부르지 않고 인라인 포인터 비교로 끝낸다.
+     * @brief pType 이 pTarget 이거나 그 파생이면 true 입니다. 둘 중 하나가 nullptr 이면 false 입니다(`TypeInfo::isDerivedFrom` 과 같다).
+     * @details 인라인이다 — 조상 표(`TypeAncestry`, `TypeInfo` 의 맨 앞 멤버)만 보므로 이 헤더가 `ReflectionTypes.h`(약 700 TU 에 닿는다)를 끌지 않는다.
+     *          표가 아직 없거나 만들 수 없는 드문 경우만 줄 밖 느린 길로 간다.
      */
-    SW_API bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget );
+    inline bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget )
+    {
+        if ( pType == nullptr || pTarget == nullptr )
+            return false;
+        if ( pType == pTarget )
+            return true;
+        bool bDerived = false;
+        return TypeAncestry::of( pType ).tryCompare( TypeAncestry::of( pTarget ), bDerived ) ? bDerived : isTypeDerivedFromSlow( pType, pTarget );
+    }
 
     /**
      * @brief 코드젠이 REFLECT 타입마다 특수화합니다(T::StaticType 없이 FQN 으로 조회).
@@ -166,12 +176,9 @@ namespace sw
             if ( pSrcType == nullptr )
                 pSrcType = findStaticType<From>();
 
-            // 같은 타입은 인라인으로 끝내고, 파생 검사만 줄 밖이다(이 헤더가 ReflectionTypes.h 를 끌지 않게). 측정(2026-10-30, Release):
-            // 타입을 받는 이 판 약 3 ns(인라인 조상 표 비교면 약 1.6 ns), `castTo<T>( p )` 는 `StaticType()` 조회 약 3 ns 를 더해 약 5 ns.
-            // 프레임 루프는 등록부(`PrimitiveRegistry` 등)로 캐스트를 피하므로 include 절감을 택했다 — 캐스트가 뜨거운 루프에 다시 들어오면 그때 인라인으로 올린다.
-            if ( pSrcType == nullptr )
-                return nullptr;
-            if ( pSrcType != pToType && isTypeDerivedFrom( pSrcType, pToType ) == false )
+            // 파생 검사는 조상 표의 인라인 비교다(`isTypeDerivedFrom`). 측정(2026-10-30, Release): 줄 밖 호출이던 때 이 판 약 3.2 ns,
+            // 인라인 비교면 약 1.6 ns. `castTo<T>( p )` 는 여기에 `StaticType()` 조회(약 3 ns)를 더한다 — 루프는 타입을 밖에서 한 번 구해 넘긴다.
+            if ( isTypeDerivedFrom( pSrcType, pToType ) == false )
                 return nullptr;
             if constexpr ( std::is_base_of_v<From, To> )
                 return static_cast<To*>( pSrc );

@@ -482,8 +482,6 @@ namespace sw
         , _pParentType{ nullptr }
         , _parentMissGeneration{ 0 }
         , _typeID{ 0 }
-        , _arrAncestorNameIndex{}
-        , _ancestorDepth{ constant::reflection::kAncestorDepthUnknown }
         , _bAlive{ SW_TRUE }
         , _bAbstract{ SW_FALSE }
         , _bStatic{ SW_FALSE }
@@ -1423,26 +1421,32 @@ namespace sw
         return false;
     }
 
-    bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget )
+    // `castTo` 는 `TypeInfo` 를 전방 선언만 보고 그 주소를 조상 표로 읽는다(`TypeAncestry::of`) — 표가 맨 앞 멤버여야 한다.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+    static_assert( offsetof( TypeInfo, _ancestry ) == 0, "TypeInfo::_ancestry must be the first member (castTo reads it through a forward-declared TypeInfo)" );
+#pragma clang diagnostic pop
+
+    bool isTypeDerivedFromSlow( const TypeInfo* pType, const TypeInfo* pTarget )
     {
-        return pType != nullptr && pType->isDerivedFrom( pTarget );
+        return pType->isDerivedFromSlow( pTarget );
     }
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
         // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 아직 만들지 않은 쪽은 여기서
         // 만든다(배치 밖에서 등록된 타입, 레지스트리 밖 사본, 해제 뒤 첫 조회). 만들 수 없는 쪽은 아래 순회가 답한다.
-        uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
+        uint8 selfDepth = _ancestry._ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth == constant::reflection::kAncestorDepthUnknown && computeAncestorDisplay() )
-            selfDepth = _ancestorDepth.load( std::memory_order_acquire );
-        uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
+            selfDepth = _ancestry._ancestorDepth.load( std::memory_order_acquire );
+        uint8 targetDepth = pTarget->_ancestry._ancestorDepth.load( std::memory_order_acquire );
         if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->computeAncestorDisplay() )
-            targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
+            targetDepth = pTarget->_ancestry._ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
             // pTarget 의 자기 슬롯이 곧 pTarget 의 이름이다. 이름을 다시 계산하지 않는다.
-            return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
-                                                   pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
+            return targetDepth <= selfDepth && _ancestry._arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
+                                                   pTarget->_ancestry._arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
         }
 
         // 테이블이 없는 쪽(이름 없음, 순환, 테이블보다 깊은 체인)은 부모 포인터를 따라간다.
@@ -1494,7 +1498,7 @@ namespace sw
             const uint32 nameIndex = ReflectionInternal::canonicalNameIndex( *pCurrent );
             if ( chainCount == kDepth || nameIndex == kNone )
             {
-                _ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );
+                _ancestry._ancestorDepth.store( constant::reflection::kAncestorDepthNone, std::memory_order_release );
                 return false;
             }
             arrChain[chainCount++] = nameIndex;
@@ -1506,9 +1510,9 @@ namespace sw
         // 루트가 0 번 슬롯이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 슬롯이 다 채워진 뒤에 보게 된다.
         for ( uint32 index = 0; index < chainCount; ++index )
         {
-            _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
+            _ancestry._arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
         }
-        _ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
+        _ancestry._ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
         return true;
     }
 
