@@ -13,18 +13,17 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
     class SceneComponent;
-    template <class T>
-    class ScopeOwned;
 
     /**
      * @struct SceneTransformPage
      * @brief 트랜스폼 슬롯 256 개를 담은 페이지입니다. 값마다 배열 하나라, 같은 값을 연달아 도는 패스(틱 뒤 적용, 플러시, 렌더 수집)가 라인 단위로 읽습니다.
      * @details 슬롯 하나의 값은 모든 배열의 같은 위치(`슬롯 번호 & kSlotMask`)에 있다. 페이지는 한 번 만들면 옮기지도 해제하지도 않으므로(저장소가
-     *          엔진 수명 범위와 함께 소멸할 때까지), 컴포넌트는 자기 페이지 포인터를 가지고 테이블을 거치지 않고 찾는다.
+     *          서비스 범위와 함께 소멸할 때까지), 컴포넌트는 자기 페이지 포인터를 가지고 테이블을 거치지 않고 찾는다.
      *
      *          값을 `SceneComponent` 안에 두지 않는 이유는 틱 뒤 적용과 렌더 수집이 8000 개를 돌 때 오브젝트마다 캐시 라인 서너 개를 건너다니고,
      *          행렬 하나를 읽으려고 컴포넌트 전체를 끌어오게 되기 때문이다.
@@ -122,9 +121,12 @@ namespace sw
      *          스레드 계약: 슬롯 받기와 반환은 뮤텍스 안에서 한다(씬 로드 워커와 게임 스레드가 동시에 만들 수 있다). 페이지 테이블은 고정 크기이고
      *          페이지 포인터는 release 로 발행하므로 `findPage` 는 잠금이 없다. 슬롯 **내용**의 동기화는 쓰는 쪽(씬의 틱 단계)이 맡는다.
      */
-    class SW_API SceneTransformStorage
+    class SW_API SceneTransformStorage final : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "SceneTransformStorage";
+
         /** @brief 슬롯이 없음을 나타냅니다. */
         static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
         /** @brief 슬롯에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
@@ -135,8 +137,17 @@ namespace sw
          */
         static constexpr uint32 kMaxPageCount = 16384;
 
-        /** @brief 전역 저장소입니다. 처음 부를 때 만들어지고 엔진 수명 범위가 닫힐 때(엔진 종료) 사라집니다. 그 뒤에 부르면 멈춥니다. */
-        static SceneTransformStorage& get();
+        /**
+         * @brief 빈 저장소를 만듭니다. 서비스 범위가 하나 들고(`EngineSubsystemSet`), 컴포넌트 · 계층 · 렌더 수집은 `engine::getSubsystem<SceneTransformStorage>()` 로 찾는다.
+         * @details 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 서비스 범위는 씬(엔진 범위)보다 먼저 서고 나중에 내려가 모든 컴포넌트보다 오래 산다
+         *          (언리얼 `FSceneInterface` 의 트랜스폼 버퍼가 엔진 쪽 객체에 있는 자리).
+         */
+        SceneTransformStorage();
+
+        // ISubsystem — 세울 것이 없다(처음 받는 칸부터 페이지를 만든다).
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 빈 슬롯 하나를 받아 기본값(항등 로컬, 항등 월드, 소유자 알림 켬)으로 채웁니다. 어느 스레드에서 불러도 됩니다.
@@ -168,15 +179,10 @@ namespace sw
         SceneTransformStorage( const SceneTransformStorage& )            = delete;
         SceneTransformStorage& operator=( const SceneTransformStorage& ) = delete;
 
-        /** @brief 페이지를 모두 해제합니다. 살아 있는 슬롯이 남았으면 경고합니다(컴포넌트가 새었다). 엔진 수명 범위가 닫힐 때 불립니다. */
-        ~SceneTransformStorage();
+        /** @brief 페이지를 모두 해제합니다. 살아 있는 슬롯이 남았으면 경고합니다(컴포넌트가 새었다). 서비스 범위가 내려갈 때 불립니다. */
+        ~SceneTransformStorage() override;
 
     private:
-        friend class ScopeOwned<SceneTransformStorage>; ///< 엔진 수명 범위가 만들고 소멸시킨다(SceneTransformStorage.cpp)
-
-        /** @brief 빈 저장소를 만듭니다. `get` 만 부릅니다. */
-        SceneTransformStorage();
-
         /** @brief 슬롯 하나를 기본값으로 채웁니다. */
         static void initializeSlot( SceneTransformPage& page, uint32 pageIndex, SceneComponent* pOwner );
 

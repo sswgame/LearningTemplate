@@ -40,6 +40,8 @@ SW_ENGINE_SERVICE( class, AssetManager, Required, GameVisible )
 SW_ENGINE_SERVICE( class, AssetDataKindRegistry, Required, GameVisible )
 // 타입별 일괄 틱 함수 표. 서비스 범위가 소유하고, 모듈을 올리고 내리는 길이 정적 등록자(`SW_REGISTER_TICK_BATCH` — `ModuleObjectRegistrar`)를 붙이고 뗀다. 씬은 서비스 묶음의 칸으로 읽는다.
 SW_ENGINE_SERVICE( class, TickBatchRegistry, Required, HostOnly )
+// 씬 컴포넌트 트랜스폼 칸 저장소. 서비스 범위가 소유해 모든 컴포넌트보다 오래 살고, 컴포넌트 생성 · 계층 적용 · 렌더 수집이 칸으로 읽는다.
+SW_ENGINE_SERVICE( class, SceneTransformStorage, Required, HostOnly )
 // 파일 내용 해시 캐시(쿠킹 판정 · 셰이더 의존 기록). 서비스 범위가 소유하고, 창구(`ContentHash::computeFile`)가 워커에서도 칸으로 읽는다.
 SW_ENGINE_SERVICE( class, ContentHashCache, Required, HostOnly )
 // 게임 시간 배율의 정지 요청 · 이번 프레임의 실제 경과(배율 값은 전역 변수 `gv_timeScale`).

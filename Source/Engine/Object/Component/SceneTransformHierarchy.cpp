@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -432,7 +433,7 @@ namespace sw
             }
         };
         PendingSlotJob job{};
-        job._pStorage     = &SceneTransformStorage::get();
+        job._pStorage     = &engine::getSubsystem<SceneTransformStorage>();
         job._pRegistry    = &registry;
         job._pSlotList    = _pPendingSlotScratch;
         job._pActiveSlot  = _listActiveScratchSlot.data();

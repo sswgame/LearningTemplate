@@ -7,7 +7,6 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 
 #include "Core/Container/IndexFreeList.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include <cstdlib>
@@ -15,18 +14,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "SceneTransformStorage" );
-
-    namespace
-    {
-        /** @brief 프로세스에 하나인 저장소입니다. 엔진 수명 범위가 닫히면(엔진 종료) 페이지와 함께 소멸합니다. */
-        ScopeOwned<SceneTransformStorage> s_sceneTransformStorage;
-    } // namespace
-
-    SceneTransformStorage& SceneTransformStorage::get()
-    {
-        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 컴포넌트가 엔진보다 오래 살았다. 칸을 줄 저장소가 없으므로 모든 구성에서 멈춘다(`getRequired`).
-        return s_sceneTransformStorage.getRequired();
-    }
 
     SceneTransformStorage::SceneTransformStorage()
         : _arrPage{}
@@ -39,7 +26,7 @@ namespace sw
 
     SceneTransformStorage::~SceneTransformStorage()
     {
-        // 엔진 종료(수명 범위 닫기) 때 칸이 남았으면 그 컴포넌트가 새었다. 페이지는 그래도 놓는다 — 샌 컴포넌트는 다시 불리지 않는다.
+        // 서비스 범위가 내려갈 때 칸이 남았으면 그 컴포넌트가 새었다. 페이지는 그래도 놓는다 — 샌 컴포넌트는 다시 불리지 않는다.
         if ( _liveSlotCount != 0 )
             SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", _liveSlotCount );
         for ( atomic<SceneTransformPage*>& page : _arrPage )

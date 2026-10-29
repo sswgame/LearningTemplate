@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
@@ -33,7 +34,7 @@ namespace sw
         , _bQueuedDirtyRoot{ SW_FALSE }
     {
         // 값(로컬 TRS · 월드 행렬 · LWC)은 저장소의 칸에 있다. 칸은 항등 로컬 · 항등 월드로 채워져 나온다.
-        _transformSlot     = SceneTransformStorage::get().allocateSlot( this, _pTransformPage );
+        _transformSlot     = engine::getSubsystem<SceneTransformStorage>().allocateSlot( this, _pTransformPage );
         _bIsSceneComponent = SW_TRUE;
     }
 
@@ -62,7 +63,7 @@ namespace sw
                 _listChild.pop_back();
         }
         detachFromParentImmediate();
-        SceneTransformStorage::get().freeSlot( _transformSlot );
+        engine::getSubsystem<SceneTransformStorage>().freeSlot( _transformSlot );
         _pTransformPage = nullptr;
         _transformSlot  = SceneTransformStorage::kInvalidSlot;
     }

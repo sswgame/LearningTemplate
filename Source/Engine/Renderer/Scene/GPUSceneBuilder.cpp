@@ -480,7 +480,7 @@ namespace sw
         job._pTransformSlot = std::as_const( primitives.getTransformSlots() ).data();
         job._pMap           = std::as_const( _listPrimitiveToCandidate ).data();
         job._pCandidate     = _listScratchCandidate.data();
-        job._pStorage       = &SceneTransformStorage::get();
+        job._pStorage       = &engine::getSubsystem<SceneTransformStorage>();
         engine::runParallel( static_cast<uint32>( _listTransformDirtyPrimitive.size() ), kParallelTransformCopyCount,
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformCopyJob::copyRange, &job ) );
         return job._bReverseCullingChanged.load( std::memory_order_relaxed );

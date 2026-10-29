@@ -39,6 +39,7 @@
 #include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -116,6 +117,8 @@ namespace sw::engine
         // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
         SW_MEMORY_SCOPE( EngineMisc );
         ServiceParts parts;
+        // 트랜스폼 칸 저장소가 맨 먼저 선다 — 서비스 범위의 해제는 역순이라 이 범위 · 엔진 범위의 어느 컴포넌트보다 나중에 내려간다.
+        services.addSubsystem( sw::make_unique<SceneTransformStorage>() );
         parts._pEventDispatcher = &services.addSubsystem( sw::make_unique<EventDispatcher>() );
         services.addSubsystem( sw::make_unique<LocalizationManager>() );
         services.addSubsystem( sw::make_unique<DebugOverlayState>() );
