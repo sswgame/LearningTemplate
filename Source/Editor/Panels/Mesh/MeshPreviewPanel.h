@@ -1,12 +1,13 @@
 /**
  * @file MeshPreviewPanel.h
  * @brief 메시 에셋(`*.mesh`)을 미리보기 씬에서 돌려 보고 LOD 단계를 골라 견주는 창입니다(유니티 모델 임포터 미리보기의 LOD 보기, 언리얼 Static Mesh 에디터의 LOD 선택에 해당합니다).
+ * @details 메시 걸기 · 카메라 맞출 경계 · 고른 LOD 는 `MeshPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
+#include "Editor/Panels/Mesh/Model/MeshPreviewModel.h"
 
 namespace sw
 {
@@ -47,17 +48,10 @@ namespace sw::editor
         EditorPreviewEnvironment getPreviewEnvironment() const override;
         /** @brief 미리보기 씬에 메시 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
-        /** @brief 미리보기 씬의 메시 컴포넌트입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
-        MeshComponent* findPreviewSubject() const;
         /** @brief 미리보기 메시가 지금 문서를 그리게 하고 읽힌 뒤 한 번 카메라를 맞춥니다. */
         void syncPreviewSubject();
-        /** @brief 고른 LOD 를 미리보기 씬에 건다. */
-        void applyLODChoice();
         void drawLODTable( const MeshComponent& subject );
 
-        string _previewMeshPath; ///< 미리보기 메시에 건 경로(비면 다음 그리기가 다시 건다)
-        string _status;
-        int32  _lodChoice; ///< 고른 LOD 단계(-1 = Auto, 화면 크기로 고른다)
-        bool   _bFramed;   ///< 읽힌 메시로 카메라를 한 번 맞췄다
+        MeshPreviewModel _model;
     };
 } // namespace sw::editor
