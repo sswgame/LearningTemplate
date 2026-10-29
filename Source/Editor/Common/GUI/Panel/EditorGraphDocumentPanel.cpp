@@ -18,11 +18,9 @@ namespace sw::editor
         , _bindModuleCopy{ bindModuleCopy }
         , _pNodeMoveEditLabel{ pNodeMoveEditLabel }
         , _pNodeMoveCoalesceKey{ pNodeMoveCoalesceKey }
-        , _previewHoldSeconds{ 0.0f }
         , _pendingPlacementNodeID{ 0 }
         , _pendingPlacement{}
         , _bGraphLayoutReady{ SW_FALSE }
-        , _bPreviewPlaying{ SW_FALSE }
         , _reservedGraph{ 0 }
     {
         SW_ASSERT( _bindModuleCopy != nullptr );

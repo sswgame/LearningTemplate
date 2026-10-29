@@ -10,7 +10,6 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -85,7 +84,7 @@ namespace sw::editor
     DialogueGraphPanel::DialogueGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetType{ DialogueGraphAsset::kAssetType }, "Move Dialogue Nodes", "dialogue-graph-layout", &ed::SetCurrentEditor }
         , _selectedNodeID{ 0 }
-        , _previewNodeID{ 0 }
+        , _preview{}
     {
         _nodeGraph.setPinTypeColors( {
             Color{ 0.85f, 0.85f, 0.90f, 1.0f }
@@ -102,7 +101,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
 
-        updatePreview( ImGui::GetIO().DeltaTime );
+        _preview.update( _graph, ImGui::GetIO().DeltaTime );
 
         drawGraphToolbar();
 
@@ -362,7 +361,7 @@ namespace sw::editor
         DialogueGraphAsset        data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
         adoptLoadedGraph( std::move( data ), result );
-        _previewNodeID = 0;
+        _preview.resetForDocument();
         return result;
     }
 
@@ -389,31 +388,23 @@ namespace sw::editor
         EditorWidgets::drawToolbarSeparator();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play Preview" ) );
         if ( ImGui::Button( "Play Preview" ) )
-        {
-            const DialogueGraphAsset asset  = captureGraphData();
-            const DialogueAssetNode* pStart = asset.findStartNode();
-            _bPreviewPlaying                = SW_TRUE;
-            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
-        }
+            _preview.play( _graph );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PlayPreviewTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Advance Preview" ) );
         if ( ImGui::Button( "Advance Preview" ) )
-            previewStep( DialogueStepInput{} );
+            _preview.step( _graph, DialogueStepInput{} );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "AdvancePreviewTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop Preview" ) );
         if ( ImGui::Button( "Stop Preview" ) )
-        {
-            _bPreviewPlaying = SW_FALSE;
-            _previewNodeID   = 0;
-        }
+            _preview.stop();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "StopPreviewTip" ) );
-        if ( _previewNodeID <= 0 )
+        const int32 previewNodeID = _preview.getNodeID();
+        if ( previewNodeID <= 0 )
             return;
 
         ImGui::SameLine();
-        ImGui::TextDisabled( "Preview node #%d", _previewNodeID );
-        const DialogueGraphAsset asset = captureGraphData();
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
+        ImGui::TextDisabled( "Preview node #%d", previewNodeID );
+        const DialogueAssetNode* pNode = _graph.findNode( previewNodeID );
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
             return;
@@ -430,7 +421,7 @@ namespace sw::editor
                 {
                     DialogueStepInput input{};
                     input._choiceIndex = choiceIndex;
-                    previewStep( input );
+                    _preview.step( _graph, input );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewChoiceTip" ) );
             }
@@ -442,87 +433,14 @@ namespace sw::editor
             {
                 DialogueStepInput input{};
                 input._bConditionMet = true;
-                previewStep( input );
+                _preview.step( _graph, input );
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewTrueTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "False" ) );
             if ( ImGui::SmallButton( "False" ) )
-                previewStep( DialogueStepInput{} );
+                _preview.step( _graph, DialogueStepInput{} );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "PreviewFalseTip" ) );
         }
-    }
-
-    void DialogueGraphPanel::updatePreview( float32 deltaSeconds )
-    {
-        if ( _bPreviewPlaying == SW_FALSE || _previewNodeID <= 0 )
-            return;
-        const DialogueGraphAsset asset = captureGraphData();
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
-        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
-        if ( pInfo == nullptr )
-        {
-            _bPreviewPlaying = SW_FALSE;
-            return;
-        }
-
-        switch ( pInfo->_flow )
-        {
-            case DialogueNodeFlow::PassThrough:
-            {
-                previewStep( DialogueStepInput{} );
-                return;
-            }
-            case DialogueNodeFlow::WaitAdvance:
-            {
-                _previewHoldSeconds += deltaSeconds;
-                if ( _previewHoldSeconds < 0.9f )
-                    return;
-                previewStep( DialogueStepInput{} );
-                return;
-            }
-            case DialogueNodeFlow::Finish:
-            {
-                _bPreviewPlaying = SW_FALSE;
-                return;
-            }
-            case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 선택한다
-            case DialogueNodeFlow::Condition:
-            {
-                return;
-            }
-        }
-    }
-
-    void DialogueGraphPanel::previewStep( const DialogueStepInput& input )
-    {
-        const DialogueGraphAsset asset = captureGraphData();
-        if ( _previewNodeID <= 0 )
-        {
-            const DialogueAssetNode* pStart = asset.findStartNode();
-            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
-            return;
-        }
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
-        enterPreviewNode( asset, pNode != nullptr ? DialogueCursor::step( asset, *pNode, input ) : 0 );
-    }
-
-    void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeID )
-    {
-        _previewHoldSeconds            = 0.0f;
-        const DialogueAssetNode* pNode = asset.findNode( nodeID );
-        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
-        if ( pInfo == nullptr )
-        {
-            _bPreviewPlaying = SW_FALSE;
-            return;
-        }
-
-        _previewNodeID = nodeID;
-        // 러너가 알리는 노드(대사, 선택지)만 뷰포트에 보인다.
-        if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
-            EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
-        if ( pInfo->_flow == DialogueNodeFlow::Finish )
-            _bPreviewPlaying = SW_FALSE;
     }
 
     int32 DialogueGraphPanel::addNode( DialogueAssetNodeType type )

@@ -4,13 +4,9 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorGraphDocumentPanel.h"
+#include "Editor/Panels/Dialogue/Model/DialogueGraphPreviewModel.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-
-namespace sw
-{
-    struct DialogueStepInput;
-} // namespace sw
 
 namespace sw::editor
 {
@@ -75,17 +71,11 @@ namespace sw::editor
         void drawNodeBody( const DialogueNode& node );
         /** @brief 선택한 노드의 편집 항목을 그립니다. 어떤 항목을 보일지는 특성 테이블이 정합니다. */
         void drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info );
-        /** @brief 미리보기 재생을 한 틱 진행합니다. 기다리지 않는 노드는 곧바로 지납니다. */
-        void updatePreview( float32 deltaSeconds );
-        /** @brief 미리보기를 다음 노드로 보냅니다. 다음 노드는 러너와 같은 `DialogueCursor::step` 이 정합니다. */
-        void previewStep( const DialogueStepInput& input );
-        /** @brief 미리보기를 그 노드로 옮깁니다. 대사나 선택지 노드이면 뷰포트에 보이고, 끝 노드나 없는 노드이면 멈춥니다. */
-        void enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeID );
         /** @brief 미리보기 툴바를 그립니다. */
         void drawPreviewToolbar();
 
     private:
-        int32 _selectedNodeID;
-        int32 _previewNodeID;
+        int32                     _selectedNodeID;
+        DialogueGraphPreviewModel _preview;
     };
 } // namespace sw::editor

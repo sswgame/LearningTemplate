@@ -91,12 +91,10 @@ namespace sw::editor
         NodeEditorBindFunction _bindModuleCopy;         /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
         const utf8*            _pNodeMoveEditLabel;     /**< 노드 이동 Undo 이름. */
         const utf8*            _pNodeMoveCoalesceKey;   /**< 노드 이동을 합치는 키. */
-        float32                _previewHoldSeconds;     /**< 미리보기 재생이 현재 노드에 머문 시간. */
         int32                  _pendingPlacementNodeID; /**< 다음 그리기에서 위치를 정할 새 노드. 0 이면 없다. */
         float2                 _pendingPlacement;       /**< 그 노드의 캔버스 좌표. */
         uint8                  _bGraphLayoutReady : 1;  /**< 캔버스가 위치를 한 번 정한 뒤에 켠다. */
-        uint8                  _bPreviewPlaying   : 1;  /**< 미리보기를 재생 중이다. */
-        [[maybe_unused]] uint8 _reservedGraph     : 6;
+        [[maybe_unused]] uint8 _reservedGraph     : 7;
     };
 } // namespace sw::editor
 
@@ -163,7 +161,7 @@ namespace sw::editor
         /**
          * @brief 파일에서 읽은 그래프를 목록으로 받습니다. `loadDocument` 의 공통 절차입니다.
          * @details 읽지 못한 파일이면 이전 문서의 그래프를 보관하지 않고 기본 그래프를 보여 주며 저장을 막는다. 읽지 못한 파일을 덮어쓰지 않기 위해서다.
-         *          레이아웃 동기화 플래그와 미리보기 재생을 끄고 캔버스가 내용에 맞추게 한다. 패널별 미리보기 상태는 패널이 정리한다.
+         *          레이아웃 동기화 플래그를 끄고 캔버스가 내용에 맞추게 한다. 미리보기 상태는 패널의 미리보기 모델이 정리한다.
          */
         void adoptLoadedGraph( AssetType&& data, ToolAssetLoadResult result )
         {
@@ -172,7 +170,6 @@ namespace sw::editor
                 ensureDefaults();
 
             _bGraphLayoutReady = SW_FALSE;
-            _bPreviewPlaying   = SW_FALSE;
             _nodeGraph.requestContentFit();
         }
 

@@ -91,7 +91,7 @@ namespace sw::editor
         void duplicateNode( int32 nodeID );
 
     private:
-        AnimationGraphPreviewModel _preview;             ///< 미리보기 그래프 사본 · 플레이어(재생 상태는 기반의 `_bPreviewPlaying` 이 아니라 이것이 든다)
+        AnimationGraphPreviewModel _preview;             ///< 미리보기 그래프 사본 · 플레이어 · 재생 상태
         AnimationGraphLayerEditor  _layerEditor;         ///< 레이어 탭의 레이어 · 본 마스크 편집
         string                     _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
         string                     _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
