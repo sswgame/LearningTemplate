@@ -1,15 +1,34 @@
+/**
+ * @file SimpleTextShaper.cpp
+ * @brief 단순 셰이퍼를 정의합니다. 코드 포인트에서 글리프(cmap)와 커닝을 구합니다. 합자, 위치 테이블, 결합 문자 겹쳐 그리기는 없습니다.
+ * @details 라틴, 한글(완성형 음절), 한자, 가나는 이것으로 맞다. 아랍어 연결형, 인도계 문자, 합자, 결합 분음(U+0300..U+036F)은
+ *          HarfBuzz 가 필요한 경계다. 결합 분음과 폭 없는 제어 문자는 글리프를 내지 않고 버린다(Engine/Text/README.md).
+ *          `ITextShaper::createDefault` 만 만들어 이름으로 부르는 곳이 없어 헤더를 두지 않는다.
+ */
 #include "pch.h"
-
-#include "Engine/Text/SimpleTextShaper.h"
 
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Text/IFontRasterizer.h"
+#include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/TextItemizer.h"
 
 #if defined( SW_TEXT_COMPLEX_SHAPING )
     #include "Engine/Text/HarfBuzz/ComplexTextShaper.h"
 #endif
+
+namespace sw
+{
+    /**
+     * @class SimpleTextShaper
+     * @brief cmap + 커닝 셰이퍼입니다(`ITextShaper` 의 기본 구현).
+     */
+    class SimpleTextShaper final : public ITextShaper
+    {
+    public:
+        void shape( const IFontRasterizer& rasterizer, const ShapingRun& run, vector<ShapedGlyph>& inoutListGlyph ) const override;
+    };
+} // namespace sw
 
 namespace sw
 {

@@ -1,10 +1,15 @@
+/**
+ * @file SQLiteDriver.cpp
+ * @brief SQLite 드라이버입니다. 이 키트 폴더(`Driver/SQLite/`)만 sqlite3 를 압니다. 접속 문자열은 DB 파일 경로이며 작업 폴더 기준 상대 경로와 절대 경로를 모두 쓸 수 있습니다.
+ * @details 연결마다 WAL, synchronous FULL, busy_timeout 5초를 설정한다. 준비된 문장은 SQL 문마다 캐시한다. 비밀은 쓰지 않으며 접근 제어는 파일 권한이 맡는다.
+ *          드라이버는 레지스트리 등록(`SQLDriverRegistration`)으로만 닿고 이름으로 부르는 곳이 없어 헤더를 두지 않는다.
+ */
 #include "pch.h"
-
-#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Driver/SQLite/SQLiteDriver.h"
 
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 
 #include <sqlite3.h>
@@ -229,6 +234,22 @@ namespace sw
             };
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SQLiteDriver
+     * @brief SQLite 드라이버입니다. 상태가 없으므로 모든 워커가 하나를 같이 씁니다.
+     */
+    class SQLiteDriver final : public ISQLDriver
+    {
+    public:
+        static SQLiteDriver& getInstance();
+
+        const utf8*                getName() const override { return "sqlite"; }
+        unique_ptr<ISQLConnection> openConnection( string_view connection, string_view secret, string& outError ) override;
+    };
 } // namespace sw
 
 namespace sw
