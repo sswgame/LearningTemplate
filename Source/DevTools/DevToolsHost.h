@@ -16,7 +16,6 @@ namespace sw
 {
     class ContentFolderWatchService;
     class DevConsoleHost;
-    class Engine;
 
     /**
      * @class DevToolsHost
@@ -38,7 +37,7 @@ namespace sw
         DevToolsHost& operator=( const DevToolsHost& ) = delete;
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override { _pEngine = nullptr; }
+        void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
@@ -51,9 +50,6 @@ namespace sw
 
         /** @brief 콘텐츠 폴더 감시 창구입니다 — 호스트가 범위에 `IContentFolderWatch` 로 건다(기능 · 게임의 데이터 다시 읽기가 찾는다). */
         ContentFolderWatchService& getContentFolderWatch() { return *_pContentFolderWatch; }
-
-        /** @brief 단축키를 읽을 엔진입니다(디버그 키 맵은 엔진이 든다). 엔진이 선 뒤 · 프레임 관찰자로 붙이기 전에 겁니다. nullptr 이면 단축키를 읽지 않습니다. */
-        void setEngine( const Engine* pEngine ) { _pEngine = pEngine; }
 
         /** @brief 기동 확장 — 엔진이 기동 단계 범위를 채운 뒤 · 초기화 전에 부른다(`makeStartupExtension`). */
         void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts );
@@ -69,7 +65,6 @@ namespace sw
 
     public:
     private:
-        const Engine*                         _pEngine;
         unique_ptr<DevConsoleHost>            _pConsole;
         unique_ptr<ContentFolderWatchService> _pContentFolderWatch; ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
     };

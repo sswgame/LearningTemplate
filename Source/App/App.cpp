@@ -33,6 +33,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Module/HostServices.h"
@@ -168,7 +169,6 @@ namespace sw
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
 #if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _pDevTools->setEngine( &_engine );
         _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
 #endif
 
@@ -576,8 +576,6 @@ namespace sw
         _automationFrameSubscription.reset();
 #if !defined( SW_SHIPPING )
         _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-        if ( _pDevTools != nullptr )
-            _pDevTools->setEngine( nullptr );
 #endif
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
@@ -650,7 +648,7 @@ namespace sw
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
 #if !defined( SW_SHIPPING )
-            _engine.updateDebugKeyActions( frameTime._deltaTime );
+            engine::getSubsystem<DebugKeyActions>().update( engine::getSubsystem<InputManager>(), frameTime._deltaTime );
 #endif
             pollReloadHotkeys();
 
@@ -754,13 +752,14 @@ namespace sw
     void App::pollReloadHotkeys()
     {
 #if !defined( SW_SHIPPING )
-        // 모듈을 다시 로드하는 장치는 호스트(App)에 있다. Engine 에는 "이 액션이 눌렸나"만 묻는다.
-        if ( _engine.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
+        // 모듈을 다시 로드하는 장치는 호스트(App)에 있다. 디버그 키 맵에는 "이 액션이 눌렸나"만 묻는다.
+        const DebugKeyActions& debugKeys = engine::getSubsystem<DebugKeyActions>();
+        if ( debugKeys.wasActionTriggered( hashed_string( InputMapDefaults::kReloadGameAction ) ) )
         {
             _moduleReload.requestReload( config::kTargetGameModule );
             SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
         }
-        if ( _bEnableEditor == SW_TRUE && _engine.wasDebugActionTriggered( AppInternal::kReloadEditorAction ) )
+        if ( _bEnableEditor == SW_TRUE && debugKeys.wasActionTriggered( hashed_string( AppInternal::kReloadEditorAction ) ) )
         {
             _moduleReload.requestReload( config::kTargetEditorModule );
             SW_LOG_INFO( "%#: force EditorModule reload", AppInternal::kReloadEditorAction );

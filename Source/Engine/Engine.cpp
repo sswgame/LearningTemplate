@@ -57,6 +57,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/HeadlessSubsystem.h"
+#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -141,7 +142,7 @@ namespace sw
         , _pConfigManager{ nullptr }
         , _configReloadedSubscription{}
         , _listCodecSubscription{}
-        , _debugKeyActions{}
+        , _pDebugKeyActions{ nullptr }
         , _frameHooks{}
         , _startupExtension{}
         , _hostRole{ EngineHostRole::Client }
@@ -234,7 +235,9 @@ namespace sw
             // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
-            _pEventDispatcher = engine::addServiceSubsystems( _services )._pEventDispatcher;
+            const engine::ServiceParts serviceParts = engine::addServiceSubsystems( _services );
+            _pEventDispatcher                       = serviceParts._pEventDispatcher;
+            _pDebugKeyActions                       = serviceParts._pDebugKeyActions;
             // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
             // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
             _services.addSubsystem( make_unique<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask ) );
@@ -244,8 +247,6 @@ namespace sw
                 SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
                 return false;
             }
-            // 셸 액션은 엔진의 값 멤버다 — 개발 명령(`debugkeys.rebind`)이 `engine::findSubsystem<DebugKeyActions>()` 로 찾게 빌려 건다(`shutdown` 이 맵을 놓을 때 푼다).
-            (void)_services.bind( &_debugKeyActions ); // 새 범위 — 겹치지 않는다
         }
 
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
@@ -301,7 +302,7 @@ namespace sw
         }
         // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
-            _debugKeyActions.setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
+            _pDebugKeyActions->setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 훅으로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick` 훅). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
@@ -381,9 +382,10 @@ namespace sw
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         _startup.getCollection().shutdownAll();
-        // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateDebugKeyActions` 가 처음 쓸 때 만든다).
-        _debugKeyActions.reset();
-        _services.unbind<DebugKeyActions>();
+        // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(호스트 루프가 처음 돌릴 때 만든다).
+        // 기동이 서비스 범위 전에 멈췄으면(크래시 보고 프로세스 · 코어 실패) 맵이 없다.
+        if ( _pDebugKeyActions != nullptr )
+            _pDebugKeyActions->reset();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _configReloadedSubscription.reset();
@@ -402,6 +404,7 @@ namespace sw
         // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
         _services.destroyAll();
         _pEventDispatcher = nullptr;
+        _pDebugKeyActions = nullptr;
         engine::unbindEngineServices();
         // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 라이브러리 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
@@ -874,22 +877,5 @@ namespace sw
 #else
         (void)postPresentHook; // Server 타깃 — 표시할 화면이 없다
 #endif
-    }
-
-    void Engine::updateDebugKeyActions( float32 deltaTime )
-    {
-        if ( _pInputManager == nullptr )
-            return;
-        _debugKeyActions.update( *_pInputManager, deltaTime );
-    }
-
-    unique_ptr<InputMap> Engine::createShellInputMap( const AssetID& assetID )
-    {
-        return DebugKeyActions::createInputMap( assetID );
-    }
-
-    bool Engine::wasDebugActionTriggered( string_view actionName ) const
-    {
-        return _debugKeyActions.wasActionTriggered( hashed_string( actionName ) );
     }
 } // namespace sw

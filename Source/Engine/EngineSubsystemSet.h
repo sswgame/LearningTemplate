@@ -24,6 +24,7 @@ namespace sw
     class CompressionCodecRegistry;
     class ConfigManager;
     class CrashHandlerSubsystem;
+    class DebugKeyActions;
     class DiagnosticsSubsystem;
     class EventDispatcher;
     class FontService;
@@ -69,6 +70,7 @@ namespace sw
         struct ServiceParts
         {
             EventDispatcher* _pEventDispatcher{ nullptr };
+            DebugKeyActions* _pDebugKeyActions{ nullptr }; ///< 셸 디버그 키 맵 — 엔진 종료가 입력 매니저보다 먼저 맵을 놓는다
         };
     } // namespace engine
 

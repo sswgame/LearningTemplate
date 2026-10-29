@@ -247,7 +247,6 @@ namespace sw
         }
 #if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _pDevTools->setEngine( &_engine );
         _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
 #endif
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
@@ -1061,8 +1060,6 @@ namespace sw
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
 #if !defined( SW_SHIPPING )
         _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-        if ( _pDevTools != nullptr )
-            _pDevTools->setEngine( nullptr );
 #endif
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;

@@ -1,7 +1,7 @@
 /**
  * @file Engine/Input/DebugKeyActions.h
- * @brief 디버그 키 액션 맵(`EngineDefaultAssets::_debugKeyInputMap`)을 만들고 프레임마다 돌립니다. `Engine` 의 값 멤버이고, 엔진이 서비스 범위에 빌려 겁니다
- *        (엔진 루프를 모르는 개발 명령은 `engine::findSubsystem<DebugKeyActions>()` 로 찾는다).
+ * @brief 디버그 키 액션 맵(`EngineDefaultAssets::_debugKeyInputMap`)을 만들고 프레임마다 돌립니다. 서비스 범위의 서브시스템이고
+ *        (`engine::getSubsystem<DebugKeyActions>()`), 호스트 루프(App)가 프레임마다 돌리고 개발 도구 · 개발 명령이 같은 창구로 읽습니다.
  * @details 이 클래스가 내주는 것은 **입력 사실**(그 액션이 이번 프레임에 발동했나)뿐입니다. 액션이 무엇을 뜻하는지(셰이더를 다시 베이크한다,
  *          모듈을 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — 셰이더 리로드 단축키는 재컴파일기를 가진 개발 도구(`DevToolsHost`)가 읽습니다.
  */
@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/FileSystem/AssetID.h"
 
@@ -22,15 +23,24 @@ namespace sw
     /**
      * @class DebugKeyActions
      * @brief 셸 디버그 InputMap 하나의 수명과 프레임 갱신입니다. 맵은 처음 `update` 할 때 만듭니다(그 전과 Shipping 에서는 없다).
+     * @details 서비스 범위에 서는 까닭: 엔진의 값 멤버로 두면 호스트 · 개발 도구가 엔진을 거쳐 읽는 전달 함수(`Engine::wasDebugActionTriggered` …)가 늘었다.
+     *          맵이 입력 매니저(기동 단계)를 가리키므로, 엔진 종료가 기동 단계를 내린 뒤 · 해제하기 전에 `reset` 을 부른다(`Engine::shutdown`).
      */
-    class SW_API DebugKeyActions
+    class SW_API DebugKeyActions final : public ISubsystem
     {
     public:
+        static constexpr const utf8* kSubsystemName = "DebugKeyActions";
+
         DebugKeyActions();
-        ~DebugKeyActions();
+        ~DebugKeyActions() override;
 
         DebugKeyActions( const DebugKeyActions& )            = delete;
         DebugKeyActions& operator=( const DebugKeyActions& ) = delete;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        /** @brief 맵을 놓습니다(`reset`). 엔진 종료는 그 전에 입력 매니저가 사라지기 전 자리에서 이미 놓았다. */
+        void        shutdownSubsystem() override { reset(); }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 맵을 (처음이면 만들고) @p inputManager 에 붙여 한 프레임 돌립니다. 타이틀 레이어는 끕니다 — 셸 단축키는 화면과 상관없이 받는다.

@@ -17,7 +17,6 @@
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
-#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
@@ -37,6 +36,7 @@ namespace sw
     class CompressionCodecRegistry;
     class ConfigManager;
     class DebugDrawQueue;
+    class DebugKeyActions;
     class EventDispatcher;
     class FontService;
     class FrameProfiler;
@@ -135,10 +135,6 @@ namespace sw
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void setBeginFrameHook( sw::BeginFrameHookDelegate beginFrameHook );
-        /** @brief 디버그 키 액션 맵을 한 프레임 돌립니다(`DebugKeyActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
-        void updateDebugKeyActions( float32 deltaTime );
-        /** @brief 디버그 키 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_debugKeyInputMap`)에서 만듭니다(`DebugKeyActions::createInputMap`). */
-        static unique_ptr<InputMap> createShellInputMap( const AssetID& assetID );
 
         /**
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).
@@ -156,19 +152,7 @@ namespace sw
          *        (관찰자의 결과가 프로파일 세션의 종료보다 이긴다).
          */
         void onWindowClosed();
-
-        /**
-         * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
-         * @details Engine 이 내주는 것은 **입력 사실**뿐입니다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
-         *          에디터를 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — Engine 이 리로드 콜백을 들면 Shipping 헤더에도
-         *          리로드 델리게이트가 남습니다.
-         */
-        bool wasDebugActionTriggered( string_view actionName ) const;
-        /**
-         * @brief 셸 InputMap 입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
-         * @details 개발 콘솔(`DevConsoleController`)이 자기 액션을 읽고 자기 레이어를 켜고 끕니다. 이 맵은 키보드 포커스와 상관없이 키를 읽습니다.
-         */
-        InputMap* getDebugKeyInputMap() const { return _debugKeyActions.getInputMap(); }
+        // 셸 디버그 키 맵은 서비스 범위의 서브시스템이다(`engine::getSubsystem<DebugKeyActions>()`) — 호스트 루프가 돌리고 리로드 단축키 · 개발 도구가 읽는다.
 
         // ----------------------------------------------------------------------
         // Getter (App 이 GameModuleManager 등과 연동하는 데 필요)
@@ -236,8 +220,8 @@ namespace sw
         Subscription _configReloadedSubscription;
         /** @brief 엔진이 붙인 압축 코덱(LZ4 · Zstd · Zlib)의 등록 구독입니다(`EngineCompressionCodecUtil::registerAll`). */
         vector<Subscription> _listCodecSubscription;
-        /** @brief 디버그 키 액션 맵입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
-        DebugKeyActions _debugKeyActions;
+        /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
+        DebugKeyActions* _pDebugKeyActions;
         /** @brief 훅 묶음의 칸 하나(프레임 시점)입니다. 묶음 하나가 멀티캐스트 항목 하나라 구독 하나로 떨어진다. */
         enum class FramePoint : uint8
         {

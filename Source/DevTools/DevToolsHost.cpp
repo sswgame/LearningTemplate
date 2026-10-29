@@ -23,6 +23,7 @@
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -32,8 +33,7 @@ namespace sw
     SW_LOG_CALLER( "DevTools" );
 
     DevToolsHost::DevToolsHost()
-        : _pEngine{ nullptr }
-        , _pConsole{}
+        : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
     {
     }
@@ -115,7 +115,7 @@ namespace sw
         if ( ServerPoseOverlay* const pServerPose = engine::findSubsystem<ServerPoseOverlay>() )
             if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )
                 pServerPose->update( pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
-        InputMap* const pShellMap = _pEngine != nullptr ? _pEngine->getDebugKeyInputMap() : nullptr;
+        InputMap* const pShellMap = engine::getSubsystem<DebugKeyActions>().getInputMap(); // 호스트 루프가 처음 돌리기 전에는 nullptr
         if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
             pDebugHUD->update( pShellMap );
         // 게임 창 콘솔 — 호스트가 이번 프레임의 디버그 키 액션을 갱신한 뒤다(App 루프가 `beginFrame` 뒤에 갱신한다).
@@ -131,7 +131,7 @@ namespace sw
         if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
         {
             pRecompiler->update();
-            if ( _pEngine != nullptr && _pEngine->wasDebugActionTriggered( InputMapDefaults::kReloadShadersAction ) )
+            if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
             {
                 pRecompiler->triggerReloadAll();
                 SW_LOG_INFO( "%#: force shader reload", InputMapDefaults::kReloadShadersAction );

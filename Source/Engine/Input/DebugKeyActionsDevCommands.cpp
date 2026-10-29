@@ -19,7 +19,7 @@ namespace sw
     {
         struct DebugKeyActionsDevCommandsInternal
         {
-            /** @brief 디버그 키 맵이 선 엔진의 디버그 키 액션입니다(엔진이 서비스 범위에 빌려 건다). 없으면 답에 까닭을 적고 nullptr 입니다. */
+            /** @brief 디버그 키 맵이 선 엔진의 디버그 키 액션입니다(서비스 범위의 서브시스템이다). 없으면 답에 까닭을 적고 nullptr 입니다. */
             static DebugKeyActions* findDebugKeyActions( string& outReply )
             {
                 DebugKeyActions* pDebugKeys = engine::findSubsystem<DebugKeyActions>();
