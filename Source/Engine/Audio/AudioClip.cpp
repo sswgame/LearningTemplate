@@ -251,18 +251,6 @@ namespace sw
         return false;
     }
 
-    bool AudioClipCache::reloadClip( const hashed_string& path )
-    {
-        shared_ptr<const AudioClipData> pClip = decodeClip( path );
-        if ( pClip == nullptr )
-        {
-            SW_LOG_ERROR( "Reload failed, keeping the previous sound: %#", path.c_str() );
-            return false;
-        }
-        storeResult( path, std::move( pClip ) );
-        return true;
-    }
-
     void AudioClipCache::addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
         storeResult( path, std::move( pClip ) );

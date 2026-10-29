@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/DevOnly.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -132,7 +133,7 @@ namespace sw
             }
             if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, &ConfigManager::reloadFromSource<T> };
+            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
 
@@ -323,7 +324,7 @@ namespace sw
             using ReloadFunc = bool ( * )( ConfigManager& manager, const string& resolvedPath );
 
             string     _resolvedPath;
-            ReloadFunc _pReload{ nullptr };
+            ReloadFunc _pReload{ nullptr }; ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
         };
 
         /** @brief T 를 @p resolvedPath 에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */

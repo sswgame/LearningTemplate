@@ -56,12 +56,9 @@ namespace sw
         /** @brief 현재 게임 gamesettings.xml 리소스 경로를 반환합니다. */
         string getPath() const;
 
-        /** @brief 캐시된 기본값 XML 문서를 다시 로드합니다. */
-        void reload();
-
         /**
          * @brief 기본값 문서를 **실제로 열어 본 횟수**입니다. 진단 · 회귀 테스트용입니다.
-         * @details 이 수는 `setPath`/`reload` 당 **1 이어야 합니다.** 로드가 실패해도 다시 열지 않습니다(`_bLoadAttempted`).
+         * @details 이 수는 `setPath` 당 **1 이어야 합니다.** 로드가 실패해도 다시 열지 않습니다(`_bLoadAttempted`).
          */
         uint32 getLoadAttemptCount() const { return _loadAttemptCount.load( std::memory_order_relaxed ); }
 
@@ -109,7 +106,7 @@ namespace sw
         };
 
         /**
-         * @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`reload`/`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다.
+         * @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다.
          * @details 돌려주는 참조는 잠금 밖에서 순회됩니다. 그래서 결과는 **힙에 따로** 살고(다른 타입이 들어와도 주소가 그대로),
          *          세대가 바뀌어 갈아 끼울 때 옛 것은 버리지 않고 물려 둡니다(`_listReplacedResolved`) — 다른 스레드가 아직 돌고 있을 수 있다.
          */

@@ -17,6 +17,7 @@
  */
 #pragma once
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Foundation/DevOnly.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -146,10 +147,6 @@ namespace sw
 
 /**
  * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
- * @details 빌드 스위치는 여기 한 곳이다(캐시마다 `#if` 를 두지 않는다).
+ * @details 빌드 스위치는 `SW_DEV_ONLY_FUNCTION` 한 곳이다(캐시마다 `#if` 를 두지 않는다).
  */
-#if defined( SW_SHIPPING )
-    #define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( nullptr ) )
-#else
-    #define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( &::sw::reloadAssetCacheOf<Type> )
-#endif
+#define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( SW_DEV_ONLY_FUNCTION( &::sw::reloadAssetCacheOf<Type> ) ) )

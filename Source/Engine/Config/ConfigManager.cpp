@@ -203,17 +203,6 @@ namespace sw
         return true;
     }
 
-    ReloadOutcome ConfigManager::reloadConfigFile( string_view changedPath )
-    {
-        for ( const auto& [key, source] : _mapSource )
-        {
-            (void)key;
-            if ( source._pReload != nullptr && FileUtil::pathsEqualNormalized( source._resolvedPath, changedPath ) )
-                return source._pReload( *this, source._resolvedPath ) ? ReloadOutcome::Reloaded : ReloadOutcome::Failed;
-        }
-        return ReloadOutcome::NotTracked;
-    }
-
     ConfigManager::ConfigManager()
         : _pEngineSlot{ make_unique<EngineConfig>() }
         , _pGameSlot{ make_unique<GameConfig>() }

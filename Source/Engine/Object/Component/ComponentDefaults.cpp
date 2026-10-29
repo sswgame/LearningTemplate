@@ -340,14 +340,6 @@ namespace sw
         return _customDefaultsPath;
     }
 
-    void ComponentDefaults::reload()
-    {
-        ScopedLock<mutex> lock{ _defaultsMutex };
-        _bDefaultsLoaded.store( false, std::memory_order_release );
-        _bLoadAttempted.store( false, std::memory_order_release );
-        clearResolvedCache();
-    }
-
     void ComponentDefaults::clearResolvedCache()
     {
         // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
