@@ -6,7 +6,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -20,7 +19,6 @@
 
 #include <imgui.h>
 
-SW_LOG_CALLER( "DataTablePanel" );
 namespace sw::editor
 {
     namespace
@@ -40,122 +38,42 @@ namespace sw::editor
 
     DataTablePanel::DataTablePanel()
         : IEditorPanel{ false }
+        , _model{}
         , _localizationFilter{}
         , _newKeyBuffer{}
-        , _localizationSheet{}
-        , _listLocalizationProject{}
-        , _listGameDataFile{}
-        , _selectedGameDataRawText{}
-        , _savedGameDataRawText{}
-        , _gameDataDocument{}
+        , _listVisibleLocalizationIndex{}
         , _gameDataTable{}
-        , _localizationJob{}
-        , _gameDataJob{}
-        , _selectedGameDataIndex{ -1 }
-        , _selectedProjectIndex{ 0 }
-        , _bLocalizationLoaded{ SW_FALSE }
-        , _bGameDataLoaded{ SW_FALSE }
-        , _bLocalizationDirty{ SW_FALSE }
-        , _bGameDataDirty{ SW_FALSE }
-        , _bGameDataRaw{ SW_FALSE }
-        , _reserved{ 0 }
+        , _seenGameDataLoadCount{ 0 }
+        , _bGameDataRaw{ false }
     {
     }
 
-    /**
-     * @brief 두 문서(로컬라이즈 · 게임 데이터)를 한 패널이 들기 때문에 dirty 한 쪽만 저장합니다.
-     * @details 기반 클래스의 dirty 비트는 "무언가 바뀌었다" 만 알려 주므로, 어느 쪽인지는 여기 두 비트가 압니다.
-     */
+    /** @brief 두 문서(로컬라이즈 · 게임 데이터)를 한 패널이 들기 때문에 모델이 dirty 한 쪽만 저장합니다. */
     bool DataTablePanel::saveDocument()
     {
-        if ( _bLocalizationDirty == SW_TRUE )
-            saveLocalization();
-        if ( _bGameDataDirty == SW_TRUE )
-            saveSelectedGameDataFile();
-        return _bLocalizationDirty == SW_FALSE && _bGameDataDirty == SW_FALSE;
+        const bool bSaved = _model.save();
+        syncDocumentDirty();
+        return bSaved;
     }
 
     void DataTablePanel::revertDocument()
     {
-        if ( _bLocalizationDirty == SW_TRUE )
-        {
-            // 읽지 못한 테이블은 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
-            if ( EditorDataTableCommands::loadLocalizationProject( _localizationSheet._projectPath, _localizationSheet ) == false )
-                SW_LOG_WARNING( "Some localization files could not be read - see the warnings above" );
-            _bLocalizationLoaded = SW_TRUE;
-            _bLocalizationDirty  = SW_FALSE;
-            syncDocumentDirty();
-        }
-        if ( _bGameDataDirty == SW_TRUE )
-        {
-            _selectedGameDataRawText = _savedGameDataRawText;
-            (void)_gameDataDocument.load( _selectedGameDataRawText ); // 깨진 원문도 글 상자로 고치게 열린다
-            _gameDataTable.reset();
-            _bGameDataDirty = SW_FALSE;
-            syncDocumentDirty();
-        }
-    }
-
-    void DataTablePanel::markLocalizationDirty()
-    {
-        _bLocalizationDirty = SW_TRUE;
-        syncDocumentDirty();
-    }
-
-    void DataTablePanel::markGameDataDirty()
-    {
-        _bGameDataDirty = SW_TRUE;
+        _model.revert();
         syncDocumentDirty();
     }
 
     void DataTablePanel::syncDocumentDirty()
     {
-        const bool bAnyDirty = ( _bLocalizationDirty == SW_TRUE || _bGameDataDirty == SW_TRUE );
-        if ( bAnyDirty )
+        // 기반 클래스의 dirty 비트는 "무언가 바뀌었다" 만 알려 주므로, 어느 쪽인지는 모델의 두 비트가 안다.
+        if ( _model.isAnyDirty() )
             markDocumentDirty();
         else
             clearDocumentDirty();
     }
 
-    void DataTablePanel::pollBackgroundJobs()
-    {
-        LocalizationSheet    loadedSheet;
-        const EditorTaskPoll localizationPoll = _localizationJob.take( loadedSheet );
-        if ( localizationPoll == EditorTaskPoll::Ready )
-        {
-            if ( _bLocalizationDirty == SW_FALSE )
-            {
-                _localizationSheet   = std::move( loadedSheet );
-                _bLocalizationLoaded = SW_TRUE;
-            }
-        }
-        else if ( _bLocalizationLoaded == SW_FALSE && localizationPoll == EditorTaskPoll::Idle )
-        {
-            EditorDataTableCommands::collectLocalizationProjects( _listLocalizationProject );
-            if ( _listLocalizationProject.empty() )
-                _bLocalizationLoaded = SW_TRUE; // 프로젝트가 없다 — 빈 안내를 보인다
-            else
-            {
-                if ( _selectedProjectIndex < 0 || static_cast<size_t>( _selectedProjectIndex ) >= _listLocalizationProject.size() )
-                    _selectedProjectIndex = 0;
-                _localizationJob.request( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] );
-            }
-        }
-
-        vector<GameDataFileEntry> listGameData;
-        const EditorTaskPoll      gameDataPoll = _gameDataJob.take( listGameData );
-        if ( gameDataPoll == EditorTaskPoll::Ready )
-        {
-            _listGameDataFile = std::move( listGameData );
-            _bGameDataLoaded  = SW_TRUE;
-        }
-        else if ( _bGameDataLoaded == SW_FALSE && gameDataPoll == EditorTaskPoll::Idle )
-            _gameDataJob.request();
-    }
-
     void DataTablePanel::drawContent()
     {
-        pollBackgroundJobs();
+        _model.pollBackgroundJobs();
 
         if ( ImGui::BeginTabBar( "##DataTableTabs" ) )
         {
@@ -181,7 +99,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        if ( _bLocalizationLoaded == SW_FALSE )
+        if ( _model.isLocalizationLoaded() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorDataTable", "LoadingLocalization" ) );
             return;
@@ -194,23 +112,21 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##locToolbar" ) )
         {
-            const bool   bHasProject  = _selectedProjectIndex >= 0 && static_cast<size_t>( _selectedProjectIndex ) < _listLocalizationProject.size();
-            const string projectLabel = bHasProject ? FileUtil::getFileNamePart( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] ) : string( SW_LOCKEY( "EditorDataTable", "NoProject" ) );
+            const vector<string>& listProject          = _model.getLocalizationProjects();
+            const int32           selectedProjectIndex = _model.getSelectedProjectIndex();
+            const bool            bHasProject          = selectedProjectIndex >= 0 && static_cast<size_t>( selectedProjectIndex ) < listProject.size();
+            const string          projectLabel         = bHasProject ? FileUtil::getFileNamePart( listProject[static_cast<size_t>( selectedProjectIndex )] ) : string( SW_LOCKEY( "EditorDataTable", "NoProject" ) );
             EditorChrome::setNextItemWidthColumns( 29.0f );
             const bool bProjectOpen = ImGui::BeginCombo( "##locProject", projectLabel.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ProjectTip" ) );
             if ( bProjectOpen )
             {
-                for ( size_t projectIndex = 0; projectIndex < _listLocalizationProject.size(); ++projectIndex )
+                for ( size_t projectIndex = 0; projectIndex < listProject.size(); ++projectIndex )
                 {
-                    const bool   bSelected      = static_cast<int32>( projectIndex ) == _selectedProjectIndex;
-                    const string label          = FileUtil::getFileNamePart( _listLocalizationProject[projectIndex] );
-                    const bool   bSwitchProject = ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false && _bLocalizationDirty == SW_FALSE;
-                    if ( bSwitchProject )
-                    {
-                        _selectedProjectIndex = static_cast<int32>( projectIndex );
-                        reloadLocalization();
-                    }
+                    const bool   bSelected = static_cast<int32>( projectIndex ) == selectedProjectIndex;
+                    const string label     = FileUtil::getFileNamePart( listProject[projectIndex] );
+                    if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false )
+                        _model.selectProject( projectIndex ); // 고친 것이 남았으면 모델이 바꾸지 않는다
                 }
                 ImGui::EndCombo();
             }
@@ -219,40 +135,20 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Localization" ) );
 
             if ( ImGui::Button( "Save Localization" ) )
-                saveLocalization();
+                _model.saveLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveLocalizationTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
             if ( ImGui::Button( "Reload" ) )
-                reloadLocalization();
+                _model.reloadLocalization();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ReloadTip" ) );
 
             ImGui::SameLine();
             EditorChrome::setNextItemWidthColumns( 21.0f );
             ImGui::InputTextWithHint( "##newKey", SW_LOCKEY( "EditorDataTable", "NewKeyHint" ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Add Key" ) );
-            const bool bAddKeyRequested = ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false;
-            if ( bAddKeyRequested )
-            {
-                const string newKey{ _newKeyBuffer.c_str() };
-                bool         bExists{ false };
-                for ( const LocalizationRecord& record : _localizationSheet._listRecord )
-                {
-                    bExists = bExists || record._key == newKey;
-                }
-
-                if ( bExists == false )
-                {
-                    LocalizationRecord newRecord{};
-                    newRecord._key       = newKey;
-                    newRecord._bModified = true;
-                    newRecord._listTranslation.resize( _localizationSheet._listCulture.size() );
-                    newRecord._listState.resize( _localizationSheet._listCulture.size(), TranslationState::Missing );
-                    _localizationSheet._listRecord.push_back( std::move( newRecord ) );
-                    _newKeyBuffer.clear();
-                    markLocalizationDirty();
-                }
-            }
+            if ( ImGui::Button( "Add Key" ) && _model.addKey( _newKeyBuffer.c_str() ) )
+                _newKeyBuffer.clear();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "AddKeyTip" ) );
         }
         EditorChrome::endToolbar();
@@ -311,24 +207,6 @@ namespace sw::editor
         return bChanged;
     }
 
-    void DataTablePanel::collectVisibleLocalizationRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex ) const
-    {
-        // 호출한 쪽이 **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
-        outListVisibleIndex.clear();
-        outListVisibleIndex.reserve( _localizationSheet._listRecord.size() );
-        for ( size_t recordIndex = 0; recordIndex < _localizationSheet._listRecord.size(); ++recordIndex )
-        {
-            const LocalizationRecord& record   = _localizationSheet._listRecord[recordIndex];
-            bool                      bMatches = filter.matchesAny( { record._key, record._source } );
-            for ( const string& translation : record._listTranslation )
-            {
-                bMatches = bMatches || filter.matchesAny( { translation } );
-            }
-            if ( bMatches )
-                outListVisibleIndex.push_back( recordIndex );
-        }
-    }
-
     void DataTablePanel::drawLocalizationTable()
     {
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
@@ -339,7 +217,7 @@ namespace sw::editor
         const EditorListFilter filter{ _localizationFilter.c_str() };
 
         vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
-        collectVisibleLocalizationRecords( filter, listVisibleIndex );
+        _model.collectVisibleRecords( filter, listVisibleIndex );
 
         if ( listVisibleIndex.empty() )
         {
@@ -350,14 +228,15 @@ namespace sw::editor
             return;
         }
 
-        const size_t cultureCount = _localizationSheet._listCulture.size();
-        const int32  columnCount  = static_cast<int32>( 3 + cultureCount );
+        const LocalizationSheet& sheet        = _model.editSheet();
+        const size_t             cultureCount = sheet._listCulture.size();
+        const int32              columnCount  = static_cast<int32>( 3 + cultureCount );
         if ( ImGui::BeginTable( "##locTable", columnCount, flags, ImGui::GetContentRegionAvail() ) )
         {
             ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch, 0.22f );
-            const string sourceHeader = "Source (" + _localizationSheet._sourceCulture + ")";
+            const string sourceHeader = "Source (" + sheet._sourceCulture + ")";
             ImGui::TableSetupColumn( sourceHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.28f );
-            for ( const string& culture : _localizationSheet._listCulture )
+            for ( const string& culture : sheet._listCulture )
             {
                 ImGui::TableSetupColumn( culture.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
             }
@@ -371,12 +250,8 @@ namespace sw::editor
                     deleteIndex = static_cast<int32>( recordIndex );
             }
 
-            if ( 0 <= deleteIndex && static_cast<size_t>( deleteIndex ) < _localizationSheet._listRecord.size() )
-            {
-                _localizationSheet._listRemovedKey.push_back( _localizationSheet._listRecord[static_cast<size_t>( deleteIndex )]._key );
-                _localizationSheet._listRecord.erase( _localizationSheet._listRecord.begin() + deleteIndex );
-                markLocalizationDirty();
-            }
+            if ( deleteIndex >= 0 )
+                _model.deleteRecord( static_cast<size_t>( deleteIndex ) );
 
             ImGui::EndTable();
         }
@@ -385,7 +260,7 @@ namespace sw::editor
     bool DataTablePanel::drawLocalizationRow( size_t recordIndex, size_t cultureCount )
     {
         bool                bDeleteRequested = false;
-        LocalizationRecord& record           = _localizationSheet._listRecord[recordIndex];
+        LocalizationRecord& record           = _model.editSheet()._listRecord[recordIndex];
         record._listTranslation.resize( cultureCount );
 
         ImGui::PushID( static_cast<int32>( recordIndex ) );
@@ -405,20 +280,14 @@ namespace sw::editor
 
         ImGui::TableSetColumnIndex( 1 );
         if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
-        {
-            record._bModified = true;
-            markLocalizationDirty();
-        }
+            _model.markRecordModified( record );
 
         for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
         {
             ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureIndex ) );
             ImGui::PushID( static_cast<int32>( cultureIndex ) );
             if ( drawTranslationCell( record, cultureIndex ) )
-            {
-                record._bModified = true;
-                markLocalizationDirty();
-            }
+                _model.markRecordModified( record );
             ImGui::PopID();
         }
 
@@ -437,7 +306,7 @@ namespace sw::editor
         ImGui::Text( "XML Data Files" );
         ImGui::Separator();
         if ( ImGui::Button( "Refresh Files" ) )
-            reloadGameDataFiles();
+            _model.reloadGameDataFiles();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RefreshFilesTip" ) );
 
         editor::EditorSectionDesc listDesc{};
@@ -447,18 +316,13 @@ namespace sw::editor
         listDesc._flags     = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;
         if ( EditorChrome::beginSection( listDesc ) )
         {
-            for ( size_t fileIndex = 0; fileIndex < _listGameDataFile.size(); ++fileIndex )
+            const vector<GameDataFileEntry>& listGameDataFile = _model.getGameDataFiles();
+            for ( size_t fileIndex = 0; fileIndex < listGameDataFile.size(); ++fileIndex )
             {
-                const GameDataFileEntry& entry     = _listGameDataFile[fileIndex];
-                const bool               bSelected = ( _selectedGameDataIndex == static_cast<int32>( fileIndex ) );
+                const GameDataFileEntry& entry     = listGameDataFile[fileIndex];
+                const bool               bSelected = ( _model.getSelectedGameDataIndex() == static_cast<int32>( fileIndex ) );
                 if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
-                {
-                    if ( _bGameDataDirty == SW_FALSE || bSelected )
-                    {
-                        _selectedGameDataIndex = static_cast<int32>( fileIndex );
-                        loadSelectedGameDataFile();
-                    }
-                }
+                    _model.selectGameDataFile( fileIndex ); // 다른 파일의 고친 것이 남았으면 모델이 바꾸지 않는다
             }
         }
         EditorChrome::endSection();
@@ -468,48 +332,45 @@ namespace sw::editor
 
         // 오른쪽: 파일 내용 보기 · 편집
         ImGui::BeginGroup();
-        if ( 0 <= _selectedGameDataIndex && static_cast<size_t>( _selectedGameDataIndex ) < _listGameDataFile.size() )
+        if ( _seenGameDataLoadCount != _model.getGameDataLoadCount() )
         {
-            const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-            ImGui::Text( "File: %s", entry._fileName.c_str() );
+            _gameDataTable.reset(); // 새로 읽은(되돌린) 문서다 — 앞 문서의 고른 칸을 들지 않는다
+            _seenGameDataLoadCount = _model.getGameDataLoadCount();
+        }
+        const GameDataFileEntry* pEntry = _model.findSelectedGameDataFile();
+        if ( pEntry != nullptr )
+        {
+            ImGui::Text( "File: %s", pEntry->_fileName.c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save File" ) );
             if ( ImGui::Button( "Save File" ) )
-                saveSelectedGameDataFile();
+                _model.saveSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert" ) );
             if ( ImGui::Button( "Revert" ) )
-                loadSelectedGameDataFile();
+                _model.loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 
-            bool bRaw = _bGameDataRaw == SW_TRUE;
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Raw XML" ) );
-            if ( ImGui::Checkbox( "Raw XML", &bRaw ) )
-                _bGameDataRaw = bRaw ? SW_TRUE : SW_FALSE;
+            (void)ImGui::Checkbox( "Raw XML", &_bGameDataRaw );
             EditorWidgets::drawTooltip( "Table edits keep comments and indentation. Nested elements are edited in the raw text view." );
 
             ImGui::Separator();
 
-            if ( _bGameDataRaw == SW_TRUE || _gameDataDocument.isParsed() == false )
+            if ( _bGameDataRaw || _model.getGameDataDocument().isParsed() == false )
             {
                 // XML 원문 텍스트 상자 - 테이블로 못 읽는 문서도 여기서 고친다
-                vector<utf8> arrEditBuffer;
-                arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
-                if ( _selectedGameDataRawText.empty() == false )
-                    Memory::copy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
+                const string& rawText = _model.getGameDataRawText();
+                vector<utf8>  arrEditBuffer;
+                arrEditBuffer.resize( rawText.size() + 4096, 0 );
+                if ( rawText.empty() == false )
+                    Memory::copy( arrEditBuffer.data(), rawText.c_str(), rawText.size() );
 
                 constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
                 if ( ImGui::InputTextMultiline( "##rawXMLEdit", arrEditBuffer.data(), arrEditBuffer.size(), ImGui::GetContentRegionAvail(), editFlags ) )
-                {
-                    _selectedGameDataRawText = arrEditBuffer.data();
-                    _gameDataDocument.replaceText( _selectedGameDataRawText, false );
-                    markGameDataDirty();
-                }
+                    _model.replaceGameDataRawText( arrEditBuffer.data() );
             }
-            else if ( _gameDataTable.draw( _gameDataDocument ) )
-            {
-                _selectedGameDataRawText = _gameDataDocument.getText();
-                markGameDataDirty();
-            }
+            else if ( _gameDataTable.draw( _model.editGameDataDocument() ) )
+                _model.commitGameDataTableEdit();
         }
         else
         {
@@ -518,71 +379,4 @@ namespace sw::editor
         ImGui::EndGroup();
     }
 
-    void DataTablePanel::reloadLocalization()
-    {
-        _bLocalizationDirty  = SW_FALSE;
-        _bLocalizationLoaded = SW_FALSE;
-        syncDocumentDirty();
-    }
-
-    void DataTablePanel::saveLocalization()
-    {
-        // 하나라도 쓰지 못했으면 dirty 를 지우지 않는다 — 저장 확인이 다시 묻는다.
-        if ( EditorDataTableCommands::saveLocalizationProject( _localizationSheet ) == false )
-            return;
-        _bLocalizationDirty = SW_FALSE;
-        syncDocumentDirty();
-    }
-
-    void DataTablePanel::reloadGameDataFiles()
-    {
-        _bGameDataLoaded = SW_FALSE;
-        _gameDataJob.request();
-    }
-
-    void DataTablePanel::loadSelectedGameDataFile()
-    {
-        if ( _selectedGameDataIndex < 0 || static_cast<size_t>( _selectedGameDataIndex ) >= _listGameDataFile.size() )
-            return;
-
-        const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-        // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 그대로 들고 고르면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
-        string text;
-        if ( FileUtil::readTextFile( entry._absolutePath, text ) == false )
-        {
-            SW_LOG_ERROR( "Could not read game data table '%#' - it is not opened", entry._absolutePath.c_str() );
-            _selectedGameDataIndex = -1;
-            _selectedGameDataRawText.clear();
-            _savedGameDataRawText.clear();
-            (void)_gameDataDocument.load( string_view() ); // 읽은 것이 없다 - 테이블을 비운다
-            _gameDataTable.reset();
-            _bGameDataDirty = SW_FALSE;
-            syncDocumentDirty();
-            return;
-        }
-        _selectedGameDataRawText = std::move( text );
-        _savedGameDataRawText    = _selectedGameDataRawText;
-        (void)_gameDataDocument.load( _selectedGameDataRawText ); // 깨진 원문도 글 상자로 고치게 열린다
-        _gameDataTable.reset();
-        _bGameDataDirty = SW_FALSE;
-        syncDocumentDirty();
-    }
-
-    void DataTablePanel::saveSelectedGameDataFile()
-    {
-        if ( _selectedGameDataIndex < 0 || static_cast<size_t>( _selectedGameDataIndex ) >= _listGameDataFile.size() )
-            return;
-
-        const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-        if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) == false )
-        {
-            SW_LOG_ERROR( "Could not write game data table '%#'", entry._absolutePath.c_str() );
-            return;
-        }
-        _savedGameDataRawText = _selectedGameDataRawText;
-        _gameDataDocument.markSaved();
-        _bGameDataDirty = SW_FALSE;
-        syncDocumentDirty();
-        SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
-    }
 } // namespace sw::editor

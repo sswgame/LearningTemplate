@@ -1,23 +1,16 @@
 /**
  * @file DataTablePanel.h
  * @brief 로컬라이제이션 프로젝트 표(원문 · 문화권 번역 · 낡음/검토 상태) 및 게임 XML 데이터 테이블 편집기 패널
+ * @details 문서 · 목록 · 읽기 · 저장은 `DataTableModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 입력란 글 · 원문 보기 토글 · 표 편집기만 든다.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
-#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
-#include "Editor/Panels/Catalog/Model/CatalogDocument.h"
-
-namespace sw::editor
-{
-    class EditorListFilter;
-} // namespace sw::editor
+#include "Editor/Panels/DataTable/Model/DataTableModel.h"
 
 namespace sw::editor
 {
@@ -56,47 +49,23 @@ namespace sw::editor
         void drawLocalizationToolbar();
         /** @brief 로컬라이즈 레코드 테이블을 그립니다. */
         void drawLocalizationTable();
-        /** @brief 필터를 지난 레코드 순번을 모읍니다(@p outListVisibleIndex 는 호출한 쪽이 재사용하는 버퍼). */
-        void collectVisibleLocalizationRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex ) const;
         /** @brief 현지화 테이블의 한 줄(키 · 원문 · 번역 필드 · 삭제 단추)을 그립니다. 삭제 단추를 눌렀으면 true 입니다. */
         [[nodiscard]] bool drawLocalizationRow( size_t recordIndex, size_t cultureCount );
         /** @brief 번역 필드 하나를 상태 색 · 길이 경고 · 맥락 툴팁과 함께 그립니다. 고쳤으면 true 입니다. */
         bool drawTranslationCell( LocalizationRecord& record, size_t cultureIndex );
         void drawGameDataTab();
-
-        void reloadLocalization();
-        void saveLocalization();
-
-        void reloadGameDataFiles();
-        void loadSelectedGameDataFile();
-        void saveSelectedGameDataFile();
-        void pollBackgroundJobs();
-        void markLocalizationDirty();
-        void markGameDataDirty();
-        /** @brief 두 문서의 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
+        /** @brief 모델의 두 문서 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
         void syncDocumentDirty() override;
 
     private:
+        DataTableModel                        _model;
         fixed_string<constant::kMaxBuffer128> _localizationFilter;
         fixed_string<constant::kMaxBuffer128> _newKeyBuffer;
-        LocalizationSheet                     _localizationSheet;
-        vector<string>                        _listLocalizationProject;
         /** @brief 이번 프레임에 보일 행의 인덱스입니다. 프레임마다 지우고 다시 채우는 재사용 버퍼입니다. */
-        vector<size_t>            _listVisibleLocalizationIndex;
-        vector<GameDataFileEntry> _listGameDataFile;
-        string                    _selectedGameDataRawText;
-        string                    _savedGameDataRawText;
-        CatalogDocument           _gameDataDocument;
-        CatalogTableEditor        _gameDataTable;
-        EditorLocalizationLoadJob _localizationJob;
-        EditorGameDataScanJob     _gameDataJob;
-        int32                     _selectedGameDataIndex;
-        int32                     _selectedProjectIndex;
-        uint8                     _bLocalizationLoaded : 1;
-        uint8                     _bGameDataLoaded     : 1;
-        uint8                     _bLocalizationDirty  : 1;
-        uint8                     _bGameDataDirty      : 1;
-        uint8                     _bGameDataRaw        : 1;
-        [[maybe_unused]] uint8    _reserved            : 3;
+        vector<size_t>     _listVisibleLocalizationIndex;
+        CatalogTableEditor _gameDataTable;
+        /** @brief 표 편집기가 본 모델의 게임 데이터 읽기 횟수입니다. 다르면 표 편집기 상태(고른 칸 · 되돌리기 위치)를 지운다. */
+        uint32 _seenGameDataLoadCount;
+        bool   _bGameDataRaw;
     };
 } // namespace sw::editor
