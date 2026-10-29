@@ -112,8 +112,6 @@ Content/Config/Editor/
 # 프리팹·씬 쿠킹 산출물(.prefab.bin, maps|scenes/*.bin)은 이제 build/<preset>/Cooked/ 에 스테이징된다 —
 # 소스 트리에 보이면 옛 쿠킹의 잔재이니 지운다(쿠커가 경고로 이름을 찍고 팩에 넣지 않는다). 그래서 여기서 더는
 # 무시하지 않는다: 무시하면 그 잔재가 Dev 런타임의 폴백에 걸려 실패를 가린다.
-Content/cache/
-Content/Cache/
 /cache/
 /Cache/
 **/ShaderCache/

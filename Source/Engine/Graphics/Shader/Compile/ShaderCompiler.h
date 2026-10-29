@@ -203,11 +203,5 @@ namespace sw
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList );
-
-        /** @brief 셰이더 바이트코드 디스크 캐시를 켜거나 끕니다. */
-        static void enableDiskCache( bool bEnable );
-
-        /** @brief 저장된 셰이더 디스크 캐시 파일을 모두 지웁니다. */
-        static void clearDiskCache();
     };
 } // namespace sw

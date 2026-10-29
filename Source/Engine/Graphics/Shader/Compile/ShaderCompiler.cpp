@@ -216,13 +216,14 @@ namespace sw
     #endif
 #endif
 
-            static inline atomic<bool> s_bDiskCacheEnabled{ true };
-
+            /**
+             * @brief 컴파일 결과 캐시 폴더입니다 — 실행 파일 폴더의 `Saved/ShaderCompileCache`(이 기계의 파생 데이터, 언리얼 DerivedDataCache).
+             * @details 콘텐츠 트리(`Content/`)에 두지 않는다 — 올리는 단위가 아니고, 자동화 실행은 콘텐츠 아래 쓰기를 막아 캐시를 채우지 못한 채 매번 다시 컴파일했다.
+             *          재정의 캐시(`ShaderCache::makeLocalCachePath`)와 같은 바탕이다.
+             */
             static string getShaderCacheDirectory()
             {
-                const string& root     = AssetPaths::getRootFolderPath();
-                const string  baseRoot = root.empty() ? FileUtil::joinPath( AssetPaths::getProjectFolderPath(), path::kContentFolder ) : root;
-                return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
+                return FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), "Saved/ShaderCompileCache" ) );
             }
 
             static string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
@@ -272,7 +273,7 @@ namespace sw
              */
             static void saveToCacheIfEnabled( const string& cachePath, const ShaderCompileResult& result )
             {
-                const bool bDiskCacheWritable = s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && result._bytecode.empty() == false;
+                const bool bDiskCacheWritable = cachePath.empty() == false && result._bytecode.empty() == false;
                 if ( bDiskCacheWritable == false )
                     return;
                 const string recordPath = cachePath + ShaderCooker::kIncludeRecordSuffix;
@@ -750,27 +751,6 @@ namespace sw
 namespace sw
 {
 
-    void ShaderCompiler::enableDiskCache( bool bEnable )
-    {
-        ShaderCompilerInternal::s_bDiskCacheEnabled.store( bEnable, std::memory_order_relaxed );
-    }
-
-    void ShaderCompiler::clearDiskCache()
-    {
-        const string cacheDir = ShaderCompilerInternal::getShaderCacheDirectory();
-        if ( cacheDir.empty() == false && FileUtil::isDirectory( cacheDir ) )
-        {
-            vector<string> listFile;
-            if ( FileUtil::collectFiles( cacheDir, "", listFile, false ) == false )
-                SW_LOG_WARNING( "Shader cache '%#' could not be listed completely - the files left out stay in the cache", cacheDir.c_str() );
-            for ( const string& file : listFile )
-            {
-                if ( FileUtil::removeFile( file ) == false )
-                    SW_LOG_WARNING( "Failed to remove shader cache file %# - it stays in the cache", file.c_str() );
-            }
-        }
-    }
-
     void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList )
     {
         // 에뮬 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 의 Bindless::emulatedSlot 이 읽는다.
@@ -820,24 +800,20 @@ namespace sw
             return result;
         }
 
-        string cachePath;
-        if ( Internal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) )
+        const string cachePath = Internal::computeCachePath( desc, absPathStr );
+        if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
         {
-            cachePath = Internal::computeCachePath( desc, absPathStr );
-            if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
+            // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
+            vector<string> listIncludedFile;
+            vector<uint8>  cachedBytes;
+            const bool     bRecordCurrent = ShaderCooker::readIncludeRecord( cachePath + ShaderCooker::kIncludeRecordSuffix, listIncludedFile );
+            const bool     bBytesRead     = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes );
+            if ( bBytesRead && cachedBytes.empty() == false )
             {
-                // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
-                vector<string> listIncludedFile;
-                vector<uint8>  cachedBytes;
-                const bool     bRecordCurrent = ShaderCooker::readIncludeRecord( cachePath + ShaderCooker::kIncludeRecordSuffix, listIncludedFile );
-                const bool     bBytesRead     = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes );
-                if ( bBytesRead && cachedBytes.empty() == false )
-                {
-                    result._bytecode         = std::move( cachedBytes );
-                    result._listIncludedFile = std::move( listIncludedFile );
-                    result._bSuccess         = true;
-                    return result;
-                }
+                result._bytecode         = std::move( cachedBytes );
+                result._listIncludedFile = std::move( listIncludedFile );
+                result._bSuccess         = true;
+                return result;
             }
         }
 
