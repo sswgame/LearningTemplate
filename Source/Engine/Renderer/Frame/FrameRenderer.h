@@ -92,6 +92,10 @@ namespace sw
      *          컬링 슬롯은 간접 인자, 가시 목록, 컬링 상수 버퍼로 이루어진다.
      *          실행 순서는 컴퓨트 프리패스(모든 뷰의 컬링), 렌더 텍스처 뷰, 주 시점, 화면 사각형 뷰다.
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
+     *
+     *          **협력 객체.** 렌더러는 순서를 정하고 패스를 기록한다. 혼자 서는 일은 소유한 협력 객체가 한다 — PSO 만들기 · 찾기(`FramePSOManager`),
+     *          후처리 효과 셋(`FramePostProcess`), 모듈 확장 받아들이기(`FrameExtensionHost`), 뷰 GPU 자원 수명(`FrameViewResources`), 캡처(`FrameCapture`).
+     *          협력 객체는 지금 그리는 뷰를 인자로 받고 렌더러의 `_pDevice` 변수를 참조한다.
      */
     class SW_API FrameRenderer
     {

@@ -2,7 +2,7 @@
  * @file RenderPSOCache.h
  * @brief FrameRenderer 가 만든 PSO 의 저장소입니다: 엔진 패스 PSO, 출력 포맷별 PSO(Present, Canvas), 머티리얼 퍼뮤테이션 변형과 그 바인딩 레이아웃.
  * @details **만드는 일은 하지 않습니다.** PSO 를 만드는 데는 파이프라인 XML, 디바이스, 씬 배치가 필요하고 그것은 FrameRenderer 의
- *          일입니다(FrameRendererPSO.cpp). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
+ *          일입니다(`FramePSOManager`). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 해제하는가"만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
  *          드로우 경로가 배치마다 조회하므로 조회는 락 하나로 짧게 끝납니다. 삽입은 기록 시작 전에만 일어납니다.

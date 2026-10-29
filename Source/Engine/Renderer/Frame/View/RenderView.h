@@ -108,7 +108,7 @@ namespace sw
         bool        _bShowsBuffer;     ///< 표면 값을 그대로 보인다(Normals, Depth, Overdraw). 후처리, 톤맵, 외곽선 껍질을 건너뛴다.
         /**
          * @brief 겹침 모드다(ShadedWireframe). 배치를 Lit PSO 로 먼저 그리고, 이 모드의 PSO 로 한 번 더 그린다.
-         * @details 이 모드의 PSO 는 깊이 쓰기를 끄고 카메라 쪽 깊이 바이어스를 걸어(`FrameRendererPSO.cpp` applyViewModeToDesc) 같은 삼각형 위에서 선이 LessEqual 을 통과한다.
+         * @details 이 모드의 PSO 는 깊이 쓰기를 끄고 카메라 쪽 깊이 바이어스를 걸어(`FramePSOManager.cpp` applyViewModeToDesc) 같은 삼각형 위에서 선이 LessEqual 을 통과한다.
          */
         bool _bOverlay;
     };
