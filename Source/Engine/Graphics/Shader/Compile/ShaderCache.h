@@ -13,6 +13,7 @@
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
 {
@@ -145,6 +146,9 @@ namespace sw
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
 
+        /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서비스 칸으로 찾아 씁니다. */
+        ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
+
     private:
         friend class ShaderLoadBlock;
 
@@ -159,6 +163,7 @@ namespace sw
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
 
+        ShaderReflectionManifestCache                                _reflectionManifests; ///< 읽은 리플렉션 매니페스트(`ShaderReflectionLibrary` 의 조회가 찾는다)
         unordered_map<string, ShaderCacheEntry> _mapCache            SW_GUARDED_BY( _mutexCache );
         unordered_map<string, weak_ptr<ShaderLoadBlock>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 블록). `_mutexCache` 로 지킨다
         mutable mutex                                                _mutexCache;

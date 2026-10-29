@@ -161,7 +161,8 @@ namespace sw
     }
 
     ShaderCache::ShaderCache()
-        : _mapCache{}
+        : _reflectionManifests{}
+        , _mapCache{}
         , _mapLoading{}
         , _mutexCache{}
     {
@@ -182,9 +183,8 @@ namespace sw
     {
         waitForLoadsInFlight();
         clearCache();
-        // 리플렉션 매니페스트 캐시는 프로세스 정적 저장소라 엔진 종료 뒤에도 남는다. 셰이더 층이 종료될 때 같이 비운다.
-        // 비우지 않으면 백엔드 교체로 기동 뒤에 읽은 매니페스트가 종료 누수 검사에 남는다.
-        ShaderReflectionLibrary::clearCache();
+        // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서비스 칸을 거치지 않는다.
+        _reflectionManifests.clear();
     }
 
     string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )

@@ -3,9 +3,12 @@
  * @brief 오프라인에서 쿠킹된 셰이더 리플렉션 매니페스트입니다(RHI 별 파일 하나).
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
@@ -83,5 +86,38 @@ namespace sw
          * @details 머티리얼은 셰이더 레이아웃을 맞출 때 이 값을 적어 두고, 바뀌면 다시 맞춥니다(`Material::isShaderLayoutSynced`).
          */
         static uint32 getCacheGeneration();
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class ShaderReflectionManifestCache
+     * @brief 읽은 리플렉션 매니페스트(매니페스트 경로 → 항목)와 비운 횟수입니다. 셰이더 서브시스템(`ShaderCache`)이 값으로 들고 `ShaderReflectionLibrary` 의 조회가 찾아 씁니다.
+     * @details 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 매니페스트는 셰이더 층의 쿠킹본이라 셰이더 캐시와 수명이 같다
+     *          (언리얼 `FShaderCodeLibrary` 가 셰이더 라이브러리 · 그 메타데이터를 셰이더 쪽 객체로 드는 자리). 여러 스레드가 함께 써도 된다(안에서 잠근다).
+     */
+    class SW_API ShaderReflectionManifestCache
+    {
+    public:
+        ShaderReflectionManifestCache()                                                  = default;
+        ShaderReflectionManifestCache( const ShaderReflectionManifestCache& )            = delete;
+        ShaderReflectionManifestCache& operator=( const ShaderReflectionManifestCache& ) = delete;
+
+        /** @brief 매니페스트를 모두 버리고 세대를 올립니다(`ShaderReflectionLibrary::clearCache` 의 본문, 셰이더 캐시 종료). */
+        void clear() SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 지금 든 매니페스트 수입니다. */
+        uint32 getCount() SW_EXCLUDES_LOCK( _mutex );
+        /** @brief 비운 횟수입니다. */
+        uint32 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
+
+    private:
+        friend class ShaderReflectionLibrary; // 조회(`tryGet`)가 잠금 안에서 맵을 채우고 찾는다
+
+        mutex _mutex;
+        /// @brief 매니페스트 경로 → 항목입니다. 없는 파일도 빈 채로 캐시해 매번 다시 열지 않습니다.
+        unordered_map<string, ShaderReflectionLibrary::EntryMap> _mapManifest SW_GUARDED_BY( _mutex );
+        /// @brief clear 횟수입니다 — 머티리얼이 맞춘 레이아웃이 낡았는지 본다.
+        atomic<uint32> _generation{ 0 };
     };
 } // namespace sw
