@@ -5,6 +5,7 @@
 #include "Core/Concurrency/Futex.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/FileSystem/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -81,12 +82,12 @@ namespace sw
         return true;
     }
 
-    bool AssetLoadBlock::runUploadPollIfPending()
+    bool AssetLoadBlock::runUploadPollIfPending( const bool bBlocking )
     {
         uint32 expected = kPhaseUploading;
         if ( _phase.compare_exchange_strong( expected, kPhaseCompleting, std::memory_order_acq_rel ) == false )
             return false;
-        executeUploadPoll( false );
+        executeUploadPoll( bBlocking );
         return true;
     }
 
@@ -118,7 +119,8 @@ namespace sw
         {
             pBlock->runLoadIfUnclaimed();
         } ) );
-        handle.setPriority( TaskPriority::Low ); // 백그라운드 IO 큐에서 돌아 프레임 작업을 막지 않는다(AssetStreamingQueue 와 같다)
+        handle.setPriority( TaskPriority::Low );                    // 백그라운드 IO 큐에서 돌아 프레임 작업을 막지 않는다(AssetStreamingQueue 와 같다)
+        engine::getSubsystem<AssetManager>().addLoadTask( handle ); // 제출 전에 — 결정적 실행의 프레임 경계 대기가 놓치지 않는다
         handle.submit();
     }
 

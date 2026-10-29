@@ -178,6 +178,25 @@ namespace sw
 
     uint32 TextureCache::completePendingLoads( IRHIDevice* pDevice, uint32 maxCount )
     {
+        return pumpPendingLoads( pDevice, maxCount, false );
+    }
+
+    uint32 TextureCache::finishPendingLoads( IRHIDevice* pDevice )
+    {
+        if ( pDevice == nullptr )
+            return 0;
+        uint32 completedCount = 0;
+        for ( ;; )
+        {
+            completedCount += pumpPendingLoads( pDevice, UINT32_MAX, true );
+            ScopedLock<mutex> lock{ _impl->_awaitingMutex };
+            if ( _impl->_listAwaitingUpload.empty() && _impl->_listUploading.empty() )
+                return completedCount;
+        }
+    }
+
+    uint32 TextureCache::pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking )
+    {
         if ( pDevice == nullptr )
             return 0;
         // 1) 이미 제출한 로드의 끝남 확인 — 값싼 폴링이라 상한 없이 모두 한다. 끝나지 않은 블록은 `onUploadSubmitted` 가 목록에 다시 넣는다.
@@ -191,7 +210,7 @@ namespace sw
         {
             pBlock->_pDevice.store( pDevice, std::memory_order_release );
             // 다른 스레드의 `wait()` 가 이미 집었으면 건너뛴다(집은 쪽이 끝낸다).
-            (void)pBlock->runUploadPollIfPending();
+            (void)pBlock->runUploadPollIfPending( bBlocking );
         }
         // 폴링이 끝낸 수는 블록이 `Done` 이 된 것을 센다(아직 `Loading` 인 것은 목록에 남아 있다).
         for ( const shared_ptr<TextureLoadBlock>& pBlock : listUploading )

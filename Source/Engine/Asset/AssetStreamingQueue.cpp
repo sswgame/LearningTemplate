@@ -41,7 +41,7 @@ namespace sw
         _bInitialized = true;
     }
 
-    void AssetStreamingQueue::waitForOwnTasks()
+    void AssetStreamingQueue::waitForOwnTasks( const string_view owner )
     {
         if ( engine::areEngineServicesBound() == false )
             return; // 태스크는 엔진 서비스가 묶여 있을 때만 낸다
@@ -50,14 +50,26 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             stage = _taskStage;
         }
-        engine::getSubsystem<TaskManager>().waitStage( stage, "AssetStreamingQueue::shutdown" );
+        engine::getSubsystem<TaskManager>().waitStage( stage, owner );
+    }
+
+    uint32 AssetStreamingQueue::getOwnTaskPendingCount() const
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return 0;
+        TaskStageHandle stage;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            stage = _taskStage;
+        }
+        return engine::getSubsystem<TaskManager>().getStagePendingCount( stage );
     }
 
     void AssetStreamingQueue::shutdown()
     {
         // 순서: 찾기 태스크가 읽기를 다 걸게 둔다 → 걸린 바이트 읽기를 멈추고 완료(태스크 워커가 이 큐를 부른다)까지 기다린다. 핸들은 잠금 밖에서
         // 다룬다 — 취소의 완료가 이 스레드에서 바로 올 수 있고, 그 완료가 `_mutex` 를 잡는다.
-        waitForOwnTasks(); // 오래 걸리면 남은 태스크 이름이 주기적으로 오류로 남는다
+        waitForOwnTasks( "AssetStreamingQueue::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 오류로 남는다
         vector<AsyncReadHandle> listIO;
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -76,7 +88,7 @@ namespace sw
             handle.wait();
         }
 
-        waitForOwnTasks();
+        waitForOwnTasks( "AssetStreamingQueue::shutdown" );
 
         {
             ScopedLock<mutex> lock{ _mutex };

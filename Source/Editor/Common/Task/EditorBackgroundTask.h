@@ -45,7 +45,7 @@ namespace sw::editor
     void requestEditorBackgroundStop();
     /** @brief 에디터 잡 하나가 제출 때 잡아 둔 중단 신호입니다(`beginRequest` 가 채운다). 에디터 컨텍스트가 없으면 nullptr — 멈출 일이 없다. */
     [[nodiscard]] StopToken acquireEditorBackgroundStopSignal();
-    // 낸 잡은 에디터 범위의 `TaskHandleTracker`(`getEditorState`)에 올라가고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
+    // 낸 잡은 에디터 범위의 태스크 단계(`EditorBackgroundWork::_stage`, `getEditorState`)에 들고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
 } // namespace sw::editor
 
 namespace sw::editor

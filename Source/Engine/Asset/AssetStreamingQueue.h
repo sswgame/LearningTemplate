@@ -45,8 +45,10 @@ namespace sw
 
         void initialize();
         void shutdown();
-        /** @brief 이 큐가 낸 태스크(스테이지)가 끝나기를 기다립니다(종료 앞). */
-        void waitForOwnTasks();
+        /** @brief 이 큐가 낸 태스크(스테이지)가 끝나기를 기다립니다(종료 앞 · 결정적 실행의 프레임 경계 — `AssetManager::finishPendingAssetWork`). @p owner 는 진단 이름입니다. */
+        void waitForOwnTasks( string_view owner );
+        /** @brief 이 큐가 낸 태스크 중 끝나지 않은 수입니다. */
+        [[nodiscard]] uint32 getOwnTaskPendingCount() const;
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "AssetStreaming";

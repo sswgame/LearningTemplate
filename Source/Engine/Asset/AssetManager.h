@@ -15,6 +15,7 @@
  *     배포본에는 에디터가 없으므로 감시 스레드도 없습니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -22,6 +23,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
@@ -163,6 +165,22 @@ namespace sw
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
 
+        /**
+         * @brief 결정적 실행(`-gv_finishAssetWorkEachFrame=1`, 시나리오 세션이 켠다)이면 true 입니다.
+         * @details 켜지면 에셋 도착이 벽시계가 아니라 프레임에 묶인다 — 프레임 경계에서 걸린 에셋 일을 모두 끝내고(`finishPendingAssetWork`), 렌더 스레드는
+         *          받은 로드를 상한 없이 올리고 업로드 끝남까지 기다린다(`TextureCache::finishPendingLoads`). 그래서 요청한 에셋은 늘 같은 프레임에 보인다
+         *          (언리얼 자동화의 `FlushAsyncLoading` 과 같은 자리).
+         */
+        [[nodiscard]] static bool isFinishingAssetWorkEachFrame();
+        /** @brief 워커에서 도는 에셋 로드 태스크를 로드 단계에 넣습니다. **제출 전에** 부른다(`AssetLoadBlock::startLoad`) — 프레임 경계의 대기가 놓치지 않는다. */
+        void addLoadTask( const TaskHandle& task );
+        /**
+         * @brief 걸린 에셋 일 — 로드 태스크 · 스트리밍 큐 태스크 · 비동기 IO — 이 한꺼번에 빌 때까지 기다립니다(게임 스레드, 프레임 경계, 결정적 실행만).
+         * @details 셋은 서로를 낳는다(로드가 다른 로드를, IO 완료가 해제 태스크를) — 그래서 셋이 함께 빌 때까지 되풀이한다. 기한은 없다(오래 걸리면
+         *          `TaskManager::waitStage` 가 남은 태스크를 주기적으로 오류로 남긴다). 엔진 전체 대기(`waitAll`)는 무관한 백그라운드 일까지 기다려 쓰지 않는다.
+         */
+        void finishPendingAssetWork();
+
         /** @brief 경로와 GUID(.meta)를 대응시키는 테이블을 반환합니다. */
         AssetDatabase&       getAssetDatabase() { return _assetDatabase; }
         const AssetDatabase& getAssetDatabase() const { return _assetDatabase; }
@@ -178,7 +196,9 @@ namespace sw
         IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
 
         AssetDatabase                   _assetDatabase;
-        vector<unique_ptr<IAssetCache>> _listOwnedAssetCache; ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
+        mutable mutex                   _loadStageMutex;
+        TaskStageHandle _loadStage      SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
+        vector<unique_ptr<IAssetCache>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
         unique_ptr<PackManager>         _pPackManager;
         vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다. 소유 캐시와, 빌려 온 공유 캐시(Engine.dll 의 정적 값 테이블)를 종류 이름 순으로 올린다
         /**

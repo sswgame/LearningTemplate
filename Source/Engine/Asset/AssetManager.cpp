@@ -4,8 +4,11 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
@@ -23,6 +26,9 @@ namespace sw
 {
     SW_LOG_CALLER( "AssetManager" );
 
+    /** @brief `-gv_finishAssetWorkEachFrame=1`: 에셋 도착을 프레임에 묶는다(`AssetManager::isFinishingAssetWorkEachFrame`). 시나리오 세션이 켠다. */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_finishAssetWorkEachFrame, false, "프레임 경계마다 걸린 에셋 로드 · IO · 업로드를 끝낸다(결정적 실행)" );
+
     namespace
     {
         /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
@@ -35,6 +41,38 @@ namespace sw
 
 namespace sw
 {
+    bool AssetManager::isFinishingAssetWorkEachFrame()
+    {
+        return gv_finishAssetWorkEachFrame;
+    }
+
+    void AssetManager::addLoadTask( const TaskHandle& task )
+    {
+        ScopedLock<mutex> lock{ _loadStageMutex };
+        engine::getSubsystem<TaskManager>().addToStage( _loadStage, task, "AssetLoad" );
+    }
+
+    void AssetManager::finishPendingAssetWork()
+    {
+        constexpr string_view kOwner      = "AssetManager::finishPendingAssetWork";
+        TaskManager&          taskManager = engine::getSubsystem<TaskManager>();
+        AssetStreamingQueue&  streaming   = engine::getSubsystem<AssetStreamingQueue>();
+        AsyncFileIO&          asyncIO     = engine::getSubsystem<AsyncFileIO>();
+        for ( ;; )
+        {
+            TaskStageHandle loadStage;
+            {
+                ScopedLock<mutex> lock{ _loadStageMutex };
+                loadStage = _loadStage;
+            }
+            taskManager.waitStage( loadStage, kOwner );
+            streaming.waitForOwnTasks( kOwner );
+            asyncIO.waitIdle();
+            if ( taskManager.getStagePendingCount( loadStage ) == 0 && streaming.getOwnTaskPendingCount() == 0 && asyncIO.getOutstandingCount() == 0 )
+                return;
+        }
+    }
+
     AssetManager::AssetManager()
         : _assetDatabase{}
         , _listOwnedAssetCache{}

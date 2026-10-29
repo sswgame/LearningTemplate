@@ -84,6 +84,11 @@ namespace sw
          *          요청한 디바이스가 아니라 지금 올리는 디바이스로 올린다 — 요청 뒤 디바이스가 내려가고(백엔드 교체 · 테스트의 디바이스 차례) 새로 섰으면 옛 주소는 죽었다.
          */
         uint32 completePendingLoads( IRHIDevice* pDevice, uint32 maxCount );
+        /**
+         * @brief `completePendingLoads` 의 차단 판입니다 — 기다리는 로드를 상한 없이 모두 제출하고 업로드 끝남까지 기다립니다(결정적 실행, `AssetManager::isFinishingAssetWorkEachFrame`).
+         * @details 스테이징이 차서 `Busy` 로 돌아간 로드는 앞 업로드가 끝난 뒤 다시 낸다 — 두 목록이 빌 때까지 되풀이한다. 끝낸 수를 반환합니다.
+         */
+        uint32 finishPendingLoads( IRHIDevice* pDevice );
         /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
         static constexpr uint32 kMaxUploadsPerFrame = 8;
         /**
@@ -184,6 +189,9 @@ namespace sw
         void clear() override;
 
     private:
+        /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
+        uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
+
         friend class TextureLoadBlock; // 로드 블록이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
         shared_ptr<Impl> _impl; ///< 로드 블록이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 블록은 놓을 것이 없다

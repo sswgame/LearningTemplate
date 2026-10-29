@@ -97,7 +97,7 @@ namespace sw
          * @brief 완료 단계를 내 둔(업로드 중) 로드의 끝남 확인을 아무도 집지 않았으면 이 스레드가 한 걸음 실행합니다(펌프, 막지 않는다). 실행했으면 true 입니다.
          * @details 끝나지 않았으면 단계는 업로드 중으로 남고 `onUploadSubmitted` 가 다시 불립니다. 다른 스레드의 `wait()` 가 같은 블록의 완료를 집지 않도록 **집은 스레드 하나만** 실행합니다.
          */
-        bool runUploadPollIfPending();
+        bool runUploadPollIfPending( bool bBlocking = false );
 
         /**
          * @brief 로드 단계를 시작합니다. `Async` 는 엔진 태스크가 있으면 낮은 우선순위 워커 태스크로, 없으면(테스트 · 도구) 이 자리에서 실행합니다.

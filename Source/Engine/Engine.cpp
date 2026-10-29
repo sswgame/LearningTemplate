@@ -550,9 +550,20 @@ namespace sw
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
             _pFontService->getGlyphCache().beginFrame();
+        // 결정적 실행: 에셋 도착을 프레임에 묶는다. 렌더 스레드가 받은 프레임을 다 끝낸 뒤(그 프레임의 업로드가 이 대기 중 도착한 로드를 집지 않게)
+        // 걸린 에셋 일을 모두 끝낸다 — 그러면 지난 프레임에 요청한 에셋은 늘 이번 프레임의 렌더가 올린다.
+        const bool bFinishAssetWork = AssetManager::isFinishingAssetWorkEachFrame();
+        if ( bFinishAssetWork )
+        {
+            SW_PROFILE_SCOPE( "GT.Asset.finishPending" );
+            if ( _pRenderThread != nullptr )
+                _pRenderThread->drainPackets();
+            engine::getSubsystem<AssetManager>().finishPendingAssetWork();
+        }
         BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
         {
-            engine::getSubsystem<AssetStreamingQueue>().update();
+            // 결정적 실행이면 끝난 스트리밍 완료를 상한 없이 이번 프레임에 모두 부른다(상한이면 몇 개가 넘어갈지가 도착 순서에 달린다).
+            engine::getSubsystem<AssetStreamingQueue>().update( bFinishAssetWork ? SIZE_MAX : 32 );
 
             if ( _pSceneManager != nullptr )
                 _pSceneManager->updateTransitions();
