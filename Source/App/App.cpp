@@ -45,15 +45,9 @@
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
-#include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
-#include "Engine/UI/Accessibility/UIAccessibilityService.h"
-#include "Engine/UI/Input/UIClipboardService.h"
-#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
-#include "Engine/Window/PlatformClipboard.h"
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleManager/ModuleCatalogLoader.h"
@@ -133,6 +127,7 @@ namespace sw
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
+        , _runtimeUIHost{}
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
         , _windowResizeSubscription{}
@@ -401,7 +396,7 @@ namespace sw
             }
             case HostServiceID::RuntimeUIHooks:
             {
-                installRuntimeUIHooks();
+                _runtimeUIHost.install( _engine, _pWindow, bEnableEditor );
                 return true;
             }
             case HostServiceID::DevConsole:
@@ -450,7 +445,7 @@ namespace sw
             }
             case HostServiceID::RuntimeUIHooks:
             {
-                removeRuntimeUIHooks();
+                _runtimeUIHost.remove();
                 return;
             }
             case HostServiceID::DevConsole:
@@ -722,42 +717,6 @@ namespace sw
         }
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
         _engine.onWindowClosed();
-    }
-
-    void App::installRuntimeUIHooks()
-    {
-        UISystem* pUI = engine::findSubsystem<UISystem>();
-        if ( pUI == nullptr )
-            return;
-        if ( PlatformClipboard::isAvailable() )
-        {
-            UIClipboardAPI api{};
-            api._pRead  = &PlatformClipboard::readText;
-            api._pWrite = &PlatformClipboard::writeText;
-            engine::getSubsystem<UIClipboardService>().setAPI( api );
-        }
-        if ( _bEnableEditor == SW_TRUE )
-            return; // 에디터는 창을 ImGui 가 쓴다 — 게임 UI 만 스크린 리더에 내보이지 않는다
-        // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
-        if ( _pWindow != nullptr )
-            engine::getSubsystem<UIAccessibilityService>().setBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_pWindow ) );
-        _quitCommandRegistration = engine::getSubsystem<UIGlobalCommandRegistry>().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
-    }
-
-    void App::removeRuntimeUIHooks()
-    {
-        UISystem* pUI = engine::findSubsystem<UISystem>();
-        if ( pUI == nullptr )
-            return;
-        engine::getSubsystem<UIClipboardService>().setAPI( UIClipboardAPI{} );
-        engine::getSubsystem<UIAccessibilityService>().setBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
-        _quitCommandRegistration.reset();
-    }
-
-    void App::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
-    {
-        SW_LOG_INFO( "Quit requested from the pause menu" );
-        _engine.requestQuit( 0 );
     }
 
     void App::pollReloadHotkeys()

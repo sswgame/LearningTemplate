@@ -8,10 +8,11 @@
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
  *          핫 리로드는 ModuleReloadDriver(Server 와 같이 쓰는 `Source/GameModuleManager`), 개발 콘솔과 표준 입력 명령은 개발 도구(`DevToolsHost`), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`_host`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
- *          런타임 UI 에 끼우는 두 가지(일시정지 메뉴의 "끝내기", 운영체제 클립보드)는 App 의 함수 셋이 맡습니다(`installRuntimeUIHooks`).
+ *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
  */
 #pragma once
 #include "App/RHIBackendSwitcher.h"
+#include "App/RuntimeUIHost.h"
 #include "App/UserSettingsHost.h"
 
 #include "Core/Delegate/Delegate.h"
@@ -39,7 +40,6 @@ namespace sw
     class IRHIDevice;
     class IWindow;
     class ModuleLoaderSubsystem;
-    class Widget;
 } // namespace sw
 
 namespace sw
@@ -99,16 +99,6 @@ namespace sw
         void bindHostCallbacks();
 
         /**
-         * @brief 런타임 UI 에 호스트(게임 창 실행 파일)만 아는 것을 끼웁니다 — 운영체제 클립보드와, 에디터 없이 뜬 게임 창이면 일시정지 메뉴의 "끝내기"(UI 전역 명령 `QuitGame`)입니다.
-         * @details 에디터 안에서는 끝내기를 등록하지 않는다(게임을 끝내는 것은 에디터의 플레이 중지다 — 언리얼 PIE 의 Quit 이 PIE 만 끝내는 것과 같은 자리).
-         *          클립보드는 플랫폼이 운영체제 클립보드를 이으면(`PlatformClipboard::isAvailable`) 글 입력 칸의 복사 · 붙여넣기가 다른 프로그램과 오간다.
-         */
-        void installRuntimeUIHooks();
-        /** @brief `installRuntimeUIHooks` 가 끼운 것을 뗍니다. 엔진 서비스가 내려가기 전에 부릅니다. */
-        void removeRuntimeUIHooks();
-        /** @brief UI 전역 명령 `QuitGame` 의 처리 함수입니다. 이번 프레임 뒤 루프를 끝냅니다(`Engine::requestQuit( 0 )`). */
-        void onQuitGameCommand( const hashed_string& command, Widget& source );
-        /**
          * @brief 이번 프레임에 리로드 단축키가 눌렸으면 리로드를 요청합니다(Ctrl+F7 게임, 에디터 모드의 Ctrl+F6 에디터). Shipping 에서는 아무것도 하지 않습니다.
          * @details 셸 액션(`DebugKeyActions::update`)을 갱신한 뒤에 부릅니다. 실제 교체는 `ModuleReloadDriver::update` 가 틱 직전에 합니다. 에디터 모듈을 아는 것은 App 이라 여기 둡니다.
          */
@@ -145,8 +135,6 @@ namespace sw
         Engine             _engine;
         /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
         Subscription _automationFrameSubscription;
-        /** @brief `installRuntimeUIHooks` 가 등록한 UI 전역 명령 `QuitGame` 의 구독입니다(`removeRuntimeUIHooks` 가 놓는다). */
-        Subscription _quitCommandRegistration;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
@@ -161,6 +149,8 @@ namespace sw
         /** @brief 백엔드 교체기입니다. 호스트 서비스 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
         RHIBackendSwitcher _backendSwap;
         UserSettingsHost   _userSettingsHost;
+        /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다. */
+        RuntimeUIHost _runtimeUIHost;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 Engine 가 씬 카메라를 씁니다. */
