@@ -6,6 +6,8 @@
  *          케이스마다 `beginScope` 를 불러 범위를 케이스로 맞춥니다. 게임 · 에디터 · 서버는 범위를 열지 않으므로 프로세스가 하나의 범위입니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
@@ -26,6 +28,27 @@ namespace sw
         PushRelayRejected,  ///< 릴레이한 푸시를 이 빌드가 변환하지 못해 버림(열거형 × 열거자 × 이유)
         CallSite,           ///< `SW_LOG_ERROR_ONCE` · `SW_LOG_WARNING_ONCE` — 호출 지점(파일 × 줄)마다 한 번
         Count
+    };
+
+    /**
+     * @class OnceKeySet
+     * @brief "이 키는 이미 알렸다" 집합 하나입니다(여러 스레드가 함께 부른다). `LogOnce` 의 종류마다 하나씩 들고, 지울 때가 따로 있는 주인(캐시를 비우면 다시 알리는
+     *        메시 캐시 · 폰트 서비스 · 렌더 확장 등록부)은 이것을 직접 든다 — 같은 모양의 집합 · 잠금을 주인마다 다시 만들지 않는다.
+     * @details 키는 이름들의 해시다(`LogOnce::tryClaim` 과 같은 이유 — 겹치면 알림 한 줄이 사라질 뿐이다).
+     */
+    class SW_API OnceKeySet
+    {
+    public:
+        /** @brief @p key 를 처음 받으면 true 이고 받은 것으로 적습니다. */
+        [[nodiscard]] bool tryClaim( uint64 key );
+        /** @brief 받은 키를 모두 잊습니다(다음 알림이 다시 나간다). */
+        void clear();
+        /** @brief 받은 키 수입니다. */
+        [[nodiscard]] size_t getCount() const;
+
+    private:
+        mutable mutex                        _mutex;
+        unordered_set<uint64> _uniqueClaimed SW_GUARDED_BY( _mutex );
     };
 
     /**

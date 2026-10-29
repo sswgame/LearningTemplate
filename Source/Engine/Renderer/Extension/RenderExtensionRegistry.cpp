@@ -159,9 +159,7 @@ namespace sw
 
     bool RenderExtensionRegistry::noteFailureOnce( string_view key )
     {
-        const hashed_string hashedKey{ key };
-        ScopedLock<mutex>   lock{ _mutex };
-        return _uniqueFailureLogged.insert( hashedKey ).second;
+        return _failureLogged.tryClaim( HashUtil::computeStringHash64( key, false ) );
     }
 
     RenderExtensionRegistration::RenderExtensionRegistration( RenderExtensionRegistry& registry, IRenderExtension& extension )

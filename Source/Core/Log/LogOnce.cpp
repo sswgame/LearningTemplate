@@ -9,6 +9,27 @@
 
 namespace sw
 {
+    bool OnceKeySet::tryClaim( const uint64 key )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _uniqueClaimed.insert( key ).second;
+    }
+
+    void OnceKeySet::clear()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        _uniqueClaimed.clear();
+    }
+
+    size_t OnceKeySet::getCount() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _uniqueClaimed.size();
+    }
+} // namespace sw
+
+namespace sw
+{
     namespace
     {
         struct LogOnceInternal
@@ -18,9 +39,8 @@ namespace sw
             /** @brief 종류마다 이번 범위에서 알린 키입니다. 범위는 프로세스 하나 또는 테스트 케이스 하나입니다. */
             struct State
             {
-                mutex                 _mutex;
-                unordered_set<uint64> _arrClaimed[kKindCount];
-                atomic<uint64>        _arrAttemptCount[kKindCount]{}; ///< `tryClaim` 을 부른 횟수 — `beginScope` 가 지우지 않는다
+                OnceKeySet     _arrClaimed[kKindCount];
+                atomic<uint64> _arrAttemptCount[kKindCount]{}; ///< `tryClaim` 을 부른 횟수 — `beginScope` 가 지우지 않는다
             };
 
             /**
@@ -40,8 +60,7 @@ namespace sw
         if ( pState == nullptr )
             return true;
         pState->_arrAttemptCount[kindIndex].fetch_add( 1, std::memory_order_relaxed );
-        ScopedLock<mutex> lock{ pState->_mutex };
-        return pState->_arrClaimed[kindIndex].insert( key ).second;
+        return pState->_arrClaimed[kindIndex].tryClaim( key );
     }
 
     uint64 LogOnce::getAttemptCount( LogOnceKind kind )
@@ -57,8 +76,7 @@ namespace sw
         LogOnceInternal::State* const pState = LogOnceInternal::s_state.find();
         if ( pState == nullptr )
             return; // 아직 아무것도 알리지 않았다 — 잊을 키가 없다
-        ScopedLock<mutex> lock{ pState->_mutex };
-        for ( unordered_set<uint64>& claimed : pState->_arrClaimed )
+        for ( OnceKeySet& claimed : pState->_arrClaimed )
         {
             claimed.clear();
         }

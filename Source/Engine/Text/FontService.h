@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -126,7 +127,7 @@ namespace sw
         /** @brief 읽은 카탈로그입니다. */
         const FontCatalogDesc& getCatalog() const { return _catalog; }
         /** @brief 한 번만 남긴 경고(못 찾은 패밀리, 글리프 없는 코드 포인트)의 수입니다. 경고가 반복되지 않는지 테스트가 확인합니다. */
-        uint32 getWarnedOnceCount() const { return static_cast<uint32>( _uniqueWarned.size() ); }
+        uint32 getWarnedOnceCount() const { return static_cast<uint32>( _warnedOnce.getCount() ); }
 
     private:
         /** @brief 패밀리 이름으로 면을 엽니다. 저장소 패밀리를 먼저, 시스템 패밀리를 다음으로 봅니다. 못 찾으면 kInvalidFontFaceID 를 반환하고 처음 한 번 경고합니다. 결과(없음 포함)를 캐시합니다. */
@@ -151,7 +152,7 @@ namespace sw
         unordered_map<string, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
         unordered_map<string, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
-        unordered_set<string>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트). 키는 원문입니다.
+        OnceKeySet                              _warnedOnce;          ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트 — 원문 키의 해시).
         const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
         bool                                    _bInitialized;        ///< 기본 패밀리를 열었는지 나타냅니다.
     };

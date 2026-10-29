@@ -17,6 +17,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -99,13 +100,13 @@ namespace sw
             ExtensionProxyUpdateFn _update;
         };
 
-        mutable mutex                                     _runMutex;
-        mutable mutex                                     _mutex;
-        vector<IRenderExtension*> _listExtension          SW_GUARDED_BY( _mutex );
-        vector<ProxyEntry> _listProxy                     SW_GUARDED_BY( _mutex );
-        vector<PendingUpdate> _listPendingUpdate          SW_GUARDED_BY( _mutex );
-        ExtensionSceneProxyID _nextProxyID                SW_GUARDED_BY( _mutex ) = 1;
-        unordered_set<hashed_string> _uniqueFailureLogged SW_GUARDED_BY( _mutex );
+        mutable mutex                            _runMutex;
+        mutable mutex                            _mutex;
+        vector<IRenderExtension*> _listExtension SW_GUARDED_BY( _mutex );
+        vector<ProxyEntry> _listProxy            SW_GUARDED_BY( _mutex );
+        vector<PendingUpdate> _listPendingUpdate SW_GUARDED_BY( _mutex );
+        ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
+        OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`noteFailureOnce`)
     };
 } // namespace sw
 

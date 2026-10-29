@@ -124,7 +124,7 @@ namespace sw
         , _mapOpenedFile{}
         , _mapChain{}
         , _mapMemoryFile{}
-        , _uniqueWarned{}
+        , _warnedOnce{}
         , _pLocalization{ pLocalization }
         , _bInitialized{ false }
     {
@@ -195,7 +195,7 @@ namespace sw
         _mapOpenedFamilyFace.clear();
         _mapOpenedFile.clear();
         _mapChain.clear();
-        _uniqueWarned.clear();
+        _warnedOnce.clear();
         _catalog      = FontCatalogDesc{};
         _bInitialized = false;
     }
@@ -400,7 +400,7 @@ namespace sw
 
     bool FontService::markWarnedOnce( const string& key )
     {
-        return _uniqueWarned.insert( key ).second;
+        return _warnedOnce.tryClaim( HashUtil::computeStringHash64( key, false ) ); // 이름 표에 넣지 않는다(경고 키는 이름이 아니다)
     }
 
 } // namespace sw
