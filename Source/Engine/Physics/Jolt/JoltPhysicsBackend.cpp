@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -105,13 +106,13 @@ namespace sw
              * @brief 백엔드가 올라와 있는지입니다. 지연 초기화 플래그가 아니라 수명 상태이고, `initialize` · `shutdown` 은 소유자(`PhysicsSystem`)가 한 스레드에서
              *        부른다. 읽는 쪽(`createScene3D`)은 다른 스레드일 수 있어 원자 값으로 둔다.
              */
-            static std::atomic<bool> s_bInitialized;
+            static atomic<bool> s_bInitialized;
         };
 
         alignas( JPH::Factory ) uint8 JoltPhysicsBackendInternal::s_arrFactoryStorage[sizeof( JPH::Factory )]{};
-        JPH::Factory*     JoltPhysicsBackendInternal::s_pFactory{ nullptr };
-        JoltJobSystem*    JoltPhysicsBackendInternal::s_pJobSystem{ nullptr };
-        std::atomic<bool> JoltPhysicsBackendInternal::s_bInitialized{ false };
+        JPH::Factory*  JoltPhysicsBackendInternal::s_pFactory{ nullptr };
+        JoltJobSystem* JoltPhysicsBackendInternal::s_pJobSystem{ nullptr };
+        atomic<bool>   JoltPhysicsBackendInternal::s_bInitialized{ false };
     } // namespace
 } // namespace sw
 

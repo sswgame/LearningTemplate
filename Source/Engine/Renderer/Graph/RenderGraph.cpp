@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -437,11 +438,9 @@ namespace sw
                 {
                     // 디바이스가 죽으면 매 프레임 여기로 온다. 같은 오류를 끝없이 되풀이하지 않는다.
                     // 프로세스에 한 번이다. 그래프가 둘 이상이고 서로 다른 스레드에서 돌 수 있어 `exchange` 로 한 번만 남긴다.
-                    static std::atomic<bool> s_bCreateFailureLogged{ false };
-                    if ( s_bCreateFailureLogged.exchange( true ) == false )
                     {
-                        SW_LOG_ERROR( "executeParallel: could not create a command list for pass '%#' - nothing was recorded or submitted this frame",
-                                      passName.c_str() );
+                        SW_LOG_ERROR_ONCE( "executeParallel: could not create a command list for pass '%#' - nothing was recorded or submitted this frame",
+                                           passName.c_str() );
                     }
                     return false;
                 }

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Delegate/AtomicSlot.h"
 #include "Core/Delegate/LockedMulticastDelegate.h"
 #include "Core/Testing/TestFramework.h"
@@ -38,8 +39,8 @@ namespace
             _releasedCount.fetch_add( 1 );
         }
 
-        std::atomic<uint64> _nextID{ 0 };
-        std::atomic<uint32> _releasedCount{ 0 };
+        sw::atomic<uint64> _nextID{ 0 };
+        sw::atomic<uint32> _releasedCount{ 0 };
     };
 } // namespace
 

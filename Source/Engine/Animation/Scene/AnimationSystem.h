@@ -4,6 +4,7 @@
  *        `SceneFrameStep::Animation` 단계에서 돕니다. 얻기는 `manager.getSubsystem<AnimationSystem>()` 입니다 — 코어(`Object/GameObject`)는 이 타입을 모릅니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -325,7 +326,7 @@ namespace sw
         mutable uint32                          _removedCount{ 0 };   ///< `_listItem` 안의 비운 칸 수
         uint32                                  _iterationDepth{ 0 }; ///< `forEach` 중첩 깊이(0 보다 크면 해제는 칸만 비우고 접지 않는다)
 #if defined( SW_DEBUG )
-        mutable std::atomic<bool> _compacting{ false }; ///< Debug: 접는 중인지(동시 접기 탐지)
+        mutable atomic<bool> _compacting{ false }; ///< Debug: 접는 중인지(동시 접기 탐지)
 #endif
     };
 

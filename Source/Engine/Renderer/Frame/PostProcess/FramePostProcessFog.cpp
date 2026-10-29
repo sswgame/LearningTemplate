@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -98,13 +99,11 @@ namespace sw
         const bool bWanted = pDevice != nullptr && _bHasFrameFog == SW_TRUE && _frameFog._bVolumetric == SW_TRUE;
         if ( bWanted == false )
             return;
-        // 못 켜는 이유는 한 번만 알린다. 볼륨 없이 평범한 안개로 그린다 — 안개 패스의 꺼진 상태이지 다른 경로가 아니다.
-        static std::atomic<bool> s_bReportedMissing{ false };
-        const bool               bPipelineReady = _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) != 0;
+        // 못 켜는 이유는 이유마다 한 번만 알린다(`SW_LOG_ERROR_ONCE`). 볼륨 없이 평범한 안개로 그린다 — 안개 패스의 꺼진 상태이지 다른 경로가 아니다.
+        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) != 0;
         if ( bPipelineReady == false )
         {
-            if ( s_bReportedMissing.exchange( true ) == false )
-                SW_LOG_ERROR( "The volumetric fog compute PSO is missing - the fog is drawn without the light-scattering volume" );
+            SW_LOG_ERROR_ONCE( "The volumetric fog compute PSO is missing - the fog is drawn without the light-scattering volume" );
             return;
         }
 
@@ -116,8 +115,7 @@ namespace sw
                                   _fogVolumeBuffer._uav != kInvalidDescriptorIndex && _fogVolumeBuffer._srv != kInvalidDescriptorIndex;
         if ( bVolumeReady == false )
         {
-            if ( s_bReportedMissing.exchange( true ) == false )
-                SW_LOG_ERROR( "Failed to create the volumetric fog buffer (%# cells) - the fog is drawn without the light-scattering volume", kCellCount );
+            SW_LOG_ERROR_ONCE( "Failed to create the volumetric fog buffer (%# cells) - the fog is drawn without the light-scattering volume", kCellCount );
             return;
         }
 
@@ -151,8 +149,7 @@ namespace sw
         const uint32 paramRowCount = static_cast<uint32>( _listScratchFogVolumeParam.size() );
         if ( _fogVolumeParamBuffer.ensureCapacity( pDevice, rowStride, paramRowCount, kParamUsage, true, false, _listScratchFogVolumeParam.data() ) == false )
         {
-            if ( s_bReportedMissing.exchange( true ) == false )
-                SW_LOG_ERROR( "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );
+            SW_LOG_ERROR_ONCE( "Failed to create the volumetric fog parameter buffer - the fog is drawn without the light-scattering volume" );
             return;
         }
         _fogVolumeParamBuffer.upload( pDevice, _listScratchFogVolumeParam.data(), paramRowCount * rowStride );

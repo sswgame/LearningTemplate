@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Catalog/CatalogPanel.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -63,9 +64,9 @@ namespace sw::editor
         };
 
         // 시나리오 감시 값이 읽는 값입니다. 패널이 그릴 때 갱신하고 감시 값은 게임 스레드에서 읽습니다.
-        std::atomic<int32> s_catalogFileCount{ 0 };
-        std::atomic<int32> s_catalogRowCount{ 0 };
-        std::atomic<int32> s_catalogValidation{ 0 }; ///< 0 아직, 1 통과, 2 실패
+        atomic<int32> s_catalogFileCount{ 0 };
+        atomic<int32> s_catalogRowCount{ 0 };
+        atomic<int32> s_catalogValidation{ 0 }; ///< 0 아직, 1 통과, 2 실패
 
         struct CatalogPanelInternal
         {

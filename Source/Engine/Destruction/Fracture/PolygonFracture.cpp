@@ -3,6 +3,7 @@
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -171,7 +172,7 @@ namespace sw
 
             /** @brief 시드 하나의 셀을 가까운 이웃부터 이등분 직선으로 자릅니다. 셀이 사라지면(꼭짓점 3 개 미만) 빈 목록입니다. */
             static vector<Corner> cutCell( uint32 site, const vector<float2>& listSite, const vector<Corner>& listSource, vector<Corner>& inoutListScratch,
-                                           vector<std::pair<float32, uint32>>& inoutListNear )
+                                           vector<pair<float32, uint32>>& inoutListNear )
             {
                 const uint32   siteCount  = static_cast<uint32>( listSite.size() );
                 vector<Corner> listCorner = listSource;
@@ -182,7 +183,7 @@ namespace sw
                         inoutListNear.emplace_back( float2::getDistanceSquared( listSite[site], listSite[other] ), other );
                 }
                 VectorUtil::sort( inoutListNear );
-                for ( const std::pair<float32, uint32>& entry : inoutListNear )
+                for ( const pair<float32, uint32>& entry : inoutListNear )
                 {
                     float32 radiusSquared = 0.0f;
                     for ( const Corner& corner : listCorner )
@@ -361,9 +362,9 @@ namespace sw
         {
             listSource.push_back( Corner{ point, Internal::kOuterTag } );
         }
-        vector<vector<Corner>>             listCell( siteCount );
-        vector<Corner>                     listScratch;
-        vector<std::pair<float32, uint32>> listNear;
+        vector<vector<Corner>>        listCell( siteCount );
+        vector<Corner>                listScratch;
+        vector<pair<float32, uint32>> listNear;
         for ( uint32 site = 0; site < siteCount; ++site )
         {
             listCell[site] = Internal::cutCell( site, listSite, listSource, listScratch, listNear );

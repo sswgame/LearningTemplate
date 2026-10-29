@@ -133,7 +133,7 @@ namespace sw
             static string formatFloat( const float64 value )
             {
                 utf8 arrBuffer[constant::kMaxBuffer64]{};
-                std::snprintf( arrBuffer, sizeof( arrBuffer ), "%.9g", value );
+                formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", value );
                 return string( arrBuffer );
             }
 

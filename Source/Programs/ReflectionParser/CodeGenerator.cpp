@@ -350,7 +350,7 @@ namespace sw
         const auto formatRangeLiteral = []( const float32 value ) -> string
         {
             utf8 arrBuffer[constant::kMaxBuffer64]{};
-            std::snprintf( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
+            formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
             string literal( arrBuffer );
             if ( literal.find_first_of( ".eE" ) == string::npos )
                 literal += ".0";

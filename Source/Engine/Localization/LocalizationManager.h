@@ -3,6 +3,7 @@
  * @brief 다국어(로컬라이제이션) 관리자를 정의합니다. 싱글톤이 아니라 엔진 서비스 `engine::getSubsystem<LocalizationManager>()` 로 얻습니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
@@ -262,7 +263,7 @@ namespace sw
         mutable mutex                         _missingMutex;
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
-        std::atomic<uint32> _textRevision;
+        atomic<uint32> _textRevision;
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
         LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
     };

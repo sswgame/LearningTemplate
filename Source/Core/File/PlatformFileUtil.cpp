@@ -3,6 +3,7 @@
 #include "Core/File/PlatformFileUtil.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -28,9 +29,9 @@ namespace sw
         struct PlatformFileUtilInternal
         {
             /** @brief 읽으려고 연 파일 수입니다(`noteFileOpenedForRead`). */
-            inline static std::atomic<uint64> s_fileOpenCount{ 0 };
+            inline static atomic<uint64> s_fileOpenCount{ 0 };
             /** @brief 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다. */
-            inline static std::atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
+            inline static atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
 
 #if defined( SW_PLATFORM_WINDOWS )
             /** @brief 스레드마다 하나인 수동 리셋 이벤트입니다 — 동기 위치 읽기가 완료를 기다린다. 스레드가 끝나면 닫는다. */

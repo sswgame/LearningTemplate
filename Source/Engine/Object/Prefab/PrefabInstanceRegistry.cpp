@@ -3,6 +3,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -113,7 +114,7 @@ namespace sw
     {
         outListObjectID.clear();
         // (기록 순서, 오브젝트 id) 로 모아 정렬한다 — 해시 표의 순회 순서는 정해져 있지 않다.
-        vector<std::pair<uint64, uint64>> listOrdered;
+        vector<pair<uint64, uint64>> listOrdered;
         for ( const auto& [objectID, part] : _mapNestedPart )
         {
             if ( part._ownerObjectID == ownerObjectID )
@@ -121,7 +122,7 @@ namespace sw
         }
         VectorUtil::sort( listOrdered );
         outListObjectID.reserve( listOrdered.size() );
-        for ( const std::pair<uint64, uint64>& entry : listOrdered )
+        for ( const pair<uint64, uint64>& entry : listOrdered )
         {
             outListObjectID.push_back( entry.second );
         }

@@ -24,6 +24,7 @@
 #pragma once
 #include "Core/Container/EventBuffer.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -228,14 +229,14 @@ namespace sw
         /** @brief 작업 스레드 하나가 관찰자를 계산하는 데 쓰는 스크래치 버퍼입니다. 틱마다 다시 사용합니다. */
         struct ObserverScratch
         {
-            vector<uint32>                     _listLeave{};
-            vector<SlotHandle>                 _listNear{};  ///< 들어오는 반경 안의 엔티티와 항상 보이는 엔티티. 격자 키이며 엔티티 id 를 담은 SlotHandle 이다
-            vector<std::pair<float32, uint32>> _listRank{};  ///< (거리, id)
-            vector<uint32>                     _listOrder{}; ///< 쌓인 우선도 순서
-            vector<uint32>                     _listSent{};
-            vector<uint32>                     _listEnter{}; ///< 이번 틱의 새로 보임 메시지에 실은 엔티티. 전송이 받아들여져야 보이는 목록에 넣는다
-            NetMessageWriter                   _messageWriter{};
-            uint64                             _sentUpdateCount{ 0 }; ///< 이번 update 에서 이 스크래치를 쓴 스레드가 보낸 갱신 수. update 가 끝나면 합산한다
+            vector<uint32>                _listLeave{};
+            vector<SlotHandle>            _listNear{};  ///< 들어오는 반경 안의 엔티티와 항상 보이는 엔티티. 격자 키이며 엔티티 id 를 담은 SlotHandle 이다
+            vector<pair<float32, uint32>> _listRank{};  ///< (거리, id)
+            vector<uint32>                _listOrder{}; ///< 쌓인 우선도 순서
+            vector<uint32>                _listSent{};
+            vector<uint32>                _listEnter{}; ///< 이번 틱의 새로 보임 메시지에 실은 엔티티. 전송이 받아들여져야 보이는 목록에 넣는다
+            NetMessageWriter              _messageWriter{};
+            uint64                        _sentUpdateCount{ 0 }; ///< 이번 update 에서 이 스크래치를 쓴 스레드가 보낸 갱신 수. update 가 끝나면 합산한다
         };
 
         void updateObserverRange( uint32 start, uint32 end );

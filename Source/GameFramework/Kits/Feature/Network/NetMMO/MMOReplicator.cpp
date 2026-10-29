@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
@@ -314,7 +315,7 @@ namespace sw
             }
         }
         // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
-        vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
+        vector<pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
         for ( const SlotHandle nearKey : listNear )
         {

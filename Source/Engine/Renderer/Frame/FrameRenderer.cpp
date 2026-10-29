@@ -451,10 +451,9 @@ namespace sw
         // 그릴 3D 내용도 없어 조용히 넘기고, 3D 내용을 실은 채 시점이 빠진 패킷(만든 쪽의 결함)만 한 번 알린다. 씬에 카메라가 없는 것은 게임 스레드가 알린다.
         if ( packet._bHasViewProj == SW_FALSE )
         {
-            static std::atomic<bool> s_bMissingViewReported{ false };
-            const bool               bCarries3DContent = packet._gpuScene.getInstances().empty() == false || packet._listView.empty() == false;
-            if ( bCarries3DContent && s_bMissingViewReported.exchange( true ) == false )
-                SW_LOG_ERROR( "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
+            const bool bCarries3DContent = packet._gpuScene.getInstances().empty() == false || packet._listView.empty() == false;
+            if ( bCarries3DContent )
+                SW_LOG_ERROR_ONCE( "Render packet carries scene content but no main view (RenderFramePacket::setMainView) - the frame is not drawn" );
             return false;
         }
 

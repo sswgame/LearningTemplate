@@ -335,7 +335,7 @@ namespace sw::editor
             static string formatNumber( float32 value )
             {
                 utf8 arrText[constant::kMaxBuffer32]{};
-                (void)snprintf( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
+                formatstring( arrText, sizeof( arrText ), "%.6g", static_cast<float64>( value ) + 0.0 );
                 return string( arrText );
             }
 

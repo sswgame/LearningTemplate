@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -53,10 +54,10 @@ namespace sw
             [[nodiscard]] static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
                                                             int64& outSecondValue )
             {
-                unordered_map<uint32, std::pair<hashed_string, int64>> mapHashToName;
-                const auto                                             isClash = [&]( const hashed_string& name, int64 value ) -> bool
+                unordered_map<uint32, pair<hashed_string, int64>> mapHashToName;
+                const auto                                        isClash = [&]( const hashed_string& name, int64 value ) -> bool
                 {
-                    const auto [iter, bInserted] = mapHashToName.emplace( static_cast<uint32>( name.getHash() ), std::make_pair( name, value ) );
+                    const auto [iter, bInserted] = mapHashToName.emplace( static_cast<uint32>( name.getHash() ), make_pair( name, value ) );
                     if ( bInserted || iter->second.second == value )
                         return false;
                     outFirstName   = iter->second.first;

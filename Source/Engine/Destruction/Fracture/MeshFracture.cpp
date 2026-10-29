@@ -3,6 +3,7 @@
 #include "Engine/Destruction/Fracture/MeshFracture.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
@@ -1052,7 +1053,7 @@ namespace sw
                             mapEdgeFace[( from << 32 ) | to] = face;
                         }
                     }
-                    vector<std::pair<uint32, uint32>> listHorizon;
+                    vector<pair<uint32, uint32>> listHorizon;
                     for ( const uint32 face : listVisible )
                     {
                         for ( uint32 corner = 0; corner < 3; ++corner )
@@ -1067,7 +1068,7 @@ namespace sw
                     {
                         inoutListFace[face]._bAlive = SW_FALSE;
                     }
-                    for ( const std::pair<uint32, uint32>& edge : listHorizon )
+                    for ( const pair<uint32, uint32>& edge : listHorizon )
                     {
                         inoutListFace.push_back( Face{
                             { edge.first, edge.second, point },
@@ -1139,7 +1140,7 @@ namespace sw
 
             /** @brief 시드 하나의 셀을 가까운 이웃부터 이등분 평면으로 자릅니다. 자른 조각과 겉면 조각을 @p outCut 에 넣습니다. */
             static void cutSite( uint32 site, const vector<float3>& listSite, const vector<Triangle>& listSource, const vector<Triangle>& listSurfaceSource, const FractureSettings& settings,
-                                 vector<Triangle>& inoutListScratch, vector<std::pair<float32, uint32>>& inoutListOrder, SiteCut& inoutCut )
+                                 vector<Triangle>& inoutListScratch, vector<pair<float32, uint32>>& inoutListOrder, SiteCut& inoutCut )
             {
                 const uint32     siteCount           = static_cast<uint32>( listSite.size() );
                 vector<Triangle> listPieceTriangle   = listSource;
@@ -1154,7 +1155,7 @@ namespace sw
                     }
                     VectorUtil::sort( inoutListOrder );
                     float32 radiusSquared = computeRadiusSquared( listPieceTriangle, listSite[site] );
-                    for ( const std::pair<float32, uint32>& entry : inoutListOrder )
+                    for ( const pair<float32, uint32>& entry : inoutListOrder )
                     {
                         // 이등분 평면까지의 거리는 시드 거리 / 2 다. 조각 반경보다 멀면 이 평면도, 뒤의 평면도 닿지 않는다.
                         if ( entry.first * 0.25f > radiusSquared )
@@ -1557,8 +1558,8 @@ namespace sw
         Build::SiteCut cut;
         cut._listSitePiece.resize( siteCount );
         cut._listSiteSurface.resize( siteCount );
-        vector<Triangle>                   listScratch;
-        vector<std::pair<float32, uint32>> listOrder;
+        vector<Triangle>              listScratch;
+        vector<pair<float32, uint32>> listOrder;
         for ( uint32 site = 0; site < siteCount; ++site )
         {
             Build::cutSite( site, listSite, listSource, listSurfaceSource, settings, listScratch, listOrder, cut );

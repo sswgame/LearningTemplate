@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -49,7 +50,7 @@ namespace sw::editor
         {
             SubsystemScope* _pScope{ nullptr }; ///< 지금 에디터 범위(에디터 컨텍스트 · 테스트가 건다)
             /// 지금 범위를 등록한 스레드(에디터 UI 가 도는 스레드)입니다. 범위가 없으면 기본값입니다. 읽는 쪽이 다른 스레드일 수 있어 atomic 입니다.
-            std::atomic<std::thread::id> _ownerThreadID{};
+            atomic<std::thread::id> _ownerThreadID{};
         };
 
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위

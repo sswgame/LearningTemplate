@@ -3,6 +3,7 @@
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/pair.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
@@ -142,12 +143,12 @@ namespace sw::editor
 
     bool EditorScenarioStepValidation::parseDrag( const AutomationStep& step, EditorDragArgs& outArgs, string& outError )
     {
-        const std::pair<const utf8*, float64*> arrNumber[] = {
+        const pair<const utf8*, float64*> arrNumber[] = {
             {    "dx",       &outArgs._deltaX},
             {    "dy",       &outArgs._deltaY},
             {"button", &outArgs._buttonNumber},
         };
-        for ( const std::pair<const utf8*, float64*>& entry : arrNumber )
+        for ( const pair<const utf8*, float64*>& entry : arrNumber )
         {
             const string* pValue = step.findAttribute( entry.first );
             if ( pValue != nullptr && StringUtil::parseDouble( string_view{ *pValue }, *entry.second ) == false )

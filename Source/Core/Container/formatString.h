@@ -63,6 +63,8 @@ namespace sw
                 LeftAlign        = SW_BIT( 3 ),
                 ZeroPad          = SW_BIT( 4 ),
                 ShowBoolAsString = SW_BIT( 5 ),
+                FloatGeneral     = SW_BIT( 6 ), ///< `%g`: 고정 · 지수 중 짧은 쪽, 자릿수는 유효 숫자
+                FloatScientific  = SW_BIT( 7 ), ///< `%e`: 지수 표기
             };
 
             uint8 _precision = 6;
@@ -175,6 +177,20 @@ namespace sw
             return *this;
         }
 
+        /** @brief 실수를 `%g` 처럼(고정 · 지수 중 짧은 쪽, 자릿수는 유효 숫자) 씁니다. */
+        constexpr Format& floatGeneral() noexcept
+        {
+            _data.setFlag( FormatData::Flags::FloatGeneral );
+            return *this;
+        }
+
+        /** @brief 실수를 `%e` 처럼 지수 표기로 씁니다. */
+        constexpr Format& floatScientific() noexcept
+        {
+            _data.setFlag( FormatData::Flags::FloatScientific );
+            return *this;
+        }
+
         /** @brief bool 값을 숫자(1/0)로 표시하도록 정합니다. */
         constexpr Format& showBoolAsNumber() noexcept
         {
@@ -227,6 +243,10 @@ namespace sw
         constexpr bool isLeftAlign() const noexcept { return _data.hasFlag( FormatData::Flags::LeftAlign ); }
         /** @brief 0 으로 채우는지 반환합니다. */
         constexpr bool isZeroPad() const noexcept { return _data.hasFlag( FormatData::Flags::ZeroPad ); }
+        /** @brief 실수를 `%g` 로 쓰는지 반환합니다. */
+        constexpr bool isFloatGeneral() const noexcept { return _data.hasFlag( FormatData::Flags::FloatGeneral ); }
+        /** @brief 실수를 `%e` 로 쓰는지 반환합니다. */
+        constexpr bool isFloatScientific() const noexcept { return _data.hasFlag( FormatData::Flags::FloatScientific ); }
         /** @brief bool 을 문자열로 표시하는지 반환합니다. */
         constexpr bool isShowBoolAsString() const noexcept { return _data.hasFlag( FormatData::Flags::ShowBoolAsString ); }
         /** @brief 정밀도를 반환합니다. */
@@ -503,6 +523,11 @@ namespace sw
                 case 'e':
                 case 'E':
                 {
+                    // `%g` · `%e` 는 표기가 다르다(예전에는 받기만 하고 고정 소수점으로 썼다 — 코드젠의 `%.9g` 가 그래서 snprintf 로 돌았다).
+                    if ( conversion == 'g' || conversion == 'G' )
+                        outFormat.floatGeneral();
+                    else if ( conversion == 'e' || conversion == 'E' )
+                        outFormat.floatScientific();
                     // printf 실수 서식은 자릿수를 안 적으면 여섯 자리다. 자릿수 없는 `%#` 는 가장 짧은 왕복 표기다(`to_string` 과 같다 — `floatToString`).
                     if ( outFormat.hasPrecision() == false )
                     {
@@ -933,8 +958,10 @@ namespace sw
                 *pCurrent++ = '+';
 
             // 자릿수를 정했으면 고정 소수점, 아니면(`%#`) 그 타입의 가장 짧은 왕복 표기다 — `to_string` 과 같은 글이 나온다(실수를 글로 바꾸는 규칙은 하나).
-            auto [pPtr, ec] = format.hasPrecision() ? std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, format.getPrecision() )
-                                                    : std::to_chars( pCurrent, pBuf + kFloatBufferSize, value );
+            const std::chars_format style = format.isFloatGeneral() ? std::chars_format::general : format.isFloatScientific() ? std::chars_format::scientific
+                                                                                                                              : std::chars_format::fixed;
+            auto [pPtr, ec]               = format.hasPrecision() ? std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, style, format.getPrecision() )
+                                                                  : std::to_chars( pCurrent, pBuf + kFloatBufferSize, value );
 
             // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 실패할 수 없다. 그래도 실패하면 조용한 쓰레기 값 대신 표시를 남긴다.
             if ( static_cast<int32>( ec ) != 0 )

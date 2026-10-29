@@ -97,7 +97,7 @@ namespace sw
         // 파이프라인 XML 이 선언하지 않은 첨부(패스 콜백이 직접 거는 텍스처)는 프롤로그가 알 수 없다. 그런 것이
         // 남아 있어도 배리어 자체는 락이 보호하므로 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
         // 있는 자원" 이므로, 파이프라인 선언을 채우면 이 줄이 사라진다.
-        static std::atomic<uint32> s_reported{ 0 };
+        static atomic<uint32> s_reported{ 0 };
         if ( s_reported.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
         SW_LOG_TRACE( "%# issued a barrier during parallel recording - the level prologue did not "

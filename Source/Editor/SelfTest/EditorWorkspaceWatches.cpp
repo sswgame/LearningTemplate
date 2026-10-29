@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/HexUtil.h"
@@ -168,8 +169,8 @@ namespace sw::editor
             const GameObjectManager* pActive = editor::getActiveObjectManager();
             if ( pActive == nullptr )
                 return false;
-            vector<std::pair<string, uint64>> listEntry;
-            ObjectSaveOptions                 options{ SerializePurpose::Authoring };
+            vector<pair<string, uint64>> listEntry;
+            ObjectSaveOptions            options{ SerializePurpose::Authoring };
             options._bOmitExternalParent = true;
             pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
             {
@@ -187,7 +188,7 @@ namespace sw::editor
             const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
             const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
             uint64                    hash  = HashUtil::kFNVOffset64;
-            for ( const std::pair<string, uint64>& entry : listEntry )
+            for ( const pair<string, uint64>& entry : listEntry )
             {
                 hash = HashUtil::combine( hash, HashUtil::computeStringHash64( entry.first, false ) );
                 hash = HashUtil::combine( hash, entry.second );

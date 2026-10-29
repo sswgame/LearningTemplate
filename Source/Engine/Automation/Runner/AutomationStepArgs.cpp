@@ -3,6 +3,7 @@
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/pair.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -40,14 +41,14 @@ namespace sw
 
     bool AutomationStepArgsUtil::parseNumberComparison( const AutomationStep& step, float32 nearTolerance, NumberComparison& outComparison, string& outError )
     {
-        static constexpr std::pair<const utf8*, NumberRule> kArrRule[] = {
+        static constexpr pair<const utf8*, NumberRule> kArrRule[] = {
             { "equals",  NumberRule::Equals},
             {   "near",    NumberRule::Near},
             {"atLeast", NumberRule::AtLeast},
             { "atMost",  NumberRule::AtMost},
         };
         outComparison._tolerance = nearTolerance;
-        for ( const std::pair<const utf8*, NumberRule>& entry : kArrRule )
+        for ( const pair<const utf8*, NumberRule>& entry : kArrRule )
         {
             const string* pText = step.findAttribute( entry.first );
             if ( pText == nullptr )

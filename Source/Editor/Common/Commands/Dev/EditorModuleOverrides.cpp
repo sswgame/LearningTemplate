@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/pair.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -18,8 +19,8 @@ namespace sw::editor
             return false;
         const JSONValue root = document.getRoot();
         // 남길 줄을 모은다 — 그 모듈의 옛 줄은 빼고, 기본과 다르면 새 줄 하나.
-        vector<std::pair<string, bool>> listEntry;
-        const JSONValue                 listOld = root.get( "_listModuleOverride" );
+        vector<pair<string, bool>> listEntry;
+        const JSONValue            listOld = root.get( "_listModuleOverride" );
         if ( listOld.isValid() && listOld.isArray() )
         {
             for ( size_t index = 0; index < listOld.size(); ++index )
@@ -40,7 +41,7 @@ namespace sw::editor
 
         const JSONValue listNew = root.set( "_listModuleOverride" );
         listNew.setArray();
-        for ( const std::pair<string, bool>& entry : listEntry )
+        for ( const pair<string, bool>& entry : listEntry )
         {
             const JSONValue item = listNew.pushBack();
             item.setObject();
