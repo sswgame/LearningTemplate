@@ -4,11 +4,13 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include <imgui.h>
 
@@ -27,8 +29,6 @@ namespace sw::editor
         class PrefabAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetType getKind() const override { return EditorAssetType::Prefab; }
-
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {
                 const float32 width     = maxPos._x - minPos._x;
@@ -61,6 +61,19 @@ namespace sw::editor
             }
         };
 
-        EditorAssetTypeActionsRegistrar<PrefabAssetTypeActions> s_prefabAssetTypeActionsRegistrar{};
+        const PrefabAssetTypeActions s_prefabActions{};
+
+        /** @brief 새 프리팹의 틀입니다. 구성 요소가 없는 게임 오브젝트 하나입니다. */
+        constexpr EditorNewAssetTemplate kPrefabTemplate{
+            "prefab", "Prefab", "new_prefab", ".prefab.xml", nullptr,
+            "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
+            "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n",
+            nullptr };
+
+        /** @brief 프리팹은 쿠커가 쿠킹하는 저작 소스만이다(`AssetCookPath`). 쿠킹된 산출물(`.prefab.bin`)은 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다). */
+        const EditorAssetMatchRule kArrPrefabRule[] = { EditorAssetMatchRule::cookableSource( PrefabAsset::kAssetType, { "Prefab" } ) };
     } // namespace
+
+    SW_EDITOR_ASSET_TYPE( Prefab, PrefabAsset::kAssetType._name.data(), 200, "Prefab", "Prefabs", "Prefab Window", editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false, true, true,
+                          kArrPrefabRule, SW_COUNT_OF( kArrPrefabRule ), &kPrefabTemplate, &s_prefabActions );
 } // namespace sw::editor

@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
@@ -204,7 +205,7 @@ namespace sw::editor
 namespace sw::editor
 {
     CharacterEditorPanel::CharacterEditorPanel()
-        : EditorPreviewPanel{ EditorAssetType::Data, true }
+        : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, true }
         , _sockets{}
         , _pose{}
         , _appearance{}

@@ -40,7 +40,7 @@ namespace sw::editor
             static constexpr Color kDetailText{ Color::fromBytes( 150, 155, 170, 200 ) };
             static constexpr Color kGameObjectBadge{ 0.95f, 0.85f, 0.30f, 1.0f };
 
-            /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 테이블)이다. */
+            /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 등록)이다. */
             static Color getCategoryColor( const QuickLauncherItem& item )
             {
                 if ( item._category == "GameObject" )

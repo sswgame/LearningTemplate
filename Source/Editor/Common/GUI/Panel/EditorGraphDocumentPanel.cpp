@@ -11,7 +11,7 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
-    EditorGraphDocumentPanelBase::EditorGraphDocumentPanelBase( EditorAssetType kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
+    EditorGraphDocumentPanelBase::EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
                                                                 NodeEditorBindFunction bindModuleCopy )
         : EditorDocumentPanel{ kind, true }
         , _nodeGraph{}

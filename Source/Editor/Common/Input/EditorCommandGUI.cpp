@@ -39,6 +39,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"
 
@@ -102,7 +103,7 @@ namespace sw::editor
                 params._description        = "Scene";
                 params._bEnableMultiselect = false;
                 // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
-                EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
+                EditorAssetTypeRegistry::appendSuffixes( EditorAssetType{ SceneDocument::kAssetType }, params._listFilterExtension );
 
                 const string activePack = editor::getSubsystem<const GameConfig>()._packRoot.get();
                 const string mapsDir    = AssetPaths::findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();

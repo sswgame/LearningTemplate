@@ -77,7 +77,7 @@ namespace sw::editor
             {
                 if ( bIsDirectory )
                     return "Folder";
-                const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( EditorAssetTypeRegistry::findKind( path ) );
+                const EditorAssetTypeRegistration* pInfo = EditorAssetTypeRegistry::findKindInfoForPath( path );
                 return pInfo != nullptr ? pInfo->_pBrowserLabel : "File";
             }
 
@@ -380,7 +380,7 @@ namespace sw::editor
         {
             // 종류별 그림은 그 종류의 동작(`IEditorAssetTypeActions`)이 그린다. 이미지 미리보기가 있는 종류(텍스처)는 썸네일 캐시의 이미지가 우선한다.
             // 둘 다 없으면 종류 아이콘을 종류 색으로 가운데에 그린다.
-            const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
+            const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( pPath );
             bool                           bDrawn   = false;
             if ( pActions != nullptr && pActions->hasImagePreview() )
             {
@@ -527,7 +527,7 @@ namespace sw::editor
         , _renameBuffer{}
         , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
-        , _filterIndex{ 0 }
+        , _typeFilter{}
         , _fallbackGlyphCount{ 0 }
         , _lastFallbackGlyphCount{ 0 }
         , _viewMode{ ViewMode::Tiles }
@@ -772,12 +772,14 @@ namespace sw::editor
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
         StringBuilder<constant::kMaxBuffer64> mark;
-        for ( const EditorNewAssetTemplate& assetTemplate : EditorAssetFileCommands::getNewAssetTemplateList() )
+        vector<const EditorNewAssetTemplate*> listTemplate;
+        EditorAssetTypeRegistry::collectNewAssetTemplates( listTemplate );
+        for ( const EditorNewAssetTemplate* pTemplate : listTemplate )
         {
-            if ( ImGui::MenuItem( assetTemplate._pLabel ) )
-                (void)createNewAsset( assetTemplate ); // 실패는 createAsset 이 알린다
+            if ( ImGui::MenuItem( pTemplate->_pLabel ) )
+                (void)createNewAsset( *pTemplate ); // 실패는 createAsset 이 알린다
             mark.clear();
-            mark.append( "contentBrowser.add." ).append( assetTemplate._pID );
+            mark.append( "contentBrowser.add." ).append( pTemplate->_pID );
             EditorSelfTestMarks::note( mark.c_str() );
         }
         ImGui::EndPopup();
@@ -1017,19 +1019,7 @@ namespace sw::editor
         if ( entry._bIsDirectory )
             return true;
 
-        const utf8* pPath = entry._name.c_str();
-
-        uint32                          filterCount{ 0 };
-        const EditorAssetBrowserFilter* pFilter = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
-        if ( _filterIndex >= filterCount )
-            return true;
-
-        const EditorAssetBrowserFilter& filter = pFilter[_filterIndex];
-        if ( filter._bOther )
-            return EditorAssetTypeRegistry::matchesOther( pPath );
-        if ( filter._kind == EditorAssetType::Unknown )
-            return true;
-        return EditorAssetTypeRegistry::matches( filter._kind, pPath );
+        return _typeFilter.passes( entry._name );
     }
 
     bool ContentBrowserPanel::passesSearchFilter( const AssetEntry& entry ) const
@@ -1085,19 +1075,16 @@ namespace sw::editor
     void ContentBrowserPanel::drawViewControls()
     {
         ImGui::SameLine();
-        uint32                          filterCount{ 0 };
-        const EditorAssetBrowserFilter* pFilter  = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
-        const utf8*                     pPreview = "All";
-        if ( _filterIndex < filterCount )
-            pPreview = pFilter[_filterIndex]._pLabel;
+        _typeFilter.sync();
+        const vector<EditorAssetBrowserFilter>& listFilter = _typeFilter.getFilters();
         EditorChrome::setNextItemWidthColumns( 15.0f );
-        if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
+        if ( ImGui::BeginCombo( "##cb_type", _typeFilter.getSelectedLabel() ) )
         {
-            for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
+            for ( uint32 filterIdx = 0; filterIdx < static_cast<uint32>( listFilter.size() ); ++filterIdx )
             {
-                const bool bSelected = ( _filterIndex == filterIdx );
-                if ( ImGui::Selectable( pFilter[filterIdx]._pLabel, bSelected ) )
-                    _filterIndex = filterIdx;
+                const bool bSelected = ( _typeFilter.getSelectedIndex() == filterIdx );
+                if ( ImGui::Selectable( listFilter[filterIdx]._pLabel, bSelected ) )
+                    _typeFilter.select( filterIdx );
                 if ( bSelected )
                     ImGui::SetItemDefaultFocus();
             }

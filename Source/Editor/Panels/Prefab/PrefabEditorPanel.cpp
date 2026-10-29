@@ -22,6 +22,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
@@ -56,7 +57,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( PrefabEditorPanel, PrefabEditorPanel::kPanelID, EditorPanelCategory::Tool, 1410 );
 
     PrefabEditorPanel::PrefabEditorPanel()
-        : EditorPreviewPanel{ EditorAssetType::Prefab, false }
+        : EditorPreviewPanel{ EditorAssetType{ PrefabAsset::kAssetType }, false }
         , _isolation{}
         , _gizmo{}
         , _pendingNestedPath{}

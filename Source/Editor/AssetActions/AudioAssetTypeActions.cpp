@@ -3,8 +3,12 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
+
+#include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/Graph/AudioGraphDef.h"
 
 #include <imgui.h>
 
@@ -21,8 +25,6 @@ namespace sw::editor
         class AudioAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetType getKind() const override { return EditorAssetType::Audio; }
-
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {
                 constexpr int32   kBarCount               = 5;
@@ -46,6 +48,15 @@ namespace sw::editor
             }
         };
 
-        EditorAssetTypeActionsRegistrar<AudioAssetTypeActions> s_audioAssetTypeActionsRegistrar{};
+        const AudioAssetTypeActions s_audioActions{};
+
+        /** @brief 소리 클립과 소리 그래프입니다. 그래프는 클립 캐시가 읽어 둔 것을 오디오 서비스가 다시 굳힌다(엔진 캐시 `AudioData`). */
+        const EditorAssetMatchRule kArrAudioRule[] = {
+            EditorAssetMatchRule::engineType( AudioClipData::kAssetType ),
+            EditorAssetMatchRule::engineType( AudioGraphDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
+        };
     } // namespace
+
+    SW_EDITOR_ASSET_TYPE( Audio, AudioClipData::kAssetType._name.data(), 600, "Audio", "Audio", nullptr, editoricon::kAudio, { 0.95f, 0.85f, 0.25f, 1.0f }, false, true, true, kArrAudioRule,
+                          SW_COUNT_OF( kArrAudioRule ), nullptr, &s_audioActions );
 } // namespace sw::editor

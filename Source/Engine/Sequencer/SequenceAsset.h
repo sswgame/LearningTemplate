@@ -206,7 +206,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        /** @brief 시퀀스 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".seq.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

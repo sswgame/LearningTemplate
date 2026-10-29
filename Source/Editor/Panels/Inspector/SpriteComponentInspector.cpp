@@ -11,6 +11,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/2D/SpriteComponent.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 
 #include <imgui.h>
 
@@ -25,7 +26,7 @@ namespace sw::editor
             void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) override
             {
                 if ( ImGui::SmallButton( "Open Sprite Clip Tool" ) )
-                    editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType::SpriteClip );
+                    editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType{ SpriteClipAsset::kAssetType } );
             }
         };
     } // namespace

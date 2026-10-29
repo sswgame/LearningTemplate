@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -114,7 +115,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( BehaviorTreePanel, BehaviorTreePanel::kPanelID, EditorPanelCategory::Custom, 9320 );
 
     BehaviorTreePanel::BehaviorTreePanel()
-        : EditorDocumentPanel{ EditorAssetType::Data, false }
+        : EditorDocumentPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
         , _nodeGraph{}
         , _listIssue{}

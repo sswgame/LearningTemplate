@@ -112,7 +112,7 @@ namespace sw::editor
         /** @brief 실행 중에 들어온 id(콘솔 인자 · `-gv_` · 창 배치 파일 · 등록 목록)나 창 제목으로 찾습니다. 코드가 아는 패널은 `findPanel<T>()` 로 찾습니다. */
         IEditorPanel* findPanelByID( string_view panelID ) const;
         /** @brief 애셋 종류 @p kind 의 문서를 여는 패널(`IEditorPanel::getDocumentKind`)입니다. 없으면 nullptr 입니다. */
-        IEditorPanel* findDocumentPanel( EditorAssetType kind ) const;
+        IEditorPanel* findDocumentPanel( const EditorAssetType& kind ) const;
         /** @brief id(또는 창 제목)로 열거나 닫습니다. 확장 모듈의 패널과 실행 중 id 용입니다 — 코드가 아는 패널은 `setPanelOpen<T>()` 를 씁니다. */
         bool setPanelOpen( string_view panelID, bool bOpen );
         void clear();

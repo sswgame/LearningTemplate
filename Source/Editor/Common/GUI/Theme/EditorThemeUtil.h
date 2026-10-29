@@ -19,7 +19,7 @@ namespace sw
 
 namespace sw::editor
 {
-    enum class EditorAssetType : uint8;
+    class EditorAssetType;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -155,10 +155,10 @@ namespace sw::editor
         /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(editoricon::kFolderOpen / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
-        /** @brief 종류의 에디터 아이콘을 반환합니다. 애셋 종류 테이블을 따릅니다. `Unknown` 이면 일반 파일 아이콘입니다. */
-        static const utf8* getAssetTypeIcon( EditorAssetType kind );
-        /** @brief 종류의 색을 반환합니다. 애셋 종류 테이블을 따르고, 액센트 종류는 테마 액센트를 씁니다. `Unknown` 이면 흐린 글자색입니다. */
-        static Color getAssetTypeColor( EditorAssetType kind );
+        /** @brief 종류의 에디터 아이콘을 반환합니다. 애셋 종류 등록을 따릅니다. 알 수 없음이면 일반 파일 아이콘입니다. */
+        static const utf8* getAssetTypeIcon( const EditorAssetType& kind );
+        /** @brief 종류의 색을 반환합니다. 애셋 종류 등록을 따르고, 액센트 종류는 테마 액센트를 씁니다. 알 수 없음이면 흐린 글자색입니다. */
+        static Color getAssetTypeColor( const EditorAssetType& kind );
 
         /** @brief 경로(확장자)에 맞는 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );

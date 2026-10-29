@@ -6,7 +6,7 @@
 
 namespace sw::editor
 {
-    string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType kind )
+    string_view EditorAssetTypeRegistry::matchingFocusedPath( const EditorAssetType& kind )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 

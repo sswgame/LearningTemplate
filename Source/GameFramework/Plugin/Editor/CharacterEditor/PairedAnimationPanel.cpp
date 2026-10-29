@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -54,7 +55,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( PairedAnimationPanel, PairedAnimationPanel::kPanelID, EditorPanelCategory::Custom, 9030 );
 
     PairedAnimationPanel::PairedAnimationPanel()
-        : EditorPreviewPanel{ EditorAssetType::Data, false }
+        : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
         , _gizmo{}
         , _listSlot{}

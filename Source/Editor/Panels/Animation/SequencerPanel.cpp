@@ -152,7 +152,7 @@ namespace sw::editor
     } // namespace
 
     SequencerPanel::SequencerPanel()
-        : EditorDocumentPanel{ EditorAssetType::Sequence, false }
+        : EditorDocumentPanel{ EditorAssetType{ SequenceAsset::kAssetType }, false }
         , _cinematicNote{ "Cinematic notes (not a clip track)." }
         , _sequence{ make_unique<ClipSequence>() }
         , _previewPlayer{ make_unique<sw::SequencePlayer>() }

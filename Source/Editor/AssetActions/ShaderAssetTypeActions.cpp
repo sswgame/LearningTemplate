@@ -3,6 +3,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 
@@ -22,8 +23,6 @@ namespace sw::editor
         class ShaderAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetType getKind() const override { return EditorAssetType::Shader; }
-
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {
                 const float32 width        = maxPos._x - minPos._x;
@@ -38,6 +37,19 @@ namespace sw::editor
             }
         };
 
-        EditorAssetTypeActionsRegistrar<ShaderAssetTypeActions> s_shaderAssetTypeActionsRegistrar{};
+        const ShaderAssetTypeActions s_shaderActions{};
+
+        /**
+         * @brief 저작 셰이더 소스입니다. 공유 헤더 `.hlsli` 도 소스다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없다.
+         * @details `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Content/common/shaders/bin/`, 엔진 종류 `ShaderBinary`) 셰이더 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.
+         */
+        constexpr string_view kArrShaderExt[] = { ".hlsl", ".hlsli" };
+
+        const EditorAssetMatchRule kArrShaderRule[] = {
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrShaderExt, SW_COUNT_OF( kArrShaderExt ), EditorAssetMatchPriority::Suffix ),
+        };
     } // namespace
+
+    SW_EDITOR_ASSET_TYPE( Shader, EditorAssetTypeIDs::kShader, 400, "Shader", "Shaders", nullptr, editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false, true, true, kArrShaderRule,
+                          SW_COUNT_OF( kArrShaderRule ), nullptr, &s_shaderActions );
 } // namespace sw::editor

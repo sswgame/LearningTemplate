@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -88,7 +89,7 @@ namespace sw::editor
                          &VFXPreviewPanelInternal::readPreviewSceneFrames );
 
     VFXPreviewPanel::VFXPreviewPanel()
-        : EditorPreviewPanel{ EditorAssetType::Data, false }
+        : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _listEmitterRow{}
         , _previewEffectPath{}
         , _status{}

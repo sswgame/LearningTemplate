@@ -82,7 +82,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    IEditorPanel* EditorPanelManager::findDocumentPanel( EditorAssetType kind ) const
+    IEditorPanel* EditorPanelManager::findDocumentPanel( const EditorAssetType& kind ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {

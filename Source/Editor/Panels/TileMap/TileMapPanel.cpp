@@ -24,6 +24,7 @@
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include <imgui.h>
 
@@ -115,7 +116,7 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker", &TileMapPanelInternal::readPaintTool );
 
     TileMapPanel::TileMapPanel()
-        : EditorDocumentPanel{ EditorAssetType::TileMap, false }
+        : EditorDocumentPanel{ EditorAssetType{ TileMapXMLData::kAssetType }, false }
         , _pathBuffer{}
         , _nameBuffer{ "Untitled" }
         , _edgeTargetN{}

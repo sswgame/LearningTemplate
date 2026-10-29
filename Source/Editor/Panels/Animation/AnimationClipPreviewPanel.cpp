@@ -83,7 +83,7 @@ namespace sw::editor
                          &AnimationClipPreviewPanelInternal::readPreviewSceneFrames );
 
     AnimationClipPreviewPanel::AnimationClipPreviewPanel()
-        : EditorPreviewPanel{ EditorAssetType::AnimationClip, false }
+        : EditorPreviewPanel{ EditorAssetType{ AnimationClip::kAssetType }, false }
         , _bodyPrefabPath{}
         , _activePrefabPath{}
         , _spawnedPrefabPath{}

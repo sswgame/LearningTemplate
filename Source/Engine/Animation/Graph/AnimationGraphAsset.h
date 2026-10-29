@@ -206,7 +206,7 @@ namespace sw
     class SW_API AnimationGraphAsset
     {
     public:
-        /** @brief 애니메이션 그래프 파일의 접미사입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        /** @brief 애니메이션 그래프 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".animgraph.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

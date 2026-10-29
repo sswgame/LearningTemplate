@@ -36,7 +36,7 @@ namespace sw::editor
          * @param kind 이 패널이 다루는 애셋 종류입니다.
          * @param bLoadOnOpen true 이면 포커스가 없어도 첫 draw 에서 로드를 요청합니다. 기본 문서를 여는 용도입니다.
          */
-        explicit EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen );
+        explicit EditorDocumentPanel( const EditorAssetType& kind, bool bLoadOnOpen );
         /** @brief 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 표지를 비웁니다(백엔드 교체는 패널을 다시 만들어도 되돌리기 스택을 남긴다). */
         ~EditorDocumentPanel() override;
 

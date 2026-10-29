@@ -81,7 +81,7 @@ namespace sw::editor
         /** @brief 토큰 파일이 바뀌었다고 알립니다(핫 리로드 — 에셋 테이블의 처리기가 부른다). 다음 UI 프레임이 다시 읽는다. */
         void markTokensChanged() { _bTokensChanged = SW_TRUE; }
         /**
-         * @brief 핫 리로드가 바뀐 토큰 파일을 알릴 때 부릅니다(에셋 종류 테이블의 처리기). 활성 에디터의 테마에 표시를 남기고, 다음 UI 프레임이 모두 다시 읽고 적용합니다.
+         * @brief 핫 리로드가 바뀐 토큰 파일을 알릴 때 부릅니다(에셋 종류 등록의 처리기). 활성 에디터의 테마에 표시를 남기고, 다음 UI 프레임이 모두 다시 읽고 적용합니다.
          * @return 늘 true 입니다(처리했으니 엔진 캐시 리로드는 하지 않는다).
          */
         [[nodiscard]] static bool importChangedTokenFile( string_view relativePath );

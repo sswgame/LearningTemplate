@@ -11,14 +11,15 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/IEditorPopup.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw::editor
 {
     /** @brief 퀵 런처 검색 항목 */
     struct QuickLauncherItem
     {
-        EditorAssetType _kind{};   ///< 파일 항목의 애셋 종류. 게임 오브젝트 항목은 `Unknown`
-        string          _category; ///< 배지 문구 — 애셋 종류의 단수 이름(`EditorAssetTypeInfo::_pDisplayName`) 또는 "GameObject"
+        EditorAssetType _kind{};   ///< 파일 항목의 애셋 종류. 게임 오브젝트 항목은 알 수 없음(빈 값)
+        string          _category; ///< 배지 문구 — 애셋 종류의 단수 이름(`EditorAssetTypeRegistration::_pDisplayName`) 또는 "GameObject"
         string          _title;
         string          _detail;
         string          _path;

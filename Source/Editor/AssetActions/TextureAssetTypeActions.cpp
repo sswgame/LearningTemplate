@@ -3,10 +3,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
+
+#include "Engine/Graphics/Texture/Texture2D.h"
 
 #include <imgui.h>
 
@@ -27,8 +31,6 @@ namespace sw::editor
         class TextureAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetType getKind() const override { return EditorAssetType::Texture; }
-
             virtual bool hasImagePreview() const override { return true; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
@@ -77,6 +79,18 @@ namespace sw::editor
             }
         };
 
-        EditorAssetTypeActionsRegistrar<TextureAssetTypeActions> s_textureAssetTypeActionsRegistrar{};
+        const TextureAssetTypeActions s_textureActions{};
+
+        /** @brief 저작 원본 이미지의 확장자입니다. 엔진은 원본을 읽지 않으므로 엔진 정의에 없다 — 임포트하는 것이 리로드다. */
+        constexpr string_view kArrTextureSourceExt[] = { ".png", ".jpg", ".jpeg", ".tga", ".hdr", ".bmp" };
+
+        const EditorAssetMatchRule kArrTextureRule[] = {
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, kArrTextureSourceExt, SW_COUNT_OF( kArrTextureSourceExt ), EditorAssetMatchPriority::Suffix,
+                                            { "Texture", &TextureImporter::importChangedSourceImage, AssetImportThread::Worker } ),
+            EditorAssetMatchRule::engineType( Texture2D::kAssetType, { "Texture" } ),
+        };
     } // namespace
+
+    SW_EDITOR_ASSET_TYPE( Texture, Texture2D::kAssetType._name.data(), 300, "Texture", "Textures", nullptr, editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false, true, true,
+                          kArrTextureRule, SW_COUNT_OF( kArrTextureRule ), nullptr, &s_textureActions );
 } // namespace sw::editor

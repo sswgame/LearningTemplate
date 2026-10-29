@@ -12,15 +12,14 @@ namespace sw::editor
 {
     bool EditorAssetIndex::classifyFile( string_view filePath, EditorAssetIndexEntry& outEntry )
     {
-        const EditorAssetType      kind  = EditorAssetTypeRegistry::findKind( filePath );
-        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        const EditorAssetTypeRegistration* pInfo = EditorAssetTypeRegistry::findKindInfoForPath( filePath );
         if ( pInfo == nullptr )
             return false;
         const string assetID = AssetPaths::toAssetID( filePath );
         if ( assetID.empty() )
             return false;
 
-        outEntry._kind     = kind;
+        outEntry._kind     = pInfo->getType();
         outEntry._category = pInfo->_pDisplayName;
         outEntry._title    = FileUtil::getFileNamePart( filePath );
         outEntry._detail   = assetID;
@@ -53,13 +52,13 @@ namespace sw::editor
 
     void EditorAssetIndex::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
     {
-        uint32                           kindCount{ 0 };
-        const EditorAssetTypeInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( kindCount );
+        const uint32 kindCount = EditorAssetTypeRegistry::getKindCount();
         outCounts._listKindCount.clear();
         outCounts._listKindCount.reserve( kindCount );
         for ( uint32 index = 0; index < kindCount; ++index )
         {
-            outCounts._listKindCount.push_back( EditorResourceCatalogCount{ pInfo[index]._kind, pInfo[index]._pBrowserLabel, 0 } );
+            const EditorAssetTypeRegistration& registration = EditorAssetTypeRegistry::getKindAt( index );
+            outCounts._listKindCount.push_back( EditorResourceCatalogCount{ registration.getType(), registration._pBrowserLabel, 0 } );
         }
 
         for ( const string& filePath : listFilePath )

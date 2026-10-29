@@ -3,38 +3,15 @@
  * @brief 콘텐츠 브라우저의 에셋 파일 관리입니다. 새 폴더와 새 에셋, 이름 바꾸기와 옮기기(참조 고침), 복제, 임포트, 휴지통 삭제, 탐색기에서 보기를 맡습니다(ImGui 없음).
  */
 #pragma once
-#include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-
-namespace sw
-{
-    struct EngineDefaultAssets;
-
-    class DataPath;
-} // namespace sw
 
 namespace sw::editor
 {
     class EditorReferenceIndex;
 
-    /**
-     * @brief 콘텐츠 브라우저 Add 메뉴가 만드는 새 에셋 하나의 틀입니다.
-     * @details 종류를 더할 때는 `EditorAssetFileCommands.cpp` 의 `kArrNewAssetTemplate` 에 한 줄을 더합니다. Add 메뉴와 `createAsset` 이 그 테이블을 함께 읽습니다.
-     *          글은 `_pfnSourcePath`(베낄 엔진 기본 에셋 항목) 와 `_pText`(그대로 쓰는 글) 가운데 하나만 채웁니다.
-     */
-    struct EditorNewAssetTemplate
-    {
-        const utf8* _pID{ nullptr };     ///< 테이블 안에서 겹치지 않는 이름. Add 메뉴 표지는 `contentBrowser.add.<id>` 다
-        const utf8* _pLabel{ nullptr };  ///< Add 메뉴 라벨
-        const utf8* _pStem{ nullptr };   ///< 기본 이름 줄기(`new_material`)
-        const utf8* _pSuffix{ nullptr }; ///< 붙는 확장자(`.material`)
-        /** @brief 베낄 엔진 기본 에셋 항목을 고릅니다. 경로의 원본은 `enginedefaultassets.xml` 이다. 손으로 만든 글이 퍼뮤테이션 같은 항목을 빠뜨리기 쉬운 종류가 쓴다 */
-        const DataPath& ( *_pfnSourcePath )(const EngineDefaultAssets&){ nullptr };
-        const utf8* _pText{ nullptr };          ///< 그대로 쓰는 글
-        const utf8* _pNameAttribute{ nullptr }; ///< 베낀 글의 이름 속성 전체(`name="DefaultMaterial"`). 새 에셋은 `name="<줄기>"` 로 바꾼다. nullptr 이면 그대로 둔다
-    };
+    struct EditorNewAssetTemplate;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -61,9 +38,7 @@ namespace sw::editor
 
         /** @brief @p parentAbs 안에 `new_folder` 폴더를 만듭니다. */
         [[nodiscard]] static bool createFolder( string_view parentAbs, string& outFolderAbs );
-        /** @brief 새 에셋 틀의 표입니다. Add 메뉴는 이 순서대로 항목을 그립니다. */
-        static span<const EditorNewAssetTemplate> getNewAssetTemplateList();
-        /** @brief @p folderAbs 안에 @p assetTemplate 의 새 에셋(`<줄기><확장자>`, 겹치면 `_2` 부터)을 씁니다. */
+        /** @brief @p folderAbs 안에 @p assetTemplate(종류 등록의 틀, `EditorAssetTypeRegistry::collectNewAssetTemplates`)의 새 에셋(`<줄기><확장자>`, 겹치면 `_2` 부터)을 씁니다. */
         [[nodiscard]] static bool createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
         /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다(`.meta` 는 베끼지 않는다). */
         [[nodiscard]] static bool duplicateAsset( string_view sourceAbs, string& outAssetAbs );

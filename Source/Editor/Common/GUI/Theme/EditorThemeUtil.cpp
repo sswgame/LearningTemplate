@@ -264,6 +264,17 @@ namespace sw::editor
                 pColors[ImGuiCol_TableRowBg]        = EditorThemeInternal::toImVec4( config._tableRowBgAlt, 0.0f );
                 pColors[ImGuiCol_TableRowBgAlt]     = EditorThemeInternal::toImVec4( config._tableRowBgAlt );
             }
+
+            /** @brief 종류 등록의 아이콘입니다. 종류가 없으면 일반 파일 아이콘입니다. */
+            static const utf8* getIconOf( const EditorAssetTypeRegistration* pRegistration ) { return pRegistration != nullptr ? pRegistration->_pIcon : editoricon::kFile; }
+
+            /** @brief 종류 등록의 색입니다. 종류가 없으면 흐린 글자 색이고, 액센트 종류는 테마 액센트 색입니다. */
+            static Color getColorOf( const EditorAssetTypeRegistration* pRegistration )
+            {
+                if ( pRegistration == nullptr )
+                    return EditorThemeUtil::getTextMutedColor();
+                return pRegistration->_bAccentColor ? EditorThemeUtil::getAccentColor() : pRegistration->_color;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -676,32 +687,28 @@ namespace sw::editor
         return bOpened ? editoricon::kFolderOpen : editoricon::kFolder;
     }
 
-    const utf8* EditorThemeUtil::getAssetTypeIcon( EditorAssetType kind )
+    const utf8* EditorThemeUtil::getAssetTypeIcon( const EditorAssetType& kind )
     {
-        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
-        return pInfo != nullptr ? pInfo->_pIcon : editoricon::kFile;
+        return EditorThemeInternal::getIconOf( EditorAssetTypeRegistry::findKindInfo( kind ) );
     }
 
-    Color EditorThemeUtil::getAssetTypeColor( EditorAssetType kind )
+    Color EditorThemeUtil::getAssetTypeColor( const EditorAssetType& kind )
     {
-        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
-        if ( pInfo == nullptr )
-            return getTextMutedColor();
-        return pInfo->_bAccentColor ? getAccentColor() : pInfo->_color;
+        return EditorThemeInternal::getColorOf( EditorAssetTypeRegistry::findKindInfo( kind ) );
     }
 
     const utf8* EditorThemeUtil::getAssetIconForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return editoricon::kFolder;
-        return getAssetTypeIcon( EditorAssetTypeRegistry::findKind( path ) );
+        return EditorThemeInternal::getIconOf( EditorAssetTypeRegistry::findKindInfoForPath( path ) );
     }
 
     Color EditorThemeUtil::getAssetColorForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return getFolderColor();
-        return getAssetTypeColor( EditorAssetTypeRegistry::findKind( path ) );
+        return EditorThemeInternal::getColorOf( EditorAssetTypeRegistry::findKindInfoForPath( path ) );
     }
 
     void EditorThemeUtil::drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color& color, float32 sizeRatio )

@@ -24,6 +24,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -153,8 +154,8 @@ namespace sw::editor
             /** @brief 스프라이트 클립 문서가 아닌 이미지인지입니다. 그런 경로는 문서로 읽지 않고 아틀라스로 씁니다. */
             static bool isAtlasImagePath( string_view path )
             {
-                return EditorAssetTypeRegistry::matches( EditorAssetType::SpriteClip, path ) &&
-                       EditorAssetTypeRegistry::matches( EditorAssetType::Texture, path );
+                return EditorAssetTypeRegistry::matches( EditorAssetType{ SpriteClipAsset::kAssetType }, path ) &&
+                       EditorAssetTypeRegistry::matches( EditorAssetType{ Texture2D::kAssetType }, path );
             }
         };
     } // namespace

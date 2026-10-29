@@ -416,12 +416,12 @@ namespace sw::editor
 
     const utf8* UIPreviewPanel::getPanelTitle() const
     {
-        return EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument );
+        return EditorAssetTypeRegistry::getPanelTitle( EditorAssetType{ UIDocumentAsset::kAssetType } );
     }
 
     EditorAssetType UIPreviewPanel::getDocumentKind() const
     {
-        return EditorAssetType::UIDocument;
+        return EditorAssetType{ UIDocumentAsset::kAssetType };
     }
 
     void UIPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
@@ -479,7 +479,7 @@ namespace sw::editor
         // 콘텐츠 브라우저에서 `*.ui.xml` 을 두 번 누르면(`EditorAssetCommands::openPath`) 작업공간 포커스가 그 경로가 되고 이 패널이 열린다.
         if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastFocusKey, 0 ) == false )
             return;
-        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::UIDocument );
+        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ UIDocumentAsset::kAssetType } );
         if ( focused.empty() || _documentPath == focused )
             return;
         const string previous = _documentPath.get();

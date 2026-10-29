@@ -46,7 +46,7 @@ namespace sw::editor
                   addParam( MeshModifierParamDef{ "Texture", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1,
                                                  "Static texture used in place of the runtime render target" }
                                 .withLayout( "Texture", "Static texture that replaces the realtime render target for editor baking" )
-                                // 확장자 목록은 Editor/Common/Workspace/Asset/EditorAssetType.cpp 의 kArrTextureExt 와 같다.
+                                // 확장자 목록은 Editor/AssetActions/TextureAssetTypeActions.cpp 의 kArrTextureSourceExt 와 같다.
                                 .withAssetFilter( ".png,.jpg,.jpeg,.tga,.dds,.hdr,.bmp" ) )
         },
             _amountParam{ addParam( MeshModifierParamDef{ "Amount", MeshModifierParamKind::Float, -100.0f, 100.0f, float3{ 0.0f, 0.0f, 0.0f } }.withLayout( "Displace", "Distance moved along the normal per unit height", "m" ) ) },

@@ -12,6 +12,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -88,23 +89,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 새 씬의 글입니다. */
-            static constexpr const utf8* kSceneText = "<Scene formatVersion=\"2\" name=\"NewScene\">\n\t<SceneSettings _bStreaming=\"false\" _unloadMargin=\"0\" _maxCellLoadsPerFrame=\"0\"><_cellGrid _cellSize=\"0\" _loadingRadius=\"0\"/></SceneSettings><entities>\n\t</entities>\n</Scene>\n";
-            /** @brief 새 프리팹의 글입니다. */
-            static constexpr const utf8* kPrefabText = "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
-                                                       "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
-            /** @brief 새 머티리얼이 베끼는 엔진 기본 머티리얼 칸입니다. */
-            static const DataPath& selectDefaultMaterial( const EngineDefaultAssets& assets ) { return assets._defaultMaterial; }
-
-            /**
-             * @brief 새 에셋 틀의 표입니다. 한 줄이 Add 메뉴 항목 하나입니다.
-             * @details 머티리얼은 엔진 머티리얼을 베낀다(손으로 만든 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다).
-             */
-            static constexpr EditorNewAssetTemplate kArrNewAssetTemplate[] = {
-                {"material", "Material", "new_material",   ".material", &selectDefaultMaterial,     nullptr, "name=\"DefaultMaterial\""},
-                {   "scene",    "Scene",    "new_scene",  ".scene.xml",                nullptr,  kSceneText,                    nullptr},
-                {  "prefab",   "Prefab",   "new_prefab", ".prefab.xml",                nullptr, kPrefabText,                    nullptr},
-            };
             /** @brief `_2` 부터 세다 멈추는 상한입니다. */
             static constexpr uint32 kMaxUniqueSuffix = 10000;
 
@@ -196,11 +180,6 @@ namespace sw::editor
             return true;
         SW_LOG_ERROR( "Could not create the folder '%#'", outFolderAbs );
         return false;
-    }
-
-    span<const EditorNewAssetTemplate> EditorAssetFileCommands::getNewAssetTemplateList()
-    {
-        return EditorAssetFileCommandsInternal::kArrNewAssetTemplate;
     }
 
     bool EditorAssetFileCommands::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )

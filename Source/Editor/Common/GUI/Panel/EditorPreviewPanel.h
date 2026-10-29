@@ -74,7 +74,7 @@ namespace sw::editor
         [[nodiscard]] bool readDocumentIsProbeAsset( float64& outValue ) const;
 
     protected:
-        EditorPreviewPanel( EditorAssetType kind, bool bLoadOnOpen );
+        EditorPreviewPanel( const EditorAssetType& kind, bool bLoadOnOpen );
 
         /** @brief 씬의 틱 정책입니다. 기본은 틱만 돌리고 물리, 오디오, 플레이는 끕니다. */
         virtual ScenePreviewPolicy getPreviewPolicy() const;

@@ -20,6 +20,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -34,7 +36,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( SpriteClipPanel, SpriteClipPanel::kPanelID, EditorPanelCategory::Tool, 1600 );
 
     SpriteClipPanel::SpriteClipPanel()
-        : EditorDocumentPanel{ EditorAssetType::SpriteClip, false }
+        : EditorDocumentPanel{ EditorAssetType{ SpriteClipAsset::kAssetType }, false }
         , _atlasPath{}
         , _status{}
         , _listFrame{}
@@ -193,7 +195,7 @@ namespace sw::editor
 
     ToolAssetLoadResult SpriteClipPanel::loadDocument()
     {
-        if ( EditorAssetTypeRegistry::matches( EditorAssetType::Texture, getLoadedAssetPath().c_str() ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetType{ Texture2D::kAssetType }, getLoadedAssetPath().c_str() ) )
         {
             _atlasPath = getLoadedAssetPath().c_str();
             return ToolAssetLoadResult::Loaded;

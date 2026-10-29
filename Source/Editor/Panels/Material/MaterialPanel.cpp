@@ -293,7 +293,7 @@ namespace sw::editor
                          &MaterialPanelInternal::readPreviewSceneFrames );
 
     MaterialPanel::MaterialPanel()
-        : EditorPreviewPanel{ EditorAssetType::Material, false }
+        : EditorPreviewPanel{ EditorAssetType{ Material::kAssetType }, false }
         , _material{ Material::create() }
         , _name{}
         , _shaderPath{}

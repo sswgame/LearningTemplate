@@ -315,10 +315,10 @@ namespace sw::editor
         if ( editorContext.getSubsystem<EditorWorkspace>().consumeOpenPanel( request ) == false )
             return;
         const EditorPanelManager& panelManager = editorContext.getSubsystem<EditorPanelManager>();
-        IEditorPanel*             pPanel       = request._documentKind != EditorAssetType::Unknown ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
+        IEditorPanel*             pPanel       = request._documentKind.isUnknown() == false ? panelManager.findDocumentPanel( request._documentKind ) : panelManager.findPanelByID( request._panelID );
         if ( pPanel == nullptr )
         {
-            SW_LOG_ERROR( "Open panel request found no panel (id '%#', document kind %#)", request._panelID.c_str(), static_cast<uint32>( request._documentKind ) );
+            SW_LOG_ERROR( "Open panel request found no panel (id '%#', document kind '%#')", request._panelID.c_str(), request._documentKind.getID() );
             return;
         }
         pPanel->setOpen( true );

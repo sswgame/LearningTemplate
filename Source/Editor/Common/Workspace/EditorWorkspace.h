@@ -43,8 +43,8 @@ namespace sw::editor
     /** @brief 패널 열기 요청 하나입니다. 패널 id 와 문서 종류 중 하나만 채웁니다(`EditorWorkspace::requestOpenPanel<T>` · `requestOpenDocumentPanel`). */
     struct EditorPanelOpenRequest
     {
-        string          _panelID;                                  ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
-        EditorAssetType _documentKind{ EditorAssetType::Unknown }; ///< 이 종류의 문서를 여는 도구 패널
+        string          _panelID;        ///< 등록 id(`T::kPanelID`) 또는 실행 중에 들어온 id
+        EditorAssetType _documentKind{}; ///< 이 종류의 문서를 여는 도구 패널. 비면 id 로 연다
     };
 } // namespace sw::editor
 
@@ -114,7 +114,7 @@ namespace sw::editor
         /** @brief 실행 중에 들어온 id(콘솔 인자 · 패널 서비스)로 열기를 요청합니다. 코드가 아는 패널은 `requestOpenPanel<T>()` 를 씁니다. */
         void requestOpenPanelByID( string_view panelID );
         /** @brief 애셋 종류 @p kind 의 문서를 여는 도구 패널(`IEditorPanel::getDocumentKind`)을 열기를 요청합니다. */
-        void requestOpenDocumentPanel( EditorAssetType kind );
+        void requestOpenDocumentPanel( const EditorAssetType& kind );
         /** @brief 쌓인 요청을 꺼냅니다. 없으면 false 입니다. */
         [[nodiscard]] bool consumeOpenPanel( EditorPanelOpenRequest& outRequest );
 

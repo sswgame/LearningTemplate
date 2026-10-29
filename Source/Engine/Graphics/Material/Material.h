@@ -56,7 +56,7 @@ namespace sw
     class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
     {
     public:
-        /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 표(`EditorAssetType.cpp`)가 이 값을 씁니다. */
+        /** @brief 머티리얼 파일의 확장자입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".material";
         /** @brief 머티리얼 파일의 접미사입니다(쿠킹하지 않는다). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

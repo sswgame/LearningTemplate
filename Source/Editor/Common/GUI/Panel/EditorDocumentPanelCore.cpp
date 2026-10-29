@@ -11,7 +11,7 @@
 SW_LOG_CALLER( "EditorDocumentPanelCore" );
 namespace sw::editor
 {
-    EditorDocumentPanel::EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen )
+    EditorDocumentPanel::EditorDocumentPanel( const EditorAssetType& kind, bool bLoadOnOpen )
         : IEditorPanel{ false }
         , _kind{ kind }
         , _loadedAssetPath{}

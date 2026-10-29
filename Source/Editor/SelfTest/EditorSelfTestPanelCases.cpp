@@ -497,7 +497,7 @@ namespace sw::editor
             // 크기를 정하지 않은 도구 창은 내용 크기로 열려서 Data Table 은 높이가 100 px 가 되고, User Settings 는 값 입력란의 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
             // 자체 테스트는 레이아웃을 저장하거나 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 적용된다.
             // ------------------------------------------------------------------------------
-            // UI Preview 는 `.ui.xml` 에셋을 여는 패널이라(EditorAssetType::UIDocument) 기본 배치가 다른 에셋 패널처럼 가운데 영역에 도킹한다 — 여기 넣지 않는다.
+            // UI Preview 는 `.ui.xml` 에셋을 여는 패널이라(종류 `UIDocumentAsset`) 기본 배치가 다른 에셋 패널처럼 가운데 영역에 도킹한다 — 여기 넣지 않는다.
             static constexpr const utf8* kArrFloatingToolPanelID[] = { HistoryPanel::kPanelID, GlobalVariablesPanel::kPanelID, RenderTargetPanel::kPanelID,
                                                                        AnimationRewindPanel::kPanelID, DataTablePanel::kPanelID, InputMapPanel::kPanelID,
                                                                        UserSettingsPanel::kPanelID };

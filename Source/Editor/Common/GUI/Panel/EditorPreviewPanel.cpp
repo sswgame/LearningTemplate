@@ -39,7 +39,7 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorPreviewTickCount, "Editor.PreviewTickCount", "Ticks the scene manager gave all preview scenes (a hidden preview window adds none)",
                          &readPreviewTickCount );
 
-    EditorPreviewPanel::EditorPreviewPanel( EditorAssetType kind, bool bLoadOnOpen )
+    EditorPreviewPanel::EditorPreviewPanel( const EditorAssetType& kind, bool bLoadOnOpen )
         : EditorDocumentPanel{ kind, bLoadOnOpen }
         , _viewport{}
         , _commandStack{}

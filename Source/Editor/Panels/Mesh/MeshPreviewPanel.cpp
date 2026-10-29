@@ -100,7 +100,7 @@ namespace sw::editor
                          &MeshPreviewPanelInternal::readPreviewSceneFrames );
 
     MeshPreviewPanel::MeshPreviewPanel()
-        : EditorPreviewPanel{ EditorAssetType::Mesh, false }
+        : EditorPreviewPanel{ EditorAssetType{ MeshAssetFormat::kAssetType }, false }
         , _previewMeshPath{}
         , _status{}
         , _lodChoice{ MeshPreviewPanelInternal::kAutoLOD }

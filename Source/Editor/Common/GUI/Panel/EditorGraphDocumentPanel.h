@@ -55,7 +55,7 @@ namespace sw::editor
          * @param bindModuleCopy 패널 모듈의 사본에 편집기를 거는 함수입니다. nullptr 이면 안 된다.
          * @details 패널마다 다른 것은 이 두 문자열과 사본뿐이고, 절차는 같다.
          */
-        EditorGraphDocumentPanelBase( EditorAssetType kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
+        EditorGraphDocumentPanelBase( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey,
                                       NodeEditorBindFunction bindModuleCopy );
 
         /**
@@ -117,7 +117,7 @@ namespace sw::editor
         using LinkType = typename LinkList::value_type;
 
         /** @brief 인자는 `EditorGraphDocumentPanelBase` 와 같습니다. 패널 .cpp 가 `&ax::NodeEditor::SetCurrentEditor` 를 넘깁니다. */
-        EditorGraphDocumentPanel( EditorAssetType kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey, NodeEditorBindFunction bindModuleCopy )
+        EditorGraphDocumentPanel( const EditorAssetType& kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey, NodeEditorBindFunction bindModuleCopy )
             : EditorGraphDocumentPanelBase{ kind, pNodeMoveEditLabel, pNodeMoveCoalesceKey, bindModuleCopy }
             , _graph{}
         {

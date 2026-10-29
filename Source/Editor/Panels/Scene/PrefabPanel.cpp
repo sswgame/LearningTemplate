@@ -20,6 +20,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include <imgui.h>
 
@@ -70,7 +71,7 @@ namespace sw::editor
         uint64      objectID{ 0 };
         GameObject* pPrimary       = editor::getMainSceneSelection().getPrimaryObject();
         objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-        const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
+        const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ PrefabAsset::kAssetType } );
         if ( matching.empty() == false )
             pScanPath = matching.data();
         if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID ) )

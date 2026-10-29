@@ -17,6 +17,7 @@
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserTypeFilter.h"
 
 struct ImDrawList;
 
@@ -257,7 +258,7 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer256> _renameBuffer;
         uint64                                _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
         float32                               _tileSize;
-        uint32                                _filterIndex;
+        ContentBrowserTypeFilter              _typeFilter;             /**< 종류 필터 목록과 고른 필터. 종류 등록이 바뀌면 다시 만든다 */
         uint32                                _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
         uint32                                _lastFallbackGlyphCount; /**< 지난 그리기의 값. 프로브가 읽는다 */
         ViewMode                              _viewMode;

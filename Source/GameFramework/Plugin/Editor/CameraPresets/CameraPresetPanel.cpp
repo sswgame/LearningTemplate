@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -105,7 +106,7 @@ namespace sw::editor
                          &CameraPresetPanelInternal::readSelectedIndex );
 
     CameraPresetPanel::CameraPresetPanel()
-        : EditorPreviewPanel{ EditorAssetType::Data, false }
+        : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _catalog{}
         , _selectedIndex{ -1 }
         , _targetYawDegrees{ 0.0f }

@@ -164,17 +164,17 @@ namespace sw::editor
 
     void EditorWorkspace::requestOpenPanelByID( string_view panelID )
     {
-        _pendingOpenPanel = EditorPanelOpenRequest{ string{ panelID }, EditorAssetType::Unknown };
+        _pendingOpenPanel = EditorPanelOpenRequest{ string{ panelID }, EditorAssetType{} };
     }
 
-    void EditorWorkspace::requestOpenDocumentPanel( EditorAssetType kind )
+    void EditorWorkspace::requestOpenDocumentPanel( const EditorAssetType& kind )
     {
         _pendingOpenPanel = EditorPanelOpenRequest{ string{}, kind };
     }
 
     bool EditorWorkspace::consumeOpenPanel( EditorPanelOpenRequest& outRequest )
     {
-        if ( _pendingOpenPanel._panelID.empty() && _pendingOpenPanel._documentKind == EditorAssetType::Unknown )
+        if ( _pendingOpenPanel._panelID.empty() && _pendingOpenPanel._documentKind.isUnknown() )
             return false;
         outRequest        = std::move( _pendingOpenPanel );
         _pendingOpenPanel = EditorPanelOpenRequest{};

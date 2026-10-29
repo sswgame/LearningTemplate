@@ -93,7 +93,7 @@ namespace sw::editor
         UIPreviewPanel();
         ~UIPreviewPanel() override;
 
-        /** @brief 제목은 애셋 종류 테이블의 UIDocument 패널 제목입니다(경로로 여는 요청과 Assets 메뉴가 같은 테이블을 봅니다). */
+        /** @brief 제목은 애셋 종류 등록의 UIDocument 패널 제목입니다(경로로 여는 요청과 Assets 메뉴가 같은 등록을 봅니다). */
         const utf8*      getPanelTitle() const override;
         EditorDockSlot   getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         EditorAssetType  getDocumentKind() const override;

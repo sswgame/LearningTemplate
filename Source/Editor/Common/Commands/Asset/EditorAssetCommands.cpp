@@ -33,16 +33,16 @@ namespace sw::editor
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-        // 전용 도구 패널을 먼저 찾는다(종류 테이블에 패널 제목이 있는 종류). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
+        // 전용 도구 패널을 먼저 찾는다(종류 등록에 패널 제목이 있는 종류). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
         const EditorAssetType panelKind = EditorAssetTypeRegistry::findPanelKindForPath( relativePath );
-        if ( panelKind != EditorAssetType::Unknown )
+        if ( panelKind.isUnknown() == false )
         {
             editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( string{ relativePath }.c_str() );
             editorContext.getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( panelKind );
             return true;
         }
 
-        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( relativePath );
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( relativePath );
         return pActions != nullptr && pActions->open( relativePath );
     }
 
@@ -72,7 +72,7 @@ namespace sw::editor
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
 
-        if ( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == false )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetType{ PrefabAsset::kAssetType }, pPath ) == false )
         {
             SW_LOG_TRACE( "Not a prefab path: %#", pPath );
             return nullptr;
@@ -165,7 +165,7 @@ namespace sw::editor
             return;
 
         // 스폰과 로드는 종류의 동작(프리팹, 텍스처, 씬)이 한다. 처리하지 않은 것은 연다.
-        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
+        const IEditorAssetTypeActions* pActions = EditorAssetTypeRegistry::findActionsForPath( pPath );
         if ( pActions != nullptr && pActions->dropInViewport( pManager, pPath, spawnPos ) )
             return;
         (void)openPath( pPath ); // 실패는 openPath 가 알린다
