@@ -8,6 +8,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ContentFolderWatchService.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/Net/NetLineEmulation.h"
@@ -33,6 +34,7 @@ namespace sw
     DevToolsHost::DevToolsHost()
         : _pEngine{ nullptr }
         , _pConsole{}
+        , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
     {
     }
 
@@ -138,6 +140,7 @@ namespace sw
 #endif
         if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
             pConfigReload->update();
+        _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
             return 0;

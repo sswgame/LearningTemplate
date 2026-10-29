@@ -50,10 +50,6 @@ endif()
 # 링크도 여기서만 한다 — Engine.dll 은 libssl · libcrypto 를 모른다. Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와
 # Base/Online/Security/NetSecurity.h 만 본다. x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
 target_link_libraries(GameFramework PRIVATE openssl)
-# 개발 감시(외형 데이터 다시 읽기 — `AppearanceDataWatcher`)는 개발 도구 단위의 파일 감시 분배기를 쓴다. 배포 빌드는 그 파일을 짓지 않는다.
-if(NOT SW_SHIPPING_BUILD)
-	target_link_libraries(GameFramework PRIVATE DevTools)
-endif()
 
 add_subdirectory(Kits)
 

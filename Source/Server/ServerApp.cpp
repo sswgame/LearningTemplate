@@ -7,6 +7,7 @@
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
+    #include "DevTools/AssetReload/ContentFolderWatchService.h"
     #include "DevTools/DevToolsHost.h"
     #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
@@ -231,6 +232,10 @@ namespace sw
             _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
         }
         _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
+        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
+        const bool bFolderWatchBound = _host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
+        SW_ASSERT( bFolderWatchBound );
+        (void)bFolderWatchBound;
 #endif
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )

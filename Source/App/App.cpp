@@ -21,6 +21,7 @@
     #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #endif
 #if !defined( SW_SHIPPING )
+    #include "DevTools/AssetReload/ContentFolderWatchService.h"
     #include "DevTools/DevToolsHost.h"
 #endif
 #include "Engine/Foundation/EngineServices.h"
@@ -282,6 +283,10 @@ namespace sw
             _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
         }
         _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
+        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
+        const bool bFolderWatchBound = _host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
+        SW_ASSERT( bFolderWatchBound );
+        (void)bFolderWatchBound;
 #endif
         const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
         SW_ASSERT( bStateStoreBound );
