@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -70,6 +71,32 @@ namespace sw
 namespace sw
 {
     /**
+     * @class ShaderCookStampCache
+     * @brief 쿠킹 한 번이 `bin/<rhi>/cook.stamp` 를 폴더마다 한 번만 읽게 하는 읽기 캐시입니다. 쿠킹을 도는 쪽(`ShaderCookDriver` 의 쿠킹 상태)이 값으로 듭니다.
+     * @details 여러 스레드가 함께 써도 됩니다(안에서 잠근다). 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다 — 캐시가 쓸모 있는 기간이 쿠킹 한 번이라
+     *          그 쿠킹이 든다(언리얼 쿡 커맨드렛이 쿡 한 번의 상태를 `UCookOnTheFlyServer` 에 두는 자리). 내용은 `ShaderCookStamp.cpp` 에만 있다.
+     */
+    class SW_API ShaderCookStampCache
+    {
+    public:
+        struct State; ///< 폴더별 스탬프 해석 결과와 잠금(정의는 ShaderCookStamp.cpp)
+
+        ShaderCookStampCache();
+        ~ShaderCookStampCache();
+        ShaderCookStampCache( const ShaderCookStampCache& )            = delete;
+        ShaderCookStampCache& operator=( const ShaderCookStampCache& ) = delete;
+
+        /** @brief 내용입니다. `ShaderCooker` 의 스탬프 함수만 씁니다. */
+        State& getState() { return *_pState; }
+
+    private:
+        unique_ptr<State> _pState;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct ShaderCooker
      * @brief HLSL 소스를 타깃 백엔드(DXIL, SPIR-V, DXBC) 바이너리로 미리 컴파일(쿠킹)하는 엔진 유틸리티입니다.
      */
@@ -114,10 +141,11 @@ namespace sw
          * @return 스탬프를 썼으면 true 입니다. 도메인 설정이 틀렸거나 가려진 헤더가 있거나 헤더를 읽지 못하거나 shaders 폴더 밖이거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
          * @details 루트와 우선순위를 전역(`AssetPaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
          *          실제 `Content/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
-         *          스탬프를 쓰면 그 폴더의 스탬프 읽기 캐시를 버린다.
+         *          스탬프를 쓰면 @p stampCache 를 비운다(다음 판정이 새 스탬프를 읽는다).
          */
         [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
-                                                  const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile );
+                                                  const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
+                                                  ShaderCookStampCache& stampCache );
 
         /** @brief @p absShaderPath 가 든 소스 폴더(`…/shaders`)입니다. `shaders` 폴더 밖이면 빈 글입니다. 스탬프 키 · 쿠킹 출력의 기준이다. */
         static string findShadersDirectory( string_view absShaderPath );
@@ -229,11 +257,13 @@ namespace sw
          * @brief 쿠킹된 산출물이 지금 소스에서 나온 것인지 `bin/<rhi>/cook.stamp` 의 내용 해시로 확인합니다.
          * @param binDirectory 스탬프가 있는 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)입니다.
          * @param absShaderPath 원본 `.hlsl` 의 절대 경로입니다.
+         * @param stampCache 이 쿠킹의 스탬프 읽기 캐시입니다(폴더마다 한 번 읽는다).
          * @param pOutListIncludedFile 최신이면 그 소스의 스탬프에 적힌 헤더(절대 경로)를 담습니다(선택). 최신이 아니면 비웁니다. 컴파일을 건너뛴 요청의 몫을 `writeCookStamp` 에 넘길 때 씁니다.
          * @details 최신이려면 소스 해시가 같고 **스탬프에 적힌 이 소스의 헤더가 모두 지금도 같은 내용**이어야 한다. 이 소스가 열지 않은 헤더는 보지 않는다.
          *          헤더가 없어졌거나 읽지 못하면 낡음이다. 옛 판의 스탬프도 낡음이다.
          */
-        static bool isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath, vector<string>* pOutListIncludedFile = nullptr );
+        static bool isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath,
+                                           ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile = nullptr );
 
         /**
          * @brief 도메인(`engine` · `common` · `game/<팩>`)마다 쿠킹 스테이징(@p cookedDir)의 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
@@ -249,7 +279,7 @@ namespace sw
         static void verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem );
 
         /**
-         * @brief 스탬프 읽기 결과와 파일 내용 해시 캐시(`ContentHash`)를 버려, 다음 조회가 다시 읽게 합니다.
+         * @brief 파일 내용 해시 캐시(`ContentHash`)를 버려, 다음 조회가 다시 읽게 합니다(스탬프 읽기 캐시는 쿠킹마다의 값 `ShaderCookStampCache` 다).
          * @details 이름은 헤더 해시를 따로 캐시하던 때의 것이다. 지금은 헤더를 열 때마다 내용 해시를 보므로(크기 · 쓰기 시각이 같으면 캐시) 실행 중 `.hlsli` 를 고치면 다음 조회가 스스로 알아챈다.
          *          그래도 수동 리로드와 쿠킹 직후는 "전부 다시 본다" 는 약속이라 부른다 — 같은 시각에 같은 크기로 다시 쓴 파일(테스트)을 놓치지 않는다.
          */

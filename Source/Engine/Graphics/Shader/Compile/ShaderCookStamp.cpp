@@ -16,7 +16,6 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -28,6 +27,48 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 #include <algorithm>
+
+namespace sw
+{
+    /**
+     * @struct ShaderCookStampCache::State
+     * @brief `bin/<rhi>` 폴더별 스탬프 읽기 결과와 잠금입니다. 스탬프 글만 담는다 — 헤더 파일의 지금 상태는 담지 않고 부를 때마다 본다.
+     */
+    struct ShaderCookStampCache::State
+    {
+        /** @brief 소스 하나의 의존 줄입니다 — 연 헤더의 키(대소문자 그대로)와 그 내용 해시. */
+        struct Dependency
+        {
+            string _headerKey;
+            uint64 _hash{ 0 };
+        };
+
+        /** @brief `cook.stamp` 한 개를 읽은 결과입니다. */
+        struct Info
+        {
+            /// @brief 첫 줄이 지금 판(`kCookStampHeader`)인가. 아니면 아래는 모두 비어 있다.
+            bool _bVersionKnown{ false };
+            /// @brief 도구 지문 줄이 있었는가.
+            bool _bHasToolchain{ false };
+            /// @brief 도구 지문 줄의 값입니다.
+            uint64 _toolchain{ 0 };
+            /// @brief 소스 키(소문자 상대 경로)에서 그 소스의 내용 해시를 찾는 맵입니다.
+            unordered_map<string, uint64> _mapSourceHash;
+            /// @brief 소스 키에서 그 소스가 연 헤더와 내용 해시를 찾는 맵입니다. 헤더를 열지 않은 소스는 항목이 없다.
+            unordered_map<string, vector<Dependency>> _mapDependency;
+        };
+
+        mutex                       _mutex;
+        unordered_map<string, Info> _mapStamp; ///< `_mutex` 를 잡고 쓴다(값을 참조로 돌려주는 `readCookStamp` 때문에 잠금 분석 주석을 달 수 없다)
+    };
+
+    ShaderCookStampCache::ShaderCookStampCache()
+        : _pState{ make_unique<State>() }
+    {
+    }
+
+    ShaderCookStampCache::~ShaderCookStampCache() = default;
+} // namespace sw
 
 namespace sw
 {
@@ -107,27 +148,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 소스 하나의 의존 줄입니다 — 연 헤더의 키(대소문자 그대로)와 그 내용 해시. */
-            struct StampDependency
-            {
-                string _headerKey;
-                uint64 _hash{ 0 };
-            };
-
-            /** @brief `cook.stamp` 한 개를 읽은 결과입니다. */
-            struct StampInfo
-            {
-                /// @brief 첫 줄이 지금 판(`kCookStampHeader`)인가. 아니면 아래는 모두 비어 있다.
-                bool _bVersionKnown{ false };
-                /// @brief 도구 지문 줄이 있었는가.
-                bool _bHasToolchain{ false };
-                /// @brief 도구 지문 줄의 값입니다.
-                uint64 _toolchain{ 0 };
-                /// @brief 소스 키(소문자 상대 경로)에서 그 소스의 내용 해시를 찾는 맵입니다.
-                unordered_map<string, uint64> _mapSourceHash;
-                /// @brief 소스 키에서 그 소스가 연 헤더와 내용 해시를 찾는 맵입니다. 헤더를 열지 않은 소스는 항목이 없다.
-                unordered_map<string, vector<StampDependency>> _mapDependency;
-            };
+            using StampDependency = ShaderCookStampCache::State::Dependency;
+            using StampInfo       = ShaderCookStampCache::State::Info;
 
             /** @brief 스탬프 글을 해석합니다. 첫 줄이 지금 판이 아니면 `_bVersionKnown` 이 false 인 빈 결과입니다. 판정은 호출자가 한다(도구 지문 비교 등). */
             static StampInfo parseCookStamp( string_view text )
@@ -171,33 +193,17 @@ namespace sw
                 return info;
             }
 
-            /** @struct StampCache @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시와 잠금입니다. 쿠킹 루프가 요청마다 부릅니다. 스탬프 글만 담는다 — 헤더 파일의 지금 상태는 담지 않고 부를 때마다 본다. */
-            struct StampCache
-            {
-                mutex                            _mutex;
-                unordered_map<string, StampInfo> _mapStamp; ///< `_mutex` 를 잡고 쓴다(값을 참조로 돌려주는 `readCookStamp` 때문에 잠금 분석 주석을 달 수 없다)
-            };
-            /** @brief 캐시의 저장소입니다 — 엔진 수명 범위가 소유한다(함수 밖 정적 맵을 두지 않는다, `LogOnce` · 메시 캐시와 같다). */
-            inline static ScopeOwned<StampCache> s_stampCache{};
-            /** @brief 캐시를 돌려줍니다(처음 부를 때 만든다). */
-            static StampCache& getStampCache()
-            {
-                StampCache* const pCache = s_stampCache.getOrCreate();
-                SW_ASSERT( pCache != nullptr ); // 엔진 수명 범위가 닫힌 뒤에는 쿠킹하지 않는다
-                return *pCache;
-            }
-
             /**
              * @brief `bin/<rhi>/cook.stamp` 를 읽어 해석합니다(폴더당 한 번 읽고 캐시합니다).
              * @details 스탬프 판이나 도구 지문이 다르면 **빈 결과**를 반환한다. 그러면 모든 것이 낡은 것으로 판정되어
              *          한 번 전부 다시 쿠킹한다. 버전을 올리는 것이 곧 강제 재쿠킹이다.
-             * @warning 참조를 반환하므로 **`StampCache::_mutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
+             * @warning 참조를 반환하므로 **@p cache 의 `_mutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
              *          일어나면 앞서 반환한 참조가 무효가 됩니다.
              */
-            static const StampInfo& readCookStamp( const string& binDirectory )
+            static const StampInfo& readCookStamp( ShaderCookStampCache::State& cache, const string& binDirectory )
             {
-                const auto cached = getStampCache()._mapStamp.find( binDirectory );
-                if ( cached != getStampCache()._mapStamp.end() )
+                const auto cached = cache._mapStamp.find( binDirectory );
+                if ( cached != cache._mapStamp.end() )
                     return cached->second;
 
                 StampInfo    info{};
@@ -212,7 +218,7 @@ namespace sw
                 if ( bUsable == false )
                     info = StampInfo{};
 
-                return getStampCache()._mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
+                return cache._mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
             }
 
             /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
@@ -394,9 +400,11 @@ namespace sw
              * @param sourceShadersDir 소스 폴더(`<리소스 루트>/<domain>/shaders`) — 스탬프 키가 이 폴더 기준이다
              * @param binDirectory 매니페스트를 쓴 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)
              * @param mapIncludedFile 소스(정규화한 절대 경로)별 연 헤더(절대 경로). 여기 없는 소스는 헤더에 기대지 않는 것으로 적는다.
+             * @param stampCache 이 쿠킹의 스탬프 읽기 캐시 — 쓴 뒤 비워 다음 조회가 새 스탬프를 읽게 한다.
              */
             [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
-                                                      const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile )
+                                                      const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
+                                                      ShaderCookStampCache::State& stampCache )
             {
                 const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
                 const string shadersDir = FileUtil::normalizeSeparators( sourceShadersDir );
@@ -481,8 +489,8 @@ namespace sw
                 }
                 {
                     // 방금 쓴 스탬프를 다음 조회가 읽게 한다(읽기 캐시에 옛 글이 남아 있으면 갓 쿠킹한 산출물이 낡음으로 보인다).
-                    ScopedLock<mutex> lock{ getStampCache()._mutex };
-                    getStampCache()._mapStamp.clear();
+                    ScopedLock<mutex> lock{ stampCache._mutex };
+                    stampCache._mapStamp.clear();
                 }
                 return true;
             }
@@ -715,9 +723,10 @@ namespace sw
     }
 
     bool ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
-                                       const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile )
+                                       const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
+                                       ShaderCookStampCache& stampCache )
     {
-        return ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile );
+        return ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile, stampCache.getState() );
     }
 
     string ShaderCooker::findShadersDirectory( string_view absShaderPath )
@@ -753,9 +762,7 @@ namespace sw
 
     void ShaderCooker::invalidateSharedHeaderCache()
     {
-        ScopedLock<mutex> lock{ ShaderCookStampInternal::getStampCache()._mutex };
-        ShaderCookStampInternal::getStampCache()._mapStamp.clear();
-        // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
+        // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 버린다. 스탬프 읽기 캐시는 쿠킹마다의 값이라 여기서 버릴 것이 없다.
         ContentHash::clearCache();
     }
 
@@ -842,7 +849,8 @@ namespace sw
         return ShaderCookStampInternal::computeToolchainFingerprint();
     }
 
-    bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath, vector<string>* pOutListIncludedFile )
+    bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath,
+                                              ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile )
     {
         using Internal = ShaderCookStampInternal;
         if ( pOutListIncludedFile != nullptr )
@@ -868,9 +876,10 @@ namespace sw
         uint64                            stampedSourceHash{ 0 };
         vector<Internal::StampDependency> listDependency;
         {
-            ScopedLock<mutex> lock{ Internal::getStampCache()._mutex };
+            ShaderCookStampCache::State& cache = stampCache.getState();
+            ScopedLock<mutex>            lock{ cache._mutex };
 
-            const Internal::StampInfo& stamp = Internal::readCookStamp( rhiDir );
+            const Internal::StampInfo& stamp = Internal::readCookStamp( cache, rhiDir );
             const auto                 iter  = stamp._mapSourceHash.find( stampKey );
             if ( iter == stamp._mapSourceHash.end() )
                 return false;

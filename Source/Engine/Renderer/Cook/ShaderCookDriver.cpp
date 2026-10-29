@@ -65,6 +65,8 @@ namespace sw
                  *        압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
                  */
                 unordered_map<string, ShaderReflectionLibrary::EntryMap> _mapManifest;
+                /** @brief 이 쿠킹의 스탬프 읽기 캐시입니다. 병렬 구간의 최신 판정이 함께 쓴다(안에서 잠근다 — 그래서 const 상태 안에서도 쓸 수 있다). */
+                mutable ShaderCookStampCache _stampCache;
             };
 
             /** @brief 요청 하나를 포맷 하나로 쿠킹하는 작업의 입력입니다. 계획 단계(직렬)가 채우고, 병렬 구간에서는 읽기만 합니다. */
@@ -95,7 +97,7 @@ namespace sw
 
             /**
              * @brief 병렬로 도는 쿠킹 한 번의 입력과 본문입니다. 병렬 단위는 **사슬**(같은 바이너리 파일을 만드는 작업의 묶음)이라 두 스레드가 한 파일을 쓰지 않습니다.
-             * @details 컴파일러(DXC · FXC) · `ContentHash` · `isCookedOutputCurrent`(전역 잠금) · `ShaderReflection::reflect` · `ShaderBindingValidator::validate` 가 스레드 안전해야 하고,
+             * @details 컴파일러(DXC · FXC) · `ContentHash` · `isCookedOutputCurrent`(쿠킹 상태의 스탬프 캐시 잠금) · `ShaderReflection::reflect` · `ShaderBindingValidator::validate` 가 스레드 안전해야 하고,
              *          그 확인은 각 함수의 주석에 있다.
              */
             struct CookJob
@@ -133,7 +135,8 @@ namespace sw
                     // **파일 시간이 아니라 내용 해시로 판정한다.** `git pull` 은 소스의 mtime 을 체크아웃 시각으로 덮어써
                     // "산출물이 더 새것" 이 거꾸로 나올 수 있다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내 백엔드 버그처럼 보인다.
                     const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) &&
-                                           ShaderCooker::isCookedOutputCurrent( _pState->_resourceRoot, _pState->_listPriority, task._outDir, task._normPath, &outResult._listIncludedFile );
+                                           ShaderCooker::isCookedOutputCurrent( _pState->_resourceRoot, _pState->_listPriority, task._outDir, task._normPath, _pState->_stampCache,
+                                                                                &outResult._listIncludedFile );
                     if ( bUpToDate == false )
                     {
                         outResult._listIncludedFile.clear();
@@ -354,7 +357,8 @@ namespace sw
                     }
                     const string& sourceShadersDir = ioState._mapSourceShadersDirByOutDir[manifestPair.first];
                     if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, sourceShadersDir, manifestPair.first,
-                                                       ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile ) == false )
+                                                       ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile,
+                                                       ioState._stampCache ) == false )
                     {
                         SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;
