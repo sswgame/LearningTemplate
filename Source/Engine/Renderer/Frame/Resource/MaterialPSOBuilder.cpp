@@ -2,9 +2,7 @@
 
 #include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"
 
-#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/ScopedLock.h"
-#include "Core/Concurrency/ThreadName.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -26,10 +24,11 @@ namespace sw
         }
         if ( bThread == false )
             return;
-        if ( _thread.joinable() == false )
-            _thread = sw::thread( &MaterialPSOBuilder::run, this );
-        _wakeWord.fetch_add( 1, std::memory_order_acq_rel );
-        Futex::wakeOne( _wakeWord );
+        if ( _worker.isRunning() == false )
+            _worker.start( "MaterialPSOBuilder", DedicatedWorker<uint8>::ProcessDelegate::create<&MaterialPSOBuilder::buildOneOnWorker>( this ) );
+        // 작업 하나에 신호 하나다. 그 사이 `buildOnCaller` 가 먼저 꺼내 갔으면 신호는 할 일 없이 끝난다.
+        [[maybe_unused]] const bool bAccepted = _worker.submit( uint8{ 0 } );
+        SW_ASSERT( bAccepted ); // 방금 띄웠거나 돌고 있다 — `shutdown` 과 같은 스레드(렌더 스레드)가 부른다
     }
 
     bool MaterialPSOBuilder::popJob( Job& outJob, IRHIDevice*& outDevice )
@@ -52,22 +51,16 @@ namespace sw
         --_inFlight;
     }
 
-    void MaterialPSOBuilder::run( StopToken stopToken )
+    void MaterialPSOBuilder::buildOneOnWorker( [[maybe_unused]] uint8& signal, const bool bStopping )
     {
-        ThreadName::setCurrentThreadName( "MaterialPSOBuilder" );
-        while ( stopToken.isStopRequested() == false )
-        {
-            const uint32 seenWake = _wakeWord.load( std::memory_order_acquire );
-            Job          job;
-            IRHIDevice*  pDevice{ nullptr };
-            if ( popJob( job, pDevice ) == false )
-            {
-                Futex::wait( _wakeWord, seenWake ); // 그 사이 넣었으면 워드가 바뀌어 바로 돌아온다
-                continue;
-            }
-            const RHIPipelineStateHandle handle = pDevice->getResourceFactory()->createPipelineState( job._desc );
-            pushResult( std::move( job ), handle );
-        }
+        if ( bStopping )
+            return;
+        Job         job;
+        IRHIDevice* pDevice{ nullptr };
+        if ( popJob( job, pDevice ) == false )
+            return;
+        const RHIPipelineStateHandle handle = pDevice->getResourceFactory()->createPipelineState( job._desc );
+        pushResult( std::move( job ), handle );
     }
 
     void MaterialPSOBuilder::takeResults( vector<Result>& outListResult )
@@ -103,13 +96,8 @@ namespace sw
 
     void MaterialPSOBuilder::shutdown( IRHIDevice* pDevice )
     {
-        if ( _thread.joinable() )
-        {
-            _thread.request_stop();
-            _wakeWord.fetch_add( 1, std::memory_order_acq_rel );
-            Futex::wakeAll( _wakeWord );
-            _thread.join();
-        }
+        // 남은 신호는 멈춤으로 처리되어 만들지 않고, 만드는 중인 작업은 끝까지 간다(디바이스가 아직 살아 있다).
+        _worker.stop();
         vector<Result> listResult;
         {
             ScopedLock<mutex> lock{ _mutex };

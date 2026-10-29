@@ -6,15 +6,16 @@
  *          **스레드는 하나입니다.** PSO 병렬 생성은 드라이버가 직렬이라 이득 9 % 로 기각됐고, 이 빌더는 빨리 만들려는 것이 아니라 렌더 스레드의 임계 경로에서 빼려는 것입니다.
  *          스레드를 쓸 수 없는 백엔드(GL, `RHICapabilities::_bThreadSafeResourceCreation` 이 거짓)나 `-gv_psoAsync=0` 은 렌더 스레드가 같은 줄을 시간 예산 안에서 직접 만듭니다
  *          (`buildOnCaller`) — 폴백이 아니라 같은 `Building` 상태 규칙을 다른 방식으로 채웁니다.
- *          언리얼의 PSO 비동기 컴파일 스레드와 같은 모양입니다.
+ *          언리얼의 PSO 비동기 컴파일 스레드와 같은 모양입니다. 스레드는 집의 전용 스레드 큐(`DedicatedWorker`)이고, 줄(급한 줄 · 미리 만들기 줄)은
+ *          `buildOnCaller` 와 나눠 쓰므로 여기 둔다 — 전용 스레드에는 "하나 꺼내 만들어라" 신호만 넣는다. TaskManager 워커에 두지 않는 이유: 드라이버가
+ *          직렬이라 생성 하나가 워커를 수 ms 막는다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Task/DedicatedWorker.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -45,7 +46,7 @@ namespace sw
         };
 
         MaterialPSOBuilder() = default;
-        /** @brief 스레드를 세우고 합류합니다(남은 결과의 PSO 는 버립니다 — 디바이스가 살아 있다면 먼저 `shutdown` 을 부릅니다). */
+        /** @brief 전용 스레드를 멈추고 합류합니다(남은 결과의 PSO 는 버립니다 — 디바이스가 살아 있다면 먼저 `shutdown` 을 부릅니다). */
         ~MaterialPSOBuilder();
 
         MaterialPSOBuilder( const MaterialPSOBuilder& )            = delete;
@@ -74,7 +75,8 @@ namespace sw
         void shutdown( IRHIDevice* pDevice );
 
     private:
-        void run( StopToken stopToken );
+        /** @brief 전용 스레드의 처리 함수입니다. 신호 하나에 줄의 작업 하나를 만든다(멈추는 중이면 만들지 않는다 — `shutdown` 이 줄을 버린다). */
+        void buildOneOnWorker( uint8& signal, bool bStopping );
         /** @brief 급한 줄 먼저 하나 꺼냅니다. 없으면 false 입니다. 꺼낸 작업은 만드는 중으로 셉니다(`_inFlight`). */
         bool popJob( Job& outJob, IRHIDevice*& outDevice );
         void pushResult( Job&& job, RHIPipelineStateHandle handle );
@@ -85,7 +87,7 @@ namespace sw
         vector<Result> _listResult;
         IRHIDevice*    _pDevice{ nullptr };
         uint32         _inFlight{ 0 };
-        atomic<uint32> _wakeWord{ 0 };
-        sw::thread     _thread;
+        /** @brief 빌더 스레드입니다. 일은 신호(값은 쓰지 않는다)이고 작업 자체는 위 줄에서 급한 것부터 꺼낸다. 처음 넣을 때 띄운다. */
+        DedicatedWorker<uint8> _worker;
     };
 } // namespace sw
