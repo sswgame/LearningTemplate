@@ -45,6 +45,7 @@ namespace sw
         };
         thread_local LogReentryDepth t_reentryDepth{};
 
+#if SW_WITH_DYNAMIC_MODULES
         /**
          * @struct GlobalLogListenerUnloadListener
          * @brief 전역 로그 리스너(`Logger::registerGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
@@ -64,6 +65,7 @@ namespace sw
         };
 
         GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;
+#endif
 
         /**
          * @brief 스레드마다 둔 날짜 문자열 캐시입니다. 같은 초 안의 줄은 달력 변환(`WallClock::toLocalCalendar`) · 포맷을 다시 하지 않습니다.
@@ -308,6 +310,7 @@ namespace sw
         waitForRetiredBroadcasts( retiredSlot );
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     uint32 AsyncLogSink::removeListenerCodeWithin( const void* pBegin, const void* pEnd )
     {
         // 모듈을 내리기 직전에 불린다. 다른 스레드의 방송이 그 모듈 코드 안에 있는 채로 이미지를 내리면 안 된다 — 끝날 때까지 기다린다.
@@ -322,6 +325,7 @@ namespace sw
         waitForRetiredBroadcasts( retiredSlot );
         return releasedCount;
     }
+#endif
 
     uint32 AsyncLogSink::retireBroadcastSlot()
     {

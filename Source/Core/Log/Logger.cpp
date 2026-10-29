@@ -315,6 +315,7 @@ namespace sw
         return pSink->registerLogWrittenListener( listener );
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     uint32 Logger::releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
@@ -323,6 +324,7 @@ namespace sw
 
         return pSink->removeListenerCodeWithin( pBegin, pEnd );
     }
+#endif
 
     void Logger::registerGlobalSink( ILogSink* pSink )
     {

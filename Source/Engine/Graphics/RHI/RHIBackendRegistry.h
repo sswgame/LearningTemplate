@@ -9,9 +9,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Module/DynamicModules.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/RHIBackendType.h"

@@ -60,8 +60,10 @@ namespace sw
         void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 이 싱크가 소유한 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`_mutex`). */
         Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
+#if SW_WITH_DYNAMIC_MODULES // 모듈 코드 범위의 리스너 떼기 — 배포 빌드는 모듈을 내리지 않는다
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 뗍니다. */
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
+#endif
 
         /**
          * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 바로 `open` 합니다.

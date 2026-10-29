@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Defines.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -65,8 +66,10 @@ namespace sw
          * @details 감싸는 싱크는 감싼 싱크의 구독을 그대로 돌려줍니다. 리스너를 받지 않는 싱크는 빈 구독을 돌려줍니다.
          */
         [[nodiscard]] virtual Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
+#if SW_WITH_DYNAMIC_MODULES // 모듈 코드 범위의 리스너 떼기 — 배포 빌드는 모듈을 내리지 않는다
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다(핫 리로드가 모듈을 언로드하기 전에 부릅니다). */
         virtual uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
+#endif
         /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
         virtual string_view getLogFolderPath() = 0;
         /**
@@ -139,8 +142,10 @@ namespace sw
          *          2 초 뒤 stderr 경고로 풀린다. 리스너 콜백 안에서 푸는 것은 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
          */
         [[nodiscard]] static Subscription registerGlobalListener( const LogWrittenDelegate& listener );
+#if SW_WITH_DYNAMIC_MODULES // 모듈 코드 범위의 리스너 떼기 — 배포 빌드는 모듈을 내리지 않는다
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
+#endif
         /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */
         static ILogSink* getGlobalSink();
 

@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -24,6 +25,7 @@ namespace sw
      */
     struct SW_API RegistrationReloadScope
     {
+#if SW_WITH_DYNAMIC_MODULES
         RegistrationReloadScope();
         ~RegistrationReloadScope();
         RegistrationReloadScope( const RegistrationReloadScope& )            = delete;
@@ -31,6 +33,10 @@ namespace sw
 
         /** @brief 교체 이미지를 올리는 중이면 true 입니다. */
         static bool isActive();
+#else
+        /** @brief 배포 빌드는 모듈을 바꿔 올리지 않는다 — 늘 false 라 목록의 대체 · 그림자 분기가 컴파일에서 빠진다. */
+        static constexpr bool isActive() { return false; }
+#endif
     };
 } // namespace sw
 

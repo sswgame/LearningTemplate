@@ -10,8 +10,10 @@ namespace sw
 {
     namespace
     {
+#if SW_WITH_DYNAMIC_MODULES
         /** @brief 교체 이미지를 올리는 중첩 깊이입니다. 게임 스레드에서만 만지므로 원자일 필요가 없다. */
         int32 s_reloadScopeDepth = 0;
+#endif
 
         /**
          * @struct RegistrationListChain
@@ -72,6 +74,7 @@ namespace sw
         }
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     RegistrationReloadScope::RegistrationReloadScope()
     {
         ++s_reloadScopeDepth;
@@ -86,6 +89,7 @@ namespace sw
     {
         return s_reloadScopeDepth > 0;
     }
+#endif
 
     RegistrationListBase::RegistrationListBase( const utf8* pListName )
         : _pListName{ pListName }
