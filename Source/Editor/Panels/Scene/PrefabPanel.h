@@ -1,17 +1,14 @@
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Panels/Scene/Model/PrefabOverridesModel.h"
 
 namespace sw::editor
 {
     /**
      * @brief 프리팹 인스턴스의 오버라이드를 살펴보고 되돌리거나 적용하며, 중첩 프리팹을 보여 주는 도구입니다.
+     * @details 상태와 명령은 `PrefabOverridesModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 프리팹 창 열기만 한다.
      */
     class PrefabPanel : public IEditorPanel
     {
@@ -35,13 +32,6 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 87.0f, 25.0f ); }
 
     private:
-        void scanPrefabOverrides( const utf8* pPrefabPath );
-
-        string                     _selectedPrefabPath;
-        string                     _selectedInstanceName;
-        string                     _lastScanKey;
-        vector<PrefabOverrideItem> _listOverride;
-        vector<string>             _listNestedPrefab;
-        bool                       _bShowOnlyModified;
+        PrefabOverridesModel _model;
     };
 } // namespace sw::editor

@@ -3,24 +3,19 @@
 #include "Editor/Panels/Scene/PrefabPanel.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Prefab/PrefabEditorPanel.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include <imgui.h>
 
@@ -31,59 +26,33 @@ namespace sw::editor
         struct PrefabPanelInternal
         {
             static constexpr Color kIsolationText{ 1.0f, 0.75f, 0.2f, 1.0f };
-
-            /** @brief 오버라이드를 볼 프리팹 인스턴스 — 메인 씬에 놓인 인스턴스다(언리얼 레벨의 프리팹 · 블루프린트 인스턴스 패널처럼 레벨 선택). */
-            static GameObject* getPrefabTargetInstance()
-            {
-                return editor::getMainSceneSelection().getPrimaryObject();
-            }
         };
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "PrefabTool" );
     SW_EDITOR_PANEL( PrefabPanel, PrefabPanel::kPanelID, EditorPanelCategory::Tool, 1400 );
 
     // 도구 패널이지만 열린 채 시작한다 — 기본 도킹이 가운데 탭(Scene · Game 옆)에 붙여 떠 있는 창으로 화면을 덮지 않는다(`EditorDockLayout::applyDefaultDockLayout`).
     PrefabPanel::PrefabPanel()
-        : _selectedPrefabPath{}
-        , _selectedInstanceName{}
-        , _lastScanKey{}
-        , _listOverride{}
-        , _listNestedPrefab{}
-        , _bShowOnlyModified{ true }
+        : _model{}
     {
-        scanPrefabOverrides( nullptr );
-    }
-
-    void PrefabPanel::scanPrefabOverrides( const utf8* pPrefabPath )
-    {
-        const string_view path = ( pPrefabPath != nullptr ) ? string_view{ pPrefabPath } : string_view{};
-        EditorToolAssetCommands::collectPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), path, _selectedPrefabPath,
-                                                         _selectedInstanceName, _listOverride, _listNestedPrefab );
     }
 
     void PrefabPanel::drawContent()
     {
-        const utf8* pScanPath{ nullptr };
-        uint64      objectID{ 0 };
-        GameObject* pPrimary       = editor::getMainSceneSelection().getPrimaryObject();
-        objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-        const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ PrefabAsset::kAssetType } );
-        if ( matching.empty() == false )
-            pScanPath = matching.data();
-        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID ) )
-            scanPrefabOverrides( pScanPath );
+        _model.refreshIfFocusChanged();
+        const string& prefabPath   = _model.getPrefabPath();
+        const string& instanceName = _model.getInstanceName();
 
         EditorThemeUtil::textInfo( "Prefab Asset:" );
         ImGui::SameLine();
-        ImGui::Text( "%s", _selectedPrefabPath.empty() ? "(none)" : _selectedPrefabPath.c_str() );
+        ImGui::Text( "%s", prefabPath.empty() ? "(none)" : prefabPath.c_str() );
 
         EditorThemeUtil::textInfo( "Active Instance:" );
         ImGui::SameLine();
-        ImGui::Text( "%s", _selectedInstanceName.empty() ? "(none)" : _selectedInstanceName.c_str() );
+        ImGui::Text( "%s", instanceName.empty() ? "(none)" : instanceName.c_str() );
 
         PrefabEditorPanel* pWindow = PrefabEditorPanel::findIsolatingWindow(); // 프리팹 창이 열려 문서를 격리 중이면 그 창
         if ( pWindow != nullptr )
@@ -97,10 +66,10 @@ namespace sw::editor
                 (void)pWindow->exitIsolation( false );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
         }
-        else if ( _selectedPrefabPath.empty() == false )
+        else if ( prefabPath.empty() == false )
         {
             if ( ImGui::Button( "Open Prefab Window" ) )
-                (void)PrefabEditorPanel::openWindow( _selectedPrefabPath ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
+                (void)PrefabEditorPanel::openWindow( prefabPath ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "OpenPrefabIsolation" ) );
         }
 
@@ -120,24 +89,12 @@ namespace sw::editor
         }
 
         if ( ImGui::Button( "Apply All Overrides to Template" ) )
-        {
-            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), AssetID{ _selectedPrefabPath } ) )
-                SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
-            else
-                SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
-            scanPrefabOverrides( _selectedPrefabPath.c_str() );
-        }
+            _model.applyAllToTemplate();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ApplyAllOverrides" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All Overrides" ) );
         if ( ImGui::Button( "Revert All Overrides" ) )
-        {
-            if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
-                SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
-            else
-                SW_LOG_ERROR( "Could not revert overrides on %s", _selectedInstanceName.c_str() );
-            scanPrefabOverrides( _selectedPrefabPath.c_str() );
-        }
+            _model.revertAll();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertAllOverrides" ) );
 
         if ( bEditsAllowed == false )
@@ -146,22 +103,23 @@ namespace sw::editor
 
     void PrefabPanel::drawNestedPrefabSection()
     {
+        const vector<string>& listNestedPrefab = _model.getNestedPrefabs();
         if ( ImGui::CollapsingHeader( "Nested Prefabs & Sub-Assets", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            for ( size_t prefabIndex = 0; prefabIndex < _listNestedPrefab.size(); ++prefabIndex )
+            for ( size_t prefabIndex = 0; prefabIndex < listNestedPrefab.size(); ++prefabIndex )
             {
                 ImGui::PushID( static_cast<int32>( prefabIndex ) );
-                ImGui::BulletText( "[Nested] %s", _listNestedPrefab[prefabIndex].c_str() );
+                ImGui::BulletText( "[Nested] %s", listNestedPrefab[prefabIndex].c_str() );
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Edit" ) );
                 if ( ImGui::SmallButton( "Edit" ) )
                 {
                     // 창이 이 프리팹을 열고 있으면 그 안에서 중첩 부분만 보이게 하고, 아니면 중첩 프리팹을 창의 문서로 연다.
                     PrefabEditorPanel* pNestedWindow          = PrefabEditorPanel::findIsolatingWindow();
-                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolation().getPrefabPath(), _selectedPrefabPath );
+                    const bool         bWindowShowsThisPrefab = pNestedWindow != nullptr && FileUtil::pathsEqualNormalized( pNestedWindow->getIsolation().getPrefabPath(), _model.getPrefabPath() );
                     if ( bWindowShowsThisPrefab )
-                        pNestedWindow->requestNestedIsolation( _listNestedPrefab[prefabIndex] );
+                        pNestedWindow->requestNestedIsolation( listNestedPrefab[prefabIndex] );
                     else
-                        (void)PrefabEditorPanel::openWindow( _listNestedPrefab[prefabIndex] ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
+                        (void)PrefabEditorPanel::openWindow( listNestedPrefab[prefabIndex] ); // 창이 없거나 플레이 중이면 열리지 않는다 — 버튼이 아무 일도 하지 않을 뿐이다
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "EditNestedPrefab" ) );
                 ImGui::PopID();
@@ -170,11 +128,11 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        ImGui::Checkbox( "Show Modified Properties Only", &_bShowOnlyModified );
+        ImGui::Checkbox( "Show Modified Properties Only", &_model.editShowOnlyModified() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ShowModifiedOnly" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh Overrides" ) );
         if ( ImGui::SmallButton( "Refresh Overrides" ) )
-            scanPrefabOverrides( _selectedPrefabPath.c_str() );
+            _model.rescan();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RefreshOverrides" ) );
     }
 
@@ -189,10 +147,11 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableHeadersRow();
 
-            for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )
+            const vector<PrefabOverrideItem>& listOverride = _model.getOverrides();
+            for ( size_t overrideIndex = 0; overrideIndex < listOverride.size(); ++overrideIndex )
             {
-                PrefabOverrideItem& item = _listOverride[overrideIndex];
-                if ( _bShowOnlyModified && item._bModified == false )
+                const PrefabOverrideItem& item = listOverride[overrideIndex];
+                if ( _model.isVisible( item ) == false )
                     continue;
 
                 ImGui::TableNextRow();
@@ -225,14 +184,14 @@ namespace sw::editor
                 if ( item._bModified )
                 {
                     ImGui::PushID( static_cast<int32>( overrideIndex ) );
-                    if ( ImGui::SmallButton( "Revert" ) )
-                    {
-                        EditorToolAssetCommands::revertPrefabOverride( PrefabPanelInternal::getPrefabTargetInstance(), item, _selectedPrefabPath );
-                        SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
-                        scanPrefabOverrides( _selectedPrefabPath.c_str() );
-                    }
+                    const bool bRevert = ImGui::SmallButton( "Revert" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertOverride" ) );
                     ImGui::PopID();
+                    if ( bRevert )
+                    {
+                        _model.revertOverride( overrideIndex ); // 목록을 다시 훑어 item 이 무효가 된다 — 이 프레임의 표는 여기서 끝낸다
+                        break;
+                    }
                 }
             }
 
