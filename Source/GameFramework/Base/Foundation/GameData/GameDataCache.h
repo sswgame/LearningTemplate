@@ -1,11 +1,11 @@
 /**
  * @file GameDataCache.h
- * @brief 게임 데이터 테이블(상호작용 테이블, 원소 규칙 테이블)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 등록하는 목록을 정의합니다.
+ * @brief 게임 데이터 테이블(상호작용 테이블, 원소 규칙 테이블)의 캐시와, 캐시 하나를 가진 모듈 서브시스템(`GameDataCacheSubsystem`)을 정의합니다.
  * @details 표는 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓴다.
- *          캐시는 GameFramework 모듈의 객체이고 엔진 수명 범위(`ScopeOwned`)가 소유한다 — 엔진 종료 때나 모듈이 내려갈 때 사라진다.
- *          게임 서비스가 묶이면(`game::bindGameService`, 서비스에 `AssetManager` 가 있을 때) 레지스트리에 오르고, 풀리면(`unbindGameService`) 내려간다.
+ *          캐시는 GameFramework 의 모듈 서브시스템이 소유한다(`SW_MODULE_SUBSYSTEM( Engine, … )` — 엔진 범위 아래 GameFramework 의 자식 범위). 서브시스템이 서면
+ *          엔진의 에셋 캐시 레지스트리에 오르고(`AssetManager::registerAssetCache`) 종료가 내린다 — 엔진 기동 단계가 내려가거나 모듈이 내려갈 때 함께 사라진다.
  *          그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽을 수 있고(`reload`), 종료할 때의 비우기와 진단도 엔진 캐시와 같은 길을 탄다.
- *          모듈이 해제하지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 정리한다.
+ *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이 캐시 · 목록을 들고 게임 서비스 묶기가 레지스트리를 맞췄다(언리얼 `UEngineSubsystem` 이 데이터 레지스트리를 갖는 자리).
  *
  *          다시 읽은 테이블은 **새 객체**로 항목을 바꾸고, 옛 객체는 캐시가 사라질 때까지 살려 둔다.
  *          표 안의 정의를 날 포인터로 든 컴포넌트가 그 프레임에 옛 것을 읽어도 죽은 메모리를 밟지 않게 하려는 것이다.
@@ -18,12 +18,14 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/FileSystem/AssetID.h"
@@ -32,22 +34,17 @@
 
 namespace sw
 {
-    class AssetManager;
-
     /**
-     * @struct GameDataCacheRegistry
-     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 등록한 에셋 매니저입니다. 캐시가 생기거나 서비스가 바인딩되고 해제될 때 레지스트리를 맞춥니다.
+     * @struct GameDataCacheRegistration
+     * @brief 데이터 캐시를 엔진의 에셋 캐시 레지스트리에 올리는 한 곳입니다(`GameDataCacheSubsystem` 의 기동이 부른다 — 템플릿이 에셋 매니저 헤더를 끌지 않게 .cpp 에 둔다).
      */
-    struct SW_GF_API GameDataCacheRegistry
+    struct SW_GF_API GameDataCacheRegistration
     {
-        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr). 캐시 생성자가 부릅니다. */
-        static void registerCache( IAssetCache* pCache, AssetCacheReloadFunction pReload );
-        /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다. 프로세스 끝에는 매니저가 이미 사라졌을 수 있으므로 매니저는 건드리지 않습니다. */
-        static void unregisterCache( const IAssetCache* pCache );
-        /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 등록합니다. 앞서 바인딩된 매니저가 있으면 거기서 먼저 해제합니다. nullptr 이면 해제만 합니다. */
-        static void attach( AssetManager* pAssetManager );
-        /** @brief 묶인 매니저의 레지스트리에서 목록의 캐시를 내립니다. */
-        static void detach() { attach( nullptr ); }
+        /**
+         * @brief @p cache 를 에셋 매니저의 레지스트리에 올리고 그 등록을 @p outRegistration 에 담습니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr).
+         * @return 에셋 매니저가 없으면 오류를 남기고 false 입니다(올릴 곳 없이 서지 않는다).
+         */
+        [[nodiscard]] static bool registerWithAssetManager( IAssetCache& cache, AssetCacheReloadFunction pReload, Subscription& outRegistration );
     };
 } // namespace sw
 
@@ -65,17 +62,16 @@ namespace sw
     public:
         /** @param pKindName 레지스트리의 종류 이름입니다. 정적 문자열이며, 에디터 핫 리로드 경로 표가 이 이름으로 찾습니다. */
         explicit GameDataCache( const utf8* pKindName )
-            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 엔진 수명 범위가 소유해 다시 만들어질 수 있다 — 같은 이름의 칸을 이어 쓴다
+            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 모듈 서브시스템이 소유해 엔진을 다시 세우면 다시 만들어진다 — 같은 이름의 칸을 이어 쓴다
             , _pKindName{ pKindName }
             , _mutex{}
             , _mapTable{}
             , _listRetired{}
             , _reloadCount{ 0 }
         {
-            GameDataCacheRegistry::registerCache( this, SW_ASSET_CACHE_RELOAD_FUNCTION( GameDataCache<TableType> ) );
         }
 
-        ~GameDataCache() override { GameDataCacheRegistry::unregisterCache( this ); }
+        ~GameDataCache() override = default;
 
         GameDataCache( const GameDataCache& )            = delete;
         GameDataCache& operator=( const GameDataCache& ) = delete;
@@ -191,5 +187,42 @@ namespace sw
 
         vector<RetiredTable> _listRetired SW_GUARDED_BY( _mutex );
         atomic<uint32>                    _reloadCount;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class GameDataCacheSubsystem
+     * @brief 데이터 캐시 하나를 가진 모듈 서브시스템의 바탕입니다. 기동이 캐시를 에셋 캐시 레지스트리에 올리고 종료가 내립니다.
+     * @tparam TableType 캐시가 보관하는 데이터 표 타입입니다.
+     * @details 표마다 `.cpp` 에서 상속해 이름(`kSubsystemName` · `getSubsystemName`)을 적고 `SW_MODULE_SUBSYSTEM( Engine, 그 타입, 그 타입 )` 으로 등록한다.
+     *          쓰는 쪽(컴포넌트)은 `game::getSubsystem<그 타입>().getCache()` 로 찾는다.
+     */
+    template <typename TableType>
+    class GameDataCacheSubsystem : public ISubsystem
+    {
+    public:
+        /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
+        explicit GameDataCacheSubsystem( const utf8* pKindName )
+            : _cache{ pKindName }
+            , _registration{}
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            const bool bRegistered = GameDataCacheRegistration::registerWithAssetManager( _cache, SW_ASSET_CACHE_RELOAD_FUNCTION( GameDataCache<TableType> ), _registration );
+            return bRegistered ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        /** @brief 레지스트리에서 내립니다. 표는 서브시스템이 사라질 때 함께 사라진다(정의를 날 포인터로 든 컴포넌트는 그 전에 내려간다). */
+        void shutdownSubsystem() override { _registration.reset(); }
+
+        /** @brief 경로마다 한 번 읽어서 공유하는 캐시입니다. */
+        GameDataCache<TableType>& getCache() { return _cache; }
+
+    private:
+        GameDataCache<TableType> _cache;
+        Subscription             _registration; ///< 에셋 캐시 레지스트리 등록(캐시보다 먼저 풀린다 — 나중에 선언)
     };
 } // namespace sw

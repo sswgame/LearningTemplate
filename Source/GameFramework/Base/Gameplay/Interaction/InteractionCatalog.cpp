@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -110,21 +110,31 @@ namespace sw
             }
         };
 
-        /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
-        struct InteractionCatalogCacheHolder
+        /**
+         * @class InteractionCatalogCache
+         * @brief 경로마다 한 번 읽어서 공유하는 상호작용 카탈로그 캐시입니다 — GameFramework 의 모듈 서브시스템(엔진 범위)이 소유하고 에셋 캐시 레지스트리에 올린다.
+         */
+        class InteractionCatalogCache final : public GameDataCacheSubsystem<InteractionCatalog>
         {
-            GameDataCache<InteractionCatalog> _cache{ "InteractionCatalog" };
+        public:
+            static constexpr const utf8* kSubsystemName = "InteractionCatalogCache";
+
+            InteractionCatalogCache()
+                : GameDataCacheSubsystem<InteractionCatalog>{ "InteractionCatalog" }
+            {
+            }
+
+            const utf8* getSubsystemName() const override { return kSubsystemName; }
         };
 
-        /** @brief 공유 카탈로그 캐시의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때(또는 이 모듈이 내려갈 때) 사라지고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
-        ScopeOwned<InteractionCatalogCacheHolder> s_sharedCatalogCache;
-
-        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. */
+        /** @brief 공유 카탈로그 캐시입니다. 모듈 서브시스템이 서기 전 · 내려간 뒤의 접근은 결함이라 멈춘다 — 카탈로그를 읽을 엔진이 없다. */
         GameDataCache<InteractionCatalog>& getSharedCatalogCache()
         {
-            return s_sharedCatalogCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 카탈로그를 읽을 엔진이 없다
+            return game::getSubsystem<InteractionCatalogCache>().getCache();
         }
     } // namespace
+
+    SW_MODULE_SUBSYSTEM( Engine, InteractionCatalogCache, InteractionCatalogCache );
 } // namespace sw
 
 namespace sw

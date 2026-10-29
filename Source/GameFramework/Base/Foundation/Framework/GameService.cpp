@@ -2,10 +2,8 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineScope.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataCache.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 SW_LOG_CALLER( "GameService" );
@@ -27,14 +25,12 @@ namespace sw
     {
         SW_GAMESERVICE_API void bindGameService( const ISubsystemLocator& hostServices )
         {
+            // 데이터 표 캐시(상호작용 · 원소 규칙)는 GameFramework 의 모듈 서브시스템이 서며 에셋 캐시 레지스트리에 스스로 오른다(`GameDataCacheSubsystem`).
             s_gameServiceState._pHostServices = &hostServices;
-            // 데이터 표 캐시(상호작용 · 원소 규칙)를 호스트의 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 비우기 · 진단이 그 레지스트리를 훑는다.
-            GameDataCacheRegistry::attach( findSubsystem<AssetManager>() );
         }
 
         SW_GAMESERVICE_API void unbindGameService()
         {
-            GameDataCacheRegistry::detach();
             s_gameServiceState._pHostServices = nullptr;
         }
 
