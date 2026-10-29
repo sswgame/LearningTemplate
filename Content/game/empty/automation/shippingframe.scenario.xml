@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty 게임 시나리오 — 첫 씬을 고정 틱으로 30 프레임 돌린 그림을 남긴다. 배포본(Shipping)의 그림 비교가 이 그림을 골든과 견준다
+  (AppSmokeTest.ShippingSceneMatchesGoldenImage, 골든은 Test/AppTest/Golden/shippingframe_<백엔드>.ppm.z — SW_UPDATE_GOLDEN=1 로 뜬다).
+  배포본에는 벤치 스위치 · 개발 명령이 없으므로 구운 팩의 첫 씬과 시나리오 실행기만 쓴다. 다른 구성에서는 게임 팩 시나리오로 돌며 밝기 하한만 본다.
+  실행: ctest -R Scenario.game.empty.shippingframe   (산출물: Bin/Saved/Automation/game.empty.shippingframe/)
+-->
+<Scenario name="game.empty.shippingframe" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Wait frames="30"/>
+	<Screenshot file="shippingframe.ppm"/>
+	<Wait frames="1"/>
+	<ExpectImage file="shippingframe.ppm" golden="shippingframe"/>
+	<Pass/>
+</Scenario>

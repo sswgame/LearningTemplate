@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디더 등장 — 순간이동한 메시(_bAppearOnTeleport)가 4 초 동안 0 → 1 로 나타나고, 남은 픽셀 비율이 등장 비율을 따라 단조롭게 는다.
+  무대(maps/rendertest3d)의 DitherCube 를 제자리로 순간이동해 등장을 다시 시작하고, 0 · 1/4 · 1/2 · 3/4 지점을 찍는다. 등장 비율은 고정 프레임 시간으로 정해진다
+  (순간이동한 다음 씬 프레임부터 프레임마다 1/240). 1/4 배수는 4x4 Bayer 문턱((k + 0.5) / 16)의 한가운데라 한두 프레임 어긋나도 남는 픽셀 수가 같다.
+  지표는 등장 0 사진과의 평균 차(differentFrom, 상자 영역) — 남은 픽셀 비율을 따라 오른다. 단계마다 겹치지 않는 구간(near)을 둬 단조 증가를 단언한다.
+  실행: ctest -R Scenario.game.empty.ditherappear
+        (ctest 가 <Launch> 를 명령줄로 옮긴다. Shipping 은 개발 명령이 없어 건너뛴다)
+-->
+<Scenario name="game.empty.ditherappear" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Wait frames="40"/>
+	<Screenshot file="dither_full.ppm"/>
+
+	<!-- 프레임 60 에 옮기면 프레임 61 부터 오른다. 프레임 N 에 요청한 사진은 프레임 N+1 의 그림이라 등장 비율은 (N + 1 - 60) / 240 이다. -->
+	<Wait frames="20"/>
+	<DevCommand line="teleport DitherCube 0 1 0"/>
+	<Screenshot file="dither_0.ppm" waitForSettle="false"/>
+	<Wait frames="59"/>
+	<Screenshot file="dither_25.ppm" waitForSettle="false"/>
+	<Wait frames="60"/>
+	<Screenshot file="dither_50.ppm" waitForSettle="false"/>
+	<Wait frames="60"/>
+	<Screenshot file="dither_75.ppm" waitForSettle="false"/>
+	<Wait frames="111"/>
+	<Screenshot file="dither_end.ppm"/>
+
+	<Wait frames="1"/>
+	<ExpectImage file="dither_end.ppm" golden="dither_end" region="0.35,0.2,0.65,0.7"/>
+	<ExpectImage file="dither_25.ppm" golden="dither_25" region="0.35,0.2,0.65,0.7"/>
+	<ExpectImage file="dither_50.ppm" golden="dither_50" region="0.35,0.2,0.65,0.7"/>
+	<ExpectImage file="dither_75.ppm" golden="dither_75" region="0.35,0.2,0.65,0.7"/>
+	<ExpectImage file="dither_end.ppm" golden="dither_end_2"/>
+	<Pass/>
+</Scenario>

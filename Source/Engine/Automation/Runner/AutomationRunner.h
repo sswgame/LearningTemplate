@@ -133,8 +133,8 @@ namespace sw
         AutomationOutcome         getResult() const { return _result; }
         const AutomationScenario& getScenario() const { return _scenario; }
         const vector<string>&     getFailures() const { return _judge.getFailures(); }
-        /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
-        const vector<string>& getUnconfirmed() const { return _judge.getUnconfirmed(); }
+        /** @brief `-scenario-update-golden` 으로 이 실행이 쓴 골든(리소스 id)입니다. */
+        const vector<string>& getUpdatedGoldens() const { return _judge.getUpdatedGoldens(); }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _judge.getUnhandledLogs(); }
         const string&         getFinishReason() const { return _finishReason; }

@@ -112,7 +112,7 @@ namespace sw
         if ( params._pTimeline != nullptr )
             writeAutomationTimeline( writer, *params._pTimeline );
         writeAutomationReportList( writer, "failures", params._pListFailure );
-        writeAutomationReportList( writer, "unconfirmed", params._pListUnconfirmed );
+        writeAutomationReportList( writer, "updatedGoldens", params._pListUpdatedGolden );
         writeAutomationReportList( writer, "unhandledLogs", params._pListUnhandledLog );
         writeAutomationReportList( writer, "allowedLogs", params._pListAllowedLog );
         writeAutomationReportList( writer, "metrics", params._pListMetric );

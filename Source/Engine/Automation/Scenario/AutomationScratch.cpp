@@ -2,6 +2,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
@@ -12,6 +13,7 @@
 
 #include "Engine/Asset/AssetMeta.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -77,6 +79,12 @@ namespace sw
 
                 const bool bScratch = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
                 if ( StringUtil::startsWith( target, root ) == false || bScratch )
+                    return true;
+                // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/` 에 쓴다 — 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다.
+                bool bUpdateGolden = false;
+                if ( engine::areEngineServicesBound() )
+                    (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
+                if ( bUpdateGolden && target.find( "/automation/golden/" ) != string::npos )
                     return true;
                 outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
                 return false;

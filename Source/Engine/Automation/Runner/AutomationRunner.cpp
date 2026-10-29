@@ -10,6 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
@@ -19,7 +20,6 @@
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
-#include "Engine/Automation/Runner/AutomationThresholdBasis.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
@@ -47,6 +47,15 @@ namespace sw
     {
         struct AutomationRunnerInternal
         {
+            /**
+             * @brief 이 실행의 산출물 폴더(`Saved/Automation/<시나리오>/<프로세스>`)입니다 — 사진 · 녹화가 여기 쌓인다.
+             * @details 프로세스마다 다르다. 예전에는 시나리오 이름만이라 다음 실행 · 나란히 도는 실행(백엔드 넷)이 같은 사진을 덮어써 판정이 다른 실행의 그림을 읽었다.
+             */
+            static string makeOutputDirectory( string_view scenarioName )
+            {
+                return string( kAutomationOutputFolder ) + "/" + string( scenarioName ) + "/" + to_string( Process::getCurrentProcessID() );
+            }
+
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
             [[nodiscard]] static float64 readNowSeconds() { return static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6; }
 
@@ -133,7 +142,7 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return;
         }
-        _outputDirectory = string( kAutomationOutputFolder ) + "/" + _scenario.getName();
+        _outputDirectory = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
         if ( skipIfStepsAreMissingFromThisBuild() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
@@ -153,7 +162,7 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return false;
         }
-        _outputDirectory  = string( kAutomationOutputFolder ) + "/" + _scenario.getName();
+        _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
         const bool bReady = skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
         if ( bReady )
             startHangWatchdog();
@@ -322,12 +331,17 @@ namespace sw
                                                _run._exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
             if ( bExitDeadlineExceeded )
                 finish( AutomationOutcome::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
-            // 끝난 프레임은 세지 않는다. 보고의 프레임은 끝낸 단계의 프레임이다. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
-            if ( _result == AutomationOutcome::Running && _run._holdFrameCount == 0 )
-                ++_run._frameIndex;
+            // 단계 시점(`_frameIndex`)은 `WaitUntil` 이 붙잡은 프레임에 서 있다(뒤 단계가 그만큼 밀린다). 시한은 붙잡힌 프레임까지 모두 센 `_elapsedFrameCount` 로 본다 —
+            // 예전에는 붙잡힌 프레임을 세지 않아 조건이 끝내 서지 않는 시나리오를 프레임 시한이 잡지 못하고 벽시계 그물만 잡았다.
+            if ( _result == AutomationOutcome::Running )
+            {
+                ++_run._elapsedFrameCount;
+                if ( _run._holdFrameCount == 0 )
+                    ++_run._frameIndex;
+            }
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝내므로 벽시계 그물만 본다.
             const bool bFrameTimeoutReached = _result == AutomationOutcome::Running && _run._exitDeadlineSeconds <= 0.0 && _run._loadDeadlineSeconds <= 0.0 &&
-                                              _run._frameIndex > _scenario.getTimeoutFrames();
+                                              _run._elapsedFrameCount > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
                 finish( AutomationOutcome::TimedOut, "timeoutFrames reached without <Pass/>" );
             const bool bLoadDeadlineExceeded = _result == AutomationOutcome::Running && _run._loadDeadlineSeconds > 0.0 &&
@@ -683,16 +697,9 @@ namespace sw
         // 시작한 시나리오는 결과와 상관없이 로그 게이트를 지난다 — 시작하지 못한 실행은 허용 목록도 로그 수집도 준비되지 않았다.
         if ( _bStarted == SW_TRUE )
             _judge.applyLogGate( _result, _finishReason );
-        if ( _result == AutomationOutcome::Passed && _judge.getUnconfirmed().empty() == false )
-            _result = AutomationOutcome::Unconfirmed;
         if ( _result == AutomationOutcome::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _run._frameIndex );
-        }
-        else if ( _result == AutomationOutcome::Unconfirmed )
-        {
-            SW_LOG_INFO( "[Scenario] UNCONFIRMED %# (%# frame(s)): every assertion held, but %# threshold(s) are provisional - move the measured values into measured=\"...\"",
-                         _scenario.getName().c_str(), _run._frameIndex, static_cast<uint32>( _judge.getUnconfirmed().size() ) );
         }
         else if ( _result == AutomationOutcome::Skipped )
         {
@@ -714,17 +721,17 @@ namespace sw
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
         SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getAutomationOutcomeName( _result ), _run._frameIndex );
         AutomationReportParams report{};
-        report._scenarioName      = _scenario.getName();
-        report._pResultName       = getAutomationOutcomeName( _result );
-        report._exitCode          = getAutomationExitCode( _result );
-        report._frameCount        = _run._frameIndex;
-        report._reason            = _finishReason;
-        report._pListFailure      = &_judge.getFailures();
-        report._pListUnconfirmed  = &_judge.getUnconfirmed();
-        report._pListUnhandledLog = &_judge.getUnhandledLogs();
-        report._pListAllowedLog   = &_judge.getAllowedLogIDs();
-        report._pListMetric       = &_judge.getMetricLines();
-        report._pListRecord       = &_judge.getRecordLines();
+        report._scenarioName       = _scenario.getName();
+        report._pResultName        = getAutomationOutcomeName( _result );
+        report._exitCode           = getAutomationExitCode( _result );
+        report._frameCount         = _run._frameIndex;
+        report._reason             = _finishReason;
+        report._pListFailure       = &_judge.getFailures();
+        report._pListUpdatedGolden = &_judge.getUpdatedGoldens();
+        report._pListUnhandledLog  = &_judge.getUnhandledLogs();
+        report._pListAllowedLog    = &_judge.getAllowedLogIDs();
+        report._pListMetric        = &_judge.getMetricLines();
+        report._pListRecord        = &_judge.getRecordLines();
         // 실행 환경 — 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 한다.
         const string  backendName        = findBackendName();
         const string  lastStep           = describeRunPosition();

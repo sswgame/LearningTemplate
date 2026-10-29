@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모듈 렌더 확장(ExtensionRenderPass M3 · M4) — 게임 모듈(EmptyGame)이 등록한 확장(`EmptyRenderDemo`)의 두 패스가 파이프라인에 끼는지 본다:
+  `Empty.DrawDemo` 가 큐브 셋을 장면에 그리고, `Empty.TintDemo` 가 장면 색 위에 붉은 막(비율 0.15)을 블렌드한다. 두 셰이더는 파이프라인
+  `game/empty/pipeline/extensionpasspipeline.xml` 의 `_listExtensionShader` 가 선언한다(선언하지 않은 파이프라인에서는 확장이 쉰다).
+  틴트가 없는 그림은 배경이 푸르스름해 빨강 평균이 파랑 평균보다 낮다 — 틴트가 돌았다면 그 차이가 올라간다.
+  실행: App -scenario=game/empty/automation/extensionpass.scenario.xml -unattended -gv_firstScene=… -gv_renderPipeline=…(<Launch> 줄, ctest 가 붙인다)
+-->
+<Scenario name="game.empty.extensionpass" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/extensionpasspipeline.xml"/>
+	<Wait frames="40"/>
+	<Screenshot file="extensionpass.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImage file="extensionpass.ppm" golden="extensionpass"/>
+	<ExpectLog contains="Extension render" count="0"/>
+	<Pass/>
+</Scenario>

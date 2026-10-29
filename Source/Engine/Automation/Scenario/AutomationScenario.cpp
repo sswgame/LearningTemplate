@@ -75,50 +75,33 @@ namespace sw
             }
 
             /**
-             * @brief `<At>` 의 시점을 프레임으로 읽습니다. `frame`(절대 프레임) · `time`(시작부터 초) · `after`(앞 `<At>` 에서 프레임) · `afterSeconds`(앞 `<At>` 에서 초) 중 정확히 하나입니다.
-             * @details 상대 시점은 연속 동작("점프하고 0.2 초 뒤 이동")을 프레임 셈 없이 적게 한다. 초는 시나리오의 고정 프레임 시간으로 바꾼다.
+             * @brief `<Wait frames="N"/>` · `<Wait seconds="S"/>` 의 프레임 수입니다(초는 고정 프레임 시간으로 바꾼다). 둘 가운데 정확히 하나여야 합니다.
+             * @details 시간은 이것만 흘린다 — 단계는 적은 순서대로 지금 프레임에 돈다. 조건을 기다리는 것은 `<WaitUntil>` 이다(그동안 시계가 서 있다).
              */
-            [[nodiscard]] static bool readAtFrame( const XMLNode& atNode, float32 fixedDelta, uint32 previousFrame, uint32& outFrame, string& outReason )
+            [[nodiscard]] static bool readWait( const XMLNode& waitNode, float32 fixedDelta, uint32& outFrames, string& outReason )
             {
                 uint32 timingCount = 0;
-                for ( XMLAttribute attribute = atNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = waitNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    const string_view name   = attribute.getName();
-                    const utf8*       pText  = attribute.getValue();
-                    uint32            frames = 0;
-                    bool              bOk    = true;
-                    if ( name == "frame" )
-                    {
-                        bOk      = readUint( pText, "frame", frames, outReason );
-                        outFrame = frames;
-                    }
-                    else if ( name == "time" )
-                    {
-                        bOk      = readSeconds( pText, "time", fixedDelta, frames, outReason );
-                        outFrame = frames;
-                    }
-                    else if ( name == "after" )
-                    {
-                        bOk      = readUint( pText, "after", frames, outReason );
-                        outFrame = previousFrame + frames;
-                    }
-                    else if ( name == "afterSeconds" )
-                    {
-                        bOk      = readSeconds( pText, "afterSeconds", fixedDelta, frames, outReason );
-                        outFrame = previousFrame + frames;
-                    }
+                    const string_view name  = attribute.getName();
+                    const utf8*       pText = attribute.getValue();
+                    bool              bOk   = true;
+                    if ( name == "frames" )
+                        bOk = readUint( pText, "frames", outFrames, outReason );
+                    else if ( name == "seconds" )
+                        bOk = readSeconds( pText, "seconds", fixedDelta, outFrames, outReason );
                     else
                     {
-                        outReason = "unknown <At> attribute '" + string( name ) + "' (frame · time · after · afterSeconds)";
+                        outReason = "unknown <Wait> attribute '" + string( name ) + "' (frames · seconds)";
                         return false;
                     }
                     if ( bOk == false )
                         return false;
                     ++timingCount;
                 }
-                if ( timingCount != 1 )
+                if ( timingCount != 1 || outFrames == 0 )
                 {
-                    outReason = "<At> needs exactly one of frame=\"N\" · time=\"seconds\" · after=\"N\" · afterSeconds=\"seconds\"";
+                    outReason = "<Wait> needs exactly one of frames=\"N\" · seconds=\"S\" and more than zero frames";
                     return false;
                 }
                 return true;
@@ -354,39 +337,31 @@ namespace sw
         return false;
     }
 
-    bool AutomationScenario::parseAtNode( const XMLNode& atNode, uint32& inoutOrderInFile, uint32& inoutPreviousFrame, string& outError )
+    bool AutomationScenario::parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile, string& outError )
     {
-        using Internal = AutomationScenarioInternal;
-        string reason;
-        uint32 frameIndex = 0;
-        if ( Internal::readAtFrame( atNode, _fixedDelta, inoutPreviousFrame, frameIndex, reason ) == false )
+        const string_view kind = stepNode.getName();
+        if ( kind.empty() )
         {
-            outError = _sourcePath + ": " + reason;
+            outError = _sourcePath + ": <Scenario> holds text — only step elements may sit there";
             return false;
         }
-        inoutPreviousFrame     = frameIndex;
-        const string frameText = to_string( frameIndex );
-        for ( XMLNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
+        if ( stepNode.findChild().isValid() )
         {
-            const string_view kind = stepNode.getName();
-            if ( kind.empty() )
-            {
-                outError = _sourcePath + ": <At frame=\"" + frameText + "\"> holds text — only step elements may sit there";
-                return false;
-            }
-            AutomationStep step{};
-            step._kind        = string( kind );
-            step._frameIndex  = frameIndex;
-            step._orderInFile = inoutOrderInFile++;
-            for ( XMLAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-            {
-                AutomationAttribute value{};
-                value._name  = attribute.getName();
-                value._value = attribute.getValue();
-                step._listAttribute.push_back( std::move( value ) );
-            }
-            _listStep.push_back( std::move( step ) );
+            outError = _sourcePath + ": <" + string( kind ) + "> has child elements — steps are flat, written in the order they run";
+            return false;
         }
+        AutomationStep step{};
+        step._kind        = string( kind );
+        step._frameIndex  = frameIndex;
+        step._orderInFile = inoutOrderInFile++;
+        for ( XMLAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        {
+            AutomationAttribute value{};
+            value._name  = attribute.getName();
+            value._value = attribute.getValue();
+            step._listAttribute.push_back( std::move( value ) );
+        }
+        _listStep.push_back( std::move( step ) );
         return true;
     }
 
@@ -394,8 +369,9 @@ namespace sw
     {
         using Internal = AutomationScenarioInternal;
         string reason;
-        uint32 orderInFile   = 0;
-        uint32 previousFrame = 0;
+        uint32 orderInFile      = 0;
+        uint32 frameCursor      = 0;     ///< 지금까지 `<Wait>` 가 흘린 프레임 — 단계는 적은 순서대로 이 프레임에 돈다
+        bool   bCursorFrameUsed = false; ///< 지금 프레임에 이미 단계가 있다
         for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
         {
             const string_view elementName = atNode.getName();
@@ -426,6 +402,22 @@ namespace sw
                 _testOptions._listScratchFolder.push_back( std::move( folder ) );
                 continue;
             }
+            if ( elementName == "AllowLog" )
+            {
+                // 허용은 시나리오 안에 사유와 함께 둔다(예전의 전역 허용 목록 대신). 와일드카드 · 빈 사유는 받지 않는다.
+                const string_view id     = atNode.getAttributeText( "id" );
+                const string_view reason = atNode.getAttributeText( "reason" );
+                const bool        bValid = id.empty() == false && reason.empty() == false && id.find_first_of( "*?" ) == string_view::npos &&
+                                    atNode.getFirstAttribute().isValid() && atNode.getFirstAttribute().getNext().isValid() &&
+                                    atNode.getFirstAttribute().getNext().getNext().isValid() == false;
+                if ( bValid == false )
+                {
+                    outError = _sourcePath + ": <AllowLog> needs exactly id=\"<log id>\" and reason=\"<why it is allowed>\" (no wildcard)";
+                    return false;
+                }
+                _testOptions._listAllowedLog.push_back( AutomationAttribute{ string( id ), string( reason ) } );
+                continue;
+            }
             if ( elementName == "Launch" )
             {
                 if ( Internal::readLaunchVariable( atNode, _testOptions._listLaunchVariable, reason ) == false )
@@ -435,13 +427,37 @@ namespace sw
                 }
                 continue;
             }
-            if ( elementName != "At" )
+            if ( elementName == "At" )
             {
-                outError = _sourcePath + ": only <Load>, <Scratch>, <Launch> and <At frame=\"N\"> may sit under <Scenario>, got <" + atNode.getName() + ">";
+                outError = _sourcePath + ": <At frame> is gone — write the steps in the order they run and put <Wait frames=\"N\"/> where time must pass "
+                                         "(<WaitUntil> waits for a condition)";
                 return false;
             }
-            if ( parseAtNode( atNode, orderInFile, previousFrame, outError ) == false )
+            if ( elementName == "Wait" )
+            {
+                uint32 frames = 0;
+                if ( Internal::readWait( atNode, _fixedDelta, frames, reason ) == false )
+                {
+                    outError = _sourcePath + ": " + reason;
+                    return false;
+                }
+                frameCursor += frames;
+                bCursorFrameUsed = false;
+                continue;
+            }
+            // `<WaitUntil>` 은 조건이 설 때까지 시계를 붙잡는다 — 붙잡힌 프레임의 다른 단계(입력 · 입력 전 단계)가 다시 돌지 않게 제 프레임을 혼자 갖는다.
+            // 앞 단계가 이 프레임에 있으면 다음 프레임으로 가고, 뒤 단계는 그다음 프레임에서 돈다(적은 순서는 그대로다 — 쓰는 사람이 프레임을 셀 일이 없다).
+            const bool bWaitUntil = elementName == "WaitUntil";
+            if ( bWaitUntil && bCursorFrameUsed )
+                ++frameCursor;
+            if ( parseStepNode( atNode, frameCursor, orderInFile, outError ) == false )
                 return false;
+            bCursorFrameUsed = true;
+            if ( bWaitUntil )
+            {
+                ++frameCursor;
+                bCursorFrameUsed = false;
+            }
         }
         return true;
     }

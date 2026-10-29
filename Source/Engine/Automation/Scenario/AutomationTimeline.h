@@ -20,7 +20,7 @@ namespace sw
         BackgroundHold, ///< 앞 실행이 남긴 백그라운드 작업(저장 검증 · 색인 …)이 시계를 붙잡은 프레임
         ConditionHold,  ///< `<WaitUntil>` · `<Screenshot>` 같은 조건 대기가 시계를 붙잡은 프레임(조건이 참이 될 때까지)
         StepRan,        ///< 단계가 하나 이상 돈 프레임
-        ScheduledWait,  ///< 돌 단계 없이 `<At>` 시점만 기다린 프레임 — 고정 프레임 대기다
+        ScheduledWait,  ///< 돌 단계 없이 `<Wait frames>` 만 흘린 프레임 — 고정 프레임 대기다
     };
 
     /** @brief 프레임 종류 하나의 합계입니다. */

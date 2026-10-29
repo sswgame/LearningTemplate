@@ -33,8 +33,6 @@ namespace sw
                 return 12;
             case AutomationOutcome::Skipped:
                 return 13;
-            case AutomationOutcome::Unconfirmed:
-                return 14;
             case AutomationOutcome::UnhandledLog:
                 return 15;
         }

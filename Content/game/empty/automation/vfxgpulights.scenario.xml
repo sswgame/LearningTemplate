@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GPU 방출기의 파티클 라이트 — 빛나는 불똥(engine/vfx/gpusparklights, 깊이 충돌 + _light)이 어두운 바닥을 비추는지 본다(결정 기록 5-5 L5).
+  빛은 vfxsimulate.hlsl 이 라이트 버퍼의 GPU 구간에 쓰고 GPU 라이트 그리드(lightgrid.hlsl)가 받는다. 불똥 그림은 아주 작아 바닥의 밝기 차이가 거의 빛이다.
+  비교: 효과가 바닥 위에서 돌 때(lit)와 순간이동으로 멀리 보낸 뒤(away)의 바닥 영역 — 빛이 있으면 둘이 다르다. GPU 구간은 GPU 생산자(gv_lightCulling=GPU, 기본)에서만 그려진다.
+  결정적: 고정 프레임 시간, 효과 시드 고정. 첫 사진이 자리 잡기를 기다린 뒤로는 찍는 프레임이 정해져야 하므로 기다리지 않는다(waitForSettle="false").
+  멀리 보낸 뒤 찍기까지: 이미 태어난 불똥은 순간이동 뒤에도 수명(최대 2 초 = 120 프레임)이 다할 때까지 제자리에서 비춘다. 그래서 away 는 순간이동(152) + 120 프레임을 넘긴 300 에서 찍는다(처음에는 230 이라 살아 있는 불똥이 빛을 남겼다).
+  처음 적은 어림값 0.02 는 틀렸다. gl 은 4.6e-05 로 GPU 라이트가 사실상 안 그려졌다 — 원인은 깊이 히스토리의 행 순서였다(GL 장면 깊이는 0 행이 화면 아래인데 충돌 셰이더는 D3D 처럼 0 행이 위라고 읽어
+  입자가 바닥을 통과해 떨어졌다. depthhistory.hlsl 이 GL 에서 행을 뒤집어 고쳤다, 2026-10-26). 고친 뒤 gl 0.01246 으로 다른 백엔드와 같다.
+  실행: ctest -R Scenario.game.empty.vfxgpulights
+        (ctest 가 <Launch> 를 명령줄로 옮긴다. Shipping 은 개발 명령이 없어 건너뛴다)
+-->
+<Scenario name="game.empty.vfxgpulights" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/vfxgpulights.scene.xml"/>
+	<Wait frames="60"/>
+	<Screenshot file="settled.ppm"/>
+	<Wait frames="90"/>
+	<Screenshot file="lit.ppm" waitForSettle="false"/>
+	<Wait frames="2"/>
+	<DevCommand line="teleport Effect 0 -200 2"/>
+	<Wait frames="148"/>
+	<Screenshot file="away.ppm" waitForSettle="false"/>
+	<Wait frames="10"/>
+	<ExpectImage file="lit.ppm" golden="lit" region="0.1,0.45,0.9,0.95"/>
+	<Pass/>
+</Scenario>

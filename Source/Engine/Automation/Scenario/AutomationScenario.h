@@ -113,6 +113,7 @@ namespace sw
     struct SW_API AutomationTestOptions
     {
         vector<AutomationScratchFolder> _listScratchFolder{};  ///< 루트 아래 `<Scratch from as>`(여럿 가능). 실행기가 시작할 때 사본을 새로 만든다(`AutomationScratch::prepare`)
+        vector<AutomationAttribute>     _listAllowedLog{};     ///< 루트 아래 `<AllowLog id reason>`(여럿 가능) — 이 시나리오에서 나와도 되는 로그 id(`_name`)와 사유(`_value`). 사유는 필수다
         vector<AutomationAttribute>     _listLaunchVariable{}; ///< 루트 아래 `<Launch variable value>`(여럿 가능). 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 기동 때 값
         AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며 `timeoutFrames` 를 보지 않는다
         /** @brief 새 프로세스에서만 도는 시나리오입니다(루트 `isolated="true"`). 시작 상태를 전제하거나 환경(창 크기 · 테마 · 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣지 않는다. 테스트가 고른다. */
@@ -136,7 +137,7 @@ namespace sw
     /**
      * @class AutomationScenario
      * @brief 시나리오 파일 하나를 읽은 값입니다. 단계는 프레임 순이며 같은 프레임은 파일 순입니다.
-     * @details 읽기는 형식만 본다(루트, `<At frame>`, 속성 텍스트). 단계 종류와 속성이 맞는지는 실행기가 시작할 때 본다(`AutomationRunner`).
+     * @details 읽기는 형식만 본다(루트, 적은 순서의 단계와 `<Wait>`, 속성 텍스트). 단계 종류와 속성이 맞는지는 실행기가 시작할 때 본다(`AutomationRunner`).
      *          게임과 에디터 모듈이 등록하는 단계 종류는 그때 채워져 있다.
      */
     class SW_API AutomationScenario
@@ -184,10 +185,10 @@ namespace sw
         [[nodiscard]] bool parseLoad( const XMLNode& node, string& outReason );
         /** @brief `<Scenario>` 의 속성 하나를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다(오타가 기본값으로 조용히 바뀌지 않게 한다). */
         [[nodiscard]] bool parseRootAttribute( string_view name, const utf8* pText, string& outReason );
-        /** @brief `<Scenario>` 의 자식(`<Load>` `<Scratch>` `<Launch>` `<At>`)을 차례로 읽습니다. 틀리면 false 와 이유(원본 이름 포함)입니다. */
+        /** @brief `<Scenario>` 의 자식(`<Load>` `<Scratch>` `<Launch>` `<Wait>` 와 단계)을 차례로 읽습니다. 틀리면 false 와 이유(원본 이름 포함)입니다. */
         [[nodiscard]] bool parseChildren( const XMLNode& root, string& outError );
-        /** @brief `<At>` 하나의 시점과 단계들을 읽어 `_listStep` 에 더합니다. 단계 번호와 앞 시점을 이어 갱신합니다. */
-        [[nodiscard]] bool parseAtNode( const XMLNode& atNode, uint32& inoutOrderInFile, uint32& inoutPreviousFrame, string& outError );
+        /** @brief 단계 하나를 지금 프레임(앞의 `<Wait>` 들이 흘린 합)으로 `_listStep` 에 더합니다. 단계 번호를 이어 갱신합니다. */
+        [[nodiscard]] bool parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile, string& outError );
 
         vector<AutomationStep>   _listStep;
         AutomationTestOptions    _testOptions;

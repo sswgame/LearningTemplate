@@ -2,6 +2,7 @@
 
 #include "Engine/Automation/Runner/AutomationJudge.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
@@ -19,12 +20,13 @@
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
-#include "Engine/Automation/Runner/AutomationThresholdBasis.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
@@ -47,7 +49,9 @@ namespace sw
         : _logCapture{}
         , _logPolicy{}
         , _listFailure{}
-        , _listUnconfirmed{}
+        , _listUpdatedGolden{}
+        , _goldenFolderID{}
+        , _goldenPrefix{}
         , _listUnhandledLog{}
         , _listAllowedLogID{}
         , _listMetricLine{}
@@ -333,53 +337,77 @@ namespace sw
 
     void AutomationJudge::runExpectImage( AutomationStepContext& context, const AutomationStep& step )
     {
-        using Internal = AutomationStepArgsUtil;
-        string                    error;
-        Internal::ExpectImageArgs args;
-        if ( Internal::parseExpectImage( step, args, error ) == false )
+        string                                  error;
+        AutomationStepArgsUtil::ExpectImageArgs args;
+        if ( AutomationStepArgsUtil::parseExpectImage( step, args, error ) == false )
         {
             context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        const string* pRegion = step.findAttribute( "region" );
-
-        const string    path = context.resolveOutputPath( *step.findAttribute( "file" ) );
+        const string&   file = *step.findAttribute( "file" );
         AutomationImage image;
-        AutomationImage reference;
-        const string*   pReference = step.findAttribute( "reference" );
-        if ( AutomationImageMetric::loadPpm( path, image, error ) == false ||
-             ( pReference != nullptr && AutomationImageMetric::loadPpm( context.resolveOutputPath( *pReference ), reference, error ) == false ) )
+        AutomationImage reduced;
+        if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
         {
             context.recordFailure( step, "could not read the image: " + error );
             return;
         }
-        float64 value = 0.0;
-        if ( AutomationImageMetric::measure( image, args._region, args._metric, args._ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
+        // 골든은 백엔드마다 따로다(래스터 · 정밀도 차가 백엔드마다 다르다). 시나리오 안에서 백엔드를 바꿀 수 있어 단언하는 때의 백엔드를 쓴다.
+        static constexpr const utf8* kArrBackendTag[] = { "dx11", "dx12", "vk", "gl" };
+        // 백엔드는 감시 값 `RHI.Backend`(App 의 교체기가 올린다)로 읽는다 — 판정이 RHI 를 직접 알지 않는다. 없으면(RHI 없는 호스트) 이미지 단언을 할 수 없다.
+        const AutomationWatchRegistration* pBackendWatch = AutomationWatchRegistry::find( "RHI.Backend" );
+        float64                            backendValue  = -1.0;
+        if ( pBackendWatch == nullptr || pBackendWatch->_pFunction == nullptr || pBackendWatch->_pFunction( nullptr, backendValue ) == false )
+        {
+            context.recordFailure( step, "the RHI backend is unknown (watch RHI.Backend) - an image assertion needs a rendering host" );
+            return;
+        }
+        const uint32    backendIndex = static_cast<uint32>( backendValue );
+        const utf8*     pBackendTag  = backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown";
+        const string    goldenID     = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + ".ppm";
+        vector<uint8>   listBytes;
+        AutomationImage golden;
+        const bool      bHasGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes ) &&
+                                AutomationImageMetric::parsePpm( listBytes.data(), listBytes.size(), golden, error );
+        AutomationImageDifference difference;
+        const bool                bCompared = bHasGolden && AutomationImageMetric::compare( reduced, golden, difference, error );
+        const bool                bMatches  = bCompared && difference._differingFraction <= args._tolerance;
+        if ( bCompared )
+        {
+            string line = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (tolerance " +
+                          AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%), mean distance " + AutomationStepArgsUtil::formatNumber( difference._meanDistance );
+            SW_LOG_INFO( "[Scenario] image %#", line.c_str() );
+            _listMetricLine.push_back( std::move( line ) );
+        }
+        if ( bMatches )
+            return;
+        if ( _bUpdateGolden )
+        {
+            // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
+            vector<uint8> listEncoded;
+            AutomationImageMetric::encodePpm( reduced, listEncoded );
+            const string path = AssetPaths::resolveWritePath( goldenID );
+            if ( path.empty() || FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) ) == false || FileUtil::writeFile( path, listEncoded.data(), listEncoded.size() ) == false )
+            {
+                context.recordFailure( step, "could not write the golden " + goldenID );
+                return;
+            }
+            SW_LOG_INFO( "[Scenario] golden %# %#", bHasGolden ? "updated" : "recorded", goldenID.c_str() );
+            _listUpdatedGolden.push_back( goldenID );
+            return;
+        }
+        if ( bHasGolden == false )
+        {
+            context.recordFailure( step, "no golden " + goldenID + " yet - run with -scenario-update-golden and review the image" );
+            return;
+        }
+        if ( bCompared == false )
         {
             context.recordFailure( step, error );
             return;
         }
-        // 값은 항상 적는다. 임계값을 정할 때 숫자를 보기 위해서다.
-        string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
-                      Internal::formatNumber( value );
-        SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
-        _listMetricLine.push_back( std::move( line ) );
-
-        string     rule;
-        const bool bOk = Internal::matchesNumber( args._comparison, value, rule );
-        if ( bOk == false )
-        {
-            context.recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
-            return;
-        }
-        if ( args._basis._kind == AutomationThresholdBasisKind::Provisional )
-        {
-            // 어림값 문턱이 맞았다 — 통과로 세지 않는다. 위 지표 줄의 잰 값을 `measured` 로 옮기면 확정이다.
-            string unconfirmed = step.describe() + ": " + *step.findAttribute( "metric" ) + " " + rule + " held with " + Internal::formatNumber( value ) +
-                                 " on a provisional threshold (" + args._basis._text + ")";
-            SW_LOG_INFO( "[Scenario] unconfirmed %#", unconfirmed.c_str() );
-            _listUnconfirmed.push_back( std::move( unconfirmed ) );
-        }
+        context.recordFailure( step, file + " differs from " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) +
+                                         "% of pixels differ (tolerance " + AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%)" );
     }
 
     void AutomationJudge::applyLogGate( AutomationOutcome& inOutResult, string& outReason )
@@ -410,8 +438,8 @@ namespace sw
         }
         inOutResult = AutomationOutcome::UnhandledLog;
         outReason   = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
-                    " without a log id - fix the cause, declare the line with <ExpectLog>, or add its log id with scope, reason and plan to " +
-                    string( AutomationLogPolicy::kAllowListPath ) + " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+                    " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
+                    " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }
 
     void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
@@ -423,9 +451,12 @@ namespace sw
 
     bool AutomationJudge::prepare( const AutomationScenario& scenario, string& outError )
     {
-        if ( _logPolicy.loadAllowList( outError ) == false )
-            return false; // 허용 목록이 틀리면 폴백 없이 읽기 오류(11)로 멈춘다
-        _logPolicy.selectScenario( scenario.getName() );
+        (void)outError; // 읽기는 시나리오 파일을 읽을 때 끝났다 — 허용은 그 파일의 `<AllowLog>` 다
+        _logPolicy.clear();
+        for ( const AutomationAttribute& allowed : scenario.getTestOptions()._listAllowedLog )
+        {
+            _logPolicy.allowID( allowed._name );
+        }
         for ( const AutomationStep& step : scenario.getSteps() )
         {
             if ( step._kind != "ExpectLog" )
@@ -443,6 +474,12 @@ namespace sw
         }
         prepareWatches( scenario );
         _listRemembered.clear();
+        _listUpdatedGolden.clear();
+        _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/golden";
+        _goldenPrefix   = scenario.getName();
+        _bUpdateGolden  = false;
+        if ( engine::areEngineServicesBound() )
+            (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, _bUpdateGolden );
         _logCapture.start();
         return true;
     }

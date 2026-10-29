@@ -21,11 +21,11 @@ namespace sw
         uint32                _frameCount{ 0 };
         string_view           _reason{};
         const vector<string>* _pListFailure{ nullptr };
-        const vector<string>* _pListUnconfirmed{ nullptr };  ///< 맞았지만 어림값 문턱이라 미확정인 단언 줄
-        const vector<string>* _pListUnhandledLog{ nullptr }; ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
-        const vector<string>* _pListAllowedLog{ nullptr };   ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
-        const vector<string>* _pListMetric{ nullptr };       ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationJudge`)이 소유한다
-        const vector<string>* _pListRecord{ nullptr };       ///< 기록 값 줄(`frame 300 Scene.TransformHash = 12345`, 결정성 대조) — 판정이 소유한다
+        const vector<string>* _pListUpdatedGolden{ nullptr }; ///< `-scenario-update-golden` 이 쓴 골든(리소스 id) — 리뷰할 목록
+        const vector<string>* _pListUnhandledLog{ nullptr };  ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄
+        const vector<string>* _pListAllowedLog{ nullptr };    ///< 허용 목록 항목이 맞은 로그 id(`scenario-logs --check` 가 낡은 항목을 세는 근거)
+        const vector<string>* _pListMetric{ nullptr };        ///< 지표 값 줄(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 판정(`AutomationJudge`)이 소유한다
+        const vector<string>* _pListRecord{ nullptr };        ///< 기록 값 줄(`frame 300 Scene.TransformHash = 12345`, 결정성 대조) — 판정이 소유한다
         // --- 실행 환경: 이 보고만으로 어디서 어떻게 돌았고 어떻게 다시 돌리는지 알게 하는 칸입니다(없으면 빈 글 · 0) ---
         string_view               _backendName{};              ///< 끝날 때의 RHI 백엔드(`dx12` …). 헤드리스면 빔
         string_view               _gameName{};                 ///< 돌린 게임
@@ -45,7 +45,7 @@ namespace sw
      * @class AutomationReportWriter
      * @brief 보고 경로를 들고 있다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
      * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` · `timeline` ·
-     *          `failures[]` · `unconfirmed[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
+     *          `failures[]` · `updatedGoldens[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
      *          읽는 쪽(`Scripts` 의 보고 읽기, `AppTestUtil::readReportRecords`)이 있으니 필드는 **더하기만** 하고 이름을 바꾸지 않는다. `records[]` 는 끝에 둔다(`readReportRecords` 가 `"records"` 키부터 첫 `]` 까지 읽는다).
      */
     class SW_API AutomationReportWriter

@@ -21,7 +21,7 @@ namespace sw
      * @class AutomationJudge
      * @brief 단언 단계의 비교와 결과 판정에 필요한 상태를 모두 쥡니다. 시간 · 입력 · 대기는 모릅니다(그것은 `AutomationStepTimeline` 과 실행기의 일).
      * @details 판정이 읽는 바깥 값(시나리오 프레임 · 산출물 경로 · 오브젝트 매니저)은 단계 문맥(`AutomationStepContext`)에서 호출마다 받는다 — 판정이 실행기를 알지 못한다.
-     *          실패는 `addFailure` 로만 쌓이고, 결과를 정하는 것(`Passed` → `Failed` · `Unconfirmed` · `UnhandledLog`)은 실행기의 끝맺음이다.
+     *          실패는 `addFailure` 로만 쌓이고, 결과를 정하는 것(`Passed` → `Failed` · `UnhandledLog`)은 실행기의 끝맺음이다.
      *          상용 엔진 비교: 언리얼 Automation Test 의 `FAutomationTestBase`(테스트 기록 · 오류 목록)가 실행기와 갈라진 모양과 같다. 게임 스레드에서만 쓴다.
      */
     class SW_API AutomationJudge
@@ -70,13 +70,13 @@ namespace sw
         void applyLogGate( AutomationOutcome& inOutResult, string& outReason );
 
         const vector<string>& getFailures() const { return _listFailure; }
-        /** @brief 맞았지만 어림값 문턱(`provisional`)이라 미확정인 단언 줄입니다. 비어 있지 않고 실패가 없으면 결과는 `Unconfirmed` 입니다. */
-        const vector<string>& getUnconfirmed() const { return _listUnconfirmed; }
+        /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */
+        const vector<string>& getUpdatedGoldens() const { return _listUpdatedGolden; }
         /** @brief 로그 게이트가 처리하지 않았다고 본 줄입니다. 비어 있지 않으면 실패가 없어도 결과는 `UnhandledLog` 입니다. */
         const vector<string>& getUnhandledLogs() const { return _listUnhandledLog; }
         /** @brief 이 실행에서 허용 항목이 맞은 로그 id 입니다(`scenario-logs --check` 가 낡은 항목을 세는 근거). */
         const vector<string>& getAllowedLogIDs() const { return _listAllowedLogID; }
-        /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). */
+        /** @brief 이미지 비교 줄들입니다(`park.ppm vs golden 'park' (dx12): 0.4% differing`). */
         const vector<string>& getMetricLines() const { return _listMetricLine; }
         /** @brief 기록 값 줄들입니다(`frame 300 Scene.TransformHash = 12345` — 백엔드끼리 같아야 한다). */
         const vector<string>& getRecordLines() const { return _listRecordLine; }
@@ -111,15 +111,18 @@ namespace sw
         /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
         void prepareWatches( const AutomationScenario& scenario );
 
-        AutomationLogCapture    _logCapture;       ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy     _logPolicy;        ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        vector<string>          _listFailure;      ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>          _listUnconfirmed;  ///< 맞았지만 어림값 문턱인 `<ExpectImage>` ("frame 40 <ExpectImage> #7: meanLuma >= 0.05 held with 0.2 …")
-        vector<string>          _listUnhandledLog; ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
-        vector<string>          _listAllowedLogID; ///< 이 실행에서 허용 항목이 맞은 로그 id
-        vector<string>          _listMetricLine;   ///< 보고에 적는 지표 값
-        vector<string>          _listRecordLine;   ///< 보고에 적는 기록 값(결정성 대조)
-        vector<WatchHistory>    _listWatch;        ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<RememberedValue> _listRemembered;   ///< `<Remember>` 가 남긴 값
+        AutomationLogCapture    _logCapture;             ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        AutomationLogPolicy     _logPolicy;              ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
+        vector<string>          _listFailure;            ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>          _listUpdatedGolden;      ///< 이 실행이 쓴 골든(리소스 id)
+        string                  _goldenFolderID;         ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
+        string                  _goldenPrefix;           ///< 골든 파일 이름의 앞머리(시나리오 이름)
+        bool                    _bUpdateGolden{ false }; ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다
+        vector<string>          _listUnhandledLog;       ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
+        vector<string>          _listAllowedLogID;       ///< 이 실행에서 허용 항목이 맞은 로그 id
+        vector<string>          _listMetricLine;         ///< 보고에 적는 지표 값
+        vector<string>          _listRecordLine;         ///< 보고에 적는 기록 값(결정성 대조)
+        vector<WatchHistory>    _listWatch;              ///< `<ExpectVisited>` 가 보는 감시 값 이력
+        vector<RememberedValue> _listRemembered;         ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

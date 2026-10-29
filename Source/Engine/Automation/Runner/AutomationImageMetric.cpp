@@ -51,12 +51,6 @@ namespace sw
                 outValue = static_cast<uint32>( value );
                 return digits > 0;
             }
-
-            /** @brief 픽셀의 Rec.709 휘도(0..1)입니다. */
-            static float64 lumaAt( const uint8* pPixel )
-            {
-                return ( 0.2126 * pPixel[0] + 0.7152 * pPixel[1] + 0.0722 * pPixel[2] ) / 255.0;
-            }
         };
     } // namespace
 } // namespace sw
@@ -107,38 +101,6 @@ namespace sw
         return true;
     }
 
-    bool AutomationImageMetric::tryParseKind( string_view text, AutomationImageMetricKind& outKind )
-    {
-        if ( text == "meanLuma" )
-            outKind = AutomationImageMetricKind::MeanLuma;
-        else if ( text == "darkFraction" )
-            outKind = AutomationImageMetricKind::DarkFraction;
-        else if ( text == "meanRedMinusBlue" )
-            outKind = AutomationImageMetricKind::MeanRedMinusBlue;
-        else if ( text == "differentFrom" )
-            outKind = AutomationImageMetricKind::DifferentFrom;
-        else if ( text == "differingFraction" )
-            outKind = AutomationImageMetricKind::DifferingFraction;
-        else
-            return false;
-        return true;
-    }
-
-    bool AutomationImageMetric::usesReference( AutomationImageMetricKind kind )
-    {
-        switch ( kind )
-        {
-            case AutomationImageMetricKind::DifferentFrom:
-            case AutomationImageMetricKind::DifferingFraction:
-                return true;
-            case AutomationImageMetricKind::MeanLuma:
-            case AutomationImageMetricKind::DarkFraction:
-            case AutomationImageMetricKind::MeanRedMinusBlue:
-                return false;
-        }
-        return false;
-    }
-
     bool AutomationImageMetric::tryParseRegion( string_view text, AutomationImageRegion& outRegion )
     {
         const string_splitter parts( text, { "," } );
@@ -157,95 +119,84 @@ namespace sw
         return true;
     }
 
-    bool AutomationImageMetric::measure( const AutomationImage& image, const AutomationImageRegion& region, AutomationImageMetricKind kind, float32 darkRatio,
-                                         const AutomationImage* pReference, float64& outValue, string& outError )
+    void AutomationImageMetric::encodePpm( const AutomationImage& image, vector<uint8>& outBytes )
     {
-        using Internal  = AutomationImageMetricInternal;
+        const string header = "P6\n" + to_string( image._width ) + " " + to_string( image._height ) + "\n255\n";
+        outBytes.assign( header.begin(), header.end() );
+        outBytes.insert( outBytes.end(), image._listRGB.begin(), image._listRGB.end() );
+    }
+
+    bool AutomationImageMetric::reduce( const AutomationImage& image, const AutomationImageRegion& region, AutomationImage& outReduced, string& outError )
+    {
         const uint32 x0 = static_cast<uint32>( region._x0 * static_cast<float32>( image._width ) );
         const uint32 y0 = static_cast<uint32>( region._y0 * static_cast<float32>( image._height ) );
-        const uint32 x1 = MathUtil::min( static_cast<uint32>( region._x1 * static_cast<float32>( image._width ) + 0.5f ), image._width );
-        const uint32 y1 = MathUtil::min( static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ), image._height );
-        if ( x0 >= x1 || y0 >= y1 )
+        const uint32 x1 = std::min( image._width, static_cast<uint32>( region._x1 * static_cast<float32>( image._width ) + 0.5f ) );
+        const uint32 y1 = std::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
+        if ( x1 <= x0 || y1 <= y0 )
         {
-            outError = "the region covers no pixel";
+            outError = "the region covers no pixel of the " + to_string( image._width ) + "x" + to_string( image._height ) + " image";
             return false;
         }
-        const bool bMissingReference =
-            usesReference( kind ) && ( pReference == nullptr || pReference->_width != image._width || pReference->_height != image._height );
-        if ( bMissingReference )
+        const uint32 sourceWidth  = x1 - x0;
+        const uint32 sourceHeight = y1 - y0;
+        const uint32 width        = std::min( sourceWidth, kGoldenMaxWidth );
+        const uint32 height       = std::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
+        outReduced._width         = width;
+        outReduced._height        = height;
+        outReduced._listRGB.assign( static_cast<size_t>( width ) * height * 3u, 0 );
+        for ( uint32 y = 0; y < height; ++y )
         {
-            outError = "differentFrom and differingFraction need a reference image of the same size";
-            return false;
-        }
-
-        const float64   pixelCount = static_cast<float64>( x1 - x0 ) * static_cast<float64>( y1 - y0 );
-        float64         sum        = 0.0;
-        vector<float64> listLuma;
-        if ( kind == AutomationImageMetricKind::DarkFraction )
-            listLuma.reserve( static_cast<size_t>( pixelCount ) );
-        for ( uint32 y = y0; y < y1; ++y )
-        {
-            for ( uint32 x = x0; x < x1; ++x )
+            const uint32 sy0 = y0 + static_cast<uint32>( static_cast<uint64>( y ) * sourceHeight / height );
+            const uint32 sy1 = std::max( sy0 + 1, y0 + static_cast<uint32>( static_cast<uint64>( y + 1 ) * sourceHeight / height ) );
+            for ( uint32 x = 0; x < width; ++x )
             {
-                const size_t offset = ( static_cast<size_t>( y ) * image._width + x ) * 3u;
-                const uint8* pPixel = image._listRGB.data() + offset;
-                switch ( kind )
+                const uint32 sx0       = x0 + static_cast<uint32>( static_cast<uint64>( x ) * sourceWidth / width );
+                const uint32 sx1       = std::max( sx0 + 1, x0 + static_cast<uint32>( static_cast<uint64>( x + 1 ) * sourceWidth / width ) );
+                uint64       arrSum[3] = { 0, 0, 0 };
+                for ( uint32 sy = sy0; sy < sy1; ++sy )
                 {
-                    case AutomationImageMetricKind::MeanLuma:
+                    for ( uint32 sx = sx0; sx < sx1; ++sx )
                     {
-                        sum += Internal::lumaAt( pPixel );
-                        break;
+                        const uint8* pPixel = &image._listRGB[( static_cast<size_t>( sy ) * image._width + sx ) * 3u];
+                        arrSum[0] += pPixel[0];
+                        arrSum[1] += pPixel[1];
+                        arrSum[2] += pPixel[2];
                     }
-                    case AutomationImageMetricKind::DarkFraction:
-                    {
-                        listLuma.push_back( Internal::lumaAt( pPixel ) );
-                        break;
-                    }
-                    case AutomationImageMetricKind::MeanRedMinusBlue:
-                    {
-                        sum += ( static_cast<float64>( pPixel[0] ) - static_cast<float64>( pPixel[2] ) ) / 255.0;
-                        break;
-                    }
-                    case AutomationImageMetricKind::DifferentFrom:
-                    {
-                        const uint8* pOther = pReference->_listRGB.data() + offset;
-                        for ( uint32 channel = 0; channel < 3; ++channel )
-                        {
-                            sum += MathUtil::abs( static_cast<float64>( pPixel[channel] ) - static_cast<float64>( pOther[channel] ) ) / ( 255.0 * 3.0 );
-                        }
-                        break;
-                    }
-                    case AutomationImageMetricKind::DifferingFraction:
-                    {
-                        const uint8* pOther   = pReference->_listRGB.data() + offset;
-                        uint32       distance = 0;
-                        for ( uint32 channel = 0; channel < 3; ++channel )
-                        {
-                            distance += pPixel[channel] > pOther[channel] ? static_cast<uint32>( pPixel[channel] - pOther[channel] )
-                                                                          : static_cast<uint32>( pOther[channel] - pPixel[channel] );
-                        }
-                        sum += distance >= kDifferingMinDistance ? 1.0 : 0.0;
-                        break;
-                    }
+                }
+                const uint64 count = static_cast<uint64>( sy1 - sy0 ) * ( sx1 - sx0 );
+                uint8*       pOut  = &outReduced._listRGB[( static_cast<size_t>( y ) * width + x ) * 3u];
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    pOut[channel] = static_cast<uint8>( ( arrSum[channel] + count / 2 ) / count );
                 }
             }
         }
-        if ( kind != AutomationImageMetricKind::DarkFraction )
-        {
-            outValue = sum / pixelCount;
-            return true;
-        }
-        // 중앙값 기준이라 조명, 톤맵, 클리어 색이 바뀌어도 "영역의 일반적인 밝기보다 어두운 비율" 은 그대로다.
-        vector<float64> listSorted = listLuma;
-        const size_t    middle     = listSorted.size() / 2;
-        std::nth_element( listSorted.begin(), listSorted.begin() + static_cast<ptrdiff_t>( middle ), listSorted.end() );
-        const float64 threshold = listSorted[middle] * static_cast<float64>( darkRatio );
-        size_t        darkCount = 0;
-        for ( const float64 luma : listLuma )
-        {
-            darkCount += luma < threshold ? 1u : 0u;
-        }
-        outValue = static_cast<float64>( darkCount ) / pixelCount;
         return true;
     }
+
+    bool AutomationImageMetric::compare( const AutomationImage& actual, const AutomationImage& golden, AutomationImageDifference& outDifference, string& outError )
+    {
+        if ( actual._width != golden._width || actual._height != golden._height )
+        {
+            outError = "the image is " + to_string( actual._width ) + "x" + to_string( actual._height ) + " but the golden is " + to_string( golden._width ) + "x" +
+                       to_string( golden._height ) + " (region or window size changed - record the golden again)";
+            return false;
+        }
+        const size_t pixelCount     = static_cast<size_t>( actual._width ) * actual._height;
+        size_t       differingCount = 0;
+        uint64       distanceSum    = 0;
+        for ( size_t pixel = 0; pixel < pixelCount; ++pixel )
+        {
+            const uint8* pA       = &actual._listRGB[pixel * 3u];
+            const uint8* pB       = &golden._listRGB[pixel * 3u];
+            const uint32 distance = static_cast<uint32>( std::abs( pA[0] - pB[0] ) + std::abs( pA[1] - pB[1] ) + std::abs( pA[2] - pB[2] ) );
+            distanceSum += distance;
+            if ( distance >= kDifferingMinDistance )
+                ++differingCount;
+        }
+        outDifference._differingFraction = pixelCount > 0 ? static_cast<float64>( differingCount ) / static_cast<float64>( pixelCount ) : 0.0;
+        outDifference._meanDistance      = pixelCount > 0 ? static_cast<float64>( distanceSum ) / ( static_cast<float64>( pixelCount ) * 765.0 ) : 0.0;
+        return true;
+    }
+
 } // namespace sw

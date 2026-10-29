@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KayKit 캐릭터 벤치의 아틀라스 색 — 벤치 기사(-gv_benchCharacters)가 흰 기본 머티리얼이 아니라 KayKit 머티리얼(data/benchscene.xml 의 _knightMaterial)로 그려지는지 눈으로 본다.
+  벤치 카메라는 캐릭터 수에 맞춰 스스로 잡힌다(frameCharacterCameras). 사진은 걷기 · 서기가 자리 잡은 뒤(60 프레임) 한 장이다.
+  텍스처 샘플이 늘어 벤치 수치가 바뀔 수 있다 — 이 시나리오를 통과시킨 뒤 같은 인자로 GT.Animation 측정 기준을 다시 잡는다(KayKitMaterials K2).
+  실행: ctest -R Scenario.game.empty.kaykitcharacters (Shipping 은 벤치 변수가 없어 건너뛴다)
+-->
+<Scenario name="game.empty.kaykitcharacters" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_benchCharacters" value="6"/>
+	<Wait frames="60"/>
+	<Screenshot file="empty/kaykit_characters.ppm"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

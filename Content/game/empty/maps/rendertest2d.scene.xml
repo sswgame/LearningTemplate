@@ -1,0 +1,96 @@
+<Scene formatVersion="2" name="RenderTest2D">
+	<!-- 2D 빛 쿠키 시나리오(automation/light2dcookie)의 무대 — 밝은 격자 벽 앞에 같은 빛 둘을 두고 왼쪽 빛에만 창문 쿠키(window_01)를 끼웠다.
+	     시나리오가 두 빛을 순간이동으로 맞바꿔 같은 자리의 쿠키 있음 · 없음을 견준다. 애니메이션이 없어 같은 프레임이 실행마다 같은 그림이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="Camera2D">
+			<GameObject _schemaVersion="0" _name="Camera2D" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Wall">
+			<GameObject _schemaVersion="0" _name="Wall" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="0,0,2"
+					                 _localRotation="0,0,0"
+					                 _localScale="20,12,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _textureName="engine/textures/prototype/grid_light.dds"
+					                 _materialPath="engine/materials/sprite2dlit.material"
+					                 _sortingLayer="Background"
+					                 _orderInLayer="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="CookieLight">
+			<GameObject _schemaVersion="0" _name="CookieLight" _bActive="true">
+				<_listComponent>
+					<PointLight2DComponent _localPosition="-4.5,0,0"
+					                       _localRotation="0,0,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachComponent="None"
+					                       _color="1,0.9,0.7"
+					                       _intensity="0.8"
+					                       _innerRadius="2"
+					                       _outerRadius="4"
+					                       _falloffExponent="1"
+					                       _innerAngle="6.2831853"
+					                       _outerAngle="6.2831853"
+					                       _normalMapHeight="1"
+					                       _bCastShadows="false"
+					                       _cookieTexturePath="engine/textures/particles/kenney_particle/window_01.dds" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="PlainLight">
+			<GameObject _schemaVersion="0" _name="PlainLight" _bActive="true">
+				<_listComponent>
+					<PointLight2DComponent _localPosition="4.5,0,0"
+					                       _localRotation="0,0,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachComponent="None"
+					                       _color="1,0.9,0.7"
+					                       _intensity="0.8"
+					                       _innerRadius="2"
+					                       _outerRadius="4"
+					                       _falloffExponent="1"
+					                       _innerAngle="6.2831853"
+					                       _outerAngle="6.2831853"
+					                       _normalMapHeight="1"
+					                       _bCastShadows="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Ambient">
+			<GameObject _schemaVersion="0" _name="Ambient" _bActive="true">
+				<_listComponent>
+					<GlobalLight2DComponent _localPosition="0,0,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachComponent="None"
+					                        _color="0.6,0.65,0.8"
+					                        _intensity="0.2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

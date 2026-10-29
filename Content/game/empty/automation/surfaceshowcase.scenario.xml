@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  표면 셰이더 쇼케이스(계획 CharacterAppearanceIntegration E6) — surfacelit.hlsl 이 표면 상태 이름(_surface<채널>)을 읽어 그리는지 본다.
+  구 다섯이 왼쪽부터 기본 · 젖음 · 흙 · 피 · 찢김이다(surfaceshowcase_*.material 이 채널 값 하나씩 1 로 켠다 — 마스크 텍스처를 비워 흰색으로 읽히므로 켠 채널이 구 전체를 덮는다).
+  기대: 젖음 구는 기본보다 어둡고 번들거린다 · 흙 구는 갈색 · 피 구는 검붉다 · 찢김 구는 알파 컷으로 전부 사라져 바닥이 보인다(깊이 · 그림자도 사라진다).
+  자동 단언은 구 셋 영역의 골든 비교다(백엔드별 golden/ — 첫 실행은 -scenario-update-golden 으로 뜨고 그림을 리뷰한다).
+  구 영역은 16:9 창에서 카메라(0,1,-6, fovY 0.8)가 구 중심 가로 0.144 · 0.322 · 0.5 · 0.678 · 0.856 에 놓는 값이다. 사진(surface_showcase.ppm)은 눈으로 본다 — 매니페스트 id surface-shader-check.
+  실행: ctest -R Scenario.game.empty.surfaceshowcase  (네 백엔드)
+-->
+<Scenario name="game.empty.surfaceshowcase" fixedDelta="0.0166667" timeoutFrames="120" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/surfaceshowcase.scene.xml"/>
+	<Wait frames="30"/>
+	<Screenshot file="surface_showcase.ppm"/>
+	<Wait frames="1"/>
+	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase" region="0.119,0.46,0.169,0.54"/>
+	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase_2" region="0.475,0.46,0.525,0.54"/>
+	<ExpectImage file="surface_showcase.ppm" golden="surface_showcase_3" region="0.653,0.46,0.703,0.54"/>
+	<Pass/>
+</Scenario>

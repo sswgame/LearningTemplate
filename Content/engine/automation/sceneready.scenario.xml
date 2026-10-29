@@ -5,12 +5,12 @@
   실행: App -scenario=engine/automation/sceneready.scenario.xml -unattended
 -->
 <Scenario name="engine.sceneready" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<At frame="1"><WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/></At>
-	<At frame="2"><WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/></At>
-	<At frame="3">
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-		<Expect watch="RenderView.HiddenCount" equals="0"/>
-		<ExpectLog contains="Quit requested" count="0"/>
-		<Pass/>
-	</At>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Expect watch="RenderView.HiddenCount" equals="0"/>
+	<ExpectLog contains="Quit requested" count="0"/>
+	<Pass/>
 </Scenario>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  사용자 설정이 화면에 닿는지 — 렌더 스케일 · 시야 거리 · 후처리 품질 · 색각 보정을 한 무대(maps/rendertest3d, 디퍼드)에서 하나씩 바꿔 사진을 찍고 기준과 견준다(UserSettingsConsumers U4).
+  변수는 옵션 메뉴가 쓰는 gv_* 와 같다(UserSettingsVariables.h). 결정적: 애니메이션 없는 무대, 고정 프레임 시간, 카메라는 움직이지 않는다.
+  견주는 영역은 큐브가 놓인 가운데 아래쪽이고, 설정마다 백엔드별 골든(golden/)과 비교한다.
+  UI 는 그대로인지 · 렌더 텍스처 모니터가 색각 보정을 두 번 받지 않는지 · 텍스처 품질(재시작) · 이펙트 품질은 이 무대로 볼 수 없어 눈 확인 항목(usersettings-visual-review)이 맡는다.
+  실행: ctest -R Scenario.game.empty.useroptions
+        (ctest 가 <Launch> 를 명령줄로 옮긴다)
+-->
+<Scenario name="game.empty.useroptions" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_deferred" value="1"/>
+	<!-- 설정 파일이 비어 있으면 App 이 이 PC 에 맞춰 그래픽 프리셋을 고른다(약한 GPU 는 low) — 잰 값의 기준 상태(높음)로 못 박는다 -->
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<Screenshot file="base.ppm"/>
+
+	<!-- 렌더 스케일 0.5 -->
+	<Wait frames="10"/>
+	<Variable name="gv_renderScale" value="0.5"/>
+	<Wait frames="30"/>
+	<Screenshot file="scale.ppm" waitForSettle="false"/>
+	<Wait frames="5"/>
+	<Variable name="gv_renderScale" value="1"/>
+
+	<!-- 시야 거리 0.05 — 먼 평면 100 m 가 5 m 가 되어 카메라(-6)에서 먼 큐브가 잘린다 -->
+	<Wait frames="5"/>
+	<Variable name="gv_viewDistanceScale" value="0.05"/>
+	<Wait frames="30"/>
+	<Screenshot file="distance.ppm" waitForSettle="false"/>
+	<Wait frames="5"/>
+	<Variable name="gv_viewDistanceScale" value="1"/>
+
+	<!-- 후처리 품질 0 — SSAO · 블룸을 건너뛴다 -->
+	<Wait frames="5"/>
+	<Variable name="gv_postQuality" value="0"/>
+	<Wait frames="30"/>
+	<Screenshot file="postlow.ppm" waitForSettle="false"/>
+	<Wait frames="5"/>
+	<Variable name="gv_postQuality" value="3"/>
+
+	<!-- 색각 보정 1(적색약) -->
+	<Wait frames="5"/>
+	<Variable name="gv_colorVisionMode" value="1"/>
+	<Wait frames="30"/>
+	<Screenshot file="colorvision.ppm" waitForSettle="false"/>
+	<Wait frames="5"/>
+	<Variable name="gv_colorVisionMode" value="0"/>
+
+	<Wait frames="10"/>
+	<ExpectImage file="scale.ppm" golden="scale" region="0.05,0.15,0.95,0.75"/>
+	<ExpectImage file="distance.ppm" golden="distance" region="0.05,0.15,0.95,0.75"/>
+	<ExpectImage file="postlow.ppm" golden="postlow" region="0.05,0.15,0.95,0.75"/>
+	<ExpectImage file="colorvision.ppm" golden="colorvision" region="0.05,0.15,0.95,0.75"/>
+	<Pass/>
+</Scenario>

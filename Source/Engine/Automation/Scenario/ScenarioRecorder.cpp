@@ -512,24 +512,33 @@ namespace sw
         writer.attributeInt( "timeoutFrames", passFrame + Internal::kTimeoutMargin );
         writer.attribute( "startAfter", settings._bStartWhenScenePlaying ? "ScenePlaying" : "Immediately" );
         writer.attribute( "input", "exclusive" );
+        // 단계는 적은 순서대로 돌고 시간은 `<Wait frames>` 만 흘린다 — 녹화한 프레임 사이의 간격을 `<Wait>` 로 옮긴다.
+        uint32 frameCursor    = 0;
+        auto   waitUntilFrame = [&writer, &frameCursor]( uint32 frame )
+        {
+            if ( frame <= frameCursor )
+                return;
+            writer.whitespace( "\n\t" );
+            writer.beginElement( "Wait" );
+            writer.attributeInt( "frames", frame - frameCursor );
+            writer.endElement();
+            frameCursor = frame;
+        };
         for ( size_t index = 0; index < listFrameBody.size(); ++index )
         {
             if ( listFrameBody[index]->isEmpty() )
                 continue;
+            waitUntilFrame( settings._firstFrame + static_cast<uint32>( index ) );
             writer.whitespace( "\n\t" );
-            writer.beginElement( "At" );
-            writer.attributeInt( "frame", settings._firstFrame + static_cast<uint32>( index ) );
             // 프레임 본문은 따로 쓴 조각이다 — 스틱 구간은 앞 프레임의 본문에 나중에 닫힌다.
             writer.fragment( *listFrameBody[index] );
-            writer.endElement();
         }
         if ( bCheckpoints )
         {
-            writer.whitespace( "\n\t" );
-            writer.beginElement( "At" );
-            writer.attributeInt( "frame", checkpointFrame );
+            waitUntilFrame( checkpointFrame );
             for ( const ScenarioRecordCheckpoint& checkpoint : settings._listCheckpoint )
             {
+                writer.whitespace( "\n\t" );
                 writer.beginElement( "Expect" );
                 writer.attribute( "watch", checkpoint._watch );
                 if ( checkpoint._target.empty() == false )
@@ -541,13 +550,10 @@ namespace sw
                     Internal::writeFloatAttribute( writer, "tolerance", settings._checkpointTolerance );
                 writer.endElement();
             }
-            writer.endElement();
         }
+        waitUntilFrame( passFrame );
         writer.whitespace( "\n\t" );
-        writer.beginElement( "At" );
-        writer.attributeInt( "frame", passFrame );
         writer.beginElement( "Pass" );
-        writer.endElement();
         writer.endElement();
         writer.whitespace( "\n" );
         writer.endElement();

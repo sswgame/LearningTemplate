@@ -18,7 +18,6 @@
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
-#include "Engine/Automation/Runner/AutomationThresholdBasis.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
@@ -357,30 +356,10 @@ namespace sw
 
             static bool validateExpectImage( const AutomationStep& step, string& outError )
             {
-                if ( step.hasOnlyAttributes( { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost", "measured", "provisional" },
-                                             outError ) == false ||
-                     step.requireAttribute( "file", outError ) == nullptr )
+                if ( step.hasRequiredAttributes( { "file", "golden", "region", "tolerance" }, { "file", "golden" }, outError ) == false )
                     return false;
-                if ( countComparisons( step, { "equals", "near", "atLeast", "atMost" } ) == false )
-                {
-                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost";
-                    return false;
-                }
                 AutomationStepArgsUtil::ExpectImageArgs args;
-                if ( AutomationStepArgsUtil::parseExpectImage( step, args, outError ) == false )
-                    return false;
-                if ( AutomationImageMetric::usesReference( args._metric ) != ( step.findAttribute( "reference" ) != nullptr ) )
-                {
-                    outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" or \"differingFraction\" (and only with them)";
-                    return false;
-                }
-                // 평균 차의 하한 · 상한은 서로 다른 화면이 같은 평균을 내면 통과한다 — "다르다 · 같다" 는 화소를 세는 differingFraction 으로만 쓴다.
-                if ( args._metric == AutomationImageMetricKind::DifferentFrom && step.findAttribute( "near" ) == nullptr )
-                {
-                    outError = step.describe() + ": differentFrom is an amount (near only); use differingFraction with atLeast / atMost to say \"differs\" or \"same\"";
-                    return false;
-                }
-                return true;
+                return AutomationStepArgsUtil::parseExpectImage( step, args, outError );
             }
 
             /** @brief 종료 시한 단계의 시간 속성 @p pName 하나만 받습니다. */
@@ -509,7 +488,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다. */
+        /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다(순차 형식은 읽기가 자리를 나눈다 — 이것은 그 약속의 그물이다). */
         [[nodiscard]] static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
         {
             AutomationRunner&     runner     = asRunner( context );

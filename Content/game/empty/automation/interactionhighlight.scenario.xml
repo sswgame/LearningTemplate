@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  상호작용 강조 — 고른 대상이 외곽선(PickUp)으로, 감각 모드(Hide)는 벽 너머로도 구별되는지 본다(InteractionHighlightAndMontage H3). 강조 패스(highlightoutline.hlsl)를 본다.
+  결정적: 무대 maps/interactionhighlight(카메라 고정), 고정 프레임 시간. 하는 쪽(Player 빈 오브젝트)만 순간이동으로 옮겨 같은 그림틀에서 강조만 켜고 끈다 —
+  먼 곳(base) → PickCube 1.2 m 앞(outline) → HideCube 앞, 사이에 벽(sense).
+  지표는 영역 안에서 기준 사진과 색이 다른 화소의 비율이다. 대상 둘레의 영역은 카메라 (0,1.6,-6)·시야 0.7 rad 로 계산한 값이다 — PickCube 는 화면 (0.34, 0.51), HideCube 는 (0.69, 0.48).
+  실행: ctest -R Scenario.game.empty.interactionhighlight
+        (ctest 가 <Launch> 를 명령줄로 옮긴다)
+-->
+<Scenario name="game.empty.interactionhighlight" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/interactionhighlight.scene.xml"/>
+	<Wait frames="40"/>
+	<Screenshot file="base.ppm"/>
+
+	<!-- PickCube 앞 — 외곽선 -->
+	<Wait frames="10"/>
+	<DevCommand line="teleport Player -1.5 0.5 -0.2"/>
+	<Wait frames="20"/>
+	<Screenshot file="outline.ppm" waitForSettle="false"/>
+
+	<!-- HideCube 앞(벽 너머) — 감각 모드 -->
+	<Wait frames="10"/>
+	<DevCommand line="teleport Player 2 0.5 0.8"/>
+	<Wait frames="20"/>
+	<Screenshot file="sense.ppm" waitForSettle="false"/>
+
+	<Wait frames="10"/>
+	<ExpectImage file="outline.ppm" golden="outline" region="0.26,0.38,0.42,0.64"/>
+	<ExpectImage file="outline.ppm" golden="outline_2" region="0.62,0.37,0.76,0.60"/>
+	<ExpectImage file="sense.ppm" golden="sense" region="0.62,0.37,0.76,0.60"/>
+	<ExpectImage file="sense.ppm" golden="sense_2" region="0.26,0.38,0.42,0.64"/>
+	<Pass/>
+</Scenario>

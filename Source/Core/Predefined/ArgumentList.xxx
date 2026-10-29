@@ -154,6 +154,8 @@ SW_REGISTER_ARGUMENT( UPDATE_SNAPSHOTS, false, false, "update-snapshots" )
 // 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
 // (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/` 의 헤더 주석.
 SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )
+// 시나리오의 `<ExpectImage golden>` 이 없거나 다른 골든을 지금 그림으로 쓴다(시나리오 파일 옆 `golden/`) — 쓴 파일은 보고의 updatedGoldens 에 남는다. 리뷰하고 커밋한다.
+SW_REGISTER_ARGUMENT( SCENARIO_UPDATE_GOLDEN, false, false, "scenario-update-golden" )
 // 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다).
 SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
 // 시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 실패로 세지 않고 이어 간다.

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  KayKit 리그 벤치의 아틀라스 색 — 후처리 리그를 건 기사 한 명(-gv_benchRig=1)의 몸 · 쇠뇌(_rigWeaponMaterial) · 망토(_rigCapeMaterial)가 KayKit 머티리얼로 그려지는지 눈으로 본다.
+  카메라 시점(-gv_benchRigView)마다 한 장: 0 왼쪽 앞(시선 · 왼손 · 발) · 2 오른쪽 옆(쇠뇌 · 망토).
+  실행: ctest -R Scenario.game.empty.kaykitrig (Shipping 은 벤치 변수가 없어 건너뛴다)
+-->
+<Scenario name="game.empty.kaykitrig" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_benchRig" value="1"/>
+	<Wait frames="60"/>
+	<Screenshot file="empty/kaykit_rig_view0.ppm"/>
+	<Wait frames="10"/>
+	<Variable name="gv_benchRigView" value="2"/>
+	<Wait frames="60"/>
+	<Screenshot file="empty/kaykit_rig_view2.ppm"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

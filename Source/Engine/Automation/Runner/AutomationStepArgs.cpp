@@ -103,27 +103,31 @@ namespace sw
 
     bool AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError )
     {
-        const string* pMetric = step.requireAttribute( "metric", outError );
-        if ( pMetric == nullptr )
+        const string* pGolden = step.requireAttribute( "golden", outError );
+        if ( pGolden == nullptr )
             return false;
-        if ( AutomationImageMetric::tryParseKind( *pMetric, outArgs._metric ) == false )
+        // 골든 이름은 파일 이름의 한 조각이다 — 경로 · 점을 받지 않는다(`<시나리오>.<이름>.<백엔드>.ppm` 이 하나로 읽혀야 한다).
+        const bool bPlainName = pGolden->empty() == false && pGolden->find_first_of( "/\\.:" ) == string::npos;
+        if ( bPlainName == false )
         {
-            outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom · differingFraction)";
+            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + *pGolden + "'";
             return false;
         }
+        outArgs._golden       = *pGolden;
         const string* pRegion = step.findAttribute( "region" );
         if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, outArgs._region ) == false )
         {
             outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
             return false;
         }
-        // 문턱 숫자가 잰 것인지 어림인지는 단언 옆에 형식으로 남는다 — 적지 않은 단언은 읽기 오류다.
-        if ( AutomationThresholdBasis::tryParse( step.findAttribute( "measured" ), step.findAttribute( "provisional" ), outArgs._basis, outError ) == false )
+        if ( readFloat( step, "tolerance", outArgs._tolerance, outError ) == false )
+            return false;
+        if ( outArgs._tolerance < 0.0f || outArgs._tolerance > 1.0f )
         {
-            outError = step.describe() + ": " + outError;
+            outError = step.describe() + ": tolerance is the allowed fraction of differing pixels (0..1)";
             return false;
         }
-        return readFloat( step, "ratio", outArgs._ratio, outError ) && parseNumberComparison( step, kImageNearTolerance, outArgs._comparison, outError );
+        return true;
     }
 
     bool AutomationStepArgsUtil::compareVariable( const GlobalVariableInfo& info, string_view expected, float32 tolerance, bool& outMatched )

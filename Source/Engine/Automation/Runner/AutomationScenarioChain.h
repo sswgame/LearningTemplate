@@ -46,7 +46,7 @@ namespace sw
          * @return 다음 단계로 넘어갔으면 true(통과했거나 `keepGoing` 이 실패를 넘겼고 단계가 남았다). 아니면 false 이고 체인이 끝난다.
          */
         [[nodiscard]] bool onStageEnded( AutomationOutcome result );
-        /** @brief 체인의 최종 결과입니다. 끝나기 전에는 `Running`, 전부 통과했으면 `Passed`(미확정 단계가 있으면 `Unconfirmed`), 아니면 처음으로 통과하지 못한 단계의 결과입니다. */
+        /** @brief 체인의 최종 결과입니다. 끝나기 전에는 `Running`, 전부 통과했으면 `Passed`, 아니면 처음으로 통과하지 못한 단계의 결과입니다. */
         AutomationOutcome getFinalResult() const { return _finalResult; }
         /** @brief 통과하지 못해 멈춰서 돌리지 않은 단계 수입니다. */
         size_t getSkippedStageCount() const { return _skippedStageCount; }
@@ -54,8 +54,6 @@ namespace sw
         size_t getFailedStageCount() const { return _failedStageCount; }
         /** @brief `keepGoing` 이 건너뛰고 이어 간 단계(건너뜀으로 끝난 것) 수입니다. */
         size_t getSkippedResultCount() const { return _skippedResultCount; }
-        /** @brief 어림값 문턱이 들어 미확정(`Unconfirmed`)으로 끝난 단계 수입니다. 실패가 아니라서 뒤 단계는 돌고, 실패가 없으면 체인의 결과가 미확정이 됩니다. */
-        size_t getUnconfirmedResultCount() const { return _unconfirmedResultCount; }
         /**
          * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 FAIL (shooter3d.reload) — 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
          * @param stageIndex 방금 끝난 단계 번호
@@ -68,7 +66,6 @@ namespace sw
         size_t            _skippedStageCount{ 0 };
         size_t            _failedStageCount{ 0 };
         size_t            _skippedResultCount{ 0 };
-        size_t            _unconfirmedResultCount{ 0 };
         AutomationOutcome _firstNonPassResult{ AutomationOutcome::Passed }; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
         AutomationOutcome _finalResult{ AutomationOutcome::Running };
         bool              _bKeepGoing{ false };

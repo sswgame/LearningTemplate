@@ -7,40 +7,40 @@
   실행: App -scenario=engine/automation/rhiswap/swapbackends.scenario.xml -unattended
 -->
 <Scenario name="rhiswap.swapbackends" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
-	<At frame="30"><SwapBackend backend="dx11"/></At>
-	<At frame="32"><WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
-	<At frame="40">
-		<Expect watch="RHI.Backend" equals="0"/>
-		<Expect watch="RHI.SwapFailedCount" equals="0"/>
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-	</At>
-	<At frame="60"><SwapBackend backend="dx12"/></At>
-	<At frame="62"><WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
-	<At frame="70">
-		<Expect watch="RHI.Backend" equals="1"/>
-		<Expect watch="RHI.SwapFailedCount" equals="0"/>
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-	</At>
-	<At frame="90"><SwapBackend backend="vk"/></At>
-	<At frame="92"><WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
-	<At frame="100">
-		<Expect watch="RHI.Backend" equals="2"/>
-		<Expect watch="RHI.SwapFailedCount" equals="0"/>
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-	</At>
-	<At frame="120"><SwapBackend backend="gl"/></At>
-	<At frame="122"><WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
-	<At frame="130">
-		<Expect watch="RHI.Backend" equals="3"/>
-		<Expect watch="RHI.SwapFailedCount" equals="0"/>
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-	</At>
-	<At frame="150"><SwapBackend backend="dx12"/></At>
-	<At frame="152"><WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
-	<At frame="160">
-		<Expect watch="RHI.Backend" equals="1"/>
-		<Expect watch="RHI.SwapFailedCount" equals="0"/>
-		<Expect watch="Scene.ObjectCount" atLeast="1"/>
-		<Pass/>
-	</At>
+	<Wait frames="30"/>
+	<SwapBackend backend="dx11"/>
+	<Wait frames="2"/>
+	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="RHI.Backend" equals="0" timeoutFrames="60"/>
+	<Expect watch="RHI.SwapFailedCount" equals="0"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Wait frames="20"/>
+	<SwapBackend backend="dx12"/>
+	<Wait frames="2"/>
+	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="RHI.Backend" equals="1" timeoutFrames="60"/>
+	<Expect watch="RHI.SwapFailedCount" equals="0"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Wait frames="20"/>
+	<SwapBackend backend="vk"/>
+	<Wait frames="2"/>
+	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="RHI.Backend" equals="2" timeoutFrames="60"/>
+	<Expect watch="RHI.SwapFailedCount" equals="0"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Wait frames="20"/>
+	<SwapBackend backend="gl"/>
+	<Wait frames="2"/>
+	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="RHI.Backend" equals="3" timeoutFrames="60"/>
+	<Expect watch="RHI.SwapFailedCount" equals="0"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Wait frames="20"/>
+	<SwapBackend backend="dx12"/>
+	<Wait frames="2"/>
+	<WaitUntil watch="RHI.SwapPending" equals="0" timeoutFrames="900"/>
+	<WaitUntil watch="RHI.Backend" equals="1" timeoutFrames="60"/>
+	<Expect watch="RHI.SwapFailedCount" equals="0"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Pass/>
 </Scenario>

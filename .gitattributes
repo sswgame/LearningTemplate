@@ -5,8 +5,9 @@
 # core.autocrlf 로 워크트리만 CRLF 가 되면 같은 내용인데도 "다시 빌드해야 한다" 로 판정돼, 바뀐 것 없이 공유 설치 폴더가 다시 설치됐다.
 ThirdParty/*/vcpkg-port/** -text
 
-# 골든 이미지(Test/AppTest/Golden — CompressionStream 으로 감싼 PPM)는 바이너리다
-*.ppm.z binary
+# 시나리오 골든 이미지(Content/**/automation/golden/*.ppm — 축소한 PPM)와 스냅숏은 바이트로 대조한다 — 바이너리 · 줄끝 변환 금지
+*.ppm binary
+Source/**/Tests/Snapshots/** -text
 
 # 모델 임포트의 원본(models_raw/)과 결과(models/ — .mesh 옆 스켈레톤 JSON · 클립)는 스탬프가 바이트 해시로 대조한다 — 줄끝 변환 금지
 # (core.autocrlf 체크아웃이 *.skeleton.xml 을 CRLF 로 바꾸면 갓 임포트한 LF 결과와 해시가 달라 "손으로 바꿨다" 가 된다)

@@ -145,7 +145,7 @@ namespace sw
         Internal::writeStringField( writer, "reproduce", Internal::toView( payload._reproduce ) );
         writer.key( "hang" );
         writer.valueBool( true );
-        for ( const utf8* pListName : { "failures", "unconfirmed", "unhandledLogs", "allowedLogs", "metrics", "records" } )
+        for ( const utf8* pListName : { "failures", "updatedGoldens", "unhandledLogs", "allowedLogs", "metrics", "records" } )
         {
             writer.key( pListName );
             writer.beginArray();
