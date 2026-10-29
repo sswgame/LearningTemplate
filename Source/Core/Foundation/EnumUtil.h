@@ -73,7 +73,7 @@ namespace sw
      * @details 연산자를 `namespace sw` 안에 정의하고 전역에는 using 으로 다시 내놓는 이유는 이름 조회 규칙 때문입니다.
      *          한정하지 않은 연산자 호출은 (a) 호출한 자리에서 바깥쪽 스코프로 훑어 나가는 일반 조회와 (b) 인자 타입이 속한
      *          네임스페이스를 보는 ADL 을 함께 씁니다.
-     *          - 전역에만 두면: `Engine/Graphics/RHI/RHITypes.h` 가 이미 `sw::operator|(RHIBufferUsage, ...)` 를 갖고 있어서,
+     *          - 전역에만 두면: `Engine/Graphics/RHI/RHIEnums.h` 가 이미 `sw::operator|(RHIBufferUsage, ...)` 를 갖고 있어서,
      *            `sw::editor::PanelFlags` 처럼 sw 안쪽에 있는 enum 은 (a) 가 sw 에서 그 이름을 찾는 순간 멈춥니다. C++ 조회는
      *            같은 이름을 찾으면 후보가 맞지 않아도 더 바깥(전역)으로 가지 않으므로 전역 연산자를 끝내 보지 못합니다.
      *          - sw 안에만 두면: 네임스페이스 없이 전역에 선언한 enum(TestFlag 등)은 (a) 도 (b) 도 sw 를 보지 않아 찾지 못합니다.

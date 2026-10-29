@@ -92,7 +92,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 
 | 쓰지 않는 것 | 쓰는 것 |
 | :--- | :--- |
-| 상수를 여러 곳에 복사 | `.cpp` 하나는 `WeaponInternal::kMaxSpread`, 모듈 하나는 `MeshAssetFormat::kExtension`, 모듈 사이는 `RHITypes.h` `constant` · `shaderslot::k*` |
+| 상수를 여러 곳에 복사 | `.cpp` 하나는 `WeaponInternal::kMaxSpread`, 모듈 하나는 `MeshAssetFormat::kExtension`, 모듈 사이는 `RHIDescriptors.h` `constant` · `shaderslot::k*` |
 | `kFrameCount = constant::kMaxFrameCountInFlight`(별칭) | `constant::kMaxFrameCountInFlight` 를 그대로 |
 | `nanoseconds / 1000000000` | `nanoseconds / constant::kNanosecondsPerSecond` |
 | `0x53574846`(4 글자 표식) | `FourCcUtil::make( "SWHF" )` |

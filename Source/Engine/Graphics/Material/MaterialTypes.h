@@ -4,7 +4,8 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
