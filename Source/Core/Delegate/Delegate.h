@@ -472,17 +472,29 @@ namespace sw
                 if ( callee.isBound() )
                     callee( args... );
             }
-            --_broadcastDepth;
+            endBroadcast();
+        }
 
-            if ( _broadcastDepth > 0 )
-                return;
-
-            // broadcast 중에 요청된 remove 를 한꺼번에 처리한다
-            for ( const DelegateHandle& removeHandle : _listPendingRemove )
+        /**
+         * @brief 등록 순서대로 부르고 결과마다 @p onResult( R ) 를 부릅니다. @p onResult 가 true 를 돌려주면 남은 델리게이트는 부르지 않습니다. 멈췄으면 true 입니다.
+         * @details 하나가 결정을 내는 알림(프레임 훅의 종료 코드)에 씁니다. 순회 중 구독 해제 · 추가 규칙은 `broadcast` 와 같습니다 — 호출부가 목록을 직접 훑으며
+         *          순회 중 해제를 따로 막지 않게 하려고 둡니다(언리얼 `TMulticastDelegate` 는 반환 값을 버리므로 결과를 모으는 쪽이 손으로 훑는다).
+         */
+        template <typename ResultVisitor>
+        bool broadcastUntil( ResultVisitor&& onResult, Args... args )
+        {
+            static_assert( std::is_void_v<R> == false, "broadcastUntil needs a result - use broadcast for void delegates" );
+            ++_broadcastDepth;
+            bool         bStopped     = false;
+            const size_t numDelegates = _listDelegate.size();
+            for ( size_t entryIndex = 0; entryIndex < numDelegates && bStopped == false; ++entryIndex )
             {
-                removeNow( removeHandle );
+                delegate_type callee = _listDelegate[entryIndex]._delegate; // `broadcast` 와 같은 까닭으로 사본을 부른다
+                if ( callee.isBound() )
+                    bStopped = onResult( callee( args... ) );
             }
-            _listPendingRemove.clear();
+            endBroadcast();
+            return bStopped;
         }
 
         /**
@@ -532,6 +544,19 @@ namespace sw
         void clear() { removeAll(); }
 
     private:
+        /** @brief broadcast 깊이를 내리고, 가장 바깥 호출이면 broadcast 중에 요청된 remove 를 한꺼번에 처리합니다. */
+        void endBroadcast()
+        {
+            --_broadcastDepth;
+            if ( _broadcastDepth > 0 )
+                return;
+            for ( const DelegateHandle& removeHandle : _listPendingRemove )
+            {
+                removeNow( removeHandle );
+            }
+            _listPendingRemove.clear();
+        }
+
         /** @brief 구독 @p id 가 풀렸습니다. broadcast 중이면 그 자리에서 무효화하고 삭제는 끝난 뒤로 미룹니다. */
         void releaseSubscription( uint64 id ) override
         {

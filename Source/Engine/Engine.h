@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/SubscriptionList.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -215,8 +215,6 @@ namespace sw
         void updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
         /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. Server 타깃에는 렌더러가 없어 아무 일도 하지 않습니다. */
         void submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
-        /** @brief 프레임 관찰자 구독이 풀렸습니다(@p id 는 관찰자 주소). 목록에서 뗍니다. */
-        void releaseSubscription( uint64 id );
 
     private:
         /**
@@ -238,19 +236,23 @@ namespace sw
         vector<Subscription> _listCodecSubscription;
         /** @brief 디버그 키 액션 맵입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
         DebugKeyActions _debugKeyActions;
+        /** @brief 훅 묶음의 칸 하나(프레임 시점)입니다. 묶음 하나가 멀티캐스트 항목 하나라 구독 하나로 떨어진다. */
+        enum class FramePoint : uint8
+        {
+            FrameBegin,
+            AfterSceneTick,
+            FrameEnd,
+            WindowClosed,
+        };
+        /** @brief 훅 묶음 목록입니다 — 공용 멀티캐스트라 훅이 순회 중에 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다(언리얼 `FCoreDelegates::OnBeginFrame` 과 같은 자리). */
+        using FrameHookDelegate = Delegate<int32( FramePoint, const EngineFrameContext& )>;
+        using FrameHookList     = MulticastDelegate<int32( FramePoint, const EngineFrameContext& )>;
         /**
-         * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
+         * @brief 프레임 관찰자 목록입니다(대상은 소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
-        /** @struct FrameHookEntry @brief 붙인 훅 묶음 하나와 그 구독 id 입니다. */
-        struct FrameHookEntry
-        {
-            uint64           _id;
-            EngineFrameHooks _hooks;
-        };
-        vector<FrameHookEntry>         _listFrameHook;
+        FrameHookList                  _frameHooks;
         EngineStartupExtensionDelegate _startupExtension; ///< 호스트가 건 기동 확장(`setStartupExtension`, 없으면 비었다)
-        uint64                         _nextFrameHookID;  ///< 다음 훅 묶음의 구독 id(1 부터)
         /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
         Subscription _telemetryFrameSubscription;
 
@@ -297,9 +299,5 @@ namespace sw
         RenderPacketBuilder* _pPacketBuilder;
         /** @brief 서브시스템 `RenderThread` 의 렌더 스레드입니다(소유는 그 단계 — 처음 설 때부터 해제까지 빌려 쓴다). 전용 서버에는 없다. */
         RenderThread* _pRenderThread;
-
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&Engine::releaseSubscription>( this ) };
     };
 } // namespace sw

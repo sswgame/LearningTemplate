@@ -371,6 +371,50 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
 }
 
 /**
+ * @brief [DelegateTest] `broadcastUntil` 은 결과가 멈춤을 고른 곳에서 서고, 그 사이 자기 구독을 푼 항목은 순회가 끝난 뒤 빠진다
+ */
+SW_TEST_CASE( DelegateTest, MulticastDelegateBroadcastUntilStopsAndDefersRemove )
+{
+    sw::MulticastDelegate<int32()> multiDel;
+    int32                          thirdCallCount = 0;
+    sw::Subscription               subscriptionA;
+    subscriptionA                  = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<int32()>, [&]() -> int32
+                     {
+        subscriptionA.reset(); // 순회 중 자기 구독을 푼다
+        return -1;
+    } ) );
+    sw::Subscription subscriptionB = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<int32()>, []() -> int32
+    { return 7; } ) );
+    sw::Subscription subscriptionC = multiDel.add( SW_DELEGATE_LAMBDA( sw::Delegate<int32()>, [&]() -> int32
+    {
+        ++thirdCallCount;
+        return 9;
+    } ) );
+
+    int32      firstCode = -1;
+    const bool bStopped  = multiDel.broadcastUntil( [&]( int32 code )
+    {
+        if ( code == -1 )
+            return false;
+        firstCode = code;
+        return true;
+    } );
+    SW_EXPECT_TRUE( bStopped );
+    SW_EXPECT_EQUAL( 7, firstCode );
+    SW_EXPECT_EQUAL( 0, thirdCallCount );
+    SW_EXPECT_FALSE( subscriptionA.isActive() );
+
+    int32 resultCount = 0;
+    SW_EXPECT_FALSE( multiDel.broadcastUntil( [&]( int32 )
+    {
+        ++resultCount;
+        return false;
+    } ) );
+    SW_EXPECT_EQUAL( 2, resultCount ); // A 는 빠졌다
+    SW_EXPECT_EQUAL( 1, thirdCallCount );
+}
+
+/**
  * @brief [DelegateTest] MulticastDelegate 는 **진짜로 이동한다** (복사로 떨어지지 않는다)
  * @details 복사 생성자를 `= default` 로 *선언* 하면 암시적 이동 생성자·이동 대입이 생기지 않는다.
  *          그러면 `std::move` 를 써도 구독자 벡터가 통째로 깊은 복사되고,
