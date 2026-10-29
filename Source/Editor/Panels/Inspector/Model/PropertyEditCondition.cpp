@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Reflection/PropertyEditCondition.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 
 #include "Core/Container/StringUtil.h"
 

@@ -38,6 +38,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -46,7 +47,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
-#include "Engine/Reflection/PropertyEditCondition.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"

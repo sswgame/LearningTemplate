@@ -9,6 +9,8 @@
 #include "Core/Container/string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TextAddress.h"
 
@@ -43,7 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief EditCondition 식을 풀고 판정합니다. */
-    struct SW_API PropertyEditCondition
+    struct SW_EDITOR_API PropertyEditCondition
     {
         /**
          * @brief @p prop 의 EditCondition 식을 @p type(기반 포함)에 대해 풉니다.
