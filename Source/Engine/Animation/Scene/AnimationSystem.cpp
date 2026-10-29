@@ -240,12 +240,12 @@ namespace sw
     {
         if ( pClient == nullptr || _lodClientList.add( pClient ) == false )
             return {}; // 이미 있으면 먼저 받은 구독이 쥔다
-        return _subscriptions.issue( reinterpret_cast<uint64>( pClient ) );
+        return _lodClientSubscriptions.issue( pClient );
     }
 
-    void AnimationSystem::releaseSubscription( uint64 id )
+    void AnimationSystem::releaseLODClient( IAnimationLODClient* pClient )
     {
-        (void)_lodClientList.remove( reinterpret_cast<const IAnimationLODClient*>( id ) ); // 구독 하나가 등록 하나라 늘 있다
+        (void)_lodClientList.remove( pClient ); // 구독 하나가 등록 하나라 늘 있다
     }
 
     void AnimationSystem::setLODViews( const vector<LODView>& listView )

@@ -237,25 +237,15 @@ namespace sw
         vector<NavMeshSurfaceComponent*>   _listSurface;
         vector<NavMeshObstacleComponent*>  _listObstacle;
         vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
-        /** @brief 등록 구독의 종류입니다. 구독 id 는 등록한 주소에 이 값을 더한 것이다(주소는 8 바이트 정렬이라 아래 3 비트가 빈다). */
-        enum class RegistrationKind : uint64
-        {
-            GeometrySource = 0,
-            Agent,
-            Surface,
-            Obstacle,
-            Link,
-        };
-        static constexpr uint64    kRegistrationKindMask = 7;
-        [[nodiscard]] Subscription issueRegistration( const void* pItem, RegistrationKind kind );
-        /** @brief 등록 구독이 풀렸습니다. 종류에 맞춰 뺍니다(기하 소스는 순서를 지키며, 나머지는 각자의 해제). */
-        void releaseSubscription( uint64 id );
+        // 등록 구독이 풀렸을 때 부르는 해제 — 종류마다 구독 목록 하나라 id 에 종류를 싣지 않는다. 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`).
+        /** @brief 기하 소스를 순서를 지키며 뺍니다. */
+        void releaseGeometrySource( INavGeometrySource* pSource );
         void unregisterAgent( NavMeshAgentComponent* pAgent );
         void unregisterSurface( NavMeshSurfaceComponent* pSurface );
         void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
         void unregisterLink( NavMeshLinkComponent* pLink );
 
-        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
+        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
@@ -264,7 +254,10 @@ namespace sw
         bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
 
     private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&SceneNavigation::releaseSubscription>( this ) };
+        // 슬롯 색인(`_navIndex`)으로 O(1) 빼는 목록 넷의 등록 구독입니다. 풀리면 그 종류의 `unregister…` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다.
+        ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction::create<&SceneNavigation::unregisterAgent>( this ) };
+        ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction::create<&SceneNavigation::unregisterSurface>( this ) };
+        ItemSubscriptionList<NavMeshObstacleComponent> _obstacleSubscriptions{ ItemSubscriptionList<NavMeshObstacleComponent>::ReleaseFunction::create<&SceneNavigation::unregisterObstacle>( this ) };
+        ItemSubscriptionList<NavMeshLinkComponent>     _linkSubscriptions{ ItemSubscriptionList<NavMeshLinkComponent>::ReleaseFunction::create<&SceneNavigation::unregisterLink>( this ) };
     };
 } // namespace sw

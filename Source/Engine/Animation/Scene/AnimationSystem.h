@@ -600,8 +600,8 @@ namespace sw
         unordered_set<const SkeletalMeshComponent*> _uniqueSingletonRemoval; ///< 성분 목록에서 뺄 외톨이 유닛이다(`unregisterUnit` 이 모으고 `flushSingletonRemoval` 이 비운다)
         AnimationComponentSet                       _componentAll;           ///< 모든 유닛의 성분이다(평가 순서 — 외톨이 해제는 지름길로 뺀다)
         AnimationComponentSet                       _componentActive;        ///< 이번 프레임에 일하는 유닛의 성분별 구간이다(`collectActiveUnits` 가 채운다). 단계를 처리하는 유닛 전부다
-        /** @brief LOD 클라이언트 구독이 풀렸습니다(@p id 는 클라이언트 주소). 목록에서 뺍니다. */
-        void releaseSubscription( uint64 id );
+        /** @brief LOD 클라이언트 구독이 풀렸습니다. 목록에서 뺍니다(주소로만 찾는다). */
+        void releaseLODClient( IAnimationLODClient* pClient );
 
         AnimationOrderedList<IAnimationLODClient> _lodClientList; ///< LOD 클라이언트(등록 순서 — 판정 · 예산 순서)
         vector<LODView>                           _listLODView;
@@ -644,7 +644,7 @@ namespace sw
         uint8              _bHasPendingLODView;   ///< 대기 뷰가 있다
 
     private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AnimationSystem::releaseSubscription>( this ) };
+        /** @brief LOD 클라이언트 등록의 구독입니다(목록이 O(1) 순서 보존 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseLODClient` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<IAnimationLODClient> _lodClientSubscriptions{ ItemSubscriptionList<IAnimationLODClient>::ReleaseFunction::create<&AnimationSystem::releaseLODClient>( this ) };
     };
 } // namespace sw

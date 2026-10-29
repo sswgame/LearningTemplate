@@ -310,8 +310,8 @@ namespace sw
         bool consumeDisplayRequest( DisplaySettingsRequest& outRequest ) { return _engineHandlers.consumeDisplayRequest( outRequest ); }
 
     private:
-        /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다(@p id 는 맵 주소). 맵을 뗍니다. */
-        void releaseSubscription( uint64 id );
+        /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다. 맵을 뗍니다(주소로만 찾는다 — 역참조하지 않는다). */
+        void releaseKeyBindingInputMap( const InputMap* pInputMap );
 
         /** @brief 설정 하나의 값 상태입니다. `UserSettingsSchema::getSettings` 와 같은 순번입니다. */
         struct SettingState
@@ -361,9 +361,8 @@ namespace sw
         vector<DataPath EngineDefaultAssets::*> _listStartupSchemaField; ///< `addStartupSchema` 가 더한 스키마 칸(기동이 사용자 파일보다 먼저 읽는다)
 
     private:
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&UserSettingsManager::releaseSubscription>( this ) };
+        /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<const InputMap> _subscriptions{ ItemSubscriptionList<const InputMap>::ReleaseFunction::create<&UserSettingsManager::releaseKeyBindingInputMap>( this ) };
     };
 
     template <typename T>

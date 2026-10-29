@@ -468,12 +468,11 @@ namespace sw
             pChannel = &added;
         }
         pChannel->_pProvider = pProvider;
-        return _subscriptions.issue( static_cast<uint64>( reinterpret_cast<uintptr_t>( pProvider ) ) );
+        return _subscriptions.issue( pProvider );
     }
 
-    void StateHashHistory::releaseSubscription( uint64 id )
+    void StateHashHistory::releaseProvider( const IStateHashProvider* pProvider )
     {
-        const IStateHashProvider* const pProvider = reinterpret_cast<const IStateHashProvider*>( static_cast<uintptr_t>( id ) );
         for ( Channel& channel : _listChannel )
         {
             channel._pProvider = channel._pProvider == pProvider ? nullptr : channel._pProvider; // 이력은 남긴다

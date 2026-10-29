@@ -184,10 +184,10 @@ namespace sw
          */
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );
 
-    protected:
-        void releaseSubscription( uint64 id );
-
     private:
+        /** @brief 제공자의 등록 구독이 풀렸습니다. 그 제공자가 맡은 줄을 비웁니다(이력은 남긴다). 주소로만 찾는다. */
+        void releaseProvider( const IStateHashProvider* pProvider );
+
         /** @brief 링 버퍼 하나입니다(틱 오름차순으로 쌓이고 가득 차면 `_head` 부터 덮는다). 용량은 이력이 정한다. */
         struct Ring
         {
@@ -215,7 +215,7 @@ namespace sw
         uint32          _capacity{ 0 };
 
     private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&StateHashHistory::releaseSubscription>( this ) };
+        /** @brief 제공자 등록의 구독입니다. 풀리면 `releaseProvider` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<const IStateHashProvider> _subscriptions{ ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction::create<&StateHashHistory::releaseProvider>( this ) };
     };
 } // namespace sw

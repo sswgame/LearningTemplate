@@ -94,12 +94,12 @@ namespace sw
             if ( def._type == UserSettingType::KeyBinding && inputMap.hasAction( def._action ) )
                 (void)applyToTarget( settingIndex, _listState[settingIndex]._committedValue, true ); // 못 넣은 키는 핸들러가 경고한다 — 값은 저장된 그대로다
         }
-        return _subscriptions.issue( reinterpret_cast<uint64>( &inputMap ) );
+        return _subscriptions.issue( &inputMap );
     }
 
-    void UserSettingsManager::releaseSubscription( uint64 id )
+    void UserSettingsManager::releaseKeyBindingInputMap( const InputMap* pInputMap )
     {
-        _engineHandlers.removeBindingInputMap( *reinterpret_cast<const InputMap*>( id ) ); // 주소로만 찾는다 — 역참조하지 않는다
+        _engineHandlers.removeBindingInputMap( *pInputMap ); // 주소로만 찾는다 — 역참조하지 않는다
     }
 
     // ------------------------------------------------------------------------------

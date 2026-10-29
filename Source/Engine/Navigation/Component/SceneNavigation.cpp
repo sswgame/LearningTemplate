@@ -75,7 +75,7 @@ namespace sw
         , _listSurface{}
         , _listObstacle{}
         , _listLink{}
-        , _listGeometrySource{ "SceneNavigation.GeometrySource" }
+        , _listGeometrySource{ "SceneNavigation.GeometrySource", RegistrationList<INavGeometrySource>::ReleaseFunction::create<&SceneNavigation::releaseGeometrySource>( this ) }
         , _listFailedAgentType{}
         , _tileRebaker{}
         , _debugView{}
@@ -128,20 +128,13 @@ namespace sw
         return _settings;
     }
 
-    Subscription SceneNavigation::issueRegistration( const void* pItem, RegistrationKind kind )
-    {
-        const uint64 address = reinterpret_cast<uint64>( pItem );
-        SW_ASSERT( ( address & kRegistrationKindMask ) == 0 );
-        return _subscriptions.issue( address | static_cast<uint64>( kind ) );
-    }
-
     Subscription SceneNavigation::registerAgent( NavMeshAgentComponent* pAgent )
     {
         if ( pAgent == nullptr || pAgent->_navIndex != kNotRegistered )
             return {};
         pAgent->_navIndex = static_cast<uint32>( _listAgent.size() );
         _listAgent.push_back( pAgent );
-        return issueRegistration( pAgent, RegistrationKind::Agent );
+        return _agentSubscriptions.issue( pAgent );
     }
 
     void SceneNavigation::unregisterAgent( NavMeshAgentComponent* pAgent )
@@ -176,7 +169,7 @@ namespace sw
         if ( pSurface == nullptr )
             return {};
         _listSurface.push_back( pSurface );
-        return issueRegistration( pSurface, RegistrationKind::Surface );
+        return _surfaceSubscriptions.issue( pSurface );
     }
 
     void SceneNavigation::unregisterSurface( NavMeshSurfaceComponent* pSurface )
@@ -195,7 +188,7 @@ namespace sw
             return {};
         pObstacle->_navIndex = static_cast<uint32>( _listObstacle.size() );
         _listObstacle.push_back( pObstacle );
-        return issueRegistration( pObstacle, RegistrationKind::Obstacle );
+        return _obstacleSubscriptions.issue( pObstacle );
     }
 
     void SceneNavigation::unregisterObstacle( NavMeshObstacleComponent* pObstacle )
@@ -215,43 +208,12 @@ namespace sw
     Subscription SceneNavigation::registerGeometrySource( INavGeometrySource* pSource )
     {
         // nullptr · 이미 등록한 소스는 목록이 거절한다(같은 소스가 두 번 들면 빼기가 하나만 지워 죽은 포인터가 남는다).
-        if ( _listGeometrySource.addLogged( pSource, "Navigation geometry source" ) != RegistrationResult::Added )
-            return {};
-        return issueRegistration( pSource, RegistrationKind::GeometrySource );
+        return _listGeometrySource.addSubscribed( pSource, "Navigation geometry source" );
     }
 
-    void SceneNavigation::releaseSubscription( uint64 id )
+    void SceneNavigation::releaseGeometrySource( INavGeometrySource* pSource )
     {
-        // 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`) — 주소를 그 종류로 돌려 쓴다.
-        void* const pItem = reinterpret_cast<void*>( id & ~kRegistrationKindMask );
-        switch ( static_cast<RegistrationKind>( id & kRegistrationKindMask ) )
-        {
-            case RegistrationKind::GeometrySource:
-            {
-                (void)_listGeometrySource.remove( static_cast<const INavGeometrySource*>( pItem ) ); // 구독 하나가 등록 하나라 늘 있다
-                break;
-            }
-            case RegistrationKind::Agent:
-            {
-                unregisterAgent( static_cast<NavMeshAgentComponent*>( pItem ) );
-                break;
-            }
-            case RegistrationKind::Surface:
-            {
-                unregisterSurface( static_cast<NavMeshSurfaceComponent*>( pItem ) );
-                break;
-            }
-            case RegistrationKind::Obstacle:
-            {
-                unregisterObstacle( static_cast<NavMeshObstacleComponent*>( pItem ) );
-                break;
-            }
-            case RegistrationKind::Link:
-            {
-                unregisterLink( static_cast<NavMeshLinkComponent*>( pItem ) );
-                break;
-            }
-        }
+        (void)_listGeometrySource.remove( pSource ); // 구독 하나가 등록 하나라 늘 있다
     }
 
     Subscription SceneNavigation::registerLink( NavMeshLinkComponent* pLink )
@@ -262,7 +224,7 @@ namespace sw
         // 막힌 채 들어온 링크(씬 데이터)는 다음 갱신에 막는다.
         pLink->_bEnabledDirty = pLink->_bLinkEnabled ? SW_FALSE : SW_TRUE;
         _listLink.push_back( pLink );
-        return issueRegistration( pLink, RegistrationKind::Link );
+        return _linkSubscriptions.issue( pLink );
     }
 
     void SceneNavigation::unregisterLink( NavMeshLinkComponent* pLink )
