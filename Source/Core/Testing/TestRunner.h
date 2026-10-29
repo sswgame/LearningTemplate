@@ -17,6 +17,7 @@ namespace sw::test
     struct TestRunOptions
     {
         string _filter{ "*" };    ///< 케이스 이름 와일드카드(쉼표로 여럿, 앞에 `-` 면 뺀다)
+        string _sourceFolder{};   ///< 비지 않으면 정의한 파일 경로에 이 폴더(`/` 구분, 예: `Source/Editor/`)가 든 케이스만 돈다 — 에디터 이미지의 케이스를 에디터 안에서 돌린다
         string _reportPath{};     ///< JSON 보고를 쓸 경로(비면 이 실행의 폴더 `<뿌리>/<프로세스>/report.json`)
         string _scratchRoot{};    ///< 케이스별 쓰기 폴더의 뿌리(비면 `Saved/Test`)
         uint32 _seed{ 0 };        ///< 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다)

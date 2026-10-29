@@ -29,6 +29,18 @@ namespace sw::test
     {
         struct TestRunnerInternal
         {
+            /** @brief @p pFile(정의한 파일)에 @p folder 가 들었으면 true 입니다. 구분자는 `/` 로 맞춰 비교한다. 폴더가 비면 늘 true 입니다. */
+            static bool isInSourceFolder( const utf8* pFile, const string& folder )
+            {
+                if ( folder.empty() )
+                    return true;
+                if ( pFile == nullptr )
+                    return false;
+                string path{ pFile };
+                std::replace( path.begin(), path.end(), '\\', '/' );
+                return path.find( folder ) != string::npos;
+            }
+
             /** @brief 일부러 내는 로그 하나의 선언과 나온 횟수입니다. */
             struct ExpectedLog
             {
@@ -444,7 +456,8 @@ namespace sw::test
             ScopedLock<mutex>   lock{ registry._mutex };
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
             {
-                if ( matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) && getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex )
+                if ( matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) && getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex &&
+                     Internal::isInSourceFolder( pCase->_pFile, options._sourceFolder ) )
                     listCase.push_back( pCase );
             }
         }

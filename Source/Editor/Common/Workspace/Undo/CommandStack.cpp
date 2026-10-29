@@ -13,15 +13,6 @@ namespace sw
             /** @brief 기록 형식의 판입니다. 명령 · 단계의 모양이 바뀌면 올린다(옛 판의 기록은 버린다). */
             static constexpr uint32 kSaveVersion = 1;
 
-            /** @brief 실행 중인 스택(`findExecuting`)입니다. 편집기 UI 스레드만 실행한다. */
-            static inline CommandStack* s_pExecuting = nullptr;
-            /** @brief 살아 있는 스택들입니다(`removeOwnedByFromAll`). 편집기 UI 스레드만 만들고 없앤다. */
-            static vector<CommandStack*>& getLiveStacks()
-            {
-                static vector<CommandStack*> s_listStack;
-                return s_listStack;
-            }
-
             static void writeStep( Archive& archive, const editor::UndoStep& step )
             {
                 archive << step._functionHash;
@@ -128,20 +119,45 @@ namespace sw
         , _transactionDepth{ 0 }
         , _bIsExecuting{ false }
         , _bHistoryParked{ false }
+        , _listOwnerWatch{}
     {
-        CommandStackInternal::getLiveStacks().push_back( this );
     }
 
-    CommandStack::~CommandStack()
+    CommandStack::~CommandStack() = default;
+
+    void CommandStack::watchOwners( const Command& cmd )
     {
-        vector<CommandStack*>& listStack = CommandStackInternal::getLiveStacks();
-        listStack.erase( std::remove( listStack.begin(), listStack.end(), this ), listStack.end() );
+        for ( const editor::UndoStep* pStep : { &cmd._undo, &cmd._redo } )
+        {
+            if ( pStep->_pOwner == nullptr )
+                continue;
+            const uint64 ownerID  = pStep->_ownerID;
+            const bool   bWatched = std::any_of( _listOwnerWatch.begin(), _listOwnerWatch.end(), [ownerID]( const OwnerWatch& watch )
+              { return watch._ownerID == ownerID; } );
+            if ( bWatched == false )
+                _listOwnerWatch.push_back( OwnerWatch{ ownerID, pStep->_pOwner->subscribeReleased( editor::UndoStepOwner::ReleasedDelegate::create<&CommandStack::onOwnerReleased>( this ) ) } );
+        }
+        if ( cmd._listChild != nullptr )
+        {
+            for ( const Command& child : *cmd._listChild )
+                watchOwners( child );
+        }
+    }
+
+    void CommandStack::onOwnerReleased( uint64 ownerID )
+    {
+        (void)removeOwnedBy( ownerID );
+        // 알림 안에서 구독을 놓는다 — 이 주인은 다시 알리지 않는다(사라지는 중이다).
+        _listOwnerWatch.erase( std::remove_if( _listOwnerWatch.begin(), _listOwnerWatch.end(), [ownerID]( const OwnerWatch& watch )
+        { return watch._ownerID == ownerID; } ),
+                               _listOwnerWatch.end() );
     }
 
     void CommandStack::push( Command cmd )
     {
         if ( isExecutable( cmd ) == false || _bIsExecuting )
             return;
+        watchOwners( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -224,6 +240,7 @@ namespace sw
         // 상관없는 지난 명령의 redo 를 바꾼다.
         if ( isExecutable( cmd ) == false || _bIsExecuting )
             return;
+        watchOwners( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -311,14 +328,6 @@ namespace sw
         return droppedCount;
     }
 
-    void CommandStack::removeOwnedByFromAll( uint64 ownerID )
-    {
-        for ( CommandStack* pStack : CommandStackInternal::getLiveStacks() )
-        {
-            (void)pStack->removeOwnedBy( ownerID );
-        }
-    }
-
     uint32 CommandStack::dropOwnedBy( vector<Command>& inoutListCommand, size_t& inoutIndex, uint64 ownerID )
     {
         uint32 droppedCount{ 0 };
@@ -364,10 +373,8 @@ namespace sw
             return;
         }
 
-        CommandStack* const pPrevious      = CommandStackInternal::s_pExecuting;
-        CommandStackInternal::s_pExecuting = this;
-        ( bUndo ? cmd._undo : cmd._redo ).execute();
-        CommandStackInternal::s_pExecuting = pPrevious;
+        editor::UndoStepContext context{ *this }; // 처리기가 이 스택에 알린다(전역 실행 중 칸을 두지 않는다)
+        ( bUndo ? cmd._undo : cmd._redo ).execute( context );
     }
 
     bool CommandStack::isOwnedBy( const Command& cmd, uint64 ownerID )
@@ -396,11 +403,6 @@ namespace sw
             return true;
         }
         return cmd._undo.isPersistable() && cmd._redo.isPersistable();
-    }
-
-    CommandStack* CommandStack::findExecuting()
-    {
-        return CommandStackInternal::s_pExecuting;
     }
 
     void CommandStack::save( Archive& outArchive ) const

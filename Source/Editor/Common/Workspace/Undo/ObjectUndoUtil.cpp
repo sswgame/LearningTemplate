@@ -114,36 +114,35 @@ namespace sw
                     SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
-            /** @brief 실행 중인 스택에 알립니다(단계 밖에서 부르면 아무것도 하지 않는다). */
-            static void notify( uint64 objectID, ObjectEditKind kind )
+            /** @brief 이 단계를 실행하는 스택에 알립니다. */
+            static void notify( editor::UndoStepContext& context, uint64 objectID, ObjectEditKind kind )
             {
-                if ( CommandStack* pStack = CommandStack::findExecuting() )
-                    pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ objectID, kind } );
+                context._stack.notifyObjectEdit( CommandStack::ObjectEditNotice{ objectID, kind } );
             }
 
             /** @brief 기록한 씬에서 @p objectID 를 찾아 @p snapshot 을 다시 읽습니다. 없으면 아무것도 하지 않습니다(데이터 단계). */
-            static void restore( uint32 sceneKey, uint64 objectID, string name, ObjectSnapshot snapshot )
+            static void restore( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, string name, ObjectSnapshot snapshot )
             {
                 GameObject* pTarget = findObject( findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey ), objectID, name );
                 if ( pTarget == nullptr )
                     return;
                 loadSnapshot( pTarget, snapshot );
-                notify( pTarget->getObjectID(), ObjectEditKind::Modified );
+                notify( context, pTarget->getObjectID(), ObjectEditKind::Modified );
             }
 
             /** @brief 기록한 씬에서 @p objectID 를 없앱니다(자식까지). 알림은 없애기 전 — 받는 쪽이 아직 오브젝트를 찾을 수 있다(데이터 단계). */
-            static void destroy( uint32 sceneKey, uint64 objectID, string name )
+            static void destroy( editor::UndoStepContext& context, uint32 sceneKey, uint64 objectID, string name )
             {
                 const ActiveTarget target  = findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey );
                 GameObject*        pTarget = findObject( target, objectID, name );
                 if ( pTarget == nullptr )
                     return;
-                notify( pTarget->getObjectID(), ObjectEditKind::Destroyed );
+                notify( context, pTarget->getObjectID(), ObjectEditKind::Destroyed );
                 target._pManager->destroyObject( pTarget );
             }
 
             /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다(데이터 단계). */
-            static void recreate( uint32 sceneKey, string name, ObjectSnapshot snapshot, string prefabPath, bool bNestedPart, PrefabNestedPart nestedPart )
+            static void recreate( editor::UndoStepContext& context, uint32 sceneKey, string name, ObjectSnapshot snapshot, string prefabPath, bool bNestedPart, PrefabNestedPart nestedPart )
             {
                 const ActiveTarget target = findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey );
                 if ( target._pManager == nullptr )
@@ -160,7 +159,7 @@ namespace sw
                 // 중첩 프리팹 부품이었으면 표시도 같은 id 로 복원한다 — 레지스트리는 놓인 오브젝트의 표시를 거두므로 명령이 값으로 들고 있다.
                 if ( bNestedPart )
                     target._pManager->getSubsystem<PrefabInstanceRegistry>().restoreNestedPart( pCreated->getObjectID(), nestedPart );
-                notify( pCreated->getObjectID(), ObjectEditKind::Recreated );
+                notify( context, pCreated->getObjectID(), ObjectEditKind::Recreated );
             }
         };
     } // namespace

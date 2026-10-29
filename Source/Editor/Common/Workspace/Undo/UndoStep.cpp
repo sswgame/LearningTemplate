@@ -58,6 +58,7 @@ namespace sw::editor
 
     UndoStepOwner::UndoStepOwner()
         : _id{ 0 }
+        , _released{}
     {
         static uint64 s_nextID = 1; // 편집기 UI 스레드만 만든다
         _id                    = s_nextID++;
@@ -65,10 +66,10 @@ namespace sw::editor
 
     UndoStepOwner::~UndoStepOwner()
     {
-        CommandStack::removeOwnedByFromAll( _id );
+        _released.broadcast( _id ); // 이 주인의 코드 단계를 받은 스택들이 그 명령을 뺀다
     }
 
-    void UndoStep::execute() const
+    void UndoStep::execute( UndoStepContext& context ) const
     {
         if ( _transient.isBound() )
         {
@@ -85,7 +86,7 @@ namespace sw::editor
             return;
         }
         Archive arguments( _arguments.data(), _arguments.size() );
-        if ( invoker( arguments ) == false )
+        if ( invoker( arguments, context ) == false )
             SW_LOG_WARNING( "Undo step %# could not read its arguments - skipped", _functionHash );
     }
 } // namespace sw::editor

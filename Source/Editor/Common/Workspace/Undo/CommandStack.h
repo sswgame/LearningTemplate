@@ -31,7 +31,7 @@ namespace sw
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 미리보기 창은 자기 스택을 멤버로 든다.
      * @details 단계는 데이터다(`UndoStep` — 함수 이름 해시 + 인자 바이트). 그래서 편집기 모듈을 리로드해도 기록이 넘어간다. 언리얼의 `FTransaction`
      *          (오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo` 와 같은 구조다. 패널 인스턴스에 묶인 코드 단계를 가진 명령은 맡길 때 버리고, 그 코드가 든
-     *          코드 단계는 주인(`UndoStepOwner` — 패널)이 사라질 때 모든 스택에서 빠진다(`removeOwnedByFromAll`).
+     *          코드 단계는 주인(`UndoStepOwner` — 패널)이 사라질 때 그 단계를 받은 스택에서 빠진다(스택이 주인의 사라짐을 구독한다).
      */
     class SW_EDITOR_API CommandStack final
     {
@@ -62,7 +62,7 @@ namespace sw
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
-        /** @brief 빈 스택으로 시작하고 살아 있는 스택 목록에 오릅니다(`removeOwnedByFromAll`). */
+        /** @brief 빈 스택으로 시작합니다. */
         CommandStack();
         /** @brief 살아 있는 스택 목록에서 내려갑니다. */
         ~CommandStack();
@@ -129,8 +129,6 @@ namespace sw
          *          사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
          */
         uint32 removeOwnedBy( uint64 ownerID );
-        /** @brief 살아 있는 모든 스택에서 `removeOwnedBy` 를 부릅니다(`UndoStepOwner` 의 소멸자). */
-        static void removeOwnedByFromAll( uint64 ownerID );
 
         /**
          * @brief 기록(명령 · 위치 · 보관한 내역)을 씁니다. 코드 단계를 가진 명령은 빼고 위치를 맞춘다. 진행 중인 트랜잭션은 쓰지 않는다.
@@ -139,21 +137,22 @@ namespace sw
         void save( Archive& outArchive ) const;
         /** @brief `save` 가 쓴 기록으로 바꿉니다. 읽지 못하면 빈 스택으로 두고 false 입니다. 알림 처리기는 그대로입니다. */
         [[nodiscard]] bool load( Archive& archive );
-        /** @brief 지금 실행 중인 스택입니다(단계의 처리기가 알림을 보낼 곳 — `ObjectUndoUtil`). 실행 중이 아니면 nullptr 입니다. */
-        static CommandStack* findExecuting();
+
+    private:
+        /** @brief @p cmd(안쪽 명령까지)의 코드 단계 주인마다 사라짐을 한 번 구독합니다(`push` · `pushCoalesce`). */
+        void watchOwners( const Command& cmd );
+        /** @brief 주인이 사라졌다 — 그 명령을 빼고 구독을 놓습니다. */
+        void onOwnerReleased( uint64 ownerID );
 
     private:
         /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */
         void execute( const Command& cmd, bool bUndo );
         /** @brief @p cmd(와 그 안쪽)가 모두 데이터 단계면 true 입니다(맡길 수 있다). */
         static bool isPersistable( const Command& cmd );
-        /** @brief @p cmd(와 그 안쪽)가 [@p pBegin, @p pEnd) 의 코드를 가지고 있는지 확인합니다. */
+        /** @brief @p cmd(와 그 안쪽)에 주인이 @p ownerID 인 코드 단계가 있는지 확인합니다. */
         static bool isOwnedBy( const Command& cmd, uint64 ownerID );
         /** @brief 실행할 것이 있는 명령인지 확인합니다(undo 와 redo 가 둘 다 있거나 트랜잭션 묶음). */
         static bool isExecutable( const Command& cmd );
-        /**
-         * @brief @p inoutListCommand 에서 [@p pBegin, @p pEnd) 의 코드를 가진 명령을 분리하고 @p inoutIndex(되돌린 것과 아직 되돌리지 않은 것의 경계)를 맞춥니다. 분리한 수를 반환합니다.
-         */
         /** @brief @p inoutListCommand 에서 주인이 @p ownerID 인 명령을 빼고 @p inoutIndex 를 맞춥니다. 뺀 수를 반환합니다. */
         static uint32 dropOwnedBy( vector<Command>& inoutListCommand, size_t& inoutIndex, uint64 ownerID );
 
@@ -171,5 +170,12 @@ namespace sw
         uint32 _transactionDepth;
         bool   _bIsExecuting;
         bool   _bHistoryParked; ///< 보관한 내역이 있다
+        /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
+        struct OwnerWatch
+        {
+            uint64       _ownerID;
+            Subscription _subscription;
+        };
+        vector<OwnerWatch> _listOwnerWatch; ///< 맨 끝 — 먼저 사라져 주인 쪽 알림 목록에서 빠진다
     };
 } // namespace sw

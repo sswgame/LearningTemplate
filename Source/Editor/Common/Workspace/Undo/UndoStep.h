@@ -27,6 +27,11 @@
 #include <tuple>
 #include <type_traits>
 
+namespace sw
+{
+    class CommandStack;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief 단순 복사 형(산술 · 열거형 · 단순 구조체)을 바이트 그대로 씁니다. */
@@ -96,7 +101,17 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 인자 바이트를 읽어 함수 하나를 부르는 처리기입니다. 인자를 다 읽지 못하면 false 입니다. */
-    using UndoStepInvoker = bool ( * )( Archive& arguments );
+    /**
+     * @struct UndoStepContext
+     * @brief 단계를 실행하는 문맥 — 지금 그 단계를 되돌리거나 다시 하는 스택입니다. 데이터 단계 처리기가 첫 인자로 `UndoStepContext&` 를 받으면 틀이 넘긴다.
+     * @details 처리기가 "어느 스택이 나를 부르는가" 를 전역(실행 중 스택 칸)에서 찾지 않게 한다. 문맥이 필요 없는 처리기는 받지 않는다(서명이 그대로다).
+     */
+    struct UndoStepContext
+    {
+        ::sw::CommandStack& _stack;
+    };
+
+    using UndoStepInvoker = bool ( * )( Archive& arguments, UndoStepContext& context );
 
     /**
      * @class UndoStepRegistry
@@ -130,19 +145,26 @@ namespace sw::editor
 
     /**
      * @class UndoStepOwner
-     * @brief 코드 단계의 주인입니다. 패널이 멤버로 들고, 사라질 때 자기가 만든 코드 단계를 가진 명령을 모든 스택에서 뺍니다(`CommandStack::removeOwnedBy`).
+     * @brief 코드 단계의 주인입니다. 패널이 멤버로 들고, 사라질 때 알린다 — 그 주인의 코드 단계를 받은 스택이 구독해 그 명령을 뺀다(`CommandStack::removeOwnedBy`).
+     * @details 살아 있는 스택의 전역 목록을 두지 않는다: 알림은 단계를 받은 스택에만 간다(구독이 수명을 맡는다 — 스택이 먼저 사라지면 구독이 풀린다).
      */
     class SW_EDITOR_API UndoStepOwner
     {
     public:
+        /** @brief 주인이 사라짐을 받는 델리게이트입니다(주인 id). */
+        using ReleasedDelegate = Delegate<void( uint64 ownerID )>;
+
         UndoStepOwner();
         ~UndoStepOwner();
         UndoStepOwner( const UndoStepOwner& )            = delete;
         UndoStepOwner& operator=( const UndoStepOwner& ) = delete;
         uint64         getID() const { return _id; }
+        /** @brief 사라질 때 @p onReleased 를 부르게 합니다. 구독이 먼저 사라지면 부르지 않습니다. */
+        [[nodiscard]] Subscription subscribeReleased( const ReleasedDelegate& onReleased ) const { return _released.add( onReleased ); }
 
     private:
-        uint64 _id;
+        uint64                                            _id;
+        mutable MulticastDelegate<void( uint64 ownerID )> _released; ///< 주인의 코드 단계를 받은 스택들
     };
 
     /**
@@ -151,10 +173,11 @@ namespace sw::editor
      */
     struct UndoStep
     {
-        uint64           _functionHash{ 0 }; ///< 처리기 이름 해시(0 이면 데이터 단계가 아니다)
-        vector<uint8>    _arguments{};       ///< 인자 바이트(`writeUndoArg` 순서)
-        Delegate<void()> _transient{};       ///< 주인에 묶인 코드 단계(맡기지 않는다)
-        uint64           _ownerID{ 0 };      ///< 코드 단계의 주인(`UndoStepOwner::getID`)
+        uint64               _functionHash{ 0 }; ///< 처리기 이름 해시(0 이면 데이터 단계가 아니다)
+        vector<uint8>        _arguments{};       ///< 인자 바이트(`writeUndoArg` 순서)
+        Delegate<void()>     _transient{};       ///< 주인에 묶인 코드 단계(맡기지 않는다)
+        uint64               _ownerID{ 0 };      ///< 코드 단계의 주인(`UndoStepOwner::getID`)
+        const UndoStepOwner* _pOwner{ nullptr }; ///< 코드 단계의 주인 — 스택이 단계를 받을 때 사라짐 알림을 구독한다(그 뒤로는 쓰지 않는다)
 
         /** @brief 실행할 것이 있으면 true 입니다. */
         bool isBound() const { return _functionHash != 0 || _transient.isBound(); }
@@ -166,10 +189,11 @@ namespace sw::editor
             UndoStep result;
             result._transient = std::move( step );
             result._ownerID   = owner.getID();
+            result._pOwner    = &owner;
             return result;
         }
-        /** @brief 실행합니다. 데이터 단계의 처리기가 없거나 인자를 읽지 못하면 경고하고 아무것도 하지 않습니다. */
-        SW_EDITOR_API void execute() const;
+        /** @brief @p context 의 스택에서 실행합니다. 데이터 단계의 처리기가 없거나 인자를 읽지 못하면 경고하고 아무것도 하지 않습니다. */
+        SW_EDITOR_API void execute( UndoStepContext& context ) const;
     };
 
     template <auto TFunction, typename TSignature = decltype( TFunction )>
@@ -189,8 +213,8 @@ namespace sw::editor
             return s_hash;
         }
 
-        /** @brief 인자를 읽어 함수를 부릅니다. */
-        static bool invoke( Archive& arguments )
+        /** @brief 인자를 읽어 함수를 부릅니다(문맥은 받지 않는 처리기다). */
+        static bool invoke( Archive& arguments, [[maybe_unused]] UndoStepContext& context )
         {
             std::tuple<std::remove_cv_t<std::remove_reference_t<TArgs>>...> tupleArgument{};
             const bool                                                      bRead = std::apply( [&arguments]( auto&... value )
@@ -198,6 +222,48 @@ namespace sw::editor
             if ( bRead == false )
                 return false;
             std::apply( TFunction, tupleArgument );
+            return true;
+        }
+
+        /** @brief 인자를 바이트로 적은 단계를 만듭니다. */
+        template <typename... TValues>
+        static UndoStep make( const TValues&... values )
+        {
+            static_assert( sizeof...( TValues ) == sizeof...( TArgs ), "UndoStepFunction::make: argument count differs from the function" );
+            (void)s_registrar; // 처음 쓰일 때 표에 오른다(정적 멤버 정의가 이 줄로 인스턴스화된다)
+            Archive archive;
+            ( writeUndoArg( archive, static_cast<const std::remove_cv_t<std::remove_reference_t<TArgs>>&>( values ) ), ... );
+            UndoStep result;
+            result._functionHash = getHash();
+            result._arguments.assign( archive.getData(), archive.getData() + archive.getSize() );
+            return result;
+        }
+
+    private:
+        static inline const UndoStepRegistrar s_registrar{ getHash(), &invoke };
+    };
+
+    /** @brief 첫 인자로 실행 문맥(`UndoStepContext&`)을 받는 처리기입니다 — 문맥은 적지 않고 실행할 때 넘긴다. */
+    template <auto TFunction, typename... TArgs>
+    struct UndoStepFunction<TFunction, void ( * )( UndoStepContext&, TArgs... )>
+    {
+        /** @brief 이 함수의 이름 해시입니다(이 틀의 시그니처 — 함수의 정규 이름이 들어 있다). */
+        static uint64 getHash()
+        {
+            static const uint64 s_hash = HashUtil::computeStringHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
+            return s_hash;
+        }
+
+        /** @brief 인자를 읽어 문맥과 함께 함수를 부릅니다. */
+        static bool invoke( Archive& arguments, UndoStepContext& context )
+        {
+            std::tuple<std::remove_cv_t<std::remove_reference_t<TArgs>>...> tupleArgument{};
+            const bool                                                      bRead = std::apply( [&arguments]( auto&... value )
+            { return ( readUndoArg( arguments, value ) && ... ); }, tupleArgument );
+            if ( bRead == false )
+                return false;
+            std::apply( [&context]( auto&... value )
+            { TFunction( context, value... ); }, tupleArgument );
             return true;
         }
 
