@@ -43,7 +43,12 @@ namespace sw
         const Entry* pEntry = findOwnEntry( typeHash );
         if ( pEntry != nullptr )
             return pEntry->_pObject;
-        // 이 범위에 없으면 매단 자식이 공개한 칸을 매단 순서로 본다(자식끼리 같은 타입을 공개하면 먼저 매단 쪽이 이긴다).
+        return findInMounted( typeHash );
+    }
+
+    void* SubsystemScope::findInMounted( uint64 typeHash ) const
+    {
+        // 매단 자식이 공개한 칸을 매단 순서로 본다(자식끼리 같은 타입을 공개하면 먼저 매단 쪽이 이긴다).
         for ( const MountedScope& mounted : _listMounted )
         {
             void* const pPublished = mounted._scope->findPublished( typeHash );
@@ -63,13 +68,7 @@ namespace sw
         const Entry* pEntry = findOwnEntry( typeHash );
         if ( pEntry != nullptr )
             return pEntry->_bPublished ? pEntry->_pObject : nullptr;
-        for ( const MountedScope& mounted : _listMounted )
-        {
-            void* const pPublished = mounted._scope->findPublished( typeHash );
-            if ( pPublished != nullptr )
-                return pPublished;
-        }
-        return nullptr;
+        return findInMounted( typeHash );
     }
 
     bool SubsystemScope::registerEntry( uint64 typeHash, void* pObject, bool bOwned )

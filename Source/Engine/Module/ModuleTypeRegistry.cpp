@@ -14,6 +14,8 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Module/ModuleSubsystemHost.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -85,6 +87,17 @@ namespace sw
         }
 
         /**
+         * @brief 모듈 서브시스템을 세우는 자리입니다(엔진 서비스 범위). 모듈 서브시스템 등록이 있는데 없으면 호스트가 엔진을 세우지 않은 실행이라 오류다.
+         */
+        ModuleSubsystemHost* findModuleSubsystemHost( string_view moduleName )
+        {
+            ModuleSubsystemHost* const pHost = engine::findSubsystem<ModuleSubsystemHost>();
+            if ( pHost == nullptr )
+                SW_LOG_ERROR( "Module '%#' registers module subsystems but no ModuleSubsystemHost is in the engine scope", moduleName );
+            return pHost;
+        }
+
+        /**
          * @brief enum 전역 변수의 글 값을 리플렉션 열거자로 읽습니다(`GlobalVariableEnumTextParser`).
          * @details 타입 이름은 정의 매크로의 `#enumType` 이라 인턴해도 된다. `findInterned` 로 찾으면 그 이름을 아직 아무도 인턴하지 않은
          *          기동 시점(App)에 빈 해시가 나와 모든 이름이 "없다" 가 된다 — 테스트 프로세스는 다른 테스트가 먼저 인턴해 두어 가려진다.
@@ -124,21 +137,23 @@ namespace sw
         ModuleRegistrarHeads peekGlobalRegistrarHeads()
         {
             ModuleRegistrarHeads heads;
-            heads._pType     = TypeRegistrar::getHead();
-            heads._pEnum     = EnumRegistrar::getHead();
-            heads._pVariable = GlobalVariableRegistrar::getHead();
-            heads._pDataKind = AssetDataKindRegistrar::getHead();
-            heads._pObject   = ModuleObjectRegistrar::getHead();
+            heads._pType      = TypeRegistrar::getHead();
+            heads._pEnum      = EnumRegistrar::getHead();
+            heads._pVariable  = GlobalVariableRegistrar::getHead();
+            heads._pDataKind  = AssetDataKindRegistrar::getHead();
+            heads._pObject    = ModuleObjectRegistrar::getHead();
+            heads._pSubsystem = ModuleSubsystemRegistrar::getHead();
             return heads;
         }
 
         void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads )
         {
-            TypeRegistrar::getHead()           = heads._pType;
-            EnumRegistrar::getHead()           = heads._pEnum;
-            GlobalVariableRegistrar::getHead() = heads._pVariable;
-            AssetDataKindRegistrar::getHead()  = heads._pDataKind;
-            ModuleObjectRegistrar::getHead()   = heads._pObject;
+            TypeRegistrar::getHead()            = heads._pType;
+            EnumRegistrar::getHead()            = heads._pEnum;
+            GlobalVariableRegistrar::getHead()  = heads._pVariable;
+            AssetDataKindRegistrar::getHead()   = heads._pDataKind;
+            ModuleObjectRegistrar::getHead()    = heads._pObject;
+            ModuleSubsystemRegistrar::getHead() = heads._pSubsystem;
         }
 
         void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )
@@ -182,6 +197,13 @@ namespace sw
             // 등록은 모든 타입의 상속 캐시를 비운다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
             getSubsystem<SceneManager>().waitForPendingLoad();
             getSubsystem<TypeRegistry>().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
+
+            // 모듈 서브시스템은 타입이 오른 뒤에 선다(초기화가 그 모듈의 리플렉션 타입을 쓸 수 있다). 새로 뗀 것만 — 리로드는 내릴 때 걷었다.
+            if ( heads._pSubsystem != nullptr )
+            {
+                if ( ModuleSubsystemHost* const pHost = findModuleSubsystemHost( moduleName ) )
+                    (void)pHost->mountModule( moduleName, heads._pSubsystem ); // 실패는 오류로 남았다 — 그 서브시스템을 찾는 쪽이 없다는 오류로 멈춘다
+            }
 
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {
@@ -232,6 +254,9 @@ namespace sw
                 } );
                 scene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
+            // 모듈 서브시스템은 그것을 빌려 쓰는 인스턴스(컴포넌트 · 등록 줄)가 모두 놓은 뒤, 타입과 코드가 아직 있을 때 걷는다.
+            if ( ModuleSubsystemHost* const pHost = findSubsystem<ModuleSubsystemHost>() )
+                pHost->unmountModule( moduleName );
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
             (void)getSubsystem<AssetDataKindRegistry>().unregisterModuleKinds( moduleName );

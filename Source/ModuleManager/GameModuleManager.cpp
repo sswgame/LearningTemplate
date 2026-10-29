@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleCatalog.h"
+#include "Engine/Module/ModuleSubsystemHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/RenderThread.h"
@@ -588,6 +589,9 @@ namespace sw
     void GameModuleManager::fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const
     {
         engine::bindModuleServices( outScope, bGameModule );
+        // 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM` — GameFramework 의 암호 제공자 …)은 목록의 행이 아니다. 모듈 범위의 부모를 그 창구로 두어 타입으로 찾게 한다 —
+        // 호스트 범위 자체를 부모로 두면 게임 모듈이 호스트 전용 서비스까지 본다.
+        outScope.setParentScope( engine::findSubsystem<ModuleSubsystemHost>() );
         // 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 호스트 칸 — 게임 · 에디터 모듈 모두 쓴다(호스트 범위에서 찾아 건다, 없는 호스트면 걸지 않는다).
         if ( IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>() )
             (void)outScope.bind( pStateStore );

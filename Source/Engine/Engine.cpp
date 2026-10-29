@@ -61,6 +61,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/Module/ModuleSubsystemHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -177,7 +178,7 @@ namespace sw
     // 길이를 나누지 않는다: 기동 순서(코어 → 역할 → 서비스 범위 → 기동 단계 구성 → 서비스 표 → 기동 → 관찰자)가 곧 뜻인 기동 열이다. 단계 사이를 지역값
     // (`hostMask` · `startupParts` · `bDedicatedServer`)이 이어 주고 단계마다 실패하면 바로 나가므로, 함수로 가르면 같은 값을 넘기는 매개변수 묶음만 늘고
     // 순서가 호출자 한 곳에서 안 보인다. 각 단계의 일은 서브시스템 목록(`EngineSubsystemSet`)이 이미 맡았다.
-    bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, const ISubsystemLocator* pHostScope )
+    bool Engine::initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope )
     {
         // 범위는 호스트 아래 셋이다. 호스트(엔진을 띄운 쪽이 들고, 엔진보다 먼저 서서 나중에 사라진다 — 모듈 라이브러리 창구 · 자동화 구동기) 아래로
         // 코어(진단 도구 · 이름 풀 · 로거 · 명령줄 · 크래시 핸들러 · 정적 저장소) → 서비스(엔진 범위의 모든 것보다 오래 사는
@@ -233,6 +234,9 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
             _pEventDispatcher = engine::addServiceSubsystems( _services )._pEventDispatcher;
+            // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
+            // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
+            _services.addSubsystem( make_unique<ModuleSubsystemHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask ) );
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {

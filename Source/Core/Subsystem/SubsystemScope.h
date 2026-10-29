@@ -132,6 +132,8 @@ namespace sw
         void unmountChildScope( string_view name );
         /** @brief 이름 @p name 의 자식 범위입니다. 없으면 nullptr 입니다. */
         SubsystemScope* findChildScope( string_view name ) const;
+        /** @brief 매단 자식 범위가 공개한 칸에서만 찾습니다(이 범위 자신의 칸 · 상위 범위는 보지 않는다). 모듈에 넘기는 "모듈이 공개한 것" 창구가 쓴다. 없으면 nullptr 입니다. */
+        void* findInMounted( uint64 typeHash ) const;
 
         /**
          * @brief 소유하지 않는 객체를 타입 @p T 로 겁니다. 객체는 범위보다 오래 살아야 하고, 먼저 사라지면 `unbind` 합니다.
