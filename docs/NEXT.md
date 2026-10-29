@@ -161,7 +161,12 @@
 | 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
 | 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 호스트 전용 `SceneManager::update`(HostOnly 노출), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
 
-**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 11 · 12(이름만 — 편집기 뷰에서만 숨기는 제외 필터는 남음) · 15 의 어빌리티 vtable 훑기. 3 은 이렇게 끝냈다 —
+**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
+12 는 층 문제(엔진에 편집기 이름 · 뜻)만 풀었다(`setRenderHidden`) — 편집기 뷰에서만 숨기기는 층이 아니라 기능이고, 렌더러에 뷰 마스크가 없어(GPU 인스턴스 예비 칸 · 컬링 셰이더 · 그림자 · CPU 경로)
+필요해질 때 기능으로 더한다(편집기 플레이는 씬 사본이 아니라 제자리라 플레이 중에도 숨긴 채다).
+13: 패킷 사진은 우편함의 "다음 패킷에 찍기" 칸(`ScreenshotRequestQueue::putForNextPacket`), 창 제목은 자동화 세션이 든다 — 관찰자 인터페이스에 자동화 칸이 없다.
+14: UI 데모 · 스트레스 화면은 `Games/Empty`. 9 는 개발 명령(`net.emulation`)과 묶여 `DevTools` 단위와 함께 한다(I 절).
+3 은 이렇게 끝냈다 —
 등록은 구독(`Subscription`)이 해제를 보장하고, 엔진 밖 레지스트리(편집기 확장 · 에셋 동작 · 메시 모디파이어)의 정적 등록자는 `ModuleObjectRegistrar`(타입 등록자와 같은 머리)로
 모듈을 올릴 때 붙고 내리기 전에 떨어진다(`engine::unregisterModuleTypes`) — 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않고, 떨어질 때 목록이 알려 편집기가 그 줄의 인스턴스를 거둔다.
 모듈 타입의 인스턴스를 든 쪽은 **타입의 모듈 이름**(데이터)으로 고른다: UI 화면 · 위젯(`getTypeInfo`) — `TypeRegistry::subscribeModuleUnloading`, 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트 · 실행 계산) — `Component::onModuleUnloading`,
