@@ -38,7 +38,7 @@
 - **시작 시점의 결정성**: 로딩 화면은 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`, 요청마다 `SceneLoadKind` 필수 — 편집기 · 진단은 `Tool`)에 게임이 붙어 띄우고(언리얼 PreLoadMap), 떠 있는 동안 게임 시간을 멈춘다(`LoadingScreen` 형식). 그래서 시나리오의 첫 프레임은 늘 월드의 첫 틱이다 — 예전에는 로드 시간 · 최소 표시 시간만큼 월드가 로딩 화면 뒤에서 돌았다(cloth 골든을 다시 떴다).
 - **종료 코드**: 표 하나 `Config/Engine/ProcessExitCodes.json` → C++ `ProcessExitCode` · CMake `SW_EXIT_CODE_<이름>`.
 - **남은 일(다음 세션 먼저)**:
-  1. DX11 · GL 흉내 슬롯 겹침 — 코드가 거는 역할(2D 쿠키 아틀라스 · 자동 노출 · TAA 이력)이 슬롯 1 · 2 를 선언 역할과 나눠 써서, "2D 쿠키 빛 씬 + 반투명이 씬 색 사본을 읽는 파이프라인" 이면 `commitBindlessTextureBindings` 단언으로 죽는다(콘솔로 파이프라인만 바꿔도 난다). 고칠 모양: 코드 역할에 전용 흉내 슬롯(`shaderslot::emulated::kEngineTextureBindings` 에 줄 추가 → 셰이더 재쿠킹). 체인의 단계 사이 빈 씬은 테스트 격리로 두되 이 결함을 가리는 용도가 아니게 된다.
+  1. ~~DX11 · GL 흉내 슬롯 겹침~~ — 끝(2026-10-29): 엔진 텍스처는 역할 하나 = 칸 하나(`shaderslot::emulated::kEngineTextureNames`, DX11 t32.. · GL 유닛 0..). 공유 칸 · 겹침 검증 · `pickOne` 단언을 지웠다(언리얼 D3D11 RHI 처럼 매개변수마다 레지스터). 덧붙여 엔진이 넣는 define 이 도구 지문에 빠져 실행 셰이더 캐시가 옛 칸 번호 바이트를 돌려준 결함을 고쳤다(`ShaderCompiler::appendEngineDefines`). cloth 골든은 단계 격리 전에 뜬 것이라 다시 떴다.
   2. 게임 기동 흐름 재시작 훅(엔진 → 게임) — 첫 씬 없는 단계가 "프로세스가 처음 연 씬" 대신 게임의 기동 흐름(`EmptyGame::onInitialize` 의 벤치 · `requestFirstScene`)을 다시 돌게 하면 kaykit 셋도 체인에 든다.
   3. `kaykitcharacters` 사진은 기사 여섯이 화면 위쪽에 작게 떠 있고 바닥이 없다(`frameCharacterCameras` 의 눈 높이 · 바라보는 높이) — 의도인지 보고 골든을 다시 뜬다.
   4. switch 로 쓴 열거형 이름 함수(`getAutomationOutcomeName` 등)를 리플렉션 열거형(`ENUM()` · `getEnumName`)으로 — `RHIWaitIdleReason` 은 바꿨다. 보고 · 로그 글이 바뀌는 것(`LOAD ERROR` → `LoadError`)은 읽는 스크립트를 함께 본다.
