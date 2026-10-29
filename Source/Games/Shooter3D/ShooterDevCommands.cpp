@@ -11,8 +11,9 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
@@ -25,7 +26,8 @@ namespace sw
             /** @brief 활성 씬의 슈터 플레이어를 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
             [[nodiscard]] static bool collectPlayers( vector<ShooterPlayerComponent*>& outListPlayer, string& outReply )
             {
-                GameObjectManager* pManager = GameInstance::findActiveObjectManager();
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
                 {
                     outReply = "cheat: no active scene";

@@ -13,10 +13,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Ability/Ability.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
@@ -29,7 +30,8 @@ namespace sw
             /** @brief 활성 씬의 어빌리티 시스템을 모읍니다. 씬이 없거나 하나도 없으면 답을 채우고 false 입니다. */
             [[nodiscard]] static bool collectAbilitySystems( vector<AbilityComponent*>& outListComponent, string& outReply )
             {
-                GameObjectManager* pManager = GameInstance::findActiveObjectManager();
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                GameObjectManager*  pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 if ( pManager == nullptr )
                 {
                     outReply = "cheat: no active scene";
@@ -118,7 +120,8 @@ namespace sw
                 vector<AbilityComponent*> listComponent;
                 if ( collectAbilitySystems( listComponent, outReply ) == false )
                     return true;
-                const GameObjectManager* pManager = GameInstance::findActiveObjectManager();
+                SceneManager* const      pSceneManager = game::findSubsystem<SceneManager>();
+                const GameObjectManager* pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
                 // 무적 태그의 하위 태그로 붙인다 — 무적 판정(`hasMatchingTag`)은 하위를 함께 보고, 치트의 몫은 이펙트가 준 무적과 따로 센다.
                 const TagID tag         = "State.Invulnerable.Cheat"_tag;
                 int32       playerCount = 0;

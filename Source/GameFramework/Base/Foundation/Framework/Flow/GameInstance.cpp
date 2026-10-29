@@ -51,6 +51,16 @@ namespace sw
              */
             static constexpr uint32 kVersion = 4; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다
         };
+
+        struct GameInstanceInternal
+        {
+            /** @brief 게임 창구로 찾은 씬 매니저의 활성 씬 오브젝트 매니저입니다. 씬 매니저가 없거나 활성 씬이 없으면 nullptr 입니다. */
+            static GameObjectManager* findActiveObjectManager()
+            {
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                return pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -67,9 +77,6 @@ namespace sw
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _gameScope{}
         , _loadedAudioEvents{}
-        , _pUISystem{ nullptr }
-        , _pUserSettings{ nullptr }
-        , _pInput{ nullptr }
         , _bResumingWorld{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
@@ -114,23 +121,8 @@ namespace sw
         SW_LOG_ERROR( "Game scoped service %# is already bound to another instance - two kits share one service type", typeHash );
     }
 
-    GameObjectManager* GameInstance::findActiveObjectManager()
+    bool GameInstance::checkEngineServices( const IWindow* pWindow )
     {
-        // `findSubsystem<SceneManager>()` 가 바로 이 서비스를 보므로 아래 널 검사에는 사실상 닿지 않는다.
-        // 그래도 `game::findSubsystem<T>()` 는 nullptr 을 반환할 수 있어서 받는 쪽이 널을 검사하는 모양을 지킨다.
-        if ( game::findSubsystem<SceneManager>() == nullptr )
-            return nullptr;
-        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
-        if ( pSceneManager == nullptr )
-            return nullptr;
-        return pSceneManager->findActiveObjectManager();
-    }
-
-    bool GameInstance::bindEngineServices( const IWindow* pWindow )
-    {
-        _pUISystem     = nullptr;
-        _pUserSettings = nullptr;
-        _pInput        = nullptr;
         // 네트워크 세션은 필수 엔진 서비스다(`EngineServiceList.xxx` 의 `Required` 행). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
         if ( game::findSubsystem<GameNetSession>() == nullptr )
         {
@@ -138,27 +130,22 @@ namespace sw
             return false;
         }
         // UI · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
-        UISystem*            pUISystem     = game::findSubsystem<UISystem>();
-        UserSettingsManager* pUserSettings = game::findSubsystem<UserSettingsManager>();
-        if ( pWindow != nullptr && ( pUISystem == nullptr || pUserSettings == nullptr ) )
+        if ( pWindow != nullptr && ( game::findSubsystem<UISystem>() == nullptr || game::findSubsystem<UserSettingsManager>() == nullptr ) )
         {
             SW_LOG_ERROR( "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );
             return false;
         }
-        _pUISystem     = pUISystem;
-        _pUserSettings = pUserSettings;
-        _pInput        = game::findSubsystem<InputManager>();
         return true;
     }
 
     bool GameInstance::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
-        // 엔진 서비스는 여기서 한 번 받아 든다 — 아래에서 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 다시 찾지 않는다. 필수 서비스가 없으면 아무것도 걸기 전에 멈춘다.
-        if ( bindEngineServices( pWindow ) == false )
+        // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
+        if ( checkEngineServices( pWindow ) == false )
             return false;
         _pWindow        = pWindow;
         _pRHIDevice     = pRHIDevice;
-        _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
+        _bResumingWorld = GameInstanceInternal::findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configurePackConfig( _packConfig );
         const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
         if ( pGameConfig == nullptr )
@@ -204,20 +191,20 @@ namespace sw
         }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         const bool bInitialized = bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && onInitialize();
-        if ( _pUISystem != nullptr )
+        // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다.
+        if ( game::findSubsystem<UISystem>() != nullptr )
             registerSessionCommands( game::getSubsystem<UIGlobalCommandRegistry>() );
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.
-        if ( _pUserSettings != nullptr )
-            _pUserSettings->reapplyAll();
+        if ( UserSettingsManager* const pUserSettings = game::findSubsystem<UserSettingsManager>() )
+            pUserSettings->reapplyAll();
         return bInitialized;
     }
 
     void GameInstance::shutdown()
     {
-        if ( _pUISystem != nullptr )
-            unregisterSessionCommands();
+        unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음) 빈 구독이다
         onShutdown();
         if ( _loadedAudioEvents.empty() == false )
         {
@@ -232,11 +219,8 @@ namespace sw
         detachGameScope();
         _sceneLoadRequestedSubscription.reset();
         _listPendingSceneLoad.clear();
-        _pWindow       = nullptr;
-        _pRHIDevice    = nullptr;
-        _pUISystem     = nullptr;
-        _pUserSettings = nullptr;
-        _pInput        = nullptr;
+        _pWindow    = nullptr;
+        _pRHIDevice = nullptr;
     }
 
     bool GameInstance::loadGameSettings()
@@ -270,13 +254,14 @@ namespace sw
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
         if ( settings._inputMap.isSet() == false )
             return true;
-        if ( _pInput == nullptr )
+        InputManager* const pInput = game::findSubsystem<InputManager>();
+        if ( pInput == nullptr )
         {
             SW_LOG_ERROR( "GameSettings input map '%#' needs the engine service InputManager, which is not bound to the game services - the game does not start",
                           settings._inputMap.c_str() );
             return false;
         }
-        if ( _pInput->getInputMap().loadFromAsset( AssetID{ settings._inputMap.get() } ) == false )
+        if ( pInput->getInputMap().loadFromAsset( AssetID{ settings._inputMap.get() } ) == false )
             SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         return true;
     }
@@ -454,7 +439,7 @@ namespace sw
 
     bool GameInstance::serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes )
     {
-        GameObjectManager* pObjectManager = findActiveObjectManager();
+        GameObjectManager* pObjectManager = GameInstanceInternal::findActiveObjectManager();
         if ( pObjectManager == nullptr )
             return false;
 
@@ -493,7 +478,7 @@ namespace sw
         if ( pData == nullptr || size < sizeof( uint32 ) )
             return false;
 
-        GameObjectManager* pObjectManager = findActiveObjectManager();
+        GameObjectManager* pObjectManager = GameInstanceInternal::findActiveObjectManager();
         if ( pObjectManager == nullptr )
             return false;
 
@@ -575,7 +560,7 @@ namespace sw
 
     void GameInstance::captureStatefulComponents()
     {
-        GameObjectManager* pManager = findActiveObjectManager();
+        GameObjectManager* pManager = GameInstanceInternal::findActiveObjectManager();
         if ( pManager == nullptr )
             return;
         // 모두 싣고 나서 걷는다. 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게 하려는 순서다.
@@ -593,7 +578,7 @@ namespace sw
 
     void GameInstance::restoreStatefulComponents()
     {
-        GameObjectManager* pManager = findActiveObjectManager();
+        GameObjectManager* pManager = GameInstanceInternal::findActiveObjectManager();
         if ( pManager == nullptr )
             return;
         for ( const StatefulComponentType& type : _listStatefulType )
