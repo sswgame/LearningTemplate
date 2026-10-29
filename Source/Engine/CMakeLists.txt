@@ -204,7 +204,7 @@ if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
 	sw_declareUnbuiltSources(${listRHIBackendSource})
 elseif(SW_SHIPPING_BUILD)
 	# 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRHIBackend).
-	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
+	# 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(실행하면 등록표가 "백엔드 없음 · 있는 것" 을 알린다).
 	sw_resolveShippingRHIBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
 	# EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
 	# `_defaultRHI` 는 선택 키다 — 기본값과 다를 때만 적는다(정본은 쿠킹 표).
@@ -215,7 +215,8 @@ elseif(SW_SHIPPING_BUILD)
 
 	message(STATUS "[Engine] Shipping monolithic RHI backend: ${swShippingBackend}")
 	sw_getRHIBackendSources(${swShippingBackend} listShippingRHISource)
-	target_sources(Engine PRIVATE ${listShippingRHISource})
+	sw_getRHIBackendEntrySource(${swShippingBackend} swShippingRHIEntry)
+	target_sources(Engine PRIVATE ${listShippingRHISource} ${swShippingRHIEntry}) # 진입 파일이 백엔드를 등록표에 올린다(정적 등록자)
 	target_link_libraries(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_GRAPHICS_LIBS})
 	target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
 

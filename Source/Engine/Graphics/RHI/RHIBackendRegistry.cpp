@@ -12,49 +12,20 @@
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIModuleABI.h"
 
-#if defined( SW_SHIPPING )
-    #if defined( SW_RHI_TARGET_DX12 )
-        #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
-    #elif defined( SW_RHI_TARGET_DX11 )
-        #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
-    #elif defined( SW_RHI_TARGET_VULKAN )
-        #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-    #elif defined( SW_RHI_TARGET_OPENGL )
-        #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
-    #elif defined( SW_WITH_CLIENT_CODE )
-        #error "Shipping links exactly one RHI backend into Engine: SW_RHI_TARGET_* is missing (SW_SHIPPING_RHI_BACKEND)"
-    #endif
-#endif
-
 namespace sw
 {
     namespace
     {
         struct RHIBackendRegistryInternal
         {
-#if defined( SW_SHIPPING )
-    #if defined( SW_RHI_TARGET_DX12 )
-            static sw::unique_ptr<IRHIDevice> createD3D12Device()
+            /** @brief 정적 등록자 목록의 머리입니다(함수 정적 — 정적 초기화 순서와 무관하다). */
+            static const RHIStaticBackendRegistrar*& getStaticHead()
             {
-                return make_unique<D3D12RHIDevice>();
+                static const RHIStaticBackendRegistrar* s_pHead = nullptr;
+                return s_pHead;
             }
-    #elif defined( SW_RHI_TARGET_DX11 )
-            static sw::unique_ptr<IRHIDevice> createD3D11Device()
-            {
-                return make_unique<D3D11RHIDevice>();
-            }
-    #elif defined( SW_RHI_TARGET_VULKAN )
-            static sw::unique_ptr<IRHIDevice> createVulkanDevice()
-            {
-                return make_unique<VulkanRHIDevice>();
-            }
-    #elif defined( SW_RHI_TARGET_OPENGL )
-            static sw::unique_ptr<IRHIDevice> createOpenGLDevice()
-            {
-                return make_unique<OpenGLRHIDevice>();
-            }
-    #endif
-#else
+
+#if SW_WITH_DYNAMIC_MODULES
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg        = engine::getSubsystem<RHIBackendRegistry>();
@@ -89,19 +60,32 @@ namespace sw
 {
     SW_LOG_CALLER( "RHIBackendRegistry" );
 
+    RHIStaticBackendRegistrar::RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate )
+        : _backend{ backend }
+        , _pCreate{ pCreate }
+        , _pNext{ nullptr }
+    {
+        _pNext                                      = RHIBackendRegistryInternal::getStaticHead();
+        RHIBackendRegistryInternal::getStaticHead() = this;
+    }
+
+    const RHIStaticBackendRegistrar* RHIStaticBackendRegistrar::getHead()
+    {
+        return RHIBackendRegistryInternal::getStaticHead();
+    }
+
     RHIBackendRegistry::RHIBackendRegistry()
     {
-#if defined( SW_SHIPPING )
-    #if defined( SW_RHI_TARGET_DX12 )
-        registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
-    #elif defined( SW_RHI_TARGET_DX11 )
-        registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
-    #elif defined( SW_RHI_TARGET_VULKAN )
-        registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
-    #elif defined( SW_RHI_TARGET_OPENGL )
-        registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
-    #endif
-#endif
+        // 정적으로 링크한 백엔드(배포)는 스스로 올랐다 — 동적 모듈 구성은 비어 있고 `createDevice` 가 필요할 때 모듈을 올린다.
+        for ( const RHIStaticBackendRegistrar* pRegistrar = RHIStaticBackendRegistrar::getHead(); pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
+        {
+            const RHIStaticBackendRegistrar::CreateFunction pCreate = pRegistrar->_pCreate;
+            registerBackend( pRegistrar->_backend, SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate, [pCreate]() -> sw::unique_ptr<IRHIDevice>
+            {
+                return sw::unique_ptr<IRHIDevice>{ pCreate() };
+            } ),
+                             RHIAvailability::query( pRegistrar->_backend ) );
+        }
     }
 
     void RHIBackendRegistry::registerBackend( RHIBackend backend, const RHIDeviceFactoryDelegate& factory, const RHICapabilities& caps )
@@ -142,7 +126,7 @@ namespace sw
 
     unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
     {
-#if !defined( SW_SHIPPING )
+#if SW_WITH_DYNAMIC_MODULES
         // 못 올렸으면 바로 아래 조회가 등록되지 않은 백엔드로 보고 무엇이 있는지와 함께 알린다.
         (void)RHIBackendRegistryInternal::ensureBackendModuleLoaded( backend );
 #endif
@@ -151,7 +135,7 @@ namespace sw
         if ( pEntry == nullptr || pEntry->_factory.isBound() == false )
         {
             // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
-            // 없다. 배포본은 SW_RHI_TARGET_* 로 고른 백엔드 **하나만** 링크하므로, 무엇이 있는지
+            // 없다. 배포본은 고른 백엔드 **하나만** 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
             // 같이 알려 준다.
             SW_LOG_ERROR( "The %# backend is not in this build. Available: %#",
                           RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );

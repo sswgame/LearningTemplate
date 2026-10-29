@@ -16,8 +16,13 @@ endif()
 function(sw_getRHIBackendSources NAME OUT_VAR)
 	file(GLOB_RECURSE listSource CONFIGURE_DEPENDS
 		"${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/*.cpp")
-	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 만 짓는다(Shipping 정적 링크에는 없다)
+	list(FILTER listSource EXCLUDE REGEX "/Module/") # 모듈 엔트리는 RHI_* MODULE 이 짓는다 — 배포 정적 링크는 `sw_getRHIBackendEntrySource` 로 따로 넣는다
 	set(${OUT_VAR} ${listSource} PARENT_SCOPE)
+endfunction()
+
+# 백엔드의 진입 파일(`Module/ModuleEntry.cpp`) — 배포 정적 링크에서는 같은 매크로가 정적 등록자가 된다(`SW_IMPLEMENT_RHI_MODULE`).
+function(sw_getRHIBackendEntrySource NAME OUT_VAR)
+	set(${OUT_VAR} "${CMAKE_SOURCE_DIR}/Source/Engine/Graphics/RHI/${SW_RHI_BACKEND_${NAME}_SOURCE_FOLDER}/Module/ModuleEntry.cpp" PARENT_SCOPE)
 endfunction()
 
 # 모든 백엔드의 장치 소스(Engine GLOB 에서 뺀다 — 백엔드 소스는 모듈 · Shipping 갈래가 가져간다).

@@ -38,6 +38,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RHIStaticBackendRegistrar
+     * @brief 정적으로 링크한 백엔드(배포)가 스스로 오르는 등록자입니다(`SW_IMPLEMENT_RHI_MODULE`). 등록표가 만들어질 때 목록을 읽는다.
+     * @details 정적 초기화 때 머리에 이어 붙는다 — 등록표(서브시스템)보다 먼저 산다.
+     */
+    struct SW_API RHIStaticBackendRegistrar
+    {
+        using CreateFunction = IRHIDevice* (*)();
+
+        RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate );
+        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
+        static const RHIStaticBackendRegistrar* getHead();
+
+        RHIBackend                       _backend;
+        CreateFunction                   _pCreate;
+        const RHIStaticBackendRegistrar* _pNext;
+    };
+
+    /**
      * @class RHIBackendRegistry
      * @brief 백엔드 팩토리의 등록, 조회와 MODULE 로드를 맡습니다.
      */
@@ -63,7 +81,7 @@ namespace sw
 
         /**
          * @brief 지금 등록된 백엔드 이름을 쉼표로 이어 반환합니다(오류 메시지용).
-         * @details 배포본은 `SW_RHI_TARGET_*` 로 고른 **하나만** 링크합니다. 요청한 백엔드가 없을 때
+         * @details 배포본은 고른 **하나만** 링크합니다(`SW_SHIPPING_RHI_BACKEND`). 요청한 백엔드가 없을 때
          *          무엇이 있는지 같이 알려 주지 않으면, 설정 파일을 고친 사람이 원인을 알 수 없습니다.
          */
         string describeRegisteredBackends() const;
