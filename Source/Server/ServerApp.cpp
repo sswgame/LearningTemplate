@@ -34,7 +34,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
-#include "Engine/Module/ModuleLoader.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"

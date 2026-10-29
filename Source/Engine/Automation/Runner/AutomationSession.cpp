@@ -16,7 +16,7 @@
 #include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/GameRestarter.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/RHISubsystem.h"

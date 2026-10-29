@@ -9,7 +9,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/ModuleLoader.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
 

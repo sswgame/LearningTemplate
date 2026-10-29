@@ -4,7 +4,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Module/ModuleLoader.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"

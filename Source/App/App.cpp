@@ -34,7 +34,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Module/GameRestarter.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

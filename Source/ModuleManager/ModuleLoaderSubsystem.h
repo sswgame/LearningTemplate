@@ -11,7 +11,7 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Foundation/HostSubsystemNames.h"
-#include "Engine/Module/ModuleLoader.h"
+#include "Engine/Module/HostServices.h"
 
 namespace sw
 {
