@@ -132,7 +132,7 @@
 
 **남은 것**(순서대로):
 1. `DevTools` 단위 — 리로드 · 감시 분배기 · 콘솔 · HUD · 서버 포즈 고스트 · 프레임 지연은 옮겼다(엔진은 기동 확장 델리게이트와 프레임 훅만 안다). 기능별 개발 명령은 기능 옆 `*DevCommands.cpp` 이고 배포 구성은 그 이름을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`, `Tests/` 와 같은 규칙). 회선 흉내는 세션의 샤드 전송 데코레이터(`GameNetSession::setTransportDecorator`)에 `NetLineEmulationSubsystem` 이 걸고(J9), 장치 손실 주입은 렌더 스레드의 프레임 시작 훅(`BeginFrameHookDelegate`)에 App 의 백엔드 교체기가 건다. OS 파일 감시기(`DevTools/FileWatch`) · RenderDoc 연결(기동 확장에서 RHI 앞에 올린다) · 리로드 어댑터 캐시(오디오 · 현지화)도 옮겼다. DevTools 헤더는 DevTools 를 링크한 타깃만 include 할 수 있다(`DevToolsAPI.h` 가 컴파일에서 멈춘다). 남은 것: Core/Console 등록표의 파일 감싸기 — 자동화 실행기(4)가 시나리오 `<Command>` 로 개발 명령을 부르므로 4 와 같이 배포 구성에서 폴더째 뺀다.
-2. 에셋 리로드를 데코레이터로 — `IAssetCache::reload` 를 런타임 계약에서 빼고, `DevTools` 가 캐시를 감싸 리로드를 덧붙인다(리로드 전용 어댑터 캐시도 그쪽으로). 텍스처 캐시의 리로드 세대는 비동기 로드와 섞여 인터페이스부터 나눈다(가장 큰 일).
+2. ~~에셋 리로드~~ — `IAssetCache::reload` 가상 칸을 지웠다. 캐시는 등록할 때 리로드 함수를 같이 넘기고(`SW_ASSET_CACHE_RELOAD_FUNCTION`, 배포는 `SW_DEV_ONLY_FUNCTION` 이 nullptr), 템플릿이 아닌 캐시 · 오디오 · 현지화 · 설정의 리로드 본문은 개발 전용 `*Reload.cpp`(배포 구성은 짓지 않는다)다. 데이터 폴더 감시는 엔진 확장점 `IContentFolderWatch`(개발 도구가 건다). 남은 런타임 흔적: 텍스처 리로드 세대 칸(배포에서는 늘 0).
 3. 편집기 `AssetHotReload` 는 편집기에 두고 `DevTools` 의 감시 위에 선다.
 4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
    자동화의 판정 · 골든 · 보고 · 백엔드 행렬 · 종료 코드(`Engine/Automation/Runner`)는 엔진 밖 개발 단위로. 시나리오 재생기 · 단계 · 프레임 통계(내장 벤치마크 · 어트랙트 모드)는 배포 게임이 쓰므로 Engine 에 남는다.
