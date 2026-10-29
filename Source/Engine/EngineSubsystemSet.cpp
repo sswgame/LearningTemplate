@@ -26,6 +26,7 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -124,6 +125,7 @@ namespace sw::engine
             services.addSubsystem( sw::make_unique<DebugDrawQueue>() );
             services.addSubsystem( sw::make_unique<VisualLogger>() );
             services.addSubsystem( sw::make_unique<RenderTargetRegistry>() );
+            services.addSubsystem( sw::make_unique<GPUBreadcrumbLog>() ); // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다
             services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
 #if defined( SW_WITH_CLIENT_CODE )
             services.addSubsystem( sw::make_unique<RenderExtensionRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다

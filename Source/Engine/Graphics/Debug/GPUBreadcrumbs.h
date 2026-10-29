@@ -12,9 +12,13 @@
  *          켜는 스위치는 `-gv_gpuBreadcrumbs`(개발 빌드 기본 켬 — 표지 한 번이 패스당 GPU 쓰기 하나뿐이라 값싸다)이고 Shipping 은 등록되지 않아 늘 꺼진다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/fixed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -22,7 +26,9 @@ namespace sw
 
     /**
      * @class GPUBreadcrumbs
-     * @brief 패스 이름 표와 디바이스 소실 보고입니다. 모든 함수는 어느 스레드에서 불러도 됩니다(패스는 병렬로 기록될 수 있다).
+     * @brief 패스 이름 표와 디바이스 소실 보고의 창구입니다. 모든 함수는 어느 스레드에서 불러도 됩니다(패스는 병렬로 기록될 수 있다).
+     * @details 상태(이름 표 · CPU 가 마지막으로 기록한 패스 · 소실 보고 여부)는 서비스 범위의 서브시스템 `GPUBreadcrumbLog` 가 갖고, 이 창구는 서비스 표의 칸으로 찾는다
+     *          (`engine::findSubsystem<GPUBreadcrumbLog>()`). 칸이 비면(엔진 없는 도구 · 테스트) 표지를 남기지 않고 소실 보고는 이름 없이 로그만 남긴다.
      */
     class SW_API GPUBreadcrumbs
     {
@@ -62,5 +68,43 @@ namespace sw
          * @note 첫 보고만 로그를 남깁니다(소실 뒤 같은 호출이 프레임마다 와도 줄이 쌓이지 않는다).
          */
         static void reportDeviceLost( const utf8* pBackend, const uint32* pGPUID, uint32 gpuCount );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class GPUBreadcrumbLog
+     * @brief GPU 브레드크럼의 세션 상태입니다 — 패스 이름 표(id = 칸 번호 + 1, 한 번 올린 이름은 바뀌지 않는다), CPU 가 마지막으로 기록한 패스, 소실을 보고했는지.
+     * @details 서비스 범위의 서브시스템이다(`EngineSubsystemSet` — 렌더 타깃 목록과 같은 자리). 예전에는 파일 정적이라 엔진을 다시 세워도 이전 실행의 소실 보고 표시가 남았다.
+     *          `GPUBreadcrumbs` 창구만 부른다. 언리얼 `FGPUBreadcrumbs`(RHI 가 갖는 브레드크럼 상태)와 같은 자리.
+     */
+    class SW_API GPUBreadcrumbLog final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "GPUBreadcrumbLog";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 이름을 표에 올리고(처음이면) id 를 돌려줍니다. 표가 찼으면 0 입니다(오류를 한 번 남긴다). */
+        [[nodiscard]] uint32 registerPass( string_view name );
+        /** @brief id 의 이름을 @p pOutName 에 씁니다. 없는 id 면 false 입니다. */
+        [[nodiscard]] bool resolve( uint32 id, utf8* pOutName, uint32 capacity );
+        /** @brief CPU 가 마지막으로 기록한 패스를 적습니다(병렬 기록이면 마지막으로 쓴 스레드의 것). */
+        void noteRecorded( uint32 id ) { _lastRecordedID.store( id ); }
+        /** @brief CPU 가 마지막으로 기록한 패스의 id 입니다(0 = 없음). */
+        [[nodiscard]] uint32 getLastRecordedID() const { return _lastRecordedID.load(); }
+        /** @brief 소실 보고를 처음 맡으면 true 입니다 — 소실 뒤에는 같은 호출이 프레임마다 온다. */
+        [[nodiscard]] bool claimLostReport() { return _bLostReported.exchange( 1 ) == 0; }
+
+    private:
+        mutex                                     _mutex;
+        uint64                                    _arrHash[GPUBreadcrumbs::kMaxName] SW_GUARDED_BY( _mutex ){};
+        fixed_string<GPUBreadcrumbs::kNameLength> _arrName[GPUBreadcrumbs::kMaxName] SW_GUARDED_BY( _mutex ){};
+        uint32 _count                             SW_GUARDED_BY( _mutex ){ 0 };
+        atomic<uint32>                            _lastRecordedID{ 0 };
+        atomic<uint32>                            _bLostReported{ 0 };
     };
 } // namespace sw

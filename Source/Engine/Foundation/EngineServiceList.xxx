@@ -96,6 +96,8 @@ SW_ENGINE_SERVICE_OPT( class, StateHashHistory, HostOnly )
 // areEngineServicesBound() 가 영영 false 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다.
 // 위 CommandStack 주석이 그 실례다. 진단용 목록 하나 때문에 그런 일이 생겨서는 안 된다.
 SW_ENGINE_SERVICE_OPT( class, RenderTargetRegistry, HostOnly )
+// GPU 브레드크럼 상태(패스 이름 표 · 마지막 기록 패스 · 소실 보고). 패스마다 표지를 남기는 창구(`GPUBreadcrumbs::mark`)가 칸으로 읽는다. OPT 인 까닭은 위와 같다.
+SW_ENGINE_SERVICE_OPT( class, GPUBreadcrumbLog, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 // 모듈 렌더 패스(이름 → 패스 상수). 렌더러가 읽고 게임 · 키트 모듈이 등록한다. **OPT 다** — 렌더러 폴더를 짓지 않는 Server 타깃에는 이 타입이 없다.
 // 클라이언트 엔진은 늘 서비스 범위에 넣는다(Engine.cpp).

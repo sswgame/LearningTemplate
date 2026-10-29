@@ -2,15 +2,13 @@
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
-#include "Core/String/fixed_string.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 
 namespace sw
@@ -23,28 +21,34 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuBreadcrumbs, true, "GPU 브레드크럼(패스마다 GPU 표지 · DX12 DRED 자동 브레드크럼 · Vulkan 체크포인트)을 켠다 - 디바이스 소실 때 마지막 패스 이름을 보고한다 (개발 빌드)" );
 
-    namespace
+    uint32 GPUBreadcrumbLog::registerPass( string_view name )
     {
-        /// @brief 패스 이름 표입니다. 이름은 한 번 올라가면 바뀌지 않으므로 id 는 영구적이다(id = 칸 번호 + 1).
-        struct GPUBreadcrumbTable
+        const uint64      hash = HashUtil::computeStringHash64( name, false );
+        ScopedLock<mutex> lock{ _mutex };
+        for ( uint32 index = 0; index < _count; ++index )
         {
-            mutex                                     _mutex;
-            uint64                                    _arrHash[GPUBreadcrumbs::kMaxName] SW_GUARDED_BY( _mutex ){};
-            fixed_string<GPUBreadcrumbs::kNameLength> _arrName[GPUBreadcrumbs::kMaxName] SW_GUARDED_BY( _mutex ){};
-            uint32 _count                             SW_GUARDED_BY( _mutex ){ 0 };
+            if ( _arrHash[index] == hash )
+                return index + 1;
+        }
+        if ( _count >= GPUBreadcrumbs::kMaxName )
+        {
+            SW_LOG_ERROR_ONCE( "GPU breadcrumb table is full (%# pass names) - new passes leave no breadcrumb", GPUBreadcrumbs::kMaxName );
+            return 0;
+        }
+        _arrHash[_count] = hash;
+        _arrName[_count] = name;
+        ++_count;
+        return _count;
+    }
 
-            static GPUBreadcrumbTable& get()
-            {
-                static GPUBreadcrumbTable s_table{};
-                return s_table;
-            }
-        };
-
-        /// @brief CPU 가 마지막으로 기록한 패스의 id 입니다(병렬 기록이면 마지막으로 쓴 스레드의 것).
-        atomic<uint32> s_lastRecordedID{ 0 };
-        /// @brief 소실을 이미 보고했는지입니다 - 소실 뒤에는 같은 호출이 프레임마다 온다.
-        atomic<uint32> s_bLostReported{ 0 };
-    } // namespace
+    bool GPUBreadcrumbLog::resolve( uint32 id, utf8* pOutName, uint32 capacity )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( id == 0 || id > _count )
+            return false;
+        formatstring( pOutName, capacity, "%#", _arrName[id - 1].c_str() );
+        return true;
+    }
 
     bool GPUBreadcrumbs::isEnabled()
     {
@@ -59,36 +63,17 @@ namespace sw
     {
         if ( isEnabled() == false || name.empty() )
             return 0;
-        const uint64        hash  = HashUtil::computeStringHash64( name, false );
-        GPUBreadcrumbTable& table = GPUBreadcrumbTable::get();
-        ScopedLock<mutex>   lock{ table._mutex };
-        for ( uint32 index = 0; index < table._count; ++index )
-        {
-            if ( table._arrHash[index] == hash )
-                return index + 1;
-        }
-        if ( table._count >= kMaxName )
-        {
-            SW_LOG_ERROR_ONCE( "GPU breadcrumb table is full (%# pass names) - new passes leave no breadcrumb", kMaxName );
-            return 0;
-        }
-        table._arrHash[table._count] = hash;
-        table._arrName[table._count] = name;
-        ++table._count;
-        return table._count;
+        GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>();
+        return pLog != nullptr ? pLog->registerPass( name ) : 0; // 서비스 범위가 없는 도구 · 테스트는 표지를 남기지 않는다
     }
 
     bool GPUBreadcrumbs::resolve( uint32 id, utf8* pOutName, uint32 capacity )
     {
         if ( pOutName == nullptr || capacity == 0 )
             return false;
-        pOutName[0]               = '\0';
-        GPUBreadcrumbTable& table = GPUBreadcrumbTable::get();
-        ScopedLock<mutex>   lock{ table._mutex };
-        if ( id == 0 || id > table._count )
-            return false;
-        formatstring( pOutName, capacity, "%#", table._arrName[id - 1].c_str() );
-        return true;
+        pOutName[0]                  = '\0';
+        GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>();
+        return pLog != nullptr && pLog->resolve( id, pOutName, capacity );
     }
 
     void GPUBreadcrumbs::mark( IRHICommandList& commands, string_view passName )
@@ -96,18 +81,21 @@ namespace sw
         const uint32 id = registerPass( passName );
         if ( id == 0 )
             return;
-        s_lastRecordedID.store( id );
+        engine::findSubsystem<GPUBreadcrumbLog>()->noteRecorded( id ); // id 가 0 이 아니면 표가 있다(`registerPass`)
         commands.writeBreadcrumb( id );
     }
 
     uint32 GPUBreadcrumbs::getLastRecordedID()
     {
-        return s_lastRecordedID.load();
+        const GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>();
+        return pLog != nullptr ? pLog->getLastRecordedID() : 0;
     }
 
     void GPUBreadcrumbs::reportDeviceLost( const utf8* pBackend, const uint32* pGPUID, uint32 gpuCount )
     {
-        if ( s_bLostReported.exchange( 1 ) != 0 )
+        // 보고 여부는 이 실행(서비스 범위)의 것이다. 표가 없으면(엔진 없는 도구) 막을 상태가 없어 늘 보고한다 — 이름은 풀지 못한다.
+        GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>();
+        if ( pLog != nullptr && pLog->claimLostReport() == false )
             return;
         const utf8* pBackendName = pBackend != nullptr ? pBackend : "unknown";
         utf8        arrLine[constant::kMaxBuffer256];
