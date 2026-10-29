@@ -3,20 +3,14 @@
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 
 #include "Core/Console/DevCommandRegistry.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -30,8 +24,6 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -83,8 +75,6 @@ namespace sw::editor
 
             /** @brief 참조 찾기 결과 창의 팝업 이름입니다. */
             static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
-            /** @brief 게임 팩 루트의 표시 이름 접두입니다(`game/<팩>`). */
-            static constexpr const utf8* kGameDomainPrefix = "game/";
             /** @brief 폴더 이동 액션입니다. 키는 `editor.input.xml` 의 `Editor.Panel.content_browser` 레이어가 정한다. */
             static constexpr string_view kActionNavigateBack    = "contentBrowser.navigateBack";
             static constexpr string_view kActionNavigateForward = "contentBrowser.navigateForward";
@@ -138,12 +128,6 @@ namespace sw::editor
             {
                 const ContentBrowserPanel* pPanel = findPanel();
                 return pPanel != nullptr && pPanel->isWaitingForReferenceIndex();
-            }
-
-            /** @brief 에디터가 본 `Content/` 변경 번호입니다. 패널은 에디터 컨텍스트가 있어야 도므로 컨텍스트와 핫 리로드는 필수입니다. */
-            [[nodiscard]] static uint64 getContentChangeSerial()
-            {
-                return editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>().getContentChangeSerial();
             }
 
             /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
@@ -463,24 +447,15 @@ namespace sw::editor
         pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), EditorColorUtil::toImU32( ContentBrowserPanelInternal::kFolderPocketBorder ), 3.0f );
     }
 
-    string ContentBrowserPanel::describeSourceControlStatus( const AssetEntry& entry )
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        if ( entry._bIsDirectory )
-            return {};
-        return editorContext.getSubsystem<EditorSourceControl>().describeStatus( entry._absolutePath, entry._bReadOnly );
-    }
-
     void ContentBrowserPanel::drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry )
     {
-        const string statusText = describeSourceControlStatus( entry );
+        const string statusText = ContentBrowserModel::describeSourceControlStatus( entry );
         if ( statusText.empty() )
             return;
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        const bool     bLocked       = editorContext.getSubsystem<EditorSourceControl>().findLock( entry._absolutePath ) != nullptr;
-        const ImU32    color         = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
-        const ImVec2   textSize      = ImGui::CalcTextSize( editoricon::kLock );
+        const bool   bLocked  = ContentBrowserModel::isLocked( entry );
+        const ImU32  color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
+        const ImVec2 textSize = ImGui::CalcTextSize( editoricon::kLock );
         pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
         if ( ImGui::IsItemHovered() )
             ImGui::SetTooltip( "%s", statusText.c_str() );
@@ -493,54 +468,25 @@ namespace sw::editor
         subject._pPopupID  = "AssetCtx";
         subject._kind      = EditorCommandTargetKind::Asset;
         subject._hoveredID = EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, entry._absolutePath );
-        if ( _selectedAssetAbs.empty() == false )
-            subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _selectedAssetAbs ) );
+        if ( _model.getSelectedAssetPath().empty() == false )
+            subject._listSelectedID.push_back( EditorInputGUI::registerPayloadName( EditorPayloadKind::Asset, _model.getSelectedAssetPath() ) );
         subject._selectOnly = &ContentBrowserPanelInternal::selectOnlyAsset;
         (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
     }
 
-    void ContentBrowserPanel::selectAssetPath( string_view absolutePath )
-    {
-        for ( const AssetEntry& entry : _listEntry )
-        {
-            if ( FileUtil::pathsEqualNormalized( entry._absolutePath, absolutePath ) )
-            {
-                selectAsset( entry );
-                return;
-            }
-        }
-    }
-
     ContentBrowserPanel::ContentBrowserPanel() noexcept
-        : _listRoot{}
-        , _listEntry{}
+        : _model{}
         , _listVisibleEntry{}
-        , _selectedFolderAbs{}
-        , _listCrumb{}
-        , _selectedAssetAbs{}
-        , _history{}
-        , _fileActions{}
-        , _referenceSearch{}
-        , _importQueue{}
         , _thumbnailCache{}
         , _searchBuffer{}
         , _renameBuffer{}
-        , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
-        , _typeFilter{}
         , _fallbackGlyphCount{ 0 }
         , _lastFallbackGlyphCount{ 0 }
         , _viewMode{ ViewMode::Tiles }
-        , _folderJob{}
-        , _folderCache{ &EditorFolderListing::collectChildFolders }
-        , _bRootsDirty{ SW_TRUE }
-        , _bFolderDirty{ SW_TRUE }
         , _bOpenDeleteConfirm{ SW_FALSE }
-        , _bShowAllPacks{ SW_FALSE }
-        , _bShowAllPacksInitialized{ SW_FALSE }
         , _bOpenReferenceResults{ SW_FALSE }
         , _bFocusRenameInput{ SW_FALSE }
-        , _bListingRecursive{ SW_FALSE }
         , _bContentVisible{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -548,19 +494,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
     {
-        _fileActions.requestDelete( absolutePath );
+        _model.requestDeleteAsset( absolutePath );
         _bOpenDeleteConfirm = SW_TRUE;
-    }
-
-    bool ContentBrowserPanel::confirmDeleteAsset()
-    {
-        if ( _fileActions.confirmDelete() == false )
-            return false;
-        // 지운 파일이 목록과 선택에 남지 않도록 현재 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
-        _selectedAssetAbs.clear();
-        _bFolderDirty = SW_TRUE;
-        _folderCache.clear();
-        return true;
     }
 
     void ContentBrowserPanel::drawDeleteConfirmModal()
@@ -573,8 +508,8 @@ namespace sw::editor
         if ( EditorWidgets::beginCenteredModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName ) == false )
             return;
 
-        const string&               pendingDeleteAbs = _fileActions.getPendingDeletePath();
-        const EditorReferenceIndex& referenceIndex   = _referenceSearch.getIndex();
+        const string&               pendingDeleteAbs = _model.getPendingDeletePath();
+        const EditorReferenceIndex& referenceIndex   = _model.getReferenceSearch().getIndex();
         ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( pendingDeleteAbs ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
@@ -600,37 +535,15 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Cancel" ) );
         if ( ImGui::Button( "Cancel" ) || EditorInputGUI::wasCancelPressed() )
         {
-            _fileActions.cancelDelete();
+            _model.cancelDeleteAsset();
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
     }
 
-    void ContentBrowserPanel::syncWithContentChanges()
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        const uint64   serial        = editorContext.getSubsystem<AssetHotReload>().getContentChangeSerial();
-        if ( serial == _seenContentChangeSerial )
-            return;
-        _seenContentChangeSerial = serial;
-        _bFolderDirty            = SW_TRUE;
-        _folderCache.clear();
-    }
-
     void ContentBrowserPanel::shutdown( IRHIDevice* /*pDevice*/ )
     {
         _thumbnailCache.clear();
-    }
-
-    void ContentBrowserPanel::syncReferenceIndex()
-    {
-        AssetHotReload& hotReload = editor::getSubsystem<EditorContext>().getSubsystem<AssetHotReload>(); // 번호의 출처이기도 하다
-        _referenceSearch.update( hotReload.getContentChangeSerial(), &hotReload );
-    }
-
-    bool ContentBrowserPanel::isReferenceIndexCurrent() const
-    {
-        return _referenceSearch.isCurrent( ContentBrowserPanelInternal::getContentChangeSerial() );
     }
 
     bool ContentBrowserPanel::isWaitingForReferenceIndex() const
@@ -649,96 +562,20 @@ namespace sw::editor
         _bContentVisible = SW_FALSE;
     }
 
-    void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
-    {
-        // 감시도 같은 변경을 알리지만 한두 프레임 늦다. 결과를 아는 위치에서 바로 다시 읽는다.
-        _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
-        _bFolderDirty     = SW_TRUE;
-        _folderCache.clear();
-        // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
-        _referenceSearch.restartPendingScan( ContentBrowserPanelInternal::getContentChangeSerial() );
-    }
-
-    bool ContentBrowserPanel::createNewFolder()
-    {
-        string folderAbs;
-        if ( ContentBrowserFileActions::createFolder( _selectedFolderAbs, folderAbs ) == false )
-            return false;
-        selectAfterFileChange( folderAbs );
-        return true;
-    }
-
-    bool ContentBrowserPanel::createNewAsset( const EditorNewAssetTemplate& assetTemplate )
-    {
-        string assetAbs;
-        if ( ContentBrowserFileActions::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
-            return false;
-        selectAfterFileChange( assetAbs );
-        return true;
-    }
-
-    bool ContentBrowserPanel::duplicateAsset( string_view absolutePath )
-    {
-        string assetAbs;
-        if ( ContentBrowserFileActions::duplicateAsset( absolutePath, assetAbs ) == false )
-            return false;
-        selectAfterFileChange( assetAbs );
-        return true;
-    }
-
     void ContentBrowserPanel::beginRename( string_view absolutePath )
     {
         string stem;
-        if ( _fileActions.beginRename( absolutePath, stem ) == false )
+        if ( _model.beginRename( absolutePath, stem ) == false )
             return;
         _renameBuffer.assign( stem.c_str() );
         _bFocusRenameInput = SW_TRUE;
-    }
-
-    EditorReferenceIndex* ContentBrowserPanel::findCurrentReferenceIndex()
-    {
-        EditorReferenceIndex* pIndex = _referenceSearch.findCurrentIndex( ContentBrowserPanelInternal::getContentChangeSerial() );
-        if ( pIndex == nullptr )
-            SW_LOG_WARNING( "The reference index has not caught up with the last file change yet - nothing was moved, try again in a moment" );
-        return pIndex;
-    }
-
-    bool ContentBrowserPanel::commitRename( string_view newName )
-    {
-        // 색인이 따라오기 전이면 입력란을 열어 둔 채 돌아온다 — Enter 를 다시 누르면 된다.
-        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
-        if ( pIndex == nullptr )
-            return false;
-        string destinationAbs;
-        if ( _fileActions.commitRename( newName, *pIndex, destinationAbs ) == false )
-            return false;
-        selectAfterFileChange( destinationAbs );
-        return true;
-    }
-
-    bool ContentBrowserPanel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
-    {
-        EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
-        if ( pIndex == nullptr )
-            return false;
-        string destinationAbs;
-        if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, *pIndex, destinationAbs ) == false )
-            return false;
-        selectAfterFileChange( destinationAbs );
-        return true;
-    }
-
-    bool ContentBrowserPanel::isRenaming( const AssetEntry& entry ) const
-    {
-        const string& renamingAbs = _fileActions.getRenamingPath();
-        return renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, renamingAbs );
     }
 
     void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
     {
         string assetID;
         if ( EditorWidgets::acceptAssetDrop( assetID ) )
-            (void)moveAssetToFolder( AssetPaths::findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
+            (void)_model.moveAssetToFolder( AssetPaths::findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )
@@ -756,11 +593,11 @@ namespace sw::editor
         const bool bEscaped = EditorInputGUI::wasCancelPressed();
         if ( bEscaped )
         {
-            _fileActions.cancelRename();
+            _model.cancelRename();
             return;
         }
         if ( bEntered || ImGui::IsItemDeactivated() )
-            (void)commitRename( _renameBuffer.c_str() ); // 실패(이름 규칙 · 이미 있음)는 moveAsset 이 알린다
+            (void)_model.commitRename( _renameBuffer.c_str() ); // 실패(이름 규칙 · 이미 있음)는 moveAsset 이 알린다
     }
 
     void ContentBrowserPanel::drawAddMenu()
@@ -768,7 +605,7 @@ namespace sw::editor
         if ( ImGui::BeginPopup( "##cb_add" ) == false )
             return;
         if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kFolder, "New Folder" ) ) )
-            (void)createNewFolder(); // 실패는 createFolder 가 알린다
+            (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
         StringBuilder<constant::kMaxBuffer64> mark;
@@ -777,7 +614,7 @@ namespace sw::editor
         for ( const EditorNewAssetTemplate* pTemplate : listTemplate )
         {
             if ( ImGui::MenuItem( pTemplate->_pLabel ) )
-                (void)createNewAsset( *pTemplate ); // 실패는 createAsset 이 알린다
+                (void)_model.createNewAsset( *pTemplate ); // 실패는 createAsset 이 알린다
             mark.clear();
             mark.append( "contentBrowser.add." ).append( pTemplate->_pID );
             EditorSelfTestMarks::note( mark.c_str() );
@@ -787,7 +624,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
     {
-        _referenceSearch.query( absolutePath, bDependencies );
+        _model.showReferences( absolutePath, bDependencies );
         _bOpenReferenceResults = SW_TRUE;
     }
 
@@ -803,12 +640,13 @@ namespace sw::editor
         if ( ImGui::BeginPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName ) == false )
             return;
 
-        const bool                          bDependencies       = _referenceSearch.isDependencyQuery();
-        const vector<EditorAssetReference>& listReferenceResult = _referenceSearch.getResultList();
+        const ContentBrowserReferenceSearch& referenceSearch     = _model.getReferenceSearch();
+        const bool                           bDependencies       = referenceSearch.isDependencyQuery();
+        const vector<EditorAssetReference>&  listReferenceResult = referenceSearch.getResultList();
         ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
         ImGui::SameLine();
-        ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", _referenceSearch.getQueryID().c_str() );
-        if ( _referenceSearch.getIndex().isReady() == false )
+        ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", referenceSearch.getQueryID().c_str() );
+        if ( referenceSearch.getIndex().isReady() == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
             ImGui::EndPopup();
@@ -853,13 +691,6 @@ namespace sw::editor
             (void)EditorAssetCommands::openPath( openPath ); // 실패는 openPath 가 알린다
     }
 
-    void ContentBrowserPanel::openFolder( string_view absolutePath )
-    {
-        vector<ContentBrowserCrumb> listCrumb;
-        makeTrailForFolder( absolutePath, listCrumb );
-        selectFolder( absolutePath, listCrumb );
-    }
-
     void ContentBrowserPanel::drawContent()
     {
         // 폴더 이동: 마우스 뒤로 · 앞으로 단추(창 위에서)와 창 액션(`Editor.Panel.content_browser` 의 Alt+Left · Backspace · Alt+Right).
@@ -869,9 +700,9 @@ namespace sw::editor
         const bool               bBack    = ( bHovered && pointer.wasPressed( EditorMouseButton::Back ) ) || EditorInputGUI::wasActionTriggered( ContentBrowserPanelInternal::kActionNavigateBack );
         const bool               bForward = ( bHovered && pointer.wasPressed( EditorMouseButton::Forward ) ) || EditorInputGUI::wasActionTriggered( ContentBrowserPanelInternal::kActionNavigateForward );
         if ( bBack )
-            navigateBack();
+            _model.navigateBack();
         else if ( bForward )
-            navigateForward();
+            _model.navigateForward();
 
         _lastFallbackGlyphCount = _fallbackGlyphCount;
         _fallbackGlyphCount     = 0;
@@ -881,24 +712,8 @@ namespace sw::editor
             editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
 
         // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.
-        const bool bWantRecursive = EditorListFilter{ _searchBuffer.c_str() }.isActive();
-        if ( bWantRecursive != ( _bListingRecursive == SW_TRUE ) )
-        {
-            _bListingRecursive = bWantRecursive ? SW_TRUE : SW_FALSE;
-            _bFolderDirty      = SW_TRUE;
-        }
-
-        if ( _bRootsDirty == SW_TRUE )
-            refreshRoots();
-        processPendingImports();
+        _model.tick( EditorListFilter{ _searchBuffer.c_str() }.isActive() );
         _bContentVisible = SW_TRUE;
-        syncWithContentChanges();
-        syncReferenceIndex();
-        if ( _bFolderDirty == SW_TRUE )
-            refreshCurrentFolder();
-        vector<EditorFolderListingEntry> listNewEntry;
-        if ( _folderJob.take( listNewEntry ) == EditorTaskPoll::Ready )
-            applyFolderListing( listNewEntry );
 
         drawToolbar();
         ImGui::Separator();
@@ -908,123 +723,6 @@ namespace sw::editor
         drawAssetView();
         drawDeleteConfirmModal();
         drawReferenceResults();
-    }
-
-    void ContentBrowserPanel::refreshRoots()
-    {
-        _listRoot.clear();
-
-        const auto addRoot = [this]( string_view name, string_view path )
-        {
-            if ( path.empty() )
-                return;
-            if ( FileUtil::isDirectory( path ) == false )
-                return;
-            ContentRoot root;
-            root._displayName  = string{ name };
-            root._absolutePath = FileUtil::normalizeSeparators( path );
-            _listRoot.push_back( std::move( root ) );
-        };
-
-        // 기본은 활성 게임 팩 하나다. 언리얼의 Content Browser 가 프로젝트 콘텐츠만 보이는 것과 같다. All packs 를 켜면 game/ 의 팩마다 루트가 하나씩 생긴다.
-        if ( _bShowAllPacksInitialized == SW_FALSE )
-        {
-            _bShowAllPacks            = getPreferences<EditorContentBrowserPreferences>()._bShowAllPacksByDefault ? SW_TRUE : SW_FALSE;
-            _bShowAllPacksInitialized = SW_TRUE;
-        }
-        const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
-        if ( packRoot.empty() == false )
-            addRoot( packRoot, AssetPaths::findLooseDomainFolder( packRoot ).getDiskPath() );
-        if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
-        {
-            vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( AssetPaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
-            std::sort( listPackFolder.begin(), listPackFolder.end() );
-            for ( const string& packFolder : listPackFolder )
-            {
-                const string packName = string( ContentBrowserPanelInternal::kGameDomainPrefix ) + FileUtil::normalizePath( FileUtil::getFileNamePart( packFolder ) );
-                if ( packName != FileUtil::normalizePath( packRoot ) )
-                    addRoot( packName, packFolder );
-            }
-        }
-        addRoot( "engine", AssetPaths::findLooseDomainFolder( "engine" ).getDiskPath() );
-        addRoot( "common", AssetPaths::findLooseDomainFolder( "common" ).getDiskPath() );
-        addRoot( "editor", AssetPaths::findLooseDomainFolder( "editor" ).getDiskPath() );
-
-        // 현재 폴더가 숨긴 팩 안에 있으면 첫 루트로 이동한다.
-        bool bSelectedIsUnderRoot = false;
-        for ( const ContentRoot& root : _listRoot )
-        {
-            if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( _selectedFolderAbs ), FileUtil::normalizePath( root._absolutePath ) ) )
-            {
-                bSelectedIsUnderRoot = true;
-                break;
-            }
-        }
-        if ( bSelectedIsUnderRoot == false && _listRoot.empty() == false )
-        {
-            vector<ContentBrowserCrumb> listCrumb;
-            makeTrailForFolder( _listRoot.front()._absolutePath, listCrumb );
-            selectFolder( _listRoot.front()._absolutePath, listCrumb );
-        }
-
-        _bRootsDirty = SW_FALSE;
-    }
-
-    void ContentBrowserPanel::setShowAllPacks( bool bShowAllPacks )
-    {
-        _bShowAllPacks            = bShowAllPacks ? SW_TRUE : SW_FALSE;
-        _bShowAllPacksInitialized = SW_TRUE;
-        _bRootsDirty              = SW_TRUE;
-    }
-
-    uint32 ContentBrowserPanel::getGameRootCount() const
-    {
-        uint32 gameRootCount{ 0 };
-        for ( const ContentRoot& root : _listRoot )
-        {
-            if ( StringUtil::startsWith( root._displayName, ContentBrowserPanelInternal::kGameDomainPrefix ) )
-                ++gameRootCount;
-        }
-        return gameRootCount;
-    }
-
-    bool ContentBrowserPanel::hasRoot( string_view displayName ) const
-    {
-        return VectorUtil::containsIf( _listRoot, [&]( const ContentRoot& root )
-        { return FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ); } );
-    }
-
-    void ContentBrowserPanel::refreshCurrentFolder()
-    {
-        _folderJob.request( _selectedFolderAbs, _bListingRecursive == SW_TRUE );
-        _bFolderDirty = SW_FALSE;
-    }
-
-    void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
-    {
-        // 목록을 보기만 하고 `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시, 프리팹, 씬 저장, 임포트)이 만든다.
-        _listEntry = std::move( listEntry );
-
-        std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
-        {
-            if ( entryA._bIsDirectory != entryB._bIsDirectory )
-                return entryA._bIsDirectory > entryB._bIsDirectory;
-            return entryA._name < entryB._name;
-        } );
-    }
-
-    bool ContentBrowserPanel::passesTypeFilter( const AssetEntry& entry ) const
-    {
-        if ( entry._bIsDirectory )
-            return true;
-
-        return _typeFilter.passes( entry._name );
-    }
-
-    bool ContentBrowserPanel::passesSearchFilter( const AssetEntry& entry ) const
-    {
-        return EditorListFilter{ _searchBuffer.c_str() }.matches( entry._name );
     }
 
     void ContentBrowserPanel::drawToolbar()
@@ -1040,21 +738,21 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawNavigationControls()
     {
-        const bool bCanBack = _history.canNavigateBack();
+        const bool bCanBack = _model.canNavigateBack();
         if ( bCanBack == false )
             ImGui::BeginDisabled();
         if ( ImGui::Button( "<##cb_nav_back" ) )
-            navigateBack();
+            _model.navigateBack();
         if ( bCanBack == false )
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateBack" ) );
 
         ImGui::SameLine();
-        const bool bCanForward = _history.canNavigateForward();
+        const bool bCanForward = _model.canNavigateForward();
         if ( bCanForward == false )
             ImGui::BeginDisabled();
         if ( ImGui::Button( ">##cb_nav_forward" ) )
-            navigateForward();
+            _model.navigateForward();
         if ( bCanForward == false )
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
@@ -1075,16 +773,17 @@ namespace sw::editor
     void ContentBrowserPanel::drawViewControls()
     {
         ImGui::SameLine();
-        _typeFilter.sync();
-        const vector<EditorAssetBrowserFilter>& listFilter = _typeFilter.getFilters();
+        ContentBrowserTypeFilter& typeFilter = _model.getTypeFilter();
+        typeFilter.sync();
+        const vector<EditorAssetBrowserFilter>& listFilter = typeFilter.getFilters();
         EditorChrome::setNextItemWidthColumns( 15.0f );
-        if ( ImGui::BeginCombo( "##cb_type", _typeFilter.getSelectedLabel() ) )
+        if ( ImGui::BeginCombo( "##cb_type", typeFilter.getSelectedLabel() ) )
         {
             for ( uint32 filterIdx = 0; filterIdx < static_cast<uint32>( listFilter.size() ); ++filterIdx )
             {
-                const bool bSelected = ( _typeFilter.getSelectedIndex() == filterIdx );
+                const bool bSelected = ( typeFilter.getSelectedIndex() == filterIdx );
                 if ( ImGui::Selectable( listFilter[filterIdx]._pLabel, bSelected ) )
-                    _typeFilter.select( filterIdx );
+                    typeFilter.select( filterIdx );
                 if ( bSelected )
                     ImGui::SetItemDefaultFocus();
             }
@@ -1114,7 +813,7 @@ namespace sw::editor
     void ContentBrowserPanel::drawFileControls()
     {
         ImGui::SameLine();
-        const bool canImport = _selectedFolderAbs.empty() == false;
+        const bool canImport = _model.canImport();
         if ( canImport == false )
             ImGui::BeginDisabled();
         const bool importClicked = ImGui::Button( "Import..." );
@@ -1128,23 +827,17 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Import" ) );
         }
         if ( importClicked )
-            importFilesFromDialog();
+            _model.importFilesFromDialog();
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Refresh" ) );
         if ( ImGui::Button( "Refresh" ) )
-        {
-            _folderCache.clear();
-            _listEntry.clear();
-            _selectedAssetAbs.clear();
-            refreshRoots();
-            refreshCurrentFolder();
-        }
+            _model.refreshAll();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
 
-        bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
+        bool bShowAllPacks = _model.isShowingAllPacks();
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "All packs" ) );
         if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
-            setShowAllPacks( bShowAllPacks );
+            _model.setShowAllPacks( bShowAllPacks );
         EditorSelfTestMarks::note( "contentBrowser.allPacks" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );
     }
@@ -1180,25 +873,25 @@ namespace sw::editor
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
                                          ? AssetPaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
                                          : AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
-            const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
+            const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
                 vector<ContentBrowserCrumb> listCrumb;
                 ContentBrowserLogic::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
-                selectFolder( fullFavPath, listCrumb );
+                _model.selectFolder( fullFavPath, listCrumb );
             }
         }
 
         ImGui::Separator();
         EditorWidgets::drawSectionHeader( "Sources" );
 
-        for ( const ContentRoot& root : _listRoot )
+        for ( const ContentBrowserRoot& root : _model.getRoots() )
         {
             drawFolderTreeNode( root._absolutePath.c_str(), root._displayName, 0 );
         }
 
-        if ( _listRoot.empty() )
+        if ( _model.getRoots().empty() )
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "NoResourceRoots" ) );
 
         EditorChrome::endSection();
@@ -1207,7 +900,7 @@ namespace sw::editor
     void ContentBrowserPanel::drawFolderTreeNode( string_view folderPath, string_view label, int32 depth )
     {
         const string absPath  = FileUtil::normalizeSeparators( folderPath );
-        const bool   selected = FileUtil::pathsEqualNormalized( absPath, _selectedFolderAbs );
+        const bool   selected = FileUtil::pathsEqualNormalized( absPath, _model.getSelectedFolderPath() );
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
         if ( selected )
@@ -1216,7 +909,7 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
         // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다. Refresh 와 파일 감시가 캐시를 비운다. 참조는 재귀 중에도 유효하다.
-        const vector<string>& listChild    = _folderCache.getOrScanChildFolders( absPath );
+        const vector<string>& listChild    = _model.getOrScanChildFolders( absPath );
         const bool            hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
@@ -1234,11 +927,7 @@ namespace sw::editor
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )
-        {
-            vector<ContentBrowserCrumb> listCrumb;
-            makeTrailForFolder( absPath, listCrumb );
-            selectFolder( absPath, listCrumb );
-        }
+            _model.openFolder( absPath );
 
         if ( opened && hasChildDirs )
         {
@@ -1257,14 +946,7 @@ namespace sw::editor
         // 수백 개일 때 프레임마다 문자열 수천 개를 복사한다. 이 목록을 쓰는 두 곳은 읽기만 하므로 포인터로
         // 충분하고, 버퍼도 멤버로 두면 첫 프레임 이후로는 할당이 없다.
         vector<const AssetEntry*>& listVisible = _listVisibleEntry;
-        listVisible.clear();
-        listVisible.reserve( _listEntry.size() );
-        for ( const AssetEntry& entry : _listEntry )
-        {
-            if ( passesTypeFilter( entry ) == false || passesSearchFilter( entry ) == false )
-                continue;
-            listVisible.push_back( &entry );
-        }
+        _model.collectVisibleEntries( _searchBuffer.view(), listVisible );
 
         editor::EditorSectionDesc assetsDesc{};
         assetsDesc._pID   = "##cb_assets";
@@ -1287,31 +969,33 @@ namespace sw::editor
         EditorChrome::endSection();
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
-        if ( _referenceSearch.isScanPending() && _referenceSearch.getIndex().isReady() == false )
+        const ContentBrowserReferenceSearch& referenceSearch = _model.getReferenceSearch();
+        if ( referenceSearch.isScanPending() && referenceSearch.getIndex().isReady() == false )
         {
             ImGui::SameLine();
             ImGui::TextDisabled( "|  Indexing references..." );
         }
-        if ( _selectedAssetAbs.empty() == false )
+        if ( _model.getSelectedAssetPath().empty() == false )
         {
             ImGui::SameLine();
-            ImGui::TextDisabled( "|  %s", _selectedAssetAbs.c_str() );
+            ImGui::TextDisabled( "|  %s", _model.getSelectedAssetPath().c_str() );
         }
     }
 
     void ContentBrowserPanel::drawBreadcrumbs()
     {
-        if ( _listCrumb.empty() )
+        const vector<ContentBrowserCrumb>& listCrumb = _model.getCrumbs();
+        if ( listCrumb.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "SelectFolder" ) );
             return;
         }
 
         // 조각마다 절대 경로를 가진다. 누르면 그 조각까지의 브레드크럼 경로와 함께 그 폴더로 이동한다. 경로가 비어 있는 조각("Favorites")은 누를 수 없다.
-        size_t clickedIndex = _listCrumb.size();
-        for ( size_t crumbIndex = 0; crumbIndex < _listCrumb.size(); ++crumbIndex )
+        size_t clickedIndex = listCrumb.size();
+        for ( size_t crumbIndex = 0; crumbIndex < listCrumb.size(); ++crumbIndex )
         {
-            const ContentBrowserCrumb& crumb = _listCrumb[crumbIndex];
+            const ContentBrowserCrumb& crumb = listCrumb[crumbIndex];
             if ( crumbIndex > 0 )
             {
                 ImGui::SameLine();
@@ -1320,7 +1004,7 @@ namespace sw::editor
             }
 
             ImGui::PushID( static_cast<int32>( crumbIndex ) );
-            const bool bIsLast = ( crumbIndex + 1 == _listCrumb.size() );
+            const bool bIsLast = ( crumbIndex + 1 == listCrumb.size() );
             if ( bIsLast )
             {
                 const Color accentColor = EditorThemeUtil::getAccentColor();
@@ -1339,11 +1023,8 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( clickedIndex < _listCrumb.size() )
-        {
-            const vector<ContentBrowserCrumb> listCrumb( _listCrumb.begin(), _listCrumb.begin() + static_cast<std::ptrdiff_t>( clickedIndex + 1 ) );
-            selectFolder( listCrumb.back()._absolutePath, listCrumb );
-        }
+        if ( clickedIndex < listCrumb.size() )
+            _model.selectCrumb( clickedIndex ); // 그리기가 끝난 뒤라 listCrumb 가 바뀌어도 된다
     }
 
     void ContentBrowserPanel::drawTilesView( const vector<const AssetEntry*>& listVisible )
@@ -1380,7 +1061,7 @@ namespace sw::editor
                     if ( column > 0 )
                         ImGui::SameLine();
 
-                    const bool  selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );
+                    const bool  selected = _model.isSelected( entry, true );
                     const Color accent   = EditorThemeUtil::getAccentColor();
                     const Color frameBg  = EditorThemeUtil::getFrameBgColor();
                     ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( selected ? accent.withAlpha( 0.40f ) : frameBg.withAlpha( 0.60f ) ) );
@@ -1389,11 +1070,11 @@ namespace sw::editor
                     ImGui::BeginGroup();
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
                     if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
-                        selectAsset( entry );
+                        _model.selectAsset( entry );
                     ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
                     if ( EditorInputGUI::wasItemDoubleClicked() )
-                        openAsset( entry );
+                        _model.openAsset( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
                     else
@@ -1406,7 +1087,7 @@ namespace sw::editor
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
 
-                    if ( isRenaming( entry ) )
+                    if ( _model.isRenaming( entry ) )
                         drawRenameField( cell );
                     else
                         EditorWidgets::drawClampedLabel( entry._name, cell, ContentBrowserPanelInternal::kTileLabelLineCount );
@@ -1441,20 +1122,20 @@ namespace sw::editor
                     ImGui::PushID( entry._absolutePath.c_str() );
                     ImGui::TableNextRow();
 
-                    const bool selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs );
+                    const bool selected = _model.isSelected( entry, false );
                     ImGui::TableSetColumnIndex( 0 );
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
-                    const string statusText   = describeSourceControlStatus( entry );
+                    const string statusText   = ContentBrowserModel::describeSourceControlStatus( entry );
                     const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + editoricon::kLock );
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();
                     if ( bSelected )
                     {
-                        selectAsset( entry );
+                        _model.selectAsset( entry );
                         if ( EditorInputGUI::wasItemDoubleClicked() )
-                            openAsset( entry );
+                            _model.openAsset( entry );
                     }
                     if ( statusText.empty() == false && ImGui::IsItemHovered() )
                         ImGui::SetTooltip( "%s", statusText.c_str() );
@@ -1464,7 +1145,7 @@ namespace sw::editor
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
                     else
                         acceptAssetDrop( entry._absolutePath );
-                    if ( isRenaming( entry ) )
+                    if ( _model.isRenaming( entry ) )
                     {
                         ImGui::SameLine();
                         drawRenameField( 0.0f );
@@ -1483,98 +1164,5 @@ namespace sw::editor
 
             ImGui::EndTable();
         }
-    }
-
-    void ContentBrowserPanel::navigateBack()
-    {
-        // 이력을 적지 않고 고르므로 항목 포인터는 selectFolder 안에서도 유효하다.
-        const ContentBrowserHistoryEntry* pEntry = _history.stepBack();
-        if ( pEntry != nullptr )
-            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
-    }
-
-    void ContentBrowserPanel::navigateForward()
-    {
-        const ContentBrowserHistoryEntry* pEntry = _history.stepForward();
-        if ( pEntry != nullptr )
-            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
-    }
-
-    void ContentBrowserPanel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const
-    {
-        const string folderNorm = FileUtil::normalizePath( folderAbs );
-        for ( const ContentRoot& root : _listRoot )
-        {
-            if ( FileUtil::startsWithPathComponent( folderNorm, FileUtil::normalizePath( root._absolutePath ) ) )
-            {
-                ContentBrowserLogic::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
-                return;
-            }
-        }
-        ContentBrowserLogic::makeFolderTrail( {}, {}, folderAbs, outListCrumb );
-    }
-
-    void ContentBrowserPanel::selectFolder( string_view absolutePath, const vector<ContentBrowserCrumb>& listCrumb, bool bRecordHistory )
-    {
-        const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
-        if ( bRecordHistory )
-            _history.record( normalizedPath, listCrumb );
-
-        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 AssetPaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
-        _selectedFolderAbs = normalizedPath;
-        _listCrumb         = listCrumb;
-        _selectedAssetAbs.clear();
-        _bFolderDirty = SW_TRUE;
-    }
-
-    void ContentBrowserPanel::selectAsset( const AssetEntry& entry )
-    {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        _selectedAssetAbs = entry._absolutePath;
-        if ( entry._bIsDirectory == false )
-            editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( entry._relativePath.c_str() );
-    }
-
-    void ContentBrowserPanel::openAsset( const AssetEntry& entry )
-    {
-        if ( entry._bIsDirectory )
-        {
-            vector<ContentBrowserCrumb> listCrumb = _listCrumb;
-            ContentBrowserLogic::appendChildCrumb( entry._absolutePath, listCrumb );
-            selectFolder( entry._absolutePath, listCrumb );
-            return;
-        }
-
-        selectAsset( entry );
-        SW_LOG_TRACE( "Open: %#", entry._relativePath.c_str() );
-        (void)EditorAssetCommands::openPath( entry._relativePath ); // 실패는 openPath 가 알린다
-    }
-
-    void ContentBrowserPanel::importFilesFromDialog()
-    {
-        if ( _selectedFolderAbs.empty() )
-        {
-            SW_LOG_WARNING( "Select a destination folder before importing." );
-            return;
-        }
-
-        _importQueue.openDialog( _selectedFolderAbs );
-    }
-
-    void ContentBrowserPanel::processPendingImports()
-    {
-        vector<string> listPath;
-        if ( _importQueue.takePending( listPath ) == false )
-            return;
-
-        if ( _selectedFolderAbs.empty() )
-        {
-            SW_LOG_WARNING( "Import cancelled — no destination folder." );
-            return;
-        }
-
-        if ( EditorAssetFileCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
-            _bFolderDirty = SW_TRUE;
     }
 } // namespace sw::editor
