@@ -13,13 +13,8 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/Graph/AudioGraphDef.h"
-#include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Scene/SceneManager.h"
-
-// NullAudioBackend 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
-// `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
-// macOS 구현이 그랬다).
 
 // 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 · ALSA 구현이 없다. 서버는 장치를 열지 않는다.
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
@@ -42,6 +37,22 @@ namespace sw
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
             /** @brief 오프라인 렌더 덤프가 쌓는 최대 길이(초)입니다. 7.1 이면 약 110 MB 이며, 넘는 부분은 쌓지 않습니다. */
             static constexpr uint32 kMaxDumpSeconds = 60;
+        };
+
+        /**
+         * @class NullAudioBackend
+         * @brief 출력 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 엔진은 그대로 돌고, `update` 가 흐른 시간만큼 버퍼에 렌더합니다.
+         * @details 장치를 열지 않으므로(`openDevice` 가 false) 재생 상태는 `update` 의 오프라인 렌더로 진행한다. 명시 스피커 모드(`setSpeakerMode`)는 그 레이아웃 그대로 렌더한다.
+         *          5.1 · 7.1 의 결정적 오프라인 렌더와 덤프(`gv_audioDumpPath`)가 이 길을 쓴다. `createNull` 만 만들어 이 파일에 둔다.
+         *          클라이언트(Windows XAudio2 · 리눅스 ALSA)에서도 `createNull` 이 쓰므로 `#else` 안에 두지 않고 **항상 컴파일한다** — 한 번도 컴파일되지 않는 구현은 조용히 썩는다.
+         */
+        class NullAudioBackend final : public IAudioService
+        {
+        public:
+            /** @brief 출력 장치 없이 만듭니다. */
+            NullAudioBackend() = default;
+            /** @brief 내립니다. */
+            ~NullAudioBackend() override { shutdown(); }
         };
     } // namespace
 

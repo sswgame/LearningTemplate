@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UI/Accessibility/UIAccessibilityBridgeFactory.h"
+#include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.h"
