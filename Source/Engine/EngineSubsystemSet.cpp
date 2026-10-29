@@ -10,6 +10,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Config/ConfigManager.h"
+
+#if !defined( SW_SHIPPING )
+    #include "Engine/AssetReload/ConfigReloadSubsystem.h"
+#endif
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
@@ -200,6 +204,9 @@ namespace sw::engine
         {
             SW_MEMORY_SCOPE( EngineMisc );
             parts._pConfigManager = &startup.addSubsystem( sw::make_unique<ConfigManager>() );
+#if !defined( SW_SHIPPING ) // 설정 파일 리로드는 개발 도구다(배포 빌드는 Engine/AssetReload 를 짓지 않는다)
+            parts._pConfigReload = &startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
+#endif
         }
         // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
         (void)startup.bind( &parts._pConfigManager->getHostEngineConfig() ); // 새 범위 - 겹치지 않는다

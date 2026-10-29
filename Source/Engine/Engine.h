@@ -55,6 +55,7 @@ namespace sw
     class RHISubsystem;
     class SceneManager;
     class ShaderRecompiler;
+    class ConfigReloadSubsystem;
     class TaskManager;
     class TypeRegistry;
     class UISystem;
@@ -298,7 +299,8 @@ namespace sw
          *          아니므로 돌리는 쪽(Engine)이 갖습니다.
          */
 #if !defined( SW_SHIPPING )
-        ShaderRecompiler* _pShaderRecompiler;
+        ShaderRecompiler*      _pShaderRecompiler;
+        ConfigReloadSubsystem* _pConfigReload; ///< 설정 파일 리로드(개발 빌드만 — 배포는 nullptr)
 #endif
 
     private:

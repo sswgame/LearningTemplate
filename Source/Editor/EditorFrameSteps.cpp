@@ -19,7 +19,6 @@
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
-#include "Editor/Common/Workspace/HotReload/ConfigHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
@@ -74,7 +73,6 @@ namespace sw::editor
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.assetReload" );
                 context.getSubsystem<AssetHotReload>().update();
-                context.getSubsystem<ConfigHotReload>().update();
                 context.getSubsystem<EditorAssetValidation>().update();
                 context.getSubsystem<EditorSourceControl>().update();
             }

@@ -17,9 +17,9 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
-#include "Editor/Common/Workspace/HotReload/ConfigHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/AssetReload/ConfigReloadSubsystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
@@ -196,7 +196,8 @@ namespace sw::editor
         page._bDirty = false;
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 NotTracked — 다음 실행부터 반영된다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용하지 않은 것으로 알린다.
-        outApplied = ConfigHotReload::reloadChangedFile( editor::findSubsystem<ConfigManager>(), page._absolutePath ) == ReloadOutcome::Reloaded;
+        ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
+        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( page._absolutePath ) == ReloadOutcome::Reloaded;
         return true;
     }
 

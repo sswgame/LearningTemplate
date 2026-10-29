@@ -41,6 +41,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Renderer/LiveShaderSubsystem\\.(cpp|h)$") # 그 서브시스템도 서지 않는다(EngineSubsystemSet)
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "/AssetReload/") # 파일 감시 · 설정 리로드 — 개발 도구(언리얼 DirectoryWatcher 모듈)
 endif()
 
 # 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은

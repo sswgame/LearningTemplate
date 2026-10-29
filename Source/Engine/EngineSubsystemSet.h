@@ -30,6 +30,7 @@ namespace sw
     class FrameRendererSubsystem;
     class InputManager;
     class LiveShaderSubsystem;
+    class ConfigReloadSubsystem;
     class MemoryBudgetSubsystem;
     class RenderThreadSubsystem;
     class RHISubsystem;
@@ -107,6 +108,7 @@ namespace sw
         {
             CompressionCodecRegistry* _pCodecRegistry{ nullptr };
             ConfigManager*            _pConfigManager{ nullptr };
+            ConfigReloadSubsystem*    _pConfigReload{ nullptr }; ///< 배포 빌드는 nullptr
             RHISubsystem*             _pRHI{ nullptr };
             FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
             RenderThreadSubsystem*    _pRenderThread{ nullptr };

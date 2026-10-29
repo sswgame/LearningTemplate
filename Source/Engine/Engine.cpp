@@ -90,6 +90,9 @@
     #include "Engine/Renderer/RenderThread.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
+#if !defined( SW_SHIPPING )
+    #include "Engine/AssetReload/ConfigReloadSubsystem.h"
+#endif
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
@@ -171,6 +174,7 @@ namespace sw
         , _pRenderThread{ nullptr }
 #if !defined( SW_SHIPPING )
         , _pShaderRecompiler{ nullptr }
+        , _pConfigReload{ nullptr }
 #endif
     {
     }
@@ -308,6 +312,9 @@ namespace sw
         _pShaderRecompiler = startupParts._pLiveShader->findShaderRecompiler();
     #endif
 #endif
+#if !defined( SW_SHIPPING )
+        _pConfigReload = startupParts._pConfigReload; // 설정 리로드는 서버에도 선다(배포 빌드는 짓지 않는다)
+#endif
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
         {
@@ -418,6 +425,7 @@ namespace sw
         _pRenderThread  = nullptr;
 #if !defined( SW_SHIPPING )
         _pShaderRecompiler = nullptr;
+        _pConfigReload     = nullptr;
 #endif
         _pConfigManager = nullptr;
         // 서비스 범위 → (표 끊기) → 코어 범위. 테스트 하네스와 같은 끝 정리다.
@@ -584,6 +592,8 @@ namespace sw
             }
     #endif
             pollShaderReloadHotkey();
+            if ( _pConfigReload != nullptr )
+                _pConfigReload->update();
 #endif
             // 파일 대화 상자 결과를 **여기서** 메인 스레드로 넘긴다. 대화 상자는 별도 스레드가 띄운다.
             FileUtil::pumpFileDialogResults();

@@ -11,8 +11,8 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/HotReload/FileWatchDispatcher.h"
 
+#include "Engine/AssetReload/FileWatchDispatcher.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 

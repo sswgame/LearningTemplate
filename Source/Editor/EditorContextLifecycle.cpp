@@ -18,6 +18,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Config/EditorToolDefaultsReload.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelService.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
@@ -36,7 +37,6 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
-#include "Editor/Common/Workspace/HotReload/ConfigHotReload.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/EditorModuleUnloadListener.h"
@@ -82,7 +82,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorInputActions>() );       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
-        _scope.addSubsystem( make_unique<ConfigHotReload>() );
+        _scope.addSubsystem( make_unique<EditorToolDefaultsReload>() ); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
         _scope.addSubsystem( make_unique<EditorAssetValidation>() );
         _scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
         _scope.addSubsystem( make_unique<InspectorComponentManager>() );

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/HotReload/FileWatchDispatcher.h"
+#include "Engine/AssetReload/FileWatchDispatcher.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
