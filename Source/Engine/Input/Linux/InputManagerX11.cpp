@@ -34,12 +34,11 @@ namespace sw
         /**
          * @brief 접근성(XKB) · 포커스 상태와 X11 · Wayland 이벤트 변환을 모읍니다.
          * @details 창마다의 네이티브 자원(입력기 · 입력 문맥 · 커서)은 창(`X11Window`)이 소유하고 창과 함께 내린다 — 여기 정적 칸으로 두면
-         *          창을 다시 만들 때 옛 창 · Display 를 가리키는 캐시가 남는다.
+         *          창을 다시 만들 때 옛 창 · Display 를 가리키는 캐시가 남는다. 포커스 · 포인터 자리 · 알린 기록도 입력 관리자의 칸이다
+         *          (`_bNativeWindowFocused` · `_lastPlatformPointer` · `_unsupportedReportedMask`) — 언리얼 `FLinuxApplication` 이 같은 상태를 멤버로 든다.
          */
         struct X11InputInternal
         {
-            /** @brief 창이 X11 포커스를 가지고 있는지 나타냅니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
-            static inline bool s_bWindowFocused{ false };
 
             /**
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
@@ -63,13 +62,9 @@ namespace sw
             static constexpr uint32 kUnsupportedPointerLockBit   = 1u << 0; ///< 포인터 묶기
             static constexpr uint32 kUnsupportedCursorShapeBit   = 1u << 1; ///< 커서 모양
             static constexpr uint32 kUnsupportedCursorVisibleBit = 1u << 2; ///< 커서 숨기기 · 보이기
-            /** @brief 못 하는 동작을 이미 알린 비트의 모음입니다. */
-            static inline atomic<uint32> s_unsupportedReportedMask{ 0 };
 
-            /** @brief @p featureBit 를 알린 것으로 표시합니다. 처음이면 true — 검사와 표시를 `fetch_or` 한 번으로 해 두 스레드가 동시에 와도 알림은 한 번이다. */
-            static bool markUnsupportedReported( uint32 featureBit ) { return ( s_unsupportedReportedMask.fetch_or( featureBit ) & featureBit ) == 0; }
-            /** @brief Wayland 포인터의 마지막 자리입니다(버튼 이벤트에는 좌표가 없다). */
-            static inline int2 s_waylandPointer{ 0, 0 };
+            /** @brief @p mask 에 @p featureBit 를 알린 것으로 표시합니다. 처음이면 true — 검사와 표시를 `fetch_or` 한 번으로 해 두 스레드가 동시에 와도 알림은 한 번이다. */
+            static bool markUnsupportedReported( atomic<uint32>& mask, uint32 featureBit ) { return ( mask.fetch_or( featureBit ) & featureBit ) == 0; }
 
             /** @brief 리눅스 이벤트 버튼 번호(Wayland `wl_pointer.button`)를 마우스 버튼으로 바꿉니다. 모르는 번호면 Count 입니다. */
             static MouseButton mapWaylandButton( uint32 button )
@@ -198,7 +193,7 @@ namespace sw
         // 보조 폴링이 필요 없다. XQueryPointer 는 서버와 동기 왕복하는 호출이라 프레임마다 부르면 그만큼 비용이 든다
         // (Win32 의 GetAsyncKeyState/GetCursorPos 는 값싼 호출이라 그쪽에는 없는 문제다).
         // 놓칠 수 있는 이벤트는 "창 밖에서 뗀 버튼" 이고, 그것은 포인터가 나갔거나 포커스를 잃은 경우에만 생긴다.
-        if ( _pMouse->isPointerInside() && X11InputInternal::s_bWindowFocused )
+        if ( _pMouse->isPointerInside() && _bNativeWindowFocused == SW_TRUE )
             return;
 
         Display* pDisplay  = nullptr;
@@ -251,7 +246,7 @@ namespace sw
                 }
                 case WaylandInputKind::PointerMove:
                 {
-                    X11InputInternal::s_waylandPointer = int2{ input._x, input._y };
+                    _lastPlatformPointer = int2{ input._x, input._y };
                     postRawEvent( RawInputEvent::makeMouseMove( input._x, input._y ) );
                     break;
                 }
@@ -265,8 +260,8 @@ namespace sw
                     if ( bDown ? onPlatformPointerPressed( button ) : onPlatformPointerReleased( button ) )
                         break;
                     // Wayland 버튼 이벤트에는 좌표가 없다 — 마지막 움직임의 자리를 싣는다(0, 0 이면 커서가 왼쪽 위로 튄다).
-                    postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, X11InputInternal::s_waylandPointer._x, X11InputInternal::s_waylandPointer._y )
-                                        : RawInputEvent::makeMouseButtonUp( button, X11InputInternal::s_waylandPointer._x, X11InputInternal::s_waylandPointer._y ) );
+                    postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, _lastPlatformPointer._x, _lastPlatformPointer._y )
+                                        : RawInputEvent::makeMouseButtonUp( button, _lastPlatformPointer._x, _lastPlatformPointer._y ) );
                     break;
                 }
                 case WaylandInputKind::PointerWheel:
@@ -292,8 +287,8 @@ namespace sw
                 case WaylandInputKind::FocusGained:
                 case WaylandInputKind::FocusLost:
                 {
-                    const bool bFocused                = input._kind == WaylandInputKind::FocusGained;
-                    X11InputInternal::s_bWindowFocused = bFocused;
+                    const bool bFocused   = input._kind == WaylandInputKind::FocusGained;
+                    _bNativeWindowFocused = bFocused ? SW_TRUE : SW_FALSE;
                     onPlatformFocusChanged( bFocused );
                     postWindowStateEvent( RawInputEvent::makeFocusChange( bFocused ) );
                     break;
@@ -369,14 +364,14 @@ namespace sw
             // 다시 걸지 않는다. 제목 표시줄이나 닫기 버튼을 눌러 돌아온 사용자가 그 버튼까지 포인터를 가져갈 수 있어야 하기 때문이다.
             case FocusIn:
             {
-                X11InputInternal::s_bWindowFocused = true;
+                _bNativeWindowFocused = SW_TRUE;
                 onPlatformFocusChanged( true );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( true ) );
                 break;
             }
             case FocusOut:
             {
-                X11InputInternal::s_bWindowFocused = false;
+                _bNativeWindowFocused = SW_FALSE;
                 onPlatformFocusChanged( false );
                 postWindowStateEvent( RawInputEvent::makeFocusChange( false ) );
                 break;
@@ -407,7 +402,7 @@ namespace sw
         if ( pWindow == nullptr )
             return;
         // 창이 스스로 커서를 숨긴다(X11 투명 커서 · Wayland `wl_pointer.set_cursor`). 못 하면 커서가 그대로 보이므로 한 번 오류로 알린다.
-        if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorVisibleBit ) )
+        if ( pWindow->setCursorVisible( bVisible ) == false && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedCursorVisibleBit ) )
             SW_LOG_ERROR( "This window cannot hide or show the cursor (Wayland needs a pointer device and a cursor theme) - the cursor stays as it is" );
     }
 
@@ -421,7 +416,7 @@ namespace sw
         // 다른 모양을 청했는데 못 바꾸는 것은 오류로 한 번 알린다(조용히 건너뛰지 않는다).
         const bool bApplied     = pWindow->supportsCursorShape() && pWindow->setCursorShape( _cursorShape );
         const bool bNeedsReport = bApplied == false && _cursorShape != CursorShape::Arrow;
-        if ( bNeedsReport && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedCursorShapeBit ) )
+        if ( bNeedsReport && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedCursorShapeBit ) )
             SW_LOG_ERROR( "This window cannot change the cursor shape (Wayland needs the compositor's cursor-shape-v1) - the cursor keeps its current shape" );
     }
 
@@ -444,13 +439,13 @@ namespace sw
             // 그래서 이 갈래는 X11 이 아닌 창뿐이다. 실패해도 상태가 바뀌지 않아 다음 동기화가 다시 청한다(포인터 장치가 늦게 생긴 경우).
             const MouseLockMode     mode = _pMouse->getLockMode();
             const WindowPointerLock lock = mode == MouseLockMode::LockedInCenter ? WindowPointerLock::Locked : ( mode == MouseLockMode::ConfinedToWindow ? WindowPointerLock::Confined : WindowPointerLock::Released );
-            if ( pWindow->setPointerLock( lock ) == false && X11InputInternal::markUnsupportedReported( X11InputInternal::kUnsupportedPointerLockBit ) )
+            if ( pWindow->setPointerLock( lock ) == false && X11InputInternal::markUnsupportedReported( _unsupportedReportedMask, X11InputInternal::kUnsupportedPointerLockBit ) )
                 SW_LOG_ERROR( "This window cannot lock the pointer (Wayland needs the compositor's pointer-constraints, relative-pointer for a centre lock, and a pointer device) - the pointer stays free" );
             return;
         }
 
         // 포커스가 없는 창은 포인터를 잡지 않는다. 잡으면 창 관리자의 장식(제목 표시줄)에도 갈 수 없다.
-        if ( X11InputInternal::s_bWindowFocused == false )
+        if ( _bNativeWindowFocused == SW_FALSE )
         {
             XUngrabPointer( pDisplay, CurrentTime );
             XFlush( pDisplay );
@@ -471,7 +466,7 @@ namespace sw
 
     void InputManager::recenterLockedCursorPlatform()
     {
-        const bool bCannotRecenter = _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter || X11InputInternal::s_bWindowFocused == false;
+        const bool bCannotRecenter = _pMouse == nullptr || _pMouse->getLockMode() != MouseLockMode::LockedInCenter || _bNativeWindowFocused == SW_FALSE;
         if ( bCannotRecenter )
             return;
 
@@ -520,7 +515,7 @@ namespace sw
         // X11 포커스는 FocusIn/FocusOut 으로만 알 수 있다(서버에 묻는 XGetInputFocus 는 왕복 호출이다). 창이 뜬 직후 FocusIn 전이면 false 이므로 첫 클릭에 잡는다.
         const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         const bool                 bHasWindow  = pWindowHost != nullptr && pWindowHost->getWindow() != nullptr;
-        return _bWindowFocused == SW_TRUE && ( bHasWindow == false || X11InputInternal::s_bWindowFocused );
+        return _bWindowFocused == SW_TRUE && ( bHasWindow == false || _bNativeWindowFocused == SW_TRUE );
     }
 
     void InputManager::disableWindowsAccessibilityShortcuts()
@@ -557,7 +552,7 @@ namespace sw
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
         // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이다. 입력기 · 커서는 창이 소유하고 창과 함께 내리므로 여기서는 포커스 기록만 지운다.
-        X11InputInternal::s_bWindowFocused = false;
+        _bNativeWindowFocused = SW_FALSE;
 
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;

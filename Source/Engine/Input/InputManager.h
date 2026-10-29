@@ -431,24 +431,27 @@ namespace sw
         static constexpr size_t kKeyboardFocusCount = static_cast<size_t>( InputKeyboardFocus::Count );
         static constexpr size_t kKeyMaskWordCount   = ( static_cast<size_t>( Key::Count ) + 63 ) / 64;
 
-        ConcurrentQueue<RawInputEvent, 2048>      _queueRawEvent;        /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
-        atomic<uint32>                            _droppedRawEventCount; /**< 큐가 가득 차서 버린 원시 이벤트의 누적 개수입니다. beginFrame() 에서 요약 로그를 남기고 0 으로 초기화합니다. */
-        vector<unique_ptr<IInputDevice>>          _listDevice;           /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
-        KeyboardDevice*                           _pKeyboard;            /**< 편의 API 용 캐시 포인터입니다. 소유는 _listDevice 가 합니다. */
-        MouseDevice*                              _pMouse;               /**< 편의 API 용 캐시 포인터입니다. */
-        GamepadDevice*                            _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
-        unique_ptr<InputMap>                      _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
-        vector<RawInputEvent>                     _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
-        vector<FramePress>                        _listFramePress;       /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
-        float2                                    _frameLookDelta;       /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
-        ClockFunction                             _pfnNowMicroseconds;   /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
-        int64                                     _frameEndMicroseconds; /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
-        IVirtualInputSource*                      _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
-        VirtualCursor                             _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
-        InputViewRect                             _gameView;             ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
-        uint32                                    _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
-        uint32                                    _beginFrameCount;      /**< `beginFrame` 을 부른 횟수입니다. */
-        InputGlyphStyle                           _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
+        ConcurrentQueue<RawInputEvent, 2048>      _queueRawEvent;           /**< OS 와 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐입니다. beginFrame() 이 매 프레임 비웁니다. */
+        atomic<uint32>                            _droppedRawEventCount;    /**< 큐가 가득 차서 버린 원시 이벤트의 누적 개수입니다. beginFrame() 에서 요약 로그를 남기고 0 으로 초기화합니다. */
+        atomic<uint32>                            _unsupportedReportedMask; /**< 창이 못 하는 동작(포인터 묶기 · 커서 모양 · 커서 숨기기)을 이미 알린 비트입니다(X11 · Wayland — 처음 한 번만 오류로 알린다). */
+        atomic<bool>                              _bTrackingPointerLeave;   /**< 포인터 이탈 알림(Win32 WM_MOUSELEAVE)을 요청해 둔 상태인지입니다. TrackMouseEvent 는 이탈을 한 번 알리고 풀린다. */
+        vector<unique_ptr<IInputDevice>>          _listDevice;              /**< 등록된 모든 장치(키보드, 마우스, 게임패드 등)를 소유하는 목록입니다. */
+        KeyboardDevice*                           _pKeyboard;               /**< 편의 API 용 캐시 포인터입니다. 소유는 _listDevice 가 합니다. */
+        MouseDevice*                              _pMouse;                  /**< 편의 API 용 캐시 포인터입니다. */
+        GamepadDevice*                            _pGamepad;                /**< 0번 게임패드 편의 API 용 캐시 포인터입니다(1~3번은 getGamepad(index) 로 조회). */
+        unique_ptr<InputMap>                      _pInputMap;               /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
+        vector<RawInputEvent>                     _listDrainedEvent;        /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
+        vector<FramePress>                        _listFramePress;          /**< 이번 프레임에 눌린 컨트롤마다 첫 누름 순간입니다(beginFrame 이 비우고 채운다). */
+        float2                                    _frameLookDelta;          /**< 이번 프레임에 적용한 마우스 원시 이동량의 합입니다. */
+        int2                                      _lastPlatformPointer;     /**< 버튼 이벤트에 좌표가 없는 창(Wayland `wl_pointer.button`)이 쓰는 포인터의 마지막 자리입니다. */
+        ClockFunction                             _pfnNowMicroseconds;      /**< 이벤트 시각과 프레임 창을 측정하는 시계입니다(`setClock`). */
+        int64                                     _frameEndMicroseconds;    /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
+        IVirtualInputSource*                      _pVirtualInput;           /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
+        VirtualCursor                             _virtualCursor;           /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
+        InputViewRect                             _gameView;                ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
+        uint32                                    _virtualFrameIndex;       /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
+        uint32                                    _beginFrameCount;         /**< `beginFrame` 을 부른 횟수입니다. */
+        InputGlyphStyle                           _activeGlyphStyle;        /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */
         DelegateSlot<ActiveDeviceChangedDelegate> _onActiveDeviceChanged;
         DelegateSlot<GamepadConnectionDelegate>   _onGamepadConnectionChanged;
         DelegateSlot<TextInputDelegate>           _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
@@ -468,6 +471,7 @@ namespace sw
         uint8                                     _bAltHeld              : 1;           /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
         uint8                                     _bCursorHiddenApplied  : 1;           /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
         uint8                                     _bOSDeviceInputBlocked : 1;           /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
+        uint8                                     _bNativeWindowFocused  : 1;           /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
 

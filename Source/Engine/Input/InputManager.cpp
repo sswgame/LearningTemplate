@@ -68,6 +68,8 @@ namespace sw
     InputManager::InputManager()
         : _queueRawEvent{}
         , _droppedRawEventCount{ 0 }
+        , _unsupportedReportedMask{ 0 }
+        , _bTrackingPointerLeave{ false }
         , _listDevice{}
         , _pKeyboard{ nullptr }
         , _pMouse{ nullptr }
@@ -76,6 +78,7 @@ namespace sw
         , _listDrainedEvent{}
         , _listFramePress{}
         , _frameLookDelta{}
+        , _lastPlatformPointer{ 0, 0 }
         , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
         , _frameEndMicroseconds{ 0 }
         , _pVirtualInput{ nullptr }
@@ -101,6 +104,7 @@ namespace sw
         , _bAltHeld{ SW_FALSE }
         , _bCursorHiddenApplied{ SW_FALSE }
         , _bOSDeviceInputBlocked{ SW_FALSE }
+        , _bNativeWindowFocused{ SW_FALSE }
         , _bAccessibilityShortcutsDisabled{ SW_FALSE }
     {
     }
