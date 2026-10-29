@@ -16,6 +16,7 @@
 namespace sw
 {
     class UIScreen;
+    class UISystem;
 } // namespace sw
 
 namespace sw
