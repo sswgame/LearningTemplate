@@ -51,8 +51,7 @@ namespace sw
         shared_ptr<const NavMeshGeometry>         _pGeometry;
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         NavTileData                               _result;
-        TaskHandle                                _task;  ///< 비어 있으면 인라인으로 이미 돌았다(`isCompleted()` 가 true).
-        TaskStageHandle                           _stage; ///< `_task` 하나만 담는다 — 기다리는 동안 다른 일을 돕는다.
+        TaskHandle                                _task; ///< 비어 있으면 인라인으로 이미 돌았다(`isCompleted()` 가 true). 기다림은 줄의 `_bakeStage` 로 한다.
         int32                                     _tileX{ 0 };
         int32                                     _tileZ{ 0 };
         bool                                      _bSucceeded{ false };
@@ -61,13 +60,6 @@ namespace sw
         {
             SW_MEMORY_SCOPE( Navigation );
             _bSucceeded = _pNavMesh->bakeTile( *_pGeometry, _pVolume.get(), _tileX, _tileZ, _result );
-        }
-
-        /** @brief 끝나지 않았을 때만 매니저를 부른다 — 인라인 경로 · 엔진 종료(`waitAll`) 뒤에는 매니저가 없어도 된다. */
-        void waitDone() const
-        {
-            if ( _task.isCompleted() == false )
-                engine::getSubsystem<TaskManager>().waitStage( _stage );
         }
     };
 } // namespace sw
@@ -97,12 +89,14 @@ namespace sw
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         vector<int2>                              _listDirtyTile;
         vector<unique_ptr<NavTileBakeJob>>        _listJob;
-        vector<NavCacheObstacleEntry>             _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 베이크 모드는 `_pVolume` 이다)
-        NavQueryFilter                            _filter{};
-        NavMeshBakeStats                          _bakeStats{};
-        AABB                                      _bounds{};
-        float3                                    _searchExtent{ 1.0f, 2.0f, 1.0f };
-        bool                                      _bFromCooked{ false };
+        /** @brief 이 줄이 낸 베이크 태스크 전부입니다(일마다 스테이지를 따로 만들지 않는다 — 언리얼 FGraphEventArray 처럼 주인 하나가 묶는다). 게임 스레드만 넣는다. */
+        TaskStageHandle               _bakeStage;
+        vector<NavCacheObstacleEntry> _listCacheObstacle; ///< 장애물 캐시에 든 장애물(캐시 모드에서만 — 다시 베이크 모드는 `_pVolume` 이다)
+        NavQueryFilter                _filter{};
+        NavMeshBakeStats              _bakeStats{};
+        AABB                          _bounds{};
+        float3                        _searchExtent{ 1.0f, 2.0f, 1.0f };
+        bool                          _bFromCooked{ false };
 
         NavMeshRuntime()                                   = default;
         NavMeshRuntime( const NavMeshRuntime& )            = delete;
@@ -110,9 +104,18 @@ namespace sw
         ~NavMeshRuntime()
         {
             // 일이 이 내비메시 · 입력을 읽고 있다 — 끝날 때까지 놓지 않는다.
+            waitBakes();
+        }
+
+        /** @brief 낸 베이크가 모두 끝날 때까지 기다립니다. 남은 일이 있을 때만 매니저를 부른다 — 인라인 경로 · 엔진 종료(`waitAll`) 뒤에는 매니저가 없어도 된다. */
+        void waitBakes() const
+        {
             for ( const unique_ptr<NavTileBakeJob>& pJob : _listJob )
             {
-                pJob->waitDone();
+                if ( pJob->_task.isCompleted() )
+                    continue;
+                engine::getSubsystem<TaskManager>().waitStage( _bakeStage, "NavMeshRuntime" );
+                return;
             }
         }
 

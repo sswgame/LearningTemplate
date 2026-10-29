@@ -288,8 +288,7 @@ namespace sw
                 {
                     TaskManager& taskManager = engine::getSubsystem<TaskManager>();
                     pRaw->_task              = taskManager.emplaceTask( "NavTileBake", SW_DELEGATE_METHOD( TaskDelegate, &NavTileBakeJob::run, pRaw ) );
-                    pRaw->_stage             = taskManager.createStage();
-                    pRaw->_stage.addTask( pRaw->_task );
+                    taskManager.addToStage( pRuntime->_bakeStage, pRaw->_task, "NavTileBake" );
                     pRaw->_task.submit();
                 }
                 else
@@ -304,10 +303,7 @@ namespace sw
     {
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
-            for ( const unique_ptr<NavTileBakeJob>& pJob : pRuntime->_listJob )
-            {
-                pJob->waitDone();
-            }
+            pRuntime->waitBakes();
         }
     }
 } // namespace sw
