@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 구조 개편 A3 · B · C, 테스트 틀 · 시나리오 개편, 병렬 실행(시나리오 백엔드 행렬 · `-log-file` · 기동 로그 백로그)까지 끝났다. 다음은 7 절의 설계 넷 — 빌드 속도 마무리(D) · 테스트 틀 고도화(E) · 시나리오 범용화와 게임 쪽 확장(F) · 리로드를 떼었다 붙이는 단위로(G) — 과 4 절의 남은 일이다.
+> 결론: 구조 개편 A3 · B · C, 테스트 틀 · 시나리오 개편, 병렬 실행(시나리오 백엔드 행렬 · `-log-file` · 기동 로그 백로그)까지 끝났다. 다음은 7 절의 설계 넷 — 빌드 속도 마무리(D) · 테스트 틀 고도화(E) · 시나리오 범용화와 게임 쪽 확장(F) · 리로드를 떼었다 붙이는 단위로(G) · 뜻이 안 보이는 이름 바꾸기(H) — 과 4 절의 남은 일이다.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -18,6 +18,7 @@
 | 규칙 | 근거 |
 |---|---|
 | Asset = 콘텐츠(`Engine/Asset`, 데이터 폴더 `Content/`), Resource = GPU · RHI 자원만 | 언리얼 Content · AssetManager · FRenderResource |
+| Cook = 원본을 런타임 바이너리로 굽는 일(업계 공용어 — 언리얼 · 프로스트바이트 · id), Pawn · Possess = 조종자가 쥐는 몸 · 쥐기(게임 프레임워크 공용어). 한 엔진 · 게임만의 고유 이름 · 브랜드 · 약어는 내용으로 바꾼다(`BugIt` → `BugReport`, 7 절 H) | 이름은 내용으로 |
 | Pack(`.pack`) · Watch(자동화 감시 값, Probe 는 라이트 · 리플렉션 프로브만) · Scene(씬 컨테이너, World 는 월드 공간 뜻만) | 같은 단어 한 뜻 |
 | Module 은 동적으로 올리는 코드 단위만. 렌더러 확장점은 `RenderExtension`, 모듈 로더는 `IModuleLoader` · `ModuleLoadStage` · `ModuleUnloadStage`. 모듈 문맥의 Image → Library | 언리얼 SceneViewExtension |
 | Host = 엔진을 돌리는 프로세스(App · Server · 테스트 하네스)와 그 쪽(`HostService` — 엔진 쪽 짝은 `EngineServices`). 네트워크 끝점 `NetEndpoint*`, 에디터 패널 진입점 `IEditorPanelService`, 온라인 키트 서버 서비스 `IOnlineServerService`(짝 `IOnlineClientService`) | 같은 단어 한 뜻 |
@@ -97,6 +98,30 @@
 2. **에셋 리로드 서브시스템**(`Engine/AssetReload`, Dev 만 짓는 폴더): 파일 감시(`IFileWatcher` 를 Core 에서 옮김) · 경로 표 · 설정 · 오디오 · 현지화 어댑터 · `AppearanceDataWatcher` 흡수. 편집기 없는 Dev 게임에서도 선다. 캐시 쪽 계약은 `IReloadableAssetCache` 로 떼어 Shipping 의 `IAssetCache` 에 reload 가 없게 한다(텍스처의 리로드 세대는 비동기 로드와 섞여 있어 마지막에).
 3. **`LiveShaderSubsystem`** 은 Dev 에서만 더한다(빈 껍데기를 Shipping 에 세우지 않는다).
 4. 확인: Shipping 빌드에서 `CodeWithin` · `reload` 기호가 남지 않는지 `llvm-nm` 으로 본다(게이트로 둘지는 그때 정한다).
+
+### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
+
+기준: 여러 엔진 · 업계가 함께 쓰는 공용어는 둔다. 한 엔진 · 한 게임의 고유 이름 · 브랜드 · 약어는 내용으로 바꾼다. 별칭은 두지 않는다.
+
+| 지금 | 바꿈 | 규모 | 까닭 |
+|---|---|---|---|
+| `DontDestroyOnLoadComponent` | `PersistAcrossScenesComponent` | 3 파일 | 유니티 API 이름 |
+| `GhostBooDef` | `HidingGhostDef` | 3 파일 | 닌텐도 캐릭터 이름 |
+| `GameplayCueDef` | `AbilityPresentationDef` | 9 파일 | 언리얼 GAS 은어 |
+| `AbilitySystemComponent` · `GameplayAbility` · `GameplayEffect*` · `GameplayTagCountContainer` · `AbilityTaskWaitGameplayEvent` | `AbilityComponent` · `Ability` · `AbilityEffect*` · `TagCountTable` · `AbilityTaskWaitEvent` | 35 파일 | "Gameplay" 가 내용을 말하지 않는다(언리얼 GAS 그대로) |
+| `SmartObjectComponent` · `SmartObjectDef` | `UseSlotComponent` · `UseSlotDef` | 12 파일 | 언리얼 기능 이름 |
+| `Br*`(배틀로얄 키트) | `BattleRoyale*` | 12 파일 | 약어 |
+| `Metro*` · `MetroSoulsState` · `MetroCharm*` | `Metroidvania*` · `MetroidvaniaDeathRestState` · `MetroidvaniaTrinket*` | 12 파일 | 약어 · 다른 게임 은어 |
+| `Witcher*`(폴더 `WitcherRPG`) | `MonsterHunt*`(`MonsterContract` · `Alchemy` · `QuickSpell`) | 13 파일 | 게임 브랜드 |
+| `AuthorityGhost` · `gv_authorityGhost*` · `net.ghost` | `ServerPoseOverlay` · `gv_serverPoseOverlay*` · `net.serverOverlay` | 6 파일 | 넷코드 은어 |
+| 명령 `vlog.*` | `visuallog.*` | 2 파일 | 타입은 `VisualLogger` 인데 명령만 약어 |
+| `gv_bench*` · `BenchScene*` · `UIBenchScreen` | `gv_stress*` · `StressTestScene*` · `UIStressTestScreen` | 35 파일 | 줄임말이고 좌석 슬롯 `bench` 와 겹친다 |
+| `gv_netEmu*` · `gv_ioEmu*` | `gv_netEmulation*` · `gv_ioEmulation*` | 약 30 줄 | 타입(`NetEmulation`)과 철자를 맞춘다 |
+| `ShellInputActions` · `shell.rebind` · `shellbindings.xml` | `DebugKeyActions` · `debugkeys.rebind` · `debugkeys.xml` | 16 파일 | "셸" 이 무엇인지 안 보인다 |
+| `ScreenshotMailbox` | `ScreenshotRequestQueue` | 5 파일 | 비유 이름 |
+| `gv_deferred` · `gv_morphDiag` | `gv_deferredShading` · `gv_meshMorphDebugMode` | 24 줄 | 무엇이 디퍼드 · 진단인지 없다 |
+
+둔 것(공용어 · 실제 이름): `Cook*`(언리얼 · 프로스트바이트 · id 가 함께 쓰는 업계 말이고 대안 "Build" 는 빌드와 겹친다 — 2 절 규칙에 적는다), `Pawn` · `Possess`(게임 프레임워크의 일반 말로 굳었고 82 파일 — 대안이 더 모호하다), `Breadcrumbs`(Aftermath · 언리얼 공용), `EditorChrome`(UI 업계 말), `Tracy` · `LiveLinkFace`(실제 라이브러리 · 앱 프로토콜), `cheat.god` · `GM`(게이머 · 운영 공용어), `KartGhost`(레이싱 장르 표준), `DrainGate`.
 
 ## 5. 이번 세션의 근본 원인 (같은 결함이 남았을 곳)
 
