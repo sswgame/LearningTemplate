@@ -81,7 +81,7 @@ namespace sw
     {
         using Internal                       = FrameRendererOcclusionInternal;
         target._bOcclusionTilesThisFrame     = SW_FALSE;
-        const RHIPipelineStateHandle pso     = getEnginePSO( RenderPassType::OcclusionTiles );
+        const RHIPipelineStateHandle pso     = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
         const bool                   bBuilds = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && canCopyDepthHistory( target );
         if ( bBuilds == false || _pCmd == nullptr )
             return;

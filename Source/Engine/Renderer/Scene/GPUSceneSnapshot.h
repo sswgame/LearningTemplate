@@ -142,7 +142,7 @@ namespace sw
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
          * @details 거울 변환은 삼각형 감김 방향을 뒤집는다. 컬 모드를 그대로 두면 카메라 쪽 면이 잘리고 안쪽 면이 보인다. 컬 모드는 PSO 의 상태라
-         *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FrameRenderer::psoForBatch`).
+         *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
          */
         uint8              _bReverseCulling{ SW_FALSE };
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;

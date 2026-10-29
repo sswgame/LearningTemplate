@@ -88,6 +88,7 @@ namespace sw
         , _gpuScene{}
         , _sceneBuilder{}
         , _pipelineResource{}
+        , _psoManager{ _pDevice, _pipelineResource, _gpuScene }
         , _graph{}
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
@@ -107,8 +108,6 @@ namespace sw
         , _gpuPassTimeline{}
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
-        , _listMaterialFallback{}
-        , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _occlusionTilesPlaceholder{}
         , _arrOcclusionReadbackMeta{}
@@ -116,13 +115,10 @@ namespace sw
         , _gpuAssert{}
         , _nanCheck{}
         , _nanCheckCommandList{}
-        , _psoCache{}
-        , _pPSOCache{ &_psoCache }
         , _outputRenderTarget{ 0 }
         , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
         , _canvasRenderer{}
         , _particleRenderer{}
-        , _particlePSOKey{ 0 }
         , _canvasFrame{}
         , _pLastSwapchainWriter{ nullptr }
         , _bUpscalePostChainLogged{ SW_FALSE }
@@ -470,7 +466,7 @@ namespace sw
         recordDepthHistories();
         // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
         // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
-        _particleRenderer.recordSimulation( *_pCmd, getEnginePSO( RenderPassType::VFXSimulation ), getEnginePSO( RenderPassType::VFXMeshInstance ) );
+        _particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
         const uint32 animationInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animationInstanceCount );
         dispatchMeshMorph();
@@ -483,12 +479,12 @@ namespace sw
         // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
         dispatchRealtimeProbes();
         // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _canvasRenderer.recordMarkerProjection( *_pCmd, getEnginePSO( RenderPassType::CanvasMarker ), _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
+        _canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
                                                 _gpuAssert, _mainView._settings._viewMode == RenderViewMode::MarkerSlots );
         // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
         _gpuAssert.requestReadback( *_pCmd );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, *_pPSOCache );
+        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
         drawLight2DCookieAtlas();
 
@@ -800,7 +796,7 @@ namespace sw
         if ( requested == LightGridProducer::CPU )
             return LightGridProducer::CPU;
         // GPU 생산자는 컴퓨트 PSO 가 있어야 한다. 없으면 그리드 버퍼를 채울 쪽이 없다 — 채우지 않은 버퍼를 읽게 두지 않고 그리드 없이 그린다(그림은 같고 비용만 다르다).
-        if ( getEnginePSO( RenderPassType::LightGrid ) != 0 )
+        if ( _psoManager.getEnginePSO( RenderPassType::LightGrid ) != 0 )
             return LightGridProducer::GPU;
         if ( _bLightGridPSOMissingLogged == SW_FALSE )
         {
@@ -860,17 +856,19 @@ namespace sw
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 정한다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         // 만드는 일은 빌더 스레드가 한다(`MaterialPSOBuilder`) — 먼저 지난 프레임까지 끝난 결과를 캐시에 합치고, 이번 프레임에 필요한 키를 줄에 넣는다.
-        pumpMaterialPSOBuilds();
-        ensureMaterialPSOS();
-        // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄).
-        warmPinnedMaterialPSOS();
+        _psoManager.pumpMaterialPSOBuilds();
+        const uint32 viewModeMask = collectFrameViewModeMask();
+        _psoManager.ensureMaterialPSOS( viewModeMask );
+        // 아직 씬에 없는 고정 머티리얼(프리로드)의 PSO 도 같은 자리에서 미리 만든다(급하지 않은 줄). 줄은 하나라 주 렌더러만 꺼낸다 — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
+        if ( _bScenePreview == SW_FALSE )
+            _psoManager.warmPinnedMaterialPSOS( viewModeMask );
         // 빌더 스레드를 쓰지 않는 경로(GL · `-gv_psoAsync=0`)는 방금 넣은 줄을 이 자리에서 만들어 같은 프레임에 그린다.
-        pumpMaterialPSOBuilds();
+        _psoManager.pumpMaterialPSOBuilds();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
-        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, *_pPSOCache );
+        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
-        ensureParticlePSO();
+        _psoManager.ensureParticlePSO();
         _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVFXMeshEmitters(), makeVFXSimulationInput() );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )

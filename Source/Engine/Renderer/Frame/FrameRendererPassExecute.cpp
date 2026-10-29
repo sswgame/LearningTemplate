@@ -420,7 +420,7 @@ namespace sw
                 {
                     const float4 clearVal = getTargetClearColor( passDepth.view() );
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
-                    drawSceneMeshes( context, getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
+                    drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
@@ -552,7 +552,7 @@ namespace sw
         recordAutoExposure( context, passDesc );
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
-        const RHIPipelineStateHandle pso = getEnginePSO( input._passType );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
 
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( pTarget->view() );
@@ -576,8 +576,8 @@ namespace sw
         if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
-                                          getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
-        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : getEnginePSO( input._passType );
+                                          _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
+        const RHIPipelineStateHandle psoForward = bDepthAlreadyWritten ? _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) : _psoManager.getEnginePSO( input._passType );
         drawSceneMeshes( context, psoForward, input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
@@ -594,7 +594,7 @@ namespace sw
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0 &&
                                  pMaterialTarget != nullptr && findTransient( pMaterialTarget->view() ) != 0;
-        if ( bHasTargets == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
+        if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
         const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view(), pMaterialTarget->view() };
@@ -603,7 +603,7 @@ namespace sw
         const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth.view(), colorLoadFor( passDepth ) ) == false )
             return;
-        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
+        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
 
@@ -642,7 +642,7 @@ namespace sw
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
-        drawTransparentQueue( context, getEnginePSO( RenderPassType::Transparent ) );
+        drawTransparentQueue( context, _psoManager.getEnginePSO( RenderPassType::Transparent ) );
         context._pCmd->endRenderPass();
     }
 
@@ -677,7 +677,7 @@ namespace sw
         const float4         sceneClear  = getTargetClearColor( colorTarget.view() );
         if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
-        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
+        drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::MeshOutline ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
     }
 
@@ -692,10 +692,10 @@ namespace sw
         const hashed_string&         passDepth   = input._passDepth;
         const hashed_string&         colorTarget = input._declaredColor[0]._attachment;
         const float4                 sceneClear  = getTargetClearColor( colorTarget.view() );
-        const RHIPipelineStateHandle pso         = getEnginePSO( input._passType );
+        const RHIPipelineStateHandle pso         = _psoManager.getEnginePSO( input._passType );
         // 렌더 패스의 깊이 붙임은 PSO 의 깊이 형식을 따른다 — 깊이 테스트를 끈 감각 패스의 PSO 는 깊이가 없고, 둘이 다르면 Vulkan 은 그리지 않는다.
         RHIPipelineStateDesc psoDesc{};
-        const bool           bUsesDepth = findPSODesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
+        const bool           bUsesDepth = _psoManager.findDesc( pso, psoDesc ) && psoDesc._depthStencilFormat != RHIFormat::Unknown;
         const string_view    depthName  = bUsesDepth ? passDepth.view() : string_view{};
         if ( beginColorPass( context, colorTarget.view(), depthName, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
             return;
@@ -710,7 +710,7 @@ namespace sw
         // 뎁스나 선언한 컬러 출력이 없으면 그리지 않는다(장면을 통째로 덮거나 백버퍼에 그린다 — 그런 파이프라인은 검증이 거부한다).
         // 앞의 불투명 패스가 색과 깊이를 이미 썼으므로 둘 다 불러온다(지우지 않는다).
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle skyPSO       = getEnginePSO( RenderPassType::Sky );
+        const RHIPipelineStateHandle skyPSO       = _psoManager.getEnginePSO( RenderPassType::Sky );
         const bool                   bShowsSky    = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bHasTargets  = input._passDepth.empty() == false;
         const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
@@ -755,7 +755,7 @@ namespace sw
         if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
-            drawFullscreen( context, getEnginePSO( RenderPassType::TAA ) );
+            drawFullscreen( context, _psoManager.getEnginePSO( RenderPassType::TAA ) );
             context._pCmd->endRenderPass();
         }
 
@@ -789,7 +789,7 @@ namespace sw
                                                                                                   : RHIRenderPassLoadOp::Clear;
         const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
         // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다. 셋업에 없으면 findOutputPSO 가 멈춘다(복사로 대신하지 않는다).
-        const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
+        const RHIPipelineStateHandle psoBlit = _psoManager.findOutputPSO( RenderPassType::Present, target._format );
         if ( src != 0 )
         {
             registerPassTexture( context, attachmentNames()._sourceColor, srcName );
@@ -870,7 +870,7 @@ namespace sw
         const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
         if ( bDraw )
         {
-            const RHIPipelineStateHandle psoCanvas = findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
+            const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
             RHIRenderPassBeginInfo       beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = target._texture;
@@ -966,7 +966,7 @@ namespace sw
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
-        const RHIPipelineStateHandle pso      = getEnginePSO( RenderPassType::Shadow );
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::Shadow );
         const uint32                 viewCull = context._cullViewIndex;
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 

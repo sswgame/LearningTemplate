@@ -14,7 +14,7 @@ namespace sw
 {
     void FrameRenderer::prepareRealtimeProbes( IRHIDevice* pDevice )
     {
-        const bool bPipelineReady = getEnginePSO( RenderPassType::ProbeUpdate ) != 0;
+        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::ProbeUpdate ) != 0;
         _probeUpdater.prepare( pDevice, _listFrameRealtimeProbe, _lightBuffer, _frameSkySource, _bHasFrameSky == SW_TRUE, bPipelineReady );
     }
 
@@ -23,6 +23,6 @@ namespace sw
         if ( _pCmd == nullptr || _probeUpdater.isActive() == false )
             return;
         SW_PROFILE_SCOPE( "RT.Probe.Update" );
-        _probeUpdater.dispatch( *_pCmd, getEnginePSO( RenderPassType::ProbeUpdate ), _lightBuffer, _transparentRankPlaceholder._srv );
+        _probeUpdater.dispatch( *_pCmd, _psoManager.getEnginePSO( RenderPassType::ProbeUpdate ), _lightBuffer, _transparentRankPlaceholder._srv );
     }
 } // namespace sw

@@ -23,7 +23,7 @@ namespace sw
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
             return;
-        const RHIPipelineStateHandle pso = getEnginePSO( RenderPassType::NanCheck );
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::NanCheck );
         if ( pso == 0 )
         {
             SW_LOG_ERROR_ONCE( "gv_nanCheck is on but the NaN check PSO is missing (shader not cooked?) - no output is scanned" );

@@ -98,7 +98,7 @@ namespace sw
             return;
         }
         const bool bHasHistory = view._arrAutoExposureSRV[0] != kInvalidDescriptorIndex && view._arrAutoExposureSRV[1] != kInvalidDescriptorIndex;
-        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && getEnginePSO( RenderPassType::AutoExposure ) != 0;
+        const bool bMeasures   = view._settings.usesPostProcess() && bHasHistory && _psoManager.getEnginePSO( RenderPassType::AutoExposure ) != 0;
         if ( bMeasures == false )
             return;
 
@@ -150,7 +150,7 @@ namespace sw
         cmd.beginRenderPass( beginInfo );
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
-        cmd.setPipelineState( getEnginePSO( RenderPassType::AutoExposure ) );
+        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(autoexposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                                   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererExposureInternal::RootConstants constants{};

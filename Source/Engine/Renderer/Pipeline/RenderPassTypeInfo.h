@@ -158,7 +158,7 @@ namespace sw
         static constexpr uint32 kOmittedWhenOff = SW_BIT( 18 );
         /**
          * @brief 주 출력(Swapchain · 오프스크린 출력 · 캡처 텍스처)에 그리는 출력 패스다(Present · Canvas · FSR RCAS).
-         * @details 렌더 타깃 포맷이 대상마다 달라 PSO 는 셋업이 대상 포맷마다 만들고(`FrameRenderer::createOutputPSOVariants`) 엔진 PSO 는 없다.
+         * @details 렌더 타깃 포맷이 대상마다 달라 PSO 는 셋업이 대상 포맷마다 만들고(`FramePSOManager::createOutputPSOVariants`) 엔진 PSO 는 없다.
          *          파이프라인에서 Swapchain 을 출력으로 적을 수 있는 패스는 이 비트가 있는 패스뿐이다(`RenderPipelineAsset::validate`).
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );

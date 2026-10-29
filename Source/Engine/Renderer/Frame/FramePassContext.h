@@ -65,7 +65,7 @@ namespace sw
         ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli "드로우별 루트 상수" 절 참고).
         uint32 _drawMaterialCount{ 0 };
         /// @brief bindForDraw 가 마지막으로 조회한 PSO 와 그 레이아웃입니다. 같은 PSO 로 연속해서 드로우할 때
-        ///        layoutForPSO() 의 뮤텍스와 해시맵 조회를 건너뛰는 패스 로컬 캐시입니다(1항목).
+        ///        `FramePSOManager::findLayout` 의 뮤텍스와 해시맵 조회를 건너뛰는 패스 로컬 캐시입니다(1항목).
         RHIPipelineStateHandle     _lastLayoutPSO{ 0 };
         const ShaderBindingLayout* _pLastLayout{ nullptr };
 

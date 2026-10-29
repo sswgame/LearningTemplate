@@ -50,7 +50,7 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling && getEnginePSO( RenderPassType::GPUCull ) != 0;
+        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0;
     }
 
     void FrameRenderer::dispatchInstanceAnimation( uint32 instanceCount )
@@ -63,7 +63,7 @@ namespace sw
         const bool bSpinAnimationNeeded = _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0;
         if ( bSpinAnimationNeeded )
         {
-            const RHIPipelineStateHandle animationPSO        = getEnginePSO( RenderPassType::InstanceAnimation );
+            const RHIPipelineStateHandle animationPSO        = _psoManager.getEnginePSO( RenderPassType::InstanceAnimation );
             const bool                   bSpinAnimationReady = animationPSO != 0 && _deform._instanceAnimationCb.isValid() &&
                                              _gpuScene.getInstanceUAV() != kInvalidDescriptorIndex;
             if ( bSpinAnimationReady )
@@ -234,7 +234,7 @@ namespace sw
             return;
         }
 
-        const RHIPipelineStateHandle morphPSO         = getEnginePSO( RenderPassType::MeshMorph );
+        const RHIPipelineStateHandle morphPSO         = _psoManager.getEnginePSO( RenderPassType::MeshMorph );
         const RHIDescriptorIndex     programSRV       = _deform._meshMorphPool.getDeformProgramBuffer()._srv;
         const bool                   bMissingResource = morphPSO == 0 || _deform._meshMorphCb.isValid() == false || programSRV == kInvalidDescriptorIndex;
         if ( bMissingResource )
@@ -277,7 +277,7 @@ namespace sw
             return;
         if ( _deform._meshMorphPool.isSkinDispatchable() == false )
             return;
-        const RHIPipelineStateHandle skinPSO = getEnginePSO( RenderPassType::MeshSkin );
+        const RHIPipelineStateHandle skinPSO = _psoManager.getEnginePSO( RenderPassType::MeshSkin );
         if ( skinPSO == 0 || _deform._meshSkinCb.isValid() == false )
             return;
 
@@ -333,7 +333,7 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        const bool bCullingUnavailable = getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
+        const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
                                          _gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex;
         if ( bCullingUnavailable )
             return;
@@ -378,7 +378,7 @@ namespace sw
             return;
         const RHIStructuredBufferSlot& gridBuffer = _lightBuffer.getGPUGridBuffer();
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::LightGrid ) );
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::LightGrid ) );
         // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). lightgrid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
         _pCmd->bindComputeShaderResource( _lightBuffer.getBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _lightBuffer.getGPUGridViewBuffer()._srv, 1 );
@@ -392,7 +392,7 @@ namespace sw
     bool FrameRenderer::canCopyDepthHistory( const FrameViewTarget& view ) const
     {
         const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
-        if ( bHasSource == false || getEnginePSO( RenderPassType::DepthHistory ) == 0 )
+        if ( bHasSource == false || _psoManager.getEnginePSO( RenderPassType::DepthHistory ) == 0 )
             return false;
         return view._transientPool.find( attachmentNames()._sceneDepth.view() )._texture != 0;
     }
@@ -436,7 +436,7 @@ namespace sw
         _pCmd->beginRenderPass( beginInfo );
         _pCmd->setVertexBuffer( 0, 0, 0, 0 );
         _pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
-        _pCmd->setPipelineState( getEnginePSO( RenderPassType::DepthHistory ) );
+        _pCmd->setPipelineState( _psoManager.getEnginePSO( RenderPassType::DepthHistory ) );
         // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depthhistory.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
@@ -473,8 +473,8 @@ namespace sw
     VFXSimulationFrameInput FrameRenderer::makeVFXSimulationInput() const
     {
         VFXSimulationFrameInput input{};
-        input._bSimulationPipelineReady = getEnginePSO( RenderPassType::VFXSimulation ) != 0;
-        input._bMeshPipelineReady       = getEnginePSO( RenderPassType::VFXMeshInstance ) != 0;
+        input._bSimulationPipelineReady = _psoManager.getEnginePSO( RenderPassType::VFXSimulation ) != 0;
+        input._bMeshPipelineReady       = _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) != 0;
         input._bNativeBindless          = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
         input._instanceBuffer           = _gpuScene.getInstanceBuffer();
         input._instanceUAV              = _gpuScene.getInstanceUAV();
@@ -542,7 +542,7 @@ namespace sw
         _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
-        _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::GPUCull ) );
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
         // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
@@ -575,7 +575,7 @@ namespace sw
         _pCmd->uavBarrier( view._indirectArgs._buffer );
         _pCmd->uavBarrier( view._visibleInstances._buffer );
 
-        const RHIPipelineStateHandle sortPSO        = getEnginePSO( RenderPassType::InstanceSort );
+        const RHIPipelineStateHandle sortPSO        = _psoManager.getEnginePSO( RenderPassType::InstanceSort );
         const bool                   bSortPassReady = sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0;
         if ( bSortPassReady )
         {

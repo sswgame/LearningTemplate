@@ -28,23 +28,12 @@
 
 namespace sw
 {
-    void FrameRenderer::registerPSOLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
-    {
-        if ( pso == 0 || _pDevice == nullptr )
-            return;
-        // gv_rhiBackend(전역) 대신 이 FrameRenderer 가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
-        // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
-        _pPSOCache->registerLayout( pso, desc, _pDevice->getBackendType() );
-    }
-
     void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
     {
         if ( result._bSuccess == false || _pDevice == nullptr )
             return;
 
-        // 빌려 쓰는 캐시(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 무효화하고 다시 채웠다.
-        if ( _pPSOCache == &_psoCache )
-            _pPSOCache->invalidateLayoutsByShaderPath( shaderPath );
+        _psoManager.onShaderRecompiled( shaderPath );
 
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
@@ -63,11 +52,6 @@ namespace sw
         {
             preview._renderer->onShaderRecompiled( shaderPath, result );
         }
-    }
-
-    const ShaderBindingLayout* FrameRenderer::layoutForPSO( RHIPipelineStateHandle pso ) const
-    {
-        return _pPSOCache->findLayout( pso );
     }
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
@@ -160,12 +144,11 @@ namespace sw
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
             // 폴백은 **이 PSO 셰이더의 레이아웃**(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
-            const ShaderBindingLayout* pLayout = ( context._lastLayoutPSO == pso ) ? context._pLastLayout : layoutForPSO( pso );
+            const ShaderBindingLayout* pLayout = ( context._lastLayoutPSO == pso ) ? context._pLastLayout : _psoManager.findLayout( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
-            const auto                     it                   = _mapLayoutMaterialFallback.find( pLayout );
-            const RHIStructuredBufferSlot* pFallback            = ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
+            const RHIStructuredBufferSlot* pFallback            = _psoManager.findMaterialFallback( pLayout );
             const bool                     bUseFallbackMaterial = pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex;
             if ( bUseFallbackMaterial )
             {
@@ -194,10 +177,10 @@ namespace sw
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
         // 같은 PSO 로 연속 드로우하는 것이 흔한 패턴이라, 패스 로컬 1칸 캐시로
-        // layoutForPSO() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
+        // FramePSOManager::findLayout() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
         if ( context._lastLayoutPSO != pso )
         {
-            context._pLastLayout   = layoutForPSO( pso );
+            context._pLastLayout   = _psoManager.findLayout( pso );
             context._lastLayoutPSO = pso;
         }
         const ShaderBindingLayout* pLayout = context._pLastLayout;
@@ -406,7 +389,7 @@ namespace sw
     bool FrameRenderer::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
     {
         // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
-        const ShaderBindingLayout* pLayout = layoutForPSO( batchPSO );
+        const ShaderBindingLayout* pLayout = _psoManager.findLayout( batchPSO );
         if ( pLayout == nullptr )
             return false;
         static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
@@ -424,11 +407,11 @@ namespace sw
         const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
-        if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other, drawMode ) != psoForBatch( pso, head, drawMode ) )
+        if ( other._vertexBuffer != head._vertexBuffer || _psoManager.psoForBatch( pso, other, drawMode ) != _psoManager.psoForBatch( pso, head, drawMode ) )
             return false;
         // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
         const bool bCbDiffers = other._materialCb != head._materialCb;
-        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head, drawMode ) ) );
+        return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
     }
 
     bool FrameRenderer::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head,
@@ -446,7 +429,7 @@ namespace sw
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 캐시는 ensureMaterialPSOS 가 기록 전에 채운다. 여기서는 조회만 한다.
         RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
-        const RHIPipelineStateHandle     batchPSO = psoForBatch( pso, head, drawMode, &psoState );
+        const RHIPipelineStateHandle     batchPSO = _psoManager.psoForBatch( pso, head, drawMode, &psoState );
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
         if ( batchPSO == 0 )
         {
@@ -491,7 +474,7 @@ namespace sw
     bool FrameRenderer::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
     {
         const vector<GPUParticleBatch>& listBatch   = _gpuScene.getParticleBatches();
-        const RHIPipelineStateHandle    pso         = findParticlePSO();
+        const RHIPipelineStateHandle    pso         = _psoManager.findParticlePSO();
         const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || listSlot.empty() || pso == 0;
         if ( bCannotDraw )
             return false;
@@ -517,31 +500,8 @@ namespace sw
             return;
         }
 
-        // 칸에 옮겨 그리는 PSO — 전체 화면 블릿 셰이더(쿠킹되는 Present 기본 셰이더)를 아틀라스 포맷으로. 머티리얼 변형 캐시의 키 공간을 빌려 캐시가 소유한다
-        // (입자 PSO 와 같은 방식 — 디바이스를 바꾸면 캐시가 비고 여기서 다시 만든다).
-        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderFullscreenBlit.get();
-        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "CKAT" ) ), RenderViewMode::Lit, false );
-        if ( _pPSOCache->hasMaterialPSO( psoKey ) == false )
-        {
-            RHIPipelineStateDesc desc{};
-            desc._vertexShaderPath              = shaderPath;
-            desc._pixelShaderPath               = shaderPath;
-            desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-            desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-            desc._numRenderTargets              = 1;
-            desc._arrRTVFormat[0]               = pAtlas->getFormat();
-            desc._depthStencilFormat            = RHIFormat::Unknown;
-            desc._bEnableDepthTest              = 0;
-            desc._bEnableDepthWrite             = 0;
-            desc._cullMode                      = RHICullMode::None;
-            const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
-            if ( handle == 0 )
-                SW_LOG_ERROR( "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
-            else
-                registerPSOLayout( handle, desc );
-            _pPSOCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
-        }
-        const RHIPipelineStateHandle pso = _pPSOCache->findMaterialPSO( psoKey );
+        // 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)는 PSO 관리자가 저장소에 둔다 — 디바이스를 바꾸면 저장소가 비고 다시 만든다.
+        const RHIPipelineStateHandle pso = _psoManager.findOrCreateCookieAtlasPSO( pAtlas->getFormat() );
         if ( pso == 0 )
         {
             _cookieAtlas.clearPendingDraws();

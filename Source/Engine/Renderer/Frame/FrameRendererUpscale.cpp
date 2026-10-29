@@ -81,7 +81,7 @@ namespace sw
                           _pipelineResource.getDesc()._name.c_str() );
             _bUpscalePostChainLogged = SW_TRUE;
         }
-        const bool bUpscale = bCandidate && bPostChain == false && getEnginePSO( RenderPassType::UpscaleEasu ) != 0;
+        const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) != 0;
         if ( bUpscale == false )
         {
             if ( view._upscaleIntermediate != 0 )
@@ -137,7 +137,7 @@ namespace sw
         cmd.beginRenderPass( beginInfo );
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
-        cmd.setPipelineState( getEnginePSO( RenderPassType::UpscaleEasu ) );
+        cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererUpscaleInternal::RootConstants constants{};
@@ -161,7 +161,7 @@ namespace sw
     void FrameRenderer::drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY )
     {
         const FrameViewTarget&       view = *_pActiveView;
-        const RHIPipelineStateHandle pso  = findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
+        const RHIPipelineStateHandle pso  = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHICommandList&             cmd  = *context._pCmd;
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );

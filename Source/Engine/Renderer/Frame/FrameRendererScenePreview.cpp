@@ -1,7 +1,7 @@
 /**
  * @file FrameRendererScenePreview.cpp
  * @brief 미리보기 씬(에디터 툴 창의 씬)을 씬마다 따로 둔 렌더러로 그리는 경로입니다(`FrameRenderer::executeScenePreviewPacket`).
- * @details 씬마다 나누는 것은 GPUScene(인스턴스 · 배치 · 정점 풀 · 머티리얼 그룹 버퍼) · 트랜지언트 · 패스 상수다. PSO 캐시는 주 렌더러의 것을 함께 쓴다(`_pPSOCache`) —
+ * @details 씬마다 나누는 것은 GPUScene(인스턴스 · 배치 · 정점 풀 · 머티리얼 그룹 버퍼) · 트랜지언트 · 패스 상수다. PSO 캐시는 주 렌더러의 것을 함께 쓴다(`FramePSOManager::shareCacheOf`) —
  *          창을 다시 열 때마다 엔진 PSO 를 모두 다시 만들던 첫 프레임 히치와 창 수만큼의 중복이 없다(다중 월드 결정 2).
  *
  *          [내리기의 GPU 안전] 창이 닫혀 메인 패킷에서 그 씬의 뷰 요청이 사라지면 `retireScenePreviews` 가 그 렌더러를 바로 `shutdown` 한다.
@@ -37,8 +37,8 @@ namespace sw
             ScenePreviewRenderer created;
             created._renderer                 = make_unique<FrameRenderer>();
             created._renderer->_bScenePreview = SW_TRUE;
-            created._renderer->_pPSOCache     = _pPSOCache;
-            created._sceneKey                 = packet._sceneKey;
+            created._renderer->_psoManager.shareCacheOf( _psoManager );
+            created._sceneKey = packet._sceneKey;
             if ( created._renderer->initialize( pDevice, _pTaskManager, _pipelinePath ) == false )
             {
                 SW_LOG_ERROR( "Scene preview renderer for scene key %# could not start: %#", packet._sceneKey, created._renderer->getStatusMessage() );

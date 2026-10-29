@@ -64,7 +64,7 @@ namespace sw
         // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
         // 출력이 곧 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다 — 일반 풀스크린 패스의 복사 · 지우기 길을 타면 장면이 지워진다.
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
-        const RHIPipelineStateHandle pso          = getEnginePSO( RenderPassType::Fog );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::Fog );
         const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bDraws       = _bHasFrameFog == SW_TRUE && pso != 0 && bShowsScene;
         if ( bDraws == false )
@@ -104,7 +104,7 @@ namespace sw
             return;
         // 못 켜는 이유는 한 번만 알린다. 볼륨 없이 평범한 안개로 그린다 — 안개 패스의 꺼진 상태이지 다른 경로가 아니다.
         static std::atomic<bool> s_bReportedMissing{ false };
-        const bool               bPipelineReady = getEnginePSO( RenderPassType::VolumetricFog ) != 0;
+        const bool               bPipelineReady = _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) != 0;
         if ( bPipelineReady == false )
         {
             if ( s_bReportedMissing.exchange( true ) == false )
@@ -176,7 +176,7 @@ namespace sw
         const RHIDescriptorIndex       grid    = pGrid != nullptr ? pGrid->_srv : _transparentRankPlaceholder._srv;
 
         _pCmd->transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::VolumetricFog ) );
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) );
         // g_FogLights(t0) / g_FogParams(t1) / g_FogLightGrid(t2) / g_FogVolumeRW(u0). volumetricfog.hlsl 레지스터와 1:1 이다.
         _pCmd->bindComputeShaderResource( lights, 0 );
         _pCmd->bindComputeShaderResource( _fogVolumeParamBuffer._srv, 1 );

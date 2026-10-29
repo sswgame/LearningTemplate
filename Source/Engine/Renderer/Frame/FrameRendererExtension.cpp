@@ -251,7 +251,7 @@ namespace sw
                 }
                 else
                 {
-                    pass._pso = findOrCreateExtensionProgramPSO( params._program, colorFormat, params._depthAttachment.empty() == false );
+                    pass._pso = _psoManager.findOrCreateExtensionProgramPSO( params._program, colorFormat, params._depthAttachment.empty() == false );
                     if ( pass._pso == 0 )
                     {
                         fail( "pass program PSO could not be created" );
