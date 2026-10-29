@@ -929,12 +929,12 @@ namespace sw
         }
         if ( bPause && _bPauseRequested == SW_FALSE )
         {
-            GameTimeScale::addPauseRequest();
+            engine::getSubsystem<GameTimeScale>().addPauseRequest();
             _bPauseRequested = SW_TRUE;
         }
         else if ( bPause == false && _bPauseRequested == SW_TRUE )
         {
-            GameTimeScale::removePauseRequest();
+            engine::getSubsystem<GameTimeScale>().removePauseRequest();
             _bPauseRequested = SW_FALSE;
         }
     }

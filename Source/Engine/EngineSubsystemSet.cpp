@@ -13,6 +13,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/ContentRootSubsystem.h"
@@ -109,6 +110,7 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
         services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
+        services.addSubsystem( sw::make_unique<GameTimeScale>() ); // 정지 요청 · 이번 프레임의 실제 경과
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
         {
             SW_MEMORY_SCOPE( RenderCPU );

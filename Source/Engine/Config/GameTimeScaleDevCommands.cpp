@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -22,9 +23,9 @@ namespace sw
                 float32 scale = 1.0f;
                 if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
                     return false;
-                GameTimeScale::set( scale );
+                engine::getSubsystem<GameTimeScale>().set( scale );
             }
-            outReply = "time scale = " + to_string( GameTimeScale::get() );
+            outReply = "time scale = " + to_string( engine::getSubsystem<GameTimeScale>().get() );
             return true;
         }
     } // namespace

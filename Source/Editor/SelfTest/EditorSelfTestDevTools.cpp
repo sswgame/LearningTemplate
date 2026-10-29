@@ -226,8 +226,8 @@ namespace sw::editor
                 {
                     (void)context.expect( DevCommandRegistry::get().findCommand( "select.tag" ) != nullptr, "the editor module did not register its dev commands" );
                     (void)context.expect( pConsole->getDevConsole().submit( "timescale 0.75" ) == DevConsoleResult::Ok, "timescale failed in the editor console" );
-                    (void)context.expect( GameTimeScale::get() == 0.75f, "the console command did not change the time scale" );
-                    GameTimeScale::set( 1.0f );
+                    (void)context.expect( editor::getSubsystem<GameTimeScale>().get() == 0.75f, "the console command did not change the time scale" );
+                    editor::getSubsystem<GameTimeScale>().set( 1.0f );
                     return EditorSelfTestStep::Continue;
                 }
                 const bool bShown = pConsole->isMessageInSnapshot( kEcho );

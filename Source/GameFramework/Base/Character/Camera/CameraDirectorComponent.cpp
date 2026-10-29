@@ -145,7 +145,7 @@ namespace sw
         {
             _photoMode.end();
             _photoInputMap.reset();
-            GameTimeScale::removePauseRequest();
+            game::getSubsystem<GameTimeScale>().removePauseRequest();
             releasePhotoModeUILayers();
         }
         manager.getComponentRegistry().remove<CameraDirectorComponent>( this );
@@ -234,7 +234,7 @@ namespace sw
         photoInputMap->setInputManager( game::findSubsystem<InputManager>() );
         _photoInputMap = std::move( photoInputMap );
         _photoMode.begin( _director.getPose() );
-        GameTimeScale::addPauseRequest();
+        game::getSubsystem<GameTimeScale>().addPauseRequest();
         // UI 는 이 컴포넌트가 모른다 — 숨길 레이어는 속성(데이터)이 정하고, 숨기는 일은 UI 시스템의 레이어 숨김 요청이 한다. UI 시스템이 없으면 가릴 화면도 없다.
         UISystem* pUISystem = game::findSubsystem<UISystem>();
         if ( pUISystem != nullptr && _photoHiddenUILayers != UILayerMask::None )
@@ -253,7 +253,7 @@ namespace sw
             return;
         _photoMode.end();
         _photoInputMap.reset();
-        GameTimeScale::removePauseRequest();
+        game::getSubsystem<GameTimeScale>().removePauseRequest();
         releasePhotoModeUILayers();
         _bPhotoModeCut = true;
         updateCamera( 0.0f );
@@ -382,7 +382,7 @@ namespace sw
             return;
         // 포토 모드는 게임이 멈춰도 움직이므로 실제 경과로 돌고, 게임 카메라에는 입력을 주지 않는다.
         if ( _photoMode.isActive() )
-            gatherPhotoModeInput( GameTimeScale::getUnscaledDeltaTime() );
+            gatherPhotoModeInput( game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
         else
             gatherInput( deltaTime );
         // 틱 중이면 틱 뒤로 미룬다 — 대상의 이번 프레임 자리는 틱이 끝나야 적용된다. 여러 번 불려도 시간은 모아 한 번 쓴다.

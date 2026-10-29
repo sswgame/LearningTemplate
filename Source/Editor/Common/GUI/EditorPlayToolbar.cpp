@@ -211,16 +211,16 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) );
 
                 ImGui::SameLine();
-                float32 timeScale = GameTimeScale::get();
+                float32 timeScale = editor::getSubsystem<GameTimeScale>().get();
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 5.0f );
                 if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
-                    GameTimeScale::set( timeScale );
+                    editor::getSubsystem<GameTimeScale>().set( timeScale );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayTimeScale" ) );
                 // 되돌리기는 보이는 메뉴 항목이다(예전에는 오른쪽 클릭이 말없이 x1 로 되돌렸다 — 숨은 동작).
                 if ( EditorInputGUI::beginItemContextMenu( "##TimeScaleMenu" ) )
                 {
                     if ( ImGui::MenuItem( "Reset to x1.00", nullptr, false, timeScale != 1.0f ) )
-                        GameTimeScale::set( 1.0f );
+                        editor::getSubsystem<GameTimeScale>().set( 1.0f );
                     EditorSelfTestMarks::note( "toolbar.timeScale.reset" );
                     ImGui::EndPopup();
                 }

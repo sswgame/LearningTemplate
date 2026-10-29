@@ -40,7 +40,7 @@ namespace sw::editor
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         // 엔진 프레임의 실제 경과(시간 배율 · 정지와 무관) — 고정 프레임 시간(`-gv_fixedFrameDelta`)으로 도는 시나리오에서 카메라 비행이 결정적이다.
-        const float32 dt = GameTimeScale::getUnscaledDeltaTime();
+        const float32 dt = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _viewportClient.update( dt, bFocused, bHovered );
 
         if ( bFocused )

@@ -510,7 +510,7 @@ namespace sw
     {
         _frameDeltaSeconds = deltaSeconds;
         // 실제 경과는 호스트가 따로 적는 단계가 아니라 프레임 시작의 인자다 — 적지 않은 호스트가 생길 수 없다.
-        GameTimeScale::setUnscaledDeltaTime( unscaledDeltaSeconds );
+        engine::getSubsystem<GameTimeScale>().setUnscaledDeltaTime( unscaledDeltaSeconds );
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
         if ( _listFrameHook.empty() == false )
         {
@@ -525,7 +525,7 @@ namespace sw
             _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUISystem != nullptr && _pUISystem->isInitialized() )
-            _pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
+            _pUISystem->processInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -617,7 +617,7 @@ namespace sw
             _pAudioService->getEngine().takeSubtitleCues( listCue );
             _pUISystem->getSubtitles().postAudioCues( listCue );
         }
-        _pUISystem->update( GameTimeScale::getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+        _pUISystem->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
     }
 
     void Engine::submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )

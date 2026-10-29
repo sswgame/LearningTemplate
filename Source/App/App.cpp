@@ -629,7 +629,7 @@ namespace sw
                 break;
             }
 
-            const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get(), gv_fixedFrameDelta );
+            const FrameTime frameTime = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), gv_fixedFrameDelta );
 
             // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
             _userSettingsHost.update( frameTime._deltaTime );
