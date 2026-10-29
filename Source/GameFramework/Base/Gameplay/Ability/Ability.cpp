@@ -30,6 +30,11 @@ namespace sw
     {
     }
 
+    const TypeInfo* Ability::getTypeInfo() const
+    {
+        return StaticType();
+    }
+
     Ability::~Ability()
     {
         // 컴포넌트는 어빌리티를 지우기 전에 끝내고(`retireAbilitySpec`) 작업을 비운다. 여기서는 남은 작업이 등록한 구독만 확실히 해제한다.

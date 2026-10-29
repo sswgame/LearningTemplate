@@ -1,10 +1,10 @@
 /**
  * @file EditorModuleUnloadListener.h
- * @brief 확장 모듈 라이브러리가 언로드되기 전에 그 이미지의 등록 줄로 만든 에디터 인스턴스를 지웁니다.
+ * @brief 모듈을 내리기 전에 그 모듈의 등록 줄로 만든 에디터 인스턴스와 그 모듈 타입의 기본값 인스턴스를 거둡니다.
  */
 #pragma once
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/EditorSubsystem.h"
 
@@ -14,10 +14,10 @@ namespace sw::editor
 
     /**
      * @class EditorModuleUnloadListener
-     * @brief 확장 모듈 라이브러리가 언로드되기 전에(핫 리로드 · 종료) 그 이미지의 등록 줄로 만든 패널 · 팝업 · 인스펙터 · 커맨드를 지웁니다.
-     * @details 리스너 객체는 EditorModule 코드라 EditorModule 이 언로드되면 vtable 도 사라집니다. 그래서 EditorContext 가 소유하고 에디터를 종료할 때 함께 지웁니다
-     *          (`ModuleLibraryUtil::registerUnloadHandler` 의 주의 — 모듈보다 오래 살면 안 된다). EditorModule 자신이 언로드될 때는 에디터 인스턴스가 먼저 통째로 사라지므로 할 일이 없습니다.
-     *          훑는 매니저들을 의존으로 선언하므로 그들보다 먼저 종료 · 소멸합니다(언로드 훑기가 지워진 매니저를 밟지 않는다).
+     * @brief 모듈을 내리기 전에(핫 리로드) 그 모듈의 등록 줄로 만든 패널 · 팝업 · 인스펙터 · 명령 · 확장 서브시스템과, 그 모듈 타입의 기본값 인스턴스를 거둡니다.
+     * @details 등록 줄은 모듈을 내리기 전에 떨어지고(`ModuleObjectRegistrar::detach`) 목록이 알린다(`subscribeEditorExtensionRemoved`) — 그 자리에서 매니저들을
+     *          목록과 맞춰 빠진 줄의 인스턴스를 종료한다. 기본값 인스턴스는 어느 모듈의 컴포넌트든 될 수 있어 모듈을 내린다는 알림(`TypeRegistry::subscribeModuleUnloading`)에 모두 지운다.
+     *          주소로 고르지 않는다. 맞추는 매니저들을 의존으로 선언하므로 그들보다 먼저 종료 · 소멸한다(구독이 지워진 매니저를 밟지 않는다).
      */
     class EditorModuleUnloadListener final : public EditorSubsystem
     {
@@ -30,16 +30,19 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName = "EditorModuleUnloadListener";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const>      getSubsystemDependencies() const override;
+        SubsystemInitResult          initializeSubsystem() override;
+        void                         shutdownSubsystem() override;
         EditorModuleUnloadListener( const EditorModuleUnloadListener& )            = delete;
         EditorModuleUnloadListener& operator=( const EditorModuleUnloadListener& ) = delete;
 
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
-
     private:
+        /** @brief 등록 줄이 빠졌다 — 매니저들을 목록과 맞춘다. */
+        void onRegistrationRemoved();
+        /** @brief 모듈을 내린다 — 기본값 인스턴스를 지운다(다음에 물을 때 다시 만든다). */
+        void onModuleUnloading( string_view moduleName );
+
         EditorContext& _context;
-
-    private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &EditorModuleUnloadListener::onModuleUnloading, "editor extension instances", true );
+        Subscription   _registrationRemovedSubscription;
+        Subscription   _moduleUnloadingSubscription;
     };
 } // namespace sw::editor

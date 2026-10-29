@@ -811,7 +811,6 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( context._moduleName );
-                ModuleLibraryUtil::releaseLibraryCode( context._moduleName, pPreviousHandle );
             }
 
             context._pLibraryModule      = prepared._pHandle;
@@ -882,7 +881,6 @@ namespace sw
         if ( prepared._pHandle != nullptr )
         {
             engine::setGlobalRegistrarHeads( prepared._previousHeads );
-            ModuleLibraryUtil::releaseLibraryCode( context._moduleName, prepared._pHandle );
             ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
@@ -905,7 +903,6 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
-            ModuleLibraryUtil::releaseLibraryCode( context._moduleName, context._pLibraryModule );
             ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
             context._pLibraryModule = nullptr;
         }
@@ -929,7 +926,6 @@ namespace sw
         {
             SW_LOG_INFO( "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
             engine::unregisterModuleTypes( it->_name );
-            ModuleLibraryUtil::releaseLibraryCode( it->_name, it->_pHandle );
             ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
             it->_pHandle = nullptr;
         }

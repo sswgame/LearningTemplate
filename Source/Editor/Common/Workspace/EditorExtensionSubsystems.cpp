@@ -2,8 +2,6 @@
 
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
-#include "Core/Module/ModuleLibraryUtil.h"
-
 namespace sw::editor
 {
     SW_LOG_CALLER( "EditorExtensionSubsystems" );
@@ -28,7 +26,7 @@ namespace sw::editor
             return;
         _syncedGeneration = list.getGeneration();
 
-        // 1) 등록 목록에서 사라진 항목의 인스턴스를 종료한다(정상 경로에서는 releaseSubsystemsWithin 이 먼저 했다 — 여기는 줄을 직접 뺀 경우)
+        // 1) 등록 목록에서 사라진 항목의 인스턴스를 종료한다(모듈을 내리기 전 — 줄이 빠진 그 자리에서 불린다)
         for ( size_t index = _listEntry.size(); index-- > 0; )
         {
             if ( SubsystemRegistry::find( _listEntry[index]._pRegistration->_pID ) != _listEntry[index]._pRegistration )
@@ -62,19 +60,6 @@ namespace sw::editor
             }
             _listEntry.push_back( Entry{ &registration, std::move( pSubsystem ) } );
         }
-    }
-
-    uint32 EditorExtensionSubsystems::releaseSubsystemsWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        for ( size_t index = _listEntry.size(); index-- > 0; )
-        {
-            if ( ModuleLibraryUtil::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
-                continue;
-            releaseAt( index );
-            ++releasedCount;
-        }
-        return releasedCount;
     }
 
     void EditorExtensionSubsystems::releaseAll()

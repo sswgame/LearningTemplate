@@ -6,7 +6,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"

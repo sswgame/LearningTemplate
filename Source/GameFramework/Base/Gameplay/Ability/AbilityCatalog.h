@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionCast.h"
 
 #include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/Ability.h"
@@ -166,12 +167,14 @@ namespace sw
         template <typename T>
         void registerAbilityClass( const hashed_string& className )
         {
+            static_assert( HasOwnReflectBody_v<T>, "ability class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module abilities by type" );
             registerAbilityClass( className, &AbilityCatalog::createDefault<Ability, T> );
         }
         /** @brief 어트리뷰트 세트 클래스 T 를 이름으로 등록합니다. 기본 생성자로 만듭니다. */
         template <typename T>
         void registerAttributeSetClass( const hashed_string& className )
         {
+            static_assert( HasOwnReflectBody_v<T>, "attribute set class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module sets by type" );
             registerAttributeSetClass( className, &AbilityCatalog::createDefault<AttributeSet, T> );
         }
 

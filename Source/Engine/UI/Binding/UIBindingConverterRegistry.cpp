@@ -12,7 +12,6 @@ namespace sw
     {
         struct UIBindingConverterRegistryInternal
         {
-            /** @brief 함수가 [_pBegin, _pEnd) 안인 변환기를 고릅니다(`removeCodeWithin`). */
             /** @brief 비율 → 백분율 배수입니다(Percent 변환기). */
             static constexpr float64 kPercentScale = 100.0;
 

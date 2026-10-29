@@ -38,6 +38,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<MaterialAssetTypeActions> s_materialAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<MaterialAssetTypeActions> s_materialAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

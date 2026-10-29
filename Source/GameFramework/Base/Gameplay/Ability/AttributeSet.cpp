@@ -6,6 +6,11 @@
 
 namespace sw
 {
+    const TypeInfo* AttributeSet::getTypeInfo() const
+    {
+        return StaticType();
+    }
+
     AttributeSet::AttributeSet()
         : _mapAttribute{}
         , _mapRange{}

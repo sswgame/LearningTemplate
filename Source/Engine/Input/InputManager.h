@@ -10,7 +10,6 @@
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -90,7 +89,7 @@ namespace sw
     /**
      * @class InputManager
      * @brief 다형 IInputDevice 를 등록하고 관리하며, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
-     * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)과 모듈이 등록한 장치를 가지므로 `ModuleLibraryUtil::registerUnloadHandler` 를 구현한다.
+     * @details 모듈이 단 콜백(장치 변경, 게임패드 연결, 글자 입력, 조합)은 구독(`Subscription`)이라 그 모듈의 소유자가 사라질 때 풀린다.
      *          모듈 라이브러리를 언로드하기 전에 그 범위의 콜백을 해제하고, 그 범위에 vtable 이 있는 장치를 등록에서 제거한다(`onModuleUnloading`).
      */
     class SW_API InputManager final : public ISubsystem

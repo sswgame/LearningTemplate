@@ -32,6 +32,12 @@ namespace sw::editor
     {
         static constexpr const utf8* kKindName = "settings";
 
+        /**
+         * @brief 섹션을 떼기 직전(`EditorExtensionRegistrar::detach`)에 파일에 씁니다. 값은 그 모듈의 소유자(`EditorSettingsRegistrar`) 멤버라 모듈을 내리면 사라지고,
+         *        환경설정 창은 고친 뒤 잠시 기다렸다 저장하므로 그 사이에 내리면 고친 값이 사라진다. 다시 올라오면 새 항목이 파일에서 다시 읽는다.
+         */
+        static void onDetaching( const EditorSettingsRegistration& registration );
+
         const utf8* _pLabel;
         const TypeInfo* ( *_pfnGetType )();
         void*       _pInstance;    ///< 지금 값. 소유자(`EditorSettingsRegistrar`)의 멤버다. 페이지 방식(`SW_EDITOR_SETTINGS_PAGE`)은 nullptr 이다
@@ -66,7 +72,7 @@ namespace sw::editor
      * @class EditorSettingsRegistrar
      * @brief 환경설정 섹션 하나의 소유자입니다. 값과 기본값을 멤버로 들고, 그 값을 가리키는 등록 항목을 레지스트리에 올립니다(`SW_EDITOR_SETTINGS` 가 파일 범위에 둡니다).
      * @details 값의 수명은 등록의 수명과 같다 — 등록자가 만들어질 때 값이 생기고(등록 전에), 소멸할 때 등록이 먼저 빠지고 값이 사라진다.
-     *          그래서 확장 모듈을 내리면 그 섹션의 값도 같이 사라지고(언로드 훅이 내리기 전에 저장한다), 다시 올라오면 항목이 새로 생겨 파일 값을 다시 읽는다.
+     *          그래서 확장 모듈을 내리면 그 섹션의 값도 같이 사라지고(떼기 직전에 저장한다 — `EditorSettingsRegistration::onDetaching`), 다시 올라오면 항목이 새로 생겨 파일 값을 다시 읽는다.
      *          전에는 함수 정적 변수(`EditorSettingsInstance<T>`)라 등록과 별개의 숨은 전역이었고, 등록되지 않은 섹션을 읽으면 조용히 기본값을 돌려줬다.
      */
     template <typename TSettings>
@@ -110,11 +116,6 @@ namespace sw::editor
         [[nodiscard]] static EditorUserFileResult loadAll( string_view filePath );
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
         [[nodiscard]] static bool saveAll( string_view filePath );
-        /**
-         * @brief 값(`_pInstance`)이 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 라이브러리가 가진 섹션).
-         * @details 그 섹션의 값은 그 이미지의 소유자(`EditorSettingsRegistrar`) 멤버라 이미지를 내리면 사라진다. 언로드 훅이 이것으로 묻고 내리기 전에 `saveAll` 한다.
-         */
-        [[nodiscard]] static bool hasSectionWithin( const void* pBegin, const void* pEnd );
         /**
          * @brief 아직 파일 값을 입히지 않은 섹션(`loadAll` 뒤에 올라온 확장 모듈의 섹션)에만 파일 값을 입힙니다. 입힌 섹션 수입니다.
          * @details 이미 입힌 섹션은 다시 읽지 않는다(사용자가 바꾼 값을 덮지 않는다). 에디터가 프레임마다, `saveAll` 이 쓰기 전에 부른다.

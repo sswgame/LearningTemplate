@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -66,15 +67,22 @@ namespace sw
             }
 
             /** @brief vtable 이 범위 안에 있는 화면이나 위젯이 하나라도 있으면 true 입니다. */
-            static bool usesCodeWithin( const UIScreen& screen, const void* pBegin, const void* pEnd )
+            /** @brief @p pType 이 @p moduleName 의 타입이면 true 입니다. */
+            static bool isTypeOfModule( const TypeInfo* pType, string_view moduleName )
             {
-                if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( &screen ), pBegin, pEnd ) )
+                return pType != nullptr && string_view( pType->_moduleName.c_str() ) == moduleName;
+            }
+
+            /** @brief 화면 클래스나 그 트리의 위젯 가운데 @p moduleName 의 타입이 있으면 true 입니다. */
+            static bool usesTypeOfModule( const UIScreen& screen, string_view moduleName )
+            {
+                if ( isTypeOfModule( screen.getTypeInfo(), moduleName ) )
                     return true;
                 vector<Widget*> listWidget;
                 screen.getTree().collectWidgetsInDocumentOrder( listWidget );
                 for ( const Widget* pWidget : listWidget )
                 {
-                    if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pWidget ), pBegin, pEnd ) )
+                    if ( isTypeOfModule( pWidget->getTypeInfo(), moduleName ) )
                         return true;
                 }
                 return false;
@@ -230,6 +238,9 @@ namespace sw
         setOptionsMenuDocument( PackEngineSettings::resolve( packSettings._uiOptionsMenu, defaultAssets._uiOptionsMenu ) );
         if ( packSettings._bUIPauseMenu )
             setPauseMenuDocument( PackEngineSettings::resolve( packSettings._uiPauseMenu, defaultAssets._uiPauseMenu ) );
+        // 모듈을 내리기 전에 그 모듈 타입의 화면을 닫는다(타입의 모듈 이름으로 고른다 — 코드 주소가 아니다).
+        _moduleUnloadingSubscription = engine::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
+            TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotice>( this ) );
 #if SW_DEV_COMMANDS_ENABLED
         _debugHUD = make_unique<DebugHUD>();
         _debugHUD->initialize( *this, &userSettings );
@@ -244,6 +255,7 @@ namespace sw
             _debugHUD->shutdown();
         _debugHUD.reset();
 #endif
+        _moduleUnloadingSubscription.reset();
         _styleSheetCacheRegistration.reset();
         _documentCacheRegistration.reset();
         _uiKeyBindingRegistration.reset();
@@ -737,27 +749,17 @@ namespace sw
             _input.restoreFocus( *pActive );
     }
 
-    uint32 UISystem::onModuleUnloading( const void* pBegin, const void* pEnd )
+    uint32 UISystem::closeScreensOfModule( string_view moduleName )
     {
         uint32 closedCount = 0;
-        // 언로드되는 모듈의 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다). 변환기는 모듈이 든 구독이 거둔다(표의 번호가 올라 다시 묶인다).
-        for ( const unique_ptr<UIScreen>& screen : _listScreen )
-        {
-            const UIViewModel* pViewModel = screen->getViewModel();
-            if ( pViewModel != nullptr && ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pViewModel ), pBegin, pEnd ) )
-            {
-                SW_LOG_WARNING( "[UI] Screen %# released its view model for module reload - the game sets it again after the reload", screen->_handle );
-                screen->setViewModel( nullptr );
-            }
-        }
         for ( uint32 index = static_cast<uint32>( _listScreen.size() ); index > 0; --index )
         {
-            if ( UISystemInternal::usesCodeWithin( *_listScreen[index - 1], pBegin, pEnd ) == false )
+            if ( UISystemInternal::usesTypeOfModule( *_listScreen[index - 1], moduleName ) == false )
                 continue;
             const UIScreen& screen = *_listScreen[index - 1];
-            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds widget code from the unloading module", screen._handle );
+            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds types of module %#", screen._handle, moduleName );
             // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈의 것이면 다시 열 수 없다.
-            const bool bScreenClassInModule = ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( &screen ), pBegin, pEnd );
+            const bool bScreenClassInModule = UISystemInternal::isTypeOfModule( screen.getTypeInfo(), moduleName );
             if ( screen._documentPath.empty() == false && bScreenClassInModule == false )
                 _listReopenDocument.push_back( screen._documentPath );
             destroyScreenAt( index - 1 );

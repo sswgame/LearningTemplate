@@ -2,8 +2,6 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Core/Module/ModuleLibraryUtil.h"
-
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
@@ -123,17 +121,4 @@ namespace sw::editor
         }
     }
 
-    uint32 InspectorComponentManager::releaseInspectorsWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        resetTypeCache( _cacheTypeGeneration ); // 지운 확장을 가리키는 타입별 목록을 버린다
-        for ( size_t index = _listEntry.size(); index-- > 0; )
-        {
-            if ( ModuleLibraryUtil::isAddressWithin( _listEntry[index]._pRegistration, pBegin, pEnd ) == false )
-                continue;
-            _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index ) );
-            ++releasedCount;
-        }
-        return releasedCount;
-    }
 } // namespace sw::editor

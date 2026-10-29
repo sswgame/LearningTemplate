@@ -40,6 +40,11 @@ namespace sw
 
     UIScreen::~UIScreen() = default;
 
+    const TypeInfo* UIScreen::getTypeInfo() const
+    {
+        return StaticType();
+    }
+
     bool UIScreen::takesFocus() const
     {
         return _desc._bTakesFocus && _desc._layer != UILayer::HUD && _desc._layer != UILayer::Overlay;

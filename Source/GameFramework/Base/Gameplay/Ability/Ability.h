@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityEvents.h"
@@ -75,16 +76,22 @@ namespace sw
      *          **스레드**: `onTickAbility` 와 작업은 컴포넌트의 틱(병렬 워커)에서 돈다. 그 안에서 **다른 오브젝트**를 바꿀 때는
      *          `applyEffectSpecToTarget` 처럼 프레임워크가 제공하는 함수를 쓴다. 틱 중이면 이 함수들이 적용을 틱 직후로 미룬다. 오브젝트 생성은 `GameObjectManager::executeOrDeferPostTick` 로 한다.
      *
-     *          **핫 리로드**: 게임 모듈의 어빌리티 인스턴스는 모듈을 언로드하기 전에 컴포넌트가 정리한다(`ModuleLibraryUtil::registerUnloadHandler`). 모듈을 다시 로드하면
+     *          **핫 리로드**: 모듈을 내리기 전에 컴포넌트가 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티를 정리한다(`TypeRegistry::subscribeModuleUnloading`). 모듈을 다시 로드하면
      *          컴포넌트의 `_abilitySetID` 가 어빌리티를 다시 부여한다. 코드로 준 어빌리티는 게임이 다시 줘야 한다.
      */
+    REFLECT( Abstract )
     class SW_GF_API Ability
     {
         friend class AbilityComponent;
 
     public:
+        REFLECT_BODY();
+
         Ability();
         virtual ~Ability();
+
+        /** @brief 동적 리플렉션 타입입니다. 파생 클래스는 `REFLECT( Abstract )` 를 붙이고 자기 `StaticType()` 을 반환하도록 재정의합니다(모듈을 내릴 때 타입의 모듈 이름으로 고른다). */
+        virtual const TypeInfo* getTypeInfo() const;
 
         Ability( const Ability& )            = delete;
         Ability& operator=( const Ability& ) = delete;
@@ -227,9 +234,13 @@ namespace sw
      *            이벤트 없이 발동하면 걸지 않는다.
      *          `_bActivateOnGranted` 와 무한 이펙트를 함께 쓰면 패시브가 된다.
      */
+    REFLECT( Abstract )
     class SW_GF_API ApplyEffectsAbility : public Ability
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
         ApplyEffectsAbility() = default;
 
         void activateAbility( const AbilityEventData* pTriggerEvent ) override;

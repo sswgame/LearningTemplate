@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Module/ModuleObjectRegistrar.h"
+
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 
 namespace sw::editor
@@ -20,14 +22,17 @@ namespace sw::editor
 
     /**
      * @struct MeshModifierRegistration
-     * @brief 모디파이어 종류 하나의 등록 항목입니다. 만들면 목록에 오르고, 소멸하면 빠집니다.
+     * @brief 모디파이어 종류 하나의 등록 항목입니다. 모듈을 올릴 때 목록에 오르고(`attach`) 내리기 전에 빠집니다(`detach`).
+     * @details 만들 때는 링크 때 목록에만 달린다(`ModuleObjectRegistrar`) — 핫 리로드가 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않는다.
      */
-    struct MeshModifierRegistration
+    struct MeshModifierRegistration final : ModuleObjectRegistrar
     {
         MeshModifierRegistration( const utf8* pID, const utf8* pDisplayName, const utf8* pCategory, MeshModifierCreateFn pCreateFn );
-        ~MeshModifierRegistration();
         MeshModifierRegistration( const MeshModifierRegistration& )            = delete;
         MeshModifierRegistration& operator=( const MeshModifierRegistration& ) = delete;
+
+        void attach() override;
+        void detach() override;
 
         const utf8*          _pID;          ///< 저장 문서의 종류 키입니다(바꾸면 옛 문서를 못 읽는다)
         const utf8*          _pDisplayName; ///< 패널 추가 메뉴의 이름(영문)
@@ -72,8 +77,8 @@ namespace sw::editor
  * @param pDisplayName 패널 표시 이름
  * @param pCategory 패널 추가 메뉴 묶음
  */
-#define SW_MESH_MODIFIER( TModifier, pID, pDisplayName, pCategory )                             \
-    static const ::sw::editor::MeshModifierRegistration sw_meshModifierRegistration_##TModifier \
-    {                                                                                           \
-        pID, pDisplayName, pCategory, &::sw::editor::createMeshModifier<TModifier>              \
+#define SW_MESH_MODIFIER( TModifier, pID, pDisplayName, pCategory )                       \
+    static ::sw::editor::MeshModifierRegistration sw_meshModifierRegistration_##TModifier \
+    {                                                                                     \
+        pID, pDisplayName, pCategory, &::sw::editor::createMeshModifier<TModifier>        \
     }

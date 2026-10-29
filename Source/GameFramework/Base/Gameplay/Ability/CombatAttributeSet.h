@@ -50,9 +50,13 @@ namespace sw
      *          - 맞을 때마다 주인에게 `Event.Hit` 게임플레이 이벤트를 보낸다. 이벤트의 크기는 깎인 체력이고, 피격 반응 어빌리티가 이 이벤트로 발동한다.
      *          기본값은 체력과 최대 체력 100, 마나와 최대 마나 100, 공격력 10, 방어 0, 이동 속도 5 이다. 카탈로그 XML 이 이 값을 덮어쓴다.
      */
+    REFLECT( Abstract )
     class SW_GF_API CombatAttributeSet : public AttributeSet
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
         CombatAttributeSet();
 
         /** @brief 체력이 0 에 닿을 때 붙는 태그("State.Dead")입니다. */

@@ -120,15 +120,11 @@ namespace sw::editor
         void registerDefaultPanels();
         /**
          * @brief 등록 목록과 맞춥니다. 새 항목은 인스턴스를 만들고(지난번에 열려 있던 id 이면 열린 채로), 사라진 항목의 인스턴스는 종료합니다.
-         * @details 세대(`EditorExtensionRegistrationList::getGeneration`)가 같으면 바로 반환한다. 에디터 프레임 앞에서 호출한다(`EditorContext::syncExtensionRegistrations`).
+         * @details 세대(`EditorExtensionRegistrationList::getGeneration`)가 같으면 바로 반환한다. 에디터 프레임 앞과 등록이 빠진 그 자리에서 호출한다
+         *          (`EditorContext::syncExtensionRegistrations` — 모듈을 내리기 전, 그 코드가 살아 있을 때다). 사라진 항목이 열려 있었으면 id 로 기억해 두었다가
+         *          같은 id 가 다시 등록되면 연 채로 만든다. 저장하지 않은 문서는 경고하고 버린다.
          */
         void syncWithRegistry( IRHIDevice* pRHIDevice );
-        /**
-         * @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 라이브러리) 안에 있는 패널을 종료하고 지웁니다. 지운 수를 반환합니다.
-         * @details 이미지를 언로드하기 전에 호출한다(`EditorModuleUnloadListener`). 저장하지 않은 문서는 경고하고 버린다.
-         *          열림 상태는 id 로 기억해 두었다가 같은 id 가 다시 등록되면 연 채로 만든다.
-         */
-        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice );
         /**
          * @brief 핵심(Core)이 아닌 패널(도구 · 커스텀 · 확장)을 닫고 등록 줄로 새 인스턴스를 만듭니다 — 새 에디터 세션과 같은 상태입니다. 바꾼 수를 반환합니다.
          * @details 연 문서 · 그래프 · 맵 · 최근 목록 같은 패널 상태는 인스턴스가 소유하므로, 다시 만드는 것이 초기화다(패널마다 초기화 함수를 두지 않는다).

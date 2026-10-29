@@ -61,6 +61,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<PrefabAssetTypeActions> s_prefabAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<PrefabAssetTypeActions> s_prefabAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

@@ -32,7 +32,6 @@ namespace sw
     struct AbilityEventData;
 
     class AbilityCatalog;
-    class AbilityModuleUnloadGuard;
     class Ability;
 
     /** @brief 어트리뷰트의 current 값이 한 번 바뀐 내용입니다(`AbilityComponent::registerAttributeChanged` 가 전달). */
@@ -75,7 +74,6 @@ namespace sw
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
     class SW_GF_API AbilityComponent : public HealthSourceComponent
     {
-        friend class AbilityModuleUnloadGuard;
         friend class Ability;
 
     public:
@@ -96,6 +94,11 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /**
+         * @brief 모듈 @p moduleName 을 내리기 전에 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티 · 어트리뷰트 세트와, 그 모듈의 실행 계산을 쓰는 이펙트를 놓습니다.
+         * @details 모듈을 다시 올리면 `_abilitySetID` 가 어빌리티를 다시 준다. 게임이 건 델리게이트는 게임이 든 구독이 게임과 함께 푼다.
+         */
+        void onModuleUnloading( string_view moduleName ) override;
         void onTick( float32 deltaTime ) override;
 
         // --------------------------------------------------------------------------
@@ -398,8 +401,6 @@ namespace sw
         void spawnDamageNumber( float32 amount );
         /** @brief base 를 쓰기 직전에 부릅니다. @p name 이 체력이고 무적이면 내려가는 @p inoutNewBase 를 @p oldBase 로 되돌립니다(`getInvulnerableTag`). */
         void guardHealthBaseChange( const hashed_string& name, float32 oldBase, float32& inoutNewBase );
-        /** @brief 모듈을 언로드하기 전에, [@p pBegin, @p pEnd) 안의 코드(어빌리티, 세트, 실행 계산의 vtable과 델리게이트 스텁)를 가리키는 참조를 제거합니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         // ---- 런타임 상태(저장하지 않는다) ----
         vector<unique_ptr<AttributeSet>>                                                                _listAttributeSet;
@@ -416,7 +417,6 @@ namespace sw
         MulticastDelegate<void( const Ability& )>                                                       _abilityActivatedMulticast;
         MulticastDelegate<void( const Ability&, bool )>                                                 _abilityEndedMulticast;
         MulticastDelegate<void( const AbilityPresentationEvent& )>                                      _gameplayCueMulticast;
-        unique_ptr<AbilityModuleUnloadGuard>                                                            _pModuleCodeGuard; ///< 모듈을 언로드하기 전에 그 모듈의 코드를 가리키는 참조를 제거한다
         const AbilityCatalog*                                                                           _pCatalog;
         float32                                                                                         _time;
         uint64                                                                                          _nextHandleID;

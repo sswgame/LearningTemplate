@@ -12,7 +12,6 @@
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"

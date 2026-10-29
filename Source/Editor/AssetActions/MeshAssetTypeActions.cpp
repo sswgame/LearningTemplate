@@ -24,6 +24,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<MeshAssetTypeActions> s_meshAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<MeshAssetTypeActions> s_meshAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

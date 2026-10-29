@@ -11,7 +11,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -402,11 +401,17 @@ namespace sw
         /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다. 기동이 엔진 서비스를 넘기고 테스트는 자기 것을 넘깁니다. nullptr 이면 설정 바인딩이 없습니다. 화면 바인딩은 다시 연결됩니다. */
         void setUserSettings( UserSettingsManager* pSettings );
 
-        /** @brief vtable 이 [@p pBegin, @p pEnd) 안에 있는 화면과 위젯을 가진 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
+        /**
+         * @brief 클래스(`UIScreen::getTypeInfo`)나 위젯(`Widget::getTypeInfo`)이 @p moduleName 의 타입인 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다.
+         * @details 모듈을 내리기 전의 알림(`TypeRegistry::subscribeModuleUnloading`)이 부른다. 문서로 연 기본 화면은 다음 update 가 다시 연다(새 이미지의 위젯 타입으로).
+         *          뷰모델은 게임이 소유해 게임과 함께 사라지고, 사라질 때 바인딩이 놓는다 — 여기서 볼 것이 없다.
+         */
+        uint32 closeScreensOfModule( string_view moduleName );
 
     private:
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
+        /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
+        void               onModuleUnloadingNotice( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
         unique_ptr<Widget> instantiateDocument( string_view documentPath, UIScreenDesc& outDesc, vector<UIBindingDesc>& outListBinding, vector<string>& outListStyleSheet );
         /** @brief 문서로 생성한 화면에 문서 경로, 바인딩, 스타일 시트를 기록하고 올립니다. */
         UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDesc> listBinding, vector<string> listStyleSheet );
@@ -469,6 +474,7 @@ namespace sw
         Subscription                       _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
         Subscription                       _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
         Subscription                       _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
+        Subscription                       _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
         UIThemeController                  _theme;
         vector<string>                     _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry         _bindingConverters;
@@ -511,9 +517,5 @@ namespace sw
         uint8                    _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
         uint8                    _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
         uint8                    _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
-
-    private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &UISystem::onModuleUnloading, "ui screens" );
     };
 } // namespace sw

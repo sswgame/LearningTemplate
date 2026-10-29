@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Base/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -65,13 +67,19 @@ namespace sw
      *          값을 바꾸는 경로는 **`AbilityComponent` 하나**뿐이다. 훅, 집계, 델리게이트가 그 안에서 차례로 실행된다. 그래서 값 쓰기는
      *          공개하지 않는다(`AbilityComponent::setAttributeBaseValue` 를 쓴다).
      */
+    REFLECT( Abstract )
     class SW_GF_API AttributeSet
     {
         friend class AbilityComponent;
 
     public:
+        REFLECT_BODY();
+
         AttributeSet();
         virtual ~AttributeSet() = default;
+
+        /** @brief 동적 리플렉션 타입입니다. 파생 클래스는 `REFLECT( Abstract )` 를 붙이고 자기 `StaticType()` 을 반환하도록 재정의합니다(모듈을 내릴 때 타입의 모듈 이름으로 고른다). */
+        virtual const TypeInfo* getTypeInfo() const;
 
         AttributeSet( const AttributeSet& )            = delete;
         AttributeSet& operator=( const AttributeSet& ) = delete;

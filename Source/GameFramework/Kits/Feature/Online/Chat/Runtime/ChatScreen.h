@@ -24,9 +24,13 @@ namespace sw
      * @class ChatScreen
      * @brief 한 채널의 채팅 화면입니다.
      */
+    REFLECT( Abstract )
     class SW_KIT_API ChatScreen : public UIScreen
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo*         getTypeInfo() const override { return StaticType(); }
         static constexpr size_t kVisibleLines = 15; ///< 화면에 보이는 줄 수의 상한이다
 
         ChatScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );

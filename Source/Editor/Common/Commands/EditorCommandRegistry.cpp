@@ -7,7 +7,6 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -264,19 +263,13 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry, const void* pExcludeBegin, const void* pExcludeEnd )
+    void EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry )
     {
         using CommandRegistry = EditorExtensionRegistry<EditorCommandRegistration>;
-        uint32 excludedCount{ 0 };
         for ( uint32 index = 0; index < CommandRegistry::getCount(); ++index )
         {
             const EditorCommandRegistration& row = CommandRegistry::getAt( index );
-            if ( ModuleLibraryUtil::isAddressWithin( &row, pExcludeBegin, pExcludeEnd ) )
-            {
-                ++excludedCount;
-                continue;
-            }
-            EditorCommandDesc desc{};
+            EditorCommandDesc                desc{};
             desc._id              = row._pID;
             desc._label           = row._pLabel != nullptr ? row._pLabel : "";
             desc._icon            = row._pIcon != nullptr ? row._pIcon : "";
@@ -298,6 +291,5 @@ namespace sw::editor
                 desc._submenu = row._pfnSubmenu;
             registry.registerCommand( std::move( desc ) );
         }
-        return excludedCount;
     }
 } // namespace sw::editor

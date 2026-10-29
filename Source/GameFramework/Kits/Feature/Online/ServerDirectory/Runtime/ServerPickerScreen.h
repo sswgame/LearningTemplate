@@ -25,9 +25,13 @@ namespace sw
      * @class ServerPickerScreen
      * @brief 서버 목록 화면입니다.
      */
+    REFLECT( Abstract )
     class SW_KIT_API ServerPickerScreen : public UIScreen
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
         /** @brief 서버를 골랐을 때 불립니다. 화면은 곧 닫힌다. */
         using ServerPickedDelegate = Delegate<void( const ServerListEntry& server )>;
 

@@ -38,6 +38,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<ShaderAssetTypeActions> s_shaderAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<ShaderAssetTypeActions> s_shaderAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

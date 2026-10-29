@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
@@ -211,6 +212,17 @@ namespace sw
          *          `SW_SHIPPING` 가드를 기억해야 하고, 잊은 곳은 Shipping 빌드에서야 깨진다(`b206e2a26`). 레지스트리 연산이라 구성과 무관하게 맞다.
          */
         void unregisterTypesByModule( string_view moduleName );
+        /** @brief `subscribeModuleUnloading` 의 알림 모양입니다. 인자는 내려가는 모듈 이름(`TypeInfo::_moduleName` 과 같은 값)입니다. */
+        using ModuleUnloadingDelegate = Delegate<void( string_view moduleName )>;
+        /**
+         * @brief 모듈을 내리기 직전(그 모듈의 타입 · 코드가 아직 살아 있을 때)의 알림을 받습니다. 구독이 사라지면 뗍니다.
+         * @details 모듈 타입의 인스턴스를 든 쪽(UI 화면 · 어빌리티 · 편집기 기본값)이 **타입의 모듈 이름**(데이터)으로 자기 것을 골라 놓는다 —
+         *          컴포넌트를 지우는 `destroyComponentsOfModule` 과 같은 규칙이다(언리얼은 클래스의 패키지로 다시 만든다). 코드 주소로 고르지 않는다.
+         *          `engine::unregisterModuleTypes` 가 타입을 걷기 전에 부른다(`publishModuleUnloading`). 모듈을 올리고 내리는 스레드에서만 불린다.
+         */
+        [[nodiscard]] Subscription subscribeModuleUnloading( const ModuleUnloadingDelegate& delegate );
+        /** @brief 구독자에게 @p moduleName 이 내려간다고 알립니다(`engine::unregisterModuleTypes`). */
+        void publishModuleUnloading( string_view moduleName );
         /**
          * @brief 호스트의 모든 타입 공급자(엔진, GameFramework, 킷, 게임 모듈)가 등록을 끝냈다고 기록합니다. 기동 단계 `ModuleLoadStage` 가 부릅니다.
          * @details 씬을 읽는 쪽(`SceneManager::requestLoadFuture`, `SceneCooker::cookAllScenes`)은 이 뒤에만 읽는다. 그 전에 읽으면 아직 올라오지
@@ -467,6 +479,8 @@ namespace sw
         unordered_map<hashed_string, EnumInfo*> _mapNameToEnum       SW_GUARDED_BY( _mutex );
         unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
         hashed_string                                                _activeModuleName;
+        /** @brief 모듈 내림 알림 구독자입니다(`subscribeModuleUnloading`). 모듈을 올리고 내리는 스레드만 만진다. */
+        MulticastDelegate<void( string_view )> _moduleUnloading;
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
     };

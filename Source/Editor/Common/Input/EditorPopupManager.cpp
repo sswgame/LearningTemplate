@@ -3,7 +3,6 @@
 #include "Editor/Common/Input/EditorPopupManager.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
 
@@ -121,19 +120,6 @@ namespace sw::editor
                     entry._pRegistration = &registration;
             }
         }
-    }
-
-    uint32 EditorPopupManager::releasePopupsWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        for ( size_t index = _listPopup.size(); index-- > 0; )
-        {
-            if ( ModuleLibraryUtil::isAddressWithin( _listPopup[index]._pRegistration, pBegin, pEnd ) == false )
-                continue;
-            _listPopup.erase( _listPopup.begin() + static_cast<ptrdiff_t>( index ) );
-            ++releasedCount;
-        }
-        return releasedCount;
     }
 
     void EditorPopupManager::clear()

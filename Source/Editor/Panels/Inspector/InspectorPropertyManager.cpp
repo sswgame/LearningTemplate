@@ -11,7 +11,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
@@ -960,29 +959,6 @@ namespace sw::editor
             registerType( registration._pID, registration._pCreate() );
             _listRegistration.push_back( &registration );
         }
-    }
-
-    uint32 InspectorPropertyManager::releaseDrawersWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        for ( size_t index = _listRegistration.size(); index-- > 0; )
-        {
-            const EditorPropertyDrawerRegistration* pRegistration = _listRegistration[index];
-            if ( ModuleLibraryUtil::isAddressWithin( pRegistration, pBegin, pEnd ) == false )
-                continue;
-            _listRegistration.erase( _listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
-            ++releasedCount;
-        }
-        if ( releasedCount > 0 )
-        {
-            _registry.clear();  // 언로드되는 이미지의 위젯(그 vtable)을 남기지 않는다
-            registerBuiltins(); // 가려졌던 내장 위젯을 복원한다
-            for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
-            {
-                registerType( pRegistration->_pID, pRegistration->_pCreate() );
-            }
-        }
-        return releasedCount;
     }
 
     void InspectorPropertyManager::registerBuiltins()

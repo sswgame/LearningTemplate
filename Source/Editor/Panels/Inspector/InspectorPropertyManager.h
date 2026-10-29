@@ -52,8 +52,6 @@ namespace sw::editor
         void registerDefaults();
         /** @brief 그리기 확장 등록 줄(`SW_EDITOR_PROPERTY_DRAWER`)과 맞춥니다. 세대가 같으면 바로 돌아갑니다. */
         void syncWithRegistry();
-        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 라이브러리) 안인 그리기를 지웁니다(가렸던 내장 위젯은 복원한다). 지운 수입니다. */
-        uint32 releaseDrawersWithin( const void* pBegin, const void* pEnd );
 
         /**
          * @brief CallInEditor 인자 필드 하나를 그 C++ 타입의 위젯으로 그립니다. 값이 바뀌었으면 true 입니다.

@@ -1068,6 +1068,16 @@ namespace sw
         }
     }
 
+    Subscription TypeRegistry::subscribeModuleUnloading( const ModuleUnloadingDelegate& delegate )
+    {
+        return _moduleUnloading.add( delegate );
+    }
+
+    void TypeRegistry::publishModuleUnloading( string_view moduleName )
+    {
+        _moduleUnloading.broadcast( moduleName );
+    }
+
     void TypeRegistry::unregisterTypesByModule( string_view moduleName )
     {
         UniqueLock<shared_mutex> lock{ _mutex };

@@ -51,8 +51,6 @@ namespace sw
         [[nodiscard]] Subscription registerChanged( const TagChangedDelegate& delegate );
         /** @brief 모든 구독을 풉니다(소유자가 사라질 때). 구독은 무효가 됩니다. */
         void unregisterAllChanged();
-        /** @brief [@p pBegin, @p pEnd) 안의 코드를 가리키는 구독을 풉니다(모듈 언로드). 푼 수입니다. */
-        uint32 unregisterChangedWithin( const void* pBegin, const void* pEnd );
 
     private:
         struct CountEntry

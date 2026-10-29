@@ -25,7 +25,7 @@ namespace sw
      * @brief 이름 → 처리 함수 표입니다(`UISystem::getGlobalCommands`). 화면이 `onCommand` 로 처리하지 않은 명령이 마지막으로 여기에 닿습니다.
      * @details 언리얼 CommonUI 의 입력 액션 바인딩이 위젯 밖의 핸들러를 부르는 것, 유니티 UI Toolkit 의 명령 이벤트가 패널 밖으로 올라가는 것에 해당한다.
      *          엔진 일시정지 메뉴(`PauseMenuScreen`)의 `ReturnToTitle` · `QuitGame` 버튼은 이 표에 그 이름이 등록됐을 때만 보인다 —
-     *          게임 흐름(`GameInstance`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 함수가 모듈 라이브러리 안에 있으면 그 모듈이 언로드될 때 `UISystem` 이 제거한다(`removeCodeWithin`).
+     *          게임 흐름(`GameInstance`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 등록은 구독이라 등록한 쪽이 사라질 때 풀린다.
      *          게임 스레드에서만 쓴다.
      */
     class SW_API UIGlobalCommandRegistry

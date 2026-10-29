@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Module/ModuleObjectRegistrar.h"
+
 struct ImDrawList;
 
 namespace sw
@@ -73,19 +75,20 @@ namespace sw::editor
 {
     /**
      * @class EditorAssetTypeActionsRegistrar
-     * @brief 종류의 코드 파일에 정적 객체로 두면 동작을 만들어 등록하고, 모듈을 언로드할 때 지웁니다.
+     * @brief 종류의 코드 파일에 정적 객체로 두면 동작을 만들고, 모듈을 올릴 때 등록하고(`attach`) 내리기 전에 지웁니다(`detach`).
      * @details EditorModule 은 MODULE DLL 이므로 소스의 오브젝트 파일이 모두 링크된다. 아무도 참조하지 않는 등록자도 버려지지 않는다.
      */
     template <typename TActions>
-    class EditorAssetTypeActionsRegistrar
+    class EditorAssetTypeActionsRegistrar final : public ModuleObjectRegistrar
     {
     public:
         EditorAssetTypeActionsRegistrar()
             : _actions{}
         {
-            EditorAssetTypeActionsRegistry::registerActions( _actions );
         }
-        ~EditorAssetTypeActionsRegistrar() { EditorAssetTypeActionsRegistry::unregisterActions( _actions ); }
+
+        void attach() override { EditorAssetTypeActionsRegistry::registerActions( _actions ); }
+        void detach() override { EditorAssetTypeActionsRegistry::unregisterActions( _actions ); }
 
         EditorAssetTypeActionsRegistrar( const EditorAssetTypeActionsRegistrar& )            = delete;
         EditorAssetTypeActionsRegistrar& operator=( const EditorAssetTypeActionsRegistrar& ) = delete;

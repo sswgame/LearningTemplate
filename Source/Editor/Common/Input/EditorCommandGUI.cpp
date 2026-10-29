@@ -50,10 +50,10 @@ namespace sw::editor
         struct EditorCommandGUIInternal
         {
             /**
-             * @brief 커맨드 테이블과 등록 항목으로 레지스트리를 다시 만듭니다. 등록 항목이 [@p pExcludeBegin, @p pExcludeEnd) 안에 있으면 제외하고, 제외한 수를 반환합니다.
+             * @brief 커맨드 테이블과 등록 항목으로 레지스트리를 다시 만듭니다.
              * @details 정의는 아래 EditorCommandGUI 구현 옆에 있다. 테이블 `_s_arrCommandRow` 가 이 구조체의 끝에 있어 그 뒤에 둔다.
              */
-            static uint32 rebuild( const void* pExcludeBegin, const void* pExcludeEnd );
+            static void rebuild();
 
             /**
              * @brief 커맨드 GUI 가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유하므로 에디터 컨텍스트와 함께 처음 값으로 돌아갑니다.
@@ -496,7 +496,7 @@ namespace sw::editor
 
     void EditorCommandGUI::registerDefaults()
     {
-        (void)EditorCommandGUIInternal::rebuild( nullptr, nullptr ); // 제외 범위가 없으면 제외한 수는 항상 0 이다
+        EditorCommandGUIInternal::rebuild();
     }
 
     void EditorCommandGUI::syncWithRegistry()
@@ -506,12 +506,7 @@ namespace sw::editor
         registerDefaults();
     }
 
-    uint32 EditorCommandGUI::releaseCommandsWithin( const void* pBegin, const void* pEnd )
-    {
-        return EditorCommandGUIInternal::rebuild( pBegin, pEnd );
-    }
-
-    uint32 EditorCommandGUIInternal::rebuild( const void* pExcludeBegin, const void* pExcludeEnd )
+    void EditorCommandGUIInternal::rebuild()
     {
         // 컨텍스트가 없으면 메뉴가 통째로 비고 단축키가 동작하지 않는다 — 조용히 반환하지 않고 필수 서비스 조회가 모든 구성에서 멈춘다.
         EditorCommandRegistry& registry = editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>();
@@ -544,7 +539,7 @@ namespace sw::editor
             registry.registerCommand( std::move( desc ) );
         }
         // 확장 모듈과 다른 파일의 등록 항목(SW_EDITOR_COMMAND)을 테이블과 같은 레지스트리에 합친다.
-        const uint32 excludedCount = EditorCommandTableUtil::appendRegistrations( registry, pExcludeBegin, pExcludeEnd );
+        EditorCommandTableUtil::appendRegistrations( registry );
 
         string report;
         if ( registry.validate( report ) == false )
@@ -562,7 +557,6 @@ namespace sw::editor
             if ( registry.findMenu( pHostedPath ) == nullptr )
                 SW_LOG_ERROR( "Menu path '%#' is drawn by code but no command row uses it - the menu is empty", pHostedPath );
         }
-        return excludedCount;
     }
 
     void EditorCommandGUI::drawMainMenus()

@@ -17,6 +17,13 @@ namespace sw::editor
             static vector<unique_ptr<EditorExtensionRegistrationList>> s_listList;
             return s_listList;
         }
+
+        /** @brief 등록이 빠졌다는 알림입니다(`subscribeEditorExtensionRemoved`). 목록과 같은 이미지(EditorModule)가 가진다. */
+        MulticastDelegate<void()>& getRemovedSignal()
+        {
+            static MulticastDelegate<void()> s_removed;
+            return s_removed;
+        }
     } // namespace
 } // namespace sw::editor
 
@@ -41,8 +48,15 @@ namespace sw::editor
     void EditorExtensionRegistrationList::removeRegistration( const EditorExtensionRegistration& registration )
     {
         // 거절된 등록자의 소멸도 여기로 온다 — 올라 있지 않으면 할 일이 없다
-        if ( _registered.remove( &registration ) )
-            ++_generation;
+        if ( _registered.remove( &registration ) == false )
+            return;
+        ++_generation;
+        getRemovedSignal().broadcast();
+    }
+
+    Subscription subscribeEditorExtensionRemoved( const Delegate<void()>& delegate )
+    {
+        return getRemovedSignal().add( delegate );
     }
 
     EditorExtensionRegistrationList& getEditorExtensionRegistrationList( const utf8* pKindName )

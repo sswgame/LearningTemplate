@@ -99,7 +99,7 @@
 - 에셋 리로드: 감시(`IFileWatcher` — Core, Shipping 에도 빌드됨) → 편집기 `AssetHotReload` · `ConfigHotReload`(EditorSubsystem — 편집기 없는 Dev 실행은 리로드가 없다) → `IAssetCache::reload`(순수 가상, 모든 캐시가 구현 · Shipping 에도 있다) → 리플렉션으로 사용자에게 알림. 리로드 전용 어댑터(`AudioReloadCache` · `LocalizationReloadCache`)가 Shipping 에도 등록된다. 게임 쪽 두 번째 감시 경로 `AppearanceDataWatcher`(Shooter3D 가 가드 없이 시작). 셰이더는 `ShaderRecompiler`(Ctrl+F8 수동, Shipping 제외)와 늘 서는 빈 `LiveShaderSubsystem`.
 
 **진행(2026-10-29)**: 끝난 것 —
-- 1: 스위치 `SW_WITH_DYNAMIC_MODULES`(`Core/Foundation/DynamicModules.h`, 배포 0)가 언로드 장치 · RHI DLL 로드 · 로그 싱크의 코드 범위 떼기 · 등록표 리로드 대체(`RegistrationReloadScope::isActive` 가 constexpr false)를 뺀다. 처리기 멤버 13 곳은 `SW_MODULE_UNLOAD_HANDLER` 한 줄.
+- 1: 스위치 `SW_WITH_DYNAMIC_MODULES`(`Core/Foundation/DynamicModules.h`, 배포 0)가 언로드 장치 · RHI DLL 로드 · 등록표 리로드 대체(`RegistrationReloadScope::isActive` 가 constexpr false)를 뺀다. 주소 범위 처리기(`SW_MODULE_UNLOAD_HANDLER`)는 J3 에서 통째로 지웠다 — 소유(구독 · 모듈 등록자)와 타입의 모듈 이름으로 바꿨다.
 - 2 의 일부: `Engine/AssetReload/`(개발 빌드만) — `FileWatchDispatcher` · `ConfigReloadSubsystem`(편집기 없는 개발 App · 서버도 설정을 다시 읽는다, 편집기는 `EditorToolDefaultsReload` 처리기만). 게임 쪽 `AppearanceDataWatcher` 는 그 분배기의 클라이언트. Core 의 OS 감시기 · 리로드 어댑터 캐시(오디오 · 현지화)는 배포 빌드에서 빠진다.
 - 3: `LiveShaderSubsystem` 은 배포 빌드에서 짓지도 세우지도 않는다.
 - Shipping 빌드 · 쿠킹 · 실행(시나리오 sceneready PASS) 확인.
@@ -160,6 +160,13 @@
 | 13 | `IEngineFrameObserver` 에 자동화 전용 칸(실행 상태 · 사진 경로) | 자동화 관찰자가 자기 서비스로 | 4 |
 | 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
 | 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 호스트 전용 `SceneManager::update`(HostOnly 노출), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
+
+**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 11 · 12(이름만 — 편집기 뷰에서만 숨기는 제외 필터는 남음) · 15 의 어빌리티 vtable 훑기. 3 은 이렇게 끝냈다 —
+등록은 구독(`Subscription`)이 해제를 보장하고, 엔진 밖 레지스트리(편집기 확장 · 에셋 동작 · 메시 모디파이어)의 정적 등록자는 `ModuleObjectRegistrar`(타입 등록자와 같은 머리)로
+모듈을 올릴 때 붙고 내리기 전에 떨어진다(`engine::unregisterModuleTypes`) — 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않고, 떨어질 때 목록이 알려 편집기가 그 줄의 인스턴스를 거둔다.
+모듈 타입의 인스턴스를 든 쪽은 **타입의 모듈 이름**(데이터)으로 고른다: UI 화면 · 위젯(`getTypeInfo`) — `TypeRegistry::subscribeModuleUnloading`, 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트 · 실행 계산) — `Component::onModuleUnloading`,
+편집기 기본값 — 같은 알림. `SW_MODULE_UNLOAD_HANDLER` · `releaseModuleCode` · `isAddressWithin` · `findVtableAddress` · `Delegate::isCodeWithin` · 라이브러리 범위 조회는 지웠다.
+엔진 밖 모듈의 화면 · 어빌리티 · 세트 · 실행 계산 클래스는 `REFLECT( Abstract )` 와 `getTypeInfo` 재정의가 필요하다(카탈로그 등록 템플릿이 `HasOwnReflectBody` 로 멈춘다 — 재정의는 위젯과 같은 규칙).
 
 **전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
 `ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · AssetPaths 해석 캐시 · SystemFontLocator · GameDataCache …),

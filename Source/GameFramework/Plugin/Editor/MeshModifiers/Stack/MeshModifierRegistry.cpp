@@ -41,10 +41,14 @@ namespace sw::editor
         , _pCategory{ pCategory }
         , _pCreateFn{ pCreateFn }
     {
+    }
+
+    void MeshModifierRegistration::attach()
+    {
         MeshModifierRegistry::add( this );
     }
 
-    MeshModifierRegistration::~MeshModifierRegistration()
+    void MeshModifierRegistration::detach()
     {
         MeshModifierRegistry::remove( this );
     }

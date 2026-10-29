@@ -46,6 +46,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<AudioAssetTypeActions> s_audioAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<AudioAssetTypeActions> s_audioAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

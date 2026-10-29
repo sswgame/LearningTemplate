@@ -3,7 +3,6 @@
 #include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 namespace sw
 {
@@ -57,15 +56,6 @@ namespace sw
             {
                 TFunction expected = pCreate;
                 return pCreate != nullptr && slot.compare_exchange_strong( expected, nullptr, std::memory_order_acq_rel );
-            }
-
-            template <typename TFunction>
-            static uint32 releaseWithin( atomic<TFunction>& slot, const void* pBegin, const void* pEnd )
-            {
-                const TFunction pCreate = slot.load( std::memory_order_acquire );
-                if ( ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( pCreate ), pBegin, pEnd ) == false )
-                    return 0;
-                return release( slot, pCreate ) ? 1 : 0;
             }
 
         private:

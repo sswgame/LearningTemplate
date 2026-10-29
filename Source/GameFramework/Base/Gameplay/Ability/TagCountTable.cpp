@@ -93,8 +93,4 @@ namespace sw
         _changedMulticast.removeAll();
     }
 
-    uint32 TagCountTable::unregisterChangedWithin( const void* pBegin, const void* pEnd )
-    {
-        return _changedMulticast.removeCodeWithin( pBegin, pEnd );
-    }
 } // namespace sw

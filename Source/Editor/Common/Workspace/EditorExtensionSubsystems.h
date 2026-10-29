@@ -3,7 +3,7 @@
  * @brief 확장 모듈(에디터 플러그인)이 등록 줄(`SW_EDITOR_SUBSYSTEM`)로 추가하는 에디터 서브시스템을 만들어 에디터 범위에 등록하고, 모듈이 언로드되기 전에 종료합니다.
  * @details 언리얼에서 에디터가 플러그인 모듈의 `UEditorSubsystem` 파생 클래스를 찾아 만들어 주는 것에 해당한다. 확장 모듈은 에디터가 뜬 뒤에도
  *          핫 리로드로 로드되고 언로드되므로, 에디터 컨텍스트가 처음 한 번 만드는 내장 서브시스템과 따로 둔다. 등록 목록의 세대가 바뀌면 맞추고
- *          (`syncWithRegistry`), 모듈 언로드 직전에 그 이미지의 것을 종료한다(`releaseSubsystemsWithin`). 확장 코드는 함수 정적 싱글턴을 두지 않고
+ *          (`syncWithRegistry`), 모듈을 내리기 전에 그 줄이 빠지면 그 자리에서 종료한다(`syncWithRegistry`). 확장 코드는 함수 정적 싱글턴을 두지 않고
  *          `editor::findSubsystem<T>()` 로 찾는다.
  */
 #pragma once
@@ -26,6 +26,8 @@ namespace sw::editor
     struct EditorSubsystemRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "subsystem";
+        /** @brief 같은 모듈의 패널 · 명령이 쓴다 — 그것들이 먼저 내려가게 나중에 뗀다. */
+        static constexpr uint32 kDetachPass = 1;
 
         unique_ptr<EditorSubsystem> ( *_pCreate )();
         bool ( *_pBind )( SubsystemScope& scope, EditorSubsystem& subsystem );
@@ -73,8 +75,6 @@ namespace sw::editor
 
         /** @brief 등록 목록과 맞춥니다. 사라진 줄의 인스턴스를 종료하고, 새 줄은 만들어 초기화한 뒤 범위에 등록합니다. 세대가 같으면 비교 한 번으로 끝납니다. */
         void syncWithRegistry();
-        /** @brief 등록 항목이 언로드될 모듈 라이브러리 [@p pBegin, @p pEnd) 안에 있는 서브시스템을 종료하고, 종료한 수를 반환합니다. */
-        uint32 releaseSubsystemsWithin( const void* pBegin, const void* pEnd );
         /** @brief 모두 역순으로 종료합니다. 다음 `syncWithRegistry` 가 다시 만듭니다. */
         void releaseAll();
         /** @brief 지금 살아 있는 기여 서브시스템 수입니다. */

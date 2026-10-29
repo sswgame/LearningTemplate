@@ -3,11 +3,11 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -19,37 +19,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "AbilityComponent" );
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @class AbilityModuleUnloadGuard
-     * @brief 모듈(DLL, SO)을 언로드하기 전에, 그 모듈의 코드(게임 어빌리티, 어트리뷰트 세트, 실행 계산, 델리게이트)를 가리키는 참조를 컴포넌트에서 제거합니다.
-     * @details 게임 모듈이 준 어빌리티 인스턴스는 vtable 이 그 모듈 안에 있다. 핫 리로드가 모듈을 언로드한 뒤에 컴포넌트가 그 인스턴스를 지우면,
-     *          이미 언로드된 코드로 점프해서 크래시가 난다. 그래서 컴포넌트마다 리스너를 하나 두고(`ModuleLibraryUtil::registerUnloadHandler`),
-     *          언로드하기 전에 코드가 아직 남아 있을 때 해당 범위의 것을 지운다.
-     */
-    class AbilityModuleUnloadGuard final
-    {
-    public:
-        explicit AbilityModuleUnloadGuard( AbilityComponent& owner )
-            : _owner{ owner }
-        {
-        }
-
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
-        {
-            return _owner.onModuleUnloading( pBegin, pEnd );
-        }
-
-    private:
-        AbilityComponent& _owner;
-
-    private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &AbilityModuleUnloadGuard::onModuleUnloading, "ability system" );
-    };
 } // namespace sw
 
 namespace sw
@@ -85,7 +54,6 @@ namespace sw
         , _abilityActivatedMulticast{}
         , _abilityEndedMulticast{}
         , _gameplayCueMulticast{}
-        , _pModuleCodeGuard{ nullptr }
         , _pCatalog{ nullptr }
         , _time{ 0.0f }
         , _nextHandleID{ 0 }
@@ -99,7 +67,6 @@ namespace sw
         , _damageNumberOffset{ 0.0f, 0.6f, 0.0f }
         , _bShowDamageNumbers{ false }
     {
-        _pModuleCodeGuard = make_unique<AbilityModuleUnloadGuard>( *this );
         // 결정: 태그가 바뀌는 길(이펙트 · 어빌리티 · 이펙트 없이 붙인 태그)은 여럿이지만 알림은 집합 하나에서 나온다 — 걸린 동안의 조건과
         // 태그로 발동하는 어빌리티는 그 알림 하나에 건다. 소멸자의 `unregisterAllChanged` 가 함께 푼다.
         _ownedTagSubscription = _ownedTagCounts.registerChanged( TagCountTable::TagChangedDelegate::create<&AbilityComponent::onOwnedTagChanged>( this ) );
@@ -108,7 +75,6 @@ namespace sw
     AbilityComponent::~AbilityComponent()
     {
         // 순서는 다음과 같다. 먼저 순회가 더 일어나지 않게 하고, 바깥 구독을 해제한다(지우는 중에 게임 코드를 부르지 않기 위해서다). 그다음 어빌리티를 지우고(작업이 이 컴포넌트에서 구독을 해제한다), 마지막에 나머지를 지운다.
-        _pModuleCodeGuard.reset();
         _anyAttributeChangedMulticast.removeAll();
         _ownedTagCounts.unregisterAllChanged();
         _effectAppliedMulticast.removeAll();
@@ -370,43 +336,25 @@ namespace sw
         DamageNumberComponent::spawnNumber( *pManager, position, roundedDamage );
     }
 
-    uint32 AbilityComponent::onModuleUnloading( const void* pBegin, const void* pEnd )
+    void AbilityComponent::onModuleUnloading( string_view moduleName )
     {
-        uint32 releasedCount = 0;
-
-        // 1) 델리게이트: 게임이 등록한 구독이며 스텁이 그 모듈 안에 있다. 지우기 전에 해제해서 정리 중에 호출되지 않게 한다.
-        releasedCount += _anyAttributeChangedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _ownedTagCounts.unregisterChangedWithin( pBegin, pEnd );
-        releasedCount += _effectAppliedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _effectRemovedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _abilityActivatedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _abilityEndedMulticast.removeCodeWithin( pBegin, pEnd );
-        releasedCount += _gameplayCueMulticast.removeCodeWithin( pBegin, pEnd );
-        for ( auto& [name, pMulticast] : _mapAttributeChangedMulticast )
+        const auto isOfModule = [moduleName]( const TypeInfo* pType )
         {
-            (void)name;
-            if ( pMulticast != nullptr )
-                releasedCount += pMulticast->removeCodeWithin( pBegin, pEnd );
-        }
-
+            return pType != nullptr && string_view( pType->_moduleName.c_str() ) == moduleName;
+        };
         {
             const ScopedListLock lock{ *this };
 
-            // 2) 어빌리티: 인스턴스의 vtable 이 그 모듈 안에 있으면 코드가 아직 남아 있는 지금 제거한다. 작업이 등록한 이벤트 구독도 함께 해제된다.
+            // 1) 어빌리티: 그 모듈 타입이면 코드가 아직 남아 있는 지금 제거한다. 작업이 등록한 이벤트 구독도 함께 해제된다.
             const size_t specCount = _listAbilitySpec.size();
             for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
             {
                 AbilitySpec& spec = *_listAbilitySpec[specIndex];
-                if ( spec._bPendingRemove == SW_TRUE )
-                    continue;
-                if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( spec._pAbility.get() ), pBegin, pEnd ) )
-                {
+                if ( spec._bPendingRemove == SW_FALSE && isOfModule( spec._pAbility->getTypeInfo() ) )
                     retireAbilitySpec( spec );
-                    ++releasedCount;
-                }
             }
 
-            // 3) 그 모듈의 실행 계산을 쓰는 이펙트: 다음 주기에 언로드된 코드를 부르지 않도록 해제한다.
+            // 2) 그 모듈의 실행 계산을 쓰는 이펙트: 다음 주기에 언로드된 코드를 부르지 않도록 해제한다.
             const size_t effectCount = _listActiveEffect.size();
             for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
             {
@@ -415,25 +363,20 @@ namespace sw
                     continue;
                 for ( const shared_ptr<const IGameplayEffectExecution>& pExecution : activeEffect._spec._pDef->_listExecution )
                 {
-                    if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pExecution.get() ), pBegin, pEnd ) )
+                    if ( isOfModule( pExecution->getTypeInfo() ) )
                     {
                         removeActiveEffectInternal( activeEffect );
-                        ++releasedCount;
                         break;
                     }
                 }
             }
         }
 
-        // 4) 게임 모듈이 정의한 어트리뷰트 세트: 값도 함께 사라진다. 모듈을 다시 로드하면 게임이 세트를 다시 준다.
+        // 3) 그 모듈이 정의한 어트리뷰트 세트: 값도 함께 사라진다. 모듈을 다시 로드하면 게임이 세트를 다시 준다.
         for ( size_t setIndex = _listAttributeSet.size(); setIndex > 0; --setIndex )
         {
-            if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( _listAttributeSet[setIndex - 1].get() ), pBegin, pEnd ) )
-            {
+            if ( isOfModule( _listAttributeSet[setIndex - 1]->getTypeInfo() ) )
                 _listAttributeSet.erase( _listAttributeSet.begin() + static_cast<ptrdiff_t>( setIndex - 1 ) );
-                ++releasedCount;
-            }
         }
-        return releasedCount;
     }
 } // namespace sw

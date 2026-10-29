@@ -24,9 +24,13 @@ namespace sw
      * @class FriendListScreen
      * @brief 친구 목록 화면입니다.
      */
+    REFLECT( Abstract )
     class SW_KIT_API FriendListScreen : public UIScreen
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
         FriendListScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
         ~FriendListScreen() override;
 

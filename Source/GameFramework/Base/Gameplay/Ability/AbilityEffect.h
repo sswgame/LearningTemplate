@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -171,11 +172,17 @@ namespace sw
      * @details 상태를 갖지 않으므로 여러 정의가 인스턴스 하나를 함께 쓴다(`shared_ptr<const ...>`). 데이터에서 매개변수를 받는 공식은
      *          카탈로그가 만들 때 매개변수를 넣는다(`DamageExecution` 의 SetByCaller 이름과 계수).
      */
-    class IGameplayEffectExecution
+    REFLECT( Abstract )
+    class SW_GF_API IGameplayEffectExecution
     {
     public:
+        REFLECT_BODY();
+
         IGameplayEffectExecution()          = default;
         virtual ~IGameplayEffectExecution() = default;
+
+        /** @brief 동적 리플렉션 타입입니다. 파생 클래스는 `REFLECT( Abstract )` 를 붙이고 자기 `StaticType()` 을 반환하도록 재정의합니다(모듈을 내릴 때 타입의 모듈 이름으로 고른다). */
+        virtual const TypeInfo* getTypeInfo() const;
 
         IGameplayEffectExecution( const IGameplayEffectExecution& )            = delete;
         IGameplayEffectExecution& operator=( const IGameplayEffectExecution& ) = delete;
@@ -194,9 +201,13 @@ namespace sw
      *          `Armor`(current)이고, 음수이면 0 으로 본다. 결과가 0 이하이면 아무것도 내지 않는다. 어트리뷰트 이름은 `CombatAttributeSet` 의 것을 쓴다.
      *          다른 어트리뷰트 이름으로 같은 공식을 쓰려면 이 클래스를 참고해서 클래스를 하나 더 만든다.
      */
+    REFLECT( Abstract )
     class SW_GF_API DamageExecution final : public IGameplayEffectExecution
     {
     public:
+        REFLECT_BODY();
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
         DamageExecution();
 
         void execute( const AbilityEffectExecutionParams& params, vector<EvaluatedModifier>& outListModifier ) const override;

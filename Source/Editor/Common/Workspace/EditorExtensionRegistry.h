@@ -5,10 +5,13 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 
 #include "Editor/Common/EditorExports.h"
+
+#include "Engine/Module/ModuleObjectRegistrar.h"
 
 #include <type_traits>
 
@@ -21,6 +24,11 @@ namespace sw::editor
      */
     struct EditorExtensionRegistration
     {
+        /** @brief 모듈을 내릴 때 떼는 차례(`ModuleObjectRegistrar::getDetachPass`)입니다. 다른 등록의 인스턴스가 쓰는 종류만 키운다. */
+        static constexpr uint32 kDetachPass = 0;
+        /** @brief 떼기 직전에 불립니다(`EditorExtensionRegistrar::detach`). 기본은 할 일이 없다 — 종류가 같은 이름으로 가린다(환경설정은 저장한다). */
+        static void onDetaching( const EditorExtensionRegistration& registration ) { (void)registration; }
+
         const utf8* _pID;   ///< 종류 안에서 유일한 id. 같은 id 의 두 번째 등록은 거절된다
         int32       _order; ///< 표시 순서. 작을수록 앞이고, 같으면 id 사전순이다
     };
@@ -71,6 +79,11 @@ namespace sw::editor
      *          목록은 EditorModule 을 언로드할 때 사라진다. 확장 모듈은 EditorModule 에 의존하므로 항상 먼저 언로드된다(리로드 그래프와 종료 순서).
      */
     SW_EDITOR_API EditorExtensionRegistrationList& getEditorExtensionRegistrationList( const utf8* pKindName );
+    /**
+     * @brief 어느 종류든 등록이 빠지면(`removeRegistration`) 빠진 **뒤에** 불릴 함수를 겁니다. 구독이 사라지면 뗍니다.
+     * @details 인스턴스를 만들어 둔 쪽(에디터 컨텍스트)이 그 자리에서 목록과 맞춰, 빠진 등록으로 만든 인스턴스를 그 모듈 코드가 살아 있을 때 거둔다.
+     */
+    [[nodiscard]] SW_EDITOR_API Subscription subscribeEditorExtensionRemoved( const Delegate<void()>& delegate );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -110,26 +123,45 @@ namespace sw::editor
 {
     /**
      * @class EditorExtensionRegistrar
-     * @brief 확장의 코드 파일에 정적 객체로 두면 항목을 등록하고, 모듈을 언로드할 때 뺍니다.
-     * @details EditorModule 과 확장 모듈은 DLL 이므로 소스의 오브젝트 파일이 모두 링크된다. 아무도 참조하지 않는 등록자도 버려지지 않는다.
-     *          직접 쓰지 말고 `SW_EDITOR_PANEL` 같은 종류별 매크로를 쓴다.
+     * @brief 확장의 코드 파일에 정적 객체로 두면, 그 모듈을 올릴 때 항목을 등록하고(`attach`) 내리기 전에 뺍니다(`detach`).
+     * @details 만들 때는 링크 때 목록에만 달린다(`ModuleObjectRegistrar`) — 핫 리로드가 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않는다.
+     *          빼면 목록이 알리고(`subscribeEditorExtensionRemoved`) 에디터가 그 줄로 만든 인스턴스를 그 자리에서 거둔다 — 코드 주소로 고르지 않는다.
+     *          EditorModule 과 확장 모듈은 DLL 이므로 소스의 오브젝트 파일이 모두 링크된다. 아무도 참조하지 않는 등록자도 버려지지 않는다.
+     *          직접 쓰지 말고 `SW_EDITOR_PANEL` 같은 종류별 매크로를 쓴다. 빼기 전에 `TRegistration::onDetaching` 을 부른다.
      */
     template <typename TRegistration>
-    class EditorExtensionRegistrar
+    class EditorExtensionRegistrar : public ModuleObjectRegistrar
     {
     public:
         explicit EditorExtensionRegistrar( const TRegistration& registration )
             : _registration{ registration }
-            , _bRegistered{ EditorExtensionRegistry<TRegistration>::getList().addRegistration( _registration ) }
+            , _bRegistered{ false }
         {
+            (void)EditorExtensionRegistry<TRegistration>::getList(); // 목록을 먼저 세운다 — 같은 이미지의 목록이 이 등록자보다 먼저 사라지지 않게(정적 소멸은 역순)
         }
-        ~EditorExtensionRegistrar() { EditorExtensionRegistry<TRegistration>::getList().removeRegistration( _registration ); }
+        /** @brief 모듈 경로 밖에서 붙은 채 사라지면(프로세스 끝) 뺍니다. */
+        ~EditorExtensionRegistrar()
+        {
+            if ( _bRegistered )
+                EditorExtensionRegistry<TRegistration>::getList().removeRegistration( _registration );
+        }
 
         EditorExtensionRegistrar( const EditorExtensionRegistrar& )            = delete;
         EditorExtensionRegistrar& operator=( const EditorExtensionRegistrar& ) = delete;
 
+        void attach() override { _bRegistered = EditorExtensionRegistry<TRegistration>::getList().addRegistration( _registration ); }
+        void detach() override
+        {
+            if ( _bRegistered == false )
+                return;
+            TRegistration::onDetaching( _registration );
+            _bRegistered = false;
+            EditorExtensionRegistry<TRegistration>::getList().removeRegistration( _registration );
+        }
+        uint32 getDetachPass() const override { return TRegistration::kDetachPass; }
+
         const TRegistration& getRegistration() const { return _registration; }
-        /** @brief 등록이 받아들여졌으면 true 입니다. 같은 id 가 먼저 있었으면 false 입니다. */
+        /** @brief 등록이 받아들여져 올라 있으면 true 입니다. 같은 id 가 먼저 있었거나 아직 붙지 않았으면 false 입니다. */
         bool isRegistered() const { return _bRegistered; }
 
     private:
@@ -142,11 +174,11 @@ namespace sw::editor
  * @brief 등록 항목 하나를 이 파일의 정적 등록자로 둡니다. `name` 은 파일 안에서 유일한 식별자 조각이며 보통 타입 이름입니다.
  * @details 유니티 빌드가 여러 .cpp 를 한 번역 단위로 합치므로 변수 이름에 `name` 을 붙여 겹치지 않게 합니다.
  */
-#define SW_EDITOR_REGISTER( TRegistration, name, ... )                                           \
-    static const ::sw::editor::EditorExtensionRegistrar<TRegistration> sw_editorRegistrar_##name \
-    {                                                                                            \
-        TRegistration                                                                            \
-        {                                                                                        \
-            __VA_ARGS__                                                                          \
-        }                                                                                        \
+#define SW_EDITOR_REGISTER( TRegistration, name, ... )                                     \
+    static ::sw::editor::EditorExtensionRegistrar<TRegistration> sw_editorRegistrar_##name \
+    {                                                                                      \
+        TRegistration                                                                      \
+        {                                                                                  \
+            __VA_ARGS__                                                                    \
+        }                                                                                  \
     }

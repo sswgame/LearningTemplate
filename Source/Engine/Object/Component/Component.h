@@ -405,6 +405,12 @@ namespace sw
          */
         virtual void onPostLoad() {}
         /**
+         * @brief 모듈 @p moduleName 을 내리기 직전(그 코드가 아직 있을 때)에 불립니다. 그 모듈 **타입**(`TypeInfo` 의 모듈 이름)의 객체를 든 컴포넌트가 그것을 놓는다.
+         * @details 컴포넌트 자신이 그 모듈 타입이면 이 뒤에 지워진다(`destroyComponentsOfModule`) — 여기서 할 일은 엔진 · 키트 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트)다.
+         *          모듈 언로드는 개발 빌드만 하고 게임 스레드에서 부른다(`engine::unregisterModuleTypes`). 코드 주소로 고르지 않는다(언리얼은 클래스의 패키지로 다시 만든다).
+         */
+        virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
+        /**
          * @brief 씬 상태 해시(`SceneStateHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
          *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 파생 타입은 부모 것을 먼저 부른다.

@@ -46,6 +46,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<SceneAssetTypeActions> s_sceneAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<SceneAssetTypeActions> s_sceneAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

@@ -5,7 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
@@ -191,16 +190,10 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorPreferencesStore::hasSectionWithin( const void* pBegin, const void* pEnd )
+    void EditorSettingsRegistration::onDetaching( const EditorSettingsRegistration& registration )
     {
-        using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
-        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
-        {
-            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
-            if ( registration._pfnGetType() != nullptr && ModuleLibraryUtil::isAddressWithin( registration._pInstance, pBegin, pEnd ) )
-                return true;
-        }
-        return false;
+        if ( registration._pfnGetType() != nullptr )
+            (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
     }
 
     string EditorPreferencesStore::makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault )

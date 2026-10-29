@@ -47,42 +47,7 @@ namespace sw
                 return string_view{ entry._arrDirectory };
             }
 
-#if defined( SW_PLATFORM_LINUX )
-            /** @brief `dl_iterate_phdr` 가 라이브러리마다 부르는 곳에 넘기는 문맥입니다. */
-            struct LibraryRangeQuery
-            {
-                uintptr_t _address{ 0 };
-                uintptr_t _begin{ 0 };
-                uintptr_t _end{ 0 };
-                bool      _bFound{ false };
-            };
-
-            /** @brief 라이브러리 하나의 PT_LOAD 범위를 모아 @p pContext 의 주소를 담는지 봅니다. 담으면 1 을 반환해 순회를 멈춥니다. */
-            static int32 collectLibraryRange( struct dl_phdr_info* pInfo, size_t, void* pContext )
-            {
-                LibraryRangeQuery* pQuery = static_cast<LibraryRangeQuery*>( pContext );
-                uintptr_t          begin  = UINTPTR_MAX;
-                uintptr_t          end    = 0;
-                for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )
-                {
-                    const ElfW( Phdr ) & header = pInfo->dlpi_phdr[headerIndex];
-                    if ( header.p_type != PT_LOAD )
-                        continue;
-                    const uintptr_t segmentBegin = pInfo->dlpi_addr + header.p_vaddr;
-                    const uintptr_t segmentEnd   = segmentBegin + header.p_memsz;
-                    begin                        = MathUtil::min( begin, segmentBegin );
-                    end                          = MathUtil::max( end, segmentEnd );
-                }
-                if ( begin <= pQuery->_address && pQuery->_address < end )
-                {
-                    pQuery->_begin  = begin;
-                    pQuery->_end    = end;
-                    pQuery->_bFound = true;
-                    return 1;
-                }
-                return 0;
-            }
-#elif defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS )
             /** @brief 라이브러리 기준 주소 @p pBase 의 PE NT 머리입니다. DOS · NT 서명이 맞지 않으면 nullptr 입니다. */
             static const IMAGE_NT_HEADERS* findNtHeaders( const void* pBase )
             {
@@ -120,98 +85,6 @@ namespace sw
             }
 #endif
         };
-        /**
-         * @class ModuleUnloadHandlerList
-         * @brief 살아 있는 언로드 처리기 목록과 그 잠금입니다(`ModuleLibraryUtil::registerUnloadHandler`). 구독이 풀리면 그 처리기를 뺀다.
-         * @details 함수 지역 static 으로 둔다(`getModuleUnloadHandlerList`) — 정적 처리기(로그 리스너)가 정적 초기화 중에 오르므로 목록이 그보다 먼저 서야 하고,
-         *          먼저 선 것이 나중에 사라지므로 정적 처리기의 구독이 죽은 목록을 밟지 않는다(목록이 먼저 사라지면 구독이 무효가 된다).
-         */
-        class ModuleUnloadHandlerList final : public SubscriptionSource
-        {
-        public:
-            /** @brief 처리기 하나를 부른 결과입니다. */
-            struct ReleaseResult
-            {
-                const utf8* _pHandlerName{ nullptr };
-                uint32      _releasedCount{ 0 };
-                bool        _bExpected{ false };
-            };
-
-            Subscription add( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
-            {
-                uint64 id = 0;
-                if ( isWalkingThread() )
-                {
-                    id = _nextID++; // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
-                    _listEntry.push_back( Entry{ id, desc, function } );
-                }
-                else
-                {
-                    ScopedLock<mutex> lock{ _mutex };
-                    id = _nextID++;
-                    _listEntry.push_back( Entry{ id, desc, function } );
-                }
-                return issueSubscription( id );
-            }
-
-            /** @brief 살아 있는 모든 처리기에 범위를 넘깁니다. 시작 때의 사본을 돌고, 앞 처리기 안에서 풀린 것은 건너뛴다. */
-            void releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult )
-            {
-                outListResult.clear();
-                ScopedLock<mutex>   lock{ _mutex };
-                const vector<Entry> listSnapshot = _listEntry;
-                _walkingThread                   = std::this_thread::get_id();
-                outListResult.reserve( listSnapshot.size() );
-                for ( const Entry& entry : listSnapshot )
-                {
-                    if ( VectorUtil::findIf( _listEntry, [&entry]( const Entry& live )
-                    { return live._id == entry._id; } ) == nullptr )
-                        continue;
-                    ReleaseResult result{};
-                    result._pHandlerName  = entry._desc._pName;
-                    result._bExpected     = entry._desc._bReleaseExpected;
-                    result._releasedCount = entry._function( pBegin, pEnd );
-                    outListResult.push_back( result );
-                }
-                _walkingThread = std::thread::id{};
-            }
-
-        private:
-            struct Entry
-            {
-                uint64                  _id{ 0 };
-                ModuleUnloadHandlerDesc _desc{};
-                ModuleUnloadFunction    _function{};
-            };
-
-            /** @brief 지금 스레드가 훑기 중인 그 스레드인지 묻습니다(그러면 이미 잠금을 쥐고 있다). */
-            bool isWalkingThread() const { return _walkingThread == std::this_thread::get_id(); }
-
-            void releaseSubscription( const uint64 id ) override
-            {
-                const auto removeEntry = [this, id]()
-                { VectorUtil::removeIf( _listEntry, [id]( const Entry& entry )
-                  { return entry._id == id; } ); };
-                if ( isWalkingThread() )
-                {
-                    removeEntry(); // 훑기 안에서 — 훑기는 사본을 돌고 지워진 것은 건너뛴다
-                    return;
-                }
-                ScopedLock<mutex> lock{ _mutex };
-                removeEntry();
-            }
-
-            mutex           _mutex;
-            vector<Entry>   _listEntry;
-            uint64          _nextID{ 1 };
-            std::thread::id _walkingThread; ///< `releaseAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
-        };
-
-        ModuleUnloadHandlerList& getModuleUnloadHandlerList()
-        {
-            static ModuleUnloadHandlerList s_list;
-            return s_list;
-        }
     } // namespace
 
     string_view ModuleLibraryUtil::getSharedLibraryPrefix()
@@ -397,57 +270,6 @@ namespace sw
 #endif
     }
 
-    bool ModuleLibraryUtil::findLoadedLibraryRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd )
-    {
-        pOutBegin = nullptr;
-        pOutEnd   = nullptr;
-        if ( pAddressInside == nullptr )
-            return false;
-#if defined( SW_PLATFORM_WINDOWS )
-        HMODULE hModule = nullptr;
-        if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                                 static_cast<LPCWSTR>( pAddressInside ), &hModule ) == FALSE )
-            return false;
-        const IMAGE_NT_HEADERS* pNt = ModuleLibraryUtilInternal::findNtHeaders( hModule );
-        if ( pNt == nullptr )
-            return false;
-        pOutBegin = hModule;
-        pOutEnd   = reinterpret_cast<const uint8*>( hModule ) + pNt->OptionalHeader.SizeOfImage;
-        return true;
-#elif defined( SW_PLATFORM_LINUX )
-        ModuleLibraryUtilInternal::LibraryRangeQuery query{};
-        query._address = reinterpret_cast<uintptr_t>( pAddressInside );
-        dl_iterate_phdr( &ModuleLibraryUtilInternal::collectLibraryRange, &query );
-        if ( query._bFound == false )
-            return false;
-        pOutBegin = reinterpret_cast<const void*>( query._begin );
-        pOutEnd   = reinterpret_cast<const void*>( query._end );
-        return true;
-#else
-        return false;
-#endif
-    }
-
-    bool ModuleLibraryUtil::findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd )
-    {
-        pOutBegin = nullptr;
-        pOutEnd   = nullptr;
-        if ( pHandle == nullptr )
-            return false;
-#if defined( SW_PLATFORM_WINDOWS )
-        // Windows 의 모듈 핸들은 라이브러리의 기준 주소다.
-        return findLoadedLibraryRange( pHandle, pOutBegin, pOutEnd );
-#elif defined( SW_PLATFORM_LINUX )
-        // 리눅스 핸들은 주소가 아니다. 링크 맵이 가리키는 동적 섹션은 라이브러리 안에 있다.
-        struct link_map* pLinkMap = nullptr;
-        if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr )
-            return false;
-        return findLoadedLibraryRange( pLinkMap->l_ld, pOutBegin, pOutEnd );
-#else
-        return false;
-#endif
-    }
-
     void ModuleLibraryUtil::unloadDynamicLibrary( void* pHandle )
     {
         if ( pHandle == nullptr )
@@ -518,26 +340,6 @@ namespace sw
     }
 
 #if SW_WITH_DYNAMIC_MODULES
-    uint32 ModuleLibraryUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd )
-    {
-        // 모듈은 자기가 등록한 것을 스스로 해제해야 한다 — 등록 API 는 구독(`Subscription`)을 돌려주므로 구독을 든 객체가 사라지면 풀린다.
-        // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 라이브러리는 내린다).
-        vector<ModuleUnloadHandlerList::ReleaseResult> listResult;
-        if ( pBegin != nullptr && pEnd != nullptr )
-            getModuleUnloadHandlerList().releaseAllWithin( pBegin, pEnd, listResult );
-
-        uint32 releasedCount{ 0 };
-        for ( const ModuleUnloadHandlerList::ReleaseResult& result : listResult )
-        {
-            releasedCount += result._releasedCount;
-            if ( result._releasedCount > 0 && result._bExpected )
-                SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
-            else if ( result._releasedCount > 0 )
-                SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
-        }
-        return releasedCount;
-    }
-
     void* ModuleLibraryUtil::findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
     {
     #if defined( SW_PLATFORM_WINDOWS )
@@ -574,44 +376,18 @@ namespace sw
     #endif
     }
 
-    void ModuleLibraryUtil::releaseLibraryCode( string_view moduleName, void* pHandle )
-    {
-        const void* pBegin{ nullptr };
-        const void* pEnd{ nullptr };
-        if ( pHandle == nullptr || findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
-            return;
-        (void)releaseModuleCode( moduleName, pBegin, pEnd ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
-    }
-
     bool ModuleLibraryUtil::unloadModuleLibrary( string_view moduleName, void* pHandle )
     {
         if ( pHandle == nullptr )
             return false;
-        releaseLibraryCode( moduleName, pHandle );
+        (void)moduleName; // 이름은 로그 자리 — 등록은 내리기 전에 모듈 경로가 뗐다(`engine::unregisterModuleTypes`)
 
-        // 이 라이브러리가 끌어온 의존 라이브러리가 함께 언로드되지 않게 한다. 그 라이브러리의 코드를 가리키는 등록은 여기서 해제할 수 없다.
+        // 이 라이브러리가 끌어온 의존 라이브러리가 함께 언로드되지 않게 한다. 그 라이브러리를 가리키는 등록은 여기서 뗄 수 없다.
         (void)pinDynamicLibraryDependencies( pHandle );
         unloadDynamicLibrary( pHandle );
         return true;
     }
 
-    Subscription ModuleLibraryUtil::registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function )
-    {
-        return getModuleUnloadHandlerList().add( desc, function );
-    }
-
 #endif // SW_WITH_DYNAMIC_MODULES
 
-    bool ModuleLibraryUtil::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
-    {
-        const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );
-        return code != 0 && reinterpret_cast<uintptr_t>( pBegin ) <= code && code < reinterpret_cast<uintptr_t>( pEnd );
-    }
-
-    const void* ModuleLibraryUtil::findVtableAddress( const void* pObject )
-    {
-        if ( pObject == nullptr )
-            return nullptr;
-        return *static_cast<const void* const*>( pObject );
-    }
 } // namespace sw

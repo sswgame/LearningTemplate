@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/DelegateSlot.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Window/CursorShape.h"

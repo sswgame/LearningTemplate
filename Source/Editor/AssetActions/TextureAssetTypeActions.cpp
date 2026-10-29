@@ -77,6 +77,6 @@ namespace sw::editor
             }
         };
 
-        const EditorAssetTypeActionsRegistrar<TextureAssetTypeActions> s_textureAssetTypeActionsRegistrar{};
+        EditorAssetTypeActionsRegistrar<TextureAssetTypeActions> s_textureAssetTypeActionsRegistrar{};
     } // namespace
 } // namespace sw::editor

@@ -12,6 +12,8 @@
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleObjectRegistrar.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -36,6 +38,49 @@ namespace sw
         {
             // 모듈 등록 · 해제는 엔진 서비스가 선 동안에만 일어난다(아래가 서비스를 부른다) — 범위는 열려 있다.
             return s_mapModuleHead.getRequired();
+        }
+
+        /** @brief 모듈 이름 → 붙인 등록자(붙인 순서)입니다. 내리기 전에 떼고 지운다. 엔진 수명 범위가 소유한다. */
+        ScopeOwned<unordered_map<string, vector<ModuleObjectRegistrar*>>> s_mapModuleObjectRegistrar;
+
+        /** @brief @p pHead 의 등록자를 만든 순서(정적 초기화 순서)로 붙이고 @p moduleName 아래 기록합니다. */
+        void attachModuleObjects( string_view moduleName, ModuleObjectRegistrar* pHead )
+        {
+            vector<ModuleObjectRegistrar*> listRegistrar;
+            for ( ModuleObjectRegistrar* pRegistrar = pHead; pRegistrar != nullptr; pRegistrar = pRegistrar->getNext() )
+            {
+                listRegistrar.push_back( pRegistrar );
+            }
+            vector<ModuleObjectRegistrar*>& listAttached = s_mapModuleObjectRegistrar.getRequired()[string{ moduleName }];
+            for ( size_t index = listRegistrar.size(); index > 0; --index )
+            {
+                listRegistrar[index - 1]->attach();
+                listAttached.push_back( listRegistrar[index - 1] );
+            }
+        }
+
+        /** @brief @p moduleName 아래 붙인 등록자를 차례(`getDetachPass`)대로, 같은 차례 안에서는 붙인 역순으로 뗍니다. */
+        void detachModuleObjects( string_view moduleName )
+        {
+            unordered_map<string, vector<ModuleObjectRegistrar*>>& mapRegistrar = s_mapModuleObjectRegistrar.getRequired();
+            const auto                                             it           = mapRegistrar.find( string{ moduleName } );
+            if ( it == mapRegistrar.end() )
+                return;
+            const vector<ModuleObjectRegistrar*> listAttached = std::move( it->second );
+            mapRegistrar.erase( it );
+            uint32 lastPass{ 0 };
+            for ( const ModuleObjectRegistrar* pRegistrar : listAttached )
+            {
+                lastPass = std::max( lastPass, pRegistrar->getDetachPass() );
+            }
+            for ( uint32 pass = 0; pass <= lastPass; ++pass )
+            {
+                for ( size_t index = listAttached.size(); index > 0; --index )
+                {
+                    if ( listAttached[index - 1]->getDetachPass() == pass )
+                        listAttached[index - 1]->detach();
+                }
+            }
         }
 
         /**
@@ -82,6 +127,7 @@ namespace sw
             heads._pEnum     = EnumRegistrar::getHead();
             heads._pVariable = GlobalVariableRegistrar::getHead();
             heads._pDataKind = AssetDataKindRegistrar::getHead();
+            heads._pObject   = ModuleObjectRegistrar::getHead();
             return heads;
         }
 
@@ -91,6 +137,7 @@ namespace sw
             EnumRegistrar::getHead()           = heads._pEnum;
             GlobalVariableRegistrar::getHead() = heads._pVariable;
             AssetDataKindRegistrar::getHead()  = heads._pDataKind;
+            ModuleObjectRegistrar::getHead()   = heads._pObject;
         }
 
         void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads )
@@ -104,6 +151,9 @@ namespace sw
             // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
             if ( heads._pDataKind != nullptr )
                 (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( moduleName, heads._pDataKind );
+            // 엔진 밖 레지스트리(편집기 확장 · 키트)의 등록자도 새로 뗀 것만 붙인다. 모듈을 내리기 전에 같은 이름으로 뗀다.
+            if ( heads._pObject != nullptr )
+                attachModuleObjects( moduleName, heads._pObject );
 
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
@@ -163,13 +213,23 @@ namespace sw
         void unregisterModuleTypes( string_view moduleName )
         {
             getModuleHeadCache().erase( string{ moduleName } );
+            // 모듈 타입의 인스턴스를 든 쪽(UI 화면 · 어빌리티 · 편집기)이 타입의 모듈 이름으로 자기 것을 놓는다 — 타입과 코드가 아직 있을 때다.
+            getSubsystem<TypeRegistry>().publishModuleUnloading( moduleName );
+            // 그다음 모듈의 등록 줄을 뗀다 — 레지스트리가 그 줄로 만든 인스턴스(패널 · 명령 …)를 이 안에서 거둔다.
+            detachModuleObjects( moduleName );
             getSubsystem<SceneManager>().waitForPendingLoad(); // 해제도 상속 캐시를 비운다(등록과 같은 이유)
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
             // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {
-                if ( scene && scene->getObjectManager() )
-                    scene->getObjectManager()->destroyComponentsOfModule( moduleName );
+                if ( scene == nullptr || scene->getObjectManager() == nullptr )
+                    continue;
+                // 남의 모듈 타입 객체를 든 컴포넌트(어빌리티 · 세트)가 먼저 놓고, 그 모듈 타입의 컴포넌트를 지운다.
+                scene->getObjectManager()->forEachComponent( [moduleName]( Component* pComponent )
+                {
+                    pComponent->onModuleUnloading( moduleName );
+                } );
+                scene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );

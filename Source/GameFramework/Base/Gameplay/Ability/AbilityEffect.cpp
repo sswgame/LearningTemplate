@@ -33,6 +33,11 @@ namespace sw
         return true;
     }
 
+    const TypeInfo* IGameplayEffectExecution::getTypeInfo() const
+    {
+        return StaticType();
+    }
+
     DamageExecution::DamageExecution()
         : _damageName{ "Damage" }
         , _attackPowerCoefficient{ 0.0f }

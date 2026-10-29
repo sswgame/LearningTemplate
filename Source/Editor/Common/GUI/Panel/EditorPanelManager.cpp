@@ -5,7 +5,6 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
@@ -124,14 +123,20 @@ namespace sw::editor
             return;
         _syncedGeneration = list.getGeneration();
 
-        // 1) 등록 목록에서 사라진 줄의 인스턴스를 종료한다(정상 경로에서는 releasePanelsWithin 이 먼저 했다 — 여기는 줄을 직접 뺀 경우)
+        // 1) 등록 목록에서 사라진 줄의 인스턴스를 종료한다(모듈을 내리기 전 — 줄이 빠진 그 자리에서 불린다)
         for ( size_t index = _listPanel.size(); index-- > 0; )
         {
             EditorPanelEntry& entry = _listPanel[index];
             if ( entry._pRegistration == nullptr || PanelRegistry::find( entry._id ) == entry._pRegistration )
                 continue;
             if ( entry._pInstance != nullptr )
+            {
+                if ( entry._pInstance->isDocumentDirty() )
+                    SW_LOG_WARNING( "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
+                if ( entry._pInstance->isOpen() )
+                    _listRememberedOpenID.push_back( entry._id );
                 entry._pInstance->shutdown( pRHIDevice );
+            }
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
         }
         // 2) 등록 순서대로 다시 줄 세우고 새 줄은 만든다 — 그리기 순서와 Panel 메뉴 순서가 등록 목록과 같다
@@ -168,28 +173,6 @@ namespace sw::editor
                 listSorted.push_back( std::move( entry ) );
         }
         _listPanel = std::move( listSorted );
-    }
-
-    uint32 EditorPanelManager::releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice )
-    {
-        uint32 releasedCount{ 0 };
-        for ( size_t index = _listPanel.size(); index-- > 0; )
-        {
-            EditorPanelEntry& entry = _listPanel[index];
-            if ( ModuleLibraryUtil::isAddressWithin( entry._pRegistration, pBegin, pEnd ) == false )
-                continue;
-            if ( entry._pInstance != nullptr )
-            {
-                if ( entry._pInstance->isDocumentDirty() )
-                    SW_LOG_WARNING( "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
-                if ( entry._pInstance->isOpen() )
-                    _listRememberedOpenID.push_back( entry._id );
-                entry._pInstance->shutdown( pRHIDevice );
-            }
-            _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
-            ++releasedCount;
-        }
-        return releasedCount;
     }
 
     uint32 EditorPanelManager::resetOptionalPanels( IRHIDevice* pRHIDevice )
