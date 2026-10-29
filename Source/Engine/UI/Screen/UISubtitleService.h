@@ -43,7 +43,7 @@ namespace sw
      *          `gv_subtitleSize`(0, 1, 2)는 문서에 적힌 글 크기에 0.85, 1, 1.3 을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
      *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 게임 스레드에서만 쓴다.
      */
-    class SW_API UISubtitleService
+    class SW_API UISubtitleService final : public ISubsystem
     {
     public:
         /** @brief 동시에 보이는 줄 수입니다. */

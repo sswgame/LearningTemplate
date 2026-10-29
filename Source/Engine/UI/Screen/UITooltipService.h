@@ -30,7 +30,7 @@ namespace sw
      *          - 커서: 호버 경로의 잎에서 올라가 처음 만난 `Inherit` 가 아닌 모양이다. 루트까지 모두 `Inherit` 면 화살표다. 호버가 없으면 화살표다.
      *          문서의 위젯 이름: `Body`(옮기는 바탕), `Text`(글). 게임 스레드에서만 쓴다.
      */
-    class SW_API UITooltipService
+    class SW_API UITooltipService final : public ISubsystem
     {
     public:
         /** @brief 툴팁을 포인터에서 이만큼(UI 단위) 오른쪽 아래에 둡니다. */
