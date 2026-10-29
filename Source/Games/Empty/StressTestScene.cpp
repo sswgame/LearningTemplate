@@ -216,7 +216,7 @@ namespace sw
 
     /**
      * @brief `-gv_stressTestUiMarkers=K`: 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen, 숫자 글자)를 붙입니다(데미지 숫자가 많이 뜨는 경우를 재현합니다).
-     * @details 마커는 프레임마다 월드 좌표를 화면에 투영해 배치합니다. 위젯 벤치(`-gv_stressTestUiWidgets`, 엔진 `UIStressTestScreen`)와 함께 `GT.UI.*` 로 측정합니다.
+     * @details 마커는 프레임마다 월드 좌표를 화면에 투영해 배치합니다. 위젯 벤치(`-gv_stressTestUiWidgets`, 같은 게임의 `UIStressTestScreen`)와 함께 `GT.UI.*` 로 측정합니다.
      *          큐브 수(`-gv_stressTestMeshes`)보다 크면 큐브 수만큼 붙입니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );

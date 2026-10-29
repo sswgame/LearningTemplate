@@ -27,10 +27,14 @@ namespace sw
      *          이기는지 판단하는 측정용이며, 방법과 기준은 `UI/README.md` "성능" 의 "측정 시나리오" 에 있다).
      *          .cpp 의 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_stressTestUiWidgets` 를 보고 열고 닫는다(HUD 레이어이며 포커스와 입력을 받지 않는다).
      */
-    class SW_API UIStressTestScreen final : public UIScreen
+    REFLECT( Abstract )
+    class UIStressTestScreen final : public UIScreen
     {
     public:
-        static constexpr float32 kCellWidth    = 140.0f; ///< 칸 하나의 크기입니다(UI 단위).
+        REFLECT_BODY();
+
+        const TypeInfo*          getTypeInfo() const override { return StaticType(); } // 모듈을 내릴 때 UI 가 이 타입으로 닫는다(`UIScreen` 의 타입 규칙)
+        static constexpr float32 kCellWidth    = 140.0f;                               ///< 칸 하나의 크기입니다(UI 단위).
         static constexpr float32 kCellHeight   = 44.0f;
         static constexpr uint32  kChurnWindow  = 128;   ///< 텍스트를 바꾸는 칸은 앞쪽 이만큼 안에서 돕니다(보이는 칸이며, 칠하기까지 측정합니다).
         static constexpr float32 kPulseOpacity = 0.95f; ///< `gv_stressTestUiOpacityPulse` 가 번갈아 쓰는 루트 불투명도입니다(1 과 이 값).
