@@ -22,6 +22,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
+#include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
