@@ -68,15 +68,9 @@ namespace sw::editor
         [[nodiscard]] static string_view getName( TextureImportFormat format );
         /**
          * @brief 임포터가 @p format · @p bSRGB 로 써 내는 DDS 의 DXGI 형식 번호입니다. sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSRGB 를 보지 않습니다.
-         * @details 임포터(`TextureImporter`)는 이 함수로만 DXGI 를 고른다 — 이름 · 번호 · sRGB 짝이 한 표에 있어 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
+         * @details 임포터(`TextureImporter`)는 이 함수로만 DXGI 를 고른다 — 이름 · 번호 · sRGB 짝이 한 표에 있다.
          */
         [[nodiscard]] static uint32 getDxgiFormat( TextureImportFormat format, bool bSRGB );
-        /**
-         * @brief 임포터가 써 낼 수 있는 모든 DDS 형식의 DXGI 이름입니다(형식마다 UNORM 과, 있으면 sRGB 짝).
-         * @details 에셋 검증 규칙(`Config/Editor/AssetValidationRules.json` 의 `allowed_formats` · `rejected_formats`)이 이 이름을 모두 허용 · 거절 중 하나로 적었는지
-         *          테스트가 본다(`EditorTexturePipelineTest.EveryImportOutputFormatIsDecidedByTheAssetRules`). 새 형식을 더하면 규칙 파일도 고쳐야 그 테스트가 통과한다.
-         */
-        [[nodiscard]] static vector<string_view> getWrittenFormatNames();
     };
 } // namespace sw::editor
 

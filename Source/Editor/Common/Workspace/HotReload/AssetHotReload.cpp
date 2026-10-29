@@ -8,7 +8,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -32,12 +31,6 @@
 
 namespace sw::editor
 {
-    span<const utf8* const> AssetHotReload::getSubsystemDependencies() const
-    {
-        static constexpr const utf8* kArrDependency[] = { EditorAssetValidation::kSubsystemName };
-        return kArrDependency;
-    }
-
     namespace
     {
         struct AssetHotReloadInternal
@@ -353,12 +346,10 @@ namespace sw::editor
         if ( relPath.empty() )
             return;
 
-        // 워커 임포터의 원본(모델 · 텍스처 · 높이장 원본)은 임포트 잡이 임포트한다 — 에디터 스레드에서 동기로 돌지 않는다. 원본은 임포트가 쓰는 파일이 아니라 바로 검증을 요청한다.
+        // 워커 임포터의 원본(모델 · 텍스처 · 높이장 원본)은 임포트 잡이 임포트한다 — 에디터 스레드에서 동기로 돌지 않는다.
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relPath );
         if ( route._pfnImportSource != nullptr && route._importThread == AssetImportThread::Worker )
         {
-            if ( EditorContext* pContext = editor::findSubsystem<EditorContext>(); pContext != nullptr )
-                pContext->getSubsystem<EditorAssetValidation>().requestValidation( relPath );
             requestSourceImport( relPath, route._pfnImportSource );
             return;
         }
@@ -375,10 +366,6 @@ namespace sw::editor
 
     void AssetHotReload::handleChangedFile( const string& relativePath )
     {
-        // 바뀐 파일(에디터 저장 · 임포트 산출물 · 바깥 도구의 쓰기)마다 검증 규칙을 돌린다 — 결과는 로그로 남는다.
-        if ( EditorContext* pContext = editor::findSubsystem<EditorContext>(); pContext != nullptr )
-            pContext->getSubsystem<EditorAssetValidation>().requestValidation( relativePath );
-
         // 대상이 아닌 파일은 NotTracked, 등록되지 않은 캐시는 Failed(오류를 남겼다) — 어느 쪽이든 감시는 이어 간다.
         if ( reloadChangedAsset( AssetHotReloadInternal::toAssetID( relativePath ) ) == ReloadOutcome::Failed )
             SW_LOG_WARNING( "Hot reload skipped %# - the running scene keeps the previous content", relativePath.c_str() );

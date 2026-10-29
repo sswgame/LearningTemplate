@@ -5,7 +5,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -258,10 +257,6 @@ namespace sw::editor
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();
-        // 저장한 씬에 검증 규칙을 실행한다. 결과는 로그로 알리고 저장을 막지 않는다.
-        pScene = pSceneManager->getActiveScene();
-        if ( pScene != nullptr )
-            editor::getSubsystem<EditorAssetValidation>().requestValidation( pScene->getSourcePath() );
         return true;
     }
 

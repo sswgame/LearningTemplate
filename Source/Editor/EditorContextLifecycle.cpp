@@ -12,7 +12,6 @@
 
 #include "Core/Task/TaskHandleTracker.h"
 
-#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -91,7 +90,6 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
         _scope.addSubsystem( make_unique<EditorToolDefaultsReload>() ); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
-        _scope.addSubsystem( make_unique<EditorAssetValidation>() );
         _scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() ) );
         _scope.addSubsystem( make_unique<InspectorComponentManager>() );
         _scope.addSubsystem( make_unique<InspectorPropertyManager>() );

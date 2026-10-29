@@ -26,7 +26,7 @@ kBlenderToEngine: Matrix3 = [[-1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]
 #: 소켓으로 보는 엠프티 이름 머리 — 언리얼 FBX 임포트의 `SOCKET_` 규약과 같다. 사용자 속성 `sw_socket` 도 소켓이다.
 kSocketPrefix = "SOCKET_"
 
-#: 리소스 파일 이름 규칙(`Config/Editor/AssetValidationRules.json` 의 file-names 와 같은 문자 집합).
+#: 리소스 파일 이름 규칙 — 소문자 · 숫자 · `_` · `.` · `-` 만(대소문자를 가리지 않는 파일 시스템에서도 같은 경로).
 kResourceNameRe = re.compile(r"^[a-z0-9_.\-]+$")
 
 #: 소켓 이름 규칙 — 엔진은 `MainHand.Muzzle` 처럼 슬롯 접두어를 점으로 붙이므로 소켓 이름에는 점을 쓰지 않는다.

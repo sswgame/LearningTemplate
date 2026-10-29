@@ -133,7 +133,7 @@ namespace sw
             }
             if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
+            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, T::StaticType()->_name, SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
 
@@ -155,6 +155,19 @@ namespace sw
         ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
         /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
         uint32 getReloadableCount() const { return static_cast<uint32>( _mapSource.size() ); }
+        /**
+         * @brief 파일에서 읽은 설정마다 (리플렉션 타입 이름, 찾은 경로)를 넘깁니다. 순서는 정하지 않는다.
+         * @details 편집기의 프로젝트 설정 창이 이것으로 페이지를 만든다 — 읽힌 설정이 곧 고칠 수 있는 설정이다(언리얼 Project Settings 가 로드된 설정 객체에서 페이지를 만드는 것과 같다).
+         */
+        template <typename Func>
+        void forEachFileSource( Func&& func ) const
+        {
+            for ( const auto& [key, source] : _mapSource )
+            {
+                (void)key;
+                func( source._typeName, string_view( source._resolvedPath ) );
+            }
+        }
 
         // 호스트가 기동 때 만든 테이블은 엔진 기동 범위의 서브시스템이다 — 엔진은 `engine::findSubsystem<ConfigManager>()`, 에디터는 모듈 호스트가 에디터 서비스 범위에
         // 건 것을 `editor::findSubsystem<ConfigManager>()` 로 찾는다(정적 창구를 두지 않는다). 서비스 목록에 올리지 않은 것은 게임 모듈이 볼 이유가 없기 때문이다.
@@ -323,8 +336,9 @@ namespace sw
         {
             using ReloadFunc = bool ( * )( ConfigManager& manager, const string& resolvedPath );
 
-            string     _resolvedPath;
-            ReloadFunc _pReload{ nullptr }; ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
+            string        _resolvedPath;
+            hashed_string _typeName;           ///< 리플렉션 타입 이름(`EngineConfig`)
+            ReloadFunc    _pReload{ nullptr }; ///< 배포 빌드는 늘 nullptr(`SW_DEV_ONLY_FUNCTION`)
         };
 
         /** @brief T 를 @p resolvedPath 에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */

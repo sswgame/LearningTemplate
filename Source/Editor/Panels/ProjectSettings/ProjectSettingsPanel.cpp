@@ -39,9 +39,6 @@ namespace sw::editor
     {
         struct ProjectSettingsPanelInternal
         {
-            /** @brief 설정 색인의 위치입니다(`GenerateConfigReference.py` 가 만든다). */
-            static constexpr const utf8* kReferencePath = "docs/Config/ConfigReference.json";
-
             /** @brief 감시 값이 읽는 지난 프레임의 값입니다. 패널 인스턴스는 감시 값에서 보이지 않으므로 에디터 범위의 상태 저장소가 소유한다. */
             struct ProbeState
             {
@@ -130,21 +127,14 @@ namespace sw::editor
             _listPage.push_back( std::move( pPackPage ) );
         }
 
-        const string referencePath = EditorPaths::resolveProjectRelativePath( ProjectSettingsPanelInternal::kReferencePath );
-        string       referenceText;
-        if ( FileUtil::isRegularFile( referencePath ) == false || FileUtil::readTextFile( referencePath, referenceText ) == false )
+        const ConfigManager* const pConfigManager = editor::findSubsystem<ConfigManager>();
+        if ( pConfigManager == nullptr )
         {
-            SW_LOG_WARNING( "Project settings: %# is missing - run Scripts/generate/GenerateConfigReference.py", referencePath.c_str() );
+            SW_LOG_ERROR( "Project settings: the editor services have no ConfigManager - there is nothing to list" );
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
-        if ( ProjectSettingsCatalog::parseReference( referenceText, listEntry ) == false )
-        {
-            SW_LOG_WARNING( "Project settings: %# is not a valid config reference", referencePath.c_str() );
-            return;
-        }
-        ProjectSettingsCatalog::expandWildcards( EditorPaths::getProjectRootPath(), listEntry );
-
+        ProjectSettingsCatalog::collectLoaded( *pConfigManager, EditorPaths::getProjectRootPath(), listEntry );
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();
@@ -341,7 +331,7 @@ namespace sw::editor
 
         if ( _listPage.empty() )
         {
-            EditorWidgets::drawEmptyHint( "No config reference - run Scripts/generate/GenerateConfigReference.py" );
+            EditorWidgets::drawEmptyHint( "No settings file was loaded from Config/ or Content/" );
             if ( ImGui::Button( "Reload list" ) )
                 _bCatalogLoaded = false;
             return;

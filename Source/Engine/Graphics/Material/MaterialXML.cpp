@@ -20,7 +20,7 @@ namespace sw
         /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
         struct MaterialXMLInternal
         {
-            /** @brief 블렌드 모드 이름 표의 한 줄입니다. 모드마다 이름은 하나다(별칭 없음). 읽기(`parseBlendMode`)와 이름 목록(`listBlendModeNames`)이 이 표 하나를 본다. */
+            /** @brief 블렌드 모드 이름 표의 한 줄입니다. 모드마다 이름은 하나다(별칭 없음). 읽기(`parseBlendMode`)와 쓰기(`blendModeToString`)가 이 표 하나를 본다. */
             struct BlendModeName
             {
                 string_view  _name;
@@ -214,16 +214,6 @@ namespace sw
         }
         SW_LOG_ERROR( "Material blend mode '%#' is unknown (Opaque, Transparent)", modeName );
         return false;
-    }
-
-    vector<string_view> MaterialUtil::listBlendModeNames()
-    {
-        vector<string_view> listName;
-        for ( const MaterialXMLInternal::BlendModeName& entry : MaterialXMLInternal::kArrBlendModeName )
-        {
-            listName.push_back( entry._name );
-        }
-        return listName;
     }
 
     const utf8* MaterialUtil::blendModeToString( RHIBlendMode mode )

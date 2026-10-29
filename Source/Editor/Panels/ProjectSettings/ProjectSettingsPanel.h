@@ -24,7 +24,7 @@ namespace sw::editor
     /**
      * @class ProjectSettingsPanel
      * @brief 언리얼 Project Settings · 유니티 Project Settings 에 해당합니다. 왼쪽은 설정 파일 목록, 오른쪽은 고른 파일의 그리드입니다.
-     * @details 목록은 활성 팩의 `<Engine>` 요소(맨 앞)와 생성 문서 `docs/Config/ConfigReference.json` 에서 만든다(`ProjectSettingsCatalog`). 저장은 Save(또는 Ctrl+S)로 하고, 기본값과 같은 값은 파일에서 지운다.
+     * @details 목록은 활성 팩의 `<Engine>` 요소(맨 앞)와 설정 테이블이 파일에서 읽은 설정에서 만든다(`ProjectSettingsCatalog`). 저장은 Save(또는 Ctrl+S)로 하고, 기본값과 같은 값은 파일에서 지운다.
      *          저장하면 엔진의 `ConfigReloadSubsystem::reloadChangedFile` 이 호스트 설정을 제자리에서 다시 읽는다(`ConfigManager::reloadConfigFile`).
      *          창 시작 값만 쓰는 필드(창 크기 · 백엔드)는 다음 실행부터 반영된다.
      */

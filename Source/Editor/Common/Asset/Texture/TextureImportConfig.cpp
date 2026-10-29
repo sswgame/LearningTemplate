@@ -286,18 +286,6 @@ namespace sw::editor
         return bSRGB ? entry._srgbDxgiFormat : entry._dxgiFormat;
     }
 
-    vector<string_view> TextureImportFormatUtil::getWrittenFormatNames()
-    {
-        vector<string_view> listName;
-        for ( const TextureImportFormatName& entry : kArrTextureImportFormatName )
-        {
-            listName.push_back( entry._dxgiName );
-            if ( entry._srgbName.empty() == false )
-                listName.push_back( entry._srgbName );
-        }
-        return listName;
-    }
-
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )
     {
         return rule._filter.isCatchAll();
