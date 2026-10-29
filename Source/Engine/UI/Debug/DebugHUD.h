@@ -41,7 +41,7 @@ namespace sw
      *
      *          - HUD 화면은 오버레이 레이어라서 포커스, 포인터, 게임 입력을 받지 않는다. 켜진 섹션만 4 Hz 로 본문을 부르고 줄을 다시 쓴다.
      *          - 설정 창(`engine/ui/debughud.ui.xml`)은 모달이라 열린 동안만 UI 가 입력을 가진다(`UISystem::isGameInputBlocked`).
-     *          - 꺼져 있으면 프레임 비용은 셸 맵 액션 하나를 읽는 것뿐이다(할당 없음).
+     *          - 꺼져 있으면 프레임 비용은 디버그 키 맵 액션 하나를 읽는 것뿐이다(할당 없음).
      *          - `kUsesFrameProfiler` 섹션이 보이는 동안 `FrameProfiler` 를 켜고, HUD 가 켠 것이면 감출 때 끈다.
      *
      *          게임 스레드에서만 쓴다. `Engine` 가 UI 기동 단계에서 만들고 `UISystem::update` 앞에서 `update` 를 부른다.
@@ -51,7 +51,7 @@ namespace sw
     public:
         // 설정 스키마(Dev 기동이 엔진과 게임 스키마 뒤에 덧붙인다)와 섹션 체크 상자 창 문서는 엔진 기본 에셋 표가 기준이다
         // (`EngineDefaultAssets::_debugHUDSettingsSchema` · `_uiDebugHUD`, 창은 `UISystem::getEngineDocuments()._debugHUD`).
-        /** @brief 셸 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
+        /** @brief 디버그 키 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
         static constexpr const utf8* kToggleActionName = "DebugHUDToggle";
         /** @brief HUD 패널 위젯 이름입니다(레이아웃 덤프와 감시 값이 찾습니다). */
         static constexpr const utf8* kPanelName = "DebugHUDPanel";
@@ -73,7 +73,7 @@ namespace sw
         void shutdown();
         /**
          * @brief 프레임마다(`UISystem::update` 앞) 마스터 단축키, 켜짐 상태, HUD 화면 열기와 닫기, 프로파일러, 닫힌 창의 설정 확정을 순서대로 처리합니다.
-         * @param pShellMap 셸 입력 맵입니다(없으면 단축키를 보지 않습니다).
+         * @param pShellMap 디버그 키 입력 맵입니다(없으면 단축키를 보지 않습니다).
          */
         void update( const InputMap* pShellMap );
 

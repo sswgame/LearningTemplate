@@ -13,20 +13,20 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    AbilitySystemComponent* AbilityDebugPanel::findTarget()
+    AbilityComponent* AbilityDebugPanel::findTarget()
     {
         // 선택한 오브젝트에 컴포넌트가 있으면 그것을 본다 — 도는 월드(메인 씬)를 디버그하는 창이라 메인 씬의 선택이다
         vector<GameObject*> listSelected;
         editor::getMainSceneSelection().getSelectedObjects( listSelected );
         for ( GameObject* pObject : listSelected )
         {
-            AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+            AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
             if ( pAbilitySystem != nullptr )
             {
                 _pickedHandle = pObject->getHandle();
@@ -38,10 +38,10 @@ namespace sw::editor
         if ( pObjects == nullptr || _pickedHandle.isValid() == false )
             return nullptr;
         GameObject* pOwner = pObjects->resolveGameObject( _pickedHandle );
-        return pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
+        return pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
     }
 
-    void AbilityDebugPanel::drawTargetPicker( const AbilitySystemComponent* pCurrent )
+    void AbilityDebugPanel::drawTargetPicker( const AbilityComponent* pCurrent )
     {
         GameObjectManager* pObjects = getActiveObjectManager();
         if ( pObjects == nullptr )
@@ -56,7 +56,7 @@ namespace sw::editor
         _listCandidate.clear();
         pObjects->forEachGameObject( [this]( GameObject* pObject )
         {
-            if ( pObject != nullptr && pObject->getComponent<AbilitySystemComponent>() != nullptr )
+            if ( pObject != nullptr && pObject->getComponent<AbilityComponent>() != nullptr )
                 _listCandidate.push_back( pObject->getHandle() );
         } );
         if ( _listCandidate.empty() )
@@ -76,7 +76,7 @@ namespace sw::editor
 
     void AbilityDebugPanel::drawContent()
     {
-        AbilitySystemComponent* pTarget = findTarget();
+        AbilityComponent* pTarget = findTarget();
         drawTargetPicker( pTarget );
 
         if ( EditorPlaySession::isStopped() )

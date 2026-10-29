@@ -16,7 +16,7 @@
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
-#include "Engine/Input/ShellInputActions.h"
+#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Renderer/Frame/Capture/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
@@ -133,9 +133,9 @@ namespace sw
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
-        /** @brief 셸 디버그 액션 맵을 한 프레임 돌립니다(`ShellInputActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
-        void updateShellActions( float32 deltaTime );
-        /** @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_shellInputMap`)에서 만듭니다(`ShellInputActions::createInputMap`). */
+        /** @brief 디버그 키 액션 맵을 한 프레임 돌립니다(`DebugKeyActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
+        void updateDebugKeyActions( float32 deltaTime );
+        /** @brief 디버그 키 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_debugKeyInputMap`)에서 만듭니다(`DebugKeyActions::createInputMap`). */
         static unique_ptr<InputMap> createShellInputMap( const AssetID& assetID );
 
         /**
@@ -163,10 +163,10 @@ namespace sw
          */
         bool wasDebugActionTriggered( string_view actionName ) const;
         /**
-         * @brief 셸 InputMap 입니다(`updateShellActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
+         * @brief 셸 InputMap 입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
          * @details 개발 콘솔(`DevConsoleController`)이 자기 액션을 읽고 자기 레이어를 켜고 끕니다. 이 맵은 키보드 포커스와 상관없이 키를 읽습니다.
          */
-        InputMap* getShellInputMap() const { return _shellActions.getInputMap(); }
+        InputMap* getDebugKeyInputMap() const { return _debugKeyActions.getInputMap(); }
 
         // ----------------------------------------------------------------------
         // Getter (App 이 GameModuleManager 등과 연동하는 데 필요)
@@ -238,8 +238,8 @@ namespace sw
         ConfigManager* _pConfigManager;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 설정 표가 먼저 사라지면 무효가 된다. */
         Subscription _configReloadedSubscription;
-        /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
-        ShellInputActions _shellActions;
+        /** @brief 디버그 키 액션 맵입니다(`updateDebugKeyActions` 가 처음 부를 때 만든다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 놓는다. */
+        DebugKeyActions _debugKeyActions;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
@@ -278,7 +278,7 @@ namespace sw
         FontService* _pFontService;
         /** @brief 서브시스템 `UI` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 · 갱신 · 캔버스가 돈다. */
         UISystem* _pUISystem;
-        /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 셸 맵 · 관찰자 문맥이 쓴다. */
+        /** @brief 서브시스템 `Input` 입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 입력 프레임 · 디버그 키 맵 · 관찰자 문맥이 쓴다. */
         InputManager* _pInputManager;
         /** @brief 서브시스템 `Audio` 의 오디오 서비스입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 갱신하고 플레이어 설정이 볼륨을 넣는다. */
         IAudioService* _pAudioService;

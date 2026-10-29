@@ -7,7 +7,7 @@
  *          회복 · 가시처럼 이펙트만 거는 어빌리티는 클래스 없이 프레임워크의 "ApplyEffects" 로 돕니다.
  */
 #pragma once
-#include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
+#include "GameFramework/Base/Gameplay/Ability/Ability.h"
 
 namespace sw
 {
@@ -17,10 +17,10 @@ namespace sw
      * @brief 사거리(`range`) 안의 가장 가까운 적 하나에 피해 이펙트(`damageEffect`, SetByCaller "Damage" = `damage`)를 겁니다.
      * @details 대상이 없어도 휘두릅니다(쿨다운이 걸린다) — 헛손질도 행동이다.
      */
-    class ArenaMeleeStrikeAbility final : public GameplayAbility
+    class ArenaMeleeStrikeAbility final : public Ability
     {
     public:
-        void activateAbility( const GameplayEventData* pTriggerEvent ) override;
+        void activateAbility( const AbilityEventData* pTriggerEvent ) override;
     };
 } // namespace sw
 
@@ -30,10 +30,10 @@ namespace sw
      * @brief 바라보는 쪽으로 투사체를 쏩니다(`speed` · `range`). 맞은 적에게 `damageEffect`(SetByCaller "Damage" = `damage`)와 `extraEffect` 를 겁니다.
      * @details 스펙은 쏘는 순간 만듭니다 — 날아가는 동안 쏜 쪽이 쓰러져도 공격력 스냅샷과 레벨이 남습니다.
      */
-    class ArenaProjectileAbility final : public GameplayAbility
+    class ArenaProjectileAbility final : public Ability
     {
     public:
-        void activateAbility( const GameplayEventData* pTriggerEvent ) override;
+        void activateAbility( const AbilityEventData* pTriggerEvent ) override;
     };
 } // namespace sw
 
@@ -44,10 +44,10 @@ namespace sw
      * @details 시간이 걸리는 어빌리티의 예입니다(`waitDelay`). 도는 동안 설정의 `BlockTag` 가 공격을 막고, 이동은 플레이어 컨트롤러가
      *          `State.Dashing` 을 보고 바라보는 쪽으로 밀어 줍니다.
      */
-    class ArenaDashAbility final : public GameplayAbility
+    class ArenaDashAbility final : public Ability
     {
     public:
-        void activateAbility( const GameplayEventData* pTriggerEvent ) override;
+        void activateAbility( const AbilityEventData* pTriggerEvent ) override;
 
     private:
         void handleDashFinished();

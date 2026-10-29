@@ -5,7 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 #include "Games/AbilityArena/ArenaUnitComponent.h"
@@ -14,7 +14,7 @@ namespace sw
 {
     SW_LOG_CALLER( "ArenaAbilities" );
 
-    void ArenaMeleeStrikeAbility::activateAbility( const GameplayEventData* pTriggerEvent )
+    void ArenaMeleeStrikeAbility::activateAbility( const AbilityEventData* pTriggerEvent )
     {
         (void)pTriggerEvent;
         if ( commitAbility() == false )
@@ -23,7 +23,7 @@ namespace sw
             return;
         }
 
-        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
+        AbilityComponent*             pAbilitySystem = getAbilitySystem();
         const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
         // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
         const std::optional<float32> range  = getParameter( "range" );
@@ -36,8 +36,8 @@ namespace sw
         }
         if ( pDirector != nullptr )
         {
-            AbilitySystemComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, *range );
-            GameplayEffectSpec      spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
+            AbilityComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, *range );
+            AbilityEffectSpec spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( pTarget != nullptr && spec.isValid() )
             {
                 spec.setSetByCallerMagnitude( "Damage", *damage );
@@ -47,7 +47,7 @@ namespace sw
         endAbility();
     }
 
-    void ArenaProjectileAbility::activateAbility( const GameplayEventData* pTriggerEvent )
+    void ArenaProjectileAbility::activateAbility( const AbilityEventData* pTriggerEvent )
     {
         (void)pTriggerEvent;
         if ( commitAbility() == false )
@@ -56,7 +56,7 @@ namespace sw
             return;
         }
 
-        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
+        AbilityComponent*             pAbilitySystem = getAbilitySystem();
         const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
@@ -73,17 +73,17 @@ namespace sw
         }
         if ( pDirector != nullptr && pUnit != nullptr )
         {
-            GameplayEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
+            AbilityEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
                 spec.setSetByCallerMagnitude( "Damage", *damage );
-            const hashed_string      extraEffect = getNameParameter( "extraEffect" );
-            const GameplayEffectSpec extraSpec   = extraEffect.empty() ? GameplayEffectSpec{} : makeOutgoingSpec( extraEffect );
+            const hashed_string     extraEffect = getNameParameter( "extraEffect" );
+            const AbilityEffectSpec extraSpec   = extraEffect.empty() ? AbilityEffectSpec{} : makeOutgoingSpec( extraEffect );
             pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), spec, extraSpec, *speed, *range );
         }
         endAbility();
     }
 
-    void ArenaDashAbility::activateAbility( const GameplayEventData* pTriggerEvent )
+    void ArenaDashAbility::activateAbility( const AbilityEventData* pTriggerEvent )
     {
         (void)pTriggerEvent;
         if ( commitAbility() == false )

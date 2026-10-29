@@ -133,8 +133,8 @@ namespace sw::editor
         : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _inputMap{}
         , _replay{}
-        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._shellInputMap } // 처음 여는 맵은 셸 맵이다 — 경로의 원본은 enginedefaultassets.xml
-        , _replayFilePath{ getEditorToolDefaults()._inputReplayFile }               // 처음 가리키는 파일 — 원본은 editortooldefaults.json
+        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._debugKeyInputMap } // 처음 여는 맵은 디버그 키 맵이다 — 경로의 원본은 enginedefaultassets.xml
+        , _replayFilePath{ getEditorToolDefaults()._inputReplayFile }                  // 처음 가리키는 파일 — 원본은 editortooldefaults.json
         , _newActionName{ "" }
         , _selectedAction{ "" }
         , _arrActionFilter{}

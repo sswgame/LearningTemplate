@@ -88,8 +88,8 @@ namespace sw
             /**
              * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인지 확인합니다.
              * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-W` 나
-             *          `-gv_benchMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
-             *          `-gv_benchMeshes` 를 받아 주면 int32 항목에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
+             *          `-gv_stressTestMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
+             *          `-gv_stressTestMeshes` 를 받아 주면 int32 항목에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
              *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
              */
             bool isFlagArgument() const { return std::holds_alternative<bool>( _defaultValue ); }

@@ -117,7 +117,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 
 | Suffix | What the data is for |
 | --- | --- |
-| `Def` | Authored data definition (read from a file, shared, immutable). A sub-struct of a catalog file is a `Def` (`BrZoneDef` in `BrCatalog`) |
+| `Def` | Authored data definition (read from a file, shared, immutable). A sub-struct of a catalog file is a `Def` (`BattleRoyaleZoneDef` in `BattleRoyaleCatalog`) |
 | `Desc` | Creation description handed to a `create*` call |
 | `Spec` | A granted runtime instance, Unreal GAS sense (`AbilitySpec` ↔ `FGameplayAbilitySpec`; the authored data is the `Def`) |
 | `Config` | Preset or deployment configuration (project, server, build; the `initialize` configuration of a service, host, transport or store driver) |

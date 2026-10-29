@@ -71,7 +71,7 @@ namespace sw
 
         /**
          * @brief 피해 숫자 하나를 @p position 에 띄웁니다. 떠오르며 흐려지다가 `kSpawnedLifeTime` 초 뒤에 지워집니다.
-         * @details 피해를 내는 모든 곳(`UnitStatsComponent`, `AbilitySystemComponent`)이 이것 하나를 쓴다.
+         * @details 피해를 내는 모든 곳(`UnitStatsComponent`, `AbilityComponent`)이 이것 하나를 쓴다.
          *          오브젝트에 씬 컴포넌트, 화면 마커(`WidgetComponent`, 가운데 피벗), 이 컴포넌트를 붙인다.
          *          틱 중이면 만들기를 틱 직후로 미룬다. 틱 안에서는 컴포넌트를 붙일 수 없기 때문이다.
          *          직접 만들면 안 된다. 수명 기본값 0 은 "지우지 않음"이라서 맞을 때마다 숫자 오브젝트가 남는다.

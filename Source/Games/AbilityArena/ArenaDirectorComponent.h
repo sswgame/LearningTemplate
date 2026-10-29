@@ -1,7 +1,7 @@
 /**
  * @file ArenaDirectorComponent.h
  * @brief AbilityArena 의 규칙을 돌리는 컴포넌트입니다. 웨이브, 쓰러뜨린 수, 플레이어 다시 스폰, 투사체 스폰, 로그를 맡고 유닛 프리팹 스폰을 지시합니다.
- * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 어빌리티, 이펙트, 어트리뷰트는 프레임워크(`AbilitySystemComponent`)와 데이터
+ * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 어빌리티, 이펙트, 어트리뷰트는 프레임워크(`AbilityComponent`)와 데이터
  *          (`Content/game/abilityarena/data/abilities.xml`)가 맡습니다. 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
  *          (플레이어 조종자, `ArenaEnemyAIComponent`, `ArenaAutoBattleAIComponent`)가 맡는다. 이 컴포넌트는 "언제 누가 등장하고 누가 쓰러졌는가, 누가 누구를 조종하는가"만 안다.
  *
@@ -23,13 +23,13 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityEffect.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 
 namespace sw
 {
-    class AbilitySystemComponent;
+    class AbilityComponent;
     class Archive;
     class GameObject;
     class GameObjectManager;
@@ -87,12 +87,12 @@ namespace sw
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 현재 위치를 반환합니다. 없으면 false 입니다(틱 밖에서 부릅니다). */
         [[nodiscard]] bool findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const;
         /** @brief @p from 과 적대 관계이고 살아 있는 가장 가까운 유닛의 어빌리티 시스템을 반환합니다(어빌리티가 대상을 찾을 때 씁니다). */
-        AbilitySystemComponent* findNearestHostile( const AbilitySystemComponent& from, float32 maxRange ) const;
+        AbilityComponent* findNearestHostile( const AbilityComponent& from, float32 maxRange ) const;
         /**
          * @brief @p from 이 @p facing 방향으로 투사체를 쏩니다. 처음 닿은 적대 유닛에 @p spec(있으면 @p extraSpec 도)을 적용합니다.
          * @details 어느 스레드에서 불러도 된다. 투사체는 틱이 끝난 뒤(게임 스레드) 스폰한다. 스펙은 쏜 순간 만든 것이라 쏜 쪽이 그 사이 쓰러져도 남는다.
          */
-        void launchProjectile( const AbilitySystemComponent& from, const float3& facing, const GameplayEffectSpec& spec, const GameplayEffectSpec& extraSpec,
+        void launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec, const AbilityEffectSpec& extraSpec,
                                float32 speed, float32 range ) const;
         /** @brief 이번 프레임 스냅샷의 플레이어 위치(틱 전)를 반환합니다. 없으면 아레나 중앙입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
@@ -112,7 +112,7 @@ namespace sw
          * @brief 유닛(어빌리티 시스템)이 따르는 디렉터를 반환합니다. 같은 오브젝트의 `ArenaUnitComponent` 가 가진 핸들로 씬에서 찾으며, 없으면 nullptr 입니다.
          * @details 어빌리티가 디렉터를 찾는 경로다. 게임 모듈의 정적 서비스 포인터에 기대지 않으므로 핫 리로드가 디렉터를 다시 만들어도 이어진다.
          */
-        static const ArenaDirectorComponent* findForUnit( const AbilitySystemComponent& unit );
+        static const ArenaDirectorComponent* findForUnit( const AbilityComponent& unit );
         /** @brief 폰(유닛)이 따르는 디렉터를 반환합니다. 조종자가 판단할 때 찾는 경로이며, 없으면 nullptr 입니다. */
         static const ArenaDirectorComponent* findForPawn( const PawnComponent& pawn );
 
@@ -148,12 +148,12 @@ namespace sw
         /** @brief 쏠 투사체 하나입니다. 틱이 끝난 뒤(`launchProjectile` 이 미룬 일) 스폰합니다. */
         struct ProjectileRequest
         {
-            GameplayEffectSpec _spec{};
-            GameplayEffectSpec _extraSpec{};
-            float3             _position{};
-            float3             _velocity{};
-            float32            _range{ 0.0f };
-            uint8              _bFromPlayer{ SW_FALSE };
+            AbilityEffectSpec _spec{};
+            AbilityEffectSpec _extraSpec{};
+            float3            _position{};
+            float3            _velocity{};
+            float32           _range{ 0.0f };
+            uint8             _bFromPlayer{ SW_FALSE };
         };
 
     private:

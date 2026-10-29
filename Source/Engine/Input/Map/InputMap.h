@@ -198,7 +198,7 @@ namespace sw
         inline constexpr utf8 kTitleLayerName[]      = "Title";
         inline constexpr utf8 kReloadShadersAction[] = "ReloadShaders";
         inline constexpr utf8 kReloadGameAction[]    = "ReloadGame";
-        // 개발 콘솔 셸 맵(`default.input.xml`)의 기본값이다. 여는 키는 늘 켜진 Debug 레이어에 두고, 나머지 키는 콘솔이 열려 있는 동안만 켜지는 DevConsole 레이어에 둔다.
+        // 개발 콘솔 디버그 키 맵(`default.input.xml`)의 기본값이다. 여는 키는 늘 켜진 Debug 레이어에 두고, 나머지 키는 콘솔이 열려 있는 동안만 켜지는 DevConsole 레이어에 둔다.
         inline constexpr utf8    kDevConsoleLayerName[]            = "DevConsole";
         inline constexpr utf8    kDevConsoleToggleAction[]         = "DevConsoleToggle";
         inline constexpr utf8    kDevConsoleCloseAction[]          = "DevConsoleClose";
@@ -554,7 +554,7 @@ namespace sw
         void setInputManager( InputManager* pInput ) { _pInput = pInput; }
         /**
          * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
-         * @details 셸 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
+         * @details 디버그 키 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
          *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
          *          단, 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안은 이 맵도 키를 보지 않는다 — 에디터 패널에 친 글자가 셸 · UI 맵의 키(콘솔 여는 `~`, UI 확인 Enter)가 되지 않게.
          *          도구 자신의 맵만 `setToolKeyboardReader( true )` 로 그 키를 읽는다.
@@ -832,7 +832,7 @@ namespace sw
          *          그 프레임에는 "눌렸었다" 로 취급한다. 단일 키와 합성(axis1d, vector2d) 모두 같은 규칙이다.
          */
         bool isSlotHeldThisFrame( const InputSlot& slot, SlotRead read = SlotRead::Game ) const;
-        /** @brief 개발 콘솔이 입력을 쥐어 이 맵이 슬롯을 "안 눌림" 으로 봐야 하면 true 입니다(키보드와 패드 슬롯). 키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 늘 false 입니다. */
+        /** @brief 개발 콘솔이 입력을 쥐어 이 맵이 슬롯을 "안 눌림" 으로 봐야 하면 true 입니다(키보드와 패드 슬롯). 키보드 포커스를 무시하는 맵(디버그 키 맵, UI 맵)은 늘 false 입니다. */
         bool isSlotHiddenByConsole( const InputSlot& slot ) const;
         /**
          * @brief 바인딩 값을 합쳐 액션 값을 계산합니다.
@@ -904,7 +904,7 @@ namespace sw
         float32                              _lastDeltaSeconds;   ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
         InputMapVirtualCursor                _virtualCursorStick; ///< 이 맵이 켜는 가상 커서(`<InputMap virtualCursor>`)
         uint8                                _bSuppressBaseActionOnChord : 1;
-        uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(셸 맵). */
+        uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */
         uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */
         [[maybe_unused]] uint8               _reservedFlags              : 5;
     };

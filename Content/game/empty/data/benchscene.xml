@@ -1,4 +1,4 @@
-<BenchSceneSettings _knightMesh="game/shooter3d/models/kaykit/knight.mesh"
+<StressTestSceneSettings _knightMesh="game/shooter3d/models/kaykit/knight.mesh"
                     _knightMaterial="game/shooter3d/materials/kaykit_knight.material"
                     _knightSkeleton="game/shooter3d/models/kaykit/knight/knight.skeleton.xml"
                     _knightClips="game/shooter3d/models/kaykit/knight/clips"

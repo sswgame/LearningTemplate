@@ -173,7 +173,7 @@ namespace sw
         ArgumentInfo& argument = _listArgument[iter->second];
 
         // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-W` 나
-        // `-gv_benchMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_benchMeshes` 가
+        // `-gv_stressTestMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_stressTestMeshes` 가
         // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {

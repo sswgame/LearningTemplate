@@ -40,7 +40,7 @@ namespace sw
      *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.xml`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
-     *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `GameplayEvent` →
+     *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `AbilityEvent` →
      *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
      *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterHitUtil::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
      *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.

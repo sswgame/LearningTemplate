@@ -337,7 +337,7 @@ namespace sw
 //
 //     SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "…" );
 //     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::DirectX12, "…" );   // enum — `#type` 이 리플렉션 enum 이름이다
-//     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshes, 0, "…" );
+//     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes, 0, "…" );
 //     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "…" );
 //     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_viewMode );
 //

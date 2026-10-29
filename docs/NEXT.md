@@ -111,6 +111,8 @@
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
+**끝남(2026-10-29)**: 아래 표를 모두 바꿨다(H1 · H2). `SmartObject*` 는 `UseSlotSlots` 처럼 말이 겹쳐 `UsableObject*` 로 했다. 디버그 키 사용자 파일 이름이 `debugkeys.xml`(루트 `<DebugKeyBindings>`)로 바뀌어 예전에 다시 묶은 키는 한 번 다시 묶는다. 콘텐츠의 소문자 에셋 이름(`benchscene.xml` · `benchtextured.material`)은 에셋 id 라 두었다.
+
 기준: 여러 엔진 · 업계가 함께 쓰는 공용어는 둔다. 한 엔진 · 한 게임의 고유 이름 · 브랜드 · 약어는 내용으로 바꾼다. 별칭은 두지 않는다.
 
 | 지금 | 바꿈 | 규모 | 까닭 |
@@ -118,16 +120,16 @@
 | `PersistAcrossScenesComponent` | `PersistAcrossScenesComponent` | 3 파일 | 유니티 API 이름 |
 | `HidingGhostDef` | `HidingGhostDef` | 3 파일 | 닌텐도 캐릭터 이름 |
 | `AbilityPresentationDef` | `AbilityPresentationDef` | 9 파일 | 언리얼 GAS 은어 |
-| `AbilitySystemComponent` · `GameplayAbility` · `GameplayEffect*` · `GameplayTagCountContainer` · `AbilityTaskWaitGameplayEvent` | `AbilityComponent` · `Ability` · `AbilityEffect*` · `TagCountTable` · `AbilityTaskWaitEvent` | 35 파일 | "Gameplay" 가 내용을 말하지 않는다(언리얼 GAS 그대로) |
-| `SmartObjectComponent` · `SmartObjectDef` | `UseSlotComponent` · `UseSlotDef` | 12 파일 | 언리얼 기능 이름 |
+| `AbilityComponent` · `Ability` · `AbilityEffect*` · `TagCountTable` · `AbilityTaskWaitEvent` | `AbilityComponent` · `Ability` · `AbilityEffect*` · `TagCountTable` · `AbilityTaskWaitEvent` | 35 파일 | "Gameplay" 가 내용을 말하지 않는다(언리얼 GAS 그대로) |
+| `UsableObjectComponent` · `UsableObjectDef` | `UseSlotComponent` · `UseSlotDef` | 12 파일 | 언리얼 기능 이름 |
 | `Br*`(배틀로얄 키트) | `BattleRoyale*` | 12 파일 | 약어 |
-| `Metro*` · `MetroSoulsState` · `MetroCharm*` | `Metroidvania*` · `MetroidvaniaDeathRestState` · `MetroidvaniaTrinket*` | 12 파일 | 약어 · 다른 게임 은어 |
-| `Witcher*`(폴더 `WitcherRPG`) | `MonsterHunt*`(`MonsterContract` · `Alchemy` · `QuickSpell`) | 13 파일 | 게임 브랜드 |
-| `AuthorityGhost` · `gv_authorityGhost*` · `net.ghost` | `ServerPoseOverlay` · `gv_serverPoseOverlay*` · `net.serverOverlay` | 6 파일 | 넷코드 은어 |
+| `Metro*` · `MetroidvaniaDeathRestState` · `MetroidvaniaCharm*` | `Metroidvania*` · `MetroidvaniaDeathRestState` · `MetroidvaniaTrinket*` | 12 파일 | 약어 · 다른 게임 은어 |
+| `Witcher*`(폴더 `MonsterHuntRPG`) | `MonsterHunt*`(`MonsterContract` · `Alchemy` · `QuickSpell`) | 13 파일 | 게임 브랜드 |
+| `ServerPoseOverlay` · `gv_serverPoseOverlay*` · `net.serverOverlay` | `ServerPoseOverlay` · `gv_serverPoseOverlay*` · `net.serverOverlay` | 6 파일 | 넷코드 은어 |
 | 명령 `vlog.*` | `visuallog.*` | 2 파일 | 타입은 `VisualLogger` 인데 명령만 약어 |
-| `gv_bench*` · `BenchScene*` · `UIBenchScreen` | `gv_stress*` · `StressTestScene*` · `UIStressTestScreen` | 35 파일 | 줄임말이고 좌석 슬롯 `bench` 와 겹친다 |
+| `gv_stressTest*` · `StressTestScene*` · `UIStressTestScreen` | `gv_stress*` · `StressTestScene*` · `UIStressTestScreen` | 35 파일 | 줄임말이고 좌석 슬롯 `bench` 와 겹친다 |
 | `gv_netEmulation*` · `gv_ioEmu*` | `gv_netEmulation*` · `gv_ioEmulation*` | 약 30 줄 | 타입(`NetEmulation`)과 철자를 맞춘다 |
-| `ShellInputActions` · `shell.rebind` · `shellbindings.xml` | `DebugKeyActions` · `debugkeys.rebind` · `debugkeys.xml` | 16 파일 | "셸" 이 무엇인지 안 보인다 |
+| `DebugKeyActions` · `debugkeys.rebind` · `debugkeys.xml` | `DebugKeyActions` · `debugkeys.rebind` · `debugkeys.xml` | 16 파일 | "셸" 이 무엇인지 안 보인다 |
 | `ScreenshotRequestQueue` | `ScreenshotRequestQueue` | 5 파일 | 비유 이름 |
 | `gv_deferredShading` · `gv_meshMorphDebugMode` | `gv_deferredShading` · `gv_meshMorphDebugMode` | 24 줄 | 무엇이 디퍼드 · 진단인지 없다 |
 

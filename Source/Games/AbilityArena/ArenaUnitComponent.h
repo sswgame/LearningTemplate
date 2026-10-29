@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    class AbilitySystemComponent;
+    class AbilityComponent;
     class ArenaDirectorComponent;
     class MeshComponent;
     class PawnComponent;
@@ -80,7 +80,7 @@ namespace sw
 
     private:
         /** @brief 폰 버튼의 발동 · 뗌을 어빌리티 입력 번호의 눌림 · 뗌으로 넘깁니다. */
-        void pressAbilityButtons( const PawnComponent& pawn, AbilitySystemComponent& abilitySystem );
+        void pressAbilityButtons( const PawnComponent& pawn, AbilityComponent& abilitySystem );
         /** @brief 다른 적과 겹친 만큼의 절반을 자기 쪽으로 밀어냅니다(상대도 같은 일을 한다 — 물리 없이, 유닛 수가 적다). */
         void separateFromEnemies( const ArenaDirectorComponent& director, float3& inoutPosition ) const;
         /** @brief 쓰러진 뒤 — 납작해지다가 디렉터가 걷는다. */

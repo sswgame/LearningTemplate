@@ -271,7 +271,7 @@ namespace sw
 {
     /**
      * @struct AnimationNotifyInfo
-     * @brief 애니메이션 알림이 이 오브젝트의 컴포넌트에 보내는 게임플레이 이벤트입니다(알림 테이블의 `GameplayEvent` 처리기이며, 언리얼 AnimationNotify 의 이벤트에 해당).
+     * @brief 애니메이션 알림이 이 오브젝트의 컴포넌트에 보내는 게임플레이 이벤트입니다(알림 테이블의 `AbilityEvent` 처리기이며, 언리얼 AnimationNotify 의 이벤트에 해당).
      */
     struct AnimationNotifyInfo
     {
@@ -370,7 +370,7 @@ namespace sw
          * @details 스폰, 파괴, 구조 변경을 해도 된다. 틱 밖이면 바로, 틱 중이면 틱이 끝난 뒤로 미뤄서 부른다.
          */
         virtual void onHitReceived( const HitInfo& hit ) { (void)hit; }
-        /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸을 때 불립니다(알림 테이블의 `GameplayEvent`). 게임 스레드에서 켜진 컴포넌트마다 불립니다. */
+        /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸을 때 불립니다(알림 테이블의 `AbilityEvent`). 게임 스레드에서 켜진 컴포넌트마다 불립니다. */
         virtual void onAnimationNotify( const AnimationNotifyInfo& notify ) { (void)notify; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.

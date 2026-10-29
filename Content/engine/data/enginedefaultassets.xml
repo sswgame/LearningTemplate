@@ -4,7 +4,7 @@
                      _missingMaterial="engine/materials/missingmaterial.material"
                      _missingTexture="engine/textures/missing.dds"
                      _loadingTexture="engine/textures/loading.dds"
-                     _shellInputMap="engine/input/default.input.xml"
+                     _debugKeyInputMap="engine/input/default.input.xml"
                      _uiInputMap="engine/input/ui.input.xml"
                      _photoModeInputMap="engine/input/photomode.input.xml"
                      _userSettingsSchema="engine/settings/engine.settings.xml"

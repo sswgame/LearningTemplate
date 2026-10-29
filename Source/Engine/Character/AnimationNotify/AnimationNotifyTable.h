@@ -10,7 +10,7 @@
  *            <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.4" sound="common/audio/footstep_{surface}.wav"/>
  *            <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="10" impulse="40"/>
  *            <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25"/>
- *            <Notify name="Taunt" handler="GameplayEvent" event="Taunted"/>
+ *            <Notify name="Taunt" handler="AbilityEvent" event="Taunted"/>
  *            <FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>
  *          </AnimationNotifies>
  *          @endcode
@@ -203,8 +203,8 @@ namespace sw
 {
     /**
      * @class AnimationNotifyHandlerRegistry
-     * @brief 이름에서 처리기로 가는 테이블입니다. `getDefault` 가 엔진 내장 처리기(PlaySound, SpawnPrefab, Footstep, HitWindow, CameraShake, GameplayEvent,
-     *        MotionWarp)를 가지고 있습니다. 추가한 처리기는 엔진이 끝날 때까지 살아 있으므로, 핫 리로드되는 모듈의 처리기는 추가하지 말고 이벤트(`GameplayEvent`)로 받으세요.
+     * @brief 이름에서 처리기로 가는 테이블입니다. `getDefault` 가 엔진 내장 처리기(PlaySound, SpawnPrefab, Footstep, HitWindow, CameraShake, AbilityEvent,
+     *        MotionWarp)를 가지고 있습니다. 추가한 처리기는 엔진이 끝날 때까지 살아 있으므로, 핫 리로드되는 모듈의 처리기는 추가하지 말고 이벤트(`AbilityEvent`)로 받으세요.
      */
     class SW_API AnimationNotifyHandlerRegistry
     {

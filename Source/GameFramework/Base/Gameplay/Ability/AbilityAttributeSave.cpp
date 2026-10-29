@@ -5,13 +5,13 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AbilityAttributeSave" );
 
-    void AbilityAttributeSaveUtil::captureBaseValues( const AbilitySystemComponent& abilitySystem, vector<SavedAttributeValue>& outListValue )
+    void AbilityAttributeSaveUtil::captureBaseValues( const AbilityComponent& abilitySystem, vector<SavedAttributeValue>& outListValue )
     {
         for ( const unique_ptr<AttributeSet>& pAttributeSet : abilitySystem.getAttributeSets() )
         {
@@ -28,7 +28,7 @@ namespace sw
         }
     }
 
-    bool AbilityAttributeSaveUtil::applyBaseValues( AbilitySystemComponent& abilitySystem, const vector<SavedAttributeValue>& listValue )
+    bool AbilityAttributeSaveUtil::applyBaseValues( AbilityComponent& abilitySystem, const vector<SavedAttributeValue>& listValue )
     {
         bool bAllApplied = true;
         for ( const SavedAttributeValue& value : listValue )

@@ -31,7 +31,7 @@ private:
 
 ```cpp
 SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "..." );          // 에디터에서 바꿀 런타임 설정
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchMeshes, 0, "..." );   // 벤치 · 진단. 스크립트가 배포 실행 파일을 몰 때만 SHIPPED
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_stressTestMeshes, 0, "..." );   // 벤치 · 진단. 스크립트가 배포 실행 파일을 몰 때만 SHIPPED
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 은 종류와 상관없이 이것 하나
 ```
 
@@ -50,7 +50,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나. 키가 아닌 글은 `findStringByText( string_view )` |
 | 매 프레임 `string resolvePresentSource()` | `string_view resolvePresentSource()` · `hashed_string` |
 
-접미사: `Def`(파일에서 읽는 정의: `GameplayAbilityDef`) · `Desc`(`create*` 에 넘기는 서술: `PhysicsShapeDesc3D`) · `Spec`(부여된 실행 인스턴스: `AbilitySpec`) · `Config`(프리셋 · 배포: `GameConfig`) · `Settings`(실행 중 바꾸는 설정: `GameSettings`) · `Params`(호출 인자 묶음). `RT` 는 render thread, render target 은 `RenderTarget`.
+접미사: `Def`(파일에서 읽는 정의: `AbilityDef`) · `Desc`(`create*` 에 넘기는 서술: `PhysicsShapeDesc3D`) · `Spec`(부여된 실행 인스턴스: `AbilitySpec`) · `Config`(프리셋 · 배포: `GameConfig`) · `Settings`(실행 중 바꾸는 설정: `GameSettings`) · `Params`(호출 인자 묶음). `RT` 는 render thread, render target 은 `RenderTarget`.
 
 ## 3. 헤더 · include — [규칙](agents/Includes.md#c-structure-and-includes)
 

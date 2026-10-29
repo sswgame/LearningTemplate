@@ -64,7 +64,7 @@
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
+#include "Engine/Scene/ServerPoseOverlay.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
 #include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
@@ -129,7 +129,7 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
 #if SW_DEV_COMMANDS_ENABLED
         if ( setup._bAuthorityGhost )
-            services.addSubsystem( sw::make_unique<AuthorityGhost>() ); // 서버 포즈 고스트(개발 도구) — Shipping 에는 없다
+            services.addSubsystem( sw::make_unique<ServerPoseOverlay>() ); // 서버 포즈 고스트(개발 도구) — Shipping 에는 없다
 #endif
         {
             SW_MEMORY_SCOPE( RenderCPU );

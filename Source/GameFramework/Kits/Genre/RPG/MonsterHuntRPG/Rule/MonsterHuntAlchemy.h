@@ -1,0 +1,118 @@
+/**
+ * @file MonsterHuntAlchemy.h
+ * @brief 연금술을 다룹니다. 레시피로 물약, 변이 혼합물, 오일, 폭탄을 만들고(기반 `Crafter`), 사용 횟수는 명상으로 보충하며(술을 소모), 독성(최대치, 서서히 감소,
+ *        변이 혼합물은 효과 동안 묶임)과 칼에 바른 오일의 적중 횟수를 관리합니다.
+ */
+#pragma once
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/FourCcUtil.h"
+#include "Core/String/hashed_string.h"
+#include "Core/Time/Countdown.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    enum class MonsterHuntAlchemyKind : uint8;
+
+    struct MonsterHuntAlchemyDef;
+
+    class Archive;
+    class Inventory;
+    class MonsterHuntCatalog;
+
+    /** @brief 연금술 물건 쓰기 결과입니다. */
+    ENUM()
+    enum class MonsterHuntUseResult : uint8
+    {
+        Ok = 0,
+        UnknownItem,
+        WrongKind,      ///< 마시는 것이 아니거나, 칼에 바르는 것이 아니거나, 던지는 것이 아니다
+        NotInInventory, ///< 만든 적이 없다
+        NoCharges,      ///< 다 썼다(명상으로 보충한다)
+        TooToxic,       ///< 마시면 최대 독성을 넘는다
+        AlreadyActive   ///< 같은 변이 혼합물이 이미 돌고 있다
+    };
+
+    /** @brief 지금 돌고 있는 효과 하나입니다. */
+    struct MonsterHuntActiveEffect
+    {
+        hashed_string _itemID{};
+        Countdown     _remaining{};
+        float32       _lockedToxicity{ 0.0f }; ///< 변이 혼합물이 가진 독성으로, 효과가 끝날 때까지 줄지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class MonsterHuntAlchemy
+     * @brief 위쳐 한 명의 연금술입니다. 물건 하나는 한 번 만들면 인벤토리에 남고(아이템 하나) 사용 횟수만 줄어듭니다. 명상하면 술 하나로 모든 물건이
+     *        가득 찹니다. 독성은 묶이지 않은 부분이 초당 일정량 줄고, 변이 혼합물이 가진 부분은 효과가 끝날 때 풀립니다.
+     */
+    class SW_KIT_API MonsterHuntAlchemy
+    {
+    public:
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WALC" );
+        static constexpr uint32 kStateVersion = 1;
+
+        MonsterHuntAlchemy();
+
+        void initialize( const MonsterHuntCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog );
+        /** @brief 레시피로 물건을 만듭니다(기반 `Crafter::craft`). 결과가 연금술 물건이면 사용 횟수를 가득 채웁니다. */
+        CraftResult brew( const hashed_string& recipeID, Inventory& inoutInventory, const hashed_string& station, int32 level );
+        /** @brief 마실 수 있는지 반환합니다(물약, 변이 혼합물). */
+        MonsterHuntUseResult evaluateDrink( const hashed_string& itemID, const Inventory& inventory ) const;
+        /** @brief 마십니다. 사용 횟수를 하나 쓰고 독성과 효과를 적용합니다. */
+        MonsterHuntUseResult drink( const hashed_string& itemID, const Inventory& inventory );
+        /** @brief 칼에 오일을 바릅니다(앞의 오일은 지웁니다). */
+        MonsterHuntUseResult applyOil( const hashed_string& itemID, const Inventory& inventory );
+        /** @brief 폭탄을 던집니다. 성공하면 @p outElement 에 폭탄의 속성이 담깁니다. */
+        MonsterHuntUseResult throwBomb( const hashed_string& itemID, const Inventory& inventory, hashed_string& outElement );
+        /** @brief 칼이 맞혔음을 알립니다. 바른 오일의 속성을 반환하고(없으면 빈 이름) 적중 횟수를 하나 씁니다. */
+        hashed_string consumeOilHit();
+        /** @brief 명상합니다. 술 하나를 쓰고 가진 모든 연금술 물건의 사용 횟수를 채웁니다. 술이 없으면 false 를 반환합니다. */
+        [[nodiscard]] bool meditate( Inventory& inoutInventory );
+        void               update( float32 deltaTime );
+
+        float32                                getToxicity() const;
+        float32                                getMaxToxicity() const;
+        int32                                  getCharges( const hashed_string& itemID ) const;
+        bool                                   isEffectActive( const hashed_string& itemID ) const;
+        hashed_string                          getOilElement() const;
+        int32                                  getOilHits() const { return _oilHits; }
+        const vector<MonsterHuntActiveEffect>& getActiveEffects() const { return _listEffect; }
+        Crafter&                               getCrafter() { return _crafter; }
+        /** @brief 제작기, 남은 충전, 도는 효과(남은 시간과 묶인 독성), 바른 오일과 남은 적중 횟수, 떠 있는 독성을 씁니다. 카탈로그와 레시피 카탈로그는 싣지 않습니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 연금 아이템이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+
+    private:
+        struct ChargeEntry
+        {
+            hashed_string _itemID{};
+            int32         _charges{ 0 };
+        };
+
+        const MonsterHuntAlchemyDef* findDef( const hashed_string& itemID ) const;
+        ChargeEntry*                 findCharge( const hashed_string& itemID );
+        MonsterHuntUseResult         evaluateUse( const hashed_string& itemID, const Inventory& inventory, MonsterHuntAlchemyKind kind ) const;
+        void                         refill( const hashed_string& itemID );
+        void                         spendCharge( const hashed_string& itemID );
+
+        Crafter                         _crafter;
+        vector<ChargeEntry>             _listCharge;
+        vector<MonsterHuntActiveEffect> _listEffect;
+        const MonsterHuntCatalog*       _pCatalog;
+        const RecipeCatalog*            _pRecipeCatalog;
+        hashed_string                   _oilID;
+        float32                         _floatingToxicity; ///< 묶이지 않은 독성(서서히 줄어든다)
+        int32                           _oilHits;
+    };
+} // namespace sw

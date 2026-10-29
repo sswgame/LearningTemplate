@@ -1,7 +1,7 @@
 /**
  * @file AbilityDebugPanel.h
- * @brief 어빌리티 런타임 상태 창입니다. 고른 오브젝트의 `AbilitySystemComponent` 가 지금 가진 어트리뷰트 · 걸린 이펙트 · 태그 개수 · 어빌리티 쿨다운을 읽기 전용으로 보입니다.
- * @details 언리얼 gameplay debugger 의 AbilitySystem 카테고리, `showdebug abilitysystem` 의 자리다. 런타임 상태는 저장하지 않으므로 플레이 중에만 값이 있고,
+ * @brief 어빌리티 런타임 상태 창입니다. 고른 오브젝트의 `AbilityComponent` 가 지금 가진 어트리뷰트 · 걸린 이펙트 · 태그 개수 · 어빌리티 쿨다운을 읽기 전용으로 보입니다.
+ * @details 언리얼 gameplay debugger 의 Ability 카테고리, `showdebug abilitysystem` 의 자리다. 런타임 상태는 저장하지 않으므로 플레이 중에만 값이 있고,
  *          멈춰 있으면 빈 상태 힌트를 보인다. 대상은 선택한 오브젝트에 컴포넌트가 있으면 그것이고, 없으면 활성 씬의 컴포넌트 목록에서 고른 것이다.
  *          행 만들기는 `AbilityDebugModel` 이 맡는다.
  */
@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class AbilitySystemComponent;
+    class AbilityComponent;
 } // namespace sw
 
 namespace sw::editor
@@ -43,9 +43,9 @@ namespace sw::editor
         void             drawContent() override;
 
     private:
-        AbilitySystemComponent* findTarget();
-        void                    drawTargetPicker( const AbilitySystemComponent* pCurrent );
-        void                    drawSnapshot();
+        AbilityComponent* findTarget();
+        void              drawTargetPicker( const AbilityComponent* pCurrent );
+        void              drawSnapshot();
 
         AbilityDebugSnapshot     _snapshot;
         vector<GameObjectHandle> _listCandidate;

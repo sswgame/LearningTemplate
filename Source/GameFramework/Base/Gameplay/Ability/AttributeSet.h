@@ -9,14 +9,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemTypes.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    struct GameplayEffectSpec;
+    struct AbilityEffectSpec;
 
-    class AbilitySystemComponent;
+    class AbilityComponent;
 
     // ------------------------------------------------------------------------------
     // 1) 값. base 와 current 로 구성한다(언리얼의 `FGameplayAttributeData` 에 해당)
@@ -41,12 +41,12 @@ namespace sw
      */
     struct AttributeModCallbackData
     {
-        const GameplayEffectSpec* _pSpec{ nullptr };   ///< 실행한 스펙(쏜 쪽, 레벨, SetByCaller)
-        AbilitySystemComponent*   _pTarget{ nullptr }; ///< 바뀐 쪽
-        hashed_string             _attribute{};        ///< 바뀐 어트리뷰트
-        float32                   _magnitude{ 0.0f };  ///< 적용한 크기(스택을 곱한 값)
-        float32                   _deltaBase{ 0.0f };  ///< base 가 실제로 바뀐 양(클램프 뒤)
-        AttributeModOp            _op{ AttributeModOp::Add };
+        const AbilityEffectSpec* _pSpec{ nullptr };   ///< 실행한 스펙(쏜 쪽, 레벨, SetByCaller)
+        AbilityComponent*        _pTarget{ nullptr }; ///< 바뀐 쪽
+        hashed_string            _attribute{};        ///< 바뀐 어트리뷰트
+        float32                  _magnitude{ 0.0f };  ///< 적용한 크기(스택을 곱한 값)
+        float32                  _deltaBase{ 0.0f };  ///< base 가 실제로 바뀐 양(클램프 뒤)
+        AttributeModOp           _op{ AttributeModOp::Add };
     };
 } // namespace sw
 
@@ -62,12 +62,12 @@ namespace sw
      *          데이터(`AbilityCatalog` XML 의 `<AttributeSet>`)가 어트리뷰트를 추가하고, 규칙이 필요한 세트만 파생 클래스를 만든다(`CombatAttributeSet`).
      *          이름별 범위(`setAttributeRange`)만 있으면 되는 세트는 이 클래스를 그대로 쓴다.
      *
-     *          값을 바꾸는 경로는 **`AbilitySystemComponent` 하나**뿐이다. 훅, 집계, 델리게이트가 그 안에서 차례로 실행된다. 그래서 값 쓰기는
-     *          공개하지 않는다(`AbilitySystemComponent::setAttributeBaseValue` 를 쓴다).
+     *          값을 바꾸는 경로는 **`AbilityComponent` 하나**뿐이다. 훅, 집계, 델리게이트가 그 안에서 차례로 실행된다. 그래서 값 쓰기는
+     *          공개하지 않는다(`AbilityComponent::setAttributeBaseValue` 를 쓴다).
      */
     class SW_GF_API AttributeSet
     {
-        friend class AbilitySystemComponent;
+        friend class AbilityComponent;
 
     public:
         AttributeSet();
@@ -78,7 +78,7 @@ namespace sw
 
         /**
          * @brief 어트리뷰트를 추가합니다. 이미 있으면 base 와 current 를 @p baseValue 로 되돌립니다.
-         * @details 컴포넌트에 붙이기 **전에** 부른다. 붙인 뒤에 추가할 때는 `AbilitySystemComponent::defineAttribute` 를 쓴다. 이 함수는 집계와 알림을 거친다.
+         * @details 컴포넌트에 붙이기 **전에** 부른다. 붙인 뒤에 추가할 때는 `AbilityComponent::defineAttribute` 를 쓴다. 이 함수는 집계와 알림을 거친다.
          */
         void defineAttribute( const hashed_string& name, float32 baseValue );
         /** @brief 어트리뷰트 값이 머물 범위를 정합니다. 기본 훅(`preAttributeChange`, `preAttributeBaseChange`)이 이 범위로 값을 자릅니다. */
@@ -90,7 +90,7 @@ namespace sw
         /** @brief 추가한 순서대로 나열한 어트리뷰트 이름입니다. UI 와 로그가 같은 순서로 보여 줍니다. */
         const vector<hashed_string>& getAttributeNames() const { return _listAttributeName; }
         /** @brief 이 세트가 붙은 컴포넌트입니다. 붙기 전이면 nullptr 입니다. */
-        AbilitySystemComponent* getOwningAbilitySystem() const { return _pOwningAbilitySystem; }
+        AbilityComponent* getOwningAbilitySystem() const { return _pOwningAbilitySystem; }
 
         /**
          * @brief current 값이 바뀌기 직전에 불립니다. @p inoutNewValue 를 고쳐 클램프합니다(언리얼의 `PreAttributeChange` 에 해당).
@@ -111,10 +111,10 @@ namespace sw
         virtual void postGameplayEffectExecute( const AttributeModCallbackData& data );
 
     private:
-        /** @brief 쓸 수 있는 값을 찾습니다. 없으면 nullptr 입니다. 값을 쓰는 쪽은 `AbilitySystemComponent` 뿐입니다. */
+        /** @brief 쓸 수 있는 값을 찾습니다. 없으면 nullptr 입니다. 값을 쓰는 쪽은 `AbilityComponent` 뿐입니다. */
         AttributeData* findAttributeMutable( const hashed_string& name );
-        /** @brief 붙은 컴포넌트를 기록합니다(`AbilitySystemComponent::addAttributeSet` 이 부름). */
-        void setOwningAbilitySystem( AbilitySystemComponent* pAbilitySystem ) { _pOwningAbilitySystem = pAbilitySystem; }
+        /** @brief 붙은 컴포넌트를 기록합니다(`AbilityComponent::addAttributeSet` 이 부름). */
+        void setOwningAbilitySystem( AbilityComponent* pAbilitySystem ) { _pOwningAbilitySystem = pAbilitySystem; }
         /** @brief @p name 의 범위로 @p inoutValue 를 자릅니다. 범위가 없으면 값을 그대로 둡니다. */
         void clampToRange( const hashed_string& name, float32& inoutValue ) const;
 
@@ -128,6 +128,6 @@ namespace sw
         unordered_map<hashed_string, AttributeData>  _mapAttribute;
         unordered_map<hashed_string, AttributeRange> _mapRange;
         vector<hashed_string>                        _listAttributeName;
-        AbilitySystemComponent*                      _pOwningAbilitySystem;
+        AbilityComponent*                            _pOwningAbilitySystem;
     };
 } // namespace sw

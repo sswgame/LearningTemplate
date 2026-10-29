@@ -14,7 +14,7 @@
  *       </Interaction>
  *       <Interaction id="Takedown" mode="Press" pairedAnimation="anim/takedown_front.pairedanim.xml;anim/takedown_back.pairedanim.xml"
  *                    interactorRole="Attacker" interactableRole="Victim"/>
- *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></SmartObject>
+ *       <UsableObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></UsableObject>
  *     </Interactions>
  * @endcode
  *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
@@ -112,7 +112,7 @@ namespace sw
 namespace sw
 {
     /** @brief 스마트 오브젝트의 슬롯 하나입니다(벤치 좌석, 엄폐 지점, 작업대 앞). */
-    struct SmartObjectSlotDef
+    struct UsableObjectSlotDef
     {
         hashed_string _id{};
         TagContainer  _tags{};      ///< 슬롯이 하는 일(Activity.Sit, Cover.Low)
@@ -124,10 +124,10 @@ namespace sw
 namespace sw
 {
     /** @brief 스마트 오브젝트 하나입니다. 슬롯 목록을 담으며, 플레이어와 AI 가 같은 정의로 슬롯을 차지합니다. */
-    struct SmartObjectDef
+    struct UsableObjectDef
     {
-        hashed_string              _id{};
-        vector<SmartObjectSlotDef> _listSlot{};
+        hashed_string               _id{};
+        vector<UsableObjectSlotDef> _listSlot{};
     };
 } // namespace sw
 
@@ -143,12 +143,12 @@ namespace sw
 
     public:
         void addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
-        void addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
+        void addSmartObject( const UsableObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
 
-        const InteractionDef*         findInteraction( const hashed_string& id ) const { return _interactionCatalog.find( id ); }
-        const SmartObjectDef*         findSmartObject( const hashed_string& id ) const { return _smartObjectCatalog.find( id ); }
-        const vector<InteractionDef>& getInteractions() const { return _interactionCatalog.getAll(); }
-        const vector<SmartObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
+        const InteractionDef*          findInteraction( const hashed_string& id ) const { return _interactionCatalog.find( id ); }
+        const UsableObjectDef*         findSmartObject( const hashed_string& id ) const { return _smartObjectCatalog.find( id ); }
+        const vector<InteractionDef>&  getInteractions() const { return _interactionCatalog.getAll(); }
+        const vector<UsableObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
 
         /**
          * @brief 경로의 테이블을 한 번 읽어서 공유합니다. 읽지 못했으면 nullptr 입니다. 다음 호출이 다시 읽지 않으므로 오류도 한 번만 남습니다.
@@ -164,9 +164,9 @@ namespace sw
 
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const;
-        [[nodiscard]] bool readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
+        [[nodiscard]] bool readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const;
 
-        GameCatalog<InteractionDef> _interactionCatalog{};
-        GameCatalog<SmartObjectDef> _smartObjectCatalog{};
+        GameCatalog<InteractionDef>  _interactionCatalog{};
+        GameCatalog<UsableObjectDef> _smartObjectCatalog{};
     };
 } // namespace sw

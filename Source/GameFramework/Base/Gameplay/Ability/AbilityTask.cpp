@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Ability/AbilityTask.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
+#include "GameFramework/Base/Gameplay/Ability/Ability.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 namespace sw
 {
@@ -69,7 +69,7 @@ namespace sw
             callback();
     }
 
-    AbilityTaskWaitGameplayEvent::AbilityTaskWaitGameplayEvent( TagID eventTag, const Delegate<void( const GameplayEventData& )>& onEvent, bool bOnlyTriggerOnce )
+    AbilityTaskWaitEvent::AbilityTaskWaitEvent( TagID eventTag, const Delegate<void( const AbilityEventData& )>& onEvent, bool bOnlyTriggerOnce )
         : _onEvent{ onEvent }
         , _eventTag{ eventTag }
         , _subscription{}
@@ -79,32 +79,32 @@ namespace sw
     {
     }
 
-    void AbilityTaskWaitGameplayEvent::onActivate()
+    void AbilityTaskWaitEvent::onActivate()
     {
-        GameplayAbility*        pAbility       = getAbility();
-        AbilitySystemComponent* pAbilitySystem = pAbility != nullptr ? pAbility->getAbilitySystem() : nullptr;
+        Ability*          pAbility       = getAbility();
+        AbilityComponent* pAbilitySystem = pAbility != nullptr ? pAbility->getAbilitySystem() : nullptr;
         if ( pAbilitySystem == nullptr )
         {
             endTask();
             return;
         }
         _subscription = pAbilitySystem->registerGameplayEvent(
-            _eventTag, SW_DELEGATE_METHOD( AbilitySystemComponent::GameplayEventDelegate, &AbilityTaskWaitGameplayEvent::handleEvent, this ) );
+            _eventTag, SW_DELEGATE_METHOD( AbilityComponent::AbilityEventDelegate, &AbilityTaskWaitEvent::handleEvent, this ) );
     }
 
-    void AbilityTaskWaitGameplayEvent::onDestroy( bool bAbilityEnded )
+    void AbilityTaskWaitEvent::onDestroy( bool bAbilityEnded )
     {
         (void)bAbilityEnded;
         _subscription.reset();
     }
 
-    void AbilityTaskWaitGameplayEvent::handleEvent( const GameplayEventData& payload )
+    void AbilityTaskWaitEvent::handleEvent( const AbilityEventData& payload )
     {
         if ( isFinished() )
             return;
         ++_receivedCount;
 
-        const Delegate<void( const GameplayEventData& )> callback = _onEvent;
+        const Delegate<void( const AbilityEventData& )> callback = _onEvent;
         if ( _bOnlyTriggerOnce == SW_TRUE )
             endTask();
         if ( callback.isBound() )

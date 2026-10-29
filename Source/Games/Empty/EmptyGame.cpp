@@ -2,7 +2,7 @@
 
 #include "Games/Empty/EmptyGame.h"
 
-#include "Games/Empty/BenchScene.h"
+#include "Games/Empty/StressTestScene.h"
 
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
@@ -34,8 +34,8 @@ namespace sw
 #endif
 
         // 이 템플릿이 하는 일은 벤치 하네스를 시작하는 것뿐입니다. 새 게임을 시작할 때는 아래 두 줄과
-        // BenchScene.* 를 지우고 자기 씬을 만듭니다.
-        _benchScene = make_unique<BenchScene>();
+        // StressTestScene.* 를 지우고 자기 씬을 만듭니다.
+        _benchScene = make_unique<StressTestScene>();
         if ( _benchScene->spawnFromGlobals() == false )
             _benchScene.reset();
 

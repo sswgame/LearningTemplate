@@ -33,7 +33,7 @@ namespace sw
      *          수치는 더하고, 켜고 끄는 항목(`wallJump`, `dash`)은 0이 아니면 켠다. 능력을 얻으면 `_flag` 가 `GameFlags` 에 켜지고, `AreaGraph` 잠금 조건식이 그 플래그를 읽는다.
      */
     REFLECT()
-    struct MetroAbilityDef
+    struct MetroidvaniaAbilityDef
     {
         REFLECT_BODY();
 
@@ -51,7 +51,7 @@ namespace sw
 {
     /** @brief 부적(문양) 하나입니다. 낄 때 슬롯을 `_cost` 만큼 씁니다. */
     REFLECT()
-    struct MetroCharmDef
+    struct MetroidvaniaTrinketDef
     {
         REFLECT_BODY();
 
@@ -69,7 +69,7 @@ namespace sw
 {
     /** @brief 지역 지도 하나입니다(지도 상인에게 삽니다). `_id` 는 `AreaDef::_region` 입니다. */
     REFLECT()
-    struct MetroRegionMapDef
+    struct MetroidvaniaRegionMapDef
     {
         REFLECT_BODY();
 
@@ -84,7 +84,7 @@ namespace sw
 {
     /** @brief 지도에 표시되는 지점입니다(벤치, 기도대, 사슴 정거장). */
     REFLECT()
-    struct MetroSiteDef
+    struct MetroidvaniaSiteDef
     {
         REFLECT_BODY();
 
@@ -103,7 +103,7 @@ namespace sw
 {
     /** @brief 방에 놓인 줍는 것입니다(가면 조각, 능력, 부적). 지도 표시와 수집률이 이것을 셉니다. */
     REFLECT()
-    struct MetroPickupDef
+    struct MetroidvaniaPickupDef
     {
         REFLECT_BODY();
 
@@ -122,7 +122,7 @@ namespace sw
 {
     /** @brief 적 한 종류입니다. */
     REFLECT()
-    struct MetroEnemyDef
+    struct MetroidvaniaEnemyDef
     {
         REFLECT_BODY();
 
@@ -141,9 +141,9 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<Health>` 의 스키마입니다. 읽은 값은 `MetroRules::_health`(기반 `VitalitySettings`)로 옮깁니다. */
+    /** @brief `<Health>` 의 스키마입니다. 읽은 값은 `MetroidvaniaRules::_health`(기반 `VitalitySettings`)로 옮깁니다. */
     REFLECT()
-    struct MetroHealthDef
+    struct MetroidvaniaHealthDef
     {
         REFLECT_BODY();
 
@@ -164,9 +164,9 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<Stamina>` 의 스키마입니다. 읽은 값은 `MetroRules::_stamina`(기반 `ResourceGaugeSettings`)로 옮깁니다. */
+    /** @brief `<Stamina>` 의 스키마입니다. 읽은 값은 `MetroidvaniaRules::_stamina`(기반 `ResourceGaugeSettings`)로 옮깁니다. */
     REFLECT()
-    struct MetroStaminaDef
+    struct MetroidvaniaStaminaDef
     {
         REFLECT_BODY();
 
@@ -185,7 +185,7 @@ namespace sw
 {
     /** @brief 장르 규칙 수치입니다. 스칼라 칸은 `<Rules>` 의 스키마이고, 통화는 루트, 체력 · 스태미나 · 패리 창은 각자의 원소에서 읽습니다. */
     REFLECT()
-    struct MetroRules
+    struct MetroidvaniaRules
     {
         REFLECT_BODY();
 
@@ -228,7 +228,7 @@ namespace sw
 {
     /** @brief 루트 `<Metroidvania>` 의 속성입니다. */
     REFLECT()
-    struct MetroCatalogRootDef
+    struct MetroidvaniaCatalogRootDef
     {
         REFLECT_BODY();
 
@@ -254,20 +254,20 @@ namespace sw
     public:
         MetroidvaniaCatalog();
 
-        const MetroAbilityDef*   findAbility( const hashed_string& id ) const { return _abilityCatalog.find( id ); }
-        const MetroCharmDef*     findCharm( const hashed_string& id ) const { return _charmCatalog.find( id ); }
-        const MetroRegionMapDef* findRegionMap( const hashed_string& region ) const { return _mapCatalog.find( region ); }
-        const MetroSiteDef*      findSite( const hashed_string& id ) const { return _siteCatalog.find( id ); }
-        const MetroPickupDef*    findPickup( const hashed_string& id ) const { return _pickupCatalog.find( id ); }
-        const MetroEnemyDef*     findEnemy( const hashed_string& id ) const { return _enemyCatalog.find( id ); }
+        const MetroidvaniaAbilityDef*   findAbility( const hashed_string& id ) const { return _abilityCatalog.find( id ); }
+        const MetroidvaniaTrinketDef*   findCharm( const hashed_string& id ) const { return _charmCatalog.find( id ); }
+        const MetroidvaniaRegionMapDef* findRegionMap( const hashed_string& region ) const { return _mapCatalog.find( region ); }
+        const MetroidvaniaSiteDef*      findSite( const hashed_string& id ) const { return _siteCatalog.find( id ); }
+        const MetroidvaniaPickupDef*    findPickup( const hashed_string& id ) const { return _pickupCatalog.find( id ); }
+        const MetroidvaniaEnemyDef*     findEnemy( const hashed_string& id ) const { return _enemyCatalog.find( id ); }
 
-        const vector<MetroAbilityDef>&   getAbilities() const { return _abilityCatalog.getAll(); }
-        const vector<MetroCharmDef>&     getCharms() const { return _charmCatalog.getAll(); }
-        const vector<MetroRegionMapDef>& getRegionMaps() const { return _mapCatalog.getAll(); }
-        const vector<MetroSiteDef>&      getSites() const { return _siteCatalog.getAll(); }
-        const vector<MetroPickupDef>&    getPickups() const { return _pickupCatalog.getAll(); }
-        const MetroRules&                getRules() const { return _rules; }
-        MetroRules&                      getRules() { return _rules; }
+        const vector<MetroidvaniaAbilityDef>&   getAbilities() const { return _abilityCatalog.getAll(); }
+        const vector<MetroidvaniaTrinketDef>&   getCharms() const { return _charmCatalog.getAll(); }
+        const vector<MetroidvaniaRegionMapDef>& getRegionMaps() const { return _mapCatalog.getAll(); }
+        const vector<MetroidvaniaSiteDef>&      getSites() const { return _siteCatalog.getAll(); }
+        const vector<MetroidvaniaPickupDef>&    getPickups() const { return _pickupCatalog.getAll(); }
+        const MetroidvaniaRules&                getRules() const { return _rules; }
+        MetroidvaniaRules&                      getRules() { return _rules; }
 
     private:
         static constexpr const utf8* kXMLRootName = "Metroidvania"; ///< 루트 원소(`XMLCatalog`)
@@ -278,12 +278,12 @@ namespace sw
         [[nodiscard]] bool           loadPickup( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadEnemy( const XMLNode& node, string_view sourceName );
 
-        GameCatalog<MetroAbilityDef>   _abilityCatalog;
-        GameCatalog<MetroCharmDef>     _charmCatalog;
-        GameCatalog<MetroRegionMapDef> _mapCatalog;
-        GameCatalog<MetroSiteDef>      _siteCatalog;
-        GameCatalog<MetroPickupDef>    _pickupCatalog;
-        GameCatalog<MetroEnemyDef>     _enemyCatalog;
-        MetroRules                     _rules;
+        GameCatalog<MetroidvaniaAbilityDef>   _abilityCatalog;
+        GameCatalog<MetroidvaniaTrinketDef>   _charmCatalog;
+        GameCatalog<MetroidvaniaRegionMapDef> _mapCatalog;
+        GameCatalog<MetroidvaniaSiteDef>      _siteCatalog;
+        GameCatalog<MetroidvaniaPickupDef>    _pickupCatalog;
+        GameCatalog<MetroidvaniaEnemyDef>     _enemyCatalog;
+        MetroidvaniaRules                     _rules;
     };
 } // namespace sw

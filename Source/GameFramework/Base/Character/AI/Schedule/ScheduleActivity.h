@@ -20,11 +20,11 @@ namespace sw
     ENUM()
     enum class ScheduleActivityTarget : uint8
     {
-        Place = 0,   ///< 일정 블록의 `place`(장소 id)
-        Home,        ///< NPC 의 집 장소
-        SmartObject, ///< `objectKind` 의 슬롯을 활동 슬롯 제공자에게 예약한다(없으면 `place`, 그것도 없으면 집)
-        Appointment, ///< 약속(`appointment`)의 장소와 시간
-        Wander       ///< `place` 둘레 `radius` 안을 `wanderMinutes` 마다 옮겨 다닌다
+        Place = 0,    ///< 일정 블록의 `place`(장소 id)
+        Home,         ///< NPC 의 집 장소
+        UsableObject, ///< `objectKind` 의 슬롯을 활동 슬롯 제공자에게 예약한다(없으면 `place`, 그것도 없으면 집)
+        Appointment,  ///< 약속(`appointment`)의 장소와 시간
+        Wander        ///< `place` 둘레 `radius` 안을 `wanderMinutes` 마다 옮겨 다닌다
     };
 } // namespace sw
 

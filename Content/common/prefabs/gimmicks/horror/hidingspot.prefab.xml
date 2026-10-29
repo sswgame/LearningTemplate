@@ -40,12 +40,12 @@
 				</_requiredTags>
 				<_listOccupant />
 			</GimmickSensorComponent>
-			<SmartObjectComponent _componentName="SmartObjectComponent"
+			<UsableObjectComponent _componentName="UsableObjectComponent"
 			                      _bActive="true"
 			                      _smartObjectID="HidingSpot"
 			                      _catalogPath="common/data/interactions/default.interactions.xml">
 				<_listClaimant />
-			</SmartObjectComponent>
+			</UsableObjectComponent>
 			<HidingSpotComponent _componentName="HidingSpotComponent" _bActive="true" />
 		</_listComponent>
 	</GameObject>

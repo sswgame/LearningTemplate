@@ -177,7 +177,7 @@ namespace sw
         return bValid;
     }
 
-    bool InteractionCatalog::readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const
+    bool InteractionCatalog::readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
         bool bValid    = Internal::checkAttributes( node, Internal::kArrSmartObjectAttribute, sourceName );
@@ -186,13 +186,13 @@ namespace sw
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
             {
-                SW_LOG_WARNING( "%#: unknown element <%#> in <SmartObject>", sourceName, slotNode.getName() );
+                SW_LOG_WARNING( "%#: unknown element <%#> in <UsableObject>", sourceName, slotNode.getName() );
                 bValid = false;
                 continue;
             }
             bValid = Internal::checkAttributes( slotNode, Internal::kArrSlotAttribute, sourceName ) && bValid;
-            SmartObjectSlotDef slot;
-            float3             offset{};
+            UsableObjectSlotDef slot;
+            float3              offset{};
             bValid = XMLReadUtil::readOptionalFloat3( slotNode, "offset", sourceName, offset ) && bValid;
 
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
@@ -222,13 +222,13 @@ namespace sw
                 addInteraction( def );
                 continue;
             }
-            if ( StringUtil::equals( child.getName(), "SmartObject" ) )
+            if ( StringUtil::equals( child.getName(), "UsableObject" ) )
             {
-                SmartObjectDef def;
+                UsableObjectDef def;
                 bValid = readSmartObject( child, def, sourceName ) && bValid;
                 if ( def._id.empty() )
                 {
-                    SW_LOG_WARNING( "%#: <SmartObject> without an id - skipped", sourceName );
+                    SW_LOG_WARNING( "%#: <UsableObject> without an id - skipped", sourceName );
                     bValid = false;
                     continue;
                 }

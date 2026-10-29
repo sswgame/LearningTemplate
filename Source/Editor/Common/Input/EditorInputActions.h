@@ -53,7 +53,7 @@ namespace sw::editor
         static constexpr const utf8* kGlobalLayer = "Editor.Global";
         /** @brief 패널 레이어 이름의 앞부분입니다. 레이어 이름은 이 뒤에 패널 id(`EditorPanelEntry::_id`)를 붙인 것입니다. */
         static constexpr const utf8* kPanelLayerPrefix = "Editor.Panel.";
-        /** @brief 사용자 재배치 파일 이름입니다(에디터 상태 폴더 — `Saved/Editor`). 형식은 셸 맵과 같다(`ShellInputActions::saveUserBindings`). */
+        /** @brief 사용자 재배치 파일 이름입니다(에디터 상태 폴더 — `Saved/Editor`). 형식은 디버그 키 맵과 같다(`DebugKeyActions::saveUserBindings`). */
         static constexpr const utf8* kUserBindingsFileName = "editorbindings.xml";
 
         EditorInputActions();

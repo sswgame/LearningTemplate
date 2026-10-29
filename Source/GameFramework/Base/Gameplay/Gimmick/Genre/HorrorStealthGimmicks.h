@@ -93,7 +93,7 @@ namespace sw
 {
     /**
      * @class HidingSpotComponent
-     * @brief 숨는 곳입니다(사물함, 옷장, 침대 밑). 같은 오브젝트의 `SmartObjectComponent` 슬롯(Activity.Hide)을 차지하면 `State.Hidden` 태그를 붙입니다.
+     * @brief 숨는 곳입니다(사물함, 옷장, 침대 밑). 같은 오브젝트의 `UsableObjectComponent` 슬롯(Activity.Hide)을 차지하면 `State.Hidden` 태그를 붙입니다.
      *        AI 감각은 그 태그를 보고 대상을 보지 않습니다(`isHidden`). 상호작용(Hide)을 끝내면 들어가고, 다시 끝내면 나옵니다. 센서의 사용 알림을 읽어서 처리합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Hiding Spot", Tooltip = "Claims a smart object slot and tags the occupant as hidden" )

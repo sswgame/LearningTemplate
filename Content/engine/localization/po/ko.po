@@ -106,8 +106,8 @@ msgstr "태그"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
-msgid "Select an object with an AbilitySystemComponent, or pick one above."
-msgstr "AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
+msgid "Select an object with an AbilityComponent, or pick one above."
+msgstr "AbilityComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintPlayOnly"
@@ -121,8 +121,8 @@ msgstr "무한"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.NoComponentsInScene"
-msgid "No AbilitySystemComponent in the active scene"
-msgstr "활성 씬에 AbilitySystemComponent 가 없습니다"
+msgid "No AbilityComponent in the active scene"
+msgstr "활성 씬에 AbilityComponent 가 없습니다"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.PickTarget"

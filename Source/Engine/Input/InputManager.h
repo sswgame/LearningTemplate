@@ -202,10 +202,10 @@ namespace sw
         bool isKeyVisibleToGame( Key key ) const;
         /**
          * @brief 게임 쪽 조회가 패드 @p deviceIndex 의 컨트롤 @p controlIndex(버튼 0..13, 왼쪽 트리거 100, 오른쪽 트리거 101)를 볼 수 있으면 true 입니다.
-         * @details 개발 콘솔이 열려 있는 동안은 모두 false 입니다 — 콘솔이 패드 A · B · 십자키로 조작되므로(셸 맵) 게임이 같은 입력을 또 받으면 안 된다
+         * @details 개발 콘솔이 열려 있는 동안은 모두 false 입니다 — 콘솔이 패드 A · B · 십자키로 조작되므로(디버그 키 맵) 게임이 같은 입력을 또 받으면 안 된다
          *          (shooter3d 는 패드 `Back` 이 카메라 전환과 겹친다). 콘솔이 쥔 동안 눌렸거나 닫을 때 눌려 있던 컨트롤은 뗄 때까지 가린다(닫는 B 가 게임의 B 로 새지 않게).
          *          키보드와 달리 이 가림은 `Game` 이 아닌 포커스 중 콘솔(`DevConsole`)에만 걸린다 — 런타임 UI 글자 입력 중에도 패드로 UI 를 다녀야 한다.
-         *          키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 이 조회를 쓰지 않고 장치 상태를 그대로 읽는다.
+         *          키보드 포커스를 무시하는 맵(디버그 키 맵, UI 맵)은 이 조회를 쓰지 않고 장치 상태를 그대로 읽는다.
          */
         bool isGamepadControlVisibleToGame( uint32 deviceIndex, uint16 controlIndex ) const;
 

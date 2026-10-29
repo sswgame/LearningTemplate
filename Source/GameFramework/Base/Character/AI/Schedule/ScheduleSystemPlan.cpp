@@ -298,7 +298,7 @@ namespace sw
                 segment._target = placeLocation;
                 break;
             }
-            case ScheduleActivityTarget::SmartObject:
+            case ScheduleActivityTarget::UsableObject:
             {
                 segment._target = placeLocation;
                 ScheduleReserveRequest request;

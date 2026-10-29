@@ -22,7 +22,7 @@ namespace sw
     {
         struct DevConsoleControllerInternal
         {
-            /** @brief 셸 맵에 있어야 하는 콘솔 액션입니다. 이름은 `InputMapDefaults` 상수 하나만 씁니다. */
+            /** @brief 디버그 키 맵에 있어야 하는 콘솔 액션입니다. 이름은 `InputMapDefaults` 상수 하나만 씁니다. */
             static constexpr const utf8* kArrActionName[] = {
                 InputMapDefaults::kDevConsoleToggleAction,
                 InputMapDefaults::kDevConsoleCloseAction,

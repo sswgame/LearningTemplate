@@ -52,7 +52,7 @@ namespace sw
         void shutdown();
 
         /**
-         * @brief 셸 InputMap 의 콘솔 액션과 이번 프레임 글자를 처리하고, 열려 있으면 창에 그립니다. 셸 맵을 갱신한 뒤 프레임마다 부릅니다.
+         * @brief 셸 InputMap 의 콘솔 액션과 이번 프레임 글자를 처리하고, 열려 있으면 창에 그립니다. 디버그 키 맵을 갱신한 뒤 프레임마다 부릅니다.
          * @details 열기와 닫기가 발화한 프레임의 글자는 버린다. 여는 키가 같은 프레임에 내는 글자(`` ` ``, `~`)가 입력 줄에 들어가지 않게 하기 위해서다.
          *          콘솔 레이어(`InputMapDefaults::kDevConsoleLayerName`)는 콘솔이 열리고 닫히는 것에 맞춰 켜고 끈다.
          */
@@ -74,7 +74,7 @@ namespace sw
         void appendText( string_view text );
         /** @brief Tab 입력을 처리합니다. 입력 줄을 완성하고, 후보가 여럿이면 출력 줄에 나열합니다. */
         void completeInputLine();
-        /** @brief 셸 맵에 콘솔 레이어와 액션이 모두 있으면 true 입니다. 처음 한 번만 검사하고, 빠졌으면 오류를 남깁니다. */
+        /** @brief 디버그 키 맵에 콘솔 레이어와 액션이 모두 있으면 true 입니다. 처음 한 번만 검사하고, 빠졌으면 오류를 남깁니다. */
         bool hasConsoleActions( const InputMap& shellMap );
 
     private:
@@ -85,8 +85,8 @@ namespace sw
         InputManager*                 _pInput;
         Subscription                  _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
         uint8                         _bOpen             : 1;
-        uint8                         _bShellMapChecked  : 1; /**< 셸 맵을 한 번 검사했는지 나타냅니다. */
-        uint8                         _bShellMapComplete : 1; /**< 검사한 셸 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */
+        uint8                         _bShellMapChecked  : 1; /**< 디버그 키 맵을 한 번 검사했는지 나타냅니다. */
+        uint8                         _bShellMapComplete : 1; /**< 검사한 디버그 키 맵에 콘솔 레이어와 액션이 모두 있었는지 나타냅니다. */
         [[maybe_unused]] uint8        _reserved          : 5;
     };
 } // namespace sw

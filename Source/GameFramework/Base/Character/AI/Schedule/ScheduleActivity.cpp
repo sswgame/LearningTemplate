@@ -29,14 +29,14 @@ namespace sw
     void ScheduleActivityRegistry::registerBuiltinActivities()
     {
         const ScheduleActivityDef arrBuiltin[] = {
-            {     hashed_string( "GoTo" ),  hashed_string( "Idle" ),       ScheduleActivityTarget::Place},
-            {   hashed_string( "WorkAt" ),  hashed_string( "Work" ),       ScheduleActivityTarget::Place},
-            {   hashed_string( "Attend" ), hashed_string( "Cheer" ),       ScheduleActivityTarget::Place},
-            { hashed_string( "StayHome" ),  hashed_string( "Idle" ),        ScheduleActivityTarget::Home},
-            {    hashed_string( "Sleep" ), hashed_string( "Sleep" ),        ScheduleActivityTarget::Home},
-            {hashed_string( "UseObject" ),   hashed_string( "Use" ), ScheduleActivityTarget::SmartObject},
-            {     hashed_string( "Meet" ),  hashed_string( "Talk" ), ScheduleActivityTarget::Appointment},
-            {   hashed_string( "Wander" ),  hashed_string( "Walk" ),      ScheduleActivityTarget::Wander},
+            {     hashed_string( "GoTo" ),  hashed_string( "Idle" ),        ScheduleActivityTarget::Place},
+            {   hashed_string( "WorkAt" ),  hashed_string( "Work" ),        ScheduleActivityTarget::Place},
+            {   hashed_string( "Attend" ), hashed_string( "Cheer" ),        ScheduleActivityTarget::Place},
+            { hashed_string( "StayHome" ),  hashed_string( "Idle" ),         ScheduleActivityTarget::Home},
+            {    hashed_string( "Sleep" ), hashed_string( "Sleep" ),         ScheduleActivityTarget::Home},
+            {hashed_string( "UseObject" ),   hashed_string( "Use" ), ScheduleActivityTarget::UsableObject},
+            {     hashed_string( "Meet" ),  hashed_string( "Talk" ),  ScheduleActivityTarget::Appointment},
+            {   hashed_string( "Wander" ),  hashed_string( "Walk" ),       ScheduleActivityTarget::Wander},
         };
         for ( const ScheduleActivityDef& def : arrBuiltin )
         {

@@ -105,7 +105,7 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
 
-#include "Engine/Scene/AuthorityGhost.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다
+#include "Engine/Scene/ServerPoseOverlay.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -149,7 +149,7 @@ namespace sw
         , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
         , _configReloadedSubscription{}
-        , _shellActions{}
+        , _debugKeyActions{}
         , _listFrameObserver{}
         , _runTitle{}
         , _hostRole{ EngineHostRole::Client }
@@ -259,8 +259,8 @@ namespace sw
                 SW_LOG_ERROR( "Engine services failed: %#", _services.getCollection().getError().c_str() );
                 return false;
             }
-            // 셸 액션은 엔진의 값 멤버다 — 개발 명령(`shell.rebind`)이 `engine::findSubsystem<ShellInputActions>()` 로 찾게 빌려 건다(`shutdown` 이 맵을 놓을 때 푼다).
-            (void)_services.bind( &_shellActions ); // 새 범위 — 겹치지 않는다
+            // 셸 액션은 엔진의 값 멤버다 — 개발 명령(`debugkeys.rebind`)이 `engine::findSubsystem<DebugKeyActions>()` 로 찾게 빌려 건다(`shutdown` 이 맵을 놓을 때 푼다).
+            (void)_services.bind( &_debugKeyActions ); // 새 범위 — 겹치지 않는다
         }
 
         // 기동 단계는 서브시스템이다 — 서브시스템이 스스로 이름 · 의존 · 호스트를 선언한다. 추가 순서는 뜻이 없다(의존이 정한다). 해제는 그 역순이다.
@@ -321,9 +321,9 @@ namespace sw
             SW_LOG_ERROR( "Engine startup failed: %#", _startup.getCollection().getError().c_str() );
             return false;
         }
-        // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
+        // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
-            _shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
+            _debugKeyActions.setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
         // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
@@ -398,7 +398,7 @@ namespace sw
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
         _runTitle.reset(); // 프레임마다 모은 창 제목도 같다
 #if SW_DEV_COMMANDS_ENABLED
-        AuthorityGhost* const pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
+        ServerPoseOverlay* const pAuthorityGhost = engine::findSubsystem<ServerPoseOverlay>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
         if ( pAuthorityGhost != nullptr )
             pAuthorityGhost->shutdown(); // 작업 스레드는 이 이미지의 코드다 - 이미지가 내려가기 전에 합류한다
 #endif
@@ -406,9 +406,9 @@ namespace sw
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         _startup.getCollection().shutdownAll();
-        // 셸 디버그 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
-        _shellActions.reset();
-        _services.unbind<ShellInputActions>();
+        // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(`updateDebugKeyActions` 가 처음 쓸 때 만든다).
+        _debugKeyActions.reset();
+        _services.unbind<DebugKeyActions>();
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _configReloadedSubscription.reset();
@@ -650,10 +650,10 @@ namespace sw
         if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
 #if SW_DEV_COMMANDS_ENABLED
-        // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
+        // 디버그 HUD — 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
         DebugHUD* const pDebugHUD = _pUISystem->getDebugHUD();
         if ( pDebugHUD != nullptr )
-            pDebugHUD->update( _shellActions.getInputMap() );
+            pDebugHUD->update( _debugKeyActions.getInputMap() );
 #endif
         // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
         const MainWindowSubsystem* const pWindowHost  = engine::findSubsystem<MainWindowSubsystem>();
@@ -770,9 +770,9 @@ namespace sw
         if ( _pSceneManager != nullptr )
             SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
 #if SW_DEV_COMMANDS_ENABLED
-        // 서버가 가진 위치를 고스트로 겹친다(`-gv_authorityGhostPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
+        // 서버가 가진 위치를 고스트로 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         if ( _pSceneManager != nullptr )
-            if ( AuthorityGhost* pAuthorityGhost = engine::findSubsystem<AuthorityGhost>(); pAuthorityGhost != nullptr )
+            if ( ServerPoseOverlay* pAuthorityGhost = engine::findSubsystem<ServerPoseOverlay>(); pAuthorityGhost != nullptr )
                 pAuthorityGhost->update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
 #endif
 
@@ -949,27 +949,27 @@ namespace sw
 #endif
     }
 
-    void Engine::updateShellActions( float32 deltaTime )
+    void Engine::updateDebugKeyActions( float32 deltaTime )
     {
         if ( _pInputManager == nullptr )
             return;
-        _shellActions.update( *_pInputManager, deltaTime );
+        _debugKeyActions.update( *_pInputManager, deltaTime );
     }
 
     unique_ptr<InputMap> Engine::createShellInputMap( const AssetID& assetID )
     {
-        return ShellInputActions::createInputMap( assetID );
+        return DebugKeyActions::createInputMap( assetID );
     }
 
     void Engine::pollShaderReloadHotkey()
     {
 #if defined( SW_DEBUG )
         // 셰이더 리로드는 **Engine 자신의** 개발 도구다(ShaderRecompiler 를 여기서 소유한다). 그래서
-        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 셸 맵(`ShellInputActions`)은 입력 사실만 내주므로 단축키의 뜻은 소유자인 여기서 읽는다.
+        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 디버그 키 맵(`DebugKeyActions`)은 입력 사실만 내주므로 단축키의 뜻은 소유자인 여기서 읽는다.
         // 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
         if ( _pRHI == nullptr )
             return;
-        if ( _shellActions.wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
+        if ( _debugKeyActions.wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
             return;
         if ( ShaderRecompiler* pShaderRecompiler = getShaderRecompiler() )
         {
@@ -981,6 +981,6 @@ namespace sw
 
     bool Engine::wasDebugActionTriggered( string_view actionName ) const
     {
-        return _shellActions.wasActionTriggered( hashed_string( actionName ) );
+        return _debugKeyActions.wasActionTriggered( hashed_string( actionName ) );
     }
 } // namespace sw

@@ -86,7 +86,7 @@ namespace sw
      * @struct AutomationLoad
      * @brief 부하 시나리오의 부하 선언(루트 아래 `<Load>` 한 줄)입니다. 부하 검증(`py -3 -m Scripts load`)이 같은 줄로 App · 온라인 봇 · 루프백 클러스터를 돌린다.
      * @details 엔진이 쓰는 값은 `_durationSeconds` 뿐이다 — 시나리오가 시작한 프레임에 그 시간만큼 프레임 측정 창(`gv_profileSeconds`)을 연다. 나머지는 실행기
-     *          (`Scripts/qa/Load.py`)가 명령줄로 옮긴다(메시 수 → `-gv_benchMeshes`, 회선 → `-gv_netEmulation*`). 형식을 한 곳에서 검사하려고 엔진도 읽는다.
+     *          (`Scripts/qa/Load.py`)가 명령줄로 옮긴다(메시 수 → `-gv_stressTestMeshes`, 회선 → `-gv_netEmulation*`). 형식을 한 곳에서 검사하려고 엔진도 읽는다.
      */
     struct AutomationLoad
     {
@@ -94,8 +94,8 @@ namespace sw
         float32 _durationSeconds{ 0.0f }; ///< 측정 창(초, 워밍업 60 프레임 뒤). 0 보다 커야 한다
         float32 _rampUpSeconds{ 0.0f };   ///< 클라이언트를 이 시간에 걸쳐 늘린다(봇 · 클러스터)
         uint32  _clientCount{ 0 };        ///< 동시 클라이언트 수(봇 · 클러스터). App 하나는 0
-        uint32  _meshCount{ 0 };          ///< 벤치 메시 수(`-gv_benchMeshes`), 0 이면 건드리지 않는다
-        uint32  _moverCount{ 0 };         ///< 메시마다 틱에서 움직이는 컴포넌트 수(`-gv_benchTickMovers`) — 틱 오브젝트 수 = 메시 × 이 값
+        uint32  _meshCount{ 0 };          ///< 벤치 메시 수(`-gv_stressTestMeshes`), 0 이면 건드리지 않는다
+        uint32  _moverCount{ 0 };         ///< 메시마다 틱에서 움직이는 컴포넌트 수(`-gv_stressTestTickMovers`) — 틱 오브젝트 수 = 메시 × 이 값
         bool    _bDeclared{ false };      ///< 시나리오에 `<Load>` 가 있으면 true 입니다
     };
 } // namespace sw

@@ -33,7 +33,7 @@ namespace sw
             }
 
             /** @brief 이펙트의 태그 자식과 `<GrantAbility>` 를 읽고 즉시 이펙트에 줄 동안 항목이 없는지 확인합니다. 어긋나면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readEffectTagsAndGrants( const XMLNode& node, const utf8* pID, string_view sourceName, GameplayEffectDef& outDef )
+            [[nodiscard]] static bool readEffectTagsAndGrants( const XMLNode& node, const utf8* pID, string_view sourceName, AbilityEffectDef& outDef )
             {
                 readTagChildren( node, "AssetTag", outDef._assetTags );
                 readTagChildren( node, "GrantedTag", outDef._grantedTags );
@@ -64,7 +64,7 @@ namespace sw
             }
 
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
-            [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
+            [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, AbilityEffectModifier& outModifier )
             {
                 if ( XMLReadUtil::readRequiredName( node, "attribute", sourceName, outModifier._attribute ) == false )
                 {
@@ -179,27 +179,27 @@ namespace sw
         _mapExecutionFactory.insert_or_assign( className, factory );
     }
 
-    shared_ptr<const GameplayEffectDef> AbilityCatalog::addEffect( const GameplayEffectDef& def )
+    shared_ptr<const AbilityEffectDef> AbilityCatalog::addEffect( const AbilityEffectDef& def )
     {
         if ( def._id.empty() )
         {
             SW_LOG_WARNING( "addEffect: an effect without an id was ignored" );
             return nullptr;
         }
-        shared_ptr<const GameplayEffectDef> pDef = make_shared<GameplayEffectDef>( def );
+        shared_ptr<const AbilityEffectDef> pDef = make_shared<AbilityEffectDef>( def );
         _mapEffect.insert_or_assign( def._id, pDef );
         return pDef;
     }
 
-    void AbilityCatalog::addAbility( const GameplayAbilityDef& def )
+    void AbilityCatalog::addAbility( const AbilityDef& def )
     {
         if ( def._id.empty() )
         {
             SW_LOG_WARNING( "addAbility: an ability without an id was ignored" );
             return;
         }
-        GameplayAbilityDef stored = def;
-        stored._config._id        = def._id;
+        AbilityDef stored  = def;
+        stored._config._id = def._id;
         _mapAbility.insert_or_assign( def._id, std::move( stored ) );
     }
 
@@ -255,13 +255,13 @@ namespace sw
         return nullptr;
     }
 
-    shared_ptr<const GameplayEffectDef> AbilityCatalog::findEffect( const hashed_string& effectID ) const
+    shared_ptr<const AbilityEffectDef> AbilityCatalog::findEffect( const hashed_string& effectID ) const
     {
         const auto mapIter = _mapEffect.find( effectID );
         return mapIter != _mapEffect.end() ? mapIter->second : nullptr;
     }
 
-    const GameplayAbilityDef* AbilityCatalog::findAbility( const hashed_string& abilityID ) const
+    const AbilityDef* AbilityCatalog::findAbility( const hashed_string& abilityID ) const
     {
         const auto mapIter = _mapAbility.find( abilityID );
         return mapIter != _mapAbility.end() ? &mapIter->second : nullptr;
@@ -273,9 +273,9 @@ namespace sw
         return mapIter != _mapAbilitySet.end() ? &mapIter->second : nullptr;
     }
 
-    unique_ptr<GameplayAbility> AbilityCatalog::createAbility( const hashed_string& abilityID ) const
+    unique_ptr<Ability> AbilityCatalog::createAbility( const hashed_string& abilityID ) const
     {
-        const GameplayAbilityDef* pDef = findAbility( abilityID );
+        const AbilityDef* pDef = findAbility( abilityID );
         if ( pDef == nullptr )
         {
             SW_LOG_WARNING( "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
@@ -288,7 +288,7 @@ namespace sw
                             pDef->_className.c_str() );
             return nullptr;
         }
-        unique_ptr<GameplayAbility> pAbility = factoryIter->second();
+        unique_ptr<Ability> pAbility = factoryIter->second();
         if ( pAbility != nullptr )
             pAbility->setConfig( pDef->_config );
         return pAbility;
@@ -315,9 +315,9 @@ namespace sw
         uint32 loadedCount = 0;
 
         // 이펙트, 어빌리티, 세트 순으로 읽는다. 어빌리티가 비용 이펙트와 쿨다운 이펙트를 참조하므로, 파일 안의 순서와 상관없이 이펙트를 먼저 모두 읽는다.
-        for ( XMLNode node = root.findChild( "GameplayEffect" ); node; node = node.findNextSibling( "GameplayEffect" ) )
+        for ( XMLNode node = root.findChild( "AbilityEffect" ); node; node = node.findNextSibling( "AbilityEffect" ) )
         {
-            GameplayEffectDef def;
+            AbilityEffectDef def;
             if ( readEffect( node, sourceName, def ) == false )
                 continue;
             (void)addEffect( def ); // id 가 있으므로 실패하지 않는다
@@ -326,7 +326,7 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            GameplayAbilityDef def;
+            AbilityDef def;
             if ( readAbility( node, sourceName, def ) == false )
                 continue;
             addAbility( def );
@@ -352,16 +352,16 @@ namespace sw
         }
 
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <GameplayEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
+            SW_LOG_WARNING( "%#: no <AbilityEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
         return loadedCount;
     }
 
-    bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, GameplayEffectDef& outDef ) const
+    bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const
     {
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_WARNING( "%#: <GameplayEffect> without an id - skipped", sourceName );
+            SW_LOG_WARNING( "%#: <AbilityEffect> without an id - skipped", sourceName );
             return false;
         }
         outDef._id = hashed_string( pID );
@@ -372,7 +372,7 @@ namespace sw
             SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
             return false;
         }
-        // 적지 않은 칸은 GameplayEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
+        // 적지 않은 칸은 AbilityEffectDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 이펙트를 넣지 않는 오류다(자르지 않는다).
         constexpr float32 kAny   = MathUtil::kMaxFloat;
         bool              bValid = XMLReadUtil::readOptionalNumber( node, "seconds", sourceName, -kAny, kAny, outDef._duration._baseValue );
         bValid                   = XMLReadUtil::readOptionalNumber( node, "secondsPerLevel", sourceName, -kAny, kAny, outDef._duration._perLevel ) && bValid;
@@ -405,7 +405,7 @@ namespace sw
 
         for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
-            GameplayEffectModifier modifier;
+            AbilityEffectModifier modifier;
             if ( AbilityCatalogInternal::readModifier( modifierNode, pID, sourceName, modifier ) )
                 outDef._listModifier.push_back( modifier );
         }
@@ -464,7 +464,7 @@ namespace sw
         return true;
     }
 
-    bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const
+    bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, AbilityDef& outDef ) const
     {
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
@@ -480,12 +480,12 @@ namespace sw
         }
         // 클래스 이름은 여기서 찾지 않는다. 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서에 영향받으면 안 된다. 없는 클래스는 만들 때(`createAbility`) 경고한다.
 
-        GameplayAbilityConfig& config = outDef._config;
-        config._id                    = outDef._id;
-        config._pCostEffect           = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
-        config._pCooldownEffect       = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
-        bool bValid                   = XMLReadUtil::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
-        bValid                        = XMLReadUtil::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
+        AbilityConfig& config   = outDef._config;
+        config._id              = outDef._id;
+        config._pCostEffect     = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
+        config._pCooldownEffect = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
+        bool bValid             = XMLReadUtil::readOptionalFlag( node, "retrigger", config._bRetriggerInstancedAbility );
+        bValid                  = XMLReadUtil::readOptionalFlag( node, "activateOnGranted", config._bActivateOnGranted ) && bValid;
 
         AbilityCatalogInternal::readTagChildren( node, "AbilityTag", config._abilityTags );
         AbilityCatalogInternal::readTagChildren( node, "CancelTag", config._cancelAbilitiesWithTags );
@@ -604,11 +604,11 @@ namespace sw
         return true;
     }
 
-    shared_ptr<const GameplayEffectDef> AbilityCatalog::resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const
+    shared_ptr<const AbilityEffectDef> AbilityCatalog::resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const
     {
         if ( StringUtil::isNullOrEmpty( pEffectID ) )
             return nullptr;
-        shared_ptr<const GameplayEffectDef> pDef = findEffect( hashed_string( pEffectID ) );
+        shared_ptr<const AbilityEffectDef> pDef = findEffect( hashed_string( pEffectID ) );
         if ( pDef == nullptr )
             SW_LOG_WARNING( "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerID, pEffectID );
         return pDef;

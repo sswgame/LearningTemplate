@@ -2,8 +2,8 @@
 
 #include "GameFramework/Plugin/Editor/Base/Ability/AbilityDebugModel.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
+#include "GameFramework/Base/Gameplay/Ability/Ability.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 namespace sw::editor
 {
@@ -16,7 +16,7 @@ namespace sw::editor
         _time = 0.0f;
     }
 
-    void AbilityDebugModel::collect( const AbilitySystemComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot )
+    void AbilityDebugModel::collect( const AbilityComponent& abilitySystem, AbilityDebugSnapshot& outSnapshot )
     {
         outSnapshot.clear();
         outSnapshot._time = abilitySystem.getTime();
@@ -63,7 +63,7 @@ namespace sw::editor
         abilitySystem.getAbilitySpecHandles( listHandle );
         for ( const AbilitySpecHandle& handle : listHandle )
         {
-            const GameplayAbility* pAbility = abilitySystem.findAbility( handle );
+            const Ability* pAbility = abilitySystem.findAbility( handle );
             if ( pAbility == nullptr )
                 continue;
             AbilityDebugAbilityRow row;

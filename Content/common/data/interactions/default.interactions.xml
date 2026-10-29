@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 공용 상호작용 표 — InteractableComponent · SmartObjectComponent 가 기본으로 읽는다(InteractionCatalog). 각은 도, 시간은 초다.
+<!-- 공용 상호작용 표 — InteractableComponent · UsableObjectComponent 가 기본으로 읽는다(InteractionCatalog). 각은 도, 시간은 초다.
      prompt 는 지역화 표의 키다. alignment 는 하는 쪽이 맞춰 설 마커 이름(모션 워핑)이다. -->
 <Interactions>
   <Interaction id="Use" prompt="ui.interact.use" mode="Press" maxDistance="2" maxAngle="1.2217" cooldown="0.3" alignment="Front"/>
@@ -17,18 +17,18 @@
     <Step prompt="ui.craft.gather" mode="Hold" duration="1"/>
     <Step prompt="ui.craft.hammer" mode="Mash" presses="6" decay="0.5"/>
   </Interaction>
-  <SmartObject id="Bench">
+  <UsableObject id="Bench">
     <Slot id="Left" offset="-0.5 0 0.3" yaw="3.1416" tags="Activity.Sit"/>
     <Slot id="Right" offset="0.5 0 0.3" yaw="3.1416" tags="Activity.Sit"/>
-  </SmartObject>
-  <SmartObject id="LowCover">
+  </UsableObject>
+  <UsableObject id="LowCover">
     <Slot id="Left" offset="-0.6 0 -0.5" yaw="0" tags="Cover.Low"/>
     <Slot id="Right" offset="0.6 0 -0.5" yaw="0" tags="Cover.Low"/>
-  </SmartObject>
-  <SmartObject id="Workbench">
+  </UsableObject>
+  <UsableObject id="Workbench">
     <Slot id="Front" offset="0 0 0.8" yaw="3.1416" tags="Activity.Craft"/>
-  </SmartObject>
-  <SmartObject id="HidingSpot">
+  </UsableObject>
+  <UsableObject id="HidingSpot">
     <Slot id="Inside" offset="0 0 0" yaw="0" tags="Activity.Hide"/>
-  </SmartObject>
+  </UsableObject>
 </Interactions>

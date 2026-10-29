@@ -106,8 +106,8 @@ msgstr "タグ"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintNoTarget"
-msgid "Select an object with an AbilitySystemComponent, or pick one above."
-msgstr "AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。"
+msgid "Select an object with an AbilityComponent, or pick one above."
+msgstr "AbilityComponent を持つオブジェクトを選択するか、上で選んでください。"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.HintPlayOnly"
@@ -121,8 +121,8 @@ msgstr "無限"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.NoComponentsInScene"
-msgid "No AbilitySystemComponent in the active scene"
-msgstr "アクティブなシーンに AbilitySystemComponent がありません"
+msgid "No AbilityComponent in the active scene"
+msgstr "アクティブなシーンに AbilityComponent がありません"
 
 #: Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.PickTarget"

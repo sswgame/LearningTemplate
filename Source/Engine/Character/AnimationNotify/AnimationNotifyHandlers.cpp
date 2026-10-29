@@ -274,8 +274,8 @@ namespace sw
                 };
             };
 
-            /** @class GameplayEventHandler @brief 같은 오브젝트의 켜진 컴포넌트에 `onAnimationNotify` 를 보냅니다(구간이면 시작과 끝). */
-            class GameplayEventHandler final : public IAnimationNotifyHandler
+            /** @class AbilityEventHandler @brief 같은 오브젝트의 켜진 컴포넌트에 `onAnimationNotify` 를 보냅니다(구간이면 시작과 끝). */
+            class AbilityEventHandler final : public IAnimationNotifyHandler
             {
             public:
                 vector_reference<const AnimationNotifyParamDef> getParams() const override { return vector_reference<const AnimationNotifyParamDef>{ kArrParam }; }
@@ -365,7 +365,7 @@ namespace sw
         registry.registerHandler( hashed_string( "Footstep" ), make_unique<AnimationNotifyHandlersInternal::FootstepHandler>() );
         registry.registerHandler( hashed_string( "HitWindow" ), make_unique<AnimationNotifyHandlersInternal::HitWindowHandler>() );
         registry.registerHandler( hashed_string( "CameraShake" ), make_unique<AnimationNotifyHandlersInternal::CameraShakeHandler>() );
-        registry.registerHandler( hashed_string( "GameplayEvent" ), make_unique<AnimationNotifyHandlersInternal::GameplayEventHandler>() );
+        registry.registerHandler( hashed_string( "AbilityEvent" ), make_unique<AnimationNotifyHandlersInternal::AbilityEventHandler>() );
         registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimationNotifyHandlersInternal::MotionWarpHandler>() );
         return true;
     }

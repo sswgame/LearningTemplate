@@ -10,7 +10,7 @@
 
 #include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
@@ -58,12 +58,12 @@ namespace sw
     void ArenaUnitComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*             pOwner             = getOwner();
-        GameObjectManager*      pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        MeshComponent*          pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
-        AbilitySystemComponent* pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
-        const PawnComponent*    pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const bool              bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
+        GameObject*          pOwner             = getOwner();
+        GameObjectManager*   pManager           = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        MeshComponent*       pMesh              = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
+        AbilityComponent*    pAbilitySystem     = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
+        const PawnComponent* pPawn              = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
         const ArenaDirectorComponent* pDirector = GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director );
@@ -103,7 +103,7 @@ namespace sw
         pMesh->setLocalRotation( float3{ 0.0f, MathUtil::atan2( _facing._x, _facing._z ), 0.0f } );
     }
 
-    void ArenaUnitComponent::pressAbilityButtons( const PawnComponent& pawn, AbilitySystemComponent& abilitySystem )
+    void ArenaUnitComponent::pressAbilityButtons( const PawnComponent& pawn, AbilityComponent& abilitySystem )
     {
         if ( _bButtonsResolved == SW_FALSE )
         {

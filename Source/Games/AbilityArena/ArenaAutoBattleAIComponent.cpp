@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
@@ -27,7 +27,7 @@ namespace sw
     {
         (void)context;
         const GameObject*             pOwner         = pawn.getOwner();
-        const AbilitySystemComponent* pAbilitySystem = pOwner != nullptr ? pOwner->getComponent<AbilitySystemComponent>() : nullptr;
+        const AbilityComponent*       pAbilitySystem = pOwner != nullptr ? pOwner->getComponent<AbilityComponent>() : nullptr;
         const ArenaDirectorComponent* pDirector      = ArenaDirectorComponent::findForPawn( pawn );
         float3                        selfPosition{};
         const bool                    bMissingBattleContext = pAbilitySystem == nullptr || pDirector == nullptr || pDirector->findUnitPosition( pOwner->getHandle(), selfPosition ) == false;

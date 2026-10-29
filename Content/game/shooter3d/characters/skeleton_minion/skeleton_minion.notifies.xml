@@ -2,5 +2,5 @@
      적 프리팹(prefabs/skeleton.prefab.xml)의 AnimationNotifyComponent 가 읽는다. 휘두름의 맞는 시각은 클립의 Impact 알림이고,
      ShooterEnemyComponent 가 이벤트(_attackHitEvent 와 같은 이름)를 받아 손이 닿으면 맞힌다. -->
 <AnimationNotifies>
-    <Notify name="Impact" handler="GameplayEvent" event="AttackHit"/>
+    <Notify name="Impact" handler="AbilityEvent" event="AttackHit"/>
 </AnimationNotifies>

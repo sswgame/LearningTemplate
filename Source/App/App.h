@@ -107,7 +107,7 @@ namespace sw
         void onQuitGameCommand( const hashed_string& command, Widget& source );
         /**
          * @brief 이번 프레임에 리로드 단축키가 눌렸으면 리로드를 요청합니다(Ctrl+F7 게임, 에디터 모드의 Ctrl+F6 에디터). Shipping 에서는 아무것도 하지 않습니다.
-         * @details 셸 액션(`Engine::updateShellActions`)을 갱신한 뒤에 부릅니다. 실제 교체는 `ModuleReloadDriver::update` 가 틱 직전에 합니다. 에디터 모듈을 아는 것은 App 이라 여기 둡니다.
+         * @details 셸 액션(`Engine::updateDebugKeyActions`)을 갱신한 뒤에 부릅니다. 실제 교체는 `ModuleReloadDriver::update` 가 틱 직전에 합니다. 에디터 모듈을 아는 것은 App 이라 여기 둡니다.
          */
         void pollReloadHotkeys();
 

@@ -5,7 +5,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaAbilitySet.h"
 
 namespace sw
 {
@@ -40,15 +40,15 @@ namespace sw
     {
         using Internal = MetroidvaniaCatalogInternal;
         // 규칙은 파일마다 통째로 정한다 — 칸의 기본값은 스키마 초기값이고 앞의 값을 이어받지 않는다.
-        MetroCatalogRootDef rootDef;
-        MetroRules          rules;
-        MetroHealthDef      health;
-        MetroStaminaDef     stamina;
-        bool                bValid = GameDataXML::readFields( root, rootDef, sourceName );
-        bValid                     = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
-        bValid                     = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
-        bValid                     = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
-        rules._currency            = rootDef._currency;
+        MetroidvaniaCatalogRootDef rootDef;
+        MetroidvaniaRules          rules;
+        MetroidvaniaHealthDef      health;
+        MetroidvaniaStaminaDef     stamina;
+        bool                       bValid = GameDataXML::readFields( root, rootDef, sourceName );
+        bValid                            = Internal::readOptionalChild( root, "Rules", sourceName, rules ) && bValid;
+        bValid                            = Internal::readOptionalChild( root, "Health", sourceName, health ) && bValid;
+        bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
+        rules._currency                   = rootDef._currency;
 
         VitalitySettings& vitality   = rules._health;
         vitality._maxHealth          = health._maxHealth;
@@ -116,14 +116,14 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )
     {
-        MetroAbilityDef ability;
-        bool            bValid = GameDataXML::readFields( node, ability, sourceName );
-        const XMLNode   motor  = node.findChild( "Motor" );
+        MetroidvaniaAbilityDef ability;
+        bool                   bValid = GameDataXML::readFields( node, ability, sourceName );
+        const XMLNode          motor  = node.findChild( "Motor" );
         if ( motor )
             ability._motor.addAttributes( motor ); // 속성이 없으면 빈 스탯이다
         for ( const StatValue& value : ability._motor.getValues() )
         {
-            if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
+            if ( MetroidvaniaAbilitySet::isMotorSettingName( value._name ) == false )
             {
                 SW_LOG_ERROR( "%#: ability '%#' changes an unknown motor setting '%#'", sourceName, ability._id.c_str(), value._name.c_str() );
                 bValid = false;
@@ -137,7 +137,7 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadCharm( const XMLNode& node, string_view sourceName )
     {
-        MetroCharmDef charm;
+        MetroidvaniaTrinketDef charm;
         if ( GameDataXML::readFields( node, charm, sourceName ) == false )
             return false;
         const XMLNode stats = node.findChild( "Stats" );
@@ -149,8 +149,8 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadPickup( const XMLNode& node, string_view sourceName )
     {
-        MetroPickupDef pickup;
-        bool           bValid = GameDataXML::readFields( node, pickup, sourceName );
+        MetroidvaniaPickupDef pickup;
+        bool                  bValid = GameDataXML::readFields( node, pickup, sourceName );
         if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
         {
             SW_LOG_ERROR( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pickup._id.c_str(), pickup._ability.c_str() );
@@ -169,8 +169,8 @@ namespace sw
 
     bool MetroidvaniaCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
     {
-        MetroEnemyDef enemy;
-        bool          bValid = GameDataXML::readFields( node, enemy, sourceName );
+        MetroidvaniaEnemyDef enemy;
+        bool                 bValid = GameDataXML::readFields( node, enemy, sourceName );
         if ( enemy._bBoss && enemy._flag.empty() )
         {
             SW_LOG_ERROR( "%#: boss '%#' needs flag=\"...\" (set when it is defeated)", sourceName, enemy._id.c_str() );

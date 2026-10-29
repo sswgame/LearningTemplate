@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityEvents.h"
 
 namespace sw
 {
@@ -137,7 +137,7 @@ namespace sw
 
         // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 현재치의 base 를 자르면 current 도 다시 집계된다. 최대치가 늘 때는 그대로 둔다.
         // 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
-        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || newValue >= oldValue )
             return;
 
@@ -166,7 +166,7 @@ namespace sw
 
     void CombatAttributeSet::clampCombatValue( const hashed_string& name, float32& inoutValue ) const
     {
-        const AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
+        const AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( name == CombatAttributes::health() )
         {
             const float32 maxValue = pAbilitySystem != nullptr ? CombatAttributeSetInternal::readOwnCurrent( *this, CombatAttributes::maxHealth() ) : inoutValue;
@@ -187,7 +187,7 @@ namespace sw
 
     void CombatAttributeSet::applyIncomingDamage( const AttributeModCallbackData& data )
     {
-        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr )
             return;
 
@@ -204,7 +204,7 @@ namespace sw
         GameObject* pOwner = pAbilitySystem->getOwner();
         if ( oldHealth > newHealth )
         {
-            GameplayEventData hitEvent;
+            AbilityEventData hitEvent;
             hitEvent._eventTag   = getHitEventTag();
             hitEvent._instigator = data._pSpec != nullptr ? data._pSpec->_context._instigator : GameObjectHandle{};
             hitEvent._target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
@@ -219,7 +219,7 @@ namespace sw
     void CombatAttributeSet::applyIncomingHealing( const AttributeModCallbackData& data )
     {
         (void)data;
-        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr )
             return;
 
@@ -234,7 +234,7 @@ namespace sw
 
     void CombatAttributeSet::handleOutOfHealth( const AttributeModCallbackData& data )
     {
-        AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
+        AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( getDeadTag() ) )
             return;
 
@@ -246,7 +246,7 @@ namespace sw
         GameObjectHandle target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
         GameObjectHandle instigator = data._pSpec != nullptr ? data._pSpec->_context._instigator : GameObjectHandle{};
 
-        GameplayEventData deathEvent;
+        AbilityEventData deathEvent;
         deathEvent._eventTag   = getDeathEventTag();
         deathEvent._instigator = instigator;
         deathEvent._target     = target;

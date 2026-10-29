@@ -18,7 +18,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
-#include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"
+#include "GameFramework/Base/Gameplay/Interaction/UsableObjectComponent.h"
 #include "GameFramework/Base/World/Query/WorldQuery.h"
 
 namespace sw
@@ -141,8 +141,8 @@ namespace sw
 
     bool HidingSpotComponent::enter( GameObject& who )
     {
-        GameObject*           pOwner = getOwner();
-        SmartObjectComponent* pSmart = pOwner != nullptr ? pOwner->getComponent<SmartObjectComponent>() : nullptr;
+        GameObject*            pOwner = getOwner();
+        UsableObjectComponent* pSmart = pOwner != nullptr ? pOwner->getComponent<UsableObjectComponent>() : nullptr;
         if ( pSmart == nullptr )
             return false;
         TagContainer hide;
@@ -155,8 +155,8 @@ namespace sw
 
     bool HidingSpotComponent::exit( GameObject& who )
     {
-        GameObject*           pOwner = getOwner();
-        SmartObjectComponent* pSmart = pOwner != nullptr ? pOwner->getComponent<SmartObjectComponent>() : nullptr;
+        GameObject*            pOwner = getOwner();
+        UsableObjectComponent* pSmart = pOwner != nullptr ? pOwner->getComponent<UsableObjectComponent>() : nullptr;
         if ( pSmart == nullptr || pSmart->releaseSlot( who ) == false )
             return false;
         who.removeTag( HorrorStealthGimmicksInternal::getHiddenTag() );

@@ -116,7 +116,7 @@ namespace sw
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 #if SW_DEV_COMMANDS_ENABLED
-        /** @brief 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용, 서브시스템으로 서지 않았으면 nullptr). 엔진 루프가 `update` 앞에서 셸 맵 단축키와 함께 돌린다. */
+        /** @brief 서브시스템이 붙인 디버그 HUD 입니다(Dev 전용, 서브시스템으로 서지 않았으면 nullptr). 엔진 루프가 `update` 앞에서 디버그 키 맵 단축키와 함께 돌린다. */
         DebugHUD* getDebugHUD() const { return _debugHUD.get(); }
 #endif
 

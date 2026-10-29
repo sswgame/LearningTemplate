@@ -22,7 +22,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
@@ -355,17 +355,17 @@ namespace sw
         return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
     }
 
-    AbilitySystemComponent* ArenaDirectorComponent::findNearestHostile( const AbilitySystemComponent& from, float32 maxRange ) const
+    AbilityComponent* ArenaDirectorComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
     {
         const GameObject*    pFromOwner = from.getOwner();
         GameObjectManager*   pManager   = getObjectManager();
         const ArenaUnitView* pNearest   = pFromOwner != nullptr ? findNearestHostileView( pFromOwner->getHandle(), maxRange ) : nullptr;
         GameObject*          pTarget    = pNearest != nullptr && pManager != nullptr ? pManager->resolveGameObject( pNearest->_object ) : nullptr;
-        return pTarget != nullptr ? pTarget->getComponent<AbilitySystemComponent>() : nullptr;
+        return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
     }
 
-    void ArenaDirectorComponent::launchProjectile( const AbilitySystemComponent& from, const float3& facing, const GameplayEffectSpec& spec,
-                                                   const GameplayEffectSpec& extraSpec, float32 speed, float32 range ) const
+    void ArenaDirectorComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec,
+                                                   const AbilityEffectSpec& extraSpec, float32 speed, float32 range ) const
     {
         const GameObject*    pFrom     = from.getOwner();
         const ArenaUnitView* pFromView = pFrom != nullptr ? findUnitView( pFrom->getHandle() ) : nullptr;
@@ -390,7 +390,7 @@ namespace sw
         } ) );
     }
 
-    const ArenaDirectorComponent* ArenaDirectorComponent::findForUnit( const AbilitySystemComponent& unit )
+    const ArenaDirectorComponent* ArenaDirectorComponent::findForUnit( const AbilityComponent& unit )
     {
         const GameObject*         pOwner   = unit.getOwner();
         const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -454,15 +454,15 @@ namespace sw
 
     bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
-        const bool              bPlayer             = request._kind == ArenaUnitKind::Player;
-        const string&           prefabPath          = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
-        const utf8*             pName               = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
-        GameObject*             pObject             = spawnPrefab( manager, prefabPath, pName );
-        MeshComponent*          pMesh               = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-        AbilitySystemComponent* pAbilitySystem      = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
-        ArenaUnitComponent*     pUnitComponent      = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
-        PawnComponent*          pPawn               = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
-        const bool              bMissingPrefabParts = pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr;
+        const bool          bPlayer             = request._kind == ArenaUnitKind::Player;
+        const string&       prefabPath          = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
+        const utf8*         pName               = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
+        GameObject*         pObject             = spawnPrefab( manager, prefabPath, pName );
+        MeshComponent*      pMesh               = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        AbilityComponent*   pAbilitySystem      = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
+        ArenaUnitComponent* pUnitComponent      = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
+        PawnComponent*      pPawn               = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        const bool          bMissingPrefabParts = pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr;
         if ( bMissingPrefabParts )
         {
             SW_LOG_WARNING( "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
@@ -612,9 +612,9 @@ namespace sw
         bool   bAnyEnemyLingering = false;
         for ( size_t unitIndex = _listUnit.size(); unitIndex > 0; --unitIndex )
         {
-            ArenaUnit&              unit           = _listUnit[unitIndex - 1];
-            GameObject*             pObject        = pManager->resolveGameObject( unit._object );
-            AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+            ArenaUnit&        unit           = _listUnit[unitIndex - 1];
+            GameObject*       pObject        = pManager->resolveGameObject( unit._object );
+            AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
             {
                 _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
@@ -670,9 +670,9 @@ namespace sw
         bool bFocusSet = false;
         for ( const ArenaUnit& unit : _listUnit )
         {
-            GameObject*                   pObject        = pManager->resolveGameObject( unit._object );
-            const MeshComponent*          pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-            const AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+            GameObject*             pObject        = pManager->resolveGameObject( unit._object );
+            const MeshComponent*    pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+            const AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
             if ( pMesh == nullptr || pAbilitySystem == nullptr )
                 continue;
             ArenaUnitView view;
@@ -726,8 +726,8 @@ namespace sw
             return;
         for ( const ArenaUnit& unit : _listUnit )
         {
-            GameObject*                   pObject        = unit._kind == ArenaUnitKind::Player ? pManager->resolveGameObject( unit._object ) : nullptr;
-            const AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+            GameObject*             pObject        = unit._kind == ArenaUnitKind::Player ? pManager->resolveGameObject( unit._object ) : nullptr;
+            const AbilityComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilityComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
                 continue;
             const std::optional<float32> healthValue = pAbilitySystem->getAttributeValue( CombatAttributes::health() );

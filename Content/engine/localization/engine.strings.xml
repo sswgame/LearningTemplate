@@ -88,7 +88,7 @@
 				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityDebug.HintNoTarget" source="Select an object with an AbilitySystemComponent, or pick one above.">
+		<entry key="EdAbilityDebug.HintNoTarget" source="Select an object with an AbilityComponent, or pick one above.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
@@ -104,7 +104,7 @@
 				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityDebug.NoComponentsInScene" source="No AbilitySystemComponent in the active scene">
+		<entry key="EdAbilityDebug.NoComponentsInScene" source="No AbilityComponent in the active scene">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/Base/Ability/AbilityDebugPanel.cpp</item>
 			</origins>

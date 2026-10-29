@@ -94,8 +94,8 @@
 		<entry source="NPCs" text="NPC" />
 		<entry source="Name" text="名前" />
 		<entry source="Nested Stack" text="ネストされたスタック" />
-		<entry source="No AbilitySystemComponent in the active scene"
-		       text="アクティブなシーンに AbilitySystemComponent がありません" />
+		<entry source="No AbilityComponent in the active scene"
+		       text="アクティブなシーンに AbilityComponent がありません" />
 		<entry source="No object has component:"
 		       text="次のコンポーネントを持つオブジェクトがありません:" />
 		<entry source="No plan for today" text="今日の予定はありません" />
@@ -148,8 +148,8 @@
 		<entry source="Select an NPC on the left" text="左で NPC を選択してください" />
 		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。" />
-		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
-		       text="AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。" />
+		<entry source="Select an object with an AbilityComponent, or pick one above."
+		       text="AbilityComponent を持つオブジェクトを選択するか、上で選んでください。" />
 		<entry source="Send Automatically" text="自動で送信" />
 		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。" />

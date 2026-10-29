@@ -9,7 +9,7 @@
  *          | `Footstep` | 소켓에서 아래로 쏜 광선이 맞은 물리 재질을 바닥 종류로 보고, 소리 경로의 `{surface}` 를 그 이름(소문자)으로 바꾼다 | socket(필수), distance, sound |
  *          | `HitWindow` | 구간 알림이다. 두 소켓 사이 칼날을 프레임마다 쓸어(지난 위치에서 현재 위치까지, `MeleeHitWindowUtil::sweep`) 맞은 오브젝트에 한 번씩 `onHitReceived` 를 호출한다. 클라이언트는 기록만 한다 | socketA, socketB(필수), radius, damage, impulse, samples |
  *          | `CameraShake` | 카메라 충격을 요청한다(같은 씬의 `CameraRegistry::getShakeChannel` 을 듣는 카메라가 받는다) | amplitude, duration, frequency, radius, socket |
- *          | `GameplayEvent` | 같은 오브젝트의 컴포넌트에 `onAnimationNotify` 를 호출한다(구간이면 시작과 끝) | event(필수) |
+ *          | `AbilityEvent` | 같은 오브젝트의 컴포넌트에 `onAnimationNotify` 를 호출한다(구간이면 시작과 끝) | event(필수) |
  *          | `MotionWarp` | 구간 알림이다. `MotionWarpingComponent` 에 워프 창을 열어, 구간 끝에 이름 붙은 목표에 닿게 루트 모션을 휜다 | target(필수), translation, rotation, vertical |
  */
 #pragma once

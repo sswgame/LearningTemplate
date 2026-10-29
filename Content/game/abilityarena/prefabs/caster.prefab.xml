@@ -15,7 +15,7 @@
 			               _blendMode="Opaque"
 			               _gpuSpinSeed="0"
 			               _bVisible="true" />
-			<AbilitySystemComponent _componentName="AbilitySystemComponent"
+			<AbilityComponent _componentName="AbilityComponent"
 			                        _bActive="true"
 			                        _abilitySetID="None"
 			                        _healthAttribute="Health"

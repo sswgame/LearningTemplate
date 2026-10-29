@@ -591,10 +591,10 @@ namespace sw
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 둘이 읽는다. Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
 #if !defined( SW_SHIPPING )
-            _engine.updateShellActions( frameTime._deltaTime );
+            _engine.updateDebugKeyActions( frameTime._deltaTime );
 #endif
             pollReloadHotkeys();
-            _devConsole.update( _engine.getShellInputMap() );
+            _devConsole.update( _engine.getDebugKeyInputMap() );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.

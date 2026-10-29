@@ -377,7 +377,7 @@ namespace sw
         // 포커스를 무시하는 맵(셸 · UI · 에디터)도 도구 포커스 동안의 키는 도구 자신의 맵만 본다.
         if ( _bKeyboardFocusIgnored == SW_TRUE )
             return slot._deviceKind == InputDeviceKind::Keyboard && isToolKeyboardHidden();
-        // 개발 콘솔이 입력을 쥔 동안 게임 맵은 키보드 바인딩과 패드 바인딩을 모두 "안 눌림" 으로 본다(패드는 셸 맵이 콘솔 조작에 쓴다).
+        // 개발 콘솔이 입력을 쥔 동안 게임 맵은 키보드 바인딩과 패드 바인딩을 모두 "안 눌림" 으로 본다(패드는 디버그 키 맵이 콘솔 조작에 쓴다).
         if ( slot._deviceKind == InputDeviceKind::Keyboard )
             return _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false;
         if ( slot._deviceKind == InputDeviceKind::Gamepad )

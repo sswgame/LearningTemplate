@@ -111,7 +111,7 @@ namespace sw::editor
         InputMap                 _inputMap;
         InputReplay              _replay;
         vector<InputMapConflict> _listConflict;   ///< 이번 프레임의 바인딩 충돌이다. Mappings 탭이 다시 모은다
-        EditableAssetPath        _inputMapPath;   ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 셸 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
+        EditableAssetPath        _inputMapPath;   ///< 편집하는 InputMap 리소스. 처음 값은 enginedefaultassets 의 디버그 키 맵, 칸에서 고친 글은 확정해야 읽기 · 쓰기에 쓰인다
         EditableAssetPath        _replayFilePath; ///< Save · Load 가 쓰는 .swreplay 리소스. 처음 값은 editortooldefaults 의 `_inputReplayFile`
         string                   _newActionName;
         string                   _selectedAction;

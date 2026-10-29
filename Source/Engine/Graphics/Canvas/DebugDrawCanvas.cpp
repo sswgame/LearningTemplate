@@ -55,7 +55,7 @@ namespace sw
 
     /**
      * @brief `-gv_debugDrawGameView=1`: 디버그 드로우 큐(선 · 구 · 상자 · 화살표 · 글자)를 게임 화면(App 창 · 에디터 게임 뷰 · 스크린샷) 위에 겹쳐 그립니다.
-     * @details 에디터 게임 뷰 툴바의 단추가 켜고 끈다. 권위 고스트(`-gv_authorityGhostPort`)처럼 큐에 그리는 디버그 도구를 게임 화면에서 본다. Shipping 에는 없다.
+     * @details 에디터 게임 뷰 툴바의 단추가 켜고 끈다. 권위 고스트(`-gv_serverPoseOverlayPort`)처럼 큐에 그리는 디버그 도구를 게임 화면에서 본다. Shipping 에는 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_debugDrawGameView, false, "디버그 드로우 큐를 게임 화면 위에 겹쳐 그린다 — 선 · 구 · 글자(캔버스)" );
 } // namespace sw

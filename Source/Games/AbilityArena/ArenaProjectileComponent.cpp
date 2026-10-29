@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
@@ -32,8 +32,8 @@ namespace sw
         setCanEverTick( true );
     }
 
-    void ArenaProjectileComponent::launch( GameObjectHandle director, const float3& position, const float3& velocity, float32 range, const GameplayEffectSpec& spec,
-                                           const GameplayEffectSpec& extraSpec, bool bFromPlayer )
+    void ArenaProjectileComponent::launch( GameObjectHandle director, const float3& position, const float3& velocity, float32 range, const AbilityEffectSpec& spec,
+                                           const AbilityEffectSpec& extraSpec, bool bFromPlayer )
     {
         _director             = director;
         _position             = position;
@@ -100,12 +100,12 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 대상은 다른 워커가 틱하고 있을 수 있다 — 틱 뒤(게임 스레드)에 건다. 무적이면 이펙트의 BlockedTag 가 막는다. 효과음도 게임 스레드에서.
-        const GameplayEffectSpec spec      = _spec;
-        const GameplayEffectSpec extraSpec = _extraSpec;
+        const AbilityEffectSpec spec      = _spec;
+        const AbilityEffectSpec extraSpec = _extraSpec;
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, target, spec, extraSpec]()
         {
-            GameObject*             pTarget        = pManager->resolveGameObject( target );
-            AbilitySystemComponent* pAbilitySystem = pTarget != nullptr ? pTarget->getComponent<AbilitySystemComponent>() : nullptr;
+            GameObject*       pTarget        = pManager->resolveGameObject( target );
+            AbilityComponent* pAbilitySystem = pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
             if ( pAbilitySystem == nullptr )
                 return;
             if ( spec.isValid() )
