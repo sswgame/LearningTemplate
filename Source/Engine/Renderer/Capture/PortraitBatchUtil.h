@@ -1,6 +1,6 @@
 /**
  * @file PortraitBatchUtil.h
- * @brief 프리팹 목록마다 초상화를 그려 `<이름>.portrait.dds` 와 `.png` 로 씁니다(`--render-portraits`, `Engine::renderPortraits`).
+ * @brief 프리팹 목록마다 초상화를 그려 `<이름>.portrait.dds` 와 `.png` 로 씁니다(`--render-portraits`, App 이 부른다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

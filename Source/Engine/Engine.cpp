@@ -77,7 +77,6 @@
 // 렌더러 헤더는 클라이언트 코드에서만 읽는다 — 내보낸(SW_ENGINE_API) 클래스의 인라인 멤버는 include 한 번역 단위마다 만들어지고, 렌더러 폴더를
 // 짓지 않는 Server 타깃에서는 그 멤버가 부르는 정의가 없어 링크가 진다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`).
 #if defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Renderer/Capture/PortraitBatchUtil.h"
     #include "Engine/Renderer/Cook/ShaderCookDriver.h"
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
@@ -429,23 +428,6 @@ namespace sw
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( _pRHI != nullptr )
             _pRHI->setPreferredVSync( engine::getSubsystem<EngineConfig>()._window._bVSync );
-    }
-
-    bool Engine::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
-    {
-#if defined( SW_WITH_CLIENT_CODE )
-        const bool bHasDevice = _pRHI != nullptr && _pRHI->hasDevice();
-        if ( bHasDevice == false || _pSceneManager == nullptr )
-            return false;
-        return PortraitBatchUtil::renderPrefabList( _pRHI->getDevice(), _pSceneManager->getEngineServices(), _pRenderThread, prefabList, outputDirectory, size );
-#else
-        // Server 타깃에는 렌더러가 없다 — 초상화를 그릴 수 없다는 것을 알리고 실패한다.
-        (void)prefabList;
-        (void)outputDirectory;
-        (void)size;
-        SW_LOG_ERROR( "--render-portraits needs the renderer - the %# target does not build it", build::kTargetName );
-        return false;
-#endif
     }
 
     void Engine::requestQuit( int32 exitCode )
@@ -813,33 +795,4 @@ namespace sw
         return bRestarted;
     }
 
-    void Engine::setPresentHook( PresentHookDelegate presentHook )
-    {
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( _pRenderThread != nullptr )
-            _pRenderThread->setPresentHook( std::move( presentHook ) );
-#else
-        (void)presentHook; // Server 타깃 — 표시할 화면이 없다
-#endif
-    }
-
-    void Engine::setBeginFrameHook( BeginFrameHookDelegate beginFrameHook )
-    {
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( _pRenderThread != nullptr )
-            _pRenderThread->setBeginFrameHook( std::move( beginFrameHook ) );
-#else
-        (void)beginFrameHook; // Server 타깃 — 렌더 스레드가 없다
-#endif
-    }
-
-    void Engine::setPostPresentHook( PresentHookDelegate postPresentHook )
-    {
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( _pRenderThread != nullptr )
-            _pRenderThread->setPostPresentHook( std::move( postPresentHook ) );
-#else
-        (void)postPresentHook; // Server 타깃 — 표시할 화면이 없다
-#endif
-    }
 } // namespace sw

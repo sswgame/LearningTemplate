@@ -82,7 +82,7 @@ namespace sw
          * @param waitMilliseconds 1..kMaxDeviceLossDriverWaitMilliseconds. 아직 소비하지 않은 요청이 있으면 새 값으로 바꾼다.
          */
         void removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
-        /** @brief 렌더 스레드 프레임 시작 훅입니다(`Engine::setBeginFrameHook` — App 이 프레젠트 훅과 같이 건다). 걸린 대기가 있으면 잠든 뒤 디바이스를 제거한다. */
+        /** @brief 렌더 스레드 프레임 시작 훅입니다(`RenderThread::setBeginFrameHook` — App 이 프레젠트 훅과 같이 건다). 걸린 대기가 있으면 잠든 뒤 디바이스를 제거한다. */
         void onBeginFrameOnRenderThread( IRHIDevice& device );
 #endif
 

@@ -30,11 +30,13 @@ namespace sw
 {
     struct EngineConfig;
     struct NativeWindowEvent;
+    struct RenderFramePacket;
 
     class AutomationSession;
     class DevToolsHost;
     class CommandLineManager;
     class EditorModuleManager;
+    class IRHIDevice;
     class IWindow;
     class ModuleLoaderSubsystem;
     class Widget;

@@ -1,6 +1,6 @@
 /**
  * @file PresentHookDelegate.h
- * @brief 렌더 스레드의 프레임 시작 · 프레젠트 앞뒤에 끼는 훅의 델리게이트 타입입니다. 타입만 필요한 곳(`Engine.h`)이 패킷 헤더 없이 이것만 포함합니다.
+ * @brief 렌더 스레드의 프레임 시작 · 프레젠트 앞뒤에 끼는 훅의 델리게이트 타입입니다. 타입만 필요한 곳(`RenderThread.h`)이 패킷 헤더 없이 이것만 포함합니다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"

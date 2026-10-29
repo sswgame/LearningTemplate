@@ -40,8 +40,10 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Capture/PortraitBatchUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"
@@ -244,7 +246,12 @@ namespace sw
             pCommandLineManager->getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
             splash.dismiss();
             _bQuitAfterInitialize = SW_TRUE;
-            return _engine.renderPortraits( portraitList, portraitDir, static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
+            // 렌더 스레드가 쉬는 동안 이 스레드가 그래픽스 컨텍스트를 잡고 `PortraitRenderer`(따로 만든 스튜디오 씬 · 렌더러)로 그린다. 하나라도 실패하면 실패다.
+            RHI* const pRHI = _engine.getRHI();
+            if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                return false;
+            return PortraitBatchUtil::renderPrefabList( pRHI->getDevice(), engine::getSubsystem<SceneManager>().getEngineServices(), _engine.getRenderThread(), portraitList, portraitDir,
+                                                        static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
         }
 
         // 4. 창 콜백과 이벤트 전달을 설정한다.
@@ -550,11 +557,15 @@ namespace sw
                 AppAssertDialog::installForInteractiveRun( *pCommandLine );
         }
 
-        _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
-        _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
+        // 렌더 스레드 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
+        if ( RenderThread* const pRenderThread = _engine.getRenderThread() )
+        {
+            pRenderThread->setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
+            pRenderThread->setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
 #if !defined( SW_SHIPPING )
-        _engine.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &_backendSwap ) ); // 개발 명령 `rhi.removeDevice <ms>`
+            pRenderThread->setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &_backendSwap ) ); // 개발 명령 `rhi.removeDevice <ms>`
 #endif
+        }
     }
 
     void App::shutdown()
