@@ -175,7 +175,7 @@
 **전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
 `ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · AssetPaths 해석 캐시 · SystemFontLocator · GameDataCache …),
 `ScenarioPlayback::s_pPlayer`(호스트 범위 조회로), `GameTimeScale` 의 프레임 시간, `PackPatchTrustSource` 의 공급자 함수, `MeshCache` 무효화 훅 목록, `TickBatchRegistry` 상태, `AutomationSceneSteps` 의 대기 목록(실행기 상태로),
-편집기의 포커스 스택 · 선택(`EditorService` 의 `s_pFocused*`), `ViewportInputOverlay` 설정. `ScenarioPlayback::s_pPlayer` 는 호스트 범위의 `IScenarioPlayer` 로 바꿨다. **두는 것**(이유): `ProfilerBackend::s_pActive`(계측 지점마다 읽는 뜨거운 경로 · 엔진 뒤에 닫히는 구간도 부른다 — 수명은 `ProfilerBackendSubsystem`), Jolt `s_pFactory` · RenderDoc API(바깥 라이브러리가 프로세스 전역을 요구한다), `CommandStack::s_pExecuting`(실행 중 되돌리기 단계의 동적 범위 — 언리얼 `GUndo`, 바꾸려면 모든 데이터 단계 처리기 서명이 바뀐다). 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
+편집기의 포커스 스택 · 선택(`EditorService` 의 `s_pFocused*`), `ViewportInputOverlay` 설정. `ScenarioPlayback::s_pPlayer` 는 호스트 범위의 `IScenarioPlayer` 로 바꿨다. **두는 것**(이유): `ProfilerBackend::s_pActive`(계측 지점마다 읽는 뜨거운 경로 · 엔진 뒤에 닫히는 구간도 부른다 — 수명은 `ProfilerBackendSubsystem`), Jolt `s_pFactory` · RenderDoc API(바깥 라이브러리가 프로세스 전역을 요구한다). 되돌리기 스택의 전역 둘(`s_pExecuting` · 살아 있는 스택 목록)은 지웠다 — 처리기는 실행 문맥(`UndoStepContext`, 필요한 처리기만 첫 인자로 받는다)을, 스택은 코드 단계를 받은 주인의 사라짐을 구독한다. 에디터 쪽 `Tests/` 는 에디터 자체 테스트 `editor.unitTests` 가 돌린다(`App --test` 는 에디터 모듈이 오르기 전이다). 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
