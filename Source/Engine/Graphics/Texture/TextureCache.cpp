@@ -18,7 +18,6 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
@@ -34,14 +33,6 @@ namespace sw
 
     namespace
     {
-        /** @brief `engine::declareRenderTarget` 의 처리 함수입니다. 바인딩된 에셋 매니저의 텍스처 캐시에 넘긴다(부르는 쪽이 바인딩을 확인한다). */
-        void forwardRenderTargetDeclaration( string_view relativePath, uint32 width, uint32 height )
-        {
-            if ( engine::areEngineServicesBound() == false )
-                return;
-            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
-        }
-
         /** @brief 텍스처 캐시의 계측 칸입니다(`CacheStats`). 캐시는 에셋 매니저마다 하나지만 칸은 프로세스에 하나라 매니저를 다시 세워도 이어 센다. */
         const CacheStatsHandle& getTextureCacheStats()
         {
@@ -61,8 +52,6 @@ namespace sw
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ sw::make_shared<Impl>() }
     {
-        // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Foundation 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
-        engine::bindRenderTargetDeclaration( &forwardRenderTargetDeclaration );
     }
 
     TextureCache::~TextureCache() = default;

@@ -225,7 +225,7 @@ namespace sw
         bool consumeCut( CameraCutReader reader );
 
     private:
-        /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`engine::declareRenderTarget` — 텍스처 캐시가 묶는다). */
+        /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(엔진 범위의 `IRenderTargetDeclarationSink` — 텍스처 캐시가 그 타입으로 걸린다). */
         void declareRenderTexture() const;
         /** @brief 선택 규칙의 입력(역할 · 우선순위 · 출력 대상)이 바뀐 것을 소속 레지스트리의 변경 일련번호에 알립니다(`CameraRegistry::getRegistrySerial`). */
         void noteSelectionInputChanged() const;

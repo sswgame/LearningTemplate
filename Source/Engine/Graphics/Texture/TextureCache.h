@@ -12,6 +12,7 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 
@@ -36,7 +37,7 @@ namespace sw
      *       그리고(`CameraRenderOutput`), 머티리얼은 DDS 와 같은 경로(`acquire`)로 빌려 읽습니다. 크기는 처음 만들 때 정해집니다. 카메라가
      *       `declareRenderTarget` 으로 먼저 알리면 그 크기, 아니면 `kDefaultRenderTargetSize` 입니다.
      */
-    class SW_API TextureCache final : public IAssetCache
+    class SW_API TextureCache final : public IAssetCache, public IRenderTargetDeclarationSink
     {
     public:
         /** @brief 빈 캐시로 만듭니다. */
@@ -134,8 +135,9 @@ namespace sw
         /**
          * @brief 렌더 텍스처의 크기를 알립니다(게임 스레드, 카메라가 붙을 때). 이미 만들어진 것은 바꾸지 않습니다(다음에 새로 만들 때부터).
          * @details 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게 하는 함수입니다. 렌더러는 항상 텍스처의 실제 크기로 그립니다.
+         *          카메라(아래 층)는 엔진 범위의 `IRenderTargetDeclarationSink` 로 찾아 부른다(`EngineSubsystemSet` 이 이 캐시를 그 타입으로 건다).
          */
-        void declareRenderTarget( string_view relativePath, uint32 width, uint32 height );
+        void declareRenderTarget( string_view relativePath, uint32 width, uint32 height ) override;
         /**
          * @brief 이미 만든 렌더 텍스처를 새 크기로 다시 만듭니다(렌더 스레드, 기록 전에). 크기가 같거나 아직 없으면 크기만 알리고 false 입니다.
          * @details 언리얼 `UTextureRenderTarget2D::ResizeTarget` 에 해당합니다. 위젯이 그리기 크기를 바꾼 캔버스 대상처럼, 먼저 만든 크기가 낡은 경우에 씁니다.

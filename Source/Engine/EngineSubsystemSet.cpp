@@ -30,6 +30,7 @@
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
@@ -196,6 +197,8 @@ namespace sw::engine
             SW_MEMORY_SCOPE( Asset );
             AssetManager& assetManager = startup.addSubsystem( sw::make_unique<AssetManager>() );
             (void)startup.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
+            // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 매니저와 수명이 같다.
+            (void)startup.bind<IRenderTargetDeclarationSink>( &assetManager.getAssetCache<TextureCache>() );
         }
         if ( setup._defaultAssets == nullptr )
             setup._defaultAssets = sw::make_unique<EngineDefaultAssetsSubsystem>();
