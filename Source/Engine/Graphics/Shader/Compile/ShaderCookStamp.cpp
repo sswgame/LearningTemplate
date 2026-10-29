@@ -23,6 +23,7 @@
 #include "Engine/FileSystem/ContentHash.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 #include <algorithm>
@@ -203,12 +204,25 @@ namespace sw
                 return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
             }
 
-            /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수만으로 정해져 OS · 파일과 무관하다. */
+            /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
             static uint64 computeToolchainFingerprint()
             {
-                // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
-                constexpr uint32 kVulkanTargetVersion = constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor;
-                return ShaderCooker::makeToolchainFingerprint( ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCooker::kCompilerVersion );
+                static const uint64 s_fingerprint = []
+                {
+                    // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
+                    constexpr uint32 kVulkanTargetVersion = constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor;
+                    uint64           hash                 = ShaderCooker::makeToolchainFingerprint( ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCooker::kCompilerVersion );
+                    // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다.
+                    vector<ShaderMacroDefine> listDefine;
+                    ShaderCompiler::appendEngineDefines( listDefine );
+                    for ( const ShaderMacroDefine& define : listDefine )
+                    {
+                        hash = HashUtil::computeStringHash64( define._name, false, hash );
+                        hash = HashUtil::computeStringHash64( define._value, false, hash );
+                    }
+                    return hash;
+                }();
+                return s_fingerprint;
             }
 
             /** @brief 헤더 키를 만들 때 헤더가 어느 루트 아래인지 가르는 항목입니다(자기 도메인, 다른 include 루트 도메인). */

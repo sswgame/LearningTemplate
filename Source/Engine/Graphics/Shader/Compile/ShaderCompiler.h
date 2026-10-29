@@ -196,6 +196,14 @@ namespace sw
          */
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc );
 
+        /**
+         * @brief 엔진이 모든 컴파일에 넣는 define(에뮬 엔진 텍스처 칸 표 `SW_EMU_SLOT_<이름>=<칸>`)을 @p inoutList 뒤에 더합니다.
+         * @details 요청에 없고 엔진 바이너리가 정하는 컴파일 입력이라 도구 지문(`ShaderCooker::getToolchainFingerprint`)이 이 목록을 섞는다 —
+         *          그래야 표가 바뀌면 모든 셰이더 캐시(실행 캐시 · 컴파일 캐시 · 쿠킹 도장)가 함께 낡는다. 요청 desc 로 키를 만드는 캐시가 이 값을 몰라
+         *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
+         */
+        static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList );
+
         /** @brief 셰이더 바이트코드 디스크 캐시를 켜거나 끕니다. */
         static void enableDiskCache( bool bEnable );
 

@@ -771,19 +771,24 @@ namespace sw
         }
     }
 
-    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
+    void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList )
     {
-        using Internal = ShaderCompilerInternal;
-        // 에뮬 엔진 텍스처 칸 표(shaderslot::emulated)를 `SW_EMU_SLOT_<이름>=<칸>` 로 모든 컴파일에 더한다 — binding.hlsli 의 Bindless::sampleIndex 가 읽는다.
-        // 값이 캐시 키(computeCachePath)에 들어가므로 표를 바꾸면 디스크 캐시가 다시 컴파일된다.
-        ShaderCompileDesc desc = requestDesc;
+        // 에뮬 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 의 Bindless::emulatedSlot 이 읽는다.
         for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
         {
             ShaderMacroDefine define;
             define._name  = string( shaderslot::emulated::kSlotMacroPrefix ) + shaderslot::emulated::kEngineTextureNames[ordinal];
             define._value = to_string( ordinal );
-            desc._listDefine.push_back( std::move( define ) );
+            inoutList.push_back( std::move( define ) );
         }
+    }
+
+    ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
+    {
+        using Internal = ShaderCompilerInternal;
+        // 엔진 define 은 모든 컴파일에 더한다(appendEngineDefines) — 값이 도구 지문에 섞여 표를 바꾸면 모든 셰이더 캐시가 다시 컴파일된다.
+        ShaderCompileDesc desc = requestDesc;
+        appendEngineDefines( desc._listDefine );
         ShaderCompileResult result{};
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
