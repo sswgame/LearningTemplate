@@ -1422,10 +1422,7 @@ namespace sw
     }
 
     // `castTo` 는 `TypeInfo` 를 전방 선언만 보고 그 주소를 조상 표로 읽는다(`TypeAncestry::of`) — 표가 맨 앞 멤버여야 한다.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Winvalid-offsetof"
     static_assert( offsetof( TypeInfo, _ancestry ) == 0, "TypeInfo::_ancestry must be the first member (castTo reads it through a forward-declared TypeInfo)" );
-#pragma clang diagnostic pop
 
     bool isTypeDerivedFromSlow( const TypeInfo* pType, const TypeInfo* pTarget )
     {

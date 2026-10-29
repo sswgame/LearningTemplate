@@ -49,6 +49,9 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# -Wswitch 가 빌드를 세운다. 다 다뤘는데 default: 가 있으면 그 검사가 꺼지므로 그것도 오류다. 일부만 다루는 switch 는 default: 를 쓴다.
 	-Werror=switch
 	-Werror=covered-switch-default
+	# include 철자의 대소문자가 디스크와 다르면 빌드가 선다. Windows 는 대소문자를 가리지 않아 지나가고 Linux 에서야 "없는 파일" 이 된다(경고로 두면 묻힌다).
+	-Werror=nonportable-include-path
+	-Werror=nonportable-system-include-path
 	-Wno-switch-default # 모든 switch 에 default: 를 요구하지 않는다(위 규칙과 반대)
 	-Wno-switch-enum # 일부만 다루는 switch 가 상관없는 열거자를 다 적지 않아도 된다
 	# 잠금 계약(`Core/Concurrency/ThreadSafety.h` 의 SW_GUARDED_BY · SW_REQUIRES_LOCK · SW_EXCLUDES_LOCK) — 잠그지 않고 만진 멤버 · 쥔 채 다시 잠그는 호출이 경고다

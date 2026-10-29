@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`)와 clang-format 포맷 검사를 돌립니다.
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`)와 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
 **통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다.
@@ -23,6 +23,7 @@ from common.ExitCode import ExitCode  # noqa: E402
 from common.Git import getAllStagedFiles  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from lint.Format import getStagedCppFiles, runClangFormatBatch  # noqa: E402
+from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -50,6 +51,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {line.lstrip('!')}")
         else:
             print(f"[CheckIncludeOrder] OK ({checked} files)")
+
+    # --- CMake 경로의 대소문자(컴파일러가 보지 않는 자리 — CMakePathCase.py 머리말) ---------------
+    listCaseViolation = checkCMakePathCase(projectRoot)
+    if listCaseViolation:
+        hasErrors = True
+        print(f"[CMakePathCase] FAIL — 대소문자만 다른 CMake 경로 {len(listCaseViolation)}건(Linux 구성이 선다)")
+        for line in listCaseViolation:
+            print(f"  - {line}")
 
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------
     if stagedCppFiles or stagedShaderFiles:
