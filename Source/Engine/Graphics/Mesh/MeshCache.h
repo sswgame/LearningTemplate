@@ -48,7 +48,7 @@ namespace sw
     /**
      * @class MeshCache
      * @brief 메시 에셋을 경로로 공유하고, 에셋 캐시 레지스트리(`AssetManager`)에 등록되어 핫 리로드, 종료, 진단이 다른 캐시와 같은 경로를 탑니다.
-     * @details 캐시는 프로세스에 하나이고(Engine.dll 안에 있고 엔진 수명 범위가 소유합니다) 약한 참조입니다. `MeshUtil::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
+     * @details 캐시는 에셋 매니저가 내장 캐시로 만들어 소유하고(정적 창구는 `engine::getSubsystem<AssetManager>().getAssetCache<MeshCache>()` 의 상태를 쓴다) 약한 참조입니다. `MeshUtil::acquirePrimitive`, `SharedAssetCache<SpriteClipAsset>` 와 같은 구조이므로
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 종료될 때 이 캐시가 보관하는 GPU 자원이 남지 않습니다. 같은 경로는 같은 `Mesh` 이므로
      *          배치 키(메시 포인터)가 갈라지지 않습니다. 씬 로드 워커에서 불러도 됩니다(내부에서 잠급니다).
      *
@@ -57,8 +57,17 @@ namespace sw
     class SW_API MeshCache final : public IAssetCache
     {
     public:
-        /** @brief 물리 셰이프 캐시에 `.mesh` 읽기 함수를 등록합니다(매니저가 여럿이어도 같은 함수이고, 둘 다 Engine 이미지 안에 있으므로 빼지 않습니다). */
+        /** @brief 공유 테이블 · 읽는 중인 로드 · 경고 기록입니다(정의는 MeshCache.cpp). */
+        struct State;
+
+        /** @brief 빈 캐시를 만듭니다. `AssetManager` 가 내장 캐시로 만든다(`SW_BUILT_IN_ASSET_CACHE`). */
         MeshCache();
+        ~MeshCache() override;
+        MeshCache( const MeshCache& )            = delete;
+        MeshCache& operator=( const MeshCache& ) = delete;
+
+        /** @brief 이 캐시의 상태입니다. 정적 창구와 로드 블록(MeshCache.cpp)만 씁니다. */
+        State& getState() { return *_pState; }
 
         /**
          * @brief 경로의 메시 로드를 요청합니다. 이미 보관 중이면 `Ready` 핸들, 같은 경로를 읽는 중이면 그 로드의 핸들, 아니면 워커에서 새로 읽는 핸들입니다.
@@ -103,5 +112,7 @@ namespace sw
         static shared_ptr<Mesh> findLiveMesh( string_view path );
         /** @brief 메시에서 기하를 만든 위 층 캐시(엔진 범위의 `IMeshDerivedCache`)를 비웁니다. 걸린 것이 없으면(물리 없는 실행) 할 일이 없다. */
         static void invalidateDerivedCaches();
+
+        unique_ptr<State> _pState;
     };
 } // namespace sw

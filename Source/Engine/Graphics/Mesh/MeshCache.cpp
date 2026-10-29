@@ -8,10 +8,10 @@
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -24,39 +24,36 @@ namespace sw
 {
     SW_LOG_CALLER( "MeshCache" );
 
+    /**
+     * @struct MeshCache::State
+     * @brief 메시 캐시의 상태 전부입니다 — 공유 테이블(경로 → 약한 참조), 읽는 중인 로드, 경고한 경로.
+     * @details 캐시(에셋 매니저가 소유한 내장 캐시)가 든다. 정적 창구(`request` · `acquire` · `reloadShared`)와 로드 블록은 엔진의 에셋 매니저에서 찾은 캐시의 것을 쓴다.
+     *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다.
+     */
+    struct MeshCache::State
+    {
+        /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
+        struct InFlightTable
+        {
+            mutex                                          _mutex;
+            unordered_map<string, weak_ptr<MeshLoadBlock>> _mapKeyToBlock;
+        };
+
+        WeakInternTable<string, Mesh> _sharedTable{};
+        InFlightTable                 _inFlight{};
+        OnceKeySet                    _warned{}; ///< 읽지 못해 경고한 경로(캐시를 비우면 잊는다)
+    };
+
     namespace
     {
         struct MeshCacheInternal
         {
-            /** @brief 읽는 중인 로드입니다. 같은 경로를 동시에 요청하면 같은 블록을 받습니다(이중 읽기 없음). 로드 단계가 끝나면 지웁니다. */
-            struct InFlightTable
-            {
-                mutex                                          _mutex;
-                unordered_map<string, weak_ptr<MeshLoadBlock>> _mapKeyToBlock;
-            };
+            using InFlightTable = MeshCache::State::InFlightTable;
 
-            /**
-             * @brief 메시 캐시의 상태 전부입니다 — 공유 테이블(경로 → 약한 참조), 읽는 중인 로드, 경고한 경로.
-             * @details 캐시 함수(`request` · `acquire` · `reloadShared`)가 정적이라 부르는 쪽이 범위를 들고 있지 않다. 그래서 엔진 수명 범위(`LifetimeScope`)가 소유하고
-             *          엔진 종료 때 저장소째 사라진다(처음 쓸 때 만들어진다). 함수 안 정적 지역으로 두면 종료 누수 보고 뒤까지 남고 엔진을 다시 세워도 비지 않는다.
-             *          Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않는다.
-             */
-            struct State
-            {
-                WeakInternTable<string, Mesh> _sharedTable{};
-                InFlightTable                 _inFlight{};
-                OnceKeySet                    _warned{}; ///< 읽지 못해 경고한 경로(캐시를 비우면 잊는다)
-            };
+            /** @brief 엔진의 메시 캐시 상태입니다. 엔진 서비스가 없으면(캐시를 쓸 엔진이 없다) 멈춘다. */
+            static MeshCache::State& getState() { return engine::getSubsystem<AssetManager>().getAssetCache<MeshCache>().getState(); }
 
-            inline static ScopeOwned<State> s_state{};
-
-            /** @brief 상태입니다. 엔진 수명 범위가 닫힌 뒤의 접근은 부른 쪽의 잘못이라 모든 구성에서 멈춥니다(캐시를 쓸 엔진이 없다). */
-            static State& getState()
-            {
-                return s_state.getRequired();
-            }
-
-            /** @brief 메시 캐시의 계측 칸입니다(`CacheStats`). 상태가 엔진 수명 범위로 다시 서도 칸은 프로세스 끝까지 살아 이어 센다. */
+            /** @brief 메시 캐시의 계측 칸입니다(`CacheStats`). 엔진을 다시 세워 캐시가 새로 서도 칸은 프로세스 끝까지 살아 이어 센다. */
             static const CacheStatsHandle& getStats()
             {
                 static const CacheStatsHandle s_stats = CacheStats::getOrCreate( MeshCache::kAssetKindName );
@@ -138,8 +135,11 @@ namespace sw
 {
     MeshCache::MeshCache()
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
+        , _pState{ make_unique<State>() }
     {
     }
+
+    MeshCache::~MeshCache() = default;
 
     MeshHandle MeshCache::request( string_view path )
     {
@@ -198,12 +198,12 @@ namespace sw
 
     bool MeshCache::isCached( string_view relativePath ) const
     {
-        return MeshCacheInternal::findLive( relativePath ) != nullptr;
+        return _pState->_sharedTable.findLive( MeshCacheInternal::makeKey( relativePath ) ) != nullptr;
     }
 
     size_t MeshCache::getCachedCount() const
     {
-        return MeshCacheInternal::getState()._sharedTable.countLive();
+        return _pState->_sharedTable.countLive();
     }
 
     shared_ptr<const void> MeshCache::pinAsset( string_view relativePath )
@@ -215,14 +215,9 @@ namespace sw
 
     void MeshCache::clear()
     {
-        // 상태를 만들지 않고 찾는다 — 아직 아무것도 읽지 않았으면 비울 것이 없다. 종료 때의 반납은 상태를 소유한 엔진 수명 범위가 한다.
-        MeshCacheInternal::State* const pState = MeshCacheInternal::s_state.find();
-        if ( pState != nullptr )
-        {
-            pState->_sharedTable.clear();
-            // 다시 읽으면 다시 알리도록 경고 기록을 잊는다.
-            pState->_warned.clear();
-        }
+        // 자기 상태를 비운다(매니저 종료 때도 불려 서비스 칸을 거치지 않는다). 다시 읽으면 다시 알리도록 경고 기록도 잊는다.
+        _pState->_sharedTable.clear();
+        _pState->_warned.clear();
         MeshCacheInternal::getStats().recordClear();
         invalidateDerivedCaches();
     }
