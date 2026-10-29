@@ -19,8 +19,8 @@
 #include "GameFramework/Base/Online/Schedule/ServiceRetentionJob.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Base/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
@@ -35,7 +35,7 @@ namespace sw
             /** @brief 원격 설정을 저장소에서 다시 읽는 간격입니다. 바꾼 서버는 버스로 바로 알리므로, 이것은 버스를 놓친 서버의 늦은 따라잡기다. */
             static constexpr int64 kRemoteConfigReloadMs = 60000;
 
-            static bool isMemoryDriver( string_view driver ) { return driver.empty() || driver == OnlineStoreDriverTable::kMemoryDriverName; }
+            static bool isMemoryDriver( string_view driver ) { return driver.empty() || driver == kMemoryStoreDriverName; }
 
             static constexpr int64 kDayMs = 24 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
             /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
@@ -375,14 +375,14 @@ namespace sw
         }
         else
         {
-            const OnlineStoreDriverTable::CreateServiceStoreFunction pCreate = OnlineStoreDriverTable::findServiceStoreFactory();
-            if ( pCreate == nullptr )
+            IServiceStoreDriver* const pDriver = game::findSubsystem<IServiceStoreDriver>();
+            if ( pDriver == nullptr )
             {
                 outError = "store driver '" + settings._store._driver + "' needs a storage kit (GF_Server_SQLStore) that is not loaded";
                 Internal::wipeSecret( settings._store._secret );
                 return false;
             }
-            parts._store = pCreate( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs, outError );
+            parts._store = pDriver->createServiceStore( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs, outError );
         }
         Internal::wipeSecret( settings._store._secret );
         if ( parts._store == nullptr )
@@ -395,14 +395,14 @@ namespace sw
         }
         else
         {
-            const OnlineStoreDriverTable::CreateEphemeralStoreFunction pCreate = OnlineStoreDriverTable::findEphemeralStoreFactory();
-            if ( pCreate == nullptr )
+            IEphemeralStoreDriver* const pDriver = game::findSubsystem<IEphemeralStoreDriver>();
+            if ( pDriver == nullptr )
             {
                 outError = "cache driver '" + settings._cache._driver + "' needs a storage kit (GF_Server_CacheStore) that is not loaded";
                 Internal::wipeSecret( settings._cache._secret );
                 return false;
             }
-            parts._cache = pCreate( settings._cache._driver, settings._cache._connection, settings._cache._secret, outError );
+            parts._cache = pDriver->createEphemeralStore( settings._cache._driver, settings._cache._connection, settings._cache._secret, outError );
         }
         Internal::wipeSecret( settings._cache._secret );
         if ( parts._cache == nullptr )

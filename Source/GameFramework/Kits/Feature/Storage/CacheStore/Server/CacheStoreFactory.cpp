@@ -3,16 +3,18 @@
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Time/Clock.h"
+
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
-#include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
+#include "GameFramework/Base/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
 namespace sw
@@ -21,23 +23,6 @@ namespace sw
     {
         struct CacheStoreFactoryInternal
         {
-            /**
-             * @brief "memory" 캐시의 데이터의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 만든 "memory" 저장소가 만든다).
-             * @details 같은 프로세스의 저장소끼리 나눠 쓴다. 저장소는 이 데이터를 주소로 들므로 엔진이 내려가기 전에 소멸해야 한다(서버 조립이 그렇게 한다).
-             */
-            struct MemoryCacheData
-            {
-                SystemMonotonicClock    _clock{}; ///< 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
-                MemoryEphemeralDatabase _database{ _clock };
-            };
-
-            static inline ScopeOwned<MemoryCacheData> s_memoryData{};
-
-            static MemoryEphemeralDatabase& getMemoryDatabase()
-            {
-                return s_memoryData.getRequired()._database; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — "memory" 캐시를 쓸 엔진이 없다
-            }
-
             /** @brief RESP 저장소에 주는 운영 시계입니다. 상태가 없어 저장소들이 나눠 쓴다. */
             static const SystemMonotonicClock& getRespClock()
             {
@@ -88,17 +73,52 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IEphemeralStore> CacheStoreFactory::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
+    /**
+     * @class RespEphemeralStoreDriver
+     * @brief 캐시 키트의 캐시 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `IEphemeralStoreDriver` 로 공개된다.
+     * @details "memory" 캐시의 데이터(같은 프로세스의 저장소끼리 나눠 쓴다)와 그 시계를 값으로 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 저장소는 이 데이터를
+     *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
+     */
+    class RespEphemeralStoreDriver final : public ISubsystem, public IEphemeralStoreDriver
     {
-        if ( driverName == OnlineStoreDriverTable::kMemoryDriverName )
-            return make_unique<MemoryEphemeralStore>( &CacheStoreFactoryInternal::getMemoryDatabase() );
-        if ( driverName != kRespDriverName )
+    public:
+        static constexpr const utf8* kSubsystemName = "RespEphemeralStoreDriver";
+
+        RespEphemeralStoreDriver()
+            : _memoryClock{}
+            , _memoryDatabase{ _memoryClock }
+        {
+        }
+
+        // ISubsystem — 세울 것이 없다.
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /**
+         * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
+         * @param secret AUTH 비밀(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
+         */
+        unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError ) override;
+
+    private:
+        SystemMonotonicClock    _memoryClock;    ///< "memory" 캐시의 시계 — 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
+        MemoryEphemeralDatabase _memoryDatabase; ///< "memory" 캐시의 데이터 — 같은 프로세스의 저장소끼리 나눠 쓴다
+    };
+
+    SW_MODULE_SUBSYSTEM( Engine, RespEphemeralStoreDriver, IEphemeralStoreDriver );
+
+    unique_ptr<IEphemeralStore> RespEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
+    {
+        if ( driverName == kMemoryStoreDriverName )
+            return make_unique<MemoryEphemeralStore>( &_memoryDatabase );
+        if ( driverName != CacheStoreFactory::kRespDriverName )
         {
             outError = "cache driver '" + string( driverName ) + "' is not in this build (memory, resp)";
             return nullptr;
         }
         CacheEndpoint parsed;
-        if ( parseEndpoint( endpoint, parsed, outError ) == false )
+        if ( CacheStoreFactory::parseEndpoint( endpoint, parsed, outError ) == false )
             return nullptr;
         unique_ptr<ITLSContext> tlsContext;
         if ( parsed._bTLS == SW_TRUE )
@@ -174,10 +194,4 @@ namespace sw
         }
         return true;
     }
-} // namespace sw
-
-namespace sw
-{
-    // 모듈이 로드되면 서버 조립의 캐시 만들기를 이 팩토리에 묶고, 언로드되면 푼다.
-    const OnlineStoreDriverBinding s_ephemeralStoreDriverBinding{ &CacheStoreFactory::createEphemeralStore, nullptr };
 } // namespace sw

@@ -6,6 +6,7 @@
  *            host 는 IPv4 문자열이나 호스트 이름이다. 이름은 기동 때 한 번 운영체제 해석기로 푼다(`PlatformSocketUtil::resolveAddress`, IPv4 A 레코드).
  *            비밀은 `user:password` 또는 비밀번호만 쓴다.
  *          - 그 밖의 이름이나 잘못된 엔드포인트는 분명한 오류를 남기고 기동을 멈춘다. 다른 드라이버로 대신하지 않는다.
+ *          만들기는 이 키트의 모듈 서브시스템(`IEphemeralStoreDriver` 로 공개, CacheStoreFactory.cpp)이 하고, 서버 조립은 그 타입으로 찾는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -35,18 +36,13 @@ namespace sw
 {
     /**
      * @struct CacheStoreFactory
-     * @brief 캐시 팩토리입니다.
+     * @brief 캐시 팩토리의 드라이버 이름 · 엔드포인트 해석입니다(만들기는 키트의 모듈 서브시스템 — 파일 머리말).
      */
     struct SW_KIT_SERVER_API CacheStoreFactory
     {
         static constexpr const utf8* kRespDriverName  = "resp";
         static constexpr uint16      kDefaultRespPort = 6379;
 
-        /**
-         * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
-         * @param secret AUTH 비밀(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
-         */
-        static unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError );
         /** @brief 엔드포인트 문자열을 해석합니다. 호스트 이름이면 DNS 를 묻는 막는 호출입니다. 모르는 인자이거나 값이 깨졌거나 풀리지 않으면 false 와 실패 이유를 반환합니다. */
         [[nodiscard]] static bool parseEndpoint( string_view endpoint, CacheEndpoint& outEndpoint, string& outError );
     };
