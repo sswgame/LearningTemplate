@@ -1,15 +1,14 @@
 /**
  * @file CameraPresetPanel.h
  * @brief 카메라 프리셋 파일(`*.cameras.xml`)의 프리셋을 미리보기 씬에서 보는 창입니다(Cinemachine 의 프리셋 미리보기, 언리얼 카메라 리그 미리보기에 해당).
+ * @details 프리셋 파일 · 고름 · 대상 요 · 카메라 자리 풀기는 `CameraPresetModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 
-#include "GameFramework/Base/Character/Camera/CameraPreset.h"
+#include "GameFramework/Plugin/Editor/CameraPresets/Model/CameraPresetModel.h"
 
 namespace sw::editor
 {
@@ -36,22 +35,18 @@ namespace sw::editor
         bool               canSaveDocument() const override { return false; }
 
         /** @brief 지금 고른 프리셋 번호입니다(감시 값 `Editor.CameraPresetSelected`). 없으면 -1 입니다. */
-        int32 getSelectedIndex() const { return _selectedIndex; }
+        int32 getSelectedIndex() const { return _model.getSelectedIndex(); }
         /** @brief 문서의 프리셋 수입니다. */
-        uint32 getPresetCount() const { return static_cast<uint32>( _catalog.getCount() ); }
+        uint32 getPresetCount() const { return static_cast<uint32>( _model.getCatalog().getCount() ); }
 
     private:
         bool                acceptsDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬에 대상(캡슐) 하나를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
-        /** @brief 고른 프리셋을 풀어 뷰포트 카메라를 그 자리에 놓습니다. */
+        /** @brief 모델이 카메라 자리를 내면 뷰포트 카메라를 그 자리에 놓습니다. */
         void applySelectedPresetToViewport();
 
-        CameraPresetCatalog _catalog;
-        int32               _selectedIndex;
-        float32             _targetYawDegrees; ///< Follow · FirstPerson · ThirdPerson 이 따르는 대상 요(도)
-        bool                _bViewportDirty;   ///< 다음 그리기에서 뷰포트 카메라를 프리셋 자리에 놓는다
-        string              _status;
+        CameraPresetModel _model;
     };
 } // namespace sw::editor
