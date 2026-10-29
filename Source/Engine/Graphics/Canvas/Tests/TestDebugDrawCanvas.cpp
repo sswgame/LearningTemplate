@@ -35,9 +35,10 @@ SW_TEST_CASE( DebugDrawCanvasTest, PaintAddsOneQuadPerVisibleSegment )
     queue.endFrame( 1.0f / 60.0f );
 
     CanvasDrawList canvas;
-    canvas._targetSize         = float2{ 256.0f, 256.0f };
-    const uint32 paintedCount  = DebugDrawCanvasUtil::paint( queue, float4x4{}, canvas._targetSize, nullptr, 0, canvas );
-    const uint32 expectedCount = 1 + 3 * DebugDrawQueue::kSphereCircleSegmentCount;
+    canvas._targetSize = float2{ 256.0f, 256.0f };
+    vector<DebugLine> listScratchLine;
+    const uint32      paintedCount  = DebugDrawCanvasUtil::paint( queue, float4x4{}, canvas._targetSize, nullptr, 0, listScratchLine, canvas );
+    const uint32      expectedCount = 1 + 3 * DebugDrawQueue::kSphereCircleSegmentCount;
     SW_EXPECT_EQUAL( expectedCount, paintedCount );
     SW_EXPECT_EQUAL( size_t{ expectedCount }, canvas._listQuad.size() );
 }

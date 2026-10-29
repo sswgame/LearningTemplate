@@ -73,6 +73,7 @@ namespace sw
         , _listShadowLightIndex{}
         , _listScenePreviewBuilder{}
         , _listPreviewLODView{}
+        , _listDebugDrawLine{}
         , _bMergeBatchesAcrossMaterials{ false }
         , _bGPUInstanceLODCapable{ false }
         , _bMissingCameraReported{ false }
@@ -456,7 +457,7 @@ namespace sw
             if ( packet._canvas._mainOutput.isEmpty() )
                 packet._canvas._mainOutput._targetSize = targetSize;
             const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), packet._viewProj, targetSize, pFontService, glyphFrameIndex,
-                                                                    packet._canvas._mainOutput );
+                                                                    _listDebugDrawLine, packet._canvas._mainOutput );
             if ( paintedCount > 0 )
                 packet._canvas._contentRevision = 0; // 겹친 도형은 프레임마다 바뀐다 — 내용 번호 없이 늘 올린다(테스트 그림과 같다)
         }

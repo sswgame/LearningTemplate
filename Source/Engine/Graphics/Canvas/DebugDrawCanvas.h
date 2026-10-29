@@ -8,6 +8,7 @@
  *          언리얼 `DrawDebugLine` 이 게임 뷰포트에 그려지는 자리와 같다(그쪽은 배치 선 렌더러로 깊이를 쓴다).
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -16,6 +17,7 @@
 namespace sw
 {
     struct CanvasDrawList;
+    struct DebugLine;
 
     class DebugDrawQueue;
     class FontService;
@@ -42,9 +44,10 @@ namespace sw
          * @brief 보이는 선분(구는 대원으로 펼친다)과 글자를 @p viewProj 로 투영해 @p outCanvas 뒤에 칠합니다. 반환값은 칠한 선분 수 + 글자 수입니다.
          * @param targetSize 주 출력의 픽셀 크기입니다(`outCanvas._targetSize` 와 같아야 가위가 맞는다).
          * @param pFontService 없거나 초기화 전이면 글자는 칠하지 않는다(선만).
+         * @param inoutScratchLine 펼친 선분을 담는 재사용 버퍼입니다 — 부르는 쪽(패킷 빌더)이 들고 프레임마다 넘긴다(비우고 채운다).
          */
         static uint32 paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontService* pFontService, uint64 frameIndex,
-                             CanvasDrawList& outCanvas );
+                             vector<DebugLine>& inoutScratchLine, CanvasDrawList& outCanvas );
         /**
          * @brief 월드 선분을 화면 픽셀(왼쪽 위 원점, 아래로 +y)로 투영합니다. 한쪽이 카메라 뒤면 근평면에서 자르고, 둘 다 뒤면 false 입니다.
          * @details 에디터 씬 뷰의 투영(`EditorViewportProjectionUtil::projectSegment`)과 같은 규칙이다.

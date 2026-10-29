@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 namespace sw
 {
@@ -141,6 +142,8 @@ namespace sw
         vector<ScenePreviewBuilder> _listScenePreviewBuilder;
         /** @brief 미리보기 씬 하나의 애니메이션 LOD · 메시 LOD 뷰입니다. 프레임마다 재사용합니다. */
         vector<LODView> _listPreviewLODView;
+        /** @brief 디버그 드로우 겹치기가 펼친 선분입니다(`DebugDrawCanvasUtil::paint`). 게임 스레드 하나가 패킷을 채우므로 하나를 프레임마다 재사용합니다. */
+        vector<DebugLine> _listDebugDrawLine;
         /** @brief 디바이스가 텍스처를 인덱스로 고를 수 있어 머티리얼이 달라도 배치를 합치는지입니다(`initialize` 가 정한다). 미리보기 빌더에도 같은 값을 준다. */
         bool _bMergeBatchesAcrossMaterials;
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). 미리보기 빌더는 쓰지 않는다. */
