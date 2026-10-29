@@ -8,7 +8,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/EngineMinimal.h"
@@ -78,6 +77,8 @@ namespace sw
         void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
         /** @brief Present 뒤에 부를 훅을 정합니다(멀티 뷰포트와 플랫폼 창 처리용). */
         void setPostPresentHook( PresentHookDelegate hook ) { _postPresentHook = std::move( hook ); }
+        /** @brief 프레임의 `beginFrame` 바로 앞 훅을 겁니다(렌더 스레드가 부른다 — 프레젠트 훅처럼 렌더 스레드가 돌기 전에 건다). */
+        void setBeginFrameHook( BeginFrameHookDelegate hook ) { _beginFrameHook = std::move( hook ); }
 
         /** @brief 워커가 돌고 있으면 true 를 반환합니다. */
         bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
@@ -86,19 +87,6 @@ namespace sw
 
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
-
-#if SW_DEV_COMMANDS_ENABLED
-        /** @brief `requestDeviceLossAfterDriverWait` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
-        static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = 60000;
-        /**
-         * @brief 다음 프레임의 `beginFrame`(펜스 대기 자리) 바로 앞에서 @p waitMilliseconds 동안 잠든 뒤 디바이스를 제거하게 합니다(개발 명령 `rhi.removeDevice <ms>`). 어느 스레드에서 불러도 됩니다.
-         * @details 실제 TDR 은 GPU 가 멈춘 동안 펜스 대기가 드라이버 안에서 막힌 뒤에야 첫 손실 결과를 돌려준다. `debugRemoveDevice` 만으로는 그 대기가 없어
-         *          "대기 뒤의 복귀 · 행" 을 재현하지 못했다. 대기가 시나리오 시한보다 짧으면 손실 뒤 복귀를, 길면 행 감시(`AutomationHangWatchdog`)를 본다.
-         *          개발 명령이 없는 구성(Shipping)에는 없다 — 출시 빌드에 프레임을 붙잡는 길을 남기지 않는다(`FrameStall` 과 같다).
-         * @param waitMilliseconds 1..kMaxDeviceLossDriverWaitMilliseconds. 아직 소비하지 않은 요청이 있으면 새 값으로 바꾼다.
-         */
-        void requestDeviceLossAfterDriverWait( uint32 waitMilliseconds );
-#endif
 
         /**
          * @brief 다음에 그리는 프레임의 이미지를 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 입니다. 어느 스레드에서 불러도 됩니다.
@@ -171,20 +159,17 @@ namespace sw
         [[nodiscard]] bool ensureContextOnCurrentThread();
         /** @brief `IRHIDevice::setRenderThreadDrain` 에 설정하는 함수입니다(`pContext` 는 이 객체입니다). */
         static void drainPacketsThunk( void* pContext );
-#if SW_DEV_COMMANDS_ENABLED
-        /** @brief 걸린 장치 손실 요청이 있으면 그만큼 잠든 뒤 디바이스를 제거합니다(`beginFrame` 바로 앞, 패킷을 실행하는 스레드). 제거할 수 없는 백엔드면 오류 로그를 남긴다. */
-        void consumeDeviceLossRequest();
-#endif
 
     private:
-        IRHIDevice*         _pDevice;
-        FrameRenderer*      _pFrameRenderer;
-        PresentHookDelegate _presentHook;
-        PresentHookDelegate _postPresentHook;
-        sw::thread          _thread;
-        atomic<bool>        _bRunning;
-        atomic<bool>        _bStop;
-        atomic<bool>        _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
+        IRHIDevice*            _pDevice;
+        FrameRenderer*         _pFrameRenderer;
+        PresentHookDelegate    _presentHook;
+        PresentHookDelegate    _postPresentHook;
+        BeginFrameHookDelegate _beginFrameHook;
+        sw::thread             _thread;
+        atomic<bool>           _bRunning;
+        atomic<bool>           _bStop;
+        atomic<bool>           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool             _bLastImmediateSubmit;
         uint8            _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.
@@ -200,11 +185,6 @@ namespace sw
         uint32           _requestedScreenshotWaitFrames;   ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         struct PendingRenderTargetRead;
         unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
-
-#if SW_DEV_COMMANDS_ENABLED
-        /// @brief `requestDeviceLossAfterDriverWait` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 패킷을 실행하는 스레드가 비웁니다.
-        atomic<uint32> _pendingDeviceLossWaitMilliseconds;
-#endif
 
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
         /// @brief 드라이버 GPU 메모리 값(`IRHIDevice::refreshGPUMemoryBudget`)을 묻는 간격입니다. DXGI 질의는 커널을 거치므로 프레임마다 묻지 않습니다.

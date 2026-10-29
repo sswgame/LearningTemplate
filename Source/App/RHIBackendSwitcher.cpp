@@ -5,6 +5,7 @@
 #include "App/EditorModuleManager.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -36,6 +37,9 @@ namespace sw
         : _pEngine{ nullptr }
         , _pGameModuleManager{ nullptr }
         , _failedSwapCount{ 0 }
+#if !defined( SW_SHIPPING )
+        , _pendingDeviceLossWaitMilliseconds{ 0 }
+#endif
         , _startBackend{}
         , _bEnableEditor{ SW_FALSE }
         , _bHandlingChange{ SW_FALSE }
@@ -77,14 +81,23 @@ namespace sw
         return pRHI != nullptr && pRHI->getDevice().debugRemoveDevice();
     }
 
-#if SW_DEV_COMMANDS_ENABLED
-    bool RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
+#if !defined( SW_SHIPPING )
+    void RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
     {
-        RenderThread* pRenderThread = _pEngine != nullptr ? _pEngine->getRenderThread() : nullptr;
-        if ( pRenderThread == nullptr )
-            return false;
-        pRenderThread->requestDeviceLossAfterDriverWait( waitMilliseconds );
-        return true;
+        SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
+        _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
+    }
+
+    void RHIBackendSwitcher::onBeginFrameOnRenderThread( IRHIDevice& device )
+    {
+        const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
+        if ( waitMilliseconds == 0u )
+            return;
+        SW_LOG_WARNING( "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
+                        waitMilliseconds );
+        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::kNanosecondsPerMillisecond );
+        if ( device.debugRemoveDevice() == false )
+            SW_LOG_ERROR( "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
     }
 #endif
 

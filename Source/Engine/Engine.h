@@ -132,6 +132,7 @@ namespace sw
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
+        void setBeginFrameHook( sw::BeginFrameHookDelegate beginFrameHook );
         /** @brief 디버그 키 액션 맵을 한 프레임 돌립니다(`DebugKeyActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
         void updateDebugKeyActions( float32 deltaTime );
         /** @brief 디버그 키 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_debugKeyInputMap`)에서 만듭니다(`DebugKeyActions::createInputMap`). */

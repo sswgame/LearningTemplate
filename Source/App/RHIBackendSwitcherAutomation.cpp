@@ -88,7 +88,7 @@ namespace sw
 
             /**
              * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 프레임 · 종료가 멈추지 않는지 보는 데 쓴다.
-             * @details 대기를 주면 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 그만큼 잠든 뒤 제거한다(`RenderThread::requestDeviceLossAfterDriverWait`) — 실제 TDR 이 첫 손실 결과를 돌려주기 전 드라이버 안에서 막히는 모양이다.
+             * @details 대기를 주면 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 그만큼 잠든 뒤 제거한다(`RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest`) — 실제 TDR 이 첫 손실 결과를 돌려주기 전 드라이버 안에서 막히는 모양이다.
              */
             static bool runRemoveDevice( const vector<string>& listArgument, string& outReply )
             {
@@ -100,17 +100,18 @@ namespace sw
                     int32 waitMilliseconds = 0;
                     if ( StringUtil::parseInt( listArgument[0], waitMilliseconds ) == false )
                         return false;
-                    const bool bInRange = 1 <= waitMilliseconds && static_cast<uint32>( waitMilliseconds ) <= RenderThread::kMaxDeviceLossDriverWaitMilliseconds;
+                    const bool bInRange = 1 <= waitMilliseconds && static_cast<uint32>( waitMilliseconds ) <= RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds;
                     if ( bInRange == false )
                     {
-                        outReply = "driver wait must be 1.." + to_string( RenderThread::kMaxDeviceLossDriverWaitMilliseconds ) + " ms";
+                        outReply = "driver wait must be 1.." + to_string( RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds ) + " ms";
                         return false;
                     }
-                    if ( pSwitcher == nullptr || pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) ) == false )
+                    if ( pSwitcher == nullptr )
                     {
-                        outReply = "no render thread to hold";
+                        outReply = "no backend switcher in this run";
                         return false;
                     }
+                    pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) );
                     outReply = "next render frame waits " + to_string( waitMilliseconds ) + " ms where the fence wait is, then removes the device";
                     return true;
                 }

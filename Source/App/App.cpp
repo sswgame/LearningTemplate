@@ -535,6 +535,9 @@ namespace sw
 
         _engine.setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
         _engine.setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
+#if !defined( SW_SHIPPING )
+        _engine.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &_backendSwap ) ); // 개발 명령 `rhi.removeDevice <ms>`
+#endif
     }
 
     void App::shutdown()

@@ -858,6 +858,16 @@ namespace sw
 #endif
     }
 
+    void Engine::setBeginFrameHook( BeginFrameHookDelegate beginFrameHook )
+    {
+#if defined( SW_WITH_CLIENT_CODE )
+        if ( _pRenderThread != nullptr )
+            _pRenderThread->setBeginFrameHook( std::move( beginFrameHook ) );
+#else
+        (void)beginFrameHook; // Server 타깃 — 렌더 스레드가 없다
+#endif
+    }
+
     void Engine::setPostPresentHook( PresentHookDelegate postPresentHook )
     {
 #if defined( SW_WITH_CLIENT_CODE )

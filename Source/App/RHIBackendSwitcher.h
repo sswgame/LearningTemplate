@@ -3,11 +3,12 @@
  * @brief gv_rhiBackend 변경을 받아 프레임 경계에서 그래픽 API 를 교체합니다(전역 변수 훅부터 모듈 재생성까지).
  */
 #pragma once
-#include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
 {
+    class IRHIDevice;
     enum class RHIBackend : uint32;
 
     struct GlobalVariableInfo;
@@ -71,12 +72,18 @@ namespace sw
         [[nodiscard]] bool requestSwap( RHIBackend backend );
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
-#if SW_DEV_COMMANDS_ENABLED
+#if !defined( SW_SHIPPING )
+        /** @brief `removeDeviceAfterDriverWaitForTest` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
+        static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = 60000;
         /**
-         * @brief 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 @p waitMilliseconds 동안 잠든 뒤 디바이스를 제거하게 합니다(개발 명령 `rhi.removeDevice <ms>`,
-         *        `RenderThread::requestDeviceLossAfterDriverWait`). 렌더 스레드가 없으면(엔진이 붙지 않음) false 입니다.
+         * @brief 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 @p waitMilliseconds 동안 잠든 뒤 디바이스를 제거하게 합니다(개발 명령 `rhi.removeDevice <ms>`).
+         * @details 실제 TDR 은 GPU 가 멈춘 동안 펜스 대기가 드라이버 안에서 막힌 뒤에야 첫 손실 결과를 돌려준다. `debugRemoveDevice` 만으로는 그 대기가 없어
+         *          "대기 뒤의 복귀 · 행" 을 재현하지 못했다. 요청은 이 객체가 들고, 엔진의 프레임 시작 훅(`onBeginFrameOnRenderThread`)이 소비한다.
+         * @param waitMilliseconds 1..kMaxDeviceLossDriverWaitMilliseconds. 아직 소비하지 않은 요청이 있으면 새 값으로 바꾼다.
          */
-        [[nodiscard]] bool removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
+        void removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
+        /** @brief 렌더 스레드 프레임 시작 훅입니다(`Engine::setBeginFrameHook` — App 이 프레젠트 훅과 같이 건다). 걸린 대기가 있으면 잠든 뒤 디바이스를 제거한다. */
+        void onBeginFrameOnRenderThread( IRHIDevice& device );
 #endif
 
     private:
@@ -90,6 +97,10 @@ namespace sw
         EditorModuleManager* _pGameModuleManager; // 소유하지 않는다
 
         uint32 _failedSwapCount;
+#if !defined( SW_SHIPPING )
+        /// @brief `removeDeviceAfterDriverWaitForTest` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 렌더 스레드가 비운다.
+        atomic<uint32> _pendingDeviceLossWaitMilliseconds;
+#endif
         /** @brief 시나리오가 시작할 때의 백엔드입니다(`recordStartBackend`). `_bStartBackendRecorded` 가 참일 때만 뜻이 있다. */
         RHIBackend _startBackend;
 
