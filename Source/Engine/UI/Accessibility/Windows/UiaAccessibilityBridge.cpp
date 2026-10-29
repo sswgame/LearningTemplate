@@ -6,6 +6,7 @@
     #include "Core/Memory/Memory.h"
 
     #include "Engine/UI/Accessibility/UIAccessibilityActions.h"
+    #include "Engine/UI/Accessibility/UIAccessibilityService.h"
     #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
     #include "Engine/UI/UISystem.h"
     #include "Engine/Window/IWindow.h"
@@ -67,7 +68,7 @@ namespace sw
                         return nullptr;
                     if ( _bSnapshotValid == false )
                     {
-                        _pUI->populateAccessibilitySnapshot( _snapshot );
+                        UIAccessibilityService::populateSnapshot( *_pUI, _snapshot );
                         _bSnapshotValid = true;
                     }
                     return &_snapshot;

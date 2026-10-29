@@ -65,6 +65,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
+#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Input/UIClipboardService.h"
@@ -255,7 +256,8 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<UIStyleSheetCache>() );
         startup.addSubsystem( sw::make_unique<UIThemeController>() ); // 테마 — 화면 스택과 오프스크린 화면이 같이 본다
         parts._pUISystem = &startup.addSubsystem( sw::make_unique<UISystem>() );
-        // 화면 스택 위의 UI 서비스 — 화면 스택에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens`)에 건다.
+        // 화면 스택 위의 UI 서비스 — 화면 스택에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint` …)에 건다.
+        startup.addSubsystem( sw::make_unique<UIAccessibilityService>() ); // 스크린 리더 — 알림이 이것으로 읽힌다
         startup.addSubsystem( sw::make_unique<UISubtitleService>() );
         startup.addSubsystem( sw::make_unique<UITooltipService>() );
         startup.addSubsystem( sw::make_unique<UINotificationService>() );

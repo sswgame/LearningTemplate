@@ -1,7 +1,7 @@
 /**
  * @file IUIAccessibilityBridge.h
  * @brief 런타임 UI 를 운영체제의 접근성 API(Windows UI Automation)에 잇는 플랫폼 쪽 계약입니다.
- * @details 브리지는 `UISystem` 이 가진다(`UISystem::setAccessibilityBridge`). 스크린 리더(내레이터 등)가 창에 붙으면 브리지가 접근성 트리(`UISystem::populateAccessibilitySnapshot`)를
+ * @details 브리지는 접근성 서비스가 가진다(`UIAccessibilityService::setBridge`). 스크린 리더(내레이터 등)가 창에 붙으면 브리지가 접근성 트리(`UIAccessibilityService::populateSnapshot`)를
  *          읽어 보여 주고, UI 는 포커스가 옮겨 갈 때 · 알림이 올라올 때 브리지에 알린다. 붙은 스크린 리더가 없으면(`isClientActive` 가 false) 트리를 뽑지도 않는다 — 평소 비용이 없다.
  *          모든 호출은 메인(게임) 스레드이며, 플랫폼이 다른 스레드에서 묻는 것은 브리지가 메인 스레드로 옮겨 처리한다.
  *          이 플랫폼의 브리지를 만드는 팩토리(`UIAccessibilityBridgeFactory`)도 여기 둔다 — 구현은 `UIAccessibilityBridgeFactory.cpp`.

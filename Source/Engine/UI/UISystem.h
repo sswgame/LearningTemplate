@@ -18,7 +18,6 @@
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
@@ -43,7 +42,6 @@ namespace sw
     class UserSettingsManager;
     class GameObjectManager;
 
-    struct UIAccessibilitySnapshot;
 } // namespace sw
 
 namespace sw
@@ -133,6 +131,8 @@ namespace sw
         /** @brief 지금 활성 화면(맨 위에서 포커스를 받는 화면)을 반환합니다. 입력을 막는 화면 아래로는 내려가지 않습니다. 없으면 nullptr 입니다. */
         UIScreen* getActiveScreen() const;
         uint32    getScreenCount() const { return static_cast<uint32>( _listScreen.size() ); }
+        /** @brief 스택의 화면들입니다(그리기 순서 — 레이어, 쌓인 순서. 입력은 역순). 화면 스택 위의 서비스가 읽기만 합니다(접근성 트리 뽑기). */
+        const vector<unique_ptr<UIScreen>>& getScreens() const { return _listScreen; }
 
         // --- 문서 ---------------------------------------------------------------
         /**
@@ -177,24 +177,6 @@ namespace sw
         UserSettingsManager* findUserSettings() const;
         /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵, UI 맵, 지금 장치 종류). */
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
-
-        // --- 접근성(스크린 리더) -----------------------------------------------------------
-        /**
-         * @brief 플랫폼 접근성 브리지를 끼웁니다(호스트가 창을 만든 뒤. nullptr 로 빼며, 빼기 전에 브리지는 창에서 자기 훅을 풀어야 한다). 브리지는 이 시스템이 소유합니다.
-         * @details 스크린 리더가 붙어 있을 때만 일합니다. 붙지 않았으면 포커스 알림 · 접근성 트리 뽑기 · 알림 전달 모두 아무것도 하지 않는다.
-         */
-        void                    setAccessibilityBridge( unique_ptr<IUIAccessibilityBridge> bridge );
-        IUIAccessibilityBridge* findAccessibilityBridge() const { return _accessibilityBridge.get(); }
-        /**
-         * @brief 스크린 리더에 글 @p text 를 읽어 달라고 알립니다(저장했습니다, 경고 같은 화면에 잠깐 뜨는 알림). 스크린 리더가 붙어 있지 않으면 아무것도 하지 않습니다.
-         * @details 알림 서비스(`UINotificationService`)가 보이는 알림마다 부른다. 게임이 화면에 띄우지 않는 소식을 읽히고 싶으면 직접 부른다.
-         */
-        void announce( string_view text, UIAnnouncePriority priority );
-        /**
-         * @brief 지금 화면의 접근성 트리를 @p outSnapshot 에 새로 뽑습니다. 읽는 순서는 입력을 받는 화면의 위에서 아래(입력을 막는 화면 아래는 뺀다), 그다음 오버레이입니다.
-         * @details 화면마다 위젯 트리 순서입니다(`UIAccessibilityTree::appendTree`). 닫는 중인 화면은 뺀다.
-         */
-        void populateAccessibilitySnapshot( UIAccessibilitySnapshot& outSnapshot ) const;
 
         // --- 스택 밖 화면(오프스크린 화면 `UIOffscreenScreens` 가 쓴다) -------------------------------------------
         /**
@@ -373,11 +355,6 @@ namespace sw
         void refreshHiddenLayers();
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
-        /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */
-        void appendScreenAccessibility( const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot ) const;
-        /** @brief 스크린 리더가 붙어 있으면 포커스가 옮겨 갔는지 보고 브리지에 알립니다(`update`). */
-        void updateAccessibilityFocus();
-
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /** @brief 닫기를 요청한 화면을 지웁니다. */
@@ -397,52 +374,45 @@ namespace sw
             UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
-        vector<unique_ptr<UIScreen>> _listScreen; ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
-
-        UIDocumentCache*    _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)
-        UIStyleSheetCache*  _pStyleSheetCache;               ///< 스타일 시트 캐시(서브시스템 `UIStyleSheets` — 기동이 찾는다)
-        Subscription        _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
-        Subscription        _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
-        Subscription        _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
-        Subscription        _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
-        UIThemeController*  _pThemes;                        ///< 테마(서브시스템 `UIThemes` — 기동이 찾는다)
-        Subscription        _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
-        vector<string>      _listReopenDocument;             ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
-        UIUpdateDelegate    _onUpdateBeforeScreens;          ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
-        UIUpdateDelegate    _onUpdateAfterScreens;           ///< 화면 틱 뒤의 UI 서비스(알림)
-        UIUpdateDelegate    _onUpdateBeforeLayout;           ///< 레이아웃 앞의 UI 서비스(화면 마커)
-        UIUpdateDelegate    _onUpdateAfterPaint;             ///< 화면 그리기 뒤의 UI 서비스(화면 마커 앵커 · World 위젯 · 오프스크린 화면)
-        UIUpdateDelegate    _onPointerProcessed;             ///< 포인터 처리 뒤의 UI 서비스(World 위젯 광선)
-        UIActionGlyphSource _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
-        UIInputRouter       _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-
-        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge; ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
-        FontService*                       _pFontService;
-        const LocalizationManager*         _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
-        UserSettingsManager*               _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
-        unique_ptr<TextLayoutEngine>       _textLayout;
-        UIScaleSettings                    _scaleSettings;
-        UIViewport                         _viewport;
-        UICanvasPaintState                 _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
-
-        UIScreenHandle _activeScreen;
-        UIScreenHandle _accessibleFocusScreen; ///< 브리지에 마지막으로 알린 포커스 위젯의 화면입니다.
-        WidgetID       _accessibleFocusWidget; ///< 브리지에 마지막으로 알린 포커스 위젯입니다(없으면 `kInvalidWidgetID`).
-
-        vector<UIScreenHandle> _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
-        vector<SwitchScreen>   _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
-        UIEngineDocuments      _engineDocuments;     ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
-        string                 _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
-        string                 _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle         _nextScreenHandle;
-        uint32                 _nextPushOrder;
-        uint32                 _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
-        uint32                 _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
-        InputGlyphStyle        _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
-        uint8                  _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
-        uint8                  _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
-        uint8                  _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
-        uint8                  _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
-        uint8                  _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
+        vector<unique_ptr<UIScreen>> _listScreen;                     ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
+        UIDocumentCache*             _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)
+        UIStyleSheetCache*           _pStyleSheetCache;               ///< 스타일 시트 캐시(서브시스템 `UIStyleSheets` — 기동이 찾는다)
+        Subscription                 _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
+        Subscription                 _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
+        Subscription                 _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
+        Subscription                 _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
+        UIThemeController*           _pThemes;                        ///< 테마(서브시스템 `UIThemes` — 기동이 찾는다)
+        Subscription                 _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
+        vector<string>               _listReopenDocument;             ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
+        UIUpdateDelegate             _onUpdateBeforeScreens;          ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
+        UIUpdateDelegate             _onUpdateAfterScreens;           ///< 화면 틱 뒤의 UI 서비스(알림)
+        UIUpdateDelegate             _onUpdateBeforeLayout;           ///< 레이아웃 앞의 UI 서비스(화면 마커)
+        UIUpdateDelegate             _onUpdateAfterPaint;             ///< 화면 그리기 뒤의 UI 서비스(화면 마커 앵커 · World 위젯 · 오프스크린 화면)
+        UIUpdateDelegate             _onPointerProcessed;             ///< 포인터 처리 뒤의 UI 서비스(World 위젯 광선)
+        UIActionGlyphSource          _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
+        UIInputRouter                _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
+        FontService*                 _pFontService;
+        const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
+        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
+        unique_ptr<TextLayoutEngine> _textLayout;
+        UIScaleSettings              _scaleSettings;
+        UIViewport                   _viewport;
+        UICanvasPaintState           _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
+        UIScreenHandle               _activeScreen;
+        vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        vector<SwitchScreen>         _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
+        UIEngineDocuments            _engineDocuments;     ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
+        string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
+        string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
+        UIScreenHandle               _nextScreenHandle;
+        uint32                       _nextPushOrder;
+        uint32                       _textRevision;            ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
+        uint32                       _converterRevision;       ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
+        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
+        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
+        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
+        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
     };
 } // namespace sw

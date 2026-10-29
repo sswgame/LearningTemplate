@@ -13,6 +13,7 @@
 
     #include "Engine/UI/Accessibility/AtSpiMapping.h"
     #include "Engine/UI/Accessibility/UIAccessibilityActions.h"
+    #include "Engine/UI/Accessibility/UIAccessibilityService.h"
     #include "Engine/UI/Accessibility/UIAccessibilityTree.h"
     #include "Engine/UI/UISystem.h"
     #include "Engine/Window/IWindow.h"
@@ -291,7 +292,7 @@ namespace sw
             {
                 if ( _bSnapshotValid == false )
                 {
-                    _ui.populateAccessibilitySnapshot( _snapshot );
+                    UIAccessibilityService::populateSnapshot( _ui, _snapshot );
                     _bSnapshotValid = true;
                 }
                 return &_snapshot;

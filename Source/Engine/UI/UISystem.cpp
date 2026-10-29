@@ -22,7 +22,6 @@
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
-#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
@@ -91,7 +90,6 @@ namespace sw
 {
     UISystem::UISystem()
         : _listScreen{}
-
         , _pDocumentCache{ nullptr }
         , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
@@ -106,8 +104,6 @@ namespace sw
         , _onPointerProcessed{}
         , _actionGlyphs{}
         , _input{}
-
-        , _accessibilityBridge{}
         , _pFontService{ nullptr }
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
@@ -115,11 +111,7 @@ namespace sw
         , _scaleSettings{}
         , _viewport{}
         , _paintState{}
-
         , _activeScreen{ kInvalidUIScreenHandle }
-        , _accessibleFocusScreen{ kInvalidUIScreenHandle }
-        , _accessibleFocusWidget{ kInvalidWidgetID }
-
         , _listTickScratch{}
         , _listSwitchScreen{}
         , _engineDocuments{}
@@ -164,15 +156,12 @@ namespace sw
 
     void UISystem::shutdown()
     {
-        _accessibilityBridge.reset();
-
         _listSwitchScreen.clear();
         _input.getFocusManager().clearFocus();
         while ( _listScreen.empty() == false )
         {
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
         }
-
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
         _documentReloadedSubscription.reset();
@@ -282,7 +271,6 @@ namespace sw
             applyPendingCloses(); // 닫기 애니메이션이 끝난 화면을 지운다
         }
         refreshInputGlyphs();
-        updateAccessibilityFocus();
         // 스타일: 스타일이 더티한 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞이다. 여백과 글꼴이 크기를 바꾸기 때문이다).
         {
             SW_PROFILE_SCOPE( "GT.UI.Style" );
@@ -867,73 +855,6 @@ namespace sw
         return context;
     }
 
-    void UISystem::setAccessibilityBridge( unique_ptr<IUIAccessibilityBridge> bridge )
-    {
-        _accessibilityBridge   = std::move( bridge );
-        _accessibleFocusScreen = kInvalidUIScreenHandle;
-        _accessibleFocusWidget = kInvalidWidgetID;
-    }
-
-    void UISystem::announce( string_view text, UIAnnouncePriority priority )
-    {
-        const bool bListening = _accessibilityBridge != nullptr && _accessibilityBridge->isClientActive();
-        if ( bListening && text.empty() == false )
-            _accessibilityBridge->announce( text, priority );
-    }
-
-    void UISystem::appendScreenAccessibility( const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot ) const
-    {
-        // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
-        const WidgetTree* pFocusTree    = _input.getFocusManager().getFocusedTree();
-        const WidgetID    focusedWidget = pFocusTree == &screen.getTree() ? _input.getFocusManager().getFocusedWidget() : kInvalidWidgetID;
-        UIAccessibilityTree::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
-    }
-
-    void UISystem::populateAccessibilitySnapshot( UIAccessibilitySnapshot& outSnapshot ) const
-    {
-        outSnapshot.clear();
-        // 입력을 받는 화면: 위에서 아래로 읽는다. 입력을 막는 화면(모달) 아래는 읽지 않는다.
-        for ( size_t index = _listScreen.size(); index > 0; --index )
-        {
-            const UIScreen& screen = *_listScreen[index - 1];
-            if ( screen.isClosing() || screen.receivesPointer() == false )
-                continue;
-            appendScreenAccessibility( screen, outSnapshot );
-            if ( screen.blocksLowerInput() )
-                break;
-        }
-        // 오버레이(알림, 자막): 입력을 받지 않지만 읽을 글이다. 맨 뒤에 둔다.
-        for ( size_t index = _listScreen.size(); index > 0; --index )
-        {
-            const UIScreen& screen = *_listScreen[index - 1];
-            if ( screen.isClosing() == false && screen.receivesPointer() == false )
-                appendScreenAccessibility( screen, outSnapshot );
-        }
-    }
-
-    void UISystem::updateAccessibilityFocus()
-    {
-        if ( _accessibilityBridge != nullptr )
-            _accessibilityBridge->onUIUpdated();
-        const bool bListening = _accessibilityBridge != nullptr && _accessibilityBridge->isClientActive();
-        if ( bListening == false )
-        {
-            // 붙지 않은 동안 바뀐 포커스는 다시 붙을 때 새로 알린다.
-            _accessibleFocusScreen = kInvalidUIScreenHandle;
-            _accessibleFocusWidget = kInvalidWidgetID;
-            return;
-        }
-        const WidgetTree*    pTree   = _input.getFocusManager().getFocusedTree();
-        const UIScreen*      pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
-        const UIScreenHandle screen  = pScreen != nullptr ? pScreen->getHandle() : kInvalidUIScreenHandle;
-        const WidgetID       widget  = pScreen != nullptr ? _input.getFocusManager().getFocusedWidget() : kInvalidWidgetID;
-        if ( screen == _accessibleFocusScreen && widget == _accessibleFocusWidget )
-            return;
-        _accessibleFocusScreen = screen;
-        _accessibleFocusWidget = widget;
-        _accessibilityBridge->notifyFocusChanged( screen, widget );
-    }
-
     void UISystem::syncScreenSwitches()
     {
         const uint32 switchCount = UIScreenSwitches::getCount();
@@ -1032,7 +953,6 @@ namespace sw
         }
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
         SW_PROFILE_COUNT( "UI.CanvasQuads", target._listQuad.size() );
-
         _paintState.endPaint( painter.getDeferredGlyphCount() );
     }
 

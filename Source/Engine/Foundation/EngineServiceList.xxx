@@ -71,6 +71,8 @@ SW_ENGINE_SERVICE( class, UISubtitleService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, UIOffscreenScreens, Required, HostOnly )
 // 위젯 컴포넌트의 UI 쪽(서브시스템 UIWidgetComponents) — 화면 마커 · World 위젯 · 광선 입력. 게임은 크로스헤어 · 패드 광선을 `routeWorldPointer` 로 넣는다.
 SW_ENGINE_SERVICE( class, UIWidgetComponentService, Required, GameVisible )
+// 스크린 리더 연결(서브시스템 UIAccessibility) — 플랫폼 브리지 · 포커스 알림 · 읽어 줄 알림. 게임은 화면에 띄우지 않는 소식을 `announce` 한다.
+SW_ENGINE_SERVICE( class, UIAccessibilityService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 // 서브시스템 Telemetry(Client 호스트)다.

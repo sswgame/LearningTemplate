@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/UISystem.h"
@@ -87,7 +88,7 @@ namespace sw
 
     span<const utf8* const> UINotificationService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIDocumentCache::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIDocumentCache::kSubsystemName, UIAccessibilityService::kSubsystemName };
         return kArrDependency;
     }
 
@@ -188,7 +189,7 @@ namespace sw
             if ( pMessage == nullptr || pMessage->getDisplayText().empty() )
                 continue; // 아직 배치 전이다 — 다음 갱신에 다시 본다
             const UIAnnouncePriority priority = entry._desc._kind == UINotificationKind::Warning ? UIAnnouncePriority::Assertive : UIAnnouncePriority::Polite;
-            _pUI->announce( pMessage->getDisplayText(), priority );
+            engine::getSubsystem<UIAccessibilityService>().announce( pMessage->getDisplayText(), priority );
             entry._bAnnounced = true;
         }
     }

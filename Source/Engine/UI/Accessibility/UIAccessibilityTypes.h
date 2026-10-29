@@ -54,7 +54,7 @@ namespace sw
         bool           _bLeaf{ false };     ///< 안의 위젯을 따로 읽지 않는지 나타냅니다(단추 안의 글은 단추의 이름이다).
     };
 
-    /** @brief 알림(`UISystem::announce`)이 끼어드는 정도입니다. */
+    /** @brief 알림(`UIAccessibilityService::announce`)이 끼어드는 정도입니다. */
     enum class UIAnnouncePriority : uint8
     {
         Polite,   ///< 읽고 있던 것이 끝난 뒤에 읽습니다(저장했습니다, 힌트).

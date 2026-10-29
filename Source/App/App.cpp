@@ -43,6 +43,7 @@
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
+#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
@@ -730,7 +731,7 @@ namespace sw
             return; // 에디터는 창을 ImGui 가 쓴다 — 게임 UI 만 스크린 리더에 내보이지 않는다
         // 스크린 리더: 창의 접근성 요청(Windows `WM_GETOBJECT`)에 런타임 UI 로 답한다. 이 플랫폼에 연결이 없으면 nullptr 이고 UI 는 그대로 동작한다.
         if ( _pWindow != nullptr )
-            pUI->setAccessibilityBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_pWindow ) );
+            engine::getSubsystem<UIAccessibilityService>().setBridge( UIAccessibilityBridgeFactory::createForWindow( *pUI, *_pWindow ) );
         _quitCommandRegistration = engine::getSubsystem<UIGlobalCommandRegistry>().registerCommand( hashed_string( UIGlobalCommandRegistry::kQuitGame ), SW_DELEGATE_METHOD( UICommandDelegate, &App::onQuitGameCommand, this ) );
     }
 
@@ -740,7 +741,7 @@ namespace sw
         if ( pUI == nullptr )
             return;
         engine::getSubsystem<UIClipboardService>().setAPI( UIClipboardAPI{} );
-        pUI->setAccessibilityBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
+        engine::getSubsystem<UIAccessibilityService>().setBridge( nullptr ); // 창이 사라지기 전에 창의 접근성 훅을 푼다
         _quitCommandRegistration.reset();
     }
 
