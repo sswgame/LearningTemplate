@@ -122,13 +122,15 @@ endif()
 
 
 # ------------------------------------------------------------------------------
-# IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Release)
+# IPO — 전역 CMAKE_INTERPROCEDURAL_OPTIMIZATION (Shipping 만)
 # ------------------------------------------------------------------------------
 set(sw_ipo_supported FALSE)
 include("${CMAKE_CURRENT_LIST_DIR}/../Config/JsonValue.cmake")
 
-# `SW_ENABLE_LTO` 가 여기도 걸린다 — 이 전역 IPO 와 Shipping LTO 는 한 스위치다(빼면 OFF 를 줘도 Release 가 LTO 로 간다).
-if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
+# `SW_ENABLE_LTO` 가 여기도 걸린다 — 이 전역 IPO 와 Shipping LTO 는 한 스위치다(빼면 OFF 를 줘도 LTO 로 간다).
+# 배포 빌드(`SW_SHIPPING_BUILD`)만이다 — 개발 Release 에 걸면 엔진 .cpp 하나를 고쳐도 Engine.dll 링크가 코드 생성을 다시 해 75 초였다(Debug 4.7 초).
+# 언리얼도 LTO 는 Shipping 만 한다(Development 는 끈다). 개발 Release 의 성능은 LTO 없는 값이다 — 배포 성능은 Ninja-Shipping 으로 잰다.
+if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
 	sw_checkIpoSupport(sw_ipo_supported sw_ipo_error)
 
 	if(sw_ipo_supported)

@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 구조 개편 A3 · B · C 와 전수 감사, 테스트 틀 · 시나리오 개편(옛 문제 목록을 형식으로 막음)까지 끝났다. Debug · Release 오류 0, `App --test` 18 케이스 · 시나리오 19 × 네 백엔드 통과. 다음은 옛 테스트 · 게임 시나리오를 새 틀로 더 옮기는 것과 4 절의 남은 일이다.
+> 결론: 구조 개편 A3 · B · C, 테스트 틀 · 시나리오 개편, 병렬 실행(시나리오 백엔드 행렬 · `-log-file` · 기동 로그 백로그)까지 끝났다. 다음은 7 절의 설계 넷 — 빌드 속도 마무리(D) · 테스트 틀 고도화(E) · 시나리오 범용화와 게임 쪽 확장(F) · 리로드를 떼었다 붙이는 단위로(G) — 과 4 절의 남은 일이다.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -33,6 +33,10 @@
 
 `Test/README.md` 가 정본이다(쓰는 법 · 옛 문제와 고친 것 표). 요약: 단위 테스트는 기능 옆 `Tests/` 의 `SW_TEST_CASE` 를 `App --test` 한 번이 엔진 위에서 섞어 돌린다(로그 게이트 · 단언 0 건 실패 · 스냅숏 · 케이스별 쓰기 폴더). 시나리오는 적은 순서대로 도는 단계(`<Wait>` · `<WaitUntil>`), 백엔드별 골든 이미지(`-scenario-update-golden`), 시나리오 안 `<AllowLog>`, 실행별 산출물 폴더 · 사용자 설정이다.
 
+- **병렬**: CTest 항목은 시나리오마다 하나이고, 그 App 이 `-scenario-backends=all` 로 백엔드마다 자식 App 을 동시에 띄워 모은다(`AutomationBackendMatrix` — Gauntlet 컨트롤러 자리, 자식은 `kProcessKillSeconds` 180 초 안에 끝나야 한다). 항목끼리도 `ctest -j4` 로 돈다(76 실행 64 초). 스레드 병렬은 쓰지 않는다 — 창 · 장치 · 전역 변수 · 씬이 프로세스에 하나라서.
+- **로그**: `-log-file=<경로>` 가 그 파일 하나에 쓴다(ctest 는 `<빌드>/Testing/Logs/<항목>[.<백엔드>].log`). 명령줄이 로거보다 먼저 서고, 싱크가 서기 전의 줄은 `Logger` 가 고정 배열 64 줄로 쌓았다가 넘긴다(언리얼 backlog).
+- **종료 코드**: 이 PC 에서 못 도는 백엔드(77)는 행렬이 그 백엔드만 건너뜀으로 센다.
+
 ## 4. 남은 일
 
 | 일 | 내용 |
@@ -41,7 +45,59 @@
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
 | 남은 처리기 인터페이스 | `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다) |
+| `BugIt` 이름 | 언리얼 명령 이름을 그대로 가져와 뜻이 안 보인다 → `BugReport`(타입 · 개발 명령 `bugreport` · 폴더 `Saved/BugReports` · 편집기 `Panels/BugIt` · `EditorBugItCommands`, 14 파일 152 곳). 별칭은 두지 않는다. 같은 식으로 빌려 온 이름이 더 있는지 함께 찾는다 |
+| 겹치는 경로 넷 | 병렬 실행이 같은 이름에 쓰는 곳: BugIt 이 로그 폴더의 "가장 새 .txt" 를 복사(다른 프로세스 로그) · 편집기 콘솔 패널도 같음 → 싱크가 이 프로세스의 로그 파일 경로를 준다(`ILogSink::getLogFilePath`). BugIt 폴더는 "있나 보고 만들기"(같은 초 경합) → 있으면 실패하는 `FileUtil::tryCreateNewDirectory`. 스크린샷 기본 이름이 초 단위(덮어씀) → BugIt 처럼 `-2` 접미와 원자적 예약. 개발 TLS 인증서가 cert · key 두 파일(짝 어긋남) → 한 PEM(`devserver.pem`)에 원자적 한 번 쓰기(OpenSSL 의 PEM 읽기는 다른 종류 블록을 건너뛴다) |
+| `-log-file` 과 크래시 묶기 | 크래시 리포트 묶기(`CrashReportService::collectSessionLog`)는 `*_<세션>.txt` 로 로그를 찾아 고정 이름 로그를 못 찾는다 — ctest 는 크래시 파일 옆에 로그가 있어 당장은 문제없다 |
 | 그 밖 | 없는 스크립트를 부르는 곳(`Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 생성기 · CMake 파일 이름의 `Abi`(`Scripts/generate/EngineAbiStamp.py` · `cmake/Engine/EngineAbiStamp.cmake`) |
+
+## 7. 다음 설계 (D · E · F)
+
+### D. 빌드 속도 마무리
+
+- **끝남**: Release Engine.dll 링크가 75 초(Debug 4.7 초)였다 — 원인은 개발 Release 에도 걸린 전역 ThinLTO. LTO 를 `SW_SHIPPING_BUILD` 만으로 옮겼다(`cmake/Engine/BuildLayout.cmake`, 언리얼도 Shipping 만). 잰 값: Engine.dll 링크 **75 → 1.0 초**, 엔진 .cpp 하나 고친 증분 빌드 **3.0 초**, Release 전체 310 초, ctest 20 항목(76 실행) 통과. 개발 Release 의 성능 수치는 이제 LTO 없는 값이다 — 배포 성능은 `Ninja-Shipping` 으로 잰다.
+- B("Engine 링크 분할")는 층 검사를 빌드 형식으로 만든 데서 멈췄지만, 링크가 1 초라 Engine 을 DLL 여럿으로 나눌 까닭이 없다 — 하지 않는다.
+- 가장 무거운 컴파일: 편집기 `MaterialPanel` · `PrefabPanel`(각 50 초대, Release) — 무엇이 무거운지(템플릿 · ImGui 헤더 · 단일 거대 함수) `-ftime-trace` 로 보고 나눈다.
+- `.ninja_log` 에 지운 옛 테스트 실행 파일(TestBin/*)이 남았다 — 빌드 폴더의 옛 산출물은 다시 구성할 때 지운다.
+
+### E. 테스트 틀 고도화 (안정성 · 속도 · 더하기 · 빼기)
+
+| 문제(지금) | 고칠 모양 | 근거 |
+|---|---|---|
+| 케이스가 멈추면 CTest 600 초까지 아무 보고 없음 · 크래시면 보고 없음 | 케이스 시한 감시 스레드(기본 10 초, 케이스가 `.timeoutSeconds` 로 바꿈) — 넘기면 지금 케이스 이름으로 보고를 쓰고 끝낸다. 크래시 문맥에 지금 케이스(`CrashHandler::setContextValue`). 보고를 케이스마다 덧쓰기(JSON Lines)로 — 죽어도 앞 케이스 결과가 남는다 | 시나리오 HangWatch 와 같은 방식, GoogleTest 는 없고 Catch2 · Unreal 은 있음 |
+| 픽스처 · 매개변수 · 태그 · 비활성이 없음(옛 틀에는 있었다) | 케이스 선언에 지정 초기화 옵션: `SW_TEST_CASE( Suite, Name, { .tags = "slow", .disabledReason = "…", .timeoutSeconds = 30 } )`. 픽스처는 `SW_TEST_FIXTURE( Suite, Type )` 로 케이스마다 새 객체. 매개변수는 `SW_TEST_CASE_EACH( Suite, Name, 배열 )` — 원소마다 케이스 이름 `Name/<i>` | GoogleTest TEST_F · TEST_P, Catch2 태그 |
+| 케이스가 늘면 한 프로세스 순차 | 샤딩 `--test-shard=i/n`(이름 해시로 고르게) — CTest 가 `UnitTests.<i>` 를 코어 수만큼 등록 | GoogleTest `GTEST_SHARD_INDEX`, 언리얼 워커 |
+| 옛 케이스 약 5,100(Core 879 · Engine 4,269)이 남음 | 매크로가 같은 순수 함수 케이스는 기계 이식 스크립트(`Scripts/dev`)로 위치 · include 만 바꿔 옮긴다. 옛 하네스(TestBench · 자식 프로세스 · 루프백 클러스터)에 기대는 것은 시나리오나 새 픽스처로 다시 쓴다 | |
+
+### F. 시나리오 범용화와 게임 쪽 확장
+
+지금 결합(조사): 결과 = 프로세스 종료 · 입력 기본 Exclusive(OS 입력 막음) · `gv_fixedFrameDelta` 강제 · 산출물 기본 · 명령줄로만 시작 · 행 감시가 `_Exit`. 단계는 어느 모듈이든 등록할 수 있다(`SW_AUTOMATION_STEP`, 키트 · 게임 등록은 아직 0). 겹치는 기능: 시퀀서(`Engine/Sequencer` — 판정 · 입력 없음), 입력 녹화 `InputReplay`(`.swreplay`, 시나리오와 같은 `IVirtualInputSource`), `ScenarioRecorder`(녹화 → 시나리오 XML).
+
+**나눌 층**: 재생기(`ScenarioPlayer` — 단계 · 타임라인 · 가상 입력, 배포에도 있음, 게임 코드가 `play(asset, options)` 로 시작하고 끝 델리게이트를 받는다)와 그 위의 판정(`AutomationJudge` · 로그 게이트 · 골든 · 종료 코드 — 테스트 실행만). 시나리오 파일의 테스트 전용 칸(`AutomationTestOptions`)은 이미 따로 있다.
+
+| 쓰임 | 빌려 올 곳 | 필요한 것 |
+|---|---|---|
+| 어트랙트 · 데모 모드(타이틀에서 대기하면 자동 플레이, 입력이 오면 멈춤) | 아케이드 · 격투 게임의 데모 루프, 언리얼 Lyra 의 어트랙트 | 입력 `Mixed` + "실제 입력이 오면 중단" 옵션, 반복 재생, 씬 불러오기 단계 |
+| 내장 벤치마크(timedemo) | Source · id Tech `timedemo`, 사이버펑크 · 툼레이더 내장 벤치마크 | 고정 카메라 경로(시퀀서 트랙 재생 단계) + 프레임 통계 수집 → 결과 화면 · JSON. 행렬처럼 프리셋마다 돌리기 |
+| 튜토리얼 · 온보딩(플레이어가 X 를 하면 다음) | 하스스톤 · 대부분의 튜토리얼 스크립트 | `WaitUntil` 의 게임 조건(액션 · 감시 값) + UI 강조 · 안내 단계, 입력은 막지 않음 |
+| 고스트 · 리플레이(타임 어택 고스트, 킬캠) | 마리오 카트 고스트, 스타크래프트의 입력 기반 결정적 리플레이 | `InputReplay` 를 액션(의도) 단위로 녹화 · 재생, 결정성(고정 델타 · 난수 씨앗) 단계 |
+| 자동 플레이 봇 · 소크 테스트(밤새 돌리기) | 씨 오브 시브즈 자동 테스트, EA · 유비 봇 플레이 테스트, 언리얼 Gauntlet | 반복 · 무작위 분기(씨앗 고정) · 메모리 · 프레임 상한 단언, 행렬처럼 여러 프로세스 |
+| 컷신 · 이벤트 연출에서 게임 행동 끼우기 | 언리얼 Sequencer 이벤트 트랙 · 유니티 Timeline Signal | 시퀀서 이벤트 트랙이 시나리오(또는 단계 묶음)를 부르고, 시나리오가 시퀀스를 재생 · 기다림(`PlaySequence` · `WaitSequence`) |
+| 개발 매크로(autoexec · 테스트 맵 세팅) | 소스 엔진 `.cfg` · 언리얼 `exec` | 명령 줄만 있는 시나리오를 콘솔에서 `scenario run <경로>` 로 |
+
+순서 제안: (1) 재생기 · 판정 분리와 게임 API(`ScenarioPlayer`), (2) 중단 조건 · 반복 · 씬 불러오기 단계, (3) 시퀀서 연동 단계, (4) 벤치마크 모드, (5) 액션 단위 녹화 · 리플레이.
+
+### G. 리로드를 떼었다 붙이는 단위로
+
+조사(2026-10-29):
+- 코드 핫 리로드 본체는 이미 한 폴더다 — `ModuleManager/LiveReload/`(14 파일 약 3,000 줄, Shipping 은 폴더째 뺀다) + `ModuleReloadDriver` · `ModuleCompiler` 알림.
+- **흩어진 것은 "모듈 언로드 때 그 모듈 코드의 콜백을 뗀다(CodeWithin)" 계약**이다 — 27 파일 · 등록 13 곳: `RegistrationList` 그림자(같은 이름 대체), `ModuleLibraryUtil` 언로드 처리기, `Delegate` · `EventDispatcher` · `ILogSink::removeListenerCodeWithin`(순수 가상), 창 · 입력 · UI · `CommandStack` · `AssetManager` · 사용자 설정 · GameFramework(어빌리티 · 저장소 드라이버), 리플렉션 · 전역 변수 · 에셋 종류의 `unregister*ByModule`. 정적 링크인 Shipping 에서는 한 번도 불리지 않는데 하나도 빠지지 않는다. 이 장치는 핫 리로드만이 아니라 Dev 의 일반 언로드(에디터 모듈 내리기 · RHI 백엔드 교체)도 쓴다 — 경계 이름은 "동적 모듈 언로드".
+- 에셋 리로드: 감시(`IFileWatcher` — Core, Shipping 에도 빌드됨) → 편집기 `AssetHotReload` · `ConfigHotReload`(EditorSubsystem — 편집기 없는 Dev 실행은 리로드가 없다) → `IAssetCache::reload`(순수 가상, 모든 캐시가 구현 · Shipping 에도 있다) → 리플렉션으로 사용자에게 알림. 리로드 전용 어댑터(`AudioReloadCache` · `LocalizationReloadCache`)가 Shipping 에도 등록된다. 게임 쪽 두 번째 감시 경로 `AppearanceDataWatcher`(Shooter3D 가 가드 없이 시작). 셰이더는 `ShaderRecompiler`(Ctrl+F8 수동, Shipping 제외)와 늘 서는 빈 `LiveShaderSubsystem`.
+
+정한 모양(언리얼 ModuleManager · HotReload · DirectoryWatcher 모듈과 같은 나눔):
+1. **동적 모듈 언로드 장치 하나**(`Core/Module/ModuleUnload`): 처리기 목록 · 주소 범위 헬퍼를 모으고, 각 레지스트리는 `SW_MODULE_UNLOAD_HANDLER( ... )` 한 줄로만 참여한다. `SW_WITH_MODULE_UNLOAD`(Shipping 0) 이면 매크로가 비고 CodeWithin 함수 · 그림자 목록도 빠진다. `ILogSink` 의 순수 가상은 언로드 처리기 등록으로 바꿔 인터페이스에서 뺀다.
+2. **에셋 리로드 서브시스템**(`Engine/AssetReload`, Dev 만 짓는 폴더): 파일 감시(`IFileWatcher` 를 Core 에서 옮김) · 경로 표 · 설정 · 오디오 · 현지화 어댑터 · `AppearanceDataWatcher` 흡수. 편집기 없는 Dev 게임에서도 선다. 캐시 쪽 계약은 `IReloadableAssetCache` 로 떼어 Shipping 의 `IAssetCache` 에 reload 가 없게 한다(텍스처의 리로드 세대는 비동기 로드와 섞여 있어 마지막에).
+3. **`LiveShaderSubsystem`** 은 Dev 에서만 더한다(빈 껍데기를 Shipping 에 세우지 않는다).
+4. 확인: Shipping 빌드에서 `CodeWithin` · `reload` 기호가 남지 않는지 `llvm-nm` 으로 본다(게이트로 둘지는 그때 정한다).
 
 ## 5. 이번 세션의 근본 원인 (같은 결함이 남았을 곳)
 
