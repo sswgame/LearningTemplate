@@ -16,6 +16,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -34,9 +35,6 @@ namespace sw
     {
         struct ShaderCookStampInternal
         {
-            /** @brief 스탬프 읽기 캐시를 지키는 잠금입니다. */
-            inline static mutex _s_stampMutex{};
-
             /**
              * @brief 쿠킹 스탬프 헤더입니다. **버전을 올리면 스탬프가 모두 불일치가 되어 한 번 전부 다시 쿠킹합니다.**
              * @details 5판: 소스(`.hlsl`)마다 컴파일이 연 헤더와 그 내용 해시를 적는다(4판은 모든 `.hlsli` 를 줄마다 적었다). 옛 판은 읽지 않고 낡음으로 본다.
@@ -173,20 +171,33 @@ namespace sw
                 return info;
             }
 
-            /// @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시입니다. 쿠킹 루프가 요청마다 부릅니다. 스탬프 글만 담는다 — 헤더 파일의 지금 상태는 담지 않고 부를 때마다 본다.
-            inline static unordered_map<string, StampInfo> _s_mapStamp{};
+            /** @struct StampCache @brief `bin/<rhi>` 폴더별 스탬프 읽기 캐시와 잠금입니다. 쿠킹 루프가 요청마다 부릅니다. 스탬프 글만 담는다 — 헤더 파일의 지금 상태는 담지 않고 부를 때마다 본다. */
+            struct StampCache
+            {
+                mutex                            _mutex;
+                unordered_map<string, StampInfo> _mapStamp; ///< `_mutex` 를 잡고 쓴다(값을 참조로 돌려주는 `readCookStamp` 때문에 잠금 분석 주석을 달 수 없다)
+            };
+            /** @brief 캐시의 저장소입니다 — 엔진 수명 범위가 소유한다(함수 밖 정적 맵을 두지 않는다, `LogOnce` · 메시 캐시와 같다). */
+            inline static ScopeOwned<StampCache> s_stampCache{};
+            /** @brief 캐시를 돌려줍니다(처음 부를 때 만든다). */
+            static StampCache& getStampCache()
+            {
+                StampCache* const pCache = s_stampCache.getOrCreate();
+                SW_ASSERT( pCache != nullptr ); // 엔진 수명 범위가 닫힌 뒤에는 쿠킹하지 않는다
+                return *pCache;
+            }
 
             /**
              * @brief `bin/<rhi>/cook.stamp` 를 읽어 해석합니다(폴더당 한 번 읽고 캐시합니다).
              * @details 스탬프 판이나 도구 지문이 다르면 **빈 결과**를 반환한다. 그러면 모든 것이 낡은 것으로 판정되어
              *          한 번 전부 다시 쿠킹한다. 버전을 올리는 것이 곧 강제 재쿠킹이다.
-             * @warning 참조를 반환하므로 **`_s_stampMutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
+             * @warning 참조를 반환하므로 **`StampCache::_mutex` 를 잡은 채로만** 부르세요. 캐시에 삽입이
              *          일어나면 앞서 반환한 참조가 무효가 됩니다.
              */
             static const StampInfo& readCookStamp( const string& binDirectory )
             {
-                const auto cached = _s_mapStamp.find( binDirectory );
-                if ( cached != _s_mapStamp.end() )
+                const auto cached = getStampCache()._mapStamp.find( binDirectory );
+                if ( cached != getStampCache()._mapStamp.end() )
                     return cached->second;
 
                 StampInfo    info{};
@@ -201,7 +212,7 @@ namespace sw
                 if ( bUsable == false )
                     info = StampInfo{};
 
-                return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
+                return getStampCache()._mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
             }
 
             /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
@@ -470,8 +481,8 @@ namespace sw
                 }
                 {
                     // 방금 쓴 스탬프를 다음 조회가 읽게 한다(읽기 캐시에 옛 글이 남아 있으면 갓 쿠킹한 산출물이 낡음으로 보인다).
-                    ScopedLock<mutex> lock{ _s_stampMutex };
-                    _s_mapStamp.clear();
+                    ScopedLock<mutex> lock{ getStampCache()._mutex };
+                    getStampCache()._mapStamp.clear();
                 }
                 return true;
             }
@@ -742,8 +753,8 @@ namespace sw
 
     void ShaderCooker::invalidateSharedHeaderCache()
     {
-        ScopedLock<mutex> lock{ ShaderCookStampInternal::_s_stampMutex };
-        ShaderCookStampInternal::_s_mapStamp.clear();
+        ScopedLock<mutex> lock{ ShaderCookStampInternal::getStampCache()._mutex };
+        ShaderCookStampInternal::getStampCache()._mapStamp.clear();
         // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 같이 버린다.
         ContentHash::clearCache();
     }
@@ -857,7 +868,7 @@ namespace sw
         uint64                            stampedSourceHash{ 0 };
         vector<Internal::StampDependency> listDependency;
         {
-            ScopedLock<mutex> lock{ Internal::_s_stampMutex };
+            ScopedLock<mutex> lock{ Internal::getStampCache()._mutex };
 
             const Internal::StampInfo& stamp = Internal::readCookStamp( rhiDir );
             const auto                 iter  = stamp._mapSourceHash.find( stampKey );
