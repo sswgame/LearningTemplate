@@ -40,8 +40,6 @@ namespace sw
     class UIStyleSheetCache;
     class UIThemeController;
     class UserSettingsManager;
-    class GameObjectManager;
-
 } // namespace sw
 
 namespace sw
@@ -102,7 +100,7 @@ namespace sw
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
 
-        // ISubsystem — 기동 단계 `UI`. 배율 규칙 · 테마 목록 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다.
+        // ISubsystem — 기동 단계 `UI`. 배율 규칙 · UI 행동 맵을 못 읽으면 데이터 오류라 기동 실패다(테마 목록은 서브시스템 `UIThemes` 가 읽는다).
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "UI";
 
