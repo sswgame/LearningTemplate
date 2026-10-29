@@ -2,9 +2,6 @@
 
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -59,13 +56,6 @@ namespace sw::editor
                 ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );
                 ImGui::TableHeadersRow();
                 return true;
-            }
-
-            static bool compareVariableInfo( const GlobalVariableInfo* pLeft, const GlobalVariableInfo* pRight )
-            {
-                if ( pLeft->_moduleName != pRight->_moduleName )
-                    return pLeft->_moduleName < pRight->_moduleName;
-                return pLeft->_name < pRight->_name;
             }
 
             static bool drawBooleanWidget( GlobalVariableInfo& info )
@@ -194,19 +184,10 @@ namespace sw::editor
 
     GlobalVariablesPanel::GlobalVariablesPanel()
         : IEditorPanel( false )
-        , _uniquePinnedVar{}
-        , _presetJob{}
-        , _listPresetFile{}
-        , _listFilteredVariable{}
-        , _listFilterText{}
-        , _listGeneration{ 0 }
-        , _totalVariableCount{ 0 }
-        , _listRebuildCount{ 0 }
+        , _model{}
         , _searchFilter{}
         , _presetNameBuf{}
-        , _bGroupByModule{ SW_TRUE }
-        , _bPresetListDirty{ SW_TRUE }
-        , _reserved{ 0 }
+        , _bGroupByModule{ true }
     {
     }
 
@@ -235,19 +216,16 @@ namespace sw::editor
         drawVariableToolbar( gvm );
 
         // 2) 변수 목록 — 등록 세대나 검색 글이 바뀐 프레임에만 다시 짓는다.
-        const EditorListFilter filter{ _searchFilter.c_str() };
-        const bool             bListStale = _listGeneration != gvm.getRegistrationGeneration() || _listFilterText != _searchFilter.c_str();
-        if ( bListStale )
-            rebuildVariableList( gvm, filter );
-        const vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
+        const vector<GlobalVariableInfo*>& listFiltered = _model.refreshVariableList( gvm, _searchFilter.c_str() );
 
-        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _totalVariableCount, "variables" );
+        EditorWidgets::drawCountLabel( static_cast<uint32>( listFiltered.size() ), _model.getTotalVariableCount(), "variables" );
 
         drawPinnedSection( gvm );
 
         // 필터에 걸러져서 0건인 것과 애초에 없는 것은 다르게 안내한다.
         if ( listFiltered.empty() )
         {
+            const EditorListFilter filter{ _searchFilter.c_str() };
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
@@ -258,31 +236,6 @@ namespace sw::editor
         drawVariableTable( listFiltered );
     }
 
-    void GlobalVariablesPanel::rebuildVariableList( const GlobalVariableManager& gvm, const EditorListFilter& filter )
-    {
-        // 세대를 먼저 읽는다 — 채우는 사이에 등록이 바뀌면 다음 프레임에 다시 짓는다.
-        _listGeneration = gvm.getRegistrationGeneration();
-        _listFilterText = _searchFilter.c_str();
-        ++_listRebuildCount;
-
-        vector<GlobalVariableInfo*>& listAll = _listFilteredVariable;
-        gvm.collectVariables( listAll );
-        _totalVariableCount = 0;
-        // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치와 자동화 스위치이므로 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
-        (void)VectorUtil::removeIf( listAll, [this, &filter]( const GlobalVariableInfo* pInfo ) // 지운 수는 쓰지 않는다 — 남은 목록이 결과다
-        {
-            if ( pInfo->_bTestOnly )
-                return true;
-            ++_totalVariableCount;
-            return filter.matchesAny( { pInfo->_name, pInfo->_description, pInfo->_moduleName } ) == false;
-        } );
-
-        // 포인터를 담은 컨테이너를 정렬하지만 비교는 포인터 값이 아니라 (모듈, 이름) 으로 한다.
-        // 전역 변수 이름은 GlobalVariableManager 의 키이므로 유일하고, 순서가 매번 같다.
-        // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-        VectorUtil::sort( listAll, GlobalVariablesPanelInternal::compareVariableInfo );
-    }
-
     void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )
     {
         // 1) 상단 툴바. 검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴가 있다
@@ -291,10 +244,8 @@ namespace sw::editor
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
                                             SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
 
-            bool bGroup = ( _bGroupByModule == SW_TRUE );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Group by Module" ) );
-            if ( ImGui::Checkbox( "Group by Module", &bGroup ) )
-                _bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
+            (void)ImGui::Checkbox( "Group by Module", &_bGroupByModule );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset All" ) );
@@ -333,65 +284,27 @@ namespace sw::editor
         ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
                                   _presetNameBuf.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
-        if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
-        {
-            const string presetPath = FileUtil::joinPath(
-                EditorGlobalVariableCommands::getPresetFolderPath(),
-                string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
-            // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
-            if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
-            {
-                _presetNameBuf.clear();
-                _bPresetListDirty = SW_TRUE;
-            }
-            else
-            {
-                SW_LOG_ERROR( "Could not save preset '%#'", presetPath.c_str() );
-            }
-        }
+        if ( ImGui::Button( "Save" ) && _model.savePreset( _presetNameBuf.c_str() ) )
+            _presetNameBuf.clear();
 
         ImGui::Separator();
         ImGui::TextDisabled( "Saved Presets:" );
 
-        vector<string>       listNewPresetFile;
-        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-        if ( presetPoll == EditorTaskPoll::Ready )
-        {
-            _listPresetFile   = std::move( listNewPresetFile );
-            _bPresetListDirty = SW_FALSE;
-        }
-
-        bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
-        if ( _bPresetListDirty == SW_TRUE && presetPoll != EditorTaskPoll::Running )
-        {
-            _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), ".gvpreset.xml", false );
-            bPresetScanning = true;
-        }
-
-        if ( bPresetScanning )
+        if ( _model.pollPresetFiles() )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSettings", "ScanningPresets" ) );
         }
-        else if ( _listPresetFile.empty() )
+        else if ( _model.getPresetFiles().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoPresets" ) );
         }
         else
         {
-            for ( const string& presetFile : _listPresetFile )
+            for ( const string& presetFile : _model.getPresetFiles() )
             {
-                const string          fname         = FileUtil::getFileNamePart( presetFile );
-                string                displayName   = fname;
-                constexpr string_view kPresetSuffix = ".gvpreset.xml";
-                if ( StringUtil::endsWith( displayName, kPresetSuffix, true ) )
-                    displayName = displayName.substr( 0, displayName.size() - kPresetSuffix.size() );
-
+                const string displayName = GlobalVariablesModel::makePresetDisplayName( presetFile );
                 if ( ImGui::MenuItem( displayName.c_str() ) )
-                {
-                    // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
-                    if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
-                        SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
-                }
+                    GlobalVariablesModel::loadPreset( presetFile );
             }
         }
 
@@ -401,7 +314,7 @@ namespace sw::editor
     void GlobalVariablesPanel::drawPinnedSection( GlobalVariableManager& gvm )
     {
         // 3) 핀으로 고정한 즐겨찾기 변수 섹션
-        if ( _uniquePinnedVar.empty() == false )
+        if ( _model.getPinnedVariables().empty() == false )
         {
             if ( ImGui::CollapsingHeader( "Pinned / Favorites", ImGuiTreeNodeFlags_DefaultOpen ) )
             {
@@ -409,7 +322,7 @@ namespace sw::editor
                 if ( GlobalVariablesPanelInternal::beginVariableTable(
                          "PinnedGvTable", ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable, 0.0f ) )
                 {
-                    for ( const string& pinnedName : _uniquePinnedVar )
+                    for ( const string& pinnedName : _model.getPinnedVariables() )
                     {
                         GlobalVariableInfo* pInfo = gvm.findVariable( pinnedName );
                         if ( pInfo != nullptr )
@@ -429,7 +342,7 @@ namespace sw::editor
     void GlobalVariablesPanel::drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered )
     {
         // 4) 메인 변수 테이블. 모듈별 그룹이거나 평면이다
-        if ( _bGroupByModule == SW_TRUE )
+        if ( _bGroupByModule )
         {
             string currentModule;
 
@@ -496,17 +409,12 @@ namespace sw::editor
         ImGui::TableNextColumn();
         if ( bShowPin )
         {
-            const bool bPinned = ( _uniquePinnedVar.find( info._name ) != _uniquePinnedVar.end() );
+            const bool bPinned = _model.isPinned( info._name );
             if ( bPinned )
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( GlobalVariablesPanelInternal::kPinnedText ) );
 
             if ( ImGui::SmallButton( bPinned ? "*" : "-" ) )
-            {
-                if ( bPinned )
-                    _uniquePinnedVar.erase( info._name );
-                else
-                    _uniquePinnedVar.insert( info._name );
-            }
+                _model.requestTogglePin( info._name ); // 핀 섹션이 핀 집합을 도는 중일 수 있어 다음 프레임에 적용한다
 
             if ( bPinned )
                 ImGui::PopStyleColor();
