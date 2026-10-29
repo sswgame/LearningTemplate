@@ -375,6 +375,10 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Reported line" );
         ImGui::TableSetupColumn( "Action" );
         ImGui::TableHeadersRow();
+        // 처리 명령은 표를 다 그린 뒤 보낸다 — 메모리 제공자는 그 자리에서 답하고, 답을 받은 세션이 신고 목록을 다시 받아 바꾼다.
+        // 그리는 중에 보내면 지금 도는 목록(`getReports`)이 바뀌어 반복자가 풀린 메모리를 가리킨다.
+        string              resolveKey;
+        ServiceReportStatus resolveStatus = ServiceReportStatus::Resolved;
         for ( const ServiceReport& report : session.getReports() )
         {
             ImGui::PushID( report._reportKey.c_str() );
@@ -391,14 +395,22 @@ namespace sw::editor
             const bool bOpen = report._status == ServiceReportStatus::Open;
             ImGui::BeginDisabled( bOpen == false || _memoText.empty() );
             if ( ImGui::SmallButton( "Resolve" ) )
-                session.requestResolveReport( report._reportKey, ServiceReportStatus::Resolved, _memoText );
+            {
+                resolveKey    = report._reportKey;
+                resolveStatus = ServiceReportStatus::Resolved;
+            }
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Dismiss" ) );
             if ( ImGui::SmallButton( "Dismiss" ) )
-                session.requestResolveReport( report._reportKey, ServiceReportStatus::Dismissed, _memoText );
+            {
+                resolveKey    = report._reportKey;
+                resolveStatus = ServiceReportStatus::Dismissed;
+            }
             ImGui::EndDisabled();
             ImGui::PopID();
         }
         ImGui::EndTable();
+        if ( resolveKey.empty() == false )
+            session.requestResolveReport( resolveKey, resolveStatus, _memoText );
     }
 
     void AdminToolPanel::drawDirectorySection()
