@@ -1244,7 +1244,9 @@ namespace sw
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         const uint32    generation = s_typeTableGeneration.load( std::memory_order_acquire );
-        const TypeInfo* pType      = engine::getSubsystem<TypeRegistry>().findType( fqn );
+        const TypeInfo* pFound     = engine::getSubsystem<TypeRegistry>().findType( fqn );
+        // 해제된 타입(묘비)은 "없음" 으로 적는다 — 적중 경로(`tryGetCached`)가 `isAlive` 를 보지 않는다. 되살림은 세대를 올려 다시 찾게 한다.
+        const TypeInfo* pType = pFound != nullptr && pFound->isAlive() ? pFound : nullptr;
         _slot.set( generation, pType );
         return pType;
     }

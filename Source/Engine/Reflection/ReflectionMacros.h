@@ -16,6 +16,8 @@
 #pragma once
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/TypeLookupCache.h"
+
 namespace sw
 {
     struct TypeInfo;
@@ -69,15 +71,23 @@ namespace sw::generated
     #define REFLECT_CONTAINER( ... )
 
     /**
-     * @brief StaticType() 을 선언합니다. 정의는 .gen.cpp 에 생성됩니다.
+     * @brief StaticType() 을 인라인으로 정의합니다. 적중 경로는 클래스의 캐시 칸(`swStaticTypeCache`)을 세대 비교 하나로 읽고, 놓치면 .gen.cpp 의 `swFindStaticType` 이 찾습니다.
+     * @details 캐스트(`castTo<T>`)가 매번 생성 .cpp 로 가는 호출(게임 타입이면 DLL 경계)을 치르지 않는다 — 언리얼 `StaticClass()` 와 같은 자리. 핫 리로드 · 등록 · 해제는
+     *          세대를 올려 다음 한 번만 다시 찾는다(`TypeLookupCache`). 모듈마다 칸의 사본이 생겨도 저마다 같은 답을 찾는다.
      * @note 본문에 주석을 넣지 마십시오. 주석 줄에 줄 이음(\)이 빠지면 매크로가 거기서 끊기고
      *       나머지 줄이 네임스페이스 스코프로 새어 나갑니다.
      */
-    #define REFLECT_BODY()                         \
-        template <typename>                        \
-        friend struct ::sw::generated::Registrar;  \
-        static const ::sw::TypeInfo* StaticType(); \
-        auto                         swReflectSelf() const -> decltype( this )
+    #define REFLECT_BODY()                                                                           \
+        template <typename>                                                                          \
+        friend struct ::sw::generated::Registrar;                                                    \
+        static const ::sw::TypeInfo* StaticType()                                                    \
+        {                                                                                            \
+            const ::sw::TypeInfo* pCachedType = nullptr;                                             \
+            return swStaticTypeCache.tryGetCached( pCachedType ) ? pCachedType : swFindStaticType(); \
+        }                                                                                            \
+        static const ::sw::TypeInfo*              swFindStaticType();                                \
+        static inline const ::sw::TypeLookupCache swStaticTypeCache{};                               \
+        auto                                      swReflectSelf() const -> decltype( this )
 #endif
 
 namespace sw
