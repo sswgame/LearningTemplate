@@ -95,7 +95,12 @@
 - **흩어진 것은 "모듈 언로드 때 그 모듈 코드의 콜백을 뗀다(CodeWithin)" 계약**이다 — 27 파일 · 등록 13 곳: `RegistrationList` 그림자(같은 이름 대체), `ModuleLibraryUtil` 언로드 처리기, `Delegate` · `EventDispatcher` · `ILogSink::removeListenerCodeWithin`(순수 가상), 창 · 입력 · UI · `CommandStack` · `AssetManager` · 사용자 설정 · GameFramework(어빌리티 · 저장소 드라이버), 리플렉션 · 전역 변수 · 에셋 종류의 `unregister*ByModule`. 정적 링크인 Shipping 에서는 한 번도 불리지 않는데 하나도 빠지지 않는다. 이 장치는 핫 리로드만이 아니라 Dev 의 일반 언로드(에디터 모듈 내리기 · RHI 백엔드 교체)도 쓴다 — 경계 이름은 "동적 모듈 언로드".
 - 에셋 리로드: 감시(`IFileWatcher` — Core, Shipping 에도 빌드됨) → 편집기 `AssetHotReload` · `ConfigHotReload`(EditorSubsystem — 편집기 없는 Dev 실행은 리로드가 없다) → `IAssetCache::reload`(순수 가상, 모든 캐시가 구현 · Shipping 에도 있다) → 리플렉션으로 사용자에게 알림. 리로드 전용 어댑터(`AudioReloadCache` · `LocalizationReloadCache`)가 Shipping 에도 등록된다. 게임 쪽 두 번째 감시 경로 `AppearanceDataWatcher`(Shooter3D 가 가드 없이 시작). 셰이더는 `ShaderRecompiler`(Ctrl+F8 수동, Shipping 제외)와 늘 서는 빈 `LiveShaderSubsystem`.
 
-**진행(2026-10-29)**: 1 의 축소판과 3 은 끝났다 — 스위치 `SW_WITH_DYNAMIC_MODULES`(`Core/Module/DynamicModules.h`, 배포 0)가 언로드 장치 · RHI DLL 로드를 빼고, 처리기 멤버 13 곳은 `SW_MODULE_UNLOAD_HANDLER` 한 줄(배포에서 비어 링커가 처리기를 걷는다), `LiveShaderSubsystem` 은 배포 빌드에서 짓지도 세우지도 않는다. Shipping 빌드 · 쿠킹 통과. 남은 것: 2(에셋 리로드 서브시스템 · `IReloadableAssetCache` · 감시자 이동), 1 의 나머지(`ILogSink::removeListenerCodeWithin` 순수 가상 · `RegistrationList` 그림자 목록을 스위치 아래로).
+**진행(2026-10-29)**: 끝난 것 —
+- 1: 스위치 `SW_WITH_DYNAMIC_MODULES`(`Core/Foundation/DynamicModules.h`, 배포 0)가 언로드 장치 · RHI DLL 로드 · 로그 싱크의 코드 범위 떼기 · 등록표 리로드 대체(`RegistrationReloadScope::isActive` 가 constexpr false)를 뺀다. 처리기 멤버 13 곳은 `SW_MODULE_UNLOAD_HANDLER` 한 줄.
+- 2 의 일부: `Engine/AssetReload/`(개발 빌드만) — `FileWatchDispatcher` · `ConfigReloadSubsystem`(편집기 없는 개발 App · 서버도 설정을 다시 읽는다, 편집기는 `EditorToolDefaultsReload` 처리기만). 게임 쪽 `AppearanceDataWatcher` 는 그 분배기의 클라이언트. Core 의 OS 감시기 · 리로드 어댑터 캐시(오디오 · 현지화)는 배포 빌드에서 빠진다.
+- 3: `LiveShaderSubsystem` 은 배포 빌드에서 짓지도 세우지도 않는다.
+- Shipping 빌드 · 쿠킹 · 실행(시나리오 sceneready PASS) 확인.
+남은 것: 에셋 핫 리로드(`AssetHotReload`)를 엔진으로 — 임포트 단계는 편집기가 경로 표로 끼우고, 낱개 파일 리로드는 엔진이 한다(편집기 없는 개발 실행도 에셋을 다시 읽게). 캐시 계약을 `IReloadableAssetCache` 로 떼어 캐시별 reload 구현이 배포 빌드에서 빠지게(텍스처 리로드 세대는 비동기 로드와 섞여 마지막).
 덧붙여 Shipping 쿠킹을 막던 둘을 고쳤다: 원본 없이 지운 손작업 콘텐츠 13 개(65225afc1)를 되살렸고, 쿠커가 `Content/scratch/` 를 훑지 않는다(`AssetPaths::collectContentFiles`).
 
 정한 모양(언리얼 ModuleManager · HotReload · DirectoryWatcher 모듈과 같은 나눔):
