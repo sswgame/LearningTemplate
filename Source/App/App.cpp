@@ -13,13 +13,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#ifndef SW_AUTOMATION_ENABLED
-    #error "SW_AUTOMATION_ENABLED comes from CMake (cmake/Engine/BuildLayout.cmake, option SW_ENABLE_AUTOMATION)"
-#endif
-#if SW_AUTOMATION_ENABLED
-    #include "Engine/Automation/Runner/AutomationSession.h"
-    #include "Engine/Automation/Scenario/ScenarioPlayback.h"
-#endif
 #if !defined( SW_SHIPPING )
     #include "DevTools/AssetReload/ContentFolderWatchService.h"
     #include "DevTools/DevToolsHost.h"
@@ -117,10 +110,10 @@ namespace sw
     App::App()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _pAutomationSession{ nullptr }
         , _pDevTools{ nullptr }
         , _devToolsFrameSubscription{}
         , _engine{}
+        , _automation{}
         , _moduleReload{}
         , _gameModuleManager{ nullptr }
         , _pWindow{ nullptr }
@@ -202,7 +195,7 @@ namespace sw
         }
 
         // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다).
-        startAutomationSession( *pCommandLineManager );
+        _automation.start( _engine, _host, *pCommandLineManager );
 
         _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
@@ -275,12 +268,7 @@ namespace sw
     bool App::initializeHostScope()
     {
         // 자동화 구동기는 App 만 든다 — 범위를 세우기(Server 와 같은 한 곳) 전에 더한다. 엔진이 선 뒤 `begin` 으로 시작한다.
-#if SW_AUTOMATION_ENABLED
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
-        }
-#endif
+        _automation.addToHostScope( _host );
         // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
 #if !defined( SW_SHIPPING )
         // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
@@ -483,55 +471,6 @@ namespace sw
         }
     }
 
-#if SW_AUTOMATION_ENABLED
-    void App::startAutomationSession( const CommandLineManager& commandLineManager )
-    {
-        string recordPath;
-        string recordProbes;
-        if ( commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, recordPath ) && recordPath.empty() == false )
-        {
-            (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD_PROBES, recordProbes ); // 없으면 검사점 없이 입력만 녹화한다
-            (void)_pAutomationSession->beginRecording( recordPath, recordProbes );                             // 거절하면 이유를 로그로 남기고 녹화 없이 돈다
-        }
-        string scenarioPath;
-        string reportPath;
-        (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
-        RenderThread* pRenderThread = _engine.getRenderThread();
-        const bool    bKeepGoing    = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        const bool    bScenario     = commandLineManager.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
-        const bool    bStarted =
-            bScenario && _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing );
-        if ( bStarted && pRenderThread != nullptr )
-            pRenderThread->setScenarioCaptureEnabled( true );
-        // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
-        _automationFrameSubscription = _engine.getFrameHooks().add( _pAutomationSession->makeFrameHooks() );
-        // 재생기는 호스트 범위에 인터페이스로 건다 — `ScenarioPlayback` 이 범위에서 찾는다(정적 칸을 두지 않는다).
-        const bool bPlayerBound = _host.bind<IScenarioPlayer>( _pAutomationSession );
-        SW_ASSERT( bPlayerBound );
-        (void)bPlayerBound;
-    }
-
-    bool App::isAutomationBusy() const
-    {
-        // 재생(데모 · 벤치마크 경로)은 사람이 보는 화면이라 보통 프레임 속도로 돈다 — 무인 실행만 센다.
-        return _pAutomationSession != nullptr && _pAutomationSession->isBusy() && _pAutomationSession->isPlaying() == false;
-    }
-#else
-    void App::startAutomationSession( const CommandLineManager& commandLineManager )
-    {
-        // 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`)은 시나리오 인자를 조용히 무시하지 않는다 — 폴백 없이 이유를 남기고 시나리오 없이 돈다.
-        string     value;
-        const bool bAsked = commandLineManager.getArgument( CommandLineArgument::SCENARIO, value ) || commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, value );
-        if ( bAsked )
-            SW_LOG_ERROR( "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime). Ignored" );
-    }
-
-    bool App::isAutomationBusy() const
-    {
-        return false;
-    }
-#endif
-
     void App::bindHostCallbacks()
     {
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
@@ -574,12 +513,7 @@ namespace sw
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 라이브러리 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
-#if SW_AUTOMATION_ENABLED
-        _host.unbind<IScenarioPlayer>(); // 재생기(세션)를 내리기 전에 푼다
-#endif
-        if ( _pAutomationSession != nullptr )
-            _pAutomationSession->onDetachedFromEngine();
-        _automationFrameSubscription.reset();
+        _automation.detach( _host );
 #if !defined( SW_SHIPPING )
         _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
 #endif
@@ -587,9 +521,9 @@ namespace sw
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         // 엔진이 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).
         _engine.shutdown( _host );
-        _pModuleImageHost   = nullptr;
-        _pAutomationSession = nullptr;
-        _pDevTools          = nullptr;
+        _pModuleImageHost = nullptr;
+        _automation.release();
+        _pDevTools = nullptr;
 
         // 주 창은 엔진 범위의 MainWindow 서브시스템이 소유한다 — 엔진 종료(RHI 가 내려간 뒤)가 파괴했다. 관찰 포인터만 비운다.
         _pWindow = nullptr;
@@ -683,7 +617,7 @@ namespace sw
             // 고른 상태가 창 · 에디터 상태(최소화 · 유휴 · 포커스)보다 앞선다.
             {
                 FramePacingInputs pacingInputs;
-                pacingInputs._bAutomationRun = isAutomationBusy() || _engine.isProfileRunActive();
+                pacingInputs._bAutomationRun = _automation.isBusy() || _engine.isProfileRunActive();
                 pacingInputs._bListenHost    = bListenHost;
                 pacingInputs._bMinimized     = _pWindow->isMinimized();
                 pacingInputs._bFocused       = _pWindow->hasFocus();

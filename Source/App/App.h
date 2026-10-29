@@ -11,6 +11,7 @@
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
  */
 #pragma once
+#include "App/AppAutomationHost.h"
 #include "App/RHIBackendSwitcher.h"
 #include "App/RuntimeUIHost.h"
 #include "App/UserSettingsHost.h"
@@ -33,7 +34,6 @@ namespace sw
     struct NativeWindowEvent;
     struct RenderFramePacket;
 
-    class AutomationSession;
     class DevToolsHost;
     class CommandLineManager;
     class EditorModuleManager;
@@ -86,15 +86,6 @@ namespace sw
          *          바로 드러나지 않으므로 여기서 대신 알린다.
          */
         void warnUnknownGlobalOverrides() const;
-        /**
-         * @brief `-scenario` 가 있으면 호스트 범위의 자동화 세션을 시작해 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
-         * @details 시나리오는 늘 고정 프레임 시간이다(세션이 단계마다 `gv_fixedFrameDelta` 를 그 시나리오 값으로 맞춘다). 여럿이면 한 프로세스에서 차례로 돈다.
-         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 시작하지 않고 관찰자로도 붙이지 않습니다.
-         */
-        void startAutomationSession( const CommandLineManager& commandLineManager );
-        /** @brief 자동화 세션이 시나리오를 돌리는 중인가(`SW_ENABLE_AUTOMATION=OFF` 구성은 늘 false). 프레임 페이싱이 읽는다. */
-        bool isAutomationBusy() const;
-
         /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 서비스이 선 뒤). */
         void bindHostCallbacks();
 
@@ -128,13 +119,11 @@ namespace sw
         ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
-        /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
-        AutomationSession* _pAutomationSession;
-        DevToolsHost*      _pDevTools;                 ///< 호스트 범위의 개발 도구(배포 빌드는 늘 nullptr)
-        Subscription       _devToolsFrameSubscription; ///< 개발 도구의 프레임 관찰 구독
-        Engine             _engine;
-        /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
-        Subscription _automationFrameSubscription;
+        DevToolsHost*          _pDevTools;                 ///< 호스트 범위의 개발 도구(배포 빌드는 늘 nullptr)
+        Subscription           _devToolsFrameSubscription; ///< 개발 도구의 프레임 관찰 구독
+        Engine                 _engine;
+        /** @brief 자동화 시나리오 연결(호스트 범위의 구동기 · 엔진 프레임 관찰자)입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 뗀다). */
+        AppAutomationHost _automation;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
