@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -215,4 +216,10 @@ namespace sw
 namespace sw
 {
     SW_AUTOMATION_WATCH( skirmishViewLagMax, "Skirmish.ViewLagMax", "Largest distance between a unit view mesh and the director's unit position", &readViewLagMax );
+} // namespace sw
+
+namespace sw
+{
+    /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
+    SW_RESOURCE_DATA_KIND( SkirmishUnitModels, "skirmishunitmodels", "game/", nullptr, "/data/unitmodels.xml", &AssetDataKindUtil::loadCatalog<SkirmishUnitModelCatalog> );
 } // namespace sw

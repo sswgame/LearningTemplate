@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -148,4 +149,10 @@ namespace sw
             SW_LOG_WARNING( "%#: no <Item> entries", sourceName );
         return loadedCount;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `ItemCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
+    SW_RESOURCE_DATA_KIND( Items, ItemCatalog::kDataKind, "game/", nullptr, "/data/items.xml", &AssetDataKindUtil::loadCatalog<ItemCatalog> );
 } // namespace sw
