@@ -50,7 +50,7 @@ namespace sw
         };
     } // namespace
 
-    void FrameRenderer::releaseUpscaleIntermediate( ViewTarget& view )
+    void FrameRenderer::releaseUpscaleIntermediate( FrameViewTarget& view )
     {
         if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
@@ -63,7 +63,7 @@ namespace sw
         view._bUpscaleThisFrame      = SW_FALSE;
     }
 
-    void FrameRenderer::prepareUpscale( ViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
+    void FrameRenderer::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
     {
         using Internal                                  = FrameRendererUpscaleInternal;
         view._bUpscaleThisFrame                         = SW_FALSE;
@@ -116,7 +116,7 @@ namespace sw
 
     bool FrameRenderer::recordUpscaleEasu( FramePassContext& context, string_view sourceName )
     {
-        const ViewTarget& view = *_pActiveView;
+        const FrameViewTarget& view = *_pActiveView;
         if ( view._bUpscaleThisFrame == SW_FALSE )
             return false;
         const TransientAttachmentPool::Attachment source = findTransientAttachment( sourceName );
@@ -160,7 +160,7 @@ namespace sw
 
     void FrameRenderer::drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY )
     {
-        const ViewTarget&            view = *_pActiveView;
+        const FrameViewTarget&       view = *_pActiveView;
         const RHIPipelineStateHandle pso  = findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHICommandList&             cmd  = *context._pCmd;
         cmd.setVertexBuffer( 0, 0, 0, 0 );

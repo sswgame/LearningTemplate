@@ -92,12 +92,12 @@ namespace sw
 
     bool ExtensionPassContext::drawFullscreen( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawModuleFullscreen( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
+        return _pRenderer->drawModuleFullscreen( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
     }
 
     bool ExtensionPassContext::drawProxyElements( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawExtensionElements( *static_cast<FrameRenderer::FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
+        return _pRenderer->drawExtensionElements( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const FrameRenderer::ExtensionFramePass*>( _pPass ), constants );
     }
 
     void FrameRenderer::collectExtensionFrame( RenderExtensionRegistry& registry )
@@ -286,7 +286,7 @@ namespace sw
             _bCallbacksBound = SW_FALSE;
 
         allocateExtensionTextures( _mainView );
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 allocateExtensionTextures( *pView );
@@ -302,7 +302,7 @@ namespace sw
         _moduleFrameSignature = 0;
     }
 
-    void FrameRenderer::allocateExtensionTextures( ViewTarget& view )
+    void FrameRenderer::allocateExtensionTextures( FrameViewTarget& view )
     {
         if ( _pDevice == nullptr || view._transientPool.isEmpty() )
             return;

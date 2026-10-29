@@ -193,12 +193,12 @@ namespace sw
 
         // 시간 누적 기록을 버릴지는 셋업이 뷰마다 프레임에 한 번 정했다(`beginViewHistory` — 처음 그리는 프레임과 컷). TAA · 모션 블러 · 자동 노출 · 가림 판정이
         // 모두 `_bHistoryReset` 하나를 본다 — 모션 블러는 지난 뷰-투영을 이번 것으로 둬 속도가 0 이다.
-        ViewTarget& view = *_pActiveView;
+        FrameViewTarget& view = *_pActiveView;
         context._passValues.setMatrix( passConstantNames()._prevViewProj, view._bHistoryReset == SW_TRUE ? viewProj : view._prevViewProj );
         view._prevViewProj = viewProj;
     }
 
-    void FrameRenderer::beginViewHistory( ViewTarget& view )
+    void FrameRenderer::beginViewHistory( FrameViewTarget& view )
     {
         view._bHistoryReset = ( view._bHasHistory == SW_FALSE || view._settings._bCut == SW_TRUE ) ? SW_TRUE : SW_FALSE;
         view._bHasHistory   = SW_TRUE;

@@ -56,7 +56,7 @@ namespace sw
         };
     } // namespace
 
-    void FrameRenderer::ensureOcclusionTiles( ViewTarget& view )
+    void FrameRenderer::ensureOcclusionTiles( FrameViewTarget& view )
     {
         using Internal        = FrameRendererOcclusionInternal;
         const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || view._occlusionTiles.isValid();
@@ -77,7 +77,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::recordOcclusionTiles( ViewTarget& target )
+    void FrameRenderer::recordOcclusionTiles( FrameViewTarget& target )
     {
         using Internal                       = FrameRendererOcclusionInternal;
         target._bOcclusionTilesThisFrame     = SW_FALSE;
@@ -109,7 +109,7 @@ namespace sw
         target._bOcclusionTilesThisFrame = SW_TRUE;
     }
 
-    void FrameRenderer::requestOcclusionReadback( const ViewTarget& view )
+    void FrameRenderer::requestOcclusionReadback( const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
         const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && _pDevice != nullptr && _pCmd != nullptr;
@@ -179,7 +179,7 @@ namespace sw
             _occlusionReadbackSerial = next;
     }
 
-    void FrameRenderer::fillOcclusionParams( const ViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const
+    void FrameRenderer::fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const
     {
         const bool bOccludes             = view._bOcclusionTilesThisFrame == SW_TRUE && view._bHistoryReset == SW_FALSE;
         inoutParams._arrOcclusionGrid[3] = bOccludes ? 1u : 0u;

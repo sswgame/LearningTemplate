@@ -202,7 +202,7 @@ namespace sw
         _capture.ensurePresent( _outputWidth, _outputHeight );
     }
 
-    bool FrameRenderer::updateViewTransients( ViewTarget& view, uint32 width, uint32 height )
+    bool FrameRenderer::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = getShadowMapResolution();
@@ -240,7 +240,7 @@ namespace sw
         return true;
     }
 
-    void FrameRenderer::ensureDepthHistory( ViewTarget& view )
+    void FrameRenderer::ensureDepthHistory( FrameViewTarget& view )
     {
         if ( _pDevice == nullptr || view._depthHistory != 0 )
             return;
@@ -262,7 +262,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to create the depth history (%#x%#, R32 float RT + UAV) - GPU particles do not collide with the scene depth", depth._width, depth._height );
     }
 
-    void FrameRenderer::ensureTAAHistory( ViewTarget& view )
+    void FrameRenderer::ensureTAAHistory( FrameViewTarget& view )
     {
         if ( _pDevice == nullptr || view._taaHistory != 0 )
             return;
@@ -315,7 +315,7 @@ namespace sw
             pRegistry->clear();
 
         releaseViewTransients( _mainView );
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             releaseViewTransients( *pView );
         }
@@ -323,7 +323,7 @@ namespace sw
         _capture.releasePresent();
     }
 
-    void FrameRenderer::releaseViewTransients( ViewTarget& view )
+    void FrameRenderer::releaseViewTransients( FrameViewTarget& view )
     {
         releaseAutoExposureHistory( view );
         releaseUpscaleIntermediate( view );
@@ -372,7 +372,7 @@ namespace sw
         pool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
     }
 
-    void FrameRenderer::applyViewPassSelection( ViewTarget& view, const float4x4& viewProj )
+    void FrameRenderer::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj )
     {
         using Internal = FrameRendererTransientsInternal;
         // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motionblur.hlsl).

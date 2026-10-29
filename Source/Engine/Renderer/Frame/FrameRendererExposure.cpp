@@ -5,7 +5,7 @@
  *          측정 풀스크린 하나를 같은 리스트에 기록한다(`recordAutoExposure`, autoexposure.hlsl). 측정은 지난 칸의 EV 를 읽어 목표 EV 로 다가간 값을 이번 칸(1x1 R32)에 쓰고,
  *          톤맵은 이번 칸을 `g_AutoExposureIndex` 로 읽어 2^-EV 를 곱한다(postgrade.hlsli). 칸이 둘인 까닭은 한 텍스처를 읽으며 쓸 수 없어서다.
  *          EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다 — 카메라의 범위가 0 · 0(기본)이면 노출 1 이라 자동 노출을 쓰지 않는 카메라의 화면이 그대로다.
- *          기록을 버리는 프레임(처음 · 컷 — `ViewTarget::_bHistoryReset`)은 다가가는 비율이 1 이라 측정값을 그대로 쓴다(지난 칸은 읽어도 섞지 않는다).
+ *          기록을 버리는 프레임(처음 · 컷 — `FrameViewTarget::_bHistoryReset`)은 다가가는 비율이 1 이라 측정값을 그대로 쓴다(지난 칸은 읽어도 섞지 않는다).
  * @note 히스토그램 방식(밝은 끝 · 어두운 끝을 잘라 내는 언리얼 기본값)은 없다 — 화면 대부분이 하늘인 장면은 평균이 하늘 쪽으로 끌린다.
  */
 #include "pch.h"
@@ -47,7 +47,7 @@ namespace sw
         };
     } // namespace
 
-    void FrameRenderer::ensureAutoExposureHistory( ViewTarget& view )
+    void FrameRenderer::ensureAutoExposureHistory( FrameViewTarget& view )
     {
         const bool bNotNeeded = _pDevice == nullptr || findTonemapPass() == nullptr || view._arrAutoExposure[0] != 0;
         if ( bNotNeeded )
@@ -70,7 +70,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
     }
 
-    void FrameRenderer::releaseAutoExposureHistory( ViewTarget& view )
+    void FrameRenderer::releaseAutoExposureHistory( FrameViewTarget& view )
     {
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
@@ -88,7 +88,7 @@ namespace sw
 
     void FrameRenderer::prepareAutoExposure( float32& inoutExposureScale )
     {
-        ViewTarget&                    view = *_pActiveView;
+        FrameViewTarget&               view = *_pActiveView;
         const CameraPostProcessValues& post = view._settings._postProcess;
         view._bAutoExposureThisFrame        = SW_FALSE;
         // 범위가 한 점이면 재지 않는 고정 노출이다(기본 0 · 0 은 노출 1). 후처리를 끈 뷰 · 표면 값 보기는 톤맵이 카메라 노출을 걸지 않으므로 재지 않는다.
@@ -118,7 +118,7 @@ namespace sw
 
     void FrameRenderer::recordAutoExposure( FramePassContext& context, const RenderGraphPassDesc& passDesc )
     {
-        const ViewTarget& view = *_pActiveView;
+        const FrameViewTarget& view = *_pActiveView;
         if ( &passDesc != findTonemapPass() || view._bAutoExposureThisFrame == SW_FALSE )
             return;
         TransientAttachmentPool::Attachment source{};

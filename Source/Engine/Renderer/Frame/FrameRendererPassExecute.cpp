@@ -743,8 +743,8 @@ namespace sw
         }
         // 히스토리 생성과 bindless 등록은 ensureTAAHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
         // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
-        const ViewTarget& activeView = *_pActiveView;
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `ViewTarget::_bTAAHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
+        const FrameViewTarget& activeView = *_pActiveView;
+        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewTarget::_bTAAHistoryReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 **이번 원본**을
         // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
         // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
         const bool bCut = activeView._bTAAHistoryReset == SW_TRUE && pSrcName != nullptr;
@@ -773,7 +773,7 @@ namespace sw
         const RHITextureHandle     src      = srcName.empty() ? 0 : findTransient( srcName );
         // 출력은 뷰가 정한다(resolvePresentTarget. Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
         // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다. 여기서 복사하면 뒤의 UI 가 캡처에 없다.
-        const ViewTarget&      activeView     = *_pActiveView;
+        const FrameViewTarget& activeView     = *_pActiveView;
         const PresentTarget    target         = resolvePresentTarget();
         const bool             bOwnOutput     = target._bOwnOutput == SW_TRUE;
         const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( passDesc );
@@ -1060,9 +1060,9 @@ namespace sw
     {
         // 렌더 텍스처와 호스트 타깃 뷰는 자기 출력 전체, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼, 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처
         // 텍스처에 그린다. 백버퍼는 핸들이 없어 읽을 수 없고, 후처리와 UI 가 끝난 최종 화면을 볼 방법이 그것뿐이다. 캡처는 주 출력만 받는다.
-        const ViewTarget& activeView = *_pActiveView;
-        RHITextureHandle  ownOutput{ 0 };
-        const bool        bExtraViewOwnOutput = isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr;
+        const FrameViewTarget& activeView = *_pActiveView;
+        RHITextureHandle       ownOutput{ 0 };
+        const bool             bExtraViewOwnOutput = isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr;
         if ( bExtraViewOwnOutput )
             ownOutput = activeView._pOutputTexture->getHandle();
         else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )

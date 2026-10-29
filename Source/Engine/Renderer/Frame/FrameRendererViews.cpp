@@ -36,7 +36,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
             return;
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             pView->_bSeenThisFrame = SW_FALSE;
         }
@@ -48,12 +48,12 @@ namespace sw
         }
 
         // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bSeenThisFrame == SW_FALSE )
                 releaseExtraView( *pView );
         }
-        VectorUtil::removeIf( _listExtraView, []( const unique_ptr<ViewTarget>& pView )
+        VectorUtil::removeIf( _listExtraView, []( const unique_ptr<FrameViewTarget>& pView )
         { return pView->_bSeenThisFrame == SW_FALSE; } );
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _listExtraView.size() ); ++viewIndex )
         {
@@ -86,22 +86,22 @@ namespace sw
         return shadow._cascadeCount;
     }
 
-    FrameRenderer::ViewTarget& FrameRenderer::getOrCreateExtraView( uint64 viewID )
+    FrameViewTarget& FrameRenderer::getOrCreateExtraView( uint64 viewID )
     {
-        for ( unique_ptr<ViewTarget>& pExisting : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pExisting : _listExtraView )
         {
             if ( pExisting->_viewID == viewID )
                 return *pExisting;
         }
-        _listExtraView.push_back( make_unique<ViewTarget>() );
-        ViewTarget& view = *_listExtraView.back();
-        view._viewID     = viewID;
+        _listExtraView.push_back( make_unique<FrameViewTarget>() );
+        FrameViewTarget& view = *_listExtraView.back();
+        view._viewID          = viewID;
         return view;
     }
 
     void FrameRenderer::prepareExtraView( const RenderViewRequest& request )
     {
-        ViewTarget& view       = getOrCreateExtraView( request._viewID );
+        FrameViewTarget& view  = getOrCreateExtraView( request._viewID );
         view._bSeenThisFrame   = SW_TRUE;
         view._settings         = request._settings;
         view._outputKind       = request._outputKind;
@@ -175,7 +175,7 @@ namespace sw
         prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 
-    void FrameRenderer::releaseExtraView( ViewTarget& view )
+    void FrameRenderer::releaseExtraView( FrameViewTarget& view )
     {
         releaseViewTransients( view );
         view._cullInput._cullCb.release( _pDevice );
@@ -189,7 +189,7 @@ namespace sw
         view._outputPath     = hashed_string{};
     }
 
-    void FrameRenderer::applyViewTransparentOrder( ViewTarget& view )
+    void FrameRenderer::applyViewTransparentOrder( FrameViewTarget& view )
     {
         view._bHasTransparentRank = SW_FALSE;
         view._bUsesViewSlotStream = SW_FALSE;
@@ -252,7 +252,7 @@ namespace sw
         view._bUsesViewSlotStream = SW_TRUE;
     }
 
-    void FrameRenderer::releaseViewTransparentOrder( ViewTarget& view )
+    void FrameRenderer::releaseViewTransparentOrder( FrameViewTarget& view )
     {
         view._transparentRank.release( _pDevice );
         if ( view._instanceSlotStream != 0 && _pDevice != nullptr )
@@ -266,7 +266,7 @@ namespace sw
         view._bUsesViewSlotStream = SW_FALSE;
     }
 
-    void FrameRenderer::renderExtraView( IRHIDevice* pDevice, ViewTarget& view )
+    void FrameRenderer::renderExtraView( IRHIDevice* pDevice, FrameViewTarget& view )
     {
         if ( view._commandList == nullptr )
             view._commandList = pDevice->createCommandList();

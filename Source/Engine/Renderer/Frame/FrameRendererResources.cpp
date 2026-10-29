@@ -182,7 +182,7 @@ namespace sw
             row._pSlot->release( _pDevice );
         }
         // 추가 뷰의 컬링 · 정렬 상수버퍼도 이 디바이스의 것이다(다음 프레임의 prepareExtraViews 가 다시 만든다).
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             pView->_cullInput._cullCb.release( _pDevice );
             pView->_cullInput._sortCb.release( _pDevice );

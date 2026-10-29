@@ -21,6 +21,7 @@
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
+#include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
@@ -28,6 +29,7 @@
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
+#include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
@@ -83,7 +85,7 @@ namespace sw
      * @brief 프레임 경로를 담당합니다. RenderPipeline XML 에서 RenderGraph 를 만들고, GPUScene 과 MeshComponent 를 IRHIDevice 로 그립니다.
      * @details **뷰는 여럿일 수 있다.** 주 시점 하나와 추가 뷰를 같은 그래프로 한 번씩 그린다.
      *          추가 뷰(`RenderViewRequest`)에는 CCTV, 백미러, 미니맵 같은 렌더 텍스처 뷰와 분할 화면, PiP 같은 화면 사각형 뷰가 있다.
-     *          뷰마다 트랜지언트 풀, 컬링 슬롯, TAA 히스토리, 커맨드 리스트를 따로 가진다(`ViewTarget`).
+     *          뷰마다 트랜지언트 풀, 컬링 슬롯, TAA 히스토리, 커맨드 리스트를 따로 가진다(`FrameViewTarget`).
      *          컬링 슬롯은 간접 인자, 가시 목록, 컬링 상수 버퍼로 이루어진다.
      *          실행 순서는 컴퓨트 프리패스(모든 뷰의 컬링), 렌더 텍스처 뷰, 주 시점, 화면 사각형 뷰다.
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
@@ -298,180 +300,6 @@ namespace sw
             RHIPipelineStateHandle _pso{ 0 };
         };
 
-        /**
-         * @brief 패스 하나를 기록하는 동안 쓰는 로컬 상태입니다.
-         * @details 병렬 기록에서는 패스마다 하나씩 존재한다. 주의: 이 값들을 FrameRenderer 멤버로 두고
-         *          저장하고 복원하면 "한 번에 한 패스만 돈다" 는 전제가 생기고, 병렬 기록에서 패스끼리 값을 덮어쓴다.
-         *          상수 버퍼도 패스마다 따로 있어야 한다. 하나를 공유하면 기록은 지연되고
-         *          버퍼 쓰기는 즉시 일어나므로, replay 시점에는 마지막으로 쓴 값만 남는다.
-         */
-        struct FramePassContext
-        {
-            IRHICommandList* _pCmd{ nullptr };
-            /** @brief 엔진 PassCB 값입니다(이름 기반). ShaderParameterBinder 가 리플렉션 오프셋에 기록합니다. */
-            PassConstantValues _passValues{};
-            /** @brief `g_World` 입니다. 인스턴스 버퍼가 없는 드로우(풀스크린, 픽스처)의 월드 행렬이며, 씬 메시는 인스턴스 버퍼에서 읽습니다. */
-            float4x4           _world{};
-            RHIBufferHandle    _passCb{ 0 };
-            RHIDescriptorIndex _passCbIndex{ kInvalidDescriptorIndex };
-            /** @brief 패스 스코프 이름에서 리소스를 찾는 레지스트리입니다. 패스를 시작할 때마다 reset 합니다.
-             *         병렬 기록에서는 패스마다 독립이어야 하므로 FrameRenderer 의 공유 멤버가 아니라 여기에 둡니다. */
-            FrameResourceRegistry _resourceRegistry{};
-            /// @brief 엔진 상수 버퍼를 마지막으로 올린 시점의 버퍼, 값 버전, 레지스트리 버전입니다.
-            ///        셋이 그대로면 그 드로우는 버퍼를 다시 올릴 필요가 없습니다.
-            RHIBufferHandle _lastCbBuffer{ 0 };
-            uint32          _lastCbValuesVersion{ 0 };
-            uint32          _lastCbRegistryVersion{ 0 };
-            /**
-             * @brief 마지막으로 리소스를 **실제로 바인딩한** PSO 입니다.
-             * @details 슬롯 상태는 PSO 단위다. `setPipelineState` 는 이전 PSO 가 바인딩한 t/u 슬롯이 다음 PSO 로
-             *          새지 않게 슬롯 상태를 통째로 비운다. 그래서 값과 레지스트리가 그대로여도 PSO 가 바뀌었으면
-             *          다시 바인딩해야 한다. 이를 빼먹으면 배치가 퍼뮤테이션 PSO 로 바뀐 순간 t5(g_SwMaterials)
-             *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
-             *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
-             */
-            RHIPipelineStateHandle _lastBindPSO{ 0 };
-            /**
-             * @brief 이 패스가 어느 컬링 슬롯의 결과를 쓸지 정합니다. 0은 주 시점, 1은 그림자이고, `kFirstExtraCullView` 부터는 추가 뷰입니다.
-             * @details 그림자 패스만 그림자 슬롯을 쓰고, 나머지는 지금 그리는 뷰의 슬롯을 쓴다. 컬링 결과는 절두체에 종속되므로
-             *          뷰를 잘못 고르면 그림자 캐스터가 사라지거나 화면 밖 물체를 그린다.
-             */
-            uint32 _cullViewIndex{ 0 };
-            /// @brief 지금 기록하는 패스의 종류입니다. `executePass` 가 정하며, 드로우 루프가 이 패스에서 그리지 않는 머티리얼의 배치를 거를 때 봅니다.
-            RenderPassType _passType{ RenderPassType::Invalid };
-            /// @brief 지금 기록하는 패스의 파이프라인 이름입니다(진단 로그용 — bindless 인덱스 검사가 어느 패스인지 적는다). 패스 밖이면 비어 있습니다.
-            hashed_string _passName;
-            /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작, 모프 풀, 정점 풀)은
-            ///        배치 테이블(g_SwBatches)과 인스턴스 슬롯 스트림이 제공하므로 그룹 안에서 루트 상수를 다시 바인딩하지 않습니다.
-            ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli "드로우별 루트 상수" 절 참고).
-            uint32 _drawMaterialCount{ 0 };
-            /// @brief bindForDraw 가 마지막으로 조회한 PSO 와 그 레이아웃입니다. 같은 PSO 로 연속해서 드로우할 때
-            ///        layoutForPSO() 의 뮤텍스와 해시맵 조회를 건너뛰는 패스 로컬 캐시입니다(1항목).
-            RHIPipelineStateHandle     _lastLayoutPSO{ 0 };
-            const ShaderBindingLayout* _pLastLayout{ nullptr };
-
-            /**
-             * @brief "마지막으로 바인딩한 것" 캐시를 모두 지웁니다. PSO 와 버퍼 핸들이 무효가 되는 시점(디바이스 교체)에 부릅니다.
-             * @details 핸들 값은 **디바이스 안에서만** 식별자 역할을 한다. 새 디바이스의 PSO 가 옛 디바이스의 PSO 와 같은 값을
-             *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPSO == pso` 가 참이 되어 이미 파괴된
-             *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩도 건너뛴다. 결과적으로 백엔드를 교체한 뒤
-             *          아무것도 그려지지 않는다. 파괴할 때 캐시도 함께 지워야 "같은 값은 같은 대상" 이 성립한다.
-             */
-            void resetBindingCache()
-            {
-                _lastCbBuffer          = 0;
-                _lastCbValuesVersion   = 0;
-                _lastCbRegistryVersion = 0;
-                _lastBindPSO           = 0;
-                _lastLayoutPSO         = 0;
-                _pLastLayout           = nullptr;
-            }
-        };
-
-        /**
-         * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
-         * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
-         *          (`_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
-         */
-        struct ViewTarget
-        {
-            TransientAttachmentPool     _transientPool;
-            RenderView                  _cullInput;   ///< 추가 뷰의 컬링 입력(행렬, 절두체, 자기 컬링 상수 버퍼)
-            unique_ptr<IRHICommandList> _commandList; ///< 이 뷰를 직렬로 기록하는 리스트(주 시점은 병렬 경로가 아닐 때만 쓴다)
-            RenderViewSettings          _settings;
-            hashed_string               _outputPath;                ///< 렌더 텍스처 경로
-            Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 쓰는 렌더 텍스처(`TextureCache`)
-            RHITextureHandle            _hostTarget{ 0 };           ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
-            uint64                      _viewID{ 0 };
-            RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
-            RHIDescriptorIndex          _taaHistorySRV{ kInvalidDescriptorIndex };
-            /**
-             * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
-             * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
-             *          장면 깊이 첨부는 프레임 사이에 그대로 남아 있으므로 옮기는 때는 다음 프레임의 컴퓨트 프리패스다(복사본을 프레임 끝에 따로 만들지 않는다).
-             */
-            RHITextureHandle   _depthHistory{ 0 };
-            RHIDescriptorIndex _depthHistoryUAV{ kInvalidDescriptorIndex };
-            float4x4           _depthHistoryViewProj{};           ///< 장면 깊이를 그린 프레임의 뷰-투영(그 프레임 끝에 적는다)
-            float3             _depthHistoryEye{};                ///< 그 프레임의 눈 위치
-            uint8              _bLastFrameDepthValid{ SW_FALSE }; ///< 장면 깊이 첨부에 이 뷰가 그린 깊이가 남아 있다(풀을 새로 만들면 내린다)
-            /**
-             * @brief 가림 타일 — 깊이 히스토리를 `FrameRendererUtil::kOcclusionTileSize` px 타일마다 최대 깊이 하나로 줄인 구조 버퍼(float, SRV + UAV)입니다. 컬링의 가림 판정(t2)이 읽는다.
-             * @details 깊이 히스토리와 수명이 같다(`ensureOcclusionTiles`). `_bOcclusionTilesThisFrame` 은 이번 프레임에 타일을 지었는지다(`recordOcclusionTiles`).
-             */
-            RHIStructuredBufferSlot _occlusionTiles;
-            uint32                  _occlusionColumns{ 0 };
-            uint32                  _occlusionRows{ 0 };
-            uint8                   _bOcclusionTilesThisFrame{ SW_FALSE };
-            RHIStructuredBufferSlot _transparentRank;           ///< 이 뷰의 투명 순번 테이블(정렬 디스패치 t2). GPU 정렬 백엔드에서 쓴다.
-            vector<uint32>          _listTransparentBatchOrder; ///< 이번 프레임 이 뷰의 투명 배치 순서(비면 주 순서를 쓴다)
-            /// @brief 이번 프레임 이 뷰의 입자 그리기 순서와 자리(`_listTransparentBatchOrder` 안의 자리)입니다. `_bHasParticleOrder` 가 0 이면 주 시점의 것을 쓴다.
-            vector<GPUTransparentParticleSlot> _listParticleSlot;
-            uint8                              _bHasParticleOrder{ SW_FALSE }; ///< `_listParticleSlot` 이 이 뷰의 배치 순서와 짝인지
-            vector<uint32>                     _listInstanceSlot;              ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
-            RHIBufferHandle                    _instanceSlotStream{ 0 };       ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
-            uint32                             _transparentTailBase{ 0 };      ///< 순번 테이블 0번의 인스턴스 번호
-            /**
-             * @brief 이 뷰의 방향광 그림자(셰이더 상수 · 캐스케이드 타일 · 컬링 절두체)입니다. 주 시점은 프레임의 것, 추가 뷰는 자기 카메라에 맞춘 것이다.
-             * @details 추가 뷰가 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다(언리얼의 뷰별 그림자 뷰).
-             */
-            ViewShadowData _shadow;
-            /// @brief 추가 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼)입니다. 주 시점은 `_arrView[Shadow]` 를 씁니다.
-            RenderView _shadowCullInput;
-            uint32     _cullSlot{ 0 };
-            uint32     _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
-            uint32     _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
-            uint32     _outputHeight{ 0 };
-            uint32     _shadowMapResolution{ 0 };                 ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
-            uint32     _lightGridIndex{ invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
-            /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
-            float4x4 _prevViewProj{};
-            /**
-             * @brief 자동 노출의 적응 EV 기록 둘(1x1 R32 실수 RT)과 그 SRV 입니다. 프레임마다 번갈아 한쪽을 읽고 다른 쪽(`_autoExposureWrite`)에 씁니다.
-             * @details 풀과 수명이 같다 — `updateViewTransients` 가 만들고 `releaseViewTransients` 가 놓는다. 새로 만든 기록은 값이 없으므로 그 프레임은 기록을 버린다.
-             */
-            RHITextureHandle   _arrAutoExposure[2]{};
-            RHIDescriptorIndex _arrAutoExposureSRV[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-            /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
-            float4  _autoExposureParams{};
-            float32 _autoExposureClock{ 0.0f }; ///< 지난번 이 뷰의 노출을 측정한 렌더러 시각(초, `getAnimationTime`)
-            /**
-             * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
-             * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.
-             */
-            RHITextureHandle     _upscaleIntermediate{ 0 };
-            RHIDescriptorIndex   _upscaleIntermediateSRV{ kInvalidDescriptorIndex };
-            uint32               _upscaleWidth{ 0 };
-            uint32               _upscaleHeight{ 0 };
-            RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
-            uint8                _bRenderThisFrame{ SW_FALSE };
-            uint8                _bSeenThisFrame{ SW_FALSE };
-            uint8                _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임에 `_transparentRank` 로 정렬한다.
-            uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
-            /**
-             * @brief 지금 풀로 이 뷰를 한 번 이상 그렸다 — 시간 누적 기록(TAA 히스토리 · `_prevViewProj` · 자동 노출 EV)에 지난 프레임 값이 있다.
-             * @details 풀을 새로 만들면(`updateViewTransients`) 기록도 새것이라 내린다.
-             */
-            uint8 _bHasHistory{ SW_FALSE };
-            /**
-             * @brief 이번 프레임은 시간 누적 기록을 버린다 — 처음 그리는 프레임이거나 컷(`RenderViewSettings::_bCut`)이다(언리얼 `bCameraCut`).
-             * @details `applyViewProjection` 이 프레임마다 한 번 정하고 TAA(이번 원본만) · 모션 블러(지난 뷰-투영 = 이번 것) · 자동 노출(측정값을 그대로)이 모두 이것 하나를 본다.
-             *          기능마다 컷을 따로 읽으면 한 기능만 컷을 빠뜨린다. TAA 는 이것을 포함한 `_bTAAHistoryReset` 을 본다.
-             */
-            uint8 _bHistoryReset{ SW_TRUE };
-            /**
-             * @brief 이번 프레임은 TAA 기록만 더 버린다 — `_bHistoryReset` 이거나 지난 프레임이 TAA 기록을 쓰지 않았다(TAA 가 빠진 프레임, `_bTAAHistoryWritten`).
-             * @details 빠진 TAA(후처리를 끈 뷰 · 품질 · 읽는 쪽 없음)는 출력이 원본을 가리키거나 없고 기록을 쓰지 않는다. 다시 도는 첫 프레임의 기록은 그 앞 화면이라 섞으면 그동안 움직인 것의 가장자리에 옛 그림이 남는다.
-             *          `beginViewHistory` 가 `_bHistoryReset` 과 같은 자리에서 정한다(기능마다 따로 정하지 않는다).
-             */
-            uint8 _bTAAHistoryReset{ SW_TRUE };
-            uint8 _bTAAHistoryWritten{ SW_FALSE };     ///< 이번 프레임의 TAA 가 돌아 기록을 쓴다 — 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 다음 프레임의 `beginViewHistory` 가 읽는다
-            uint8 _autoExposureWrite{ 0 };             ///< 이번 프레임에 쓰는 자동 노출 기록 칸(0 · 1). 톤맵은 이 칸을 읽는다
-            uint8 _bAutoExposureThisFrame{ SW_FALSE }; ///< 이번 프레임에 이 뷰의 노출을 측정한다(`prepareAutoExposure`)
-            uint8 _bAutoExposureMeasured{ SW_FALSE };  ///< 지금 자동 노출 기록에 측정한 값이 있다(기록을 새로 만들면 내린다 — 첫 측정은 지난 칸을 섞지 않는다)
-            uint8 _bUpscaleThisFrame{ SW_FALSE };      ///< 이번 프레임에 Present 가 FSR 1(EASU + RCAS)로 키운다(`prepareUpscale`)
-        };
-
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
         struct PresentTarget
         {
@@ -529,9 +357,9 @@ namespace sw
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다시 만들었으면 true 입니다. */
-        bool updateViewTransients( ViewTarget& view, uint32 width, uint32 height );
+        bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height );
         /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseViewTransients( ViewTarget& view );
+        void releaseViewTransients( FrameViewTarget& view );
         /**
          * @brief 이 뷰가 이번 프레임에 기록할 풀스크린 패스를 고릅니다. 꺼진 효과는 출력이 원본을 가리키거나(`kBypassesToSource`) 없고(`kOmittedWhenOff`),
          *        읽는 패스가 모두 빠진 풀스크린 패스(블룸이 꺼진 뷰의 BloomDownsample)도 빠집니다. 도는 패스의 출력 타깃은 처음이면 만듭니다.
@@ -539,9 +367,9 @@ namespace sw
          *          빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다(디버그 · 스크린샷용).
          * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같으면 카메라 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
          */
-        void applyViewPassSelection( ViewTarget& view, const float4x4& viewProj );
+        void applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
-        void releaseExtraView( ViewTarget& view );
+        void releaseExtraView( FrameViewTarget& view );
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태에 반영합니다. 새 뷰를 만들고, 사라진 뷰를 해제하고, 출력 텍스처, 풀 크기, 컬링 입력을 맞추고,
          *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
@@ -553,18 +381,18 @@ namespace sw
          */
         uint32 prepareCascadeCullInputs();
         /** @brief 이 카메라 id 의 추가 뷰입니다. 없으면 새로 만들어 목록 끝에 붙입니다. */
-        ViewTarget& getOrCreateExtraView( uint64 viewID );
+        FrameViewTarget& getOrCreateExtraView( uint64 viewID );
         /** @brief 요청 하나로 추가 뷰를 준비합니다(설정 · 출력 · 렌더 텍스처 빌리기 · 컬링 상수버퍼 · 트랜지언트). 준비하지 못하면 이번 프레임에 그리지 않습니다. */
         void prepareExtraView( const RenderViewRequest& request );
         /**
          * @brief 스냅샷에 든 이 뷰의 투명 순서를 뷰 자원(순번 테이블, 슬롯 스트림, 배치 순서)에 옮깁니다. 없으면 주 순서로 그립니다.
          * @details GPU 정렬 백엔드는 순번 테이블을 정렬 디스패치에 쓰고, 컬링이 없는 백엔드는 배치 안을 뷰 순서로 다시 배치한 슬롯 스트림을 드로우에 쓴다. 업로드 뒤, 기록 전에 부른다.
          */
-        void applyViewTransparentOrder( ViewTarget& view );
+        void applyViewTransparentOrder( FrameViewTarget& view );
         /** @brief 뷰 하나의 투명 순서 자원(순번 테이블, 슬롯 스트림)을 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseViewTransparentOrder( ViewTarget& view );
+        void releaseViewTransparentOrder( FrameViewTarget& view );
         /** @brief 추가 뷰 하나를 그래프로 그립니다(직렬, 자기 리스트). 지금 뷰를 그 뷰로 바꿨다가 주 시점으로 되돌립니다. */
-        void renderExtraView( IRHIDevice* pDevice, ViewTarget& view );
+        void renderExtraView( IRHIDevice* pDevice, FrameViewTarget& view );
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
@@ -578,16 +406,16 @@ namespace sw
          *          다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다. 파이프라인이 TAA 를
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 알 수 있다.
          */
-        void ensureTAAHistory( ViewTarget& view );
+        void ensureTAAHistory( FrameViewTarget& view );
         /**
          * @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 **셋업 단계에서** 풀 크기로 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 풀을 새로 만들었으니 지난 깊이는 없다.
          * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
          */
-        void ensureDepthHistory( ViewTarget& view );
+        void ensureDepthHistory( FrameViewTarget& view );
         /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 톤맵하는 패스가 없으면 만들지 않습니다. */
-        void ensureAutoExposureHistory( ViewTarget& view );
+        void ensureAutoExposureHistory( FrameViewTarget& view );
         /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseAutoExposureHistory( ViewTarget& view );
+        void releaseAutoExposureHistory( FrameViewTarget& view );
         /**
          * @brief 지금 그리는 뷰의 이번 프레임 노출을 정합니다 — 잴지, 측정 상수(EV 범위 · 다가가는 비율), 쓰는 기록 칸입니다.
          * @details 셋업에서 뷰마다 한 번(`applyViewPassConstants`) 부른다. 기록 중의 패스(`recordAutoExposure`)는 여기서 정한 것을 읽기만 한다(병렬 기록 — 뷰 상태를 쓰지 않는다).
@@ -604,9 +432,9 @@ namespace sw
          * @details 키우는 조건: 업스케일러가 spatial(`gv_upscaler`), 정수 업스케일이 아님, 풀이 뷰포트보다 작음, Present 가 톤맵하지 않음(EASU 는 톤맵한 색을 받는다).
          *          Present 가 톤맵하는 파이프라인(후처리 체인)에서 켜면 한 번 오류를 남기고 선형으로 키운다 — 그 파이프라인에는 톤맵한 중간 그림이 없다.
          */
-        void prepareUpscale( ViewTarget& view, uint32 viewportWidth, uint32 viewportHeight );
+        void prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight );
         /** @brief 뷰의 FSR 중간 RT 를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseUpscaleIntermediate( ViewTarget& view );
+        void releaseUpscaleIntermediate( FrameViewTarget& view );
         /**
          * @brief Present 렌더 패스를 열기 **전에** EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
          * @return true 면 Present 는 블릿 대신 `drawUpscaleRcas` 로 그린다
@@ -615,18 +443,18 @@ namespace sw
         /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
         void drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
-        bool canCopyDepthHistory( const ViewTarget& view ) const;
+        bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /**
          * @brief 컴퓨트 프리패스 리스트에 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린 하나를 기록합니다(depthhistory.hlsl).
          * @details GPU 입자 시뮬레이션보다 먼저 기록한다 — 깊이 충돌이 이 히스토리를 읽는다. 지금 읽는 쪽은 주 시점뿐이지만 히스토리는 뷰마다 둔다.
          */
         void recordDepthHistories();
         /** @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다). */
-        void recordDepthHistory( ViewTarget& target );
+        void recordDepthHistory( FrameViewTarget& target );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
         /** @brief 뷰의 가림 타일 버퍼를 **셋업 단계에서** 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면(2D 파이프라인) 만들지 않습니다. */
-        void ensureOcclusionTiles( ViewTarget& view );
+        void ensureOcclusionTiles( FrameViewTarget& view );
         /**
          * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
@@ -636,24 +464,24 @@ namespace sw
          * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusiontiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
          * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
          */
-        void recordOcclusionTiles( ViewTarget& target );
+        void recordOcclusionTiles( FrameViewTarget& target );
         /**
          * @brief 주 시점 가림 타일을 되읽는 복사를 컴퓨트 프리패스 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getOcclusionSnapshot`).
          * @details `recordOcclusionTiles` 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
          *          요청 때의 뷰-투영 · 격자는 `_arrOcclusionReadbackMeta` 에 적어 두었다가 사본이 도착하면 붙인다.
          */
-        void requestOcclusionReadback( const ViewTarget& view );
+        void requestOcclusionReadback( const FrameViewTarget& view );
         /**
          * @brief 뷰 @p view 의 컬링 상수에 가림 판정 값을 채웁니다. 이번 프레임에 타일을 지었고 기록을 버리는 프레임(처음 · 컷)이 아닐 때만 켭니다.
          * @details 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다(언리얼의 지난 프레임 HZB 와 같은 한계). 컷 프레임은 지난 깊이가
          *          다른 장면이라 보지 않는다.
          */
-        void fillOcclusionParams( const ViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const;
+        void fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const;
         /**
          * @brief 뷰의 이번 프레임 시간 누적 기록을 시작합니다 — 기록을 버릴지(`_bHistoryReset`: 이 풀로 처음 그리거나 컷)를 정하고 그렸다고 표시합니다.
          * @details 셋업에서 뷰마다 프레임에 한 번 부른다(주 시점은 `updatePassConstants`, 추가 뷰는 `prepareExtraView`). 컬링(가림)이 기록 전에 돌므로 그리기 때(`applyViewProjection`)가 아니라 여기서 정한다.
          */
-        void beginViewHistory( ViewTarget& view );
+        void beginViewHistory( FrameViewTarget& view );
         /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
         VFXSimulationFrameInput makeVFXSimulationInput() const;
         /** @brief 트랜지언트 텍스처를 해제합니다. */
@@ -947,7 +775,7 @@ namespace sw
         [[nodiscard]] bool uploadSceneAndSubmitFrame( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
          * @brief 라이트 버퍼를 올리고 뷰마다 라이트 그리드를 준비합니다. 업로드 전에, 추가 뷰가 정해진 뒤에 부릅니다(생산자는 `selectLightGridProducer`).
-         * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `ViewTarget::_lightGridIndex` 에 남는다.
+         * @details 라이트와 그림자 타일은 앞서 `GPULightBuffer::populate` 로 담겨 있어야 한다. 뷰의 그리드 번호는 `FrameViewTarget::_lightGridIndex` 에 남는다.
          *          GPU 생산자면 그리드 채우기는 커맨드 리스트가 열린 뒤 `dispatchLightGrid` 가 한다.
          */
         void updateLightBuffer( IRHIDevice* pDevice );
@@ -1018,7 +846,7 @@ namespace sw
         /** @brief 모듈 구간의 끝입니다. 모듈이 넣은 패스 콜백 · 요소를 모두 놓습니다(람다의 소멸 코드가 모듈에 있어 모듈 구간 안에서 놓아야 한다). */
         void releaseExtensionFrame();
         /** @brief 이 뷰의 풀에 이번 프레임에 요청된 모듈 임시 텍스처를 만듭니다(이미 있으면 그대로). */
-        void allocateExtensionTextures( ViewTarget& view );
+        void allocateExtensionTextures( FrameViewTarget& view );
         /** @brief 요소가 쓰는 메시를 찾거나 읽고 GPU 에 올립니다. 기록 전에만 부릅니다. 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
         Mesh* resolveExtensionMesh( RenderExtensionRegistry& registry, const hashed_string& meshID );
         /** @brief 모듈 확장 패스 하나를 실행합니다(그래프 노드 콜백이 부른다). 모듈의 실행 콜백에 `ExtensionPassContext` 를 넘깁니다. */
@@ -1115,11 +943,11 @@ namespace sw
         string              _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
         float4              _clearColor;
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
-        ViewTarget _mainView;
+        FrameViewTarget _mainView;
         /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
-        vector<unique_ptr<ViewTarget>> _listExtraView;
+        vector<unique_ptr<FrameViewTarget>> _listExtraView;
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `_mainView` 입니다.
-        ViewTarget* _pActiveView;
+        FrameViewTarget* _pActiveView;
         /**
          * @brief 프레임 단위 패스 상태입니다. 직렬 경로에서 쓰며 병렬 패스의 시드가 됩니다.
          * @details 병렬 기록에서는 패스마다 이것을 복사해 각자의 커맨드 리스트와 상수 버퍼를 붙인다.
@@ -1280,7 +1108,7 @@ namespace sw
          * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
-        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
+        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView );
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
         void computeLODFadeStep();
         /**
@@ -1372,7 +1200,7 @@ namespace sw
          * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.
          *          언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서로, 마지막 뷰의 Canvas 패스만 UI 를 그린다. `submitGraph` 가 기록 전에 정한다.
          */
-        const ViewTarget* _pMainOutputCanvasView;
+        const FrameViewTarget* _pMainOutputCanvasView;
         /** @brief 미리보기 씬 하나를 그리는 렌더러입니다(`executeScenePreviewPacket`). 씬 키로 찾습니다. */
         struct ScenePreviewRenderer
         {

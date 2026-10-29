@@ -348,7 +348,7 @@ namespace sw
                 continue;
             bAllViewsCulled = dispatchCullView( viewIndex, _arrView[viewIndex], instanceCount, nullptr ) && bAllViewsCulled;
         }
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             // 컬링하지 못한 추가 뷰는 그리지 않는다. 가시 목록을 바인딩하는 프레임에 갱신되지 않은 목록을 읽게 된다.
             // 그림자 패스도 이 뷰의 그림자 볼륨으로 따로 거른다 — 주 시점의 그림자 슬롯을 쓰면 이 뷰만 보는 곳의 가리는 물체가 빠진다.
@@ -389,7 +389,7 @@ namespace sw
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
-    bool FrameRenderer::canCopyDepthHistory( const ViewTarget& view ) const
+    bool FrameRenderer::canCopyDepthHistory( const FrameViewTarget& view ) const
     {
         const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
         if ( bHasSource == false || getEnginePSO( RenderPassType::DepthHistory ) == 0 )
@@ -406,7 +406,7 @@ namespace sw
         recordDepthHistory( _mainView );
         recordOcclusionTiles( _mainView );
         requestOcclusionReadback( _mainView );
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             recordDepthHistory( *pView );
             if ( pView->_bRenderThisFrame == SW_TRUE )
@@ -416,7 +416,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::recordDepthHistory( ViewTarget& target )
+    void FrameRenderer::recordDepthHistory( FrameViewTarget& target )
     {
         if ( canCopyDepthHistory( target ) == false )
             return;
@@ -460,7 +460,7 @@ namespace sw
             _mainView._depthHistoryEye      = mainView._position;
             _mainView._bLastFrameDepthValid = SW_TRUE;
         }
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_FALSE || pView->_depthHistory == 0 )
                 continue;
@@ -497,7 +497,7 @@ namespace sw
         return input;
     }
 
-    bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView )
+    bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
     {
         if ( cullViewIndex >= _gpuScene.getCullViewCount() )
             return false;
@@ -522,14 +522,14 @@ namespace sw
         cullParams._arrLODView[2]    = lodView._position._z;
         cullParams._arrLODControl[0] = 1u;
         // 전환 상태 버퍼가 있는 뷰만 크로스페이드한다(없으면 진행량 0 — 단계를 바로 바꾸고 버퍼를 읽지 않는다). 컷 · 처음 그리는 프레임은 상태를 비워 단계를 바로 맞춘다.
-        const bool        bHasLODState = _gpuScene.hasLODState( cullViewIndex );
-        const ViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _mainView;
-        const bool        bViewCut     = lodTarget._bHasHistory == SW_FALSE || lodTarget._settings._bCut == SW_TRUE;
-        const bool        bResetState  = _gpuScene.takeLODStateReset( cullViewIndex ) || bViewCut;
-        cullParams._arrLODControl[1]   = bResetState ? 1u : 0u;
-        cullParams._arrLODControl[2]   = bHasLODState ? _lodFadeStep : 0u;
+        const bool             bHasLODState = _gpuScene.hasLODState( cullViewIndex );
+        const FrameViewTarget& lodTarget    = ( pExtraView != nullptr ) ? *pExtraView : _mainView;
+        const bool             bViewCut     = lodTarget._bHasHistory == SW_FALSE || lodTarget._settings._bCut == SW_TRUE;
+        const bool             bResetState  = _gpuScene.takeLODStateReset( cullViewIndex ) || bViewCut;
+        cullParams._arrLODControl[1]        = bResetState ? 1u : 0u;
+        cullParams._arrLODControl[2]        = bHasLODState ? _lodFadeStep : 0u;
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
-        const ViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
+        const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_mainView : nullptr );
         if ( pOcclusionView != nullptr )
             fillOcclusionParams( *pOcclusionView, cullParams );
         const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;

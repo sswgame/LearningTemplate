@@ -299,7 +299,7 @@ namespace sw
         _sceneBuilder.clear();
 
         // 추가 뷰는 통째로 해제한다(빌린 렌더 텍스처, 컬링 상수 버퍼, 리스트). 주 시점의 리스트도 이 디바이스의 것이다.
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             releaseExtraView( *pView );
         }
@@ -404,7 +404,7 @@ namespace sw
             // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
             _mainView._commandList.reset();
-            for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
             {
                 pView->_commandList.reset();
             }
@@ -512,7 +512,7 @@ namespace sw
 
         // 주 출력의 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다. 화면 사각형 뷰는 주 시점 뒤에 겹치므로, 주 시점이 그리면 그 뷰가 UI 를 덮는다.
         _pMainOutputCanvasView = &_mainView;
-        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( const unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE && pView->_outputKind == RenderViewOutputKind::ScreenRect )
                 _pMainOutputCanvasView = pView.get();
@@ -536,7 +536,7 @@ namespace sw
     uint32 FrameRenderer::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
     {
         uint32 renderedCount = 0;
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != outputKind )
                 continue;
@@ -765,7 +765,7 @@ namespace sw
         // 그리드 번호는 이 목록의 순서다 — 주 시점이 0 번, 이번 프레임에 그리는 추가 뷰가 그 뒤다. 뷰-투영은 그 뷰의 g_ViewProj 와 같은 값이다.
         _listScratchGridViewProj.clear();
         _mainView._lightGridIndex = invalid_index::kUint32;
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             pView->_lightGridIndex = invalid_index::kUint32;
         }
@@ -774,7 +774,7 @@ namespace sw
         {
             _mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
             _listScratchGridViewProj.push_back( view( RenderViewType::Main )._viewProj );
-            for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
             {
                 if ( pView->_bRenderThisFrame == SW_FALSE )
                     continue;
@@ -846,7 +846,7 @@ namespace sw
         // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
         prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
-        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 applyViewTransparentOrder( *pView );

@@ -489,7 +489,7 @@ namespace sw
             return getRenderViewModeInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
         };
         uint32 viewModeMask = viewModeBits( _mainView._settings._viewMode );
-        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
+        for ( const unique_ptr<FrameViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 viewModeMask |= viewModeBits( pView->_settings._viewMode );
