@@ -166,8 +166,9 @@ namespace sw
             if ( pSrcType == nullptr )
                 pSrcType = findStaticType<From>();
 
-            // 같은 타입은 인라인으로 끝내고, 파생 검사만 DLL 경계를 넘는다. 측정할 것: 이 호출이 약 4 ns 의 캐스트 비용을
-            // 눈에 띄게 늘리면 조상 표 비교를 작은 헤더로 떼어 다시 인라인으로 올린다.
+            // 같은 타입은 인라인으로 끝내고, 파생 검사만 줄 밖이다(이 헤더가 ReflectionTypes.h 를 끌지 않게). 측정(2026-10-30, Release):
+            // 타입을 받는 이 판 약 3 ns(인라인 조상 표 비교면 약 1.6 ns), `castTo<T>( p )` 는 `StaticType()` 조회 약 3 ns 를 더해 약 5 ns.
+            // 프레임 루프는 등록부(`PrimitiveRegistry` 등)로 캐스트를 피하므로 include 절감을 택했다 — 캐스트가 뜨거운 루프에 다시 들어오면 그때 인라인으로 올린다.
             if ( pSrcType == nullptr )
                 return nullptr;
             if ( pSrcType != pToType && isTypeDerivedFrom( pSrcType, pToType ) == false )
