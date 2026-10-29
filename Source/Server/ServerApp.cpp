@@ -20,7 +20,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
@@ -82,8 +81,6 @@ namespace sw
             static constexpr uint32 kDroppedTickWarningInterval = 100;
             /** @brief 클라이언트 산출물에 없어야 할 표식(`BuildTargetImageTest`)입니다. 서버 실행 파일 자신도 서버 전용입니다. */
             static constexpr utf8 kArrServerImageMarker[] = "sw-server-only-module:Server";
-            /** @brief 관리 채널 연결이 이만큼(초) 말이 없으면 닫는다 - 열어 두고 잊은 연결이 쌓이지 않게. */
-            static constexpr float64 kAdminIdleTimeoutSeconds = 300.0;
             /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
             static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
 #if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
@@ -157,7 +154,6 @@ namespace sw
         , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
         , _bDraining{ SW_FALSE }
-        , _bMaintenance{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -359,7 +355,9 @@ namespace sw
                 if ( startDebugTools() == false )
                     return false;
 #endif
-                return startAdminChannel(); // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수)
+                // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수). 상태는 서버 루프가 답한다.
+                return _adminChannel.start( *_pServerConfig, *_observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [this]()
+                { return ServerAdminStatus{ _tickCount, getServiceConnectionCount(), _bDraining == SW_TRUE }; } ) );
             }
             case HostServiceID::BackendSwitcher:
             case HostServiceID::UserSettings:
@@ -415,10 +413,7 @@ namespace sw
                 _debugChannel.reset();
                 _debugTransport.reset();
 #endif
-                if ( _adminChannel != nullptr )
-                    _adminChannel->shutdown();
-                _adminChannel.reset();
-                _adminTransport.reset();
+                _adminChannel.stop();
                 return;
             case HostServiceID::BackendSwitcher:
             case HostServiceID::UserSettings:
@@ -537,8 +532,7 @@ namespace sw
             if ( _debugChannel != nullptr )
                 (void)_debugChannel->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
 #endif
-            if ( _adminChannel != nullptr )
-                (void)_adminChannel->pump();
+            _adminChannel.pump();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
             if ( cause != ShutdownCause::None || _engine.isQuitRequested() )
@@ -775,92 +769,6 @@ namespace sw
         return true;
     }
 #endif
-
-    bool ServerApp::startAdminChannel()
-    {
-        if ( _pServerConfig->_adminChannelPort <= 0 )
-            return true;
-        // 토큰은 환경에서만 읽는다(설정 파일 · 명령줄에 두지 않는다). 없거나 비면 채널을 토큰 없이 여는 대신 기동을 멈춘다.
-        string token;
-        if ( ProcessEnvironment::tryReadNonEmpty( _pServerConfig->_adminChannelTokenEnvironment, token ) == false )
-        {
-            SW_LOG_ERROR( "The admin channel is enabled (_adminChannelPort=%#) but the token environment variable '%#' is not set or empty - the server does not start without a token",
-                          _pServerConfig->_adminChannelPort, _pServerConfig->_adminChannelTokenEnvironment.c_str() );
-            return false;
-        }
-        _adminTransport = StreamTransportFactory::createPlatformTransport();
-        _adminChannel   = make_unique<DebugChannel>();
-        DebugChannelConfig settings;
-        settings._bindAddress = NetAddress::makeLoopback( static_cast<uint16>( _pServerConfig->_adminChannelPort ) );
-        settings._token       = std::move( token );
-        StreamTransportConfig transportSettings;
-        transportSettings._idleTimeoutSeconds = ServerAppInternal::kAdminIdleTimeoutSeconds; // 열어 두고 잊은 연결을 닫는다
-        const bool bStarted                   = _adminChannel->initialize( _adminTransport.get(), transportSettings, settings,
-                                                                           SW_DELEGATE_LAMBDA( DebugChannelExecuteDelegate, [this]( string_view line, string& outReply )
-                          { return executeAdminCommand( line, outReply ); } ) );
-        if ( bStarted == false )
-        {
-            SW_LOG_ERROR( "The admin channel (_adminChannelPort=%#) could not start", _pServerConfig->_adminChannelPort );
-            _adminChannel.reset();
-            _adminTransport.reset();
-            return false;
-        }
-        SW_LOG_INFO( "Admin channel listening on loopback port %# (token from environment variable %#)", _adminChannel->getListenPort(),
-                     _pServerConfig->_adminChannelTokenEnvironment.c_str() );
-        return true;
-    }
-
-    bool ServerApp::executeAdminCommand( string_view line, string& outReply )
-    {
-        const string_view command  = StringUtil::trim( line );
-        const size_t      space    = command.find( ' ' );
-        const string_view name     = space == string_view::npos ? command : command.substr( 0, space );
-        const string_view argument = space == string_view::npos ? string_view{} : StringUtil::trim( command.substr( space + 1 ) );
-        if ( name == "help" )
-        {
-            outReply = "admin commands: status | maintenance on|off|state | shutdown";
-            return true;
-        }
-        if ( name == "status" )
-        {
-            const int32 connectionCount = getServiceConnectionCount();
-            outReply                    = "tick " + to_string( _tickCount ) + " connections " + to_string( connectionCount ) + " maintenance " + ( _bMaintenance == SW_TRUE ? "on" : "off" ) + " draining " +
-                       ( _bDraining == SW_TRUE ? "yes" : "no" );
-            return true;
-        }
-        if ( name == "maintenance" )
-        {
-            if ( argument == "state" )
-            {
-                outReply = _bMaintenance == SW_TRUE ? "maintenance on" : "maintenance off";
-                return true;
-            }
-            if ( argument != "on" && argument != "off" )
-            {
-                outReply = "usage: maintenance on|off|state";
-                return false;
-            }
-            if ( _bDraining == SW_TRUE )
-            {
-                outReply = "the server is draining for shutdown - maintenance mode cannot change";
-                return false;
-            }
-            _bMaintenance = argument == "on" ? SW_TRUE : SW_FALSE;
-            _observability.getHealthRegistry()->setDraining( _bMaintenance == SW_TRUE ); // /readyz 503 이면 부하 분산기가 새 접속을 보내지 않는다. 이미 접속한 사람은 그대로다.
-            SW_LOG_INFO( "Admin channel: maintenance mode %#", _bMaintenance == SW_TRUE ? "on" : "off" );
-            outReply = _bMaintenance == SW_TRUE ? "maintenance on" : "maintenance off";
-            return true;
-        }
-        if ( name == "shutdown" )
-        {
-            SW_LOG_INFO( "Admin channel: graceful shutdown requested" );
-            ShutdownSignal::request( ShutdownCause::Terminate ); // 종료 신호(SIGTERM)와 같은 길 - 드레인 뒤 정상 종료
-            outReply = "shutdown requested";
-            return true;
-        }
-        outReply = "unknown admin command (help lists them)";
-        return false;
-    }
 
     void ServerApp::shutdown()
     {
