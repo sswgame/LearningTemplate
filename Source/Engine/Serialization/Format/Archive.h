@@ -3,13 +3,12 @@
  * @brief 바이너리 아카이브를 읽고 쓰는 클래스입니다. 리플렉션 직렬화는 선택입니다.
  */
 #pragma once
-#include "Core/Compression/ICompressionCodec.h"
+#include "Core/Compression/CompressionCodecType.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/StringPool.h"
 
 namespace sw
@@ -20,6 +19,8 @@ namespace sw
     struct float4;
     struct float4x4;
     struct TypeInfo;
+
+    class SerializeContext;
 
     /// @brief 바이너리 아카이브를 읽고 씁니다. 리플렉션 직렬화는 선택입니다.
     class SW_API Archive

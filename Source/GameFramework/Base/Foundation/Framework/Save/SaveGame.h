@@ -10,6 +10,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/Base/Online/Local/LocalStore.h"
 #include "GameFramework/GameFrameworkExports.h"
