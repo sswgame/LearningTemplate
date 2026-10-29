@@ -91,6 +91,7 @@ namespace sw
         , _psoManager{ _pDevice, _pipelineResource, _gpuScene }
         , _postProcess{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
+        , _viewResources{ _pDevice, _pipelineResource, _postProcess }
         , _graph{}
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }

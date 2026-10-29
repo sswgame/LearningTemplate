@@ -156,6 +156,8 @@ namespace sw
         };
         /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusiontiles.hlsl 이 루트 상수로 받는다).
         static constexpr uint32 kOcclusionTileSize = 16;
+        /** @brief @p value 를 @p divisor 칸으로 나눈 칸 수(올림)입니다. 가림 타일 격자와 그 디스패치 그룹 수가 쓴다. */
+        static constexpr uint32 divideRoundUp( uint32 value, uint32 divisor ) { return ( value + divisor - 1u ) / divisor; }
         /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanimation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {

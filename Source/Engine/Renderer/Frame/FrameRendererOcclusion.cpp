@@ -48,34 +48,8 @@ namespace sw
 
             /// 타일 짓기 스레드 그룹 한 변입니다(occlusiontiles.hlsl 의 numthreads 와 같다).
             static constexpr uint32 kGroupSize = 8;
-
-            static uint32 divideRoundUp( uint32 value, uint32 divisor )
-            {
-                return ( value + divisor - 1u ) / divisor;
-            }
         };
     } // namespace
-
-    void FrameRenderer::ensureOcclusionTiles( FrameViewTarget& view )
-    {
-        using Internal        = FrameRendererOcclusionInternal;
-        const bool bNotNeeded = _pDevice == nullptr || view._depthHistory == 0 || view._occlusionTiles.isValid();
-        if ( bNotNeeded )
-            return;
-        const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
-        if ( depth._texture == 0 )
-            return;
-        view._occlusionColumns = Internal::divideRoundUp( depth._width, FrameRendererUtil::kOcclusionTileSize );
-        view._occlusionRows    = Internal::divideRoundUp( depth._height, FrameRendererUtil::kOcclusionTileSize );
-        const bool bCreated    = view._occlusionTiles.ensureCapacity( _pDevice, sizeof( float32 ), view._occlusionColumns * view._occlusionRows,
-                                                                      RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true,
-                                                                      nullptr );
-        if ( bCreated == false )
-        {
-            SW_LOG_ERROR( "Failed to create the occlusion tiles (%#x%# floats) - this view culls without occlusion", view._occlusionColumns, view._occlusionRows );
-            view._occlusionTiles.release( _pDevice );
-        }
-    }
 
     void FrameRenderer::recordOcclusionTiles( FrameViewTarget& target )
     {
@@ -103,7 +77,7 @@ namespace sw
         _pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
         _pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
         _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        _pCmd->dispatchCompute( Internal::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), Internal::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
+        _pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), FrameRendererUtil::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).
         _pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
         target._bOcclusionTilesThisFrame = SW_TRUE;

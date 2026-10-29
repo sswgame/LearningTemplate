@@ -167,17 +167,17 @@ namespace sw
         const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
-        updateViewTransients( view, width, height );
+        (void)_viewResources.updateViewTransients( view, width, height );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        applyViewPassSelection( view, request._viewProj );
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _postProcess.prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 
     void FrameRenderer::releaseExtraView( FrameViewTarget& view )
     {
-        releaseViewTransients( view );
+        _viewResources.releaseViewTransients( view );
         view._cullInput._cullCb.release( _pDevice );
         view._cullInput._sortCb.release( _pDevice );
         view._shadowCullInput._cullCb.release( _pDevice );

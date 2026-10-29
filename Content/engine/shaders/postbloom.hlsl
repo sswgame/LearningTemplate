@@ -22,7 +22,7 @@ PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     // BloomDownsample 패스 — 반해상도 출력에 밝은 부분만 낸다(합성은 Bloom 패스가 한다). 원본은 원래 해상도라 g_SourceTexel 이 원본 텍셀이다.
-    // 블룸이 꺼진 뷰에서는 읽는 패스가 없어 이 패스를 기록하지 않는다(FrameRenderer::applyViewPassSelection).
+    // 블룸이 꺼진 뷰에서는 읽는 패스가 없어 이 패스를 기록하지 않는다(FrameViewResources::applyViewPassSelection).
     return float4( Bloom::computeBrightDownsampled( input._uv, g_SourceTexel.xy ), 1.0f );
 }
 #else

@@ -88,7 +88,12 @@ namespace sw
 
         beginViewHistory( _mainView );
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
-        applyViewPassSelection( _mainView, mainViewProj );
+        // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _mainView, mainViewProj );
+        if ( selection._bTargetsRepointed == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
+            publishRenderTargets();
+        if ( selection._bTargetsChanged == SW_TRUE )
+            reportRenderTargetMemory();
         applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 

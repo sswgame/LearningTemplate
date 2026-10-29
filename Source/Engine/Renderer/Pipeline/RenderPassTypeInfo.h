@@ -146,7 +146,7 @@ namespace sw
         /**
          * @brief 꺼진 뷰에서는 패스를 기록하지 않고 출력 이름이 원본(SourceColor 입력)을 가리킨다 — 출력 타깃도 처음 켜질 때까지 만들지 않는다(블룸 · 외곽선 · 피사계 심도 · 모션 블러 · TAA. TAA 출력은 셋업이 기록 형식으로 읽어 늘 만든다).
          * @details 원본을 복사하거나 셰이더가 원본을 고르던 길은 꺼져 있어도 전 화면을 한 번 읽고 쓰고, 출력 타깃이 늘 메모리를 차지했다.
-         *          뷰마다 프레임에 한 번 정한다(`FrameRenderer::applyViewPassSelection`).
+         *          뷰마다 프레임에 한 번 정한다(`FrameViewResources::applyViewPassSelection`).
          *          출력이 원본과 형식 · 크기가 같아야 하고 그 출력을 쓰는 패스가 하나뿐이어야 한다 — 로드가 검사한다(`RenderPipelineAsset::validate` 3-6).
          */
         static constexpr uint32 kBypassesToSource = SW_BIT( 17 );

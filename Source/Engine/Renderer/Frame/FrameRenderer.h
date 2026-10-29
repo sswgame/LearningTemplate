@@ -31,6 +31,7 @@
 #include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
+#include "Engine/Renderer/Frame/View/FrameViewResources.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
@@ -335,18 +336,6 @@ namespace sw
         void resetPassCbRing();
         /** @brief 주 시점의 트랜지언트 텍스처를 확보합니다. 크기는 출력 크기 × 사각형 × 해상도 배율이며, 출력 크기는 덮어쓴 크기가 있으면 그 값, 없으면 백버퍼입니다. */
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
-        /** @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기가 같으면 그대로 두고, 다시 만들었으면 true 입니다. */
-        bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height );
-        /** @brief 뷰 하나의 트랜지언트와 TAA 히스토리를 해제합니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseViewTransients( FrameViewTarget& view );
-        /**
-         * @brief 이 뷰가 이번 프레임에 기록할 풀스크린 패스를 고릅니다. 꺼진 효과는 출력이 원본을 가리키거나(`kBypassesToSource`) 없고(`kOmittedWhenOff`),
-         *        읽는 패스가 모두 빠진 풀스크린 패스(블룸이 꺼진 뷰의 BloomDownsample)도 빠집니다. 도는 패스의 출력 타깃은 처음이면 만듭니다.
-         * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 빠진 패스는 기록하지 않는다(`executeGenericFullscreenPass`). 타깃은 한 번 만들면 풀이 바뀔 때까지 둔다.
-         *          빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다(디버그 · 스크린샷용).
-         * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같으면 카메라 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
-         */
-        void applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj );
         /** @brief 추가 뷰 하나를 통째로 해제합니다. 트랜지언트, 컬링 상수 버퍼, 리스트, 빌린 렌더 텍스처가 해당합니다. */
         void releaseExtraView( FrameViewTarget& view );
         /**
@@ -379,18 +368,6 @@ namespace sw
         RenderView& activeCullInput() { return _pActiveView == &_mainView ? view( RenderViewType::Main ) : _pActiveView->_cullInput; }
         /** @brief 지금 그리는 뷰가 추가 뷰면 true 입니다. */
         bool isRenderingExtraView() const { return _pActiveView != &_mainView; }
-        /**
-         * @brief 뷰의 TAA 히스토리 텍스처를 **셋업 단계에서** 만들어 둡니다.
-         * @details 주의: TAA 패스 콜백은 병렬 기록에서 태스크 스레드가 실행하므로, 콜백 안에서 만들고 bindless 에 등록하면
-         *          다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다. 파이프라인이 TAA 를
-         *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 알 수 있다.
-         */
-        void ensureTAAHistory( FrameViewTarget& view );
-        /**
-         * @brief 뷰의 깊이 히스토리(R32 실수 RT · RW 텍스처)를 **셋업 단계에서** 풀 크기로 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 풀을 새로 만들었으니 지난 깊이는 없다.
-         * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
-         */
-        void ensureDepthHistory( FrameViewTarget& view );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /**
@@ -402,8 +379,6 @@ namespace sw
         void recordDepthHistory( FrameViewTarget& target );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
-        /** @brief 뷰의 가림 타일 버퍼를 **셋업 단계에서** 깊이 히스토리 크기에 맞춰 만들어 둡니다. 깊이 히스토리가 없으면(2D 파이프라인) 만들지 않습니다. */
-        void ensureOcclusionTiles( FrameViewTarget& view );
         /**
          * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
@@ -471,7 +446,7 @@ namespace sw
         RHIRenderPassLoadOp colorLoadFor( const hashed_string& name );
         /** @brief @p targetName 하나에 풀스크린 삼각형을 그립니다. 열지 못하면 아무것도 하지 않습니다. */
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
-        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`applyViewPassSelection`)는 기록하지 않습니다. */
+        /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */
         void executeGenericFullscreenPass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
         void executeForwardOpaquePass( const PassExecuteInput& input );
@@ -641,9 +616,6 @@ namespace sw
          */
         bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
                               RHIBufferHandle slotStream );
-        /** @brief 뷰의 풀에서 트랜지언트 텍스처를 할당합니다. */
-        void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
-                                uint32 resolutionDivisor = 1 );
         /** @brief 컬러(및 깊이) 패스를 시작합니다. 열지 못하면 false 를 반환하며, 그때는 그리지도 닫지도 않습니다(`beginColorPassMrt` 도 같습니다). */
         bool beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
@@ -786,6 +758,11 @@ namespace sw
          * @details `_psoManager` 를 참조로 쓰므로 그 뒤에 선언한다. 언리얼 `FSceneViewExtensions` 가 확장을 모으고 렌더러가 훅 자리마다 부르는 나눔과 같다.
          */
         FrameExtensionHost _extensionHost;
+        /**
+         * @brief 뷰(`FrameViewTarget`)의 GPU 자원 수명 — 트랜지언트 풀, TAA · 깊이 히스토리, 가림 타일, 프레임마다의 패스 고르기입니다.
+         * @details `_postProcess` 를 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
+         */
+        FrameViewResources _viewResources;
         RenderGraph        _graph;
         string             _pipelinePath;
         string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
@@ -852,8 +829,7 @@ namespace sw
         uint32 _disabledInputRoleMask;
         /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
         GPULightBuffer   _lightBuffer;
-        vector<float4x4> _listScratchGridViewProj;     ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
-        vector<uint8>    _listScratchNeededAttachment; ///< 뷰의 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(`applyViewPassSelection`, 뷰마다 다시 쓴다)
+        vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
