@@ -156,7 +156,7 @@ namespace sw
 {
     /**
      * @brief 반복 로드 곡선이 평평한지 가르는 기준입니다(`MemoryProfiler::judgeLeakCurve`).
-     * @details 기본값은 L2 측정(`docs/plans/LeakDetection.md` 4절 3번) 전의 잠정 값이고 L2 뒤에 확정합니다. 로더 · 로그 워커가 섞이는 잡음을 견디도록
+     * @details 기본값은 L2 측정 전의 잠정 값이고 L2 뒤에 확정합니다. 로더 · 로그 워커가 섞이는 잡음을 견디도록
      *          0 이 아니라 작은 허용치를 둡니다 — 진짜 누수는 회차마다 같은 양이 남아 이 허용치보다 훨씬 가파르다.
      */
     struct LeakCurveCriteria

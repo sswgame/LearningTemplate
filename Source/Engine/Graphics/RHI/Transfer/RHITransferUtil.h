@@ -1,6 +1,6 @@
 /**
  * @file RHITransferUtil.h
- * @brief 전송(업로드 · 되읽기)의 동기 변형입니다. 제출한 뒤 `pollTransfer` 를 되풀이하며 기다립니다(docs/plans/RHIAsyncUploads.md 2.2).
+ * @brief 전송(업로드 · 되읽기)의 동기 변형입니다. 제출한 뒤 `pollTransfer` 를 되풀이하며 기다립니다.
  * @details 백엔드가 아니라 Engine 코드라 vtable 에 없다. 백엔드에 "기다리는 두 번째 경로"가 생기지 않는 것이 핵심이다.
  *          사용처는 테스트, 도구, 스크린샷, 에디터 캡처, 동기 텍스처 `acquire` 이다. **RT 프레임 셋업 구간에서는 쓰지 않는다**(그 자리는 제출 → 다음 프레임 폴링).
  *          셋업 구간은 `ScopedForbidBlockingTransfer` 로 표시하고, 그 안에서 `...AndWait` 를 부르면 Debug 에서 단언이 걸린다.
@@ -111,7 +111,7 @@ namespace sw
         /**
          * @class ScopedForbidBlockingTransfer
          * @brief 이 스코프 안(이 스레드)에서 `...AndWait` 를 부르면 Debug 단언이 걸리게 합니다. RT 프레임 셋업 구간을 표시하는 데 씁니다.
-         * @details 셋업 구간에서 GPU 를 기다리면 프레임 히치가 된다(docs/plans/RHIAsyncUploads.md 2.1). 규칙을 주석이 아니라 코드로 두려는 것이다. 중첩할 수 있다.
+         * @details 셋업 구간에서 GPU 를 기다리면 프레임 히치가 된다. 규칙을 주석이 아니라 코드로 두려는 것이다. 중첩할 수 있다.
          */
         class SW_API ScopedForbidBlockingTransfer
         {

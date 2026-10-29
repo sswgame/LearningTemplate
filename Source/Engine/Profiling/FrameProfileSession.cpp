@@ -28,7 +28,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
     /**
      * @brief `-gv_profileSeconds=S`: 워밍업 뒤 S 초를 재고 보고한 다음 종료합니다. `-gv_profileFrames` 와 함께 주면 먼저 닿는 쪽이 끝냅니다.
-     * @details 장시간 실행(soak · `Scripts/qa/Soak.py`)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다.
+     * @details 장시간 실행(soak)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileSeconds, 0, "프레임 프로파일 측정 시간(초, 0=사용 안 함)" );
     /**
@@ -40,7 +40,7 @@ namespace sw
 #if SW_PROFILER_TRACE_ENABLED
     /**
      * @brief `-gv_profileTracePath=<경로>`: 측정 창(워밍업 뒤 ~ 보고) 전체를 트레이스로 저장합니다(비면 끄기).
-     * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다(`Scripts/qa/PerfRegression.py`).
+     * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다.
      *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 측정하는 판에는 켜지 않습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
@@ -167,7 +167,6 @@ namespace sw
 
     void FrameProfileSession::reportHitches() const
     {
-        // 줄 모양은 `Scripts/qa/Load.py` 가 읽는다 — 바꾸면 그 정규식도 고친다.
         SW_LOG_INFO( "[Profile] hitch  worst %# %# %# %# %# us  over16ms %#  over33ms %#  over100ms %#", _arrWorstFrameMicro[0], _arrWorstFrameMicro[1], _arrWorstFrameMicro[2],
                      _arrWorstFrameMicro[3], _arrWorstFrameMicro[4], _arrHitchCount[0], _arrHitchCount[1], _arrHitchCount[2] );
         // VSync 를 켠 실행이면 중앙 간격이 화면 주기라 over1.5x 가 주기를 하나 이상 놓친 프레임 수다.

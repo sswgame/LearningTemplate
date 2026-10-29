@@ -16,8 +16,7 @@
 
 namespace sw
 {
-    // 시나리오를 띄우는 쪽(`AppScenarioTest`, 스크립트 `py -3 -m Scripts scenario`)과 실행기가 나누는 글의 정본이다. 스크립트(`Scripts/common/ScenarioArguments.py`)가
-    // 이 아래 `inline constexpr const utf8* kXxx = "…";` 줄을 읽으므로 이름이나 줄 모양을 바꾸면 스크립트가 멈춘다. 명령줄 철자(`-scenario` · `-unattended` …)는
+    // 시나리오를 띄우는 쪽과 실행기가 나누는 글의 정본이다. 명령줄 철자(`-scenario` · `-unattended` …)는
     // `Core/Predefined/ArgumentList.xxx` 가 정본이다(`getCommandLineArgumentSpelling`).
     /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행과 CTest 모두 `Bin`). 시나리오의 산출물은 그 아래 `<시나리오 name>/<프로세스>/` 에 쌓인다 — 병렬 실행이 겹치지 않는다. */
     inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";
@@ -84,9 +83,9 @@ namespace sw
 
     /**
      * @struct AutomationLoad
-     * @brief 부하 시나리오의 부하 선언(루트 아래 `<Load>` 한 줄)입니다. 부하 검증(`py -3 -m Scripts load`)이 같은 줄로 App · 온라인 봇 · 루프백 클러스터를 돌린다.
-     * @details 엔진이 쓰는 값은 `_durationSeconds` 뿐이다 — 시나리오가 시작한 프레임에 그 시간만큼 프레임 측정 창(`gv_profileSeconds`)을 연다. 나머지는 실행기
-     *          (`Scripts/qa/Load.py`)가 명령줄로 옮긴다(메시 수 → `-gv_stressTestMeshes`, 회선 → `-gv_netEmulation*`). 형식을 한 곳에서 검사하려고 엔진도 읽는다.
+     * @brief 부하 시나리오의 부하 선언(루트 아래 `<Load>` 한 줄)입니다. 부하 검증이 같은 줄로 App · 온라인 봇 · 루프백 클러스터를 돌린다.
+     * @details 엔진이 쓰는 값은 `_durationSeconds` 뿐이다 — 시나리오가 시작한 프레임에 그 시간만큼 프레임 측정 창(`gv_profileSeconds`)을 연다. 나머지는 부하 실행기가
+     *          명령줄로 옮긴다(메시 수 → `-gv_stressTestMeshes`, 회선 → `-gv_netEmulation*`). 형식을 한 곳에서 검사하려고 엔진도 읽는다.
      */
     struct AutomationLoad
     {

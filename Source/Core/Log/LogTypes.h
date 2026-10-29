@@ -39,7 +39,7 @@ namespace sw
 
     /**
      * @brief 텍스트 로그 줄에서 id 가 든 줄의 본문 앞에 붙는 꼬리표 `[id:영역.사건] ` 의 모양입니다.
-     * @details 쓰는 쪽(`AsyncLogSink`)과 읽는 쪽(자식 프로세스 출력만 보는 `AppScenarioTest` 의 로그 게이트)이 같은 정의를 쓴다.
+     * @details 쓰는 쪽(`AsyncLogSink`)과 읽는 쪽(자식 프로세스 출력만 보는 시나리오 백엔드 행렬 `AutomationBackendMatrix`)이 같은 정의를 쓴다.
      */
     struct LogIDTag
     {

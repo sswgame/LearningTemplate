@@ -42,7 +42,7 @@ SW_REFLECT_BUILTIN_TYPE( atomic_bool, sw::atomic<bool>, none, sw, atomic<bool>, 
 SW_REFLECT_BUILTIN_TYPE( TagID, sw::TagID, none, sw, _ )
 
 // -----------------------------------------------------------------------------
-// 저장 전용 압축 타입(docs/plans/PackedTypes.md P3)
+// 저장 전용 압축 타입
 // C++ 타입 칸에는 별칭(`sw::unorm8x4`)을 적습니다. 템플릿 이름(`NormalizedVector<unorm8, 4>`)의 쉼표가 매크로 인자를 나눕니다.
 // 줄을 더하면 `Core/Math/PackedValueTraits.h` 에 특수화가 있어야 합니다(없으면 SerializeContext 가 컴파일되지 않습니다).
 // 새 타입 줄은 이 묶음 뒤에 더합니다. UIBindingValue 가 숫자 줄(int8 .. float64)이 이어져 있다고 가정하므로 그 사이에 끼우지 않습니다.

@@ -1,6 +1,6 @@
 /**
  * @file HpackHuffmanTable.h
- * @brief RFC 7541 부록 B 의 허프만 부호표입니다. 생성 파일 — Scripts/generate/GenerateHpackHuffman.py 가 RFC 본문에서 읽어 썼으므로 손으로 고치지 않는다.
+ * @brief RFC 7541 부록 B 의 허프만 부호표입니다. RFC 본문에서 기계로 옮긴 표라 손으로 고치지 않는다(RFC 가 바뀌지 않는다).
  * @details 기호 0 ~ 255 는 바이트, 256 은 EOS 다. 부호는 오른쪽 맞춤이고 비트 수가 길이다.
  */
 #pragma once

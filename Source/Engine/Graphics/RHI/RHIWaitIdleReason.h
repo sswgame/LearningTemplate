@@ -1,6 +1,6 @@
 /**
  * @file RHIWaitIdleReason.h
- * @brief `IRHIDevice::waitIdle` · `RenderThread::waitIdle` 를 부르는 이유입니다(docs/plans/RHIAsyncUploads.md U14).
+ * @brief `IRHIDevice::waitIdle` · `RenderThread::waitIdle` 를 부르는 이유입니다.
  * @details 호출이 GPU 와 렌더 스레드를 통째로 기다리므로 프레임 경로에 새로 생기면 히치가 된다. 이유를 필수 인자로 두면 호출처가 "왜 기다리는가" 를 이름으로 적어야 하고,
  *          프레임 경로 폴더(`Renderer/Frame/`, `Graphics/Material/`, `Graphics/Texture/` 의 핫 리로드가 아닌 함수)에서 `Tool` 이 아닌 이유의 호출을 찾아내기 쉽다.
  */

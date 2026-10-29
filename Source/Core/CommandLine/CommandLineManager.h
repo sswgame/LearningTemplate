@@ -34,8 +34,7 @@ namespace sw
 
     /**
      * @brief 표준 인자의 명령줄 철자(`ArgumentList.xxx` 줄의 첫 철자, 앞의 `-` 없이)입니다 — 열거값 순서의 표입니다.
-     * @details 인자 글을 코드에서 만들어야 하는 쪽(테스트가 App 을 띄울 때)이 철자를 다시 적지 않게 한다. 정본은 `ArgumentList.xxx` 한 곳이고
-     *          스크립트(`Scripts/common/ScenarioArguments.py`)도 같은 파일을 읽는다.
+     * @details 인자 글을 코드에서 만들어야 하는 쪽(테스트가 App 을 띄울 때)이 철자를 다시 적지 않게 한다. 정본은 `ArgumentList.xxx` 한 곳이다.
      */
     inline constexpr const utf8* kArrCommandLineArgumentSpelling[] = {
 /** @brief 줄의 철자 목록(`...`)에서 첫 철자만 고릅니다. 철자가 하나뿐인 줄에서도 가변 인자가 비지 않게 뒤에 nullptr 를 붙여 부릅니다. */

@@ -11,7 +11,7 @@
  *            바꾸지 못하게 합니다(같은 입력은 어느 플랫폼에서나 같은 비트).
  *          - 크기 · 정렬은 `static_assert` 가 못 박습니다(패딩 없음 — CPU · GPU 구조체 미러용). 묶음의 정렬은 성분 하나의 정렬이라 `unorm8x4` 는 1 바이트
  *            정렬이고, GPU 가 4 바이트 정렬을 요구하는 자리는 쓰는 구조체가 맞춥니다.
- *          - 어디에 쓰는지, 무엇을 쓰면 안 되는지는 `docs/plans/PackedTypes.md` 의 규칙을 따릅니다. 상용 엔진의 대응: 언리얼 `FColor` · `FPackedNormal`, 유니티 `UNorm8` ·
+ *          - 상용 엔진의 대응: 언리얼 `FColor` · `FPackedNormal`, 유니티 `UNorm8` ·
  *            `SNorm16` 정점 속성 형식.
  */
 #pragma once

@@ -169,7 +169,7 @@ namespace sw
         virtual RHIFormat getTextureFormat( RHITextureHandle texture ) const = 0;
 
         // ------------------------------------------------------------------------------
-        // 전송: 제출 → 티켓 → 폴링 (docs/plans/RHIAsyncUploads.md 2.2)
+        // 전송: 제출 → 티켓 → 폴링
         // ------------------------------------------------------------------------------
         // 규칙: 이 인터페이스에는 GPU 완료를 기다리는 가상 함수를 새로 만들지 않는다. 기다리는 변형은 Engine 의 `RHITransferUtil::...AndWait` 헬퍼이고
         //       vtable 밖에 있다. 소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에야 텍스처를 bindless 에 등록한다 — 백엔드가 레코드의 마지막 전송 시리얼로

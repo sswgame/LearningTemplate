@@ -1,8 +1,8 @@
 /**
  * @file ReflectionAnnotationKeys.h
- * @brief 리플렉션 어노테이션 인자 키를 편집기에 알리는 선언입니다. **생성 파일 — 고치지 마십시오.**
- * @details `Scripts/generate/GenerateReflectionAnnotationKeys.py` 가 `AnnotationMeta.txt`(키와 철자), `ReflectUnits.h`(단위),
- *          `PredefinedContainerKind.xxx`(컨테이너 종류)에서 만듭니다. 키를 더하려면 그 파일들을 고치고 스크립트를 다시 실행합니다.
+ * @brief 리플렉션 어노테이션 인자 키를 편집기에 알리는 선언입니다.
+ * @details `AnnotationMeta.txt`(키와 철자), `ReflectUnits.h`(단위), `PredefinedContainerKind.xxx`(컨테이너 종류)를 옮긴 것이다. 만들던 생성기는 지웠다(3edb95697) —
+ *          키를 더하면 이 파일도 손으로 맞춘다(IDE 의 자동 완성만 영향을 받는다).
  *          편집기에서만 include 됩니다(`ReflectionIntellisense.h`). 빌드와 ReflectionParser 는 이 파일을 읽지 않습니다.
  */
 #pragma once

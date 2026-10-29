@@ -55,7 +55,7 @@ namespace sw
                 return false;
             }
 
-            const PFN_GetModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetModuleAbiStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
+            const PFN_GetModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pStampSymbol ) );
             if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kModuleABIStamp ) == false )
             {
                 SW_LOG_ERROR( "The %# module ABI stamp differs (expected '%#') - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIStamp );

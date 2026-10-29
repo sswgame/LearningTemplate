@@ -3,7 +3,7 @@
  * @brief 기본 PBR 머티리얼 셰이더 — 정점 색 × 머티리얼 색 × 알베도 텍스처를 금속도 · 거칠기 PBR 로 비춘다.
  * @details 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 훅만 정의한다.
  *          정점 변형 · 그림자 · 깊이 패스 · G버퍼 서명 · 보기 모드 · 반투명 알파는 뼈대가 한다.
- *          조명 훅은 포워드 림 라이트를 더하려고 직접 정의한다(디퍼드 조명 패스는 같은 림을 다른 식으로 더한다 — docs/plans/MaterialShaderHooks.md H7).
+ *          조명 훅은 포워드 림 라이트를 더하려고 직접 정의한다(디퍼드 조명 패스는 같은 림을 다른 식으로 더한다).
  *          머티리얼 define: `MATERIAL_WORLD_UV`(월드 좌표 트라이플래너 UV — 블록아웃용) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 blendMode 와 짝).
  *          알파 컷오프는 이 셰이더에 없다(`MATERIAL_ALPHA_CUTOFF` 는 `#error`) — 컷오프 프로퍼티가 필요하면 머티리얼 구조체에 더하고 표면 훅이 채운다.
  */

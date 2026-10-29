@@ -1,7 +1,7 @@
 /**
  * @file ReloadOutcome.h
  * @brief 바뀐 파일 하나를 다시 읽은 결과 세 값입니다(핫 리로드). "맡은 파일이 아님"이 정상 결과로 따로 있어 `(void)` 로 버릴 이유가 없습니다.
- * @details 있을 수도 없을 수도 있는 파일을 처음 읽는 결과는 `ConfigReadResult`(Loaded · Missing · Invalid)다(docs/plans/DataDriven.md 7.3).
+ * @details 있을 수도 없을 수도 있는 파일을 처음 읽는 결과는 `ConfigReadResult`(Loaded · Missing · Invalid)다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

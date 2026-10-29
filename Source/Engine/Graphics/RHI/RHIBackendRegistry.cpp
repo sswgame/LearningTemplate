@@ -164,7 +164,7 @@ namespace sw
             return false;
         }
 
-        PFN_GetRHIModuleAbiStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleAbiStamp>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
+        PFN_GetRHIModuleABIStamp pfnStamp = reinterpret_cast<PFN_GetRHIModuleABIStamp>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIStamp" ) );
         if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleABIStamp ) == false )
         {
             SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleABIStamp (%#; expected %#)", modulePath, kRHIModuleABIStamp );

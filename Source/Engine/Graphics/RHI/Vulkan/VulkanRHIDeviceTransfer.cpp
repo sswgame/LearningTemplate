@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 
-// 텍스처 전송(docs/plans/RHIAsyncUploads.md 2.2, U6): 영속 매핑 스테이징 링, 제출 뒤에도 사는 전송 작업(커맨드 버퍼 + 펜스), 펜스 줄의 연속 구간 워터마크.
+// 텍스처 전송: 영속 매핑 스테이징 링, 제출 뒤에도 사는 전송 작업(커맨드 버퍼 + 펜스), 펜스 줄의 연속 구간 워터마크.
 // 전송은 그래픽스 큐 하나로 낸다 — 같은 큐라 큐 소유권 이전이 없고, 제출 순서와 배리어가 계약 3(앞선 프레임 뒤, 뒤의 프레임 앞)을 만든다.
 
 namespace sw

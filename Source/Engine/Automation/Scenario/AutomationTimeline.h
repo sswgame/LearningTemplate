@@ -49,7 +49,7 @@ namespace sw
     /**
      * @class AutomationTimeline
      * @brief 프레임마다 걸린 벽시계를 종류별로 더하고, 단계 앞 대기 가운데 가장 긴 것을 남깁니다(`AutomationRunner` 의 값 멤버).
-     * @details 같은 단계 목록을 가진 두 시나리오라도 프레임 비용은 백엔드 · 에디터 여부로 다르다 — 그래서 파일의 `<At>` 간격(정적 어림, `Scripts/qa/ScenarioWaitCost.py`)이 아니라 잰 값을 남긴다.
+     * @details 같은 단계 목록을 가진 두 시나리오라도 프레임 비용은 백엔드 · 에디터 여부로 다르다 — 그래서 파일의 `<At>` 간격(정적 어림)이 아니라 잰 값을 남긴다.
      *          `ScheduledWait` 와 `ConditionHold` 가 "단계 없이 기다린" 시간이고, 둘을 더한 것이 단계 앞 대기(`closeWait` 가 가장 긴 것을 남긴다).
      */
     class SW_API AutomationTimeline

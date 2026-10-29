@@ -34,7 +34,7 @@ namespace sw::editor
 
         /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";
-        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다. `Scripts/generate/GenerateEditorIcons.py` 가 만듭니다. */
+        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`EditorIconGlyphs.h` 와 짝). */
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
 
         /**

@@ -41,7 +41,7 @@ namespace sw
 
         /**
          * @brief 두 프로세스 확인이 로그를 맞대는 사건 줄입니다: `[PairedAnimationNet] side=<server|client> event=<start|join|end|restore> session=<번호> anchor=<앵커 시각 초>`.
-         * @details 줄 형식의 정본은 이 함수이고 `Scripts/common/PairedAnimationNetLog.py` 가 읽는다. `start` 는 서버가 새 세션을 모두에게 보냈고, `join` 은 늦게 붙은 연결에 재생 중인 세션을
+         * @details 줄 형식의 정본은 이 함수다. `start` 는 서버가 새 세션을 모두에게 보냈고, `join` 은 늦게 붙은 연결에 재생 중인 세션을
          *          보냈고, `end` 는 끝 메시지(서버가 보냈다 · 클라이언트가 받았다), `restore` 는 클라이언트가 상태를 이어 받았다. 끝 줄의 앵커 시각은 뜻이 없어 0 이다.
          */
         string formatEventLine( const utf8* pSide, const utf8* pEvent, uint32 sessionID, float32 anchorTime )

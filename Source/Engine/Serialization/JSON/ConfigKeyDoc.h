@@ -1,14 +1,7 @@
 /**
  * @file ConfigKeyDoc.h
- * @brief 손으로 읽는 설정 JSON 의 키 표입니다 — 읽기 코드는 이 표로 모르는 키를 거르고, 문서 생성기(`Scripts/common/ConfigReference.py`)는 같은 표로
- *        칸 표를 만듭니다. 키가 두 곳(검사 목록 · 문서)에 적히지 않게 합니다.
- * @details 표는 반드시 이 모양으로 적습니다(생성기가 이 모양만 읽는다):
- *          @code
- *          static constexpr ConfigKeyDoc kArrXxxKeyDoc[] = {
- *              { "key", "type", "default", "설명 — 중괄호를 쓰지 않는다" },
- *          };
- *          @endcode
- *          표 바로 위의 `@brief` 문서 주석이 그 절의 설명입니다. 리플렉션 구조체로 읽는 설정은 이것을 쓰지 않습니다(칸 표가 PROPERTY 에서 나온다).
+ * @brief 손으로 읽는 설정 JSON 의 키 표입니다 — 읽기 코드는 이 표로 모르는 키를 거르고, 키마다 형식 · 기본값 · 설명을 같은 줄에 둡니다.
+ * @details 리플렉션 구조체로 읽는 설정은 이것을 쓰지 않습니다(칸 표가 PROPERTY 에서 나온다).
  */
 #pragma once
 #include "Core/Container/string.h"

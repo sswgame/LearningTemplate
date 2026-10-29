@@ -1,5 +1,5 @@
 {
-  "_comment": "빌드 시간에 끼는 캐시의 정본. cold_clear 는 콜드 측정(Scripts/dev/RunBuildBaseline.py 의 full)이 재기 전에 지우는 캐시다 — ninja clean 이 모르는 폴더라 지우지 않으면 두 번째 판부터 캐시가 찬 값이 나온다. keep 은 같은 모양으로 보이지만 지우면 안 되는 것과 그 이유다. base: build = 빌드 폴더(CMAKE_BINARY_DIR), source = 저장소(프로젝트) 루트. cmake/Engine/BuildLayout.cmake 가 lto_link_cache 의 경로를 여기서 읽고, common/BuildCaches.py 가 cold_clear 전부를 읽는다. 캐시를 새로 만들면 여기에 한 줄을 더한다.",
+  "_comment": "빌드 시간에 끼는 캐시의 정본. cold_clear 는 콜드 측정이 재기 전에 지우는 캐시다 — ninja clean 이 모르는 폴더라 지우지 않으면 두 번째 판부터 캐시가 찬 값이 나온다. keep 은 같은 모양으로 보이지만 지우면 안 되는 것과 그 이유다. base: build = 빌드 폴더(CMAKE_BINARY_DIR), source = 저장소(프로젝트) 루트. cmake/Engine/BuildLayout.cmake 가 lto_link_cache 의 경로를 여기서 읽고. 캐시를 새로 만들면 여기에 한 줄을 더한다.",
   "cold_clear": {
     "lto_link_cache": { "base": "build", "path": "LTOCache", "reason": "ThinLTO 링크 캐시(lld). 링크마다 비트코드 모듈의 코드 생성 결과를 재사용한다" },
     "cook_staging": { "base": "build", "path": "Cooked", "reason": "CookAssets 의 스테이징 폴더. ninja 출력이 아니라 clean 이 지우지 않는다" },

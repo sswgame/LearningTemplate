@@ -46,7 +46,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestSceneLoadPath=<리소스 경로>`: `gv_stressTestWatchFrame` 프레임에 이 씬을 비동기로 엽니다.
      * @details 워커가 파싱하고 오브젝트를 생성하는 동안과, 활성 씬을 바꾸는 프레임의 최악 시간을 측정합니다(`GT.Frame` 의 p99와 max). 로드 자체에 걸린 시간은
-     *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다(`Scripts/qa/SceneLoadBench.py`).
+     *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_stressTestSceneLoadPath, "", "감시 값 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
 

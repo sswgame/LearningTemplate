@@ -8,7 +8,7 @@
 맞으므로, 그 빌드의 모듈은 재시작 전까지 받지 않는 쪽이 안전합니다. 내용이 같으면 파일을 다시 쓰지 않아(재빌드를 부르지 않는다)
 Ninja 의 restat 이 그 뒤를 멈춥니다.
 
-사용법: py -3 Scripts/generate/EngineAbiStamp.py --root <repo> --out <path/EngineAbiStamp.gen.h>
+사용법: py -3 Scripts/generate/EngineABIStamp.py --root <repo> --out <path/EngineABIStamp.gen.h>
 """
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def computeStampInternal(repositoryRoot: Path) -> str:
 
 def makeHeaderTextInternal(stamp: str) -> str:
     return (
-        "// 생성 파일 - Scripts/generate/EngineAbiStamp.py. 고치지 마십시오.\n"
+        "// 생성 파일 - Scripts/generate/EngineABIStamp.py. 고치지 마십시오.\n"
         "// Core · Engine 헤더 내용의 지문입니다. Engine 과 모듈이 같은 값을 박고, 핫 리로드가 올리기 전에 대조합니다.\n"
         "#pragma once\n"
         "// 머리(swEngineABIStamp:)는 C++ 한 곳(Engine/Module/EngineABIStampMarker.h)이 정한다 — 생성기는 지문만 낸다.\n"
@@ -79,7 +79,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     text = makeHeaderTextInternal(computeStampInternal(Path(os.path.normpath(Path(args.root).absolute()))))
     # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
-    writeGeneratedFile(Path(args.out), text, tag="EngineAbiStamp", newline="\n", bReportUnchanged=False)
+    writeGeneratedFile(Path(args.out), text, tag="EngineABIStamp", newline="\n", bReportUnchanged=False)
     return ExitCode.Passed
 
 

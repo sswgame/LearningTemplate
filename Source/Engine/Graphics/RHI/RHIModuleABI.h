@@ -53,5 +53,5 @@ namespace sw
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)();
     using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
-    using PFN_GetRHIModuleAbiStamp   = const utf8* (*)();
+    using PFN_GetRHIModuleABIStamp   = const utf8* (*)();
 } // namespace sw

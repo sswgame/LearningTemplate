@@ -454,7 +454,6 @@ namespace sw
         }
 
         _bValid = true;
-        // 이 줄의 모양은 `Scripts/qa/SceneLoadBench.py` 가 읽는다 — 셀 수는 따로 적는다.
         SW_LOG_INFO( "Loaded '%#' (%# entities) from binary %#", _name, static_cast<uint32>( computeTotalEntityCount() ), absPath );
         if ( cellCount > 0 )
             SW_LOG_INFO( "Scene '%#' has %# streaming cells", _name, cellCount );

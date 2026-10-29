@@ -6,7 +6,7 @@
 
 /**
  * @brief [FrameProfileSessionTest] 측정 창은 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫는다
- * @details 장시간 실행(`Scripts/qa/Soak.py`)은 `-gv_profileSeconds` 로 끊는다. 시간 목표만 주면 프레임 목표 0 은 "기준 없음" 이어야 하고
+ * @details 장시간 실행(soak)은 `-gv_profileSeconds` 로 끊는다. 시간 목표만 주면 프레임 목표 0 은 "기준 없음" 이어야 하고
  *          (0 프레임에서 바로 닫히면 soak 이 워밍업 직후 끝난다), 둘 다 주면 먼저 닿는 쪽이 닫는다.
  */
 SW_TEST_CASE( FrameProfileSessionTest, MeasureWindowClosesOnTheFirstTargetReached )

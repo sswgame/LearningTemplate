@@ -1,9 +1,8 @@
 /**
  * @file EditorIconGlyphs.h
- * @brief 에디터 아이콘 폰트(`editor/fonts/sweditoricons.ttf`)의 글리프 문자열입니다. **생성 파일 — 고치지 마십시오.**
- * @details `Scripts/generate/GenerateEditorIcons.py` 가 같은 아이콘 목록에서 폰트와 이 헤더를 함께 만듭니다. 아이콘을 추가하려면
- *          `Scripts/common/EditorIconFont.py` 의 `kListIcon` 에 항목을 넣고 스크립트를 다시 실행합니다. 코드에서는 상수 이름으로만 쓰고
- *          바이트를 직접 쓰지 않습니다. 목록 순서가 코드포인트이기 때문입니다.
+ * @brief 에디터 아이콘 폰트(`editor/fonts/sweditoricons.ttf`)의 글리프 문자열입니다. 폰트와 이 헤더가 정본입니다.
+ * @details 둘을 만들던 생성기는 콘텐츠 제작 스크립트와 함께 지웠다(3edb95697) — 아이콘을 더하려면 그 커밋의 부모에서 `GenerateEditorIcons.py` ·
+ *          `EditorIconFont.py` 를 꺼내 돌린다. 코드에서는 상수 이름으로만 쓰고 바이트를 직접 쓰지 않습니다. 목록 순서가 코드포인트이기 때문입니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

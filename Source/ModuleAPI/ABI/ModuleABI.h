@@ -41,5 +41,5 @@ namespace sw
     inline constexpr auto kModuleABIStamp = "module-abi-v9-2026-10";
 
     using PFN_GetModuleAbiVersion = uint32 ( * )();
-    using PFN_GetModuleAbiStamp   = const utf8* (*)();
+    using PFN_GetModuleABIStamp   = const utf8* (*)();
 } // namespace sw

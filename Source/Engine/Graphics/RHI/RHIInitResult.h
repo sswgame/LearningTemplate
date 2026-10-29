@@ -11,7 +11,7 @@ namespace sw
 {
     /**
      * @brief RHI 초기화 결과입니다. 실패가 환경 탓(이 빌드나 드라이버에 없다)인지, 결함일 수 있는지를 가릅니다.
-     * @details `AppSmokeTest` 와 `Scripts/common/AppRun.py` 는 로그 문구가 아니라 이 값에서 나온 종료 코드(`kRHIUnusableHereExitCode`)로 해당 테스트를 건너뜁니다.
+     * @details 테스트 · 시나리오 실행은 로그 문구가 아니라 이 값에서 나온 종료 코드(`kRHIUnusableHereExitCode`)로 해당 백엔드를 건너뜁니다.
      */
     enum class RHIInitResult : uint8
     {

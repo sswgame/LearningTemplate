@@ -1,6 +1,6 @@
 /**
  * @file HpackStaticTable.h
- * @brief RFC 7541 부록 A 의 HPACK 정적 표입니다. 생성 파일 — Scripts/generate/GenerateHpackStatic.py 가 RFC 본문에서 읽어 썼으므로 손으로 고치지 않는다.
+ * @brief RFC 7541 부록 A 의 HPACK 정적 표입니다. RFC 본문에서 기계로 옮긴 표라 손으로 고치지 않는다(RFC 가 바뀌지 않는다).
  * @details 색인 1 부터 61 까지이며 배열 위치는 색인 - 1 이다.
  */
 #pragma once
