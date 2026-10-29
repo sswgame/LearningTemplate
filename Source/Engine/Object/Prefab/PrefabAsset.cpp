@@ -1726,7 +1726,7 @@ namespace sw
         }
 
         vector<string> listFile;
-        if ( FileUtil::collectFiles( sourceRoot, {}, listFile, true ) == false )
+        if ( AssetPaths::collectContentFiles( sourceRoot, {}, listFile ) == false )
         {
             SW_LOG_ERROR( "Prefab cook could not list '%#' - nothing is cooked", sourceRoot );
             ++outFailedCount;

@@ -30,6 +30,18 @@ namespace sw
     {
     public:
         /**
+         * @brief 실행이 쓰고 버리는 로컬 작업 도메인(`Content/scratch/`, .gitignore)입니다 — 시나리오 사본 · 편집기 테스트가 쓴다. 콘텐츠가 아니다.
+         * @details 쿠킹 · 팩은 이 도메인을 훑지 않는다 — 남은 찌꺼기 하나가 배포 빌드의 쿠킹을 멈췄다. 이름은 여기 하나다(`AutomationScratch` 가 이것을 가리킨다).
+         */
+        static constexpr const utf8* kScratchDomain = "scratch";
+
+        /**
+         * @brief 콘텐츠 뿌리 @p contentRoot 아래 확장자 @p extension(비면 모두)의 파일을 하위까지 모읍니다 — 작업 도메인(`kScratchDomain`)은 뺀다.
+         * @details 콘텐츠 전체를 훑는 쿠커 · 임포터는 `FileUtil::collectFiles` 대신 이것을 쓴다. 실패하면(목록을 끝까지 못 읽음) 이유를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile );
+
+        /**
          * @brief 작업 디렉터리에서 위로 올라가며 `Content/` 를 찾고, 도메인 루트와 검색 루트를 채웁니다.
          * @return 프로젝트 루트를 찾으면 true 입니다. 못 찾으면 false 를 반환하고 단언도 실패합니다.
          */

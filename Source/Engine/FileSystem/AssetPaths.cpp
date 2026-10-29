@@ -1034,4 +1034,14 @@ namespace sw
         return false;
     }
 
+    bool AssetPaths::collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile )
+    {
+        if ( FileUtil::collectFiles( contentRoot, extension, outListFile, true ) == false )
+            return false;
+        const string scratchPrefix = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( contentRoot ) ) + "/" + kScratchDomain + "/";
+        const auto   isScratch     = [&scratchPrefix]( const string& path )
+        { return StringUtil::startsWith( FileUtil::normalizeSeparators( path ), scratchPrefix, true ); };
+        outListFile.erase( std::remove_if( outListFile.begin(), outListFile.end(), isScratch ), outListFile.end() );
+        return true;
+    }
 } // namespace sw

@@ -10,6 +10,7 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/MissingComponent.h"
@@ -542,7 +543,7 @@ namespace sw
         }
 
         vector<string> listSceneFile;
-        if ( FileUtil::collectFiles( resourceRoot, ".xml", listSceneFile, true ) == false )
+        if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listSceneFile ) == false )
         {
             SW_LOG_ERROR( "Scene cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;

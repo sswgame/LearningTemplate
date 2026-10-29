@@ -14,6 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/FileSystem/AssetPaths.h"
+
 namespace sw
 {
     /** @brief 시나리오 하나가 쓰는 폴더의 원본과 사본입니다(`<Scratch from as>`). 둘 다 리소스 id 입니다. */
@@ -29,7 +31,7 @@ namespace sw
     /** @brief 시나리오 사본 폴더를 만듭니다. 상태가 없습니다. */
     struct SW_API AutomationScratch
     {
-        static constexpr const utf8* kScratchDomain = "scratch"; ///< 사본이 사는 도메인(`Content/scratch/`)
+        static constexpr const utf8* kScratchDomain = AssetPaths::kScratchDomain; ///< 사본이 사는 도메인(`Content/scratch/`)
 
         /** @brief `<Scratch>` 의 두 id 가 맞는 모양인지 봅니다(빈 값 · `..` · 사본이 `scratch/` 밖 · 원본이 `scratch/` 안이면 false 와 이유). */
         [[nodiscard]] static bool isValidFolder( const AutomationScratchFolder& folder, string& outReason );

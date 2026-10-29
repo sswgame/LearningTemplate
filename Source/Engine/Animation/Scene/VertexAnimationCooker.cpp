@@ -185,7 +185,7 @@ namespace sw
                                            uint32& outFailedCount )
     {
         vector<string> listFile;
-        if ( FileUtil::collectFiles( resourceRoot, ".xml", listFile, true ) == false )
+        if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
             SW_LOG_ERROR( "Vertex animation cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;

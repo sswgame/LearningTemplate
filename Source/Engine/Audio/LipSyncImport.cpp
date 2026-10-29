@@ -11,6 +11,7 @@
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw
 {
@@ -25,7 +26,7 @@ namespace sw
     uint32 LipSyncImport::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
     {
         vector<string> listFile;
-        if ( FileUtil::collectFiles( resourceRoot, "", listFile, true ) == false )
+        if ( AssetPaths::collectContentFiles( resourceRoot, "", listFile ) == false )
         {
             SW_LOG_ERROR( "Lip sync import could not list '%#' - nothing is imported", resourceRoot );
             ++outFailedCount;

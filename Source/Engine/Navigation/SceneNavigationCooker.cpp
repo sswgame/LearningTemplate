@@ -8,6 +8,7 @@
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
@@ -98,7 +99,7 @@ namespace sw
             return 0;
         }
         vector<string> listFile;
-        if ( FileUtil::collectFiles( resourceRoot, ".xml", listFile, true ) == false )
+        if ( AssetPaths::collectContentFiles( resourceRoot, ".xml", listFile ) == false )
         {
             SW_LOG_ERROR( "Scene navigation cook could not list '%#' - nothing is cooked", resourceRoot );
             ++outFailedCount;
