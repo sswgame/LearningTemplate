@@ -1,18 +1,24 @@
 /**
  * @file DebugHUD.h
- * @brief 런타임 디버그 오버레이 HUD 입니다(Dev 전용이며 Shipping 에는 없습니다). 게임 창, 에디터 게임 뷰, 모든 Dev 실행에서 런타임 UI 위에 그립니다.
+ * @brief 런타임 디버그 오버레이 HUD 입니다(개발 도구 `DevTools` — 배포 빌드는 짓지 않는다). 게임 창, 에디터 게임 뷰, 모든 Dev 실행에서 런타임 UI 위에 그립니다.
  */
 #pragma once
 #include "Core/Console/DebugHUDRegistry.h"
+#include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "DevTools/DevToolsAPI.h"
 
-    #include "Core/Foundation/Macros.h"
-    #include "Core/Foundation/Types.h"
-    #include "Core/Container/string.h"
-    #include "Core/String/hashed_string.h"
+#include "Engine/UI/Screen/UIScreen.h"
 
-    #include "Engine/UI/Screen/UIScreen.h"
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );               ///< 디버그 HUD 표시(사용자 설정 debug.hud).
+SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_debugHUDCorner );        ///< HUD 모서리입니다(0 왼쪽 위, 1 오른쪽 위, 2 왼쪽 아래, 3 오른쪽 아래).
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity );     ///< HUD 불투명도 0.2~1.
 
 namespace sw
 {
@@ -44,11 +50,13 @@ namespace sw
      *          - 꺼져 있으면 프레임 비용은 디버그 키 맵 액션 하나를 읽는 것뿐이다(할당 없음).
      *          - `kUsesFrameProfiler` 섹션이 보이는 동안 `FrameProfiler` 를 켜고, HUD 가 켠 것이면 감출 때 끈다.
      *
-     *          게임 스레드에서만 쓴다. `Engine` 가 UI 기동 단계에서 만들고 `UISystem::update` 앞에서 `update` 를 부른다.
+     *          게임 스레드에서만 쓴다. 개발 도구(`DevToolsHost`)가 기동 단계 서브시스템으로 더하고 씬 틱 뒤(`UISystem::update` 앞)에 `update` 를 부른다.
      */
-    class SW_API DebugHUD
+    class SW_DEVTOOLS_API DebugHUD final : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "DebugHUD";
         // 설정 스키마(Dev 기동이 엔진과 게임 스키마 뒤에 덧붙인다)와 섹션 체크 상자 창 문서는 엔진 기본 에셋 표가 기준이다
         // (`EngineDefaultAssets::_debugHUDSettingsSchema` · `_uiDebugHUD`, 창은 `UISystem::getEngineDocuments()._debugHUD`).
         /** @brief 디버그 키 입력 맵(`engine/input/default.input.xml`) Debug 레이어의 마스터 단축키 액션입니다(Ctrl+F3). */
@@ -59,18 +67,19 @@ namespace sw
         static constexpr float32 kMinOpacity = 0.2f;
         static constexpr float32 kMaxOpacity = 1.0f;
 
-        DebugHUD();
-        ~DebugHUD();
+        /**
+         * @brief UI 시스템과 설정 출처를 잇습니다. 개발 도구(`DevToolsHost`)가 UI 가 있는 기동 단계 범위에 더한다.
+         * @param pSettings 설정 매니저입니다(nullptr 이거나 HUD 스키마를 읽지 않았으면 전역 변수에 바로 씁니다).
+         */
+        DebugHUD( UISystem& ui, UserSettingsManager* pSettings );
+        ~DebugHUD() override;
         DebugHUD( const DebugHUD& )            = delete;
         DebugHUD& operator=( const DebugHUD& ) = delete;
 
-        /**
-         * @brief UI 시스템과 설정 출처를 연결하고, 명령과 감시 값이 찾는 컨트롤러로 등록합니다.
-         * @param pSettings 설정 매니저입니다(nullptr 이거나 HUD 스키마를 읽지 않았으면 전역 변수에 바로 씁니다. 테스트용).
-         */
-        void initialize( UISystem& ui, UserSettingsManager* pSettings );
-        /** @brief 화면과 창을 닫고 HUD 가 켠 프로파일러를 끕니다. */
-        void shutdown();
+        SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                    shutdownSubsystem() override { shutdown(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
         /**
          * @brief 프레임마다(`UISystem::update` 앞) 마스터 단축키, 켜짐 상태, HUD 화면 열기와 닫기, 프로파일러, 닫힌 창의 설정 확정을 순서대로 처리합니다.
          * @param pShellMap 디버그 키 입력 맵입니다(없으면 단축키를 보지 않습니다).
@@ -116,6 +125,8 @@ namespace sw
         static const utf8* getCornerName( DebugHUDCorner corner );
 
     private:
+        /** @brief 화면과 창을 닫고 HUD 가 켠 프로파일러를 끕니다. */
+        void shutdown();
         /** @brief 설정 @p settingID 에 @p value 를 쓰고 확정합니다. 스키마가 없으면 @p pVariableName 전역 변수에 바로 씁니다. */
         void writeSetting( const hashed_string& settingID, const utf8* pVariableName, string_view value );
         /** @brief 켜짐 상태와 HUD 화면을 맞춥니다. */
@@ -136,5 +147,3 @@ namespace sw
         [[maybe_unused]] uint8 _reserved              : 6;
     };
 } // namespace sw
-
-#endif

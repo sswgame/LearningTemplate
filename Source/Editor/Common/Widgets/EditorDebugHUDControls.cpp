@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "DevTools/DebugHUD/DebugHUD.h"
+
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -12,8 +14,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/UI/Debug/DebugHUD.h"
-#include "Engine/UI/UISystem.h"
 
 #include <imgui.h>
 
@@ -23,11 +23,10 @@ namespace sw::editor
 
     namespace
     {
-        /** @brief 게임 디버그 HUD 입니다 — 그것을 든 엔진 UI 서비스(`UISystem::getDebugHUD`)에서 찾는다. 없으면(Shipping · 테스트 호스트) nullptr 입니다. */
+        /** @brief 게임 디버그 HUD 입니다(개발 도구의 기동 단계 서브시스템). 없으면(UI 없는 실행 · 테스트 호스트) nullptr 입니다. */
         DebugHUD* findEditorDebugHUDControlsTarget()
         {
-            UISystem* pUI = editor::findSubsystem<UISystem>();
-            return pUI != nullptr ? pUI->getDebugHUD() : nullptr;
+            return editor::findSubsystem<DebugHUD>();
         }
     } // namespace
 

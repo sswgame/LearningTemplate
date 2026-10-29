@@ -9,7 +9,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorDebugHUDControls
-     * @brief HUD 의 켜짐 · 섹션 · 모서리 · 불투명도를 엔진 UI 서비스가 든 HUD(`UISystem::getDebugHUD`)에서 바로 고칩니다. 값은 엔진 사용자 설정(`debug.*`)에 남는다 —
+     * @brief HUD 의 켜짐 · 섹션 · 모서리 · 불투명도를 개발 도구의 HUD 서브시스템(`DebugHUD`)에서 바로 고칩니다. 값은 엔진 사용자 설정(`debug.*`)에 남는다 —
      *        에디터 환경설정 파일에 따로 적지 않는다(같은 값을 두 곳에 두지 않는다).
      * @details HUD 조종자가 없으면(Shipping · 테스트 호스트) 안내 한 줄만 그린다.
      */

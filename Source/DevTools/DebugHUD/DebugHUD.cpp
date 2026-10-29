@@ -1,34 +1,34 @@
 #include "pch.h"
 
-#include "Engine/UI/Debug/DebugHUD.h"
+#include "DevTools/DebugHUD/DebugHUD.h"
 
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Input/Map/InputMap.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/UISystem.h"
+#include "Engine/UI/Widgets/BorderPanel.h"
+#include "Engine/UI/Widgets/CheckBoxWidget.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UI/Widgets/UIBrush.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
-    #include "Core/Console/DevCommandRegistry.h"
-    #include "Core/Container/StringUtil.h"
-    #include "Core/Container/formatString.h"
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Math/MathUtil.h"
-    #include "Core/String/fixed_string.h"
-
-    #include "Engine/Automation/Watch/AutomationWatch.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Graphics/Canvas/CanvasPainter.h"
-    #include "Engine/Input/Map/InputMap.h"
-    #include "Engine/Profiling/FrameProfiler.h"
-    #include "Engine/UI/Layout/BoxPanel.h"
-    #include "Engine/UI/Layout/CanvasPanel.h"
-    #include "Engine/UI/UISystem.h"
-    #include "Engine/UI/Widgets/BorderPanel.h"
-    #include "Engine/UI/Widgets/CheckBoxWidget.h"
-    #include "Engine/UI/Widgets/TextWidget.h"
-    #include "Engine/UI/Widgets/UIBrush.h"
-    #include "Engine/UserSettings/UserSettingsManager.h"
-    #include "Engine/UserSettings/UserSettingsVariables.h"
-
+SW_GLOBAL_VARIABLE( bool, gv_debugHUD, false, "디버그 HUD 표시 — 개발 도구, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud)" );
+SW_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections, "", "디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections)" );
+SW_GLOBAL_VARIABLE( int32, gv_debugHUDCorner, 0, "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)" );
+SW_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity, 0.85f, "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)" );
 SW_TEST_GLOBAL_VARIABLE( sw::string, gv_debugHUDWatchSection, "", "자동화 감시 값 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름" );
 
 namespace sw
@@ -39,12 +39,8 @@ namespace sw
     {
         struct DebugHUDInternal
         {
-            /** @brief 엔진 UI 서비스가 든 HUD 입니다(`UISystem::getDebugHUD`). 개발 명령 `hud` 와 감시 값이 찾는다. 엔진 밖이거나 HUD 가 없으면 nullptr 입니다. */
-            static DebugHUD* findEngineHUD()
-            {
-                UISystem* pUI = engine::findSubsystem<UISystem>();
-                return pUI != nullptr ? pUI->getDebugHUD() : nullptr;
-            }
+            /** @brief 기동 단계 범위의 HUD 입니다. 개발 명령 `hud` 와 감시 값이 찾는다. 엔진 밖이거나 HUD 가 없으면(UI 없는 실행) nullptr 입니다. */
+            static DebugHUD* findEngineHUD() { return engine::findSubsystem<DebugHUD>(); }
 
             /** @brief 섹션 본문을 다시 부르는 간격(초)입니다. 언리얼 `stat` 처럼 읽을 수 있는 빠르기(4 Hz)이며, 켜짐이나 목록이 바뀌면 바로 부릅니다. */
             static constexpr float32 kRefreshSeconds = 0.25f;
@@ -636,9 +632,9 @@ namespace sw
 
 namespace sw
 {
-    DebugHUD::DebugHUD()
-        : _pUI{ nullptr }
-        , _pSettings{ nullptr }
+    DebugHUD::DebugHUD( UISystem& ui, UserSettingsManager* pSettings )
+        : _pUI{ &ui }
+        , _pSettings{ pSettings }
         , _toggleAction{ kToggleActionName }
         , _screen{ kInvalidUIScreenHandle }
         , _window{ kInvalidUIScreenHandle }
@@ -655,11 +651,11 @@ namespace sw
         shutdown();
     }
 
-    void DebugHUD::initialize( UISystem& ui, UserSettingsManager* pSettings )
+    span<const utf8* const> DebugHUD::getSubsystemDependencies() const
     {
-        shutdown();
-        _pUI       = &ui;
-        _pSettings = pSettings;
+        // UI 화면을 열고 설정을 쓴다 — 둘보다 먼저 내려가야 화면을 닫을 수 있다.
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UserSettingsManager::kSubsystemName };
+        return kArrDependency;
     }
 
     void DebugHUD::shutdown()
@@ -895,5 +891,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-#endif

@@ -105,7 +105,6 @@
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
-#include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -260,7 +259,7 @@ namespace sw
             startupSetup._bDedicatedServer = bDedicatedServer;
             startupSetup._bRenderer        = true;
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
-            // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
+            // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드 · 디버그 HUD)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
             if ( IEngineStartupExtension* const pExtension = locateSubsystem<IEngineStartupExtension>( pHostScope ) )
                 pExtension->addStartupSubsystems( _startup, startupParts );
             _listCodecSubscription = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
@@ -276,10 +275,6 @@ namespace sw
             _pRHISubsystem  = startupParts._pRHI;
             _pFrameRenderer = &startupParts._pFrameRendererSubsystem->getFrameRenderer();
             _pPacketBuilder = &startupParts._pFrameRendererSubsystem->getPacketBuilder();
-#endif
-#if SW_DEV_COMMANDS_ENABLED
-            // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
-            startupParts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
 #endif
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
@@ -609,12 +604,6 @@ namespace sw
     {
         if ( _pUISystem == nullptr || _pUISystem->isInitialized() == false )
             return;
-#if SW_DEV_COMMANDS_ENABLED
-        // 디버그 HUD — 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
-        DebugHUD* const pDebugHUD = _pUISystem->getDebugHUD();
-        if ( pDebugHUD != nullptr )
-            pDebugHUD->update( _debugKeyActions.getInputMap() );
-#endif
         // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
         const MainWindowSubsystem* const pWindowHost  = engine::findSubsystem<MainWindowSubsystem>();
         const IWindow* const             pMainWindow  = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;

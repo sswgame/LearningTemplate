@@ -7,12 +7,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "DevTools/DebugHUD/DebugHUD.h"
+
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/UI/Debug/DebugHUD.h"
 
 #include <imgui.h>
 

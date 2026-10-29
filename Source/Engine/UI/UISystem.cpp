@@ -30,7 +30,6 @@
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
-#include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -114,9 +113,6 @@ namespace sw
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
         , _textLayout{}
-#if SW_DEV_COMMANDS_ENABLED
-        , _debugHUD{}
-#endif
         , _scaleSettings{}
         , _subtitles{ *this }
         , _tooltips{ *this }
@@ -241,20 +237,11 @@ namespace sw
         // 모듈을 내리기 전에 그 모듈 타입의 화면을 닫는다(타입의 모듈 이름으로 고른다 — 코드 주소가 아니다).
         _moduleUnloadingSubscription = engine::getSubsystem<TypeRegistry>().subscribeModuleUnloading(
             TypeRegistry::ModuleUnloadingDelegate::create<&UISystem::onModuleUnloadingNotice>( this ) );
-#if SW_DEV_COMMANDS_ENABLED
-        _debugHUD = make_unique<DebugHUD>();
-        _debugHUD->initialize( *this, &userSettings );
-#endif
         return SubsystemInitResult::Succeeded;
     }
 
     void UISystem::shutdownSubsystem()
     {
-#if SW_DEV_COMMANDS_ENABLED
-        if ( _debugHUD != nullptr )
-            _debugHUD->shutdown();
-        _debugHUD.reset();
-#endif
         _moduleUnloadingSubscription.reset();
         _styleSheetCacheRegistration.reset();
         _documentCacheRegistration.reset();

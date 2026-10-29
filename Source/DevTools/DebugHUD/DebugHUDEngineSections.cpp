@@ -8,29 +8,26 @@
 
 #include "Core/Console/DebugHUDRegistry.h"
 #include "Core/Console/DebugHUDSectionFormat.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryTag.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Diagnostics/MemoryProfiler.h"
-    #include "Core/Math/MathUtil.h"
-    #include "Core/Memory/MemoryTag.h"
-
-    #include "Engine/Audio/AudioEngine.h"
-    #include "Engine/Audio/IAudioService.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Input/Devices/MouseDevice.h"
-    #include "Engine/Input/InputManager.h"
-    #include "Engine/Object/Component/CameraComponent.h"
-    #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-    #include "Engine/Physics/Component/ScenePhysics.h"
-    #include "Engine/Physics/IPhysicsScene.h"
-    #include "Engine/Profiling/FrameProfiler.h"
-    #include "Engine/Scene/Scene.h"
-    #include "Engine/Scene/SceneManager.h"
-    #include "Engine/Profiling/DebugOverlayState.h"
+#include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/IAudioService.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Input/Devices/MouseDevice.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Profiling/DebugOverlayState.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -277,5 +274,3 @@ namespace sw
     SW_DEBUG_HUD_SECTION( camera, "camera", "Camera", 80, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeCamera );
     SW_DEBUG_HUD_SECTION( overlay, "overlay", "Game values", 90, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeOverlay );
 } // namespace sw
-
-#endif

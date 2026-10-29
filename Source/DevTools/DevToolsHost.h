@@ -18,8 +18,8 @@ namespace sw
     /**
      * @class DevToolsHost
      * @brief 호스트(App · Server)가 자기 범위에 두는 개발 도구의 진입점입니다. 엔진은 이것을 모르고 두 확장점으로만 만난다.
-     * @details - 기동 확장(`IEngineStartupExtension`): 셰이더 라이브 리로드(`LiveShaderSubsystem` — 렌더러가 있을 때)와 설정 파일 리로드(`ConfigReloadSubsystem`)를 기동 단계 범위에 더한다.
-     *          - 프레임 관찰자(`IEngineFrameObserver`): 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
+     * @details - 기동 확장(`IEngineStartupExtension`): 셰이더 라이브 리로드(`LiveShaderSubsystem` — 렌더러가 있을 때)와 설정 파일 리로드(`ConfigReloadSubsystem`), 디버그 HUD(`DebugHUD` — UI 가 있을 때)를 기동 단계 범위에 더한다.
+     *          - 프레임 관찰자(`IEngineFrameObserver`): 씬 틱 뒤에 HUD 를 돌리고, 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
      *          언리얼의 개발 모듈(HotReload · DirectoryWatcher · ShaderCompiler 의 재컴파일)이 엔진 바깥에서 엔진 확장점에 붙는 모양과 같다. 게임 스레드에서만 쓴다.
      */
     class SW_DEVTOOLS_API DevToolsHost final : public ISubsystem, public IEngineStartupExtension, public IEngineFrameObserver
@@ -45,6 +45,7 @@ namespace sw
 
         // IEngineFrameObserver
         void                onFrameBegin( const EngineFrameContext& /*context*/ ) override {}
+        void                onAfterSceneTick( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& /*context*/ ) override { return kRunning; }
 

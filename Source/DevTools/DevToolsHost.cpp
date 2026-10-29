@@ -7,13 +7,16 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Shader/ShaderRecompiler.h"
 
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw
 {
@@ -37,6 +40,19 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             (void)startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
         }
+        // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
+        if ( parts._pUserSettings != nullptr )
+            parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
+        // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
+        if ( parts._pUISystem != nullptr )
+            (void)startup.addSubsystem( sw::make_unique<DebugHUD>( *parts._pUISystem, parts._pUserSettings ) );
+    }
+
+    void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        // 디버그 HUD — 씬 틱 뒤 · 런타임 UI 앞(HUD 화면이 UI 갱신의 틱에서 섹션을 부른다). 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다.
+        if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
+            pDebugHUD->update( _pEngine != nullptr ? _pEngine->getDebugKeyInputMap() : nullptr );
     }
 
     int32 DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
