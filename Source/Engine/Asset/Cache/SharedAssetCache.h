@@ -21,7 +21,7 @@
  *            (PrefabAsset.h).
  *          - `UITextAssetCache`: 문서 · 스타일 시트 캐시의 기반 클래스(final 아님)이고 메모리 글(`registerMemoryText`), 다시 읽기 알림 델리게이트, 파싱 횟수를
  *            인스턴스마다 가집니다. 실패를 남기지 않는 정책도 다릅니다(UITextAssetCache.h).
- *          - `AudioReloadCache` · `LocalizationReloadCache`: 표가 없는 어댑터입니다. 데이터는 `IAudioService` · `LocalizationManager` 가 가지고 이 캐시는
+ *          - `AudioReloadCache` · `LocalizationReloadCache`(개발 도구 `DevTools/AssetReload`): 표가 없는 어댑터입니다. 데이터는 `IAudioService` · `LocalizationManager` 가 가지고 이 캐시는
  *            바뀐 파일을 넘기기만 합니다(각 .cpp).
  */
 #pragma once

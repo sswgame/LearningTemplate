@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/FileSystem/AssetID.h"
 
@@ -16,7 +18,7 @@ namespace sw
      * @details 티어 규칙 때문에 Resource 에 둔다(`IAssetCache` 를 구현하며 `SpriteClipCache.h` 와 같은 위치다). `clear()` 는 아무것도 비우지 않는다.
      *          캐시 비우기(재초기화)가 화면의 텍스트를 지우면 안 되고, 텍스트의 수명은 매니저가 정하기 때문이다.
      */
-    class SW_API LocalizationReloadCache final : public IAssetCache
+    class SW_DEVTOOLS_API LocalizationReloadCache final : public IAssetCache
     {
     public:
         /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */

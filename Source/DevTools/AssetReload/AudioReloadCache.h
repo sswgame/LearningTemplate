@@ -6,6 +6,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Asset/Cache/IAssetCache.h"
 #include "Engine/FileSystem/AssetID.h"
 
@@ -17,7 +19,7 @@ namespace sw
      * @details 에디터의 핫 리로드 경로 표가 이 파일의 접미사(`.audiomixer.xml`, `.audioevents.xml`)를 "경로를 든 캐시가 읽는다" 경로로 돌리면 `isCached` 를 아는 이 캐시가 받는다.
      *          `clear()` 는 아무것도 비우지 않는다 — 캐시 비우기(재초기화)가 소리 데이터를 지우면 안 되고 수명은 서비스가 정한다.
      */
-    class SW_API AudioReloadCache final : public IAssetCache
+    class SW_DEVTOOLS_API AudioReloadCache final : public IAssetCache
     {
     public:
         /** @brief 조회가 없는 어댑터라 적중 · 실패를 세지 않습니다(`CacheTracking::uncounted`). */

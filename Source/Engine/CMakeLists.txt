@@ -35,13 +35,6 @@ endforeach()
 sw_getAllRHIBackendSources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 
-# 리로드 전용 어댑터 캐시(오디오 데이터 · 현지화)는 개발 도구다 — 바뀐 파일을 서비스에 넘기는 일만 한다. 이름으로 찾는 곳이 없어 빠져도 등록표가 비지 않는다.
-# 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
-# (셰이더 · 설정 리로드 · 파일 감시 분배기는 엔진 밖 `Source/DevTools` 다.)
-if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "Audio/AudioReloadCache\\.(cpp|h)$" "Localization/LocalizationReloadCache\\.(cpp|h)$")
-endif()
-
 # 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은
 # 엔진 프레임이 읽거나 기능이 등록하는 것이라 남는다.
 if(NOT SW_ENABLE_AUTOMATION)
