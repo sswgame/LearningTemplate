@@ -13,6 +13,7 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreen.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );               ///< 디버그 HUD 표시(사용자 설정 debug.hud).
@@ -80,6 +81,8 @@ namespace sw
         void                    shutdownSubsystem() override { shutdown(); }
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;
+        /** @brief UI 가 서는 호스트(클라이언트)에서만 선다 — UI 화면 위에 그린다. */
+        SubsystemHostMask getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /**
          * @brief 프레임마다(`UISystem::update` 앞) 마스터 단축키, 켜짐 상태, HUD 화면 열기와 닫기, 프로파일러, 닫힌 창의 설정 확정을 순서대로 처리합니다.
          * @param pShellMap 디버그 키 입력 맵입니다(없으면 단축키를 보지 않습니다).
