@@ -23,7 +23,6 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
@@ -43,9 +42,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ProcessMetrics.h"
-#include "Engine/DedicatedServer/ServerFrameHistory.h"
 #include "Engine/DedicatedServer/ServerServiceManager.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Core/Console/DevCommandRegistry.h"
@@ -85,30 +82,8 @@ namespace sw
             static constexpr uint32 kDroppedTickWarningInterval = 100;
             /** @brief 클라이언트 산출물에 없어야 할 표식(`BuildTargetImageTest`)입니다. 서버 실행 파일 자신도 서버 전용입니다. */
             static constexpr utf8 kArrServerImageMarker[] = "sw-server-only-module:Server";
-            /** @brief 운영 HTTP 에는 스크레이퍼와 감시자 몇 개만 붙으므로 연결 상한과 유휴 시한을 작게 잡습니다. */
-            static constexpr int32   kOpsMaxConnections     = 64;
-            static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
-            /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
-            static constexpr int64 kProcessSampleIntervalMs = 1000;
             /** @brief 관리 채널 연결이 이만큼(초) 말이 없으면 닫는다 - 열어 두고 잊은 연결이 쌓이지 않게. */
             static constexpr float64 kAdminIdleTimeoutSeconds = 300.0;
-            /** @brief 프레임 이력 덤프(`ServerApp::dumpFrameHistory`)가 놓이는 폴더 이름입니다. 로그 폴더(`Saved/Logs`) 옆에 둔다(`CrashReports` 묶음 폴더와 같은 자리). */
-            static constexpr const utf8* kServerReportsFolderName = "ServerReports";
-            /** @brief 느린 틱 덤프의 최소 간격입니다. 과부하 서버가 덤프 때문에 더 느려지지 않게 한다. */
-            static constexpr int64 kMinFrameDumpIntervalMs = 10000;
-            /** @brief 틱 사용률 경고의 최소 간격입니다(1 분에 한 번). */
-            static constexpr int64 kLoadWarningIntervalMs = 60000;
-
-            /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다(문맥 파일 버퍼 8KB 안에서 — 한 줄 70 바이트쯤). */
-            static constexpr uint32 kCrashTailTicks = 40;
-
-            /** @brief 크래시 핸들러가 부르는 글쓰기(`bindCrashExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
-            static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
-            {
-                const ServerFrameHistory* pHistory = static_cast<const ServerFrameHistory*>( pUser );
-                return pHistory != nullptr ? pHistory->writeCrashTail( pOutText, capacity, kCrashTailTicks ) : 0u;
-            }
-
             /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
             static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
 #if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
@@ -162,26 +137,12 @@ namespace sw
         , _moduleCatalog{}
         , _moduleResolution{}
         , _console{}
-        , _metricRegistry{ nullptr }
-        , _healthRegistry{ nullptr }
-        , _opsTransport{ nullptr }
-        , _opsEndpoint{ nullptr }
-        , _processMetrics{ nullptr }
+        , _observability{}
         , _serverServices{ nullptr }
         , _reloadStopsServices{}
         , _serverConfigPath{}
         , _serverServiceContext{}
         , _pServerConfig{ nullptr }
-        , _pTickHistogram{ nullptr }
-        , _pDroppedTickCounter{ nullptr }
-        , _pServiceConnectionGauge{ nullptr }
-        , _pTickUtilizationGauge{ nullptr }
-        , _frameHistory{ nullptr }
-        , _crashExtraTextSubscription{}
-        , _lastFrameDumpMs{ 0 }
-        , _loadWindowStartMs{ 0 }
-        , _loadWindowBusyNanoseconds{ 0 }
-        , _lastLoadWarningMs{ 0 }
         , _drainDeadlineMs{ 0 }
         , _tickCount{ 0 }
         , _startNanoseconds{ 0 }
@@ -191,7 +152,6 @@ namespace sw
         , _statusTickSampleCount{ 0 }
         , _droppedTickCount{ 0 }
         , _pendingStepCount{ 0 }
-        , _nextProcessSampleMs{ 0 }
         , _hostServices{}
         , _bReady{ SW_FALSE }
         , _bPaused{ SW_FALSE }
@@ -283,8 +243,8 @@ namespace sw
             SW_LOG_INFO( "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount );
         }
 #endif
-        _bReady            = SW_TRUE;
-        _loadWindowStartMs = ServerAppInternal::nowMonotonicMs();
+        _bReady = SW_TRUE;
+        _observability.beginLoadWindow( ServerAppInternal::nowMonotonicMs() );
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setClockNumber( LogClock::Tick, _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
@@ -357,7 +317,7 @@ namespace sw
         {
             case HostServiceID::Observability:
             {
-                return initializeObservability();
+                return _observability.initialize( *_pServerConfig, _startNanoseconds );
             }
             case HostServiceID::CrashReports:
             {
@@ -369,8 +329,8 @@ namespace sw
                 _serverServiceContext._serverConfigPath = _serverConfigPath;
                 _serverServiceContext._pServerConfig    = _pServerConfig;
                 _serverServiceContext._pConfigManager   = _engine.getConfigManager();
-                _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
-                _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
+                _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
+                _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
                 return _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
             }
             case HostServiceID::Game:
@@ -419,7 +379,7 @@ namespace sw
             case HostServiceID::Observability:
             {
                 // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
-                shutdownObservability();
+                _observability.shutdown();
                 return;
             }
             case HostServiceID::CrashReports:
@@ -469,68 +429,6 @@ namespace sw
         }
     }
 
-    bool ServerApp::initializeObservability()
-    {
-        _metricRegistry      = make_unique<MetricRegistry>();
-        _healthRegistry      = make_unique<ServiceHealthRegistry>();
-        _pTickHistogram      = _metricRegistry->registerHistogram( "server_tick_seconds", "Dedicated server tick body duration", MetricRegistry::makeLatencyBounds() );
-        _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
-        _pServiceConnectionGauge =
-            _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
-        _pTickUtilizationGauge = _metricRegistry->registerGauge( "server_tick_utilization_ratio", "Tick body time divided by wall time over the last second (1.0 = no idle time left)" );
-        _frameHistory          = make_unique<ServerFrameHistory>();
-        _frameHistory->initialize( static_cast<uint32>( _pServerConfig->_frameHistoryTicks ) );
-        // 크래시 때 이력을 새 파일로 쓰지 않고, 크래시 핸들러가 문맥 파일을 쓰며 이 링 버퍼를 읽어 끝에 싣는다(풀기는 `shutdownObservability`).
-        if ( _frameHistory->getCapacity() > 0 )
-            _crashExtraTextSubscription = bindCrashExtraTextWriter( &ServerAppInternal::writeFrameCrashTail, _frameHistory.get() );
-        _processMetrics = make_unique<ProcessMetrics>();
-        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerMillisecond );
-        if ( _pServerConfig->_opsPort == 0 )
-            return true;
-        OpsHTTPEndpointConfig opsSettings;
-        if ( NetAddress::parse( _pServerConfig->_opsListenAddress, static_cast<uint16>( _pServerConfig->_opsPort ), opsSettings._bindAddress ) == false )
-        {
-            SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
-            return false;
-        }
-        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).
-        _opsTransport                  = StreamTransportFactory::createPlatformTransport();
-        if ( _opsTransport == nullptr )
-        {
-            SW_LOG_ERROR( "Ops HTTP endpoint needs a stream transport and this platform has none" );
-            return false;
-        }
-        StreamTransportConfig transportSettings;
-        transportSettings._ioThreadCount      = 1;
-        transportSettings._maxConnections     = ServerAppInternal::kOpsMaxConnections;
-        transportSettings._idleTimeoutSeconds = ServerAppInternal::kOpsIdleTimeoutSeconds;
-        _opsEndpoint                          = make_unique<OpsHTTPEndpoint>();
-        if ( _opsEndpoint->initialize( _opsTransport.get(), transportSettings, opsSettings, _metricRegistry.get(), _healthRegistry.get() ) == false )
-        {
-            _opsEndpoint.reset();
-            _opsTransport.reset();
-            return false; // 운영자가 켠 엔드포인트를 열지 못하면 서버를 시작하지 않는다. 감시자가 볼 수 없는 서버이기 때문이다.
-        }
-        return true;
-    }
-
-    void ServerApp::shutdownObservability()
-    {
-        if ( _opsEndpoint != nullptr )
-            _opsEndpoint->shutdown();
-        _opsEndpoint.reset();
-        _opsTransport.reset();
-        _processMetrics.reset();
-        _pTickHistogram          = nullptr;
-        _pDroppedTickCounter     = nullptr;
-        _pServiceConnectionGauge = nullptr;
-        _pTickUtilizationGauge   = nullptr;
-        _crashExtraTextSubscription.reset(); // 이력을 지우기 전에 푼다 — 크래시 경로가 지운 버퍼를 읽지 않게
-        _frameHistory.reset();
-        _healthRegistry.reset();
-        _metricRegistry.reset();
-    }
-
     bool ServerApp::startServerServices()
     {
         if ( _serverServices == nullptr )
@@ -562,85 +460,21 @@ namespace sw
         // 오류로 남겼다. 경고로 두면 같은 바이너리 폴더(Bin/Saved/Logs)를 쓰는 앞선 실행의 잔재가 이번 실행의 판정(시나리오의 처리 안 된 경고)을 바꾼다.
         if ( newCount > 0 )
             SW_LOG_INFO( "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
-        MetricGauge* pCrashGauge = _metricRegistry->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
+        MetricGauge* pCrashGauge = _observability.getMetricRegistry()->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
         if ( pCrashGauge != nullptr )
             pCrashGauge->set( static_cast<float64>( listReport.size() ) );
         return true;
     }
 
-    void ServerApp::onTickFinished( int64 tickNanoseconds, int64 monotonicMs )
+    int32 ServerApp::getServiceConnectionCount() const
     {
-        _loadWindowBusyNanoseconds += tickNanoseconds;
-        if ( _frameHistory == nullptr )
-            return;
-        ServerFrameSample sample;
-        sample._tick             = _tickCount;
-        sample._bodyMicroseconds = tickNanoseconds / constant::kNanosecondsPerMicrosecond;
-        sample._connectionCount  = _serverServices != nullptr ? static_cast<uint32>( _serverServices->getConnectionCount() ) : 0u;
-        sample._droppedTickTotal = _droppedTickCount;
-        _frameHistory->record( sample );
-        const int64 slowNanoseconds = static_cast<int64>( _pServerConfig->_slowTickDumpMs ) * constant::kNanosecondsPerMillisecond;
-        const bool  bSlowTick       = slowNanoseconds > 0 && tickNanoseconds >= slowNanoseconds;
-        const bool  bDumpDue        = monotonicMs - _lastFrameDumpMs >= ServerAppInternal::kMinFrameDumpIntervalMs;
-        if ( bSlowTick && bDumpDue )
-        {
-            _lastFrameDumpMs = monotonicMs;
-            dumpFrameHistory( "slow_tick" );
-        }
-    }
-
-    void ServerApp::dumpFrameHistory( const utf8* pReason )
-    {
-        if ( _frameHistory == nullptr || _frameHistory->getCount() == 0 )
-            return;
-        const string crashFolder = getCrashReportFolder();
-        if ( crashFolder.empty() )
-            return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
-        const string reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), ServerAppInternal::kServerReportsFolderName );
-        if ( FileUtil::ensureDirectoryExists( reportsFolder ) == false )
-            return; // 실패는 ensureDirectoryExists 가 남겼다
-        string          netStatsLine;
-        GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
-        if ( pNetSession != nullptr )
-            netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
-        string text;
-        _frameHistory->writeReport( text, pReason, CrashHandler::getSessionID(), netStatsLine );
-        string fileName{ "frames_" };
-        fileName.append( CrashHandler::getSessionID() ).append( "_tick" ).append( to_string( _tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
-        const string path = FileUtil::joinPath( reportsFolder, fileName );
-        if ( FileUtil::writeTextFile( path, text ) == false )
-        {
-            SW_LOG_WARNING( "Frame history could not be written to '%#'", path.c_str() );
-            return;
-        }
-        SW_LOG_INFO( "Frame history (%#) written to '%#' (%# ticks)", pReason, path.c_str(), _frameHistory->getCount() );
-    }
-
-    void ServerApp::updateLoad( int64 monotonicMs )
-    {
-        const int64 windowMs = monotonicMs - _loadWindowStartMs;
-        if ( windowMs <= 0 )
-            return;
-        const float64 utilization  = static_cast<float64>( _loadWindowBusyNanoseconds ) / ( static_cast<float64>( windowMs ) * static_cast<float64>( constant::kNanosecondsPerMillisecond ) );
-        _loadWindowStartMs         = monotonicMs;
-        _loadWindowBusyNanoseconds = 0;
-        if ( _pTickUtilizationGauge != nullptr )
-            _pTickUtilizationGauge->set( utilization );
-        const float64 warnRatio   = static_cast<float64>( _pServerConfig->_tickLoadWarnPercent ) * 0.01;
-        const bool    bOverloaded = warnRatio > 0.0 && utilization > warnRatio;
-        const bool    bWarnDue    = monotonicMs - _lastLoadWarningMs >= ServerAppInternal::kLoadWarningIntervalMs;
-        if ( bOverloaded && bWarnDue )
-        {
-            _lastLoadWarningMs = monotonicMs;
-            SW_LOG_WARNING( "Server tick load is %# percent of the tick budget (warn above %# percent) - the server is close to falling behind", static_cast<int32>( utilization * 100.0 ),
-                            _pServerConfig->_tickLoadWarnPercent );
-        }
+        return _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
     }
 
     int32 ServerApp::countDrainBlockers() const
     {
         // 서비스 연결(로그인 · 채팅 …) + 게임 UDP 접속(복제 키트의 플레이어) + 키트가 끝내야 하는 진행 중인 일(매치 · 거래). 셋이 모두 0 이어야 조용히 내려갈 수 있다.
-        const int32           serviceConnections = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
+        const int32           serviceConnections = getServiceConnectionCount();
         const int32           openWork           = _serverServices != nullptr ? _serverServices->getOpenWorkCount() : 0;
         const GameNetSession* pNetSession        = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         const int32           gameConnections    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server ? pNetSession->getConnectedCount() : 0;
@@ -650,7 +484,7 @@ namespace sw
     void ServerApp::beginDrain( ShutdownCause cause, int64 monotonicMs )
     {
         _bDraining = SW_TRUE;
-        _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
+        _observability.getHealthRegistry()->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
         const bool  bWait  = ServerAppInternal::shouldDrainFor( cause );
         const int64 waitMs = bWait ? static_cast<int64>( _pServerConfig->_drainWaitSeconds ) * constant::kMillisecondsPerSecond : 0;
         _drainDeadlineMs   = monotonicMs + waitMs;
@@ -673,18 +507,6 @@ namespace sw
         if ( monotonicMs >= _drainDeadlineMs )
             return true;
         return countDrainBlockers() == 0;
-    }
-
-    void ServerApp::updateProcessMetrics( int64 monotonicMs )
-    {
-        if ( monotonicMs < _nextProcessSampleMs )
-            return;
-        _nextProcessSampleMs = monotonicMs + ServerAppInternal::kProcessSampleIntervalMs;
-        updateLoad( monotonicMs );
-        if ( _processMetrics != nullptr )
-            _processMetrics->update();
-        if ( _pServiceConnectionGauge != nullptr && _serverServices != nullptr )
-            _pServiceConnectionGauge->set( static_cast<float64>( _serverServices->getConnectionCount() ) );
     }
 
 #if !defined( SW_SHIPPING )
@@ -735,12 +557,12 @@ namespace sw
             // 서버 서비스는 게임 틱과 따로 돈다. 일시정지(Dev `pause`) 중에도 로그인이나 채팅 요청은 처리한다.
             if ( _serverServices != nullptr )
                 _serverServices->update( WallClock::nowUnixMilliseconds() );
-            updateProcessMetrics( ServerAppInternal::nowMonotonicMs() );
+            _observability.updateEverySecond( ServerAppInternal::nowMonotonicMs(), getServiceConnectionCount() );
 
             if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
             {
                 // 일시정지에서는 게임 틱만 멈춘다. 서버는 살아 있으므로 상태 확인 박동은 계속 보내(감시자가 재시작하지 않게 한다). 재개할 때 밀린 틱을 몰아서 돌지 않게 마감을 지금으로 바꾼다.
-                _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
+                _observability.markAlive( ServerAppInternal::nowMonotonicMs() );
                 MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + _tickNanoseconds );
                 deadline = MonotonicClock::nowNanoseconds();
                 continue;
@@ -749,19 +571,18 @@ namespace sw
             const int64 tickStart = MonotonicClock::nowNanoseconds();
             updateOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
-            _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
 #if SW_PROFILER_TRACE_ENABLED
             // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)는 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만 있다).
             ProfilerTraceExport::updateSlowFrameCapture( engine::getSubsystem<FrameProfiler>(), static_cast<uint64>( tickStart ),
                                                          static_cast<uint64>( tickStart + tickTime ), "Server" );
 #endif
-            _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
             _statusTickSumNanoseconds += tickTime;
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
             ++_tickCount;
             Logger::setClockNumber( LogClock::Tick, _tickCount );
-            onTickFinished( tickTime, ServerAppInternal::nowMonotonicMs() );
+            // 틱 지표 · 상태 박동 · 프레임 이력(O1) · 느린 틱 덤프 · 사용률 창(O5)은 관측이 든다.
+            _observability.recordTick( tickTime, _tickCount, getServiceConnectionCount(), _droppedTickCount, ServerAppInternal::nowMonotonicMs() );
 #if !defined( SW_SHIPPING )
             StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
@@ -789,7 +610,7 @@ namespace sw
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
                     SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / constant::kNanosecondsPerMicrosecond );
                 _droppedTickCount += dropped;
-                _pDroppedTickCounter->add( dropped );
+                _observability.addDroppedTicks( dropped );
                 deadline = now;
             }
             else if ( deadline > now )
@@ -900,7 +721,7 @@ namespace sw
         const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
         const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / constant::kNanosecondsPerMicrosecond : 0;
         const int32 serviceCount    = _serverServices != nullptr ? _serverServices->getRunningCount() : 0;
-        const int32 connectionCount = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
+        const int32 connectionCount = getServiceConnectionCount();
         uint64      residentBytes   = 0;
         uint64      peakBytes       = 0;
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
@@ -1002,7 +823,7 @@ namespace sw
         }
         if ( name == "status" )
         {
-            const int32 connectionCount = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
+            const int32 connectionCount = getServiceConnectionCount();
             outReply                    = "tick " + to_string( _tickCount ) + " connections " + to_string( connectionCount ) + " maintenance " + ( _bMaintenance == SW_TRUE ? "on" : "off" ) + " draining " +
                        ( _bDraining == SW_TRUE ? "yes" : "no" );
             return true;
@@ -1025,7 +846,7 @@ namespace sw
                 return false;
             }
             _bMaintenance = argument == "on" ? SW_TRUE : SW_FALSE;
-            _healthRegistry->setDraining( _bMaintenance == SW_TRUE ); // /readyz 503 이면 부하 분산기가 새 접속을 보내지 않는다. 이미 접속한 사람은 그대로다.
+            _observability.getHealthRegistry()->setDraining( _bMaintenance == SW_TRUE ); // /readyz 503 이면 부하 분산기가 새 접속을 보내지 않는다. 이미 접속한 사람은 그대로다.
             SW_LOG_INFO( "Admin channel: maintenance mode %#", _bMaintenance == SW_TRUE ? "on" : "off" );
             outReply = _bMaintenance == SW_TRUE ? "maintenance on" : "maintenance off";
             return true;

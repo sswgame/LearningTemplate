@@ -13,7 +13,7 @@
  *
  *          운영 관측을 위해 지표 레지스트리(`server_tick_seconds`, `server_dropped_ticks_total`)와 상태 확인(틱마다 박동하고, 종료 요청이 오면 비우는 중으로 바꾼다)을 항상 가진다.
  *          설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`, 기본 바인드는 `127.0.0.1`)를 연다.
- *          프로세스 지표(`process_resident_memory_bytes`, `server_service_connections`)는 초에 한 번 갱신한다.
+ *          프로세스 지표(`process_resident_memory_bytes`, `server_service_connections`)는 초에 한 번 갱신한다. 관측 전부는 협력 객체 `ServerObservability` 가 든다.
  *          게임 인스턴스를 만든 뒤 모듈이 올린 서버 서비스(`ServerServiceRegistry`, 예: 온라인 서비스 호스트)를 시작하고 서버 루프마다 돌린다. 서비스는 지표와 상태
  *          레지스트리를 `ServerServiceContext` 로 받는다. 서비스 코드는 모듈에 있으므로 모듈을 언로드하기 전(리로드, 종료)에 멈춘다.
  *          Dev 빌드에서는 `-gv_debugChannelPort` · `-gv_debugChannelToken` 으로 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행)을 열고, `-gv_stateHashHistory` 로 틱별 상태 해시를 남긴다(S3 · S7).
@@ -35,6 +35,8 @@
 
 #include "ModuleManager/ModuleReloadDriver.h"
 
+#include "Server/ServerObservability.h"
+
 namespace sw
 {
     class DevToolsHost;
@@ -49,17 +51,9 @@ namespace sw
     class DebugChannel;
     class DevConsole;
     class IStreamTransport;
-    class MetricCounter;
-    class MetricGauge;
-    class MetricHistogram;
-    class MetricRegistry;
     class GameModuleManager;
     class ModuleLoaderSubsystem;
-    class OpsHTTPEndpoint;
-    class ProcessMetrics;
-    class ServerFrameHistory;
     class ServerServiceManager;
-    class ServiceHealthRegistry;
 
     /**
      * @class ServerApp
@@ -92,13 +86,10 @@ namespace sw
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
         void stopHostService( HostServiceID id );
-        /** @brief 지표와 상태 레지스트리를 만들고, 설정이 켜면 운영 HTTP 엔드포인트를 엽니다. 켰는데 열지 못하면 false 를 반환합니다(기동 실패). */
-        [[nodiscard]] bool initializeObservability();
-        void               shutdownObservability();
+        /** @brief 서버 서비스 연결 수입니다(서비스가 없으면 0). 관측 · 드레인 · 상태가 읽는다. */
+        [[nodiscard]] int32 getServiceConnectionCount() const;
         /** @brief 레지스트리에 올라온 서버 서비스(온라인 서비스 호스트 등)를 시작합니다. 하나라도 실패하면 false 입니다(기동 실패). */
         [[nodiscard]] bool startServerServices();
-        /** @brief 프로세스 지표(메모리, 서비스 연결 수)를 초에 한 번 갱신합니다. */
-        void updateProcessMetrics( int64 monotonicMs );
         /**
          * @brief 지난 실행이 남긴 크래시 파일을 묶음 폴더(`Saved/CrashReports`)로 묶고 지표 `server_crash_reports` 에 남은 묶음 수를 적습니다.
          * @details 클라이언트의 `Telemetry` 기동 단계(동의는 플레이어 설정)를 서버는 돌지 않으므로 여기서 묶습니다. 동의는 `Local`(기계 안에만)입니다.
@@ -106,16 +97,6 @@ namespace sw
          *          묶음 `crash.txt` 끝에는 크래시 시점의 최근 틱 이력이 들어 있습니다(`ServerFrameHistory::writeCrashTail`). 설정이 틀리면 false 입니다.
          */
         [[nodiscard]] bool collectPreviousCrashes();
-        /**
-         * @brief 틱 하나를 끝낸 뒤 부릅니다(`_tickCount` 는 이미 올랐다). 프레임 이력(서버 운영 O1)에 남기고, 느린 틱이면 이력을 덤프하고, 틱 사용률 창(O5)에 더합니다.
-         * @param tickNanoseconds 틱 본문 시간
-         * @param monotonicMs 지금(단조 밀리초)
-         */
-        void onTickFinished( int64 tickNanoseconds, int64 monotonicMs );
-        /** @brief 프레임 이력과 메시지 종류별 누적 셈을 `Saved/ServerReports/frames_<세션>_<틱>_<까닭>.txt` 로 씁니다. 이력이 비었거나 폴더를 만들 수 없으면 경고만 남깁니다. */
-        void dumpFrameHistory( const utf8* pReason );
-        /** @brief 초마다 부릅니다 — 틱 사용률 지표 · 경고(O5)를 갱신합니다. */
-        void updateLoad( int64 monotonicMs );
         /** @brief 종료 요청이 처음 보였을 때 드레인(서버 운영 O3)을 시작합니다. `/readyz` 를 503 으로 바꾸고 접속이 빌 때까지의 기한을 정합니다. */
         void beginDrain( ShutdownCause cause, int64 monotonicMs );
         /** @brief 드레인이 기다리는 것의 수입니다 — 서비스 연결 + 게임 UDP 접속(O3) + 키트의 진행 중인 일(`IServerService::getOpenWorkCount`). 0 이면 조용히 내려갈 수 있다. */
@@ -166,41 +147,27 @@ namespace sw
         unique_ptr<IStreamTransport> _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
         unique_ptr<DebugChannel>     _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널(`gv_debugChannelPort` 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
 #endif
-        unique_ptr<IStreamTransport>      _adminTransport; ///< 관리 채널의 스트림 전송(채널을 종료한 뒤 지운다)
-        unique_ptr<DebugChannel>          _adminChannel;   ///< 관리 채널(`_adminChannelPort` 가 0 이 아닐 때만, 루프백 · 환경 변수 토큰 - 서버 운영 O4)
-        ModuleCatalog                     _moduleCatalog;
-        ModuleResolution                  _moduleResolution;
-        StandardInputCommands             _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
-        unique_ptr<MetricRegistry>        _metricRegistry;
-        unique_ptr<ServiceHealthRegistry> _healthRegistry;
-        unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓰므로 엔드포인트를 종료한 뒤 지운다).
-        unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
-        unique_ptr<ProcessMetrics>        _processMetrics;
-        unique_ptr<ServerServiceManager>  _serverServices;             ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
-        Subscription                      _reloadStopsServices;        ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
-        string                            _serverConfigPath;           ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
-        ServerServiceContext              _serverServiceContext;       ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
-        const ServerConfig*               _pServerConfig;              // ConfigManager 가 소유한다
-        MetricHistogram*                  _pTickHistogram;             ///< server_tick_seconds. 틱 본문 시간.
-        MetricCounter*                    _pDroppedTickCounter;        ///< server_dropped_ticks_total
-        MetricGauge*                      _pServiceConnectionGauge;    ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
-        MetricGauge*                      _pTickUtilizationGauge;      ///< server_tick_utilization_ratio. 최근 1 초 틱 본문 시간 ÷ 흐른 시간(O5)
-        unique_ptr<ServerFrameHistory>    _frameHistory;               ///< 최근 N 틱 기록(O1)
-        Subscription                      _crashExtraTextSubscription; ///< 크래시 문맥 파일에 `_frameHistory` 를 싣는 함수의 구독(이력보다 먼저 푼다)
-        int64                             _lastFrameDumpMs;            ///< 마지막 덤프의 단조 밀리초(느린 틱 덤프의 간격 제한)
-        int64                             _loadWindowStartMs;          ///< 틱 사용률 창의 시작
-        int64                             _loadWindowBusyNanoseconds;  ///< 창 안의 틱 본문 시간 합
-        int64                             _lastLoadWarningMs;          ///< 마지막 사용률 경고(1 분에 한 번)
-        int64                             _drainDeadlineMs;            ///< 드레인 기한(단조 밀리초)
-        uint64                            _tickCount;
-        int64                             _startNanoseconds;
-        int64                             _tickNanoseconds;          ///< 한 틱 주기
-        int64                             _statusTickSumNanoseconds; ///< 틱 본문 시간 합
-        int64                             _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
-        uint32                            _statusTickSampleCount;
-        uint32                            _droppedTickCount;    ///< 밀려 버린 틱 수(누적)
-        uint32                            _pendingStepCount;    ///< 일시정지 중 더 돌 틱 수(`step N`)
-        int64                             _nextProcessSampleMs; ///< 프로세스 지표를 다시 읽을 단조 밀리초
+        unique_ptr<IStreamTransport> _adminTransport; ///< 관리 채널의 스트림 전송(채널을 종료한 뒤 지운다)
+        unique_ptr<DebugChannel>     _adminChannel;   ///< 관리 채널(`_adminChannelPort` 가 0 이 아닐 때만, 루프백 · 환경 변수 토큰 - 서버 운영 O4)
+        ModuleCatalog                _moduleCatalog;
+        ModuleResolution             _moduleResolution;
+        StandardInputCommands        _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
+        /** @brief 운영 관측(지표 · 상태 · 운영 HTTP · 프레임 이력 · 틱 사용률)입니다. 호스트 서비스 `Observability` 가 세우고 내린다. */
+        ServerObservability              _observability;
+        unique_ptr<ServerServiceManager> _serverServices;       ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
+        Subscription                     _reloadStopsServices;  ///< 리로드 배치 직전에 서버 서비스를 멈추는 콜백(Dev, `onBeforeModuleReload`)
+        string                           _serverConfigPath;     ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
+        ServerServiceContext             _serverServiceContext; ///< 서버 서비스와 게임 · 키트 모듈이 받는 서버 문맥(호스트 범위에 빌려 건다 — `engine::findSubsystem<ServerServiceContext>()`)
+        const ServerConfig*              _pServerConfig;        // ConfigManager 가 소유한다
+        int64                            _drainDeadlineMs;      ///< 드레인 기한(단조 밀리초)
+        uint64                           _tickCount;
+        int64                            _startNanoseconds;
+        int64                            _tickNanoseconds;          ///< 한 틱 주기
+        int64                            _statusTickSumNanoseconds; ///< 틱 본문 시간 합
+        int64                            _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
+        uint32                           _statusTickSampleCount;
+        uint32                           _droppedTickCount; ///< 밀려 버린 틱 수(누적)
+        uint32                           _pendingStepCount; ///< 일시정지 중 더 돌 틱 수(`step N`)
         /**
          * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 표준 입력 · 개발 콘솔 · 디버그 채널)입니다.
          * @details 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
