@@ -20,6 +20,7 @@ namespace sw
     class IRHIDevice;
     class UIScreen;
     class UISystem;
+    class UIThemeController;
     class Widget;
 } // namespace sw
 
@@ -83,7 +84,7 @@ namespace sw::editor
         /** @brief 렌더 텍스처를 ImGui 텍스처로 등록합니다(핸들이 바뀌면 다시). */
         void syncTexture();
         void releaseTexture();
-        void drawToolbar( UISystem& ui );
+        void drawToolbar( const UIThemeController& themes );
         void drawLanguageCombo();
         void drawInteractionBar( UIScreen& screen );
         void drawAnimationBar( UIScreen& screen );

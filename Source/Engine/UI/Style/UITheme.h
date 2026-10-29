@@ -30,7 +30,7 @@ namespace sw
 {
     /**
      * @struct UIThemeCatalog
-     * @brief 선택할 수 있는 테마들과 기본 테마입니다(언리얼 Slate 스타일 세트, Godot Theme 에 해당). `UISystem::setTheme` 이 이름으로 고릅니다.
+     * @brief 선택할 수 있는 테마들과 기본 테마입니다(언리얼 Slate 스타일 세트, Godot Theme 에 해당). `UIThemeController::setTheme` 이 이름으로 고릅니다.
      */
     REFLECT()
     struct SW_API UIThemeCatalog

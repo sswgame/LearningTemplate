@@ -36,6 +36,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -405,7 +406,7 @@ namespace sw::editor
         ImGui::EndCombo();
     }
 
-    void UIPreviewPanel::drawToolbar( UISystem& ui )
+    void UIPreviewPanel::drawToolbar( const UIThemeController& themes )
     {
         const string previous = _model.getDocumentPath().get();
         if ( _model.getDocumentPath().drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
@@ -451,7 +452,7 @@ namespace sw::editor
         {
             if ( ImGui::Selectable( "(game theme)", chosenTheme.empty() ) )
                 _model.setTheme( hashed_string{} );
-            for ( const UIThemeDesc& theme : ui.getThemeCatalog()._listTheme )
+            for ( const UIThemeDesc& theme : themes.getCatalog()._listTheme )
             {
                 if ( ImGui::Selectable( theme._name.c_str(), theme._name == chosenTheme ) )
                     _model.setTheme( theme._name );
@@ -1126,7 +1127,7 @@ namespace sw::editor
             return;
         }
         _model.syncFocusedDocument( isDocumentDirty() );
-        drawToolbar( *pUI );
+        drawToolbar( editor::getSubsystem<UIThemeController>() );
         _model.syncPreview( *pUI ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
         _model.syncLanguage( *pUI );
         syncTexture();

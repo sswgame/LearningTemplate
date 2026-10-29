@@ -29,7 +29,6 @@
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenMarkers.h"
-#include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 #include "Engine/UI/World/UIWorldPointerRouter.h"
@@ -43,6 +42,7 @@ namespace sw
     class TextLayoutEngine;
     class UIDocumentCache;
     class UIStyleSheetCache;
+    class UIThemeController;
     class UserSettingsManager;
     class GameObjectManager;
     class WidgetComponent;
@@ -61,7 +61,7 @@ namespace sw
      * @details 언리얼의 `FSlateApplication` 과 CommonUI 의 `UCommonUIActionRouter` 에 해당한다.
      *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
      *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
-     *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 테마 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
+     *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
      *          문서 · 스타일 시트 캐시(서브시스템 `UIDocuments` · `UIStyleSheets`)의 다시 읽기 알림을 받으며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
      *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
@@ -182,20 +182,6 @@ namespace sw
         /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵, UI 맵, 지금 장치 종류). */
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
-        // --- 스타일과 테마 ---------------------------------------------------------------
-        /**
-         * @brief 선택할 수 있는 테마를 등록합니다(기동 단계 `UI`, `engine/ui/uithemes.xml`, 팩 설정 `_uiThemes`).
-         * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그 테마로, 없으면 목록의 기본 테마로 바꾼다. 그 뒤 설정이 바뀌면
-         *          `update` 가 따라간다(모르는 이름이면 경고하고 지금 테마를 유지한다).
-         */
-        void                  setThemeCatalog( const UIThemeCatalog& catalog );
-        const UIThemeCatalog& getThemeCatalog() const { return _theme.getCatalog(); }
-        /**
-         * @brief 테마를 선택합니다. 모든 화면의 스타일 시트를 테마 시트, 문서 시트 순서로 다시 적용하고 트리 전체를 다시 맞춥니다. 모르는 이름이면 false 입니다.
-         * @details 읽지 못한 시트는 오류를 남기고 제외한다(나머지 시트로 그린다).
-         */
-        [[nodiscard]] bool   setTheme( const hashed_string& name );
-        const hashed_string& getThemeName() const { return _theme.getThemeName(); }
         // --- 접근성(스크린 리더) -----------------------------------------------------------
         /**
          * @brief 플랫폼 접근성 브리지를 끼웁니다(호스트가 창을 만든 뒤. nullptr 로 빼며, 빼기 전에 브리지는 창에서 자기 훅을 풀어야 한다). 브리지는 이 시스템이 소유합니다.
@@ -397,6 +383,8 @@ namespace sw
         UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDesc> listBinding, vector<string> listStyleSheet );
         /** @brief 화면의 스타일 시트를 테마 @p themeName(빈 이름이면 지금 테마) 시트, 화면 시트 순서로 다시 적용하고 트리 전체를 다시 맞추게 합니다. */
         void rebuildStyleSet( UIScreen& screen, const hashed_string& themeName = hashed_string{} );
+        /** @brief 테마가 바뀐 알림(`UIThemeController::onThemeChanged`)입니다 — 모든 화면의 스타일 시트를 다시 적용합니다. */
+        void onThemeChanged();
         /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. */
         bool rebuildScreenFromDocument( UIScreen& screen );
         /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 등록합니다. 재생 중인 애니메이션과 트윈은 멈춥니다(기존 트리의 위젯 번호를 가리키기 때문입니다). */
@@ -424,8 +412,6 @@ namespace sw
         void updateAccessibilityFocus();
         /** @brief 이번 프레임의 마우스 이벤트 중 화면 위젯 아래가 아닌 것을 게임 카메라 광선으로 바꿔 World 위젯으로 보냅니다(`processInput`). */
         void processWorldPointer();
-        /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값이거나 테마 목록이 없으면 그대로 둡니다). */
-        void syncThemeSetting();
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /** @brief 닫기를 요청한 화면을 지웁니다. */
@@ -453,14 +439,15 @@ namespace sw
         Subscription                       _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
         Subscription                       _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독
         Subscription                       _moduleUnloadingSubscription;    ///< 모듈 내림 알림 구독(`initializeSubsystem` 이 걸고 `shutdownSubsystem` 이 놓는다)
-        UIThemeController                  _theme;
-        vector<string>                     _listReopenDocument;    ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
-        UIUpdateDelegate                   _onUpdateBeforeScreens; ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
-        UIUpdateDelegate                   _onUpdateAfterScreens;  ///< 화면 틱 뒤의 UI 서비스(알림)
-        UIActionGlyphSource                _actionGlyphs;          ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
-        UIInputRouter                      _input;                 ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        UIWorldPointerRouter               _worldPointer;          ///< World 위젯의 광선 입력 상태입니다.
-        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge;   ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
+        UIThemeController*                 _pThemes;                        ///< 테마(서브시스템 `UIThemes` — 기동이 찾는다)
+        Subscription                       _themeChangedSubscription;       ///< 테마가 바뀐 알림 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
+        vector<string>                     _listReopenDocument;             ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
+        UIUpdateDelegate                   _onUpdateBeforeScreens;          ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
+        UIUpdateDelegate                   _onUpdateAfterScreens;           ///< 화면 틱 뒤의 UI 서비스(알림)
+        UIActionGlyphSource                _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
+        UIInputRouter                      _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
+        UIWorldPointerRouter               _worldPointer;                   ///< World 위젯의 광선 입력 상태입니다.
+        unique_ptr<IUIAccessibilityBridge> _accessibilityBridge;            ///< 플랫폼 접근성 브리지입니다(호스트가 끼우며 없으면 nullptr).
         FontService*                       _pFontService;
         const LocalizationManager*         _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         UserSettingsManager*               _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).

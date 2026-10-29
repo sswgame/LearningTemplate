@@ -42,6 +42,7 @@
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
+#include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -101,7 +102,8 @@ namespace sw
         , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
         , _styleSheetReloadedSubscription{}
-        , _theme{}
+        , _pThemes{ nullptr }
+        , _themeChangedSubscription{}
         , _listReopenDocument{}
         , _onUpdateBeforeScreens{}
         , _onUpdateAfterScreens{}
@@ -153,6 +155,8 @@ namespace sw
         _pStyleSheetCache               = &engine::getSubsystem<UIStyleSheetCache>();
         _documentReloadedSubscription   = _pDocumentCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = _pStyleSheetCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
+        _pThemes                        = &engine::getSubsystem<UIThemeController>();
+        _themeChangedSubscription       = _pThemes->onThemeChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UISystem::onThemeChanged, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
         if ( _input.initialize( inputManager, assetID ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
@@ -183,6 +187,7 @@ namespace sw
         _listReopenDocument.clear();
         _documentReloadedSubscription.reset();
         _styleSheetReloadedSubscription.reset();
+        _themeChangedSubscription.reset();
         refreshActiveScreen();
         _input.shutdown();
         _paintState.releasePaintScratch(); // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다
@@ -194,7 +199,7 @@ namespace sw
     {
         static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
                                                           UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName,
-                                                          UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName };
+                                                          UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName, UIThemeController::kSubsystemName };
         return kArrDependency;
     }
 
@@ -217,11 +222,6 @@ namespace sw
         // UI 행동(일시정지 · 확인 · 뒤로 …)도 키 바인딩 설정의 대상이다 — 사용자 파일의 UI 키를 지금 넣고, 옵션 메뉴가 바꿀 수 있게 한다.
         if ( InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
             _uiKeyBindingRegistration = userSettings.addKeyBindingInputMap( *pUIInputMap );
-        // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
-        UIThemeCatalog themes{};
-        if ( themes.loadFromAsset( AssetID{ PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) } ) == false )
-            return SubsystemInitResult::Failed;
-        setThemeCatalog( themes );
         // 엔진 UI 문서(행 견본 · 확인 창 · 알림 · 자막 · 디버그 HUD)는 엔진 기본 에셋 표가 기준이다.
         // 엔진 기본 메뉴(옵션 · 일시정지) — 팩 설정이 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
         setEngineDocuments( UIEngineDocuments::makeFromDefaultAssets( defaultAssets ) );
@@ -241,6 +241,7 @@ namespace sw
         shutdown();
         _pDocumentCache   = nullptr;
         _pStyleSheetCache = nullptr;
+        _pThemes          = nullptr;
         setLocalization( nullptr );
         setUserSettings( nullptr );
     }
@@ -272,7 +273,7 @@ namespace sw
     {
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그리기 캐시, 그리기 목록, 텍스트 배치, 글리프 아틀라스가 프레임 안에서 커진다
         _viewport = viewport;
-        syncThemeSetting();
+        _pThemes->syncSetting(); // 사용자 설정의 테마를 따라간다 — 바뀌면 `onThemeChanged` 가 모든 화면을 다시 맞춘다
         syncScreenSwitches();
         reopenClosedScreens();
         _onUpdateBeforeScreens.broadcast( deltaSeconds ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
@@ -631,25 +632,8 @@ namespace sw
         }
     }
 
-    void UISystem::setThemeCatalog( const UIThemeCatalog& catalog )
+    void UISystem::onThemeChanged()
     {
-        _theme.setCatalog( catalog, gv_uiTheme );
-        // 사용자 설정(gv_uiTheme)의 테마가 목록에 있으면 그것을, 없으면 목록의 기본 테마를 쓴다. 테마를 두지 않은 게임 목록에서는 설정 값이 조용히 기본 테마가 된다.
-        const hashed_string settingTheme = _theme.findSettingTheme();
-        if ( settingTheme.empty() == false )
-        {
-            (void)setTheme( settingTheme );
-            return;
-        }
-        const hashed_string& defaultTheme = _theme.getCatalog()._defaultTheme;
-        if ( defaultTheme.empty() == false && setTheme( defaultTheme ) == false )
-            SW_LOG_ERROR( "[UI] Default UI theme '%#' is not in the theme catalog", defaultTheme.c_str() );
-    }
-
-    bool UISystem::setTheme( const hashed_string& name )
-    {
-        if ( _theme.selectTheme( name ) == false )
-            return false; // 경고는 selectTheme 이 남겼다
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             rebuildStyleSet( *screen );
@@ -658,12 +642,11 @@ namespace sw
         {
             rebuildStyleSet( *offscreen._screen, offscreen._theme );
         }
-        return true;
     }
 
     void UISystem::rebuildStyleSet( UIScreen& screen, const hashed_string& themeName )
     {
-        _theme.rebuildStyleSet( screen, *_pStyleSheetCache, themeName );
+        _pThemes->rebuildStyleSet( screen, themeName );
     }
 
     UIScreen* UISystem::findScreen( UIScreenHandle handle ) const
@@ -1163,14 +1146,6 @@ namespace sw
             pComponent->appendWorldCanvas( inoutListTarget );
         }
         _offscreen.appendCanvases( inoutListTarget );
-    }
-
-    void UISystem::syncThemeSetting()
-    {
-        hashed_string theme;
-        // 실행 중에 바꾼 값: 모르는 이름이면 setTheme 이 경고하고 지금 테마를 유지한다(게임 테마 목록에 그 이름이 없는 경우).
-        if ( _theme.pollSetting( gv_uiTheme, theme ) )
-            (void)setTheme( theme );
     }
 
     void UISystem::syncScreenSwitches()

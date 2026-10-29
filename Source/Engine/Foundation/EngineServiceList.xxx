@@ -62,6 +62,8 @@ SW_ENGINE_SERVICE( class, UIBindingConverterRegistry, Required, GameVisible )
 // UI 문서 · 스타일 시트 캐시(에셋 캐시이자 서브시스템 UIDocuments · UIStyleSheets, Client 호스트) — 엔진 · 에디터가 읽고, 게임은 화면을 `UISystem::openScreen` 으로 연다.
 SW_ENGINE_SERVICE( class, UIDocumentCache, Required, HostOnly )
 SW_ENGINE_SERVICE( class, UIStyleSheetCache, Required, HostOnly )
+// UI 테마(서브시스템 UIThemes) — 목록 · 지금 테마 · 사용자 설정 추적. 게임이 테마를 고를 수 있다(`setTheme`).
+SW_ENGINE_SERVICE( class, UIThemeController, Required, GameVisible )
 // 화면 스택 위에서 자기 화면을 여닫는 UI 서비스(알림 · 자막) — UISystem 에 의존하고 UI 갱신 칸에 건다(Client 호스트). 툴팁은 찾는 쪽이 없어 행이 없다.
 SW_ENGINE_SERVICE( class, UINotificationService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, UISubtitleService, Required, GameVisible )
