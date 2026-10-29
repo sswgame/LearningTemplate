@@ -15,6 +15,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw
 {
     class SourceStringTable;
@@ -56,7 +58,7 @@ namespace sw
 namespace sw
 {
     /** @brief 합치기 결과입니다. 무엇이 더해지고 바뀌고 지워졌는지 나타냅니다. */
-    struct SW_API TextGatherReport
+    struct SW_EDITOR_API TextGatherReport
     {
         vector<string>          _listAdded;
         vector<string>          _listChanged;
@@ -77,7 +79,7 @@ namespace sw
      * @class TextGatherer
      * @brief 텍스트를 모으고 원문 테이블에 합칩니다. 파일 시스템을 훑는 일은 부르는 쪽(`LocalizationTools`)이 하고, 여기서는 텍스트와 파일 하나를 받습니다.
      */
-    class SW_API TextGatherer
+    class SW_EDITOR_API TextGatherer
     {
     public:
         /** @brief 코드에서 이 이름의 매크로 호출을 모읍니다. 앞의 둘은 (네임스페이스, 키, 원문) 세 리터럴, 뒤의 둘은 (네임스페이스, 키) 두 리터럴이다. */

@@ -11,6 +11,7 @@
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
+#include "Editor/Common/Localization/TranslationMemory.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Facial/FacialRig.h"
@@ -44,7 +45,6 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
-#include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneDocument.h"

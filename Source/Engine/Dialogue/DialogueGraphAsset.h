@@ -15,7 +15,6 @@
 
 namespace sw
 {
-    class TextGatherer;
 
     /**
      * @brief 대화 노드 타입입니다. 파일에는 열거자 이름(`"Choice"`)으로 적힙니다.
@@ -234,8 +233,6 @@ namespace sw
         int32 findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
-        /** @brief 화자, 대사, 선택지를 로컬라이제이션 수집기에 넣습니다. 키이거나 글 그대로인 값을 넣으며, `resolveLocalizedText` 가 같은 규칙으로 찾습니다. */
-        void collectLocalizableText( TextGatherer& gatherer, string_view origin ) const;
 
         PROPERTY( Tooltip = "Nodes of the graph" )
         vector<DialogueAssetNode> _listNode;

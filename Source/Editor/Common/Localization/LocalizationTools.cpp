@@ -9,6 +9,7 @@
 #include "Core/String/MarkupTagScanner.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Localization/TranslationMemory.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -20,7 +21,6 @@
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/PortableObjectFile.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -485,7 +485,19 @@ namespace sw
                 gatherer.addIssue( origin, "dialogue cannot be parsed", true );
                 return;
             }
-            dialogue.collectLocalizableText( gatherer, origin );
+            // 화자 · 대사 · 선택지 — 키이거나 글 그대로인 값을 넣는다(`DialogueGraphAsset::resolveLocalizedText` 가 같은 규칙으로 찾는다)
+            for ( const DialogueAssetNode& node : dialogue._listNode )
+            {
+                if ( node._speaker.empty() == false )
+                    gatherer.addTextOrKey( node._speaker, "Dialogue speaker name", origin );
+                if ( node._text.empty() == false )
+                    gatherer.addTextOrKey( node._text, "Dialogue line", origin );
+                for ( const string& choice : node._listChoice )
+                {
+                    if ( choice.empty() == false )
+                        gatherer.addTextOrKey( choice, "Dialogue choice", origin );
+                }
+            }
             return;
         }
         if ( StringUtil::endsWith( origin, ".xml", true ) == false )

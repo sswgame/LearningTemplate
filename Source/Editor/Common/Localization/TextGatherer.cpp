@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Localization/TextGatherer.h"
+#include "Editor/Common/Localization/TextGatherer.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"

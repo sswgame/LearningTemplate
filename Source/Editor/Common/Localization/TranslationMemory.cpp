@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Localization/TranslationMemory.h"
+#include "Editor/Common/Localization/TranslationMemory.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"

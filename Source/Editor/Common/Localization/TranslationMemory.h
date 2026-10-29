@@ -12,6 +12,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
@@ -32,7 +34,7 @@ namespace sw
      * @class TranslationMemory
      * @brief 문화권 하나의 원문 → 번역 쌍입니다. `<TranslationMemory culture="ko"><entries><entry source="…" text="…" /></entries></TranslationMemory>`
      */
-    class SW_API TranslationMemory
+    class SW_EDITOR_API TranslationMemory
     {
     public:
         static constexpr const utf8* kExtension = ".tm.xml";

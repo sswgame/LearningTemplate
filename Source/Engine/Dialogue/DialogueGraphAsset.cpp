@@ -11,7 +11,6 @@
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Localization/TextGatherer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -246,22 +245,6 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };
         return string{ pResolved };
-    }
-
-    void DialogueGraphAsset::collectLocalizableText( TextGatherer& gatherer, string_view origin ) const
-    {
-        for ( const DialogueAssetNode& node : _listNode )
-        {
-            if ( node._speaker.empty() == false )
-                gatherer.addTextOrKey( node._speaker, "Dialogue speaker name", origin );
-            if ( node._text.empty() == false )
-                gatherer.addTextOrKey( node._text, "Dialogue line", origin );
-            for ( const string& choice : node._listChoice )
-            {
-                if ( choice.empty() == false )
-                    gatherer.addTextOrKey( choice, "Dialogue choice", origin );
-            }
-        }
     }
 } // namespace sw
 

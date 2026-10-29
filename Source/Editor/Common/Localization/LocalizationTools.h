@@ -14,7 +14,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Localization/TextGatherer.h"
+#include "Editor/Common/Localization/TextGatherer.h"
 
 namespace sw
 {
