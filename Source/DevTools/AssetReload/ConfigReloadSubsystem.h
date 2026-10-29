@@ -15,6 +15,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw
@@ -27,7 +29,7 @@ namespace sw
     using ConfigFileReloadDelegate = Delegate<ReloadOutcome( string_view fullPath )>;
 
     /** @class ConfigReloadSubsystem @brief `Config/` 감시와 설정 파일 리로드입니다. */
-    class ConfigReloadSubsystem final : public ISubsystem
+    class SW_DEVTOOLS_API ConfigReloadSubsystem final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ConfigReload";

@@ -12,7 +12,7 @@ sw_filterPlatformSources(listCoreSource)
 # 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(listCoreSource "/Source/Core/Testing/" "/Tests/")
-	# 파일 감시(OS 감시기)는 핫 리로드 · 설정 리로드만 쓴다 — 개발 도구다(쓰는 쪽 Engine/AssetReload · LiveReload 도 배포 빌드에서 빠진다)
+	# 파일 감시(OS 감시기)는 핫 리로드 · 설정 리로드만 쓴다 — 개발 도구다(쓰는 쪽 DevTools · LiveReload 도 배포 빌드에서 빠진다)
 	sw_excludeUnbuiltSources(listCoreSource "/Source/Core/File/IFileWatcher\\.(cpp|h)$" "/Source/Core/File/(Windows|Linux)/[A-Za-z]*FileWatcher\\.(cpp|h)$")
 endif()
 

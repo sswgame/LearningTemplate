@@ -45,6 +45,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | `SW_KIT_API` | Kit DLL classes, in headers under `GameFramework/Kits` | `SW_KIT_EXPORTS` / `SW_KIT_IMPORTS` |
 | `SW_KIT_SERVER_API` | Server kit (`GF_Server_<X>`, folder `Server/`) classes | `SW_KIT_SERVER_EXPORTS` |
 | `SW_EDITOR_API` | `EditorModule.dll` symbols (registries, widgets, selection, undo) | `SW_EDITOR_EXPORTS` |
+| `SW_DEVTOOLS_API` | `DevTools.dll` symbols (dev-only tools: reload, console, HUD; not built for Shipping) | `SW_DEVTOOLS_EXPORTS` |
 | `SW_GAMESERVICE_API` | The GameService locator (`bindGameService` / `getRawService`) in ModuleAPI; not a class-export macro | — |
 
 - Never use `SW_GF_API` in a kit header: kit TUs do not define `SW_GF_EXPORTS`, so a Base class would be imported, not re-exported.

@@ -6,6 +6,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/EngineFrameObserver.h"
 #include "Engine/EngineStartupExtension.h"
 
@@ -20,7 +22,7 @@ namespace sw
      *          - 프레임 관찰자(`IEngineFrameObserver`): 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
      *          언리얼의 개발 모듈(HotReload · DirectoryWatcher · ShaderCompiler 의 재컴파일)이 엔진 바깥에서 엔진 확장점에 붙는 모양과 같다. 게임 스레드에서만 쓴다.
      */
-    class DevToolsHost final : public ISubsystem, public IEngineStartupExtension, public IEngineFrameObserver
+    class SW_DEVTOOLS_API DevToolsHost final : public ISubsystem, public IEngineStartupExtension, public IEngineFrameObserver
     {
     public:
         /** @brief 서브시스템 이름입니다. */

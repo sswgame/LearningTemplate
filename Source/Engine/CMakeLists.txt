@@ -35,14 +35,10 @@ endforeach()
 sw_getAllRHIBackendSources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 
-# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 쿠킹된 셰이더만 읽으므로 감시할 것이 없다.
+# 리로드 전용 어댑터 캐시(오디오 데이터 · 현지화)는 개발 도구다 — 바뀐 파일을 서비스에 넘기는 일만 한다. 이름으로 찾는 곳이 없어 빠져도 등록표가 비지 않는다.
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
-# (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 — 이라 적지 않는다.)
+# (셰이더 · 설정 리로드 · 파일 감시 분배기는 엔진 밖 `Source/DevTools` 다.)
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "Renderer/LiveShaderSubsystem\\.(cpp|h)$") # 그 서브시스템도 서지 않는다(EngineSubsystemSet)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "/AssetReload/") # 파일 감시 · 설정 리로드 — 개발 도구(언리얼 DirectoryWatcher 모듈)
-	# 리로드 전용 어댑터 캐시(오디오 데이터 · 현지화) — 바뀐 파일을 서비스에 넘기는 일만 한다. 이름으로 찾는 곳이 없어 빠져도 등록표가 비지 않는다
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Audio/AudioReloadCache\\.(cpp|h)$" "Localization/LocalizationReloadCache\\.(cpp|h)$")
 endif()
 
