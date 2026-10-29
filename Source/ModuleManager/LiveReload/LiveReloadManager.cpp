@@ -113,6 +113,7 @@ namespace sw
         , _buildMutex{}
         , _buildNotice{}
         , _listBeforeCommitBatch{}
+        , _listReloadHold{}
         , _drainWorkers{}
         , _listCallbackRegistration{}
         , _nextCallbackID{ 1 }
@@ -435,6 +436,12 @@ namespace sw
 
         if ( _bReloadGraphBroken == SW_TRUE )
             return;
+        // 잡혀 있으면 대기 표시(`_bPendingReload`)를 그대로 둔다 — 풀린 첫 갱신에서 리로드된다.
+        for ( const ReloadHoldEntry& hold : _listReloadHold )
+        {
+            if ( hold._delegate.isBound() && hold._delegate() )
+                return;
+        }
 
         vector<string> listPendingRoot;
         BLOCK( "Collect Pending Reloads" )
@@ -493,6 +500,14 @@ namespace sw
         return issueSubscription( id );
     }
 
+    Subscription LiveReloadManager::addReloadHold( ReloadHoldDelegate delegate )
+    {
+        const uint64 id = _nextCallbackID++;
+        _listReloadHold.push_back( { id, std::move( delegate ) } );
+        _listCallbackRegistration.push_back( { id, string{}, CallbackSlot::ReloadHold } );
+        return issueSubscription( id );
+    }
+
     Subscription LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
     {
         _drainWorkers = std::move( delegate );
@@ -543,6 +558,18 @@ namespace sw
             }
             return;
         }
+        if ( registration._slot == CallbackSlot::ReloadHold )
+        {
+            for ( size_t index = 0; index < _listReloadHold.size(); ++index )
+            {
+                if ( _listReloadHold[index]._id == registration._id )
+                {
+                    _listReloadHold.erase( _listReloadHold.begin() + static_cast<ptrdiff_t>( index ) );
+                    return;
+                }
+            }
+            return;
+        }
         if ( registration._slot == CallbackSlot::DrainWorkers )
         {
             _drainWorkers = {};
@@ -576,6 +603,7 @@ namespace sw
                 break;
             }
             case CallbackSlot::BeforeCommitBatch:
+            case CallbackSlot::ReloadHold:
             case CallbackSlot::DrainWorkers:
             {
                 break;

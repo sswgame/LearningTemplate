@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/EditorUICapture.h"
+#include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
@@ -49,7 +50,6 @@
 
 #include "EditorFoundation/CommandStack.h"
 #include "EditorFoundation/EditSessionState.h"
-#include "EditorFoundation/FileDialog.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"

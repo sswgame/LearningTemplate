@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
@@ -82,6 +83,7 @@ namespace sw
         pOutAPI->requestBackgroundStop = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::requestBackgroundStop ); };                               \
         pOutAPI->getRedrawReasons      = []( sw::EditorHandle editorHandle ) -> uint32                                                                                                                             \
         { return editorHandle != nullptr ? sw::editor::EditorRedrawUtil::collectReasons() : 0u; };                                                                                                                 \
+        pOutAPI->isReloadHeld = []() -> bool { return sw::FileDialog::isOpen(); };                                                                                                                                 \
         return true;                                                                                                                                                                                               \
     }
 // NOLINTEND(bugprone-macro-parentheses)

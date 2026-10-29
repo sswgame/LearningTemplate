@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
+#include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorSubsystem.h"
@@ -21,8 +22,6 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
-
-#include "EditorFoundation/FileDialog.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameTimeScale.h"

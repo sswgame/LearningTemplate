@@ -6,8 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "EditorFoundation/EditorFoundationExports.h"
-#include "EditorFoundation/FileDialog.h"
+#include "Editor/Common/Backend/FileDialog.h"
+#include "Editor/Common/EditorExports.h"
 
 #if defined( SW_PLATFORM_LINUX )
 
@@ -22,7 +22,7 @@ namespace sw
      * @brief 외부 데스크톱 다이얼로그 도구를 호출하는 Linux 파일 선택기입니다.
      * @note 반환하는 경로는 I/O 용이라 대소문자를 그대로 둡니다(normalizeSeparators).
      */
-    class SW_EDITOR_FOUNDATION_API LinuxFileDialog final
+    class SW_EDITOR_API LinuxFileDialog final
     {
     public:
         /** @brief 인스턴스를 만들지 않습니다. open 만 부르십시오. */

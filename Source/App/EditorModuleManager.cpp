@@ -99,6 +99,8 @@ namespace sw
                     config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
                 holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
                     config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
+                // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
+                holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
                 if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
                     SW_LOG_ERROR( "Failed to load the Editor Module." );
@@ -117,6 +119,11 @@ namespace sw
 #endif
 
         return true;
+    }
+
+    bool EditorModuleManager::isEditorReloadHeld() const
+    {
+        return _editorAPI.isReloadHeld != nullptr && _editorAPI.isReloadHeld();
     }
 
     void EditorModuleManager::registerEditorExtensions( LiveReloadManager* pLiveReloadManager )

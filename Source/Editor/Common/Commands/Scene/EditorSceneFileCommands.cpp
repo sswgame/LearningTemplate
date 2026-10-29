@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/EditorAssetValidation.h"
+#include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -16,7 +17,6 @@
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 
 #include "EditorFoundation/CommandStack.h"
-#include "EditorFoundation/FileDialog.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"

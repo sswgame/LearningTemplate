@@ -7,8 +7,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "EditorFoundation/FileDialog.h"
-#include "EditorFoundation/Windows/WindowsFileDialog.h"
+#include "Editor/Common/Backend/FileDialog.h"
+#include "Editor/Common/Backend/Platform/WindowsFileDialog.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

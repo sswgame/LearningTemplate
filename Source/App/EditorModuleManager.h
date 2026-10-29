@@ -90,6 +90,8 @@ namespace sw
          * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 이미지를 언로드한 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
          */
         bool isEditorImageUsable( void* pLibraryModule ) const;
+        /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`LiveReloadManager::addReloadHold`)으로 건다. */
+        bool isEditorReloadHeld() const;
         /**
          * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)

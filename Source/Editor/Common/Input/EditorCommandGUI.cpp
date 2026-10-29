@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -31,7 +32,6 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "EditorFoundation/CommandStack.h"
-#include "EditorFoundation/FileDialog.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"

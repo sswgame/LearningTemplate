@@ -65,6 +65,8 @@ namespace sw
          */
         using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
         using DrainWorkersDelegate        = Delegate<void()>;
+        /** @brief true 를 돌려주는 동안 리로드를 잡아 둡니다(`addReloadHold`). */
+        using ReloadHoldDelegate = Delegate<bool()>;
 
         /**
          * @brief 모듈을 언로드하기 전에 실행 중인 태스크를 비우는 제한 시간(ms)입니다. 넘으면 리로드 그래프를 깨진 상태로 표시합니다.
@@ -170,6 +172,13 @@ namespace sw
         [[nodiscard]] Subscription addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
 
         /**
+         * @brief 리로드를 잡아 둘 조건을 목록에 더합니다. 하나라도 true 인 동안 바뀐 모듈은 **대기열에 남고** 잡음이 풀린 첫 갱신에서 리로드된다(버리지 않는다).
+         * @details 모듈 코드가 다른 스레드에서 아직 돌고 있어 지금 내리면 그 스레드가 내려간 코드로 돌아오는 때에 쓴다(편집기의 네이티브 파일 대화상자 —
+         *          닫힐 때까지 돌아오지 않는다). 거절(`addOnBeforeCommitBatch`)과 달리 이번 변경을 잃지 않는다. 구독이 사라지면 그 항목만 빠집니다.
+         */
+        [[nodiscard]] Subscription addReloadHold( ReloadHoldDelegate delegate );
+
+        /**
          * @brief 모듈을 언로드하기 직전에 불려 워커 스레드를 비울 콜백을 겁니다. 구독이 사라지면 풀립니다.
          * @details TaskManager 만으로는 부족하다. RenderThread 는 App 소유라 Engine 에서 직접 볼 수 없으므로, 모듈 호스트가
          *          renderThread->waitIdle() 와 device.waitIdle() 을 여기에 연결해야 Present 훅이 실행 중인 라이브러리를 FreeLibrary 하지 않는다.
@@ -215,6 +224,7 @@ namespace sw
             ReloadFault,
             ValidateLibrary,
             BeforeCommitBatch,
+            ReloadHold,
             DrainWorkers,
         };
         /** @brief 살아 있는 구독 하나 — 어느 모듈(배치 · 비우기는 빈 이름)의 어느 칸인지입니다. */
@@ -236,6 +246,12 @@ namespace sw
         {
             uint64                      _id;
             OnBeforeCommitBatchDelegate _delegate;
+        };
+        /** @brief 리로드 잡음 목록의 항목입니다. */
+        struct ReloadHoldEntry
+        {
+            uint64             _id;
+            ReloadHoldDelegate _delegate;
         };
 
         /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
@@ -350,6 +366,7 @@ namespace sw
         mutable mutex                              _buildMutex;
         BuildNotice                                _buildNotice;
         vector<BeforeCommitBatchEntry>             _listBeforeCommitBatch; ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로)
+        vector<ReloadHoldEntry>                    _listReloadHold;        ///< 리로드 잡음(`addReloadHold`)
         DrainWorkersDelegate                       _drainWorkers;
         vector<CallbackRegistration>               _listCallbackRegistration; ///< 살아 있는 구독이 가리키는 칸
         uint64                                     _nextCallbackID;           ///< 다음 구독 번호(0 은 빈 구독)

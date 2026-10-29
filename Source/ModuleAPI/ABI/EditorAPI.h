@@ -64,6 +64,8 @@ namespace sw
         uint32 ( *getRedrawReasons )( EditorHandle editor ){ nullptr };
         /** @brief 앱이 끝나는 중이니 에디터의 백그라운드 잡(색인 스캔 · 임포트 …)은 일찍 끝내라는 협조 신호를 올립니다. 호스트가 종료 대기(`drainRenderWorkers`) 앞에서 한 번 부릅니다. */
         void ( *requestBackgroundStop )( EditorHandle editor ){ nullptr };
+        /** @brief 지금 이 모듈을 내리면 안 되면 true 입니다(다른 스레드가 이 모듈 코드에 있다 — 열린 파일 대화상자). 인스턴스가 없어도 부를 수 있다. 호스트가 리로드 잡음으로 건다. */
+        bool ( *isReloadHeld )(){ nullptr };
     };
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */
