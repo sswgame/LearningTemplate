@@ -70,6 +70,7 @@ namespace sw
         , _listProject{}
         , _mapLooseTable{}
         , _mapBinaryTable{}
+        , _pTextArena{ make_unique<LocalizedTextArena>() }
         , _mapLanguageTable{}
         , _mapCultureStatistic{}
         , _listLookupCulture{}
@@ -501,7 +502,7 @@ namespace sw
     {
         unique_ptr<StringTable>& pTable = _mapLanguageTable[code];
         if ( pTable == nullptr )
-            pTable = make_unique<StringTable>();
+            pTable = make_unique<StringTable>( *_pTextArena );
         return *pTable;
     }
 

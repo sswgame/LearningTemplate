@@ -26,6 +26,7 @@
 
 namespace sw
 {
+    class LocalizedTextArena;
     class StringTable;
     class TextArgumentList;
 
@@ -55,7 +56,7 @@ namespace sw
      * @details 조회 순서는 지금 문화권, 그 부모(`ko_kr` → `ko`), 폴백 문화권, 그 부모, 로드한 프로젝트들의 원문 문화권입니다(언리얼 culture fallback,
      *          유니티 Locale fallback). 낡은(stale) 번역과 검토(review) 번역은 화면에 내지 않고 순서의 다음으로 넘어갑니다.
      *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
-     *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
+     *          조회가 돌려주는 `const utf8*` 는 이 관리자가 든 추가 전용 저장소(`LocalizedTextArena`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
     class SW_API LocalizationManager : public ISubsystem
     {
@@ -253,6 +254,7 @@ namespace sw
         vector<MountedProject> _listProject                             SW_GUARDED_BY( _mutex );
         map<string, TranslationTable> _mapLooseTable                    SW_GUARDED_BY( _mutex );
         map<string, LocalizationBinaryTable> _mapBinaryTable            SW_GUARDED_BY( _mutex ); ///< 문화권 코드 → 쿠킹된 이진 표
+        unique_ptr<LocalizedTextArena>                                  _pTextArena;             ///< 테이블이 문자열을 두는 저장소 — 테이블보다 먼저 서고 나중에 사라진다
         unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
         map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
         vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
