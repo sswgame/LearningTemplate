@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceRecordUtil.h"
 
@@ -37,8 +39,7 @@ namespace sw
 
     vector<uint8> MatchmakingProtocol::encodeID( uint64 id )
     {
-        const string text = ServiceKeyUtil::makeHex64( id );
-        return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
+        return StringUtil::toBytes( ServiceKeyUtil::makeHex64( id ) );
     }
 
     bool MatchmakingProtocol::decodeID( const vector<uint8>& bytes, uint64& outID )

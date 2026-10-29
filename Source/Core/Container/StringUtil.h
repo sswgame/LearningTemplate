@@ -115,6 +115,15 @@ namespace sw
         static void utf8ToUcs2( string_view text, vector<uint16>& outListUnit );
         /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
         static void appendUTF8( string& inoutText, uint32 codepoint );
+        /** @brief 글의 바이트를 그대로 @p outBytes 에 담습니다(앞 내용은 버린다 — 요청 본문 · BLOB 칸). */
+        static void assignBytes( vector<uint8>& outBytes, string_view text ) { outBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() ); }
+        /** @brief 글의 바이트를 새 `vector<uint8>` 로 돌려줍니다. */
+        [[nodiscard]] static vector<uint8> toBytes( string_view text )
+        {
+            vector<uint8> bytes;
+            assignBytes( bytes, text );
+            return bytes;
+        }
         /**
          * @brief 바이트 오프셋이 몇째 줄 · 몇째 글자인지 셉니다(둘 다 1 부터). 열은 바이트가 아니라 UTF-8 글자 수입니다.
          * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 형식을 눌러 그 위치로 간다. 오프셋이 글 밖이면 끝 위치입니다.

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
@@ -27,11 +28,6 @@ namespace sw
             static constexpr int32       kStatusServerError      = 500;
             static constexpr size_t      kMaxNotifiedRefundCount = 100000;
             static constexpr const utf8* kEnvironmentSandbox     = "Sandbox";
-
-            static vector<uint8> toBytes( string_view text )
-            {
-                return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
-            }
 
             static bool isTransientStatus( const HTTPClientResponse& response )
             {
@@ -166,7 +162,7 @@ namespace sw
             writer.endObject();
             request._method    = HTTPMethod::Post;
             request._url       = makeHistoryURL( paginationToken );
-            request._bodyBytes = Internal::toBytes( body );
+            request._bodyBytes = StringUtil::toBytes( body );
             request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
         }
         _mapRequestToCall[_pHTTPClient->submitRequest( request )] = call;

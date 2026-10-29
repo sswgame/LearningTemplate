@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 
+#include "Core/Container/StringUtil.h"
+
 namespace sw
 {
     SQLValue SQLValue::makeInt64( int64 value )
@@ -15,7 +17,7 @@ namespace sw
     SQLValue SQLValue::makeText( string_view text )
     {
         SQLValue sqlValue;
-        sqlValue._bytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
+        StringUtil::assignBytes( sqlValue._bytes, text );
         sqlValue._type = SQLValueType::Text;
         return sqlValue;
     }

@@ -174,8 +174,7 @@ namespace sw
 
     bool UserAppearancePresetStore::writeBytes( vector<uint8>& outBytes ) const
     {
-        const string text = saveToText();
-        outBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
+        StringUtil::assignBytes( outBytes, saveToText() );
         return true;
     }
 

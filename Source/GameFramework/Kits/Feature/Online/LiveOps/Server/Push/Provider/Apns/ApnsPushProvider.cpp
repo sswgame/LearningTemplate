@@ -169,7 +169,7 @@ namespace sw
         request._method    = HTTPMethod::Post;
         request._url       = _deviceURLPrefix + deviceToken;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._bodyBytes = PushPayloadUtil::toBytes( makePayloadJSON( message ) );
+        request._bodyBytes = StringUtil::toBytes( makePayloadJSON( message ) );
         request._listHeader.push_back( HTTPHeader{ "authorization", "bearer " + _providerToken } );
         request._listHeader.push_back( HTTPHeader{ "apns-topic", _settings._topic } );
         request._listHeader.push_back( HTTPHeader{ "apns-push-type", bAlert ? Internal::kPushTypeAlert : Internal::kPushTypeBackground } );

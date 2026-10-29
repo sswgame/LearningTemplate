@@ -154,7 +154,7 @@ namespace sw
 
     void FcmPushProvider::queueSend( uint64 deliveryID, string&& bodyJSON, UnixMilliseconds nowMs )
     {
-        vector<uint8>          bodyBytes = PushPayloadUtil::toBytes( bodyJSON );
+        vector<uint8>          bodyBytes = StringUtil::toBytes( bodyJSON );
         const UnixMilliseconds now{ nowMs }; // 서버 루프의 nowMs 는 유닉스 밀리초다 — 서명 토큰의 iat · exp 가 된다
         if ( _tokenSource.hasValidToken( now ) )
         {

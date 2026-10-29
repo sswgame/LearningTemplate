@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -20,11 +22,6 @@ namespace sw
             static constexpr int64 kSecretLifetimeMs      = 24 * constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
             static constexpr int64 kSecretRefreshMarginMs = constant::kSecondsPerHour * constant::kMillisecondsPerSecond;
             static constexpr int32 kStatusBadRequest      = 400;
-
-            static vector<uint8> toBytes( string_view text )
-            {
-                return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
-            }
         };
     } // namespace
 } // namespace sw
@@ -128,7 +125,7 @@ namespace sw
         request._method    = HTTPMethod::Post;
         request._url       = url;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._bodyBytes = AppleLoginProviderInternal::toBytes( body );
+        request._bodyBytes = StringUtil::toBytes( body );
         request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         return _pAppleHTTPClient->submitRequest( request );
@@ -145,7 +142,7 @@ namespace sw
         PendingVerification& pending     = _listPending.emplace_back();
         pending._outerID                 = _verificationIDAllocator.allocate();
         pending._code                    = std::move( code );
-        pending._innerID                 = _oidc.submitVerification( AppleLoginProviderInternal::toBytes( innerTicket ), nowMs );
+        pending._innerID                 = _oidc.submitVerification( StringUtil::toBytes( innerTicket ), nowMs );
         return pending._outerID;
     }
 

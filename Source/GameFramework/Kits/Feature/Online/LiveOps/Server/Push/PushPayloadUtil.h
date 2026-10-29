@@ -5,6 +5,7 @@
  *          제품 이름은 이 파일에 쓰지 않는다. 헤더만 있어 내보내는 기호가 없다.
  */
 #pragma once
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -18,11 +19,6 @@ namespace sw
     /** @struct PushPayloadUtil @brief 알림 본문을 JSON 으로 쓰는 공통 조각입니다. 상태가 없습니다. */
     struct PushPayloadUtil
     {
-        /** @brief 글 바이트를 `vector<uint8>` 로 복사합니다(요청 본문). */
-        static vector<uint8> toBytes( string_view text )
-        {
-            return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
-        }
 
         /** @brief 알림의 앞쪽에서 비지 않은 인자 수입니다(첫 빈 인자에서 멈춘다). */
         static int32 countArguments( const PushNotificationMessage& message )
