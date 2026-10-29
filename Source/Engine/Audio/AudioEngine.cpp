@@ -44,10 +44,9 @@ namespace sw
         , _listVoice{}
         , _listVoiceOrder{}
         , _listInstance{}
-        , _listBusUserState{}
         , _blockOutput{}
         , _listAttenuation{}
-        , _listSnapshot{}
+        , _snapshotMixer{}
         , _music{}
         , _mapLibrary{}
         , _mapEventState{}
@@ -111,7 +110,7 @@ namespace sw
         _listApplyingCommand.clear();
         _listVoice.clear();
         _listInstance.clear();
-        _listSnapshot.clear();
+        _snapshotMixer.clearSnapshots();
         _mapLibrary.clear();
         _mapEventState.clear();
         {
@@ -169,10 +168,7 @@ namespace sw
     {
         SW_ASSERT( pMixer->getChannelLayout() == _layout );
         _pMixer = std::move( pMixer );
-        for ( const BusUserState& state : _listBusUserState )
-        {
-            applyBusUserState( state );
-        }
+        _snapshotMixer.adoptMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
         // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
         for ( VoiceSlot& slot : _listVoice )
         {
@@ -185,7 +181,6 @@ namespace sw
             _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
         }
         rebuildAttenuationTable();
-        rebindSnapshots();
     }
 
     bool AudioEngine::loadEventLibrary( const hashed_string& libraryName, const AudioEventLibrary& library )
@@ -762,20 +757,7 @@ namespace sw
             listParameter.push_back( EmitterParameter{ command._name, command._value } );
     }
 
-    void AudioEngine::applyStartSnapshot( const Command& command )
-    {
-        SnapshotState* pSnapshot = getOrCreateSnapshot( command._name );
-        if ( pSnapshot == nullptr )
-            return;
-        pSnapshot->_target  = 1.0f;
-        pSnapshot->_bDriven = false;
-        // 가장 나중에 켠 것이 마지막에 적용된다.
-        const SnapshotState moved = *pSnapshot;
-        _listSnapshot.erase( _listSnapshot.begin() + ( pSnapshot - _listSnapshot.data() ) );
-        _listSnapshot.push_back( moved );
-    }
-
-    // 긴 케이스(클립 재생 · 에미터 파라미터 · 스냅샷 켜기)는 함수로 뺐고, 남은 것은 명령 종류마다 한두 줄인 switch 디스패처라 나누지 않는다.
+    // 긴 케이스(클립 재생 · 에미터 파라미터)는 함수로, 스냅샷 · 버스 사용자 상태는 `AudioSnapshotMixer` 로 뺐고, 남은 것은 명령 종류마다 한두 줄인 switch 디스패처라 나누지 않는다.
     void AudioEngine::applyCommand( Command& command )
     {
         switch ( command._type )
@@ -814,23 +796,17 @@ namespace sw
             }
             case CommandType::SetBusUserVolume:
             {
-                BusUserState& state = getOrCreateBusUserState( command._name );
-                state._volume       = MathUtil::clamp( command._value, 0.0f, 1.0f );
-                applyBusUserState( state );
+                _snapshotMixer.setBusUserVolume( *_pMixer, command._name, command._value );
                 break;
             }
             case CommandType::SetBusMuted:
             {
-                BusUserState& state = getOrCreateBusUserState( command._name );
-                state._bMuted       = command._bFlag;
-                applyBusUserState( state );
+                _snapshotMixer.setBusMuted( *_pMixer, command._name, command._bFlag );
                 break;
             }
             case CommandType::SetBusSolo:
             {
-                BusUserState& state = getOrCreateBusUserState( command._name );
-                state._bSolo        = command._bFlag;
-                applyBusUserState( state );
+                _snapshotMixer.setBusSolo( *_pMixer, command._name, command._bFlag );
                 break;
             }
             case CommandType::SwapMixer:
@@ -894,19 +870,12 @@ namespace sw
             }
             case CommandType::StartSnapshot:
             {
-                applyStartSnapshot( command );
+                _snapshotMixer.startSnapshot( *_pMixer, command._name );
                 break;
             }
             case CommandType::StopSnapshot:
             {
-                for ( SnapshotState& snapshot : _listSnapshot )
-                {
-                    if ( snapshot._name == command._name )
-                    {
-                        snapshot._target  = 0.0f;
-                        snapshot._bDriven = false;
-                    }
-                }
+                _snapshotMixer.stopSnapshot( command._name );
                 break;
             }
             case CommandType::StartMusic:
@@ -927,12 +896,7 @@ namespace sw
             }
             case CommandType::SetSnapshotIntensity:
             {
-                SnapshotState* pSnapshot = getOrCreateSnapshot( command._name );
-                if ( pSnapshot == nullptr )
-                    break;
-                pSnapshot->_intensity = command._value;
-                pSnapshot->_target    = command._value;
-                pSnapshot->_bDriven   = true;
+                _snapshotMixer.setSnapshotIntensity( *_pMixer, command._name, command._value );
                 break;
             }
         }
@@ -1046,30 +1010,6 @@ namespace sw
         return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );
     }
 
-    AudioEngine::BusUserState& AudioEngine::getOrCreateBusUserState( const hashed_string& bus )
-    {
-        for ( BusUserState& state : _listBusUserState )
-        {
-            if ( state._bus == bus )
-                return state;
-        }
-        BusUserState state;
-        state._bus = bus;
-        _listBusUserState.push_back( state );
-        return _listBusUserState.back();
-    }
-
-    void AudioEngine::applyBusUserState( const BusUserState& state )
-    {
-        const int32 busIndex = _pMixer->findBusIndex( state._bus );
-        if ( busIndex < 0 )
-            return;
-        const uint32 index = static_cast<uint32>( busIndex );
-        _pMixer->setBusUserVolume( index, state._volume );
-        _pMixer->setBusMuted( index, state._bMuted || _pMixer->getDesc()._listBus[index]._bMuted );
-        _pMixer->setBusSolo( index, state._bSolo || _pMixer->getDesc()._listBus[index]._bSolo );
-    }
-
     void AudioEngine::updateEmitters()
     {
         // 한 극 추종: 블록마다 남은 차이의 (1 − e^(−블록/τ)) 만큼 다가간다.
@@ -1179,7 +1119,7 @@ namespace sw
     {
         applyCommands();
         updateParameters();
-        updateSnapshots();
+        _snapshotMixer.update( *_pMixer );
         updateEmitters();
         updateMusic();
 

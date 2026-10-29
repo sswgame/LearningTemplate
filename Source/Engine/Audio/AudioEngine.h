@@ -28,6 +28,7 @@
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/AudioSnapshotMixer.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/AudioVoice.h"
@@ -35,7 +36,6 @@
 namespace sw
 {
     struct AudioMixerDesc;
-    struct AudioSnapshotDesc;
 
     class AudioMixer;
 
@@ -227,8 +227,8 @@ namespace sw
         float32 getBusPeak( const hashed_string& bus ) const;
         /** @brief 파라미터의 현재 값(seek 이후)을 반환합니다. 오디오 스레드와 테스트가 씁니다. 모르는 파라미터면 0 입니다. */
         float32 getParameterValue( const hashed_string& name ) const;
-        /** @brief 스냅샷의 현재 세기를 반환합니다. 오디오 스레드와 테스트가 씁니다. */
-        float32 getSnapshotIntensity( const hashed_string& name ) const;
+        /** @brief 스냅샷 세기 · 버스 사용자 상태입니다(`getSnapshotIntensity`). 오디오 스레드와 테스트가 씁니다. */
+        const AudioSnapshotMixer& getSnapshotMixer() const { return _snapshotMixer; }
         /** @brief 현재 그래프를 반환합니다. 오디오 스레드와 테스트가 씁니다. */
         const AudioMixer* getMixer() const { return _pMixer.get(); }
 
@@ -283,15 +283,6 @@ namespace sw
             bool                                _bFlag{ false }; ///< 음소거, 솔로, 일시정지 플래그다.
         };
 
-        /** @brief 버스 이름에 남는 사용자 상태입니다. 그래프를 바꾸면 다시 적용합니다. */
-        struct BusUserState
-        {
-            hashed_string _bus{};
-            float32       _volume{ 1.0f };
-            bool          _bMuted{ false };
-            bool          _bSolo{ false };
-        };
-
         /** @brief 에미터 파라미터 값 하나입니다. */
         struct EmitterParameter
         {
@@ -342,16 +333,6 @@ namespace sw
             bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다.
         };
 
-        /** @brief 스냅샷 하나의 실행 상태입니다. 켠 순서대로 목록에 둡니다. */
-        struct SnapshotState
-        {
-            hashed_string            _name{};
-            const AudioSnapshotDesc* _pDesc{ nullptr };
-            float32                  _intensity{ 0.0f };
-            float32                  _target{ 0.0f };
-            bool                     _bDriven{ false }; ///< 게임이 세기를 직접 정한다.
-        };
-
         /** @brief 보이스 슬롯 하나입니다. */
         struct VoiceSlot
         {
@@ -392,8 +373,6 @@ namespace sw
         void applyPlayClip( const Command& command );
         /** @brief 에미터의 이름 붙은 파라미터를 넣거나 고칩니다. */
         void applySetEmitterParameter( const Command& command );
-        /** @brief 스냅샷을 켭니다. 가장 나중에 켠 것이 마지막에 적용되도록 목록 끝으로 옮깁니다. */
-        void applyStartSnapshot( const Command& command );
         /** @brief 만든 그래프로 바꿉니다(사용자 버스 상태 다시 적용, 보이스 버스 다시 찾기, 감쇠 · 스냅샷 다시 묶기). 그래프 레이아웃은 `_layout` 과 같아야 합니다. */
         void adoptMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
@@ -408,10 +387,6 @@ namespace sw
         void startWaitingVoice( VoiceSlot& slot );
         /** @brief 버스 이름을 현재 그래프의 번호로 찾습니다. 없으면 sfx 를, 그것도 없으면 master 를 씁니다. */
         uint32 resolveBusIndex( const hashed_string& bus ) const;
-        /** @brief 사용자 상태(볼륨, 음소거, 솔로)를 현재 그래프에 적용합니다. */
-        void applyBusUserState( const BusUserState& state );
-        /** @brief 이름에 해당하는 사용자 상태 슬롯을 반환합니다. 없으면 만듭니다. */
-        BusUserState& getOrCreateBusUserState( const hashed_string& bus );
         /** @brief 에미터의 가림 값이 이번 블록 동안 목표값을 따라가게 합니다. */
         void updateEmitters();
         /** @brief 보이스 하나의 이번 블록 목표(볼륨, 팬, 피치, 로우패스, 들림)를 정합니다. */
@@ -429,7 +404,7 @@ namespace sw
         void loadEventLibraryLocked( const hashed_string& libraryName, const AudioEventLibrary& library, vector<string>& outListError,
                                      shared_ptr<const AudioEventLibrary>& outLibrary ) SW_REQUIRES_LOCK( _libraryMutex );
 
-        // AudioEngineEvents.cpp: 이벤트, 파라미터, 스냅샷, 보이스 제한
+        // AudioEngineEvents.cpp: 이벤트, 파라미터, 보이스 제한
         /** @brief 이벤트를 재생합니다. 쿨다운, 상한, 컨테이너를 적용합니다. */
         void applyPostEvent( const Command& command );
         /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */
@@ -450,12 +425,6 @@ namespace sw
         void updateParameters();
         /** @brief 이 에미터에서 본 파라미터 값을 반환합니다. 에미터 값, 전역 값, 0 순서로 찾습니다. */
         float32 findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const;
-        /** @brief 스냅샷 세기를 옮기고 버스 오프셋, 센드, 이펙트 파라미터에 적용합니다. */
-        void updateSnapshots();
-        /** @brief 그래프가 바뀐 뒤 스냅샷 설명자를 이름으로 다시 찾습니다. */
-        void rebindSnapshots();
-        /** @brief 이름에 해당하는 스냅샷 슬롯을 반환합니다. 없으면 만들고, 그래프에 없는 이름이면 nullptr 를 반환합니다. */
-        SnapshotState* getOrCreateSnapshot( const hashed_string& name );
         /** @brief 실제로 섞을 보이스를 고르고(우선순위와 들림), 나머지는 가상이나 정지 상태로 둡니다. */
         void selectRealVoices();
         /** @brief 인스턴스의 들림과 거리를 모으고, 보이스가 없는 인스턴스를 비웁니다. */
@@ -500,10 +469,9 @@ namespace sw
         vector<VoiceSlot>                            _listVoice;                      /**< 보이스 슬롯입니다. */
         vector<uint32>                               _listVoiceOrder;                 /**< 보이스를 고르는 작업 목록입니다. */
         vector<EventInstance>                        _listInstance;                   /**< 이벤트 인스턴스 슬롯입니다. */
-        vector<BusUserState>                         _listBusUserState;               /**< 버스 이름의 사용자 상태입니다. */
         AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
-        vector<SnapshotState>                        _listSnapshot;                   /**< 켜 둔 스냅샷입니다. 켠 순서대로 둡니다. */
+        AudioSnapshotMixer                           _snapshotMixer;                  /**< 켜 둔 스냅샷과 버스 사용자 상태입니다(그래프를 바꿔도 이름으로 남는다). */
         AudioMusicPlayback                           _music;                          /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
         LibraryMap                                   _mapLibrary;                     /**< 로드한 라이브러리입니다. */
         EventMap                                     _mapEventState;                  /**< 이벤트 이름에서 상태로 가는 맵입니다. */
