@@ -57,7 +57,7 @@ namespace sw
     class TypeRegistry;
     class UISystem;
 
-    // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 빌더 헤더(`RenderPacketBuilder.h`)에 있습니다.
+    // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 시점 헤더(`RenderPacketViewSetup.h`, 패킷 빌더 헤더가 끌어온다)에 있습니다.
 
     /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`SubsystemHostMask`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
     enum class EngineHostRole : uint8

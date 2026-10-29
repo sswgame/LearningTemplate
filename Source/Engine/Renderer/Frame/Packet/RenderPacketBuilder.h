@@ -1,33 +1,30 @@
 /**
  * @file Engine/Renderer/Frame/Packet/RenderPacketBuilder.h
  * @brief 게임 스레드가 프레임마다 렌더 스레드에 넘길 패킷(`RenderFramePacket`)을 채웁니다. `Engine` 의 값 멤버입니다.
- * @details 씬 스냅샷 빌더, 패킷 저장소, GPU 업로드 큐, 추가 뷰 스케줄러가 여기 있고, 기동 단계 `FrameRenderer` 가 생성하고 종료합니다.
+ * @details 패킷 저장소와 GPU 업로드 큐를 갖고, 채우기는 협력 객체가 나눠 맡습니다: 활성 씬 내용(`RenderPacketSceneCollector`), 주 시점과 추가 뷰(`RenderPacketViewSetup`),
+ *          미리보기 씬(`RenderPacketScenePreviews`), 화면 2D(`RenderPacketCanvasCollector`). 기동 단계 `FrameRenderer` 가 생성하고 종료합니다.
  *          렌더 스레드는 씬을 보지 못하므로(패킷이 유일한 통로) 씬에서 읽을 것은 모두 여기서 패킷에 담습니다.
  *          부르는 순서(패킷 열기 → 관찰자 → 씬과 뷰 → 캔버스 → 제출)는 `Engine::update` 의 호출 코드에서 볼 수 있습니다.
  */
 #pragma once
-#include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketCanvasCollector.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketScenePreviews.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketViewSetup.h"
 
 namespace sw
 {
     struct HostViewTargets;
     struct RenderFramePacket;
 
-    class CameraComponent;
     class FontService;
     class FrameRenderer;
-    class GPUSceneBuilder;
     class GPUUploadQueue;
     class IRHIDevice;
-    class RenderScaleAdjuster;
-    class RenderViewScheduler;
     class RHI;
     class Scene;
     class SceneManager;
@@ -35,16 +32,9 @@ namespace sw
     class UISystem;
 
     /**
-     * @brief 이번 프레임의 뷰 카메라를 반환합니다.
-     * @details tick 안의 핫 리로드와 씬 전환이 GameObject 를 파괴할 수 있으므로,
-     *          카메라는 미리 잡아 두지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
-     */
-    SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
-
-    /**
      * @class RenderPacketBuilder
-     * @brief 프레임 패킷을 채우는 게임 스레드 쪽 상태(씬 스냅샷 빌더, 패킷, 업로드 큐, 뷰 스케줄러)와 그 채우기입니다.
-     * @details 객체들은 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다).
+     * @brief 프레임 패킷을 채우는 게임 스레드 쪽 지휘자입니다. 패킷 저장소 · 업로드 큐의 수명과 채우기 순서를 갖고, 내용은 협력 객체가 싣습니다.
+     * @details 패킷과 업로드 큐는 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다).
      *          헤드리스 작업에는 기동 단계가 서지 않아 아무것도 없습니다(`isInitialized` 가 false).
      */
     class SW_API RenderPacketBuilder
@@ -81,12 +71,8 @@ namespace sw
          */
         void populateScene( RenderFramePacket& packet, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, Scene* pActiveScene,
                             float32 deltaTime, const RHI& rhi, const FrameRenderer* pFrameRenderer );
-        /** @brief 애니메이션 LOD · 메시 LOD 가 다음 프레임에 볼 뷰(주 시점과 이번 프레임에 그리는 추가 뷰)를 씬의 애니메이션 시스템과 메시 LOD 고르기에 넘깁니다. */
-        void updateLODViews( const RenderFramePacket& packet, Scene& activeScene );
-        /** @brief GPUScene 을 씬에서 채우고 추가 뷰의 투명 순서 · GPU 업로드 요청을 만든 뒤 CPU 스냅샷을 패킷에 내보냅니다. */
-        void populateGPUSceneSnapshot( RenderFramePacket& packet, Scene* pActiveScene );
         /**
-         * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 개발 테스트 이미지), 글리프 아틀라스 구간, 색각 보정을 싣습니다.
+         * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 개발 테스트 이미지), 글리프 아틀라스 구간, 색각 보정을 싣습니다(`RenderPacketCanvasCollector::populate`).
          * @param bSceneMain 씬 뷰가 주 출력인 프레임이면 화면 UI 를 싣지 않습니다. UI 는 게임 화면(게임 뷰, 백버퍼)에만 있습니다.
          */
         void populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
@@ -96,7 +82,7 @@ namespace sw
          */
         void resolveMarkerInstanceSlots( RenderFramePacket& packet, const UISystem* pUISystem, const Scene* pActiveScene ) const;
         /**
-         * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다.
+         * @brief 호스트가 요청한 미리보기 씬 뷰(`HostViewTargets::_arrSceneView`)마다 미리보기 패킷을 하나씩 채워 @p packet 에 붙입니다(`RenderPacketScenePreviews::populate`).
          * @details 씬마다 스냅샷 빌더를 따로 둔다(빌더의 재구축 판단 캐시가 씬별이기 때문이다). 요청이 끊긴 씬의 빌더는 이 프레임에 해제한다.
          *          미리보기 패킷에는 주 광원, 라이트, 그림자, 카메라, 씬 스냅샷만 싣는다. 추가 뷰, 캔버스, 스크린샷은 주 패킷에만 있다.
          * @param sceneManager 씬 키로 씬을 찾는 곳입니다(`SceneManager::findPreviewScene`). 없는 키는 건너뜁니다.
@@ -104,51 +90,17 @@ namespace sw
         void populateScenePreviews( RenderFramePacket& packet, const HostViewTargets& views, const SceneManager& sceneManager );
 
     private:
-        /** @brief 자동 렌더 배율(`gv_autoRenderScale`)에 이번 프레임 시간(초)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다. */
-        float32 updateAutoRenderScale( float32 deltaTime );
-
-        /** @brief 미리보기 씬 하나의 GT 쪽 스냅샷 빌더입니다. 씬 키로 찾습니다. */
-        struct ScenePreviewBuilder
-        {
-            unique_ptr<GPUSceneBuilder> _builder;
-            uint32                      _sceneKey{ 0 };
-            uint8                       _bSeen{ SW_FALSE }; ///< 이번 프레임에 요청이 있었다
-        };
-        /** @brief 씬 키의 빌더 항목을 찾고, 없으면 만듭니다. */
-        ScenePreviewBuilder& getOrCreateScenePreviewBuilder( uint32 sceneKey );
-
-        /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다.
-         *         프레임마다 CPU 스냅샷만 exportCPUSnapshot 으로 뽑아 패킷에 담아 RT 로 넘깁니다. */
-        unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /**
          * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 슬롯과 바꿔 가며 돕니다(`RenderThread::submit`).
          * @details 링에서 돌아온 저장소를 그대로 다시 채웁니다(지역 변수로 두면 스냅샷의 배치와 그룹 목록, 라이트 목록이
          *          프레임마다 새로 할당됩니다).
          */
         unique_ptr<RenderFramePacket> _packetScratch;
-        unique_ptr<GPUUploadQueue>    _gpuUploadQueue;
-        /** @brief 추가 뷰(CCTV, 백미러, PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기, 예산)입니다. */
-        unique_ptr<RenderViewScheduler> _renderViewScheduler;
-        /** @brief 스케줄러의 시각(초)입니다. 프레임 델타의 누적입니다. */
-        float64 _renderViewClock;
-        /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
-        unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
-        bool                            _bAutoRenderScaleActive;
-        /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
-        vector<LODView> _listLODView;
-        /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
-        vector<uint32> _listShadowLightIndex;
-        /** @brief 미리보기 씬마다의 스냅샷 빌더입니다(`populateScenePreviews`). 요청이 끊긴 씬의 것은 해제합니다. */
-        vector<ScenePreviewBuilder> _listScenePreviewBuilder;
-        /** @brief 미리보기 씬 하나의 애니메이션 LOD · 메시 LOD 뷰입니다. 프레임마다 재사용합니다. */
-        vector<LODView> _listPreviewLODView;
-        /** @brief 디버그 드로우 겹치기가 펼친 선분입니다(`DebugDrawCanvasUtil::paint`). 게임 스레드 하나가 패킷을 채우므로 하나를 프레임마다 재사용합니다. */
-        vector<DebugLine> _listDebugDrawLine;
-        /** @brief 디바이스가 텍스처를 인덱스로 고를 수 있어 머티리얼이 달라도 배치를 합치는지입니다(`initialize` 가 정한다). 미리보기 빌더에도 같은 값을 준다. */
-        bool _bMergeBatchesAcrossMaterials;
-        /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). 미리보기 빌더는 쓰지 않는다. */
-        bool _bGPUInstanceLODCapable;
-        /** @brief 활성 씬에 쓸 카메라가 없다는 오류를 이미 알렸는지입니다. 카메라가 생기면 다시 알릴 수 있게 내립니다. */
-        bool _bMissingCameraReported;
+        /** @brief 주 씬과 미리보기 씬의 GPU 업로드 요청을 받는 큐입니다(스냅샷을 내보내기 전에 비운다). */
+        unique_ptr<GPUUploadQueue>  _gpuUploadQueue;
+        RenderPacketSceneCollector  _scene;    ///< 활성 씬의 스냅샷 빌더와 라이트 · 그림자 · LOD 뷰 채우기
+        RenderPacketViewSetup       _views;    ///< 주 시점 카메라 · 자동 렌더 배율 · 추가 뷰 일정
+        RenderPacketScenePreviews   _previews; ///< 미리보기 씬마다의 스냅샷 빌더
+        RenderPacketCanvasCollector _canvas;   ///< 화면 2D 채우기
     };
 } // namespace sw

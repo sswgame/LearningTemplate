@@ -2,7 +2,7 @@
  * @file MeshLODSystem.h
  * @brief 메시 LOD 고르기입니다 — LOD 단계가 여럿인 메시(`Mesh::getLODs`)를 그리는 컴포넌트마다 화면 크기로 단계를 정합니다. 씬 서비스(`ISceneService`)라 매니저마다 하나 있고,
  *        `SceneFrameStep::FlushEnd` 단계(그리기 전, 트랜스폼을 펼친 뒤)에서 돕니다. 얻기는 `manager.getSubsystem<MeshLODSystem>()` 입니다.
- * @details 뷰는 렌더 패킷 빌더가 프레임마다 넣는다(주 시점과 이번 프레임에 그리는 추가 뷰 — 애니메이션 LOD 와 같은 목록, `RenderPacketBuilder::updateLODViews`).
+ * @details 뷰는 렌더 패킷 빌더가 프레임마다 넣는다(주 시점과 이번 프레임에 그리는 추가 뷰 — 애니메이션 LOD 와 같은 목록, `RenderPacketSceneCollector::updateLODViews`).
  *          대기 뷰(컷 프리롤의 카메라, `CameraManagerComponent`)가 있으면 그 시점의 화면 크기도 본다 — 컷 첫 프레임에 그 시점의 단계로 바로 그린다.
  *          단계를 바꾸면 컴포넌트가 렌더 상태를 더티로 표시하고, 렌더 수집이 그 단계의 정점 범위로 배치를 나눈다(`MeshComponent::findDrawSection`).
  *          지금은 컴포넌트마다 CPU 에서 고른다 — 인스턴스마다 GPU 컬링이 고르는 경로(`gpucull.hlsl` 의 간접 인자)와 단계 사이 디더 크로스페이드는 계획
