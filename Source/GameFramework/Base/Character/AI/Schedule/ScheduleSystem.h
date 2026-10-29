@@ -41,6 +41,7 @@ namespace sw
 
     class GameFlags;
     class ScheduleCatalog;
+    class ScheduleSystemRegistry;
 
     /** @brief 계산을 얼마나 곱게 할지 정합니다. */
     ENUM()
@@ -315,7 +316,10 @@ namespace sw
         void explainNPC( int32 npcIndex, string& outText ) const;
         /** @brief 오늘 계획의 시간표(출발, 도착, 구간, 출처)입니다. 에디터와 콘솔에 그대로 보여 줍니다. */
         void dumpTimeline( int32 npcIndex, string& outText ) const;
-        /** @brief 지금 살아 있는 일정 시스템을 모두 모읍니다. 생성자가 목록에 등록하고 소멸자가 해제합니다. 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다. */
+        /**
+         * @brief 지금 살아 있는 일정 시스템을 모두 모읍니다. 생성자가 목록에 등록하고 소멸자가 해제합니다. 에디터 일정 디버그 창이 같은 스레드에서 읽기 전용으로 씁니다.
+         * @details 목록은 GameFramework 의 모듈 서브시스템(`ScheduleSystemRegistry`, 엔진 범위)이다. 게임 서비스가 없으면(테스트) 비어 있다.
+         */
         static void collectLiveSystems( vector<const ScheduleSystem*>& outListSystem );
 
     private:
@@ -410,6 +414,7 @@ namespace sw
         IScheduleActivityAnimator* _pAnimator;
         const GameFlags*           _pFlags;
         const TagContainer*        _pWorldTags;
+        ScheduleSystemRegistry*    _pLiveRegistry;  ///< 생성자가 오른 살아 있는 목록(모듈 서브시스템). 없으면(게임 서비스 없는 테스트) nullptr — 소멸자가 같은 목록에서 빠진다
         ScheduleSpotLocator        _defaultLocator; ///< 카탈로그 `<Spot>` 제공자
         StraightSchedulePathing    _defaultPathing; ///< 곧은 선
         ScheduleSystemSettings     _settings;

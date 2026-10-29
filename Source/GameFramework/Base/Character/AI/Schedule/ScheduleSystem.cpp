@@ -8,13 +8,16 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Subsystem/ISubsystem.h"
+
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Base/Character/AI/Schedule/ScheduleSaveState.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
@@ -50,20 +53,30 @@ namespace sw
             }
         };
 
-        /** @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창(`collectLiveSystems`)만 읽습니다. */
-        struct ScheduleSystemRegistry
-        {
-            mutex                         _mutex;
-            vector<const ScheduleSystem*> _listSystem;
-        };
-
-        /**
-         * @brief 목록의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(첫 일정 시스템이 만들어질 때 만들어진다).
-         * @details 일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 서고 사라진다. 그래서 자기 생성자에서 오르고 소멸자에서 빠지되,
-         *          목록이 먼저 사라졌으면(엔진 종료 뒤) 뺄 것이 없다.
-         */
-        ScopeOwned<ScheduleSystemRegistry> s_scheduleSystemRegistry;
     } // namespace
+
+    /**
+     * @class ScheduleSystemRegistry
+     * @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창 · 감시 값(`collectLiveSystems`)만 읽습니다.
+     * @details GameFramework 의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 엔진 범위 아래 GameFramework 의 자식 범위에 서고 `game::findSubsystem` 으로 찾힌다.
+     *          일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 선다. 그래서 생성자가 찾은 목록에 오르고 그 목록을 들어 소멸자가 빠진다
+     *          (목록이 없으면 — 게임 서비스 없는 테스트 — 오르지 않는다). 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이 들었다. 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
+     */
+    class ScheduleSystemRegistry final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ScheduleSystemRegistry";
+
+        // ISubsystem — 세울 것이 없다. 일정 시스템(컴포넌트)은 GameFramework 가 내려가기 전에 사라진다.
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        mutex                                     _mutex;
+        vector<const ScheduleSystem*> _listSystem SW_GUARDED_BY( _mutex );
+    };
+
+    SW_MODULE_SUBSYSTEM( Engine, ScheduleSystemRegistry, ScheduleSystemRegistry );
 } // namespace sw
 
 namespace sw
@@ -112,10 +125,10 @@ namespace sw
 
     void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
     {
-        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
+        ScheduleSystemRegistry* const pRegistry = game::findSubsystem<ScheduleSystemRegistry>();
         if ( pRegistry == nullptr )
         {
-            outListSystem.clear(); // 아직 일정 시스템이 하나도 서지 않았다
+            outListSystem.clear(); // 게임 서비스가 없다(테스트) — 오른 일정 시스템이 없다
             return;
         }
         ScopedLock<mutex> lock{ pRegistry->_mutex };
@@ -130,6 +143,7 @@ namespace sw
         , _pAnimator{ nullptr }
         , _pFlags{ nullptr }
         , _pWorldTags{ nullptr }
+        , _pLiveRegistry{ game::findSubsystem<ScheduleSystemRegistry>() }
         , _defaultLocator{}
         , _defaultPathing{}
         , _settings{}
@@ -146,19 +160,18 @@ namespace sw
         , _bConditionsDirty{ SW_FALSE }
         , _bSuppressEvents{ SW_FALSE }
     {
-        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.getOrCreate();
-        if ( pRegistry == nullptr )
-            return; // 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 올릴 목록이 없다
-        ScopedLock<mutex> lock{ pRegistry->_mutex };
-        pRegistry->_listSystem.push_back( this );
+        if ( _pLiveRegistry == nullptr )
+            return; // 게임 서비스가 없다(테스트의 지역 객체) — 오를 목록이 없다
+        ScopedLock<mutex> lock{ _pLiveRegistry->_mutex };
+        _pLiveRegistry->_listSystem.push_back( this );
     }
 
     ScheduleSystem::~ScheduleSystem()
     {
         shutdown();
-        ScheduleSystemRegistry* const pRegistry = s_scheduleSystemRegistry.find();
+        ScheduleSystemRegistry* const pRegistry = _pLiveRegistry;
         if ( pRegistry == nullptr )
-            return; // 목록이 먼저 사라졌다(엔진 종료 · 프로세스 끝) — 뺄 것이 없다
+            return; // 오르지 않았다
         ScopedLock<mutex> lock{ pRegistry->_mutex };
         for ( size_t systemIndex = 0; systemIndex < pRegistry->_listSystem.size(); ++systemIndex )
         {
