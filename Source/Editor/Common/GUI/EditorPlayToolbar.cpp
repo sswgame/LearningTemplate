@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "DevTools/RenderDoc/RenderDocCapture.h"
+
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -24,7 +26,6 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

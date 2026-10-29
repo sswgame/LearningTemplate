@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
+#include "DevTools/RenderDoc/RenderDocCapture.h"
 
 /**
  * @brief [RenderDocCaptureTest] RenderDoc 없이(`-renderdoc` 없음 · RenderDoc 으로 띄우지 않음) 붙지 않고, 캡처 · UI 요청은 아무것도 하지 않고 죽지 않는다

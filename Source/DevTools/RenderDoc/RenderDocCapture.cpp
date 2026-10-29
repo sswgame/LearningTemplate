@@ -1,13 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
+#include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
 
-#if !defined( SW_SHIPPING )
-    #include <renderdoc_app.h>
-#endif
+#include <renderdoc_app.h>
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -17,7 +15,6 @@
 
 namespace sw
 {
-#if !defined( SW_SHIPPING )
     SW_LOG_CALLER( "RenderDoc" );
 
     namespace
@@ -33,7 +30,7 @@ namespace sw
             /** @brief 이미 로드된(또는 @p bLoadIfMissing 이면 설치 경로에서 로드한) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr 입니다. */
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
-    #if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS )
                 // 주입된 RenderDoc 은 참조 없이 빌리지 않는다 — 고정(PIN)해 API 포인터(`_s_pAPI`)가 사는 동안 내려가지 않게 한다.
                 HMODULE hModule = nullptr;
                 if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, L"renderdoc.dll", &hModule ) == FALSE )
@@ -48,17 +45,17 @@ namespace sw
                 if ( hModule == nullptr )
                     return nullptr;
                 return reinterpret_cast<pRENDERDOC_GetAPI>( reinterpret_cast<void*>( GetProcAddress( hModule, "RENDERDOC_GetAPI" ) ) );
-    #elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX )
                 void* pModule = dlopen( "librenderdoc.so", RTLD_NOW | RTLD_NOLOAD );
                 if ( pModule == nullptr && bLoadIfMissing )
                     pModule = dlopen( "librenderdoc.so", RTLD_NOW );
                 if ( pModule == nullptr )
                     return nullptr;
                 return reinterpret_cast<pRENDERDOC_GetAPI>( dlsym( pModule, "RENDERDOC_GetAPI" ) );
-    #else
+#else
                 (void)bLoadIfMissing;
                 return nullptr;
-    #endif
+#endif
             }
 
             static bool runCapture( const vector<string>& listArgument, string& outReply )
@@ -93,12 +90,10 @@ namespace sw
     SW_DEV_COMMAND( RenderDocCaptureFrame, "renderdoc.capture", "renderdoc.capture", "Capture the next frame with RenderDoc (needs -renderdoc or a RenderDoc launch)",
                     &RenderDocCaptureInternal::runCapture );
     SW_DEV_COMMAND( RenderDocReplayUI, "renderdoc.ui", "renderdoc.ui", "Open the RenderDoc replay UI attached to this process", &RenderDocCaptureInternal::runUI );
-#endif
 } // namespace sw
 
 namespace sw
 {
-#if !defined( SW_SHIPPING )
     void RenderDocCapture::initialize( bool bLoadIfMissing )
     {
         if ( RenderDocCaptureInternal::_s_bTried.exchange( true ) ) // 첫 호출 하나만 초기화한다
@@ -145,24 +140,4 @@ namespace sw
             return RenderDocCaptureInternal::_s_pAPI->ShowReplayUI() != 0;
         return RenderDocCaptureInternal::_s_pAPI->LaunchReplayUI( 1, nullptr ) != 0;
     }
-#else
-    void RenderDocCapture::initialize( bool bLoadIfMissing )
-    {
-        (void)bLoadIfMissing;
-    }
-
-    bool RenderDocCapture::isAvailable()
-    {
-        return false;
-    }
-
-    void RenderDocCapture::triggerCapture()
-    {
-    }
-
-    bool RenderDocCapture::launchReplayUI()
-    {
-        return false;
-    }
-#endif
 } // namespace sw

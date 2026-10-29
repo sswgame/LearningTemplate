@@ -9,6 +9,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "DevTools/RenderDoc/RenderDocCapture.h"
+
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
@@ -37,7 +39,6 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"
 

@@ -21,6 +21,7 @@ target_link_libraries(DevTools
 	PUBLIC
 		Engine
 	PRIVATE
+		renderdoc # RenderDoc in-app API 헤더 하나(`RenderDoc/RenderDocCapture.cpp`)
 		sw_global_options
 )
 target_compile_definitions(DevTools PRIVATE "SW_LOG_TAG=\"DevTools\"" SW_TOOL_INTERNAL) # 호스트 쪽 도구라 엔진 서비스 표를 직접 찾는다

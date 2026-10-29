@@ -76,7 +76,6 @@
 // 짓지 않는 Server 타깃에서는 그 멤버가 부르는 정의가 없어 링크가 진다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`).
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Capture/PortraitBatchUtil.h"
-    #include "Engine/Renderer/Capture/RenderDocCapture.h"
     #include "Engine/Renderer/Cook/ShaderCookDriver.h"
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"

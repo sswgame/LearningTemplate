@@ -13,7 +13,6 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/UserSettings/UserSettingsEngineHandlers.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
@@ -48,7 +47,6 @@ namespace sw
     SubsystemInitResult RHISubsystem::initializeSubsystem()
     {
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-        RenderDocCapture::initialize( commandLine.isArgumentProvided( CommandLineArgument::RENDERDOC ) );
 
         RHIBackend          commandLineBackend{};
         const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();

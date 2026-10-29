@@ -188,8 +188,6 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 	message(STATUS "[Engine] Tracy profiler client enabled (loaded on demand on Windows)")
 endif()
 
-# RenderDoc in-app API — 헤더 하나(include 경로만, 링크할 것 없음). Renderer/Capture/RenderDocCapture.cpp 가 Dev 에서만 쓴다.
-target_link_libraries(Engine PRIVATE renderdoc)
 # 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다(INavMesh · INavCrowd 뒤).
 target_link_libraries(Engine PRIVATE recastnavigation)
 # 글자 래스터화 — FreeType(x64-windows 는 freetype.dll, 리눅스는 정적). 헤더는 Text/FreeType 에서만 include 한다(Engine/Text/IFontRasterizer.h 뒤).

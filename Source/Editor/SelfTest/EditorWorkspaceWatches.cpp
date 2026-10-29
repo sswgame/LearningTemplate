@@ -10,6 +10,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -25,7 +26,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"

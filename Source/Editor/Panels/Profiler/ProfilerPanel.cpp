@@ -11,6 +11,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "DevTools/RenderDoc/RenderDocCapture.h"
+
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -41,7 +43,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
-#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

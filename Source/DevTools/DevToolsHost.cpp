@@ -2,6 +2,7 @@
 
 #include "DevTools/DevToolsHost.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -11,6 +12,7 @@
 #include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
+#include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 #include "DevTools/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Shader/ShaderRecompiler.h"
@@ -74,6 +76,12 @@ namespace sw
 
     void DevToolsHost::addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts )
     {
+        // RenderDoc — 그래픽 API 를 만들 때 끼어들므로 RHI 디바이스보다 먼저 올린다(기동 단계는 아직 초기화 전이다). `-renderdoc` 이면 설치 경로에서 로드한다.
+        if ( parts._pRHI != nullptr )
+        {
+            const CommandLineManager* const pCommandLine = locateSubsystem<CommandLineManager>( &startup );
+            RenderDocCapture::initialize( pCommandLine != nullptr && pCommandLine->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
+        }
         // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(전용 서버 · 렌더러를 끈 기동은 렌더 쪽이 nullptr).
         if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
             (void)startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread ) );
