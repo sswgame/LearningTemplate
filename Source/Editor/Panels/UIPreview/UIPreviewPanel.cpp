@@ -5,11 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Log/LogOnce.h"
-#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -25,26 +21,18 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
-#include "Engine/UI/Document/UIDocumentCache.h"
-#include "Engine/UI/Document/UIDocumentWriter.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
@@ -53,56 +41,12 @@
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetNavigation.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-#include "Engine/UI/Widgets/TextWidget.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "UIPreviewPanel" );
     SW_EDITOR_PANEL( UIPreviewPanel, UIPreviewPanel::kPanelID, EditorPanelCategory::Tool, 950 );
-
-    /** @brief 되돌리기 항목이 패널을 가리키는 길입니다. 패널이 사라지면 `_pPanel` 이 비어 항목은 아무것도 하지 않습니다. */
-    struct UIPreviewPanel::EditSession
-    {
-        UIPreviewPanel* _pPanel{ nullptr };
-
-        void apply( uint32 generation, uint32 ordinal, const string& propertyName, const string& text ) const
-        {
-            if ( _pPanel != nullptr )
-                _pPanel->applyEditedText( generation, ordinal, propertyName, text );
-        }
-
-        void insert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index ) const
-        {
-            if ( _pPanel != nullptr )
-                _pPanel->applyInsert( generation, typeName, parentOrdinal, index );
-        }
-
-        void detach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder ) const
-        {
-            if ( _pPanel != nullptr )
-                _pPanel->applyDetach( generation, parentOrdinal, index, pHolder );
-        }
-
-        void reattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder ) const
-        {
-            if ( _pPanel != nullptr )
-                _pPanel->applyReattach( generation, parentOrdinal, index, pHolder );
-        }
-
-        void move( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex ) const
-        {
-            if ( _pPanel != nullptr )
-                _pPanel->applyMove( generation, parentOrdinal, fromIndex, toIndex );
-        }
-    };
-
-    /** @brief 지운 위젯을 되돌리기 항목 둘(지우기를 되돌리기 · 다시 하기)이 나눠 보관하고 있는 상자입니다. */
-    struct UIPreviewPanel::RemovedWidget
-    {
-        unique_ptr<Widget> _pWidget{};
-    };
 
     namespace
     {
@@ -114,7 +58,6 @@ namespace sw::editor
             static constexpr float32 kTreeRatio            = 0.28f; ///< 왼쪽 영역에서 위젯 트리가 차지하는 높이 비율
             static constexpr float32 kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
             static constexpr float32 kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
-            static constexpr uint32  kPaletteRefreshFrames = 180;   ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
             /** @brief 레이아웃 사각형 · 안전 영역 선의 색입니다(테마 토큰 — 정보색 · 오류색을 반투명으로). */
             static Color getLayoutColor() { return EditorThemeUtil::getInfoColor().withAlpha( 0.45f ); }
             static Color getSafeZoneColor() { return EditorThemeUtil::getErrorColor().withAlpha( 0.8f ); }
@@ -347,72 +290,23 @@ namespace sw::editor
 
     UIPreviewPanel::UIPreviewPanel()
         : IEditorPanel( false )
-        , _listRow{}
-        , _pRowTree{ nullptr }
-        , _rowTreeGeneration{ 0 }
-        , _listLanguage{}
-        , _listBaseline{}
-        , _listPaletteType{}
+        , _model{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 원본은 editortooldefaults.json
+        , _grid{}
         , _paletteFilter{}
         , _slotDragBaseline{}
-        , _paletteType{}
-        , _documentPath{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 원본은 editortooldefaults.json
-        , _openedDocument{}
-        , _targetPath{}
-        , _error{}
-        , _lastFocusKey{}
-        , _language{}
-        , _theme{}
-        , _animation{}
-        , _viewport{}
-        , _pointer{}
-        , _focus{}
-        , _grid{}
-        , _pLocalization{}
-        , _pSession{ sw::make_shared<EditSession>() }
-        , _probe{}
+        , _slotFieldBaseline{}
         , _pTextureID{ nullptr }
         , _texture{ 0 }
-        , _screen{ kInvalidUIScreenHandle }
-        , _selected{ kInvalidWidgetID }
-        , _seenRootID{ kInvalidWidgetID }
-        , _baselineWidget{ kInvalidWidgetID }
-        , _selectedOrdinal{ UIPreviewLogic::kNoOrdinal }
-        , _generation{ 0 }
-        , _gameTextRevision{ 0 }
-        , _languageIndex{ 0 }
         , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
-        , _paletteFrame{ 0 }
-        , _slotEditCount{ 0 }
-        , _resolutionTable{}
-        , _resolutionIndex{ 0 }
-        , _bResolutionTableAttempted{ false }
-        , _uiScale{ 1.0f }
-        , _textScale{ 1.0f }
-        , _safeZone{ 0.0f }
-        , _animationScrub{ 0.0f }
-        , _lastPointer{}
         , _bShowLayout{ true }
-        , _bInteract{ false }
-        , _bNavigationMode{ false }
-        , _bMutated{ false }
-        , _bAnimationPaused{ false }
-        , _bAnimationLoop{ false }
-        , _bPointerInside{ false }
-        , _bPointerPressed{ false }
-        , _bApplyLocalization{ false }
-        , _bAwaitReload{ false }
-        , _bReloadedAfterSave{ false }
         , _bSlotDragging{ false }
         , _bLayoutDragging{ false }
     {
-        _pSession->_pPanel = this;
+        _model.setDirtyListener( SW_DELEGATE_METHOD( Delegate<void( bool )>, &UIPreviewPanel::setDocumentDirty, this ) );
+        _model.setTargetReleaseListener( SW_DELEGATE_METHOD( Delegate<void()>, &UIPreviewPanel::releaseTexture, this ) );
     }
 
-    UIPreviewPanel::~UIPreviewPanel()
-    {
-        _pSession->_pPanel = nullptr; // 쌓여 있는 되돌리기 항목이 사라진 패널을 부르지 않게 한다
-    }
+    UIPreviewPanel::~UIPreviewPanel() = default;
 
     const utf8* UIPreviewPanel::getPanelTitle() const
     {
@@ -424,12 +318,18 @@ namespace sw::editor
         return EditorAssetType{ UIDocumentAsset::kAssetType };
     }
 
+    void UIPreviewPanel::setDocumentDirty( bool bDirty )
+    {
+        if ( bDirty )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
+    }
+
     void UIPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         releaseTexture();
-        closePreview();
-        _pLocalization.reset(); // 화면을 닫은 뒤에 놓는다(화면이 관리자를 가리킨다)
-        _probe = UIPreviewProbe{};
+        _model.shutdown();
     }
 
     void UIPreviewPanel::releaseTexture()
@@ -443,196 +343,12 @@ namespace sw::editor
         _texture    = 0;
     }
 
-    void UIPreviewPanel::closePreview()
-    {
-        // 닫힐 때는 UI 시스템이 먼저 내려갔을 수 있다(소멸자 · 종료) — 풀 화면이 이미 사라진 것이라 오류가 아니다.
-        UISystem* pUI = editor::findSubsystem<UISystem>(); // 종료 순서에 따라 이미 없을 수 있다
-        if ( pUI != nullptr && _screen != kInvalidUIScreenHandle )
-        {
-            UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );
-            if ( pScreen != nullptr )
-            {
-                _pointer.forgetTree( pScreen->getTree() ); // 트리를 지우기 전에 호버와 포커스를 놓는다
-                _focus.forgetTree( pScreen->getTree() );
-            }
-            pUI->getOffscreenScreens().remove( _screen );
-        }
-        _screen = kInvalidUIScreenHandle;
-        _openedDocument.clear();
-        _targetPath.clear();
-        _selected           = kInvalidWidgetID;
-        _selectedOrdinal    = UIPreviewLogic::kNoOrdinal;
-        _seenRootID         = kInvalidWidgetID;
-        _baselineWidget     = kInvalidWidgetID;
-        _bMutated           = false;
-        _bPointerInside     = false;
-        _bPointerPressed    = false;
-        _bNavigationMode    = false;
-        _bApplyLocalization = true;
-        ++_generation;
-        _listBaseline.clear();
-        clearDocumentDirty();
-    }
-
-    void UIPreviewPanel::syncFocusedDocument()
-    {
-        // 콘텐츠 브라우저에서 `*.ui.xml` 을 두 번 누르면(`EditorAssetCommands::openPath`) 작업공간 포커스가 그 경로가 되고 이 패널이 열린다.
-        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastFocusKey, 0 ) == false )
-            return;
-        const string_view focused = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType{ UIDocumentAsset::kAssetType } );
-        if ( focused.empty() || _documentPath == focused )
-            return;
-        const string previous = _documentPath.get();
-        if ( _documentPath.commit( focused ) == false )
-            return; // 리소스 id 가 아니면 commit 이 알렸다 — 지금 문서를 그대로 둔다
-        if ( isDocumentDirty() )
-            SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because '%#' was opened", previous.c_str(), _documentPath.c_str() );
-        _error.clear();
-    }
-
-    const UIResolutionPreset* UIPreviewPanel::findSelectedResolution()
-    {
-        if ( _bResolutionTableAttempted == false )
-        {
-            // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 목록이 비어 미리보기를 세우지 않는다.
-            _bResolutionTableAttempted                = true;
-            const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-            if ( pDefaultAssets == nullptr )
-            {
-                SW_LOG_ERROR( "UI preview needs the engine default assets for its resolution table - the preview stays empty" );
-                return nullptr;
-            }
-            if ( _resolutionTable.loadFromAsset( AssetID{ pDefaultAssets->_uiResolutionPresets.get() } ) == false )
-                return nullptr;
-        }
-        if ( _resolutionTable._listResolution.empty() )
-            return nullptr;
-        if ( _resolutionIndex >= _resolutionTable._listResolution.size() )
-            _resolutionIndex = 0;
-        return &_resolutionTable._listResolution[_resolutionIndex];
-    }
-
-    void UIPreviewPanel::syncPreview( UISystem& ui )
-    {
-        const UIResolutionPreset* pResolution = findSelectedResolution();
-        if ( pResolution == nullptr )
-        {
-            _error = "UI preview resolutions could not be read (EngineDefaultAssets _uiResolutionPresets - see the log)";
-            return;
-        }
-        _viewport                        = UIPreviewLogic::makeViewport( ui.getScaleSettings(), *pResolution, _uiScale, _safeZone );
-        const string targetPath          = UIPreviewLogic::makeTargetPath( _viewport );
-        const bool   bReopen             = _screen == kInvalidUIScreenHandle || ui.getOffscreenScreens().findScreen( _screen ) == nullptr || _documentPath != _openedDocument;
-        const bool   bPreviousOpenFailed = bReopen && _error.empty() == false && _documentPath == _openedDocument;
-        if ( bPreviousOpenFailed )
-            return; // 같은 문서가 지난번에 만들지 못했다 — 고칠 때까지(경로를 바꾸거나 다시 열기) 프레임마다 다시 시도하지 않는다
-        if ( bReopen )
-        {
-            const string documentPath = _documentPath.get(); // 확정 경로는 늘 값이 있다(EditableAssetPath)
-            releaseTexture();                                // 크기가 바뀌면 렌더 텍스처도 새것이다
-            closePreview();                                  // 포인터 · 포커스를 놓고 화면을 닫는다(되돌리기 세대도 올린다)
-            _screen             = ui.openOffscreenScreen( documentPath, targetPath );
-            _openedDocument     = documentPath;
-            _targetPath         = targetPath;
-            _error              = _screen == kInvalidUIScreenHandle ? SW_LOCKEY( "EditorUIPreview", "BuildFailed" ) : "";
-            _bApplyLocalization = true;
-        }
-        else if ( _targetPath != targetPath )
-        {
-            // 해상도를 바꿔도 화면(트리, 고친 값)은 그대로 두고 그릴 렌더 텍스처만 새 크기의 것으로 옮긴다.
-            releaseTexture();
-            ui.getOffscreenScreens().setTargetPath( _screen, hashed_string( targetPath ) );
-            _targetPath = targetPath;
-        }
-        if ( _screen != kInvalidUIScreenHandle )
-        {
-            ui.setOffscreenView( _screen, _viewport, _textScale, _theme );
-            if ( UIScreen* pScreen = ui.getOffscreenScreens().findScreen( _screen ) )
-                pScreen->setReportsUnhandledCommands( false ); // 미리보기에는 게임 코드가 없어 명령을 받을 쪽이 없다
-        }
-    }
-
-    void UIPreviewPanel::syncTree( UIScreen& screen )
-    {
-        // 문서를 다시 읽으면(저장, 에디터 밖 편집) 핫 리로드가 트리를 새로 지어 위젯 번호가 모두 바뀐다 — 고른 위젯은 문서 순서 번호로 이어 간다.
-        WidgetTree&    tree   = screen.getTree();
-        const Widget*  pRoot  = tree.getRoot();
-        const WidgetID rootID = pRoot != nullptr ? pRoot->getID() : kInvalidWidgetID;
-        if ( rootID == _seenRootID )
-            return;
-        const bool bRebuilt = _seenRootID != kInvalidWidgetID;
-        _seenRootID         = rootID;
-        _pointer.forgetTree( tree );
-        _focus.forgetTree( tree );
-        _bPointerInside  = false;
-        _bPointerPressed = false;
-        ++_generation;
-        _listBaseline.clear();
-        _baselineWidget = kInvalidWidgetID;
-        _selected       = _selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, _selectedOrdinal ) : kInvalidWidgetID;
-        if ( bRebuilt )
-        {
-            // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다.
-            _bMutated = false;
-            clearDocumentDirty();
-            if ( _bAwaitReload )
-            {
-                _bAwaitReload       = false;
-                _bReloadedAfterSave = true;
-            }
-        }
-    }
-
-    void UIPreviewPanel::syncLanguage( UISystem& ui )
-    {
-        LocalizationManager* pGame = editor::findSubsystem<LocalizationManager>();
-        if ( _listLanguage.empty() )
-        {
-            UIPreviewLogic::makeLanguageChoices( pGame != nullptr ? pGame->getAvailableLanguages() : vector<string>{}, _listLanguage );
-        }
-        if ( _language.empty() || pGame == nullptr )
-        {
-            if ( _pLocalization != nullptr )
-            {
-                ui.getOffscreenScreens().setLocalization( _screen, nullptr );
-                _pLocalization.reset();
-            }
-            else if ( _bApplyLocalization && _screen != kInvalidUIScreenHandle )
-            {
-                ui.getOffscreenScreens().setLocalization( _screen, nullptr );
-            }
-            _bApplyLocalization = false;
-            return;
-        }
-
-        // 문화권이 전역이라 게임 UI 의 언어는 건드리지 않는다 — 게임 관리자의 사본을 이 화면에만 적용한다. 게임 텍스트가 다시 읽히면(번역 핫 리로드) 사본도 다시 만든다.
-        const uint32 gameRevision = pGame->getTextRevision();
-        const bool   bNeedCopy    = _pLocalization == nullptr || gameRevision != _gameTextRevision;
-        if ( bNeedCopy )
-        {
-            if ( _pLocalization == nullptr )
-                _pLocalization = sw::make_unique<LocalizationManager>();
-            _pLocalization->copyStateFrom( *pGame );
-            _gameTextRevision   = gameRevision;
-            _bApplyLocalization = true;
-        }
-        if ( _pLocalization->getCurrentLanguage() != _language )
-        {
-            (void)_pLocalization->setCurrentLanguage( _language );
-            _bApplyLocalization = true;
-        }
-        if ( _bApplyLocalization && _screen != kInvalidUIScreenHandle )
-        {
-            ui.getOffscreenScreens().setLocalization( _screen, _pLocalization.get() );
-            _bApplyLocalization = false;
-        }
-    }
-
     void UIPreviewPanel::syncTexture()
     {
-        AssetManager*    pAssets  = editor::findSubsystem<AssetManager>();
-        const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( _targetPath ) : nullptr;
-        const uint64     texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+        AssetManager*    pAssets    = editor::findSubsystem<AssetManager>();
+        const string&    targetPath = _model.getTargetPath();
+        const Texture2D* pTexture   = pAssets != nullptr && targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( targetPath ) : nullptr;
+        const uint64     texture    = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
         if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
@@ -646,264 +362,28 @@ namespace sw::editor
 
     bool UIPreviewPanel::canSaveDocument() const
     {
-        return _bMutated == false && _screen != kInvalidUIScreenHandle && _openedDocument.empty() == false;
+        return _model.canSaveDocument();
     }
 
     bool UIPreviewPanel::saveDocument()
     {
-        UISystem*       pUI     = editor::findSubsystem<UISystem>();
-        const UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
-        if ( pScreen == nullptr )
-            return false;
-        string text;
-        string error;
-        if ( UIPreviewLogic::makeDocumentText( *pUI, *pScreen, _openedDocument, text, error ) == false )
-        {
-            SW_LOG_ERROR( "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
-            return false;
-        }
-        const string path = AssetPaths::getWritePath( _openedDocument );
-        if ( path.empty() || FileUtil::writeTextFile( path, text ) == false )
-        {
-            SW_LOG_ERROR( "UI Preview: '%#' could not be written to '%#'", _openedDocument.c_str(), path.c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "UI Preview: saved '%#'", _openedDocument.c_str() );
-        _bAwaitReload       = true;
-        _bReloadedAfterSave = false;
-        return true;
+        return _model.saveDocument();
     }
 
     void UIPreviewPanel::revertDocument()
     {
-        closePreview();
-        _error.clear();
-    }
-
-    void UIPreviewPanel::markPreviewMutated()
-    {
-        _bMutated = true;
-    }
-
-    void UIPreviewPanel::captureBaseline( const Widget& widget )
-    {
-        _listBaseline.clear();
-        _baselineWidget       = widget.getID();
-        const TypeInfo* pType = widget.getTypeInfo();
-        if ( pType == nullptr )
-            return;
-        for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
-        {
-            if ( prop._containerKind != ContainerKind::None )
-                continue; // 컨테이너는 텍스트 한 줄로 되돌릴 수 없다
-            BaselineValue value{};
-            value._name = prop._name.c_str();
-            value._text = UIPreviewLogic::formatWidgetProperty( widget, prop );
-            _listBaseline.push_back( std::move( value ) );
-        }
+        _model.revertDocument();
     }
 
     void UIPreviewPanel::onPropertyEdited( const PropertyInfo& prop )
     {
-        UISystem* pUI     = editor::findSubsystem<UISystem>();
-        UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
-        Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( _selected ) : nullptr;
-        if ( pWidget == nullptr )
-            return;
-        markDocumentDirty();
-        if ( prop._containerKind != ContainerKind::None )
-        {
-            captureBaseline( *pWidget ); // 컨테이너 편집은 되돌리기 항목을 남기지 못한다 — 그 뒤의 값을 기준으로 잡는다
-            return;
-        }
-        const string name    = prop._name.c_str();
-        const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, prop );
-        for ( BaselineValue& baseline : _listBaseline )
-        {
-            if ( baseline._name != name )
-                continue;
-            if ( baseline._text == newText )
-                return;
-            const string oldText = baseline._text;
-            baseline._text       = newText;
-            // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, formatToString( "uipreview.%#.%#", _selectedOrdinal, name ) );
-            return;
-        }
-    }
-
-    void UIPreviewPanel::pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey )
-    {
-        if ( propertyName == "_slot" )
-            ++_slotEditCount;
-        const uint32                  generation = _generation;
-        const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
-        {
-            pSession->apply( generation, ordinal, propertyName, oldText );
-        } ),
-                                                          _undoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
-        {
-            pSession->apply( generation, ordinal, propertyName, newText );
-        } ),
-                                                          _undoOwner ),
-                                 "Edit UI Widget", coalesceKey );
-    }
-
-    UIScreen* UIPreviewPanel::findPreviewScreen() const
-    {
-        UISystem* pUI = editor::findSubsystem<UISystem>();
-        return pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
-    }
-
-    void UIPreviewPanel::afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal )
-    {
-        // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
-        WidgetTree& tree = screen.getTree();
-        _pointer.clearHover();
-        _bPointerInside  = false;
-        _baselineWidget  = kInvalidWidgetID;
-        _selectedOrdinal = selectedOrdinal;
-        _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
-        markDocumentDirty();
-    }
-
-    bool UIPreviewPanel::addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget )
-    {
-        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
-        const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
-        WidgetTree&     tree      = screen.getTree();
-        uint32          index{ 0 };
-        PanelWidget*    pParent = UIPreviewLogic::findDropContainer( tree, pTarget, index );
-        if ( pType == nullptr || pParent == nullptr )
-            return false;
-        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
-        Widget*      pAdded        = UIPreviewLogic::insertWidget( tree, *pType, parentOrdinal, index );
-        if ( pAdded == nullptr )
-        {
-            SW_LOG_WARNING( "UI Preview: a '%#' cannot be added to '%#' (the panel takes no more children or the type cannot be built)", typeName.c_str(),
-                            pParent->getName().c_str() );
-            return false;
-        }
-        afterStructureEdit( screen, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
-        const uint32                  generation = _generation;
-        const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
-        {
-            pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
-        } ),
-                                                          _undoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
-        {
-            pSession->insert( generation, typeName, parentOrdinal, index );
-        } ),
-                                                          _undoOwner ),
-                                 "Add UI Widget" );
-        return true;
-    }
-
-    bool UIPreviewPanel::deleteSelected( UIScreen& screen )
-    {
-        WidgetTree& tree    = screen.getTree();
-        Widget*     pWidget = tree.findWidgetByID( _selected );
-        if ( pWidget == nullptr || pWidget->getParent() == nullptr )
-            return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
-        PanelWidget* pParent = pWidget->getParent();
-        const uint32 index   = pParent->findChildIndex( pWidget );
-        if ( index == invalid_index::kUint32 )
-            return false;
-        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
-        _pointer.clearHover();
-        shared_ptr<RemovedWidget> pHolder = sw::make_shared<RemovedWidget>();
-        pHolder->_pWidget                 = UIPreviewLogic::detachWidget( tree, parentOrdinal, index );
-        if ( pHolder->_pWidget == nullptr )
-            return false;
-        afterStructureEdit( screen, parentOrdinal );
-        const uint32                  generation = _generation;
-        const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
-        {
-            pSession->reattach( generation, parentOrdinal, index, pHolder );
-        } ),
-                                                          _undoOwner ),
-                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
-        {
-            pSession->detach( generation, parentOrdinal, index, pHolder );
-        } ),
-                                                          _undoOwner ),
-                                 "Delete UI Widget" );
-        return true;
-    }
-
-    void UIPreviewPanel::applyInsert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index )
-    {
-        UIScreen*       pScreen   = generation == _generation ? findPreviewScreen() : nullptr;
-        TypeRegistry*   pRegistry = editor::findSubsystem<TypeRegistry>();
-        const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
-        if ( pScreen == nullptr || pType == nullptr )
-            return;
-        Widget* pAdded = UIPreviewLogic::insertWidget( pScreen->getTree(), *pType, parentOrdinal, index );
-        if ( pAdded != nullptr )
-            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( pScreen->getTree(), pAdded->getID() ) );
-    }
-
-    void UIPreviewPanel::applyDetach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder )
-    {
-        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
-        if ( pScreen == nullptr )
-            return;
-        _pointer.clearHover();
-        unique_ptr<Widget> removed = UIPreviewLogic::detachWidget( pScreen->getTree(), parentOrdinal, index );
-        if ( removed == nullptr )
-            return;
-        if ( pHolder != nullptr )
-            pHolder->_pWidget = std::move( removed ); // 지우기를 다시 하면 되돌릴 때 끼울 위젯을 다시 맡는다
-        afterStructureEdit( *pScreen, parentOrdinal );
-    }
-
-    void UIPreviewPanel::applyReattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder )
-    {
-        UIScreen*  pScreen             = generation == _generation ? findPreviewScreen() : nullptr;
-        const bool bCannotAttachWidget = pScreen == nullptr || pHolder == nullptr || pHolder->_pWidget == nullptr;
-        if ( bCannotAttachWidget )
-            return;
-        Widget* pAttached = UIPreviewLogic::attachWidget( pScreen->getTree(), std::move( pHolder->_pWidget ), parentOrdinal, index );
-        if ( pAttached != nullptr )
-            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( pScreen->getTree(), pAttached->getID() ) );
-    }
-
-    void UIPreviewPanel::applyEditedText( uint32 generation, uint32 ordinal, const string& propertyName, const string& text )
-    {
-        if ( generation != _generation )
-            return; // 그 뒤에 트리를 다시 지었다 — 옛 항목이 새 트리에 값을 쓰지 않는다
-        UISystem* pUI     = editor::findSubsystem<UISystem>();
-        UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
-        if ( pScreen == nullptr )
-            return;
-        Widget* pWidget = pScreen->getTree().findWidgetByID( UIPreviewLogic::findWidgetByOrdinal( pScreen->getTree(), ordinal ) );
-        if ( pWidget == nullptr )
-            return;
-        const PropertyInfo* pProp = UIPreviewLogic::findWidgetProperty( *pWidget, propertyName );
-        if ( pProp == nullptr || UIPreviewLogic::applyWidgetProperty( *pWidget, *pProp, text ) == false )
-        {
-            SW_LOG_WARNING( "UI Preview: '%#' could not be restored to '%#'", propertyName.c_str(), text.c_str() );
-            return;
-        }
-        markDocumentDirty();
-        if ( _baselineWidget == pWidget->getID() )
-        {
-            for ( BaselineValue& baseline : _listBaseline )
-            {
-                if ( baseline._name == propertyName )
-                    baseline._text = text;
-            }
-        }
+        _model.onPropertyEdited( prop );
     }
 
     void UIPreviewPanel::drawLanguageCombo()
     {
-        const string preview = _language.empty() ? string( "(game language)" ) : _language;
+        const string& language = _model.getLanguage();
+        const string  preview  = language.empty() ? string( "(game language)" ) : language;
         EditorChrome::setNextItemWidthColumns( UIPreviewPanelInternal::kLanguageComboColumns );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
@@ -911,17 +391,15 @@ namespace sw::editor
                                     "(expanded text, right-to-left layout)." );
         if ( bOpen == false )
             return;
-        for ( uint32 index = 0; index < _listLanguage.size(); ++index )
+        const vector<string>& listLanguage = _model.getLanguageChoices();
+        for ( uint32 index = 0; index < listLanguage.size(); ++index )
         {
-            const string& code  = _listLanguage[index];
+            const string& code  = listLanguage[index];
             string        label = code.empty() ? string( "(game language)" ) : code;
             if ( UIPreviewLogic::isPseudoLanguage( code ) )
                 label += "  [pseudo]";
-            if ( ImGui::Selectable( label.c_str(), code == _language ) )
-            {
-                _language      = code;
-                _languageIndex = index;
-            }
+            if ( ImGui::Selectable( label.c_str(), code == language ) )
+                _model.selectLanguage( index );
             UIPreviewPanelInternal::noteMark( "uipreview.language", code.empty() ? "game" : code.c_str() );
         }
         ImGui::EndCombo();
@@ -929,13 +407,9 @@ namespace sw::editor
 
     void UIPreviewPanel::drawToolbar( UISystem& ui )
     {
-        const string previous = _documentPath.get();
-        if ( _documentPath.drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
-        {
-            if ( isDocumentDirty() )
-                SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because the path changed", previous.c_str() );
-            _error.clear();
-        }
+        const string previous = _model.getDocumentPath().get();
+        if ( _model.getDocumentPath().drawField( "##uipreviewdoc", 320.0f * EditorThemeUtil::getDPIScale() ) )
+            _model.onDocumentPathCommitted( previous, isDocumentDirty() );
         UIPreviewPanelInternal::noteMark( "uipreview", "path" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) );
@@ -955,99 +429,58 @@ namespace sw::editor
         // 도구 줄이 패널보다 길면 오른쪽 콤보(언어)가 패널 밖에 놓여 누를 수 없다 — 들어가지 않으면 줄을 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 25.0f ) );
         EditorChrome::setNextItemWidthColumns( 25.0f );
-        const UIResolutionPreset* pSelectedResolution = findSelectedResolution();
+        const UIResolutionPreset* pSelectedResolution = _model.findSelectedResolution();
         const bool                bResolutionOpen     = ImGui::BeginCombo( "##uipreviewres", pSelectedResolution != nullptr ? pSelectedResolution->_name.c_str() : "-" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
         if ( bResolutionOpen )
         {
-            for ( uint32 index = 0; index < static_cast<uint32>( _resolutionTable._listResolution.size() ); ++index )
+            const vector<UIResolutionPreset>& listResolution = _model.getResolutionTable()._listResolution;
+            for ( uint32 index = 0; index < static_cast<uint32>( listResolution.size() ); ++index )
             {
-                if ( ImGui::Selectable( _resolutionTable._listResolution[index]._name.c_str(), index == _resolutionIndex ) )
-                    _resolutionIndex = index;
+                if ( ImGui::Selectable( listResolution[index]._name.c_str(), index == _model.getResolutionIndex() ) )
+                    _model.setResolutionIndex( index );
             }
             ImGui::EndCombo();
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 20.0f ) );
         EditorChrome::setNextItemWidthColumns( 20.0f );
-        const bool bThemeOpen = ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() );
+        const hashed_string& chosenTheme = _model.getTheme();
+        const bool           bThemeOpen  = ImGui::BeginCombo( "##uipreviewtheme", chosenTheme.empty() ? "(game theme)" : chosenTheme.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
         if ( bThemeOpen )
         {
-            if ( ImGui::Selectable( "(game theme)", _theme.empty() ) )
-                _theme = hashed_string{};
+            if ( ImGui::Selectable( "(game theme)", chosenTheme.empty() ) )
+                _model.setTheme( hashed_string{} );
             for ( const UIThemeDesc& theme : ui.getThemeCatalog()._listTheme )
             {
-                if ( ImGui::Selectable( theme._name.c_str(), theme._name == _theme ) )
-                    _theme = theme._name;
+                if ( ImGui::Selectable( theme._name.c_str(), theme._name == chosenTheme ) )
+                    _model.setTheme( theme._name );
             }
             ImGui::EndCombo();
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( UIPreviewPanelInternal::kLanguageComboColumns ) );
         drawLanguageCombo();
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );
+        ImGui::SliderFloat( "UI scale", &_model.editUIScale(), 0.5f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "Text scale", &_textScale, 0.75f, 2.0f, "%.2f" );
+        ImGui::SliderFloat( "Text scale", &_model.editTextScale(), 0.75f, 2.0f, "%.2f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 19.0f );
-        ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
+        ImGui::SliderFloat( "Safe zone", &_model.editSafeZone(), 0.0f, 0.1f, "%.3f" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Layout rects" ) );
         ImGui::Checkbox( "Layout rects", &_bShowLayout );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "LayoutRectsTip" ) );
     }
 
-    bool UIPreviewPanel::navigateFocus( UIScreen& screen, uint32 direction )
-    {
-        UISystem& ui     = editor::getSubsystem<UISystem>();
-        _bNavigationMode = true;
-        ui.getOffscreenScreens().setNavigationMode( _screen, true );
-        WidgetTree& tree = screen.getTree();
-        if ( _focus.getFocusedTree() == &tree && tree.getFocusedWidget() != kInvalidWidgetID )
-            return _focus.navigate( tree, static_cast<UINavigationDirection>( direction ) );
-        // 포커스가 아직 없으면 탐색 방식은 기본 포커스부터 시작한다(게임 화면이 열릴 때와 같다) — 첫 포커스 위젯을 잡는다.
-        vector<Widget*> listWidget;
-        tree.collectWidgetsInDocumentOrder( listWidget );
-        for ( const Widget* pWidget : listWidget )
-        {
-            if ( pWidget->supportsFocus() && _focus.setFocus( tree, pWidget->getID() ) )
-                return true;
-        }
-        return false;
-    }
-
-    void UIPreviewPanel::acceptFocus( UIScreen& screen )
-    {
-        WidgetTree&   tree     = screen.getTree();
-        const Widget* pFocused = tree.findWidgetByID( tree.getFocusedWidget() );
-        if ( pFocused == nullptr )
-            return;
-        const UIRect   bounds = pFocused->getGeometry().computeScreenBounds();
-        UIPointerEvent event{};
-        event._position = float2{ ( bounds._left + bounds._right ) * 0.5f, ( bounds._top + bounds._bottom ) * 0.5f };
-        event._kind     = UIPointerEventKind::Move;
-        (void)_pointer.process( tree, event );
-        event._kind = UIPointerEventKind::Down;
-        (void)_pointer.process( tree, event );
-        event._kind = UIPointerEventKind::Up;
-        (void)_pointer.process( tree, event );
-        _lastPointer = event._position;
-        markPreviewMutated();
-    }
-
     void UIPreviewPanel::drawInteractionBar( UIScreen& screen )
     {
-        UISystem* pUI = editor::findSubsystem<UISystem>();
-        if ( ImGui::Checkbox( "Interact", &_bInteract ) && pUI != nullptr )
-        {
-            _bNavigationMode = false;
-            pUI->getOffscreenScreens().setNavigationMode( _screen, false );
-            if ( _bInteract == false )
-                _pointer.clearHover();
-        }
+        bool bInteract = _model.isInteracting();
+        if ( ImGui::Checkbox( "Interact", &bInteract ) )
+            _model.setInteracting( bInteract );
         UIPreviewPanelInternal::noteMark( "uipreview", "interact" );
         EditorWidgets::drawTooltip( "Simulate the pointer over the preview (hover, press, wheel). Clicks no longer select widgets. Pressing changes widget values "
                                     "in the preview only - Reload restores the document." );
@@ -1070,13 +503,13 @@ namespace sw::editor
             fixed_string<constant::kMaxBuffer32> id;
             formatstring( id.data(), id.capacity(), "##uipreviewnav%#", button._pMark );
             if ( ImGui::ArrowButton( id.c_str(), button._dir ) )
-                (void)navigateFocus( screen, static_cast<uint32>( button._direction ) );
+                (void)_model.navigateFocus( screen, static_cast<uint32>( button._direction ) );
             UIPreviewPanelInternal::noteMark( "uipreview.nav", button._pMark );
             EditorWidgets::drawTooltip( "Move the preview focus in this direction (like the keyboard or pad). The first press focuses the first focusable widget." );
             ImGui::SameLine();
         }
         if ( ImGui::Button( "Accept" ) )
-            acceptFocus( screen );
+            _model.acceptFocus( screen );
         UIPreviewPanelInternal::noteMark( "uipreview.nav", "accept" );
         EditorWidgets::drawTooltip( "Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code." );
     }
@@ -1091,76 +524,48 @@ namespace sw::editor
             ImGui::TextDisabled( "(no animations)" );
             return;
         }
-        if ( _animation.empty() || player.findAnimation( _animation ) == nullptr )
-            _animation = listAnimation[0]._name;
+        const hashed_string chosen = _model.syncAnimation( player );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 16.0f );
-        const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", _animation.c_str() );
+        const bool bOpen = ImGui::BeginCombo( "##uipreviewanimation", chosen.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "animation" );
         EditorWidgets::drawTooltip( "Document animation to preview. The preview never plays Open by itself - the document values are what you see until you play one." );
         if ( bOpen )
         {
             for ( const UIAnimation& animation : listAnimation )
             {
-                if ( ImGui::Selectable( animation._name.c_str(), animation._name == _animation ) )
-                {
-                    player.stopAll();
-                    _animation = animation._name;
-                }
+                if ( ImGui::Selectable( animation._name.c_str(), animation._name == chosen ) )
+                    _model.chooseAnimation( player, animation._name );
                 UIPreviewPanelInternal::noteMark( "uipreview.animation", animation._name.c_str() );
             }
             ImGui::EndCombo();
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Play" ) );
         if ( ImGui::Button( "Play" ) )
-        {
-            _bAnimationPaused = false;
-            (void)player.play( _animation, 1.0f, _bAnimationLoop ? 0u : 1u );
-            markPreviewMutated();
-        }
+            _model.playAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
         EditorWidgets::drawTooltip( "Play the chosen animation from the start. The widget values stay where it leaves them; Reload restores the document." );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _bAnimationPaused ? "Resume" : "Pause" ) );
-        if ( ImGui::Button( _bAnimationPaused ? "Resume" : "Pause" ) )
-        {
-            _bAnimationPaused = !_bAnimationPaused;
-            player.setPaused( _animation, _bAnimationPaused );
-        }
+        const utf8* pPauseLabel = _model.isAnimationPaused() ? "Resume" : "Pause";
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPauseLabel ) );
+        if ( ImGui::Button( pPauseLabel ) )
+            _model.togglePauseAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "pause" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Stop" ) );
         if ( ImGui::Button( "Stop" ) )
-        {
-            player.stop( _animation );
-            _bAnimationPaused = false;
-        }
+            _model.stopAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "stop" );
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Loop" ) );
-        ImGui::Checkbox( "Loop", &_bAnimationLoop );
+        ImGui::Checkbox( "Loop", &_model.editAnimationLoop() );
         ImGui::SameLine();
 
         // 시간 막대 — 끌면 그 시각에서 멈춘 채 값을 보인다(이벤트는 보내지 않는다). 재생 중에는 지금 시각을 따라간다.
-        float32            time{ 0.0f };
-        float32            duration{ 0.0f };
-        const bool         bActive = player.getPlaybackTime( _animation, time, duration );
-        const UIAnimation* pChosen = player.findAnimation( _animation );
-        if ( bActive == false )
-        {
-            duration = pChosen != nullptr ? pChosen->computeDuration() : 0.0f;
-            time     = MathUtil::clamp( _animationScrub, 0.0f, duration );
-        }
-        float32 scrubSeconds = time;
+        float32    time{ 0.0f };
+        float32    duration{ 0.0f };
+        const bool bActive      = _model.readAnimationTime( player, time, duration );
+        float32    scrubSeconds = time;
         EditorChrome::setNextItemWidthColumns( 29.0f );
         if ( ImGui::SliderFloat( "##uipreviewanimationtime", &scrubSeconds, 0.0f, MathUtil::max( duration, 0.001f ), "%.2f s" ) )
-        {
-            _animationScrub   = scrubSeconds;
-            _bAnimationPaused = true;
-            (void)player.seek( _animation, scrubSeconds );
-            markPreviewMutated();
-        }
-        else if ( bActive )
-        {
-            _animationScrub = time;
-        }
+            _model.scrubAnimation( player, scrubSeconds );
         UIPreviewPanelInternal::noteMark( "uipreview", "animationtime" );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", UIPreviewLogic::makeTimeLabel( bActive ? time : scrubSeconds, duration ).c_str() );
@@ -1170,32 +575,26 @@ namespace sw::editor
     {
         string typeName;
         if ( UIPreviewPanelInternal::acceptPaletteType( typeName ) )
-            (void)addWidget( screen, hashed_string( typeName.c_str() ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
+            (void)_model.addWidget( screen, hashed_string( typeName.c_str() ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
     }
 
     void UIPreviewPanel::drawPalette( UIScreen& screen )
     {
-        using Internal          = UIPreviewPanelInternal;
-        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
-        const uint32  frame     = static_cast<uint32>( ImGui::GetFrameCount() );
-        if ( pRegistry != nullptr && ( _listPaletteType.empty() || frame - _paletteFrame > Internal::kPaletteRefreshFrames ) )
-        {
-            UIPreviewLogic::collectPaletteTypes( *pRegistry, _listPaletteType );
-            _paletteFrame = frame;
-        }
-
-        const bool bCanAdd = _paletteType.empty() == false;
+        using Internal = UIPreviewPanelInternal;
+        _model.refreshPalette( static_cast<uint32>( ImGui::GetFrameCount() ) );
+        Widget*    pSelected = screen.getTree().findWidgetByID( _model.getSelected() );
+        const bool bCanAdd   = _model.getPaletteType().empty() == false;
         ImGui::BeginDisabled( bCanAdd == false );
         if ( ImGui::Button( "Add" ) )
-            (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
+            (void)_model.addWidget( screen, _model.getPaletteType(), pSelected );
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview.palette", "add" );
         EditorWidgets::drawTooltip( "Add the chosen widget type into the selected panel (after the selected widget when it is not a panel). Drag an entry onto a tree row or the picture instead to choose the place." );
         ImGui::SameLine();
-        const bool bCanDelete = screen.getTree().findWidgetByID( _selected ) != nullptr && screen.getTree().findWidgetByID( _selected )->getParent() != nullptr;
+        const bool bCanDelete = _model.canDeleteSelected( screen.getTree() );
         ImGui::BeginDisabled( bCanDelete == false );
         if ( ImGui::Button( "Delete" ) )
-            (void)deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
+            (void)_model.deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview", "delete" );
         EditorWidgets::drawTooltip( "Remove the selected widget and its children (Undo puts them back). The root cannot be removed." );
@@ -1205,17 +604,17 @@ namespace sw::editor
         Internal::noteMark( "uipreview.palette", "filter" );
 
         ImGui::BeginChild( "##uipreviewpalettelist", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None );
-        for ( const TypeInfo* pType : _listPaletteType )
+        for ( const TypeInfo* pType : _model.getPaletteTypes() )
         {
             const utf8* pName = pType->_name.c_str();
             if ( _paletteFilter.empty() == false && StringUtil::stristr( pName, _paletteFilter.c_str() ) == nullptr )
                 continue;
-            const bool bChosen = _paletteType == pType->_name;
+            const bool bChosen = _model.getPaletteType() == pType->_name;
             if ( ImGui::Selectable( pName, bChosen, ImGuiSelectableFlags_AllowDoubleClick ) )
             {
-                _paletteType = pType->_name;
+                _model.setPaletteType( pType->_name );
                 if ( EditorInputGUI::wasItemDoubleClicked() )
-                    (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
+                    (void)_model.addWidget( screen, _model.getPaletteType(), screen.getTree().findWidgetByID( _model.getSelected() ) );
             }
             Internal::noteMark( "uipreview.palette", pName );
             // 끌어서 트리 줄이나 이미지에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`). 페이로드는 {WidgetType, 타입 이름 id} 다.
@@ -1228,16 +627,17 @@ namespace sw::editor
     void UIPreviewPanel::drawSlotHandles( UIScreen& screen, const float2& drawSize, const float2& origin )
     {
         using Internal             = UIPreviewPanelInternal;
-        Widget*    pWidget         = screen.getTree().findWidgetByID( _selected );
+        Widget*    pWidget         = screen.getTree().findWidgetByID( _model.getSelected() );
         const bool bCannotEditSlot = pWidget == nullptr || UIPreviewLogic::canEditSlotByHandle( *pWidget ) == false || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
         if ( bCannotEditSlot )
             return;
         const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
         if ( pSlotProp == nullptr )
             return;
-        const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
-        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
-        const float2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
+        const UIViewport& viewport = _model.getViewport();
+        const UIRect      box      = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport );
+        const float32     half     = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
+        const float2      center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
         struct HandleRow
         {
             UIPreviewSlotHandle _handle;
@@ -1252,8 +652,8 @@ namespace sw::editor
             {UIPreviewSlotHandle::Bottom, "bottom", float2{ center._x, origin._y + box._bottom }},
         };
         // 마우스 이동량(화면 픽셀)을 UI 단위로 옮기는 배율 — 이미지가 뷰포트보다 작게 그려진다.
-        const float32 toUIX = _viewport._size._x / drawSize._x;
-        const float32 toUIY = _viewport._size._y / drawSize._y;
+        const float32 toUIX = viewport._size._x / drawSize._x;
+        const float32 toUIY = viewport._size._y / drawSize._y;
         for ( const HandleRow& row : arrHandle )
         {
             ImGui::SetCursorScreenPos( ImVec2{ row._center._x - half, row._center._y - half } );
@@ -1265,7 +665,7 @@ namespace sw::editor
             if ( ImGui::IsItemActivated() )
             {
                 _bSlotDragging    = true;
-                _slotDragOrdinal  = _selectedOrdinal;
+                _slotDragOrdinal  = _model.getSelectedOrdinal();
                 _slotDragBaseline = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
             }
             if ( ImGui::IsItemActive() && _bSlotDragging )
@@ -1277,14 +677,8 @@ namespace sw::editor
             }
             if ( ImGui::IsItemDeactivated() && _bSlotDragging )
             {
-                _bSlotDragging       = false;
-                const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
-                if ( newText != _slotDragBaseline )
-                {
-                    pushPropertyEdit( _slotDragOrdinal, "_slot", _slotDragBaseline, newText, string{} );
-                    markDocumentDirty();
-                    _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
-                }
+                _bSlotDragging = false;
+                (void)_model.commitSlotEdit( _slotDragOrdinal, _slotDragBaseline, UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp ) ); // 같으면 남기지 않는다
             }
             ImGui::PopID();
         }
@@ -1294,7 +688,7 @@ namespace sw::editor
     {
         using Internal                = UIPreviewPanelInternal;
         WidgetTree& tree              = screen.getTree();
-        Widget*     pWidget           = tree.findWidgetByID( _selected );
+        Widget*     pWidget           = tree.findWidgetByID( _model.getSelected() );
         const bool  bCannotEditLayout = pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
         if ( bCannotEditLayout )
             return;
@@ -1303,10 +697,11 @@ namespace sw::editor
         const GridPanel* pGrid   = castTo<const GridPanel>( pParent );
         if ( pParent == nullptr || ( pBox == nullptr && pGrid == nullptr ) )
             return;
-        const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
-        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
-        const ImVec2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
-        const ImU32   color = EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() );
+        const UIViewport& viewport = _model.getViewport();
+        const UIRect      box      = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport );
+        const float32     half     = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
+        const ImVec2      center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
+        const ImU32       color = EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() );
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
         ImGui::PushID( "layouthandle" );
         ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
@@ -1322,7 +717,7 @@ namespace sw::editor
             return;
         _bLayoutDragging   = false;
         const ImVec2 mouse = ImGui::GetMousePos();
-        const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
+        const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, viewport );
         if ( pBox != nullptr )
         {
             // 상자: 자식 가운데(상자 축)와 놓은 점을 비교해 사이 위치를 고르고, 분리해 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
@@ -1339,22 +734,7 @@ namespace sw::editor
             const uint32 toIndex = UIPreviewLogic::findReorderIndex( fromIndex, UIPreviewLogic::findBoxInsertIndex( listCenter, bVertical ? point._y : point._x ) );
             if ( toIndex == fromIndex )
                 return;
-            const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
-            applyMove( _generation, parentOrdinal, fromIndex, toIndex );
-            ++_slotEditCount;
-            const uint32                  generation = _generation;
-            const shared_ptr<EditSession> pSession   = _pSession;
-            EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
-            {
-                pSession->move( generation, parentOrdinal, toIndex, fromIndex );
-            } ),
-                                                              _undoOwner ),
-                                     UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
-            {
-                pSession->move( generation, parentOrdinal, fromIndex, toIndex );
-            } ),
-                                                              _undoOwner ),
-                                     "Reorder UI Widget" );
+            _model.reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ), fromIndex, toIndex );
             return;
         }
         // 격자: 놓은 점이 속한 행 · 열(배치가 정한 줄)을 슬롯에 쓴다 — 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
@@ -1374,28 +754,7 @@ namespace sw::editor
         slot._row            = static_cast<uint16>( row );
         slot._column         = static_cast<uint16>( column );
         pWidget->setLayoutSlot( slot );
-        const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
-        if ( newText == oldText )
-            return;
-        pushPropertyEdit( _selectedOrdinal, "_slot", oldText, newText, string{} );
-        markDocumentDirty();
-        _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
-    }
-
-    void UIPreviewPanel::applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
-    {
-        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
-        if ( pScreen == nullptr || fromIndex == toIndex )
-            return;
-        // 자식을 분리하고 끼워도 부모의 문서 순서 번호는 그대로다(부모가 자식보다 앞에 온다).
-        WidgetTree& tree = pScreen->getTree();
-        _pointer.clearHover();
-        unique_ptr<Widget> moved = UIPreviewLogic::detachWidget( tree, parentOrdinal, fromIndex );
-        if ( moved == nullptr )
-            return;
-        Widget* pAttached = UIPreviewLogic::attachWidget( tree, std::move( moved ), parentOrdinal, toIndex );
-        if ( pAttached != nullptr )
-            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( tree, pAttached->getID() ) );
+        (void)_model.commitSlotEdit( _model.getSelectedOrdinal(), oldText, UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp ) ); // 같으면 남기지 않는다
     }
 
     void UIPreviewPanel::finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate )
@@ -1406,12 +765,7 @@ namespace sw::editor
         if ( bCommit == false )
             return;
         const string& oldText = bImmediate ? frameText : _slotFieldBaseline;
-        const string  newText = UIPreviewLogic::formatWidgetProperty( widget, slotProp );
-        if ( newText == oldText )
-            return;
-        pushPropertyEdit( _selectedOrdinal, "_slot", oldText, newText, string{} );
-        markDocumentDirty();
-        _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
+        (void)_model.commitSlotEdit( _model.getSelectedOrdinal(), oldText, UIPreviewLogic::formatWidgetProperty( widget, slotProp ) ); // 같으면 남기지 않는다
     }
 
     struct UIPreviewPanel::SlotFieldPass
@@ -1607,26 +961,15 @@ namespace sw::editor
 
     void UIPreviewPanel::drawWidgetList( UIScreen& screen )
     {
-        using Internal = UIPreviewPanelInternal;
-        // 행은 위젯 번호 · 깊이 · 타입 · 이름이라 구조(붙기 · 떨어지기 · 이름)가 바뀔 때만 다시 짓는다.
-        const WidgetTree& tree       = screen.getTree();
-        const bool        bRowsStale = _pRowTree != &tree || _rowTreeGeneration != tree.getStructureGeneration();
-        if ( bRowsStale )
+        using Internal                            = UIPreviewPanelInternal;
+        const vector<UIPreviewWidgetRow>& listRow = _model.getWidgetRows( screen.getTree() );
+        for ( uint32 ordinal = 0; ordinal < listRow.size(); ++ordinal )
         {
-            UIPreviewLogic::collectWidgetRows( tree, _listRow );
-            _pRowTree          = &tree;
-            _rowTreeGeneration = tree.getStructureGeneration();
-        }
-        for ( uint32 ordinal = 0; ordinal < _listRow.size(); ++ordinal )
-        {
-            const UIPreviewWidgetRow& row = _listRow[ordinal];
+            const UIPreviewWidgetRow& row = listRow[ordinal];
             ImGui::PushID( static_cast<int32>( row._widget ) );
             ImGui::Indent( Internal::kIndentPerLevel * static_cast<float32>( row._depth ) + 0.001f );
-            if ( ImGui::Selectable( row._label.c_str(), row._widget == _selected ) )
-            {
-                _selected        = row._widget;
-                _selectedOrdinal = ordinal;
-            }
+            if ( ImGui::Selectable( row._label.c_str(), row._widget == _model.getSelected() ) )
+                _model.select( row._widget, ordinal );
             if ( EditorSelfTestMarks::isEnabled() )
             {
                 fixed_string<constant::kMaxBuffer32> ordinalText;
@@ -1644,14 +987,13 @@ namespace sw::editor
 
     void UIPreviewPanel::drawInspector( UIScreen& screen )
     {
-        Widget* pWidget = screen.getTree().findWidgetByID( _selected );
+        Widget* pWidget = screen.getTree().findWidgetByID( _model.getSelected() );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
         {
             EditorWidgets::drawEmptyHint( "Select a widget to edit its properties." );
             return;
         }
-        if ( _baselineWidget != _selected )
-            captureBaseline( *pWidget );
+        _model.syncBaseline( *pWidget );
         // 검색창이 맨 위다(언리얼 Details 처럼) — 슬롯 구역도 이 검색어로 거른다.
         _grid.drawSearchBar( "uipreview.inspector.search" );
         drawSlotSection( *pWidget );
@@ -1664,81 +1006,28 @@ namespace sw::editor
 
     void UIPreviewPanel::feedPointer( UIScreen& screen, const float2& drawSize, const float2& origin, bool bHovered )
     {
-        WidgetTree&              tree    = screen.getTree();
-        const EditorPointerState pointer = EditorInputGUI::readPointer();
-        UIPointerEvent           event{};
-        event._position = UIPreviewLogic::mapImageToUI( float2{ pointer._position._x - origin._x, pointer._position._y - origin._y }, drawSize, _viewport );
-        event._delta    = float2{ event._position._x - _lastPointer._x, event._position._y - _lastPointer._y };
-        if ( bHovered )
+        // 에디터 포인터를 UI 단위로 옮겨 모델에 넘긴다 — 모델은 에디터 입력을 모른다. 버튼 순서는 `UIPreviewPointerInput` 의 것(왼쪽 · 오른쪽 · 가운데)이다.
+        static constexpr EditorMouseButton kArrButton[UIPreviewPointerInput::kButtonCount] = { EditorMouseButton::Left, EditorMouseButton::Right, EditorMouseButton::Middle };
+        const EditorPointerState           pointer                                         = EditorInputGUI::readPointer();
+        UIPreviewPointerInput              input{};
+        input._position = UIPreviewLogic::mapImageToUI( float2{ pointer._position._x - origin._x, pointer._position._y - origin._y }, drawSize, _model.getViewport() );
+        input._wheel    = pointer._wheel;
+        input._bHovered = bHovered;
+        for ( uint32 buttonIndex = 0; buttonIndex < UIPreviewPointerInput::kButtonCount; ++buttonIndex )
         {
-            const bool bPointerEnteredOrMoved = _bPointerInside == false || event._delta._x != 0.0f || event._delta._y != 0.0f;
-            if ( bPointerEnteredOrMoved )
-            {
-                if ( _bNavigationMode )
-                {
-                    UISystem* pUI    = editor::findSubsystem<UISystem>();
-                    _bNavigationMode = false;
-                    if ( pUI != nullptr )
-                        pUI->getOffscreenScreens().setNavigationMode( _screen, false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
-                }
-                event._kind = UIPointerEventKind::Move;
-                (void)_pointer.process( tree, event );
-                _lastPointer = event._position;
-            }
-            _bPointerInside = true;
-            if ( pointer._wheel != 0.0f )
-            {
-                event._kind  = UIPointerEventKind::Wheel;
-                event._wheel = pointer._wheel;
-                (void)_pointer.process( tree, event );
-                markPreviewMutated();
-            }
+            input._arrPressed[buttonIndex]  = pointer.wasPressed( kArrButton[buttonIndex] );
+            input._arrReleased[buttonIndex] = pointer.wasReleased( kArrButton[buttonIndex] );
         }
-        else if ( _bPointerInside )
-        {
-            if ( _bPointerPressed == false )
-                _pointer.clearHover();
-            _bPointerInside = false;
-        }
-
-        struct ButtonMap
-        {
-            EditorMouseButton _editorButton;
-            MouseButton       _button;
-        };
-        static constexpr ButtonMap kArrButton[] = {
-            {  EditorMouseButton::Left,   MouseButton::Left},
-            { EditorMouseButton::Right,  MouseButton::Right},
-            {EditorMouseButton::Middle, MouseButton::Middle},
-        };
-        for ( const ButtonMap& map : kArrButton )
-        {
-            event._button = map._button;
-            if ( bHovered && pointer.wasPressed( map._editorButton ) )
-            {
-                event._kind                  = UIPointerEventKind::Down;
-                const UIPointerResult result = _pointer.process( tree, event );
-                if ( result._focusRequest != kInvalidWidgetID )
-                    (void)_focus.setFocus( tree, result._focusRequest );
-                _bPointerPressed = true;
-                markPreviewMutated();
-            }
-            // 이미지 밖에서 놓은 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
-            if ( pointer.wasReleased( map._editorButton ) && ( bHovered || _bPointerPressed ) )
-            {
-                event._kind = UIPointerEventKind::Up;
-                (void)_pointer.process( tree, event );
-                _bPointerPressed = false;
-                markPreviewMutated();
-            }
-        }
+        _model.feedPointer( screen, input );
     }
 
     void UIPreviewPanel::drawImage( UIScreen& screen )
     {
         using Internal = UIPreviewPanelInternal;
         ImGui::BeginChild( "##uipreviewimage", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders );
-        const Widget* pSelected = screen.getTree().findWidgetByID( _selected );
+        const UIViewport& viewport  = _model.getViewport();
+        const bool        bInteract = _model.isInteracting();
+        const Widget*     pSelected = screen.getTree().findWidgetByID( _model.getSelected() );
         if ( pSelected != nullptr )
         {
             const UIRect bounds = pSelected->getGeometry().computeScreenBounds();
@@ -1751,9 +1040,9 @@ namespace sw::editor
             fixed_string<constant::kMaxBuffer32> width;
             fixed_string<constant::kMaxBuffer32> height;
             fixed_string<constant::kMaxBuffer32> scale;
-            formatstring( width.data(), width.capacity(), "%#", Fmt( static_cast<float64>( _viewport._size._x ), Format().precision( 0 ) ) );
-            formatstring( height.data(), height.capacity(), "%#", Fmt( static_cast<float64>( _viewport._size._y ), Format().precision( 0 ) ) );
-            formatstring( scale.data(), scale.capacity(), "%#", Fmt( static_cast<float64>( _viewport._uiScale ), Format().precision( 2 ) ) );
+            formatstring( width.data(), width.capacity(), "%#", Fmt( static_cast<float64>( viewport._size._x ), Format().precision( 0 ) ) );
+            formatstring( height.data(), height.capacity(), "%#", Fmt( static_cast<float64>( viewport._size._y ), Format().precision( 0 ) ) );
+            formatstring( scale.data(), scale.capacity(), "%#", Fmt( static_cast<float64>( viewport._uiScale ), Format().precision( 2 ) ) );
             const string hint = SW_LOCKEYFORMAT( "EditorUIPreview", "SelectWidgetHint",
                                                  TextArgumentList().addText( "width", width.c_str() ).addText( "height", height.c_str() ).addText( "scale", scale.c_str() ) );
             ImGui::TextDisabled( "%s", hint.c_str() );
@@ -1765,25 +1054,25 @@ namespace sw::editor
             return;
         }
         const ImVec2 avail    = ImGui::GetContentRegionAvail();
-        const float2 drawSize = UIPreviewLogic::fitImage( _viewport._physicalSize, float2{ avail.x, avail.y } );
+        const float2 drawSize = UIPreviewLogic::fitImage( viewport._physicalSize, float2{ avail.x, avail.y } );
         const ImVec2 cursor   = ImGui::GetCursorScreenPos();
         const float2 origin{ cursor.x, cursor.y };
         ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
         EditorSelfTestMarks::note( "uipreview.image" );
         string droppedType;
-        if ( _bInteract == false && Internal::acceptPaletteType( droppedType ) )
+        if ( bInteract == false && Internal::acceptPaletteType( droppedType ) )
         {
             // 팔레트 항목을 이미지 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
             const float2   mouse  = EditorInputGUI::readPointer()._position;
-            const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse._x - origin._x, mouse._y - origin._y }, drawSize, _viewport );
+            const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse._x - origin._x, mouse._y - origin._y }, drawSize, viewport );
             const WidgetID target = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
-            (void)addWidget( screen, hashed_string( droppedType.c_str() ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
+            (void)_model.addWidget( screen, hashed_string( droppedType.c_str() ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
         }
         // 이미지 클릭으로 고르기는 손잡이를 그린 뒤에 정한다 — 손잡이는 이미지 위에 겹쳐 있어, 여기서 바로 고르면 손잡이를 누른 클릭이 그 아래 위젯(자식)을
         // 골라 손잡이가 사라지고 끌기가 시작되지 않는다.
-        const bool bImageClicked = _bInteract == false && EditorInputGUI::wasItemClicked();
-        if ( _bInteract )
+        const bool bImageClicked = bInteract == false && EditorInputGUI::wasItemClicked();
+        if ( bInteract )
             feedPointer( screen, drawSize, origin, bImageHovered );
 
         // 겹쳐 그리기 — 레이아웃 사각형 · 고른 위젯 · 안전 영역(이미지 위 ImGui 선, 캔버스는 바꾸지 않는다).
@@ -1799,20 +1088,20 @@ namespace sw::editor
             for ( const Widget* pWidget : listWidget )
             {
                 if ( pWidget->isVisible() )
-                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( Internal::getLayoutColor() ), 1.0f );
+                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( Internal::getLayoutColor() ), 1.0f );
             }
         }
         if ( pSelected != nullptr )
-            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ), 2.0f );
-        const float4& insets         = _viewport._safeInsets;
+            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ), 2.0f );
+        const float4& insets         = viewport._safeInsets;
         const bool    bHasSafeInsets = insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f;
         if ( bHasSafeInsets )
         {
-            const UIRect safe{ insets._x, insets._y, _viewport._size._x - insets._z, _viewport._size._y - insets._w };
-            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );
+            const UIRect safe{ insets._x, insets._y, viewport._size._x - insets._z, viewport._size._y - insets._w };
+            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );
         }
         // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
-        if ( _bInteract == false )
+        if ( bInteract == false )
         {
             drawSlotHandles( screen, drawSize, origin );
             drawLayoutHandle( screen, drawSize, origin );
@@ -1821,70 +1110,9 @@ namespace sw::editor
         if ( bSelectWidgetByClick )
         {
             const ImVec2 mouse = ImGui::GetMousePos();
-            const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
-            _selected          = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
-            _selectedOrdinal   = _selected != kInvalidWidgetID ? UIPreviewLogic::findWidgetOrdinal( screen.getTree(), _selected ) : UIPreviewLogic::kNoOrdinal;
+            _model.selectAt( screen.getTree(), UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, viewport ) );
         }
         ImGui::EndChild();
-    }
-
-    void UIPreviewPanel::updateProbe( const UIScreen* pScreen )
-    {
-        _probe = UIPreviewProbe{};
-        if ( pScreen == nullptr )
-            return;
-        const WidgetTree& tree     = pScreen->getTree();
-        _probe._bValid             = true;
-        _probe._bDirty             = isDocumentDirty();
-        _probe._bReloadedAfterSave = _bReloadedAfterSave;
-        _probe._bTextureReady      = _pTextureID != nullptr;
-        _probe._languageIndex      = _languageIndex;
-        const Widget* pRoot        = tree.getRoot();
-        _probe._bRightToLeft       = pRoot != nullptr && pRoot->isRightToLeft();
-        vector<Widget*> listWidget;
-        tree.collectWidgetsInDocumentOrder( listWidget );
-        _probe._widgetCount = static_cast<uint32>( listWidget.size() );
-        for ( const Widget* pWidget : listWidget )
-        {
-            const TextWidget* pText = castTo<const TextWidget>( pWidget );
-            if ( pText != nullptr )
-            {
-                _probe._firstTextBytes = static_cast<uint32>( pText->getDisplayText().size() );
-                break;
-            }
-        }
-        if ( _pointer.getHoverTree() == &tree )
-        {
-            const Widget* pHovered = tree.findWidgetByID( _pointer.getHoveredWidget() );
-            if ( pHovered != nullptr )
-            {
-                _probe._hoveredOrdinal    = static_cast<int32>( UIPreviewLogic::findWidgetOrdinal( tree, pHovered->getID() ) );
-                _probe._bHoveredFocusable = pHovered->supportsFocus();
-            }
-        }
-        if ( tree.getFocusedWidget() != kInvalidWidgetID )
-        {
-            const uint32 focused = UIPreviewLogic::findWidgetOrdinal( tree, tree.getFocusedWidget() );
-            if ( focused != UIPreviewLogic::kNoOrdinal )
-                _probe._focusedOrdinal = static_cast<int32>( focused );
-        }
-        const Widget* pSelected = tree.findWidgetByID( _selected );
-        if ( pSelected != nullptr )
-        {
-            _probe._bSelectedValid     = true;
-            _probe._selectedOpacity    = pSelected->getOpacity();
-            _probe._bSlotEditable      = UIPreviewLogic::canEditSlotByHandle( *pSelected );
-            _probe._selectedOffsetMinX = pSelected->getLayoutSlot()._offsetMin._x;
-        }
-        _probe._paletteCount  = static_cast<uint32>( _listPaletteType.size() );
-        _probe._slotEditCount = _slotEditCount;
-        float32 time{ 0.0f };
-        float32 duration{ 0.0f };
-        if ( pScreen->getAnimationPlayer().getPlaybackTime( _animation, time, duration ) )
-        {
-            _probe._animationTime     = time;
-            _probe._bAnimationPlaying = _bAnimationPaused == false;
-        }
     }
 
     void UIPreviewPanel::drawContent()
@@ -1893,27 +1121,27 @@ namespace sw::editor
         UISystem* pUI  = editor::findSubsystem<UISystem>();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
-            _probe = UIPreviewProbe{};
+            _model.resetProbe();
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
             return;
         }
-        syncFocusedDocument();
+        _model.syncFocusedDocument( isDocumentDirty() );
         drawToolbar( *pUI );
-        syncPreview( *pUI );
-        syncLanguage( *pUI );
+        _model.syncPreview( *pUI ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
+        _model.syncLanguage( *pUI );
         syncTexture();
-        UIScreen* pScreen = pUI->getOffscreenScreens().findScreen( _screen );
+        UIScreen* pScreen = _model.findPreviewScreen();
         if ( pScreen != nullptr )
         {
-            syncTree( *pScreen );
+            _model.syncTree( *pScreen );
             drawInteractionBar( *pScreen );
             drawAnimationBar( *pScreen );
         }
         ImGui::Separator();
         if ( pScreen == nullptr )
         {
-            _probe = UIPreviewProbe{};
-            EditorWidgets::drawEmptyHint( _error.empty() ? SW_LOCKEY( "EditorUIPreview", "EnterPathHint" ) : _error.c_str() );
+            _model.resetProbe();
+            EditorWidgets::drawEmptyHint( _model.getError().empty() ? SW_LOCKEY( "EditorUIPreview", "EnterPathHint" ) : _model.getError().c_str() );
             return;
         }
 
@@ -1933,6 +1161,6 @@ namespace sw::editor
         ImGui::EndChild();
         ImGui::SameLine();
         drawImage( *pScreen );
-        updateProbe( pScreen );
+        _model.updateProbe( pScreen, isDocumentDirty(), _pTextureID != nullptr );
     }
 } // namespace sw::editor
