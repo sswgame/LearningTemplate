@@ -305,8 +305,8 @@ namespace sw
             return;
         const utf8* pFolder = getCrashReportFolder();
         const utf8* pPrefix = ( pFolder != nullptr && pFolder[0] != '\0' ) ? pFolder : ".";
-        std::snprintf( pOutPath, outSize, "%s/crash_%s.%s", pPrefix, getCrashSessionID(),
-                       ( pExtension != nullptr ) ? pExtension : "txt" );
+        formatstring( pOutPath, outSize, "%#/crash_%#.%#", pPrefix, getCrashSessionID(),
+                      ( pExtension != nullptr ) ? pExtension : "txt" );
     }
 
     void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID )

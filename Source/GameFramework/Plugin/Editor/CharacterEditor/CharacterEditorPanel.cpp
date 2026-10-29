@@ -413,7 +413,7 @@ namespace sw::editor
         if ( focused.empty() == false )
         {
             acceptFocusedDocument();
-            std::snprintf( _path.data(), _path.max_size(), "%s", string( focused ).c_str() );
+            _path = focused;
         }
         if ( _path.empty() )
             return ToolAssetLoadResult::Missing;
@@ -937,7 +937,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( socket._name.c_str(), bSelected ) )
                 {
                     _selectedSocket = socket._name;
-                    std::snprintf( _renameBuffer.data(), _renameBuffer.max_size(), "%s", socket._name.c_str() );
+                    _renameBuffer   = socket._name.c_str();
                 }
                 if ( bFirst )
                 {
@@ -981,10 +981,10 @@ namespace sw::editor
             return;
         }
 
-        utf8 arrParentBuffer[constant::kMaxBuffer128];
-        std::snprintf( arrParentBuffer, sizeof( arrParentBuffer ), "%s", socket._parent.c_str() );
-        if ( ImGui::InputText( "Parent", arrParentBuffer, sizeof( arrParentBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            reportEdit( _sockets.setParent( name, CharacterEditorPanelInternal::makeName( arrParentBuffer ), _status ) );
+        fixed_string<constant::kMaxBuffer128> parent;
+        parent = socket._parent.c_str();
+        if ( ImGui::InputText( "Parent", parent.data(), parent.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            reportEdit( _sockets.setParent( name, CharacterEditorPanelInternal::makeName( parent.c_str() ), _status ) );
 
         hashed_string pickedKind;
         if ( CharacterEditorPanelInternal::drawNameCombo( "Kind", socket._kind, _sockets.getKindTable().getKinds(), pickedKind ) )
@@ -1012,10 +1012,10 @@ namespace sw::editor
         if ( ImGui::Combo( "Anchor", &anchorIndex, "Bone\0Surface\0" ) )
             reportEdit( _sockets.setAnchor( name, anchorIndex == 1 ? SocketAnchor::Surface : SocketAnchor::Bone, _status ) );
 
-        utf8 arrPreviewBuffer[constant::kMaxPathSize];
-        std::snprintf( arrPreviewBuffer, sizeof( arrPreviewBuffer ), "%s", socket._previewMesh.c_str() );
-        if ( ImGui::InputText( "Preview mesh", arrPreviewBuffer, sizeof( arrPreviewBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            reportEdit( _sockets.setPreviewMesh( name, arrPreviewBuffer, _status ) );
+        fixed_string<constant::kMaxPathSize> previewMesh;
+        previewMesh = string_view( socket._previewMesh );
+        if ( ImGui::InputText( "Preview mesh", previewMesh.data(), previewMesh.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            reportEdit( _sockets.setPreviewMesh( name, previewMesh.c_str(), _status ) );
     }
 
     void CharacterEditorPanel::drawSkeletonTab()
@@ -1202,7 +1202,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawSelectionHeader( const AppearanceSelection& selection )
     {
-        utf8 arrTextBuffer[constant::kMaxBuffer128];
+        fixed_string<constant::kMaxBuffer128> text;
         if ( _bDatabaseLoaded )
         {
             vector<hashed_string> listPreset;
@@ -1218,19 +1218,19 @@ namespace sw::editor
         }
         else
         {
-            std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._basePresetID.c_str() );
-            if ( ImGui::InputText( "Base preset", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-                (void)_appearance.setBasePreset( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+            text = selection._basePresetID.c_str();
+            if ( ImGui::InputText( "Base preset", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+                (void)_appearance.setBasePreset( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
         }
-        std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._bodyType.c_str() );
-        if ( ImGui::InputText( "Body type", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            (void)_appearance.setBodyType( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
-        std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._bodyShape.c_str() );
-        if ( ImGui::InputText( "Body shape", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            (void)_appearance.setBodyShape( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
-        std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", selection._face.c_str() );
-        if ( ImGui::InputText( "Face", arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            (void)_appearance.setFace( CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+        text = selection._bodyType.c_str();
+        if ( ImGui::InputText( "Body type", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            (void)_appearance.setBodyType( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
+        text = selection._bodyShape.c_str();
+        if ( ImGui::InputText( "Body shape", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            (void)_appearance.setBodyShape( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
+        text = selection._face.c_str();
+        if ( ImGui::InputText( "Face", text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+            (void)_appearance.setFace( CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
     }
 
     void CharacterEditorPanel::drawSlotRows( const AppearanceSelection& selection )
@@ -1238,13 +1238,13 @@ namespace sw::editor
         ImGui::TextUnformatted( "Slots" );
         if ( _bDatabaseLoaded == false )
         {
-            utf8 arrTextBuffer[constant::kMaxBuffer128];
+            fixed_string<constant::kMaxBuffer128> text;
             for ( const AppearanceSlotRequest& request : selection._listSlot )
             {
                 ImGui::PushID( request._slot.c_str() );
-                std::snprintf( arrTextBuffer, sizeof( arrTextBuffer ), "%s", request._itemID.c_str() );
-                if ( ImGui::InputText( request._slot.c_str(), arrTextBuffer, sizeof( arrTextBuffer ), ImGuiInputTextFlags_EnterReturnsTrue ) )
-                    (void)_appearance.setSlotItem( request._slot, CharacterEditorPanelInternal::makeName( arrTextBuffer ) ); // 같은 값이면 false 이고 그대로 둔다
+                text = request._itemID.c_str();
+                if ( ImGui::InputText( request._slot.c_str(), text.data(), text.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue ) )
+                    (void)_appearance.setSlotItem( request._slot, CharacterEditorPanelInternal::makeName( text.c_str() ) ); // 같은 값이면 false 이고 그대로 둔다
                 ImGui::PopID();
             }
             ImGui::InputText( "##NewSlot", _newName.data(), _newName.max_size() );
@@ -1561,7 +1561,7 @@ namespace sw::editor
                 if ( ImGui::Selectable( preset._name.c_str() ) )
                 {
                     (void)_appearance.loadFromPreset( _presetStore, string_view( preset._name ) ); // 목록의 이름이라 항상 있다
-                    std::snprintf( _presetName.data(), _presetName.max_size(), "%s", preset._name.c_str() );
+                    _presetName = string_view( preset._name );
                 }
             }
         }
@@ -1701,8 +1701,8 @@ namespace sw::editor
         _bRigPreview      = _bRigPreview && _rigPath.empty() == false; // 리그가 없는 게임으로 바뀌면 켜 둔 단추도 내린다
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(기준은 팩 데이터의 외형 폴더 하나).
         const string exportFolder = FileUtil::joinPath( data._appearanceFolder, AppearanceDatabase::kPresetFolder );
-        std::snprintf( _exportFolder.data(), _exportFolder.max_size(), "%s", exportFolder.c_str() );
-        _packDataState = PackDataState::Ready;
+        _exportFolder             = string_view( exportFolder );
+        _packDataState            = PackDataState::Ready;
     }
 
     void CharacterEditorPanel::ensureKindTable()

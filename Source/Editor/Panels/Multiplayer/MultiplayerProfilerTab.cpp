@@ -2,6 +2,8 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
+#include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -206,14 +208,14 @@ namespace sw::editor
         {
             const EditorNetProfilerChannel channel = static_cast<EditorNetProfilerChannel>( channelIndex );
             track._series.copyChannel( channel, _listValueScratch );
-            const float32 latest = pLatest != nullptr ? pLatest->_arrValue[static_cast<size_t>( channelIndex )] : 0.0f;
-            const float32 peak   = track._series.computePeak( channel );
-            utf8          arrOverlay[constant::kMaxBuffer64];
-            (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%.1f %s (peak %.1f)", static_cast<float64>( latest ), MultiplayerProfilerTabInternal::getGraphUnit( channel ),
-                                 static_cast<float64>( peak ) );
+            const float32                        latest = pLatest != nullptr ? pLatest->_arrValue[static_cast<size_t>( channelIndex )] : 0.0f;
+            const float32                        peak   = track._series.computePeak( channel );
+            fixed_string<constant::kMaxBuffer64> overlay;
+            formatstring( overlay.data(), overlay.capacity(), "%# %# (peak %#)", Fmt( latest, Format().precision( 1 ) ), MultiplayerProfilerTabInternal::getGraphUnit( channel ),
+                          Fmt( peak, Format().precision( 1 ) ) );
             ImGui::TextUnformatted( MultiplayerProfilerTabInternal::getGraphTitle( channel ) );
             ImGui::PushID( channelIndex );
-            ImGui::PlotLines( "##Graph", _listValueScratch.data(), static_cast<int32>( _listValueScratch.size() ), 0, arrOverlay, 0.0f, peak > 0.0f ? peak : 1.0f,
+            ImGui::PlotLines( "##Graph", _listValueScratch.data(), static_cast<int32>( _listValueScratch.size() ), 0, overlay.c_str(), 0.0f, peak > 0.0f ? peak : 1.0f,
                               ImVec2( -1.0f, height ) );
             ImGui::PopID();
         }

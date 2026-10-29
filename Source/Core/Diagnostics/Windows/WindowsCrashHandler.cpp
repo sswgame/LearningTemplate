@@ -1,11 +1,13 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/ThreadCrashStack.h"
+#include "Core/String/fixed_string.h"
 
 #include <cstdio>
 
@@ -172,11 +174,11 @@ namespace sw
             if ( bWritten == FALSE )
             {
                 // 실패 원인을 크래시 출력에 남긴다(stdio 를 거치지 않는다 — reportCrash 의 시한 메시지와 같은 이유).
-                utf8        arrMessage[256]{};
-                const int32 length  = std::snprintf( arrMessage, sizeof( arrMessage ), "\n[CrashHandler] MiniDumpWriteDump failed (snapshot %d, error 0x%08x)\n",
-                                                    bSnapshot ? 1 : 0, static_cast<uint32>( dumpError ) );
-                DWORD       written = 0;
-                WriteFile( GetStdHandle( STD_ERROR_HANDLE ), arrMessage, static_cast<DWORD>( length > 0 ? length : 0 ), &written, nullptr );
+                fixed_string<constant::kMaxBuffer256> message;
+                formatstring( message.data(), message.capacity(), "\n[CrashHandler] MiniDumpWriteDump failed (snapshot %#, error 0x%#)\n", bSnapshot ? 1 : 0,
+                              Fmt( static_cast<uint32>( dumpError ), Format( 8, Format::Padding::Zero ).hex() ) );
+                DWORD written = 0;
+                WriteFile( GetStdHandle( STD_ERROR_HANDLE ), message.c_str(), static_cast<DWORD>( message.size() ), &written, nullptr );
             }
             return bWritten != FALSE;
         }
@@ -357,8 +359,8 @@ namespace sw
                 (void)WideCharToMultiByte( CP_UTF8, 0, pWideName, -1, arrThreadName, static_cast<int32>( sizeof( arrThreadName ) - 1 ), nullptr, nullptr );
                 LocalFree( pWideName );
             }
-            std::snprintf( s_arrReason, sizeof( s_arrReason ), "%s - %s of 0x%llx, in %s+0x%llx, thread %llu '%s'", pBaseReason, pAccess, static_cast<uint64>( dataAddr ), pName,
-                           static_cast<uint64>( offset ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
+            formatstring( s_arrReason, sizeof( s_arrReason ), "%# - %# of 0x%#, in %#+0x%#, thread %# '%#'", pBaseReason, pAccess, Fmt( static_cast<uint64>( dataAddr ), Format().hex() ), pName,
+                          Fmt( static_cast<uint64>( offset ), Format().hex() ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
             return s_arrReason;
         }
 

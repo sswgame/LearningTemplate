@@ -3,14 +3,15 @@
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Localization/LocText.h"
 
 #include <algorithm>
-#include <cstdio>
 
 namespace sw::editor
 {
@@ -20,26 +21,26 @@ namespace sw::editor
         {
             static string formatDistanceRange( float64 minDistance, float64 maxDistance )
             {
-                utf8 arrText[96]{};
-                (void)std::snprintf( arrText, sizeof( arrText ), "%.2f .. %.2f m", minDistance, maxDistance );
-                return string{ arrText };
+                fixed_string<constant::kMaxBuffer128> text;
+                formatstring( text.data(), text.capacity(), "%# .. %# m", Fmt( minDistance, Format().precision( 2 ) ), Fmt( maxDistance, Format().precision( 2 ) ) );
+                return string{ text.view() };
             }
 
             static string formatFade( float64 fadeInSeconds, float64 fadeOutSeconds )
             {
-                utf8 arrText[96]{};
-                (void)std::snprintf( arrText, sizeof( arrText ), "in %.2f s / out %.2f s", fadeInSeconds, fadeOutSeconds );
-                return string{ arrText };
+                fixed_string<constant::kMaxBuffer128> text;
+                formatstring( text.data(), text.capacity(), "in %# s / out %# s", Fmt( fadeInSeconds, Format().precision( 2 ) ), Fmt( fadeOutSeconds, Format().precision( 2 ) ) );
+                return string{ text.view() };
             }
 
             static string formatRange( float32 low, float32 high, const utf8* pUnit )
             {
-                utf8 arrText[96]{};
+                fixed_string<constant::kMaxBuffer128> text;
                 if ( low == high )
-                    (void)std::snprintf( arrText, sizeof( arrText ), "%.2f %s", static_cast<float64>( low ), pUnit );
+                    formatstring( text.data(), text.capacity(), "%# %#", Fmt( low, Format().precision( 2 ) ), pUnit );
                 else
-                    (void)std::snprintf( arrText, sizeof( arrText ), "%.2f .. %.2f %s", static_cast<float64>( low ), static_cast<float64>( high ), pUnit );
-                return string{ arrText };
+                    formatstring( text.data(), text.capacity(), "%# .. %# %#", Fmt( low, Format().precision( 2 ) ), Fmt( high, Format().precision( 2 ) ), pUnit );
+                return string{ text.view() };
             }
 
             static const utf8* getContainerName( AudioContainerType container )
@@ -184,9 +185,9 @@ namespace sw::editor
     {
         if ( seconds < 0.0f )
             return string{ SW_LOCKEY( "EditorAudioEvents", "RemainingLoop" ) };
-        utf8 arrText[32]{};
-        (void)std::snprintf( arrText, sizeof( arrText ), "%.2f s", static_cast<float64>( seconds ) );
-        return string{ arrText };
+        fixed_string<constant::kMaxBuffer32> text;
+        formatstring( text.data(), text.capacity(), "%# s", Fmt( seconds, Format().precision( 2 ) ) );
+        return string{ text.view() };
     }
 
     hashed_string AudioEventBrowserUtil::duplicateEvent( AudioEventLibrary& inoutLibrary, const hashed_string& source )

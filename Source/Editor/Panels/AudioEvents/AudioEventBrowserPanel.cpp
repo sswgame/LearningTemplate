@@ -2,7 +2,9 @@
 
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -23,7 +25,6 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Localization/LocText.h"
 
-#include <cstdio>
 #include <imgui.h>
 
 namespace sw::editor
@@ -43,13 +44,13 @@ namespace sw::editor
             {
                 ImGui::TextUnformatted( pLabel );
                 ImGui::SameLine( 160.0f * EditorThemeUtil::getDPIScale() );
-                utf8 arrOverlay[64]{};
+                fixed_string<constant::kMaxBuffer64> overlay;
                 if ( limit == 0 )
-                    (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%u / -", count );
+                    formatstring( overlay.data(), overlay.capacity(), "%# / -", count );
                 else
-                    (void)std::snprintf( arrOverlay, sizeof( arrOverlay ), "%u / %u", count, limit );
+                    formatstring( overlay.data(), overlay.capacity(), "%# / %#", count, limit );
                 ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? EditorThemeUtil::getWarningColor() : EditorThemeUtil::getSuccessColor() ) );
-                ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, arrOverlay );
+                ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, overlay.c_str() );
                 ImGui::PopStyleColor();
             }
         };

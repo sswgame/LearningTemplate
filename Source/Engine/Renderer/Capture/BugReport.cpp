@@ -4,12 +4,14 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -47,10 +49,10 @@ namespace sw
             /** @brief 값 셋을 공백으로 나눈 글로 씁니다. 소수 다섯 자리(C 로캘)입니다. */
             static string formatFloat3( const float3& value )
             {
-                utf8 arrText[constant::kMaxBuffer128]{};
-                std::snprintf( arrText, sizeof( arrText ), "%.5f %.5f %.5f", static_cast<float64>( value._x ), static_cast<float64>( value._y ),
-                               static_cast<float64>( value._z ) );
-                return string( arrText );
+                fixed_string<constant::kMaxBuffer128> text;
+                formatstring( text.data(), text.capacity(), "%# %# %#", Fmt( value._x, Format().precision( 5 ) ), Fmt( value._y, Format().precision( 5 ) ),
+                              Fmt( value._z, Format().precision( 5 ) ) );
+                return string( text.view() );
             }
 
             /** @brief 공백으로 나뉜 값 셋을 읽습니다. */
