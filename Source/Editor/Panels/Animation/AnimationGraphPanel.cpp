@@ -82,7 +82,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( AnimationGraphPanel, AnimationGraphPanel::kPanelID, EditorPanelCategory::Tool, 1100 );
 
     AnimationGraphPanel::AnimationGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetType::AnimationGraph, "Move Animation Graph Nodes", "animation-graph-layout" }
+        : EditorGraphDocumentPanel{ EditorAssetType::AnimationGraph, "Move Animation Graph Nodes", "animation-graph-layout", &ed::SetCurrentEditor }
         , _previewGraph{}
         , _previewPlayer{}
         , _layerEditor{}
