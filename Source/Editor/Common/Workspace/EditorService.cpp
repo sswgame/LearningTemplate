@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFocus.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
@@ -32,9 +33,6 @@ namespace sw::editor
 
         const ISubsystemLocator* s_pHostServices{ nullptr }; ///< App 이 넘긴 호스트 서비스 범위
         EditorScopeSlot          s_editorScope{};
-        CommandStack*            s_pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택(`setFocusedCommandStack`)
-        EditorSelection*         s_pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택(`setFocusedSelection`). nullptr 이면 메인 선택
-        vector<EditorSelection*> s_listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(`registerPreviewSelection`, 빌림)
 
         /**
          * @brief 에디터 상태(범위 · 포커스 · 미리보기 선택)를 만지는 스레드가 범위를 등록한 스레드인지 모든 구성에서 확인합니다.
@@ -119,27 +117,31 @@ namespace sw::editor
     CommandStack* getFocusedCommandStack()
     {
         assertEditorThread();
-        return s_pFocusedCommandStack != nullptr ? s_pFocusedCommandStack : findSubsystem<CommandStack>();
+        const EditorFocus* const pFocus = findSubsystem<EditorFocus>();
+        return pFocus != nullptr && pFocus->_pFocusedCommandStack != nullptr ? pFocus->_pFocusedCommandStack : findSubsystem<CommandStack>();
     }
 
     void setFocusedCommandStack( CommandStack* pStack )
     {
         assertEditorThread();
-        s_pFocusedCommandStack = pStack;
+        if ( EditorFocus* const pFocus = findSubsystem<EditorFocus>() )
+            pFocus->_pFocusedCommandStack = pStack; // 에디터 범위가 내려간 뒤(종료 중 패널 소멸)에는 걸 곳이 없다
     }
 
     EditorSelection* getFocusedSelection()
     {
         assertEditorThread();
-        if ( s_pFocusedSelection != nullptr )
-            return s_pFocusedSelection;
+        const EditorFocus* const pFocus = findSubsystem<EditorFocus>();
+        if ( pFocus != nullptr && pFocus->_pFocusedSelection != nullptr )
+            return pFocus->_pFocusedSelection;
         return findMainSceneSelectionInScope();
     }
 
     void setFocusedSelection( EditorSelection* pSelection )
     {
         assertEditorThread();
-        s_pFocusedSelection = pSelection;
+        if ( EditorFocus* const pFocus = findSubsystem<EditorFocus>() )
+            pFocus->_pFocusedSelection = pSelection;
     }
 
     EditorSelection& getMainSceneSelection()
@@ -153,7 +155,7 @@ namespace sw::editor
     EditorSelection* findSelectionOf( const GameObjectManager& manager )
     {
         assertEditorThread();
-        for ( EditorSelection* pSelection : s_listPreviewSelection )
+        for ( EditorSelection* pSelection : getPreviewSelections() )
         {
             const Scene* pScene = pSelection->getScene();
             if ( pScene != nullptr && pScene->getObjectManager() == &manager )
@@ -165,20 +167,24 @@ namespace sw::editor
     const vector<EditorSelection*>& getPreviewSelections()
     {
         assertEditorThread();
-        return s_listPreviewSelection;
+        static const vector<EditorSelection*> s_empty; // 에디터 범위가 없을 때(테스트 · 종료)의 빈 목록
+        const EditorFocus* const              pFocus = findSubsystem<EditorFocus>();
+        return pFocus != nullptr ? pFocus->_listPreviewSelection : s_empty;
     }
 
     void registerPreviewSelection( EditorSelection& selection )
     {
         assertEditorThread();
-        if ( VectorUtil::contains( s_listPreviewSelection, &selection ) == false )
-            s_listPreviewSelection.push_back( &selection );
+        EditorFocus* const pFocus = findSubsystem<EditorFocus>();
+        if ( pFocus != nullptr && VectorUtil::contains( pFocus->_listPreviewSelection, &selection ) == false )
+            pFocus->_listPreviewSelection.push_back( &selection );
     }
 
     void unregisterPreviewSelection( EditorSelection& selection )
     {
         assertEditorThread();
-        VectorUtil::removeValue( s_listPreviewSelection, &selection );
+        if ( EditorFocus* const pFocus = findSubsystem<EditorFocus>() )
+            VectorUtil::removeValue( pFocus->_listPreviewSelection, &selection );
     }
 
     GameObjectManager* getActiveObjectManager()
