@@ -58,9 +58,9 @@ namespace sw
         _mapExtensionPassIndex.clear();
         auto addExtensionPasses = [this]( ExtensionHookStage stage )
         {
-            for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _listExtensionFramePass.size() ); ++moduleIndex )
+            for ( uint32 moduleIndex = 0; moduleIndex < static_cast<uint32>( _extensionHost.getPasses().size() ); ++moduleIndex )
             {
-                const ExtensionFramePass& modulePass = _listExtensionFramePass[moduleIndex];
+                const ExtensionFramePass& modulePass = _extensionHost.getPasses()[moduleIndex];
                 if ( modulePass._params._stage != stage )
                     continue;
                 vector<hashed_string> listExtensionInput;
@@ -129,7 +129,7 @@ namespace sw
         }
 
         addModulePassesAt( listPass.size() ); // 자리를 못 찾은 단계(출력 패스가 없는 파이프라인)는 끝에 붙는다
-        _moduleBoundSignature = _moduleFrameSignature;
+        _extensionHost.markBound();
 
         _graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
 
@@ -194,8 +194,8 @@ namespace sw
         const auto   passSlotIter = _mapPassNameToIndex.find( graphContext._passName );
         // 모듈 확장 패스는 XML 패스 슬롯 **뒤**에 자기 슬롯을 갖는다(병렬 기록의 패스마다 독립 컨텍스트). 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다.
         const auto   moduleIter  = _mapExtensionPassIndex.find( graphContext._passName );
-        const bool   bModulePass = moduleIter != _mapExtensionPassIndex.end() && moduleIter->second < _listExtensionFramePass.size();
-        const size_t slotCount   = passCount + 1 + _listExtensionFramePass.size();
+        const bool   bModulePass = moduleIter != _mapExtensionPassIndex.end() && moduleIter->second < _extensionHost.getPasses().size();
+        const size_t slotCount   = passCount + 1 + _extensionHost.getPasses().size();
         const size_t passSlot    = bModulePass ? passCount + 1 + moduleIter->second
                                                : ( ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount );
         if ( _listPassContext.size() <= passSlot )
@@ -213,7 +213,7 @@ namespace sw
             return;
         if ( bModulePass )
         {
-            executeExtensionPass( passContext, _listExtensionFramePass[moduleIter->second] );
+            executeExtensionPass( passContext, _extensionHost.getPasses()[moduleIter->second] );
             return;
         }
 

@@ -90,6 +90,7 @@ namespace sw
         , _pipelineResource{}
         , _psoManager{ _pDevice, _pipelineResource, _gpuScene }
         , _postProcess{ _pDevice, _pipelineResource, _psoManager }
+        , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _graph{}
         , _pipelinePath{}
         , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
@@ -432,7 +433,7 @@ namespace sw
     bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
     {
         // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _listExtensionFramePass.size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
+        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _extensionHost.getPasses().size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
         if ( _listPassContext.size() < passCount )
             _listPassContext.resize( passCount );
 
@@ -816,9 +817,17 @@ namespace sw
         if ( pExtensionRegistry == nullptr )
             return uploadSceneAndSubmitFrame( pDevice, pCallerName );
         RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
-        collectExtensionFrame( *pExtensionRegistry );
+        // 선언이 그래프에 묶인 것과 다르면 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다. 임시 텍스처는 이번 프레임에 그리는 뷰마다 기록 전에 만든다.
+        if ( _extensionHost.collectFrame( *pExtensionRegistry, _outputWidth, _outputHeight ) )
+            _bCallbacksBound = SW_FALSE;
+        _extensionHost.allocateTextures( _mainView );
+        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                _extensionHost.allocateTextures( *pView );
+        }
         const bool bOk = uploadSceneAndSubmitFrame( pDevice, pCallerName );
-        releaseExtensionFrame();
+        _extensionHost.releaseFrame();
         return bOk;
     }
 

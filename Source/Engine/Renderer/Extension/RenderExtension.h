@@ -237,7 +237,7 @@ namespace sw
 
     private:
         friend class FrameRenderer;
-        /// @brief 엔진 내부 상태입니다(`FramePassContext` · `FrameRenderer::ExtensionFramePass`). 형식을 헤더에 드러내지 않으려 불투명 포인터로 둔다.
+        /// @brief 엔진 내부 상태입니다(`FramePassContext` · `ExtensionFramePass`). 형식을 헤더에 드러내지 않으려 불투명 포인터로 둔다.
         ExtensionPassContext( FrameRenderer& renderer, void* pPassContext, const void* pPass, const ExtensionViewInfo& view )
             : _pRenderer{ &renderer }
             , _pPassContext{ pPassContext }

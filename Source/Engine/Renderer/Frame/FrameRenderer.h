@@ -20,6 +20,7 @@
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
+#include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
@@ -277,19 +278,6 @@ namespace sw
 
     private:
         friend class ExtensionPassContext;
-
-        /**
-         * @brief 이번 프레임에 모듈 확장이 선언해 검사를 통과한 패스 하나입니다(선언 + 실행 콜백 + 만들어 둔 PSO). 프레임 끝에 비웁니다.
-         */
-        struct ExtensionFramePass
-        {
-            ExtensionPassParams    _params{};
-            ExtensionPassExecuteFn _execute{};
-            hashed_string          _graphName{};   ///< 그래프 노드 이름("Module.<이름>")
-            hashed_string          _colorTarget{}; ///< 첫 쓰기 첨부(그리는 컬러 타깃)
-            hashed_string          _depthTarget{}; ///< 깊이 첨부(없으면 빈 이름)
-            RHIPipelineStateHandle _pso{ 0 };
-        };
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
         struct PresentTarget
@@ -753,18 +741,7 @@ namespace sw
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
-        // --- 모듈 확장(ExtensionRenderPass M3 · M4) — 구현은 FrameRendererModule.cpp ---
-        /**
-         * @brief 모듈 구간의 첫 일입니다(`uploadSceneAndSubmit`, `RenderScope` 안). 대기 중인 프록시 갱신을 적용하고, 확장의 `addPasses` 와 프록시의 `collectDrawElements` 를 부르고,
-         *        패스 선언을 검사해 프로그램 PSO · 임시 텍스처를 기록 전에 만들고, 선언이 바뀌었으면 그래프를 다시 묶게 합니다.
-         */
-        void collectExtensionFrame( RenderExtensionRegistry& registry );
-        /** @brief 모듈 구간의 끝입니다. 모듈이 넣은 패스 콜백 · 요소를 모두 놓습니다(람다의 소멸 코드가 모듈에 있어 모듈 구간 안에서 놓아야 한다). */
-        void releaseExtensionFrame();
-        /** @brief 이 뷰의 풀에 이번 프레임에 요청된 모듈 임시 텍스처를 만듭니다(이미 있으면 그대로). */
-        void allocateExtensionTextures( FrameViewTarget& view );
-        /** @brief 요소가 쓰는 메시를 찾거나 읽고 GPU 에 올립니다. 기록 전에만 부릅니다. 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
-        Mesh* resolveExtensionMesh( RenderExtensionRegistry& registry, const hashed_string& meshID );
+        // --- 모듈 확장 패스의 기록(ExtensionRenderPass M3 · M4) — 받아들이기는 `FrameExtensionHost`, 구현은 FrameRendererExtension.cpp ---
         /** @brief 모듈 확장 패스 하나를 실행합니다(그래프 노드 콜백이 부른다). 모듈의 실행 콜백에 `ExtensionPassContext` 를 넘깁니다. */
         void executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass );
         /** @brief `ExtensionPassContext::drawFullscreen` 의 몸체입니다. */
@@ -804,10 +781,15 @@ namespace sw
          * @details `_psoManager` 를 참조로 읽으므로 그 뒤에 선언한다. 언리얼의 효과별 `AddXxxPass` 처럼 장면 렌더러 밖에 둔다.
          */
         FramePostProcess _postProcess;
-        RenderGraph      _graph;
-        string           _pipelinePath;
-        string           _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        float4           _clearColor;
+        /**
+         * @brief 모듈 렌더 확장의 프레임 받아들이기(확장 훅 · 프록시 요소 · 패스 선언 검사 · 프로그램 PSO · 임시 텍스처 · 요소 메시)입니다. 그래프에 묶고 기록하는 일은 렌더러가 한다.
+         * @details `_psoManager` 를 참조로 쓰므로 그 뒤에 선언한다. 언리얼 `FSceneViewExtensions` 가 확장을 모으고 렌더러가 훅 자리마다 부르는 나눔과 같다.
+         */
+        FrameExtensionHost _extensionHost;
+        RenderGraph        _graph;
+        string             _pipelinePath;
+        string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
+        float4             _clearColor;
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
         FrameViewTarget _mainView;
         /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
@@ -973,20 +955,9 @@ namespace sw
         GPUNanCheck                          _nanCheck;
         unique_ptr<IRHICommandList>          _nanCheckCommandList;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
-        /// @brief 모듈 확장 패스(`_listExtensionFramePass`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
+        /// @brief 모듈 확장 패스(`FrameExtensionHost::getPasses`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
         unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
-        /// @brief 이번 프레임의 모듈 확장 패스입니다. 모듈 구간 안(`collectExtensionFrame` ~ `releaseExtensionFrame`)에서만 비지 않습니다. 기록 중에는 읽기만 합니다.
-        vector<ExtensionFramePass> _listExtensionFramePass;
-        /// @brief 이번 프레임에 요청된 모듈 임시 텍스처입니다(`ExtensionPassBuilder::createTexture`).
-        vector<ExtensionTextureDesc> _listExtensionTexture;
-        /// @brief 이번 프레임에 프록시들이 낸 요소입니다(`collectDrawElements`). 기록 중에는 읽기만 합니다.
-        vector<ExtensionDrawElement> _listExtensionDrawElement;
-        /// @brief 요소가 쓰는 메시를 쥐는 표입니다(`MeshUtil::acquirePrimitive` · `MeshCache` 는 약한 참조라 렌더러가 쥔다). 기록 전(셋업)에만 바꾸고, 파이프라인 · 디바이스 자원을 놓을 때 비웁니다.
-        unordered_map<hashed_string, shared_ptr<Mesh>> _mapExtensionMesh;
-        /// @brief 이번 프레임 모듈 패스 선언의 해시(0 = 없음)입니다. 그래프에 묶인 선언의 해시(`_moduleBoundSignature`)와 다르면 그래프를 다시 묶습니다. 프레임 끝에 0 으로 돌립니다.
-        uint64           _moduleFrameSignature{ 0 };
-        uint64           _moduleBoundSignature{ 0 };
-        RHITextureHandle _outputRenderTarget;
+        RHITextureHandle                     _outputRenderTarget;
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
