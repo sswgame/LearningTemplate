@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/array.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 
@@ -1033,64 +1034,26 @@ namespace sw
         // 이 프레임 시드(_frameContext)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
         // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.
 
-        // DX11 과 GL 은 PassCB 인덱스를 t0..t3 에 바인딩한다(bindless 에뮬레이션).
+        // DX11 과 GL 은 패스가 이름으로 건 엔진 텍스처를 역할마다 제 칸에 바인딩한다(bindless 에뮬레이션 — shaderslot::emulated 표).
         // DX12 와 VK 는 셰이더가 힙이나 배열을 직접 인덱싱한다. 리플렉션 바인더가 g_<Name>Index 를 채운다.
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        // 이 함수는 드로우 루프 안에서 불린다. 이름은 attachmentNames() 의 intern 된 것으로 찾는다. 주의: 이름을
-        // 문자열로 받으면 **드로우마다** intern 하게 된다(FNV 해시 + 32-way 샤드 뮤텍스 × 4).
-        auto srvOf = [&context]( const hashed_string& name ) -> RHIDescriptorIndex
+        // 역할 하나가 칸 하나라 고를 것이 없다 — 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(예전에는 네 칸을 나눠 써 선언 밖에서 거는 쿠키 · 노출이 부딪혔다).
+        // 이 함수는 드로우 루프 안에서 불린다. 이름은 처음 한 번 intern 한다 — 문자열로 찾으면 **드로우마다** intern 하게 된다(FNV 해시 + 샤드 뮤텍스).
+        static const auto s_arrName = []
         {
-            const RegisteredTexture* pTex = context._resourceRegistry.findTexture( name );
-            return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
-        };
-
-        const AttachmentNames&   names     = attachmentNames();
-        const RHIDescriptorIndex shadow    = srvOf( names._shadowMap );
-        const RHIDescriptorIndex albedo    = srvOf( names._gbufferAlbedo );
-        const RHIDescriptorIndex normal    = srvOf( names._gbufferNormal );
-        const RHIDescriptorIndex depth     = srvOf( names._sceneDepth );
-        const RHIDescriptorIndex source    = srvOf( names._sourceColor );
-        const RHIDescriptorIndex ao        = srvOf( names._ambientOcclusion );
-        const RHIDescriptorIndex bloom     = srvOf( names._bloomBright );
-        const RHIDescriptorIndex cookie    = srvOf( names._light2DCookieAtlas );
-        const RHIDescriptorIndex expo      = srvOf( names._autoExposure );
-        const RHIDescriptorIndex copy      = srvOf( names._sceneColorCopy );
-        const RHIDescriptorIndex depthCopy = srvOf( names._sceneDepthCopy );
-        // G버퍼 머티리얼 칸은 t0..t3 밖의 자기 슬롯이다(조명 패스가 다섯째로 읽는다 — shaderslot::kEngineGBufferMaterialTexture).
-        const RHIDescriptorIndex material = srvOf( names._gbufferMaterial );
-        if ( material != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( material, shaderslot::kEngineGBufferMaterialTexture );
-
-        // 슬롯 표는 getEmulatedTextureSlot(RenderPassInputSignature.h) 하나다: [source|shadow, albedo|ao(+cookie · TAA 이력), normal|bloom(+autoExposure), depth].
-        // 선언한 입력이 같은 슬롯의 두 역할을 함께 읽는 파이프라인은 로드(RenderPipelineAsset::validate)가 거절했다. 그래서 여기서는 슬롯마다
-        // 등록된 것이 하나뿐이라는 것이 불변식이다 — 우선순위로 하나를 고르지 않는다(둘이면 하나가 조용히 빠진다). 코드가 거는 쿠키 · 노출 ·
-        // TAA 이력은 선언 검증 밖이라 이 단언이 지킨다.
-        auto pickOne = []( RHIDescriptorIndex first, RHIDescriptorIndex second, RHIDescriptorIndex third ) -> RHIDescriptorIndex
+            array<hashed_string, shaderslot::kEngineTextureCount> arrName{};
+            for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
+                arrName[ordinal] = hashed_string( shaderslot::emulated::kEngineTextureNames[ordinal] );
+            return arrName;
+        }();
+        for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
         {
-            [[maybe_unused]] const uint32 presentCount = ( first != kInvalidDescriptorIndex ? 1u : 0u ) + ( second != kInvalidDescriptorIndex ? 1u : 0u ) +
-                                                         ( third != kInvalidDescriptorIndex ? 1u : 0u );
-            SW_ASSERT( presentCount <= 1 );
-            if ( first != kInvalidDescriptorIndex )
-                return first;
-            return second != kInvalidDescriptorIndex ? second : third;
-        };
-        const RHIDescriptorIndex slot0 = pickOne( source, shadow, kInvalidDescriptorIndex );
-        // 슬롯 1 은 역할이 넷이다(SceneColorCopy 는 반투명 패스가 읽는다). 앞 셋을 먼저 고르고 그 결과와 사본 중 하나만 있어야 한다.
-        const RHIDescriptorIndex slot1 = pickOne( pickOne( albedo, ao, cookie ), copy, kInvalidDescriptorIndex );
-        // 슬롯 2 도 넷이다(SceneDepthCopy 는 반투명 패스가 읽는다 — 그 패스는 G버퍼 노멀 · 블룸을 읽지 않는다).
-        const RHIDescriptorIndex slot2 = pickOne( pickOne( normal, bloom, expo ), depthCopy, kInvalidDescriptorIndex );
-
-        if ( slot0 != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( slot0, 0 );
-        if ( slot1 != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( slot1, 1 );
-        if ( slot2 != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( slot2, 2 );
-        // t3 은 깊이만이다. 깊이가 없을 때 그림자 맵을 대신 걸던 것은 지웠다 — 셰이더는 그림자를 t0 에서만 읽는다.
-        if ( depth != kInvalidDescriptorIndex )
-            context._pCmd->bindShaderResource( depth, 3 );
+            const RegisteredTexture* pTex = context._resourceRegistry.findTexture( s_arrName[ordinal] );
+            if ( pTex != nullptr && pTex->_srv != kInvalidDescriptorIndex )
+                context._pCmd->bindShaderResource( pTex->_srv, shaderslot::kEngineTexture0 + ordinal );
+        }
     }
 
     FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const

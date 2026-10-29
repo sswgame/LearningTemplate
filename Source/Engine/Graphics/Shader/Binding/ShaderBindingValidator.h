@@ -61,7 +61,7 @@ namespace sw
      *          **바이너리를 읽는 순간**(PSO 레이아웃 빌드, 쿠킹, 테스트)에 이름과 숫자로 보고합니다.
      *
      *          검사 항목(백엔드별 이름공간 기준):
-     *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwMaterials, g_SwBindlessTex2D, g_SwSlot#, …)의 종류와
+     *           1. 예약 리소스(PassCB, MaterialCB, g_SwInstances, g_SwMaterials, g_SwBindlessTex2D, g_SwEngineTex#, …)의 종류와
      *              위치가 계약 테이블과 같은가. 그 백엔드에 없어야 할 선언이 있는가.
      *           2. 같은 이름공간에서 두 리소스가 한 자리를 차지하는가. DX: (레지스터 종류, space, 번호),
      *              Vulkan: (set, binding), GL: (UBO/텍스처 유닛/SSBO, binding). GL 은 set 을 버리므로 여기서

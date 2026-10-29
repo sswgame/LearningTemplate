@@ -6,7 +6,7 @@
  *          MIT 라이선스다(아래 고지, 전문은 ThirdParty/fidelityfx-fsr1/LICENSE.md). 이 엔진의 셰이더 규칙(이름 · 루트 상수 · bindless/에뮬 읽기)에 맞춰 옮겼고 계산은 같다.
  *          두 단계는 퍼뮤테이션으로 고른다 — 기본은 EASU(배율 크기 원본 → 출력 크기 중간 RT), `SW_PASS_FSR_RCAS` 는 RCAS(중간 RT → Present 대상의 뷰포트).
  *          EASU 는 톤맵 뒤 지각 공간의 [0,1] 색을 받아야 한다(AMD 권고) — 그래서 Present 가 톤맵하지 않는 파이프라인에서만 쓴다(FrameRenderer::prepareUpscale).
- *          원본 · 중간 RT 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0(t0 — C++ 가 bindShaderResource 로 건다)이다.
+ *          원본 · 중간 RT 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(C++ 가 shaderslot::emulated::getSlot 의 레지스터에 건다)이다.
  *          C++: FrameRenderer::recordUpscale(FrameRendererUpscale.cpp).
  *
  * FidelityFX Super Resolution — Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
@@ -81,14 +81,14 @@ float min3( float first, float second, float third )
 // ---- 원본 읽기 ----
 float4 gatherSourceChannel( float2 uv, uint channel )
 {
-    return Bindless::gatherEngineChannel( SW_ROOT( g_FSRSource ), 0u, channel, uv );
+    return Bindless::gatherEngineChannel( SW_ROOT( g_FSRSource ), SW_EMU_SLOT_SourceColor, channel, uv );
 }
 
 float3 loadSourceClamped( int2 texel )
 {
-    const int2 size    = int2( Bindless::getEngineTextureSize( SW_ROOT( g_FSRSource ), 0u ) );
+    const int2 size    = int2( Bindless::getEngineTextureSize( SW_ROOT( g_FSRSource ), SW_EMU_SLOT_SourceColor ) );
     const int2 clamped = clamp( texel, int2( 0, 0 ), size - int2( 1, 1 ) );
-    return Bindless::loadEngineTexel( SW_ROOT( g_FSRSource ), 0u, clamped ).rgb;
+    return Bindless::loadEngineTexel( SW_ROOT( g_FSRSource ), SW_EMU_SLOT_SourceColor, clamped ).rgb;
 }
 
 // ---- EASU (ffx_fsr1.h FSREasuTapF · FSREasuSetF · FSREasuF) ----

@@ -31,7 +31,7 @@ namespace sw
             struct RootConstants
             {
                 uint32  _source{ 0 };  ///< HDR 원본의 bindless 번호(네이티브). 에뮬은 엔진 텍스처 슬롯 0
-                uint32  _history{ 0 }; ///< 지난 칸의 bindless 번호(네이티브). 에뮬은 엔진 텍스처 슬롯 1
+                uint32  _history{ 0 }; ///< 지난 칸의 bindless 번호(네이티브). 에뮬은 AutoExposure 칸
                 float32 _minEv{ 0.0f };
                 float32 _maxEv{ 0.0f };
                 float32 _rateUp{ 1.0f };
@@ -151,7 +151,7 @@ namespace sw
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( getEnginePSO( RenderPassType::AutoExposure ) );
-        // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0 · 1. PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(autoexposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                                   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererExposureInternal::RootConstants constants{};
         constants._source   = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
@@ -162,8 +162,10 @@ namespace sw
         constants._rateDown = view._autoExposureParams._w;
         if ( bNativeBindless == false )
         {
-            cmd.bindShaderResource( source._srv, shaderslot::kEngineTexture0 );
-            cmd.bindShaderResource( view._arrAutoExposureSRV[readSlot], shaderslot::kEngineTexture0 + 1u );
+            constexpr uint32 kSourceSlot  = shaderslot::emulated::getSlot( "SourceColor" );
+            constexpr uint32 kHistorySlot = shaderslot::emulated::getSlot( "AutoExposure" );
+            cmd.bindShaderResource( source._srv, kSourceSlot );
+            cmd.bindShaderResource( view._arrAutoExposureSRV[readSlot], kHistorySlot );
         }
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );

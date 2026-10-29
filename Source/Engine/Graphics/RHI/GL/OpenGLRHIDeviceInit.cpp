@@ -249,11 +249,10 @@ namespace sw
             glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_S, GL_REPEAT );
             glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glSamplerParameteri( materialSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
-            // 엔진 텍스처 유닛(t0..t3 — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)은 엔진 텍스처 샘플러(선형 · 클램프, shaderslot::kEngineTextureSampler)다.
+            // 엔진 텍스처 유닛(칸 번호 — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵 · 쿠키 · 노출)은 엔진 텍스처 샘플러(선형 · 클램프, shaderslot::kEngineTextureSampler)다.
             // 네이티브 bindless 의 Bindless::sampleIndex 가 고르는 샘플러와 같아야 블룸의 반 텍셀 탭이 같은 텍셀 넷을 섞는다. 렌더 타깃은 밉이 하나라
             // 축소 필터에 밉 모드를 두지 않는다.
             static_assert( shaderslot::kEngineTextureSampler == SW_SAMPLER_LINEAR_CLAMP, "GL 엔진 텍스처 샘플러의 필터 · 주소가 계약과 다르다" );
-            static_assert( shaderslot::kEngineTexture0 == 0, "엔진 텍스처 유닛 판정은 t0 부터라고 가정한다" );
             GLuint engineSampler{ 0 };
             glGenSamplers( 1, &engineSampler );
             glSamplerParameteri( engineSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -264,8 +263,8 @@ namespace sw
             for ( uint32 unit = 0; unit < 64; ++unit )
             {
                 const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
-                // G버퍼 머티리얼 칸(t15)도 엔진 텍스처다 — t0..t3 과 떨어져 있을 뿐 같은 샘플러를 쓴다.
-                const bool bEngineUnit = ( unit < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount ) || unit == shaderslot::kEngineGBufferMaterialTexture;
+                // 엔진 텍스처 칸의 GL 유닛은 칸 번호(0..kEngineTextureCount-1)다 — shaderslot::emulated::getGlTextureUnit.
+                const bool bEngineUnit = unit < shaderslot::kEngineTextureCount;
                 glBindTextureUnit( unit, defaultTex );
                 if ( bMaterialUnit )
                     glBindSampler( unit, materialSampler );

@@ -1,7 +1,7 @@
 // autoexposure.hlsl — 자동 노출 측정 · 적응(풀스크린 1x1). HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 R32 실수 RT 에 쓴다.
 // EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다. 목표는 카메라의 범위(최소 · 최대 EV)로 자른 측정값이고, 밝아질 때와 어두워질 때 다가가는 비율이 다르다(언리얼 Speed Up · Down).
 // 비율이 1 이면(처음 · 컷 프레임) 지난 값을 섞지 않는다 — 새 기록에는 값이 없어 NaN 일 수 있으므로 lerp 가 아니라 고르기다.
-// 원본 · 지난 EV 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0 · 1(t0 · t1 — C++ 가 bindShaderResource 로 건다)이다.
+// 원본 · 지난 EV 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(C++ 가 shaderslot::emulated::getSlot 의 레지스터에 건다)이다.
 // 톤맵(postgrade.hlsli)이 이 RT 를 g_AutoExposureIndex 로 읽어 2^-EV 를 곱한다. C++: FrameRenderer::recordAutoExposure — 톤맵하는 패스 앞에 같은 리스트로 그린다.
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
@@ -37,17 +37,17 @@ PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
 
 float3 loadSource( int2 texel )
 {
-    return Bindless::loadEngineTexel( SW_ROOT( g_AutoExposureSource ), 0u, texel ).rgb;
+    return Bindless::loadEngineTexel( SW_ROOT( g_AutoExposureSource ), SW_EMU_SLOT_SourceColor, texel ).rgb;
 }
 
 float2 getSourceSize()
 {
-    return float2( Bindless::getEngineTextureSize( SW_ROOT( g_AutoExposureSource ), 0u ) );
+    return float2( Bindless::getEngineTextureSize( SW_ROOT( g_AutoExposureSource ), SW_EMU_SLOT_SourceColor ) );
 }
 
 float loadHistory()
 {
-    return Bindless::loadEngineTexel( SW_ROOT( g_AutoExposureHistory ), 1u, int2( 0, 0 ) ).r;
+    return Bindless::loadEngineTexel( SW_ROOT( g_AutoExposureHistory ), SW_EMU_SLOT_AutoExposure, int2( 0, 0 ) ).r;
 }
 
 float4 PSMain( PSInput input ) : SV_TARGET

@@ -137,6 +137,20 @@
         SamplerState samplerName : register( SW_CAT( s, slot ) )
 #endif
 
+// 엔진 텍스처 칸 ordinal(리터럴 0..SW_ENGINE_TEXTURE_COUNT-1)의 이름 · 샘플러 · 선언(에뮬 — binding.hlsli 11-2). HLSL 레지스터는 SW_SLOT_ENGINE_TEX<n>(DX11),
+// GL 텍스처 유닛은 칸 번호 그대로다(bindingslots.hlsli 2). DX11 은 짝 샘플러 없이 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+#define SW_ENGINE_TEXTURE( ordinal ) SW_CAT( g_SwEngineTex, ordinal )
+#if defined( __spirv__ )
+    #define SW_ENGINE_SAMPLER( ordinal ) SW_CAT( SW_ENGINE_TEXTURE( ordinal ), Sampler )
+    #define SW_DECLARE_ENGINE_TEXTURE( ordinal )                                                                                                                            \
+        [[vk::combinedImageSampler]] [[vk::binding( ordinal, 0 )]] Texture2D SW_ENGINE_TEXTURE( ordinal ) : register( SW_CAT( t, SW_CAT( SW_SLOT_ENGINE_TEX, ordinal ) ) ); \
+        [[vk::combinedImageSampler]] [[vk::binding( ordinal, 0 )]] SamplerState SW_ENGINE_SAMPLER( ordinal ) : register( SW_CAT( s, ordinal ) )
+#else
+    #define SW_ENGINE_SAMPLER( ordinal ) SW_CAT( g_SwSampler, SW_ENGINE_TEXTURE_SAMPLER )
+    #define SW_DECLARE_ENGINE_TEXTURE( ordinal ) \
+        Texture2D SW_ENGINE_TEXTURE( ordinal ) : register( SW_CAT( t, SW_CAT( SW_SLOT_ENGINE_TEX, ordinal ) ) )
+#endif
+
 // ------------------------------------------------------------------------------
 // 5) Common Math Constants
 // ------------------------------------------------------------------------------

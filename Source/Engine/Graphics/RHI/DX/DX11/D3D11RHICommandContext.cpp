@@ -322,18 +322,7 @@ namespace sw
             _pContext->VSSetShaderResources( slot, 1, &pSRV );
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = ( pSRV != nullptr ) ? texture : 0;
-        // 엔진 슬롯(t0..t3 — 풀스크린 입력 · 그림자 맵)만 샘플러를 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
-        // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 샘플러는 shaderslot::kEngineTextureSampler(선형 · 클램프) — 네이티브 bindless 가 고르는 것과 같다.
-        // 머티리얼 슬롯(t16..t31)은 짝 샘플러가 없다 — DX11 샘플러 슬롯은 16 개뿐이라 셰이더가 정적 세트의 머티리얼 샘플러(s9 + kMaterialTextureSampler)로 읽는다.
-        // G버퍼 머티리얼 칸(t15)도 짝이 없다 — s15 가 정적 세트 자리라 여기서 걸면 정적 샘플러를 덮는다(셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다).
-        const bool bEngineSlot = ( slot - shaderslot::kEngineTexture0 ) < shaderslot::kEngineTextureCount; // 부호 없는 뺄셈 — 시작보다 앞이면 감겨 커진다
-        if ( _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler] != nullptr )
-        {
-            if ( bEngineSlot )
-                _pContext->PSSetSamplers( slot, 1, _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler].GetAddressOf() );
-            if ( slot != 0 )
-                _pContext->PSSetSamplers( 0, 1, _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler].GetAddressOf() );
-        }
+        // 짝 샘플러는 걸지 않는다 — DX11 샘플러 슬롯은 16 개뿐이라 엔진 텍스처 칸(t32..)과 머티리얼 칸(t16..t31)은 셰이더가 정적 세트(s9..s15)의 샘플러로 읽는다.
     }
 
     void D3D11RHICommandContext::setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset )

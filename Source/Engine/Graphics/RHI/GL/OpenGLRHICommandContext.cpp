@@ -481,10 +481,12 @@ namespace sw
         if ( tex == 0 )
             return;
 
-        glBindTextureUnit( slot, tex );
+        // 엔진 텍스처 칸은 HLSL 레지스터(t32..)와 GL 유닛(칸 번호)이 다르다 — GL 프래그먼트 유닛은 32 개라 레지스터 번호를 유닛으로 쓸 수 없다(bindingslots.hlsli 2).
+        const uint32 unit = shaderslot::emulated::getGlTextureUnit( slot );
+        glBindTextureUnit( unit, tex );
         static_assert( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount <= 32, "텍스처 유닛 마스크(uint32)가 머티리얼 텍스처 유닛을 다 담지 못한다" );
-        if ( slot < 32 )
-            _pDevice->_recordingState._boundTextureUnitMask |= ( 1u << slot );
+        if ( unit < 32 )
+            _pDevice->_recordingState._boundTextureUnitMask |= ( 1u << unit );
     }
 
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )

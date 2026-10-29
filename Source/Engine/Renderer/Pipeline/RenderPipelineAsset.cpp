@@ -393,27 +393,11 @@ namespace sw
                         continue;
 
                     uint32 sourceColorCount{ 0 };
-                    // 에뮬 백엔드(DX11 · GL)는 한 슬롯을 여러 역할이 나눠 쓴다(getEmulatedTextureSlot). 같은 슬롯의 두 역할을 함께 읽으면 실행이 하나만 걸어
-                    // 다른 하나가 조용히 빠지므로 로드에서 거절한다.
-                    RenderPassInputRole arrSlotRole[static_cast<uint32>( EmulatedTextureSlot::None )]{};
                     for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                     {
                         const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
                         if ( role == RenderPassInputRole::SourceColor )
                             ++sourceColorCount;
-                        const EmulatedTextureSlot slot = getEmulatedTextureSlot( role );
-                        if ( slot != EmulatedTextureSlot::None )
-                        {
-                            RenderPassInputRole& slotRole = arrSlotRole[static_cast<uint32>( slot )];
-                            if ( slotRole != RenderPassInputRole::Invalid && slotRole != role )
-                            {
-                                SW_LOG_ERROR( "[%#] pass '%#' (%#): inputs with roles %# and %# share emulated texture slot %# (DX11 · GL) - only one can be bound",
-                                              sourcePath, pass._name, pass._type, getRenderPassInputRoleName( slotRole ), getRenderPassInputRoleName( role ),
-                                              static_cast<uint32>( slot ) );
-                                ++issueCount;
-                            }
-                            slotRole = role;
-                        }
                         if ( pContract->reads( role ) )
                             continue;
                         SW_LOG_ERROR( "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",

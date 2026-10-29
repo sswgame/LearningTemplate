@@ -36,11 +36,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) SRV(t#, space0): 네 백엔드 공통 슬롯
         // ------------------------------------------------------------------------------
-        inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
-        inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_SLOT_COUNT;
         /**
-         * @brief 엔진 텍스처 슬롯 t0..t3(풀스크린 입력, G버퍼, 깊이, 그림자 맵)을 읽는 샘플러(SW_SAMPLER_*)입니다. 선형 필터와 클램프 주소를 씁니다.
-         * @details 네이티브 bindless(DX12, Vulkan)는 `Bindless::sampleIndex` 가 이 샘플러로 읽는다. 슬롯 결합 샘플러를 쓰는 DX11 과 GL 은 엔진이 t0..t3 에
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t43 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
+         * @details GL 텍스처 유닛은 칸 번호(0..)다 — GL 백엔드가 이 레지스터 범위를 유닛으로 옮긴다(`emulated::getGlTextureUnit`). DX12 · Vulkan 은 선언하지 않는다.
+         */
+        inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
+        inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_COUNT;
+        /**
+         * @brief 엔진 텍스처 칸(풀스크린 입력, G버퍼, 깊이, 그림자 맵 …)을 읽는 샘플러(SW_SAMPLER_*)입니다. 선형 필터와 클램프 주소를 씁니다.
+         * @details 네이티브 bindless(DX12, Vulkan)와 DX11(정적 세트)은 셰이더가 이 번호로 고르고, 결합 샘플러뿐인 GL 은 엔진이 엔진 텍스처 유닛에
          *          같은 샘플러를 바인딩한다(언리얼 후처리 입력의 Bilinear, Clamp 정적 샘플러). 랩이면 화면 가장자리의 탭이 반대편을 읽는다.
          */
         inline constexpr uint32 kEngineTextureSampler = SW_ENGINE_TEXTURE_SAMPLER;
@@ -110,12 +114,6 @@ namespace sw
         inline constexpr uint32 kLightProbeBuffer      = SW_SLOT_LIGHT_PROBE_SRV;
         inline constexpr uint32 kLightProbeFloat4Count = SW_LIGHT_PROBE_FLOAT4_COUNT;
         inline constexpr uint32 kSRVSlotCount          = SW_SRV_SLOT_COUNT;
-        /**
-         * @brief G버퍼 머티리얼 칸(금속도 · 거칠기)의 엔진 텍스처 슬롯 t15 입니다(에뮬 백엔드 DX11 · GL 만). 디퍼드 조명이 t0..t3 의 넷과 함께 다섯째로 읽습니다.
-         * @details t0..t3 과 떨어져 있어 `kEngineTextureCount` 에 들지 않는다. DX11 은 s15 가 정적 샘플러 세트라 이 슬롯에 샘플러를 걸지 않고(셰이더가 정적 세트로 읽는다),
-         *          GL 은 유닛 15 에 엔진 텍스처 샘플러를 건다. SRV 띠가 이 칸까지 자라면 아래 static_assert 가 막는다.
-         */
-        inline constexpr uint32 kEngineGBufferMaterialTexture = SW_SLOT_ENGINE_GBUFFER_MATERIAL;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. bindingslots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -269,7 +267,7 @@ namespace sw
         } // namespace vk
 
         /**
-         * @brief DX11 정적 샘플러 세트 s9..s15 입니다. 슬롯 결합 샘플러 뒤에 놓입니다. 디바이스가 초기화할 때 바인딩하고 셰이더가 samplerID 로 고릅니다.
+         * @brief DX11 정적 샘플러 세트 s9..s15 입니다. 디바이스가 초기화할 때 바인딩하고 셰이더가 samplerID 로 고릅니다.
          * @details DX11 이 SW_SAMPLER_* 를 존중하는 유일한 방법이다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기를 쓴다). GL 은 없다.
          */
         namespace dx11
@@ -280,7 +278,6 @@ namespace sw
                                SW_DX11_STATIC_SAMPLER3 == SW_DX11_STATIC_SAMPLER0 + 3 && SW_DX11_STATIC_SAMPLER4 == SW_DX11_STATIC_SAMPLER0 + 4 &&
                                SW_DX11_STATIC_SAMPLER5 == SW_DX11_STATIC_SAMPLER0 + 5 && SW_DX11_STATIC_SAMPLER6 == SW_DX11_STATIC_SAMPLER0 + 6,
                            "DX11 정적 샘플러 슬롯은 연속이어야 한다 (PSSetSamplers 한 번에 건다)" );
-            static_assert( kStaticSampler0 >= kEngineTexture0 + kEngineTextureCount, "DX11 정적 샘플러가 엔진 슬롯 결합 샘플러(s0..s3)와 겹친다" );
             static_assert( kStaticSampler0 + kStaticSamplerArrayCount <= kMaxSamplerSlotCount, "DX11 정적 샘플러가 샘플러 슬롯 수(16)를 넘는다" );
         } // namespace dx11
 
@@ -323,46 +320,49 @@ namespace sw
         /// @brief 엔진 예약 리소스 이름입니다. binding.hlsli 와 gpucull.hlsl 의 선언과 같아야 합니다(계약 검증 키).
         namespace resname
         {
-            inline constexpr const utf8* kInstances                    = "g_SwInstances";
-            inline constexpr const utf8* kMaterials                    = "g_SwMaterials";
-            inline constexpr const utf8* kEngineTexture                = "g_SwSlot";                ///< 뒤에 0..3 이 붙는다.
-            inline constexpr const utf8* kMaterialTexture              = "g_SwMaterialTex";         ///< 뒤에 0..15 가 붙는다.
-            inline constexpr const utf8* kEngineGBufferMaterialTexture = "g_SwSlotGBufferMaterial"; ///< t15(에뮬). G버퍼 머티리얼 칸
-            inline constexpr const utf8* kBindlessTextures             = "g_SwBindlessTex2D";
-            inline constexpr const utf8* kBindlessRwTextures           = "g_SwBindlessRWTex2D";
-            inline constexpr const utf8* kSamplers                     = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
-            inline constexpr const utf8* kSamplerSlot                  = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
-            inline constexpr const utf8* kShadowSampler                = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
-            inline constexpr const utf8* kGPUAssertRing                = "g_GPUAssertRW";          ///< 셰이더 assert 링(컴퓨트 쓰기 슬롯 u4, gpuassert.hlsli).
-            inline constexpr const utf8* kRwTextureSlot                = "g_SwRWSlot";             ///< 뒤에 0..2 가 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
-            inline constexpr const utf8* kVisibleInstances             = "g_SwVisibleInstanceIDs"; ///< t6(그래픽스). 컬링이 만든 가시 목록
-            inline constexpr const utf8* kMorphVertices                = "g_SwMorphVertices";      ///< t7(그래픽스). GPU 가 변형한 정점 풀
-            inline constexpr const utf8* kLights                       = "g_SwLights";             ///< t8(그래픽스). 씬 라이트 목록
-            inline constexpr const utf8* kBatches                      = "g_SwBatches";            ///< t9(그래픽스). 씬 배치 테이블
-            inline constexpr const utf8* kVertexAnimation              = "g_SwVertexAnimation";    ///< t10(그래픽스). 정점 애니메이션(VAT) 테이블
-            inline constexpr const utf8* kCanvasQuads                  = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
-            inline constexpr const utf8* kParticles                    = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
-            inline constexpr const utf8* kLightGrid                    = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
-            inline constexpr const utf8* kLightProbes                  = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
-            inline constexpr const utf8* kLightGridLights              = "g_LightGridLights";      ///< lightgrid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
-            inline constexpr const utf8* kLightGridViews               = "g_LightGridViews";       ///< lightgrid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
-            inline constexpr const utf8* kLightGridRw                  = "g_LightGridRW";          ///< lightgrid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
-            inline constexpr const utf8* kMorphRestVertices            = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
-            inline constexpr const utf8* kMorphDeformPrograms          = "g_DeformPrograms";       ///< meshmorph t1. 메시 칸 표 + 변형 프로그램(meshmodifier.hlsli)
-            inline constexpr const utf8* kMorphVerticesRw              = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
-            inline constexpr const utf8* kSkinWeights                  = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치와 팔레트 행 번호
-            inline constexpr const utf8* kSkinPalette                  = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나가 float4 세 개)
-            inline constexpr const utf8* kSkinInstances                = "g_SkinInstances";        ///< meshskin t3. 스킨 인스턴스 테이블(인스턴스 하나가 uint4 두 개)
-            inline constexpr const utf8* kCullInstances                = "g_Instances";
-            inline constexpr const utf8* kCullBatchInfo                = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
-            inline constexpr const utf8* kCullIndirectArgs             = "g_IndirectArgs";
-            inline constexpr const utf8* kCullVisibleIDs               = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
-            inline constexpr const utf8* kCullLODState                 = "g_LODState";           ///< 컬링 u2. 인스턴스마다의 LOD 전환 상태(크로스페이드)
-            inline constexpr const utf8* kAnimationInstancesRw         = "g_InstancesRW";        ///< instanceanimation u0. 월드 행렬을 고쳐 쓴다.
+            inline constexpr const utf8* kInstances            = "g_SwInstances";
+            inline constexpr const utf8* kMaterials            = "g_SwMaterials";
+            inline constexpr const utf8* kEngineTexture        = "g_SwEngineTex";   ///< 뒤에 칸 번호(0..kEngineTextureCount-1)가 붙는다.
+            inline constexpr const utf8* kMaterialTexture      = "g_SwMaterialTex"; ///< 뒤에 0..15 가 붙는다.
+            inline constexpr const utf8* kBindlessTextures     = "g_SwBindlessTex2D";
+            inline constexpr const utf8* kBindlessRwTextures   = "g_SwBindlessRWTex2D";
+            inline constexpr const utf8* kSamplers             = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
+            inline constexpr const utf8* kSamplerSlot          = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
+            inline constexpr const utf8* kShadowSampler        = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
+            inline constexpr const utf8* kGPUAssertRing        = "g_GPUAssertRW";          ///< 셰이더 assert 링(컴퓨트 쓰기 슬롯 u4, gpuassert.hlsli).
+            inline constexpr const utf8* kRwTextureSlot        = "g_SwRWSlot";             ///< 뒤에 0..2 가 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
+            inline constexpr const utf8* kVisibleInstances     = "g_SwVisibleInstanceIDs"; ///< t6(그래픽스). 컬링이 만든 가시 목록
+            inline constexpr const utf8* kMorphVertices        = "g_SwMorphVertices";      ///< t7(그래픽스). GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kLights               = "g_SwLights";             ///< t8(그래픽스). 씬 라이트 목록
+            inline constexpr const utf8* kBatches              = "g_SwBatches";            ///< t9(그래픽스). 씬 배치 테이블
+            inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t10(그래픽스). 정점 애니메이션(VAT) 테이블
+            inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t11(캔버스 패스). 화면 2D 사각형
+            inline constexpr const utf8* kParticles            = "g_SwParticles";          ///< t11(투명 패스의 입자 그리기). 방출기 하나의 입자(particle.hlsl)
+            inline constexpr const utf8* kLightGrid            = "g_SwLightGrid";          ///< t12(그래픽스). 뷰마다의 라이트 그리드 단어
+            inline constexpr const utf8* kLightProbes          = "g_SwLightProbes";        ///< t13(그래픽스). 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개)
+            inline constexpr const utf8* kLightGridLights      = "g_LightGridLights";      ///< lightgrid 컴퓨트 t0. 씬 라이트 버퍼(g_SwLights 와 같은 버퍼)
+            inline constexpr const utf8* kLightGridViews       = "g_LightGridViews";       ///< lightgrid 컴퓨트 t1. 뷰마다의 뷰-투영과 깊이 조각 상수
+            inline constexpr const utf8* kLightGridRw          = "g_LightGridRW";          ///< lightgrid 컴퓨트 u0. 뷰마다의 그리드를 쓴다
+            inline constexpr const utf8* kMorphRestVertices    = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
+            inline constexpr const utf8* kMorphDeformPrograms  = "g_DeformPrograms";       ///< meshmorph t1. 메시 칸 표 + 변형 프로그램(meshmodifier.hlsli)
+            inline constexpr const utf8* kMorphVerticesRw      = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
+            inline constexpr const utf8* kSkinWeights          = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치와 팔레트 행 번호
+            inline constexpr const utf8* kSkinPalette          = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나가 float4 세 개)
+            inline constexpr const utf8* kSkinInstances        = "g_SkinInstances";        ///< meshskin t3. 스킨 인스턴스 테이블(인스턴스 하나가 uint4 두 개)
+            inline constexpr const utf8* kCullInstances        = "g_Instances";
+            inline constexpr const utf8* kCullBatchInfo        = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
+            inline constexpr const utf8* kCullIndirectArgs     = "g_IndirectArgs";
+            inline constexpr const utf8* kCullVisibleIDs       = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
+            inline constexpr const utf8* kCullLODState         = "g_LODState";           ///< 컬링 u2. 인스턴스마다의 LOD 전환 상태(크로스페이드)
+            inline constexpr const utf8* kAnimationInstancesRw = "g_InstancesRW";        ///< instanceanimation u0. 월드 행렬을 고쳐 쓴다.
         } // namespace resname
 
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.
-        static_assert( kInstanceBuffer == kEngineTexture0 + kEngineTextureCount, "인스턴스 버퍼는 엔진 텍스처 슬롯 바로 다음이어야 한다" );
+        static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
+        static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
+                       "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
+        static_assert( SW_SLOT_ENGINE_TEX11 == SW_SLOT_ENGINE_TEX0 + 11 && kEngineTextureCount == 12 && kEngineTextureCount <= kMaterialTexture0,
+                       "엔진 텍스처 칸은 연속 12 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 12 줄과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -393,43 +393,39 @@ namespace sw
                            kLightTypeFreeform2DEdge != kLightTypeReflectionProbe,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯 표입니다 — 이 표가 **유일한 원본**입니다.
-         * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 코드가 거는 쿠키 · 노출). 한 슬롯을 여러 이름이 나눠 쓴다.
-         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<슬롯>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHLSL`) `binding.hlsli` 의
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 표입니다 — 이 표가 **유일한 원본**이고, 이름 하나가 칸 하나입니다(칸 번호 = 표의 순서).
+         * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 렌더러가 선언 밖에서 거는 쿠키 · 노출).
+         *          칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 두는 것과 같다).
+         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<칸>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHLSL`) `binding.hlsli` 의
          *          `Bindless::emulatedSlot` 이 그 매크로를 읽는다 — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
-         *          C++ 의 역할 → 슬롯(`getEmulatedTextureSlot`)과 실행의 슬롯 바인딩도 이 표를 따른다.
+         *          실행의 바인딩(`FrameRenderer::commitBindlessTextureBindings`)도 이 표를 돈다.
          */
         namespace emulated
         {
-            struct EngineTextureBinding
-            {
-                const utf8* _pName;
-                uint32      _slot;
-            };
-
             inline constexpr const utf8* kSlotMacroPrefix = "SW_EMU_SLOT_";
 
-            inline constexpr EngineTextureBinding kEngineTextureBindings[] = {
-                {         "ShadowMap",             SW_SLOT_ENGINE_TEX0},
-                {       "SourceColor",             SW_SLOT_ENGINE_TEX0},
-                {     "GBufferAlbedo",             SW_SLOT_ENGINE_TEX1},
-                {  "AmbientOcclusion",             SW_SLOT_ENGINE_TEX1},
-                {    "SceneColorCopy",             SW_SLOT_ENGINE_TEX1},
-                {    "SceneDepthCopy",             SW_SLOT_ENGINE_TEX2},
-                {"Light2DCookieAtlas",             SW_SLOT_ENGINE_TEX1},
-                {     "GBufferNormal",             SW_SLOT_ENGINE_TEX2},
-                {       "BloomBright",             SW_SLOT_ENGINE_TEX2},
-                {      "AutoExposure",             SW_SLOT_ENGINE_TEX2},
-                {        "SceneDepth",             SW_SLOT_ENGINE_TEX3},
-                {   "GBufferMaterial", SW_SLOT_ENGINE_GBUFFER_MATERIAL},
+            inline constexpr const utf8* kEngineTextureNames[] = {
+                "ShadowMap",
+                "SourceColor",
+                "GBufferAlbedo",
+                "AmbientOcclusion",
+                "SceneColorCopy",
+                "SceneDepthCopy",
+                "GBufferNormal",
+                "BloomBright",
+                "SceneDepth",
+                "GBufferMaterial",
+                "Light2DCookieAtlas",
+                "AutoExposure",
             };
+            static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 
-            /** @brief 이름의 슬롯을 돌려줍니다. 표에 없으면 false 입니다. */
-            [[nodiscard]] constexpr bool tryFindSlot( const utf8* pName, uint32& outSlot )
+            /** @brief 이름의 칸 번호(0..kEngineTextureCount-1)를 돌려줍니다. 표에 없으면 false 입니다. */
+            [[nodiscard]] constexpr bool tryFindOrdinal( const utf8* pName, uint32& outOrdinal )
             {
-                for ( const EngineTextureBinding& binding : kEngineTextureBindings )
+                for ( uint32 ordinal = 0; ordinal < kEngineTextureCount; ++ordinal )
                 {
-                    const utf8* pLeft  = binding._pName;
+                    const utf8* pLeft  = kEngineTextureNames[ordinal];
                     const utf8* pRight = pName;
                     while ( *pLeft != '\0' && *pLeft == *pRight )
                     {
@@ -438,19 +434,33 @@ namespace sw
                     }
                     if ( *pLeft == *pRight )
                     {
-                        outSlot = binding._slot;
+                        outOrdinal = ordinal;
                         return true;
                     }
                 }
                 return false;
             }
+
+            /** @brief 상수 문맥이 아닌 함수 — `getSlot` 이 표에 없는 이름을 받으면 이것을 불러 constexpr 초기화가 컴파일에서 멈춘다. */
+            inline uint32 unknownEngineTextureName()
+            {
+                return ~0u;
+            }
+
+            /** @brief 이름의 HLSL 레지스터(t#)입니다. `constexpr` 변수로 받으면 표에 없는 이름은 컴파일에서 멈춘다 — 부르는 쪽은 표의 이름 리터럴을 넘긴다. */
+            [[nodiscard]] constexpr uint32 getSlot( const utf8* pName )
+            {
+                uint32 ordinal = 0;
+                return tryFindOrdinal( pName, ordinal ) ? kEngineTexture0 + ordinal : unknownEngineTextureName();
+            }
+
+            /** @brief 레지스터 @p slot 이 엔진 텍스처 칸이면 GL 텍스처 유닛(칸 번호)을 돌려줍니다. 아니면 레지스터 그대로입니다(머티리얼 칸은 유닛 = 레지스터). */
+            [[nodiscard]] constexpr uint32 getGlTextureUnit( uint32 slot )
+            {
+                return ( slot - kEngineTexture0 ) < kEngineTextureCount ? slot - kEngineTexture0 : slot; // 부호 없는 뺄셈 — 시작보다 앞이면 감겨 커진다
+            }
         } // namespace emulated
 
-        static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
-        static_assert( kEngineGBufferMaterialTexture >= kSRVSlotCount && kEngineGBufferMaterialTexture < vk::kRangeSize && kEngineGBufferMaterialTexture < kMaterialTexture0,
-                       "G버퍼 머티리얼 슬롯(에뮬)은 SRV 띠 위, Vulkan t 밴드 안, 머티리얼 슬롯 앞이어야 한다 — 띠가 자라 닿으면 DX11 · GL 에서 버퍼와 텍스처가 한 레지스터를 다툰다" );
-        static_assert( kEngineGBufferMaterialTexture >= dx11::kStaticSampler0 && kEngineGBufferMaterialTexture < dx11::kStaticSampler0 + kStaticSamplerArrayCount,
-                       "G버퍼 머티리얼 슬롯의 같은 번호 샘플러가 DX11 정적 세트가 아니면 짝 샘플러를 둘 수 있다 — binding.hlsli 의 DX11 선언 · D3D11 bindShaderResource 를 다시 본다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
                            kComputeConstantBuffer < kConstantBufferSlotCount,
                        "예약 CB 슬롯은 백엔드가 마련한 b# 자리 안이어야 한다" );

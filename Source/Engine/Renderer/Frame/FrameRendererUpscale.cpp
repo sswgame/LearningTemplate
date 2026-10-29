@@ -138,16 +138,17 @@ namespace sw
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( getEnginePSO( RenderPassType::UpscaleEasu ) );
-        // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0. PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererUpscaleInternal::RootConstants constants{};
-        constants._source       = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
-        constants._inputWidth   = static_cast<float32>( source._width );
-        constants._inputHeight  = static_cast<float32>( source._height );
-        constants._outputWidth  = static_cast<float32>( view._upscaleWidth );
-        constants._outputHeight = static_cast<float32>( view._upscaleHeight );
+        constants._source            = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
+        constants._inputWidth        = static_cast<float32>( source._width );
+        constants._inputHeight       = static_cast<float32>( source._height );
+        constants._outputWidth       = static_cast<float32>( view._upscaleWidth );
+        constants._outputHeight      = static_cast<float32>( view._upscaleHeight );
+        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
-            cmd.bindShaderResource( source._srv, shaderslot::kEngineTexture0 );
+            cmd.bindShaderResource( source._srv, kSourceSlot );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         cmd.endRenderPass();
@@ -167,12 +168,13 @@ namespace sw
         cmd.setPipelineState( pso );
         const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FrameRendererUpscaleInternal::RootConstants constants{};
-        constants._source    = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
-        constants._viewportX = viewportX;
-        constants._viewportY = viewportY;
-        constants._sharpness = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
+        constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
+        constants._viewportX         = viewportX;
+        constants._viewportY         = viewportY;
+        constants._sharpness         = MathUtil::max( 0.0f, static_cast<float32>( gv_upscalerSharpness ) );
+        constexpr uint32 kSourceSlot = shaderslot::emulated::getSlot( "SourceColor" );
         if ( bNativeBindless == false )
-            cmd.bindShaderResource( view._upscaleIntermediateSRV, shaderslot::kEngineTexture0 );
+            cmd.bindShaderResource( view._upscaleIntermediateSRV, kSourceSlot );
         cmd.setGraphicsRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
         cmd.draw( 3, 0 );
         context.resetBindingCache();

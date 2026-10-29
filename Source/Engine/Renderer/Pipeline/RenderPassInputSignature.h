@@ -35,26 +35,6 @@ namespace sw
         Count,
     };
 
-    /**
-     * @enum EmulatedTextureSlot
-     * @brief 에뮬 백엔드(DX11 · GL)가 엔진 텍스처를 거는 슬롯입니다. 네이티브 bindless(DX12 · Vulkan)는 쓰지 않습니다.
-     * @details 표는 `shaderslot::emulated::kEngineTextureBindings`(ShaderBindingSlots.h) 하나이고 셰이더(컴파일러가 낸
-     *          `SW_EMU_SLOT_*` 매크로를 `Bindless::sampleIndex` 가 읽는다)와 실행(`FrameRenderer::commitBindlessTextureBindings`)이 같은 표를 따른다. 한 슬롯을 여러 역할이 나눠 쓰므로 한 패스가 같은
-     *          슬롯의 두 역할을 함께 읽으면 하나가 조용히 빠진다 — 파이프라인 로드(`RenderPipelineAsset::validate`)가 오류로 거절한다.
-     */
-    enum class EmulatedTextureSlot : uint8
-    {
-        Slot0,           ///< t0: SourceColor · ShadowMap
-        Slot1,           ///< t1: GBufferAlbedo · AmbientOcclusion · SceneColorCopy (코드가 거는 Light2DCookieAtlas · TAA 이력도 여기)
-        Slot2,           ///< t2: GBufferNormal · BloomBright · SceneDepthCopy (코드가 거는 AutoExposure 도 여기)
-        Slot3,           ///< t3: SceneDepth
-        GBufferMaterial, ///< 자기 슬롯(shaderslot::kEngineGBufferMaterialTexture) — 나눠 쓰지 않는다
-        None,            ///< Invalid · Count
-    };
-
-    /** @brief 역할이 에뮬 백엔드에서 쓰는 슬롯입니다. */
-    EmulatedTextureSlot getEmulatedTextureSlot( RenderPassInputRole role );
-
     /** @brief 역할의 셰이더 이름을 반환합니다. `g_<Name>Index` 의 `<Name>` 이자 FrameResourceRegistry 의 키입니다. */
     const utf8* getRenderPassInputRoleName( RenderPassInputRole role );
 

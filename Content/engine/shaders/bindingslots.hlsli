@@ -10,14 +10,14 @@
  *
  * 번호 지도 (그래픽스 셰이더, space0 — 절 번호는 이 파일의 1~10 절):
  *   b0 PassCB · b1 MaterialCB(픽스처) · b2 루트 상수 에뮬(DX11/GL) | b0 space2 루트 상수(DX12 · Vulkan 푸시 상수) — 1 절
- *   t0..t3 엔진 텍스처(에뮬) · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
+ *   t0..t3 비어 있음 · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
  *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) · t12 라이트 그리드 · t13 라이트 프로브 | t14 빈 자리(띠 안) | t15 G버퍼 머티리얼(에뮬) |
  *   t16..t31 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
  *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼(셰이더 소유) · u4 셰이더 assert 링 · u5..u7 RW 텍스처(에뮬) — 3 절
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
  *   그 밖: Vulkan set 0 시프트(6) · GL SSBO · 이미지 유닛(7) · 라이트 타입(8) · 패스 플래그(9) · 버퍼 배치 상수(10).
- *   에뮬 슬롯(t0..t3 · t16..t31)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
+ *   에뮬 슬롯(엔진 텍스처 t32..t43 · 머티리얼 t16..t31)이 bindless 를 어떻게 흉내 내는지는 binding.hlsli 0 절(bindless 입문).
  *
  * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
  * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
@@ -30,7 +30,7 @@
  *   ├────────────────────┼──────────────┼─────────────────────┼─────────────────────┼──────────────────┤
  *   │ PassCB / 컴퓨트 CB │ b0           │ 루트 CBV            │ UBO  binding 0      │ UBO 0            │
  *   │ MaterialCB (픽스처)│ b1           │ 루트 CBV            │ UBO  binding 1      │ UBO 1            │
- *   │ 엔진 텍스처 슬롯   │ t0..t3 (에뮬)│ (없음)              │ (없음)              │ 텍스처 유닛 0..3 │
+ *   │ 엔진 텍스처 칸     │ t32..t43(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 0..11│
  *   │ 인스턴스 구조버퍼  │ t4           │ t 테이블            │ SSBO binding 16+4   │ SSBO 4           │
  *   │ 머티리얼 데이터    │ t5           │ t 테이블            │ SSBO binding 16+5   │ SSBO 5           │
  *   │ 머티리얼 텍스처    │ t16..t31(에뮬)│ (없음)             │ (없음)              │ 텍스처 유닛 16..31│
@@ -70,16 +70,32 @@
 #define SW_ROOT_DWORD_COUNT  16
 #define SW_SLOT_ROOT_CB_EMUL 2 // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0). t0..t12 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 데이터·씬 표들·패스 전용 버퍼·라이트 그리드(네 백엔드의 띠).
+// 2) SRV (t#, space0). t4..t13 — 인스턴스·머티리얼 데이터·씬 표들·패스 전용 버퍼·라이트 그리드(네 백엔드의 띠). t0..t3 은 비어 있다
+//    (예전 에뮬 엔진 텍스처 공유 칸 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직여 따로 한다).
 //    띠는 Vulkan t 밴드(t0..t15)까지 자랄 수 있다. t16..t31 — 머티리얼 텍스처(에뮬, DX11 · GL 만). 밴드 뒤라 DX12 테이블 · Vulkan t 밴드에 들지 않는다.
 // ------------------------------------------------------------------------------
-#define SW_SLOT_ENGINE_TEX0          0
-#define SW_SLOT_ENGINE_TEX1          1
-#define SW_SLOT_ENGINE_TEX2          2
-#define SW_SLOT_ENGINE_TEX3          3
-#define SW_ENGINE_TEXTURE_SLOT_COUNT 4
 
-// GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음. 네 백엔드 공통.
+// 엔진 텍스처 칸(에뮬 — DX11 · GL 만). 패스가 이름으로 거는 엔진 텍스처(PassCB g_<이름>Index — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵 · 사본 · 쿠키 · 노출)는
+// **역할 하나가 칸 하나**다 — 칸을 나눠 쓰면 한 패스가 같은 칸의 두 역할을 함께 읽을 때 하나가 빠지고, 선언 밖에서 거는 텍스처(쿠키 · 노출)는
+// 로드 검증으로도 막을 수 없었다. 칸 순서는 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정한다(컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
+// HLSL 레지스터는 DX11 t32..(SRV 128 칸 — t 띠 · 머티리얼 칸 위), GL 텍스처 유닛은 0..(GL 버퍼는 SSBO 라 텍스처 유닛과 이름공간이 다르다 —
+// 컴퓨트 RW 텍스처의 이미지 유닛과 같은 방식, GL 프래그먼트 유닛은 32 개라 t32 를 유닛으로 쓸 수 없다). 레지스터는 리터럴이라 칸마다 적는다.
+// DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 텍스처 유닛은 칸 번호 그대로(0..11)이고 엔진이 그 유닛에 엔진 텍스처 샘플러를 건다.
+#define SW_SLOT_ENGINE_TEX0     32
+#define SW_SLOT_ENGINE_TEX1     33
+#define SW_SLOT_ENGINE_TEX2     34
+#define SW_SLOT_ENGINE_TEX3     35
+#define SW_SLOT_ENGINE_TEX4     36
+#define SW_SLOT_ENGINE_TEX5     37
+#define SW_SLOT_ENGINE_TEX6     38
+#define SW_SLOT_ENGINE_TEX7     39
+#define SW_SLOT_ENGINE_TEX8     40
+#define SW_SLOT_ENGINE_TEX9     41
+#define SW_SLOT_ENGINE_TEX10    42
+#define SW_SLOT_ENGINE_TEX11    43
+#define SW_ENGINE_TEXTURE_COUNT 12
+
+// GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
 
 // GPUScene 머티리얼 데이터 구조버퍼 (StructuredBuffer<MaterialData> g_SwMaterials) — 인스턴스의 materialIndex 로 읽는다.
@@ -132,12 +148,6 @@
 #define SW_SLOT_LIGHT_PROBE_SRV 13
 
 #define SW_SRV_SLOT_COUNT 14 // t0..t13 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
-
-// G버퍼 머티리얼 칸(첨부 GBufferMaterial — r 금속도, g 거칠기)의 엔진 텍스처 슬롯(에뮬 — DX11 · GL 만). 디퍼드 조명 패스는 그림자 · 알베도 · 노멀 · 깊이와 함께
-// 이것을 다섯째로 읽어 t0..t3 에 자리가 없다. t4 부터는 네 백엔드 공통 띠라 띠의 꼭대기(t15)에 둔다 — 띠는 아래부터 자라고(지금 t13 까지), 이 칸에 닿으면
-// ShaderBindingSlots.h 가 컴파일에서 막는다. DX12 · Vulkan 은 bindless 라 이 슬롯을 선언하지 않는다.
-// DX11 은 s15 가 정적 샘플러 세트(SW_DX11_STATIC_SAMPLER6)라 짝 샘플러를 두지 않고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 은 유닛 15 의 결합 샘플러에 엔진이 엔진 텍스처 샘플러를 건다.
-#define SW_SLOT_ENGINE_GBUFFER_MATERIAL 15
 
 // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
 // 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.
@@ -204,7 +214,7 @@
 
 // 슬롯 종류마다 읽는 샘플러(위 SW_SAMPLER_* 번호) — 네 백엔드가 같은 값을 쓴다. 네이티브 bindless(DX12/Vulkan)는 셰이더가 이 번호로
 // 고르고, 슬롯 결합 샘플러(DX11/GL)는 엔진이 그 슬롯에 같은 샘플러를 건다.
-//   엔진 텍스처 슬롯 t0..t3 (풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵): 선형 · 클램프(1) — 화면 가장자리의 탭이 반대편을 읽지 않는다.
+//   엔진 텍스처 칸 (풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵): 선형 · 클램프(1) — 화면 가장자리의 탭이 반대편을 읽지 않는다.
 //   머티리얼 텍스처 t16..t31: 선형 · 랩(0). DX11 은 슬롯에 걸지 않고 셰이더가 정적 세트의 이 번호로 읽는다(샘플러 슬롯이 16 개뿐이다).
 #define SW_ENGINE_TEXTURE_SAMPLER   1
 #define SW_MATERIAL_TEXTURE_SAMPLER 0

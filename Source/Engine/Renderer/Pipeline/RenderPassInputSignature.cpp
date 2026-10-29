@@ -48,20 +48,6 @@ namespace sw
         return index < static_cast<uint32>( RenderPassInputRole::Count ) ? s_arrRoleName[index] : s_arrRoleName[0];
     }
 
-    EmulatedTextureSlot getEmulatedTextureSlot( RenderPassInputRole role )
-    {
-        if ( role == RenderPassInputRole::Invalid || role == RenderPassInputRole::Count )
-            return EmulatedTextureSlot::None;
-        uint32     slot{ 0 };
-        const bool bFound = shaderslot::emulated::tryFindSlot( getRenderPassInputRoleName( role ), slot );
-        SW_ASSERT( bFound ); // 모든 역할이 표에 있어야 한다 — 빠진 역할은 같은 슬롯 충돌 검사를 조용히 건너뛴다
-        if ( bFound == false )
-            return EmulatedTextureSlot::None;
-        if ( slot == shaderslot::kEngineGBufferMaterialTexture )
-            return EmulatedTextureSlot::GBufferMaterial;
-        return static_cast<EmulatedTextureSlot>( slot - shaderslot::kEngineTexture0 );
-    }
-
     bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole )
     {
         for ( uint32 index = static_cast<uint32>( RenderPassInputRole::SourceColor ); index < static_cast<uint32>( RenderPassInputRole::Count ); ++index )

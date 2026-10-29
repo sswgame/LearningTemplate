@@ -30,7 +30,7 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 #if defined( SW_NATIVE_BINDLESS )
     if ( dispatchThreadID.x >= SW_ROOT( g_NanWidth ) || dispatchThreadID.y >= SW_ROOT( g_NanHeight ) )
         return;
-    const float4 texel    = Bindless::loadEngineTexel( SW_ROOT( g_NanTextureIndex ), 0u, int2( dispatchThreadID.xy ) );
+    const float4 texel    = Bindless::loadEngineTexel( SW_ROOT( g_NanTextureIndex ), SW_EMU_SLOT_SourceColor, int2( dispatchThreadID.xy ) );
     const bool   bNan     = any( isnan( texel ) );
     const bool   bInfOnly = bNan == false && any( isinf( texel ) );
     if ( bNan )

@@ -30,7 +30,7 @@
  *   머티리얼     MaterialTexture::sampleIndex · samplePoint · computeSize
  *   컴퓨트 RW    Bindless::storeRwTexture2D · loadRwTexture2D
  *   함수는 구조체의 static 멤버로 묶는다 — FXC(DX11)에 네임스페이스가 없어 구조체가 그 자리를 맡는다. 묶음의 선언은 아래 0-1 절이다.
- *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwSlot#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
+ *   `SW_NATIVE_BINDLESS` · `__spirv__` 분기와 `g_SwBindlessTex2D` · `g_SwEngineTex#` · `g_SwMaterialTex#` 는 **이 파일 안에서만** 쓴다.
  *   셰이더 파일(.hlsl)에 이 분기를 들이지 않는다 — 새 읽기 방식이 필요하면 여기에 진입 함수를 더한다.
  *
  * 백엔드 차이
@@ -151,7 +151,7 @@ struct Bindless
     static float sampleShadowComparison( uint index, float2 uv, float depth );
     static void storeRwTexture2D( uint index, uint2 texelPosition, float4 value );
     static float4 loadRwTexture2D( uint index, uint2 texelPosition );
-    // 엔진 텍스처 한 장을 직접 읽는 패스(풀스크린 입력 · 히스토리)용 진입 함수다. 네이티브는 index 로, 에뮬은 패스가 거는 고정 슬롯(emulatedSlot 0..3)으로 읽는다 — 분기는 11 절 안에서 끝난다.
+    // 엔진 텍스처 한 장을 직접 읽는 패스(풀스크린 입력 · 히스토리)용 진입 함수다. 네이티브는 index 로, 에뮬은 패스가 거는 역할의 칸(emulatedSlot = SW_EMU_SLOT_<역할>)으로 읽는다 — 분기는 11 절 안에서 끝난다.
     static float4 loadEngineTexel( uint index, uint emulatedSlot, int2 texel );                  // 밉 0 의 텍셀 하나
     static uint2 getEngineTextureSize( uint index, uint emulatedSlot );                          // 밉 0 의 크기
     static float4 gatherEngineChannel( uint index, uint emulatedSlot, uint channel, float2 uv ); // 점 · 클램프 샘플러로 2x2 게더(channel 0 R · 1 G · 2 B)
@@ -166,7 +166,6 @@ struct PassTexture
     static float4 sampleAlbedo( float2 uv );
     static float3 sampleNormal( float2 uv ); // G버퍼 노멀 칸(옥타헤드럴 좌표)을 푼 단위 노멀
     static float4 sampleGbufferMaterial( float2 uv );
-    static float4 sampleGbufferMaterialSlot( float2 uv );
     static void loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out bool outDrawn );
     static float4 sampleDepth( float2 uv );
     static float4 sampleSource( float2 uv );
@@ -755,7 +754,7 @@ static uint MaterialBuffer::clampIndex( uint index )
 #define SW_MATERIAL( index ) g_SwMaterials[MaterialBuffer::clampIndex( index )]
 
 // ------------------------------------------------------------------------------
-// 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 슬롯 결합 샘플러(g_SwSlot#Sampler, s#)라
+// 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 칸 결합 샘플러(GL g_SwEngineTex#Sampler) · DX11 정적 세트라
 //     여기서 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다). DX11 의 정적 세트는 11-2 절.
 //     DX12 는 루트 시그니처 정적 샘플러 s0..s7, Vulkan 은 set SW_VK_TEXTURE_SET 의 immutable sampler 배열(binding 1) + 비교 샘플러(binding 2).
 //     번호는 bindingslots.hlsli 4 절의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트에 해당한다.
@@ -938,17 +937,24 @@ static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint e
     // ---- 11-2) 슬롯 에뮬 (DX11 · OpenGL) ------------------------------------------
     #if !defined( SW_STAGE_COMPUTE )
 // 에뮬 백엔드의 샘플 슬롯은 그래픽스 스테이지 전용이다 — GL 은 텍스처 유닛과 이미지 유닛이 SPIR-V 에서 같은 binding 번호를
-// 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 t0..t3 을 걸지 않는다).
-// DX11 / OpenGL : 엔진이 t0..t3 에 SRV 바인딩. 값 비교로 어느 논리 텍스처인지 판별.
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot0, g_SwSlot0Sampler, SW_SLOT_ENGINE_TEX0 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot1, g_SwSlot1Sampler, SW_SLOT_ENGINE_TEX1 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot2, g_SwSlot2Sampler, SW_SLOT_ENGINE_TEX2 );
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlot3, g_SwSlot3Sampler, SW_SLOT_ENGINE_TEX3 );
-        // G버퍼 머티리얼 칸 t15 — 조명 패스의 다섯째 엔진 텍스처라 t0..t3 밖이다(bindingslots.hlsli SW_SLOT_ENGINE_GBUFFER_MATERIAL). DX11 은 s15 가 정적 세트라 짝 샘플러가 없다.
-        #if defined( DX11 )
-SW_DECLARE_TEXTURE2D( g_SwSlotGBufferMaterial, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
-        #else
-SW_DECLARE_TEXTURE2D_SAMPLER( g_SwSlotGBufferMaterial, g_SwSlotGBufferMaterialSampler, SW_SLOT_ENGINE_GBUFFER_MATERIAL );
+// 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 엔진 텍스처를 걸지 않는다).
+// 엔진 텍스처는 역할 하나가 한 장이다(칸 번호 = C++ 표 shaderslot::emulated::kEngineTextureNames 의 순서, 컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
+// 칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 따로 두는 것과 같다).
+// 레지스터는 DX11 t32.., GL 텍스처 유닛 0..(bindingslots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+SW_DECLARE_ENGINE_TEXTURE( 0 );
+SW_DECLARE_ENGINE_TEXTURE( 1 );
+SW_DECLARE_ENGINE_TEXTURE( 2 );
+SW_DECLARE_ENGINE_TEXTURE( 3 );
+SW_DECLARE_ENGINE_TEXTURE( 4 );
+SW_DECLARE_ENGINE_TEXTURE( 5 );
+SW_DECLARE_ENGINE_TEXTURE( 6 );
+SW_DECLARE_ENGINE_TEXTURE( 7 );
+SW_DECLARE_ENGINE_TEXTURE( 8 );
+SW_DECLARE_ENGINE_TEXTURE( 9 );
+SW_DECLARE_ENGINE_TEXTURE( 10 );
+SW_DECLARE_ENGINE_TEXTURE( 11 );
+        #if SW_ENGINE_TEXTURE_COUNT != 12
+            #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
         // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
@@ -1023,33 +1029,67 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
 }
         #endif
 
-/** @brief G버퍼 머티리얼 칸의 슬롯(t15)을 엔진 텍스처 샘플러로 읽습니다 — DX11 은 짝 샘플러가 없어 정적 세트에서 고른다. */
-static float4 PassTexture::sampleGbufferMaterialSlot( float2 uv )
-{
-        #if defined( DX11 )
-    return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, SW_ENGINE_TEXTURE_SAMPLER, uv );
-        #else
-    return g_SwSlotGBufferMaterial.Sample( g_SwSlotGBufferMaterialSampler, uv );
-        #endif
-}
+        // 엔진 텍스처 칸 ordinal 의 텍스처 · 샘플러로 OP( 텍스처, 샘플러 ) 문장을 펼친다 — SM5.0 은 리소스 배열 동적 인덱싱이 없어 리터럴 분기다. 칸 밖이면 아무것도 하지 않는다.
+        #define SW_ENGINE_TEXTURE_SWITCH( ordinal, OP )                    \
+            switch ( ordinal )                                             \
+            {                                                              \
+                case 0u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 0 ), SW_ENGINE_SAMPLER( 0 ) )   \
+                    break;                                                 \
+                case 1u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 1 ), SW_ENGINE_SAMPLER( 1 ) )   \
+                    break;                                                 \
+                case 2u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 2 ), SW_ENGINE_SAMPLER( 2 ) )   \
+                    break;                                                 \
+                case 3u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 3 ), SW_ENGINE_SAMPLER( 3 ) )   \
+                    break;                                                 \
+                case 4u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 4 ), SW_ENGINE_SAMPLER( 4 ) )   \
+                    break;                                                 \
+                case 5u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 5 ), SW_ENGINE_SAMPLER( 5 ) )   \
+                    break;                                                 \
+                case 6u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 6 ), SW_ENGINE_SAMPLER( 6 ) )   \
+                    break;                                                 \
+                case 7u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 7 ), SW_ENGINE_SAMPLER( 7 ) )   \
+                    break;                                                 \
+                case 8u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 8 ), SW_ENGINE_SAMPLER( 8 ) )   \
+                    break;                                                 \
+                case 9u:                                                   \
+                    OP( SW_ENGINE_TEXTURE( 9 ), SW_ENGINE_SAMPLER( 9 ) )   \
+                    break;                                                 \
+                case 10u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 10 ), SW_ENGINE_SAMPLER( 10 ) ) \
+                    break;                                                 \
+                case 11u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 11 ), SW_ENGINE_SAMPLER( 11 ) ) \
+                    break;                                                 \
+                default:                                                   \
+                    break;                                                 \
+            }
 
 /**
  * @brief 에뮬 백엔드(DX11 · GL)의 슬롯 표에 없는 엔진 텍스처 인덱스를 읽었을 때 내는 오류 색(자홍)입니다.
  * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 이 색이 보이면
- *          그 인덱스를 C++ 표(`shaderslot::emulated::kEngineTextureBindings` — ShaderBindingSlots.h)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
+ *          그 인덱스를 C++ 표(`shaderslot::emulated::kEngineTextureNames` — ShaderBindingSlots.h)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
  */
 static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
 static const uint   kUnmappedEngineTextureSlot  = 0xFFFFFFFFu;
 
-        // 슬롯 번호는 셰이더 컴파일러가 C++ 표에서 내는 `SW_EMU_SLOT_<이름>` 매크로다(ShaderCompiler::compileHLSL) — 여기에 손으로 맞춘 번호가 없다.
+        // 칸 번호는 셰이더 컴파일러가 C++ 표에서 내는 `SW_EMU_SLOT_<이름>` 매크로다(ShaderCompiler::compileHLSL) — 여기에 손으로 맞춘 번호가 없다.
         // 매크로가 없으면 셰이더를 컴파일하는 경로가 표를 넣지 않은 것이라 조용히 0 으로 읽지 않고 멈춘다.
         #if !defined( SW_EMU_SLOT_ShadowMap ) || !defined( SW_EMU_SLOT_SourceColor ) || !defined( SW_EMU_SLOT_GBufferAlbedo ) || !defined( SW_EMU_SLOT_AmbientOcclusion ) ||      \
             !defined( SW_EMU_SLOT_Light2DCookieAtlas ) || !defined( SW_EMU_SLOT_GBufferNormal ) || !defined( SW_EMU_SLOT_BloomBright ) || !defined( SW_EMU_SLOT_AutoExposure ) || \
             !defined( SW_EMU_SLOT_SceneDepth ) || !defined( SW_EMU_SLOT_GBufferMaterial ) || !defined( SW_EMU_SLOT_SceneColorCopy ) || !defined( SW_EMU_SLOT_SceneDepthCopy )
-            #error "SW_EMU_SLOT_* is missing - ShaderCompiler::compileHLSL injects it from shaderslot::emulated::kEngineTextureBindings"
+            #error "SW_EMU_SLOT_* is missing - ShaderCompiler::compileHLSL injects it from shaderslot::emulated::kEngineTextureNames"
         #endif
 
-/** @brief 엔진 텍스처 인덱스가 걸리는 슬롯 번호(t0..t3 · G버퍼 머티리얼)입니다. 표에 없는 인덱스면 `kUnmappedEngineTextureSlot` 입니다. */
+/** @brief 엔진 텍스처 인덱스가 걸리는 칸 번호(역할 하나에 한 칸)입니다. 표에 없는 인덱스면 `kUnmappedEngineTextureSlot` 입니다. */
 static uint Bindless::emulatedSlot( uint index )
 {
     if ( index == g_ShadowMapIndex )
@@ -1083,48 +1123,31 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
-    // FrameRenderer 가 같은 C++ 표(commitBindlessTextureBindings)로 t0..t3 에, G버퍼 머티리얼을 t15 에 바인딩한다.
-    const uint slot = Bindless::emulatedSlot( index );
-    if ( slot == SW_SLOT_ENGINE_TEX0 )
-        return g_SwSlot0.Sample( g_SwSlot0Sampler, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX1 )
-        return g_SwSlot1.Sample( g_SwSlot1Sampler, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX2 )
-        return g_SwSlot2.Sample( g_SwSlot2Sampler, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX3 )
-        return g_SwSlot3.Sample( g_SwSlot3Sampler, uv );
-    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
-        return PassTexture::sampleGbufferMaterialSlot( uv );
+            // FrameRenderer 가 같은 C++ 표(commitBindlessTextureBindings)로 역할마다 제 칸에 바인딩한다.
+        #define SW_OP( tex, smp ) return tex.Sample( smp, uv );
+    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+        #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
- * @details 에뮬 백엔드는 깊이가 늘 슬롯 3 이다(위 표와 같은 순서) — 인덱스로 되짚을 필요가 없다.
- *          샘플러는 슬롯에 걸린 것을 그대로 쓴다. 게더는 필터 모드를 보지 않는다.
+ * @details 에뮬 백엔드는 깊이가 늘 SceneDepth 칸이다 — 인덱스로 되짚을 필요가 없다. 게더는 필터 모드를 보지 않는다.
  */
 static float4 PassTexture::gatherDepthRed( float2 uv )
 {
     if ( g_SceneDepthIndex == kInvalidIndex )
         return float4( 1, 1, 1, 1 );
-    return g_SwSlot3.GatherRed( g_SwSlot3Sampler, uv );
+    return SW_ENGINE_TEXTURE( SW_EMU_SLOT_SceneDepth ).GatherRed( SW_ENGINE_SAMPLER( SW_EMU_SLOT_SceneDepth ), uv );
 }
         #if defined( DX11 )
-/** @brief DX11: 텍스처는 슬롯 멀티플렉싱(Bindless::sampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerID 로 고른다. */
+/** @brief DX11: 텍스처는 역할의 칸(Bindless::sampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerID 로 고른다. */
 static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
 {
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
-    const uint slot = Bindless::emulatedSlot( index );
-    if ( slot == SW_SLOT_ENGINE_TEX0 )
-        return Bindless::sampleSlotWith( g_SwSlot0, samplerID, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX1 )
-        return Bindless::sampleSlotWith( g_SwSlot1, samplerID, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX2 )
-        return Bindless::sampleSlotWith( g_SwSlot2, samplerID, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX3 )
-        return Bindless::sampleSlotWith( g_SwSlot3, samplerID, uv );
-    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
-        return Bindless::sampleSlotWith( g_SwSlotGBufferMaterial, samplerID, uv );
+            #define SW_OP( tex, smp ) return Bindless::sampleSlotWith( tex, samplerID, uv );
+    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+            #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
         #else
@@ -1137,7 +1160,7 @@ static float4 Bindless::sampleSlotPoint( Texture2D slotTexture, float2 uv )
     return slotTexture.Load( int3( texel, 0 ) );
 }
 /**
- * @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 슬롯의 샘플러 상태는 엔진이 정한다(t0..t3 는 선형 · 클램프).
+ * @brief OpenGL 은 결합 샘플러뿐(ARB_gl_spirv 는 분리 샘플러를 못 쓴다)이라 칸의 샘플러 상태는 엔진이 정한다(엔진 텍스처 칸은 선형 · 클램프).
  * @details 점 샘플(`SW_SAMPLER_POINT_CLAMP`)을 달라는 호출은 샘플러를 거치지 않고 텍셀을 직접 읽는다 — 안 그러면 정수 업스케일 뷰(`SW_PASS_FLAG_POINT_UPSCALE`)의
  *          Present 가 GL 에서만 선형으로 섞는다. 나머지 samplerID 는 슬롯의 샘플러를 그대로 쓴다.
  */
@@ -1147,23 +1170,15 @@ static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
         return Bindless::sampleIndex( index, uv );
     if ( index == kInvalidIndex )
         return float4( 0, 0, 0, 1 );
-    const uint slot = Bindless::emulatedSlot( index );
-    if ( slot == SW_SLOT_ENGINE_TEX0 )
-        return Bindless::sampleSlotPoint( g_SwSlot0, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX1 )
-        return Bindless::sampleSlotPoint( g_SwSlot1, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX2 )
-        return Bindless::sampleSlotPoint( g_SwSlot2, uv );
-    if ( slot == SW_SLOT_ENGINE_TEX3 )
-        return Bindless::sampleSlotPoint( g_SwSlot3, uv );
-    if ( slot == SW_SLOT_ENGINE_GBUFFER_MATERIAL )
-        return Bindless::sampleSlotPoint( g_SwSlotGBufferMaterial, uv );
+            #define SW_OP( tex, smp ) return Bindless::sampleSlotPoint( tex, uv );
+    SW_ENGINE_TEXTURE_SWITCH( Bindless::emulatedSlot( index ), SW_OP )
+            #undef SW_OP
     return kUnmappedEngineTextureColor;
 }
         #endif
 /**
  * @brief 에뮬 백엔드: 비교 샘플러가 없어 2x2 이웃을 게더로 읽어 각각 비교하고 쌍선형으로 섞는다 — DX12 · Vulkan 의 비교 샘플러(LINEAR)와 같은 값이다.
- * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 슬롯 0 이다(Bindless::sampleIndex 의 표).
+ * @details 한 점만 비교하면 가장자리가 텍셀 계단이고, 하드웨어 비교 백엔드와 그림이 갈린다. 그림자 맵은 ShadowMap 칸이다(Bindless::sampleIndex 의 표).
  */
 static float Bindless::sampleShadowComparison( uint index, float2 uv, float depth )
 {
@@ -1172,65 +1187,39 @@ static float Bindless::sampleShadowComparison( uint index, float2 uv, float dept
     if ( index != g_ShadowMapIndex )
         return ( depth <= Bindless::sampleIndex( index, uv ).r ) ? 1.0f : 0.0f;
     float2 size;
-    g_SwSlot0.GetDimensions( size.x, size.y );
+    SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GetDimensions( size.x, size.y );
     const float2 texelPosition = uv * size - 0.5f;
     const float2 weight        = frac( texelPosition );
     // 게더는 네 텍셀이 만나는 모서리를 가리킨다. 순서는 w (0,0) · z (1,0) · x (0,1) · y (1,1).
-    const float4 stored = g_SwSlot0.GatherRed( g_SwSlot0Sampler, ( floor( texelPosition ) + 1.0f ) / size );
+    const float4 stored = SW_ENGINE_TEXTURE( SW_EMU_SLOT_ShadowMap ).GatherRed( SW_ENGINE_SAMPLER( SW_EMU_SLOT_ShadowMap ), ( floor( texelPosition ) + 1.0f ) / size );
     const float4 lit    = step( depth.xxxx, stored ); // depth <= 저장값이면 1 (LESS_EQUAL)
     return lerp( lerp( lit.w, lit.z, weight.x ), lerp( lit.x, lit.y, weight.x ), weight.y );
 }
 
-/** @brief 패스가 슬롯 @p emulatedSlot(0..3)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 슬롯 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
+/** @brief 패스가 칸 @p emulatedSlot(`SW_EMU_SLOT_<역할>`)에 건 엔진 텍스처의 밉 0 텍셀을 읽습니다. 칸 밖이면 오류 색(자홍)을 냅니다 — 조용히 0 번으로 읽지 않는다. */
 // 에뮬 백엔드(DX11 · GL)의 셰이더 컴파일은 매개변수 속성 `[[maybe_unused]]` 를 읽지 못한다(X3000) — 쓰지 않는 index 는 이름만 두고 속성을 달지 않는다.
 static float4 Bindless::loadEngineTexel( uint index, uint emulatedSlot, int2 texel )
 {
-    switch ( emulatedSlot )
-    {
-        case 0:
-            return g_SwSlot0.Load( int3( texel, 0 ) );
-        case 1:
-            return g_SwSlot1.Load( int3( texel, 0 ) );
-        case 2:
-            return g_SwSlot2.Load( int3( texel, 0 ) );
-        case 3:
-            return g_SwSlot3.Load( int3( texel, 0 ) );
-        default:
-            return kUnmappedEngineTextureColor;
-    }
+        #define SW_OP( tex, smp ) return tex.Load( int3( texel, 0 ) );
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
+        #undef SW_OP
+    return kUnmappedEngineTextureColor;
 }
 static uint2 Bindless::getEngineTextureSize( uint index, uint emulatedSlot )
 {
     uint2 size = uint2( 0, 0 );
-    switch ( emulatedSlot )
-    {
-        case 0:
-            g_SwSlot0.GetDimensions( size.x, size.y );
-            break;
-        case 1:
-            g_SwSlot1.GetDimensions( size.x, size.y );
-            break;
-        case 2:
-            g_SwSlot2.GetDimensions( size.x, size.y );
-            break;
-        case 3:
-            g_SwSlot3.GetDimensions( size.x, size.y );
-            break;
-        default:
-            break;
-    }
+        #define SW_OP( tex, smp ) tex.GetDimensions( size.x, size.y );
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
+        #undef SW_OP
     return size;
 }
-/** @brief 에뮬 게더는 슬롯 0 만 있다(쓰는 패스는 FSR 하나다). 다른 슬롯은 오류 색을 낸다 — 필요해지면 슬롯 케이스를 더한다. */
+/** @brief 칸 @p emulatedSlot 의 2x2 게더입니다(channel 0 R · 1 G · 2 B). 게더는 필터를 보지 않고 주소 모드(클램프)만 본다. */
 static float4 Bindless::gatherEngineChannel( uint index, uint emulatedSlot, uint channel, float2 uv )
 {
-    if ( emulatedSlot != 0u )
-        return kUnmappedEngineTextureColor;
-    if ( channel == 0u )
-        return g_SwSlot0.GatherRed( g_SwSlot0Sampler, uv );
-    if ( channel == 1u )
-        return g_SwSlot0.GatherGreen( g_SwSlot0Sampler, uv );
-    return g_SwSlot0.GatherBlue( g_SwSlot0Sampler, uv );
+        #define SW_OP( tex, smp ) return channel == 0u ? tex.GatherRed( smp, uv ) : ( channel == 1u ? tex.GatherGreen( smp, uv ) : tex.GatherBlue( smp, uv ) );
+    SW_ENGINE_TEXTURE_SWITCH( emulatedSlot, SW_OP )
+        #undef SW_OP
+    return kUnmappedEngineTextureColor;
 }
 
     #endif // !SW_STAGE_COMPUTE
@@ -1278,7 +1267,7 @@ static float4 Bindless::loadRwTexture2D( uint index, uint2 texelPosition )
     /**
      * @brief 2D 빛 쿠키 아틀라스(패스 역할 `Light2DCookieAtlas`)를 밉 0 으로 읽습니다. 빛 반복 안에서 부르므로 암시 미분을 쓰지 않는다.
      * @details 미분이 든 샘플을 길이가 정해지지 않은 반복에 두면 FXC(DX11)가 반복을 펼치려다 실패한다(X3511). 아틀라스는 밉이 없는 렌더 타깃이라
-     *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 슬롯 1 에 건다(`Bindless::sampleIndex` 의 표). 아틀라스가 없으면 `Bindless::sampleIndex` 와 같이 검정이다.
+     *          밉 0 이 곧 그 값이다. 에뮬 백엔드는 아틀라스를 제 칸에 건다(`Bindless::sampleIndex` 의 표). 아틀라스가 없으면 `Bindless::sampleIndex` 와 같이 검정이다.
      */
     #if SW_ENGINE_TEXTURE_SAMPLER != 1
         #error PassTexture::sampleLight2dCookieAtlas 는 엔진 텍스처 샘플러가 정적 샘플러 1 번(g_SwSampler1)이라고 가정한다
@@ -1295,7 +1284,7 @@ static float4 PassTexture::sampleLight2dCookieAtlas( float2 uv )
     return g_SwBindlessTex2D[NonUniformResourceIndex( slot )].SampleLevel( g_SwSampler1, uv, 0.0f );
         #endif
     #else
-    return g_SwSlot1.SampleLevel( g_SwSlot1Sampler, uv, 0.0f );
+    return SW_ENGINE_TEXTURE( SW_EMU_SLOT_Light2DCookieAtlas ).SampleLevel( SW_ENGINE_SAMPLER( SW_EMU_SLOT_Light2DCookieAtlas ), uv, 0.0f );
     #endif
 }
     /**

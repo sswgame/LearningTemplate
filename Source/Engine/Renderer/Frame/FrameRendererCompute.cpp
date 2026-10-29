@@ -437,11 +437,14 @@ namespace sw
         _pCmd->setVertexBuffer( 0, 0, 0, 0 );
         _pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         _pCmd->setPipelineState( getEnginePSO( RenderPassType::DepthHistory ) );
-        // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 엔진 텍스처 슬롯 0. PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depthhistory.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
         if ( bNativeBindless == false )
-            _pCmd->bindShaderResource( depth._srv, shaderslot::kEngineTexture0 );
+        {
+            constexpr uint32 kDepthSlot = shaderslot::emulated::getSlot( "SceneDepth" );
+            _pCmd->bindShaderResource( depth._srv, kDepthSlot );
+        }
         _pCmd->setGraphicsRootConstants( 0, 1, &sourceIndex );
         _pCmd->draw( 3, 0 );
         _pCmd->endRenderPass();
