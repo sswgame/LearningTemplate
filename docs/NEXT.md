@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: I 절의 1 · 2 · 5, J 절 대부분, J7, 시나리오 체인(3 절), **에셋 도착 결정성**(셰이더 캐시가 빈 첫 실행도 네 백엔드 통과), **태스크 대기 · 중단 신호 일원화**(`TaskHandleTracker` → `TaskManager` 단계, 흩어진 정지 플래그 → `StopSource`/`StopToken`)가 끝났다. **바로 다음**: K 절(일원화 감사 2026-10-30)의 남은 항목을 위에서부터 — 태스크(전용 스레드 · 수동 카운터를 단계 · 전용 워커 줄로) → 등록부(정적 벡터 → `RegistrationList`) → 작은 유틸 중복 · STL 대신 Core → 서브시스템 확장(E1–E5) · 재분류 → 감사 SOLID 큰 묶음. 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+> 결론: K 절(일원화 감사 2026-10-30)의 항목이 거의 끝났다 — 태스크 · 정지 신호 · 등록부 · 서브시스템 확장(E1–E5) · 정적 상태 → 서브시스템 · 큰 클래스 분해(FrameRenderer · CanvasRenderer · RenderPacketBuilder · Engine · GameInstance · UISystem · InputMap · AudioEngine) · 편집기 패널 모델/뷰 · 유틸 · STL · include. Debug · Release 빌드와 ctest 통과(셰이더 캐시가 빈 첫 실행 포함). **바로 다음**: Linux 빌드 한 번(X11 · Wayland · ALSA · epoll · 대소문자 경로 변경을 못 지었다), `castTo` 측정, K 절 "남은 것" 표. 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -131,79 +131,14 @@
 `ObjectCopyBuffer`(정적 전역 → 편집기 서브시스템) · `ImGuiEditor` 세션(선택 · 미저장). 패널 인스턴스에 묶인 명령(UI 미리보기 · 열린 문서)만 코드 단계(`UndoStep::makeTransient`)이고 맡길 때 버린다.
 키트 · 게임 모듈도 같은 칸으로 리로드 사이 상태를 넘길 수 있다.
 
-**남은 것**(순서대로):
-1. `DevTools` 단위 — 리로드 · 감시 분배기 · 콘솔 · HUD · 서버 포즈 고스트 · 프레임 지연은 옮겼다(엔진은 기동 확장 델리게이트와 프레임 훅만 안다). 기능별 개발 명령은 기능 옆 `*DevCommands.cpp` 이고 배포 구성은 그 이름을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`, `Tests/` 와 같은 규칙). 회선 흉내는 세션의 샤드 전송 데코레이터(`GameNetSession::setTransportDecorator`)에 `NetLineEmulationSubsystem` 이 걸고(J9), 장치 손실 주입은 렌더 스레드의 프레임 시작 훅(`BeginFrameHookDelegate`)에 App 의 백엔드 교체기가 건다. OS 파일 감시기(`DevTools/FileWatch`) · RenderDoc 연결(기동 확장에서 RHI 앞에 올린다) · 리로드 어댑터 캐시(오디오 · 현지화)도 옮겼다. DevTools 헤더는 DevTools 를 링크한 타깃만 include 할 수 있다(`DevToolsAPI.h` 가 컴파일에서 멈춘다). 남은 것: Core/Console 등록표의 파일 감싸기 — 자동화 실행기(4)가 시나리오 `<Command>` 로 개발 명령을 부르므로 4 와 같이 배포 구성에서 폴더째 뺀다.
-2. ~~에셋 리로드~~ — `IAssetCache::reload` 가상 칸을 지웠다. 캐시는 등록할 때 리로드 함수를 같이 넘기고(`SW_ASSET_CACHE_RELOAD_FUNCTION`, 배포는 `SW_DEV_ONLY_FUNCTION` 이 nullptr), 템플릿이 아닌 캐시 · 오디오 · 현지화 · 설정의 리로드 본문은 개발 전용 `*Reload.cpp`(배포 구성은 짓지 않는다)다. 데이터 폴더 감시는 엔진 확장점 `IContentFolderWatch`(개발 도구가 건다). 남은 런타임 흔적: 텍스처 리로드 세대 칸(배포에서는 늘 0).
-3. 편집기 `AssetHotReload` 는 편집기에 두고 `DevTools` 의 감시 위에 선다.
-4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
-   자동화의 판정 · 골든 · 보고 · 백엔드 행렬 · 종료 코드(`Engine/Automation/Runner`)는 엔진 밖 개발 단위로. 시나리오 재생기 · 단계 · 프레임 통계(내장 벤치마크 · 어트랙트 모드)는 배포 게임이 쓰므로 Engine 에 남는다.
-5. ~~굽기~~ — `LightProbeBaker` · `ReflectionProbeBaker` 는 편집기(`Editor/Common/Commands/Scene`)로 옮겼다(테스트도 편집기 쪽 `Tests/`).
-
-### J. 구조로 풀 수 있는데 우회로 막는 자리 (감사 2026-10-29)
-
-원칙(I 와 같다): 게이트 · `#if` · 주소 훑기 · 주석 규칙 대신 빌드 단위 · 확장점 · 데이터 · 형식. 값이 큰 순서:
-
-| # | 지금 | 고칠 모양 | 크기 |
-|---|---|---|---|
-| 1 | 안 쓰는 테스트 훅 `FrameRenderer::setDebugOverrides`(`FrameDebugOverrides`) · `Memory::injectAllocationFailures` | 지운다 | 5 파일 |
-| 2 | `EventDispatcher` 채널 표가 처음 만든 모듈의 템플릿 썽크를 가리켜 그 DLL 을 매핑한 채 둔다(`outKeepLibraryMapped` · `DeferredLibraryUnloadQueue::_bKeepMapped`) | 채널 항목을 타입 지운 `MulticastDelegate<void(const IEvent&)>` + Core 의 비템플릿 broadcast 로 — keep-mapped 경로 전체가 빠진다 | 4–5 |
-| 3 | 모듈 언로드 때 레지스트리마다 주소 범위를 훑어 뗀다(`SW_MODULE_UNLOAD_HANDLER` · `isCodeWithin` · `removeCodeWithin` 9 종 — AssetManager 는 vtable 주소까지) | 모듈의 모든 등록을 모듈이 소유한 `Subscription` 묶음(ModuleScope)에 담고 언로드 = 묶음 파괴. `Subscription` 을 안 돌려주는 등록(`UIBindingConverterRegistry` · `CompressionCodecRegistry` · InputManager 슬롯 · IWindow 처리기)만 고친다 | ~20 |
-| 4 | 등록 해제를 주석 규칙에 맡김(`CompressionCodecRegistry::unregisterCodec`, `CrashContext::setCrashExtraTextWriter`, `ServerServiceManager::stopAll`, `AssetManager` 종료 경고) | 모두 `Subscription` 을 돌려주고 3 의 ModuleScope 가 소유 | 6–8 |
-| 5 | 개발 명령 · 디버그 HUD · 개발 콘솔이 Engine/Core 안에서 `#if SW_DEV_COMMANDS_ENABLED` 로 파일째 감싸짐(~28 파일) · 엔진 루프가 개발 도구를 이름으로 부른다(`Engine.cpp` `#if` 13 곳) | `DevTools` 단위(I 절)로 옮기고 `IEngineFrameObserver` · 서브시스템 등록으로 붙는다 | ~40 |
-| 6 | 쿠커(PackCooker · SceneCooker · ShaderCooker …)가 Engine.dll 에 있고 런타임 읽기마다 `CookJob::admitRead`, `HeadlessSubsystem` 의 하드코딩 분기 | 쿠킹 단위로 분리(실시간 셰이더 컴파일 — DXC 호출 · 컴파일 캐시 · 디버그 코드젠 · 핫 리로드 재컴파일 — 도 개발 단위다: 배포는 쿠킹본만 읽는다. `ShaderCache` 에는 "없으면 만들어 줄 쪽" 확장점만 두고 개발 단위가 건다, 언리얼의 Developer 모듈 ShaderCompiler), 헤드리스 작업은 이름 등록 commandlet, `AssetIO` 에는 읽기 관찰자 자리 하나 | ~25 |
-| 7 ✓ | "쿠킹본만 읽기" 를 `#if SW_SHIPPING` 으로 파일마다(SceneDocument · PrefabAsset · ShaderCache · ConfigManager …) | 호스트 조립 때 고르는 읽기 정책 하나(`ContentSource`), 소스 XML 리더는 쿠킹 단위로 | 8–10 |
-| 8 | 리플렉션 메타데이터의 에디터 칸(category · tooltip · `_bCallInEditor` …)이 `#if !SW_SHIPPING` | 생성기가 에디터 메타를 사이드 테이블(`*.editor.gen.cpp`)로 내고 편집기가 짓는다 | 생성기 + 6 |
-| 9 | 회선 에뮬레이션 데코레이터를 `GameNetSession` 이 `#if` 로 붙임 | 세션에 transport 데코레이터 등록 자리, `DevTools` 가 등록 | 3 |
-| 10 | `RHIBackendRegistry` 가 백엔드 헤더 넷을 include 하고 DLL 로드까지 | 백엔드가 스스로 등록, DLL 로드는 ModuleManager | 4 |
-| 11 | 모듈 언로드 정리 함수가 런타임 타입에 `#if`(`GameObjectManager::destroyComponentsOfModule` 등) | 범용 API + 타입의 모듈 태그(데이터), 절차는 ModuleManager | 6 |
-| 12 | `GameObject::_bHiddenInEditor` 를 렌더러가 읽음 | 편집기 숨김 집합을 뷰의 제외 필터로 | 4 + 편집기 |
-| 13 | `IEngineFrameObserver` 에 자동화 전용 칸(실행 상태 · 사진 경로) | 자동화 관찰자가 자기 서비스로 | 4 |
-| 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
-| 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
-
-**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 9 · 10(배포는 정적 자기 등록. 개발의 DLL 로드는 동적 모듈 스위치 `SW_WITH_DYNAMIC_MODULES` 한 곳 안에 두었다 — 언리얼 `FModuleManager::LoadModule` 도 Core 다) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기 · 7.
-7: 콘텐츠 정책은 팩 매니저의 값 하나 `ContentSource`(`Cooked` 배포 · `-cooked-content` / `Source` 개발 실행 · 쿠킹)이고 읽는 곳은 `AssetIO::getContentSource` · `readsSource` 를 묻는다(씬 · 프리팹 · 셰이더 · 셰이더 리플렉션 · `.meta`).
-"쿠킹본이 있으면 쿠킹본, 없으면 소스" 는 두지 않는다 — 개발 씬이 소스와 어긋난 `.bin` 을 모르고 읽던 폴백이 그것이었다. 셰이더 쿠킹본은 소스 내용 해시로 확인하는 캐시라 소스 실행도 쓴다(언리얼 DDC).
-남은 것: 설정의 베이크 JSON(`ShippingGameDefaults.h` — 배포 구성만 생성하는 산출물이라 정책이 아니라 빌드 산출물), 개발 전용 점검(`EngineDefaultAssets` · `PackEngineSettings`), 소스 리더를 쿠킹 단위로(J6).
-12 는 층 문제(엔진에 편집기 이름 · 뜻)만 풀었다(`setRenderHidden`) — 편집기 뷰에서만 숨기기는 층이 아니라 기능이고, 렌더러에 뷰 마스크가 없어(GPU 인스턴스 예비 칸 · 컬링 셰이더 · 그림자 · CPU 경로)
-필요해질 때 기능으로 더한다(편집기 플레이는 씬 사본이 아니라 제자리라 플레이 중에도 숨긴 채다).
-13: 패킷 사진은 우편함의 "다음 패킷에 찍기" 칸(`ScreenshotRequestQueue::putForNextPacket`), 창 제목은 자동화 세션이 든다 — 관찰자 인터페이스에 자동화 칸이 없다.
-14: UI 데모 · 스트레스 화면은 `Games/Empty`. 9 는 개발 명령(`net.emulation`)과 묶여 `DevTools` 단위와 함께 한다(I 절).
-3 은 이렇게 끝냈다 —
-등록은 구독(`Subscription`)이 해제를 보장하고, 엔진 밖 레지스트리(편집기 확장 · 에셋 동작 · 메시 모디파이어)의 정적 등록자는 `ModuleObjectRegistrar`(타입 등록자와 같은 머리)로
-모듈을 올릴 때 붙고 내리기 전에 떨어진다(`engine::unregisterModuleTypes`) — 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않고, 떨어질 때 목록이 알려 편집기가 그 줄의 인스턴스를 거둔다.
-모듈 타입의 인스턴스를 든 쪽은 **타입의 모듈 이름**(데이터)으로 고른다: UI 화면 · 위젯(`getTypeInfo`) — `TypeRegistry::subscribeModuleUnloading`, 컴포넌트가 든 남의 모듈 객체(어빌리티 · 세트 · 실행 계산) — `Component::onModuleUnloading`,
-편집기 기본값 — 같은 알림. `SW_MODULE_UNLOAD_HANDLER` · `releaseModuleCode` · `isAddressWithin` · `findVtableAddress` · `Delegate::isCodeWithin` · 라이브러리 범위 조회는 지웠다.
-엔진 밖 모듈의 화면 · 어빌리티 · 세트 · 실행 계산 클래스는 `REFLECT( Abstract )` 와 `getTypeInfo` 재정의가 필요하다(카탈로그 등록 템플릿이 `HasOwnReflectBody` 로 멈춘다 — 재정의는 위젯과 같은 규칙).
-
-**전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
-`ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · SystemFontLocator · GameDataCache …), `AutomationSceneSteps` 의 대기 목록(실행기 상태로, I 절 4 와 함께).
-`GameTimeScale` 의 정지 요청 · 프레임 시간은 서비스 서브시스템이 됐다. `MeshCache` 무효화 훅 목록은 엔진 범위의 `IMeshDerivedCache`(물리 셰이프 표 서브시스템 `PhysicsMeshShapeTable`)로, `TickBatchRegistry` 는 서비스 범위 서브시스템 + E1 사슬의 등록자(`ModuleObjectRegistrar`)로 옮겼다 — 정적 초기화 때는 링크 때 목록에만 달고 모듈을 올리는 길이 붙인다.
-편집기의 포커스 스택 · 선택은 에디터 서브시스템 `EditorFocus`, 뷰포트 입력 오버레이 설정은 `ViewportInputOverlaySettings` 로 옮겼다. `ScenarioPlayback::s_pPlayer` 는 호스트 범위의 `IScenarioPlayer` 로 바꿨다. **두는 것**(이유): `ProfilerBackend::s_pActive`(계측 지점마다 읽는 뜨거운 경로 · 엔진 뒤에 닫히는 구간도 부른다 — 수명은 `ProfilerBackendSubsystem`), Jolt `s_pFactory` · RenderDoc API(바깥 라이브러리가 프로세스 전역을 요구한다). 되돌리기 스택의 전역 둘(`s_pExecuting` · 살아 있는 스택 목록)은 지웠다 — 처리기는 실행 문맥(`UndoStepContext`, 필요한 처리기만 첫 인자로 받는다)을, 스택은 코드 단계를 받은 주인의 사라짐을 구독한다. 에디터 쪽 `Tests/` 는 에디터 자체 테스트 `editor.unitTests` 가 돌린다(`App --test` 는 에디터 모듈이 오르기 전이다). 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
-
-### K. 일원화 감사 (2026-10-30)
-
-같은 일을 하는 장치가 둘 이상이면 하나로(밑바탕을 넓히거나 다른 단위로 재분류 — 우회 장치를 새로 만들지 않는다). 확인: Debug · Release 빌드와 ctest(단위 + 시나리오 22 단계 × 4 백엔드) 통과, Linux 빌드는 못 돌렸다(X11 · Wayland · ALSA · epoll 쪽 변경이 있다 — Linux 에서 한 번 짓는다).
-
-**끝난 것**
-- 태스크: `TaskHandleTracker` 삭제 → 주인별 `TaskStageHandle`(`addToStage` · 끝없는 `waitStage(stage, owner)` 와 10 초 진단), `waitAll(owner)` 도 기한 없이. Jolt · 내비메시 · GPU 업로드(`runParallel`) · AsyncFileIO 종료가 스테이지로, `MaterialPSOBuilder` 가 `DedicatedWorker` 로. 정지 신호는 `StopSource`/`StopToken` 하나. 남긴 것(이유는 코드 주석): RenderGraph 레벨 스테이지(High 줄), SQL 연결 풀(연결마다 스레드), TextureCache 로드 대기, AssetLoadBlock 단계 워드, TaskManager 워커 `_bStop`, `AsyncFileIOQueue::_bStopping`.
-- 결정성: 에셋 도착을 프레임에 묶는다(`gv_finishAssetWorkEachFrame` — 로드 · 스트리밍 · IO · 업로드 · PSO 변형을 프레임 경계에서 끝낸다).
-- 등록부: 정적 벡터 · 손짠 목록 → `RegistrationList`(+ `addSubscribed` — 해제 때 주인 정리), 콜백 목록 → `MulticastDelegate`(+ `broadcastUntil`), 스레드 안전 → `LockedMulticastDelegate`(해제 대기도 기한 없이), `NameRegistry::addOwned`, `AtomicSlot`, `IDAllocator`, `ItemSubscriptionList<T>`. 카메라 · 씬 오디오 · 에셋 매니저 · 넷 라우터 · 내비게이션 · 프레임 훅 · 입력 맵 콜백 · 리로드 콜백.
-- 서브시스템 확장: E1 사전 등록 사슬(`SW_MODULE_SUBSYSTEM`, 모듈 객체 등록자), E2 공개 칸(`SubsystemScope::publish` — `IRenderTargetDeclarationSink` · `IMeshDerivedCache` 처럼 위 층이 구현을 타입으로 낸다), E3 서브시스템이 가진 상태, E4 프로세스 범위, E5 모듈 자식 범위. 옮긴 것: NetSecurity, PackManager 바인딩, 키트 DLL 정적(넷 시뮬 세션 · 계정 티켓 · 저장소 드라이버), ScheduleSystemRegistry, GameDataCache, 일괄 틱 표, 메시 무효화 훅, 프로파일러 트레이스 세션, GPU 흔적, 입력 플랫폼 정적, 차림 베이크 표, 자동화 씬 단계, UISystem 의 서비스 열둘(클립보드 · 전역 명령 · 바인딩 변환 · 알림 · 자막 · 툴팁 · 문서 · 스타일 시트 · 테마 · 오프스크린 · World 위젯 · 접근성). UISystem 에 남은 것은 입력 라우터 · 페인트 상태 · 레이어 숨김(화면 스택 자체).
-- 클래스 분해: FrameRenderer → `FramePSOManager` · `FramePostProcess` · `FrameExtensionHost` · `FrameViewResources` · `FramePassExecutor` · `FrameRenderState`(헤더 1015 → 494 줄), InputMap → `InputGlyphResolver` · `InputRemapSerializer` · `InputAccessibilitySettings`, AudioEngine → `AudioSnapshotMixer` · `AudioMusicPlayer`, 편집기 패널 넷 모델/뷰, `EditorAssetType` 닫힌 열거형 → 엔진 종류 정의 열쇠 + `SW_EDITOR_ASSET_TYPE` 등록, PhysicsSystem 백엔드 팩토리, Widget 자식 목록 가상화, UI 캡처 GL 분기 → 렌더러 물음.
-- 정적 API 캐시: 에셋 캐시는 모두 `AssetManager` 가 만들고 소유(공유 캐시 길 삭제, `SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD`), 리플렉션 매니페스트는 `ShaderCache` 멤버, 쿠킹 스탬프는 쿠킹 상태가 들고 넘긴다, `ContentHashCache` · `SceneTransformStorage` 서비스 범위 서브시스템, `LocalizedTextArena` 는 `LocalizationManager`, `SystemFontLocator` 는 쓰는 쪽이 값으로.
-- 큰 클래스 둘 더: CanvasRenderer → 글리프 아틀라스 · 텍스처 대여 · 사각형 버퍼 · 마커 투영, RenderPacketBuilder → 씬 수집 · 뷰 설정 · 씬 미리보기 · 캔버스 수집, Engine → `DebugKeyActions` 서비스 · `EngineFrameHookList`(위임 함수 삭제 — 남긴 `getRHI` 등은 서비스 표 없는 크래시 리포터 · 헤드리스의 창구), GameInstance → `GameStateSnapshot` · `GameSceneFlow`(순서는 GameInstance 가 정한다). 편집기 패널 셋 더(타일맵 · 입력 맵 · 계층) 모델/뷰.
-- 유틸 · STL: `HashUtil::mix32` · `mix64`, `HexUtil`, `reserveUniquePath`, `OnceKeySet`, `VarIntUtil`, `StringUtil::toBytes`, `ThreadUtil`(sleep · yield), `MathUtil`(min · max · clamp), `formatToString` + 이어 붙이기 252 줄, 실수 글 규칙 하나(`%#` = 가장 짧은 왕복 표기, printf 실수 서식은 여섯 자리).
-- 작은 파일 · include: 게임 헤더 13 · 데이터 종류 18 · 리로드 캐시 · 호스트 창구 · 자기 .cpp 전용 헤더 · 계정 포트 합치기, 안 쓰는 파일 여섯 삭제, `RHITypes.h` 쪼개기, `ReflectionCast.h` · `Component.h` 가 `ReflectionTypes.h` 를 끌지 않는다, ImGui · imgui-node-editor 가 프로젝트 헤더로 새지 않는다, 전방 선언 다수.
-
 **남은 것**
 | 일 | 내용 |
 |---|---|
-| AssetPaths 빌드 확인 | 상태(경로 표 · 검색 우선순위 · 디스크 도메인 · 해석 캐시)는 객체 하나가 되었고 주인은 `ContentRootSubsystem`(코어 범위에 `AssetPaths` 로 건다, 서비스 표 행). 엔진은 `engine::getSubsystem<AssetPaths>()`, 모듈은 `editor::` · `game::` 창구, 워커(임포트 잡 · 색인 · 폴더 목록 · 모디파이어 표본기)는 부른 스레드가 찾아 넘긴다. 통합에서 Debug · Release · Linux 빌드와 임포트 · 핫 리로드 시나리오로 확인 |
-| STL 나머지 | `std::atomic` · `std::pair` · `VectorUtil` 관용구 · C 문자열 |
-| 같은 모양의 작은 창 | 900 줄 밑의 편집기 패널(`StreamingCellsPanel` · `PrefabPanel` · `GameViewPanel` 등)이 상태를 패널 멤버에 든다. 호스트 클래스(`ServerApp` · App)의 중계 함수 |
+| Linux 빌드 | 이번 묶음은 Windows 에서만 지었다 — X11 · Wayland 입력 정적 이주, ALSA · epoll 정지 신호, `AssetPaths` 의 대소문자 구분 길 |
 | 측정 | `castTo` 의 파생 확인이 줄 밖 함수가 됐다 — 뜨거운 경로(~4 ns) 측정 |
-| 남긴 것(이유 있음) | Core 아래 층의 `ScopeOwned`(TagID · LogOnce), OS 가 요구하는 프로세스 전역(신호 처리 · 서비스 콜백 · RenderDoc · CRT 누수 기준), 프로세스 유일 번호 카운터, 진단 카운터, SQL 드라이버 표(링크 시점 목록) |
+| 패널 | DialogueGraphPanel 미리보기(그래프 문서 기반 클래스의 `_bPreviewPlaying` · `_previewHoldSeconds` 를 뺄 수 있다), 그리기 고리 안에서 명령을 부르는 GameFramework 플러그인 패널(목록을 도는 중 바뀌는 모양) |
+| 호스트 | `ServerApp` 의 디버그 채널 · 일시정지/한 걸음 상태, App 창 콜백 |
+| 남긴 것(이유 있음) | Core 아래 층의 `ScopeOwned`(TagID · LogOnce), Foundation 의 `std::atomic` · C 문자열(층 0), OS 가 요구하는 프로세스 전역(신호 처리 · 서비스 콜백 · RenderDoc · CRT 누수 기준), 프로세스 유일 번호 카운터, 진단 카운터, SQL 드라이버 표(링크 시점 목록), 범위 일부만 정렬하는 `std::sort`, Wayland C API 의 `strcmp` |
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
