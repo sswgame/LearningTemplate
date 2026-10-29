@@ -6,6 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/FileSystem/AssetPaths.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -39,7 +41,7 @@ namespace sw::editor
         string stateDir = gv_editorStateDir.empty() ? string{} : resolveProjectRelativePath( gv_editorStateDir );
         if ( stateDir.empty() )
         {
-            const string projectRoot = getProjectRootPath();
+            const string projectRoot = getProjectRootPath( editor::getSubsystem<AssetPaths>() );
             if ( projectRoot.empty() )
                 return stateDir;
             stateDir = FileUtil::joinPath( projectRoot, config::kDirSavedEditor );
@@ -67,7 +69,7 @@ namespace sw::editor
         string path = FileUtil::normalizeSeparators( hostRelativePath );
         if ( FileUtil::isAbsolutePath( path ) == false )
         {
-            const string projectRoot = getProjectRootPath();
+            const string projectRoot = getProjectRootPath( editor::getSubsystem<AssetPaths>() );
             if ( projectRoot.empty() == false )
                 path = FileUtil::joinPath( projectRoot, path );
         }
