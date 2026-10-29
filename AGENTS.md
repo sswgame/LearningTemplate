@@ -31,7 +31,8 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | `Source/Engine` | Objects, RHI/graphics, physics, scenes; a shared DLL in Dev. Folders are layered (`Scripts/generate/rules/EngineLayers.toml`; each layer builds as its own part and an upper-layer include fails to compile); a feature folder owns its components (`Physics/Component`) |
 | `Source/ModuleAPI` | Header-only `INTERFACE` library: the pure C-ABI contract between App and Editor/Game modules. No implementations |
 | `Source/App` | Thin launcher. Dev links Engine + ModuleAPI; Shipping also links `SWGame`. `Engine` runs the main loop, `GameModuleManager` (`Source/ModuleManager`, shared with Server) manages game-module loading, hot reload and async-task fencing |
-| `Source/Editor` | Dev only |
+| `Source/EditorFoundation` | Dev App only, never hot-reloaded: editor state that must outlive an EditorModule reload (undo `CommandStack`, `EditSessionState`, copy buffer) and OS tools (`FileDialog`). App links it and adds its services to the host scope |
+| `Source/Editor` | Dev only. **Every editor feature lives here or under a kit's `Editor/`** — Engine and Core hold no function only the editor calls (no `WITH_EDITOR` regions). Engine offers read APIs, read/write-paired serialization and extension points; the editor edits a data copy, writes it with the engine serializer and the runtime reloads |
 | `Source/GameFramework` | Genre-common frameworks and kits |
 | `Source/Games` | Concrete games; `SW_ACTIVE_GAME` selects the one to build |
 
@@ -43,6 +44,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | `SW_MODULE_API` | C-ABI entry point of every dynamically loaded module (EditorModule, SWGame, RHI backends ...) | `SW_MODULE_EXPORTS` |
 | `SW_GF_API` | `GameFramework.dll` (Base) classes | `SW_GF_EXPORTS` |
 | `SW_KIT_API` | Kit DLL classes, in headers under `GameFramework/Kits` | `SW_KIT_EXPORTS` / `SW_KIT_IMPORTS` |
+| `SW_EDITOR_FOUNDATION_API` | `EditorFoundation.dll` | `SW_EDITOR_FOUNDATION_EXPORTS` |
 | `SW_KIT_SERVER_API` | Server kit (`GF_Server_<X>`, folder `Server/`) classes | `SW_KIT_SERVER_EXPORTS` |
 | `SW_EDITOR_API` | `EditorModule.dll` symbols (registries, widgets, selection, undo) | `SW_EDITOR_EXPORTS` |
 | `SW_GAMESERVICE_API` | The GameService locator (`bindGameService` / `getRawService`) in ModuleAPI; not a class-export macro | — |

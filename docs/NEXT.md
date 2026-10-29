@@ -103,7 +103,7 @@
 - 2 의 일부: `Engine/AssetReload/`(개발 빌드만) — `FileWatchDispatcher` · `ConfigReloadSubsystem`(편집기 없는 개발 App · 서버도 설정을 다시 읽는다, 편집기는 `EditorToolDefaultsReload` 처리기만). 게임 쪽 `AppearanceDataWatcher` 는 그 분배기의 클라이언트. Core 의 OS 감시기 · 리로드 어댑터 캐시(오디오 · 현지화)는 배포 빌드에서 빠진다.
 - 3: `LiveShaderSubsystem` 은 배포 빌드에서 짓지도 세우지도 않는다.
 - Shipping 빌드 · 쿠킹 · 실행(시나리오 sceneready PASS) 확인.
-남은 것: 에셋 핫 리로드(`AssetHotReload`)를 엔진으로 — 임포트 단계는 편집기가 경로 표로 끼우고, 낱개 파일 리로드는 엔진이 한다(편집기 없는 개발 실행도 에셋을 다시 읽게). 캐시 계약을 `IReloadableAssetCache` 로 떼어 캐시별 reload 구현이 배포 빌드에서 빠지게(텍스처 리로드 세대는 비동기 로드와 섞여 마지막).
+남은 것은 I 절로 옮겼다 — 에셋 핫 리로드를 엔진으로 넣지 않는다(편집 기능은 편집기, 개발 기능은 엔진 밖 `DevTools`). 위 2 의 `Engine/AssetReload` 도 엔진 밖으로 나간다.
 덧붙여 Shipping 쿠킹을 막던 둘을 고쳤다: 원본 없이 지운 손작업 콘텐츠 13 개(65225afc1)를 되살렸고, 쿠커가 `Content/scratch/` 를 훑지 않는다(`AssetPaths::collectContentFiles`).
 
 정한 모양(언리얼 ModuleManager · HotReload · DirectoryWatcher 모듈과 같은 나눔):
@@ -111,6 +111,28 @@
 2. **에셋 리로드 서브시스템**(`Engine/AssetReload`, Dev 만 짓는 폴더): 파일 감시(`IFileWatcher` 를 Core 에서 옮김) · 경로 표 · 설정 · 오디오 · 현지화 어댑터 · `AppearanceDataWatcher` 흡수. 편집기 없는 Dev 게임에서도 선다. 캐시 쪽 계약은 `IReloadableAssetCache` 로 떼어 Shipping 의 `IAssetCache` 에 reload 가 없게 한다(텍스처의 리로드 세대는 비동기 로드와 섞여 있어 마지막에).
 3. **`LiveShaderSubsystem`** 은 Dev 에서만 더한다(빈 껍데기를 Shipping 에 세우지 않는다).
 4. 확인: Shipping 빌드에서 `CodeWithin` · `reload` 기호가 남지 않는지 `llvm-nm` 으로 본다(게이트로 둘지는 그때 정한다).
+
+### I. 편집기 · 개발 기능을 엔진에서 떼기 (2026-10-29)
+
+원칙: Engine · Core 에는 편집기 · 개발 도구만 쓰는 함수가 없다. `#if WITH_EDITOR` 구역도, 게이트도 두지 않는다(게이트는 최후의 수단) — **빌드 단위**로 가른다(언리얼 Runtime · Developer · Editor 모듈).
+
+| 단위 | 담는 것 | 짓는 빌드 |
+|---|---|---|
+| `Core` · `Engine` | 런타임, 읽기 API, 읽기 · 쓰기 짝 직렬화, 확장점(이벤트 · 등록표 · 감쌀 수 있는 인터페이스) | 모두 |
+| `DevTools`(만들 것) | 개발 전용 — 에셋 · 설정 · 셰이더 리로드, 파일 감시. 엔진 확장점에 데코레이터 · 등록으로 붙는다 | 개발 App · Server |
+| `EditorFoundation` | 편집기 리로드에도 살아야 하는 상태 · OS 도구(되돌리기 · 세션 · 복사 버퍼 · 파일 대화상자) — App 이 링크하고 호스트 범위에 건다 | 개발 App |
+| `EditorModule` · 편집기 확장 | 편집 기능 전부(저장 · 프리팹 작업 · 굽기 · 패널). 데이터 사본을 고쳐 엔진 직렬화로 쓰고 런타임이 다시 읽는다 | 개발 App |
+
+**끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. `EditorFoundation` 신설. 리타깃 `*ForEdit` → 일반 설정자.
+찾는 법: 편집기 DLL 만 가져다 쓰는 Engine.dll 내보내기를 import 표로 본다(`dumpbin /imports:Engine.dll` 을 EditorModule · `GF_EditorPlugin_*` 와 그 밖의 바이너리에 돌려 차집합, 그 이름이 Engine 소스 안에서 안 쓰이면 후보 — 2026-10-29 에 253 개, 대부분은 편집기가 마침 유일하게 부르는 런타임 조회 · 설정이라 둔다).
+
+**남은 것**(순서대로):
+1. `DevTools` 단위 신설 — `Engine/AssetReload`(파일 감시 분배기 · 설정 리로드), `LiveShaderSubsystem` · `ShaderRecompiler`, Core 의 OS 파일 감시기를 옮긴다. 엔진은 "설정을 다시 읽어라" · "이 셰이더를 바꿔라" 같은 확장점만 둔다.
+2. 에셋 리로드를 데코레이터로 — `IAssetCache::reload` 를 런타임 계약에서 빼고, `DevTools` 가 캐시를 감싸 리로드를 덧붙인다(리로드 전용 어댑터 캐시도 그쪽으로). 텍스처 캐시의 리로드 세대는 비동기 로드와 섞여 인터페이스부터 나눈다(가장 큰 일).
+3. 편집기 `AssetHotReload` 는 편집기에 두고 `DevTools` 의 감시 위에 선다.
+4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
+   자동화의 판정 · 골든 · 보고 · 백엔드 행렬 · 종료 코드(`Engine/Automation/Runner`)는 엔진 밖 개발 단위로. 시나리오 재생기 · 단계 · 프레임 통계(내장 벤치마크 · 어트랙트 모드)는 배포 게임이 쓰므로 Engine 에 남는다.
+5. 굽기(`LightProbeBaker` · `ReflectionProbeBaker`)는 편집기만 부른다 — 쿠커처럼 헤드리스 App 이 부르는 길이 없으면 편집기로(테스트 `TestLightProbeBaker` 는 편집기 쪽 테스트 자리가 생길 때 같이).
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
