@@ -241,37 +241,19 @@ namespace sw
         }
     }
 
-    void InputMap::dispatchActionCallbacks( const ActionEntry& actionEntry, bool bPrevDown )
+    void InputMap::dispatchActionCallbacks( ActionEntry& actionEntry, bool bPrevDown )
     {
         // 델리게이트 이벤트 디스패치(Triggered)
         if ( actionEntry._bTriggered == SW_TRUE )
-        {
-            for ( const ActionCallbackEntry& cbEntry : actionEntry._listActionCallback )
-            {
-                if ( cbEntry._callback.isBound() )
-                    cbEntry._callback();
-            }
-        }
+            actionEntry._onTriggered.broadcast();
 
-        // 페이즈 델리게이트 디스패치(Phase)
+        // 페이즈 델리게이트 디스패치(Phase) — 항목이 자기 단계만 거른다
         if ( actionEntry._currentPhase != ActionPhase::None )
-        {
-            for ( const PhaseCallbackEntry& phaseEntry : actionEntry._listPhaseCallback )
-            {
-                if ( phaseEntry._phase == actionEntry._currentPhase && phaseEntry._callback.isBound() )
-                    phaseEntry._callback();
-            }
-        }
+            actionEntry._onPhase.broadcast( actionEntry._currentPhase );
 
         // 2D 벡터 델리게이트 디스패치
         if ( ( actionEntry._currentValue._x != 0.0f || actionEntry._currentValue._y != 0.0f ) || ( bPrevDown && actionEntry._bDown == SW_FALSE ) )
-        {
-            for ( const Vector2DCallbackDelegate& vecCb : actionEntry._listVector2DCallback )
-            {
-                if ( vecCb.isBound() )
-                    vecCb( actionEntry._currentValue );
-            }
-        }
+            actionEntry._onVector2D.broadcast( actionEntry._currentValue );
     }
 
     float2 InputMap::composeActionValue( const float2& bounded, const float2& relative ) const

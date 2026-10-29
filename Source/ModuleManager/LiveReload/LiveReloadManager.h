@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/stable_unordered_map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -208,15 +209,16 @@ namespace sw
     private:
         struct ModuleRecord;
 
-        /** @brief 구독 하나가 가리키는 칸의 종류입니다. */
+        /**
+         * @brief 구독 하나가 가리키는 칸의 종류입니다. 여럿이 함께 드는 목록(배치 직전 · 리로드 잡음)은 공용 `MulticastDelegate` 이고, 이것은 주인 하나 칸이다.
+         * @details 칸은 다시 걸면 갈아 끼운다(리로드의 새 인스턴스가 옛 인스턴스보다 먼저 건다) — 두 번째 걸기를 결함으로 단언하는 `DelegateSlot` 과 뜻이 달라 따로 둔다.
+         */
         enum class CallbackSlot : uint8
         {
             BeforeReload,
             AfterReload,
             ReloadFault,
             ValidateLibrary,
-            BeforeCommitBatch,
-            ReloadHold,
             DrainWorkers,
         };
         /** @brief 살아 있는 구독 하나 — 어느 모듈(배치 · 비우기는 빈 이름)의 어느 칸인지입니다. */
@@ -231,19 +233,6 @@ namespace sw
         {
             string _name;
             void*  _pHandle{ nullptr }; ///< 섀도 복사 없이 원본 경로로 올린 라이브러리
-        };
-
-        /** @brief 배치 직전 콜백 목록의 항목입니다. */
-        struct BeforeCommitBatchEntry
-        {
-            uint64                      _id;
-            OnBeforeCommitBatchDelegate _delegate;
-        };
-        /** @brief 리로드 잡음 목록의 항목입니다. */
-        struct ReloadHoldEntry
-        {
-            uint64             _id;
-            ReloadHoldDelegate _delegate;
         };
 
         /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
@@ -351,23 +340,23 @@ namespace sw
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildNotice();
 
-        stable_unordered_map<string, ModuleRecord> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
-        ModuleDependencyGraph                      _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
-        vector<SharedLibrary>                      _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
-        unique_ptr<IFileWatcher>                   _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
-        string                                     _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
-        FileStamp                                  _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
-        mutable mutex                              _buildMutex;
-        BuildNotice                                _buildNotice;
-        vector<BeforeCommitBatchEntry>             _listBeforeCommitBatch; ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로)
-        vector<ReloadHoldEntry>                    _listReloadHold;        ///< 리로드 잡음(`addReloadHold`)
-        DrainWorkersDelegate                       _drainWorkers;
-        vector<CallbackRegistration>               _listCallbackRegistration; ///< 살아 있는 구독이 가리키는 칸
-        uint64                                     _nextCallbackID;           ///< 다음 구독 번호(0 은 빈 구독)
-        DeferredLibraryUnloadQueue                 _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
-        uint32                                     _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
-        uint8                                      _bReloadGraphBroken : 1;
-        uint8                                      _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
-        [[maybe_unused]] uint8                     _reserved           : 6;
+        stable_unordered_map<string, ModuleRecord>       _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
+        ModuleDependencyGraph                            _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
+        vector<SharedLibrary>                            _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)
+        unique_ptr<IFileWatcher>                         _fileWatcher;      ///< 모듈 폴더(하위 폴더 없이)를 본다. 첫 `registerModule` 이 시작한다
+        string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
+        FileStamp                                        _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
+        mutable mutex                                    _buildMutex;
+        BuildNotice                                      _buildNotice;
+        MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch; ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
+        MulticastDelegate<bool()>                        _reloadHolds;         ///< 리로드 잡음(`addReloadHold`)
+        DrainWorkersDelegate                             _drainWorkers;
+        vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
+        IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)
+        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        uint32                                           _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        uint8                                            _bReloadGraphBroken : 1;
+        uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
+        [[maybe_unused]] uint8                           _reserved           : 6;
     };
 } // namespace sw

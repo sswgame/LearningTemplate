@@ -2,7 +2,6 @@
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -21,7 +20,7 @@ namespace sw
         : _configManager{ configManager }
         , _pFileWatchDispatcher{ nullptr }
         , _configWatch{}
-        , _listHandler{}
+        , _fileHandlers{}
     {
     }
 
@@ -72,15 +71,7 @@ namespace sw
 
     Subscription ConfigReloadSubsystem::registerFileHandler( const ConfigFileReloadDelegate& handler )
     {
-        const uint64 id = _nextHandlerID++;
-        _listHandler.push_back( HandlerEntry{ id, handler } );
-        return _subscriptions.issue( id );
-    }
-
-    void ConfigReloadSubsystem::releaseSubscription( uint64 id )
-    {
-        (void)VectorUtil::removeIf( _listHandler, [id]( const HandlerEntry& entry )
-        { return entry._id == id; } );
+        return _fileHandlers.add( handler );
     }
 
     ReloadOutcome ConfigReloadSubsystem::reloadChangedFile( string_view fullPath )
@@ -88,15 +79,13 @@ namespace sw
         const ReloadOutcome hostOutcome = _configManager.reloadConfigFile( fullPath );
         if ( hostOutcome != ReloadOutcome::NotTracked )
             return hostOutcome;
-        // 처리기가 목록을 바꿔도(구독 해제) 견디게 사본을 돈다.
-        const vector<HandlerEntry> listHandler = _listHandler;
-        for ( const HandlerEntry& entry : listHandler )
+        ReloadOutcome outcome = ReloadOutcome::NotTracked;
+        (void)_fileHandlers.broadcastUntil( [&outcome]( ReloadOutcome handlerOutcome )
         {
-            const ReloadOutcome outcome = entry._handler( fullPath );
-            if ( outcome != ReloadOutcome::NotTracked )
-                return outcome;
-        }
-        return ReloadOutcome::NotTracked;
+            outcome = handlerOutcome;
+            return handlerOutcome != ReloadOutcome::NotTracked; // 처음 맡은 처리기에서 멈춘다
+        }, fullPath );
+        return outcome;
     }
 
     void ConfigReloadSubsystem::onConfigFileChanged( const FileChangeEvent& changeEvent )

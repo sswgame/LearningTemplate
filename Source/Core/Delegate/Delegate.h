@@ -483,18 +483,14 @@ namespace sw
         template <typename ResultVisitor>
         bool broadcastUntil( ResultVisitor&& onResult, Args... args )
         {
-            static_assert( std::is_void_v<R> == false, "broadcastUntil needs a result - use broadcast for void delegates" );
-            ++_broadcastDepth;
-            bool         bStopped     = false;
-            const size_t numDelegates = _listDelegate.size();
-            for ( size_t entryIndex = 0; entryIndex < numDelegates && bStopped == false; ++entryIndex )
-            {
-                delegate_type callee = _listDelegate[entryIndex]._delegate; // `broadcast` 와 같은 까닭으로 사본을 부른다
-                if ( callee.isBound() )
-                    bStopped = onResult( callee( args... ) );
-            }
-            endBroadcast();
-            return bStopped;
+            return broadcastUntilInOrder( false, onResult, args... );
+        }
+
+        /** @brief `broadcastUntil` 과 같고 나중에 더한 것부터 부릅니다(바깥 층이 안쪽 층보다 먼저 답하는 알림 — 리로드 직전 확인). */
+        template <typename ResultVisitor>
+        bool broadcastUntilReverse( ResultVisitor&& onResult, Args... args )
+        {
+            return broadcastUntilInOrder( true, onResult, args... );
         }
 
         /**
@@ -544,6 +540,25 @@ namespace sw
         void clear() { removeAll(); }
 
     private:
+        /** @brief `broadcastUntil` · `broadcastUntilReverse` 의 몸통입니다. 순회 중 더한 항목은 이번 차례에 부르지 않습니다(시작할 때의 수만 본다). */
+        template <typename ResultVisitor>
+        bool broadcastUntilInOrder( bool bReverse, ResultVisitor& onResult, Args... args )
+        {
+            static_assert( std::is_void_v<R> == false, "broadcastUntil needs a result - use broadcast for void delegates" );
+            ++_broadcastDepth;
+            bool         bStopped     = false;
+            const size_t numDelegates = _listDelegate.size();
+            for ( size_t step = 0; step < numDelegates && bStopped == false; ++step )
+            {
+                const size_t  entryIndex = bReverse ? numDelegates - 1 - step : step;
+                delegate_type callee     = _listDelegate[entryIndex]._delegate; // `broadcast` 와 같은 까닭으로 사본을 부른다
+                if ( callee.isBound() )
+                    bStopped = onResult( callee( args... ) );
+            }
+            endBroadcast();
+            return bStopped;
+        }
+
         /** @brief broadcast 깊이를 내리고, 가장 바깥 호출이면 broadcast 중에 요청된 remove 를 한꺼번에 처리합니다. */
         void endBroadcast()
         {

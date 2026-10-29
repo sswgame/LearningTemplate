@@ -10,7 +10,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/SubscriptionList.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -59,22 +59,12 @@ namespace sw
         [[nodiscard]] ReloadOutcome reloadChangedFile( string_view fullPath );
 
     private:
-        struct HandlerEntry
-        {
-            uint64                   _id{ 0 };
-            ConfigFileReloadDelegate _handler;
-        };
-
         void onConfigFileChanged( const FileChangeEvent& changeEvent );
-        void releaseSubscription( uint64 id );
 
         ConfigManager&                  _configManager;
         unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
         Subscription                    _configWatch; ///< 설정 폴더 감시 구독
-        vector<HandlerEntry>            _listHandler;
-        uint64                          _nextHandlerID{ 1 };
-
-        /** @brief 이 객체가 내준 처리기 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&ConfigReloadSubsystem::releaseSubscription>( this ) };
+        /** @brief 처리기 목록입니다 — 공용 멀티캐스트라 처리기가 순회 중 자기 구독을 놓아도 순회가 끝난 뒤 빠진다. 먼저 맡은 처리기에서 멈춘다(`broadcastUntil`). */
+        MulticastDelegate<ReloadOutcome( string_view )> _fileHandlers;
     };
 } // namespace sw

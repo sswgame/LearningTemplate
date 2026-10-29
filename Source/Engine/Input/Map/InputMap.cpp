@@ -430,34 +430,29 @@ namespace sw
         return false;
     }
 
-    void InputMap::bindActionCallback( const hashed_string& action, ActionTrigger trigger, ActionCallbackDelegate callback )
+    Subscription InputMap::bindActionCallback( const hashed_string& action, ActionCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
-            return;
-        ActionEntry&        entry = getOrCreateAction( action );
-        ActionCallbackEntry cbEntry{};
-        cbEntry._trigger  = trigger;
-        cbEntry._callback = std::move( callback );
-        entry._listActionCallback.push_back( std::move( cbEntry ) );
+            return {};
+        return getOrCreateAction( action )._onTriggered.add( callback );
     }
 
-    void InputMap::bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback )
+    Subscription InputMap::bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
-            return;
-        ActionEntry&       entry = getOrCreateAction( action );
-        PhaseCallbackEntry cbEntry{};
-        cbEntry._phase    = phase;
-        cbEntry._callback = std::move( callback );
-        entry._listPhaseCallback.push_back( std::move( cbEntry ) );
+            return {};
+        return getOrCreateAction( action )._onPhase.add( PhaseCallbackDelegate::create( [phase, callback]( ActionPhase currentPhase )
+        {
+            if ( currentPhase == phase )
+                callback();
+        } ) );
     }
 
-    void InputMap::bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback )
+    Subscription InputMap::bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback )
     {
         if ( action.empty() || callback.isBound() == false )
-            return;
-        ActionEntry& entry = getOrCreateAction( action, InputActionValueType::Axis2D );
-        entry._listVector2DCallback.push_back( std::move( callback ) );
+            return {};
+        return getOrCreateAction( action, InputActionValueType::Axis2D )._onVector2D.add( callback );
     }
 
     void InputMap::registerLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )

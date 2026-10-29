@@ -447,11 +447,15 @@ namespace sw
         bool wasChordTriggered( const hashed_string& action ) const;
 
         // ------------------------------------------------------------------------------
-        // 3.1) 이벤트 기반 델리게이트 바인딩
+        // 3.1) 이벤트 기반 델리게이트 바인딩 — 돌려받은 구독이 사라지면 떨어진다(언리얼 Enhanced Input `BindAction` 의 핸들 자리를 소유 구독으로).
+        //      액션 이름이 비었거나 델리게이트가 비었으면 빈 구독이다.
         // ------------------------------------------------------------------------------
-        void bindActionCallback( const hashed_string& action, ActionTrigger trigger, ActionCallbackDelegate callback );
-        void bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback );
-        void bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback );
+        /** @brief 액션이 발화한(`Triggered`) 프레임마다 부를 델리게이트를 겁니다. 방아쇠 조건은 바인딩(`ActionTrigger`)이 정한다. */
+        [[nodiscard]] Subscription bindActionCallback( const hashed_string& action, ActionCallbackDelegate callback );
+        /** @brief 액션이 @p phase 에 있는 프레임마다 부를 델리게이트를 겁니다. */
+        [[nodiscard]] Subscription bindPhaseCallback( const hashed_string& action, ActionPhase phase, ActionCallbackDelegate callback );
+        /** @brief 2D 값이 0 이 아닌 프레임과 놓인 프레임에 부를 델리게이트를 겁니다. */
+        [[nodiscard]] Subscription bindVector2DCallback( const hashed_string& action, Vector2DCallbackDelegate callback );
 
         // ------------------------------------------------------------------------------
         // 4) LIFO 컨텍스트 스택, 모달/비모달 제어
@@ -704,47 +708,35 @@ namespace sw
                 , _reserved{ 0 } {}
         };
 
-        struct ActionCallbackEntry
-        {
-            ActionTrigger          _trigger{ ActionTrigger::Pressed };
-            ActionCallbackDelegate _callback;
-        };
-
-        struct PhaseCallbackEntry
-        {
-            ActionPhase            _phase{ ActionPhase::None };
-            ActionCallbackDelegate _callback;
-        };
-
         struct ActionEntry
         {
-            InputActionValueType             _valueType{ InputActionValueType::Boolean };
-            vector<ActionBinding>            _listBinding{};
-            vector<ActionBindingState>       _listBindingState{};
-            vector<ActionBinding>            _listDefaultBinding{};
-            vector<ActionCallbackEntry>      _listActionCallback{};
-            vector<PhaseCallbackEntry>       _listPhaseCallback{};
-            vector<Vector2DCallbackDelegate> _listVector2DCallback{};
-            float2                           _currentValue{ 0.0f, 0.0f };
-            float32                          _holdDuration{ 0.0f };
-            ActionPhase                      _currentPhase{ ActionPhase::None };
-            uint32                           _handleIndex{ ActionHandle::kInvalidIndex };
-            uint32                           _generation{ 1 };
-            uint8                            _bDown        : 1;
-            uint8                            _bPressed     : 1;
-            uint8                            _bReleased    : 1;
-            uint8                            _bTriggered   : 1;
-            uint8                            _bToggleMode  : 1;
-            uint8                            _bToggleState : 1;
+            InputActionValueType                   _valueType{ InputActionValueType::Boolean };
+            vector<ActionBinding>                  _listBinding{};
+            vector<ActionBindingState>             _listBindingState{};
+            vector<ActionBinding>                  _listDefaultBinding{};
+            MulticastDelegate<void()>              _onTriggered{}; ///< `bindActionCallback`
+            MulticastDelegate<void( ActionPhase )> _onPhase{};     ///< `bindPhaseCallback` — 항목이 자기 단계만 거른다
+            MulticastDelegate<void( float2 )>      _onVector2D{};  ///< `bindVector2DCallback`
+            float2                                 _currentValue{ 0.0f, 0.0f };
+            float32                                _holdDuration{ 0.0f };
+            ActionPhase                            _currentPhase{ ActionPhase::None };
+            uint32                                 _handleIndex{ ActionHandle::kInvalidIndex };
+            uint32                                 _generation{ 1 };
+            uint8                                  _bDown        : 1;
+            uint8                                  _bPressed     : 1;
+            uint8                                  _bReleased    : 1;
+            uint8                                  _bTriggered   : 1;
+            uint8                                  _bToggleMode  : 1;
+            uint8                                  _bToggleState : 1;
 
             ActionEntry()
                 : _valueType{ InputActionValueType::Boolean }
                 , _listBinding{}
                 , _listBindingState{}
                 , _listDefaultBinding{}
-                , _listActionCallback{}
-                , _listPhaseCallback{}
-                , _listVector2DCallback{}
+                , _onTriggered{}
+                , _onPhase{}
+                , _onVector2D{}
                 , _currentValue{ 0.0f, 0.0f }
                 , _holdDuration{ 0.0f }
                 , _currentPhase{ ActionPhase::None }
@@ -807,7 +799,7 @@ namespace sw
         /** @brief 이번 프레임 합산으로 ActionPhase 를 전이합니다. */
         static void advanceActionPhase( ActionEntry& actionEntry, bool bPrevDown, bool bAnyHoldReached );
         /** @brief Triggered · Phase · 2D 벡터 델리게이트를 부릅니다. */
-        static void dispatchActionCallbacks( const ActionEntry& actionEntry, bool bPrevDown );
+        static void dispatchActionCallbacks( ActionEntry& actionEntry, bool bPrevDown );
         /**
          * @brief 새로 만드는 바인딩 상태입니다. 지금 장치가 눌려 있으면 `_bPhysicalDown` 을 미리 채워, 첫 `update` 에서 Pressed 가 아니라 Held 로 시작하게 합니다.
          * @details 바인딩 상태를 만드는 길(`commitBinding`, 리바인딩, 기본값 복원)은 모두 이 함수 하나를 거친다 — 빈 `ActionBindingState{}` 를 직접 넣는 길이 남으면

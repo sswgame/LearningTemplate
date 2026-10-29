@@ -114,11 +114,11 @@ namespace sw
         , _seenBuildStamp{}
         , _buildMutex{}
         , _buildNotice{}
-        , _listBeforeCommitBatch{}
-        , _listReloadHold{}
+        , _onBeforeCommitBatch{}
+        , _reloadHolds{}
         , _drainWorkers{}
         , _listCallbackRegistration{}
-        , _nextCallbackID{ 1 }
+        , _callbackIDAllocator{}
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
@@ -144,6 +144,8 @@ namespace sw
             clearSlot( registration );
         }
         _listCallbackRegistration.clear();
+        _onBeforeCommitBatch.removeAll();
+        _reloadHolds.removeAll();
 
         // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
         (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
@@ -439,11 +441,9 @@ namespace sw
         if ( _bReloadGraphBroken == SW_TRUE )
             return;
         // 잡혀 있으면 대기 표시(`_bPendingReload`)를 그대로 둔다 — 풀린 첫 갱신에서 리로드된다.
-        for ( const ReloadHoldEntry& hold : _listReloadHold )
-        {
-            if ( hold._delegate.isBound() && hold._delegate() )
-                return;
-        }
+        if ( _reloadHolds.broadcastUntil( []( bool bHold )
+        { return bHold; } ) )
+            return;
 
         vector<string> listPendingRoot;
         BLOCK( "Collect Pending Reloads" )
@@ -496,18 +496,12 @@ namespace sw
 
     Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
     {
-        const uint64 id = _nextCallbackID++;
-        _listBeforeCommitBatch.push_back( { id, std::move( delegate ) } );
-        _listCallbackRegistration.push_back( { id, string{}, CallbackSlot::BeforeCommitBatch } );
-        return issueSubscription( id );
+        return _onBeforeCommitBatch.add( delegate );
     }
 
     Subscription LiveReloadManager::addReloadHold( ReloadHoldDelegate delegate )
     {
-        const uint64 id = _nextCallbackID++;
-        _listReloadHold.push_back( { id, std::move( delegate ) } );
-        _listCallbackRegistration.push_back( { id, string{}, CallbackSlot::ReloadHold } );
-        return issueSubscription( id );
+        return _reloadHolds.add( delegate );
     }
 
     Subscription LiveReloadManager::setDrainWorkers( DrainWorkersDelegate delegate )
@@ -528,7 +522,7 @@ namespace sw
                 break;
             }
         }
-        const uint64 id = _nextCallbackID++;
+        const uint64 id = _callbackIDAllocator.allocate();
         _listCallbackRegistration.push_back( { id, string( moduleName ), slot } );
         return issueSubscription( id );
     }
@@ -548,30 +542,6 @@ namespace sw
 
     void LiveReloadManager::clearSlot( const CallbackRegistration& registration )
     {
-        if ( registration._slot == CallbackSlot::BeforeCommitBatch )
-        {
-            for ( size_t index = 0; index < _listBeforeCommitBatch.size(); ++index )
-            {
-                if ( _listBeforeCommitBatch[index]._id == registration._id )
-                {
-                    _listBeforeCommitBatch.erase( _listBeforeCommitBatch.begin() + static_cast<ptrdiff_t>( index ) );
-                    return;
-                }
-            }
-            return;
-        }
-        if ( registration._slot == CallbackSlot::ReloadHold )
-        {
-            for ( size_t index = 0; index < _listReloadHold.size(); ++index )
-            {
-                if ( _listReloadHold[index]._id == registration._id )
-                {
-                    _listReloadHold.erase( _listReloadHold.begin() + static_cast<ptrdiff_t>( index ) );
-                    return;
-                }
-            }
-            return;
-        }
         if ( registration._slot == CallbackSlot::DrainWorkers )
         {
             _drainWorkers = {};
@@ -604,8 +574,6 @@ namespace sw
                 record._onValidateLibrary = {};
                 break;
             }
-            case CallbackSlot::BeforeCommitBatch:
-            case CallbackSlot::ReloadHold:
             case CallbackSlot::DrainWorkers:
             {
                 break;
@@ -1052,13 +1020,9 @@ namespace sw
         }
 
         // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
-        // 나중에 더한 것(바깥 층)부터 부른다. 콜백이 목록을 바꿔도 이번 차례는 지금 목록대로 돈다.
-        const vector<BeforeCommitBatchEntry> listBeforeCommit = _listBeforeCommitBatch;
-        bool                                 bCommitAccepted  = true;
-        for ( auto it = listBeforeCommit.rbegin(); it != listBeforeCommit.rend() && bCommitAccepted; ++it )
-        {
-            bCommitAccepted = it->_delegate.isBound() == false || it->_delegate( listOrder );
-        }
+        // 나중에 더한 것(바깥 층)부터 부르고 처음 거절에서 멈춘다. 콜백이 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다.
+        const bool bCommitAccepted = _onBeforeCommitBatch.broadcastUntilReverse( []( bool bAccepted )
+        { return bAccepted == false; }, listOrder ) == false;
         if ( bCommitAccepted == false )
         {
             SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
