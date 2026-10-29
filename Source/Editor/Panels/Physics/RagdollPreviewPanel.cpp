@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -18,15 +17,10 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
-#include "Engine/FileSystem/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
@@ -51,14 +45,8 @@ namespace sw::editor
             static constexpr float32 kTableHeight = 120.0f;
             /// @brief 충격 슬라이더의 위쪽 끝(N*s)입니다 — 사람 크기 몸이 눈에 띄게 날아가는 값이다.
             static constexpr float32 kMaxImpulse = 400.0f;
-            /// @brief 충격의 처음 값(N*s)입니다.
-            static constexpr float32 kDefaultImpulse = 120.0f;
-            /// @brief 충격의 방향입니다(월드, 길이 1). 옆으로 밀면서 조금 띄운다.
-            static constexpr float3 kImpulseDirection{ 0.8f, 0.3f, 0.52f };
             /// @brief 물리의 고정 스텝(초)입니다 — 엔진 기본보다 촘촘해 관절 한계가 덜 뚫린다(정책 `_fixedStepOverride`).
             static constexpr float32 kFixedStepSeconds = 1.0f / 120.0f;
-            /// @brief 바닥 바디의 반 크기(미터)입니다. 위 면이 y = 0 이다.
-            static constexpr float3 kFloorHalfExtents{ 3.0f, 0.5f, 3.0f };
             /// @brief 겹침 선 색입니다.
             static constexpr float4 kSkeletonColor{ 0.75f, 0.75f, 0.75f, 1.0f };
             static constexpr float4 kJointColor{ 1.0f, 0.85f, 0.2f, 1.0f };
@@ -135,18 +123,7 @@ namespace sw::editor
 
     RagdollPreviewPanel::RagdollPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
-        , _listBodyRow{}
-        , _bodyPrefabPath{}
-        , _activePrefabPath{}
-        , _spawnedPrefabPath{}
-        , _spawnedAssetPath{}
-        , _status{}
-        , _body{}
-        , _impulse{ RagdollPreviewPanelInternal::kDefaultImpulse }
-        , _selectedBody{ -1 }
-        , _bDrawSkeleton{ true }
-        , _bDrawBodies{ true }
-        , _bDrawJoints{ true }
+        , _model{}
     {
     }
 
@@ -184,27 +161,24 @@ namespace sw::editor
         if ( ImGui::SmallButton( "Reload" ) )
         {
             reloadDocument();
-            _spawnedPrefabPath.clear(); // 다시 읽은 에셋으로 몸을 다시 놓는다
+            _model.requestRespawn(); // 다시 읽은 에셋으로 몸을 다시 놓는다
         }
         EditorSelfTestMarks::note( "ragdoll.reload" );
         EditorWidgets::drawTooltip( "Read the physics asset file again (after saving it elsewhere) and place the body anew" );
 
         ImGui::TextUnformatted( "Body prefab (skeletal mesh on its root)" );
-        (void)EditorWidgets::drawTextField( "##ragdollPreview.body", _bodyPrefabPath, -1.0f );
+        (void)EditorWidgets::drawTextField( "##ragdollPreview.body", _model.editBodyPrefabPath(), -1.0f );
         EditorSelfTestMarks::note( "ragdoll.bodyField" );
         if ( ImGui::Button( "Spawn" ) )
-        {
-            _activePrefabPath = _bodyPrefabPath;
-            _spawnedPrefabPath.clear(); // 다음 그리기가 몸을 다시 놓는다
-        }
+            _model.spawnFromField();
         EditorSelfTestMarks::note( "ragdoll.spawn" );
         EditorWidgets::drawTooltip( "Place the body in the preview scene and hang the physics asset on it as a hitbox ragdoll" );
 
-        syncPreviewBody();
-        RagdollComponent* pRagdoll = findBodyRagdoll();
+        if ( isDocumentLoadFailed() == false ) // 에셋을 읽지 못했으면 몸을 놓지 않는다
+            _model.syncBody( getPreviewScene(), getLoadedAssetPath() );
+        RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
         if ( pRagdoll != nullptr )
         {
-            const int32 impulseBody = _selectedBody >= 0 ? _selectedBody : 0;
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Ragdoll" ) );
             if ( ImGui::Button( "Ragdoll" ) )
                 pRagdoll->startRagdoll( float3{}, -1 );
@@ -212,7 +186,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( "Turn every body dynamic - the body falls and settles by gravity" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Impulse" ) );
             if ( ImGui::Button( "Impulse" ) )
-                pRagdoll->startRagdoll( RagdollPreviewPanelInternal::kImpulseDirection * _impulse, impulseBody );
+                _model.applyImpulse( *pRagdoll );
             EditorSelfTestMarks::note( "ragdoll.impulse" );
             EditorWidgets::drawTooltip( "Go ragdoll and push the picked body (the table row; the first body when none) with the impulse below" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Partial" ) );
@@ -227,11 +201,11 @@ namespace sw::editor
             EditorWidgets::drawTooltip( "End the partial ragdoll and blend back to the animation pose" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset" ) );
             if ( ImGui::Button( "Reset" ) )
-                _spawnedPrefabPath.clear(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
+                _model.requestRespawn(); // 다음 그리기가 몸을 처음 자세로 다시 놓는다
             EditorSelfTestMarks::note( "ragdoll.reset" );
             EditorWidgets::drawTooltip( "Place the body again in its start pose" );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
-            (void)ImGui::SliderFloat( "Impulse (N*s)", &_impulse, 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
+            (void)ImGui::SliderFloat( "Impulse (N*s)", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
             ImGui::Text( "State %s  Built bodies %u  Settled %s", getEnumName( pRagdoll->getState() ), static_cast<uint32>( pRagdoll->getRagdoll()._listBody.size() ),
                          pRagdoll->isSettled() ? "yes" : "no" );
         }
@@ -240,11 +214,11 @@ namespace sw::editor
             ImGui::TextDisabled( "No body yet - enter a prefab path and press Spawn" );
         }
 
-        (void)ImGui::Checkbox( "Skeleton", &_bDrawSkeleton );
+        (void)ImGui::Checkbox( "Skeleton", &_model.editDrawSkeleton() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Bodies" ) );
-        (void)ImGui::Checkbox( "Bodies", &_bDrawBodies );
+        (void)ImGui::Checkbox( "Bodies", &_model.editDrawBodies() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Joints" ) );
-        (void)ImGui::Checkbox( "Joints", &_bDrawJoints );
+        (void)ImGui::Checkbox( "Joints", &_model.editDrawJoints() );
         drawBodyTable( pRagdoll );
 
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
@@ -253,12 +227,13 @@ namespace sw::editor
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         drawOverlay( pRagdoll );
         EditorSelfTestMarks::note( "ragdoll.previewScene" );
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
     void RagdollPreviewPanel::drawBodyTable( const RagdollComponent* pRagdoll )
     {
-        if ( _listBodyRow.empty() )
+        const vector<RagdollPreviewBodyRow>& listBodyRow = _model.getBodyRows();
+        if ( listBodyRow.empty() )
             return;
         const float32 height = RagdollPreviewPanelInternal::kTableHeight * EditorThemeUtil::getDPIScale();
         if ( ImGui::BeginTable( "##ragdollPreview.bodies", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp,
@@ -272,15 +247,15 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Hit zone" );
             ImGui::TableSetupColumn( "Physics" );
             ImGui::TableHeadersRow();
-            for ( size_t rowIndex = 0; rowIndex < _listBodyRow.size(); ++rowIndex )
+            for ( size_t rowIndex = 0; rowIndex < listBodyRow.size(); ++rowIndex )
             {
-                const BodyRow& row = _listBodyRow[rowIndex];
+                const RagdollPreviewBodyRow& row = listBodyRow[rowIndex];
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::PushID( static_cast<int>( rowIndex ) );
-                const bool bSelected = _selectedBody == static_cast<int32>( rowIndex );
+                const bool bSelected = _model.getSelectedBody() == static_cast<int32>( rowIndex );
                 if ( ImGui::Selectable( row._bone.c_str(), bSelected, ImGuiSelectableFlags_SpanAllColumns ) )
-                    _selectedBody = bSelected ? -1 : static_cast<int32>( rowIndex );
+                    _model.toggleSelectedBody( static_cast<int32>( rowIndex ) );
                 ImGui::PopID();
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::TextUnformatted( row._shapes.c_str() );
@@ -324,7 +299,7 @@ namespace sw::editor
         pDrawList->PushClipRect( ImVec2( imagePosition._x, imagePosition._y ), ImVec2( imagePosition._x + imageSize._x, imagePosition._y + imageSize._y ), true );
         EditorProjectedLineRenderer renderer( pDrawList, viewProjection, imagePosition, imageSize );
 
-        if ( _bDrawSkeleton && pUnit != nullptr )
+        if ( _model.editDrawSkeleton() && pUnit != nullptr )
         {
             const vector<float4x4>& listModel  = pUnit->getModelSpaceTransforms();
             const vector<int32>&    listParent = pUnit->getSkeleton().getParentIndices();
@@ -347,14 +322,14 @@ namespace sw::editor
             {
                 if ( pPhysicsScene->isBodyValid( ragdoll._listBody[bodyIndex] ) == false )
                     continue;
-                if ( _bDrawBodies )
+                if ( _model.editDrawBodies() )
                     (void)pPhysicsScene->drawBodyDebug( ragdoll._listBody[bodyIndex], renderer );
 
                 float3     position{};
                 quaternion rotation{};
-                if ( _bDrawJoints == false || pPhysicsScene->getBodyTransform( ragdoll._listBody[bodyIndex], position, rotation ) == false )
+                if ( _model.editDrawJoints() == false || pPhysicsScene->getBodyTransform( ragdoll._listBody[bodyIndex], position, rotation ) == false )
                     continue;
-                const bool   bSelected = _selectedBody == static_cast<int32>( bodyIndex );
+                const bool   bSelected = _model.getSelectedBody() == static_cast<int32>( bodyIndex );
                 const float4 color     = bSelected ? RagdollPreviewPanelInternal::kSelectedColor : RagdollPreviewPanelInternal::kJointColor;
                 const float  radius    = RagdollPreviewPanelInternal::kJointMarkRadius;
                 renderer.drawLine( position - float3{ radius, 0.0f, 0.0f }, position + float3{ radius, 0.0f, 0.0f }, color );
@@ -376,13 +351,13 @@ namespace sw::editor
     {
         if ( getLoadedAssetPath().empty() || isDocumentLoadFailed() )
             return false;
-        outCount = static_cast<uint32>( _listBodyRow.size() );
+        outCount = static_cast<uint32>( _model.getBodyRows().size() );
         return true;
     }
 
     bool RagdollPreviewPanel::findBuiltBodyCount( uint32& outCount ) const
     {
-        const RagdollComponent* pRagdoll = findBodyRagdoll();
+        const RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
         if ( pRagdoll == nullptr || pRagdoll->getRagdoll().isEmpty() )
             return false;
         outCount = static_cast<uint32>( pRagdoll->getRagdoll()._listBody.size() );
@@ -391,7 +366,7 @@ namespace sw::editor
 
     bool RagdollPreviewPanel::findRagdollState( uint32& outState ) const
     {
-        const RagdollComponent* pRagdoll = findBodyRagdoll();
+        const RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
         if ( pRagdoll == nullptr )
             return false;
         outState = static_cast<uint32>( pRagdoll->getState() );
@@ -412,103 +387,12 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-
-        _listBodyRow.clear();
-        _selectedBody = -1;
-        PhysicsAsset asset;
-        if ( asset.loadFromAsset( AssetID{ path } ) == false )
-        {
-            _status = "The physics asset could not be read - see the log";
-            return ToolAssetLoadResult::Malformed;
-        }
-        for ( const PhysicsAssetBodyDef& body : asset._listBody )
-        {
-            BodyRow& row   = _listBodyRow.emplace_back();
-            row._bone      = body._bone.c_str();
-            row._hitZone   = body._hitZone._name.c_str();
-            row._mass      = body._mass;
-            row._jointType = body._joint._type;
-            for ( const PhysicsShapeDesc3D& shape : body._listShape )
-            {
-                if ( row._shapes.empty() == false )
-                    row._shapes += ", ";
-                row._shapes += getEnumName( shape._type );
-            }
-        }
-        _status = "Loaded";
-        return ToolAssetLoadResult::Loaded;
+        return _model.loadAsset( path );
     }
 
     void RagdollPreviewPanel::populatePreviewScene( Scene& scene )
     {
-        GameObjectManager*  pManager = scene.getObjectManager();
-        GameObject*         pFloor   = pManager != nullptr ? pManager->createGameObject( hashed_string( "PreviewFloorBody" ) ) : nullptr;
-        RigidBodyComponent* pBody    = pFloor != nullptr ? pFloor->addComponent<RigidBodyComponent>() : nullptr;
-        if ( pBody != nullptr )
-        {
-            // 보이는 바닥(환경)과 같은 높이의 정적 바디다 — 몸이 그 위에 쓰러진다.
-            PhysicsShapeDesc3D floorBox;
-            floorBox._halfExtents   = RagdollPreviewPanelInternal::kFloorHalfExtents;
-            floorBox._localPosition = float3{ 0.0f, -RagdollPreviewPanelInternal::kFloorHalfExtents._y, 0.0f };
-            pBody->setShape( floorBox );
-            pBody->setBodyType( PhysicsBodyType::Static );
-            pBody->setLayer( hashed_string( "Static" ) );
-            pBody->setMaterial( hashed_string( "Stone" ) );
-        }
+        _model.populateScene( scene );
         getPreviewViewport().frameSphere( float3{ 0.0f, RagdollPreviewPanelInternal::kFrameCenterHeight, 0.0f }, RagdollPreviewPanelInternal::kFrameRadius );
-        _spawnedPrefabPath.clear(); // 새 씬에는 몸이 없다
-        _body = GameObjectHandle{};
-    }
-
-    RagdollComponent* RagdollPreviewPanel::findBodyRagdoll() const
-    {
-        Scene*             pScene   = getPreviewScene();
-        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-        GameObject*        pBody    = pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
-        return pBody != nullptr ? pBody->getComponent<RagdollComponent>() : nullptr;
-    }
-
-    void RagdollPreviewPanel::syncPreviewBody()
-    {
-        const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
-        Scene*     pScene         = getPreviewScene();
-        if ( bDocumentReady == false || pScene == nullptr || _activePrefabPath.empty() )
-            return;
-        GameObjectManager* pManager = pScene->getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        if ( _spawnedPrefabPath == _activePrefabPath && _spawnedAssetPath == getLoadedAssetPath() )
-            return;
-
-        GameObject* pOld = pManager->resolveGameObject( _body );
-        if ( pOld != nullptr )
-            pManager->destroyObject( pOld );
-        _body                  = GameObjectHandle{};
-        _spawnedPrefabPath     = _activePrefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치고 Spawn 을 다시 누른다)
-        _spawnedAssetPath      = getLoadedAssetPath();
-        AssetManager* pAssets  = pManager->findAssetManager();
-        GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activePrefabPath ) : nullptr;
-        if ( pSpawned == nullptr )
-        {
-            _status = string( "Prefab '" ) + _activePrefabPath + "' could not be spawned - see the log";
-            return;
-        }
-        _body = pSpawned->getHandle();
-        if ( pSpawned->getComponent<SkeletalMeshComponent>() == nullptr )
-        {
-            _status = string( "Prefab '" ) + _activePrefabPath + "' has no skeletal mesh on its root - the ragdoll cannot stand";
-            return;
-        }
-        RagdollComponent* pRagdoll = pSpawned->getComponent<RagdollComponent>();
-        if ( pRagdoll == nullptr )
-            pRagdoll = pSpawned->addComponent<RagdollComponent>();
-        if ( pRagdoll == nullptr )
-        {
-            _status = "The ragdoll could not be added to the body - see the log";
-            return;
-        }
-        pRagdoll->setPhysicsAssetPath( getLoadedAssetPath() ); // 미리보는 것은 열린 에셋이다(프리팹이 건 경로가 아니라)
-        _status = "Body placed - bodies stand once the scene ticks (a mismatch between the asset's bones and the skeleton is logged)";
-        SW_LOG_INFO( "Ragdoll Preview hangs '%#' on '%#'", getLoadedAssetPath(), _activePrefabPath );
     }
 } // namespace sw::editor
