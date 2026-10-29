@@ -45,6 +45,8 @@ namespace sw
         void pause();
         FUNCTION( Category = "Playback", DisplayName = "Resume", CallInEditor )
         void resume();
+        /** @brief 시퀀스를 재생 중이면 true 입니다(시나리오의 `WaitSequence` 가 끝을 기다린다). */
+        bool isPlaying() const { return _player.isPlaying(); }
 
         /** @brief 재생할 시퀀스를 바꿉니다(코드로 만든 시퀀스). 재생 위치는 그 시퀀스의 처음입니다. */
         void setSequence( const SequenceAsset& asset );

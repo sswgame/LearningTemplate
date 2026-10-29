@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  씬 단계 — 시나리오가 다른 씬을 열고(LoadScene) 그 씬이 서기를 기다린 뒤 다음 단계로 간다. 데모 · 어트랙트 · 튜토리얼 재생(scenario.play)이 쓰는 단계라 테스트로 지킨다.
+  첫 씬(rendertest3d)에서 시작해 fogshowcase 로 바꾸고, 바뀐 씬이 서고(전환 끝 · 에셋 로드 끝 · 오브젝트 있음) 화면이 그 씬인지 골든으로 본다.
+  실행: ctest -R Scenario.game.empty.loadscene
+-->
+<Scenario name="game.empty.loadscene" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Wait frames="2"/>
+	<LoadScene path="game/empty/maps/fogshowcase.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="loaded.ppm"/>
+	<Wait frames="1"/>
+	<ExpectImage file="loaded.ppm" golden="loaded" region="0,0,1,1"/>
+	<Pass/>
+</Scenario>
