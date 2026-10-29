@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class ShaderLoadBlock
-     * @brief 셰이더 바이트코드 하나(로컬 캐시 · 쿠킹본 · 실시간 컴파일)를 얻는 로드의 공유 상태입니다. 로드 단계가 `ShaderCache` 의 세 순위를 그대로 탑니다.
+     * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 로컬 캐시 · 실시간 컴파일(`ShaderCache::loadOrCompile`).
      * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
      */
     class SW_API ShaderLoadBlock final : public AssetLoadBlock
@@ -112,7 +112,7 @@ namespace sw
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
-         * @brief 이 컴파일 요청이 읽을 쿠킹된 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>`).
+         * @brief 이 컴파일 요청이 팩에서 읽을 쿠킹된 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>` — 쿠킹본 정책만 읽는다).
          * @details 파일 이름은 `ShaderCooker::computeBinaryFileName` 그대로입니다(스템, 스테이지, 진입점, **퍼뮤테이션 해시**).
          *          주의: 해시를 빼면 쿠커는 퍼뮤테이션마다 다른 파일을 쿠킹해 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
          *          어떤 define 도 GPU 에 닿지 않습니다. 리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로
@@ -138,7 +138,7 @@ namespace sw
          */
         static bool storeLocalCache( const ShaderCompileDesc& liveDesc, const ShaderCompileResult& result );
         /**
-         * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. Debug 는 디버그 코드젠(RenderDoc 에서 한 줄씩 볼 수 있게), 그 밖은 요청 그대로입니다.
+         * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. `gv_shaderDebugCodegen` 이 켜졌으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
          * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
          *          둘이 따로 정하면 Debug 의 한 폴더에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          쿠킹된 바이너리는 이 규칙을 타지 않습니다(쿠커는 늘 최적화 코드젠).
@@ -152,7 +152,7 @@ namespace sw
         static string makeCacheKey( const ShaderCompileDesc& desc );
         /** @brief `request` 와 `getOrCompile` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(`AssetLoadStart`). */
         ShaderHandle requestWith( const ShaderCompileDesc& desc, AssetLoadStart start );
-        /** @brief 로드 단계 본문입니다 — 인메모리 캐시, 로컬 캐시, 쿠킹본, 실시간 컴파일 순으로 찾습니다(이 스레드). */
+        /** @brief 로드 단계 본문입니다 — 인메모리 캐시 다음, 쿠킹본 정책은 팩의 쿠킹본만, 소스 정책은 로컬 캐시 · 실시간 컴파일 순으로 찾습니다(이 스레드). */
         ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey );
         /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시, 쿠킹된 바이너리, 라이브 컴파일 세 경우가 같은 항목을 만듭니다. @p absSourcePath 가 비면 지문이 0 이라 다시 맞지 않는다. */
         void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, const string& absSourcePath );

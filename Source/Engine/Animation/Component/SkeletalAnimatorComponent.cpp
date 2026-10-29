@@ -22,10 +22,11 @@ namespace sw
     SW_LOG_CALLER( "SkeletalAnimator" );
 
     /**
-     * @brief `-gv_syncAssetArrival=1`: 시작 때 비동기로 읽는 에셋(애니메이터의 클립)을 그 자리에서 기다립니다 — 결정적 실행. 시나리오 세션이 `gv_fixedFrameDelta` 와 함께 켠다.
-     * @details 끄면(평소) 스폰이 디스크를 기다리지 않고, 첫 포즈가 나오는 프레임이 디스크 지연에 따라 달라진다.
+     * @brief `-gv_animationWaitForClips=1`: 시작 때 비동기로 읽는 클립을 `onBeginPlay` 에서 그 자리에서 기다립니다(첫 프레임부터 포즈가 있다).
+     * @details 끄면(기본) 스폰이 디스크를 기다리지 않고, 첫 포즈가 나오는 프레임이 디스크 지연에 따라 달라진다 — 그 포즈를 물리(래그돌)가 이어 받으면 이력이 갈린다.
+     *          시나리오 세션이 켠다(언리얼 자동화의 FlushAsyncLoading).
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_syncAssetArrival, false, "시작 때 비동기로 읽는 에셋을 그 자리에서 기다린다(결정적 실행 — 시나리오가 켠다)" );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_animationWaitForClips, false, "시작 때 비동기로 읽는 애니메이션 클립을 그 자리에서 기다린다(첫 프레임부터 포즈)" );
 
     SkeletalAnimatorBinding::SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner )
         : _owner{ owner }
@@ -264,8 +265,8 @@ namespace sw
             loadGraphForBeginPlay();
         else
             loadGraph();
-        // 결정적 실행(시나리오)은 첫 포즈를 디스크 지연에 맡기지 않는다 — 첫 프레임에 포즈가 있느냐가 래그돌 · 물리의 이력을 가른다(언리얼 자동화의 FlushAsyncLoading).
-        if ( _bClipsPending == SW_TRUE && gv_syncAssetArrival )
+        // 첫 포즈를 디스크 지연에 맡기지 않는다(`gv_animationWaitForClips`) — 첫 프레임에 포즈가 있느냐가 래그돌 · 물리의 이력을 가른다.
+        if ( _bClipsPending == SW_TRUE && gv_animationWaitForClips )
         {
             _bStartPending = _bPlayOnBegin;
             waitForAnimationAssets();

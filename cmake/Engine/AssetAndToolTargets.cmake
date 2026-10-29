@@ -34,10 +34,8 @@ endif()
 # 쿠킹은 엔진 한 곳이다(`App --cook-all`: 씬 · 프리팹 · 레지스트리 · VAT · 내비메시를 스테이징하고 팩을 굽는다 — `PackCooker`).
 # 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는
 # 쿠킹하는 호스트가 정한다(Server 가 구우면 서버 팩이다). 팩 설정은 Config/Engine/PackConfig.json 이다.
+# 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
 set(swCookArgs --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${swPackOutputDir}")
-if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
-	list(APPEND swCookArgs --verify-shaders)
-endif()
 # Shipping 은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 쓰지 않는 게임 팩에 쿠킹 시간을 들이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
 if(SW_SHIPPING_BUILD)

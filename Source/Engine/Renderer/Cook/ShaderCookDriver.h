@@ -45,12 +45,14 @@ namespace sw
         /**
          * @brief 렌더 파이프라인 에셋(pipeline XML)과 엔진 기동 데이터(enginedefaultassets.xml)를 바탕으로
          *        게임 런타임에 실제로 필요한 셰이더와 퍼뮤테이션만 네 RHI 바이너리로 한꺼번에 쿠킹합니다.
+         * @param cookedDir 쿠킹 출력의 루트(`--cooked-dir`). 바이너리는 `<여기>/<domain>/shaders/bin/<rhi>` 에 쓴다 — 씬 · 프리팹 쿠킹본과 같은 스테이징이고, 팩 쿠커가 거기서 담는다
          * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 AssetPaths 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)
          * @param bForceAll true 면 내용 해시와 상관없이 모두 다시 컴파일
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
-        static ShaderCookSummary cookAllShaders( string_view        resourceRoot = {},
+        static ShaderCookSummary cookAllShaders( string_view        cookedDir,
+                                                 string_view        resourceRoot = {},
                                                  ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
                                                  bool               bForceAll    = false );
 
@@ -58,6 +60,7 @@ namespace sw
          * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지우고, 쿠킹 스탬프를 씁니다(`cookAllShaders` 의 본체).
          * @param resourceRoot 다른 include 루트 도메인의 헤더를 찾는 리소스 루트(스탬프 쓰기 · 최신 판정)
          * @param listPriority 도메인 발견의 기준인 우선순위 설정(`AssetPaths::getSearchPriority()`). 테스트는 임시 트리와 자기 우선순위를 넘긴다
+         * @param cookedDir 쿠킹 출력의 루트(`cookAllShaders` 와 같다). 비면 실패다
          * @details **소스가 없거나 `shaders` 폴더 밖인 요청도 실패로 셉니다.** 조용히 건너뛰면 요청이 어긋난 채 종료 코드 0 으로 끝난다.
          *          요청이 만들지 않는 바이너리는 지웁니다 — 요청 규칙이 바뀌면(퍼뮤테이션 해시 · 셰이더 삭제) 옛 파일이 매니페스트 밖에 남아 `--verify-shaders` 를 지게 한다.
          *          요청 × 포맷의 컴파일 · 리플렉션은 엔진의 병렬 for(`engine::runParallel`)로 나눠 돌린다. 산출물(바이너리 · 매니페스트 · 스탬프)은 직렬로 돌 때와 바이트 단위로 같다 —
@@ -67,6 +70,7 @@ namespace sw
          */
         static ShaderCookSummary cookRequests( string_view                      resourceRoot,
                                                const vector<string>&            listPriority,
+                                               string_view                      cookedDir,
                                                const vector<ShaderCookRequest>& listRequest,
                                                ShaderTargetFormat               targetFormat = ShaderTargetFormat::Count,
                                                bool                             bForceAll    = false );

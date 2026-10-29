@@ -304,28 +304,11 @@ namespace sw
         const string key             = ShaderCooker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
                                                                             desc._entryPoint, permutationHash, ext );
 
-        // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다**(소스를 읽는 실행만 — 쿠킹본 정책은 매니페스트가 곧 정본이다). ShaderCache 의 쿠킹 바이너리와 같은 규칙이다.
-        // 둘이 어긋나면 증상이 아주 멀리서 난다:
-        // 바이너리는 새로 컴파일돼 b1(MaterialCB)을 참조하는데 레이아웃은 낡은 매니페스트라 그 슬롯이
-        // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 비어 있는 루트 디스크립터를 읽고 GPU 페이지
-        // 폴트(DEVICE_HUNG)로 죽는다. 셰이더 한 줄 고쳤을 뿐인데 죽는 곳은 드로우라 추적이 오래 걸린다.
+        // 매니페스트는 쿠킹본이다 — 쿠킹본 정책(배포 · `-cooked-content`)만 팩에서 읽는다. 소스 정책(개발 실행)은 바이트코드를 실행 중에 얻으므로
+        // 리플렉션도 그 바이트코드에서 실행 중에 만든다(false — 호출자가 리플렉션한다). 쿠킹본과 실행 중 바이트코드를 섞으면 레이아웃과 바이트코드가 어긋난다
+        // (바인더가 슬롯을 빼먹어 DX12 가 빈 루트 디스크립터를 읽고 DEVICE_HUNG 으로 죽은 적이 있다).
         if ( AssetIO::getContentSource() == ContentSource::Source )
-        {
-            const string sourceAbs   = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
-            const string manifestAbs = AssetPaths::findLooseFile( binDirRel + getManifestFileName() ).getDiskPath();
-            if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
-            {
-                // 판정 기준은 ShaderCache 와 **같은 것 하나**, cook.stamp 의 내용 해시다. 파일 시간으로
-                // 보면 안 되는 이유는 ShaderCookStamp.cpp 머리 주석에 있다.
-                const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
-                if ( ShaderCooker::isCookedOutputCurrent( binDirAbs, sourceAbs ) == false )
-                {
-                    SW_LOG_TRACE( "The reflection manifest was not produced from the current source - falling back to runtime reflection: %#",
-                                  string( desc._filePath ).c_str() );
-                    return false;
-                }
-            }
-        }
+            return false;
 
         ManifestState* const pState = s_manifestState.getOrCreate();
         // nullptr 은 엔진 수명 범위가 닫힌 뒤의 접근이다(Debug 는 `getOrCreate` 가 단언한다). 매니페스트를 들 곳이 없으니 찾지 못한 것으로 답한다.

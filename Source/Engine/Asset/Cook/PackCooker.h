@@ -59,11 +59,16 @@ namespace sw
         static string makePackFileName( string_view domain );
 
         /**
-         * @brief 도메인 기준 경로 @p relativePath 를 팩에 담을지 판정합니다(스테이징 산출물은 이 판정을 거치지 않는다).
+         * @brief 도메인 기준 경로 @p relativePath 를 팩에 담을지 판정합니다(스테이징 산출물은 `shouldIncludeStagedFile` 이 본다).
          * @param shaderFolder 담을 셰이더 바이너리 폴더 — 다른 백엔드의 `shaders/bin/<폴더>` 는 뺀다
          * @param buildTarget 빌드 타깃 — 그 타깃이 빼는 에셋 종류는 뺀다(빈 값이면 빼지 않는다)
          */
         static bool shouldIncludeFile( string_view relativePath, const PackConfig& config, string_view shaderFolder, string_view buildTarget );
+        /**
+         * @brief 스테이징 산출물(도메인 기준 @p relativePath)을 팩에 담을지 판정합니다 — 빌드 타깃이 빼는 종류와 다른 백엔드의 셰이더 바이너리만 뺀다.
+         * @details 셰이더 쿠킹본도 스테이징에 있다(`<쿠킹 폴더>/<도메인>/shaders/bin/<백엔드>`, 쿠커는 모든 백엔드를 굽는다).
+         */
+        static bool shouldIncludeStagedFile( string_view relativePath, string_view shaderFolder, string_view buildTarget );
 
         /**
          * @brief 모든 도메인의 팩을 베이크합니다.

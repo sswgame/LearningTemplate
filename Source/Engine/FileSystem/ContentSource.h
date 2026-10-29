@@ -5,7 +5,7 @@
  *          돌려 볼 수 있었고, 개발 구성의 씬은 옆에 남은 쿠킹본을 소스와 맞는지 보지 않고 읽었다. 이제 빌드 스위치는 기본값 한 곳(`kBuildContentSource`)이고,
  *          개발 구성도 `-cooked-content` 로 배포와 같은 경로를 돈다. 둘을 섞는 값("쿠킹본이 있으면 쿠킹본, 없으면 소스")은 두지 않는다 — 쿠킹본이 소스와 어긋나도
  *          모르고 읽는다(언리얼도 쿠킹 안 한 실행은 소스만, 쿠킹한 실행은 쿠킹본만 읽는다 — `FPlatformProperties::RequiresCookedData`).
- *          셰이더 쿠킹본을 소스 실행이 쓰는 것은 섞기가 아니다 — 소스 내용 해시로 맞는지 보고 쓰는 캐시다(`ShaderCooker::isCookedOutputCurrent`, 언리얼 DDC).
+ *          셰이더도 같다 — 소스 실행은 쓰일 때 컴파일하고 이 기계의 캐시(`Bin/Saved`, 언리얼 DDC)에 남긴다. 쿠킹본(스테이징 · 팩)은 읽지 않는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

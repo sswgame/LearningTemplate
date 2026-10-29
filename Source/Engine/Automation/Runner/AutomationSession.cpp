@@ -208,9 +208,9 @@ namespace sw
                 if ( variable._name == kStartSceneVariable )
                     startScene = variable._value;
             }
-            // 결정적 실행 — 비동기 도착을 기다린다(`gv_syncAssetArrival`). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다).
-            if ( globalVariables.setValueFromString( "gv_syncAssetArrival", "1" ) == false )
-                SW_LOG_WARNING( "[Scenario] this host has no gv_syncAssetArrival - streamed assets arrive on the disk's schedule" );
+            // 결정적 실행 — 애니메이터가 시작 클립을 기다린다(첫 포즈가 디스크 지연에 달리지 않게). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다).
+            if ( globalVariables.setValueFromString( "gv_animationWaitForClips", "1" ) == false )
+                SW_LOG_WARNING( "[Scenario] this host has no gv_animationWaitForClips - the first poses depend on disk timing" );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
             // 그래서 단계는 첫 단계와 같은 길로 선다(첫 씬을 선언하지 않은 단계도 체인에 든다). 재시작할 호스트가 없으면 앞 단계의 상태로 돌지 않고 멈춘다.
             if ( bLaterStage )

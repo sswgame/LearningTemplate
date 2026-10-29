@@ -68,6 +68,9 @@ namespace sw
             }
 
             /** @brief 폴더 성분 가운데 @p name 이 있으면 true 입니다(대소문자 무시). */
+            /** @brief @p normalized 가 @p shaderFolder 가 아닌 백엔드의 셰이더 바이너리(`shaders/bin/<다른 폴더>`)면 true 입니다 — 이 팩의 런타임이 읽지 않는다. */
+            static bool isOtherBackendShaderBinary( string_view normalized, const vector<string_view>& listDirectory, string_view shaderFolder );
+
             static bool containsDirectory( const vector<string_view>& listDirectory, string_view name )
             {
                 for ( const string_view directory : listDirectory )
@@ -230,6 +233,8 @@ namespace sw
                     if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath, true ) == false )
                         continue;
                     bHasRegistry = bHasRegistry || StringUtil::equals( relativePath, kAssetRegistryFileName, true );
+                    if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
+                        continue;
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
                         return CookStep::Failed;
                 }
@@ -299,17 +304,30 @@ namespace sw
         if ( config._bExcludeRawShaderSource && bRawShaderSource )
             return false;
 
-        // 다른 백엔드의 셰이더 바이너리는 이 팩의 런타임이 읽지 않는다.
-        if ( StringUtil::contains( normalized, "shaders/bin", true ) )
+        return PackCookerInternal::isOtherBackendShaderBinary( normalized, listDirectory, shaderFolder ) == false;
+    }
+
+    bool PackCooker::shouldIncludeStagedFile( string_view relativePath, string_view shaderFolder, string_view buildTarget )
+    {
+        if ( AssetPaths::isExcludedForTarget( buildTarget, relativePath ) )
+            return false;
+        const string        normalized = FileUtil::normalizePath( relativePath );
+        vector<string_view> listDirectory;
+        string_view         fileName;
+        PackCookerInternal::splitPath( normalized, listDirectory, fileName );
+        return PackCookerInternal::isOtherBackendShaderBinary( normalized, listDirectory, shaderFolder ) == false;
+    }
+
+    bool PackCookerInternal::isOtherBackendShaderBinary( string_view normalized, const vector<string_view>& listDirectory, string_view shaderFolder )
+    {
+        if ( StringUtil::contains( normalized, "shaders/bin", true ) == false )
+            return false;
+        for ( const utf8* pShaderFolder : kArrShaderFolder )
         {
-            for ( const utf8* pShaderFolder : PackCookerInternal::kArrShaderFolder )
-            {
-                const bool bOtherBackend = StringUtil::equals( pShaderFolder, shaderFolder, true ) == false && PackCookerInternal::containsDirectory( listDirectory, pShaderFolder );
-                if ( bOtherBackend )
-                    return false;
-            }
+            if ( StringUtil::equals( pShaderFolder, shaderFolder, true ) == false && containsDirectory( listDirectory, pShaderFolder ) )
+                return true;
         }
-        return true;
+        return false;
     }
 
     bool PackCooker::cookAllPacks( const PackConfig& config, const PackCookParams& params, const CookStore& store, uint32& outPackCount )

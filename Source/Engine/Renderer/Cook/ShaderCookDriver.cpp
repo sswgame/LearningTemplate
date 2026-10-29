@@ -49,6 +49,10 @@ namespace sw
                 /** @brief 다른 include 루트 도메인의 헤더를 찾는 리소스 루트와 우선순위입니다. 전역(`AssetPaths`)이 아니라 이 쿠킹이 받은 것을 스탬프 쓰기 · 최신 판정에 같이 쓴다. */
                 string         _resourceRoot;
                 vector<string> _listPriority;
+                /** @brief 쿠킹 출력의 루트(`--cooked-dir`)입니다. 바이너리는 `<여기>/<domain>/shaders/bin/<rhi>` 에 쓴다 — 씬 · 프리팹 쿠킹본과 같은 스테이징이다. */
+                string _cookedDir;
+                /** @brief 출력 폴더(`.../bin/<rhi>`)마다 그 바이너리의 소스 폴더(`<리소스 루트>/<domain>/shaders`)입니다. 스탬프 키가 소스 폴더 기준이다(계획 단계가 채운다). */
+                unordered_map<string, string> _mapSourceShadersDirByOutDir;
                 /** @brief 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다. 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다. */
                 unordered_map<string, unordered_set<string>> _mapFailedSourceByDir;
                 /**
@@ -126,10 +130,8 @@ namespace sw
                     const ShaderCookRequest& request = *task._pRequest;
                     const Stopwatch          compileWatch;
 
-                    // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 쿠킹된 바이너리까지 커밋하므로
-                    // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
-                    // "산출물이 더 새것"이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내
-                    // 백엔드 버그처럼 보인다.
+                    // **파일 시간이 아니라 내용 해시로 판정한다.** `git pull` 은 소스의 mtime 을 체크아웃 시각으로 덮어써
+                    // "산출물이 더 새것" 이 거꾸로 나올 수 있다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내 백엔드 버그처럼 보인다.
                     const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) &&
                                            ShaderCooker::isCookedOutputCurrent( _pState->_resourceRoot, _pState->_listPriority, task._outDir, task._normPath, &outResult._listIncludedFile );
                     if ( bUpToDate == false )
@@ -187,25 +189,34 @@ namespace sw
                     return;
                 }
                 const string normPath  = FileUtil::normalizeSeparators( absPath );
-                const size_t shaderPos = normPath.find( "/shaders/" );
-                if ( shaderPos == string::npos )
+                const string shaderDir = ShaderCooker::findShadersDirectory( normPath );
+                if ( shaderDir.empty() )
                 {
                     ++ioState._summary._failedCount;
                     SW_LOG_ERROR( "Shader cook request's source is not inside a 'shaders' folder: '%#' (%#)", normPath, request._entryPoint );
                     return;
                 }
-                const string shaderDir = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
+                // 출력은 쿠킹 스테이징의 같은 상대 자리다(`<도메인>/shaders` → `<쿠킹 폴더>/<도메인>/shaders/bin/<rhi>`). 리소스 루트 밖의 소스는 둘 자리가 없다.
+                string relativeShaderDir;
+                if ( FileUtil::tryMakePathUnderRoot( ioState._resourceRoot, shaderDir, relativeShaderDir, true ) == false )
+                {
+                    ++ioState._summary._failedCount;
+                    SW_LOG_ERROR( "Shader cook request's source is not under the content root '%#': '%#' (%#)", ioState._resourceRoot, normPath, request._entryPoint );
+                    return;
+                }
+                const string binRoot   = FileUtil::joinPath( FileUtil::joinPath( ioState._cookedDir, relativeShaderDir ), "bin" );
                 const string stemLower = ShaderCooker::getStemLower( normPath );
                 for ( ShaderTargetFormat fmt : listTargetFormat )
                 {
                     FormatTask task;
-                    task._pRequest = &request;
-                    task._absPath  = absPath;
-                    task._normPath = normPath;
-                    task._format   = fmt;
-                    task._outDir   = FileUtil::joinPath( FileUtil::joinPath( shaderDir, "bin" ), ShaderCooker::getSubfolderForFormat( fmt ) );
-                    task._fileName = ShaderCooker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash, ShaderCooker::getExtensionForFormat( fmt ) );
-                    task._outPath  = FileUtil::joinPath( task._outDir, task._fileName );
+                    task._pRequest                                     = &request;
+                    task._absPath                                      = absPath;
+                    task._normPath                                     = normPath;
+                    task._format                                       = fmt;
+                    task._outDir                                       = FileUtil::normalizeSeparators( FileUtil::joinPath( binRoot, ShaderCooker::getSubfolderForFormat( fmt ) ) );
+                    task._fileName                                     = ShaderCooker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash, ShaderCooker::getExtensionForFormat( fmt ) );
+                    task._outPath                                      = FileUtil::joinPath( task._outDir, task._fileName );
+                    ioState._mapSourceShadersDirByOutDir[task._outDir] = shaderDir;
                     outListTask.push_back( std::move( task ) );
                 }
             }
@@ -341,7 +352,9 @@ namespace sw
                             mapIncludedFile[sourcePath].assign( uniqueHeader.begin(), uniqueHeader.end() );
                         }
                     }
-                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, manifestPair.first, ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile ) == false )
+                    const string& sourceShadersDir = ioState._mapSourceShadersDirByOutDir[manifestPair.first];
+                    if ( ShaderCooker::writeCookStamp( ioState._resourceRoot, ioState._listPriority, sourceShadersDir, manifestPair.first,
+                                                       ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile ) == false )
                     {
                         SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;
@@ -352,7 +365,8 @@ namespace sw
         };
     } // namespace
 
-    ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        resourceRoot,
+    ShaderCookSummary ShaderCookDriver::cookAllShaders( string_view        cookedDir,
+                                                        string_view        resourceRoot,
                                                         ShaderTargetFormat targetFormat,
                                                         bool               bForceAll )
     {
@@ -385,11 +399,12 @@ namespace sw
             nothingCooked._failedCount = 1; // 아무것도 쿠킹하지 않은 채 성공으로 끝나지 않는다
             return nothingCooked;
         }
-        return cookRequests( rootDir, AssetPaths::getSearchPriority(), listRequest, targetFormat, bForceAll );
+        return cookRequests( rootDir, AssetPaths::getSearchPriority(), cookedDir, listRequest, targetFormat, bForceAll );
     }
 
     ShaderCookSummary ShaderCookDriver::cookRequests( string_view                      resourceRoot,
                                                       const vector<string>&            listPriority,
+                                                      string_view                      cookedDir,
                                                       const vector<ShaderCookRequest>& listRequest,
                                                       ShaderTargetFormat               targetFormat,
                                                       bool                             bForceAll )
@@ -398,8 +413,15 @@ namespace sw
         const Stopwatch                  totalWatch;
         const vector<ShaderTargetFormat> listTargetFormat = Internal::makeTargetFormatList( targetFormat );
         Internal::CookState              state;
-        state._resourceRoot = string( resourceRoot );
+        if ( cookedDir.empty() )
+        {
+            SW_LOG_ERROR( "Shader cook needs -cooked-dir=<folder> (the staging folder of cooked shaders, scenes and prefabs)" );
+            state._summary._failedCount = 1; // 쿠킹하지 못했다. 실패로 센다(`App --cook-shaders` 가 실패로 끝난다)
+            return state._summary;
+        }
+        state._resourceRoot = FileUtil::normalizeSeparators( resourceRoot );
         state._listPriority = listPriority;
+        state._cookedDir    = FileUtil::normalizeSeparators( cookedDir );
 
         vector<Internal::FormatTask> listTask;
         for ( const ShaderCookRequest& request : listRequest )

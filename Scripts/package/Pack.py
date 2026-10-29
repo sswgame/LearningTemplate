@@ -159,8 +159,6 @@ def runCook(request: PackageRequest, projectRoot: Path, binDir: Path) -> None:
     if executable.is_file() is False:
         raise PackageError(f"{executable} is missing - build the {request.target} target before cooking")
     listCommand = [str(executable), "--cook-all", f"--cooked-dir={binDir.parent / 'Cooked'}", f"--pack-dir={binDir / kPackFolderName}", f"--game={request.game}"]
-    if request.target == "Client":
-        listCommand.append("--verify-shaders")
     if request.rhi:
         listCommand.append(f"--{findBackendSwitchInternal(request.rhi)}")
     if runProcess(listCommand, cwd=projectRoot, bCapture=False).returnCode != 0:

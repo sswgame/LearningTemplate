@@ -380,17 +380,16 @@ namespace sw
              *          형식은 한 줄에 `<FNV-1a 64 16자리 hex> <shaders/ 기준 상대 경로>` 이고, 소스가 연 헤더마다 `<해시> <소스 경로>?<헤더 키>` 줄이 더 있다(`makeHeaderKey`).
              *          해시는 CR 을 뺀 바이트로 계산한다(`ContentHash::computeFile`). 판정 쪽과 같은 함수다.
              * @param resourceRoot 다른 include 루트 도메인을 찾을 리소스 루트
-             * @param binDirectory 매니페스트를 쓴 폴더(`<domain>/shaders/bin/<rhi>`)
+             * @param sourceShadersDir 소스 폴더(`<리소스 루트>/<domain>/shaders`) — 스탬프 키가 이 폴더 기준이다
+             * @param binDirectory 매니페스트를 쓴 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)
              * @param mapIncludedFile 소스(정규화한 절대 경로)별 연 헤더(절대 경로). 여기 없는 소스는 헤더에 기대지 않는 것으로 적는다.
              */
-            [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource,
-                                                      const unordered_map<string, vector<string>>& mapIncludedFile )
+            [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
+                                                      const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile )
             {
-                // <domain>/shaders/bin/<rhi> → <domain>/shaders
                 const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
-                const string parentDir  = FileUtil::getDirectoryPart( rhiDir );
-                const string shadersDir = FileUtil::getDirectoryPart( parentDir );
-                if ( shadersDir.empty() )
+                const string shadersDir = FileUtil::normalizeSeparators( sourceShadersDir );
+                if ( shadersDir.empty() || rhiDir.empty() )
                     return false;
 
                 vector<string> listIncludeRoot;
@@ -592,7 +591,8 @@ namespace sw
             }
 
             /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCooker::verifyCookedShaders` 의 본체). */
-            static void verifyDomain( string_view resourceRoot, const vector<string>& listPriority, const string& domain, string_view shaderFolder, vector<string>& outListProblem )
+            static void verifyDomain( string_view resourceRoot, const vector<string>& listPriority, string_view cookedDir, const string& domain, string_view shaderFolder,
+                                      vector<string>& outListProblem )
             {
                 const string shadersDir = FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::joinPath( resourceRoot, domain ), "shaders" ) );
                 if ( FileUtil::isDirectory( shadersDir ) == false )
@@ -613,8 +613,9 @@ namespace sw
                 if ( listSource.empty() )
                     return;
 
-                const string label  = domain + "/shaders";
-                const string binDir = FileUtil::joinPath( FileUtil::joinPath( shadersDir, "bin" ), shaderFolder );
+                const string label = domain + "/shaders";
+                // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징에 있다(`<쿠킹 폴더>/<domain>/shaders/bin/<폴더>` — 씬 · 프리팹 쿠킹본과 같은 자리).
+                const string binDir = FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( cookedDir, domain ), "shaders" ), "bin" ), shaderFolder );
                 if ( FileUtil::isDirectory( binDir ) == false )
                 {
                     appendProblem( outListProblem, "%#: no '%#' binary folder (never cooked)", label, shaderFolder );
@@ -702,10 +703,17 @@ namespace sw
         return true; // 어느 도메인에도 속하지 않는 소스(임시 폴더)는 가릴 헤더가 없다
     }
 
-    bool ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, const unordered_set<string>* pFailedSource,
-                                       const unordered_map<string, vector<string>>& mapIncludedFile )
+    bool ShaderCooker::writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
+                                       const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile )
     {
-        return ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, binDirectory, pFailedSource, mapIncludedFile );
+        return ShaderCookStampInternal::writeCookStamp( resourceRoot, listPriority, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile );
+    }
+
+    string ShaderCooker::findShadersDirectory( string_view absShaderPath )
+    {
+        const string normPath  = FileUtil::normalizeSeparators( absShaderPath );
+        const size_t shaderPos = normPath.find( "/shaders/" );
+        return shaderPos == string::npos ? string{} : normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 );
     }
 
     bool ShaderCooker::removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount )
@@ -823,20 +831,15 @@ namespace sw
         return ShaderCookStampInternal::computeToolchainFingerprint();
     }
 
-    bool ShaderCooker::isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath, vector<string>* pOutListIncludedFile )
-    {
-        return isCookedOutputCurrent( AssetPaths::getRootFolderPath(), AssetPaths::getSearchPriority(), binDirectory, absShaderPath, pOutListIncludedFile );
-    }
-
     bool ShaderCooker::isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath, vector<string>* pOutListIncludedFile )
     {
         using Internal = ShaderCookStampInternal;
         if ( pOutListIncludedFile != nullptr )
             pOutListIncludedFile->clear();
 
-        // <domain>/shaders/bin/<rhi> → <domain>/shaders (writeCookStamp 와 같은 되짚기)
+        // 스탬프 키는 소스 폴더 기준이다 — bin 폴더는 쿠킹 스테이징에 있어 소스 폴더로 되짚을 수 없다.
         const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
-        const string shadersDir = FileUtil::getDirectoryPart( FileUtil::getDirectoryPart( rhiDir ) );
+        const string shadersDir = findShadersDirectory( absShaderPath );
         if ( shadersDir.empty() )
             return false;
 
@@ -883,16 +886,17 @@ namespace sw
         return true;
     }
 
-    void ShaderCooker::verifyCookedShaders( string_view resourceRoot, string_view shaderFolder, vector<string>& outListProblem )
+    void ShaderCooker::verifyCookedShaders( string_view resourceRoot, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem )
     {
-        verifyCookedShaders( resourceRoot, AssetPaths::getSearchPriority(), shaderFolder, outListProblem );
+        verifyCookedShaders( resourceRoot, AssetPaths::getSearchPriority(), cookedDir, shaderFolder, outListProblem );
     }
 
-    void ShaderCooker::verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view shaderFolder, vector<string>& outListProblem )
+    void ShaderCooker::verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem )
     {
-        if ( resourceRoot.empty() || shaderFolder.empty() )
+        if ( resourceRoot.empty() || cookedDir.empty() || shaderFolder.empty() )
         {
-            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root and a shader folder (got '%#', '%#')", resourceRoot, shaderFolder );
+            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root, the cook staging folder and a shader folder (got '%#', '%#', '%#')",
+                                                    resourceRoot, cookedDir, shaderFolder );
             return;
         }
         vector<string> listDomain;
@@ -903,7 +907,7 @@ namespace sw
         }
         for ( const string& domain : listDomain )
         {
-            ShaderCookStampInternal::verifyDomain( resourceRoot, listPriority, domain, shaderFolder, outListProblem );
+            ShaderCookStampInternal::verifyDomain( resourceRoot, listPriority, cookedDir, domain, shaderFolder, outListProblem );
         }
     }
 } // namespace sw

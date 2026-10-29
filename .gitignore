@@ -23,7 +23,7 @@ Content/**/models/**
 Content/**/heightfields/**
 !Content/game/empty/heightfields/valley.layerweights
 Content/**/*_raw/import.stamp
-Content/**/shaders/bin/
+# 셰이더 쿠킹본(shaders/bin)은 쿠킹 스테이징(build/<프리셋>/Cooked)에만 생긴다 — 소스 트리에 보이면 낡은 잔재라 무시하지 않는다(씬 · 프리팹 쿠킹본과 같다).
 
 # ==============================================================================
 # IDE & Tooling
