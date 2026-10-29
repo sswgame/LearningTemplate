@@ -2,11 +2,11 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: K 절(일원화 감사 2026-10-30)의 항목이 거의 끝났다 — 태스크 · 정지 신호 · 등록부 · 서브시스템 확장(E1–E5) · 정적 상태 → 서브시스템 · 큰 클래스 분해(FrameRenderer · CanvasRenderer · RenderPacketBuilder · Engine · GameInstance · UISystem · InputMap · AudioEngine) · 편집기 패널 모델/뷰 · 유틸 · STL · include. Debug · Release 빌드와 ctest 통과(셰이더 캐시가 빈 첫 실행 포함). **바로 다음**: Linux 빌드 한 번(X11 · Wayland · ALSA · epoll · 대소문자 경로 변경을 못 지었다), `castTo` 측정, K 절 "남은 것" 표. 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: K 절(일원화 감사 2026-10-30)의 항목이 거의 끝났다 — 태스크 · 정지 신호 · 등록부 · 서브시스템 확장(E1–E5) · 정적 상태 → 서브시스템 · 큰 클래스 분해(FrameRenderer · CanvasRenderer · RenderPacketBuilder · Engine · GameInstance · UISystem · InputMap · AudioEngine) · 편집기 패널 모델/뷰 · 유틸 · STL · include. K 절 "남은 것" 표도 끝났다(2026-10-30 — Linux 빌드 · `castTo` 핫패스화 · 패널 · 호스트). Windows Debug · Release, Linux Debug 빌드와 ctest 통과. **바로 다음**: 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
-- **빌드**: `Ninja-Debug`(활성 게임 Empty) · `Ninja-Release`(전체) 오류 0. **테스트**: `ctest`(단위 `App --test` + 시나리오 엔진 3 · Empty 16) 통과 — 형식과 쓰는 법은 `Test/README.md`.
+- **빌드**: `Ninja-Debug`(활성 게임 Empty) · `Ninja-Release`(전체) 오류 0. **Linux**: 프리셋이 없다 — WSL(Ubuntu 26.04)의 따로 받은 클론에서 `cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug` + vcpkg 툴체인으로 짓고(단위 테스트 · 전용 서버 기동 통과), 받은 LLVM 의 `lld` 가 `libxml2.so.2` 를 찾아 서지 않으면 시스템 `lld` 로 바꾼다(26.04 는 libxml2.so.16). **테스트**: `ctest`(단위 `App --test` + 시나리오 엔진 3 · Empty 16) 통과 — 형식과 쓰는 법은 `Test/README.md`.
 - **콘텐츠**: 규칙은 **`Content` 에는 에셋(다른 데이터가 가리키는 id)만, 파생물은 `Saved`(개발) · `Cooked`(배포)**. 임포트 산출물(DDS · 메시 · 높이장)은 머티리얼 · 씬이 가리키는 에셋이라 `Content` 에 두되 크고 다시 만들 수 있어 커밋하지 않는다(.gitignore) — 새 체크아웃은 Release App 으로 `--import-textures` · `--import-models` · `--import-heightfields` 를 돈다(Debug 의 텍스처 압축은 장당 20 분). 셰이더는 굽지 않아도 된다 — 개발 실행은 쓰일 때 컴파일해 `Bin/Saved` 캐시에 남기고, 쿠킹본(`--cook-shaders -cooked-dir=…`)은 팩을 만들 때만 스테이징에 생긴다. 엔진 기본 텍스처 둘(`missing` · `loading`)만 원본으로 둔다. 임포트를 사람마다 치르는 부담이 커지면 공유 캐시(네트워크 DDC)나 Git LFS 로 푼다(아직 아님).
 - **엔진 층은 빌드 형식이다(B)**: 층 표 `Scripts/generate/rules/EngineLayers.toml` → configure 가 파일마다 층을 정하고(`Scripts/generate/EngineLayers.py`), Engine 의 .cpp 는 층마다 OBJECT 부분 `EngineLayer<N>`(오브젝트는 Engine DLL 안)이 짓는다. 부분 N 의 include 자리 맨 앞에 위 층 헤더마다 `#error` 껍데기가 있어 위 층 include(전이 포함)가 컴파일에서 멈춘다. 린트 게이트 `engine-layers` 와 기준선은 지웠다. 표에 없는 파일이 생기면 configure 가 멈춘다.
 - **Core 티어 표** `Scripts/generate/rules/CoreLayers.toml`, **에디터 층 표** `Scripts/generate/rules/EditorLayers.toml` — 폴더를 옮기면 세 표를 먼저 본다(`move-source` 는 표를 모른다).
@@ -131,13 +131,13 @@
 `ObjectCopyBuffer`(정적 전역 → 편집기 서브시스템) · `ImGuiEditor` 세션(선택 · 미저장). 패널 인스턴스에 묶인 명령(UI 미리보기 · 열린 문서)만 코드 단계(`UndoStep::makeTransient`)이고 맡길 때 버린다.
 키트 · 게임 모듈도 같은 칸으로 리로드 사이 상태를 넘길 수 있다.
 
-**남은 것**
-| 일 | 내용 |
+**끝남(2026-10-30, K 절 "남은 것")**
+| 일 | 한 것 |
 |---|---|
-| Linux 빌드 | 이번 묶음은 Windows 에서만 지었다 — X11 · Wayland 입력 정적 이주, ALSA · epoll 정지 신호, `AssetPaths` 의 대소문자 구분 길 |
-| 측정 | `castTo` 의 파생 확인이 줄 밖 함수가 됐다 — 뜨거운 경로(~4 ns) 측정 |
-| 패널 | DialogueGraphPanel 미리보기(그래프 문서 기반 클래스의 `_bPreviewPlaying` · `_previewHoldSeconds` 를 뺄 수 있다), 그리기 고리 안에서 명령을 부르는 GameFramework 플러그인 패널(목록을 도는 중 바뀌는 모양) |
-| 호스트 | `ServerApp` 의 디버그 채널 · 일시정지/한 걸음 상태, App 창 콜백 |
+| Linux 빌드 | 막던 것 둘 — `RhiBackends.cmake` 를 모두 `RHIBackends.cmake` 로 불렀다(대소문자), `ReflectValue.h` 가 정의 앞에 선언되지 않은 `typeFqn` 을 불렀다(→ 잎 헤더 `TypeFqn.h`). 같은 결함을 Windows 에서 잡게: 프로젝트 include 대소문자는 `-Werror=nonportable-include-path`, CMake 경로는 사전 커밋 `CMakePathCase`, clang-cl 의 `-fdelayed-template-parsing` 을 지워 2단계 이름 찾기를 Windows 도 지킨다 |
+| `castTo` | 핫패스용으로: 조상 표 · 살아 있음을 `TypeInfo` 의 맨 앞 머리 `TypeCastHeader` 로 떼어 파생 비교 인라인, `REFLECT_BODY` 의 `StaticType()` 인라인(클래스마다 캐시 칸), `Component::findCachedTypeInfo` 인라인. Release 측정 `castTo<T>( p )` 5.4 → 2.0 ns, `castTo( p, type )` 3.2 → 1.2 ns(언리얼 `Cast<>` 급). 타입별 전체 순회는 계속 등록부 |
+| 패널 | `DialogueGraphPreviewModel`(기반의 `_bPreviewPlaying` · `_previewHoldSeconds` 삭제). 목록을 도는 중 그 목록을 바꿀 명령을 부르는 모양은 GameFramework · 편집기 패널에 남지 않았다(range-for 안 단추 훑기) |
+| 호스트 | 전용 서버의 개발 콘솔 · 디버그 채널 · 일시정지/한 걸음 → `ServerDebugControl`. 창 크기 → 스왑체인은 엔진(`Engine::onMainWindowResize`), App 은 편집기 우선 입력 라우팅만 |
 | 남긴 것(이유 있음) | Core 아래 층의 `ScopeOwned`(TagID · LogOnce), Foundation 의 `std::atomic` · C 문자열(층 0), OS 가 요구하는 프로세스 전역(신호 처리 · 서비스 콜백 · RenderDoc · CRT 누수 기준), 프로세스 유일 번호 카운터, 진단 카운터, SQL 드라이버 표(링크 시점 목록), 범위 일부만 정렬하는 `std::sort`, Wayland C API 의 `strcmp` |
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
@@ -167,6 +167,9 @@
 둔 것(공용어 · 실제 이름): `Cook*`(언리얼 · 프로스트바이트 · id 가 함께 쓰는 업계 말이고 대안 "Build" 는 빌드와 겹친다 — 2 절 규칙에 적는다), `Pawn` · `Possess`(게임 프레임워크의 일반 말로 굳었고 82 파일 — 대안이 더 모호하다), `Breadcrumbs`(Aftermath · 언리얼 공용), `EditorChrome`(UI 업계 말), `Tracy` · `LiveLinkFace`(실제 라이브러리 · 앱 프로토콜), `cheat.god` · `GM`(게이머 · 운영 공용어), `KartGhost`(레이싱 장르 표준), `DrainGate`.
 
 ## 5. 이번 세션의 근본 원인 (같은 결함이 남았을 곳)
+
+- Linux 에서만 서는 결함(대소문자 · 템플릿 이름 찾기)은 Windows 빌드가 느슨해서 숨었다 → 컴파일러 오류 · 린트로 Windows 에서 잡는다(4 절 표 "Linux 빌드"). 남은 틈: Linux 전용 .cpp(X11 · Wayland · ALSA · epoll)는 Windows 가 짓지 않는다 — Linux 빌드를 정기적으로 도는 것 말고는 길이 없다(CI 후보).
+- 전용 서버 종료 때 태그별 증가 진단(Game 약 0.5 KB · Unknown · EngineMisc 각 32 B)이 Windows · Linux 에 함께 나온다. CRT 검사는 누수 없음 — 종료 직전까지 사는 할당이다. 어디서 오는지는 보지 않았다.
 
 - 층 위반은 include 글자 검사로는 직접 include 만 보였다 → 빌드 형식(층 부분 + `#error` 껍데기)으로 바꿔 전이 include 까지 막는다. Core 는 아직 티어 표만 있고 껍데기가 없다 — 같은 방식을 Core 에 넣을 후보.
 - 실행기 없는 시나리오 검사가 엔진 서비스가 있어야 푸는 이름(입력 슬롯)을 "틀렸다" 로 냈다 → `AutomationStepDependency::InputSlot`. 검사 함수가 이름을 새로 묻게 되면 `findUnresolvedDependency` 에 더한다.
