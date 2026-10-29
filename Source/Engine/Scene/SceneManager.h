@@ -32,6 +32,21 @@ namespace sw
      */
     using SceneObjectsInvalidatedDelegate = MulticastDelegate<void()>;
 
+    /** @brief 씬을 여는 까닭입니다. 요청마다 적는다(기본값이 없다) — 게임 흐름이 반응할 로드인지가 여기서 갈린다. */
+    enum class SceneLoadKind : uint8
+    {
+        Travel, ///< 게임이 씬을 옮겨 간다(게임 흐름 · 시나리오 · 게임 코드) — 로딩 화면 · 로드 이벤트가 따른다
+        Tool,   ///< 도구가 씬을 연다(편집기 열기 · 버그 리포트 재현 · 누수 프로브) — 게임 흐름은 반응하지 않는다
+    };
+
+    /**
+     * @brief 씬 로드를 받아들였다는 알림입니다 — 경로, 까닭, 그 요청의 답(끝나면 활성 씬, 실패 · 밀려남이면 nullptr).
+     * @details 누가 요청했든(게임 흐름 · 시나리오 · 편집기) `requestLoadFuture` 가 낸다. 로딩 화면 · 로드 이벤트는 요청한 쪽이 아니라 이 알림에 붙는다 —
+     *          그래야 어느 길로 열어도 같은 로딩 화면 · 같은 시작 시점이다(언리얼 `FCoreUObjectDelegates::PreLoadMap` 을 로딩 화면 모듈이 구독하는 것과 같다).
+     */
+    using SceneLoadRequestedHandler  = Delegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
+    using SceneLoadRequestedDelegate = MulticastDelegate<void( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )>;
+
     /** @brief 미리보기 씬이 아닌 씬(또는 없는 키)을 가리키는 키입니다. */
     inline constexpr uint32 kInvalidSceneKey = 0;
 
@@ -105,9 +120,9 @@ namespace sw
          *          아닙니다. 대기열은 **한 자리**이므로 새 요청은 앞의 것을 밀어내고, 밀려난 쪽의
          *          future 는 nullptr 로 끝납니다(영원히 끝나지 않는 future 는 없습니다).
          */
-        TaskFuture<Scene*> requestLoadFuture( string_view path );
+        TaskFuture<Scene*> requestLoadFuture( string_view path, SceneLoadKind kind );
         /** @brief 씬 파일의 비동기 로드를 요청합니다(TaskManager 워커). */
-        bool requestLoadAsync( string_view path );
+        bool requestLoadAsync( string_view path, SceneLoadKind kind );
         /**
          * @brief 지금 로드하는 씬의 프리로드 진행(0~1)을 @p outProgress 에 채웁니다. 프리로드 세트가 없으면(쿠킹 전 Dev 실행 · 목록이 빈 씬 · 끈 경우) false 입니다.
          * @details 요청이 들어가면 쿠킹이 옆에 구운 프리로드 목록(`ScenePreloadList`, `<씬>.preload.json`)을 `PreloadSet` 으로 연다 — 씬을 읽고 짓는 동안 그 씬이 쓸 파일을
@@ -248,6 +263,8 @@ namespace sw
          * @details 구독자는 이 매니저보다 오래 살아야 합니다. 호스트는 매니저를 먼저 해제하므로 구독을 따로 해제하지 않습니다.
          */
         SceneObjectsInvalidatedDelegate& onSceneObjectsInvalidated() { return _onSceneObjectsInvalidated; }
+        /** @brief 씬 로드를 받아들일 때 알리는 델리게이트입니다(`SceneLoadRequestedDelegate`). 구독은 돌려받은 `Subscription` 이 풉니다. */
+        SceneLoadRequestedDelegate& onSceneLoadRequested() { return _onSceneLoadRequested; }
 
     private:
         // 프레임 틱은 엔진 루프만 부른다(`Engine::updateScenes`) — 게임 모듈이 한 프레임에 두 번 틱하는 길이 없다.
@@ -320,6 +337,7 @@ namespace sw
         TaskHandleTracker               _loadTracker;
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
+        SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
         bool                            _bInitialized;
 

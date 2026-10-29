@@ -5,7 +5,8 @@
  *          시나리오 상태는 프로세스로 끊긴다(백엔드 사이에 씬 · 전역 변수 · 장치가 이어지지 않는다). 골든이 백엔드별이라 자식마다 제 골든과 견준다.
  *          자식의 로그는 `-log-file` 로 따로 쓴다 — 부모가 `-log-file=X.log` 를 받았으면 `X.<백엔드>.log`, 아니면 `Saved/Automation/<시나리오>/matrix-<프로세스>/<백엔드>.log`.
  *          보고(`-scenario-report=R.json`)를 받았으면 자식은 `R.<백엔드>.json`, 부모는 `R.json` 에 백엔드별 결과를 쓴다.
- *          자식은 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds`) 안에 끝나야 한다 — 넘기면 죽이고 시간 초과(12)로 센다.
+ *          자식 창은 2 열 바둑판으로 놓는다(`-WinX` · `-WinY` — 넘겨받은 인자에 이미 있으면 두지 않는다) — 백엔드마다 화면이 겹치지 않고 한 번에 보인다.
+ *          자식은 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds` × 체인의 단계 수) 안에 끝나야 한다 — 넘기면 죽이고 시간 초과(12)로 센다.
  *          종료 코드: 하나라도 실패면 표 순서로 첫 실패 백엔드의 코드, 아니면 하나라도 통과면 0, 모두 건너뜀이면 13. 이 기계에서 못 도는 백엔드(77)는 건너뜀으로 센다.
  */
 #pragma once
@@ -25,6 +26,8 @@ namespace sw
         vector<string> _listPassThroughArgument{}; ///< 자식에 그대로 넘길 원본 인자(`<Launch>` 값 · `-unattended` …) — 행렬 · 로그 · 보고 · 백엔드 인자는 뺐다
         string         _logFilePath{};             ///< 부모의 `-log-file`(비면 기본 폴더)
         string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
+        uint32         _windowWidth{ 0 };          ///< 자식 창의 클라이언트 크기(`EngineConfig._window`) — 자식 창을 바둑판으로 놓는 간격이다. 0 이면 놓지 않는다(플랫폼이 놓는다)
+        uint32         _windowHeight{ 0 };
     };
 
     /** @class AutomationBackendMatrix @brief 백엔드 행렬 실행입니다. 게임 스레드가 아닌 헤드리스 작업에서 부릅니다. */

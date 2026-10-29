@@ -28,6 +28,12 @@ namespace sw
 {
     SW_LOG_CALLER( "AutomationSession" );
 
+    namespace
+    {
+        /** @brief 시나리오가 첫 씬을 선언하는 `<Launch>` 변수 — 게임 프레임워크가 정의하는 이름이다(`GameInstance`). 체인의 단계는 이 씬을 새로 열고 시작한다. */
+        constexpr string_view kStartSceneVariable = "gv_firstScene";
+    } // namespace
+
     AutomationSession::AutomationSession()
         : _pRunner{ nullptr }
         , _pChain{ nullptr }
@@ -36,6 +42,7 @@ namespace sw
         , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
+        , _listStartVariable{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
     {
@@ -135,6 +142,11 @@ namespace sw
         }
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
         (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
+        _listStartVariable.clear();
+        vector<GlobalVariableInfo*> listVariable;
+        engine::getSubsystem<GlobalVariableManager>().collectVariables( listVariable );
+        for ( const GlobalVariableInfo* pVariable : listVariable )
+            _listStartVariable.emplace_back( pVariable->_name, pVariable->getValueAsString() );
         _pChain = make_unique<AutomationScenarioChain>();
         _pChain->begin( AutomationScenarioChain::splitList( scenarioArgument ), bKeepGoing );
         if ( _pChain->isActive() == false )
@@ -160,6 +172,10 @@ namespace sw
             }
         }
 
+        const bool bLaterStage = _pChain->getStageIndex() > 0;
+        if ( bLaterStage )
+            restoreStartVariables();
+
         _pRunner = make_unique<AutomationRunner>();
         _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
@@ -167,9 +183,41 @@ namespace sw
         _screenshotBaseline = completedScreenshotCount;
         if ( _pRunner->isActive() )
         {
+            const vector<AutomationAttribute>& listLaunch = _pRunner->getScenario().getTestOptions()._listLaunchVariable;
+            const auto                         itScene    = std::find_if( listLaunch.begin(), listLaunch.end(), []( const AutomationAttribute& variable )
+                                       { return variable._name == kStartSceneVariable; } );
+            if ( itScene != listLaunch.end() )
+            {
+                // 변수도 맞춘다 — 실행기의 `<Launch>` 확인과 재현 명령이 이 값을 본다.
+                (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( kStartSceneVariable, itScene->_value );
+                _pRunner->requireStartScene( itScene->_value, bLaterStage );
+            }
+            else if ( bLaterStage )
+            {
+                SW_LOG_WARNING( "[Scenario] stage %# declares no <Launch variable=\"%#\"> - it starts in the scene the previous stage left",
+                                static_cast<uint32>( _pChain->getStageIndex() ), kStartSceneVariable );
+            }
             const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
                 SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
+        }
+    }
+
+    void AutomationSession::restoreStartVariables()
+    {
+        GlobalVariableManager& globalVariables = engine::getSubsystem<GlobalVariableManager>();
+        for ( const auto& [name, value] : _listStartVariable )
+        {
+            GlobalVariableInfo* const pVariable = globalVariables.findVariable( name );
+            if ( pVariable == nullptr )
+                continue;
+            const string current = pVariable->getValueAsString();
+            if ( current == value )
+                continue;
+            if ( pVariable->setValueFromString( value ) )
+                SW_LOG_INFO( "[Scenario] %# restored '%#' -> '%#' for the next stage", name.c_str(), current.c_str(), value.c_str() );
+            else
+                SW_LOG_WARNING( "[Scenario] %# could not be restored to '%#' for the next stage", name.c_str(), value.c_str() );
         }
     }
 

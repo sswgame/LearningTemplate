@@ -8,34 +8,43 @@
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/EngineFrameHooks.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 namespace sw
 {
     /** @brief `AutomationSession::onFrameEnd` 가 아직 끝나지 않았음을 알리는 값입니다(`kEngineFrameRunning` 그 자체 — 값을 따로 쓰지 않는다). */
     inline constexpr int32 kAutomationExitCodeRunning = kEngineFrameRunning;
 
     /**
-     * @brief 결과의 프로세스 종료 코드입니다. 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 15 처리하지 않은 로그(14 는 없앤 "미확정"이라 비워 둔다).
-     * @details 숫자는 이 함수 안에만 쓴다. 행렬 실행(`AutomationBackendMatrix`)과 CTest(`Test/Scenario/CMakeLists.txt` 의 SKIP_RETURN_CODE 13)가 이 값을 읽는다.
+     * @brief 결과의 프로세스 종료 코드입니다. 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
+     *        행렬 실행(`AutomationBackendMatrix`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
      */
     constexpr int32 getAutomationExitCode( AutomationOutcome outcome )
     {
+        ProcessExitCode exitCode = ProcessExitCode::Failed; // 열거형에 없는 값은 실패로 센다
         switch ( outcome )
         {
             case AutomationOutcome::Running:
                 return kAutomationExitCodeRunning;
             case AutomationOutcome::Passed:
-                return 0;
+                exitCode = ProcessExitCode::Passed;
+                break;
             case AutomationOutcome::Failed:
-                return 10;
+                exitCode = ProcessExitCode::Failed;
+                break;
             case AutomationOutcome::LoadError:
-                return 11;
+                exitCode = ProcessExitCode::LoadError;
+                break;
             case AutomationOutcome::TimedOut:
-                return 12;
+                exitCode = ProcessExitCode::TimedOut;
+                break;
             case AutomationOutcome::Skipped:
-                return 13;
+                exitCode = ProcessExitCode::Skipped;
+                break;
             case AutomationOutcome::UnhandledLog:
-                return 15;
+                exitCode = ProcessExitCode::UnhandledLog;
+                break;
         }
-        return 10; // 열거형에 없는 값은 실패로 센다
+        return static_cast<int32>( exitCode );
     }
 } // namespace sw

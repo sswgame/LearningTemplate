@@ -152,7 +152,7 @@ namespace sw
         if ( gv_stressTestSceneLoadPath.empty() == false )
         {
             SceneManager*               pSceneManager = game::findSubsystem<SceneManager>();
-            [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath );
+            [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath, SceneLoadKind::Travel );
             SW_LOG_INFO( "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
         }
     }

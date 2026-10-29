@@ -24,16 +24,28 @@ namespace sw
 
     namespace
     {
-        /** @brief 로딩 화면입니다 — Back 으로 닫히지 않는다(로드가 끝나야 닫힌다). */
+        /**
+         * @brief 로딩 화면입니다 — Back 으로 닫히지 않고(로드가 끝나야 닫힌다), 떠 있는 동안 게임 시간을 멈춘다(문서와 상관없이 이 형식이 정한다).
+         * @details 멈추지 않으면 월드가 로딩 화면 뒤에서 돌아, 화면이 걷혔을 때 월드가 몇 틱 지났는지가 로드 시간 · 최소 표시 시간에 달린다 — 같은 씬을 기동에서 열 때와
+         *          실행 중에 열 때가 다르고, 디스크가 느린 PC 에서 첫 장면이 다르다. 멈추면 플레이어 · 시나리오가 보는 첫 프레임이 늘 월드의 첫 틱이다.
+         */
         class LoadingScreen final : public UIScreen
         {
         public:
             LoadingScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
-                : UIScreen{ desc, std::move( root ) }
+                : UIScreen{ makePausingDesc( desc ), std::move( root ) }
             {
             }
 
             bool onBack() override { return true; }
+
+        private:
+            static UIScreenDesc makePausingDesc( const UIScreenDesc& desc )
+            {
+                UIScreenDesc pausing = desc;
+                pausing._bPausesGame = true;
+                return pausing;
+            }
         };
 
         /**

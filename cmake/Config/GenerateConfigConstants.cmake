@@ -11,6 +11,7 @@ include_guard(GLOBAL)
 # 1) configure 생성기 넷을 한 프로세스로 — 생성기마다 파이썬을 띄우면 configure 의 3 할 가까이가 파이썬 시작 · import 였다.
 #    규칙 · 출력은 각 생성기 한 자리(ConfigureFiles.py 는 차례로 부를 뿐). ToolchainVars 는 Environment 뒤라 DetectToolchain 이 따로 부른다.
 #    - CookContract.*     : Config/Engine/CookContract.json(RHI 백엔드 · 쿡 접미사) → C++ X-macro 와 CMake(RHI 백엔드의 빌드 칸 — RHIBackends.cmake 가 읽는다).
+#    - ProcessExitCodes.* : Config/Engine/ProcessExitCodes.json(프로세스 종료 코드) → C++ 열거형 ProcessExitCode 와 CMake SW_EXIT_CODE_<이름>(CTest 건너뜀 코드).
 #    - ShippingHostDefaults.h : 엔진 설정 + 게임 프리셋 → Shipping/Dev 폴백 호스트 기본값(프리셋이 없으면 건너뛴다 — 아래 3) 이 멈춘다).
 #    팩 레이아웃은 생성하지 않는다 — 원본은 손으로 쓴 C++ 헤더(Source/Engine/FileSystem/Pack/PackTypes.h)다(StructureSimplification PK1).
 # ------------------------------------------------------------------------------
@@ -26,6 +27,7 @@ set(SW_CONFIGURE_FILES_GENERATED ON)
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 include("${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.cmake")
+include("${CMAKE_BINARY_DIR}/generated/sw/config/ProcessExitCodes.cmake")
 
 # ------------------------------------------------------------------------------
 # 3) 활성 게임의 프리셋(Config/Game/<SW_ACTIVE_GAME>.json — 팩 루트)과 전용 서버 운영 설정(Config/Server/<SW_ACTIVE_GAME>.json, ServerConfig)
@@ -50,6 +52,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}"
 	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}"
 	"${CMAKE_SOURCE_DIR}/Config/Engine/CookContract.json"
+	"${CMAKE_SOURCE_DIR}/Config/Engine/ProcessExitCodes.json"
 )
 
 # ------------------------------------------------------------------------------

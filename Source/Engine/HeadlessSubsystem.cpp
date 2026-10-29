@@ -339,6 +339,8 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
                 options._executablePath          = FileUtil::getExecutablePath();
                 options._listPassThroughArgument = AutomationBackendMatrix::filterPassThroughArguments( commandLine.getOriginalArguments() );
+                options._windowWidth             = engine::getSubsystem<EngineConfig>()._window._width;
+                options._windowHeight            = engine::getSubsystem<EngineConfig>()._window._height;
                 if ( options._scenarioPath.empty() || AutomationBackendMatrix::parseBackendList( backends, options._listBackend, error ) == false )
                 {
                     SW_LOG_ERROR( "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );

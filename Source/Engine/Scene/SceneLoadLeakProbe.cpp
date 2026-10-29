@@ -130,7 +130,7 @@ namespace sw
             _phase = Phase::Settling;
             return;
         }
-        _loadFuture = manager.requestLoadFuture( _scenePath );
+        _loadFuture = manager.requestLoadFuture( _scenePath, SceneLoadKind::Tool );
         if ( _loadFuture.isValid() == false )
         {
             SW_LOG_ERROR( "Scene leak probe: could not request loading '%#' - stopping", _scenePath );

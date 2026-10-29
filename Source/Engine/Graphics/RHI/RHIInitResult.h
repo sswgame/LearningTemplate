@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 namespace sw
 {
     /**
@@ -21,5 +23,5 @@ namespace sw
     };
 
     /** @brief App 이 "이 기계에서 그 백엔드를 못 돌린다"로 끝날 때의 종료 코드입니다(automake 와 CTest `SKIP_RETURN_CODE` 의 건너뜀 관례). */
-    inline constexpr int32 kRHIUnusableHereExitCode = 77;
+    inline constexpr int32 kRHIUnusableHereExitCode = static_cast<int32>( ProcessExitCode::RHIUnusableHere ); // 값은 종료 코드 표(ProcessExitCodes.json)
 } // namespace sw

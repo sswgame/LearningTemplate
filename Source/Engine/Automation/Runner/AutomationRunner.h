@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Task/TaskFuture.h"
 
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
@@ -27,6 +28,7 @@ namespace sw
 
     class GameObjectManager;
     class InputManager;
+    class Scene;
 
     /**
      * @class AutomationRunner
@@ -70,6 +72,13 @@ namespace sw
          * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).
          */
         [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
+
+        /**
+         * @brief 시작 조건을 보기 전에 @p scenePath 를 활성 씬으로 엽니다 — 체인의 단계가 앞 단계가 남긴 씬을 이어받지 않게 한다(`AutomationSession`).
+         * @param bReopen true 면 이미 활성인 같은 씬도 새로 엽니다(앞 단계가 그 씬을 바꿨다). false 면 활성 씬이 다른 씬일 때만 엽니다(프로세스가 막 연 씬).
+         * @details 열리기를 시작 시한(`startTimeoutFrames`) 안에서 기다리고, 못 열면 읽기 오류(11)다. `startFromPath` 뒤 첫 `onFrameBegin` 전에 부른다.
+         */
+        void requireStartScene( string_view scenePath, bool bReopen );
 
         /** @brief 프레임 시작(입력 `beginFrame` 전)에 부릅니다. 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌립니다. */
         void onFrameBegin( InputManager& input );
@@ -169,6 +178,8 @@ namespace sw
          * @details 그 프레임은 단계를 돌리지 않고 뒤의 입력 이벤트를 한 프레임 민다(`WaitUntil` 과 같다). 벽시계로 `kClockHoldTimeoutSeconds` 를 넘기면 시간 초과로 끝낸다.
          */
         [[nodiscard]] bool holdClockForBackgroundWork( InputManager& input );
+        /** @brief 시작 씬(`requireStartScene`)이 아직 활성이 아니면 true 입니다 — 로드를 요청하고 기다린다. 못 열면 결과를 정하고 true 입니다. */
+        [[nodiscard]] bool holdForStartScene();
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         /** @brief 부하 시나리오(`<Load>`)면 시작 프레임에 측정 창(`gv_profileSeconds`)을 열고 멈춤 그물 시각을 잡습니다. 아니면 아무것도 하지 않습니다. */
@@ -220,12 +231,15 @@ namespace sw
         GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         int64                    _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
+        string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
+        TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;
-        uint8                    _bStarted        : 1;
-        uint8                    _bEnded          : 1;
-        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8   _reserved        : 4;
+        uint8                    _bStarted          : 1;
+        uint8                    _bEnded            : 1;
+        uint8                    _bHangWatchArmed   : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                    _bWriteGateHeld    : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
+        uint8                    _bReopenStartScene : 1; ///< 시작 씬이 이미 활성이어도 새로 연다(`requireStartScene`)
+        [[maybe_unused]] uint8   _reserved          : 3;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
     };
 } // namespace sw

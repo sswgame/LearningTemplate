@@ -31,6 +31,7 @@ namespace sw
     class LoadingScreenController;
     class Scene;
     class UISystem;
+    enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
     class UserSettingsManager;
     class Widget;
 
@@ -327,10 +328,12 @@ namespace sw
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
         /**
-         * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `SceneLoadRequestedEvent` 를 냅니다.
+         * @brief @p scenePath 의 로드를 `SceneManager` 에 게임 이동으로 맡깁니다. 로딩 화면 · `SceneLoadRequestedEvent` 는 `onSceneLoadRequested` 가 붙인다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
          */
         [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
+        /** @brief 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`)입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄우고 `SceneLoadRequestedEvent` 를 냅니다. */
+        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
         /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
@@ -366,15 +369,16 @@ namespace sw
             }
         }
 
-        vector<PendingSceneLoad>        _listPendingSceneLoad;      ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        vector<StatefulComponentType>   _listStatefulType;          ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
-        unique_ptr<ComponentStateStore> _pComponentStateStore;      ///< 스냅샷 봉투의 컴포넌트 상태 섹션
-        SubsystemScope                  _gameScope;                 ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        string                          _loadedAudioEvents;         ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        UISystem*                       _pUISystem;                 ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
-        Subscription                    _returnToTitleRegistration; ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
-        UserSettingsManager*            _pUserSettings;             ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
-        InputManager*                   _pInput;                    ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyPackConfig`)
-        uint8                           _bResumingWorld;            ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        vector<PendingSceneLoad>        _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<StatefulComponentType>   _listStatefulType;               ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
+        unique_ptr<ComponentStateStore> _pComponentStateStore;           ///< 스냅샷 봉투의 컴포넌트 상태 섹션
+        SubsystemScope                  _gameScope;                      ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        string                          _loadedAudioEvents;              ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        UISystem*                       _pUISystem;                      ///< `bindEngineServices` 가 받은 UI(빌림) — 창이 없는 호스트에서만 nullptr
+        Subscription                    _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
+        Subscription                    _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(`initialize` 가 걸고 `shutdown` 이 푼다)
+        UserSettingsManager*            _pUserSettings;                  ///< `bindEngineServices` 가 받은 사용자 설정(빌림) — 창이 없는 호스트에서만 nullptr
+        InputManager*                   _pInput;                         ///< `bindEngineServices` 가 받은 입력(빌림) — 없으면 입력 맵을 적은 게임이 서지 않는다(`applyPackConfig`)
+        uint8                           _bResumingWorld;                 ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

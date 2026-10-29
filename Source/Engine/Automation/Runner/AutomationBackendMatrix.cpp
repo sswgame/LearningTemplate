@@ -10,6 +10,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
+#include "Engine/Automation/Runner/AutomationScenarioChain.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -25,6 +26,10 @@ namespace sw
     {
         struct AutomationBackendMatrixInternal
         {
+            static constexpr uint32 kTileColumnCount = 2; ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
+            // shortcut: 창 틀(제목 줄 · 테두리) 두께를 Win32 기본 모양의 대략 값으로 둔다, 플랫폼 창 틀 크기를 묻는 API 가 생기면 그 값으로.
+            static constexpr uint32 kFrameMarginX = 16;
+            static constexpr uint32 kFrameMarginY = 40;
             /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 행렬이 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
             static constexpr const utf8* kArrBackendName[] = {
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
@@ -56,25 +61,8 @@ namespace sw
             /** @brief 자식 종료 코드의 결과 이름입니다(보고 · 요약 줄). */
             static const utf8* describeExitCode( int32 exitCode )
             {
-                switch ( exitCode )
-                {
-                    case 0:
-                        return "passed";
-                    case 10:
-                        return "failed";
-                    case 11:
-                        return "loadError";
-                    case 12:
-                        return "timedOut";
-                    case 13:
-                        return "skipped";
-                    case kRHIUnusableHereExitCode:
-                        return "backendUnavailable";
-                    case 15:
-                        return "unhandledLog";
-                    default:
-                        return "crashed";
-                }
+                const utf8* const pLabel = findProcessExitCodeLabel( exitCode );
+                return pLabel != nullptr ? pLabel : "crashed"; // 표(ProcessExitCodes.json)에 없는 코드는 프로세스가 죽은 것이다
             }
 
             static bool isSkip( int32 exitCode ) { return exitCode == getAutomationExitCode( AutomationOutcome::Skipped ) || exitCode == kRHIUnusableHereExitCode; }
@@ -173,6 +161,10 @@ namespace sw
         const string scenarioStem  = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
         const string defaultFolder = string( kAutomationOutputFolder ) + "/" + scenarioStem + "/matrix-" + to_string( Process::getCurrentProcessID() );
 
+        // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
+        const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
+                                  std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
+        { return Internal::getArgumentKey( argument ) == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ); } );
         vector<unique_ptr<Internal::Child>> listChild;
         for ( const string& backend : options._listBackend )
         {
@@ -184,6 +176,12 @@ namespace sw
             vector<string> listArgument{ "-scenario=" + options._scenarioPath, "-" + backend, "-log-file=" + pChild->_logPath };
             if ( pChild->_reportPath.empty() == false )
                 listArgument.push_back( "-scenario-report=" + pChild->_reportPath );
+            if ( bTileWindows )
+            {
+                const uint32 tileIndex = static_cast<uint32>( listChild.size() );
+                listArgument.push_back( "-WinX=" + to_string( ( tileIndex % Internal::kTileColumnCount ) * ( options._windowWidth + Internal::kFrameMarginX ) ) );
+                listArgument.push_back( "-WinY=" + to_string( ( tileIndex / Internal::kTileColumnCount ) * ( options._windowHeight + Internal::kFrameMarginY ) ) );
+            }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
             const ProcessCommand command{ options._executablePath, std::move( listArgument ) };
@@ -207,7 +205,10 @@ namespace sw
 
         // 프로세스 시한 — 자식 안의 감시(행 보고)가 먼저 닿고, 그래도 끝나지 않은 자식만 여기서 죽인다. 부모가 기다리기만 하면 멈춘 자식 하나에 CTest 시한이
         // 부모만 죽이고 자식은 고아로 남는다(Windows 는 부모가 죽어도 자식을 거두지 않는다).
-        const Deadline killDeadline = Deadline::afterMilliseconds( static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * 1000 );
+        // 시한은 단계마다다 — 체인(`-scenario=a,b,c`)은 단계 수만큼 길다.
+        const int64    stageCount   = std::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
+        const int64    killSeconds  = static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * stageCount;
+        const Deadline killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
         int32          firstFailure = 0;
         bool           bAnyPassed   = false;
         for ( unique_ptr<Internal::Child>& pChild : listChild )
@@ -218,7 +219,7 @@ namespace sw
                     MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::kNanosecondsPerMillisecond );
                 const bool bKilled = pChild->_process.isRunning() && pChild->_process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
                 if ( bKilled )
-                    SW_LOG_ERROR( "[Scenario] matrix: %# did not finish within %# s - killed", pChild->_backend.c_str(), AutomationTimeLimits::kProcessKillSeconds );
+                    SW_LOG_ERROR( "[Scenario] matrix: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
                 pChild->_exitCode = pChild->_process.waitForExit();
                 if ( bKilled )
                     pChild->_exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다

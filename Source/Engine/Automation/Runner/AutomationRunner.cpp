@@ -99,11 +99,14 @@ namespace sw
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _startedUnixMs{ 0 }
+        , _startScenePath{}
+        , _startSceneLoad{}
         , _result{ AutomationOutcome::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
         , _bWriteGateHeld{ SW_FALSE }
+        , _bReopenStartScene{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -150,6 +153,53 @@ namespace sw
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
             SW_LOG_WARNING( "[Scenario] %# uses mixed input - do not touch the keyboard or mouse while it runs", _scenario.getName().c_str() );
         startHangWatchdog();
+    }
+
+    void AutomationRunner::requireStartScene( string_view scenePath, bool bReopen )
+    {
+        _startScenePath    = string( scenePath );
+        _bReopenStartScene = bReopen ? SW_TRUE : SW_FALSE;
+    }
+
+    bool AutomationRunner::holdForStartScene()
+    {
+        if ( _startScenePath.empty() )
+            return false;
+        SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
+        if ( _startSceneLoad.isValid() == false )
+        {
+            const Scene* pActive = sceneManager.getActiveScene();
+            if ( _bReopenStartScene == SW_FALSE )
+            {
+                if ( pActive == nullptr )
+                    return true; // 프로세스가 연 씬이 아직 서는 중이다 — 선 뒤에 그 씬인지 본다
+                if ( pActive->getSourcePath() == _startScenePath )
+                {
+                    _startScenePath.clear();
+                    return false;
+                }
+            }
+            _startSceneLoad = sceneManager.requestLoadFuture( _startScenePath, SceneLoadKind::Travel );
+            if ( _startSceneLoad.isValid() == false )
+            {
+                finish( AutomationOutcome::LoadError, "the start scene '" + _startScenePath + "' could not be requested" );
+                return true;
+            }
+            SW_LOG_INFO( "[Scenario] %#: opening the start scene %#", _scenario.getName().c_str(), _startScenePath.c_str() );
+            return true;
+        }
+        if ( _startSceneLoad.isReady() == false )
+            return true;
+        const Scene* const pLoaded = _startSceneLoad.get();
+        if ( pLoaded == nullptr )
+        {
+            finish( AutomationOutcome::LoadError, "the start scene '" + _startScenePath + "' failed to load (see the log)" );
+            return true;
+        }
+        if ( sceneManager.getActiveScene() != pLoaded )
+            return true; // 전환이 끝나기를 기다린다
+        _startScenePath.clear();
+        return false;
     }
 
     bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
@@ -233,6 +283,13 @@ namespace sw
             // 앞 시나리오(체인)가 남긴 백그라운드 작업이 끝나야 시작한다 — 그 결과 줄이 이 시나리오 창에 떨어지지 않게. 시작 시한은 세지 않는다(벽시계 시한이 본다).
             if ( holdClockForBackgroundWork( input ) )
                 return;
+            // 시작 씬이 서기 전에는 시작 조건(씬 플레이)을 보지 않는다 — 앞 단계의 씬이 플레이 중이어도 그 씬으로 시작하지 않게.
+            if ( holdForStartScene() )
+            {
+                if ( _result == AutomationOutcome::Running && ++_run._waitFrameCount > _scenario.getStartTimeoutFrames() )
+                    finish( AutomationOutcome::TimedOut, "the start scene did not become active within startTimeoutFrames" );
+                return;
+            }
             if ( bReady == false || bForegroundMissing )
             {
                 if ( ++_run._waitFrameCount <= _scenario.getStartTimeoutFrames() )

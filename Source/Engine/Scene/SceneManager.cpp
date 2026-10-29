@@ -61,6 +61,7 @@ namespace sw
         , _loadTracker{}
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
+        , _onSceneLoadRequested{}
         , _netLink{}
         , _bInitialized{ false }
         , _pScenePreload{}
@@ -205,7 +206,7 @@ namespace sw
     /**
      * @brief 씬 파일을 워커 스레드에서 비동기로 로드하도록 요청하고 TaskFuture<Scene*> 를 반환합니다.
      */
-    TaskFuture<Scene*> SceneManager::requestLoadFuture( string_view path )
+    TaskFuture<Scene*> SceneManager::requestLoadFuture( string_view path, SceneLoadKind kind )
     {
         if ( path.empty() )
         {
@@ -238,15 +239,18 @@ namespace sw
             _queuedPath    = path;
             _queuedPromise = TaskPromise<Scene*>{};
             SW_LOG_TRACE( "Async load in flight — queued '%#'", path );
-            return _queuedPromise.getFuture();
+            TaskFuture<Scene*> queuedFuture = _queuedPromise.getFuture();
+            _onSceneLoadRequested.broadcast( _queuedPath, kind, queuedFuture );
+            return queuedFuture;
         }
 
-        // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다. 여기서
-        // 복사해 넘기고 원본으로 future 를 뽑는다(양쪽 return 이 prvalue 라야 복사가 안 생긴다).
+        // `TaskPromise` 는 공유 상태를 가리키는 핸들이라 복사해도 같은 약속이다. 여기서 복사해 넘기고 원본으로 future 를 뽑는다.
         TaskPromise<Scene*> promise{};
         if ( dispatchLoad( path, promise ) == false )
             return {};
-        return promise.getFuture();
+        TaskFuture<Scene*> future = promise.getFuture();
+        _onSceneLoadRequested.broadcast( string( path ), kind, future );
+        return future;
     }
 
     bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
@@ -324,9 +328,9 @@ namespace sw
         return true;
     }
 
-    bool SceneManager::requestLoadAsync( string_view path )
+    bool SceneManager::requestLoadAsync( string_view path, SceneLoadKind kind )
     {
-        return requestLoadFuture( path ).isValid();
+        return requestLoadFuture( path, kind ).isValid();
     }
 
     void SceneManager::loadSceneAsyncJob( const TaskArgs& args )

@@ -179,6 +179,10 @@ namespace sw
         game::setGameScope( &_gameScope );
         bindScopedService( &_packConfig._data );
         const bool bPackConfigApplied = applyPackConfig();
+        // 씬 로드를 누가 요청했든 받아들임 알림으로 로딩 화면을 띄운다(언리얼 로딩 화면 모듈이 PreLoadMap 을 구독하는 것과 같다). 첫 씬 요청(onInitialize) 앞에 건다.
+        if ( SceneManager* pLoadSceneManager = game::findSubsystem<SceneManager>() )
+            _sceneLoadRequestedSubscription = pLoadSceneManager->onSceneLoadRequested().add(
+                SW_DELEGATE_METHOD( SceneLoadRequestedHandler, &GameInstance::onSceneLoadRequested, this ) );
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다 — 첫 씬 요청(onInitialize 안)이 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다.
         if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
             SW_LOG_ERROR( "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
@@ -225,6 +229,7 @@ namespace sw
         if ( GameNetSession* pNetSession = game::findSubsystem<GameNetSession>() )
             pNetSession->getConnectSecurity().setProvider( nullptr );
         detachGameScope();
+        _sceneLoadRequestedSubscription.reset();
         _listPendingSceneLoad.clear();
         _pWindow       = nullptr;
         _pRHIDevice    = nullptr;
@@ -379,13 +384,20 @@ namespace sw
             SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
             return false;
         }
-        TaskFuture<Scene*> future = pSceneManager->requestLoadFuture( scenePath );
-        if ( future.isValid() == false )
+        // 로딩 화면 · 로드 이벤트는 받아들임 알림(`onSceneLoadRequested`)이 붙인다 — 시나리오 · 게임 코드가 연 씬도 같은 길이다.
+        if ( pSceneManager->requestLoadFuture( scenePath, SceneLoadKind::Travel ).isValid() == false )
         {
             SW_LOG_ERROR( "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
             return false;
         }
-        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
+        return true;
+    }
+
+    void GameInstance::onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future )
+    {
+        if ( kind != SceneLoadKind::Travel )
+            return; // 도구가 연 씬(편집기 · 진단)은 게임 흐름이 아니다
+        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future } );
         LoadingScreenController& loadingScreen = getSubsystem<LoadingScreenController>();
         if ( loadingScreen.getSettings()._documentPath.isSet() )
             (void)loadingScreen.beginLoading();
@@ -393,7 +405,6 @@ namespace sw
         SceneLoadRequestedEvent event{};
         event._levelName = scenePath;
         GameEventUtil::send( event );
-        return true;
     }
 
     void GameInstance::publishFinishedSceneLoads()

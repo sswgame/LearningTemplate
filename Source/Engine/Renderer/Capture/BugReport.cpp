@@ -292,7 +292,7 @@ namespace sw
         if ( bOtherScene )
         {
             // 다른 씬이면 원래 씬을 연다(사본은 그 순간의 기록일 뿐 — 열어서 저장하면 BugReport 폴더에 쓰게 된다). 로드는 워커가 하고 교체는 이 스레드가 한다.
-            const TaskFuture<Scene*> future = sceneManager.requestLoadFuture( report._scenePath );
+            const TaskFuture<Scene*> future = sceneManager.requestLoadFuture( report._scenePath, SceneLoadKind::Tool );
             if ( future.waitFor( BugReportInternal::kSceneLoadTimeoutMilliseconds ) == false )
             {
                 outReply = "bugreport.goto: the scene '" + report._scenePath + "' did not load in time";

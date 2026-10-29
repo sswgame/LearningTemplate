@@ -1,0 +1,22 @@
+{
+    "$schema_note": [
+        "App · 시나리오 실행이 밖으로 내는 프로세스 종료 코드 표의 단일 출처(SSOT)다.",
+        "C++ 은 configure 때 Scripts/generate/ProcessExitCodes.py 가 만든 sw/config/ProcessExitCodes.gen.h 의 열거형 ProcessExitCode 와 이름 함수로 읽고",
+        "(AutomationExitCode.h · RHIInitResult.h · AutomationBackendMatrix), CMake 는 generated/sw/config/ProcessExitCodes.cmake 의 SW_EXIT_CODE_<name> 으로 읽는다",
+        "(Test/Scenario 의 SKIP_RETURN_CODE). 숫자는 이 파일에만 쓴다.",
+        "",
+        "name = ProcessExitCode 열거자(시나리오 결과면 AutomationOutcome 열거자와 같은 이름), code = 종료 코드, label = 요약 줄 · 보고의 이름.",
+        "14 는 없앤 \"미확정\" 결과의 자리라 비워 둔다. 77 은 automake · CTest 의 건너뜀 관례다(이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다).",
+        "표에 없는 코드(-1 · 예외 코드)는 \"crashed\" 로 센다."
+    ],
+
+    "exit_codes": [
+        { "name": "Passed",          "code": 0,  "label": "passed" },
+        { "name": "Failed",          "code": 10, "label": "failed" },
+        { "name": "LoadError",       "code": 11, "label": "loadError" },
+        { "name": "TimedOut",        "code": 12, "label": "timedOut" },
+        { "name": "Skipped",         "code": 13, "label": "skipped" },
+        { "name": "UnhandledLog",    "code": 15, "label": "unhandledLog" },
+        { "name": "RHIUnusableHere", "code": 77, "label": "backendUnavailable" }
+    ]
+}

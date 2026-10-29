@@ -9,6 +9,7 @@ configure 가 파이썬 생성기 넷을 **한 프로세스**로 부른다 — �
 
   - ConfigVars.cmake       (CMakeConstants)      — ProjectConstants.py → CMake set()
   - CookContract.gen.h · CookContract.cmake (CookContract) — CookContract.json → C++ · CMake
+  - ProcessExitCodes.gen.h · ProcessExitCodes.cmake (ProcessExitCodes) — ProcessExitCodes.json → C++ · CMake
   - ShippingHostDefaults.h · ShippingGameDefaults.h (ShippingHostDefaults) — 엔진 설정 · 게임 프리셋 → C++ (프리셋이 없으면 건너뛴다 — CMake 가 그 자리에서 멈춘다)
   - EditorLayers.cmake     (EditorLayers)        — 에디터 층 표 → CMake 변수(층별 부분 · 위 층 헤더 껍데기)
   - EngineLayers.cmake     (EngineLayers)        — 엔진 층 표 → CMake 변수(층별 소스 · 헤더)
@@ -32,6 +33,7 @@ from generate.GeneratorOutput import runGenerator  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
 from generate.CMakeConstants import generateCMakeConstants  # noqa: E402
 from generate.CookContract import generateCookContract  # noqa: E402
+from generate.ProcessExitCodes import generateProcessExitCodes  # noqa: E402
 from generate.EditorLayers import generateEditorLayers  # noqa: E402
 from generate.EngineLayers import generateEngineLayers  # noqa: E402
 from generate.ShippingHostDefaults import generateShippingHostDefaults  # noqa: E402
@@ -43,6 +45,7 @@ def generateConfigureFiles(outputDir: Path, gameName: str) -> None:
     """configure 산출물 넷을 `outputDir` 에 — 각 생성기를 단독으로 돌린 것과 같은 바이트."""
     generateCMakeConstants(outputDir / "ConfigVars.cmake")
     generateCookContract(outputDir / "CookContract.gen.h", outputDir / "CookContract.cmake")
+    generateProcessExitCodes(outputDir / "ProcessExitCodes.gen.h", outputDir / "ProcessExitCodes.cmake")
     gamePreset = f"{kDirRuntimeGamePreset}/{gameName}.json"
     if (getProjectRoot() / gamePreset).is_file():
         generateShippingHostDefaults(outputDir / "ShippingHostDefaults.h", outputDir / "ShippingGameDefaults.h", gamePreset)

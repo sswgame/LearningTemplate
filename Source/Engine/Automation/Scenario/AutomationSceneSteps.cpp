@@ -88,7 +88,7 @@ namespace sw
                                          { return pending._pStep == &step; } );
                 if ( it == listPending.end() )
                 {
-                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( *step.findAttribute( "path" ) );
+                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( *step.findAttribute( "path" ), SceneLoadKind::Travel );
                     if ( future.isValid() == false )
                     {
                         context.recordFailure( step, "the scene load could not be requested" );
