@@ -42,7 +42,6 @@ namespace sw
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{ "AssetManager.AssetCache" }
         , _listReloadEntry{}
-        , _contentSource{ ContentSource::Cooked }
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
         // 정적 값 표)는 빌려 온다. 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
@@ -95,13 +94,9 @@ namespace sw
         if ( listSearchPriority.empty() == false )
             AssetPaths::setSearchPriority( listSearchPriority );
 
-        // 소스 트리를 읽는 쿠킹은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이다. 느슨한 파일을 배포 구성에서도 읽고, GUID 표는 `.meta` 를 훑는다.
-        _contentSource = source;
-        bool bMounted{ false };
-        if ( source == ContentSource::SourceTree )
-            _pPackManager->setAllowLooseFiles( true );
-        else
-            bMounted = mountStartupPacks();
+        // 소스를 읽는 실행(개발 · 쿠킹)은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이라 소스와 섞어 읽으면 어긋난 쿠킹본을 모르고 읽는다. GUID 표는 `.meta` 를 훑는다.
+        _pPackManager->setContentSource( source );
+        const bool bMounted = source == ContentSource::Cooked && mountStartupPacks();
         loadAssetRegistries();
         return bMounted;
     }
@@ -320,18 +315,23 @@ namespace sw
     {
         if ( initialize() == false )
             return SubsystemInitResult::Failed;
-        // 쿠킹(씬 · 팩)은 소스 트리를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
-        bool bCooking = false;
+        // 쿠킹(씬 · 팩)은 배포 구성에서도 소스를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
+        // 개발 구성도 `-cooked-content` 면 배포와 같은 길(쿠킹한 팩만)을 읽는다 — 배포 읽기 경로를 배포 빌드 없이 돌려 본다.
+        ContentSource source = kBuildContentSource;
         if ( engine::areEngineServicesBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-            for ( const CommandLineArgument argument : { CommandLineArgument::COOK_SCENES, CommandLineArgument::COOK_PACKS, CommandLineArgument::COOK_ALL } )
+            const auto                isGiven     = [&commandLine]( CommandLineArgument argument )
             {
                 bool bGiven = false;
-                bCooking    = ( commandLine.getArgument( argument, bGiven ) && bGiven ) || bCooking;
-            }
+                return commandLine.getArgument( argument, bGiven ) && bGiven;
+            };
+            if ( isGiven( CommandLineArgument::COOK_SCENES ) || isGiven( CommandLineArgument::COOK_PACKS ) || isGiven( CommandLineArgument::COOK_ALL ) )
+                source = ContentSource::Source;
+            else if ( isGiven( CommandLineArgument::COOKED_CONTENT ) )
+                source = ContentSource::Cooked;
         }
-        (void)mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, bCooking ? ContentSource::SourceTree : ContentSource::Cooked ); // 느슨한 트리만 있어도 기동한다
+        (void)mountContent( engine::getSubsystem<EngineConfig>()._listResourcePriority, source ); // 느슨한 트리만 있어도 기동한다
         return SubsystemInitResult::Succeeded;
     }
 

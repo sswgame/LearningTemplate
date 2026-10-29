@@ -37,18 +37,17 @@ namespace sw
         }
 
         /**
-         * @brief 쿠킹된 바이너리가 지금 소스에서 나온 것인지입니다. 배포 구성은 늘 true 입니다.
+         * @brief 쿠킹된 바이너리가 지금 소스에서 나온 것인지입니다. 쿠킹본만 읽는 정책(`ContentSource::Cooked`)은 늘 true 입니다.
          * @details **신선도는 `cook.stamp` 의 내용 해시로 본다.** mtime 비교는 안 된다. 이 저장소는 쿠킹된 바이너리까지 커밋하므로
          *          `git pull` 이 둘의 시간 순서를 임의로 뒤집어, 소스가 바뀌었는데도 "바이너리가 더 새것"이라 낡은 것을 쓴다.
-         *          검사는 개발 빌드 전용이다. 배포에는 다시 컴파일할 길이 없어 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는
+         *          검사는 소스를 읽는 실행만 한다. 쿠킹본 정책에는 다시 컴파일할 길이 없어 거부하면 폴백이 아니라 빈 화면이고, 배포물의 신선도는
          *          쿠킹이 같은 스탬프로 이미 막는다(App --cook-all --verify-shaders).
          * @param outListIncludedFile 최신이면 스탬프에 적힌 이 소스의 헤더(절대 경로)를 담는다 — 인메모리 항목이 헤더를 고쳤을 때 낡음을 알아보는 데 쓴다. 판정하지 않았으면 비어 있다.
          */
         bool isPrecookedCurrent( const string& precookedRelPath, const string& sourceAbsPath, vector<string>& outListIncludedFile )
         {
             outListIncludedFile.clear();
-#if !defined( SW_SHIPPING )
-            if ( sourceAbsPath.empty() )
+            if ( AssetIO::getContentSource() == ContentSource::Cooked || sourceAbsPath.empty() )
                 return true;
             const string precookedAbsPath = AssetPaths::findLooseFile( precookedRelPath ).getDiskPath();
             if ( precookedAbsPath.empty() || FileUtil::exists( precookedAbsPath ) == false )
@@ -58,11 +57,6 @@ namespace sw
                 return true;
             SW_LOG_TRACE( "Pre-cooked shader does not match the current source — recompiling: %#", precookedRelPath.c_str() );
             return false;
-#else
-            (void)precookedRelPath;
-            (void)sourceAbsPath;
-            return true;
-#endif
         }
     } // namespace
 } // namespace sw
@@ -335,8 +329,17 @@ namespace sw
             return result;
         }
 
-        // 3순위(런타임 DXC 컴파일 폴백, 개발 모드 전용)
-#if !defined( SW_SHIPPING )
+        // 3순위(런타임 DXC 컴파일 — 소스를 읽는 실행만)
+        if ( AssetIO::getContentSource() == ContentSource::Cooked )
+        {
+            // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
+            SW_LOG_ERROR( "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._filePath.c_str(), desc._entryPoint.c_str(),
+                          precookedRelPath.c_str() );
+            ShaderCompileResult failedResult{};
+            failedResult._bSuccess     = false;
+            failedResult._errorMessage = "Shader binary missing in the cooked content";
+            return failedResult;
+        }
         // 라이브 컴파일은 Debug 에서 디버그 코드젠으로 한다(makeLiveCompileDesc). RenderDoc 에서 셰이더를 한 줄씩 볼 수 있어야 한다.
         // 쿠커는 이 경로를 타지 않으므로 쿠킹된 바이너리는 빌드 구성과 무관하게 늘 최적화된 것이다.
         ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( liveDesc );
@@ -346,15 +349,6 @@ namespace sw
             storeEntry( std::move( cacheKey ), desc, compiledResult, absPath );
         }
         return compiledResult;
-#else
-        // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
-        SW_LOG_ERROR( "Precompiled shader binary not found in shipping pack: '%#' [%#] — %#",
-                      desc._filePath.c_str(), desc._entryPoint.c_str(), precookedRelPath.c_str() );
-        ShaderCompileResult failedResult{};
-        failedResult._bSuccess     = false;
-        failedResult._errorMessage = "Shader binary missing in shipping pack";
-        return failedResult;
-#endif
     }
 
     void ShaderCache::clearCache()

@@ -68,6 +68,9 @@ SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
 // `-cook-packs` · `-cook-all` 이 팩을 쓸 폴더
 SW_REGISTER_ARGUMENT( PACK_DIR, "", false, "pack-dir" )
 
+// 개발 구성에서도 배포처럼 쿠킹한 팩만 읽는다(낱개 파일 · 씬 XML · 라이브 셰이더 컴파일 없이) — 배포 읽기 경로를 배포 빌드 없이 확인한다. 팩이 먼저 있어야 한다(`-cook-all`)
+SW_REGISTER_ARGUMENT( COOKED_CONTENT, false, false, "cooked-content" )
+
 // `-cook-packs` · `-cook-all` 이 팩과 함께 `-pack-dir` 에 남기는 빌드 내용 목록(`base.packbuild.xml` — 설치된 빌드의 출처)의 빌드 번호. 비우면 번호도 내용 목록도 없는 `patching="none"` 기록을 남긴다(패치를 쓰지 않는 빌드).
 // `-make-patch` 에서는 새 빌드 번호다
 SW_REGISTER_ARGUMENT( PACK_BUILD, "", false, "pack-build" )

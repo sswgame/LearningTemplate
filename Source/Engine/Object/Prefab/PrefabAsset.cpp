@@ -1193,20 +1193,11 @@ namespace sw
         if ( binPath.empty() )
             binPath = resolvedPath;
 
-        // 배포 구성은 쿠킹본만 읽는다. 쿠킹은 소스를 읽는다 — 쿠킹의 입력은 소스다. 쿠킹인지는 둘 중 하나로 안다: 소스 트리를 올린 쿠킹 프로세스
-        // (`ContentSource::SourceTree`), 또는 이 스레드의 쿠킹 작업(`CookJob` — 쿠커가 작업 안에서 씬을 지으며 프리팹을 부른다. 프로세스의 콘텐츠
-        // 출처와 상관없이 그 작업의 입력은 소스이고, 쿠킹본을 읽으면 아직 베이크하지 않은 프리팹이 없다고 지거나 낡은 것을 읽는다).
-#if defined( SW_SHIPPING )
-        const bool bSourceTreeProcess = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getContentSource() == ContentSource::SourceTree;
-        const bool bReadsSource       = bSourceTreeProcess || CookJob::findCurrent() != nullptr;
-#else
-        constexpr bool bReadsSource = true;
-#endif
-        if ( bReadsSource == false )
+        if ( AssetIO::readsSource() == false )
         {
             if ( asset->loadFromBinaryFile( AssetID{ binPath } ) == false )
             {
-                SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
+                SW_LOG_ERROR( "Cooked content requires the cooked prefab: %#", binPath );
                 return nullptr;
             }
         }

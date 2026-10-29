@@ -518,21 +518,16 @@ namespace sw
         // 쿠킹본 이름은 쿠커와 같은 규칙 하나다(`AssetCookPath`). 씬 이름(`.scene.xml`)이 아니면 쿠킹본이 없다 — 쿠커가 쿠킹하지 않는다.
         const string binPath = AssetCookPath::toCookedPath( path );
 
-#if defined( SW_SHIPPING )
-        if ( binPath.empty() == false && loadBinary( AssetID{ binPath } ) )
-            return true;
-        SW_LOG_ERROR( "Shipping requires cooked binary scene: %# (cooked name '%#')", path, binPath );
-        return false;
-#else
+        // 쿠킹본 경로를 직접 받으면 그것을 읽는다. 그 밖은 정책 하나가 고르고, 고른 쪽이 없으면 다른 쪽을 대신 읽지 않는다 — 소스 실행이 옆에 남은
+        // 쿠킹본을 읽으면 소스와 어긋난 씬을 모르고 쓴다(`ContentSource`).
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( assetID );
-
-        const bool bBinaryLoaded = binPath.empty() == false && AssetIO::hasAsset( AssetID{ binPath } ) && loadBinary( AssetID{ binPath } );
-        if ( bBinaryLoaded )
+        if ( AssetIO::readsSource() )
+            return loadXML( AssetID{ path } );
+        if ( binPath.empty() == false && loadBinary( AssetID{ binPath } ) )
             return true;
-
-        return loadXML( AssetID{ path } );
-#endif
+        SW_LOG_ERROR( "Cooked content requires the cooked scene: %# (cooked name '%#')", path, binPath );
+        return false;
     }
 
 } // namespace sw

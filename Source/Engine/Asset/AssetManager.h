@@ -26,17 +26,11 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
+#include "Engine/FileSystem/ContentSource.h"
 
 namespace sw
 {
     class PackManager;
-
-    /** @brief `AssetManager::mountContent` 가 무엇을 콘텐츠로 올릴지 정합니다. */
-    enum class ContentSource : uint8
-    {
-        Cooked,     ///< 실행용이다. 쿠킹한 팩을 마운트하고, 느슨한 `Content/` 파일은 개발 구성에서만 읽는다
-        SourceTree, ///< 쿠킹용이다. 소스 트리(`Content/`)를 읽고, 팩(지난 쿠킹의 산출물)은 마운트하지 않으며, 프리팹도 소스(XML, JSON)를 읽는다
-    };
 
     /**
      * @class AssetManager
@@ -62,9 +56,9 @@ namespace sw
         /**
          * @brief 콘텐츠를 로드합니다. 검색 우선순위 적용, 시작 팩 마운트, 에셋 레지스트리 적재 순서로 진행합니다.
          * @param listSearchPriority 검색 우선순위 토큰 목록. 비우면 지금 설정된 것을 그대로 씁니다.
-         * @param source 쿠킹(`ContentSource::SourceTree`)이면 팩을 마운트하지 않고 느슨한 소스 파일을 읽게 합니다. 배포 구성도 같습니다. 쿠킹의
-         *               입력은 소스이고 팩은 그 산출물이라, 팩을 올리면 지난 빌드의 결과(엔진 데이터, 프리팹, GUID 테이블)를 다시 읽거나 첫 빌드에서는
-         *               아무것도 읽지 못합니다.
+         * @param source 콘텐츠 정책 — 팩 매니저에 걸어 모든 읽기가 본다(`AssetIO::getContentSource`). 소스(`ContentSource::Source` — 개발 실행 · 쿠킹)면 팩을
+         *               마운트하지 않고 느슨한 소스 파일만 읽습니다. 쿠킹의 입력은 소스이고 팩은 그 산출물이라, 팩을 올리면 지난 빌드의 결과(엔진 데이터,
+         *               프리팹, GUID 테이블)를 다시 읽거나 소스와 어긋난 것을 읽습니다.
          * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Content/` 트리만 있으면 false).
          *
          * @details **호스트 게임 프리셋(`ConfigManager` 가 `GameConfig` 를 읽은 뒤)에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
@@ -74,9 +68,7 @@ namespace sw
          *          `initialize()` 와 나눈 이유가 그것이다. "설정이 먼저"라는 전제가 부르는 쪽에 드러나고,
          *          우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않는다.
          */
-        [[nodiscard]] bool mountContent( const vector<string>& listSearchPriority, ContentSource source = ContentSource::Cooked );
-        /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. 마운트 전에는 `ContentSource::Cooked` 입니다. */
-        ContentSource getContentSource() const { return _contentSource; }
+        [[nodiscard]] bool mountContent( const vector<string>& listSearchPriority, ContentSource source );
 
         /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시와 GUID 테이블을 비웁니다. */
         void shutdown();
@@ -84,7 +76,7 @@ namespace sw
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "Asset";
         /**
-         * @brief 기동 순서의 자리 — 리소스 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(`-cook-scenes` 면 소스 트리 — 팩은 쿠킹의 산출물이다).
+         * @brief 기동 순서의 자리 — 리소스 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(개발 실행 · 쿠킹은 소스 트리, 배포 구성 · `-cooked-content` 는 팩 — `ContentSource`).
          * @details 팩 루트는 GameConfig, 팩 스트림은 코덱이다. 종료(`shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 서브시스템이 모두 이 뒤에 서므로,
          *          역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
          */
@@ -204,7 +196,6 @@ namespace sw
         };
         vector<ReloadEntry> _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
         /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. */
-        ContentSource _contentSource;
 
     private:
     private:

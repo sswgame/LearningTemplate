@@ -105,9 +105,9 @@ namespace sw
          * @return 기록한 씬 파일 수입니다. 씬마다 옆에 프리로드 목록(`<씬>.preload.json`)도 굽지만 이 수에는 세지 않는다.
          *
          * @param store 기록과 DDC 입니다. 씬마다 작업(`CookJob`) 하나로 베이크하고, 기록이 새것이면 DDC 의 출력을 다시 씁니다(`CookStore::cookFile`).
-         * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
-         *          프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs` 가 쿠킹합니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
-         *          "Shipping requires cooked binary scene" 으로 멈춘다.
+         * @details 산출물을 소스 옆에 두지 않습니다 — 소스 실행은 쿠킹본을 읽지 않지만(`ContentSource::Source`), 소스 트리에 낡은 `.bin` 을 남기지 않는다.
+         *          프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs` 가 쿠킹합니다. 실패를 세지 않으면 배포본(또는 `-cooked-content`)이 그 씬을 열 때에야
+         *          "Cooked content requires the cooked scene" 으로 멈춘다.
          *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 베이크한다.
          */
         SW_API static uint32 cookAllScenes( const SceneEngineServices& services, string_view sourceRoot, string_view cookedDir, const CookStore& store,

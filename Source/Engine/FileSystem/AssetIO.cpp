@@ -33,10 +33,10 @@ namespace sw
             return s_pPackManager.load( std::memory_order_acquire );
         }
 
-        /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저가 정하고, 엔진 밖이면 팩 매니저를 만들 때의 빌드 기본값과 같다(배포 구성은 금지). */
+        /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저의 콘텐츠 정책이 정하고, 엔진 밖이면 빌드 기본값이다(배포 구성은 금지). */
         bool isLooseFileAllowed( const PackManager* pPackManager )
         {
-            return pPackManager != nullptr ? pPackManager->isAllowLooseFiles() : PackManager::kAllowLooseFilesByDefault;
+            return ( pPackManager != nullptr ? pPackManager->getContentSource() : kBuildContentSource ) == ContentSource::Source;
         }
 
         /**
@@ -116,6 +116,17 @@ namespace sw
     void AssetIO::bindPackManager( const PackManager* pPackManager )
     {
         s_pPackManager.store( pPackManager, std::memory_order_release );
+    }
+
+    ContentSource AssetIO::getContentSource()
+    {
+        const PackManager* pPackManager = findPackManager();
+        return pPackManager != nullptr ? pPackManager->getContentSource() : kBuildContentSource;
+    }
+
+    bool AssetIO::readsSource()
+    {
+        return getContentSource() == ContentSource::Source || CookJob::findCurrent() != nullptr;
     }
 
     bool AssetIO::readTextAsset( const AssetID& id, string& outText, string* pOutAbsPath )

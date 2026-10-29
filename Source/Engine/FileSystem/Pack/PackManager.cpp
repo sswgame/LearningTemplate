@@ -236,7 +236,7 @@ namespace sw
         : _vfsMutex{}
         , _listMountedPack{}
         , _dlcValidator{}
-        , _bAllowLooseFiles{ kAllowLooseFilesByDefault }
+        , _contentSource{ kBuildContentSource }
     {
     }
 
@@ -250,7 +250,7 @@ namespace sw
         ScopedLock<mutex> lock{ other._vfsMutex };
         _listMountedPack = std::move( other._listMountedPack );
         _dlcValidator    = std::move( other._dlcValidator );
-        _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
     }
 
     PackManager& PackManager::operator=( PackManager&& other ) noexcept
@@ -260,7 +260,7 @@ namespace sw
             ScopedLockPair<mutex> lock{ _vfsMutex, other._vfsMutex };
             _listMountedPack = std::move( other._listMountedPack );
             _dlcValidator    = std::move( other._dlcValidator );
-            _bAllowLooseFiles.store( other._bAllowLooseFiles.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            _contentSource.store( other._contentSource.load( std::memory_order_relaxed ), std::memory_order_relaxed );
         }
         return *this;
     }
@@ -495,14 +495,14 @@ namespace sw
         _dlcValidator = std::move( validator );
     }
 
-    void PackManager::setAllowLooseFiles( bool bAllow )
+    void PackManager::setContentSource( ContentSource source )
     {
-        _bAllowLooseFiles.store( bAllow, std::memory_order_relaxed );
+        _contentSource.store( source, std::memory_order_relaxed );
     }
 
-    bool PackManager::isAllowLooseFiles() const
+    ContentSource PackManager::getContentSource() const
     {
-        return _bAllowLooseFiles.load( std::memory_order_relaxed );
+        return _contentSource.load( std::memory_order_relaxed );
     }
 
     size_t PackManager::getMountedPackCount() const

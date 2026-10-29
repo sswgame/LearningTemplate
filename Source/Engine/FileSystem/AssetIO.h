@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/FileSystem/ContentSource.h"
 
 namespace sw
 {
@@ -47,6 +48,17 @@ namespace sw
          *          `FPlatformFileManager` 가 팩 파일 계층을 걸어 두는 것과 같다).
          */
         static void bindPackManager( const PackManager* pPackManager );
+        /**
+         * @brief 콘텐츠 정책입니다 — 쿠킹본 · 소스 중 무엇을 읽는가를 묻는 곳은 모두 이것 하나를 본다(씬 · 프리팹 · 셰이더 · 낱개 파일).
+         * @details 걸린 팩 매니저의 값이고, 걸리지 않았으면(엔진 없이 도는 도구) 빌드 기본값(`kBuildContentSource`)이다.
+         */
+        static ContentSource getContentSource();
+        /**
+         * @brief 이 읽기가 소스(XML · JSON)를 읽어야 하면 true, 쿠킹본을 읽어야 하면 false 입니다. 쿠킹본과 소스가 다 있는 에셋(씬 · 프리팹)의 로더가 묻는다.
+         * @details 정책이 소스이거나 이 스레드에 쿠킹 작업이 있을 때다(`CookJob` — 쿠킹 작업의 입력은 정책과 상관없이 소스다. 쿠킹본을 읽으면 아직
+         *          베이크하지 않은 것이 없다고 지거나 낡은 것을 읽는다). 둘 중 하나가 없을 때 다른 쪽을 대신 읽지 않는다.
+         */
+        static bool readsSource();
         /**
          * @brief 리소스 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
          *        **OS 경로는 받지 않습니다** — 모든 구성에서 오류 로그를 남기고 false 입니다. 디스크 파일은

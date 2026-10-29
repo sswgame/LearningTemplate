@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/FileSystem/ContentSource.h"
 #include "Engine/FileSystem/Pack/PackPatch.h"
 #include "Engine/FileSystem/Pack/PackReader.h"
 
@@ -42,12 +43,6 @@ namespace sw
     class SW_API PackManager
     {
     public:
-#if defined( SW_SHIPPING )
-        static constexpr bool kAllowLooseFilesByDefault = false; ///< 배포 구성은 팩만 읽는다
-#else
-        static constexpr bool kAllowLooseFilesByDefault = true; ///< 개발 구성은 낱개 파일을 먼저 읽는다
-#endif
-
         PackManager();
         ~PackManager();
 
@@ -67,7 +62,7 @@ namespace sw
         /**
          * @brief 패치 팩(팩 단위 차분 배포)을 마운트합니다. 팩이 담은 바뀐 파일이 아래 팩을 덮고, @p listRemovedPath 의 경로는 아래 팩에 있어도 없는 것으로 봅니다.
          * @details 지움 목록은 패치 목록 파일(`PackPatchManifest::_listRemovedPath`)에서 온다. 지운 경로는 전체 가상 경로이며 도메인 팩의 도메인을 뗀 항목도 가린다.
-         *          낱개 파일(`setAllowLooseFiles`)은 가리지 않는다 — 패치는 배포 구성(팩만 읽음)의 일이다.
+         *          낱개 파일(`setContentSource`)은 가리지 않는다 — 패치는 배포 구성(팩만 읽음)의 일이다.
          * @return 마운트에 성공하면 true 입니다(`mountPack` 과 같은 실패 규칙).
          */
         [[nodiscard]] bool mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath );
@@ -122,13 +117,13 @@ namespace sw
          */
         void setDLCEntitlementValidator( DLCEntitlementDelegate validator );
 
-        /**
-         * @brief 낱개 파일(loose file)을 먼저 읽을지 설정합니다(모딩 · 개발 편의용).
-         */
-        void setAllowLooseFiles( bool bAllow );
+        /** @brief 콘텐츠 정책을 정합니다. 기동 때 마운트 전에 한 번 정한다(`AssetManager::mountContent`). 만들 때의 값은 빌드 기본값(`kBuildContentSource`)이다. */
+        void setContentSource( ContentSource source );
+        /** @brief 콘텐츠 정책입니다. */
+        ContentSource getContentSource() const;
 
-        /** @brief 낱개 파일을 먼저 읽는지 반환합니다. */
-        bool isAllowLooseFiles() const;
+        /** @brief 낱개 파일(소스 트리)을 읽는지 반환합니다(`ContentSource::Source`). */
+        bool isAllowLooseFiles() const { return getContentSource() == ContentSource::Source; }
 
         /** @brief 현재 마운트된 팩 개수를 반환합니다. */
         size_t getMountedPackCount() const;
@@ -176,8 +171,8 @@ namespace sw
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
         DLCEntitlementDelegate               _dlcValidator;
-        atomic<bool>                         _bAllowLooseFiles; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
-        PackPatchTrust                       _patchTrust;       ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
+        atomic<ContentSource>                _contentSource; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
+        PackPatchTrust                       _patchTrust;    ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
     };
 
 } // namespace sw
