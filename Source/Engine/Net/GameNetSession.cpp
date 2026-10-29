@@ -2,7 +2,6 @@
 
 #include "Engine/Net/GameNetSession.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -14,7 +13,6 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Config/NetEmulationPresetTable.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -76,208 +74,6 @@ namespace sw
             static constexpr float32 kPercent = 100.0f;
             /** @brief 초당 킬로비트(`NetConnectionStats::_sentBandwidth`)를 초당 바이트로 바꾸는 배수입니다(1000 / 8). */
             static constexpr float32 kBytesPerKilobit = 125.0f;
-            /** @brief `net.traffic` 이 한 번에 보낼 수 있는 메시지 상한(신뢰 창 `NetConnection::kReliableWindow` 를 넘으면 보내기가 거절된다). */
-            [[maybe_unused]] static constexpr int32 kMaxTrafficMessageCount = 200; // 개발 명령만 쓴다(Shipping 에는 없다)
-            /** @brief 엔진의 세션입니다 — 개발 명령 `net.*` 이 읽는다(게임 스레드). 엔진 서비스가 묶이지 않았으면 nullptr 입니다. */
-            [[maybe_unused]] static GameNetSession* findActiveSession() { return engine::findSubsystem<GameNetSession>(); } // 개발 명령만 쓴다(Shipping 에는 없다)
-
-#if SW_DEV_COMMANDS_ENABLED
-            /** @brief 명령을 받을 세션 — 없으면 답을 채우고 nullptr 입니다. */
-            static GameNetSession* findCommandSession( string& outReply )
-            {
-                GameNetSession* pSession = findActiveSession();
-                if ( pSession == nullptr || pSession->isActive() == false )
-                {
-                    outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
-                    return nullptr;
-                }
-                return pSession;
-            }
-
-            /** @brief 보내는 쪽 · 받는 쪽 조건을 한 줄로 씁니다(`net.emulation` 의 답). */
-            static string describeEmulation( const NetEmulationTransport& emulation )
-            {
-                return "net emulation up [" + emulation.getDefaultConditions().makeOverrideText() + "] down [" + emulation.getIncomingConditions().makeOverrideText() + "]" +
-                       ( emulation.isInOutage() ? " (outage)" : "" );
-            }
-
-            /**
-             * @brief `net.emulation` — 이 프로세스의 회선 흉내를 바꿉니다.
-             * @details - `net.emulation` : 지금 조건
-             *          - `net.emulation <up|down|both> [<프리셋>] [key=value …]` : 프리셋에서 시작해(없으면 지금 조건에서) 덮어쓰기를 적용한다. up 은 보내는 쪽, down 은 받는 쪽이다
-             *          - `net.emulation spike <초>` : 그동안 보내고 받는 것을 모두 버린다(0 이면 끝낸다)
-             *          - `net.emulation stats` : `NetEmulationReport` 한 줄
-             */
-            static bool runEmulation( const vector<string>& listArgument, string& outReply )
-            {
-                GameNetSession* pSession = findCommandSession( outReply );
-                if ( pSession == nullptr )
-                    return true;
-                // 샤드마다 흉내가 하나씩이고 모두 같은 조건이다 — 첫 샤드에서 읽고, 바꿀 때는 모두에 건다.
-                NetEmulationTransport* pEmulation = pSession->findEmulation( 0 );
-                if ( pEmulation == nullptr )
-                {
-                    outReply = "net emulation is not available in this build";
-                    return true;
-                }
-                if ( listArgument.empty() )
-                {
-                    outReply = describeEmulation( *pEmulation );
-                    return true;
-                }
-                const string& verb = listArgument[0];
-                if ( verb == "stats" )
-                {
-                    outReply = pSession->makeEmulationReport().makeLine();
-                    return true;
-                }
-                if ( verb == "spike" )
-                {
-                    float32    seconds                = 0.0f;
-                    const bool bInvalidSpikeArguments = listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], seconds ) == false || seconds < 0.0f;
-                    if ( bInvalidSpikeArguments )
-                        return false;
-                    for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )
-                    {
-                        pSession->findEmulation( shardIndex )->startOutage( static_cast<float64>( seconds ) );
-                    }
-                    outReply = "net emulation spike " + listArgument[1] + " s";
-                    return true;
-                }
-                const bool bUp   = verb == "up" || verb == "both";
-                const bool bDown = verb == "down" || verb == "both";
-                if ( bUp == false && bDown == false )
-                    return false;
-                size_t                 overrideStart = 1;
-                NetEmulationConditions preset;
-                const bool             bPreset = listArgument.size() > 1 && listArgument[1].find( '=' ) == string::npos;
-                if ( bPreset )
-                {
-                    NetEmulationPresetTable presetTable;
-                    const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
-                    if ( presetTable.loadFromAsset( AssetID{ presetPath.get() } ) == false )
-                    {
-                        outReply = string( "net emulation presets could not be read (" ) + presetPath.get() + ")";
-                        return true;
-                    }
-                    if ( presetTable.tryGetConditions( listArgument[1], preset ) == false )
-                    {
-                        outReply = "unknown preset '" + listArgument[1] + "' (" + presetTable.makePresetNames() + ")";
-                        return true;
-                    }
-                    overrideStart = 2;
-                }
-                string overrideText;
-                for ( size_t index = overrideStart; index < listArgument.size(); ++index )
-                {
-                    overrideText += listArgument[index];
-                    overrideText += ' ';
-                }
-                // 방향마다 시작점(프리셋 또는 지금 조건)에 같은 덮어쓰기를 얹는다. 하나라도 틀리면 아무것도 바꾸지 않는다.
-                NetEmulationConditions upConditions   = bPreset ? preset : pEmulation->getDefaultConditions();
-                NetEmulationConditions downConditions = bPreset ? preset : pEmulation->getIncomingConditions();
-                string                 error;
-                if ( NetEmulationConditions::parseOverrides( overrideText, upConditions, error ) == false ||
-                     NetEmulationConditions::parseOverrides( overrideText, downConditions, error ) == false )
-                {
-                    outReply = "net.emulation: " + error;
-                    return true;
-                }
-                for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )
-                {
-                    NetEmulationTransport* pShardEmulation = pSession->findEmulation( shardIndex );
-                    if ( bUp )
-                        pShardEmulation->setDefaultConditions( upConditions );
-                    if ( bDown )
-                        pShardEmulation->setIncomingConditions( downConditions );
-                }
-                outReply = describeEmulation( *pEmulation );
-                return true;
-            }
-
-            /** @brief `net.disconnect` — 이 프로세스의 모든 연결을 끊습니다(서버는 모든 클라이언트를, 클라이언트는 서버를). */
-            static bool runDisconnect( const vector<string>& listArgument, string& outReply )
-            {
-                (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
-                if ( pSession == nullptr )
-                    return true;
-                pSession->disconnectPeers();
-                outReply = "net session disconnected";
-                return true;
-            }
-
-            /** @brief `net.reconnect` — 끊긴 클라이언트가 다시 붙기 시작합니다. */
-            static bool runReconnect( const vector<string>& listArgument, string& outReply )
-            {
-                (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
-                if ( pSession == nullptr )
-                    return true;
-                outReply = pSession->reconnect() ? "net session reconnecting" : "net session: only a disconnected client reconnects";
-                return true;
-            }
-
-            /**
-             * @brief `net.traffic <메시지 수> [<바이트>]` — 붙은 상대마다 그 크기의 신뢰 메시지를 그만큼 보냅니다(재전송 · 손실 수치를 보는 부하).
-             * @details 작은 메시지는 패킷 하나에 여럿 실려 패킷 수가 적다 — 손실을 확실히 맞히려면 메시지를 패킷 하나 크기(1024 바이트까지)로 키운다.
-             */
-            static bool runTraffic( const vector<string>& listArgument, string& outReply )
-            {
-                int32      messageCount = 0;
-                int32      messageBytes = 1;
-                const bool bValid       = ( listArgument.size() == 1 || listArgument.size() == 2 ) && StringUtil::parseInt( listArgument[0], messageCount ) && messageCount >= 1 &&
-                                    ( listArgument.size() == 1 || StringUtil::parseInt( listArgument[1], messageBytes ) );
-                if ( bValid == false || messageBytes < 1 )
-                    return false;
-                GameNetSession* pSession = findCommandSession( outReply );
-                if ( pSession == nullptr )
-                    return true;
-                messageCount = MathUtil::min( messageCount, kMaxTrafficMessageCount );
-                vector<uint8> payloadBytes( static_cast<size_t>( MathUtil::min( messageBytes, NetConnection::kMaxSingleMessageSize ) ), uint8{ 0 } );
-                payloadBytes[0] = GameNetSessionMessage::kTraffic;
-                vector<int32> listConnection;
-                pSession->getPeers().collectConnected( listConnection );
-                int32 sentCount = 0;
-                for ( const int32 connectionID : listConnection )
-                {
-                    for ( int32 index = 0; index < messageCount; ++index )
-                    {
-                        const bool bSent = pSession->getPeers().sendMessage( connectionID, NetChannelType::ReliableOrdered, payloadBytes.data(), static_cast<int32>( payloadBytes.size() ) );
-                        sentCount += bSent ? 1 : 0;
-                    }
-                }
-                outReply = "net traffic queued " + to_string( sentCount ) + " reliable message(s) to " + to_string( listConnection.size() ) + " connection(s)";
-                return true;
-            }
-
-            /** @brief `net.stats` — 이 프로세스의 연결 · 트래픽 수치 한 줄(`NetStatsReport`)입니다. 에디터 Profiler 탭이 표준 입력으로 주기적으로 묻습니다. */
-            static bool runStats( const vector<string>& listArgument, string& outReply )
-            {
-                (void)listArgument;
-                GameNetSession* pSession = findCommandSession( outReply );
-                if ( pSession == nullptr )
-                    return true;
-                outReply = pSession->makeStatsReport().makeLine();
-                return true;
-            }
-
-            /** @brief `net.status` — 이 프로세스의 게임 네트워크 역할 · 포트 · 연결 수입니다. */
-            static bool runStatus( const vector<string>& listArgument, string& outReply )
-            {
-                (void)listArgument;
-                const GameNetSession* pSession = findActiveSession();
-                if ( pSession == nullptr || pSession->isActive() == false )
-                {
-                    outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
-                    return true;
-                }
-                outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
-                if ( pSession->getRole() == GameNetRole::Server )
-                    outReply += ", port " + to_string( pSession->getListenPort() ) + ", shards " + to_string( pSession->getShardCount() );
-                return true;
-            }
-#endif
         };
     } // namespace
 
@@ -300,25 +96,20 @@ namespace sw
      *          클라이언트는 서버 주소가, 서버 설정으로 연 전용 서버는 `ServerConfig::_listenAddress` 가 묶을 곳을 정한다 — 이 값을 읽지 않는다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
-    /**
-     * @brief `-gv_netEmulationPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmulation*` 낱값을 무시합니다.
-     * @details 부하 검증의 `<Load network>` 와 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 값을 밖에 다시 적지 않는다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmulationPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmulation* 낱값)" );
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 포트 샤드 하나 — 소켓, 그것을 감싼 회선 흉내(Dev), 호스트, 네트워크 스레드입니다.
-     * @details 선언 순서가 소멸 순서를 정한다: 스레드 → 호스트 → 흉내 → 소켓(흉내는 안쪽 전송을 빌려 쓰고, 호스트는 흉내를 빌려 쓴다).
+     * @brief 포트 샤드 하나 — 소켓, 그것을 감싼 데코레이터(있으면), 호스트, 네트워크 스레드입니다.
+     * @details 선언 순서가 소멸 순서를 정한다: 스레드 → 호스트 → 데코레이터 → 소켓(데코레이터는 안쪽 전송을 빌려 쓰고, 호스트는 데코레이터를 빌려 쓴다).
      */
     struct GameNetSession::Shard
     {
-        unique_ptr<UDPNetTransport>       _transport{};
-        unique_ptr<NetEmulationTransport> _emulation{}; ///< `_transport` 를 감싼 회선 흉내(Dev). 호스트는 이것을 전송으로 쓴다
-        NetEndpoint                       _host{};
-        NetEndpointThread                 _thread{};
+        unique_ptr<UDPNetTransport> _transport{};
+        unique_ptr<INetTransport>   _decorator{}; ///< `_transport` 를 감싼 전송(`setTransportDecorator` — 개발 도구의 회선 흉내). 있으면 호스트가 이것을 쓴다
+        NetEndpoint                 _host{};
+        NetEndpointThread           _thread{};
     };
 } // namespace sw
 
@@ -479,7 +270,7 @@ namespace sw
         return true;
     }
 
-    unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, uint16 transportPort, const NetEmulationConditions& emulationConditions )
+    unique_ptr<GameNetSession::Shard> GameNetSession::createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex )
     {
         unique_ptr<Shard> shard = make_unique<Shard>();
         shard->_transport       = make_unique<UDPNetTransport>();
@@ -493,14 +284,11 @@ namespace sw
             return nullptr;
         }
         INetTransport* pHostTransport = shard->_transport.get();
-#if !defined( SW_SHIPPING )
-        // 회선 조절(개발 명령 net.emulation)이 실행 중에 조건을 바꿀 수 있게 늘 감싼다. 조건이 꺼져 있으면 그대로 넘긴다.
-        shard->_emulation = make_unique<NetEmulationTransport>( shard->_transport.get() );
-        shard->_emulation->setDefaultConditions( emulationConditions );
-        pHostTransport = shard->_emulation.get();
-#else
-        (void)emulationConditions;
-#endif
+        // 건 데코레이터가 있으면 소켓을 감싼다(개발 도구의 회선 흉내 — 엔진은 무엇인지 모른다). nullptr 이면 그대로 쓴다.
+        if ( _transportDecorator.isBound() )
+            shard->_decorator = _transportDecorator( shardIndex, *shard->_transport );
+        if ( shard->_decorator != nullptr )
+            pHostTransport = shard->_decorator.get();
         shard->_host.initialize( pHostTransport, params._hostSettings );
         return shard;
     }
@@ -519,18 +307,6 @@ namespace sw
             SW_LOG_ERROR( "Net session params carry a game connect ticket but are not an encrypted client - use makeTicketClientParams" );
             return false;
         }
-        NetEmulationConditions emulationConditions;
-#if !defined( SW_SHIPPING )
-        emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
-        if ( gv_netEmulationPreset.empty() == false )
-        {
-            NetEmulationPresetTable presetTable;
-            emulationConditions = NetEmulationConditions{};
-            if ( presetTable.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
-                 presetTable.tryGetConditions( gv_netEmulationPreset, emulationConditions ) == false )
-                SW_LOG_ERROR( "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.c_str(), presetTable.makePresetNames().c_str() );
-        }
-#endif
         const bool           bServer = params._role == GameNetRole::Server;
         vector<NetEndpoint*> listHost;
         for ( int32 shardIndex = 0; shardIndex < params._shardCount; ++shardIndex )
@@ -538,7 +314,7 @@ namespace sw
             // 샤드 n 은 첫 포트 + n(한 포트를 나누면 모두 첫 포트). 클라이언트는 운영체제가 고른 포트 하나다.
             const uint16      shardOffset   = params._bShardsSharePort ? uint16{ 0 } : static_cast<uint16>( shardIndex );
             const uint16      transportPort = bServer ? static_cast<uint16>( params._listenPort + shardOffset ) : uint16{ 0 };
-            unique_ptr<Shard> shard         = createShard( params, transportPort, emulationConditions );
+            unique_ptr<Shard> shard         = createShard( params, transportPort, shardIndex );
             if ( shard == nullptr )
             {
                 shutdown();
@@ -705,10 +481,10 @@ namespace sw
         return _role == GameNetRole::None ? 0 : _peers.getConnectedCount();
     }
 
-    NetEmulationTransport* GameNetSession::findEmulation( int32 shardIndex )
+    INetTransport* GameNetSession::findTransportDecorator( int32 shardIndex )
     {
         const bool bOutOfRange = shardIndex < 0 || getShardCount() <= shardIndex;
-        return bOutOfRange ? nullptr : _listShard[static_cast<size_t>( shardIndex )]->_emulation.get();
+        return bOutOfRange ? nullptr : _listShard[static_cast<size_t>( shardIndex )]->_decorator.get();
     }
 
     NetEndpoint& GameNetSession::getClientHost()
@@ -808,19 +584,11 @@ namespace sw
         return true;
     }
 
-    NetEmulationReport GameNetSession::makeEmulationReport() const
+    NetEmulationReport GameNetSession::makeConnectionReport() const
     {
         NetEmulationReport report;
         if ( _role == GameNetRole::None )
             return report;
-        for ( const unique_ptr<Shard>& shard : _listShard )
-        {
-            if ( shard->_emulation == nullptr )
-                continue;
-            const NetEmulationStats stats = shard->_emulation->getStats();
-            report._sentPacketCount += stats._sentCount;
-            report._droppedPacketCount += stats._droppedCount + stats._incomingDroppedCount;
-        }
         vector<int32> listConnection;
         _peers.collectConnected( listConnection );
         report._connectionCount = static_cast<int32>( listConnection.size() );
@@ -958,18 +726,4 @@ namespace sw
         else
             _credentials = NetConnectCredentials{}; // 거절된 티켓은 다시 내밀지 않는다 — 새 티켓이 필요하다
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_DEV_COMMAND( NetStatus, "net.status", "net.status", "Show the game net session role, port and connection count", &GameNetSessionInternal::runStatus );
-    SW_DEV_COMMAND( NetEmulation, "net.emulation", "net.emulation [up|down|both [<preset>] [key=value ...] | spike <seconds> | stats]",
-                    "Change the net session's line emulation at run time (presets: off, lan, wifi, lte, badwifi, disconnected)", &GameNetSessionInternal::runEmulation );
-    SW_DEV_COMMAND( NetDisconnect, "net.disconnect", "net.disconnect", "Drop every connection of the net session (a client stays disconnected until net.reconnect)",
-                    &GameNetSessionInternal::runDisconnect );
-    SW_DEV_COMMAND( NetReconnect, "net.reconnect", "net.reconnect", "Connect a disconnected client to its server again", &GameNetSessionInternal::runReconnect );
-    SW_DEV_COMMAND( NetTraffic, "net.traffic", "net.traffic <messages> [<bytes>]", "Send that many reliable messages (1 to 1024 bytes) to every peer (load to watch resends)",
-                    &GameNetSessionInternal::runTraffic );
-    SW_DEV_COMMAND( NetStats, "net.stats", "net.stats", "Show the net session's connection and traffic numbers in one line (packets, bytes per second, RTT, loss, message kinds)",
-                    &GameNetSessionInternal::runStats );
 } // namespace sw

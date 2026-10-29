@@ -35,6 +35,7 @@ namespace sw
     class SceneManager;
     class SubsystemScope;
     class TelemetryService;
+    class GameNetSession;
     class UISystem;
     class UserSettingsManager;
 
@@ -114,6 +115,7 @@ namespace sw
             FontService*              _pFontService{ nullptr };
             TelemetryService*         _pTelemetry{ nullptr };
             UISystem*                 _pUISystem{ nullptr };
+            GameNetSession*           _pNetSession{ nullptr };
         };
 
         /** @brief @p coreScope 에 코어 서브시스템을 넣고 명령줄 · 전역 변수 표를 겁니다. 초기화는 호출한 쪽이 한다. */

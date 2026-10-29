@@ -9,6 +9,7 @@
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 #include "DevTools/Shader/LiveShaderSubsystem.h"
@@ -82,6 +83,9 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             (void)startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
         }
+        // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
+        if ( parts._pNetSession != nullptr )
+            (void)startup.addSubsystem( sw::make_unique<NetLineEmulationSubsystem>( *parts._pNetSession ) );
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         (void)startup.addSubsystem( sw::make_unique<ServerPoseOverlay>() );
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).

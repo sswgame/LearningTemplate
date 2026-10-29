@@ -27,10 +27,10 @@
  *          연결과 끊김은 로그를 한 줄씩 남기며(`Net session client N connected`, `Net session connected to …`),
  *          멀티 프로세스 재생과 테스트가 이 줄로 접속을 확인한다.
  *
- *          Dev 구성에서는 UDP 전송을 회선 흉내(`NetEmulationTransport`)로 감싼다. 시작 값은 `-gv_netEmulation*` 이고, 실행 중에는 개발 명령
- *          `net.emulation` · `net.disconnect` · `net.reconnect` · `net.traffic` 이 바꾼다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
+ *          샤드 전송은 건 데코레이터(`setTransportDecorator`)로 감쌀 수 있다 — 개발 도구가 회선 흉내(`NetEmulationTransport`, 시작 값 `-gv_netEmulation*`,
+ *          실행 중 `net.emulation`)를 건다. 개발 명령 `net.disconnect` · `net.reconnect` · `net.traffic` 은 기능 옆 `GameNetSessionDevCommands.cpp` 다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
  *          `net.stats` 는 연결 · 트래픽 수치 한 줄(`NetStatsReport`)을 답한다(Profiler 탭이 0.5 초마다 묻는다).
- *          조건이 꺼져 있으면 흉내는 패킷을 그대로 넘긴다. Shipping 에는 흉내가 없다. 샤드마다 흉내가 하나씩이며 명령은 모두에 같은 조건을 건다.
+ *          배포 빌드에는 개발 도구가 없어 감싸지 않는다.
  *
  *          서버 틱(서버 디버깅 S7): 전용 서버가 틱마다 `sendServerTick` 으로 방금 끝낸 틱 번호를 모두에게 보내고(비신뢰 순서, 엔진 영역 `GameNetSessionMessage`),
  *          클라이언트는 가장 새 번호를 `tryGetServerTick` 으로 답한다. 클라이언트는 이 번호로 자기 씬 해시를 이력에 남겨(`StateHashHistory`) 서버 이력과 비교한다.
@@ -43,6 +43,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
@@ -120,6 +121,11 @@ namespace sw
         GameShutdownReason _reason{ GameShutdownReason::ServerRestart };
         uint32             _graceSeconds{ 0 };
     };
+
+    class INetTransport;
+
+    /** @brief 샤드 전송 데코레이터 — 샤드 번호와 안쪽 전송(소켓)을 받아 감싼 전송을 돌려준다(nullptr 이면 감싸지 않는다). */
+    using GameNetTransportDecoratorDelegate = Delegate<unique_ptr<INetTransport>( int32 shardIndex, INetTransport& inner )>;
 
     /**
      * @struct GameNetSessionMessage
@@ -226,8 +232,13 @@ namespace sw
         [[nodiscard]] NetLinkValue makeNetLink() { return NetLinkValue{ &_peers, &_router, _role == GameNetRole::Server ? NetLinkRole::Server : NetLinkRole::Client }; }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 모든 샤드를 pump 합니다. */
         NetMessageRouter& getRouter() { return _router; }
-        /** @brief 샤드 하나의 전송을 감싼 회선 흉내입니다. 세션을 열지 않았거나 Shipping 이면 nullptr 입니다. 스레드 안전합니다(네트워크 스레드가 같이 쓴다). */
-        NetEmulationTransport* findEmulation( int32 shardIndex );
+        /**
+         * @brief 샤드 전송을 감싸는 데코레이터를 겁니다. 다음 `initialize` 가 샤드마다 부르고, 돌려준 전송을 그 샤드의 호스트가 쓴다(샤드가 소유 — 소켓보다 먼저 사라진다).
+         * @details nullptr 을 돌려주면 감싸지 않는다. 개발 도구가 기동 확장에서 회선 흉내를 건다(엔진은 무엇인지 모른다 — 언리얼 PacketHandler 컴포넌트의 자리).
+         */
+        void setTransportDecorator( const GameNetTransportDecoratorDelegate& decorator ) { _transportDecorator = decorator; }
+        /** @brief 샤드 하나의 데코레이터입니다. 세션을 열지 않았거나 걸지 않았으면 nullptr 입니다. */
+        INetTransport* findTransportDecorator( int32 shardIndex );
 
         /**
          * @brief 서버가 방금 끝낸 틱 번호를 모든 클라이언트에 보냅니다(비신뢰 순서 — 옛 번호는 받는 쪽이 버린다). 서버가 아니면 아무 일도 없습니다.
@@ -248,8 +259,8 @@ namespace sw
         void disconnectPeers();
         /** @brief 끊긴 클라이언트가 서버에 다시 붙기 시작합니다. 서버이거나 이미 붙어 있거나 붙는 중이면 false 입니다. */
         [[nodiscard]] bool reconnect();
-        /** @brief 회선 흉내(모든 샤드)와 연결들의 수치를 한 보고로 모읍니다(`net.emulation stats` 의 답). 흉내가 없으면 흉내 칸은 0 입니다. */
-        NetEmulationReport makeEmulationReport() const;
+        /** @brief 연결들의 수치(다시 보냄 · 측정 손실 · RTT)를 보고에 모읍니다(`net.emulation stats` 의 연결 칸 — 흉내 칸은 흉내를 건 쪽이 채운다). */
+        NetEmulationReport makeConnectionReport() const;
         /**
          * @brief 연결 통계와 라우터의 종류별 셈을 한 보고로 모읍니다(`net.stats` 의 답 — 에디터 Profiler 탭이 묻는다).
          * @details 이미 세고 있는 값을 읽는다(연결마다 `getConnectionStats` 사본 하나). 복제 셈은 보고마다 "지난 보고 때 값"을 앞으로 옮기므로 const 가 아니다(묻는 쪽은 Profiler 탭 하나). 세션을 열지 않았으면 빈 보고입니다.
@@ -281,8 +292,8 @@ namespace sw
         uint16          getMessageKindMask() const override { return static_cast<uint16>( ( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ) | ( 1u << ( GameNetSessionMessage::kShutdownNotice - NetMessageRange::kEngine ) ) ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
-        /** @brief 샤드 하나의 소켓을 열고 회선 흉내(Dev — @p emulationConditions 로 시작)로 감싼 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
-        unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, const NetEmulationConditions& emulationConditions );
+        /** @brief 샤드 하나의 소켓을 열고 (건 데코레이터로 감싼) 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
+        unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex );
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */
         void reportConnectResult();
         /** @brief 클라이언트의 유일한 호스트입니다(클라이언트는 샤드가 하나다). */
@@ -299,24 +310,25 @@ namespace sw
         void logEvents( EventPhase phase ) const;
 
     private:
-        vector<unique_ptr<Shard>>    _listShard; ///< 포트 샤드마다 소켓 · 회선 흉내 · 호스트 · 네트워크 스레드(클라이언트는 하나)
-        NetEndpointShardSet          _peers;     ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
-        NetMessageRouter             _router;
-        Subscription                 _routerSubscription; ///< 클라이언트 — 이 세션을 엔진 영역 처리기로 `_router` 에 단 등록
-        GameConnectSecurity          _connectSecurity;    ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
-        NetMessageWriter             _tickWriter;         ///< 서버 — `sendServerTick` 이 다시 쓴다
-        TaskFuture<NetConnectResult> _connectFuture;      ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
-        vector<NetEndpointEvent>     _listEventScratch;   ///< `update` 가 다시 쓴다
-        vector<ReplicaStat>          _listReplicaStat;    ///< 복제 키트가 올린 셈(`setReplicaStats`)
-        NetAddress                   _serverAddress;
-        NetConnectCredentials        _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
-        uint64                       _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
-        uint16                       _listenPort;
-        GameNetRole                  _role;
-        uint8                        _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
-        uint8                        _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
-        GameShutdownNotice           _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
-        uint8                        _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
-        uint8                        _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
+        vector<unique_ptr<Shard>>         _listShard;          ///< 포트 샤드마다 소켓 · 데코레이터 · 호스트 · 네트워크 스레드(클라이언트는 하나)
+        GameNetTransportDecoratorDelegate _transportDecorator; ///< `setTransportDecorator` 가 건 것(없으면 비었다)
+        NetEndpointShardSet               _peers;              ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
+        NetMessageRouter                  _router;
+        Subscription                      _routerSubscription; ///< 클라이언트 — 이 세션을 엔진 영역 처리기로 `_router` 에 단 등록
+        GameConnectSecurity               _connectSecurity;    ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
+        NetMessageWriter                  _tickWriter;         ///< 서버 — `sendServerTick` 이 다시 쓴다
+        TaskFuture<NetConnectResult>      _connectFuture;      ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
+        vector<NetEndpointEvent>          _listEventScratch;   ///< `update` 가 다시 쓴다
+        vector<ReplicaStat>               _listReplicaStat;    ///< 복제 키트가 올린 셈(`setReplicaStats`)
+        NetAddress                        _serverAddress;
+        NetConnectCredentials             _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
+        uint64                            _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
+        uint16                            _listenPort;
+        GameNetRole                       _role;
+        uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
+        uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
+        GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
+        uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
+        uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
     };
 } // namespace sw

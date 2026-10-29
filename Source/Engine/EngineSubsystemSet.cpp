@@ -223,7 +223,7 @@ namespace sw::engine
             startup.addSubsystem( sw::make_unique<ShaderCache>() );
         }
         startup.addSubsystem( sw::make_unique<PhysicsSystem>() );
-        startup.addSubsystem( sw::make_unique<GameNetSession>() ); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
+        parts._pNetSession  = &startup.addSubsystem( sw::make_unique<GameNetSession>() ); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
         parts._pFontService = &startup.addSubsystem( sw::make_unique<FontService>() );
         parts._pTelemetry   = &startup.addSubsystem( sw::make_unique<TelemetryService>() );
         parts._pUISystem    = &startup.addSubsystem( sw::make_unique<UISystem>() );
