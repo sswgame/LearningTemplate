@@ -136,7 +136,7 @@
 3. 편집기 `AssetHotReload` 는 편집기에 두고 `DevTools` 의 감시 위에 선다.
 4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
    자동화의 판정 · 골든 · 보고 · 백엔드 행렬 · 종료 코드(`Engine/Automation/Runner`)는 엔진 밖 개발 단위로. 시나리오 재생기 · 단계 · 프레임 통계(내장 벤치마크 · 어트랙트 모드)는 배포 게임이 쓰므로 Engine 에 남는다.
-5. 굽기(`LightProbeBaker` · `ReflectionProbeBaker`)는 편집기만 부른다 — 쿠커처럼 헤드리스 App 이 부르는 길이 없으면 편집기로(테스트 `TestLightProbeBaker` 는 편집기 쪽 테스트 자리가 생길 때 같이).
+5. ~~굽기~~ — `LightProbeBaker` · `ReflectionProbeBaker` 는 편집기(`Editor/Common/Commands/Scene`)로 옮겼다(테스트도 편집기 쪽 `Tests/`).
 
 ### J. 구조로 풀 수 있는데 우회로 막는 자리 (감사 2026-10-29)
 
@@ -160,7 +160,7 @@
 | 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
 | 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
 
-**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 9 · 10(배포 정적 등록 — 개발의 DLL 로드를 ModuleManager 로 옮기는 것은 남았다) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
+**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 9 · 10(배포는 정적 자기 등록. 개발의 DLL 로드는 동적 모듈 스위치 `SW_WITH_DYNAMIC_MODULES` 한 곳 안에 두었다 — 언리얼 `FModuleManager::LoadModule` 도 Core 다) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
 12 는 층 문제(엔진에 편집기 이름 · 뜻)만 풀었다(`setRenderHidden`) — 편집기 뷰에서만 숨기기는 층이 아니라 기능이고, 렌더러에 뷰 마스크가 없어(GPU 인스턴스 예비 칸 · 컬링 셰이더 · 그림자 · CPU 경로)
 필요해질 때 기능으로 더한다(편집기 플레이는 씬 사본이 아니라 제자리라 플레이 중에도 숨긴 채다).
 13: 패킷 사진은 우편함의 "다음 패킷에 찍기" 칸(`ScreenshotRequestQueue::putForNextPacket`), 창 제목은 자동화 세션이 든다 — 관찰자 인터페이스에 자동화 칸이 없다.
