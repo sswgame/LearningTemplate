@@ -5,6 +5,8 @@
  *          (SQLite 는 이 키트 GF_SQLStore, PostgreSQL 은 서버 키트 GF_Server_SQLStore), 이미지를 내릴 때 그 정적 등록 객체(구독)가
  *          그 이미지의 드라이버를 지운다. 핫 리로드가 옛 이미지의 언로드를 미뤄도 옛 드라이버가 남거나 새 등록을 지우지 않는다.
  *          어느 드라이버가 실행 파일에 포함되는지는 빌드 타깃이 정한다. Client 는 SQLite 만, Server 와 Game 은 둘 다 포함한다.
+ *          모듈 서브시스템으로 옮기지 않는다 — 표는 실행 상태가 아니라 "이 이미지들에 컴파일된 상태 없는 드라이버" 의 링크 목록이라(`SW_DEV_COMMAND` · `SW_BUILT_IN_ASSET_CACHE` 등록과 같은 단위,
+ *          Godot `ClassDB` 의 모듈 등록 자리) 모듈 범위가 서기 전 · 없는 호스트(스키마 테스트의 데이터 종류 검사 · 서버 조립)에서도 같은 답을 내야 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
