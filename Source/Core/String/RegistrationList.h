@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -143,14 +144,21 @@ namespace sw
      *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
      *
      *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 레지스트리(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
-     *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 같은 까닭으로 목록은 스스로 구독을 내주지 않습니다 — 구독이 풀리는 길은
-     *          주인의 잠금과 뒷정리(카메라 일련번호 · 오디오 방출기)를 지나야 하므로 주인이 `SubscriptionList` 로 낸다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
-     *          틱 · 콜라이더)는 이 구조가 아닙니다.
+     *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다.
+     *
+     *          **구독으로 올리기(`addSubscribed`)**: 등록을 소유하는 구독을 목록이 낸다(안에 든 `ItemSubscriptionList`). 구독이 풀리면 생성자로 받은 해제 함수가
+     *          그 항목으로 불린다 — 목록은 잠금이 없으므로 빼기(`remove`)와 뒷정리(카메라 일련번호 · 컷 카메라, 리로드 함수 표)는 주인이 자기 잠금 안에서 한다.
+     *          주인마다 두던 "구독 id → 주소" 되돌리기 · 목록 여럿의 id 를 한 해제 함수로 가르기를 대신한다(언리얼 `FDelegateHandle` 짝 대신 소유 구독 하나).
+     *          목록이 사라지거나 비워지면(`clear`) 남은 구독은 무효가 된다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
+     *          틱 · 콜라이더)는 이 구조가 아닙니다 — 그 주인은 `ItemSubscriptionList` 를 직접 든다.
      */
     template <typename T>
     class RegistrationList final : public RegistrationListBase
     {
     public:
+        /** @brief `addSubscribed` 의 구독이 풀렸을 때 부르는 주인의 함수입니다. 주인이 자기 잠금 안에서 `remove` 하고 뒷정리한다. */
+        using ReleaseFunction = typename ItemSubscriptionList<T>::ReleaseFunction;
+
         /**
          * @brief 등록 순서 · 이름 선택인 빈 목록입니다.
          * @param pListName 전역 열거(`RegistrationListBase::collect`)에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
@@ -177,6 +185,24 @@ namespace sw
          * @param nameCase 이름 찾기 · 중복 판정이 대소문자를 보는지입니다(콘솔 명령처럼 사람이 치는 이름은 `IgnoreCase`).
          */
         RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName, NameCase nameCase )
+            : RegistrationList( pListName, order, bRequireName, nameCase, ReleaseFunction{} )
+        {
+        }
+
+        /**
+         * @brief 구독으로 올리는(`addSubscribed`) 등록 순서 · 이름 선택인 빈 목록입니다.
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         * @param onRelease 구독이 풀리면 그 항목으로 부르는 주인의 함수입니다(주인이 `remove` 하고 뒷정리한다).
+         */
+        RegistrationList( const utf8* pListName, const ReleaseFunction& onRelease )
+            : RegistrationList( pListName, RegistrationOrder::Insertion, false, NameCase::CaseSensitive, onRelease )
+        {
+        }
+
+        ~RegistrationList() { unlink(); }
+
+    private:
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName, NameCase nameCase, const ReleaseFunction& onRelease )
             : RegistrationListBase( pListName )
             , _listItem{}
             , _listName{}
@@ -190,11 +216,11 @@ namespace sw
             , _order{ order }
             , _nameCase{ nameCase }
             , _bRequireName{ bRequireName }
+            , _subscriptions{ onRelease }
         {
         }
 
-        ~RegistrationList() { unlink(); }
-
+    public:
         /**
          * @brief 항목을 올립니다. 이름은 지금 복사합니다. 결과를 버릴 수 없습니다(`[[nodiscard]]`) — 거절을 로그로 남기기만 하려면 `addLogged` 를 씁니다.
          * @param name 찾기 · 중복 판정 · 정렬에 쓰는 이름입니다. 비어 있으면 이름으로 찾을 수 없고 이름 중복도 보지 않습니다.
@@ -273,9 +299,23 @@ namespace sw
             return true;
         }
 
-        /** @brief 모두 제거합니다(그림자도). 저장소도 해제합니다. */
+        /**
+         * @brief `addLogged` 하고, 올렸으면 그 등록을 소유하는 구독을 돌려줍니다. 거절(`AlreadyPresent` 포함 — 먼저 받은 구독이 쥔다)이면 빈 구독입니다.
+         * @details 구독이 풀리면 생성자로 받은 해제 함수가 그 항목으로 불린다(해제 함수를 받은 생성자로 만든 목록만 쓴다). 올린 뒤의 뒷일(일련번호 · 리로드 함수)은
+         *          구독이 살아 있는지(`isActive`)로 갈라 주인이 한다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        [[nodiscard]] Subscription addSubscribed( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
+        {
+            if ( addLogged( pItem, pWhat, name, order ) != RegistrationResult::Added )
+                return {};
+            return _subscriptions.issue( pItem );
+        }
+
+        /** @brief 모두 제거합니다(그림자도). 저장소도 해제합니다. `addSubscribed` 의 구독은 무효가 됩니다(해제 함수는 부르지 않는다). */
         void clear()
         {
+            _subscriptions.detachAll();
             _listItem        = vector<T*>{};
             _listName        = vector<string>{};
             _listOrder       = vector<int32>{};
@@ -514,6 +554,8 @@ namespace sw
         RegistrationOrder _order;           ///< 늘어놓는 순서
         NameCase          _nameCase;        ///< 이름 비교가 대소문자를 보는지
         bool              _bRequireName;    ///< 이름 없는 등록을 거절하는지
+        /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<T> _subscriptions;
     };
 } // namespace sw
 
