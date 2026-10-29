@@ -4,14 +4,11 @@
  *        켜고 끄거나 기본값으로 되돌리면 함께 바뀌는 모듈을 미리 보인 뒤 프로젝트 매니페스트를 고쳐 씁니다. 설치 · 제거(파일 복사 · 삭제)는 하지 않습니다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-
-#include "Engine/Module/ModuleCatalog.h"
+#include "Editor/Panels/Settings/Model/ModulesModel.h"
 
 namespace sw::editor
 {
@@ -19,6 +16,7 @@ namespace sw::editor
      * @class ModulesPanel
      * @brief `Bin/Modules` 의 매니페스트(빌드가 복사한 카탈로그)을 읽어 종류별 테이블을 그립니다. 체크를 바꾸면 미리보기를 묻고, 확인하면
      *        `Source/Games/<활성 게임>/SWGame.module.json` 의 `_listModuleOverride` 를 고칩니다. 적용은 Build(매니페스트가 구성 의존이라 ninja 가 다시 구성한다) 뒤 다시 시작입니다.
+     *        상태와 명령은 `ModulesModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 검색 글 · 팝업 열기만 든다.
      */
     class ModulesPanel final : public IEditorPanel
     {
@@ -37,25 +35,13 @@ namespace sw::editor
         static uint32 getPreviewNewlyInactiveCount();
 
     private:
-        void               reloadCatalog();
-        void               drawFilters();
-        void               drawDetail();
-        void               drawPreview();
-        void               requestToggle( const string& moduleName, bool bEnabled );
-        [[nodiscard]] bool writeProjectOverride();
+        void drawFilters();
+        void drawDetail();
+        void drawPreview();
+        void requestToggle( const string& moduleName, bool bEnabled );
 
-        ModuleCatalog                        _catalog;
-        ModuleResolution                     _resolution;
-        string                               _loadError;
-        string                               _selectedModule; ///< 상세 영역에 보이는 모듈(비면 상세를 그리지 않는다)
-        string                               _pendingModule;  ///< 미리보기 중인 모듈(비면 묻지 않는다)
-        int32                                _kindFilter;     ///< 보일 종류(`ModuleKind` 값, -1 은 전부)
-        int32                                _stateFilter;    ///< 0 전부 · 1 켜진 것만 · 2 꺼진 것만
-        bool                                 _bOpenPreview;   ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
-        vector<ModuleInactiveEntry>          _listNewlyInactive;
-        vector<string>                       _listNewlyActive;
-        bool                                 _bPendingEnabled;
-        bool                                 _bChangedSinceStart; ///< 이 실행에서 매니페스트를 고쳤다 — 빌드 · 다시 시작 띠를 보인다
-        fixed_string<constant::kMaxBuffer64> _filter;             ///< 이름 · 설명 검색
+        ModulesModel                         _model;
+        bool                                 _bOpenPreview; ///< 이번 프레임에 확인 창을 연다(테이블 밖 ID 로 열려고 미룬다)
+        fixed_string<constant::kMaxBuffer64> _filter;       ///< 이름 · 설명 검색
     };
 } // namespace sw::editor
