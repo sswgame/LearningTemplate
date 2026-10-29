@@ -7,15 +7,16 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
+#include "Core/String/HexUtil.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
-#include <random>
 #include <thread>
 
 namespace sw::editor
@@ -87,11 +88,10 @@ namespace sw::editor
             /** @brief 디버그 채널 토큰을 운영체제 난수로 만듭니다 — 같은 PC 의 다른 프로세스가 짐작해 붙지 못하게 세션마다 새로. */
             static string makeDebugChannelToken()
             {
-                // 임시: corebase 의 SecureRandom 이 병합되면 그것으로 옮긴다(이 파일은 인자 목록 이전과 겹쳐 그쪽에서 빼 왔다).
-                std::random_device randomDevice; // 운영체제 난수(Windows RtlGenRandom · 리눅스 getrandom)
-                utf8               arrToken[constant::kMaxBuffer64];
-                formatstring( arrToken, constant::kMaxBuffer64, "netplay-%#-%#-%#-%#", randomDevice(), randomDevice(), randomDevice(), randomDevice() );
-                return string( arrToken );
+                string token{ "netplay-" };
+                HexUtil::appendUint64( token, SecureRandom::nextUint64() );
+                HexUtil::appendUint64( token, SecureRandom::nextUint64() );
+                return token;
             }
 
             /** @brief 빈 TCP 포트를 고르는 동안만 쓰는 처리기입니다 — 받기만 열고 연결은 받지 않는다. */

@@ -3,6 +3,7 @@
 #include "Core/Network/NetCompression.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Container/VarIntUtil.h"
 
 namespace sw
 {
@@ -13,31 +14,6 @@ namespace sw
             static CompressionCodecRegistry* resolveRegistry( CompressionCodecRegistry* pRegistry )
             {
                 return pRegistry != nullptr ? pRegistry : CompressionCodecRegistry::getActive();
-            }
-
-            static int32 writeVarUint( uint8* pOut, uint32 value )
-            {
-                int32 count = 0;
-                while ( value >= 0x80u )
-                {
-                    pOut[count++] = static_cast<uint8>( value | 0x80u );
-                    value >>= 7;
-                }
-                pOut[count++] = static_cast<uint8>( value );
-                return count;
-            }
-
-            /** @brief 읽은 바이트 수입니다. 5 바이트 안에 끝나지 않거나 모자라면 0 입니다. */
-            static int32 readVarUint( const uint8* pData, int32 size, uint32& outValue )
-            {
-                outValue = 0;
-                for ( int32 index = 0; index < size && index < 5; ++index )
-                {
-                    outValue |= static_cast<uint32>( pData[index] & 0x7Fu ) << ( 7 * index );
-                    if ( ( pData[index] & 0x80u ) == 0 )
-                        return index + 1;
-                }
-                return 0;
             }
         };
     } // namespace
@@ -56,10 +32,11 @@ namespace sw
         ICompressionCodec*        pCodec    = pResolved != nullptr ? pResolved->getCodec( settings._codec ) : nullptr;
         if ( pCodec == nullptr )
             return false;
+        outBytes.clear();
+        outBytes.push_back( static_cast<uint8>( settings._codec ) );
+        const int32 headerSize = 1 + static_cast<int32>( VarIntUtil::encodeVarUint64( static_cast<uint64>( size ), outBytes ) );
         outBytes.resize( static_cast<size_t>( kMaxEnvelopeHeaderSize ) + pCodec->compressBound( static_cast<size_t>( size ) ) );
-        outBytes[0]                = static_cast<uint8>( settings._codec );
-        const int32 headerSize     = 1 + NetCompressionInternal::writeVarUint( outBytes.data() + 1, static_cast<uint32>( size ) );
-        size_t      compressedSize = 0;
+        size_t compressedSize = 0;
         if ( pCodec->compress( pData, static_cast<size_t>( size ), outBytes.data() + headerSize, outBytes.size() - static_cast<size_t>( headerSize ), compressedSize,
                                settings._level ) == false ||
              static_cast<int64>( compressedSize ) + headerSize >= static_cast<int64>( size ) )
@@ -76,9 +53,12 @@ namespace sw
         outBytes.clear();
         if ( pData == nullptr || size < 2 )
             return false;
+        size_t      sizeEnd                  = 1;
+        uint64      rawSize64                = 0;
         uint32      rawSize                  = 0;
-        const int32 sizeBytes                = NetCompressionInternal::readVarUint( pData + 1, size - 1, rawSize );
-        const bool  bInvalidCompressedHeader = sizeBytes == 0 || rawSize == 0 || rawSize > static_cast<uint32>( maxRawSize );
+        const bool  bReadSize                = VarIntUtil::decodeVarUint64( pData, static_cast<size_t>( size ), sizeEnd, rawSize64 ) && VarIntUtil::narrowToUint32( rawSize64, rawSize );
+        const int32 sizeBytes                = static_cast<int32>( sizeEnd ) - 1;
+        const bool  bInvalidCompressedHeader = bReadSize == false || rawSize == 0 || rawSize > static_cast<uint32>( maxRawSize );
         if ( bInvalidCompressedHeader )
             return false; // 폭탄 · 깨진 크기 — 코덱을 부르기 전에 끊는다
         if ( pData[0] == static_cast<uint8>( CompressionCodecType::None ) )
