@@ -35,6 +35,20 @@ SW_TEST_CASE( Base64UtilTest, URLAlphabetHasNoPaddingAndRoundTrips )
 - 단언: `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_EXPECT_EQUAL` · `SW_EXPECT_NEAR` · `SW_EXPECT_SNAPSHOT( 이름, 글 )`(케이스 옆 `Snapshots/<케이스>.<이름>.txt` 와 비교), `SW_REQUIRE_TRUE` · `SW_REQUIRE_EQUAL`(실패하면 케이스 끝).
 - 케이스가 일부러 내는 Warning · Error 는 그 로그 id 로 `SW_EXPECT_LOG( "영역.사건" )` 에 적는다. 쓰기는 `test::makeScratchPath( "이름" )` 의 폴더에만 한다.
 - 엔진 서비스(`engine::getSubsystem<T>()`)를 그대로 쓴다 — 헤드리스로 선 엔진 위에서 돈다.
+- 선언 셋, 모두 끝에 옵션을 붙일 수 있다:
+
+```cpp
+SW_TEST_CASE( PoolTest, Grows, ._tags = "slow", ._timeoutSeconds = 60 ) { … }       // 함수 하나
+SW_TEST_CASE( NetTest, Reconnects, ._disabledReason = "서버 픽스처를 고칠 때까지" ) { … } // 지우지 않고 끈다(보고에 까닭이 남는다)
+
+struct TempSceneFixture { TempSceneFixture() { /* 준비 */ } ~TempSceneFixture() { /* 정리 */ } Scene _scene; };
+SW_TEST_CASE_F( TempSceneFixture, SpawnsOne ) { SW_EXPECT_EQUAL( 0u, _scene.count() ); }  // 케이스마다 새 픽스처
+
+static constexpr uint32 kArrSize[] = { 1, 2, 64 };
+SW_TEST_CASE_EACH( PoolTest, KeepsCapacity, kArrSize ) { SW_EXPECT_TRUE( Pool( param ).capacity() >= param ); } // PoolTest.KeepsCapacity/0 · /1 · /2
+```
+
+- 케이스 시한은 기본 30 초다(`._timeoutSeconds`). 넘기면 `[ TIMEOUT ]` 에 이름을 남기고 실행을 끝낸다(종료 코드 12) — 멈춘 케이스는 되살릴 수 없다. 디버거가 붙어 있으면 시한을 보지 않는다. 크래시 보고의 문맥에는 지금 케이스(`TestCase`)가 남는다.
 
 ```
 App --test                                  # 모두(순서는 섞이고 씨앗이 찍힌다)
@@ -42,9 +56,12 @@ App --test --test-filter=LODViewTest.*      # 와일드카드, 쉼표로 여럿,
 App --test --test-seed=2741926653           # 찍힌 순서를 다시
 App --test --test-repeat=20                 # 간헐 실패 찾기
 App --test --update-snapshots               # 스냅숏을 지금 값으로(바뀐 파일을 리뷰한다)
+App --test --test-filter=[slow]             # 태그로(빼기는 -[slow])
+App --test --test-shard=1/4                 # 이름 해시로 나눈 4 몫 가운데 1 번(CTest SW_UNIT_TEST_SHARDS)
+App --test --test-run-disabled              # 꺼 둔 케이스도(고친 뒤 확인)
 ```
 
-케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다. 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
+케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다(샤드가 빈 것은 실패가 아니다). 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
 
 ## 시나리오
 
@@ -81,6 +98,9 @@ App --test --update-snapshots               # 스냅숏을 지금 값으로(바�
 | 앞 케이스에 기대는 순서 의존 | 매번 섞는 순서 · 씨앗 · `--test-repeat` |
 | 표식 없는 경고 · 부분 문자열로 가리기 | 케이스 · 시나리오 단위 로그 게이트, id 로만 선언 |
 | 0 건 통과 | 단언 없는 케이스 · 빈 실행은 실패 |
+| 멈춘 케이스는 CTest 시한까지 이름 없이 매달림 · 크래시는 어느 케이스인지 모름 | 케이스 시한 감시(`[ TIMEOUT ]` + 이름) · 크래시 문맥 `TestCase` |
+| 픽스처 · 매개변수 · 태그 · 끄기가 없어 복사 · 주석 처리로 대신 | `SW_TEST_CASE_F` · `SW_TEST_CASE_EACH` · `._tags` · `._disabledReason` |
+| 케이스가 늘면 한 프로세스가 다 돎 | `--test-shard=i/n` + CTest `SW_UNIT_TEST_SHARDS` |
 | 고정 이름 쓰기 위치(병렬 · 반복 회차 충돌) | 프로세스 · 케이스별 폴더 |
 | 손으로 옮겨 적는 기대값 · `measured` · `provisional` · 미확정(14) | 스냅숏 · 골든(자동 기록) |
 | `<At frame=N>` 절대 프레임 · 고정 대기 뒤 확인 | 순서대로 도는 단계 · `WaitUntil` |

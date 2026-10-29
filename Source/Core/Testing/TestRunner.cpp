@@ -2,10 +2,14 @@
 
 #include "Core/Testing/TestRunner.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/Process/Process.h"
@@ -16,6 +20,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
 namespace sw::test
 {
@@ -107,6 +113,51 @@ namespace sw::test
                 addFailure( std::move( failure ) );
             }
 
+            /**
+             * @brief 케이스 시한 감시입니다. 실행기가 케이스마다 기한을 넣고, 감시 스레드가 넘긴 것을 보면 이름을 찍고 프로세스를 끝낸다.
+             * @details 멈춘 케이스(무한 루프 · 교착)는 그 스레드에서 되살릴 수 없다 — 이름도 없이 CTest 시한(600 초)에 죽는 대신 바로 어느 케이스인지 남긴다.
+             *          디버거가 붙어 있으면 끈다(중단점에 선 것을 멈춤으로 보지 않는다).
+             */
+            struct Watchdog
+            {
+                atomic<int64>       _deadlineNanoseconds{ 0 }; ///< 0 이면 보는 케이스가 없다
+                atomic<int64>       _timeoutMilliseconds{ 0 };
+                atomic<const utf8*> _pCaseName{ nullptr };
+            };
+
+            static Watchdog& getWatchdog()
+            {
+                static Watchdog s_watchdog;
+                return s_watchdog;
+            }
+
+            static void watchCaseDeadline( ThreadStopToken stopToken )
+            {
+                Watchdog& watchdog = getWatchdog();
+                while ( stopToken.stop_requested() == false )
+                {
+                    MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 100 * constant::kNanosecondsPerMillisecond );
+                    const int64 deadline = watchdog._deadlineNanoseconds.load( std::memory_order_acquire );
+                    if ( deadline == 0 || MonotonicClock::nowNanoseconds() < deadline )
+                        continue;
+                    // 할당 · 잠금 없이 바로 쓴다 — 멈춘 케이스가 잠금을 쥐고 있을 수 있다.
+                    const utf8* pName = watchdog._pCaseName.load( std::memory_order_acquire );
+                    std::fprintf( stdout, "\n[ TIMEOUT  ] %s did not finish within %lld ms - the run stops here (a stuck case cannot be resumed; raise ._timeoutSeconds if it is just slow)\n",
+                                  pName != nullptr ? pName : "(unknown)", static_cast<long long>( watchdog._timeoutMilliseconds.load() ) );
+                    std::fflush( stdout );
+                    Logger::flushGlobalForCrash();
+                    std::_Exit( kTestTimeoutExitCode );
+                }
+            }
+
+            /** @brief 스냅숏 · 쓰기 폴더 이름에 쓰는 케이스 이름 — 매개변수 케이스의 `/` 를 `.` 으로(`Suite.Name/2` → `Suite.Name.2`). */
+            static string toFileName( string_view caseName )
+            {
+                string name( caseName );
+                std::replace( name.begin(), name.end(), '/', '.' );
+                return name;
+            }
+
             static uint32 pickSeed( uint32 requested )
             {
                 if ( requested != 0 )
@@ -176,6 +227,30 @@ namespace sw::test
         (void)registry._registration.remove( _pRegistration );
     }
 
+    TestCaseEachRegistrar::TestCaseEachRegistrar( const utf8* pBaseName, size_t count, TestIndexedFunction pfnRun, const utf8* pFile, int32 line,
+                                                  const TestCaseOptions& options )
+    {
+        _listName.reserve( count );
+        _listRegistration.reserve( count ); // 크기를 먼저 정한다 — 등록표가 원소의 주소를 쥔다
+        for ( size_t index = 0; index < count; ++index )
+        {
+            _listName.push_back( string( pBaseName ) + "/" + to_string( index ) );
+        }
+        for ( size_t index = 0; index < count; ++index )
+        {
+            _listRegistration.push_back( TestCaseRegistration{ _listName[index].c_str(), nullptr, pFile, line, options, pfnRun, index } );
+        }
+        for ( const TestCaseRegistration& registration : _listRegistration )
+        {
+            _listRegistrar.push_back( make_unique<TestCaseRegistrar>( &registration ) );
+        }
+    }
+
+    TestCaseEachRegistrar::~TestCaseEachRegistrar()
+    {
+        _listRegistrar.clear(); // 등록표에서 먼저 뺀 뒤 이름 · 등록 줄을 놓는다
+    }
+
     void reportFailure( const utf8* pFile, int32 line, string_view message )
     {
         TestRunnerInternal::addFailure( string( pFile ) + "(" + to_string( line ) + "): error: " + string( message ) );
@@ -221,7 +296,8 @@ namespace sw::test
             caseName = state._pCase != nullptr ? state._pCase->_pName : "";
             bUpdate  = state._bUpdateSnapshots;
         }
-        const string path = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pFile ), "Snapshots" ), caseName + "." + string( name ) + ".txt" );
+        const string path = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getDirectoryPart( pFile ), "Snapshots" ),
+                                                TestRunnerInternal::toFileName( caseName ) + "." + string( name ) + ".txt" );
         string       normalized( actual );
         normalized.erase( std::remove( normalized.begin(), normalized.end(), '\r' ), normalized.end() );
         string     expected;
@@ -268,6 +344,25 @@ namespace sw::test
 
     bool TestRunner::matchesFilter( string_view filter, string_view name )
     {
+        return matchesFilter( filter, name, {} );
+    }
+
+    bool TestRunner::matchesFilter( string_view filter, string_view name, string_view tags )
+    {
+        const auto matchesPattern = [name, tags]( string_view pattern )
+        {
+            if ( pattern.size() >= 2 && pattern.front() == '[' && pattern.back() == ']' )
+            {
+                const string_view tag = pattern.substr( 1, pattern.size() - 2 );
+                for ( const string_view word : StringUtil::split( tags, " ", { ._bTrim = true, ._bDropEmpty = true } ) )
+                {
+                    if ( word == tag )
+                        return true;
+                }
+                return false;
+            }
+            return StringUtil::matchesWildcard( pattern, name );
+        };
         // 쉼표로 가른 패턴 — 앞에 `-` 가 붙은 것은 빼기다. 더하기 패턴이 하나도 없으면 모두를 더한 것으로 본다.
         bool   bIncluded    = false;
         bool   bHasPositive = false;
@@ -280,18 +375,41 @@ namespace sw::test
             {
                 if ( pattern.front() == '-' )
                 {
-                    if ( StringUtil::matchesWildcard( pattern.substr( 1 ), name ) )
+                    if ( matchesPattern( pattern.substr( 1 ) ) )
                         return false;
                 }
                 else
                 {
                     bHasPositive = true;
-                    bIncluded    = bIncluded || StringUtil::matchesWildcard( pattern, name );
+                    bIncluded    = bIncluded || matchesPattern( pattern );
                 }
             }
             start = end + 1;
         }
         return bHasPositive ? bIncluded : true;
+    }
+
+    bool TestRunner::parseShard( string_view text, uint32& outIndex, uint32& outCount )
+    {
+        const size_t slash = text.find( '/' );
+        int64        index = -1;
+        int64        count = 0;
+        if ( slash == string_view::npos || StringUtil::parseInt64( text.substr( 0, slash ), index ) == false ||
+             StringUtil::parseInt64( text.substr( slash + 1 ), count ) == false || count < 1 || index < 0 || index >= count )
+            return false;
+        outIndex = static_cast<uint32>( index );
+        outCount = static_cast<uint32>( count );
+        return true;
+    }
+
+    uint32 TestRunner::getShardOf( string_view name, uint32 shardCount )
+    {
+        uint32 hash = HashUtil::kFNVOffset32;
+        for ( const char ch : name )
+        {
+            hash = HashUtil::fnvStep32( hash, static_cast<uint8>( ch ) );
+        }
+        return shardCount <= 1 ? 0 : hash % shardCount;
     }
 
     vector<string> TestRunner::collectCaseNames()
@@ -318,7 +436,7 @@ namespace sw::test
             ScopedLock<mutex>   lock{ registry._mutex };
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
             {
-                if ( matchesFilter( options._filter, pCase->_pName ) )
+                if ( matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) && getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex )
                     listCase.push_back( pCase );
             }
         }
@@ -333,15 +451,32 @@ namespace sw::test
             }
             return true;
         }
-        if ( listCase.empty() )
+        // 비활성 케이스는 돌지 않고 까닭과 함께 센다(지우지 않고 끈 자리가 보고에 남는다).
+        vector<const TestCaseRegistration*> listDisabled;
+        if ( options._bRunDisabled == false )
+        {
+            const auto isDisabled = []( const TestCaseRegistration* pCase )
+            { return pCase->_options._disabledReason != nullptr; };
+            std::copy_if( listCase.begin(), listCase.end(), std::back_inserter( listDisabled ), isDisabled );
+            listCase.erase( std::remove_if( listCase.begin(), listCase.end(), isDisabled ), listCase.end() );
+        }
+        for ( const TestCaseRegistration* pCase : listDisabled )
+        {
+            Internal::writeLine( string( "[ DISABLED ] " ) + pCase->_pName + " - " + pCase->_options._disabledReason );
+        }
+        // 빈 샤드는 실패가 아니다 — 케이스가 몫보다 적으면 빈 몫이 생긴다. 빈 거르개는 실패다.
+        if ( listCase.empty() && options._shardCount <= 1 )
         {
             Internal::writeLine( string( "[  NO TESTS ] no case matches the filter '" ) + options._filter + "' - an empty run is not a pass" );
             return false;
         }
 
-        const uint32   baseSeed    = Internal::pickSeed( options._seed );
-        const string   scratchRoot = FileUtil::joinPath( options._scratchRoot.empty() ? string( "Saved/Test" ) : options._scratchRoot, to_string( Process::getCurrentProcessID() ) );
-        Subscription   logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
+        const uint32 baseSeed    = Internal::pickSeed( options._seed );
+        const string scratchRoot = FileUtil::joinPath( options._scratchRoot.empty() ? string( "Saved/Test" ) : options._scratchRoot, to_string( Process::getCurrentProcessID() ) );
+        Subscription logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
+        thread       watchThread;
+        if ( Process::isDebuggerPresent() == false )
+            watchThread = thread( &Internal::watchCaseDeadline );
         const uint32   repeatCount = std::max( options._repeatCount, 1u );
         uint32         failedCount = 0;
         uint32         ranCount    = 0;
@@ -350,8 +485,9 @@ namespace sw::test
         const int64    runStart = MonotonicClock::nowNanoseconds();
         utf8           arrBuffer[constant::kMaxBuffer1024];
 
-        formatstring( arrBuffer, constant::kMaxBuffer1024, "[==========] %# of %# registered case(s), seed %# (repeat with --test-seed=%#), %# round(s)", static_cast<uint32>( listCase.size() ),
-                      static_cast<uint32>( collectCaseNames().size() ), baseSeed, baseSeed, repeatCount );
+        formatstring( arrBuffer, constant::kMaxBuffer1024, "[==========] %# of %# registered case(s), seed %# (repeat with --test-seed=%#), %# round(s), shard %#/%#",
+                      static_cast<uint32>( listCase.size() ), static_cast<uint32>( collectCaseNames().size() ), baseSeed, baseSeed, repeatCount, options._shardIndex,
+                      options._shardCount );
         Internal::writeLine( arrBuffer );
         for ( uint32 roundIndex = 0; roundIndex < repeatCount; ++roundIndex )
         {
@@ -368,12 +504,23 @@ namespace sw::test
                     state._listUpdatedSnapshot.clear();
                     state._assertionCount   = 0;
                     state._bUpdateSnapshots = options._bUpdateSnapshots;
-                    state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, pCase->_pName ), to_string( roundIndex ) );
+                    state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
                     state._bActive          = true;
                 }
                 Internal::writeLine( string( "[ RUN      ] " ) + pCase->_pName );
-                const int64 caseStart = MonotonicClock::nowNanoseconds();
-                pCase->_pfnRun();
+                CrashHandler::setContextValue( "TestCase", pCase->_pName ); // 크래시 보고에 어느 케이스였는지 남는다
+                const float32       timeoutSeconds = pCase->_options._timeoutSeconds > 0.0f ? pCase->_options._timeoutSeconds : kDefaultCaseTimeoutSeconds;
+                const int64         timeoutNanos   = static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1.0e9 );
+                const int64         caseStart      = MonotonicClock::nowNanoseconds();
+                Internal::Watchdog& watchdog       = Internal::getWatchdog();
+                watchdog._pCaseName.store( pCase->_pName, std::memory_order_release );
+                watchdog._timeoutMilliseconds.store( timeoutNanos / constant::kNanosecondsPerMillisecond, std::memory_order_release );
+                watchdog._deadlineNanoseconds.store( caseStart + timeoutNanos, std::memory_order_release );
+                if ( pCase->_pfnRunIndexed != nullptr )
+                    pCase->_pfnRunIndexed( pCase->_index );
+                else
+                    pCase->_pfnRun();
+                watchdog._deadlineNanoseconds.store( 0, std::memory_order_release );
                 const int64 caseMilliseconds = ( MonotonicClock::nowNanoseconds() - caseStart ) / constant::kNanosecondsPerMillisecond;
 
                 vector<string> listLateFailure;
@@ -418,6 +565,8 @@ namespace sw::test
             }
         }
         logListener.reset();
+        watchThread = thread{}; // 감시를 세우고 합류한다
+        CrashHandler::setContextValue( "TestCase", "" );
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::kNanosecondsPerMillisecond;
         formatstring( arrBuffer, constant::kMaxBuffer1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );
@@ -432,7 +581,14 @@ namespace sw::test
         {
             string report = "{\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
                             to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
-                            ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"updatedSnapshots\": [";
+                            ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"shard\": \"" + to_string( options._shardIndex ) + "/" +
+                            to_string( options._shardCount ) + "\",\n  \"disabled\": [";
+            for ( size_t index = 0; index < listDisabled.size(); ++index )
+            {
+                report += string( index == 0 ? "" : ", " ) + "{\"name\": \"" + Internal::escapeJSON( listDisabled[index]->_pName ) + "\", \"reason\": \"" +
+                          Internal::escapeJSON( listDisabled[index]->_options._disabledReason ) + "\"}";
+            }
+            report += "],\n  \"updatedSnapshots\": [";
             for ( size_t index = 0; index < listUpdatedSnapshot.size(); ++index )
             {
                 report += ( index == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listUpdatedSnapshot[index] ) + "\"";

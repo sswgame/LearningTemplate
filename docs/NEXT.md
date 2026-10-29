@@ -61,6 +61,8 @@
 
 ### E. 테스트 틀 고도화 (안정성 · 속도 · 더하기 · 빼기)
 
+**끝남(2026-10-29)**: 아래 표의 앞 세 줄 — 케이스 시한 감시 · 크래시 문맥, 옵션(`._tags` · `._disabledReason` · `._timeoutSeconds`) · `SW_TEST_CASE_F` · `SW_TEST_CASE_EACH`, `--test-shard=i/n` + CTest `SW_UNIT_TEST_SHARDS`(지금 1). 남은 것은 넷째 줄(옛 케이스 이식)이다. 쓰는 법은 `Test/README.md`.
+
 | 문제(지금) | 고칠 모양 | 근거 |
 |---|---|---|
 | 케이스가 멈추면 CTest 600 초까지 아무 보고 없음 · 크래시면 보고 없음 | 케이스 시한 감시 스레드(기본 10 초, 케이스가 `.timeoutSeconds` 로 바꿈) — 넘기면 지금 케이스 이름으로 보고를 쓰고 끝낸다. 크래시 문맥에 지금 케이스(`CrashHandler::setContextValue`). 보고를 케이스마다 덧쓰기(JSON Lines)로 — 죽어도 앞 케이스 결과가 남는다 | 시나리오 HangWatch 와 같은 방식, GoogleTest 는 없고 Catch2 · Unreal 은 있음 |

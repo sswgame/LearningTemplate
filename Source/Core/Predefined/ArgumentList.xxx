@@ -146,6 +146,10 @@ SW_REGISTER_ARGUMENT( TEST_FILTER, "*", false, "test-filter" )
 SW_REGISTER_ARGUMENT( TEST_SEED, 0, false, "test-seed" )
 // 같은 거른 케이스를 몇 회차 돌지(간헐 실패 찾기, 회차마다 씨앗 + 1).
 SW_REGISTER_ARGUMENT( TEST_REPEAT, 1, false, "test-repeat" )
+// 이 프로세스가 도는 몫 `i/n` — 케이스를 이름 해시로 n 몫으로 나눠 i 번째만 돈다(CTest 가 몫마다 프로세스 하나, `SW_UNIT_TEST_SHARDS`).
+SW_REGISTER_ARGUMENT( TEST_SHARD, "", false, "test-shard" )
+// 비활성 케이스(`._disabledReason`)도 돈다 — 고친 뒤 다시 켜기 전에 확인한다.
+SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, false, false, "test-run-disabled" )
 // 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.
 SW_REGISTER_ARGUMENT( TEST_REPORT, "", false, "test-report" )
 // 다른 스냅숏(`SW_EXPECT_SNAPSHOT`)을 지금 값으로 다시 쓴다 — 바뀐 파일을 리뷰한다.

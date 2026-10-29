@@ -302,6 +302,15 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPEAT, repeatCount );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );
                 (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, options._bUpdateSnapshots );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_RUN_DISABLED, options._bRunDisabled );
+                string shard{ "0/1" }; // 주지 않으면 몫 하나(전부)
+                (void)commandLine.getArgument( CommandLineArgument::TEST_SHARD, shard );
+                if ( test::TestRunner::parseShard( shard, options._shardIndex, options._shardCount ) == false )
+                {
+                    SW_LOG_ERROR( "--test-shard=%# is not i/n (0 <= i < n)", shard.c_str() );
+                    inoutState._bFailed = true;
+                    return true;
+                }
                 options._seed        = static_cast<uint32>( seed );
                 options._repeatCount = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
                 inoutState._bFailed  = test::TestRunner::run( options ) == false;
