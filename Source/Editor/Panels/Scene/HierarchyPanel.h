@@ -63,7 +63,7 @@ namespace sw::editor
         /** @brief 트리 아래 빈 영역의 드래그 앤 드롭 대상, 단축키, 우클릭 메뉴를 처리합니다. */
         void drawTreeEmptyArea( GameObjectManager* pManager );
 
-        // 루트 순서와 필터 결과(행 모델)는 cpp 의 행 상태가 들고, 구조 세대가 바뀔 때만 다시 짓는다(`refreshRowModel`).
+        // 루트 순서 · 필터 결과 · 그린 행 순서 · 선택 명령은 `HierarchyRowModel`(Model/, ImGui 없음)이 들고, 구조 세대가 바뀔 때만 다시 짓는다(`HierarchyRowModel::refresh`).
         uint64                                _renamingObjectID;
         uint64                                _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
         fixed_string<constant::kMaxBuffer128> _filterBuffer;

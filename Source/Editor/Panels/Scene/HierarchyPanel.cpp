@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
-#include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/TagID.h"
@@ -28,9 +27,9 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Panels/Scene/Model/HierarchyRowModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -63,103 +62,6 @@ namespace sw::editor
             static constexpr string_view kActionSelectPrevious = "hierarchy.selectPrevious";
             static constexpr string_view kActionSelectNext     = "hierarchy.selectNext";
 
-            static bool typeMatchesFilter( GameObject* pObj, string_view typeFilter )
-            {
-                if ( pObj == nullptr || typeFilter.empty() )
-                    return false;
-
-                for ( Component* pComp : pObj->getComponents() )
-                {
-                    if ( pComp == nullptr )
-                        continue;
-
-                    if ( StringUtil::startsWith( pComp->getTypeName().view(), typeFilter, true ) )
-                        return true;
-                }
-                return false;
-            }
-
-            static bool nameMatchesFilter( GameObject* pObj, const utf8* pFilter )
-            {
-                if ( StringUtil::isNullOrEmpty( pFilter ) )
-                    return true;
-                if ( pObj == nullptr )
-                    return false;
-
-                // 1) 타입 문법 "t:ComponentName"
-                if ( pFilter[0] == 't' && pFilter[1] == ':' )
-                {
-                    return typeMatchesFilter( pObj, string_view{ pFilter + 2 } );
-                }
-
-                // 2) 태그 문법 "tag:TagName"
-                if ( StringUtil::startsWith( pFilter, "tag:", true ) )
-                {
-                    // ID 의 원본은 `TagID::computeID` 다. `computeStringHash64` 를 기본 인자로 호출하면 대소문자를 무시해서
-                    // 대소문자를 구별하는 태그 쪽과 어긋나고, 대문자로 시작하는 태그를 하나도 찾지 못한다.
-                    //
-                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 문자열을 보므로 `tag:Faction` 이 `Faction.Player` 까지
-                    // 찾는다. 리터럴 태그는 역조회 테이블에 등록되지 않아, ID 만 가진 TagID 로는 계층 비교를 할 수
-                    // 없다. 필터 버퍼는 이 호출 동안 유효하다.
-                    const string_view tagFilter{ pFilter + 4 };
-                    return pObj->hasTag( TagID{ TagID::computeID( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
-                }
-
-                // 3) 일반 이름 매칭
-                return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
-            }
-
-            /**
-             * @brief 계층 창의 행 모델입니다. 루트 순서와 필터에 걸린 오브젝트를 담고, 구조 세대 · 태그 세대 · 필터 글이 바뀔 때만 다시 짓습니다(`refreshRowModel`).
-             * @details 프레임마다 전 오브젝트를 훑어 루트를 모으고 정렬하면 큐브 수천 개 씬에서 그것만으로 프레임을 먹는다. 필터를 켜면 노드마다 서브트리를
-             *          재귀로 다시 물었다. 언리얼 아웃라이너도 트리를 이벤트로 고치고 프레임마다 다시 모으지 않는다.
-             *          포인터를 들어도 된다. 오브젝트는 해체 전에 늘 구조 세대를 올리고(`GameObjectStore::destroyObject`), 그리기 전에 세대를 먼저 본다.
-             */
-            struct RowModel
-            {
-                vector<GameObject*>                   _listRoot{};            ///< 형제 순서의 루트(삭제 대기 제외)
-                unordered_set<uint64>                 _uniqueFilterMatchID{}; ///< 자기나 후손이 필터에 걸린 오브젝트 id. 필터가 꺼져 있으면 비어 있다
-                fixed_string<constant::kMaxBuffer128> _filterText{};          ///< 지을 때의 필터 글
-                const GameObjectManager*              _pManager{ nullptr };   ///< 지을 때의 매니저
-                uint64                                _structureGeneration{ 0 };
-                uint64                                _tagGeneration{ 0 };
-                uint32                                _rebuildCount{ 0 }; ///< 다시 지은 횟수(감시 값 `Editor.HierarchyRowRebuildCount`)
-                bool                                  _bFilterActive{ false };
-            };
-
-            /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 담습니다. Shift 범위 선택, Ctrl+A, 화살표가 지난 프레임의 것을 봅니다. */
-            struct RowState
-            {
-                RowModel                             _rowModel{};
-                vector<uint64>                       _listDrawnRow;
-                vector<uint64>                       _listPreviousRow;
-                uint64                               _anchorObjectID{ 0 };  ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
-                uint64                               _revealObjectID{ 0 };  ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
-                uint64                               _lastPrimaryID{ 0 };   ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
-                uint64                               _pendingRenameID{ 0 }; ///< 이름 바꾸기 명령이 고른 오브젝트. 다음 그리기에서 입력 칸을 연다
-                fixed_string<constant::kMaxBuffer64> _addComponentSearch{}; ///< "Add Component" 메뉴의 검색 칸 글(메뉴를 닫았다 열어도 남는다)
-                bool                                 _bClickedThisFrame{ false };
-            };
-
-            /** @brief 행 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-            static RowState& getRowState() { return getEditorState<RowState>(); }
-
-            /** @brief 프레임 시작에 행 순서를 다시 모읍니다(지난 프레임의 것은 `_listPreviousRow` 로 넘긴다). 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보여 줍니다. */
-            static void beginRowFrame()
-            {
-                RowState& rowState = getRowState();
-                rowState._listPreviousRow.swap( rowState._listDrawnRow );
-                rowState._listDrawnRow.clear();
-
-                const GameObject* pPrimary             = editor::getMainSceneSelection().getPrimaryObject();
-                const uint64      primaryID            = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
-                const bool        bRevealPrimaryObject = primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0;
-                if ( bRevealPrimaryObject )
-                    rowState._revealObjectID = primaryID;
-                rowState._lastPrimaryID     = primaryID;
-                rowState._bClickedThisFrame = false;
-            }
-
             /** @brief `gv_editorWatchHierarchyObject` 오브젝트가 마지막 프레임에 그린 행에서 몇 번째인지입니다(0 부터). 그리지 않았거나 없으면 -1 입니다. */
             [[nodiscard]] static bool readProbedRowIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -168,57 +70,18 @@ namespace sw::editor
                 const GameObject*  pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchHierarchyObject.c_str() ) ) : nullptr;
                 if ( pObject == nullptr )
                     return true;
-                const vector<uint64>& listRow = getRowState()._listDrawnRow;
-                for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
-                {
-                    if ( listRow[rowIndex] == pObject->getObjectID() )
-                    {
-                        outValue = static_cast<float64>( rowIndex );
-                        break;
-                    }
-                }
+                outValue = static_cast<float64>( HierarchyRowModel::get().findDrawnRowIndex( pObject->getObjectID() ) );
                 return true;
-            }
-
-            /** @brief 단일 선택(주 선택)된 오브젝트를 형제 사이에서 한 단계 옮깁니다. 커맨드(`scene.moveSiblingUp` · `Down`)가 씁니다. */
-            static void moveSelectionStep( bool bDown )
-            {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObject  = editor::getMainSceneSelection().getPrimaryObject();
-                if ( pManager != nullptr && pObject != nullptr )
-                    (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
             }
 
             static void runMoveUp()
             {
-                moveSelectionStep( false );
+                HierarchyCommands::moveSelectionStep( false );
             }
 
             static void runMoveDown()
             {
-                moveSelectionStep( true );
-            }
-
-            /** @brief 주 선택이 폴더면 그 안에, 아니면 루트에 정리용 폴더를 만듭니다(언리얼 아웃라이너의 새 폴더). */
-            static void runCreateFolder()
-            {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( pManager == nullptr )
-                    return;
-                GameObject* pSelected = editor::getMainSceneSelection().getPrimaryObject();
-                GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
-                (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
-            }
-
-            /** @brief @p pObj 가 @p pTarget 의 조상이면 true 입니다. */
-            static bool isAncestorOf( const GameObject* pObj, const GameObject* pTarget )
-            {
-                for ( const GameObject* pParent = pTarget != nullptr ? pTarget->getParent() : nullptr; pParent != nullptr; pParent = pParent->getParent() )
-                {
-                    if ( pParent == pObj )
-                        return true;
-                }
-                return false;
+                HierarchyCommands::moveSelectionStep( true );
             }
 
             /**
@@ -228,7 +91,7 @@ namespace sw::editor
             static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectID, float32 cursorY, float32 rowHeight )
             {
                 const uint64 objectID = pObj->getObjectID();
-                if ( objectID == renamingObjectID || getRowState()._revealObjectID != 0 )
+                if ( objectID == renamingObjectID || HierarchyRowModel::get().getRevealObjectID() != 0 )
                     return false;
                 const ImVec2 rowMin{ ImGui::GetCursorScreenPos().x, cursorY };
                 if ( ImGui::IsRectVisible( rowMin, ImVec2( rowMin.x + 1.0f, cursorY + rowHeight ) ) )
@@ -241,63 +104,11 @@ namespace sw::editor
                 return ImGui::TreeNodeGetOpen( nodeID ) == false;
             }
 
-            /**
-             * @brief 행 모델이 지금 매니저 · 구조 세대 · 태그 세대 · 필터 글과 맞지 않으면 다시 짓습니다. 그리기 전에 한 번 부릅니다.
-             * @details 필터는 걸린 오브젝트마다 조상을 거슬러 올라가며 표시한다(이미 표시된 조상에서 멈춘다). 노드마다 서브트리를 다시 묻지 않는다.
-             */
-            static void refreshRowModel( GameObjectManager& manager, string_view filterText )
-            {
-                RowModel&    model               = getRowState()._rowModel;
-                const uint64 structureGeneration = manager.getStructureGeneration();
-                const uint64 tagGeneration       = manager.getTagIndex().getGeneration();
-                const bool   bUpToDate           = model._pManager == &manager && model._structureGeneration == structureGeneration && model._tagGeneration == tagGeneration &&
-                                       model._filterText.view() == filterText;
-                if ( bUpToDate )
-                    return;
-
-                model._pManager            = &manager;
-                model._structureGeneration = structureGeneration;
-                model._tagGeneration       = tagGeneration;
-                model._filterText          = filterText;
-                ++model._rebuildCount;
-                EditorSceneCommands::collectRootsInOrder( manager, model._listRoot ); // 루트만 형제 순서로 모은다. 지우고 되돌려도 위치가 그대로다
-                model._uniqueFilterMatchID.clear();
-                model._bFilterActive = EditorListFilter{ model._filterText.c_str() }.isActive();
-                if ( model._bFilterActive == false )
-                    return;
-                const utf8*            pFilter     = model._filterText.c_str();
-                unordered_set<uint64>& uniqueMatch = model._uniqueFilterMatchID;
-                manager.forEachGameObject( [pFilter, &uniqueMatch]( GameObject* pObj )
-                {
-                    if ( nameMatchesFilter( pObj, pFilter ) == false )
-                        return;
-                    for ( const GameObject* pCursor = pObj; pCursor != nullptr; pCursor = pCursor->getParent() )
-                    {
-                        if ( uniqueMatch.insert( pCursor->getObjectID() ).second == false )
-                            break;
-                    }
-                } );
-            }
-
-            /** @brief 필터가 꺼져 있거나, 이 오브젝트나 후손이 필터에 걸렸으면 true 입니다(행 모델로 답한다). */
-            static bool isRowVisible( const GameObject* pObj )
-            {
-                const RowModel& model = getRowState()._rowModel;
-                return model._bFilterActive == false || model._uniqueFilterMatchID.contains( pObj->getObjectID() );
-            }
-
             /** @brief 행 모델을 다시 지은 횟수입니다(감시 값 `Editor.HierarchyRowRebuildCount`). 구조가 그대로인 프레임에는 오르지 않아야 한다. */
             [[nodiscard]] static bool readRowRebuildCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getRowState()._rowModel._rebuildCount );
+                outValue = static_cast<float64>( HierarchyRowModel::get().getRebuildCount() );
                 return true;
-            }
-
-            /** @brief 계층 창이 보이지 않는 에디터 카메라 오브젝트입니다. 형제 번호를 다시 매길 때 빼야 한다. 없으면 nullptr 입니다. */
-            static const GameObject* findEditorCameraObject()
-            {
-                const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
-                return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             }
 
             /** @brief 끌어 놓을 위치를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
@@ -331,7 +142,7 @@ namespace sw::editor
                 if ( zone == SiblingDropZone::Onto )
                     EditorSceneCommands::reparent( pDragged, pTarget );
                 else
-                    (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == SiblingDropZone::After, findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
+                    (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == SiblingDropZone::After, HierarchyCommands::findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
             }
 
             static void drawGameObjectDragDrop( GameObject* pObj, GameObjectManager* pManager )
@@ -372,7 +183,7 @@ namespace sw::editor
                 if ( pObj == nullptr )
                     return;
                 bool bFailed{ false };
-                (void)EditorComponentMenu::drawAddComponentList( pObj, getRowState()._addComponentSearch, "hierarchy.addComponent", false, bFailed ); // 추가했는지는 되돌리기가 기록하고 실패는 목록이 알린다
+                (void)EditorComponentMenu::drawAddComponentList( pObj, HierarchyRowModel::get().editAddComponentSearch(), "hierarchy.addComponent", false, bFailed ); // 추가했는지는 되돌리기가 기록하고 실패는 목록이 알린다
             }
 
             static bool hasSingleTargetObject( const EditorCommandTarget& target ) { return EditorSceneObjectCommands::findTargetObject( target ) != nullptr; }
@@ -382,30 +193,7 @@ namespace sw::editor
             {
                 const GameObject* pObj = EditorSceneObjectCommands::findTargetObject( target );
                 if ( pObj != nullptr )
-                    getRowState()._pendingRenameID = pObj->getObjectID();
-            }
-
-            /** @brief 맥락 메뉴의 대상과 같은 선택을 만듭니다(R2 — 선택 밖 행에서 열면 그 행만 고른다). */
-            static void selectOnlyObject( uint64 objectID )
-            {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObj     = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
-                if ( pObj != nullptr )
-                    editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Replace );
-            }
-
-            /** @brief 메인 선택의 오브젝트 id 들입니다(맥락 메뉴의 대상 스냅숏). */
-            static vector<uint64> collectSelectedObjectIDs()
-            {
-                vector<GameObject*> listSelected;
-                editor::getMainSceneSelection().getSelectedObjects( listSelected );
-                vector<uint64> listID;
-                listID.reserve( listSelected.size() );
-                for ( const GameObject* pSelected : listSelected )
-                {
-                    listID.push_back( pSelected->getObjectID() );
-                }
-                return listID;
+                    HierarchyRowModel::get().requestRename( pObj->getObjectID() );
             }
 
             /** @brief 이 오브젝트의 컴포넌트 종류와 태그마다 "그것을 가진 오브젝트 모두 선택" 을 고르는 하위 메뉴의 안입니다(맥락 메뉴 명령 `scene.object.selectAllWith`). */
@@ -448,8 +236,8 @@ namespace sw::editor
                 subject._pPopupID       = "GOCtx";
                 subject._kind           = EditorCommandTargetKind::GameObject;
                 subject._hoveredID      = pObj->getObjectID();
-                subject._listSelectedID = collectSelectedObjectIDs();
-                subject._selectOnly     = &selectOnlyObject;
+                subject._listSelectedID = HierarchyCommands::collectSelectedObjectIDs();
+                subject._selectOnly     = &HierarchyCommands::selectOnlyObject;
                 (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
             }
 
@@ -554,51 +342,13 @@ namespace sw::editor
                     formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
             }
 
-            /** @brief 방금 그린 행의 클릭을 선택으로 옮깁니다. Shift 는 지난 프레임에 그린 순서로 범위, Ctrl 은 토글입니다. */
-            static void handleRowClick( EditorContext* pContext, GameObject* pObj, GameObjectManager* pManager, RowState& rowState, uint64 objectID )
+            /** @brief 방금 그린 행의 클릭을 읽어 선택으로 옮깁니다(Shift 범위 · Ctrl 토글은 `HierarchyRowModel::clickRow`). */
+            static void handleRowClick( GameObject* pObj, GameObjectManager* pManager )
             {
                 if ( EditorInputGUI::wasItemClicked() == false )
                     return;
-
-                const uint8 modifierMask    = EditorInputGUI::getModifierMask();
-                const bool  bCtrl           = ( modifierMask & ModifierKey::Ctrl ) != 0;
-                const bool  bShift          = ( modifierMask & ModifierKey::Shift ) != 0;
-                rowState._bClickedThisFrame = true;
-                if ( bShift == false || rowState._anchorObjectID == 0 )
-                {
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, bCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
-                    rowState._anchorObjectID = objectID;
-                    return;
-                }
-
-                // Shift 는 시작 행부터 이 행까지(지난 프레임에 그린 순서) 모두 선택한다. 유니티, 언리얼, 윈도 탐색기와 같다.
-                const vector<uint64>& listRow     = rowState._listPreviousRow;
-                size_t                anchorIndex = listRow.size();
-                size_t                clickIndex  = listRow.size();
-                for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
-                {
-                    if ( listRow[rowIndex] == rowState._anchorObjectID )
-                        anchorIndex = rowIndex;
-                    if ( listRow[rowIndex] == objectID )
-                        clickIndex = rowIndex;
-                }
-                if ( anchorIndex >= listRow.size() || clickIndex >= listRow.size() )
-                {
-                    pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add );
-                    return;
-                }
-
-                const size_t first = MathUtil::min( anchorIndex, clickIndex );
-                const size_t last  = MathUtil::max( anchorIndex, clickIndex );
-                if ( bCtrl == false )
-                    editor::getMainSceneSelection().clearObjectSelection();
-                for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
-                {
-                    GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
-                    if ( pRow != nullptr )
-                        pContext->getSubsystem<EditorWorkspace>().selectGameObject( pRow, SelectionMode::Add );
-                }
-                pContext->getSubsystem<EditorWorkspace>().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
+                const uint8 modifierMask = EditorInputGUI::getModifierMask();
+                HierarchyRowModel::get().clickRow( *pManager, pObj, ( modifierMask & ModifierKey::Ctrl ) != 0, ( modifierMask & ModifierKey::Shift ) != 0 );
             }
 
             /** @brief 그 행에서 직접 이름을 바꾸는 입력입니다. 엔터나 포커스를 잃으면 확정하고 Esc 는 취소합니다. */
@@ -693,7 +443,8 @@ namespace sw::editor
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
-                const bool bSkipRow = pObj == nullptr || pManager == nullptr || isRowVisible( pObj ) == false;
+                HierarchyRowModel& rowModel = HierarchyRowModel::get();
+                const bool         bSkipRow = pObj == nullptr || pManager == nullptr || rowModel.isRowVisible( pObj ) == false;
                 if ( bSkipRow )
                     return;
 
@@ -712,9 +463,9 @@ namespace sw::editor
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
                 // 뷰포트에서 선택한 오브젝트는 조상을 펼쳐 그 행까지 보여 준다. 언리얼 Outliner 의 선택 따라가기에 해당한다.
-                RowState&         rowState      = getRowState();
-                const GameObject* pRevealTarget = rowState._revealObjectID != 0 ? pManager->findGameObjectByID( rowState._revealObjectID ) : nullptr;
-                if ( pRevealTarget != nullptr && isAncestorOf( pObj, pRevealTarget ) )
+                const uint64      revealObjectID = rowModel.getRevealObjectID();
+                const GameObject* pRevealTarget  = revealObjectID != 0 ? pManager->findGameObjectByID( revealObjectID ) : nullptr;
+                if ( pRevealTarget != nullptr && HierarchyCommands::isAncestorOf( pObj, pRevealTarget ) )
                     ImGui::SetNextItemOpen( true );
                 // 프리팹 인스턴스는 이름을 파랗게 표시한다(유니티 Hierarchy).
                 const bool bPrefabInstance = editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pObj ).empty() == false;
@@ -727,18 +478,18 @@ namespace sw::editor
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
                 if ( bPrefabInstance )
                     ImGui::PopStyleColor();
-                rowState._listDrawnRow.push_back( objectID );
+                rowModel.noteDrawnRow( objectID );
                 if ( pRevealTarget == pObj )
                 {
                     ImGui::SetScrollHereY( 0.5f );
-                    rowState._revealObjectID = 0;
+                    rowModel.clearReveal();
                 }
                 if ( bSelected )
                     EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
-                handleRowClick( &editorContext, pObj, pManager, rowState, objectID );
+                handleRowClick( pObj, pManager );
                 drawInlineRename( pObj, objectID, renamingObjectID, renameBuffer, bFocusRenameInput );
 
                 drawGameObjectContextMenu( pObj );
@@ -765,7 +516,7 @@ namespace sw::editor
                        "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", nullptr, &HierarchyPanelInternal::runMoveDown, nullptr, Scene,
                        "MainMenu/Edit", None, 0 );
     SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", editoricon::kFolder, "Scene",
-                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", nullptr, &HierarchyPanelInternal::runCreateFolder, nullptr, Scene,
+                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", nullptr, &HierarchyCommands::createFolder, nullptr, Scene,
                        "MainMenu/Edit", None, 0 );
     // 계층 창이 그리는 오브젝트 메뉴 항목(하위 메뉴 · 이름 바꾸기) — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5).
     SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", "Rename", editoricon::kGameObject, "Scene", GameObject, 330, "scene.object.rename",
@@ -803,9 +554,10 @@ namespace sw::editor
 
         GameObjectManager* pManager = pScene->getObjectManager();
 
-        HierarchyPanelInternal::beginRowFrame();
+        HierarchyRowModel& rowModel = HierarchyRowModel::get();
+        rowModel.beginFrame();
         // 이름 바꾸기 명령(맥락 메뉴 · F2)이 남긴 요청을 그 행의 입력 칸으로 연다.
-        uint64& pendingRenameID = HierarchyPanelInternal::getRowState()._pendingRenameID;
+        const uint64 pendingRenameID = rowModel.takePendingRename();
         if ( pendingRenameID != 0 )
         {
             const GameObject* pRenamed = pManager->findGameObjectByID( pendingRenameID );
@@ -815,11 +567,10 @@ namespace sw::editor
                 formatstring( _renameBuffer.data(), _renameBuffer.capacity(), "%#", pRenamed->getName().c_str() );
                 _bFocusRenameInput = true;
             }
-            pendingRenameID = 0;
         }
         drawToolbar( pManager );
         // 행 모델은 툴바 뒤에 맞춘다 — 같은 프레임에 검색창에서 바뀐 글 · 만들기 단추가 바꾼 구조가 이 프레임 트리에 바로 닿는다(앞에서 맞추면 한 프레임 늦다).
-        HierarchyPanelInternal::refreshRowModel( *pManager, _filterBuffer.view() );
+        rowModel.refresh( *pManager, _filterBuffer.view() );
 
         ImGui::Separator();
 
@@ -888,11 +639,12 @@ namespace sw::editor
             pendingSkipRow = 0;
         };
         // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다. 저장에서도 빠진다. 그래서 목록에 표시하지 않는다.
-        const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
-        const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
-        for ( GameObject* pObj : HierarchyPanelInternal::getRowState()._rowModel._listRoot )
+        const CameraComponent*   pEditorCamera       = EditorCamera::find( pScene );
+        const GameObject*        pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
+        const HierarchyRowModel& rowModel            = HierarchyRowModel::get();
+        for ( GameObject* pObj : rowModel.getRoots() )
         {
-            if ( pObj == pEditorCameraObject || HierarchyPanelInternal::isRowVisible( pObj ) == false )
+            if ( pObj == pEditorCameraObject || rowModel.isRowVisible( pObj ) == false )
                 continue;
             ++visibleRootCount;
             const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectID, nextRowY, ImGui::GetFrameHeight() );
@@ -936,7 +688,7 @@ namespace sw::editor
         EditorContextMenuSubject subject{};
         subject._pPopupID       = "HierarchyEmptyCtx";
         subject._kind           = EditorCommandTargetKind::GameObject;
-        subject._listSelectedID = HierarchyPanelInternal::collectSelectedObjectIDs();
+        subject._listSelectedID = HierarchyCommands::collectSelectedObjectIDs();
         (void)EditorInputGUI::drawContextMenuFor( subject ); // 열렸는지는 쓰지 않는다
     }
 
@@ -948,39 +700,15 @@ namespace sw::editor
             return;
         // 메인 월드를 보여 주는 창이 포커스다 — 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다(미리보기 창이 등록해 둔 것을 해제한다).
         editor::setFocusedSelection( nullptr );
-        EditorSelection&                  editorSelection = editor::getMainSceneSelection();
-        HierarchyPanelInternal::RowState& rowState        = HierarchyPanelInternal::getRowState();
-        const vector<uint64>&             listRow         = rowState._listPreviousRow;
-
+        HierarchyRowModel& rowModel = HierarchyRowModel::get();
         if ( EditorInputGUI::wasActionTriggered( HierarchyPanelInternal::kActionSelectAll ) )
         {
-            // 지난 프레임에 보인 행을 모두 선택한다. 접힌 자식은 빠진다. 유니티와 같다.
-            editorSelection.clearObjectSelection();
-            for ( const uint64 rowID : listRow )
-            {
-                GameObject* pRow = pManager->findGameObjectByID( rowID );
-                if ( pRow != nullptr )
-                    editorSelection.selectObject( pRow, SelectionMode::Add );
-            }
+            rowModel.selectAllRows( *pManager );
             return;
         }
         const bool bUp   = EditorInputGUI::wasActionTriggered( HierarchyPanelInternal::kActionSelectPrevious );
         const bool bDown = EditorInputGUI::wasActionTriggered( HierarchyPanelInternal::kActionSelectNext );
-        if ( ( bUp || bDown ) == false || listRow.empty() )
-            return;
-        const GameObject* pPrimary = editorSelection.getPrimaryObject();
-        size_t            current  = listRow.size();
-        for ( size_t rowIndex = 0; pPrimary != nullptr && rowIndex < listRow.size(); ++rowIndex )
-        {
-            if ( listRow[rowIndex] == pPrimary->getObjectID() )
-                current = rowIndex;
-        }
-        const size_t next  = current >= listRow.size() ? 0 : ( bUp ? ( current > 0 ? current - 1 : 0 ) : MathUtil::min( current + 1, listRow.size() - 1 ) );
-        GameObject*  pNext = pManager->findGameObjectByID( listRow[next] );
-        if ( pNext == nullptr )
-            return;
-        editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
-        rowState._anchorObjectID    = pNext->getObjectID();
-        rowState._bClickedThisFrame = true; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
+        if ( bUp || bDown )
+            rowModel.selectStep( *pManager, bUp );
     }
 } // namespace sw::editor
