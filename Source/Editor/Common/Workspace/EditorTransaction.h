@@ -61,9 +61,9 @@ namespace sw::editor
          */
         static void push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey = {} );
         /** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
-        static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+        static void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                         const EditorDocumentRestoreDelegate& restore, string_view coalesceKey = {} );
-        static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+        static void recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                         const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
                                         string_view coalesceKey = {} );
     };

@@ -3,6 +3,7 @@
 #include "ModuleManager/LiveReload/LiveReloadManager.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -936,6 +937,19 @@ namespace sw
     }
 
     bool LiveReloadManager::drainTasksBeforeUnload()
+    {
+        const bool bDrained = drainWorkersBeforeUnload();
+        // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
+        // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
+        if ( engine::areEngineServicesBound() )
+        {
+            if ( EventDispatcher* const pEventDispatcher = engine::findSubsystem<EventDispatcher>() )
+                pEventDispatcher->processEvents();
+        }
+        return bDrained;
+    }
+
+    bool LiveReloadManager::drainWorkersBeforeUnload()
     {
         // App 경로에서는 _drainWorkers(= GameModuleManager::drainRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
         // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.

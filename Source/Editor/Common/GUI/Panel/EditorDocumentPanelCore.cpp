@@ -151,7 +151,7 @@ namespace sw::editor
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
         EditorTransaction::recordDocumentText(
-            _documentUndoBaseline, after, label,
+            _documentUndoBaseline, after, label, _undoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;

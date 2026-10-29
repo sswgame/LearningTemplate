@@ -5,6 +5,8 @@
 #include "Core/Container/map.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+
 namespace sw::editor
 {
     SW_LOG_CALLER( "UndoStep" );
@@ -52,6 +54,18 @@ namespace sw::editor
         const map<uint64, UndoStepRegistryInternal::Entry>& table = UndoStepRegistryInternal::getTable();
         const auto                                          it    = table.find( functionHash );
         return it != table.end() ? it->second._invoker : nullptr;
+    }
+
+    UndoStepOwner::UndoStepOwner()
+        : _id{ 0 }
+    {
+        static uint64 s_nextID = 1; // 편집기 UI 스레드만 만든다
+        _id                    = s_nextID++;
+    }
+
+    UndoStepOwner::~UndoStepOwner()
+    {
+        CommandStack::removeOwnedByFromAll( _id );
     }
 
     void UndoStep::execute() const

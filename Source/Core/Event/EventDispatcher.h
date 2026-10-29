@@ -13,7 +13,6 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -150,16 +149,6 @@ namespace sw
         /** @brief 모든 구독과 큐를 비웁니다. */
         void clear();
 
-        /**
-         * @brief 큐에 쌓인 이벤트 중 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 제거합니다. 제거한 수를 반환합니다. 어느 스레드에서나 부를 수 있습니다.
-         * @details 모듈이 `push` 한 이벤트는 그 모듈이 인스턴스화한 vtable(소멸자, 타입 조회)을 가진다. 이미지를 언로드한 뒤 `processEvents` 나 디스패처
-         *          소멸이 그 이벤트를 만지면 언로드된 코드로 점프한다. 소멸자는 이미지가 아직 로드돼 있는 지금 부른다. 남은 이벤트의 순서는 그대로다.
-         */
-        uint32 removeQueuedEventsWithin( const void* pBegin, const void* pEnd );
-
-        /** @brief 큐에 든 그 이미지의 이벤트를 지웁니다(`removeQueuedEventsWithin`). 구독자는 자기 구독이 풀고, 채널 코드는 Core 에 있다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
-
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
         {
@@ -264,7 +253,5 @@ namespace sw
         atomic<int32>       _activeAllocatorIndex;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &EventDispatcher::onModuleUnloading, "event subscriptions" );
     };
 } // namespace sw

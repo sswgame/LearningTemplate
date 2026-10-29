@@ -301,6 +301,8 @@ namespace sw
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
          */
         bool drainTasksBeforeUnload();
+        /** @brief 렌더 · 태스크 워커를 비웁니다(`drainTasksBeforeUnload` 의 앞 절반 — 그 뒤에 이벤트 큐를 비운다). */
+        bool drainWorkersBeforeUnload();
         /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
         /** @brief @p listOrder(의존 순서)의 모듈마다 섀도 복사본을 준비합니다. 하나라도 실패하면 오류를 남기고 false 입니다(준비한 것은 @p outListPrepared 에 남아 있어 부르는 쪽이 버린다). */

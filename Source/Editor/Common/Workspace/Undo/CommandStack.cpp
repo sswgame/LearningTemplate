@@ -15,6 +15,12 @@ namespace sw
 
             /** @brief 실행 중인 스택(`findExecuting`)입니다. 편집기 UI 스레드만 실행한다. */
             static inline CommandStack* s_pExecuting = nullptr;
+            /** @brief 살아 있는 스택들입니다(`removeOwnedByFromAll`). 편집기 UI 스레드만 만들고 없앤다. */
+            static vector<CommandStack*>& getLiveStacks()
+            {
+                static vector<CommandStack*> s_listStack;
+                return s_listStack;
+            }
 
             static void writeStep( Archive& archive, const editor::UndoStep& step )
             {
@@ -123,6 +129,13 @@ namespace sw
         , _bIsExecuting{ false }
         , _bHistoryParked{ false }
     {
+        CommandStackInternal::getLiveStacks().push_back( this );
+    }
+
+    CommandStack::~CommandStack()
+    {
+        vector<CommandStack*>& listStack = CommandStackInternal::getLiveStacks();
+        listStack.erase( std::remove( listStack.begin(), listStack.end(), this ), listStack.end() );
     }
 
     void CommandStack::push( Command cmd )
@@ -275,17 +288,14 @@ namespace sw
             _objectEditListener.get()( notice );
     }
 
-    uint32 CommandStack::removeCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 CommandStack::removeOwnedBy( uint64 ownerID )
     {
-        (void)_objectEditListener.releaseIfCodeWithin( pBegin, pEnd ); // 그 구독은 이제 아무것도 풀지 않는다 — 새 모듈이 다시 건다
-
-        uint32 droppedCount = dropCommandsWithin( _listCommand, _index, pBegin, pEnd );
-        droppedCount += dropCommandsWithin( _listParkedCommand, _parkedIndex, pBegin, pEnd );
-
+        uint32 droppedCount = dropOwnedBy( _listCommand, _index, ownerID );
+        droppedCount += dropOwnedBy( _listParkedCommand, _parkedIndex, ownerID );
         size_t keptPendingCount{ 0 };
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingTransactionCommand.size(); ++pendingIndex )
         {
-            if ( holdsCodeWithin( _listPendingTransactionCommand[pendingIndex], pBegin, pEnd ) )
+            if ( isOwnedBy( _listPendingTransactionCommand[pendingIndex], ownerID ) )
             {
                 ++droppedCount;
                 continue;
@@ -295,21 +305,28 @@ namespace sw
             ++keptPendingCount;
         }
         _listPendingTransactionCommand.resize( keptPendingCount );
-
         // 병합 대상이 바뀌었을 수 있다 — 다음 병합 push 가 엉뚱한 명령을 고치지 않게 끊는다.
         if ( droppedCount > 0 )
             _lastCoalesceKey.clear();
         return droppedCount;
     }
 
-    uint32 CommandStack::dropCommandsWithin( vector<Command>& inoutListCommand, size_t& inoutIndex, const void* pBegin, const void* pEnd )
+    void CommandStack::removeOwnedByFromAll( uint64 ownerID )
+    {
+        for ( CommandStack* pStack : CommandStackInternal::getLiveStacks() )
+        {
+            (void)pStack->removeOwnedBy( ownerID );
+        }
+    }
+
+    uint32 CommandStack::dropOwnedBy( vector<Command>& inoutListCommand, size_t& inoutIndex, uint64 ownerID )
     {
         uint32 droppedCount{ 0 };
         size_t keptCount{ 0 };
         size_t keptBeforeIndex{ 0 };
         for ( size_t commandIndex = 0; commandIndex < inoutListCommand.size(); ++commandIndex )
         {
-            if ( holdsCodeWithin( inoutListCommand[commandIndex], pBegin, pEnd ) )
+            if ( isOwnedBy( inoutListCommand[commandIndex], ownerID ) )
             {
                 ++droppedCount;
                 continue;
@@ -323,11 +340,6 @@ namespace sw
         inoutListCommand.resize( keptCount );
         inoutIndex = keptBeforeIndex;
         return droppedCount;
-    }
-
-    uint32 CommandStack::onModuleUnloading( const void* pBegin, const void* pEnd )
-    {
-        return removeCodeWithin( pBegin, pEnd );
     }
 
     void CommandStack::execute( const Command& cmd, bool bUndo )
@@ -358,15 +370,15 @@ namespace sw
         CommandStackInternal::s_pExecuting = pPrevious;
     }
 
-    bool CommandStack::holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd )
+    bool CommandStack::isOwnedBy( const Command& cmd, uint64 ownerID )
     {
-        if ( cmd._undo._transient.isCodeWithin( pBegin, pEnd ) || cmd._redo._transient.isCodeWithin( pBegin, pEnd ) )
+        if ( cmd._undo._ownerID == ownerID || cmd._redo._ownerID == ownerID )
             return true;
         if ( cmd._listChild == nullptr )
             return false;
         for ( const Command& child : *cmd._listChild )
         {
-            if ( holdsCodeWithin( child, pBegin, pEnd ) )
+            if ( isOwnedBy( child, ownerID ) )
                 return true;
         }
         return false;

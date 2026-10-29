@@ -13,6 +13,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 namespace sw::editor
 {
@@ -145,6 +146,7 @@ namespace sw::editor
         string                                _documentUndoBaseline;
         string                                _lastSavedDocumentText;
         shared_ptr<EditorDocumentPanel*>      _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
+        UndoStepOwner                         _undoOwner;   ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다)
         vector<string>                        _listRecentPath;
         vector<string>                        _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::kMaxBuffer128> _openFilter;

@@ -6,8 +6,8 @@
  *          새 DLL 이 올라오면 같은 이름으로 다시 오른다. 이름은 함수의 정규 이름(시그니처 문자열)이라 함수 이름 · 인자 형을 바꾸면 옛 기록의 그 단계는
  *          찾지 못해 건너뛴다(로그).
  *
- *          패널 인스턴스에 묶인 대상(미리보기 창의 위젯 · 열린 문서 버퍼)은 리로드 뒤에 없으므로 코드 단계(`_transient`)를 허용한다 — 기록을 맡길 때
- *          그런 단계를 가진 명령은 버린다(`CommandStack::save`).
+ *          패널 인스턴스에 묶인 대상(미리보기 창의 위젯 · 열린 문서 버퍼)은 리로드 뒤에 없으므로 코드 단계(`_transient`)를 허용한다. 코드 단계는 그것을 만든
+ *          패널의 소유자(`UndoStepOwner`)에 묶여, 소유자가 사라지면(패널을 닫거나 그 확장 DLL 이 내려가면) 모든 스택에서 빠진다. 기록을 맡길 때도 버린다(`CommandStack::save`).
  *
  *          인자 형: 산술 · 열거형 · 단순 복사 구조체(바이트 그대로), `string`, 그 둘의 `vector`. 그 밖의 형은 같은 이름의 `writeUndoArg` · `readUndoArg`
  *          겹지정을 그 형 옆에 둔다(`ObjectSnapshot`).
@@ -129,24 +129,43 @@ namespace sw::editor
     };
 
     /**
+     * @class UndoStepOwner
+     * @brief 코드 단계의 주인입니다. 패널이 멤버로 들고, 사라질 때 자기가 만든 코드 단계를 가진 명령을 모든 스택에서 뺍니다(`CommandStack::removeOwnedBy`).
+     */
+    class SW_EDITOR_API UndoStepOwner
+    {
+    public:
+        UndoStepOwner();
+        ~UndoStepOwner();
+        UndoStepOwner( const UndoStepOwner& )            = delete;
+        UndoStepOwner& operator=( const UndoStepOwner& ) = delete;
+        uint64         getID() const { return _id; }
+
+    private:
+        uint64 _id;
+    };
+
+    /**
      * @struct UndoStep
-     * @brief 단계 하나 — 데이터 단계(함수 해시 + 인자 바이트) 또는 인스턴스에 묶인 코드 단계(`_transient`)입니다.
+     * @brief 단계 하나 — 데이터 단계(함수 해시 + 인자 바이트) 또는 주인에 묶인 코드 단계(`_transient`)입니다.
      */
     struct UndoStep
     {
         uint64           _functionHash{ 0 }; ///< 처리기 이름 해시(0 이면 데이터 단계가 아니다)
         vector<uint8>    _arguments{};       ///< 인자 바이트(`writeUndoArg` 순서)
-        Delegate<void()> _transient{};       ///< 인스턴스에 묶인 코드 단계(맡기지 않는다)
+        Delegate<void()> _transient{};       ///< 주인에 묶인 코드 단계(맡기지 않는다)
+        uint64           _ownerID{ 0 };      ///< 코드 단계의 주인(`UndoStepOwner::getID`)
 
         /** @brief 실행할 것이 있으면 true 입니다. */
         bool isBound() const { return _functionHash != 0 || _transient.isBound(); }
         /** @brief 데이터 단계면 true 입니다(리로드 · 파일로 넘길 수 있다). */
         bool isPersistable() const { return _functionHash != 0; }
-        /** @brief 코드 단계로 만듭니다. 대상이 패널 인스턴스와 함께 사라질 때만 쓴다(파일 머리말). */
-        static UndoStep makeTransient( Delegate<void()> step )
+        /** @brief 코드 단계로 만듭니다. 대상이 패널 인스턴스와 함께 사라질 때만 쓴다(파일 머리말). @p owner 가 사라지면 이 단계를 가진 명령이 빠진다. */
+        static UndoStep makeTransient( Delegate<void()> step, const UndoStepOwner& owner )
         {
             UndoStep result;
             result._transient = std::move( step );
+            result._ownerID   = owner.getID();
             return result;
         }
         /** @brief 실행합니다. 데이터 단계의 처리기가 없거나 인자를 읽지 못하면 경고하고 아무것도 하지 않습니다. */

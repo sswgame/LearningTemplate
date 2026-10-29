@@ -10,7 +10,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
@@ -32,7 +31,7 @@ namespace sw
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 미리보기 창은 자기 스택을 멤버로 든다.
      * @details 단계는 데이터다(`UndoStep` — 함수 이름 해시 + 인자 바이트). 그래서 편집기 모듈을 리로드해도 기록이 넘어간다. 언리얼의 `FTransaction`
      *          (오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo` 와 같은 구조다. 패널 인스턴스에 묶인 코드 단계를 가진 명령은 맡길 때 버리고, 그 코드가 든
-     *          다른 DLL(편집기 확장)만 내려갈 때는 `removeCodeWithin` 이 뗀다.
+     *          코드 단계는 주인(`UndoStepOwner` — 패널)이 사라질 때 모든 스택에서 빠진다(`removeOwnedByFromAll`).
      */
     class SW_EDITOR_API CommandStack final
     {
@@ -63,8 +62,12 @@ namespace sw
         /** @brief 에디터가 등록하는 알림 처리기입니다(선택 갱신, 씬 dirty). 모듈 코드라 그 모듈이 언로드될 때 분리됩니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
-        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `ModuleLibraryUtil::registerUnloadHandler` 의 주의(vtable 의 집)입니다. */
+        /** @brief 빈 스택으로 시작하고 살아 있는 스택 목록에 오릅니다(`removeOwnedByFromAll`). */
         CommandStack();
+        /** @brief 살아 있는 스택 목록에서 내려갑니다. */
+        ~CommandStack();
+        CommandStack( const CommandStack& )            = delete;
+        CommandStack& operator=( const CommandStack& ) = delete;
 
         /** @brief 명령 스택에 새로운 명령을 추가합니다. undo 와 redo 가 비었거나(트랜잭션 묶음 제외) 실행 중이면 버립니다. */
         void push( Command cmd );
@@ -92,7 +95,7 @@ namespace sw
         /**
          * @brief 현재 내역(명령과 위치)을 보관해 두고 스택을 비웁니다. 이미 보관한 것이 있으면 버리고 새로 보관합니다.
          * @details 에디터가 Play 를 시작할 때 부른다. 플레이 중 편집은 Stop 이 스냅샷으로 되돌리므로 그 동안의 기록은 쓰지 않지만, Play 전 편집은
-         *          Stop 뒤에도 되돌릴 수 있어야 한다(유니티, 언리얼과 같다). 보관한 명령도 모듈을 언로드할 때 같은 규칙(`removeCodeWithin`)으로 정리한다.
+         *          Stop 뒤에도 되돌릴 수 있어야 한다(유니티, 언리얼과 같다). 보관한 명령도 주인이 사라질 때 같은 규칙(`removeOwnedBy`)으로 정리한다.
          */
         void parkHistory();
         /** @brief 보관한 내역을 되돌려 놓습니다(현재 내역은 버립니다). 보관한 것이 없으면 비우기만 합니다. Stop 이 씬을 되돌린 뒤 부릅니다. */
@@ -121,15 +124,13 @@ namespace sw
         void notifyObjectEdit( const ObjectEditNotice& notice ) const;
 
         /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 명령만 분리하고, 분리한 명령 수를 반환합니다. 알림 처리기도 그 범위면 분리합니다(수에는 넣지 않습니다).
-         * @details 모듈 라이브러리를 언로드하기 전에 부른다(그 모듈 스스로, 핫 리로드의 안전망). 트랜잭션 묶음은 안쪽에 하나라도 걸리면 **통째로** 분리한다
-         *          (트랜잭션의 반쪽만 되돌리지 않는다). 남은 명령의 순서와 현재 위치(되돌린 것과 아직 되돌리지 않은 것의 경계)는 그대로다. 데이터 명령은 대상
-         *          오브젝트의 상태 전체를 가지고 있어, 사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
+         * @brief 주인이 @p ownerID 인 코드 단계를 가진 명령을 빼고 뺀 수를 반환합니다. 트랜잭션 묶음은 안쪽에 하나라도 있으면 **통째로** 뺀다.
+         * @details 남은 명령의 순서와 현재 위치(되돌린 것과 아직 되돌리지 않은 것의 경계)는 그대로다. 데이터 명령은 대상 오브젝트의 상태 전체를 가지고 있어,
+         *          사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
          */
-        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
-
-        /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
+        uint32 removeOwnedBy( uint64 ownerID );
+        /** @brief 살아 있는 모든 스택에서 `removeOwnedBy` 를 부릅니다(`UndoStepOwner` 의 소멸자). */
+        static void removeOwnedByFromAll( uint64 ownerID );
 
         /**
          * @brief 기록(명령 · 위치 · 보관한 내역)을 씁니다. 코드 단계를 가진 명령은 빼고 위치를 맞춘다. 진행 중인 트랜잭션은 쓰지 않는다.
@@ -147,13 +148,14 @@ namespace sw
         /** @brief @p cmd(와 그 안쪽)가 모두 데이터 단계면 true 입니다(맡길 수 있다). */
         static bool isPersistable( const Command& cmd );
         /** @brief @p cmd(와 그 안쪽)가 [@p pBegin, @p pEnd) 의 코드를 가지고 있는지 확인합니다. */
-        static bool holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd );
+        static bool isOwnedBy( const Command& cmd, uint64 ownerID );
         /** @brief 실행할 것이 있는 명령인지 확인합니다(undo 와 redo 가 둘 다 있거나 트랜잭션 묶음). */
         static bool isExecutable( const Command& cmd );
         /**
          * @brief @p inoutListCommand 에서 [@p pBegin, @p pEnd) 의 코드를 가진 명령을 분리하고 @p inoutIndex(되돌린 것과 아직 되돌리지 않은 것의 경계)를 맞춥니다. 분리한 수를 반환합니다.
          */
-        static uint32 dropCommandsWithin( vector<Command>& inoutListCommand, size_t& inoutIndex, const void* pBegin, const void* pEnd );
+        /** @brief @p inoutListCommand 에서 주인이 @p ownerID 인 명령을 빼고 @p inoutIndex 를 맞춥니다. 뺀 수를 반환합니다. */
+        static uint32 dropOwnedBy( vector<Command>& inoutListCommand, size_t& inoutIndex, uint64 ownerID );
 
     private:
         vector<Command>                  _listCommand;
@@ -169,9 +171,5 @@ namespace sw
         uint32 _transactionDepth;
         bool   _bIsExecuting;
         bool   _bHistoryParked; ///< 보관한 내역이 있다
-
-    private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &CommandStack::onModuleUnloading, "undo commands" );
     };
 } // namespace sw

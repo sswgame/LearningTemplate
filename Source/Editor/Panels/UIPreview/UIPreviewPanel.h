@@ -13,6 +13,7 @@
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditableAssetPath.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
@@ -203,6 +204,7 @@ namespace sw::editor
         UIScreen* findPreviewScreen() const;
 
     private:
+        UndoStepOwner                   _undoOwner;         ///< 이 창이 남긴 코드 되돌리기 단계의 주인(창이 사라지면 그 명령이 빠진다)
         vector<UIPreviewWidgetRow>      _listRow;           ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다
         const WidgetTree*               _pRowTree;          ///< `_listRow` 를 지은 트리
         uint64                          _rowTreeGeneration; ///< `_listRow` 를 지은 때의 `WidgetTree::getStructureGeneration`(세대는 1 부터)

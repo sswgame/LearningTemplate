@@ -325,13 +325,13 @@ namespace sw::editor
             pStack->push( std::move( cmd ) );
     }
 
-    void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+    void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                                 const EditorDocumentRestoreDelegate& restore, string_view coalesceKey )
     {
-        recordDocumentText( beforeText, afterText, label, restore, {}, coalesceKey );
+        recordDocumentText( beforeText, afterText, label, owner, restore, {}, coalesceKey );
     }
 
-    void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label,
+    void EditorTransaction::recordDocumentText( string_view beforeText, string_view afterText, string_view label, const UndoStepOwner& owner,
                                                 const EditorDocumentRestoreDelegate& restore, const EditorDocumentCaptureDelegate& capture,
                                                 string_view coalesceKey )
     {
@@ -344,11 +344,13 @@ namespace sw::editor
             push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
                 restore( EditorTransactionInternal::reconstructBefore( span, capture() ) );
-            } ) ),
+            } ),
+                                           owner ),
                   UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
                 restore( EditorTransactionInternal::reconstructAfter( span, capture() ) );
-            } ) ),
+            } ),
+                                           owner ),
                   label, coalesceKey );
             return;
         }
@@ -358,11 +360,13 @@ namespace sw::editor
         push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
         {
             restore( beforeStr );
-        } ) ),
+        } ),
+                                       owner ),
               UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
         {
             restore( afterStr );
-        } ) ),
+        } ),
+                                       owner ),
               label, coalesceKey );
     }
 } // namespace sw::editor
