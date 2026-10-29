@@ -40,6 +40,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 # (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 — 이라 적지 않는다.)
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "Renderer/LiveShaderSubsystem\\.(cpp|h)$") # 그 서브시스템도 서지 않는다(EngineSubsystemSet)
 endif()
 
 # 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`) — `Automation/Runner/`(실행기 · 세션 · 판정 · 보고)를 폴더째 뺀다. 창 제목 추적(RunTitle) · 사진 준비 판정(CaptureUtil) · 감시 값(Probe/ · *Probes) · 단계 등록(Scenario/)은

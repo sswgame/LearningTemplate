@@ -83,7 +83,9 @@
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
     #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
-    #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #if !defined( SW_SHIPPING )
+        #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #endif
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThread.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -302,10 +304,8 @@ namespace sw
         _pRHI          = _pRHISubsystem->findRHI();
         _rhiInitResult = _pRHISubsystem->getInitResult();
         _pRenderThread = startupParts._pRenderThread->findRenderThread();
-    #if !defined( SW_SHIPPING )
+    #if !defined( SW_SHIPPING ) // 배포본은 라이브 리로드가 없다(서브시스템도 서지 않는다)
         _pShaderRecompiler = startupParts._pLiveShader->findShaderRecompiler();
-    #else
-        (void)startupParts._pLiveShader; // 배포본은 라이브 리로드가 없다
     #endif
 #endif
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.

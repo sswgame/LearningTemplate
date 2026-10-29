@@ -45,7 +45,9 @@
 #if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Renderer/Frame/FrameRenderer.h"
     #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-    #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #if !defined( SW_SHIPPING )
+        #include "Engine/Renderer/LiveShaderSubsystem.h"
+    #endif
     #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -187,7 +189,9 @@ namespace sw::engine
             parts._pFrameRendererSubsystem                 = &frameRendererSubsystem;
             (void)startup.bind( &frameRendererSubsystem.getFrameRenderer() ); // 새 범위 — 겹치지 않는다
             parts._pRenderThread = &startup.addSubsystem( sw::make_unique<RenderThreadSubsystem>( rhiSubsystem, frameRendererSubsystem ) );
-            parts._pLiveShader   = &startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *parts._pRenderThread ) );
+    #if !defined( SW_SHIPPING ) // 셰이더 라이브 리로드는 개발 도구다 — 배포 빌드는 빈 서브시스템도 세우지 않는다(_pLiveShader 는 nullptr)
+            parts._pLiveShader = &startup.addSubsystem( sw::make_unique<LiveShaderSubsystem>( frameRendererSubsystem, *parts._pRenderThread ) );
+    #endif
             startup.addSubsystem( sw::make_unique<SceneRHISubsystem>( rhiSubsystem ) );
         }
 #endif
