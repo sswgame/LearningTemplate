@@ -314,6 +314,14 @@ namespace sw
         bool isOSDeviceInputBlocked() const { return _bOSDeviceInputBlocked == SW_TRUE; }
         /** @brief 창 메시지 @p event 를 입력 계층 앞에서 버려야 하면 true 입니다. 버리는 중인 마우스와 키보드 이벤트가 해당합니다. */
         bool shouldDropNativeEvent( const NativeWindowEvent& event ) const;
+        /**
+         * @brief 창 메시지 입구(호스트)가 버리기 검사보다 먼저 부릅니다 — 사람이 낸 OS 키보드 · 마우스 입력(뗌 제외)을 셉니다(`getHumanInputSerial`).
+         * @details 가상 입력은 창 메시지를 거치지 않으므로 이 수에 들지 않는다 — 데모 · 어트랙트 재생이 "사람이 손대면 멈춤" 을 가상 입력과 섞지 않고 본다(`ScenarioPlayback`).
+         *          배타 모드가 사람 입력을 버려도 센다(버리기 전에 부른다). 게임패드는 창 메시지가 아니라 장치 폴링이라 세지 않는다.
+         */
+        void noteNativeEvent( const NativeWindowEvent& event );
+        /** @brief 지금까지 센 사람 입력 수입니다(늘기만 한다 — 시작 때 값과 비교한다). */
+        uint64 getHumanInputSerial() const { return _humanInputSerial; }
         /** @brief 붙인 뒤 지난 `beginFrame` 횟수이며, 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
         uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
         /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 이벤트입니다(배타 가상 입력이면 가상 이벤트만). 입력 녹화가 읽으며, 다음 `beginFrame` 까지 유효합니다. */
@@ -461,7 +469,8 @@ namespace sw
         uint8                                     _bAltHeld              : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
         uint8                                     _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
         uint8                                     _bOSDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
-        [[maybe_unused]] uint8                    _reserved              : 1;
+        uint64                                    _humanInputSerial{ 0 };     /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
+        [[maybe_unused]] uint8                    _reserved : 1;
 
     private:
         /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */

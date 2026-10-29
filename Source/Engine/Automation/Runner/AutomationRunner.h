@@ -79,6 +79,8 @@ namespace sw
          * @return 최종 결과(이미 끝났으면 그 결과)
          */
         AutomationOutcome onWindowClosed( InputManager* pInput );
+        /** @brief 도는 시나리오를 바로 멈춥니다(재생을 끊을 때 — 데모 중 사람 입력 · `scenario.stop`). 결과는 건너뜀이고 가상 입력을 뗀다. 끝났으면 아무것도 하지 않는다. */
+        void stop( InputManager* pInput, string_view reason );
 
         /**
          * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.

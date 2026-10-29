@@ -14,6 +14,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/HostSubsystemNames.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -176,8 +177,87 @@ namespace sw
             _pRunner->onFrameBegin( *context._pInput );
     }
 
+    bool AutomationSession::play( const AssetID& scenarioPath, const ScenarioPlayOptions& options )
+    {
+        if ( isBusy() )
+        {
+            SW_LOG_WARNING( "[Scenario] cannot play '%#' - a scenario, playback or recording is already running", scenarioPath.c_str() );
+            return false;
+        }
+        _bPlayback                             = true;
+        _playOptions                           = options;
+        _playPath                              = scenarioPath;
+        GlobalVariableManager& globalVariables = engine::getSubsystem<GlobalVariableManager>();
+        if ( options._bFixedDelta )
+        {
+            GlobalVariableInfo* pFixedDelta = globalVariables.findVariable( "gv_fixedFrameDelta" );
+            _playPreviousFixedDelta         = pFixedDelta != nullptr ? pFixedDelta->getValueAsString() : string{};
+        }
+        startPlayback();
+        SW_LOG_INFO( "[Scenario] playing %#%#%#", scenarioPath.c_str(), options._bLoop ? " (loop)" : "", options._bStopOnHumanInput ? " (stops on input)" : "" );
+        return true;
+    }
+
+    void AutomationSession::startPlayback()
+    {
+        _pRunner = make_unique<AutomationRunner>(); // 행 감시를 켜지 않는다 — 재생은 프로세스를 끝내지 않는다
+        _pRunner->startFromPath( _playPath, {} );
+        _screenshotBaseline   = 0;
+        _playHumanInputSerial = engine::getSubsystem<InputManager>().getHumanInputSerial();
+        if ( _playOptions._bFixedDelta && _pRunner->isActive() )
+            (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", to_string( _pRunner->getScenario().getFixedDelta() ) );
+    }
+
+    void AutomationSession::stopPlayback()
+    {
+        if ( _bPlayback )
+            endPlayback( ScenarioPlayEnd::Stopped, engine::findSubsystem<InputManager>() );
+    }
+
+    void AutomationSession::endPlayback( ScenarioPlayEnd end, InputManager* pInput )
+    {
+        if ( _pRunner != nullptr )
+            _pRunner->stop( pInput, "playback stopped" ); // 끝난 실행기면 아무것도 하지 않는다 — 가상 입력은 실행기가 뗀다
+        _pRunner.reset();
+        if ( _playOptions._bFixedDelta && _playPreviousFixedDelta.empty() == false )
+            (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", _playPreviousFixedDelta );
+        const ScenarioPlayFinishedDelegate onFinished = _playOptions._onFinished;
+        _bPlayback                                    = false;
+        _playOptions                                  = ScenarioPlayOptions{};
+        SW_LOG_INFO( "[Scenario] playback of %# ended (%#)", _playPath.c_str(),
+                     end == ScenarioPlayEnd::Completed        ? "completed"
+                     : end == ScenarioPlayEnd::Failed         ? "failed"
+                     : end == ScenarioPlayEnd::StoppedByHuman ? "a person took over"
+                                                              : "stopped" );
+        if ( onFinished.isBound() )
+            onFinished( end ); // 상태를 비운 뒤에 알린다 — 알림이 다음 재생을 시작해도 된다
+    }
+
+    int32 AutomationSession::updatePlayback( const EngineFrameContext& context )
+    {
+        if ( context._pInput == nullptr || _pRunner == nullptr )
+            return kRunning;
+        if ( _playOptions._bStopOnHumanInput && context._pInput->getHumanInputSerial() != _playHumanInputSerial )
+        {
+            endPlayback( ScenarioPlayEnd::StoppedByHuman, context._pInput );
+            return kRunning;
+        }
+        const AutomationOutcome result = _pRunner->hasEnded() ? _pRunner->getResult() : _pRunner->onFrameEnd( *context._pInput );
+        if ( result == AutomationOutcome::Running )
+            return kRunning;
+        if ( result == AutomationOutcome::Passed && _playOptions._bLoop )
+        {
+            startPlayback(); // 어트랙트 루프 — 처음부터 다시
+            return kRunning;
+        }
+        endPlayback( result == AutomationOutcome::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed, context._pInput );
+        return kRunning;
+    }
+
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
+        if ( _bPlayback )
+            return updatePlayback( context );
         // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 포함된다.
         if ( _recorder.isRecording() && context._pInput != nullptr )
             _recorder.update( *context._pInput, context._deltaSeconds );
@@ -235,6 +315,11 @@ namespace sw
 
     int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
+        if ( _bPlayback )
+        {
+            endPlayback( ScenarioPlayEnd::Stopped, context._pInput ); // 재생은 종료 코드를 정하지 않는다
+            return kRunning;
+        }
         finishRecording();
         // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).

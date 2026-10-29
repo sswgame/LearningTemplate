@@ -86,6 +86,8 @@
 | 컷신 · 이벤트 연출에서 게임 행동 끼우기 | 언리얼 Sequencer 이벤트 트랙 · 유니티 Timeline Signal | 시퀀서 이벤트 트랙이 시나리오(또는 단계 묶음)를 부르고, 시나리오가 시퀀스를 재생 · 기다림(`PlaySequence` · `WaitSequence`) |
 | 개발 매크로(autoexec · 테스트 맵 세팅) | 소스 엔진 `.cfg` · 언리얼 `exec` | 명령 줄만 있는 시나리오를 콘솔에서 `scenario run <경로>` 로 |
 
+**(1) 끝남(2026-10-29)**: `ScenarioPlayback::play( 경로, { _bLoop, _bStopOnHumanInput, _bFixedDelta, _onFinished } )` · 콘솔 `scenario.play <경로> [loop] [demo] [fixed]` · `scenario.stop`. 재생기는 App 의 `AutomationSession`(같은 실행기 — 판정이 끝나도 프로세스를 끝내지 않고 행 감시 · 보고가 없다), 사람 입력은 창 메시지 입구에서 센다(`InputManager::getHumanInputSerial` — 가상 입력은 세지 않는다). 확인: 기동 명령으로 재생 · 반복.
+
 순서 제안: (1) 재생기 · 판정 분리와 게임 API(`ScenarioPlayer`), (2) 중단 조건 · 반복 · 씬 불러오기 단계, (3) 시퀀서 연동 단계, (4) 벤치마크 모드, (5) 액션 단위 녹화 · 리플레이.
 
 ### G. 리로드를 떼었다 붙이는 단위로

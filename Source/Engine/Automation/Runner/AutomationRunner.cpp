@@ -537,6 +537,14 @@ namespace sw
         return _result;
     }
 
+    void AutomationRunner::stop( InputManager* pInput, string_view reason )
+    {
+        if ( _result != AutomationOutcome::Running )
+            return;
+        finish( AutomationOutcome::Skipped, reason );
+        endRun( pInput );
+    }
+
     void AutomationRunner::recordFailure( const AutomationStep& step, string_view message )
     {
         _judge.addFailure( step, message );

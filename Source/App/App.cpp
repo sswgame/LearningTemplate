@@ -18,6 +18,7 @@
 #endif
 #if SW_AUTOMATION_ENABLED
     #include "Engine/Automation/Runner/AutomationSession.h"
+    #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #endif
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -460,13 +461,15 @@ namespace sw
             bScenario && _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u );
         if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
-        if ( _pAutomationSession->isBusy() )
-            _automationFrameSubscription = _engine.registerFrameObserver( _pAutomationSession );
+        // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
+        _automationFrameSubscription = _engine.registerFrameObserver( _pAutomationSession );
+        ScenarioPlayback::bindPlayer( _pAutomationSession );
     }
 
     bool App::isAutomationBusy() const
     {
-        return _pAutomationSession != nullptr && _pAutomationSession->isBusy();
+        // 재생(데모 · 벤치마크 경로)은 사람이 보는 화면이라 보통 프레임 속도로 돈다 — 무인 실행만 센다.
+        return _pAutomationSession != nullptr && _pAutomationSession->isBusy() && _pAutomationSession->isPlaying() == false;
     }
 #else
     void App::startAutomationSession( const CommandLineManager& commandLineManager )
@@ -519,6 +522,9 @@ namespace sw
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 라이브러리 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
+#if SW_AUTOMATION_ENABLED
+        ScenarioPlayback::bindPlayer( nullptr ); // 재생기(세션)를 내리기 전에 푼다
+#endif
         _automationFrameSubscription.reset();
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
@@ -753,9 +759,14 @@ namespace sw
 
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
-        // 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다. 창 이벤트는 그대로 지나간다.
-        if ( engine::areEngineServicesBound() && engine::getSubsystem<InputManager>().shouldDropNativeEvent( event ) )
-            return false;
+        // 사람 입력은 버리기 전에 센다(데모 재생의 "손대면 멈춤"). 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다.
+        if ( engine::areEngineServicesBound() )
+        {
+            InputManager& inputManager = engine::getSubsystem<InputManager>();
+            inputManager.noteNativeEvent( event );
+            if ( inputManager.shouldDropNativeEvent( event ) )
+                return false;
+        }
 
         // 이벤트를 GameModuleManager(ImGui 등)에 먼저 보낸다.
         const bool bConsumedByEditor = ( _gameModuleManager != nullptr && _gameModuleManager->onWindowMessage( event ) );

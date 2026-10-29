@@ -1088,6 +1088,12 @@ namespace sw
         _bOSDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
     }
 
+    void InputManager::noteNativeEvent( const NativeWindowEvent& event )
+    {
+        if ( ( event.isKeyboardInput() || event.isMouseInput() ) && event.isInputRelease() == false )
+            ++_humanInputSerial;
+    }
+
     bool InputManager::shouldDropNativeEvent( const NativeWindowEvent& event ) const
     {
         return _bOSDeviceInputBlocked == SW_TRUE && ( event.isMouseInput() || event.isKeyboardInput() );
