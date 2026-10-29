@@ -209,12 +209,6 @@ namespace sw
          */
         bool isGamepadControlVisibleToGame( uint32 deviceIndex, uint16 controlIndex ) const;
 
-        /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백(이 관리자의 콜백 네 개와 장치별 콜백)을 해제하고, vtable 이 그 범위에 있는 장치를 등록에서 제거합니다.
-         * @details 장치 소멸자는 아직 로드되어 있는 그 이미지의 코드이므로 지금 제거해야 한다. 해제한 개수(콜백 + 장치)를 반환한다.
-         */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
-
         bool wasAnyInputPressed() const;
         /**
          * @brief 이번 프레임에 새로 눌린 키보드, 마우스, 게임패드 슬롯 하나를 찾습니다(키 바인딩 창이 받을 키). 순서는 키보드, 마우스, 패드이고, 한 장치 안에서는 열거 순서입니다.
@@ -473,7 +467,5 @@ namespace sw
         [[maybe_unused]] uint8                    _reserved : 1;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &InputManager::onModuleUnloading, "input callbacks" );
     };
 } // namespace sw

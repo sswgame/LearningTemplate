@@ -741,7 +741,6 @@ namespace sw
     {
         uint32 closedCount = 0;
         // 언로드되는 모듈의 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다). 변환기는 모듈이 든 구독이 거둔다(표의 번호가 올라 다시 묶인다).
-        (void)_globalCommands.removeCodeWithin( pBegin, pEnd ); // 제거한 수는 쓰지 않는다. 화면이 따로 다시 연결할 것이 없다
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             const UIViewModel* pViewModel = screen->getViewModel();

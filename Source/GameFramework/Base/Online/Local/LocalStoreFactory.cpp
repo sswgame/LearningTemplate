@@ -68,21 +68,6 @@ namespace sw
                 return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
-            {
-                ScopedLock<mutex> lock{ _mutex };
-                uint32            releasedCount = 0;
-                for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )
-                {
-                    const LocalStoreBackend* pBackend = _registeredBackend.getAt( index - 1 );
-                    if ( ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( pBackend->_createFunction ), pBegin, pEnd ) == false )
-                        continue;
-                    (void)_registeredBackend.remove( pBackend ); // 방금 목록에서 읽은 항목이라 올라 있다
-                    ++releasedCount;
-                }
-                return releasedCount;
-            }
-
         private:
             LocalStoreBackendTable()
                 : _mutex{}
@@ -100,8 +85,6 @@ namespace sw
             LocalStoreBackend                                            _memoryBackend; ///< 기반 백엔드
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            SW_MODULE_UNLOAD_HANDLER( &LocalStoreBackendTable::onModuleUnloading, "local store backends", true );
         };
     } // namespace
 } // namespace sw

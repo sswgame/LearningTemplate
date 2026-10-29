@@ -127,21 +127,6 @@ namespace sw
         return true;
     }
 
-    uint32 IWindow::removeCodeWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        releasedCount += _customHandler.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        releasedCount += _accessibilityQuery.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        releasedCount += _onResize.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        releasedCount += _closeQuery.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        return releasedCount;
-    }
-
-    uint32 IWindow::onModuleUnloading( const void* pBegin, const void* pEnd )
-    {
-        return removeCodeWithin( pBegin, pEnd );
-    }
-
     IWindow::~IWindow() = default;
 
     bool IWindow::recreate()

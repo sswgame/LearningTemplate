@@ -162,7 +162,7 @@ namespace sw
         //    구독을 멤버로 든다(언리얼 `FModuleManager::OnModulesChanged` 와 같은 모양 — 상속하지 않는다). `releaseModuleCode` 가 처리기를 모두 부른다.
         //    처리기는 엔진(또는 App) 쪽 코드여야 한다 — 모듈 코드의 처리기는 그 모듈보다 오래 살면 훑기가 내려간 코드로 뛴다.
         //
-        //        SW_MODULE_UNLOAD_HANDLER( &InputManager::onModuleUnloading, "input callbacks" );   // 클래스 맨 끝 멤버
+        //        SW_MODULE_UNLOAD_HANDLER( &UISystem::onModuleUnloading, "ui screens" );   // 클래스 맨 끝 멤버
         // ------------------------------------------------------------------------------
         /** @brief 처리기를 올립니다. 돌려준 구독이 사라지면 빠진다. 훑기 안에서 올리거나 풀어도 된다(훑기는 시작 때의 사본을 돌고 풀린 것은 건너뛴다). */
         [[nodiscard]] static Subscription registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function );

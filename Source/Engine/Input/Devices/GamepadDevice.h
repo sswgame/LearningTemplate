@@ -135,9 +135,6 @@ namespace sw
         void setVirtualConnected( bool bConnected ) { _bVirtualConnected = bConnected ? SW_TRUE : SW_FALSE; }
         bool isInVirtualSession() const { return _bVirtualSession == SW_TRUE; }
 
-        /** @brief 연결 콜백의 스텁이 범위 안이면 해제합니다. */
-        uint32 removeCodeWithin( const void* pBegin, const void* pEnd ) override;
-
     protected:
         /** @brief 실제 장치가 연결되어 있는지 반환합니다(플랫폼 백엔드가 폴링 결과로 답합니다). */
         virtual bool isHardwareConnected() const { return true; }

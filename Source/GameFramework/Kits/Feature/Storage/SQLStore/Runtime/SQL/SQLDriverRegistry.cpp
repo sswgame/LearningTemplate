@@ -69,21 +69,6 @@ namespace sw
                 }
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
-            {
-                ScopedLock<mutex> lock{ _mutex };
-                uint32            releasedCount = 0;
-                for ( uint32 driverIndex = _registeredDriver.getCount(); driverIndex > 0; --driverIndex )
-                {
-                    ISQLDriver* pDriver = _registeredDriver.getAt( driverIndex - 1 );
-                    if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pDriver ), pBegin, pEnd ) == false )
-                        continue;
-                    (void)_registeredDriver.remove( pDriver ); // 방금 목록에서 읽은 항목이라 올라 있다
-                    ++releasedCount;
-                }
-                return releasedCount;
-            }
-
         private:
             SQLDriverTable()
                 : _mutex{}
@@ -95,8 +80,6 @@ namespace sw
             RegistrationList<ISQLDriver> _registeredDriver SW_GUARDED_BY( _mutex ); ///< 이름은 올릴 때 복사한다 — 이미지가 내려간 뒤에도 안내 문구가 죽은 드라이버를 묻지 않는다
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            SW_MODULE_UNLOAD_HANDLER( &SQLDriverTable::onModuleUnloading, "SQL drivers", true );
         };
     } // namespace
 } // namespace sw

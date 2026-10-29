@@ -141,34 +141,6 @@ namespace sw
         return true;
     }
 
-    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd )
-    {
-        uint32 releasedCount{ 0 };
-        releasedCount += _onActiveDeviceChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        releasedCount += _onGamepadConnectionChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        for ( size_t focusIndex = 0; focusIndex < kKeyboardFocusCount; ++focusIndex )
-        {
-            releasedCount += _arrOnTextInput[focusIndex].releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-            releasedCount += _arrOnTextComposition[focusIndex].releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
-        }
-
-        // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다. 언로드한 뒤 폴링하면 사라진 코드로 점프한다. 소멸자가 아직 있는 지금 제거한다.
-        vector<IInputDevice*> listModuleDevice;
-        for ( const unique_ptr<IInputDevice>& pDevice : _listDevice )
-        {
-            if ( ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
-                listModuleDevice.push_back( pDevice.get() );
-            else
-                releasedCount += pDevice->removeCodeWithin( pBegin, pEnd );
-        }
-        for ( IInputDevice* pDevice : listModuleDevice )
-        {
-            unregisterDevice( pDevice );
-            ++releasedCount;
-        }
-        return releasedCount;
-    }
-
     void InputManager::shutdown()
     {
         if ( _bInitialized == SW_FALSE )

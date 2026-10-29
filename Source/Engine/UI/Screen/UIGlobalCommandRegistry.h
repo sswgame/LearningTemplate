@@ -45,8 +45,6 @@ namespace sw
         bool hasCommand( const hashed_string& command ) const;
         /** @brief 처리 함수가 있으면 @p source 를 넘겨 부르고 true 입니다. 없으면 false 입니다. */
         [[nodiscard]] bool tryExecute( const hashed_string& command, Widget& source ) const;
-        /** @brief 함수가 [@p pBegin, @p pEnd) 안에 있는 항목을 제거합니다(모듈 핫 리로드). 제거한 개수를 반환합니다. */
-        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
     private:
         /** @brief 명령 하나의 지금 등록 구독 번호입니다. 교체되면 새 번호로 바뀐다. */

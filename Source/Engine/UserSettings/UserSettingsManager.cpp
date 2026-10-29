@@ -777,11 +777,6 @@ namespace sw
         return _onEvent.add( listener );
     }
 
-    uint32 UserSettingsManager::onModuleUnloading( const void* pBegin, const void* pEnd )
-    {
-        return _onEvent.removeCodeWithin( pBegin, pEnd ) + _registry.removeCodeWithin( pBegin, pEnd );
-    }
-
     // ------------------------------------------------------------------------------
     // 내부
     // ------------------------------------------------------------------------------

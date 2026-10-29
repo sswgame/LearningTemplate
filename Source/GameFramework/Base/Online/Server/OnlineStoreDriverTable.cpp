@@ -32,11 +32,6 @@ namespace sw
                 return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pCreate ) ) );
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
-            {
-                return releaseWithin( _pCreateServiceStore, pBegin, pEnd ) + releaseWithin( _pCreateEphemeralStore, pBegin, pEnd );
-            }
-
             atomic<OnlineStoreDriverTable::CreateServiceStoreFunction>   _pCreateServiceStore;
             atomic<OnlineStoreDriverTable::CreateEphemeralStoreFunction> _pCreateEphemeralStore;
 
@@ -74,8 +69,6 @@ namespace sw
             }
 
         private:
-            /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-            SW_MODULE_UNLOAD_HANDLER( &OnlineStoreDriverSlots::onModuleUnloading, "online store drivers", true );
         };
     } // namespace
 } // namespace sw

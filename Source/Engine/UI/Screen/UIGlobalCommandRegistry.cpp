@@ -10,17 +10,6 @@ namespace sw
     {
         struct UIGlobalCommandRegistryInternal
         {
-            /** @brief 처리 함수의 코드가 [_pBegin, _pEnd) 안인 항목을 고릅니다(`removeCodeWithin`). */
-            struct IsCodeWithin
-            {
-                const void* _pBegin;
-                const void* _pEnd;
-
-                bool operator()( const UICommandDelegate& handler ) const
-                {
-                    return handler.isCodeWithin( _pBegin, _pEnd );
-                }
-            };
         };
     } // namespace
 } // namespace sw
@@ -72,8 +61,4 @@ namespace sw
         return true;
     }
 
-    uint32 UIGlobalCommandRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
-    {
-        return _registry.removeIf( UIGlobalCommandRegistryInternal::IsCodeWithin{ pBegin, pEnd } );
-    }
 } // namespace sw

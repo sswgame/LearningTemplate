@@ -99,30 +99,6 @@ namespace sw
         return true;
     }
 
-    uint32 UserSettingsHandlerRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32 removedCount{ 0 };
-        for ( size_t entryIndex = _listHandler.size(); entryIndex > 0; --entryIndex )
-        {
-            const HandlerEntry& entry        = _listHandler[entryIndex - 1];
-            const bool          bInsideRange = entry._handler.isCodeWithin( pBegin, pEnd ) || entry._filter.isCodeWithin( pBegin, pEnd );
-            if ( bInsideRange )
-            {
-                _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( entryIndex - 1 ) );
-                ++removedCount;
-            }
-        }
-        for ( size_t entryIndex = _listProvider.size(); entryIndex > 0; --entryIndex )
-        {
-            if ( _listProvider[entryIndex - 1]._provider.isCodeWithin( pBegin, pEnd ) )
-            {
-                _listProvider.erase( _listProvider.begin() + static_cast<ptrdiff_t>( entryIndex - 1 ) );
-                ++removedCount;
-            }
-        }
-        return removedCount;
-    }
-
     void UserSettingsHandlerRegistry::clear()
     {
         _subscriptions.detachAll();

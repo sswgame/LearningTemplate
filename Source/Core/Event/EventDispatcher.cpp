@@ -168,20 +168,9 @@ namespace sw
         return pMulticast;
     }
 
-    uint32 EventDispatcher::removeCodeWithin( const void* pBegin, const void* pEnd )
-    {
-        uint32               releasedCount{ 0 };
-        ScopedLock<SpinLock> lock{ _busSpinLock };
-        for ( const auto& [key, pMulticast] : _mapChannelDispatchTable )
-        {
-            releasedCount += pMulticast->removeCodeWithin( pBegin, pEnd );
-        }
-        return releasedCount;
-    }
-
     uint32 EventDispatcher::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        return removeCodeWithin( pBegin, pEnd ) + removeQueuedEventsWithin( pBegin, pEnd );
+        return removeQueuedEventsWithin( pBegin, pEnd );
     }
 
     uint32 EventDispatcher::removeQueuedEventsWithin( const void* pBegin, const void* pEnd )

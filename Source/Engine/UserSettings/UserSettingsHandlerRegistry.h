@@ -70,8 +70,6 @@ namespace sw
         /** @brief 공급자의 선택지를 채웁니다. 없으면 false 이고 @p outListOption 은 비어 있습니다. */
         [[nodiscard]] bool collectOptions( const hashed_string& name, vector<UserSettingOption>& outListOption ) const;
 
-        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 핸들러, 필터, 공급자를 제거하고 제거한 개수를 반환합니다. */
-        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
         /** @brief 모두 비웁니다. */
         void clear();
 
