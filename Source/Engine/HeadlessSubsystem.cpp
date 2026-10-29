@@ -7,6 +7,8 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/string_splitter.h"
+#include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestRunner.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
@@ -278,6 +280,37 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief `--test` — 엔진 안 단위 테스트(`<기능>/Tests/` 의 `SW_TEST_CASE`)를 돌린다. 작업을 돌렸으면 true 입니다.
+             * @details 모든 모듈이 올라온 뒤(ModuleLoadStage)라 엔진 · GameFramework · 키트 · 게임의 케이스가 다 등록돼 있고, 엔진 서비스가 서 있다.
+             *          창 · RHI 는 세우지 않는다 — 그림이 필요한 확인은 시나리오다.
+             */
+            [[nodiscard]] static bool runTestTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+            {
+#if SW_TESTS_ENABLED
+                bool bTest = false;
+                if ( commandLine.getArgument( CommandLineArgument::TEST, bTest ) == false || bTest == false )
+                    return false;
+                inoutState.enterHeadless();
+                test::TestRunOptions options;
+                int32                seed        = 0;
+                int32                repeatCount = 1;
+                (void)commandLine.getArgument( CommandLineArgument::TEST_FILTER, options._filter );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_SEED, seed );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_REPEAT, repeatCount );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );
+                (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, options._bUpdateSnapshots );
+                options._seed        = static_cast<uint32>( seed );
+                options._repeatCount = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
+                inoutState._bFailed  = test::TestRunner::run( options ) == false;
+                return true;
+#else
+                (void)commandLine;
+                (void)inoutState;
+                return false;
+#endif
+            }
+
             /** @brief 셰이더 쿠킹은 렌더러(`Engine/Renderer/Cook`)의 일이다 — Server 타깃은 그 폴더를 짓지 않고, 전용 서버는 위에서 거절했다. 작업을 돌렸으면 true 입니다. */
             [[nodiscard]] static bool runCookShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
@@ -489,8 +522,9 @@ namespace sw
         using Internal                  = HeadlessSubsystemInternal;
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
         // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 작업 하나가 돌았으면 뒤 작업과 이 단계의 나머지는 건너뛴다.
-        // 작업 순서가 곧 우선순위다: 도움말 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
-        const bool bTaskRan = Internal::runHelpTask( commandLine, _state ) || Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) ||
+        // 작업 순서가 곧 우선순위다: 도움말 → 단위 테스트 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
+        const bool bTaskRan = Internal::runHelpTask( commandLine, _state ) || Internal::runTestTask( commandLine, _state ) ||
+                              Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) ||
                               Internal::runCookShadersTask( commandLine, _state ) ||
                               Internal::runReflectionDocsTask( commandLine, _state ) || Internal::runBakeRetargetTask( commandLine, _state ) ||
                               Internal::runVerifyShadersTask( commandLine, _state ) || Internal::runMakePatchTask( commandLine, _state ) ||

@@ -182,6 +182,8 @@ namespace sw
          */
         template <typename T>
         void addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, bool bUseDefaultValue );
+        /** @brief `initialize` 가 줄마다 부릅니다 — 다음 등록이 열거값 @p expected 자리인지 단언합니다(단언을 줄마다 펼치지 않으려고 함수로 둔다). */
+        void checkRegistrationOrder( CommandLineArgument expected, const utf8* pName ) const;
 
         /**
          * @brief 아직 등록된 인자가 없어 보류해 둔 `gv_` 값을 찾습니다.

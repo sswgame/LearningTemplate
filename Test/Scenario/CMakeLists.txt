@@ -22,8 +22,17 @@ foreach(scenarioPath IN LISTS listScenario)
 	string(REGEX REPLACE "\.scenario\.xml$" "" scenarioName "${scenarioPath}")
 	string(REGEX REPLACE "/automation/" "/" scenarioName "${scenarioName}")
 	string(REPLACE "/" "." scenarioName "${scenarioName}")
+	# 기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오가 `<Launch variable= value=>` 로 선언하고, 실행기는 띄운 명령줄이 같은지 본다 — 여기서 명령줄로 옮긴다.
+	file(STRINGS "${swScenarioRoot}/${scenarioPath}" listLaunchLine REGEX "^[ 	]*<Launch ")
+	set(listLaunchArgument "")
+	foreach(launchLine IN LISTS listLaunchLine)
+		if(NOT launchLine MATCHES "variable=\"([^\"]+)\"[ 	]+value=\"([^\"]*)\"")
+			message(FATAL_ERROR "${scenarioPath}: <Launch> must be <Launch variable=\"…\" value=\"…\"/> on one line — ${launchLine}")
+		endif()
+		list(APPEND listLaunchArgument "-${CMAKE_MATCH_1}=${CMAKE_MATCH_2}")
+	endforeach()
 	add_test(NAME Scenario.${scenarioName}
-		COMMAND $<TARGET_FILE:App> -scenario=${scenarioPath} -unattended
+		COMMAND $<TARGET_FILE:App> -scenario=${scenarioPath} -unattended ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(Scenario.${scenarioName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE 13 RUN_SERIAL ON)
 endforeach()

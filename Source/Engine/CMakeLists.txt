@@ -62,6 +62,11 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
 endforeach()
 
+# 기능 폴더의 단위 테스트(`Tests/`)는 배포 구성이 짓지 않는다.
+if(SW_SHIPPING_BUILD)
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Tests/")
+endif()
+
 # ------------------------------------------------------------------------------
 # 1-1) 층 — 파일마다 층(Scripts/generate/rules/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의
 #      층 부분(`EngineLayer<N>`)이 짓는다. Engine 타깃 자신은 헤더 · 리플렉션 산출물 · Core/Jolt 오브젝트만 든다.

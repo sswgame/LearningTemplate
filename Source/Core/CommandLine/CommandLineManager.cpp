@@ -29,13 +29,19 @@ namespace sw
         _listOriginalArgument.clear();
         _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
 
-#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... )                                   \
-    SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( CommandLineArgument::name ),               \
-                   "Argument registration order does not match the CommandLineArgument enum: %#", #name ); \
+// 줄마다 단언을 펼치지 않고 함수 하나(`checkRegistrationOrder`)를 부른다 — 단언은 서식 버퍼를 지역에 두고, 최적화하지 않는 Debug 는 펼친 줄마다 따로 자리를 잡아
+// 이 함수의 스택 틀이 인자 수에 비례해 자랐다(인자 여섯을 더하자 주 스레드 스택 1 MB 를 넘어 기동 전에 0xC00000FD 로 죽었다).
+#define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) \
+    checkRegistrationOrder( CommandLineArgument::name, #name );          \
     addArgument( { __VA_ARGS__ }, defaultValue, useDefaultValue );
 #include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
+    }
+
+    void CommandLineManager::checkRegistrationOrder( const CommandLineArgument expected, const utf8* pName ) const
+    {
+        SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( expected ), "Argument registration order does not match the CommandLineArgument enum: %#", pName );
     }
 
     string CommandLineManager::makeUsageText() const

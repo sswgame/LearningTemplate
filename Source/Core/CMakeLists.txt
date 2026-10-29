@@ -9,6 +9,10 @@
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE listCoreSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 sw_filterPlatformSources(listCoreSource)
+# 단위 테스트(틀 `Testing/` 과 기능 폴더의 `Tests/`)는 배포 구성이 짓지 않는다 — 배포본에 테스트 코드가 없다(구성마다 다른 케이스 수가 아니라 0).
+if(SW_SHIPPING_BUILD)
+	sw_excludeUnbuiltSources(listCoreSource "/Source/Core/Testing/" "/Tests/")
+endif()
 
 # ------------------------------------------------------------------------------
 # 2) 소스를 티어로 가른다 — 낮은 티어(티어 표에서 `Log` 보다 아래인 폴더)는 따로 짓는다.

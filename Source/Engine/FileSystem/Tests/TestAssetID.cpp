@@ -1,6 +1,8 @@
+#include "pch.h"
+
 #include "Engine/FileSystem/AssetID.h"
 
-#include "TestFramework/TestFramework.h"
+#include "Core/Testing/TestFramework.h"
 
 using namespace sw;
 

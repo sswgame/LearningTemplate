@@ -138,6 +138,19 @@ SW_REGISTER_ARGUMENT( IMPORT_PO, "", false, "import-po" )
 // 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( CRASH_REPORTER, "", false, "crash-reporter" )
 
+// 엔진 안 단위 테스트(`<기능>/Tests/` 의 SW_TEST_CASE)를 헤드리스로 돌리고 끝낸다(Dev 만). 종료 코드는 모두 통과면 0. 형식은 `Core/Testing/TestFramework.h`.
+SW_REGISTER_ARGUMENT( TEST, false, false, "test" )
+// 돌릴 케이스 이름 와일드카드(`Suite.*`, 쉼표로 여럿, 앞에 - 면 뺀다).
+SW_REGISTER_ARGUMENT( TEST_FILTER, "*", false, "test-filter" )
+// 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다 — 찍힌 값을 주면 같은 순서를 다시 돈다).
+SW_REGISTER_ARGUMENT( TEST_SEED, 0, false, "test-seed" )
+// 같은 거른 케이스를 몇 회차 돌지(간헐 실패 찾기, 회차마다 씨앗 + 1).
+SW_REGISTER_ARGUMENT( TEST_REPEAT, 1, false, "test-repeat" )
+// 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.
+SW_REGISTER_ARGUMENT( TEST_REPORT, "", false, "test-report" )
+// 다른 스냅숏(`SW_EXPECT_SNAPSHOT`)을 지금 값으로 다시 쓴다 — 바뀐 파일을 리뷰한다.
+SW_REGISTER_ARGUMENT( UPDATE_SNAPSHOTS, false, false, "update-snapshots" )
+
 // 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
 // (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/` 의 헤더 주석.
 SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )

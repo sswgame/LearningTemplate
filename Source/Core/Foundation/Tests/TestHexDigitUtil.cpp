@@ -1,6 +1,8 @@
+#include "pch.h"
+
 #include "Core/Foundation/HexDigitUtil.h"
 
-#include "TestFramework/TestFramework.h"
+#include "Core/Testing/TestFramework.h"
 
 using namespace sw;
 
