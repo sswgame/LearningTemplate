@@ -3,15 +3,11 @@
  * @brief 활성 씬의 게임 카메라 출력만 보이는 Game 창입니다 — 격자 · 기즈모 · 선택 외곽선 없이 화면 UI 까지 포함한 게임 화면.
  */
 #pragma once
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
-#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
-
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Editor/Panels/Scene/Model/GameViewModel.h"
 
 namespace sw::editor
 {
@@ -19,6 +15,7 @@ namespace sw::editor
      * @class GameViewPanel
      * @brief 게임 뷰 RT(`EditorViewKind::Game`)를 화면 비율에 맞춰 그립니다(유니티 Game 뷰). Play 중 게임 입력은 이 패널이 포커스일 때만 게임으로 갑니다.
      * @details 게임 카메라가 없거나 꺼져 있으면 "No camera rendering" 을 띄웁니다. 패널이 보이지 않으면 게임 뷰를 그리지 않습니다(RT 요청 0).
+     *          상태와 입력 넘기기 · 디버그 드로우 명령은 `GameViewModel`(Model/, ImGui 없음)이 들고, 이 패널은 ImGui 창 상태를 읽어 넘기고 그리기만 한다.
      */
     class GameViewPanel : public IEditorPanel
     {
@@ -43,28 +40,15 @@ namespace sw::editor
         void onPanelCollapsed() override;
 
         /** @brief 마지막 프레임에 "No camera rendering" 안내를 띄웠으면 true 입니다. */
-        bool wasNoCameraHintShown() const { return _bNoCameraHintShown; }
+        bool wasNoCameraHintShown() const { return _model.isNoCameraHintShown(); }
 
     private:
         /** @brief 화면 비율 고르기와 HUD 토글을 그립니다. */
         void drawToolbar();
-        /**
-         * @brief 패널이 다른 OS 창(ImGui 보조 뷰포트)에 있으면 그 창의 마우스(이동 · 단추 · 휠)를 주 창 클라이언트 좌표로 옮겨 게임 입력에 넣습니다.
-         * @details 보조 창의 마우스 메시지는 ImGui 백엔드의 창 프로시저만 받아 게임 입력(`InputManager`)에 닿지 않는다. 입력 장치의 좌표 약속은 "주 창 클라이언트 픽셀" 이므로
-         *          ImGui 화면 좌표에서 주 뷰포트 자리를 빼서 넣는다 — 이미지 자리(`markViewDrawn`)와 같은 기준이라 런타임 UI 포인터가 맞는다. 주 창에 있으면 주 창 메시지가 이미 간다.
-         */
-        void forwardDetachedPointer();
-        /**
-         * @brief 패널이 다른 OS 창에서 포커스이면 그 창의 키 · 글자 입력을 게임 입력에 넣습니다(`ImGuiKeyForward`).
-         * @details 보조 창의 키 메시지도 ImGui 백엔드만 받는다. 넣은 누름의 짝 뗌은 포커스를 잃어도 넣는다 — 안 넣으면 게임에서 키가 눌린 채 남는다.
-         *          한글 조합(IME) 중인 글은 넘기지 않는다 — 조합이 끝나 확정된 글만 간다.
-         */
-        void forwardDetachedKeyboard();
+        /** @brief 패널 창이 주 뷰포트가 아니면 포인터 · 키를 읽어 모델에 넘깁니다(보조 창의 입력은 ImGui 백엔드만 받는다 — `GameViewModel::forwardDetachedPointer`). */
+        void forwardDetachedInput();
 
     private:
-        EditorGameViewAspect _aspect;              ///< 이미지 화면 비율(자유 · 16:9)
-        bool                 _bNoCameraHintShown;  ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
-        uint8                _forwardedButtonMask; ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = `kForwardedButtons` 순서). 패널 밖에서 떼도 뗌을 넣는다
-        DetachedKeyForwarder _keyForwarder;        ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
+        GameViewModel _model;
     };
 } // namespace sw::editor

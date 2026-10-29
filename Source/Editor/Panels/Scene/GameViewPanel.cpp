@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Scene/GameViewPanel.h"
 
-#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
@@ -21,18 +20,14 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -40,18 +35,6 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 보조 창에서 게임으로 넘기는 단추입니다(ImGui 번호와 게임 단추의 짝). 순서가 `_forwardedButtonMask` 의 비트다. */
-        struct ForwardedButton
-        {
-            EditorMouseButton _editorButton;
-            MouseButton       _button;
-        };
-        constexpr ForwardedButton kForwardedButtons[] = {
-            {  EditorMouseButton::Left,   MouseButton::Left},
-            { EditorMouseButton::Right,  MouseButton::Right},
-            {EditorMouseButton::Middle, MouseButton::Middle}
-        };
-
         /** @brief 런타임 UI 가 고른 OS 커서 모양을 ImGui 커서 모양으로 바꿉니다(에디터에서는 ImGui 가 OS 커서를 쥔다). */
         ImGuiMouseCursor toImGuiCursor( CursorShape shape )
         {
@@ -77,58 +60,25 @@ namespace sw::editor
     SW_EDITOR_PANEL( GameViewPanel, GameViewPanel::kPanelID, EditorPanelCategory::Core, 350 );
 
     GameViewPanel::GameViewPanel()
-        : _aspect{ EditorGameViewAspect::Free }
-        , _bNoCameraHintShown{ false }
-        , _forwardedButtonMask{ 0 }
-        , _keyForwarder{}
+        : _model{}
     {
     }
 
-    void GameViewPanel::forwardDetachedKeyboard()
+    void GameViewPanel::forwardDetachedInput()
     {
-        InputManager&         input     = editor::getSubsystem<InputManager>();
-        const bool            bDetached = ImGui::GetWindowViewport() != ImGui::GetMainViewport();
-        const bool            bForward  = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+        const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+        const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
+        // 포인터 상태는 어댑터 한 곳에서 읽는다(패널 티어는 ImGui 입력 함수를 부르지 않는다 — EditorInputBan.h).
+        _model.forwardDetachedPointer( bDetached, ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ), EditorInputGUI::readPointer(),
+                                       float2{ pMainViewport->Pos.x, pMainViewport->Pos.y } );
+        const bool            bForwardKeys = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         vector<RawInputEvent> listEvent;
-        if ( bForward )
+        if ( bForwardKeys )
         {
             ImGuiKeyForward::appendKeyChanges( listEvent );
             ImGuiKeyForward::appendTextInput( listEvent );
         }
-        // 포커스를 잃었거나 패널을 주 창에 되돌렸으면 누른 채 남은 키를 놓는다(`DetachedKeyForwarder`).
-        _keyForwarder.forward( bForward, listEvent, [&input]( const RawInputEvent& event )
-        { return input.postRawEvent( event ); } );
-    }
-
-    void GameViewPanel::forwardDetachedPointer()
-    {
-        InputManager&        input         = editor::getSubsystem<InputManager>();
-        const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
-        const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
-        const bool           bHovered      = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
-        if ( bDetached == false && _forwardedButtonMask == 0 )
-            return; // 주 창에 있으면 주 창의 메시지가 게임으로 간다(`ImGuiEditor::processEvent`)
-        // 포인터 상태는 어댑터 한 곳에서 읽는다(패널 티어는 ImGui 입력 함수를 부르지 않는다 — EditorInputBan.h).
-        const EditorPointerState pointer  = EditorInputGUI::readPointer();
-        const int32              x        = static_cast<int32>( MathUtil::round( pointer._position._x - pMainViewport->Pos.x ) );
-        const int32              y        = static_cast<int32>( MathUtil::round( pointer._position._y - pMainViewport->Pos.y ) );
-        const bool               bForward = bDetached && bHovered;
-        if ( bForward && ( pointer._delta._x != 0.0f || pointer._delta._y != 0.0f ) )
-            (void)input.postRawEvent( RawInputEvent::makeMouseMove( x, y ) ); // 큐가 차면 이 프레임의 이동만 잃는다 — 다음 이동이 위치를 다시 준다
-        for ( uint32 index = 0; index < static_cast<uint32>( std::size( kForwardedButtons ) ); ++index )
-        {
-            const ForwardedButton& button       = kForwardedButtons[index];
-            const uint8            bit          = static_cast<uint8>( 1u << index );
-            const bool             bPressedHere = bForward && pointer.wasPressed( button._editorButton );
-            if ( bPressedHere && input.postRawEvent( RawInputEvent::makeMouseButtonDown( button._button, x, y ) ) )
-                _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask | bit );
-            // 뗌은 넣은 누름의 짝이면 패널 밖이어도 넣는다 — 안 넣으면 게임에서 단추가 눌린 채 남는다.
-            const bool bReleasedForwarded = ( _forwardedButtonMask & bit ) != 0 && pointer.wasReleased( button._editorButton );
-            if ( bReleasedForwarded && input.postRawEvent( RawInputEvent::makeMouseButtonUp( button._button, x, y ) ) )
-                _forwardedButtonMask = static_cast<uint8>( _forwardedButtonMask & ~bit );
-        }
-        if ( bForward && pointer._wheel != 0.0f )
-            (void)input.postRawEvent( RawInputEvent::makeMouseWheel( pointer._wheel ) );
+        _model.forwardDetachedKeyboard( bForwardKeys, listEvent );
     }
 
     void GameViewPanel::onPanelCollapsed()
@@ -154,7 +104,7 @@ namespace sw::editor
         drawToolbar();
 
         const ImVec2         available = ImGui::GetContentRegionAvail();
-        const EditorViewRect rect      = EditorViewTargetUtil::fitViewImage( float2{ available.x, available.y }, _aspect );
+        const EditorViewRect rect      = EditorViewTargetUtil::fitViewImage( float2{ available.x, available.y }, _model.getAspect() );
         const uint32         width     = static_cast<uint32>( rect._size._x );
         const uint32         height    = static_cast<uint32>( rect._size._y );
         if ( width > 1 && height > 1 )
@@ -170,8 +120,7 @@ namespace sw::editor
         // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
         // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`HostViewTarget::_windowX`).
         editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
-        forwardDetachedPointer();
-        forwardDetachedKeyboard();
+        forwardDetachedInput();
         ImGui::SetCursorScreenPos( imagePos );
         const void* pTextureID        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
@@ -188,11 +137,9 @@ namespace sw::editor
         EditorSelfTestMarks::note( "gameView.canvas" );
 
         // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 이미지 위에 안내를 띄운다(유니티 "No cameras rendering").
-        Scene*                 pScene      = editor::getActiveScene();
-        const CameraComponent* pGameCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
-        _bNoCameraHintShown                = CameraRegistry::isUsableCamera( pGameCamera ) == false;
-        ImDrawList* pDrawList              = ImGui::GetWindowDrawList();
-        const bool  bShowNoCameraHint      = _bNoCameraHintShown && imageSize.x > 1.0f && imageSize.y > 1.0f;
+        _model.refreshNoCameraHint();
+        ImDrawList* pDrawList         = ImGui::GetWindowDrawList();
+        const bool  bShowNoCameraHint = _model.isNoCameraHintShown() && imageSize.x > 1.0f && imageSize.y > 1.0f;
         if ( bShowNoCameraHint )
         {
             constexpr const utf8*  kHint = "No camera rendering";
@@ -217,15 +164,15 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
         {
-            const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _aspect );
+            const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _model.getAspect() );
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
             if ( ImGui::BeginCombo( "##GameViewAspect", pCurrentLabel ) )
             {
                 for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )
                 {
                     const EditorGameViewAspect aspect = static_cast<EditorGameViewAspect>( aspectIndex );
-                    if ( ImGui::Selectable( EditorViewTargetUtil::getAspectLabel( aspect ), aspect == _aspect ) )
-                        _aspect = aspect;
+                    if ( ImGui::Selectable( EditorViewTargetUtil::getAspectLabel( aspect ), aspect == _model.getAspect() ) )
+                        _model.setAspect( aspect );
                 }
                 ImGui::EndCombo();
             }
@@ -249,16 +196,7 @@ namespace sw::editor
             const bool bDebugDrawShown = DebugDrawCanvasUtil::isGameViewOverlayEnabled();
             if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", editoricon::kBug, bDebugDrawShown,
                                                 "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
-            {
-                DebugDrawCanvasUtil::setGameViewOverlayEnabled( bDebugDrawShown == false );
-                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
-                const utf8*           pCommand      = bDebugDrawShown ? "gv_debugDrawGameView 0" : "gv_debugDrawGameView 1";
-                EditorNetPlaySession& session       = editorContext.getSubsystem<EditorNetPlaySession>();
-                for ( int32 processIndex = 0; processIndex < session.getProcessCount(); ++processIndex )
-                {
-                    (void)session.sendProcessCommand( processIndex, pCommand ); // 끝난 프로세스는 false — 받을 쪽이 없다
-                }
-            }
+                GameViewModel::setDebugDrawShown( bDebugDrawShown == false );
             EditorSelfTestMarks::note( "gameView.debugDraw" );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) );
