@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/EditorBuild.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -108,6 +109,7 @@ namespace sw
         [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
         /** @brief Shipping 쿠킹용 PFB2 바이너리로 저장합니다(magic + version + name + 상태 데이터 + 중첩 인스턴스 노드). */
         [[nodiscard]] bool saveToBinaryFile( string_view assetRelativePath ) const;
+#if SW_WITH_EDITOR
         /**
          * @brief GameObject 상태에서 프리팹을 채웁니다. 그 오브젝트가 스폰한 중첩 프리팹 부품(`PrefabInstanceRegistry`)은 중첩 인스턴스 노드가 됩니다.
          * @details 부품마다 원본 프리팹과 다른 점을 오버라이드로 적는다(에디터의 Apply to Prefab 이 부품의 수정을 바깥 프리팹에 쓰는 경로). 부품이 아닌
@@ -115,6 +117,7 @@ namespace sw
          * @param pNestedPrefabs 부품의 원본 프리팹을 읽을 캐시입니다. nullptr 이면 엔진의 프리팹 캐시이고, 엔진이 없으면 부품을 싣지 못하고 경고합니다.
          */
         void setFromGameObject( const GameObject* pGameObject, PrefabCache* pNestedPrefabs = nullptr );
+#endif
 
         /** @brief 프리팹 이름을 반환합니다. */
         const string& getName() const { return _name; }
@@ -237,6 +240,7 @@ namespace sw
         PrefabHandle request( string_view assetRelativePath );
         /** @brief 프리팹을 로드합니다. `request` 와 같은 로드 블록을 기다립니다(새 로드는 이 자리에서 읽는다). 읽지 못하면 nullptr 입니다. */
         shared_ptr<const PrefabAsset> loadPrefab( string_view assetRelativePath );
+#if SW_WITH_EDITOR
         /**
          * @brief 인스턴스를 프리팹 상태로 되돌립니다. 인스턴스의 위치 정보(부모, 이름, 루트의 위치와 회전)는 유지합니다.
          * @details 유니티의 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙이다(루트의 위치와 회전은 항상 인스턴스의 것이고, 스케일은 되돌린다). 상태를
@@ -251,6 +255,7 @@ namespace sw
          * @param oldBaseStateXML 고치기 전 원형(`PrefabOverrides::makeBaseState`)입니다. 덮어쓴 것을 이것과 비교해 뽑습니다.
          */
         [[nodiscard]] bool updateInstance( GameObject* pInstance, string_view oldBaseStateXML, string_view assetRelativePath );
+#endif
         /**
          * @brief 프리팹을 스폰합니다.
          * @details 컴포넌트 틱 중이면 오브젝트는 바로 반환하고 프리팹 상태는 틱 직후(구조 변경 큐)에 채운다. 그때까지 오브젝트는 비어 있다.

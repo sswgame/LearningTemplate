@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/EditorBuild.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -128,14 +129,18 @@ namespace sw
         float32 getHeightRatioOverride() const { return _heightRatioOverride; }
         /** @brief 사슬을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
+#if SW_WITH_EDITOR
         /** @brief 사슬 목록입니다(에디터 리타깃 창이 고친다). 이름이 겹치면 다시 읽을 때 오류이므로 고치는 쪽이 지킨다. */
         vector<RetargetChain>& getChainsForEdit() { return _listChain; }
         /** @brief 본 이름 테이블입니다(에디터 리타깃 창이 고친다). */
         vector<RetargetBonePair>& getBonePairsForEdit() { return _listBonePair; }
+#endif
         /** @brief 리타깃 포즈 줄입니다(대상 본 순서 무관). */
         const vector<RetargetPoseBone>& getTargetPose() const { return _listTargetPose; }
+#if SW_WITH_EDITOR
         /** @brief 리타깃 포즈 줄입니다(에디터 리타깃 창이 고친다). 같은 본이 겹치면 다시 읽을 때 오류이므로 고치는 쪽이 지킨다. */
         vector<RetargetPoseBone>& getTargetPoseForEdit() { return _listTargetPose; }
+#endif
         /** @brief 두 스켈레톤 경로를 정합니다. */
         void setSkeletonPaths( string_view sourcePath, string_view targetPath );
         /** @brief 본 이름 테이블에 한 줄을 추가합니다(코드로 만드는 프로필과 테스트용). */

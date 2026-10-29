@@ -43,6 +43,7 @@ namespace sw
         return rel;
     }
 
+#if SW_WITH_EDITOR
     bool AssetDatabase::deleteAssetFile( string_view absolutePath )
     {
         if ( absolutePath.empty() )
@@ -58,6 +59,7 @@ namespace sw
             SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
         return true;
     }
+#endif
 
     string AssetDatabase::metaPathFor( string_view relativePath )
     {

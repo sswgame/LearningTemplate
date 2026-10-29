@@ -6,6 +6,11 @@
  *          유니티는 에디터 프로세스의 내부 붙여 넣기 버퍼에 둔다. 여기는 후자다 — 바이너리 상태라 OS 클립보드에 올리지 않는다.
  */
 #pragma once
+#include "Core/Foundation/EditorBuild.h"
+
+#if SW_WITH_EDITOR == 0
+    #error "ObjectCopyBuffer(편집기 복사 버퍼) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
+#endif
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"

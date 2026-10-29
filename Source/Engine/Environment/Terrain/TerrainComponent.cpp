@@ -549,6 +549,7 @@ namespace sw
         }
     }
 
+#if SW_WITH_EDITOR
     bool TerrainComponent::saveHeightfield( string_view filePath ) const
     {
         if ( _heightfield.isValid() == false )
@@ -568,6 +569,7 @@ namespace sw
         data._bytes  = _heightfield.getSplatBytes();
         return data.saveToFile( filePath );
     }
+#endif
 
     void TerrainComponent::writeState( Archive& outArchive ) const
     {

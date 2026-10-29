@@ -943,6 +943,7 @@ namespace sw
         return true;
     }
 
+#if SW_WITH_EDITOR
     void PrefabAsset::setFromGameObject( const GameObject* pGameObject, PrefabCache* pNestedPrefabs )
     {
         _listNestedInstance.clear();
@@ -965,6 +966,7 @@ namespace sw
             pPrefabs = &engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>();
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }
+#endif
 
     bool PrefabAsset::applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity ) const
     {
@@ -1305,6 +1307,7 @@ namespace sw
         return bInCycle == false;
     }
 
+#if SW_WITH_EDITOR
     bool PrefabCache::revertInstance( GameObject* pInstance, string_view assetRelativePath )
     {
         if ( pInstance == nullptr )
@@ -1372,6 +1375,7 @@ namespace sw
         context._pIdentity = &identity;
         return ObjectStateSerializer::loadFromXMLString( pInstance, newInstanceState, context );
     }
+#endif
 
     GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
