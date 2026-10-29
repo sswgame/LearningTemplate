@@ -5,7 +5,7 @@
 #include "Core/Container/formatString.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
@@ -13,6 +13,7 @@
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceIdempotency.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 
 namespace sw
 {

@@ -12,9 +12,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Report/ServiceReport.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -75,7 +75,7 @@ namespace sw
     /**
      * @brief 메시지 하나입니다. (보낸 시각, 서버, 서버 안 순번)이 같은 채널 안의 시간 순 정렬 키입니다.
      * @details 알림, 응답, 서버 버스에는 고정 배치형(B)으로, 저장소의 기록 레코드에는 자기 기술형(A, `ChatProtocol::encodeRecord`)으로 실립니다.
-     *          문자열 상한은 `ChatLimit` 와 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. 가린 글은 코드 포인트마다 '*' 하나이므로 원문보다 길지 않습니다.
+     *          문자열 상한은 `ChatLimit` 와 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. 가린 글은 코드 포인트마다 '*' 하나이므로 원문보다 길지 않습니다.
      */
     REFLECT()
     struct SW_KIT_API ChatMessage
@@ -84,7 +84,7 @@ namespace sw
         static constexpr uint32 kBusVersion = 1; ///< 서버 버스(`ChatBus`)의 의미 버전. 기록 레코드의 판과 따로다
         PROPERTY( MaxCount = ChatLimit::kMaxChannelIDSize )
         string _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)이다
-        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
         string _senderName{};
         PROPERTY( MaxCount = ChatLimit::kMaxTextSize )
         string _text{}; ///< 필터를 거친 글이다

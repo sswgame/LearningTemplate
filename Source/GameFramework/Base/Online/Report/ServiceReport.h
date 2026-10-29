@@ -16,8 +16,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Store/ServiceRecordUnknownFields.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -41,7 +41,7 @@ namespace sw
     struct SW_GF_API ServiceReportLine
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
         string _senderName{};
         PROPERTY( MaxCount = ServiceReportConstant::kMaxLineTextSize )
         string _text{};

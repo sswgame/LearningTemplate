@@ -2,7 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "GameFramework/Base/Online/Identity/AccountBlockList.h"
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"

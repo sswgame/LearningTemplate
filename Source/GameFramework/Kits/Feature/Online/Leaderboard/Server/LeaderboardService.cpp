@@ -8,7 +8,6 @@
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
@@ -138,7 +137,7 @@ namespace sw
                     return false;
                 outScore                               = reader.readVarInt();
                 [[maybe_unused]] const int64 updatedMs = reader.readVarInt(); // 쓰지 않지만 읽어야 이름 필드에 닿는다. 넘쳤는지는 아래 hasOverflowed 가 본다
-                return ServiceKeyUtil::readString( reader, RequestLimits::kMaxDisplayNameSize, outDisplayName ) && reader.hasOverflowed() == false;
+                return ServiceKeyUtil::readString( reader, OnlineLimit::kMaxDisplayNameSize, outDisplayName ) && reader.hasOverflowed() == false;
             }
 
             [[nodiscard]] static bool decodeScore( const vector<uint8>& bytes, int64& outScore )
@@ -896,7 +895,7 @@ namespace sw
             return;
         }
         const bool bValid = -LeaderboardLimit::kMaxAbsScore <= score && score <= LeaderboardLimit::kMaxAbsScore &&
-                            displayName.size() <= static_cast<size_t>( RequestLimits::kMaxDisplayNameSize ) && accountID != kInvalidAccountID;
+                            displayName.size() <= static_cast<size_t>( OnlineLimit::kMaxDisplayNameSize ) && accountID != kInvalidAccountID;
         if ( bValid == false )
         {
             pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardResult::Invalid );

@@ -4,7 +4,8 @@
  * @details 상태가 없고 연결만 쓴다. 계정 키트 조립(`AccountOnlineServerKit`)이 하나를 만들어 서버 조립 문맥으로 친구나 우편 같은 서버 키트에 빌려준다. 테이블 형식의 원본은 `LoginStoreLogic` 이다.
  */
 #pragma once
-#include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

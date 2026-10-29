@@ -12,8 +12,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -137,12 +137,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 순위 한 줄입니다. 응답(`LeaderboardReply`)에 고정 배치형으로 실립니다. 이름 상한은 `RequestLimits::kMaxDisplayNameSize` 와 같은 값입니다. */
+    /** @brief 순위 한 줄입니다. 응답(`LeaderboardReply`)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
     REFLECT()
     struct LeaderboardEntry
     {
         REFLECT_BODY();
-        PROPERTY( MaxCount = RequestLimits::kMaxDisplayNameSize )
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
         string _displayName{};
         PROPERTY()
         AccountID _accountID{ kInvalidAccountID };

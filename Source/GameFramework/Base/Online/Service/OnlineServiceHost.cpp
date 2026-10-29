@@ -9,7 +9,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
-#include "GameFramework/Base/Online/Guard/RequestLimits.h"
+#include "GameFramework/Base/Online/Service/OnlineLimit.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
@@ -617,7 +617,7 @@ namespace sw
             handleHello( context, connection );
             return;
         }
-        if ( connection._bHelloDone == SW_FALSE || context._bodySize > RequestLimits::kMaxRequestBodySize )
+        if ( connection._bHelloDone == SW_FALSE || context._bodySize > OnlineLimit::kMaxRequestBodySize )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
             return;
