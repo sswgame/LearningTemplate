@@ -74,15 +74,15 @@ namespace sw
         const string& projectFolder = AssetPaths::getProjectFolderPath();
         const string  rootFolder    = projectFolder.empty() ? FileUtil::getCurrentPath() : projectFolder;
         const string  folder        = FileUtil::joinPath( FileUtil::joinPath( rootFolder, path::kSavedFolder ), kDevCertificateFolder );
-        outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateFile );
-        outPrivateKeyFile           = FileUtil::joinPath( folder, kDevPrivateKeyFile );
-        if ( FileUtil::isRegularFile( outCertificateFile ) && FileUtil::isRegularFile( outPrivateKeyFile ) )
+        outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateBundleFile );
+        outPrivateKeyFile           = outCertificateFile;
+        if ( FileUtil::isRegularFile( outCertificateFile ) )
             return true;
         string     certificatePem;
         string     privateKeyPem;
         const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
                               getProvider().createSelfSignedCertificate( "localhost", NetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
-                              FileUtil::writeTextFile( outCertificateFile, certificatePem ) && FileUtil::writeTextFile( outPrivateKeyFile, privateKeyPem );
+                              FileUtil::writeTextFile( outCertificateFile, certificatePem + privateKeyPem ); // 한 번의 원자적 쓰기 — 늘 한 쌍
         if ( bCreated == false )
         {
             outError = "cannot create the development certificate in " + folder;

@@ -144,8 +144,8 @@
 		<entry source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
 		       text="카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요." />
 		<entry source="Collapse" text="접기" />
-		<entry source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/&lt;time>/ with the note above"
-		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/&lt;시각>/ 에 모읍니다" />
+		<entry source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugReports/&lt;time>/ with the note above"
+		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugReports/&lt;시각>/ 에 모읍니다" />
 		<entry source="Color to paint into the cells' tint." text="칸의 틴트로 칠할 색입니다." />
 		<entry source="Column" text="열" />
 		<entry source="Column Span" text="열 넓이" />
@@ -489,8 +489,8 @@
 		<entry source="No bindings" text="바인딩 없음" />
 		<entry source="No bone masks. A mask chooses the bones a layer affects and how strongly."
 		       text="본 마스크가 없습니다. 마스크는 레이어가 움직일 본과 그 세기를 고릅니다." />
-		<entry source="No bug reports yet. Collect Now saves one under Saved/BugIt."
-		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다." />
+		<entry source="No bug reports yet. Collect Now saves one under Saved/BugReports."
+		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugReports 아래에 하나 모읍니다." />
 		<entry source="No components in the active scene." text="활성 씬에 컴포넌트가 없습니다." />
 		<entry source="No event library loaded" text="로드된 이벤트 라이브러리가 없습니다" />
 		<entry source="No game camera - the load and unload column needs one."
@@ -571,8 +571,8 @@
 		       text="편집할 머티리얼을 엽니다(Open..., Quick Open 또는 콘텐츠 브라우저에서 더블클릭)." />
 		<entry source="Open an audio graph (.audiograph.json) to edit it"
 		       text="편집할 오디오 그래프(.audiograph.json)를 여세요" />
-		<entry source="Open that scene and move the camera to the saved position (bugitgo)"
-		       text="그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)" />
+		<entry source="Open that scene and move the camera to the saved position (bugreport.goto)"
+		       text="그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugreport.goto)" />
 		<entry source="Open the RenderDoc replay UI to inspect captures"
 		       text="캡처를 살펴볼 RenderDoc 재생 UI 를 엽니다" />
 		<entry source="Open the most recent saved log file in the file explorer"

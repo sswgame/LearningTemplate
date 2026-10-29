@@ -120,7 +120,7 @@ namespace sw
          */
         [[nodiscard]] bool saveActiveScene( string_view path = {} );
         /**
-         * @brief 활성 씬의 사본을 @p path 에 저장합니다. 씬 소스 경로는 바꾸지 않습니다(다음 저장은 원래 자리로 간다 — BugIt 의 씬 사본).
+         * @brief 활성 씬의 사본을 @p path 에 저장합니다. 씬 소스 경로는 바꾸지 않습니다(다음 저장은 원래 자리로 간다 — BugReport 의 씬 사본).
          * @details 저장이 막혀 있으면(`setSaveBlockReason`) 쓰지 않고 false 입니다.
          */
         [[nodiscard]] bool saveActiveSceneCopy( string_view path );

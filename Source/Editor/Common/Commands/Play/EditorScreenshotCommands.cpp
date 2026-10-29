@@ -28,6 +28,8 @@ namespace sw::editor
 
             static void request( string_view path, RHITextureHandle sourceTexture )
             {
+                if ( path.empty() )
+                    return; // 이름을 잡지 못했다 — 이유는 `reserveUniquePath` 가 남겼다
                 getState()._waitSerial = RenderThread::getCompletedScreenshotSerial();
                 RenderThread::requestScreenshot( path, sourceTexture, RHIFormat::R8G8B8A8_UNORM );
             }

@@ -20,7 +20,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Renderer/Capture/BugItReport.h"
+#include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include <imgui.h>
@@ -64,7 +64,7 @@ namespace sw::editor
                 const FrameRenderer& renderer = editor::getSubsystem<FrameRenderer>();
                 if ( renderer.getDevice() == nullptr )
                     return string{}; // 장치가 아직 없으면 플래그를 모른다
-                const utf8* pFlag = BugItReport::findBackendFlag( renderer.getDevice()->getBackendName() );
+                const utf8* pFlag = BugReport::findBackendFlag( renderer.getDevice()->getBackendName() );
                 return pFlag[0] != '\0' ? string( " -" ) + pFlag : string{};
             }
         };

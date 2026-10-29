@@ -74,6 +74,7 @@ namespace sw
 
         /** @brief 로그 파일이 있는 폴더의 경로입니다. 파일 출력 장치에 물어 답합니다. */
         string_view getLogFolderPath() override;
+        string      getLogFilePath() override;
         /**
          * @brief 큐에 남은 줄을 이 스레드에서 모두 쓰고 장치 버퍼를 내보냅니다. 싱크 락을 바로 잡지 못하면 포기합니다(기다리면 크래시가 멈춤이 된다).
          * @details 크래시 리포트 · "로그 + std::abort" 치명 경로가 부릅니다 — 큐에 넣기만 하고 프로세스가 끝나면 크래시 직전의 경고 · 정보

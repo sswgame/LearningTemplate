@@ -43,7 +43,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `camera.set <x> <y> <z> <pitch> <yaw>` — 씬 뷰 카메라를 그 위치 · 방향(도)에 둡니다(언리얼 `BugItGo x y z pitch yaw` 와 같은 쓰임). */
+            /** @brief `camera.set <x> <y> <z> <pitch> <yaw>` — 씬 뷰 카메라를 그 위치 · 방향(도)에 둡니다(언리얼 `BugReportGoto x y z pitch yaw` 와 같은 쓰임). */
             static bool runCameraSet( const vector<string>& listArgument, string& outReply )
             {
                 SceneViewPanel* pPanel = findSceneViewPanel();

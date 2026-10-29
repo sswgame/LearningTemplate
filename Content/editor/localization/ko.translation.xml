@@ -533,20 +533,20 @@
 		<entry key="EditorAudioGraph.SetOutput" text="출력으로 지정" sourceHash="44e1db1124a858ee" />
 		<entry key="EditorAudioGraph.StopPreview" text="미리 듣기 멈춤" sourceHash="f83bedb815ca8289" />
 		<entry key="EditorAudioGraph.Unsaved" text="* 저장하지 않은 변경" sourceHash="6e6e4d288ea76fc4" />
-		<entry key="EditorBugIt.Capture"
-		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/&lt;시각>/ 에 모읍니다"
+		<entry key="EditorBugReport.Capture"
+		       text="스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugReports/&lt;시각>/ 에 모읍니다"
 		       sourceHash="758cc67a58f4e4d7" />
-		<entry key="EditorBugIt.CopyPath" text="폴더의 절대 경로를 복사합니다" sourceHash="75494fc09911e89f" />
-		<entry key="EditorBugIt.GoTo"
-		       text="그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)"
+		<entry key="EditorBugReport.CopyPath" text="폴더의 절대 경로를 복사합니다" sourceHash="75494fc09911e89f" />
+		<entry key="EditorBugReport.GoTo"
+		       text="그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugreport.goto)"
 		       sourceHash="f3a7270f36dcb6b2" />
-		<entry key="EditorBugIt.NoReports"
-		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다."
+		<entry key="EditorBugReport.NoReports"
+		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugReports 아래에 하나 모읍니다."
 		       sourceHash="0900da9a3e9e8b26" />
-		<entry key="EditorBugIt.NoteHint"
+		<entry key="EditorBugReport.NoteHint"
 		       text="붙일 메모(무엇을 했고 무엇이 잘못됐는지)"
 		       sourceHash="3915bb5df4e885fe" />
-		<entry key="EditorBugIt.ShowInExplorer"
+		<entry key="EditorBugReport.ShowInExplorer"
 		       text="이 폴더를 파일 탐색기에서 엽니다"
 		       sourceHash="e0320233b736df32" />
 		<entry key="EditorConsole.AllLevelsHidden"

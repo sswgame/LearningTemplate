@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Capture/BugItReport.h"
+#include "Engine/Renderer/Capture/BugReport.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Console/DevCommandRegistry.h"
@@ -30,7 +30,7 @@ namespace sw
 {
     namespace
     {
-        struct BugItReportInternal
+        struct BugReportInternal
         {
             /** @brief 다른 씬을 열 때 기다리는 한도입니다. */
             static constexpr uint32 kSceneLoadTimeoutMilliseconds = 30000;
@@ -79,35 +79,15 @@ namespace sw
                 return scene.getActiveGameCamera();
             }
 
-            /** @brief BugIt 폴더들의 기본 루트(`Saved/BugIt`)입니다. */
+            /** @brief BugReport 폴더들의 기본 루트(`Saved/BugReports`)입니다. */
             static string makeDefaultRoot()
             {
-                return FileUtil::joinPath( path::kSavedFolder, BugItReport::kFolderName );
-            }
-
-            /** @brief @p logFolderPath 에서 가장 최근에 쓴 .txt 를 @p destination 에 복사합니다. */
-            [[nodiscard]] static bool copyLatestLog( string_view logFolderPath, string_view destination )
-            {
-                vector<string> listFilePath;
-                if ( FileUtil::collectFiles( logFolderPath, ".txt", listFilePath, false ) == false || listFilePath.empty() )
-                    return false;
-                const string* pLatest = nullptr;
-                int64         latestTicks{ 0 };
-                for ( const string& filePath : listFilePath )
-                {
-                    int64 ticks{ 0 };
-                    if ( FileUtil::getFileWriteTime( filePath, ticks ) && ( pLatest == nullptr || ticks > latestTicks ) )
-                    {
-                        pLatest     = &filePath;
-                        latestTicks = ticks;
-                    }
-                }
-                return pLatest != nullptr && FileUtil::copyFile( *pLatest, destination );
+                return FileUtil::joinPath( path::kSavedFolder, BugReport::kFolderName );
             }
 
 #if SW_DEV_COMMANDS_ENABLED // 두 명령 함수는 개발 명령 등록(파일 끝)만 부른다 — Shipping 에서는 함께 빠진다
-            /** @brief `bugit [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
-            static bool runBugIt( const vector<string>& listArgument, string& outReply )
+            /** @brief `bugreport [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
+            static bool runBugReport( const vector<string>& listArgument, string& outReply )
             {
                 string note;
                 for ( const string& word : listArgument )
@@ -117,26 +97,26 @@ namespace sw
                     note += word;
                 }
                 string directory;
-                if ( BugItReport::capture( BugItReport::makeInputs( note ), directory ) == false )
+                if ( BugReport::capture( BugReport::makeInputs( note ), directory ) == false )
                 {
-                    outReply = "bugit failed (see the log)";
+                    outReply = "bugreport failed (see the log)";
                     return false;
                 }
-                outReply = "bugit -> " + directory + " (screenshot next frame)";
+                outReply = "bugreport -> " + directory + " (screenshot next frame)";
                 return true;
             }
 
-            /** @brief `bugitgo [폴더]` — 폴더를 주지 않으면 가장 최근 BugIt 폴더다. */
-            static bool runBugItGo( const vector<string>& listArgument, string& outReply )
+            /** @brief `bugreport.goto [폴더]` — 폴더를 주지 않으면 가장 최근 BugReport 폴더다. */
+            static bool runBugReportGoto( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() > 1 )
                     return false;
                 if ( engine::areEngineServicesBound() == false )
                 {
-                    outReply = "bugitgo: engine services are not bound";
+                    outReply = "bugreport.goto: engine services are not bound";
                     return false;
                 }
-                return BugItReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
+                return BugReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
             }
 #endif
         };
@@ -145,25 +125,25 @@ namespace sw
 
 namespace sw
 {
-    bool BugItReport::writeInfo( string_view directory ) const
+    bool BugReport::writeInfo( string_view directory ) const
     {
         string text;
-        text += string( BugItReportInternal::kKeyNote ) + " = " + _note + "\n";
-        text += string( BugItReportInternal::kKeyScene ) + " = " + _scenePath + "\n";
-        text += string( BugItReportInternal::kKeyRHI ) + " = " + _rhiBackend + "\n";
-        text += string( BugItReportInternal::kKeyBuild ) + " = " + _buildConfiguration + "\n";
-        text += string( BugItReportInternal::kKeyGame ) + " = " + _game + "\n";
-        text += string( BugItReportInternal::kKeyPosition ) + " = " + BugItReportInternal::formatFloat3( _cameraPosition ) + "\n";
-        text += string( BugItReportInternal::kKeyRotation ) + " = " + BugItReportInternal::formatFloat3( _cameraRotationDegrees ) + "\n";
+        text += string( BugReportInternal::kKeyNote ) + " = " + _note + "\n";
+        text += string( BugReportInternal::kKeyScene ) + " = " + _scenePath + "\n";
+        text += string( BugReportInternal::kKeyRHI ) + " = " + _rhiBackend + "\n";
+        text += string( BugReportInternal::kKeyBuild ) + " = " + _buildConfiguration + "\n";
+        text += string( BugReportInternal::kKeyGame ) + " = " + _game + "\n";
+        text += string( BugReportInternal::kKeyPosition ) + " = " + BugReportInternal::formatFloat3( _cameraPosition ) + "\n";
+        text += string( BugReportInternal::kKeyRotation ) + " = " + BugReportInternal::formatFloat3( _cameraRotationDegrees ) + "\n";
         return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text );
     }
 
-    bool BugItReport::readInfo( string_view directory, BugItReport& outReport )
+    bool BugReport::readInfo( string_view directory, BugReport& outReport )
     {
         string text;
         if ( FileUtil::readTextFile( FileUtil::joinPath( directory, kInfoFileName ), text ) == false )
             return false;
-        outReport              = BugItReport{};
+        outReport              = BugReport{};
         const string_view body = FileUtil::skipUTF8Bom( text );
         StringUtil::forEachLine( body, [&]( string_view line )
         {
@@ -171,46 +151,37 @@ namespace sw
             string_view value;
             if ( StringUtil::trySplitKeyValue( line, key, value ) == false )
                 return;
-            if ( key == BugItReportInternal::kKeyNote )
+            if ( key == BugReportInternal::kKeyNote )
                 outReport._note = string( value );
-            else if ( key == BugItReportInternal::kKeyScene )
+            else if ( key == BugReportInternal::kKeyScene )
                 outReport._scenePath = string( value );
-            else if ( key == BugItReportInternal::kKeyRHI )
+            else if ( key == BugReportInternal::kKeyRHI )
                 outReport._rhiBackend = string( value );
-            else if ( key == BugItReportInternal::kKeyBuild )
+            else if ( key == BugReportInternal::kKeyBuild )
                 outReport._buildConfiguration = string( value );
-            else if ( key == BugItReportInternal::kKeyGame )
+            else if ( key == BugReportInternal::kKeyGame )
                 outReport._game = string( value );
-            else if ( key == BugItReportInternal::kKeyPosition || key == BugItReportInternal::kKeyRotation )
+            else if ( key == BugReportInternal::kKeyPosition || key == BugReportInternal::kKeyRotation )
             {
                 // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽되, 카메라가 원점으로 보이는 이유를 남긴다.
-                const bool bPosition = key == BugItReportInternal::kKeyPosition;
-                if ( BugItReportInternal::parseFloat3( value, bPosition ? outReport._cameraPosition : outReport._cameraRotationDegrees ) == false )
-                    SW_LOG_WARNING( "BugIt report: '%#' value '%#' is not three numbers - the camera keeps 0,0,0", string( key ).c_str(), string( value ).c_str() );
+                const bool bPosition = key == BugReportInternal::kKeyPosition;
+                if ( BugReportInternal::parseFloat3( value, bPosition ? outReport._cameraPosition : outReport._cameraRotationDegrees ) == false )
+                    SW_LOG_WARNING( "BugReport report: '%#' value '%#' is not three numbers - the camera keeps 0,0,0", string( key ).c_str(), string( value ).c_str() );
             }
         } );
         return true;
     }
 
-    string BugItReport::makeUniqueDirectory( string_view root, const ScreenshotLocalTime& localTime )
+    string BugReport::makeUniqueDirectory( string_view root, const ScreenshotLocalTime& localTime )
     {
         StringBuilder<constant::kMaxBuffer32> baseName;
         baseName.appendFormat( "%04d%02d%02d-%02d%02d%02d", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
-        for ( uint32 suffix = 1; suffix <= BugItReportInternal::kMaxSameSecondSuffix; ++suffix )
-        {
-            string name( baseName.c_str() );
-            if ( suffix > 1 )
-                name += "-" + to_string( suffix );
-            const string directory = FileUtil::joinPath( root, name );
-            if ( FileUtil::exists( directory ) )
-                continue;
-            return FileUtil::ensureDirectoryExists( directory ) ? directory : string{};
-        }
-        return string{};
+        // 같은 초에 다른 프로세스(병렬 실행)가 같은 이름을 고를 수 있다 — 만들기가 곧 자리 잡기다.
+        return FileUtil::reserveUniquePath( FileUtil::joinPath( root, baseName.c_str() ), {}, true, BugReportInternal::kMaxSameSecondSuffix );
     }
 
-    string BugItReport::findLatestDirectory( string_view root )
+    string BugReport::findLatestDirectory( string_view root )
     {
         vector<string> listFolder;
         if ( FileUtil::collectFolders( root, listFolder, false ) == false || listFolder.empty() )
@@ -225,7 +196,7 @@ namespace sw
         return *pLatest;
     }
 
-    float3 BugItReport::computeRotationDegrees( const float3& forward )
+    float3 BugReport::computeRotationDegrees( const float3& forward )
     {
         const float32 length = forward.getLength();
         if ( length <= 0.0f )
@@ -236,14 +207,14 @@ namespace sw
         return float3{ MathUtil::toDegree( pitch ), MathUtil::toDegree( yaw ), 0.0f };
     }
 
-    float3 BugItReport::computeForward( const float3& rotationDegrees )
+    float3 BugReport::computeForward( const float3& rotationDegrees )
     {
         const float32 pitch = MathUtil::toRadian( rotationDegrees._x );
         const float32 yaw   = MathUtil::toRadian( rotationDegrees._y );
         return float3{ MathUtil::sin( yaw ) * MathUtil::cos( pitch ), -MathUtil::sin( pitch ), MathUtil::cos( yaw ) * MathUtil::cos( pitch ) };
     }
 
-    const utf8* BugItReport::findBackendFlag( string_view backendName )
+    const utf8* BugReport::findBackendFlag( string_view backendName )
     {
         if ( StringUtil::startsWith( backendName, "Direct3D 11" ) )
             return "dx11";
@@ -256,19 +227,19 @@ namespace sw
         return "";
     }
 
-    BugItInputs BugItReport::makeInputs( string_view note )
+    BugReportInputs BugReport::makeInputs( string_view note )
     {
-        BugItInputs inputs;
+        BugReportInputs inputs;
         inputs._report._note               = string( note );
         inputs._report._buildConfiguration = build::kConfigName;
-        inputs._root                       = BugItReportInternal::makeDefaultRoot();
+        inputs._root                       = BugReportInternal::makeDefaultRoot();
         inputs._localTime                  = ScreenshotPathUtil::getLocalTimeNow();
         inputs._bRequestScreenshot         = true;
 
-        // 로거는 비동기다 — 비우지 않으면 bugit 직전 줄이 사본에 없다.
+        // 로거는 비동기다 — 비우지 않으면 bugreport 직전 줄이 사본에 없다.
         Logger::flushGlobalForCrash();
         if ( ILogSink* pSink = Logger::getGlobalSink(); pSink != nullptr )
-            inputs._logFolderPath = string( pSink->getLogFolderPath() );
+            inputs._logFilePath = pSink->getLogFilePath();
 
         if ( engine::areEngineServicesBound() == false )
             return inputs;
@@ -281,7 +252,7 @@ namespace sw
         {
             inputs._pSceneManager          = &sceneManager;
             inputs._report._scenePath      = pScene->getSourcePath();
-            const CameraComponent* pCamera = BugItReportInternal::findViewCamera( *pScene );
+            const CameraComponent* pCamera = BugReportInternal::findViewCamera( *pScene );
             if ( pCamera != nullptr )
             {
                 inputs._report._cameraPosition        = pCamera->getCameraPosition();
@@ -293,28 +264,27 @@ namespace sw
         return inputs;
     }
 
-    bool BugItReport::capture( const BugItInputs& inputs, string& outDirectory )
+    bool BugReport::capture( const BugReportInputs& inputs, string& outDirectory )
     {
         outDirectory.clear();
         const string directory = makeUniqueDirectory( inputs._root, inputs._localTime );
         if ( directory.empty() )
         {
-            SW_LOG_WARNING( "bugit: could not create a folder under '%#'", inputs._root );
+            SW_LOG_WARNING( "bugreport: could not create a folder under '%#'", inputs._root );
             return false;
         }
 
-        const BugItReport& report = inputs._report;
+        const BugReport& report = inputs._report;
         if ( report.writeInfo( directory ) == false )
         {
-            SW_LOG_WARNING( "bugit: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
+            SW_LOG_WARNING( "bugreport: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
             return false;
         }
 
         if ( inputs._bRequestScreenshot )
             RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
-        if ( inputs._logFolderPath.empty() == false &&
-             BugItReportInternal::copyLatestLog( inputs._logFolderPath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
-            SW_LOG_WARNING( "bugit: the log file could not be copied" );
+        if ( inputs._logFilePath.empty() == false && FileUtil::copyFile( inputs._logFilePath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
+            SW_LOG_WARNING( "bugreport: the log file could not be copied" );
 #if SW_PROFILER_TRACE_ENABLED
         if ( inputs._pFrameProfiler != nullptr )
         {
@@ -323,11 +293,11 @@ namespace sw
             string traceReply;
             if ( ProfilerTraceExport::saveRecentFrames( *inputs._pFrameProfiler, ProfilerTimeline::kFrameCapacity - 1,
                                                         FileUtil::joinPath( directory, kTraceFileName ), "Game", tracePath, traceReply ) )
-                SW_LOG_INFO( "bugit: timeline trace saved (%#)", traceReply );
+                SW_LOG_INFO( "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
         if ( inputs._pSceneManager != nullptr && inputs._pSceneManager->saveActiveSceneCopy( FileUtil::joinPath( directory, kSceneFileName ) ) == false )
-            SW_LOG_WARNING( "bugit: the scene copy could not be saved" );
+            SW_LOG_WARNING( "bugreport: the scene copy could not be saved" );
 
         const utf8* pBackendFlag = findBackendFlag( report._rhiBackend );
         string      repro        = "App.exe";
@@ -335,48 +305,48 @@ namespace sw
             repro += string( " -" ) + pBackendFlag;
         if ( inputs._bEditor )
             repro += " -EnableEditor";
-        repro += " -gv_devConsoleExec=\"bugitgo " + directory + "\"\n";
+        repro += " -gv_devConsoleExec=\"bugreport.goto " + directory + "\"\n";
         if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro ) == false )
-            SW_LOG_WARNING( "bugit: could not write the repro command" );
+            SW_LOG_WARNING( "bugreport: could not write the repro command" );
 
-        SW_LOG_INFO( "BugIt report saved to %# (note: %#)", directory, report._note );
+        SW_LOG_INFO( "BugReport report saved to %# (note: %#)", directory, report._note );
         outDirectory = directory;
         return true;
     }
 
-    bool BugItReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
+    bool BugReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
     {
-        const string folder = directory.empty() ? findLatestDirectory( BugItReportInternal::makeDefaultRoot() ) : string( directory );
-        BugItReport  report;
+        const string folder = directory.empty() ? findLatestDirectory( BugReportInternal::makeDefaultRoot() ) : string( directory );
+        BugReport    report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {
-            outReply = "bugitgo: no BugIt folder at '" + folder + "'";
+            outReply = "bugreport.goto: no BugReport folder at '" + folder + "'";
             return false;
         }
         Scene*     pScene      = sceneManager.getActiveScene();
         const bool bOtherScene = report._scenePath.empty() == false && ( pScene == nullptr || pScene->getSourcePath() != report._scenePath );
         if ( bOtherScene )
         {
-            // 다른 씬이면 원래 씬을 연다(사본은 그 순간의 기록일 뿐 — 열어서 저장하면 BugIt 폴더에 쓰게 된다). 로드는 워커가 하고 교체는 이 스레드가 한다.
+            // 다른 씬이면 원래 씬을 연다(사본은 그 순간의 기록일 뿐 — 열어서 저장하면 BugReport 폴더에 쓰게 된다). 로드는 워커가 하고 교체는 이 스레드가 한다.
             const TaskFuture<Scene*> future = sceneManager.requestLoadFuture( report._scenePath );
-            if ( future.waitFor( BugItReportInternal::kSceneLoadTimeoutMilliseconds ) == false )
+            if ( future.waitFor( BugReportInternal::kSceneLoadTimeoutMilliseconds ) == false )
             {
-                outReply = "bugitgo: the scene '" + report._scenePath + "' did not load in time";
+                outReply = "bugreport.goto: the scene '" + report._scenePath + "' did not load in time";
                 return false;
             }
             sceneManager.updateTransitions();
             pScene = sceneManager.getActiveScene();
         }
-        CameraComponent* pCamera = pScene != nullptr ? BugItReportInternal::findViewCamera( *pScene ) : nullptr;
+        CameraComponent* pCamera = pScene != nullptr ? BugReportInternal::findViewCamera( *pScene ) : nullptr;
         if ( pCamera == nullptr )
         {
-            outReply = "bugitgo: no camera to move in the active scene";
+            outReply = "bugreport.goto: no camera to move in the active scene";
             return false;
         }
         pCamera->setWorldPosition( report._cameraPosition );
         pCamera->lookAt( report._cameraPosition + computeForward( report._cameraRotationDegrees ) );
-        SW_LOG_INFO( "BugItGo moved the view camera to %# from %#", BugItReportInternal::formatFloat3( report._cameraPosition ), folder );
-        outReply = "bugitgo -> " + folder + " (camera " + BugItReportInternal::formatFloat3( report._cameraPosition ) + ")";
+        SW_LOG_INFO( "BugReportGoto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder );
+        outReply = "bugreport.goto -> " + folder + " (camera " + BugReportInternal::formatFloat3( report._cameraPosition ) + ")";
         return true;
     }
 } // namespace sw
@@ -384,9 +354,9 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
-    SW_DEV_COMMAND( BugIt, "bugit", "bugit [note...]", "Collect a bug report (info, screenshot, log, scene copy, repro) under Saved/BugIt/<time>",
-                    &BugItReportInternal::runBugIt );
-    SW_DEV_COMMAND( BugItGo, "bugitgo", "bugitgo [folder]", "Open the scene of a BugIt folder (default: the latest) and move the view camera there",
-                    &BugItReportInternal::runBugItGo );
+    SW_DEV_COMMAND( BugReport, "bugreport", "bugreport [note...]", "Collect a bug report (info, screenshot, log, scene copy, repro) under Saved/BugReports/<time>",
+                    &BugReportInternal::runBugReport );
+    SW_DEV_COMMAND( BugReportGoto, "bugreport.goto", "bugreport.goto [folder]", "Open the scene of a BugReport folder (default: the latest) and move the view camera there",
+                    &BugReportInternal::runBugReportGoto );
 } // namespace sw
 #endif

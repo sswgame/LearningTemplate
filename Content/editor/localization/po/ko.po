@@ -278,20 +278,20 @@ msgctxt "EdCommon.NoSavedLayouts"
 msgid "No saved layouts."
 msgstr "저장된 레이아웃이 없습니다."
 
-#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
 msgctxt "EdCommon.NotifyBugReportFailed"
 msgid "The bug report could not be saved (see the log)"
 msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
 
-#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
 msgctxt "EdCommon.NotifyBugReportSaved"
 msgid "Bug report saved"
 msgstr "버그 리포트를 저장했습니다"
 
-#: Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
+#: Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
 msgctxt "EdCommon.NotifyBugReportTitle"
 msgid "Bug report"
 msgstr "버그 리포트"
@@ -1237,33 +1237,33 @@ msgctxt "EditorAudioGraph.Unsaved"
 msgid "Unsaved changes"
 msgstr "* 저장하지 않은 변경"
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.Capture"
-msgid "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/<time>/ with the note above"
-msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugIt/<시각>/ 에 모읍니다"
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.Capture"
+msgid "Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugReports/<time>/ with the note above"
+msgstr "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 위 메모와 함께 Saved/BugReports/<시각>/ 에 모읍니다"
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.CopyPath"
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.CopyPath"
 msgid "Copy the absolute folder path"
 msgstr "폴더의 절대 경로를 복사합니다"
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.GoTo"
-msgid "Open that scene and move the camera to the saved position (bugitgo)"
-msgstr "그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugitgo)"
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.GoTo"
+msgid "Open that scene and move the camera to the saved position (bugreport.goto)"
+msgstr "그 씬을 열고 카메라를 저장한 자리로 옮깁니다(bugreport.goto)"
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.NoReports"
-msgid "No bug reports yet. Collect Now saves one under Saved/BugIt."
-msgstr "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugIt 아래에 하나 모읍니다."
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.NoReports"
+msgid "No bug reports yet. Collect Now saves one under Saved/BugReports."
+msgstr "아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugReports 아래에 하나 모읍니다."
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.NoteHint"
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.NoteHint"
 msgid "Note to attach (what you did and what went wrong)"
 msgstr "붙일 메모(무엇을 했고 무엇이 잘못됐는지)"
 
-#: Source/Editor/Panels/BugIt/BugItPanel.cpp
-msgctxt "EditorBugIt.ShowInExplorer"
+#: Source/Editor/Panels/BugReport/BugReportPanel.cpp
+msgctxt "EditorBugReport.ShowInExplorer"
 msgid "Open this folder in the file explorer"
 msgstr "이 폴더를 파일 탐색기에서 엽니다"
 

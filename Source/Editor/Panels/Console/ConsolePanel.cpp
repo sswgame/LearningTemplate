@@ -664,15 +664,9 @@ namespace sw::editor
             SW_LOG_WARNING( "No log file folder (the log sink writes no file)" );
             return;
         }
-        // 파일 이름은 시작 시각이라 이름이 가장 큰 파일이 이번 실행의 로그다.
-        vector<string> listFilePath;
-        if ( FileUtil::collectFiles( pSink->getLogFolderPath(), ".txt", listFilePath, false ) == false || listFilePath.empty() )
-        {
-            (void)EditorAssetFileCommands::showInFileExplorer( pSink->getLogFolderPath() );
-            return;
-        }
-        std::sort( listFilePath.begin(), listFilePath.end() );
-        (void)EditorAssetFileCommands::showInFileExplorer( listFilePath.back() );
+        // 이번 실행의 파일은 싱크만 안다 — 폴더의 "가장 새 파일" 은 같은 폴더를 쓰는 다른 프로세스의 것일 수 있다.
+        const string logFilePath = pSink->getLogFilePath();
+        (void)EditorAssetFileCommands::showInFileExplorer( logFilePath.empty() ? string( pSink->getLogFolderPath() ) : logFilePath );
     }
 
     void ConsolePanel::updatePlayReactions()

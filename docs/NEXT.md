@@ -36,6 +36,7 @@
 - **병렬**: CTest 항목은 시나리오마다 하나이고, 그 App 이 `-scenario-backends=all` 로 백엔드마다 자식 App 을 동시에 띄워 모은다(`AutomationBackendMatrix` — Gauntlet 컨트롤러 자리, 자식은 `kProcessKillSeconds` 180 초 안에 끝나야 한다). 항목끼리도 `ctest -j4` 로 돈다(76 실행 64 초). 스레드 병렬은 쓰지 않는다 — 창 · 장치 · 전역 변수 · 씬이 프로세스에 하나라서.
 - **로그**: `-log-file=<경로>` 가 그 파일 하나에 쓴다(ctest 는 `<빌드>/Testing/Logs/<항목>[.<백엔드>].log`). 명령줄이 로거보다 먼저 서고, 싱크가 서기 전의 줄은 `Logger` 가 고정 배열 64 줄로 쌓았다가 넘긴다(언리얼 backlog).
 - **종료 코드**: 이 PC 에서 못 도는 백엔드(77)는 행렬이 그 백엔드만 건너뜀으로 센다.
+- **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 
 ## 4. 남은 일
 
@@ -45,8 +46,6 @@
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
 | 남은 처리기 인터페이스 | `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다) |
-| `BugIt` 이름 | 언리얼 명령 이름을 그대로 가져와 뜻이 안 보인다 → `BugReport`(타입 · 개발 명령 `bugreport` · 폴더 `Saved/BugReports` · 편집기 `Panels/BugIt` · `EditorBugItCommands`, 14 파일 152 곳). 별칭은 두지 않는다. 같은 식으로 빌려 온 이름이 더 있는지 함께 찾는다 |
-| 겹치는 경로 넷 | 병렬 실행이 같은 이름에 쓰는 곳: BugIt 이 로그 폴더의 "가장 새 .txt" 를 복사(다른 프로세스 로그) · 편집기 콘솔 패널도 같음 → 싱크가 이 프로세스의 로그 파일 경로를 준다(`ILogSink::getLogFilePath`). BugIt 폴더는 "있나 보고 만들기"(같은 초 경합) → 있으면 실패하는 `FileUtil::tryCreateNewDirectory`. 스크린샷 기본 이름이 초 단위(덮어씀) → BugIt 처럼 `-2` 접미와 원자적 예약. 개발 TLS 인증서가 cert · key 두 파일(짝 어긋남) → 한 PEM(`devserver.pem`)에 원자적 한 번 쓰기(OpenSSL 의 PEM 읽기는 다른 종류 블록을 건너뛴다) |
 | `-log-file` 과 크래시 묶기 | 크래시 리포트 묶기(`CrashReportService::collectSessionLog`)는 `*_<세션>.txt` 로 로그를 찾아 고정 이름 로그를 못 찾는다 — ctest 는 크래시 파일 옆에 로그가 있어 당장은 문제없다 |
 | 그 밖 | 없는 스크립트를 부르는 곳(`Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 생성기 · CMake 파일 이름의 `Abi`(`Scripts/generate/EngineAbiStamp.py` · `cmake/Engine/EngineAbiStamp.cmake`) |
 

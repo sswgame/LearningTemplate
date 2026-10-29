@@ -11,6 +11,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Time/WallClock.h"
 
 #include <chrono>
@@ -203,6 +204,48 @@ namespace sw
             return false;
         }
         return true;
+    }
+
+    string FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt )
+    {
+        if ( basePath.empty() || ensureParentDirectoryExists( basePath ) == false )
+            return {};
+        for ( uint32 attempt = 1; attempt <= maxAttempt; ++attempt )
+        {
+            const string path = string( basePath ) + ( attempt > 1 ? "-" + to_string( attempt ) : string{} ) + string( extension );
+            if ( isWriteAllowed( path ) == false )
+                return {};
+            if ( bDirectory )
+            {
+                std::error_code errorCode;
+                // create_directory 는 이 호출이 만들었을 때만 true 다 — 이미 있으면(다른 프로세스가 먼저 잡았으면) 다음 번호로.
+                if ( std::filesystem::create_directory( FileUtilStdInternal::toPath( path ), errorCode ) )
+                {
+                    noteFileCreated();
+                    return path;
+                }
+                if ( errorCode && isDirectory( path ) == false && exists( path ) == false )
+                {
+                    SW_LOG_ERROR_ID( "File.CreateDirectoryFailed", "Could not create directory '%#': %#", path, FileUtilStdInternal::describe( errorCode ).c_str() );
+                    return {};
+                }
+                continue;
+            }
+            // "x"(C11): 이미 있으면 열지 않는다 — 만들기와 있는지 보기가 한 시스템 호출이다.
+            if ( FILE* pFile = PlatformFileUtil::openFile( path.c_str(), "wbx" ); pFile != nullptr )
+            {
+                std::fclose( pFile );
+                noteFileCreated();
+                return path;
+            }
+            if ( exists( path ) == false )
+            {
+                SW_LOG_ERROR_ID( "File.CreateFailed", "Could not create file '%#'", path );
+                return {};
+            }
+        }
+        SW_LOG_ERROR_ID( "File.CreateFailed", "Every name from '%#%#' to suffix -%# is taken", basePath, extension, maxAttempt );
+        return {};
     }
 
     bool FileUtil::exists( string_view path )

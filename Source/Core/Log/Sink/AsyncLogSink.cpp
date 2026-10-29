@@ -448,6 +448,13 @@ namespace sw
         return _pFileOutput->getLogFolderPath();
     }
 
+    string AsyncLogSink::getLogFilePath()
+    {
+        if ( _pFileOutput == nullptr )
+            return {};
+        return _pFileOutput->getCurrentLogFilePath();
+    }
+
     void AsyncLogSink::workerLoop()
     {
         SW_MEMORY_SCOPE( EngineMisc );

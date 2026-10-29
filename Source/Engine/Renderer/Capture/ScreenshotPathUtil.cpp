@@ -22,6 +22,11 @@ namespace sw
             if ( listArgument.size() > 1 )
                 return false;
             const string path = listArgument.empty() ? ScreenshotPathUtil::makeDefaultPathNow() : listArgument[0];
+            if ( path.empty() )
+            {
+                outReply = "screenshot: could not reserve a file name (see the log)";
+                return true;
+            }
             RenderThread::requestScreenshot( path );
             outReply = "screenshot requested: " + path;
             return true;
@@ -45,7 +50,9 @@ namespace sw
 
     string ScreenshotPathUtil::makeDefaultPathNow()
     {
-        return makeDefaultPath( getLocalTimeNow() );
+        // 같은 초의 두 번째 사진(같은 프로세스든 다른 프로세스든)이 앞 사진을 덮지 않게 이름을 먼저 잡는다(`-2` …).
+        const string path = makeDefaultPath( getLocalTimeNow() );
+        return FileUtil::reserveUniquePath( FileUtil::removeExtension( path ), FileUtil::getExtension( path ), false );
     }
 
     ScreenshotLocalTime ScreenshotPathUtil::getLocalTimeNow()

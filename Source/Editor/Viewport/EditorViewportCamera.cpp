@@ -222,7 +222,7 @@ namespace sw::editor
     {
         if ( pCamera == nullptr )
             return;
-        // 외부(개발 명령 bugitgo, teleport)가 에디터 카메라를 옮겼으면 씬 뷰가 그 위치와 시선을 이어받는다. 덮어쓰면 명령이 한 프레임도 유지되지 않는다.
+        // 외부(개발 명령 bugreport.goto, teleport)가 에디터 카메라를 옮겼으면 씬 뷰가 그 위치와 시선을 이어받는다. 덮어쓰면 명령이 한 프레임도 유지되지 않는다.
         const bool bSameCamera   = _lastAppliedCameraID == pCamera->getComponentID();
         const bool bMovedOutside = bSameCamera && ( pCamera->getLocalPosition() - _lastAppliedPosition ).getLength() > EditorViewportCameraInternal::kExternalMoveTolerance;
         // 이 씬 뷰가 처음 쓰는 카메라가 새로 만든 위치에 있지 않으면 앞 에디터 인스턴스가 놓은 것이다(백엔드 교체 · 에디터 리로드) — 기본 포즈로 덮지 않고 이어받는다.

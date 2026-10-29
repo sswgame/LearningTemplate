@@ -284,20 +284,20 @@
 		</entry>
 		<entry key="EdCommon.NotifyBugReportFailed" source="The bug report could not be saved (see the log)">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportSaved" source="Bug report saved">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportTitle" source="Bug report">
 			<origins>
-				<item>Source/Editor/Common/Commands/Dev/EditorBugItCommands.cpp</item>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyClipboardEmpty" source="Clipboard is empty">
@@ -1295,35 +1295,35 @@
 				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.Capture"
-		       source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugIt/&lt;time>/ with the note above">
+		<entry key="EditorBugReport.Capture"
+		       source="Collect a screenshot, log, scene copy, camera position and repro command into Saved/BugReports/&lt;time>/ with the note above">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.CopyPath" source="Copy the absolute folder path">
+		<entry key="EditorBugReport.CopyPath" source="Copy the absolute folder path">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.GoTo" source="Open that scene and move the camera to the saved position (bugitgo)">
+		<entry key="EditorBugReport.GoTo" source="Open that scene and move the camera to the saved position (bugreport.goto)">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.NoReports" source="No bug reports yet. Collect Now saves one under Saved/BugIt.">
+		<entry key="EditorBugReport.NoReports" source="No bug reports yet. Collect Now saves one under Saved/BugReports.">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.NoteHint" source="Note to attach (what you did and what went wrong)">
+		<entry key="EditorBugReport.NoteHint" source="Note to attach (what you did and what went wrong)">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorBugIt.ShowInExplorer" source="Open this folder in the file explorer">
+		<entry key="EditorBugReport.ShowInExplorer" source="Open this folder in the file explorer">
 			<origins>
-				<item>Source/Editor/Panels/BugIt/BugItPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">

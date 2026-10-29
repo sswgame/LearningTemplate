@@ -3,8 +3,8 @@
  * @brief OpenSSL 로 구현한 `INetSecurityProvider` 와 TLS 컨텍스트 도우미입니다. 제공자는 프로세스에 하나 — GameFramework 안이라 게임 · 키트 모듈 리로드에 살아남는다.
  * @note OpenSSL 은 GameFramework 만 링크합니다 — 온라인을 쓰지 않는 게임의 Engine.dll 은 libssl · libcrypto 에 매이지 않는다.
  * @details 인증서 · 키는 PEM 파일 경로로 받는다(두 플랫폼 같은 길 — 전용 서버는 서버 설정 `Config/Server/<게임>.json` 의 `_tlsCertificateFile` ·
- *          `_tlsPrivateKeyFile` 이 경로를 준다). 상대 경로는 프로젝트 루트 기준이다. 경로를 비우면 **Dev 에서만** `Saved/Certificates/devserver.cert.pem` ·
- *          `devserver.key.pem`(없으면 만든다)을 쓰고, Shipping 은 오류다.
+ *          `_tlsPrivateKeyFile` 이 경로를 준다). 상대 경로는 프로젝트 루트 기준이다. 경로를 비우면 **Dev 에서만** `Saved/Certificates/devserver.pem`(인증서와 키를
+ *          한 PEM 에 — 없으면 만든다)을 쓰고, Shipping 은 오류다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -24,8 +24,11 @@ namespace sw
     struct SW_GF_API NetSecurity
     {
         static constexpr const utf8* kDevCertificateFolder = "Certificates"; ///< 프로젝트 루트의 `Saved/` 아래
-        static constexpr const utf8* kDevCertificateFile   = "devserver.cert.pem";
-        static constexpr const utf8* kDevPrivateKeyFile    = "devserver.key.pem";
+        /**
+         * @brief 개발 인증서와 그 키를 함께 담은 PEM 하나입니다. 인증서 · 키 경로 둘 다 이 파일이다(PEM 읽기는 다른 종류 블록을 건너뛴다).
+         * @details 두 파일로 따로 쓰면 서버 둘이 동시에 처음 뜰 때 한쪽의 인증서와 다른 쪽의 키가 남아 짝이 어긋난다 — 한 파일의 원자적 쓰기 한 번이면 늘 한 쌍이다.
+         */
+        static constexpr const utf8* kDevCertificateBundleFile = "devserver.pem";
 
         static INetSecurityProvider& getProvider();
 

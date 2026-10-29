@@ -36,9 +36,9 @@ namespace sw
 
         /** @brief @p localTime 의 기본 경로입니다. */
         static string makeDefaultPath( const ScreenshotLocalTime& localTime );
-        /** @brief 지금 지역 시각의 기본 경로입니다. */
+        /** @brief 지금 지역 시각의 기본 경로를 빈 파일로 잡아 돌려줍니다(같은 초면 `-2` …). 잡지 못하면 빈 글입니다(이유는 로그). */
         static string makeDefaultPathNow();
-        /** @brief 지금 지역 시각입니다(BugIt 폴더 이름도 같은 형식을 씁니다). */
+        /** @brief 지금 지역 시각입니다(BugReport 폴더 이름도 같은 형식을 씁니다). */
         static ScreenshotLocalTime getLocalTimeNow();
     };
 } // namespace sw

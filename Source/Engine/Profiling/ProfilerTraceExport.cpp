@@ -1103,7 +1103,7 @@ namespace sw
             }
             if ( word == ProfilerTraceExport::CommandWord::Switch )
             {
-                // 링 버퍼 기록을 켜고 끈다(에디터 Timeline 탭의 Record 와 같다) — bugit 이 최근 프레임을 trace.trace.json 으로 같이 담는다.
+                // 링 버퍼 기록을 켜고 끈다(에디터 Timeline 탭의 Record 와 같다) — bugreport 이 최근 프레임을 trace.trace.json 으로 같이 담는다.
                 FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
                 if ( bOn )
                 {

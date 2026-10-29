@@ -122,6 +122,15 @@ namespace sw
             std::fflush( _pFile );
     }
 
+    string FileLogOutput::getCurrentLogFilePath()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _pFile == nullptr )
+            return {};
+        // 고정 경로는 이미 절대 경로다(open). 기본 이름은 폴더 안의 파일 이름만 들고 있다.
+        return _fixedFilePath.empty() ? FileUtil::joinPath( _logFolderPath, _currentLogFileName ) : _currentLogFileName;
+    }
+
     void FileLogOutput::flushWithoutWaiting()
     {
         // Warning 이하는 stdio 버퍼에 머문다(줄마다 fflush 하면 느리다). 크래시로 끝나면 그 버퍼가 사라진다 — 여기서 내보낸다.
