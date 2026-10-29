@@ -16,9 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
@@ -30,8 +28,6 @@ namespace sw::editor
     {
         struct VFXPreviewPanelInternal
         {
-            /// @brief 미리보기 씬에 스폰하는 효과 오브젝트 이름입니다.
-            static constexpr const utf8* kPreviewSubjectName = "PreviewSubject";
             /// @brief 화면에 담을 반지름(미터)입니다 — 효과는 원점에 서고, 표본 효과의 불꽃이 1 m 남짓 솟는다.
             static constexpr float32 kFrameRadius = 1.5f;
             /// @brief 뷰포트의 최소 높이(96 DPI 기준 픽셀)입니다. 창이 낮아도 이만큼은 그린다.
@@ -90,9 +86,7 @@ namespace sw::editor
 
     VFXPreviewPanel::VFXPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
-        , _listEmitterRow{}
-        , _previewEffectPath{}
-        , _status{}
+        , _model{}
     {
     }
 
@@ -113,11 +107,11 @@ namespace sw::editor
         if ( ImGui::Button( "Reload" ) )
         {
             reloadDocument();
-            _previewEffectPath.clear(); // 다시 읽은 효과를 미리보기에 다시 건다
+            _model.requestResync(); // 다시 읽은 효과를 미리보기에 다시 건다
         }
         EditorSelfTestMarks::note( "vfx.reload" );
         EditorWidgets::drawTooltip( "Read the effect file again (after saving it in the Catalog Editor)" );
-        VFXComponent* pSubject = findPreviewSubject();
+        VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Restart" ) );
         if ( ImGui::Button( "Restart" ) && pSubject != nullptr )
             pSubject->play();
@@ -133,24 +127,25 @@ namespace sw::editor
         const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다
         ImGui::Text( "Spawned: %u  CPU alive: %u", spawnedCount, pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u );
 
-        for ( const EmitterRow& row : _listEmitterRow )
+        for ( const VFXPreviewEmitterRow& row : _model.getEmitterRows() )
         {
             ImGui::BulletText( "%s  %s%s  max %u  %s", row._name.c_str(), row._bAdditive ? "Additive" : "Alpha", row._bLooping ? "  looping" : "", row._maxParticles,
                                row._texturePath.c_str() );
         }
 
-        syncPreviewSubjectEffect();
+        if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다
+            _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
         const float2  available = float2{ ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y };
         const float32 minHeight = VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale();
         const float2  viewSize{ available._x, available._y > minHeight ? available._y : minHeight };
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "vfx.previewScene" );
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
     bool VFXPreviewPanel::findPreviewSpawnedParticleCount( uint64& outCount ) const
     {
-        const VFXComponent* pSubject = findPreviewSubject();
+        const VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
         if ( pSubject == nullptr )
             return false;
         outCount = pSubject->getSpawnedParticleCount();
@@ -171,58 +166,12 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-
-        _listEmitterRow.clear();
-        _previewEffectPath.clear();
-        VFXEffectDef effect;
-        if ( effect.loadFromAsset( AssetID{ path } ) == false )
-        {
-            _status = "The effect could not be read - see the log";
-            return ToolAssetLoadResult::Malformed;
-        }
-        for ( const VFXEmitterDef& emitter : effect._listEmitter )
-        {
-            EmitterRow& row   = _listEmitterRow.emplace_back();
-            row._name         = emitter._name;
-            row._texturePath  = emitter._texturePath;
-            row._maxParticles = emitter._maxParticles;
-            row._bAdditive    = emitter._blendMode == VFXBlendMode::Additive;
-            row._bLooping     = emitter._bLooping;
-        }
-        _status = "Loaded";
-        return ToolAssetLoadResult::Loaded;
+        return _model.loadAsset( path );
     }
 
     void VFXPreviewPanel::populatePreviewScene( Scene& scene )
     {
-        GameObjectManager* pManager = scene.getObjectManager();
-        GameObject*        pSubject = pManager != nullptr ? pManager->createGameObject( hashed_string( VFXPreviewPanelInternal::kPreviewSubjectName ) ) : nullptr;
-        if ( pSubject != nullptr )
-            (void)pSubject->addComponent<VFXComponent>(); // 효과 파일은 문서를 읽은 뒤 건다(syncPreviewSubjectEffect)
+        _model.populateScene( scene );
         getPreviewViewport().frameSphere( float3{ 0.0f, VFXPreviewPanelInternal::kFrameRadius * 0.5f, 0.0f }, VFXPreviewPanelInternal::kFrameRadius );
-        _previewEffectPath.clear(); // 새 씬의 효과에는 아직 효과 파일이 없다
-    }
-
-    VFXComponent* VFXPreviewPanel::findPreviewSubject() const
-    {
-        Scene*             pScene   = getPreviewScene();
-        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-        GameObject*        pSubject = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( VFXPreviewPanelInternal::kPreviewSubjectName ) ) : nullptr;
-        return pSubject != nullptr ? pSubject->getComponent<VFXComponent>() : nullptr;
-    }
-
-    void VFXPreviewPanel::syncPreviewSubjectEffect()
-    {
-        const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
-        if ( bDocumentReady == false || _previewEffectPath == getLoadedAssetPath() )
-            return;
-        VFXComponent* pVFX = findPreviewSubject();
-        if ( pVFX == nullptr )
-            return;
-        // 미리보기 씬은 플레이하지 않는다(틱만) — 재생은 이 창이 시작한다.
-        pVFX->setEffectPath( getLoadedAssetPath() );
-        pVFX->play();
-        _previewEffectPath = getLoadedAssetPath();
-        SW_LOG_INFO( "VFX Preview playing '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
     }
 } // namespace sw::editor

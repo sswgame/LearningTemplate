@@ -1,18 +1,13 @@
 /**
  * @file VFXPreviewPanel.h
  * @brief 파티클 효과(`*.vfx.xml`)를 미리보기 씬에서 재생해 보는 창입니다(유니티 Particle Effect 미리보기, 언리얼 Niagara 에디터 뷰포트에 해당).
+ * @details 방출기 표 · 효과 걸기는 `VFXPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-
-namespace sw
-{
-    class VFXComponent;
-} // namespace sw
+#include "Editor/Panels/VFX/Model/VFXPreviewModel.h"
 
 namespace sw::editor
 {
@@ -43,27 +38,11 @@ namespace sw::editor
         [[nodiscard]] bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
 
     private:
-        /** @brief 방출기 하나의 요약(목록 표시용)입니다. */
-        struct EmitterRow
-        {
-            string _name{};
-            string _texturePath{};
-            uint32 _maxParticles{ 0 };
-            bool   _bAdditive{ false };
-            bool   _bLooping{ false };
-        };
-
         bool                acceptsDocumentPath( string_view assetPath ) const override;
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬에 효과 오브젝트 하나(`PreviewSubject`)를 스폰합니다. */
         void populatePreviewScene( Scene& scene ) override;
-        /** @brief 미리보기 씬의 효과입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
-        VFXComponent* findPreviewSubject() const;
-        /** @brief 미리보기 효과가 지금 문서를 재생하게 합니다(문서가 바뀌었거나 다시 읽었을 때만). */
-        void syncPreviewSubjectEffect();
 
-        vector<EmitterRow> _listEmitterRow;
-        string             _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 그리기가 다시 건다)
-        string             _status;
+        VFXPreviewModel _model;
     };
 } // namespace sw::editor
