@@ -5,6 +5,8 @@
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
 #if SW_PROFILER_TRACE_ENABLED
@@ -16,7 +18,7 @@ namespace sw
         [[nodiscard]] bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            outValue = ProfilerTraceExport::isRecording() ? 1.0 : 0.0;
+            outValue = ProfilerTraceExport::isRecording( engine::getSubsystem<FrameProfiler>() ) ? 1.0 : 0.0;
             return true;
         }
     } // namespace

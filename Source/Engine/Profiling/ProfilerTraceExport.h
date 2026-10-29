@@ -111,8 +111,8 @@ namespace sw
          */
         [[nodiscard]] static bool startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
                                                   string& outReply );
-        /** @brief 긴 캡처가 진행 중이면 true 입니다. */
-        static bool isRecording();
+        /** @brief @p profiler 의 긴 캡처가 진행 중이면 true 입니다(상태는 프로파일러의 `ProfilerTraceSession` — 아무 스레드나 읽어도 된다). */
+        static bool isRecording( const FrameProfiler& profiler );
         /** @brief 긴 캡처의 시간이 다 됐으면 멈추고 저장합니다. 진행 중이 아니면 atomic 하나 읽고 돌아옵니다. 게임 스레드가 부릅니다. */
         static void updateRecording( FrameProfiler& profiler );
         /**

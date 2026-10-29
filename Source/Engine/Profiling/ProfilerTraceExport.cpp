@@ -758,28 +758,6 @@ namespace sw
 
     namespace
     {
-        /** @brief 진행 중인 긴 캡처입니다. 시작과 끝이 모두 게임 스레드라 잠금이 없고, 다른 스레드는 `_bActive` 만 읽습니다. */
-        struct LongRecording
-        {
-            atomic<bool> _bActive{ false };
-            int64        _endNanos{ 0 }; ///< 0 이면 시간 제한 없음(`finishRecording` 이 끝낸다)
-            string       _path;
-            string       _processName;
-        };
-        LongRecording g_longRecording;
-
-        /** @brief 느린 틱 자동 캡처의 상태입니다. 게임 스레드만 만집니다. */
-        struct SlowFrameCapture
-        {
-            int64  _cooldownEndNanos{ 0 };
-            uint64 _slowBeginNanos{ 0 };
-            uint64 _slowEndNanos{ 0 };
-            uint32 _framesUntilSave{ 0 }; ///< 0 이면 저장 대기 없음
-            uint32 _savedFileCount{ 0 };
-            bool   _bRecordingByCapture{ false }; ///< 이 캡처가 링 버퍼 기록을 켰다 — 끌 때 되돌린다
-        };
-        SlowFrameCapture g_slowFrameCapture;
-
         /** @brief 모은 사건을 머리말과 함께 @p path 에 씁니다. */
         [[nodiscard]] bool writeTraceFile( const string& path, const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
                                            const vector<string>& listSlotName, const ProfilerTraceMeta& meta, string& outReply )
@@ -840,43 +818,46 @@ namespace sw
     bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
                                               string& outReply )
     {
-        if ( g_longRecording._bActive.load( std::memory_order_acquire ) )
+        ProfilerTraceSession& session = profiler.getTraceSession();
+        if ( session._bLongRecordingActive.load( std::memory_order_acquire ) )
         {
             outReply = "a trace recording is already running";
             return false;
         }
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
-        g_longRecording._endNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * constant::kNanosecondsPerSecond ) : 0;
-        g_longRecording._path        = string( path );
-        g_longRecording._processName = string( processName );
-        g_longRecording._bActive.store( true, std::memory_order_release );
+        session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * constant::kNanosecondsPerSecond ) : 0;
+        session._longRecordingPath        = string( path );
+        session._longRecordingProcessName = string( processName );
+        session._bLongRecordingActive.store( true, std::memory_order_release );
         outReply = seconds > 0.0 ? "recording " + to_string( static_cast<int64>( seconds ) ) + " s - the file is written when it ends"
                                  : string( "recording until finished" );
         return true;
     }
 
-    bool ProfilerTraceExport::isRecording()
+    bool ProfilerTraceExport::isRecording( const FrameProfiler& profiler )
     {
-        return g_longRecording._bActive.load( std::memory_order_acquire );
+        return profiler.getTraceSession()._bLongRecordingActive.load( std::memory_order_acquire );
     }
 
     void ProfilerTraceExport::updateRecording( FrameProfiler& profiler )
     {
-        if ( g_longRecording._bActive.load( std::memory_order_acquire ) == false )
+        const ProfilerTraceSession& session = profiler.getTraceSession();
+        if ( session._bLongRecordingActive.load( std::memory_order_acquire ) == false )
             return;
-        if ( g_longRecording._endNanos == 0 || MonotonicClock::nowNanoseconds() < g_longRecording._endNanos )
+        if ( session._longRecordingEndNanos == 0 || MonotonicClock::nowNanoseconds() < session._longRecordingEndNanos )
             return;
         (void)finishRecording( profiler ); // 결과는 finishRecording 이 로그로 남긴다
     }
 
     bool ProfilerTraceExport::finishRecording( FrameProfiler& profiler )
     {
-        if ( g_longRecording._bActive.load( std::memory_order_acquire ) == false )
+        ProfilerTraceSession& session = profiler.getTraceSession();
+        if ( session._bLongRecordingActive.load( std::memory_order_acquire ) == false )
             return false;
         ProfilerTimeline& timeline = profiler.getTimeline();
         timeline.endLongCapture();
-        g_longRecording._bActive.store( false, std::memory_order_release );
+        session._bLongRecordingActive.store( false, std::memory_order_release );
 
         vector<ProfilerTimelineThread> listThread;
         vector<uint64>                 listFrameBegin;
@@ -886,10 +867,10 @@ namespace sw
             SW_LOG_WARNING( "Trace recording ended with no events" );
             return false;
         }
-        ProfilerTraceMeta meta = makeCurrentMeta( g_longRecording._processName );
+        ProfilerTraceMeta meta = makeCurrentMeta( session._longRecordingProcessName );
         meta._bTruncated       = bTruncated;
 
-        const string savedPath = g_longRecording._path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : g_longRecording._path;
+        const string savedPath = session._longRecordingPath.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : session._longRecordingPath;
         string       reply;
         if ( writeTraceFile( savedPath, listThread, listFrameBegin, collectSlotNames( profiler ), meta, reply ) == false )
         {
@@ -903,15 +884,15 @@ namespace sw
 
     void ProfilerTraceExport::updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName )
     {
-        SlowFrameCapture& capture  = g_slowFrameCapture;
-        ProfilerTimeline& timeline = profiler.getTimeline();
+        ProfilerTraceSession& capture  = profiler.getTraceSession();
+        ProfilerTimeline&     timeline = profiler.getTimeline();
         if ( gv_traceSlowTickMs <= 0 )
         {
-            if ( capture._bRecordingByCapture )
+            if ( capture._bSlowRecordingByCapture )
             {
                 timeline.setRecording( false );
-                capture._bRecordingByCapture = false;
-                capture._framesUntilSave     = 0;
+                capture._bSlowRecordingByCapture = false;
+                capture._slowFramesUntilSave     = 0;
             }
             return;
         }
@@ -920,13 +901,13 @@ namespace sw
             // 링 버퍼가 돌고 있어야 넘긴 틱의 앞을 저장할 수 있다. 다른 사람이 끈 기록도 다시 켠다(이 스위치를 켠 동안은 늘 켜져 있다).
             profiler.setEnabled( true );
             timeline.setRecording( true );
-            capture._bRecordingByCapture = true;
+            capture._bSlowRecordingByCapture = true;
             return;
         }
 
-        if ( capture._framesUntilSave > 0 )
+        if ( capture._slowFramesUntilSave > 0 )
         {
-            if ( --capture._framesUntilSave > 0 )
+            if ( --capture._slowFramesUntilSave > 0 )
                 return;
             ProfilerTraceMeta meta      = makeCurrentMeta( processName );
             const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::kNanosecondsPerMicrosecond;
@@ -936,7 +917,7 @@ namespace sw
             string       reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
             {
-                ++capture._savedFileCount;
+                ++capture._slowSavedFileCount;
                 SW_LOG_WARNING( "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, gv_traceSlowTickMs, path );
             }
             else
@@ -944,18 +925,18 @@ namespace sw
                 SW_LOG_WARNING( "Slow tick %# us - trace not saved: %#", tickMicro, reply );
             }
             // 저장 자체가 이 틱을 늦췄다 — 쿨다운은 저장이 끝난 뒤부터 센다.
-            capture._cooldownEndNanos = MonotonicClock::nowNanoseconds() + static_cast<int64>( kSlowFrameCooldownSeconds * constant::kNanosecondsPerSecond );
+            capture._slowCooldownEndNanos = MonotonicClock::nowNanoseconds() + static_cast<int64>( kSlowFrameCooldownSeconds * constant::kNanosecondsPerSecond );
             return;
         }
 
         const uint64 budgetNanos = static_cast<uint64>( gv_traceSlowTickMs ) * 1000000ull;
         if ( frameEndNanos <= frameBeginNanos || frameEndNanos - frameBeginNanos <= budgetNanos )
             return;
-        if ( capture._savedFileCount >= kSlowFrameMaxFileCount || MonotonicClock::nowNanoseconds() < capture._cooldownEndNanos )
+        if ( capture._slowSavedFileCount >= kSlowFrameMaxFileCount || MonotonicClock::nowNanoseconds() < capture._slowCooldownEndNanos )
             return;
-        capture._slowBeginNanos  = frameBeginNanos;
-        capture._slowEndNanos    = frameEndNanos;
-        capture._framesUntilSave = kSlowFrameFramesAfter;
+        capture._slowBeginNanos      = frameBeginNanos;
+        capture._slowEndNanos        = frameEndNanos;
+        capture._slowFramesUntilSave = kSlowFrameFramesAfter;
     }
 
     bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,

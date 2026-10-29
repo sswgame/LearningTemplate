@@ -20,6 +20,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/string.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Macros.h"
@@ -42,6 +43,32 @@ namespace sw
 #if SW_PROFILER_BACKEND_COMPILED
         const ProfileZoneSite* _pSite; ///< 외부 출력 지점(프로세스 수명, 없으면 nullptr)
 #endif
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct ProfilerTraceSession
+     * @brief 트레이스 저장(`ProfilerTraceExport`)이 프레임을 넘어 드는 세션 상태입니다 — 진행 중인 긴 캡처와 느린 틱 자동 캡처. 프로파일러가 값으로 든다.
+     * @details 캡처는 그 프로파일러의 타임라인을 모으므로 상태도 프로파일러의 것이다(예전에는 `ProfilerTraceExport.cpp` 의 파일 정적이었다). 시작 · 끝 · 갱신은
+     *          모두 게임 스레드라 잠금이 없고, 다른 스레드는 `_bLongRecordingActive` 만 읽는다. 언리얼 `FTraceAuxiliary` 의 세션 상태 자리.
+     *          Shipping 에는 트레이스 저장이 없어 쓰는 곳이 없다 — 칸 배치를 구성마다 가르지 않으려고 늘 둔다.
+     */
+    struct ProfilerTraceSession
+    {
+        // 긴 캡처(`profile.trace record` · `-gv_profileTracePath`)
+        atomic<bool> _bLongRecordingActive{ false };
+        int64        _longRecordingEndNanos{ 0 }; ///< 0 이면 시간 제한 없음(`finishRecording` 이 끝낸다)
+        string       _longRecordingPath;
+        string       _longRecordingProcessName;
+        // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)
+        int64  _slowCooldownEndNanos{ 0 };
+        uint64 _slowBeginNanos{ 0 };
+        uint64 _slowEndNanos{ 0 };
+        uint32 _slowFramesUntilSave{ 0 }; ///< 0 이면 저장 대기 없음
+        uint32 _slowSavedFileCount{ 0 };
+        bool   _bSlowRecordingByCapture{ false }; ///< 느린 틱 캡처가 링 버퍼 기록을 켰다 — 끌 때 되돌린다
     };
 } // namespace sw
 
@@ -130,6 +157,9 @@ namespace sw
         /** @brief 스레드 미니 타임라인입니다(에디터 프로파일러 패널의 Timeline 탭). 계측이 켜져 있고 타임라인이 기록 중일 때만 사건이 쌓입니다. */
         ProfilerTimeline&       getTimeline() { return _timeline; }
         const ProfilerTimeline& getTimeline() const { return _timeline; }
+        /** @brief 트레이스 저장의 세션 상태입니다(긴 캡처 · 느린 틱 캡처 — `ProfilerTraceExport` 만 쓴다). */
+        ProfilerTraceSession&       getTraceSession() { return _traceSession; }
+        const ProfilerTraceSession& getTraceSession() const { return _traceSession; }
 
         // ------------------------------------------------------------------------------
         // 실시간 조회 — 에디터 프로파일러 패널이 프레임마다 읽는다(게임 스레드가 쓰는 중에 다른 스레드가 읽어도 된다)
@@ -198,11 +228,12 @@ namespace sw
         static void plotCounter( IProfilerBackend& backend, Scope& scope, uint64 value );
 
     private:
-        unique_ptr<Scope[]> _arrScope{ make_unique<Scope[]>( kMaxScope ) }; ///< 힙에 둔다 — 구간 512 개면 1 MB 라 스택(테스트의 지역 프로파일러)에 못 놓는다
-        ProfilerTimeline    _timeline;
-        atomic<uint32>      _scopeCount{ 0 };
-        atomic<uint64>      _frameCount{ 0 };
-        atomic<bool>        _bEnabled{ false };
+        unique_ptr<Scope[]>  _arrScope{ make_unique<Scope[]>( kMaxScope ) }; ///< 힙에 둔다 — 구간 512 개면 1 MB 라 스택(테스트의 지역 프로파일러)에 못 놓는다
+        ProfilerTimeline     _timeline;
+        ProfilerTraceSession _traceSession; ///< 트레이스 저장의 긴 캡처 · 느린 틱 캡처 상태
+        atomic<uint32>       _scopeCount{ 0 };
+        atomic<uint64>       _frameCount{ 0 };
+        atomic<bool>         _bEnabled{ false };
     };
 } // namespace sw
 
