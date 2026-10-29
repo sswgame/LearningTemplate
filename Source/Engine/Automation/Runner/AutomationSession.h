@@ -14,7 +14,7 @@
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #include "Engine/Automation/Scenario/ScenarioRecorder.h"
-#include "Engine/EngineFrameObserver.h"
+#include "Engine/EngineFrameHooks.h"
 
 namespace sw
 {
@@ -23,9 +23,9 @@ namespace sw
 
     /**
      * @class AutomationSession
-     * @brief 엔진 루프에 프레임 관찰자(`IEngineFrameObserver`)로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
+     * @brief 엔진 루프에 프레임 훅(`EngineFrameHooks`, `makeFrameHooks`)으로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
      * @details 호스트 범위의 서브시스템입니다(App 이 엔진을 세우기 전에 걸고, 전용 서버는 시나리오를 쓰지 않아 걸지 않는다). 서브시스템으로서의 초기화는 하는 일이 없고,
-     *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::registerFrameObserver` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
+     *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::registerFrameHooks( makeFrameHooks() )` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
      *          엔진이 내려가기 전에 `shutdownSubsystem` 이 비웁니다 — 호스트 범위는 엔진보다 오래 살기 때문에 런처가 엔진 종료 앞에서 이 서브시스템만 먼저 내립니다
      *          (모듈 라이브러리 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
@@ -36,7 +36,7 @@ namespace sw
      *          끝까지 돌면 반복하거나(`_bLoop`) 끝을 알린다. 사람이 키보드 · 마우스를 건드리면 멈출 수 있다(`_bStopOnHumanInput` — 데모 · 어트랙트).
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API AutomationSession : public IEngineFrameObserver, public ISubsystem, public IScenarioPlayer
+    class SW_API AutomationSession : public ISubsystem, public IScenarioPlayer
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */
@@ -82,31 +82,33 @@ namespace sw
         /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
         bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
 
+        /** @brief 이 세션의 네 훅을 묶습니다(`Engine::registerFrameHooks` 에 넘긴다). */
+        EngineFrameHooks makeFrameHooks();
         /** @brief 프레임 시작(입력 `beginFrame` 전)입니다. 지금 단계의 시작 조건 · 가상 입력 붙이기 · 입력 전 단계를 돌립니다. 입력이 없으면 아무것도 하지 않습니다. */
-        void onFrameBegin( const EngineFrameContext& context ) override;
+        void onFrameBegin( const EngineFrameContext& context );
         /**
          * @brief 프레임 끝(씬 틱과 렌더 제출 뒤, 입력 프레임을 닫기 전)입니다. 문맥의 스크린샷 수(프로세스 전체)에서 단계 기준선을 빼 실행기에 넘깁니다.
-         * @return 체인이 끝났으면 프로세스 종료 코드, 아니면 `kRunning` 입니다(입력이 없어도 `kRunning`).
+         * @return 체인이 끝났으면 프로세스 종료 코드, 아니면 `kEngineFrameRunning` 입니다(입력이 없어도 `kEngineFrameRunning`).
          */
-        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context );
         /** @brief 씬 틱 뒤 — `<Screenshot>` 이 요청한 경로를 이번 프레임의 패킷에 맡깁니다(`ScreenshotRequestQueue::putForNextPacket`, 앞 것이 남았으면 다음 프레임). */
-        void onAfterSceneTick( const EngineFrameContext& context ) override;
+        void onAfterSceneTick( const EngineFrameContext& context );
         /** @brief 세션이 엔진에서 떨어집니다(App 이 프레임 구독을 놓기 전) — 창 제목 추적을 처음으로 돌린다. */
         void onDetachedFromEngine() { _runTitle.reset(); }
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. 지금 단계를 그 결과로 끝맺고, 돌릴 단계가 남았으면 실패로 봅니다(`CloseWindow` 는 마지막 단계에만 둔다).
-         * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kRunning` 입니다.
+         * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kEngineFrameRunning` 입니다.
          */
-        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context );
 
     private:
         /** @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다. */
         void startStage( uint32 completedScreenshotCount );
-        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
+        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
         [[nodiscard]] int32 onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount );
         /** @brief 재생 실행기를 새로 세웁니다(처음 · 반복). */
         void startPlayback();
-        /** @brief 재생의 프레임 끝입니다 — 사람 입력 · 단계 결과를 보고 반복 · 끝을 정한다. 늘 `kRunning`(재생은 프로세스를 끝내지 않는다). */
+        /** @brief 재생의 프레임 끝입니다 — 사람 입력 · 단계 결과를 보고 반복 · 끝을 정한다. 늘 `kEngineFrameRunning`(재생은 프로세스를 끝내지 않는다). */
         int32 updatePlayback( const EngineFrameContext& context );
         /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */
         void endPlayback( ScenarioPlayEnd end, InputManager* pInput );

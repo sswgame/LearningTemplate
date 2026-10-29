@@ -4,7 +4,7 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# DevTools — 엔진 확장점(`IEngineStartupExtension` · `IEngineFrameObserver`)에 붙는다(`DevToolsHost`). 엔진은 이 단위를 모른다.
+# DevTools — 엔진 확장점(기동 확장 델리게이트 · 프레임 훅 `EngineFrameHooks`)에 붙는다(`DevToolsHost`). 엔진은 이 단위를 모른다.
 # 링크하는 쪽: 개발 App · Server(호스트 범위에 `DevToolsHost`), EditorModule(설정 · 에셋 감시), GameFramework 의 개발 감시.
 # 늘 정의하되 `EXCLUDE_FROM_ALL` 이다 — 배포 호스트는 링크하지 않으므로 짓지 않는다(배포에서도 지어지는 에디터 테스트만 링크한다).
 # 공유 라이브러리다 — 여러 이미지(App · EditorModule · GameFramework)가 링크하므로 정적이면 정적 등록이 이미지마다 돈다(언리얼 Developer 모듈도 DLL).

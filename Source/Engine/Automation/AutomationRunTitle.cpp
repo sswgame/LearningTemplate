@@ -8,7 +8,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/EngineFrameObserver.h"
+#include "Engine/EngineFrameHooks.h"
 #include "Engine/Window/IWindowTitleTarget.h"
 
 #include <algorithm>

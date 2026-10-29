@@ -6,12 +6,12 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Automation/Runner/AutomationOutcome.h"
-#include "Engine/EngineFrameObserver.h"
+#include "Engine/EngineFrameHooks.h"
 
 namespace sw
 {
-    /** @brief `AutomationSession::onFrameEnd` 가 아직 끝나지 않았음을 알리는 값입니다(`IEngineFrameObserver::kRunning` 그 자체 — 값을 따로 쓰지 않는다). */
-    inline constexpr int32 kAutomationExitCodeRunning = IEngineFrameObserver::kRunning;
+    /** @brief `AutomationSession::onFrameEnd` 가 아직 끝나지 않았음을 알리는 값입니다(`kEngineFrameRunning` 그 자체 — 값을 따로 쓰지 않는다). */
+    inline constexpr int32 kAutomationExitCodeRunning = kEngineFrameRunning;
 
     /**
      * @brief 결과의 프로세스 종료 코드입니다. 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 15 처리하지 않은 로그(14 는 없앤 "미확정"이라 비워 둔다).

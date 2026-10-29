@@ -87,7 +87,6 @@
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
 #include "Engine/Asset/AssetDatabase.h"
-#include "Engine/EngineStartupExtension.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
@@ -107,7 +106,6 @@
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
-#include "Engine/EngineFrameObserver.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -143,7 +141,9 @@ namespace sw
         , _configReloadedSubscription{}
         , _listCodecSubscription{}
         , _debugKeyActions{}
-        , _listFrameObserver{}
+        , _listFrameHook{}
+        , _nextFrameHookID{ 1 }
+        , _startupExtension{}
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
         , _bQuitRequested{ false }
@@ -257,8 +257,8 @@ namespace sw
             startupSetup._bRenderer        = true;
             startupParts                   = engine::addStartupSubsystems( _startup, std::move( startupSetup ) );
             // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드 · 디버그 HUD)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
-            if ( IEngineStartupExtension* const pExtension = locateSubsystem<IEngineStartupExtension>( pHostScope ) )
-                pExtension->addStartupSubsystems( _startup, startupParts );
+            if ( _startupExtension.isBound() )
+                _startupExtension( _startup, startupParts );
             _listCodecSubscription = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
             _pConfigManager             = startupParts._pConfigManager;
@@ -300,10 +300,14 @@ namespace sw
         // 디버그 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 사용자 설정과 같은 폴더에 둔다. 디버그 키 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
         if ( bDedicatedServer == false && _headlessState.isHeadless() == false )
             _debugKeyActions.setUserBindingsPath( DebugKeyActions::makeUserBindingsPath( engine::getSubsystem<UserSettingsManager>().getUserFilePath() ) );
-        // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 텔레메트리가 섰을 때만 붙인다.
+        // 장면별 프레임 시간 · flush 는 프레임 훅으로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick` 훅). 텔레메트리가 섰을 때만 붙인다.
         // 떼는 것은 `shutdown` 이 단계 종료 전에 구독을 모두 끊는 것으로 끝난다.
         if ( telemetryService.isInitialized() )
-            _telemetryFrameSubscription = registerFrameObserver( &telemetryService );
+        {
+            EngineFrameHooks telemetryHooks{};
+            telemetryHooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &TelemetryService::onAfterSceneTick, &telemetryService );
+            _telemetryFrameSubscription      = registerFrameHooks( telemetryHooks );
+        }
         if ( bDedicatedServer )
         {
             // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)가 이 줄로 본다. 초기화 순서대로 적는다.
@@ -371,7 +375,7 @@ namespace sw
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _subscriptions.detachAll();
-        vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
+        vector<FrameHookEntry>{}.swap( _listFrameHook );
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
@@ -449,24 +453,26 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
-    Subscription Engine::registerFrameObserver( IEngineFrameObserver* pObserver )
+    Subscription Engine::registerFrameHooks( const EngineFrameHooks& hooks )
     {
-        if ( pObserver == nullptr )
+        const bool bAnyBound = hooks._onFrameBegin.isBound() || hooks._onAfterSceneTick.isBound() || hooks._onFrameEnd.isBound() || hooks._onWindowClosed.isBound();
+        if ( bAnyBound == false )
         {
-            SW_LOG_ERROR( "Frame observer is null - nothing is registered" );
+            SW_LOG_ERROR( "Frame hooks are all empty - nothing is registered" );
             return {};
         }
-        _listFrameObserver.push_back( pObserver );
-        return _subscriptions.issue( reinterpret_cast<uint64>( pObserver ) );
+        const uint64 id = _nextFrameHookID++;
+        _listFrameHook.push_back( FrameHookEntry{ id, hooks } );
+        return _subscriptions.issue( id );
     }
 
     void Engine::releaseSubscription( uint64 id )
     {
-        for ( size_t index = 0; index < _listFrameObserver.size(); ++index )
+        for ( size_t index = 0; index < _listFrameHook.size(); ++index )
         {
-            if ( reinterpret_cast<uint64>( _listFrameObserver[index] ) != id )
+            if ( _listFrameHook[index]._id != id )
                 continue;
-            _listFrameObserver.erase( _listFrameObserver.begin() + static_cast<ptrdiff_t>( index ) );
+            _listFrameHook.erase( _listFrameHook.begin() + static_cast<ptrdiff_t>( index ) );
             return;
         }
     }
@@ -484,13 +490,15 @@ namespace sw
 
     void Engine::onWindowClosed()
     {
-        if ( _listFrameObserver.empty() )
+        if ( _listFrameHook.empty() )
             return;
         const EngineFrameContext context = makeFrameContext();
-        for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+        for ( const FrameHookEntry& entry : _listFrameHook )
         {
-            const int32 observerExitCode = pObserver->onWindowClosed( context );
-            if ( observerExitCode == IEngineFrameObserver::kRunning )
+            if ( entry._hooks._onWindowClosed.isBound() == false )
+                continue;
+            const int32 observerExitCode = entry._hooks._onWindowClosed( context );
+            if ( observerExitCode == kEngineFrameRunning )
                 continue;
             // 관찰자의 결과가 앞선 종료 요청(프로파일 세션)의 코드보다 이긴다.
             _exitCode       = observerExitCode;
@@ -505,12 +513,13 @@ namespace sw
         // 실제 경과는 호스트가 따로 적는 단계가 아니라 프레임 시작의 인자다 — 적지 않은 호스트가 생길 수 없다.
         GameTimeScale::setUnscaledDeltaTime( unscaledDeltaSeconds );
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
-        if ( _listFrameObserver.empty() == false )
+        if ( _listFrameHook.empty() == false )
         {
             const EngineFrameContext context = makeFrameContext();
-            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            for ( const FrameHookEntry& entry : _listFrameHook )
             {
-                pObserver->onFrameBegin( context );
+                if ( entry._hooks._onFrameBegin.isBound() )
+                    entry._hooks._onFrameBegin( context );
             }
         }
         if ( _pInputManager != nullptr )
@@ -700,12 +709,13 @@ namespace sw
         if ( _pSceneManager != nullptr )
             SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
-        if ( _listFrameObserver.empty() == false )
+        if ( _listFrameHook.empty() == false )
         {
             const EngineFrameContext context = makeFrameContext();
-            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            for ( const FrameHookEntry& entry : _listFrameHook )
             {
-                pObserver->onAfterSceneTick( context );
+                if ( entry._hooks._onAfterSceneTick.isBound() )
+                    entry._hooks._onAfterSceneTick( context );
             }
         }
 
@@ -740,13 +750,15 @@ namespace sw
             _pMemoryBudget->onFrameEnd();
 
         // 관찰자의 프레임 뒤 단계(시나리오의 단언 · 환경 단계)는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
-        if ( _listFrameObserver.empty() == false )
+        if ( _listFrameHook.empty() == false )
         {
             const EngineFrameContext context = makeFrameContext();
-            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            for ( const FrameHookEntry& entry : _listFrameHook )
             {
-                const int32 observerExitCode = pObserver->onFrameEnd( context );
-                if ( observerExitCode != IEngineFrameObserver::kRunning )
+                if ( entry._hooks._onFrameEnd.isBound() == false )
+                    continue;
+                const int32 observerExitCode = entry._hooks._onFrameEnd( context );
+                if ( observerExitCode != kEngineFrameRunning )
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
         }

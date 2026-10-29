@@ -12,6 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineStartupExtension.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
@@ -41,7 +43,6 @@ namespace sw
     class FrameRenderer;
     class GlobalVariableManager;
     class IAudioService;
-    class IEngineFrameObserver;
     class InputManager;
     class InputMap;
     class IRHIDevice;
@@ -121,11 +122,13 @@ namespace sw
         // 도우미
         // ----------------------------------------------------------------------
         /**
-         * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부릅니다. 돌려받은 구독이 사라지면 떨어집니다.
-         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 관찰자와 구독은 붙인 쪽이 쥐고, 구독을 관찰자보다 먼저 놓습니다.
-         *          nullptr 이면 오류를 남기고 빈 구독을 돌려줍니다. 구독 하나가 등록 하나라 같은 관찰자를 두 번 붙이면 두 번 불립니다. `shutdown` 은 남은 구독을 모두 끊습니다.
+         * @brief 프레임 훅 묶음(`EngineFrameHooks`)을 붙입니다. 붙인 순서대로 부릅니다. 돌려받은 구독이 사라지면 떨어집니다.
+         * @details 루프는 훅이 무엇인지 모릅니다(자동화 시나리오 · 텔레메트리 · 개발 도구). 훅의 대상과 구독은 붙인 쪽이 쥐고, 구독을 대상보다 먼저 놓습니다.
+         *          칸이 모두 비었으면 오류를 남기고 빈 구독을 돌려줍니다. 구독 하나가 등록 하나라 같은 묶음을 두 번 붙이면 두 번 불립니다. `shutdown` 은 남은 구독을 모두 끊습니다.
          */
-        [[nodiscard]] Subscription registerFrameObserver( IEngineFrameObserver* pObserver );
+        [[nodiscard]] Subscription registerFrameHooks( const EngineFrameHooks& hooks );
+        /** @brief 기동 확장을 겁니다(`initialize` 전에 — 기동 단계 범위를 채운 뒤 · 초기화 전에 한 번 부른다). 대상의 수명은 건 쪽이 엔진 종료까지 쥔다. */
+        void setStartupExtension( const EngineStartupExtensionDelegate& extension ) { _startupExtension = extension; }
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
@@ -238,7 +241,15 @@ namespace sw
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
-        vector<IEngineFrameObserver*> _listFrameObserver;
+        /** @struct FrameHookEntry @brief 붙인 훅 묶음 하나와 그 구독 id 입니다. */
+        struct FrameHookEntry
+        {
+            uint64           _id;
+            EngineFrameHooks _hooks;
+        };
+        vector<FrameHookEntry>         _listFrameHook;
+        EngineStartupExtensionDelegate _startupExtension; ///< 호스트가 건 기동 확장(`setStartupExtension`, 없으면 비었다)
+        uint64                         _nextFrameHookID;  ///< 다음 훅 묶음의 구독 id(1 부터)
         /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
         Subscription _telemetryFrameSubscription;
 

@@ -35,6 +35,20 @@ namespace sw
 
     DevToolsHost::~DevToolsHost() = default;
 
+    EngineStartupExtensionDelegate DevToolsHost::makeStartupExtension()
+    {
+        return SW_DELEGATE_METHOD( EngineStartupExtensionDelegate, &DevToolsHost::addStartupSubsystems, this );
+    }
+
+    EngineFrameHooks DevToolsHost::makeFrameHooks()
+    {
+        EngineFrameHooks hooks{};
+        hooks._onFrameBegin     = SW_DELEGATE_METHOD( EngineFrameDelegate, &DevToolsHost::onFrameBegin, this );
+        hooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &DevToolsHost::onAfterSceneTick, this );
+        hooks._onFrameEnd       = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &DevToolsHost::onFrameEnd, this );
+        return hooks;
+    }
+
     void DevToolsHost::startConsole( bool bEnableEditor )
     {
         stopConsole();
@@ -115,6 +129,6 @@ namespace sw
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
             return 0;
-        return kRunning;
+        return kEngineFrameRunning;
     }
 } // namespace sw

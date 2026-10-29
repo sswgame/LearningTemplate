@@ -2,8 +2,6 @@
 
 #include "Server/ServerApp.h"
 
-#include "Engine/EngineStartupExtension.h"
-
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
@@ -227,14 +225,12 @@ namespace sw
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
 #if !defined( SW_SHIPPING )
-        // 개발 도구(셰이더 · 설정 리로드) — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
+        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
         {
             SW_MEMORY_SCOPE( EngineMisc );
             _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
         }
-        const bool bDevToolsBound = _host.bind<IEngineStartupExtension>( _pDevTools );
-        SW_ASSERT( bDevToolsBound );
-        (void)bDevToolsBound;
+        _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
 #endif
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
@@ -245,9 +241,9 @@ namespace sw
             return false;
         }
 #if !defined( SW_SHIPPING )
-        // 엔진이 섰다 — 개발 도구를 프레임 관찰자로 붙인다(프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
+        // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
         _pDevTools->setEngine( &_engine );
-        _devToolsFrameSubscription = _engine.registerFrameObserver( _pDevTools );
+        _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
 #endif
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )

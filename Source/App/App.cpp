@@ -23,7 +23,6 @@
 #if !defined( SW_SHIPPING )
     #include "DevTools/DevToolsHost.h"
 #endif
-#include "Engine/EngineStartupExtension.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -163,9 +162,9 @@ namespace sw
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
 #if !defined( SW_SHIPPING )
-        // 엔진이 섰다 — 개발 도구를 프레임 관찰자로 붙인다(프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
+        // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
         _pDevTools->setEngine( &_engine );
-        _devToolsFrameSubscription = _engine.registerFrameObserver( _pDevTools );
+        _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
 #endif
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
@@ -277,14 +276,12 @@ namespace sw
 #endif
         // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
 #if !defined( SW_SHIPPING )
-        // 개발 도구(셰이더 · 설정 리로드) — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
+        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
         {
             SW_MEMORY_SCOPE( EngineMisc );
             _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
         }
-        const bool bDevToolsBound = _host.bind<IEngineStartupExtension>( _pDevTools );
-        SW_ASSERT( bDevToolsBound );
-        (void)bDevToolsBound;
+        _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
 #endif
         const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
         SW_ASSERT( bStateStoreBound );
@@ -491,7 +488,7 @@ namespace sw
         if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
-        _automationFrameSubscription = _engine.registerFrameObserver( _pAutomationSession );
+        _automationFrameSubscription = _engine.registerFrameHooks( _pAutomationSession->makeFrameHooks() );
         ScenarioPlayback::bindPlayer( _pAutomationSession );
     }
 

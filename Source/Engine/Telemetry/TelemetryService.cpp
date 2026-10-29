@@ -609,25 +609,11 @@ namespace sw
         _frames.add( deltaSeconds * constant::kMillisecondsPerSecond );
     }
 
-    void TelemetryService::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
-    {
-    }
-
     void TelemetryService::onAfterSceneTick( const EngineFrameContext& context )
     {
         // 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다(기록 → 시계 순서). 동의가 없으면 둘 다 아무것도 하지 않는다.
         recordFrame( context._activeSceneID, context._deltaSeconds );
         update( context._deltaSeconds );
-    }
-
-    int32 TelemetryService::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
-    {
-        return kRunning;
-    }
-
-    int32 TelemetryService::onWindowClosed( [[maybe_unused]] const EngineFrameContext& context )
-    {
-        return kRunning;
     }
 
     void TelemetryService::emitSceneSummaryLocked()

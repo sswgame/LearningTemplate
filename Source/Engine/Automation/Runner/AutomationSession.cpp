@@ -173,6 +173,16 @@ namespace sw
         }
     }
 
+    EngineFrameHooks AutomationSession::makeFrameHooks()
+    {
+        EngineFrameHooks hooks{};
+        hooks._onFrameBegin     = SW_DELEGATE_METHOD( EngineFrameDelegate, &AutomationSession::onFrameBegin, this );
+        hooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &AutomationSession::onAfterSceneTick, this );
+        hooks._onFrameEnd       = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &AutomationSession::onFrameEnd, this );
+        hooks._onWindowClosed   = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &AutomationSession::onWindowClosed, this );
+        return hooks;
+    }
+
     void AutomationSession::onFrameBegin( const EngineFrameContext& context )
     {
         startRecordingWhenReady();
@@ -239,22 +249,22 @@ namespace sw
     int32 AutomationSession::updatePlayback( const EngineFrameContext& context )
     {
         if ( context._pInput == nullptr || _pRunner == nullptr )
-            return kRunning;
+            return kEngineFrameRunning;
         if ( _playOptions._bStopOnHumanInput && context._pInput->getHumanInputSerial() != _playHumanInputSerial )
         {
             endPlayback( ScenarioPlayEnd::StoppedByHuman, context._pInput );
-            return kRunning;
+            return kEngineFrameRunning;
         }
         const AutomationOutcome result = _pRunner->hasEnded() ? _pRunner->getResult() : _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationOutcome::Running )
-            return kRunning;
+            return kEngineFrameRunning;
         if ( result == AutomationOutcome::Passed && _playOptions._bLoop )
         {
             startPlayback(); // 어트랙트 루프 — 처음부터 다시
-            return kRunning;
+            return kEngineFrameRunning;
         }
         endPlayback( result == AutomationOutcome::Passed ? ScenarioPlayEnd::Completed : ScenarioPlayEnd::Failed, context._pInput );
-        return kRunning;
+        return kEngineFrameRunning;
     }
 
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
@@ -268,14 +278,14 @@ namespace sw
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
         const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
         if ( bNoRunnerToUpdate )
-            return kRunning;
+            return kEngineFrameRunning;
         const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
         const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationOutcome::Running )
-            return kRunning;
+            return kEngineFrameRunning;
         const int32 exitCode = onStageEnded( result, completedScreenshotCount );
-        if ( exitCode != kRunning )
+        if ( exitCode != kEngineFrameRunning )
             finishRecording();
         return exitCode;
     }
@@ -321,7 +331,7 @@ namespace sw
         if ( bNextStage )
         {
             startStage( completedScreenshotCount );
-            return kRunning;
+            return kEngineFrameRunning;
         }
         if ( _pChain->isChain() )
             SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getAutomationOutcomeName( _pChain->getFinalResult() ),
@@ -335,13 +345,13 @@ namespace sw
         if ( _bPlayback )
         {
             endPlayback( ScenarioPlayEnd::Stopped, context._pInput ); // 재생은 종료 코드를 정하지 않는다
-            return kRunning;
+            return kEngineFrameRunning;
         }
         finishRecording();
         // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
         if ( _pRunner == nullptr || _pRunner->hasEnded() )
-            return kRunning;
+            return kEngineFrameRunning;
         AutomationOutcome result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
         if ( _pChain != nullptr && _pChain->onStageEnded( result ) )

@@ -17,7 +17,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/EngineFrameObserver.h"
+#include "Engine/EngineFrameHooks.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -118,7 +118,7 @@ namespace sw
      *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(`gv_telemetryFolder`, 비면 사용자 설정 파일 옆 `telemetry/`)로
      *          서며 동의를 사용자 설정에 묶습니다. 같은 동의를 쓰는 크래시 보고(`CrashReportService`)의 지난 크래시 묶기도 이 단계가 세우고 내립니다.
      */
-    class SW_API TelemetryService : public ISubsystem, public IEngineFrameObserver
+    class SW_API TelemetryService : public ISubsystem
     {
     public:
         static constexpr const utf8* kConsentSettingID  = "telemetry.enabled";
@@ -131,12 +131,9 @@ namespace sw
         TelemetryService();
         ~TelemetryService() override;
 
-        // IEngineFrameObserver — 씬 틱 뒤만 쓴다. 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
-        void onFrameBegin( const EngineFrameContext& context ) override;
+        // 프레임 훅 — 씬 틱 뒤만 쓴다(엔진이 `EngineFrameHooks::_onAfterSceneTick` 에 붙인다).
         /** @brief 활성 씬(`_activeSceneID`)의 프레임 하나를 기록하고 세션 시계를 흘립니다(`recordFrame` → `update`). 동의가 없으면 둘 다 아무것도 하지 않습니다. */
-        void                onAfterSceneTick( const EngineFrameContext& context ) override;
-        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
-        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
+        void onAfterSceneTick( const EngineFrameContext& context );
 
         /** @brief 스풀 폴더 · 문맥을 정하고 섭니다. 동의는 꺼진 채로 시작합니다. 폴더의 지난 스풀 파일을 닫힌 파일로 이어 받습니다. */
         void initialize( string_view spoolFolder, const TelemetryContext& context );
