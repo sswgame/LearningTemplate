@@ -14,6 +14,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Task/TaskTypes.h"
 
 #include <condition_variable>
 
@@ -152,8 +153,11 @@ namespace sw
         uint32 getOutstandingCount() const;
         /** @brief 모든 요청이 끝날 때까지 기다립니다. */
         void waitIdle() const;
-        /** @brief 모든 요청이 끝날 때까지 최대 @p timeoutMs 밀리초 기다립니다. 모두 끝났으면 true 입니다(종료 경로용 — 끝없이 기다리지 않는다). */
-        [[nodiscard]] bool waitIdleFor( uint32 timeoutMs ) const;
+        /**
+         * @brief 태스크로 실은 완료 전달이 모두 끝날 때까지 기다린 뒤 모든 요청이 끝나기를 기다립니다(종료 경로 — 백엔드를 멈춘 뒤 부른다).
+         * @details 전달 태스크는 큐(`this`)를 쥔다. 기한을 두고 포기하지 않는다 — `waitStage( stage, owner )` 가 오래 걸리면 남은 태스크를 주기적으로 남긴다.
+         */
+        void waitDeliveriesForShutdown() const;
         /** @brief @p request 가 끝날 때까지 기다립니다. @p timeoutMs 가 0 이면 끝없이. 끝났으면 true 입니다. */
         bool waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const;
 
@@ -172,6 +176,8 @@ namespace sw
         uint32 _inFlightCount                                                       SW_GUARDED_BY( _mutex );
         uint32 _outstandingCount                                                    SW_GUARDED_BY( _mutex );
         bool _bStopping                                                             SW_GUARDED_BY( _mutex );
+        /** @brief 태스크로 실은 완료 전달 전부입니다. 생성자에서 만든다 — 전달은 여러 I/O 스레드가 내므로 그 뒤에는 원자 `addTask` 만 한다. */
+        TaskStageHandle _deliveryStage;
     };
 } // namespace sw
 

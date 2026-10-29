@@ -203,6 +203,7 @@ namespace sw
         , _inFlightCount{ 0 }
         , _outstandingCount{ 0 }
         , _bStopping{ false }
+        , _deliveryStage{ settings._pTaskManager != nullptr ? settings._pTaskManager->createStage( "AsyncIOComplete" ) : TaskStageHandle{} }
     {
     }
 
@@ -392,6 +393,7 @@ namespace sw
                 return;
             }
             handle.setPriority( AsyncFileIOInternal::toTaskPriority( pRequest->_priority ) );
+            _deliveryStage.addTask( handle ); // 제출 전에 넣는다(스테이지 계약). 스테이지는 생성자에서 만들어 두었다
             handle.submit();
             return;
         }
@@ -469,11 +471,12 @@ namespace sw
         { return _outstandingCount == 0; } );
     }
 
-    bool AsyncFileIOQueue::waitIdleFor( uint32 timeoutMs ) const
+    void AsyncFileIOQueue::waitDeliveriesForShutdown() const
     {
-        UniqueLock<mutex> lock{ _mutex };
-        return _cv.wait_for( lock, std::chrono::milliseconds( timeoutMs ), [this]() SW_REQUIRES_LOCK( _mutex )
-        { return _outstandingCount == 0; } );
+        if ( _pTaskManager != nullptr )
+            _pTaskManager->waitStage( _deliveryStage, "AsyncFileIO" );
+        // 백엔드가 멈췄으니 남은 전달은 이미 끝났거나(그 자리 전달) 위에서 기다린 태스크다 — 여기서는 곧 돌아온다.
+        waitIdle();
     }
 
     bool AsyncFileIOQueue::waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const
@@ -643,14 +646,8 @@ namespace sw
         // 순서: 새 요청을 막고 큐를 비운다 → OS 에 걸린 것이 끝나면 IO 스레드가 내려간다 → 태스크로 실은 완료 콜백까지 기다린다.
         _queue->requestStop();
         _backend->stop();
-        // 무제한 대기는 전달 태스크가 영영 안 돌면(멈춘 콜백 · 큐가 비워진 태스크 매니저) 종료를 영영 막는다. 시간 제한을 두고 넘으면 오류로 멈춘다:
-        // 전달 태스크가 큐(`this`)를 쥔 채 남아 있어, 그냥 큐를 지우면 해제된 메모리를 만지는 정의 안 된 동작이 된다. 폴백(그냥 지우고 이어 가기)은 두지 않는다.
-        constexpr uint32 kShutdownDeliveryTimeoutMs = 30000;
-        if ( _queue->waitIdleFor( kShutdownDeliveryTimeoutMs ) == false )
-        {
-            SW_FATAL( "Async file IO shutdown waited %# ms but %# request(s) never completed their callback - aborting instead of hanging", kShutdownDeliveryTimeoutMs,
-                      _queue->getOutstandingCount() );
-        }
+        // 전달 태스크가 큐(`this`)를 쥐고 있어 끝나기 전에 지우면 해제된 메모리를 만진다. 끝날 때까지 기다린다(기한 없이 — 오래 걸리면 주기적으로 오류를 남긴다).
+        _queue->waitDeliveriesForShutdown();
         _backend.reset();
         _queue.reset();
     }
