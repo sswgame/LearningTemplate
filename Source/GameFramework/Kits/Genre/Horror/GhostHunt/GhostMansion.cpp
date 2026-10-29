@@ -45,7 +45,7 @@ namespace sw
         _pInventory = refs._pInventory;
         _pWallet    = refs._pWallet;
         _seed       = seed;
-        _random.setSeed( GameHash::mix32( seed ^ 0xB00B00u ) );
+        _random.setSeed( HashUtil::mix32( seed ^ 0xB00B00u ) );
         _encounter.initialize( pCatalog, seed );
         _eventBuffer.clear();
         _listGhostEvent.clear();
@@ -171,7 +171,7 @@ namespace sw
         if ( _pLoot != nullptr && furniture._lootTable.empty() == false )
         {
             // 가구마다 따로 시드를 내므로, 어느 가구부터 뒤져도 같은 것이 나온다.
-            GameRandom random( GameHash::mix32( _seed ^ static_cast<uint32>( furnitureID.getHash() ) ) );
+            GameRandom random( HashUtil::mix32( _seed ^ static_cast<uint32>( furnitureID.getHash() ) ) );
             (void)_pLoot->roll( furniture._lootTable, random, outLoot );
         }
         return GhostSearchResult::Found;

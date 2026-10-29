@@ -177,7 +177,7 @@ namespace sw
 
     uint32 SRPGCampaign::getMissionSeed() const
     {
-        return GameHash::mix32( _seed ^ GameHash::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) );
+        return HashUtil::mix32( _seed ^ HashUtil::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) );
     }
 
     void SRPGCampaign::writeState( Archive& outArchive ) const

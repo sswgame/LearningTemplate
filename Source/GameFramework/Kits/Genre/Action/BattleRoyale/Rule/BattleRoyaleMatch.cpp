@@ -49,7 +49,7 @@ namespace sw
         settings._scorePerKill          = 0;
         _matchState.initialize( settings );
         if ( pCatalog != nullptr )
-            return _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), GameHash::mix32( seed ^ 0x5a4f4e45u ), pTerrain );
+            return _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), HashUtil::mix32( seed ^ 0x5a4f4e45u ), pTerrain );
         return true;
     }
 

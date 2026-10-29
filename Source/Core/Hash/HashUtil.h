@@ -71,6 +71,14 @@ namespace sw
             return value ^ ( value >> 31 );
         }
 
+        /** @brief 32 비트 섞기(lowbias32 — 상태 없는 정수 해시)입니다. 좌표 · 씨앗을 고르게 퍼뜨린다(절차 생성 · 노이즈). */
+        [[nodiscard]] static constexpr uint32 mix32( uint32 value ) noexcept
+        {
+            value = ( value ^ ( value >> 16 ) ) * 0x7feb352du;
+            value = ( value ^ ( value >> 15 ) ) * 0x846ca68bu;
+            return value ^ ( value >> 16 );
+        }
+
         /** @brief splitmix64 수열의 다음 값입니다 — 상태에 황금비를 더하고 마무리 섞기를 합니다. 씨앗 0 도 쓸 수 있습니다(고정점이 없다). */
         [[nodiscard]] static constexpr uint64 splitMix64Next( uint64& inoutState ) noexcept
         {

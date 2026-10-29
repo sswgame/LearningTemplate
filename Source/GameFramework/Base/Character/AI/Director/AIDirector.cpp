@@ -364,8 +364,8 @@ namespace sw
 
     uint32 AIDirector::computeChanceKey( int32 poolIndex, int32 encounterIndex ) const
     {
-        const uint32 poolKey = GameHash::mix32( _seed ^ static_cast<uint32>( poolIndex ) * 0x9e3779b1u );
-        return GameHash::mix32( poolKey ^ static_cast<uint32>( encounterIndex ) * 0x85ebca77u ^ _pickSerial * 0xc2b2ae35u );
+        const uint32 poolKey = HashUtil::mix32( _seed ^ static_cast<uint32>( poolIndex ) * 0x9e3779b1u );
+        return HashUtil::mix32( poolKey ^ static_cast<uint32>( encounterIndex ) * 0x85ebca77u ^ _pickSerial * 0xc2b2ae35u );
     }
 
     uint32 AIDirector::computeBlockMask( int32 poolIndex, int32 encounterIndex ) const

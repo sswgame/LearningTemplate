@@ -631,14 +631,14 @@ namespace sw
     {
         if ( count <= 1 )
             return 0;
-        const uint32 key = static_cast<uint32>( keyHash ) ^ GameHash::mix32( static_cast<uint32>( keyHash >> 32 ) );
-        return GameHash::mix32( seed ^ GameHash::mix32( key ) ) % count;
+        const uint32 key = static_cast<uint32>( keyHash ) ^ HashUtil::mix32( static_cast<uint32>( keyHash >> 32 ) );
+        return HashUtil::mix32( seed ^ HashUtil::mix32( key ) ) % count;
     }
 
     float32 CharacterAppearanceCatalog::pickUnit( uint32 seed, uint64 keyHash )
     {
-        const uint32 key = static_cast<uint32>( keyHash ) ^ GameHash::mix32( static_cast<uint32>( keyHash >> 32 ) );
-        return GameHash::toUnitFloat( GameHash::mix32( seed ^ GameHash::mix32( key ^ 0x68e31da4u ) ) );
+        const uint32 key = static_cast<uint32>( keyHash ) ^ HashUtil::mix32( static_cast<uint32>( keyHash >> 32 ) );
+        return GameHash::toUnitFloat( HashUtil::mix32( seed ^ HashUtil::mix32( key ^ 0x68e31da4u ) ) );
     }
 
     bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipSetCatalog& sets, const CustomizationSchemaCatalog& schemas,

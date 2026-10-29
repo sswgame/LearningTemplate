@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 
 namespace sw
@@ -110,30 +111,19 @@ namespace sw
 {
     /**
      * @struct GameHash
-     * @brief 좌표를 정수 해시로 바꿉니다(lowbias32 섞기). 상태가 없어서 어느 셀부터 물어도 같은 값이 나오므로, 절차 생성(지형, 나무, 광석)에 씁니다.
+     * @brief 좌표를 정수 해시로 바꿉니다(`HashUtil::mix32` 섞기). 상태가 없어서 어느 셀부터 물어도 같은 값이 나오므로, 절차 생성(지형, 나무, 광석)에 씁니다.
      */
     struct GameHash
     {
-        /** @brief 32 비트 섞기(lowbias32)입니다. */
-        static constexpr uint32 mix32( uint32 value )
-        {
-            value ^= value >> 16;
-            value *= 0x7feb352du;
-            value ^= value >> 15;
-            value *= 0x846ca68bu;
-            value ^= value >> 16;
-            return value;
-        }
-
         static constexpr uint32 hashCoord( int32 x, int32 z, uint32 seed )
         {
-            return mix32( static_cast<uint32>( x ) * 0x9e3779b1u ^ mix32( static_cast<uint32>( z ) * 0x85ebca77u ^ seed ) );
+            return HashUtil::mix32( static_cast<uint32>( x ) * 0x9e3779b1u ^ HashUtil::mix32( static_cast<uint32>( z ) * 0x85ebca77u ^ seed ) );
         }
 
         /** @brief 3 차원 셀의 해시입니다. y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘깁니다. */
         static constexpr uint32 hashCoord( int32 x, int32 y, int32 z, uint32 seed )
         {
-            return hashCoord( static_cast<int32>( static_cast<uint32>( x ) ^ mix32( static_cast<uint32>( y ) * 0xc2b2ae35u ^ seed ) ), z, seed );
+            return hashCoord( static_cast<int32>( static_cast<uint32>( x ) ^ HashUtil::mix32( static_cast<uint32>( y ) * 0xc2b2ae35u ^ seed ) ), z, seed );
         }
 
         /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 바꿉니다. 확률 비교에 씁니다. */

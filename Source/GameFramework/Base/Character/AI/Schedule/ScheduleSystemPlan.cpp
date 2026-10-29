@@ -328,7 +328,7 @@ namespace sw
                 {
                     const uint32    hash   = GameHash::hashCoord( day, hopStart, _settings._seed ^ npcKey );
                     const float32   angle  = GameHash::toUnitFloat( hash ) * ( 2.0f * MathUtil::kPi );
-                    const float32   length = radius * ::sqrtf( GameHash::toUnitFloat( GameHash::mix32( hash ) ) );
+                    const float32   length = radius * ::sqrtf( GameHash::toUnitFloat( HashUtil::mix32( hash ) ) );
                     ScheduleSegment hop    = segment;
                     hop._startMinute       = hopStart;
                     hop._endMinute         = MathUtil::min( endMinute, hopStart + stepMinutes );

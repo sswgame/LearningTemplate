@@ -20,7 +20,7 @@ namespace sw
     {
         uint32 mixMechArenaSeed( uint32 seed, int32 pilot, int32 slot )
         {
-            return GameHash::mix32( seed ^ GameHash::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
+            return HashUtil::mix32( seed ^ HashUtil::mix32( static_cast<uint32>( pilot ) * 0x9E3779B1u + static_cast<uint32>( slot ) ) );
         }
 
         /** @brief 기체 정의에서 기반 `Vitality` 설정을 만듭니다(범위는 `Vitality::initialize` 가 본다). */

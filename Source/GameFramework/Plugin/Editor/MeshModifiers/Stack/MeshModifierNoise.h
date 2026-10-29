@@ -72,12 +72,7 @@ namespace sw::editor::MeshModifierNoise
     /** @brief 정수 하나를 [0, 1) 로 섞어 냅니다(1 차원 노이즈 · 정점 위상용). */
     inline float32 hashToUnit( uint32 value )
     {
-        value ^= value >> 16;
-        value *= 0x7feb352du;
-        value ^= value >> 15;
-        value *= 0x846ca68bu;
-        value ^= value >> 16;
-        return static_cast<float32>( value & 0x00ffffffu ) / 16777216.0f;
+        return static_cast<float32>( HashUtil::mix32( value ) & 0x00ffffffu ) / 16777216.0f;
     }
 
     /** @brief 씨앗별 1 차원 값 노이즈 [-1, 1] 입니다(정수 칸 사이 smoothstep 보간). */

@@ -94,16 +94,6 @@ namespace sw
                     return false;
                 return readValue( reader, outValue );
             }
-
-            static uint64 mixBits( uint64 value )
-            {
-                value ^= value >> 30;
-                value *= HashUtil::kSplitMixMultiplier0;
-                value ^= value >> 27;
-                value *= HashUtil::kSplitMixMultiplier1;
-                value ^= value >> 31;
-                return value;
-            }
         };
     } // namespace
 } // namespace sw
@@ -430,7 +420,7 @@ namespace sw
         }
         uint64 hash = HashUtil::computeStringHash64( flag.data(), flag.size(), false );
         hash        = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( arrAccountByte ), sizeof( arrAccountByte ), false, hash );
-        return static_cast<int32>( RemoteConfigInternal::mixBits( hash ) % static_cast<uint64>( RemoteConfigValue::kFullRolloutPoints ) );
+        return static_cast<int32>( HashUtil::mix64( hash ) % static_cast<uint64>( RemoteConfigValue::kFullRolloutPoints ) );
     }
 
     const RemoteConfig::Entry* RemoteConfig::findEntry( string_view key, RemoteConfigValueType type ) const
