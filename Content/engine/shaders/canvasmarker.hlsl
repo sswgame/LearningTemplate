@@ -13,7 +13,7 @@
  * 켜지지 않은 기록(CPU 가 투영하는 마커 · 숨긴 마커)은 건드리지 않는다.
  *
  * 바인딩 계약: 읽기 t0 입력 행(g_MarkerRows, float4), 쓰기 u0 캔버스 사각형 버퍼(CanvasQuad — canvas.hlsl 이 읽는 같은 버퍼).
- * 입력 행 배치는 아래 kRow*, C++: CanvasRenderer::recordMarkerProjection — dispatchCompute( ceil(마커 수 / 64), 1, 1 ).
+ * 입력 행 배치는 아래 kRow*, C++: CanvasMarkerProjection::record — dispatchCompute( ceil(마커 수 / 64), 1, 1 ).
  */
 
 SW_ROOT_CONSTANTS_BEGIN
@@ -26,7 +26,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_MarkerRows, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_MarkerInstances, 1 ); // GPUScene 인스턴스 버퍼 — 인스턴스 칸이 있는 마커만 읽는다(C++ 은 칸이 없으면 자리표를 건다)
 SW_DECLARE_RW_STRUCTURED_BUFFER( CanvasQuad, g_MarkerQuadsRW, 0 );
 
-// 입력 행 배치(C++ CanvasRenderer 가 같은 순서로 올린다).
+// 입력 행 배치(C++ CanvasMarkerProjection::prepare 가 같은 순서로 올린다).
 static const uint kRowViewProjection = 0u; // 행 0..3 — 행 벡터 규약 뷰 · 투영 행렬의 행(clip = p.x * r0 + p.y * r1 + p.z * r2 + p.w * r3)
 static const uint kRowCamera         = 4u; // 카메라 xyz, asuint( 마커 수 )
 static const uint kRowViewport       = 5u; // UI 뷰포트 xy, UI 배율, 가장자리 여백(UI 단위)
