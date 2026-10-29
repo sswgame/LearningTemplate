@@ -549,28 +549,6 @@ namespace sw
         }
     }
 
-#if SW_WITH_EDITOR
-    bool TerrainComponent::saveHeightfield( string_view filePath ) const
-    {
-        if ( _heightfield.isValid() == false )
-            return false;
-        HeightfieldAsset data;
-        _heightfield.makeHeightfieldAsset( _heightMin, _heightMax, data );
-        return data.saveToFile( filePath );
-    }
-
-    bool TerrainComponent::saveSplat( string_view filePath ) const
-    {
-        if ( _heightfield.getSplatWidth() == 0 )
-            return false;
-        LayerWeightsAsset data;
-        data._width  = _heightfield.getSplatWidth();
-        data._height = _heightfield.getSplatHeight();
-        data._bytes  = _heightfield.getSplatBytes();
-        return data.saveToFile( filePath );
-    }
-#endif
-
     void TerrainComponent::writeState( Archive& outArchive ) const
     {
         outArchive << TerrainComponentInternal::kStateVersion;

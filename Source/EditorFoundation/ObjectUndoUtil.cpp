@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Scene/ObjectUndoUtil.h"
+#include "EditorFoundation/ObjectUndoUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

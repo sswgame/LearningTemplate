@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/EditorBuild.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -111,6 +110,10 @@ namespace sw
         SurfaceLayerWeights computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
         /** @brief CPU 높이장을 반환합니다(물리 충돌 `TerrainColliderComponent` 와 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
+        /** @brief 높이 범위의 아래 끝(m)입니다. 높이장 파일은 이 범위로 양자화한다(`TerrainHeightfield::makeHeightfieldAsset`). */
+        float32 getHeightMin() const { return _heightMin; }
+        /** @brief 높이 범위의 위 끝(m)입니다. */
+        float32 getHeightMax() const { return _heightMax; }
         /** @brief 높이장을 다시 읽거나 높이를 쓸 때마다(`reloadTerrain`, `writeHeights`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 비교합니다. */
         uint32 getHeightfieldGeneration() const { return _heightfieldGeneration; }
         /**
@@ -168,12 +171,6 @@ namespace sw
         [[nodiscard]] bool findEditedArea( uint32 sinceGeneration, uint32 sinceSplatRevision, float2& outMin, float2& outMax ) const;
         /** @brief 이 지형이 그리는 자기 스플랫 텍스처 평면 @p plane (0 = 레이어 0..3, 1 = 4..7, `SurfaceLayerWeights::kPlaneCount` 미만)의 캐시 경로(`cpu/terrain/...`)입니다. 가중치가 없거나 엔진 서비스가 없으면(CPU 테스트) 비어 있습니다. */
         const string& getCPUSplatPath( uint32 plane ) const { return _arrCPUSplatPath[plane]; }
-#if SW_WITH_EDITOR
-        /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 `_heightMin`..`_heightMax` 로 양자화). 높이장이 없으면 false 입니다. */
-        [[nodiscard]] bool saveHeightfield( string_view filePath ) const;
-        /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
-        [[nodiscard]] bool saveSplat( string_view filePath ) const;
-#endif
 
         /**
          * @brief 상태 스냅샷 계약(`ComponentStateStore`) — 마지막 `reloadTerrain` 뒤에 쓴 높이 · 스플랫을 씁니다. 쓴 것이 없으면 버전과 빈 표시만 씁니다.

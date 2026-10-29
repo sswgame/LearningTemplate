@@ -23,6 +23,8 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Environment/Terrain/HeightfieldAsset.h"
+#include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/FileSystem/AssetPaths.h"
@@ -457,6 +459,30 @@ namespace sw::editor
                 state._bStroking = false;
             }
 
+            /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 false 입니다. */
+            [[nodiscard]] static bool saveHeightfield( const TerrainComponent& terrain, string_view filePath )
+            {
+                const TerrainHeightfield& heightfield = terrain.getHeightfield();
+                if ( heightfield.isValid() == false )
+                    return false;
+                HeightfieldAsset data;
+                heightfield.makeHeightfieldAsset( terrain.getHeightMin(), terrain.getHeightMax(), data );
+                return data.saveToFile( filePath );
+            }
+
+            /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
+            [[nodiscard]] static bool saveSplat( const TerrainComponent& terrain, string_view filePath )
+            {
+                const TerrainHeightfield& heightfield = terrain.getHeightfield();
+                if ( heightfield.getSplatWidth() == 0 )
+                    return false;
+                LayerWeightsAsset data;
+                data._width  = heightfield.getSplatWidth();
+                data._height = heightfield.getSplatHeight();
+                data._bytes  = heightfield.getSplatBytes();
+                return data.saveToFile( filePath );
+            }
+
             /** @brief 마지막으로 고친 지형의 높이장과 스플랫을 원래 에셋 경로에 씁니다. */
             static void saveLastEdited( State& state )
             {
@@ -465,7 +491,7 @@ namespace sw::editor
                     return;
                 bool         bSaved          = true;
                 const string heightfieldPath = AssetPaths::findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
-                if ( heightfieldPath.empty() || pTerrain->saveHeightfield( heightfieldPath ) == false )
+                if ( heightfieldPath.empty() || saveHeightfield( *pTerrain, heightfieldPath ) == false )
                 {
                     SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
                     bSaved = false;
@@ -473,7 +499,7 @@ namespace sw::editor
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
                     const string splatPath = AssetPaths::findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
-                    if ( splatPath.empty() || pTerrain->saveSplat( splatPath ) == false )
+                    if ( splatPath.empty() || saveSplat( *pTerrain, splatPath ) == false )
                     {
                         SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
                         bSaved = false;

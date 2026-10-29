@@ -1,20 +1,17 @@
 /**
  * @file FileDialog.h
- * @brief 네이티브 파일 열기 · 저장 대화상자입니다. 편집기 빌드만 짓는다(`SW_WITH_EDITOR` — 언리얼 DesktopPlatform 처럼 개발 도구 전용).
- * @details 편집기 DLL 이 아니라 Core 에 두는 까닭: 대화상자는 분리된 스레드가 띄우고 사용자가 닫을 때까지 돌아오지 않는다. 그 스레드의 코드가
- *          핫 리로드로 내려가는 DLL 안에 있으면 내린 뒤에 돌아와 죽는다.
+ * @brief 네이티브 파일 열기 · 저장 대화상자입니다(언리얼 DesktopPlatform 자리 — 편집기 도구 전용).
+ * @details 핫 리로드되는 EditorModule 이 아니라 EditorFoundation 에 두는 까닭: 대화상자는 분리된 스레드가 띄우고 사용자가 닫을 때까지 돌아오지 않는다.
+ *          그 스레드의 코드가 리로드로 내려가는 DLL 안에 있으면 내린 뒤에 돌아와 죽는다. 결과 펌프는 편집기 프레임이 부른다.
  */
 #pragma once
-#include "Core/Foundation/EditorBuild.h"
-
-#if SW_WITH_EDITOR == 0
-    #error "FileDialog 는 편집기 빌드 전용이다 - 배포 빌드의 코드는 파일 대화상자를 쓰지 않는다"
-#endif
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "EditorFoundation/EditorFoundationExports.h"
 
 namespace sw
 {
@@ -45,7 +42,7 @@ namespace sw
     SW_DECLARE_DELEGATE( void, FileDialogDelegate, const vector<string>& fileName );
 
     /** @brief 네이티브 파일 대화상자입니다. **결과 델리게이트는 메인 스레드에서 불립니다**(`pumpResults`). */
-    class SW_API FileDialog
+    class SW_EDITOR_FOUNDATION_API FileDialog
     {
     public:
         /**

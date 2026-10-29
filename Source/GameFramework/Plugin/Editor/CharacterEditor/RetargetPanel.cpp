@@ -465,9 +465,9 @@ namespace sw::editor
 
     void RetargetPanel::drawChainRows()
     {
-        vector<RetargetChain>& listChain   = _profile.getChainsForEdit();
-        uint32                 removeIndex = invalid_index::kUint32;
-        bool                   bChanged    = false;
+        vector<RetargetChain> listChain   = _profile.getChains(); // 사본을 고쳐 바뀌었을 때 넣는다
+        uint32                removeIndex = invalid_index::kUint32;
+        bool                  bChanged    = false;
         for ( uint32 chainIndex = 0; chainIndex < static_cast<uint32>( listChain.size() ) && chainIndex < _listChainText.size(); ++chainIndex )
         {
             RetargetChain& chain = listChain[chainIndex];
@@ -527,17 +527,20 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "retarget.addChain" );
         if ( bChanged )
+        {
+            _profile.setChains( std::move( listChain ) );
             markEdited( "Retarget chains" );
+        }
     }
 
     void RetargetPanel::drawTargetPoseRows()
     {
-        using Internal                        = RetargetPanelInternal;
-        vector<RetargetPoseBone>& listPose    = _profile.getTargetPoseForEdit();
-        uint32                    removeIndex = invalid_index::kUint32;
-        bool                      bChanged    = false;
-        bool                      bDragged    = false;
-        const float32             fieldWidth  = 220.0f * EditorThemeUtil::getDPIScale();
+        using Internal                       = RetargetPanelInternal;
+        vector<RetargetPoseBone> listPose    = _profile.getTargetPose(); // 사본을 고쳐 바뀌었을 때 넣는다
+        uint32                   removeIndex = invalid_index::kUint32;
+        bool                     bChanged    = false;
+        bool                     bDragged    = false;
+        const float32            fieldWidth  = 220.0f * EditorThemeUtil::getDPIScale();
         for ( uint32 poseIndex = 0; poseIndex < static_cast<uint32>( listPose.size() ); ++poseIndex )
         {
             RetargetPoseBone& poseBone = listPose[poseIndex];
@@ -584,15 +587,18 @@ namespace sw::editor
         EditorSelfTestMarks::note( "retarget.targetPose.add" );
         EditorWidgets::drawTooltip( "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target" );
         if ( bChanged )
+        {
+            _profile.setTargetPose( std::move( listPose ) );
             markEdited( "Retarget pose" );
+        }
         else if ( bDragged )
             rebuildPreviewPoses();
     }
 
     void RetargetPanel::drawBonePairRows()
     {
-        vector<RetargetBonePair>& listPair    = _profile.getBonePairsForEdit();
-        uint32                    removeIndex = invalid_index::kUint32;
+        vector<RetargetBonePair> listPair    = _profile.getBonePairs(); // 사본을 고쳐 바뀌었을 때 넣는다
+        uint32                   removeIndex = invalid_index::kUint32;
         for ( uint32 pairIndex = 0; pairIndex < static_cast<uint32>( listPair.size() ); ++pairIndex )
         {
             ImGui::PushID( static_cast<int32>( pairIndex ) );
@@ -624,7 +630,10 @@ namespace sw::editor
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "retarget.addPair" );
         if ( bChanged )
+        {
+            _profile.setBonePairs( std::move( listPair ) );
             markEdited( "Retarget bone map" );
+        }
     }
 
     void RetargetPanel::drawInspection()

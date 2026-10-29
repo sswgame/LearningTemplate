@@ -15,8 +15,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "EditorFoundation/CommandStack.h"
+
 #include "Engine/Localization/LocText.h"
-#include "Engine/Scene/CommandStack.h"
 
 #include <imgui.h>
 

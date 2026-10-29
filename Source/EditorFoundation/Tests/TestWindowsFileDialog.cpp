@@ -4,10 +4,11 @@
  */
 #include "pch.h"
 
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/Windows/WindowsFileDialog.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "EditorFoundation/FileDialog.h"
+#include "EditorFoundation/Windows/WindowsFileDialog.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

@@ -681,8 +681,6 @@ namespace sw
         json += '\n';
         return json;
     }
-
-    #if SW_WITH_EDITOR
     bool ProfilerTraceExport::parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError )
     {
         using Internal = ProfilerTraceExportInternal;
@@ -756,7 +754,6 @@ namespace sw
         }
         return latest;
     }
-    #endif
 
     namespace
     {

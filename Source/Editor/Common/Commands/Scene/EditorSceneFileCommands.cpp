@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -16,11 +15,13 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 
+#include "EditorFoundation/CommandStack.h"
+#include "EditorFoundation/FileDialog.h"
+
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"

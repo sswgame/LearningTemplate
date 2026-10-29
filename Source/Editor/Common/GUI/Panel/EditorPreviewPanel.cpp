@@ -8,9 +8,10 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "EditorFoundation/ObjectUndoUtil.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

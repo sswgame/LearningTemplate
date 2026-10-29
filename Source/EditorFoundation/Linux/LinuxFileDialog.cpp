@@ -1,16 +1,17 @@
 #include "pch.h"
 
-#include "Core/File/Linux/LinuxFileDialog.h"
+#include "EditorFoundation/Linux/LinuxFileDialog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+
+#include "EditorFoundation/FileDialog.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/PlatformOSHeaders.h"

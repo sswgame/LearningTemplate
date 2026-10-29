@@ -22,6 +22,8 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "EditorFoundation/FileDialog.h"
+
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -59,10 +61,12 @@ namespace sw::editor
 
         struct EditorFrameStepsInternal
         {
-            /** @brief 1) 단축키, 메뉴가 미룬 패널 열기 요청, 씬 세션(세대 동기화 · 미저장 확인)을 처리합니다. */
+            /** @brief 1) 파일 대화상자 결과, 단축키, 메뉴가 미룬 패널 열기 요청, 씬 세션(세대 동기화 · 미저장 확인)을 처리합니다. */
             static void runCommands( EditorContext& context )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.commands" );
+                // 대화상자는 별도 스레드가 띄우고 결과만 큐에 담는다 — 여기(메인 스레드)서 넘긴다.
+                FileDialog::pumpResults();
                 context.getSubsystem<EditorInputActions>().processFrame( GameTimeScale::getUnscaledDeltaTime() );
                 EditorMenuBar::processOpenPanelRequests();
                 EditorMenuBar::processSceneSession();

@@ -1,11 +1,12 @@
 #include "pch.h"
 
-#include "Core/File/Windows/WindowsFileDialog.h"
+#include "EditorFoundation/Windows/WindowsFileDialog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+
+#include "EditorFoundation/FileDialog.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

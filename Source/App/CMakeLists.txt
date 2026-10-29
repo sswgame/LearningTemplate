@@ -38,6 +38,10 @@ target_link_libraries(App
 		sw_global_options
 )
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
+# 편집기 토대 — 편집기를 띄우는 개발 App 만. App 이 링크해 두므로 EditorModule 을 리로드해도 그 DLL 과 상태가 남는다(Source/EditorFoundation/CMakeLists.txt).
+if(TARGET EditorFoundation)
+	target_link_libraries(App PRIVATE EditorFoundation)
+endif()
 sw_configurePCH(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 sw_splitShippingDebugInfo(App)
 

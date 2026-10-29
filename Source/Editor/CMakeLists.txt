@@ -198,7 +198,7 @@ endforeach()
 function(sw_applyEditorCoreSettings TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
-	target_link_libraries(${TARGET_NAME} PRIVATE Engine ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
+	target_link_libraries(${TARGET_NAME} PRIVATE Engine EditorFoundation ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
 	set_target_properties(${TARGET_NAME} PROPERTIES
 		FOLDER "Source/Editor"
 		EXCLUDE_FROM_ALL ON
@@ -296,6 +296,7 @@ sw_addModuleLibrary(EditorModule
 	LOG_TAG "Editor"
 	FOLDER "Source/Editor"
 	SOURCES ${listEditorSource}
+	LINK_PUBLIC EditorFoundation
 	LINK_PRIVATE Engine ModuleAPI imgui imgui_nodeeditor imgui_notify imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
 	UNITY_BATCH 8
 	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).

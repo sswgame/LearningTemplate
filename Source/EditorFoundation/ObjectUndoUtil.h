@@ -1,19 +1,16 @@
 /**
- * @file Scene/ObjectUndoUtil.h
+ * @file EditorFoundation/ObjectUndoUtil.h
  * @brief 오브젝트 편집을 직렬화한 상태로 기록하는 Undo 데이터 명령입니다 — 코드는 엔진에 있어 에디터 모듈 핫 리로드를 넘습니다.
  */
 #pragma once
-#include "Core/Foundation/EditorBuild.h"
-
-#if SW_WITH_EDITOR == 0
-    #error "ObjectUndoUtil(편집기 되돌리기) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
-#endif
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "EditorFoundation/CommandStack.h"
+#include "EditorFoundation/EditorFoundationExports.h"
+
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
-#include "Engine/Scene/CommandStack.h"
 
 namespace sw
 {
@@ -54,7 +51,7 @@ namespace sw
      * @warning 이름 조회는 한 프레임 안에서 없애고 복원한 경우를 위한 것입니다. 옛 오브젝트가 지연 파괴를 기다리는 동안에는 그 id 가 아직 등록돼 있어
      *          `GameObjectManager::createGameObjectWithID` 가 새 id 를 줍니다(히스토리 점프 · 테스트처럼 프레임 없이 연달아 되돌릴 때).
      */
-    struct SW_API ObjectUndoUtil
+    struct SW_EDITOR_FOUNDATION_API ObjectUndoUtil
     {
         /** @brief 지금 상태(런타임 id 포함)를 찍습니다. nullptr 이면 빈 스냅샷입니다. */
         static ObjectSnapshot captureSnapshot( const GameObject* pObj );

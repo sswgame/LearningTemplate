@@ -336,7 +336,7 @@ namespace sw::editor
     {
         // 휴지통이 없는 플랫폼(Linux)은 지운다.
         if ( PlatformFileUtil::hasRecycleBin() == false )
-            return AssetDatabase::deleteAssetFile( absolutePath );
+            return deleteAsset( absolutePath );
 
         // 에셋과 짝 .meta 를 한 번에 보낸다.
         const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
@@ -355,7 +355,20 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
     {
-        return AssetDatabase::deleteAssetFile( absolutePath );
+        // `.meta` 는 **에셋이 실제로 지워진 뒤에만** 지운다 — 에셋 삭제가 실패했는데(잠긴 파일) `.meta` 를 지우면 남은 에셋이 다음에 새 GUID 를 받아
+        // 그 GUID 로 가리키던 참조(씬의 프리팹 · 머티리얼)가 끊긴다.
+        if ( absolutePath.empty() )
+            return false;
+        const string abs{ absolutePath };
+        if ( FileUtil::removeFile( abs ) == false )
+        {
+            SW_LOG_ERROR( "Could not delete '%#' - it and its .meta are kept", abs );
+            return false;
+        }
+        const string metaPath = AssetDatabase::metaPathFor( abs );
+        if ( FileUtil::exists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+            SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
+        return true;
     }
 
     uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )

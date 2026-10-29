@@ -1,18 +1,15 @@
 /**
- * @file Module/EditSessionState.h
+ * @file EditorFoundation/EditSessionState.h
  * @brief 에디터 인스턴스를 다시 만들 때(백엔드 교체 · 에디터 모듈 리로드) 새 인스턴스에 넘겨 줄 편집 세션 상태입니다 — 선택 · 미저장 표시.
  */
 #pragma once
-#include "Core/Foundation/EditorBuild.h"
-
-#if SW_WITH_EDITOR == 0
-    #error "EditSessionState(편집기 세션 상태) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
-#endif
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+
+#include "EditorFoundation/EditorFoundationExports.h"
 
 namespace sw
 {
@@ -23,7 +20,7 @@ namespace sw
      *          워크스페이스에 있어 인스턴스와 함께 사라지므로 여기에 맡긴다. 유니티의 `SessionState`(도메인 리로드를 넘는 에디터 값)와 같은 자리다.
      *          맡긴 뒤 씬이 바뀌었으면(씬 세대가 다르면) 찾아가지 않는다 — 옛 씬의 선택과 표시는 새 씬에 뜻이 없다.
      */
-    class SW_API EditSessionState final : public ISubsystem
+    class SW_EDITOR_FOUNDATION_API EditSessionState final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "EditSessionState";

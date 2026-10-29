@@ -6,7 +6,6 @@
 
 #include "Editor/Common/Input/EditorCommandGUI.h"
 
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -31,13 +30,15 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
 
+#include "EditorFoundation/CommandStack.h"
+#include "EditorFoundation/FileDialog.h"
+
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
-#include "Engine/Scene/CommandStack.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"
 

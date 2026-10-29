@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/File/FileDialog.h"
+#include "EditorFoundation/FileDialog.h"
 
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
@@ -10,9 +10,9 @@
 #include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/File/Windows/WindowsFileDialog.h"
+    #include "EditorFoundation/Windows/WindowsFileDialog.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/File/Linux/LinuxFileDialog.h"
+    #include "EditorFoundation/Linux/LinuxFileDialog.h"
 #endif
 
 namespace sw

@@ -10,8 +10,9 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 
+#include "EditorFoundation/CommandStack.h"
+
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

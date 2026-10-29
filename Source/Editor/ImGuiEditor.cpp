@@ -2,7 +2,6 @@
 
 #include "Editor/ImGuiEditor.h"
 
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -48,18 +47,20 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "EditorFoundation/CommandStack.h"
+#include "EditorFoundation/EditSessionState.h"
+#include "EditorFoundation/FileDialog.h"
+
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Module/EditSessionState.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"

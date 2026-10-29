@@ -17,6 +17,8 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
+#include "EditorFoundation/CommandStack.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -24,7 +26,6 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"

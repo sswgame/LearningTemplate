@@ -33,7 +33,6 @@ namespace sw
     class CameraComponent;
     class CommandLineManager;
     class CommandLineSubsystem;
-    class CommandStack;
     class CompressionCodecRegistry;
     class ConfigManager;
     class DebugDrawQueue;

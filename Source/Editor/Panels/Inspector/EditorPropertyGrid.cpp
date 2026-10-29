@@ -39,6 +39,8 @@
 #include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "EditorFoundation/CommandStack.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -50,7 +52,6 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"

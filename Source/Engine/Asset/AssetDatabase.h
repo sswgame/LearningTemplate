@@ -3,7 +3,6 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Foundation/EditorBuild.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/UUID/UUID.h"
@@ -43,15 +42,6 @@ namespace sw
 
         /** @brief 리소스 상대 에셋의 사이드카 경로입니다(`foo.png` → `foo.png.meta`). */
         static string metaPathFor( string_view relativePath );
-
-#if SW_WITH_EDITOR
-        /**
-         * @brief 에셋 파일과 그 사이드카(`.meta`)를 지웁니다. `.meta` 는 **에셋이 실제로 지워진 뒤에만** 지웁니다 — 실패하면 둘 다 그대로이고 false 입니다.
-         * @details 에셋 삭제가 실패했는데(잠긴 파일) `.meta` 를 지우면 남은 에셋이 다음에 새 GUID 를 받아 그 GUID 로 가리키던 참조
-         *          (씬의 프리팹 · 머티리얼)가 끊긴다. `.meta` 를 만드는 쪽(`ensureMeta`)과 지우는 쪽이 한 자리에 있다.
-         */
-        [[nodiscard]] static bool deleteAssetFile( string_view absolutePath );
-#endif
 
         // ------------------------------------------------------------------------------
         // 3) 등록 · 조회

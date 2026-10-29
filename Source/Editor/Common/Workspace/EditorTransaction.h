@@ -8,7 +8,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "Engine/Scene/ObjectUndoUtil.h"
+#include "EditorFoundation/ObjectUndoUtil.h"
 
 namespace sw
 {

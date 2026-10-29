@@ -943,7 +943,6 @@ namespace sw
         return true;
     }
 
-#if SW_WITH_EDITOR
     void PrefabAsset::setFromGameObject( const GameObject* pGameObject, PrefabCache* pNestedPrefabs )
     {
         _listNestedInstance.clear();
@@ -966,7 +965,6 @@ namespace sw
             pPrefabs = &engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>();
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }
-#endif
 
     bool PrefabAsset::applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity ) const
     {
@@ -1306,76 +1304,6 @@ namespace sw
             SW_LOG_ERROR( "Prefab '%#' is part of a circular nested prefab reference - it is not loaded", asset.getName() );
         return bInCycle == false;
     }
-
-#if SW_WITH_EDITOR
-    bool PrefabCache::revertInstance( GameObject* pInstance, string_view assetRelativePath )
-    {
-        if ( pInstance == nullptr )
-            return false;
-        const shared_ptr<const PrefabAsset> pAsset = loadPrefab( assetRelativePath );
-        if ( pAsset == nullptr || pAsset->isValid() == false )
-            return false;
-
-        // 인스턴스의 자리를 적어 둔다. 상태를 읽으면 컴포넌트가 모두 새로 만들어지고 이름 · 부착 · 트랜스폼이 프리팹의 것이 된다.
-        // 부모는 오브젝트가 아니라 **붙어 있던 컴포넌트**(소켓일 수 있다)를 핸들로 적는다 — 부모 오브젝트의 primary 에 다시 붙이면
-        // 소켓에 달린 무기가 튄다. 컴포넌트 id 도 복원한다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
-        const hashed_string   name         = pInstance->getName();
-        const SceneComponent* pOldRoot     = pInstance->getPrimarySceneComponent();
-        const bool            bHadRoot     = pOldRoot != nullptr;
-        const ComponentHandle parentHandle = ( bHadRoot && pOldRoot->getParent() != nullptr ) ? pOldRoot->getParent()->getHandle() : ComponentHandle{};
-        const float3          position     = bHadRoot ? pOldRoot->getLocalPosition() : float3{};
-        const float3          rotation     = bHadRoot ? pOldRoot->getLocalRotation() : float3{};
-        const ObjectIdentity  identity     = ObjectStateSerializer::captureIdentity( pInstance );
-
-        if ( pAsset->applyStateTo( pInstance, &identity ) == false )
-            return false;
-
-        pInstance->setName( name );
-        SceneComponent* pNewRoot = pInstance->getPrimarySceneComponent();
-        if ( pNewRoot != nullptr )
-        {
-            GameObjectManager* pManager        = pInstance->getManager();
-            Component*         pParent         = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
-            const bool         bReattachNeeded = pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
-                                         pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false;
-            if ( bReattachNeeded )
-                SW_LOG_WARNING( "Revert of '%#' could not re-attach it to its parent - it stays at the root", name.c_str() );
-            if ( bHadRoot )
-            {
-                pNewRoot->setLocalPosition( position );
-                pNewRoot->setLocalRotation( rotation );
-            }
-        }
-        return true;
-    }
-
-    bool PrefabCache::updateInstance( GameObject* pInstance, string_view oldBaseStateXML, string_view assetRelativePath )
-    {
-        if ( pInstance == nullptr || oldBaseStateXML.empty() )
-            return false;
-        const shared_ptr<const PrefabAsset> pAsset = loadPrefab( assetRelativePath );
-        string                              newBaseState;
-        const bool                          bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
-        if ( bNoNewBase )
-            return false;
-        // 덮어쓴 것은 옛 원형과 비교해 뽑는다. 새 원형과 비교하면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
-        const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
-        string       overrideXML;
-        string       newInstanceState;
-        string       overridesError;
-        if ( PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML, overridesError ) == false )
-        {
-            SW_LOG_WARNING( "Prefab instance '%#' could not be refreshed: %#", pInstance->getName().c_str(), overridesError.c_str() );
-            return false;
-        }
-        if ( PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState ) == false )
-            return false;
-        const ObjectIdentity identity = ObjectStateSerializer::captureIdentity( pInstance );
-        ObjectLoadContext    context{ SerializePurpose::Authoring };
-        context._pIdentity = &identity;
-        return ObjectStateSerializer::loadFromXMLString( pInstance, newInstanceState, context );
-    }
-#endif
 
     GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {

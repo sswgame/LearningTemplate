@@ -6,7 +6,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectValue.h"
@@ -425,7 +426,7 @@ namespace sw
                 if ( depth > 64 )
                     return;
                 const utf8*     pName = node.getName();
-                const TypeInfo* pType = StringUtil::isNullOrEmpty( pName ) ? nullptr : engine::getSubsystem<TypeRegistry>().findType( hashed_string( pName ) );
+                const TypeInfo* pType = StringUtil::isNullOrEmpty( pName ) ? nullptr : editor::getSubsystem<TypeRegistry>().findType( hashed_string( pName ) );
                 if ( pType != nullptr )
                 {
                     pType->forEachProperty( [&node, originName, &gatherer, pType]( const PropertyInfo& property )

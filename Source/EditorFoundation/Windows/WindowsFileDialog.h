@@ -5,7 +5,9 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileDialog.h"
+
+#include "EditorFoundation/EditorFoundationExports.h"
+#include "EditorFoundation/FileDialog.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -19,7 +21,7 @@ namespace sw
      * @class WindowsFileDialog
      * @brief Win32 API 로 구현한 Windows 파일 선택기입니다.
      */
-    class SW_API WindowsFileDialog final
+    class SW_EDITOR_FOUNDATION_API WindowsFileDialog final
     {
     public:
         /** @brief 인스턴스를 만들지 않습니다. open 만 부르십시오. */

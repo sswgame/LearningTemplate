@@ -12,7 +12,6 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/Foundation/EditorBuild.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -92,7 +91,6 @@
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
 #if !defined( SW_SHIPPING )
-    #include "Core/File/FileDialog.h"
     #include "Engine/AssetReload/ConfigReloadSubsystem.h"
 #endif
 #include "Engine/Asset/AssetDatabase.h"
@@ -247,7 +245,6 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
             engine::ServiceSetup serviceSetup;
-            serviceSetup._bEditorServices = SW_WITH_EDITOR != 0; // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행)
             serviceSetup._bAuthorityGhost = true;
             _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
@@ -591,8 +588,6 @@ namespace sw
             pollShaderReloadHotkey();
             if ( _pConfigReload != nullptr )
                 _pConfigReload->update();
-            // 파일 대화 상자 결과를 **여기서** 메인 스레드로 넘긴다. 대화 상자는 별도 스레드가 띄운다(편집기 빌드만).
-            FileDialog::pumpResults();
 #endif
             engine::getSubsystem<AssetStreamingQueue>().update();
 

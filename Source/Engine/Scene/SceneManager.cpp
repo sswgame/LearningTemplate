@@ -6,7 +6,6 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Foundation/EditorBuild.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -62,7 +61,6 @@ namespace sw
         , _loadTracker{}
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
-        , _commandStackClearSubscription{}
         , _netLink{}
         , _bInitialized{ false }
         , _pScenePreload{}
@@ -96,22 +94,13 @@ namespace sw
         _queuedPath.clear();
         _bInitialized = true;
 
-#if SW_WITH_EDITOR
-        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
-        _commandStackClearSubscription.reset(); // 다시 초기화해도 구독이 겹치지 않는다(대입이 앞 구독을 푼다)
-        CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
-        if ( pCommandStack != nullptr )
-            _commandStackClearSubscription = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
-#endif
-
         SW_LOG_INFO( "Initialized." );
         return SubsystemInitResult::Succeeded;
     }
 
     void SceneManager::shutdownSubsystem()
     {
-        shutdown(); // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다
-        _commandStackClearSubscription.reset();
+        shutdown(); // 종료도 알린다(구독자가 씬 오브젝트를 가리키는 기록을 비운다)
     }
 
     /**

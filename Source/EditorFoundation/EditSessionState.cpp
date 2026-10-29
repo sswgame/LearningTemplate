@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Module/EditSessionState.h"
+#include "EditorFoundation/EditSessionState.h"
 
 namespace sw
 {

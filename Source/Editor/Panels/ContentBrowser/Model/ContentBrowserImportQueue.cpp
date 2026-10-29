@@ -2,11 +2,12 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
 
-#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+
+#include "EditorFoundation/FileDialog.h"
 
 namespace sw::editor
 {

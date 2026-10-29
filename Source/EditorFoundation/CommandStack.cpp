@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Scene/CommandStack.h"
+#include "EditorFoundation/CommandStack.h"
 
 namespace sw
 {

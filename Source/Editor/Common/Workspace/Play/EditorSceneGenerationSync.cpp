@@ -4,7 +4,7 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Scene/CommandStack.h"
+#include "EditorFoundation/CommandStack.h"
 
 namespace sw::editor
 {

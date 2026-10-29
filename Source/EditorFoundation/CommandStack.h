@@ -3,11 +3,6 @@
  * @brief 실행 취소와 다시 실행 명령 스택입니다(에디터와 툴 공용).
  */
 #pragma once
-#include "Core/Foundation/EditorBuild.h"
-
-#if SW_WITH_EDITOR == 0
-    #error "CommandStack(편집기 되돌리기) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
-#endif
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -17,6 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
+
+#include "EditorFoundation/EditorFoundationExports.h"
 
 namespace sw
 {
@@ -36,7 +33,7 @@ namespace sw
      *          - **모듈 명령**: undo 와 redo 가 모듈 라이브러리의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
      *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
      */
-    class SW_API CommandStack final : public ISubsystem
+    class SW_EDITOR_FOUNDATION_API CommandStack final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
