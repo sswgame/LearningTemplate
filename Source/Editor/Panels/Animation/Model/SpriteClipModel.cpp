@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
