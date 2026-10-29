@@ -14,6 +14,7 @@
 #include "Engine/EngineFrameHookList.h"
 #include "Engine/EngineStartupExtension.h"
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Profiling/FrameProfileSession.h"
@@ -133,13 +134,13 @@ namespace sw
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
-        bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
+        bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested() || ( _pQuitRequest != nullptr && _pQuitRequest->isRequested() ); }
         /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 계측이 시작됐으면 true 입니다(앱 루프의 프레임 페이싱이 읽는다). */
         bool isProfileRunActive() const { return _profileSession.isActive(); }
-        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(프레임 관찰자 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(호스트). 모듈은 서비스 `QuitRequest` 에 직접 건다 — 이것도 그리로 간다. 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( int32 exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
-        int32 getExitCode() const { return _exitCode; }
+        int32 getExitCode() const { return _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() ? _pQuitRequest->getExitCode() : _exitCode; }
         /**
          * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 프레임 관찰자가 종료 코드를 내면 그 코드로 정합니다
          *        (관찰자의 결과가 프로파일 세션의 종료보다 이긴다).
@@ -229,7 +230,7 @@ namespace sw
         EngineHostRole _hostRole;
         /** @brief 헤드리스 작업의 결과입니다(서브시스템 `Headless` 가 적는다 · 크래시 보고 프로세스도 헤드리스다). */
         HeadlessTaskState _headlessState;
-        bool              _bQuitRequested;
+        bool              _bQuitRequested; ///< 창 닫힘 관찰자 · 종료 뒤로 옮겨 둔 요청(`shutdown`)이 정한 끝이다. 그 밖의 요청은 `_pQuitRequest`
         /** @brief RHI 기동 단계의 결과입니다(getRHIInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
@@ -238,6 +239,8 @@ namespace sw
         float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */
         int32 _exitCode;
+        /** @brief 서비스 범위의 종료 요청입니다(`_services` 소유 — 빌려 쓴다). 서비스가 내려가기 전에 `shutdown` 이 코드를 위 칸으로 옮기고 비운다. */
+        QuitRequest* _pQuitRequest;
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;

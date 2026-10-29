@@ -12,8 +12,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Window/IWindow.h"
-#include "Engine/Window/MainWindowSubsystem.h"
+#include "Engine/Foundation/QuitRequest.h"
+
+#include "sw/config/ProcessExitCodes.gen.h"
 
 namespace sw::editor
 {
@@ -279,8 +280,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "Could not write the editor self test report to %#", gv_editorSelfTestReport.c_str() );
         }
 
-        IWindow* pWindow = editor::getSubsystem<MainWindowSubsystem>().getWindow(); // 창이 없는 실행(헤드리스)은 종료 요청할 창이 없을 뿐이다.
-        if ( pWindow != nullptr )
-            pWindow->requestClose();
+        // 실패가 하나라도 있으면 프로세스가 실패 코드로 끝난다(CTest 가 읽는다) — 창만 닫으면 코드가 0 이었다.
+        editor::getSubsystem<QuitRequest>().request( static_cast<int32>( state._failedCount > 0 ? ProcessExitCode::Failed : ProcessExitCode::Passed ) );
     }
 } // namespace sw::editor

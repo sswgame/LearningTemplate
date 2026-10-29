@@ -152,6 +152,7 @@ namespace sw
         , _sceneDeltaSeconds{ 0.0f }
         , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ 0 }
+        , _pQuitRequest{ nullptr }
         , _profileSession{}
         , _pMemoryBudget{ nullptr }
         , _startup{}
@@ -284,6 +285,7 @@ namespace sw
             SW_LOG_ERROR( "Required engine service '%#' is not in any subsystem scope", pMissing );
             return false;
         }
+        _pQuitRequest                      = &engine::getSubsystem<QuitRequest>();
         TelemetryService& telemetryService = *startupParts._pTelemetry;
 
         // 초기화의 순서는 손으로 적지 않는다. 서브시스템마다 먼저 서야 하는 것을 적고, 여기서는 위상 순서로 부른다. 종료와 해제는 그 역순이다(`shutdown`).
@@ -395,6 +397,13 @@ namespace sw
         // 단계가 소유한 객체를 초기화 순서의 역순으로 소멸시킨다: UI → 텔레메트리 → 렌더러 쪽 → RHI →
         // 글꼴 → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 → 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _configReloadedSubscription.reset();
+        // 종료 코드는 서비스가 내려간 뒤에도 읽는다 — 요청을 엔진 칸으로 옮기고 빌린 포인터를 놓는다.
+        if ( _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() )
+        {
+            _bQuitRequested = true;
+            _exitCode       = _pQuitRequest->getExitCode();
+        }
+        _pQuitRequest = nullptr;
         _startup.destroyAll();
         _pRHISubsystem  = nullptr;
         _pRHI           = nullptr;
@@ -450,11 +459,16 @@ namespace sw
 
     void Engine::requestQuit( int32 exitCode )
     {
+        if ( _pQuitRequest != nullptr )
+        {
+            _pQuitRequest->request( exitCode );
+            return;
+        }
+        // 서비스가 서기 전(기동 실패 경로)이다.
         if ( _bQuitRequested )
             return;
         _bQuitRequested = true;
         _exitCode       = exitCode;
-        SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
     EngineFrameContext Engine::makeFrameContext() const

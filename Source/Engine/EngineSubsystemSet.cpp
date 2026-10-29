@@ -24,6 +24,7 @@
 #include "Engine/CoreServices/NamePoolSubsystem.h"
 #include "Engine/CoreServices/StaticStorageSubsystem.h"
 #include "Engine/FileSystem/ContentHash.h"
+#include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -135,6 +136,7 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<TickBatchRegistry>() ); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
         services.addSubsystem( sw::make_unique<ContentHashCache>() );  // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다
         services.addSubsystem( sw::make_unique<GameTimeScale>() );     // 정지 요청 · 이번 프레임의 실제 경과
+        services.addSubsystem( sw::make_unique<QuitRequest>() );       // 종료 요청 · 코드 — 호스트 · 엔진 · 모듈이 건다
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
         // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
         parts._pDebugKeyActions = &services.addSubsystem( sw::make_unique<DebugKeyActions>() );
