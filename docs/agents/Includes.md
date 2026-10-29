@@ -45,6 +45,7 @@ Reach a service through the window of its lifetime: `getSubsystem<T>()` (must ex
 - A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`.
 - No named accessors, no `static getInstance()`.
 - Tests inject mocks through scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`).
+- A dynamically loaded module (GameFramework, a kit) owns its services as **module subsystems**: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )` in a `.cpp`. Loading the module mounts them in a child scope named after the module (`ModuleRegistrationHost`); unloading removes the child scope. Only published types are visible from the parent scope, so a lower layer finds a higher layer's implementation by interface type (`engine::findSubsystem<INetSecurityProvider>()`) — no function slot, no function-local static provider. `Process` is the root of the scope chain (the host scope) and outlives engine and game restarts.
 
 ### Memory and ownership
 

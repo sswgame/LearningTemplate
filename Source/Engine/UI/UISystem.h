@@ -81,6 +81,9 @@ namespace sw
      *          **나눈 책임**(값 멤버, 비가상 직접 호출): 입력 라우팅은 `UIInputRouter`, 테마 고르기와 스타일 세트 짓기는 `UIThemeController`,
      *          화면 스택 밖 미리보기는 `UIOffscreenScreens`, 그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수는 `UICanvasPaintState`,
      *          화면 마커의 화면 핸들과 앵커 표는 `UIScreenMarkers` 가 든다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
+     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          바인딩 변환기 `UIBindingConverterRegistry`(이 시스템이 의존), 알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService`
+     *          (이 시스템에 의존하고 UI 갱신 칸 `onUpdateBeforeScreens` · `onUpdateAfterScreens` 에 건다).
      */
     class SW_API UISystem final : public ISubsystem
     {
