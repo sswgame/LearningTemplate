@@ -10,7 +10,7 @@ endif()
 
 # 단위 테스트 — 헤드리스(창 · GPU 없음)라 nogpu. 순서는 매번 섞이고 씨앗을 찍는다. 보고는 실행마다 다른 폴더(`Saved/Test/<프로세스>/report.json`, 찍힌다).
 add_test(NAME UnitTests
-	COMMAND $<TARGET_FILE:App> --test -unattended
+	COMMAND $<TARGET_FILE:App> --test -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.log
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 set_tests_properties(UnitTests PROPERTIES LABELS nogpu TIMEOUT 600)
 

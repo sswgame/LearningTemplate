@@ -713,6 +713,9 @@ namespace sw
 
     int32 App::getInitFailureExitCode() const
     {
+        // 헤드리스 작업이 정한 코드(시나리오 행렬의 시나리오 결과)가 먼저다.
+        if ( _engine.isHeadless() && _engine.didHeadlessTaskFail() && _engine.getHeadlessFailureExitCode() != -1 )
+            return _engine.getHeadlessFailureExitCode();
         // 환경 탓(백엔드가 이 빌드에 없거나 드라이버가 기능을 주지 않음)은 테스트와 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
         return AppInternal::isRHIUnusableHere( _engine.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }

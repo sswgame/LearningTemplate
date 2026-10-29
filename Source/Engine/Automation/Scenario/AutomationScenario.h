@@ -19,14 +19,12 @@ namespace sw
     // 시나리오를 띄우는 쪽(`AppScenarioTest`, 스크립트 `py -3 -m Scripts scenario`)과 실행기가 나누는 글의 정본이다. 스크립트(`Scripts/common/ScenarioArguments.py`)가
     // 이 아래 `inline constexpr const utf8* kXxx = "…";` 줄을 읽으므로 이름이나 줄 모양을 바꾸면 스크립트가 멈춘다. 명령줄 철자(`-scenario` · `-unattended` …)는
     // `Core/Predefined/ArgumentList.xxx` 가 정본이다(`getCommandLineArgumentSpelling`).
-    /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행은 `Bin`, 호스트 테스트는 케이스의 실행 쓰기 루트 — `AppTestUtil::getRunFolder`). 시나리오의 사진은 그 아래 `<시나리오 name>/` 에 쌓인다. */
+    /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행과 CTest 모두 `Bin`). 시나리오의 산출물은 그 아래 `<시나리오 name>/<프로세스>/` 에 쌓인다 — 병렬 실행이 겹치지 않는다. */
     inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";
     /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
     inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
     /** @brief 에디터 상태 폴더를 주는 전역 변수 이름(에디터 모듈이 선언한다 — `EditorPaths.cpp`). 명령줄에는 `-<이름>=<폴더>` 로 준다. */
     inline constexpr const utf8* kAutomationEditorStateVariable = "gv_editorStateDir";
-    /** @brief 사용자 설정 파일을 주는 전역 변수 이름(`UserSettingsVariables.cpp`). 자동화가 사용자 폴더의 `usersettings.json` 을 읽고 쓰지 않게 한다(`AppTestUtil::makeAppLaunch`). */
-    inline constexpr const utf8* kAutomationUserSettingsVariable = "gv_userSettingsFile";
 
     /**
      * @brief 시나리오 경로의 이름 줄기(`game/empty/automation/fog.scenario.xml` → `fog`)입니다 — 보고 · 로그 · 에디터 상태 폴더 이름의 앞머리(`<줄기>_<백엔드>`)입니다.

@@ -1,6 +1,6 @@
 /**
  * @file FileLogOutput.h
- * @brief 파일 로그 장치입니다. `Saved/Logs` 폴더에 쓰고, 시간과 세션마다 파일을 바꿉니다.
+ * @brief 파일 로그 장치입니다. `Saved/Logs` 폴더에 쓰고, 시간과 세션마다 파일을 바꿉니다. 경로를 받으면 그 파일 하나에 씁니다(`-log-file`).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -17,11 +17,14 @@ namespace sw
      * @details 파일은 **시간이 바뀔 때** 새로 엽니다. 이름에 세션 ID 가 들어가므로 같은 시간에 여러 번 실행해도 섞이지
      *          않습니다. 배포본은 크래시 뒤 바로 다시 실행하는 일이 잦아서 이것이 기본 상황입니다. 크래시 덤프도 같은 세션
      *          ID 를 쓰므로 둘을 짝지을 수 있습니다.
+     *          **고정 경로**(`-log-file=<경로>`)를 받으면 그 파일 하나에 처음부터 덮어쓰고 시간으로 나누지 않습니다 — 병렬 실행(ctest -j)이 실행마다
+     *          제 로그를 정해 둘 수 있게 한다(언리얼의 `-abslog=`). 크래시 리포트는 그 파일의 폴더에 둔다.
      */
     class SW_API FileLogOutput final : public ILogOutput
     {
     public:
-        FileLogOutput();
+        /** @param fixedFilePath 비면 `Saved/Logs/LOG_<날짜>_<세션>.txt`, 아니면 이 파일 하나(상대 경로는 작업 폴더 기준). */
+        explicit FileLogOutput( string fixedFilePath = {} );
         virtual ~FileLogOutput() override;
 
         FileLogOutput( const FileLogOutput& )            = delete;
@@ -44,11 +47,13 @@ namespace sw
         const string& getLogFolderPath() const { return _logFolderPath; }
 
     private:
-        mutex                      _mutex; ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
+        mutex                      _mutex;         ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
+        const string               _fixedFilePath; ///< 비면 날짜 · 세션 이름으로 시간마다 바꾼다
         string                     _logFolderPath;
         string _currentLogFileName SW_GUARDED_BY( _mutex );
         std::FILE* _pFile          SW_GUARDED_BY( _mutex );
         int32 _lastLogHour         SW_GUARDED_BY( _mutex ); ///< 시간별 로그 파일 교체를 감지하는 데 쓴다
         bool _bOpened              SW_GUARDED_BY( _mutex );
+        bool _bFixedFileStarted    SW_GUARDED_BY( _mutex ); ///< 고정 경로를 한 번 열었다(다시 열면 덮어쓰지 않고 이어 쓴다)
     };
 } // namespace sw

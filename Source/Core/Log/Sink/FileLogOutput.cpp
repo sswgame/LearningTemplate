@@ -11,13 +11,15 @@
 
 namespace sw
 {
-    FileLogOutput::FileLogOutput()
+    FileLogOutput::FileLogOutput( string fixedFilePath )
         : _mutex{}
+        , _fixedFilePath{ std::move( fixedFilePath ) }
         , _logFolderPath{}
         , _currentLogFileName{}
         , _pFile{ nullptr }
         , _lastLogHour{ -1 }
         , _bOpened{ false }
+        , _bFixedFileStarted{ false }
     {
     }
 
@@ -36,16 +38,27 @@ namespace sw
 
         // 폴더를 알아내고 만드는 호출(`getCurrentPath` · `ensureDirectoryExists`)은 실패하면 로그를 남기고, 그 로그는 싱크를 거쳐 이 장치의 `write` 로 들어온다.
         // `write` 가 `_mutex` 를 잡으므로 `_mutex` 를 쥔 채 부르면 같은 스레드가 영구 정지한다 — 락 밖에서 하고, 결과만 락 안에서 넣는다.
-        const string execPath      = FileUtil::getExecutablePath();
-        const string baseDir       = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
-        const string logFolderPath = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
-        const bool   bFolderReady  = FileUtil::ensureDirectoryExists( logFolderPath );
+        string logFolderPath;
+        string fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
+        if ( _fixedFilePath.empty() )
+        {
+            const string execPath = FileUtil::getExecutablePath();
+            const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
+            logFolderPath         = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
+        }
+        else
+        {
+            fixedAbsPath  = FileUtil::isAbsolutePath( _fixedFilePath ) ? _fixedFilePath : FileUtil::joinPath( FileUtil::getCurrentPath(), _fixedFilePath );
+            logFolderPath = FileUtil::getDirectoryPart( fixedAbsPath );
+        }
+        const bool bFolderReady = FileUtil::ensureDirectoryExists( logFolderPath );
 
         ScopedLock<mutex> lock{ _mutex };
         if ( _bOpened )
             return true;
 
-        _logFolderPath = logFolderPath;
+        _logFolderPath      = logFolderPath;
+        _currentLogFileName = fixedAbsPath;
         if ( bFolderReady == false )
             return false; // 오류는 `ensureDirectoryExists` 가 남겼다. 열린 것이 아니므로 `write` 는 줄을 버린다
         // 크래시 덤프와 리포트도 같은 폴더에 둔다. 사용자가 폴더 하나만 보내면 되도록.
@@ -74,7 +87,16 @@ namespace sw
         if ( _bOpened == false )
             return;
 
-        if ( _pFile == nullptr || record._hour != _lastLogHour )
+        if ( _fixedFilePath.empty() == false )
+        {
+            // 고정 경로는 시간으로 나누지 않는다. 앞선 실행의 글은 처음 열 때 한 번만 지운다(닫고 다시 열면 이어 쓴다).
+            if ( _pFile == nullptr )
+            {
+                _pFile             = PlatformFileUtil::openFile( _currentLogFileName.c_str(), _bFixedFileStarted ? "a" : "w" );
+                _bFixedFileStarted = true;
+            }
+        }
+        else if ( _pFile == nullptr || record._hour != _lastLogHour )
         {
             if ( _pFile != nullptr )
             {

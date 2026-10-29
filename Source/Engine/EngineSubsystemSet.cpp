@@ -76,8 +76,8 @@ namespace sw::engine
         CoreParts parts;
         parts._pDiagnostics = &coreScope.addSubsystem( sw::make_unique<DiagnosticsSubsystem>( setup._bDiagnostics ) );
         coreScope.addSubsystem( sw::make_unique<NamePoolSubsystem>() );
-        coreScope.addSubsystem( sw::make_unique<LoggerSubsystem>() );
-        parts._pCommandLine  = &coreScope.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
+        parts._pCommandLine = &coreScope.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
+        coreScope.addSubsystem( sw::make_unique<LoggerSubsystem>( *parts._pCommandLine ) );
         parts._pCrashHandler = &coreScope.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( parts._pCommandLine ) );
         coreScope.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
         coreScope.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );

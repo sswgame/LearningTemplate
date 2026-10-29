@@ -173,7 +173,7 @@ namespace sw
 
 namespace sw
 {
-    AsyncLogSink::AsyncLogSink()
+    AsyncLogSink::AsyncLogSink( string fixedLogFilePath )
         : _onLogWritten{}
         , _listListenerSubscription{}
         , _listOutput{}
@@ -194,7 +194,7 @@ namespace sw
         , _bWorkerSleeping{ false }
     {
         // 기본 장치 두 개. 다른 구성이 필요하면 addOutput 으로 더 붙인다.
-        auto fileOutput = make_unique<FileLogOutput>();
+        auto fileOutput = make_unique<FileLogOutput>( std::move( fixedLogFilePath ) );
         _pFileOutput    = fileOutput.get();
         _listOutput.push_back( make_unique<ConsoleLogOutput>() );
         _listOutput.push_back( std::move( fileOutput ) );

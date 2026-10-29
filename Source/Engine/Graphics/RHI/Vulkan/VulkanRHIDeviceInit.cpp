@@ -33,7 +33,7 @@ namespace sw
     {
         /**
          * @brief 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache.bin`)입니다.
-         * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 테스트는 App 마다 작업 폴더(쓰기 루트)를 따로 주는데(`AppTestUtil::getRunFolder`) 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다.
+         * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
          */
         string getVulkanPipelineCachePath()
         {

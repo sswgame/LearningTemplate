@@ -1,7 +1,7 @@
 /**
  * @file AutomationRunTitle.h
  * @brief 자동화 시나리오 · 벤치 실행 정보 한 줄(창 제목과 로그가 같이 쓰는 글)을 만듭니다.
- * @details 창과 로그를 모르는 순수 함수라 `Test/EngineTest` 가 글자만 테스트합니다. 사용자가 캡처한 화면에서 어느 시나리오 · 백엔드 · 단계 · 프레임인지 읽으려는 것이 목적입니다.
+ * @details 창과 로그를 모르는 순수 함수라 단위 테스트(`SW_TEST_CASE`)로 글자만 확인할 수 있습니다. 사용자가 캡처한 화면에서 어느 시나리오 · 백엔드 · 단계 · 프레임인지 읽으려는 것이 목적입니다.
  */
 #pragma once
 #include "Core/Container/string.h"

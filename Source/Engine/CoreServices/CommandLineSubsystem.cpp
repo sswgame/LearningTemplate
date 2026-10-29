@@ -5,7 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/CoreServices/LoggerSubsystem.h"
+#include "Engine/CoreServices/NamePoolSubsystem.h"
 
 namespace sw
 {
@@ -46,8 +46,9 @@ namespace sw
 
     span<const utf8* const> CommandLineSubsystem::getSubsystemDependencies() const
     {
-        // 모르는 인자 · 틀린 값의 경고가 로거로 간다.
-        static constexpr const utf8* kArrDependency[] = { LoggerSubsystem::kSubsystemName };
+        // 로거보다 먼저 선다 — 로그 파일(`-log-file`)이 명령줄로 정해진다. 그 사이의 경고(모르는 인자 · 틀린 값)는 Logger 가 쌓았다가 싱크에 넘긴다.
+        // 로그 인자 · 전역 변수 이름에 이름(hashed_string)이 쓰인다 — 이름 풀이 먼저 선다.
+        static constexpr const utf8* kArrDependency[] = { NamePoolSubsystem::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw

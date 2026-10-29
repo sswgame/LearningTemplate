@@ -75,6 +75,37 @@ namespace sw
         atomic<uint32>          s_droppedCallerCount{ 0 };          ///< 표가 차서 버린 등록 수
         atomic<bool>            s_bCallerOverflowReported{ false }; ///< 넘침 오류를 이미 남겼으면 true
 
+        /**
+         * @brief 싱크가 서기 전에 남은 줄 하나입니다(기동 초기 — 명령줄이 로거보다 먼저 선다). 싱크가 등록되면 넘긴다(`Logger::registerGlobalSink`).
+         * @details 언리얼 FOutputDeviceRedirector 의 backlog 와 같다. 힙을 쓰지 않는다 — 메모리 계층이 서기 전일 수 있다. 태그 · 파일 · id 는 글자 상수라 포인터만 둔다.
+         */
+        struct BacklogLine
+        {
+            LogLevel    _level{ LogLevel::Info };
+            const utf8* _pTag{ nullptr };
+            const utf8* _pFile{ nullptr };
+            const utf8* _pID{ nullptr };
+            int32       _line{ 0 };
+            bool        _bHasCaller{ false };
+            utf8        _arrCaller[constant::kMaxBuffer64]{ 0 };
+            utf8        _arrMessage[constant::kMaxBuffer512]{ 0 };
+        };
+        static constexpr uint32 kMaxBacklogLine = 64;
+        BacklogLine             s_arrBacklog[kMaxBacklogLine]{};
+        uint32                  s_backlogCount{ 0 };
+        uint32                  s_droppedBacklogCount{ 0 }; ///< 칸이 차서 쌓지 못한 줄 수(넘길 때 한 줄로 알린다)
+        mutex                   s_backlogMutex{};           ///< 쌓기 · 등록 · 넘기기를 한 줄로 세운다 — 등록 직후의 줄이 쌓인 채 남지 않는다
+
+        /** @brief @p pText 를 @p arrOut 에 담기는 만큼 복사합니다(잘린다). */
+        template <size_t N>
+        void copyTruncated( const utf8* pText, utf8 ( &arrOut )[N] )
+        {
+            const size_t length = pText == nullptr ? 0 : MathUtil::min( static_cast<size_t>( StringUtil::strlen( pText ) ), N - 1 );
+            if ( length > 0 )
+                Memory::copy( arrOut, pText, length );
+            arrOut[length] = '\0';
+        }
+
         /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
         /// @brief 줄 꼬리표의 시계입니다. 낮은 63 비트가 번호 + 1(0 = 정하지 않음 — 꼬리표 없음), 맨 위 비트가 종류(`LogClock::Frame` 이면 1)입니다.
@@ -242,7 +273,28 @@ namespace sw
                                                                                                      : "Trace";
             std::fprintf( stderr, "[%s][%s] %s:%d: %s\n", pLevelName, pTag != nullptr ? pTag : "", pFile != nullptr ? pFile : "", line, pMessage != nullptr ? pMessage : "" );
             std::fflush( stderr );
-            return;
+
+            ScopedLock<mutex> lock{ s_backlogMutex };
+            pSink = s_globalSink.load( std::memory_order_acquire );
+            if ( pSink == nullptr )
+            {
+                if ( s_backlogCount == kMaxBacklogLine )
+                {
+                    ++s_droppedBacklogCount;
+                    return;
+                }
+                BacklogLine& backlog = s_arrBacklog[s_backlogCount++];
+                backlog._level       = level;
+                backlog._pTag        = pTag;
+                backlog._pFile       = pFile;
+                backlog._pID         = pID;
+                backlog._line        = line;
+                backlog._bHasCaller  = pCaller != nullptr;
+                copyTruncated( pCaller, backlog._arrCaller ); // 호출자는 부른 쪽 스택에 있을 수 있다(낮은 층 보고의 파일 이름)
+                copyTruncated( pMessage, backlog._arrMessage );
+                return;
+            }
+            // stderr 에 쓰는 사이 싱크가 섰다 — 아래로 내려가 그 싱크에도 쓴다.
         }
 
         const bool bCallerDropped = s_droppedCallerCount.load( std::memory_order_relaxed ) > 0;
@@ -274,8 +326,23 @@ namespace sw
 
     void Logger::registerGlobalSink( ILogSink* pSink )
     {
-        ILogSink* pExpected{ nullptr };
-        s_globalSink.compare_exchange_strong( pExpected, pSink, std::memory_order_acq_rel, std::memory_order_relaxed );
+        ScopedLock<mutex> lock{ s_backlogMutex };
+        ILogSink*         pExpected{ nullptr };
+        if ( s_globalSink.compare_exchange_strong( pExpected, pSink, std::memory_order_acq_rel, std::memory_order_relaxed ) == false )
+            return;
+
+        // 싱크가 서기 전에 쌓인 줄을 남은 순서대로 넘긴다 — 로그 파일에 기동 첫 줄부터 남는다.
+        for ( uint32 index = 0; index < s_backlogCount; ++index )
+        {
+            const BacklogLine& backlog = s_arrBacklog[index];
+            pSink->writeLogWithID( backlog._level, backlog._pTag, backlog._bHasCaller ? backlog._arrCaller : nullptr, backlog._arrMessage, backlog._pFile,
+                                   backlog._line, backlog._pID );
+        }
+        if ( s_droppedBacklogCount > 0 )
+            pSink->writeLog( LogLevel::Warning, "Log", nullptr, "Lines logged before the log sink existed overflowed the backlog - only the first ones were kept (raise kMaxBacklogLine)",
+                             __FILE__, __LINE__ );
+        s_backlogCount        = 0;
+        s_droppedBacklogCount = 0;
     }
 
     void Logger::unregisterGlobalSink( ILogSink* pSink )

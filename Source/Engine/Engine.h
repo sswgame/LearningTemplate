@@ -191,6 +191,8 @@ namespace sw
         [[nodiscard]] bool renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size );
         /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _headlessState._bFailed; }
+        /** @brief 실패한 헤드리스 작업이 정한 종료 코드입니다(정하지 않았으면 -1). */
+        int32 getHeadlessFailureExitCode() const { return _headlessState._failureExitCode; }
         /** @brief RHI 기동 단계의 결과입니다. 그 단계가 돌지 않았으면(헤드리스 · 앞 단계 실패) `NotStarted` 입니다. App 이 기동 실패의 종료 코드를 고를 때 읽습니다. */
         RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 

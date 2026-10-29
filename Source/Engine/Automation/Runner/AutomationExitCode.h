@@ -14,8 +14,8 @@ namespace sw
     inline constexpr int32 kAutomationExitCodeRunning = IEngineFrameObserver::kRunning;
 
     /**
-     * @brief 결과의 프로세스 종료 코드입니다. 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 14 미확정, 15 처리하지 않은 로그.
-     * @details `AppTestUtil` 은 이 함수를 부르고, 스크립트(`RunScenarioLogs.py`)는 이 파일의 `case ...: return N;` 줄을 읽는다. 숫자는 이 함수 안에만 쓴다(줄 모양을 바꾸면 스크립트 테스트가 실패한다).
+     * @brief 결과의 프로세스 종료 코드입니다. 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀, 15 처리하지 않은 로그(14 는 없앤 "미확정"이라 비워 둔다).
+     * @details 숫자는 이 함수 안에만 쓴다. 행렬 실행(`AutomationBackendMatrix`)과 CTest(`Test/Scenario/CMakeLists.txt` 의 SKIP_RETURN_CODE 13)가 이 값을 읽는다.
      */
     constexpr int32 getAutomationExitCode( AutomationOutcome outcome )
     {

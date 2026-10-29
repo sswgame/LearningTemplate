@@ -40,8 +40,11 @@ namespace sw
     class SW_API AsyncLogSink final : public ILogSink
     {
     public:
-        /** @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다. */
-        AsyncLogSink();
+        /**
+         * @brief 기본 출력 장치(콘솔 · 파일)를 하나씩 달고, 전역 싱크가 비어 있으면 자신을 등록합니다.
+         * @param fixedLogFilePath 파일 장치가 쓸 파일 하나(`-log-file`). 비면 `Saved/Logs` 에 날짜 · 세션 이름으로 쓴다(`FileLogOutput`).
+         */
+        explicit AsyncLogSink( string fixedLogFilePath = {} );
         /** @brief 전역 싱크가 자신이면 등록을 해제합니다. 출력 장치를 닫는 일은 shutdown 이 합니다. */
         virtual ~AsyncLogSink() override;
 

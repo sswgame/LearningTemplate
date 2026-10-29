@@ -46,7 +46,7 @@ namespace sw
      * @brief 보고 경로를 들고 있다가 시나리오가 끝나면 JSON 보고를 씁니다(`AutomationRunner` 의 값 멤버).
      * @details 보고 형식: `name` · `result` · `exitCode` · `frames` · `reason` · `backend` · `game` · `startedAt` · `startedAtUnixMs` · `wallMilliseconds` · `wallLimitMilliseconds` · `lastStep` · `reproduce` · `timeline` ·
      *          `failures[]` · `updatedGoldens[]` · `unhandledLogs[]` · `allowedLogs[]` · `metrics[]` · `records[]`. 경로가 비어 있으면 쓰지 않는다.
-     *          읽는 쪽(`Scripts` 의 보고 읽기, `AppTestUtil::readReportRecords`)이 있으니 필드는 **더하기만** 하고 이름을 바꾸지 않는다. `records[]` 는 끝에 둔다(`readReportRecords` 가 `"records"` 키부터 첫 `]` 까지 읽는다).
+     *          읽는 쪽(CI · 스크립트가 보고를 읽는다)이 있으니 필드는 **더하기만** 하고 이름을 바꾸지 않는다. `records[]` 는 끝에 둔다(`readReportRecords` 가 `"records"` 키부터 첫 `]` 까지 읽는다).
      */
     class SW_API AutomationReportWriter
     {

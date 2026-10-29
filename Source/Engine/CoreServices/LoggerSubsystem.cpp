@@ -2,14 +2,16 @@
 
 #include "Engine/CoreServices/LoggerSubsystem.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Sink/AsyncLogSink.h"
 
-#include "Engine/CoreServices/NamePoolSubsystem.h"
+#include "Engine/CoreServices/CommandLineSubsystem.h"
 
 namespace sw
 {
-    LoggerSubsystem::LoggerSubsystem()
-        : _logger{ nullptr }
+    LoggerSubsystem::LoggerSubsystem( const CommandLineSubsystem& commandLine )
+        : _commandLine{ commandLine }
+        , _logger{ nullptr }
     {
     }
 
@@ -19,7 +21,9 @@ namespace sw
     {
         if ( _logger == nullptr )
         {
-            _logger = make_unique<AsyncLogSink>();
+            string logFilePath; // 비면 기본 폴더(Saved/Logs)다
+            (void)_commandLine.findCommandLine()->getArgument( CommandLineArgument::LOG_FILE, logFilePath );
+            _logger = make_unique<AsyncLogSink>( std::move( logFilePath ) );
             _logger->initialize();
         }
         return SubsystemInitResult::Succeeded;
@@ -33,8 +37,8 @@ namespace sw
 
     span<const utf8* const> LoggerSubsystem::getSubsystemDependencies() const
     {
-        // 로그 인자로 이름(hashed_string)이 들어온다 — 이름 풀이 먼저 서고 로거 뒤에 내려간다.
-        static constexpr const utf8* kArrDependency[] = { NamePoolSubsystem::kSubsystemName };
+        // 로그 파일이 명령줄로 정해진다. 이름 풀은 명령줄이 먼저 기댄다(CommandLineSubsystem).
+        static constexpr const utf8* kArrDependency[] = { CommandLineSubsystem::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw

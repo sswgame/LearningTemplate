@@ -1,9 +1,13 @@
 # ==============================================================================
 # @file Test/Scenario/CMakeLists.txt
 # @brief 시나리오를 CTest 항목으로 — `Content/engine/automation/` 과 활성 게임의 `Content/game/<게임>/automation/` 바로 아래 `*.scenario.xml` 마다
-#        `App -scenario=<리소스 경로> -unattended` 하나(라벨 hostgpu — 창과 GPU 가 있는 PC 에서). 목록이 없다 — 폴더를 훑는다.
-# @details 종료 코드는 실행기의 것이다(0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀 — 13 은 CTest 의 건너뜀).
+#        `App -scenario=<리소스 경로> -scenario-backends=all -unattended` 하나(라벨 hostgpu — 창과 GPU 가 있는 PC 에서). 목록이 없다 — 폴더를 훑는다.
+#        그 App 은 창 · GPU 없이 백엔드마다 자식 App 을 동시에 띄우고 결과를 모은다(`AutomationBackendMatrix` — 언리얼 Gauntlet 의 컨트롤러 자리).
+#        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드(77)는 그 백엔드만 건너뛴다.
+# @details 종료 코드는 실행기의 것이다(0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀 · 15 처리하지 않은 로그 — 13 은 CTest 의 건너뜀). 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 줍지 않는다 — 손으로 돌린다.
+#          항목끼리도(`ctest -j`) 겹치는 쓰기가 없어 병렬로 돈다: 로그는 `<빌드>/Testing/Logs/<항목>.<백엔드>.log`(`-log-file`), 산출물 · 설정은 프로세스별 폴더 · 파일이고,
+#          실행이 나누는 캐시(Saved/ShaderCache)는 원자적 바꿔치기로만 쓴다. 항목 하나가 프로세스 다섯(부모 + 백엔드 넷)이라 `-j` 는 코어 수의 1/4 쯤이 알맞다.
 #          다른 게임의 시나리오는 그 게임이 활성일 때(구성의 SW_ACTIVE_GAME) 올라온다 — App 은 활성 게임 하나만 싣는다.
 # ==============================================================================
 
@@ -32,7 +36,8 @@ foreach(scenarioPath IN LISTS listScenario)
 		list(APPEND listLaunchArgument "-${CMAKE_MATCH_1}=${CMAKE_MATCH_2}")
 	endforeach()
 	add_test(NAME Scenario.${scenarioName}
-		COMMAND $<TARGET_FILE:App> -scenario=${scenarioPath} -unattended ${listLaunchArgument}
+		COMMAND $<TARGET_FILE:App> -scenario=${scenarioPath} -scenario-backends=all -unattended
+			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Scenario.${scenarioName}.log ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(Scenario.${scenarioName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE 13 RUN_SERIAL ON)
+	set_tests_properties(Scenario.${scenarioName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE 13)
 endforeach()

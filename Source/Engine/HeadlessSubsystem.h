@@ -29,7 +29,8 @@ namespace sw
 
         bool isHeadless() const { return _bHeadless; }
 
-        bool _bFailed{ false }; ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
+        bool  _bFailed{ false };      ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
+        int32 _failureExitCode{ -1 }; ///< 실패했을 때의 종료 코드(작업이 정하지 않으면 -1) — 시나리오 행렬은 시나리오 종료 코드(10 · 11 · 12 · 13 · 15)를 그대로 낸다
 
     private:
         bool _bHeadless{ false }; ///< 헤드리스 작업을 했다(뒤 단계를 세우지 않았다)
