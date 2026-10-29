@@ -30,6 +30,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Localization/LocText.h"
@@ -339,7 +340,7 @@ namespace sw::editor
             if ( bConflict )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ActionConflictTip" ) );
             // 키 글리프는 오른쪽 끝에 맞춘다 — 고정 폭으로 비워 두면 "[ LeftControl+... ]" 같은 긴 글리프가 잘린다.
-            const string glyphText = bDown ? string{ "DOWN" } : _inputMap.getGlyphForAction( actionName );
+            const string glyphText = bDown ? string{ "DOWN" } : InputGlyphResolver::findActionGlyph( _inputMap, actionName );
             ImGui::SameLine( MathUtil::max( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( glyphText.c_str() ).x - ImGui::GetStyle().ItemSpacing.x, 0.0f ) );
             if ( bDown )
                 EditorThemeUtil::textSuccess( glyphText.c_str() );
@@ -390,7 +391,7 @@ namespace sw::editor
         const float32 rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
         InputSlot     slot{};
         const bool    bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
-        const string  slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
+        const string  slotGlyph   = bRebindable ? InputGlyphResolver::makeSlotGlyph( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
         ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
         ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
@@ -494,7 +495,7 @@ namespace sw::editor
             const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
             ImGui::PushID( static_cast<int32>( index ) );
             fixed_string<constant::kMaxBuffer256> conflictText;
-            formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputMap::getGlyphForSlot( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
+            formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputGlyphResolver::makeSlotGlyph( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
                           other.c_str(), conflict._layer.c_str() );
             EditorThemeUtil::textError( conflictText.c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind this" ) );
@@ -522,7 +523,7 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "%s", kArrStyleName[index] );
             ImGui::SameLine( ImGui::CalcTextSize( kArrStyleName[0] ).x + ImGui::GetStyle().ItemSpacing.x * 2.0f ); // 가장 긴 이름 뒤에 맞춘다(고정 폭이면 글꼴에 따라 겹친다)
-            ImGui::TextUnformatted( _inputMap.getGlyphForAction( action, kArrStyle[index] ).c_str() );
+            ImGui::TextUnformatted( InputGlyphResolver::findActionGlyph( _inputMap, action, kArrStyle[index] ).c_str() );
         }
     }
 

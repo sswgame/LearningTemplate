@@ -1,16 +1,18 @@
 #include "pch.h"
 
+#include "Engine/Input/Map/InputGlyphResolver.h"
+
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 
 /**
- * @file InputMapGlyph.cpp
+ * @file InputGlyphResolver.cpp
  * @brief 바인딩을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회를 구현합니다.
  *
- * getGlyphForAction() 은 현재 활성 장치(키보드, Xbox, PlayStation, Switch)에 맞는 표기를 고릅니다.
- * previewDevice 를 직접 넘기는 오버로드는 실제 장치와 상관없이 특정 플랫폼 표기를 미리 볼 때 씁니다
+ * findActionGlyph() 는 현재 활성 장치(키보드, Xbox, PlayStation, Switch)에 맞는 표기를 고릅니다.
+ * style 을 직접 넘기는 오버로드는 실제 장치와 상관없이 특정 플랫폼 표기를 미리 볼 때 씁니다
  * (에디터의 Glyph Previewer 탭이 이것으로 플랫폼별 표기를 나란히 비교해 보여 줍니다).
  */
 
@@ -18,7 +20,7 @@ namespace sw
 {
     namespace
     {
-        struct InputMapGlyphInternal
+        struct InputGlyphResolverInternal
         {
             static string slotToGlyph( const InputSlot& slot, InputGlyphStyle device )
             {
@@ -198,35 +200,29 @@ namespace sw
 
 namespace sw
 {
-    string InputMap::getGlyphForAction( const hashed_string& action ) const
+    string InputGlyphResolver::findActionGlyph( const InputMap& map, const hashed_string& action )
     {
-        const InputGlyphStyle device = _pInput != nullptr ? _pInput->getActiveGlyphStyle() : InputGlyphStyle::KeyboardMouse;
-        return getGlyphForActionInternal( action, device );
+        const InputManager*   pInput = map.getInputManager();
+        const InputGlyphStyle style  = pInput != nullptr ? pInput->getActiveGlyphStyle() : InputGlyphStyle::KeyboardMouse;
+        return findActionGlyph( map, action, style );
     }
 
-    string InputMap::getGlyphForAction( const hashed_string& action, InputGlyphStyle previewDevice ) const
+    string InputGlyphResolver::findActionGlyph( const InputMap& map, const hashed_string& action, InputGlyphStyle style )
     {
-        return getGlyphForActionInternal( action, previewDevice );
-    }
-
-    string InputMap::getGlyphForSlot( const InputSlot& slot, InputGlyphStyle device )
-    {
-        return string( "[ " ) + InputMapGlyphInternal::slotToGlyph( slot, device ) + " ]";
-    }
-
-    string InputMap::getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const
-    {
-        const ActionEntry* pEntry = findAction( action );
-        if ( pEntry == nullptr || pEntry->_listBinding.empty() )
-            return "[ ? ]";
-
-        for ( const ActionBinding& binding : pEntry->_listBinding )
+        const uint32 bindCount = map.getBindingCount( action );
+        for ( uint32 bindIndex = 0; bindIndex < bindCount; ++bindIndex )
         {
-            const string glyph = ( device == InputGlyphStyle::KeyboardMouse ) ? InputMapGlyphInternal::makeKeyboardMouseGlyph( binding, device )
-                                                                              : InputMapGlyphInternal::makeGamepadGlyph( binding, device );
+            const ActionBinding& binding = *map.getBinding( action, bindIndex ); // 개수 안의 인덱스라 늘 있다
+            const string         glyph   = ( style == InputGlyphStyle::KeyboardMouse ) ? InputGlyphResolverInternal::makeKeyboardMouseGlyph( binding, style )
+                                                                                       : InputGlyphResolverInternal::makeGamepadGlyph( binding, style );
             if ( glyph.empty() == false )
                 return glyph;
         }
         return "[ ? ]";
+    }
+
+    string InputGlyphResolver::makeSlotGlyph( const InputSlot& slot, InputGlyphStyle style )
+    {
+        return string( "[ " ) + InputGlyphResolverInternal::slotToGlyph( slot, style ) + " ]";
     }
 } // namespace sw

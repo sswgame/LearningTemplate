@@ -9,6 +9,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 
 #include <imgui.h>
@@ -151,7 +152,7 @@ namespace sw::editor
                 {
                     if ( inputMap.isActionDown( act ) == false )
                         continue;
-                    const string text = inputMap.getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
+                    const string text = InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
                     frame._pDrawList->AddText( ImVec2( frame.at( 150.0f, 0.0f ).x, frame._boxMin.y + offsetY ), frame.color( kActiveAction ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )

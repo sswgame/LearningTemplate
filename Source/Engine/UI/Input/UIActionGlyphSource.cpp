@@ -5,6 +5,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 
 namespace sw
@@ -14,9 +15,9 @@ namespace sw
         const hashed_string   name( action );
         const InputGlyphStyle style = getStyle();
         if ( _pInput != nullptr && _pInput->getInputMap().getActionHandle( name ).isValid() )
-            return _pInput->getInputMap().getGlyphForAction( name, style );
+            return InputGlyphResolver::findActionGlyph( _pInput->getInputMap(), name, style );
         if ( _pUIInputMap != nullptr && _pUIInputMap->getActionHandle( name ).isValid() )
-            return _pUIInputMap->getGlyphForAction( name, style );
+            return InputGlyphResolver::findActionGlyph( *_pUIInputMap, name, style );
         return "[ ? ]";
     }
 

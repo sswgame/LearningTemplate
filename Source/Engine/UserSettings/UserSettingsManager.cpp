@@ -20,6 +20,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -767,7 +768,7 @@ namespace sw
         InputSlot    slot;
         if ( settingIndex == invalid_index::kUint32 || findEffectiveSlot( settingIndex, slot ) == false )
             return "[ ? ]";
-        return InputMap::getGlyphForSlot( slot, style );
+        return InputGlyphResolver::makeSlotGlyph( slot, style );
     }
 
     // ------------------------------------------------------------------------------

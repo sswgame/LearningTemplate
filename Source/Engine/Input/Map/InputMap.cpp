@@ -16,9 +16,10 @@
  * InputMap 의 로직은 여러 파일에 나뉘어 있습니다. 찾는 내용에 따라 아래 파일을 보십시오.
  *  - InputMap.cpp (이 파일): 생성자, bind*() 등록 함수, 레이어 스택(pushLayer/popLayer), 리바인드, is/wasActionXxx() 조회.
  *  - InputMapEvaluate.cpp: update() 가 매 프레임 부르는 상태 머신(액션이 눌렸는지, 트리거됐는지 판정).
- *  - InputMapSerialization.cpp: InputMap XML 로드와 유저 키 리매핑의 저장, 로드.
- *  - InputMapCombo.cpp: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정.
- *  - InputMapGlyph.cpp: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회.
+ *  - InputMapSerialization.cpp: InputMap XML 정의의 로드와 저장.
+ *  맵이 들고 있거나 맵을 읽는 협력 클래스는 따로 있다(언리얼 Enhanced Input 이 매핑 컨텍스트와 플레이어 설정 · 아이콘을 가르는 나눔).
+ *  - InputActionBuffer: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정(맵이 들고 프레임마다 진행).
+ *  - InputGlyphResolver: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회(상태 없음).
  */
 
 namespace sw

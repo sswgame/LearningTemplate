@@ -25,8 +25,6 @@
 
 namespace sw
 {
-    enum class InputGlyphStyle : uint8;
-
     struct ActionBinding;
     struct InputPressInstant;
 
@@ -496,13 +494,8 @@ namespace sw
         const InputActionBuffer& getActionBuffer() const { return _actionBuffer; }
 
         // ------------------------------------------------------------------------------
-        // 7) UI 글리프 조회, 게임 안 키 리매핑 직렬화
+        // 7) 게임 안 키 리매핑 — UI 글리프는 `InputGlyphResolver` 가 맡는다
         // ------------------------------------------------------------------------------
-        string getGlyphForAction( const hashed_string& action ) const;
-        string getGlyphForAction( const hashed_string& action, InputGlyphStyle previewDevice ) const;
-        /** @brief 슬롯 하나의 표기(`[ Space ]`, PlayStation 이면 `[ Circle ]`)를 반환합니다. 리바인딩 화면이 아직 적용하지 않은 키를 보일 때 씁니다. */
-        static string getGlyphForSlot( const InputSlot& slot, InputGlyphStyle device );
-
         /**
          * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 종류는 그대로이며, Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
          * @details 키 하나로 바꿀 수 없는 종류(합성 축, 스틱 등)면 바꾸지 않고 경고를 남긴 뒤 false 를 반환한다(`BindingKinds::getRebindSlotIndex`).
@@ -752,8 +745,7 @@ namespace sw
 
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
 
-        string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
-        bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read = SlotRead::Game ) const;
+        bool evaluateBindingDown( const ActionBinding& binding, float2& outValue, SlotRead read = SlotRead::Game ) const;
         /** @brief 단일 키 바인딩이 수정 키(Ctrl · Alt)가 눌린 동안 물러나야 하는지 봅니다(`_bSuppressBaseActionOnChord`). */
         bool isBaseKeySuppressedByModifier( const ActionBinding& binding, SlotRead read ) const;
         /** @brief 게임패드 스틱 바인딩의 값을 데드존 · 응답 곡선 · 감도를 적용해 읽습니다. 연결이 없으면 false 입니다. */
