@@ -3,6 +3,11 @@
  * @brief 실행 취소와 다시 실행 명령 스택입니다(에디터와 툴 공용).
  */
 #pragma once
+#include "Core/Foundation/EditorBuild.h"
+
+#if SW_WITH_EDITOR == 0
+    #error "CommandStack(편집기 되돌리기) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
+#endif
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"

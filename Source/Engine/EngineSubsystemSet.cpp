@@ -5,6 +5,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIO.h"
+#include "Core/Foundation/EditorBuild.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
@@ -65,7 +66,6 @@
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Scene/ServerPoseOverlay.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -73,7 +73,10 @@
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Module/EditSessionState.h"
+#if SW_WITH_EDITOR
+    #include "Engine/Module/EditSessionState.h"
+    #include "Engine/Scene/CommandStack.h"
+#endif
 
 namespace sw::engine
 {
@@ -110,6 +113,7 @@ namespace sw::engine
         ServiceParts parts;
         parts._pEventDispatcher = &services.addSubsystem( sw::make_unique<EventDispatcher>() );
         services.addSubsystem( sw::make_unique<LocalizationManager>() );
+#if SW_WITH_EDITOR
         if ( setup._bEditorServices )
         {
             // 에디터 Undo/Redo 전용이다(목록의 선택 행). 씬이 바뀌면 씬 매니저가 비운다.
@@ -117,6 +121,7 @@ namespace sw::engine
             // 에디터 인스턴스를 다시 만들 때(백엔드 교체 · 에디터 모듈 리로드) 선택 · 미저장 표시를 넘긴다.
             services.addSubsystem( sw::make_unique<EditSessionState>() );
         }
+#endif
         services.addSubsystem( sw::make_unique<DebugOverlayState>() );
         services.addSubsystem( sw::make_unique<ComponentDefaults>() );
         FrameProfiler& frameProfiler = services.addSubsystem( sw::make_unique<FrameProfiler>() );

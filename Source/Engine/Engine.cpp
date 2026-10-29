@@ -12,6 +12,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/EditorBuild.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -245,13 +246,8 @@ namespace sw
             // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
-#if defined( SW_SHIPPING )
-            constexpr bool kEditorServices = false; // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행)
-#else
-            constexpr bool kEditorServices = true;
-#endif
             engine::ServiceSetup serviceSetup;
-            serviceSetup._bEditorServices = kEditorServices;
+            serviceSetup._bEditorServices = SW_WITH_EDITOR != 0; // 에디터 Undo/Redo 전용이라 배포본에는 만들지 않는다(목록의 선택 행)
             serviceSetup._bAuthorityGhost = true;
             _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간

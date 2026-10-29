@@ -3,6 +3,11 @@
  * @brief 오브젝트 편집을 직렬화한 상태로 기록하는 Undo 데이터 명령입니다 — 코드는 엔진에 있어 에디터 모듈 핫 리로드를 넘습니다.
  */
 #pragma once
+#include "Core/Foundation/EditorBuild.h"
+
+#if SW_WITH_EDITOR == 0
+    #error "ObjectUndoUtil(편집기 되돌리기) 는 편집기 빌드 전용이다 - 배포 빌드는 짓지 않는다"
+#endif
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

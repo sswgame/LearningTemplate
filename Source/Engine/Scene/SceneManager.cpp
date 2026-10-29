@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/EditorBuild.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -27,7 +28,6 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Scene/CommandStack.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
@@ -96,11 +96,13 @@ namespace sw
         _queuedPath.clear();
         _bInitialized = true;
 
+#if SW_WITH_EDITOR
         // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다. 다시 초기화해도 구독이 겹치지 않는다.
         _commandStackClearSubscription.reset(); // 다시 초기화해도 구독이 겹치지 않는다(대입이 앞 구독을 푼다)
         CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
         if ( pCommandStack != nullptr )
             _commandStackClearSubscription = _onSceneObjectsInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
+#endif
 
         SW_LOG_INFO( "Initialized." );
         return SubsystemInitResult::Succeeded;
