@@ -12,8 +12,6 @@
 #include "GameFramework/Base/Character/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
 namespace sw
 {
     namespace
@@ -115,4 +113,3 @@ namespace sw
     SW_DEV_COMMAND( IntentSave, "intent.save", "intent.save <file.swintent>", "Stop recording and write the intents to a .swintent file", &IntentDevCommandsInternal::runSave );
     SW_DEV_COMMAND( IntentPlay, "intent.play", "intent.play <file.swintent>", "Replay a .swintent file on the pawns of the active scene", &IntentDevCommandsInternal::runPlay );
 } // namespace sw
-#endif

@@ -10,8 +10,6 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountTicketConnect.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
 namespace sw
 {
     namespace
@@ -60,11 +58,11 @@ namespace sw
                 request._serverID     = listArgument[3];
                 request._gameBuild    = listArgument.size() >= 6 ? listArgument[5] : "1.0.0";
                 request._tlsTrustFile = listArgument.size() == 7 ? listArgument[6] : "";
-    #if SW_PLATFORM_WINDOWS
+#if SW_PLATFORM_WINDOWS
                 request._platform = "windows";
-    #else
+#else
                 request._platform = "linux";
-    #endif
+#endif
                 request._timeoutMilliseconds = kTimeoutMilliseconds;
                 NetConnectCredentials credentials;
                 string                error;
@@ -89,4 +87,3 @@ namespace sw
     SW_DEV_COMMAND( NetTicketConnect, "net.ticketconnect", "net.ticketconnect <loginHost:port> <account> <password> <serverID> <gameHost:port> [build [trustFile]]",
                     "Log in to the login service, get a game connect ticket and open the encrypted client session with it", &AccountTicketConnectCommandInternal::run );
 } // namespace sw
-#endif

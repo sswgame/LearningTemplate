@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Capture/BugReport.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -84,41 +83,6 @@ namespace sw
             {
                 return FileUtil::joinPath( path::kSavedFolder, BugReport::kFolderName );
             }
-
-#if SW_DEV_COMMANDS_ENABLED // 두 명령 함수는 개발 명령 등록(파일 끝)만 부른다 — Shipping 에서는 함께 빠진다
-            /** @brief `bugreport [메모…]` — 낱말을 공백으로 다시 이은 것이 메모다. */
-            static bool runBugReport( const vector<string>& listArgument, string& outReply )
-            {
-                string note;
-                for ( const string& word : listArgument )
-                {
-                    if ( note.empty() == false )
-                        note += " ";
-                    note += word;
-                }
-                string directory;
-                if ( BugReport::capture( BugReport::makeInputs( note ), directory ) == false )
-                {
-                    outReply = "bugreport failed (see the log)";
-                    return false;
-                }
-                outReply = "bugreport -> " + directory + " (screenshot next frame)";
-                return true;
-            }
-
-            /** @brief `bugreport.goto [폴더]` — 폴더를 주지 않으면 가장 최근 BugReport 폴더다. */
-            static bool runBugReportGoto( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() > 1 )
-                    return false;
-                if ( engine::areEngineServicesBound() == false )
-                {
-                    outReply = "bugreport.goto: engine services are not bound";
-                    return false;
-                }
-                return BugReport::goTo( engine::getSubsystem<SceneManager>(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
-            }
-#endif
         };
     } // namespace
 } // namespace sw
@@ -350,13 +314,3 @@ namespace sw
         return true;
     }
 } // namespace sw
-
-#if SW_DEV_COMMANDS_ENABLED
-namespace sw
-{
-    SW_DEV_COMMAND( BugReport, "bugreport", "bugreport [note...]", "Collect a bug report (info, screenshot, log, scene copy, repro) under Saved/BugReports/<time>",
-                    &BugReportInternal::runBugReport );
-    SW_DEV_COMMAND( BugReportGoto, "bugreport.goto", "bugreport.goto [folder]", "Open the scene of a BugReport folder (default: the latest) and move the view camera there",
-                    &BugReportInternal::runBugReportGoto );
-} // namespace sw
-#endif

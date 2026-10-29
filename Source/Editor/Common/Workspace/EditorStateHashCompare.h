@@ -7,7 +7,6 @@
  *          클라이언트(App)는 서버 틱 번호를 모르므로 아직 원천이 아니다 — 같은 입력의 두 서버, 또는 서버와 저장한 이력을 비교한다.
  */
 #pragma once
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -56,7 +55,6 @@ namespace sw::editor
 
         EditorStateHashCompare();
 
-#if SW_DEV_COMMANDS_ENABLED
         /**
          * @brief 디버그 채널로 붙은 서버의 이력 전부(`state.hashes 0 <상한>`)를 슬롯 @p sourceIndex 에 담습니다. 실패하면 false 이고 슬롯은 그대로입니다.
          * @details 디버그 채널은 개발 명령과 함께만 있다(배포 구성에는 없다 — `DebugChannel.h`).
@@ -69,7 +67,6 @@ namespace sw::editor
         [[nodiscard]] bool compareObjectsFromChannels();
         /** @brief 칸 @p sourceIndex 를 읽은 디버그 채널의 서버에 `state.objects` 를 다시 물어 틱과 오브젝트별 해시를 받습니다. 채널에서 읽은 칸이 아니거나 답이 목록이 아니면 false 이고 이유는 `getLastError` 다. */
         [[nodiscard]] bool readObjectsFromChannel( int32 sourceIndex, uint64& outTick, vector<SceneObjectHash>& outListObject );
-#endif
         /**
          * @brief 칸 @p sourceIndex 가 세션 클라이언트 프로세스 @p processIndex 에서 읽은 것임을 적습니다(`loadFromReport` 뒤에 부른다 — 칸이 다시 채워지면 지워진다).
          * @details 클라이언트는 디버그 채널이 없어 오브젝트 해시를 표준 입력(`state.objectline`)으로 받는다. 누가 어느 프로세스에 물을지는 부르는 쪽(탭)이 이 번호로 안다.

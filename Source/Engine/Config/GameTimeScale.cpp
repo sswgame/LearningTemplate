@@ -3,7 +3,6 @@
 #include "Engine/Config/GameTimeScale.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -67,29 +66,3 @@ namespace sw
         return s_unscaledDeltaSeconds;
     }
 } // namespace sw
-
-#if SW_DEV_COMMANDS_ENABLED
-namespace sw
-{
-    namespace
-    {
-        bool runTimeScale( const vector<string>& listArgument, string& outReply )
-        {
-            if ( listArgument.size() > 1 )
-                return false;
-            if ( listArgument.size() == 1 )
-            {
-                float32 scale = 1.0f;
-                if ( StringUtil::parseFloat( listArgument[0], scale ) == false )
-                    return false;
-                GameTimeScale::set( scale );
-            }
-            outReply = "time scale = " + to_string( GameTimeScale::get() );
-            return true;
-        }
-    } // namespace
-
-    SW_DEV_COMMAND( TimeScale, "timescale", "timescale [scale]", "Show or set the game time scale (gv_timeScale, 0 = frozen)",
-                    &runTimeScale );
-} // namespace sw
-#endif

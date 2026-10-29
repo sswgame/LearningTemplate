@@ -6,15 +6,13 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-    #include "Core/Container/StringUtil.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-
-    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-    #include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
 {
@@ -81,13 +79,4 @@ namespace sw
             }
         };
     } // namespace
-} // namespace sw
-#endif
-
-namespace sw
-{
-    SW_DEV_COMMAND( CheatGive, "cheat.give", "cheat.give <itemID> [count]", "Add items to the session state's inventory (partly when slots or weight run out)",
-                    &SessionStateDevCommandsInternal::runGive );
-    SW_DEV_COMMAND( CheatMoney, "cheat.money", "cheat.money <amount> [currency]", "Add money to the session state's wallet (default currency when none is given)",
-                    &SessionStateDevCommandsInternal::runMoney );
 } // namespace sw

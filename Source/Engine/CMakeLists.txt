@@ -62,9 +62,9 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
 endforeach()
 
-# 기능 폴더의 단위 테스트(`Tests/`)는 배포 구성이 짓지 않는다.
+# 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Tests/")
+	sw_excludeUnbuiltSources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 # ------------------------------------------------------------------------------

@@ -1,21 +1,18 @@
 /**
- * @file Engine/Animation/Scene/AnimationDevCommands.cpp
+ * @file AnimationDevCommands.cpp
  * @brief 활성 씬의 애니메이션 되감기 개발 명령(`anim.rewind` · `anim.rewind.seconds` · `anim.rewind.scrub`)입니다. Shipping 에는 없습니다.
  * @details 명령은 소유 코드 옆에 `SW_DEV_COMMAND` 로 둡니다(언리얼 `FAutoConsoleCommand`). 활성 씬은 씬 층(아래)에서 찾는다.
  */
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Container/StringUtil.h"
-
-    #include "Engine/Animation/Scene/AnimationRewind.h"
-    #include "Engine/Animation/Scene/AnimationSystem.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Scene/SceneManager.h"
+#include "Engine/Animation/Scene/AnimationRewind.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -109,5 +106,3 @@ namespace sw
                     "Freeze animation and show the recorded poses of the active scene that many seconds ago, or resume",
                     &AnimationDevCommandsInternal::runAnimationRewindScrub );
 } // namespace sw
-
-#endif

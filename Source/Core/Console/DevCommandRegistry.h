@@ -103,8 +103,8 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 개발 명령을 그 명령의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if SW_DEV_COMMANDS_ENABLED`
- *        안에 두십시오(밖에 두면 Shipping 에서 쓰이지 않는 함수가 됩니다).
+ * @brief 개발 명령을 기능 옆 `<기능>DevCommands.cpp` 에서 등록합니다. 배포 구성은 그 이름의 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`) —
+ *        본문 함수도 같은 파일에 둔다(파일을 `#if` 로 감싸지 않는다).
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   콘솔에 치는 이름(리터럴)
  * @param pUsage  사용법 한 줄

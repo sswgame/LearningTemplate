@@ -12,8 +12,6 @@
 #include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
 namespace sw
 {
     namespace
@@ -108,4 +106,3 @@ namespace sw
     SW_DEV_COMMAND( PhotoOff, "photo.off", "photo.off", "Leave photo mode and restore the game camera and time", &PhotoModeDevCommandsInternal::runOff );
     SW_DEV_COMMAND( PhotoShot, "photo.shot", "photo.shot [file]", "Save the next frame as PNG (same as screenshot)", &PhotoModeDevCommandsInternal::runShot );
 } // namespace sw
-#endif

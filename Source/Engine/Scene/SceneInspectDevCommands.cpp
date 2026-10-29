@@ -1,5 +1,5 @@
 /**
- * @file SceneInspectCommands.cpp
+ * @file SceneInspectDevCommands.cpp
  * @brief 활성 씬을 글로 읽는 개발 명령입니다(서버 검사기 S3 · 권위 겹쳐 보기 S6 · 어긋남 찾기 S7). Shipping 에는 없습니다.
  * @details 읽기 전용입니다. 값을 바꾸는 일은 기존 개발 명령(`teleport` · `tag.add`)처럼 게임이 정한 경로를 거칩니다.
  *          디버그 채널(`DebugChannel`)은 이 명령들을 원격으로 부를 뿐이라, 같은 명령을 표준 입력 콘솔과 에디터 콘솔에서도 씁니다.
@@ -10,24 +10,21 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Network/DebugReplyLine.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
-    #include "Core/Container/StringUtil.h"
-    #include "Core/Network/DebugReplyLine.h"
-
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Object/Component/Component.h"
-    #include "Engine/Object/Component/SceneComponent.h"
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Reflection/ReflectionTypes.h"
-    #include "Engine/Scene/SceneManager.h"
-    #include "Engine/Scene/SceneStateHash.h"
-    #include "Engine/Serialization/Serializer/SerializerUtil.h"
-
-    #include <algorithm>
-    #include <charconv>
+#include <algorithm>
+#include <charconv>
 
 namespace sw
 {
@@ -326,5 +323,3 @@ namespace sw
     SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
                     &SceneInspectCommandsInternal::runStateObjectLine );
 } // namespace sw
-
-#endif

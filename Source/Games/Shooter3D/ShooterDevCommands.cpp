@@ -8,13 +8,12 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
-    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
-    #include "Games/Shooter3D/ShooterPlayerComponent.h"
+#include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
 {
@@ -98,12 +97,4 @@ namespace sw
             }
         };
     } // namespace
-} // namespace sw
-#endif
-
-namespace sw
-{
-    SW_DEV_COMMAND( CheatAmmo, "cheat.ammo", "cheat.ammo", "Add two magazines of reserve ammo to every weapon of every shooter player", &ShooterDevCommandsInternal::runAmmo );
-    SW_DEV_COMMAND( CheatShooterHeal, "cheat.shooter.heal", "cheat.shooter.heal", "Fill the health of every living shooter player", &ShooterDevCommandsInternal::runHeal );
-    SW_DEV_COMMAND( CheatShooterGod, "cheat.shooter.god", "cheat.shooter.god", "Toggle damage immunity of every shooter player", &ShooterDevCommandsInternal::runGod );
 } // namespace sw

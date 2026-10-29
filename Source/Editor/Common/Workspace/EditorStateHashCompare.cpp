@@ -79,7 +79,6 @@ namespace sw::editor
         return true;
     }
 
-#if SW_DEV_COMMANDS_ENABLED
     bool EditorStateHashCompare::loadFromChannel( int32 sourceIndex, const NetAddress& remote, string_view token )
     {
         if ( isSourceIndexValid( sourceIndex ) == false )
@@ -149,7 +148,6 @@ namespace sw::editor
         }
         return compareObjects( arrTick[0], arrList[0], arrTick[1], arrList[1] );
     }
-#endif
 
     void EditorStateHashCompare::setClientOrigin( int32 sourceIndex, int32 processIndex )
     {

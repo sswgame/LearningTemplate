@@ -84,9 +84,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set(VCPKG_APPLOCAL_DEPS OFF)
 		set(bStageRuntimeDLLs ON)
 	endif()
-	# 기능 폴더의 단위 테스트(`Tests/`)는 배포 구성이 짓지 않는다(GameFramework · 키트 · 게임 · 에디터 확장 모두).
+	# 개발 전용 소스(단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다(GameFramework · 키트 · 게임 · 에디터 확장 모두).
 	if(SW_SHIPPING_BUILD)
-		sw_excludeUnbuiltSources(ARG_SOURCES "/Tests/")
+		sw_excludeUnbuiltSources(ARG_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 	endif()
 	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
 	sw_requireDeterministicMarkForRollback(${TARGET_NAME} ${ARG_SOURCES})

@@ -6,8 +6,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
 namespace sw
 {
     namespace
@@ -72,4 +70,3 @@ namespace sw
                     &UserSettingsDevCommandsInternal::runApply );
     SW_DEV_COMMAND( SettingsConfirm, "settings.confirm", "settings.confirm", "Keep the display change that awaits confirmation", &UserSettingsDevCommandsInternal::runConfirm );
 } // namespace sw
-#endif

@@ -6,7 +6,6 @@
 
 // 개발 명령 `automation.hang <seconds>` — 행 감시(`AutomationHangWatchdog`)를 통합에서 시험하는 교착 시나리오가 게임 스레드를 멈추는 데 쓴다.
 // `profile.stall` 은 5 초가 상한이라(`FrameStall`) 시나리오 상한 + 유예(`wallTimeoutSeconds` 3 + 5 = 8 초)를 넘기지 못한다.
-#if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     namespace
@@ -41,4 +40,3 @@ namespace sw
     SW_DEV_COMMAND( AutomationHang, "automation.hang", "automation.hang <seconds>", "Block the calling game thread for that many seconds (hang watchdog checks)",
                     &AutomationHangCommandInternal::runHang );
 } // namespace sw
-#endif

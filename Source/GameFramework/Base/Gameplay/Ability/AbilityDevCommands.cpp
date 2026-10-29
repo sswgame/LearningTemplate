@@ -7,18 +7,16 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-    #include "Core/Container/StringUtil.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-
-    #include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
-    #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-    #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-    #include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
-    #include "GameFramework/Base/Gameplay/Ability/Ability.h"
+#include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
+#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Base/Gameplay/Ability/Ability.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
 
 namespace sw
 {
@@ -179,16 +177,4 @@ namespace sw
             }
         };
     } // namespace
-} // namespace sw
-#endif
-
-namespace sw
-{
-    SW_DEV_COMMAND( CheatHeal, "cheat.heal", "cheat.heal", "Fill health to max health on every ability system in the active scene", &AbilityDevCommandsInternal::runHeal );
-    SW_DEV_COMMAND( CheatAttribute, "cheat.attribute", "cheat.attribute <name> <value>", "Set an attribute's base value on every ability system in the active scene that has it",
-                    &AbilityDevCommandsInternal::runAttribute );
-    SW_DEV_COMMAND( CheatGod, "cheat.god", "cheat.god [on|off]", "Toggle invulnerability (health never goes down) on every player-controlled ability system",
-                    &AbilityDevCommandsInternal::runGod );
-    SW_DEV_COMMAND( CheatResetCooldowns, "cheat.resetCooldowns", "cheat.resetCooldowns", "Remove the cooldown effects of every granted ability in the active scene",
-                    &AbilityDevCommandsInternal::runResetCooldowns );
 } // namespace sw

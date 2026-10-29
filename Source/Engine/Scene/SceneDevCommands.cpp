@@ -6,20 +6,17 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/String/TagID.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Container/StringUtil.h"
-    #include "Core/String/TagID.h"
-
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Object/Component/SceneComponent.h"
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Scene/Scene.h"
-    #include "Engine/Scene/SceneCooker.h"
-    #include "Engine/Scene/SceneManager.h"
-    #include "Engine/Scene/SceneStreamingSubsystem.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStreamingSubsystem.h"
 
 namespace sw
 {
@@ -131,5 +128,3 @@ namespace sw
                     &SceneDevCommandsInternal::runStreamingCells );
     SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &SceneDevCommandsInternal::runTagAdd );
 } // namespace sw
-
-#endif

@@ -389,16 +389,11 @@ namespace sw::editor
                 bWaiting                              = true;
                 continue;
             }
-#if SW_DEV_COMMANDS_ENABLED
             if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
             {
                 SW_LOG_WARNING( "Sync could not compare objects: %#", compare.getLastError() );
                 return;
             }
-#else
-            SW_LOG_WARNING( "Sync has no debug channel in this build - object hashes come only from session clients" );
-            return;
-#endif
         }
         _bObjectRequest = true;
         _errorText.clear();
@@ -563,7 +558,6 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::TextUnformatted( MultiplayerSyncTabInternal::describeComparison( compare.getComparison() ).c_str() );
         }
-#if SW_DEV_COMMANDS_ENABLED
         // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
         if ( ImGui::Button( "Which objects differ" ) )
             startObjectCompare();
@@ -578,7 +572,6 @@ namespace sw::editor
                 ImGui::BulletText( "%s", name.c_str() );
             }
         }
-#endif
     }
 
     SW_EDITOR_MULTIPLAYER_TAB( MultiplayerSyncTab, "sync", 400, "Sync" );
