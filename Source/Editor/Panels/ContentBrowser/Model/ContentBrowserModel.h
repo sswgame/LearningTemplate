@@ -10,10 +10,10 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserReferenceSearch.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserTypeFilter.h"
 
 namespace sw::editor

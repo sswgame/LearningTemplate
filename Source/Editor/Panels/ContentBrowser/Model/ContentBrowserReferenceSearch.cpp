@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/ContentBrowser/ContentBrowserReferenceSearch.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserReferenceSearch.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
