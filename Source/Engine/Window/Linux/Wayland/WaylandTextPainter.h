@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Text/SystemFontLocator.h"
 #include "Engine/Text/TextTypes.h"
 
 namespace sw
@@ -69,5 +70,6 @@ namespace sw
         int32                        _ascent;
         int32                        _lineHeight;
         unordered_map<uint32, Glyph> _mapGlyph;
+        SystemFontLocator            _systemFontLocator; ///< 후보 글꼴 파일 찾기(리눅스 하위 폴더 색인을 이 그리기가 든다)
     };
 } // namespace sw

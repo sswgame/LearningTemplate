@@ -40,6 +40,7 @@ namespace sw
         , _ascent{ 0 }
         , _lineHeight{ 0 }
         , _mapGlyph{}
+        , _systemFontLocator{}
     {
     }
 
@@ -58,7 +59,7 @@ namespace sw
     {
         for ( const string_view fileName : listFileName )
         {
-            const string path = SystemFontLocator::findSystemFontFile( fileName );
+            const string path = _systemFontLocator.findSystemFontFile( fileName );
             if ( path.empty() )
                 continue;
             vector<uint8> bytes;

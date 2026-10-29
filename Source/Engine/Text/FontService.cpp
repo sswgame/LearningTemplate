@@ -125,6 +125,7 @@ namespace sw
         , _mapChain{}
         , _mapMemoryFile{}
         , _warnedOnce{}
+        , _systemFontLocator{}
         , _pLocalization{ pLocalization }
         , _bInitialized{ false }
     {
@@ -335,7 +336,7 @@ namespace sw
             const bool    bWantsBold = static_cast<uint16>( weight ) >= static_cast<uint16>( FontWeight::SemiBold );
             const bool    bUseBold   = bWantsBold && boldName.empty() == false;
             const string& fileName   = bUseBold ? boldName : regularName;
-            const string  filePath   = SystemFontLocator::findSystemFontFile( fileName );
+            const string  filePath   = _systemFontLocator.findSystemFontFile( fileName );
             if ( filePath.empty() == false )
             {
                 opened._face        = openFontFile( AssetID{ filePath }, faceIndex, false );
