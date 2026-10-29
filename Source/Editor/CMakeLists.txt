@@ -91,11 +91,6 @@ if(listEditorUnassignedSource)
 	message(FATAL_ERROR "Editor sources outside every layer in EditorLayers.toml: ${listEditorUnassignedSource}")
 endif()
 set(listEditorSource ${listEditorRootSource})
-# EditorCore(위 층 표의 모델 층 + 뷰 층의 `Model` 폴더)가 짓는 소스 — 배포는 에디터 모듈을 짓지 않으므로 이것을 뺀 나머지를 "짓지 않는 소스" 로 적는다.
-set(listEditorCoreSource "")
-foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
-	list(APPEND listEditorCoreSource ${swEditorTierModelSource_${tier}})
-endforeach()
 
 
 # ------------------------------------------------------------------------------
@@ -149,15 +144,13 @@ function(sw_addEditorLayerStubs PART TIER)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 1-1) EditorCore: ImGui 를 모르는 층(`listEditorModelLayer`)의 오브젝트. EditorModule 과 EditorTest 가 **같은 오브젝트**를 받는다.
+# 1-1) EditorCore: ImGui 를 모르는 층(`listEditorModelLayer`)의 오브젝트 — 모델 층이 ImGui 를 include 하면 컴파일이 멈춘다(위 `#error` 껍데기). 소비자는 EditorModule 이다.
 #      소스 목록은 위 층 표 한 곳(`swEditorTierModelSource_<N>`)에서 나오고, 테스트는 손으로 나열하지 않는다(폴더에 파일을 더하면 둘 다 받는다).
 #      - 티어마다 부분(`EditorTier<N>Model`)을 따로 짓는다 — 티어 N 부분은 N 보다 위 층 헤더 자리에 `#error` 껍데기가 놓여 층 방향을 컴파일이 지킨다.
 #      - 리플렉션(`EditorCoreReflect`)은 `listEditorModelLayer` 폴더와 뷰 층 `Model` 폴더의 REFLECT · ENUM 헤더 전부(위 `listEditorReflectCore` - 입력을 폴더 정규식으로 못 정해 같은 조건으로 구성 때 모은다)의 `.gen.cpp` 를 한 번만 짓는다. 소비자는 이 헤더를 자기 리플렉션 입력에 넣지 않는다. EditorModule 은 이 폴더들을 자기 리플렉션 입력에서
 #        뺀다(같은 `StaticType()` 이 두 곳에 정의되지 않게). FlagOps 우산과 gen 폴더는 `sw_linkEditorCore` 가 소비자에게 같은 값으로 준다.
-#      - 소비자가 EditorModule(Dev 의 SHARED)이면 오브젝트는 DLL 이미지에 들어가고, EditorTest 면 실행 파일에 들어간다(SW_EDITOR_API 는 둘 다 `SW_EDITOR_EXPORTS`
-#        로 지어져 DLL 에서는 내보내고, 테스트 실행 파일에서는 소비자 TU 의 빈 매크로와 같은 이름으로 그냥 풀린다).
-#      - 배포(SW_SHIPPING_BUILD)와 꺼진 에디터 모듈에서도 EditorTest 가 쓰므로 EditorModule 의 조기 반환보다 앞에서 만든다. `EXCLUDE_FROM_ALL` 이라
-#        아무도 링크하지 않으면 짓지 않는다. 전용 서버에는 에디터가 없다.
+#      - 오브젝트는 EditorModule(Dev 의 SHARED) 이미지에 들어간다(`SW_EDITOR_EXPORTS` 로 지어 내보낸다). 에디터 쪽 단위 테스트(`Tests/`)는
+#        에디터 자체 테스트 `editor.unitTests` 가 에디터 안에서 돌린다. 배포 · 전용 서버에는 에디터가 없어 만들지 않는다.
 # ------------------------------------------------------------------------------
 set(editorModelImGuiBlock "${CMAKE_BINARY_DIR}/generated/sw/EditorModelForbidsImGui.h")
 file(GENERATE OUTPUT "${editorModelImGuiBlock}" CONTENT
@@ -208,7 +201,7 @@ function(sw_applyEditorCoreSettings TARGET_NAME)
 	sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
 endfunction()
 
-# 소비자(EditorModule · EditorTest)가 코어를 받는다: 오브젝트를 링크하고, 리플렉션이 만든 FlagOps 우산(`/FI`)과 gen 폴더를 같은 값으로 준다.
+# 소비자(EditorModule)가 코어를 받는다: 오브젝트를 링크하고, 리플렉션이 만든 FlagOps 우산(`/FI`)과 gen 폴더를 같은 값으로 준다.
 # VISIBILITY 가 PUBLIC 이면 그 소비자를 링크하는 확장 모듈도 우산을 받는다(EditorModule 의 옛 리플렉션이 하던 일).
 function(sw_linkEditorCore TARGET_NAME VISIBILITY)
 	get_property(listCore GLOBAL PROPERTY SW_EDITOR_CORE_TARGETS)
@@ -230,7 +223,7 @@ function(sw_linkEditorCore TARGET_NAME VISIBILITY)
 	endif()
 endfunction()
 
-if(NOT SW_TARGET_TYPE STREQUAL "Server")
+if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 	set(listEditorCoreTarget "")
 
 	# 리플렉션: 코어 헤더의 `.gen.cpp`. 입력은 폴더를 훑어 정한다(새 REFLECT 헤더를 손 목록에 빠뜨리는 일이 없다).
@@ -273,13 +266,9 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	set_property(GLOBAL PROPERTY SW_EDITOR_CORE_TARGETS "${listEditorCoreTarget}")
 endif()
 
-# 배포는 에디터를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`). EditorCore(위)는 EditorTest 가 링크해 그대로 지어진다.
+# 배포는 에디터(코어 포함)를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`).
 if(SW_SHIPPING_BUILD)
-	set(listEditorUnbuiltSource ${listEditorAllSource})
-	if(NOT SW_TARGET_TYPE STREQUAL "Server")   # 전용 서버는 코어도 짓지 않는다
-		list(REMOVE_ITEM listEditorUnbuiltSource ${listEditorCoreSource})
-	endif()
-	sw_declareUnbuiltSources(${listEditorUnbuiltSource})
+	sw_declareUnbuiltSources(${listEditorAllSource})
 	return()
 endif()
 
