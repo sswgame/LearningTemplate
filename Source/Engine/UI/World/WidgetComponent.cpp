@@ -21,9 +21,9 @@
 #include "Engine/Physics/IPhysicsQueryScene.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Render/UIPaintPass.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/UI/World/UIWidgetComponentService.h"
 
 namespace sw
 {
@@ -54,16 +54,16 @@ namespace sw
             static constexpr float32 kOcclusionTolerance = 0.05f;
 
             /**
-             * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 UI 시스템입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
+             * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 위젯 컴포넌트 서비스입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
              * @details 전역 표(`engine::findSubsystem`)를 다시 찾지 않는다 — 씬 쪽은 만들 때 받은 묶음만 본다(`SceneEngineServices.h` 머리말).
              */
-            static UISystem* findUISystem( const GameObject* pOwner )
+            static UIWidgetComponentService* findUIService( const GameObject* pOwner )
             {
                 const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pManager == nullptr )
                     return nullptr;
-                UISystem* pUI = locateSubsystem<UISystem>( pManager->getSceneEngineServices()._pEngineSubsystems );
-                return pUI != nullptr && pUI->isInitialized() ? pUI : nullptr;
+                UIWidgetComponentService* pService = locateSubsystem<UIWidgetComponentService>( pManager->getSceneEngineServices()._pEngineSubsystems );
+                return pService != nullptr && pService->isActive() ? pService : nullptr;
             }
         };
     } // namespace
@@ -77,7 +77,7 @@ namespace sw
         , _markerWidget{ kInvalidWidgetID }
         , _lastPlacement{}
         , _worldPointer{}
-        , _pUISystem{ nullptr }
+        , _pUIService{ nullptr }
         , _worldTree{}
         , _worldCanvas{}
         , _worldScratch{}
@@ -106,7 +106,7 @@ namespace sw
 
     WidgetComponent::~WidgetComponent()
     {
-        bindUISystem( nullptr );
+        bindUIService( nullptr );
     }
 
     void WidgetComponent::onBeginPlay()
@@ -116,40 +116,40 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->getPrimarySceneComponent() == nullptr )
             SW_LOG_ERROR( "[UI] WidgetComponent on '%#' has no scene component to follow - add a SceneComponent first; the widget is never shown", pOwner->getName().c_str() );
-        UISystem* pUI = WidgetComponentInternal::findUISystem( pOwner );
-        bindUISystem( pUI );
-        if ( pUI != nullptr && _space == WidgetSpace::World )
+        UIWidgetComponentService* pService = WidgetComponentInternal::findUIService( pOwner );
+        bindUIService( pService );
+        if ( pService != nullptr && _space == WidgetSpace::World )
             createWorldQuad();
     }
 
     void WidgetComponent::onEndPlay()
     {
         destroyWorldQuad();
-        bindUISystem( nullptr );
+        bindUIService( nullptr );
         Component::onEndPlay();
     }
 
-    void WidgetComponent::bindUISystem( UISystem* pUISystem )
+    void WidgetComponent::bindUIService( UIWidgetComponentService* pService )
     {
-        if ( _pUISystem == pUISystem )
+        if ( _pUIService == pService )
             return;
-        if ( _pUISystem != nullptr )
+        if ( _pUIService != nullptr )
         {
             detachMarker();
-            _pUISystem->unregisterWidgetComponent( *this );
+            _pUIService->unregisterComponent( *this );
         }
-        _pUISystem = pUISystem;
-        if ( _pUISystem == nullptr )
+        _pUIService = pService;
+        if ( _pUIService == nullptr )
             return;
-        _pUISystem->registerWidgetComponent( *this );
+        _pUIService->registerComponent( *this );
         attachMarker();
     }
 
-    void WidgetComponent::forgetUISystem()
+    void WidgetComponent::forgetUIService()
     {
-        _pUISystem     = nullptr;
+        _pUIService    = nullptr;
         _markerWidget  = kInvalidWidgetID;
-        _gpuState      = 0; // 앵커 표는 UI 시스템과 함께 사라졌다
+        _gpuState      = 0; // 앵커 표는 서비스와 함께 사라졌다
         _bGPUSlotDirty = SW_TRUE;
     }
 
@@ -166,7 +166,7 @@ namespace sw
             return _pendingContent.get();
         if ( _worldTree != nullptr )
             return _worldTree->getRoot();
-        return _pUISystem != nullptr ? _pUISystem->findScreenMarker( _markerWidget ) : nullptr;
+        return _pUIService != nullptr ? _pUIService->findScreenMarker( _markerWidget ) : nullptr;
     }
 
     void WidgetComponent::setScaleWithDistance( bool bScale, float32 referenceDistance )
@@ -182,8 +182,8 @@ namespace sw
 
     void WidgetComponent::attachMarker()
     {
-        UISystem* const pUI = _pUISystem;
-        if ( pUI == nullptr || _pendingContent == nullptr )
+        UIWidgetComponentService* const pService = _pUIService;
+        if ( pService == nullptr || _pendingContent == nullptr )
             return;
         if ( _space == WidgetSpace::World )
         {
@@ -197,7 +197,7 @@ namespace sw
             return;
         // 첫 위치가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게 하기 위해서다).
         _pendingContent->setVisibility( WidgetVisibility::Collapsed );
-        _markerWidget = pUI->addScreenMarker( std::move( _pendingContent ) );
+        _markerWidget = pService->addScreenMarker( std::move( _pendingContent ) );
     }
 
     void WidgetComponent::detachMarker()
@@ -206,8 +206,8 @@ namespace sw
         if ( _markerWidget == kInvalidWidgetID )
             return;
         releaseGPUMarker(); // 앵커를 돌려주기 전에 GPU 기록을 내린다
-        if ( _pUISystem != nullptr )
-            _pUISystem->removeScreenMarker( _markerWidget );
+        if ( _pUIService != nullptr )
+            _pUIService->removeScreenMarker( _markerWidget );
         _markerWidget  = kInvalidWidgetID;
         _bGPUSlotDirty = SW_TRUE;
     }
@@ -227,28 +227,28 @@ namespace sw
     {
         if ( _gpuState == 0 )
             return;
-        if ( _pUISystem != nullptr )
-            _pUISystem->clearGPUScreenMarker( _gpuAnchor );
+        if ( _pUIService != nullptr )
+            _pUIService->getMarkers().clearGPUMarker( _gpuAnchor );
         _gpuState = 0;
     }
 
     void WidgetComponent::updateGPUMarker( const SceneComponent* pScene, bool bMarkerHidden )
     {
-        UISystem* const pUI = _pUISystem;
-        if ( pUI == nullptr )
+        UIWidgetComponentService* const pService = _pUIService;
+        if ( pService == nullptr )
             return;
         // 위젯은 상태가 바뀔 때만 만진다(접힘 ↔ 보임, 슬롯 변경). 매 프레임 하는 일은 월드 점을 기록에 적는 것뿐이다.
         const uint8 wantedState = bMarkerHidden ? 1 : 2;
         if ( _gpuState != wantedState || ( wantedState == 2 && _bGPUSlotDirty == SW_TRUE ) )
         {
-            Widget* pMarker = pUI->findScreenMarker( _markerWidget );
+            Widget* pMarker = pService->findScreenMarker( _markerWidget );
             if ( pMarker == nullptr )
                 return;
             _gpuAnchor = pMarker->getPaintAnchor();
             if ( wantedState == 1 )
             {
                 pMarker->setVisibility( WidgetVisibility::Collapsed );
-                pUI->clearGPUScreenMarker( _gpuAnchor );
+                pService->getMarkers().clearGPUMarker( _gpuAnchor );
             }
             else
             {
@@ -274,7 +274,7 @@ namespace sw
         const MeshComponent* pMesh        = pOwnerObject != nullptr ? pOwnerObject->getComponent<MeshComponent>() : nullptr;
         if ( pMesh != nullptr && static_cast<const SceneComponent*>( pMesh ) == pScene )
             record._primitiveIndex = pMesh->getPrimitiveIndex();
-        pUI->setGPUScreenMarker( _gpuAnchor, record );
+        pService->getMarkers().setGPUMarker( _gpuAnchor, record );
     }
 
     WidgetMarkerPlacement WidgetComponent::computeMarkerPlacement( const float4x4& viewProjection, const float3& cameraPosition, const float3& worldPosition,
@@ -402,7 +402,7 @@ namespace sw
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )
     {
         _lastPlacement  = placement;
-        Widget* pMarker = _pUISystem != nullptr ? _pUISystem->findScreenMarker( _markerWidget ) : nullptr;
+        Widget* pMarker = _pUIService != nullptr ? _pUIService->findScreenMarker( _markerWidget ) : nullptr;
         if ( pMarker == nullptr )
             return;
         if ( placement._bVisible == SW_FALSE )
@@ -413,7 +413,7 @@ namespace sw
         pMarker->setVisibility( WidgetVisibility::HitTestInvisible ); // 마커는 클릭을 막지 않는다
 
         // 위치와 배율은 화면 앵커가 정한다(셰이더가 옮긴다). 위젯은 피벗이 앵커 점(원점)에 오도록 배치하므로, 움직여도 다시 배치하거나 칠하지 않는다.
-        _pUISystem->setScreenMarkerAnchor( pMarker->getPaintAnchor(), placement._position, placement._scale );
+        _pUIService->getMarkers().setAnchor( pMarker->getPaintAnchor(), placement._position, placement._scale );
         applyMarkerSlot( *pMarker );
         onMarkerPlaced( *pMarker, placement );
     }

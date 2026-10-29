@@ -16,10 +16,6 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Text/FontService.h"
@@ -33,7 +29,6 @@
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
-#include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/UILayoutDump.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
@@ -44,7 +39,6 @@
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/WidgetTree/Widget.h"
-#include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
@@ -107,10 +101,12 @@ namespace sw
         , _listReopenDocument{}
         , _onUpdateBeforeScreens{}
         , _onUpdateAfterScreens{}
+        , _onUpdateBeforeLayout{}
         , _onUpdateAfterPaint{}
+        , _onPointerProcessed{}
         , _actionGlyphs{}
         , _input{}
-        , _worldPointer{}
+
         , _accessibilityBridge{}
         , _pFontService{ nullptr }
         , _pLocalization{ nullptr }
@@ -119,11 +115,11 @@ namespace sw
         , _scaleSettings{}
         , _viewport{}
         , _paintState{}
-        , _markers{}
+
         , _activeScreen{ kInvalidUIScreenHandle }
         , _accessibleFocusScreen{ kInvalidUIScreenHandle }
         , _accessibleFocusWidget{ kInvalidWidgetID }
-        , _listWidgetComponent{}
+
         , _listTickScratch{}
         , _listSwitchScreen{}
         , _engineDocuments{}
@@ -169,14 +165,7 @@ namespace sw
     void UISystem::shutdown()
     {
         _accessibilityBridge.reset();
-        // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있으므로 등록과 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
-        for ( WidgetComponent* pComponent : _listWidgetComponent )
-        {
-            _worldPointer.forgetComponent( *pComponent );
-            pComponent->forgetUISystem();
-        }
-        _listWidgetComponent.clear();
-        _markers.clear();
+
         _listSwitchScreen.clear();
         _input.getFocusManager().clearFocus();
         while ( _listScreen.empty() == false )
@@ -259,7 +248,7 @@ namespace sw
         if ( _bOnScreenSuppressed == SW_FALSE )
         {
             _input.processPointer( _listScreen, _viewport );
-            processWorldPointer();
+            _onPointerProcessed.broadcast( deltaSeconds ); // World 위젯 광선(위젯 컴포넌트 서비스)
         }
         // 액션: 화면이 없으면 일시정지 메뉴를 먼저 연다. 활성 화면은 여기서 한 번 정하며, 방금 연 메뉴는 다음 프레임부터 액션을 받는다.
         UIScreen* pActive = getActiveScreen();
@@ -306,22 +295,8 @@ namespace sw
             }
             SW_PROFILE_COUNT( "UI.StyleWidgets", restyledCount );
         }
-        // 화면 마커: 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(레이아웃 앞이므로 같은 프레임에 배치된다).
-        {
-            SW_PROFILE_SCOPE( "GT.UI.Markers" );
-            WidgetMarkerView view{}; // 카메라와 뷰 · 투영은 관리자마다 한 번 구한다
-            for ( WidgetComponent* pComponent : _listWidgetComponent )
-            {
-                pComponent->updateScreenMarker( _viewport, view );
-            }
-            // GPU 투영 마커의 공용 카메라 — 켜진 마커가 있을 때만 패킷에 실린다(`getGPUMarkerCount`).
-            if ( view._pGPUManager != nullptr )
-            {
-                CanvasMarkerView gpuView{};
-                WidgetComponent::makeGPUMarkerView( view, _viewport._size, gpuView );
-                _markers.setGPUMarkerView( gpuView, view._pGPUManager );
-            }
-        }
+        // 레이아웃 앞 칸: 화면 마커가 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(같은 프레임에 배치된다).
+        _onUpdateBeforeLayout.broadcast( deltaSeconds );
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.UI.Layout" );
@@ -335,17 +310,7 @@ namespace sw
         }
         // 그리기: 더티한 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 순회(5-2) 전까지는 그리기가 kStyle 도 비운다).
         paintScreens();
-        // 월드 공간 위젯: 컴포넌트마다 자기 트리를 렌더 텍스처 크기(배율 1)로 배치하고 칠한다.
-        if ( _listWidgetComponent.empty() == false )
-        {
-            const UILayoutContext layout = makeLayoutContext();
-            const UIPaintContext  paint  = makePaintContext();
-            for ( WidgetComponent* pComponent : _listWidgetComponent )
-            {
-                pComponent->updateWorldCanvas( layout, paint );
-            }
-        }
-        _onUpdateAfterPaint.broadcast( deltaSeconds ); // 스택 밖 화면(오프스크린 — 에디터 미리보기)
+        _onUpdateAfterPaint.broadcast( deltaSeconds ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
     }
 
     UIScreenHandle UISystem::pushScreen( unique_ptr<UIScreen> screen )
@@ -902,90 +867,6 @@ namespace sw
         return context;
     }
 
-    WidgetID UISystem::addScreenMarker( unique_ptr<Widget> widget )
-    {
-        if ( widget == nullptr )
-            return kInvalidWidgetID;
-        UIScreen* pMarkers = findScreen( _markers.getScreen() );
-        if ( pMarkers == nullptr || pMarkers->isClosing() )
-        {
-            unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
-            root->setVisibility( WidgetVisibility::SelfHitTestInvisible ); // 빈 곳 클릭은 아래(게임)로 넘긴다
-            UIScreenDesc desc{};
-            desc._layer       = UILayer::HUD;
-            desc._bTakesFocus = false;
-            desc._bShowCursor = false;
-            _markers.setScreen( pushScreen( sw::make_unique<UIScreen>( desc, std::move( root ) ) ) );
-            pMarkers = findScreen( _markers.getScreen() );
-        }
-        PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
-        if ( pRoot == nullptr )
-            return kInvalidWidgetID;
-        // 앵커 번호를 준다(뗀 마커의 번호부터). 첫 위치는 붙인 쪽이 정한다 — 그 전에는 위젯이 접혀 있다.
-        widget->setPaintAnchor( _markers.allocateAnchor() );
-        return pRoot->addChild( std::move( widget ) )->getID();
-    }
-
-    void UISystem::removeScreenMarker( WidgetID widget )
-    {
-        UIScreen*    pMarkers = findScreen( _markers.getScreen() );
-        Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
-        PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
-        if ( pRoot == nullptr )
-            return;
-        _markers.releaseAnchor( pWidget->getPaintAnchor() );
-        (void)pRoot->removeChild( pWidget ); // 부모에서 찾은 위젯이므로 항상 제거된다
-        if ( pRoot->getChildCount() == 0 )
-        {
-            closeScreen( _markers.getScreen() );
-            _markers.forgetScreen();
-        }
-    }
-
-    void UISystem::setScreenMarkerAnchor( uint32 anchor, const float2& position, float32 scale )
-    {
-        _markers.setAnchor( anchor, position, scale );
-    }
-
-    void UISystem::setGPUScreenMarker( uint32 anchor, const CanvasMarkerRecord& record )
-    {
-        _markers.setGPUMarker( anchor, record );
-    }
-
-    void UISystem::clearGPUScreenMarker( uint32 anchor )
-    {
-        _markers.clearGPUMarker( anchor );
-    }
-
-    Widget* UISystem::findScreenMarker( WidgetID widget ) const
-    {
-        const UIScreen* pMarkers = findScreen( _markers.getScreen() );
-        return pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
-    }
-
-    void UISystem::registerWidgetComponent( WidgetComponent& component )
-    {
-        for ( const WidgetComponent* pExisting : _listWidgetComponent )
-        {
-            if ( pExisting == &component )
-                return;
-        }
-        _listWidgetComponent.push_back( &component );
-    }
-
-    void UISystem::unregisterWidgetComponent( WidgetComponent& component )
-    {
-        for ( size_t index = 0; index < _listWidgetComponent.size(); ++index )
-        {
-            if ( _listWidgetComponent[index] == &component )
-            {
-                _worldPointer.forgetComponent( component );
-                _listWidgetComponent.erase( _listWidgetComponent.begin() + static_cast<ptrdiff_t>( index ) );
-                return;
-            }
-        }
-    }
-
     void UISystem::setAccessibilityBridge( unique_ptr<IUIAccessibilityBridge> bridge )
     {
         _accessibilityBridge   = std::move( bridge );
@@ -1051,67 +932,6 @@ namespace sw
         _accessibleFocusScreen = screen;
         _accessibleFocusWidget = widget;
         _accessibilityBridge->notifyFocusChanged( screen, widget );
-    }
-
-    bool UISystem::routeWorldPointer( const WorldWidgetRay& ray, const UIPointerEvent& event )
-    {
-        return _worldPointer.route( _listWidgetComponent, ray, event );
-    }
-
-    void UISystem::processWorldPointer()
-    {
-        // 입력을 켠 World 위젯이 하나도 없으면 광선을 만들 필요가 없다. 호버가 남아 있으면 푼다.
-        const WidgetComponent* pAnchorComponent = nullptr;
-        for ( const WidgetComponent* pComponent : _listWidgetComponent )
-        {
-            if ( pComponent->acceptsWorldInput() )
-            {
-                pAnchorComponent = pComponent;
-                break;
-            }
-        }
-        const bool bLocked     = _input.getInputManager()->isMouseLockActive();
-        const bool bNoViewport = _viewport._physicalSize._y <= 0.0f;
-        const bool bCannotAim  = bLocked || bNoViewport;
-        if ( pAnchorComponent == nullptr || bCannotAim )
-        {
-            _worldPointer.releaseHover();
-            return;
-        }
-        // 카메라는 입력을 켠 첫 위젯의 씬 것을 쓴다(한 UI 시스템은 한 게임 씬의 UI 다).
-        const GameObject*        pOwner   = pAnchorComponent->getOwner();
-        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
-        if ( pCamera == nullptr )
-        {
-            _worldPointer.releaseHover();
-            return;
-        }
-        const float4x4 inverseViewProjection = pCamera->getViewProjectionMatrix( _viewport._physicalSize._x / _viewport._physicalSize._y ).invert();
-        for ( const UIRoutedPointerEvent& routed : _input.getFramePointerEvents() )
-        {
-            if ( routed._bOverScreenWidget == SW_TRUE )
-            {
-                _worldPointer.releaseHover(); // 화면 위젯이 World 위젯을 가린다
-                continue;
-            }
-            WorldWidgetRay ray{};
-            if ( WorldWidgetPick::makeRay( inverseViewProjection, routed._event._position, _viewport._size, ray ) == false )
-                continue;
-            const bool bHandled = _worldPointer.route( _listWidgetComponent, ray, routed._event );
-            // 위젯이 처리한 누름 · 뗌은 게임이 받지 않게 소비한다(화면 위젯과 같은 규칙).
-            const bool bButtonEvent = routed._event._kind == UIPointerEventKind::Down || routed._event._kind == UIPointerEventKind::Up;
-            if ( bHandled && bButtonEvent )
-                _input.getConsumption().consumeMouseButton( routed._event );
-        }
-    }
-
-    void UISystem::collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const
-    {
-        for ( const WidgetComponent* pComponent : _listWidgetComponent )
-        {
-            pComponent->appendWorldCanvas( inoutListTarget );
-        }
     }
 
     void UISystem::syncScreenSwitches()
@@ -1186,7 +1006,6 @@ namespace sw
             _paintState.markLastCanvasReused();
             SW_PROFILE_COUNT( "UI.PaintWidgets", 0 );
             SW_PROFILE_COUNT( "UI.CanvasQuads", _paintState.getCanvas()._listQuad.size() );
-            _markers.publishCanvasAnchors( context._uiScale );
             return;
         }
         CanvasDrawList& target = _paintState.beginPaint( bReusableFrame, _viewport._physicalSize );
@@ -1213,7 +1032,7 @@ namespace sw
         }
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
         SW_PROFILE_COUNT( "UI.CanvasQuads", target._listQuad.size() );
-        _markers.publishCanvasAnchors( context._uiScale ); // 앵커는 사각형과 따로 프레임마다 낸다(움직인 마커가 그리기 목록 번호를 올리지 않는다)
+
         _paintState.endPaint( painter.getDeferredGlyphCount() );
     }
 

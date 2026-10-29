@@ -1,8 +1,8 @@
 /**
  * @file UIWorldPointerRouter.h
  * @brief 광선을 World 위젯(입력을 켠 `WidgetComponent`)으로 보내 포인터 이벤트로 바꿉니다(언리얼 `WidgetInteractionComponent` 에 해당).
- * @details 마우스는 `UISystem::processInput` 이 화면 위젯 아래가 아닌 이벤트를 카메라 광선으로 바꿔 여기에 넣고, 크로스헤어 · 패드 같은 다른 출처는 게임 코드가
- *          `UISystem::routeWorldPointer` 로 자기 광선을 넣는다. 가장 가까이 맞힌 위젯 하나가 이벤트를 받고, 위젯마다 호버 · 포인터 잡기 상태(`UIPointerState`)를 가지므로
+ * @details 마우스는 UI 입력 처리의 포인터 뒤 칸(`UISystem::onPointerProcessed`)에서 위젯 컴포넌트 서비스가 화면 위젯 아래가 아닌 이벤트를 카메라 광선으로 바꿔 여기에 넣고,
+ *          크로스헤어 · 패드 같은 다른 출처는 게임 코드가 `UIWidgetComponentService::routeWorldPointer` 로 자기 광선을 넣는다. 가장 가까이 맞힌 위젯 하나가 이벤트를 받고, 위젯마다 호버 · 포인터 잡기 상태(`UIPointerState`)를 가지므로
  *          광선이 옮겨 가면 Leave · Enter 가 맞게 간다. 위젯 안의 위젯이 포인터를 잡았으면(슬라이더 끌기) 광선이 사각형 밖으로 벗어나도 그 위젯이 평면 위의 점을 받는다.
  */
 #pragma once
@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class UIWorldPointerRouter
-     * @brief 광선 하나를 World 위젯 하나로 고르고 위젯 좌표 이벤트로 보내는 상태입니다(`UISystem` 의 값 멤버). 컴포넌트는 소유하지 않는다.
+     * @brief 광선 하나를 World 위젯 하나로 고르고 위젯 좌표 이벤트로 보내는 상태입니다(`UIWidgetComponentService` 의 값 멤버). 컴포넌트는 소유하지 않는다.
      */
     class SW_API UIWorldPointerRouter
     {

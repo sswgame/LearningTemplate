@@ -1,6 +1,6 @@
 /**
  * @file UIScreenMarkers.h
- * @brief 화면 마커(월드를 따라가는 HUD 위젯)의 화면 핸들과 그리기 앵커 표입니다(`UISystem` 의 값 멤버).
+ * @brief 화면 마커(월드를 따라가는 HUD 위젯)의 화면 핸들과 그리기 앵커 표입니다(`UIWidgetComponentService` 의 값 멤버).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -21,7 +21,7 @@ namespace sw
     /**
      * @class UIScreenMarkers
      * @brief 마커를 담는 HUD 화면의 핸들, 마커마다의 앵커(UI 단위), 뗀 마커가 돌려준 앵커 번호, 그리기 단계가 낸 앵커(물리 픽셀 정수)를 듭니다.
-     * @details 마커 화면을 올리고 닫는 일과 위젯 붙이기 · 떼기는 화면 스택의 일이라 `UISystem` 이 한다. 이 클래스는 핸들과 앵커 번호 · 값만 맡는다.
+     * @details 마커 화면을 올리고 닫는 일과 위젯 붙이기 · 떼기는 위젯 컴포넌트 서비스(`UIWidgetComponentService`)가 화면 스택에 묻는다. 이 클래스는 핸들과 앵커 번호 · 값만 맡는다.
      */
     class SW_API UIScreenMarkers
     {

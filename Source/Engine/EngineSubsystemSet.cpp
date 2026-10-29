@@ -76,6 +76,7 @@
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/World/UIWidgetComponentService.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw::engine
@@ -258,7 +259,8 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<UISubtitleService>() );
         startup.addSubsystem( sw::make_unique<UITooltipService>() );
         startup.addSubsystem( sw::make_unique<UINotificationService>() );
-        startup.addSubsystem( sw::make_unique<UIOffscreenScreens>() ); // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다
+        startup.addSubsystem( sw::make_unique<UIOffscreenScreens>() );       // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다
+        startup.addSubsystem( sw::make_unique<UIWidgetComponentService>() ); // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다
         return parts;
     }
 } // namespace sw::engine

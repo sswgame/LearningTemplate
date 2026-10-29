@@ -37,6 +37,7 @@
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/UISystem.h"
+#include "Engine/UI/World/UIWidgetComponentService.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
@@ -410,7 +411,7 @@ namespace sw
         if ( packet._canvas._listMarker.empty() || pUISystem == nullptr || pActiveScene == nullptr || _gpuSceneBuilder == nullptr )
             return;
         // 기록이 다른 관리자(미리보기 씬)의 것이면 프리미티브 번호가 이 스냅샷의 것이 아니다 — 월드 점을 쓴다.
-        if ( pUISystem->getGPUMarkerManager() != pActiveScene->getObjectManager() )
+        if ( engine::getSubsystem<UIWidgetComponentService>().getMarkers().getGPUMarkerManager() != pActiveScene->getObjectManager() )
             return;
         for ( CanvasMarkerRecord& record : packet._canvas._listMarker )
         {
@@ -427,20 +428,21 @@ namespace sw
         const bool bSubmitMainCanvas = bSceneMain == false && bUIReady && pUISystem->getCanvas().isEmpty() == false;
         if ( bSubmitMainCanvas )
         {
+            const UIScreenMarkers& markers  = engine::getSubsystem<UIWidgetComponentService>().getMarkers();
             packet._canvas._mainOutput      = pUISystem->getCanvas();
-            packet._canvas._listAnchor      = pUISystem->getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
+            packet._canvas._listAnchor      = markers.getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
             packet._canvas._contentRevision = pUISystem->getCanvasRevision();
             // GPU 가 투영하는 마커 — 월드 점만 싣고 화면 좌표는 렌더러의 컴퓨트(`CanvasRenderer::recordMarkerProjection`)가 앵커 원소에 쓴다. 켜진 마커가 없으면 싣지 않는다.
-            if ( pUISystem->getGPUMarkerCount() > 0 )
+            if ( markers.getGPUMarkerCount() > 0 )
             {
-                packet._canvas._listMarker = pUISystem->getGPUMarkers();
-                packet._canvas._markerView = pUISystem->getGPUMarkerView();
+                packet._canvas._listMarker = markers.getGPUMarkers();
+                packet._canvas._markerView = markers.getGPUMarkerView();
             }
         }
         if ( bUIReady )
         {
-            pUISystem->collectWorldCanvases( packet._canvas._listTarget );                           // 월드 공간 UI 의 렌더 텍스처
-            engine::getSubsystem<UIOffscreenScreens>().appendCanvases( packet._canvas._listTarget ); // 화면 스택 밖 화면(에디터 UI 미리보기)
+            engine::getSubsystem<UIWidgetComponentService>().appendWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+            engine::getSubsystem<UIOffscreenScreens>().appendCanvases( packet._canvas._listTarget );            // 화면 스택 밖 화면(에디터 UI 미리보기)
         }
         // 글리프 캐시의 프레임 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 래스터화 예산이 되살아나지 않는다). 캐시가 없으면 글리프를 그리지 않으므로 값이 쓰이지 않는다.
         const uint64 glyphFrameIndex = pFontService != nullptr && pFontService->isInitialized() ? pFontService->getGlyphCache().getFrameIndex() : 0;
