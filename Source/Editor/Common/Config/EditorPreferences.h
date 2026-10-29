@@ -1,6 +1,7 @@
 /**
  * @file EditorPreferences.h
- * @brief 에디터 환경설정의 기본 섹션입니다(General, Viewport, Play, Content Browser). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @brief 에디터 환경설정 섹션의 값 형식입니다(General, Viewport, Play, Content Browser, Multiplayer Sync). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @details 기본 섹션의 등록은 `EditorPreferences.cpp`, Multiplayer Sync 의 등록은 그 탭(`MultiplayerSyncTab.cpp`)이 `SW_EDITOR_SETTINGS` 로 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -86,5 +87,18 @@ namespace sw::editor
 
         PROPERTY( Tooltip = "Show every game pack under game/ instead of the active one only" )
         bool _bShowAllPacksByDefault{ false };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 멀티플레이 창 Sync 탭 — 클라이언트에게 물은 질의의 기다림 상한입니다. */
+    REFLECT()
+    struct EditorSyncPreferences
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1.0, Tooltip = "Seconds the Sync tab waits for a client's answer before it shows a timeout error (a client answers an invalid question with an error line, which is never counted as an answer)" )
+        float32 _clientReplyTimeoutSeconds{ 10.0f };
     };
 } // namespace sw::editor

@@ -6,6 +6,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
 
@@ -266,5 +267,13 @@ namespace sw::editor
         }
         // 등록되지 않은 섹션을 읽었다 - 그 모듈이 꺼져 있거나 SW_EDITOR_SETTINGS 가 빠졌다. 기본값으로 대신하지 않고 모든 구성에서 이유를 남기고 멈춘다.
         SW_FATAL( "Editor preferences section for type '%#' is not registered (its module is off, or SW_EDITOR_SETTINGS is missing)", pType != nullptr ? pType->_name.c_str() : "(null)" );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    void EditorConfig::saveToPreferences()
+    {
+        (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
     }
 } // namespace sw::editor

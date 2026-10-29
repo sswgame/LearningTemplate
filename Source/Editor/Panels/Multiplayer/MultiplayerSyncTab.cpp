@@ -4,8 +4,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/Config/EditorSyncPreferences.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
