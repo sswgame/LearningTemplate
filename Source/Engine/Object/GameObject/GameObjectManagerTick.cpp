@@ -236,6 +236,7 @@ namespace sw
     {
         static constexpr const utf8* kArrName[] = {
 #define SW_SCENE_FRAME_STEP( Name ) #Name,
+#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
         };

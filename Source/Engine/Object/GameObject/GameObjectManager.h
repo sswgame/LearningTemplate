@@ -27,7 +27,6 @@
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/FrameSystemLanePlan.h"
-#include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
@@ -38,6 +37,7 @@ namespace sw
     class CameraComponent;
     class Component;
     class GameObjectManager;
+    class ISceneFrameSystem;
     class SceneComponent;
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */

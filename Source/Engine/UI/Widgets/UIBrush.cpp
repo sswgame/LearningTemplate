@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Widgets/UIBrush.h"
 
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
+
 namespace sw
 {
     CanvasBrush UIBrush::makeCanvasBrush( const shared_ptr<const Texture2D>& image ) const

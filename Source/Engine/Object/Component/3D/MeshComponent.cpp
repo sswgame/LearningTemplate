@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

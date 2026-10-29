@@ -18,7 +18,6 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
-#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -52,6 +51,8 @@ namespace sw
     class UserSettingsManager;
     class GameObjectManager;
     class WidgetComponent;
+
+    struct UIAccessibilitySnapshot;
 } // namespace sw
 
 namespace sw

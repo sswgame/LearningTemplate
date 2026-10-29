@@ -13,7 +13,6 @@
 
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -26,6 +25,8 @@ namespace sw
     class MaterialInstance;
     class Mesh;
     class PrimitiveRegistry;
+
+    enum class InstanceHighlightStyle : uint8; // 정의는 GPUInstanceHighlight.h — 값으로만 받는다
 
     /**
      * @class MeshComponent

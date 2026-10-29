@@ -27,6 +27,7 @@
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
+#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"

@@ -8,12 +8,13 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class Texture2D;
+
+    struct CanvasBrush;
 
     /**
      * @struct UIBrush
