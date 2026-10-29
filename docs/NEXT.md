@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 구조 개편 A3 · B · C, 테스트 틀 · 시나리오 개편, 병렬 실행(시나리오 백엔드 행렬 · `-log-file` · 기동 로그 백로그)까지 끝났다. 다음은 7 절의 설계 넷 — 빌드 속도 마무리(D) · 테스트 틀 고도화(E) · 시나리오 범용화와 게임 쪽 확장(F) · 리로드를 떼었다 붙이는 단위로(G) · 뜻이 안 보이는 이름 바꾸기(H) — 과 4 절의 남은 일이다.
+> 결론: D · H 와 E · F · G 의 앞부분이 끝났다. **다음은 7 절 I(편집기 · 개발 · 테스트 기능을 빌드 단위로 엔진에서 떼기)부터** — 과도기 `EditorFoundation` 을 없애는 일(되돌리기 데이터화 · `IModuleStateStore`)이 첫째, 그다음 `DevTools` 단위, 테스트 · 자동화 실행기 분리다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -123,7 +123,16 @@
 | `EditorFoundation` | 편집기 리로드에도 살아야 하는 상태 · OS 도구(되돌리기 · 세션 · 복사 버퍼 · 파일 대화상자) — App 이 링크하고 호스트 범위에 건다 | 개발 App |
 | `EditorModule` · 편집기 확장 | 편집 기능 전부(저장 · 프리팹 작업 · 굽기 · 패널). 데이터 사본을 고쳐 엔진 직렬화로 쓰고 런타임이 다시 읽는다 | 개발 App |
 
-**끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. `EditorFoundation` 신설. 리타깃 `*ForEdit` → 일반 설정자.
+**끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. 리타깃 `*ForEdit` → 일반 설정자.
+파일 대화상자는 편집기(`Editor/Common/Backend/FileDialog`)로 — 스레드를 들고 있다가 닫히면 합류시키고, 그 전까지 `LiveReloadManager::addReloadHold`(편집기 API `isReloadHeld`)가 리로드를 대기열에 잡아 둔다(버리지 않는다).
+
+**지금 과도기**: `Source/EditorFoundation`(개발 App 이 링크하는 SHARED — `CommandStack` · `ObjectUndoUtil` · `EditSessionState` · `ObjectCopyBuffer`)이 남아 있다. **없앤다**(사용자 결정 2026-10-29 — 내리지 않는 토대 대신 "데이터로 맡기기"):
+- **되돌리기를 데이터로**(언리얼 `FTransaction` 처럼): 명령 = 레이블 + 종류 이름 + 직렬화한 내용(+ 묶음의 안쪽 명령). 실행은 종류 이름으로 찾는 처리기 표(편집기 · 편집기 확장이 정적 등록 — 다시 올라오면 다시 등록)가 한다.
+  오브젝트 스냅숏 명령(33 곳, `ObjectUndoUtil`)은 이미 데이터라 모양만 바꾼다. 코드 명령 12 곳(`EditorTransaction.cpp` 문서 글 · `pushCoalesce`, `RigDebugPanel` · `UIPreviewPanel` · `TerrainBrushTool` · `EditorInspectorCommands`)은
+  "열린 문서 · 도구를 키로 찾는 표 + 종류별 처리기"로 바꾸고, 대상이 닫혀 있으면 그 명령은 건너뛴다. 그러면 `removeCodeWithin` · 모듈 언로드 처리기도 되돌리기에서 빠진다.
+- **리로드 사이 맡기기**: 모듈이 이름 붙은 데이터 묶음을 맡겼다 되찾는 순수 가상 인터페이스(`IModuleStateStore`)를 `ModuleAPI` 에, 구현은 App(호스트 범위). 편집기는 인스턴스를 없앨 때 되돌리기 기록 · 세션 상태(선택 · 미저장) · 복사 버퍼를 맡기고 새 인스턴스가 되찾는다.
+  리로드든 백엔드 교체든 같은 길이라 `EditSessionState::setModuleLibraryKept`(App `RHIBackendSwitcher`)도 없어진다. 키트 · 게임 모듈도 같은 인터페이스로 리로드 사이 상태를 넘길 수 있다.
+- 다 옮기면 `Source/EditorFoundation` · App 의 호스트 범위 등록 · 씬 변경 구독(`App::_commandStackClearSubscription` — 편집기가 직접 구독)을 지운다.
 찾는 법: 편집기 DLL 만 가져다 쓰는 Engine.dll 내보내기를 import 표로 본다(`dumpbin /imports:Engine.dll` 을 EditorModule · `GF_EditorPlugin_*` 와 그 밖의 바이너리에 돌려 차집합, 그 이름이 Engine 소스 안에서 안 쓰이면 후보 — 2026-10-29 에 253 개, 대부분은 편집기가 마침 유일하게 부르는 런타임 조회 · 설정이라 둔다).
 
 **남은 것**(순서대로):
