@@ -12,6 +12,11 @@
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorSubsystem.h"
 
+namespace sw
+{
+    class AssetPaths;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief 해석한 테마 값입니다. 색 이름은 `EditorThemeColorDef` 의 키와 같습니다(접미사 Color 는 옛 접근자 이름을 따른 것). */
@@ -84,7 +89,7 @@ namespace sw::editor
          * @brief 핫 리로드가 바뀐 토큰 파일을 알릴 때 부릅니다(에셋 종류 등록의 처리기). 활성 에디터의 테마에 표시를 남기고, 다음 UI 프레임이 모두 다시 읽고 적용합니다.
          * @return 늘 true 입니다(처리했으니 엔진 캐시 리로드는 하지 않는다).
          */
-        [[nodiscard]] static bool importChangedTokenFile( string_view relativePath );
+        [[nodiscard]] static bool importChangedTokenFile( const AssetPaths& assetPaths, string_view relativePath ); ///< 임포터 함수 형식(`AssetSourceImporterFunc`)에 맞춘다 — 경로 상태는 쓰지 않는다
         /** @brief 바뀐 토큰이 있었으면 true 를 돌려주고 표시를 지웁니다. */
         bool consumeTokensChanged()
         {
