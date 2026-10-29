@@ -22,6 +22,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
