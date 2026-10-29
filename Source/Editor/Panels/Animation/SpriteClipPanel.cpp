@@ -2,14 +2,10 @@
 
 #include "Editor/Panels/Animation/SpriteClipPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -18,13 +14,10 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Localization/TextFormatter.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -32,28 +25,13 @@
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "SpriteClip" );
     SW_EDITOR_PANEL( SpriteClipPanel, SpriteClipPanel::kPanelID, EditorPanelCategory::Tool, 1600 );
 
     SpriteClipPanel::SpriteClipPanel()
         : EditorDocumentPanel{ EditorAssetType{ SpriteClipAsset::kAssetType }, false }
-        , _atlasPath{}
-        , _status{}
-        , _listFrame{}
-        , _listKey{}
-        , _listAnimation{}
-        , _animationName{}
-        , _selectedFrame{ -1 }
-        , _selectedKey{ -1 }
-        , _selectedAnimation{ -1 }
-        , _sliceColumns{ 4 }
-        , _sliceRows{ 4 }
+        , _model{}
         , _atlasThumbnail{}
     {
-        const DataPath& atlas = editor::getEditorToolDefaults()._spriteAtlas;
-        if ( atlas.isSet() )
-            _atlasPath = atlas.c_str();
-        _listFrame.push_back( Frame{} );
     }
 
     void SpriteClipPanel::drawDocumentContent()
@@ -71,12 +49,13 @@ namespace sw::editor
 
         drawKeySection();
 
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
     void SpriteClipPanel::drawFileBar()
     {
-        ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
+        fixed_string<constant::kMaxBuffer256>& atlasPath = _model.editAtlasPath();
+        ImGui::InputText( "Atlas", atlasPath.data(), atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
@@ -84,12 +63,9 @@ namespace sw::editor
             reloadDocument();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
+        // 저장 단추도 저장 경로 하나(`saveDocumentAndClearDirty`)를 지난다 — 예전 단추는 못 읽은 문서(Malformed)도 덮어쓰고, 경로가 비거나 쓰기에 실패해도 "저장했다" 를 띄웠다.
         if ( ImGui::Button( "Save" ) )
-        {
-            saveClip();
-            const string savedPath = getLoadedAssetPath().empty() ? string{ EditorPaths::kSpriteClipDocumentFileName } : getLoadedAssetPath();
-            _status                = SW_LOCKEYFORMAT( "EditorSpriteClip", "SavedStatus", TextArgumentList().addText( "path", savedPath ) );
-        }
+            (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 상태 줄은 그대로다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s/%s (separate from AnimationGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
     }
@@ -109,39 +85,32 @@ namespace sw::editor
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );
         if ( ImGui::Button( "Add Frame" ) )
         {
-            _listFrame.push_back( Frame{} );
-            _selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
+            _model.addFrame();
             notifyDocumentEdited( "Add Sprite Frame" );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Frame" ) );
-        const bool bRemoveFrameRequested = ImGui::Button( "Remove Frame" ) && 0 <= _selectedFrame &&
-                                           _selectedFrame < static_cast<int32>( _listFrame.size() );
-        if ( bRemoveFrameRequested )
-        {
-            _listFrame.erase( _listFrame.begin() + _selectedFrame );
-            if ( _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
-                _selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
+        if ( ImGui::Button( "Remove Frame" ) && _model.removeSelectedFrame() )
             notifyDocumentEdited( "Remove Sprite Frame" );
-        }
 
-        for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( _listFrame.size() ); ++frameIndex )
+        const int32 frameCount = static_cast<int32>( _model.getFrames().size() );
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
         {
             ImGui::PushID( frameIndex );
             fixed_string<constant::kMaxBuffer32> label;
             formatstring( label.data(), label.capacity(), "Frame %#", frameIndex );
-            if ( ImGui::Selectable( label.c_str(), _selectedFrame == frameIndex ) )
-                _selectedFrame = frameIndex;
+            if ( ImGui::Selectable( label.c_str(), _model.getSelectedFrame() == frameIndex ) )
+                _model.selectFrame( frameIndex );
             ImGui::PopID();
         }
 
-        if ( _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() ) )
+        SpriteClipFrame* pFrame = _model.editSelectedFrame();
+        if ( pFrame == nullptr )
             return;
-        Frame& f = _listFrame[static_cast<size_t>( _selectedFrame )];
-        drawEditedDragFloat( "u", &f._uvRect._x, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
-        drawEditedDragFloat( "v", &f._uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
-        drawEditedDragFloat( "w", &f._uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
-        drawEditedDragFloat( "h", &f._uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
-        ImGui::InputInt( "durationMs", &f._durationMs );
+        drawEditedDragFloat( "u", &pFrame->_uvRect._x, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "v", &pFrame->_uvRect._y, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "w", &pFrame->_uvRect._z, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        drawEditedDragFloat( "h", &pFrame->_uvRect._w, 0.01f, SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ), "Edit Sprite Frame", "sprite-clip-frame" );
+        ImGui::InputInt( "durationMs", &pFrame->_durationMs );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
@@ -153,41 +122,34 @@ namespace sw::editor
         ImGui::TextUnformatted( "TransformAnimation Keys (optional)" );
         if ( ImGui::Button( "Add Key" ) )
         {
-            _listKey.push_back( TransformKey{} );
-            _selectedKey = static_cast<int32>( _listKey.size() ) - 1;
+            _model.addKey();
             notifyDocumentEdited( "Add Sprite Key" );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove Key" ) );
-        const bool bRemoveKeyRequested = ImGui::Button( "Remove Key" ) && 0 <= _selectedKey &&
-                                         _selectedKey < static_cast<int32>( _listKey.size() );
-        if ( bRemoveKeyRequested )
-        {
-            _listKey.erase( _listKey.begin() + _selectedKey );
-            if ( _selectedKey >= static_cast<int32>( _listKey.size() ) )
-                _selectedKey = static_cast<int32>( _listKey.size() ) - 1;
+        if ( ImGui::Button( "Remove Key" ) && _model.removeSelectedKey() )
             notifyDocumentEdited( "Remove Sprite Key" );
-        }
 
-        for ( int32 keyIndex = 0; keyIndex < static_cast<int32>( _listKey.size() ); ++keyIndex )
+        const int32 keyCount = static_cast<int32>( _model.getKeys().size() );
+        for ( int32 keyIndex = 0; keyIndex < keyCount; ++keyIndex )
         {
             ImGui::PushID( 1000 + keyIndex );
             fixed_string<constant::kMaxBuffer32> label;
             formatstring( label.data(), label.capacity(), "Key %#", keyIndex );
-            if ( ImGui::Selectable( label.c_str(), _selectedKey == keyIndex ) )
-                _selectedKey = keyIndex;
+            if ( ImGui::Selectable( label.c_str(), _model.getSelectedKey() == keyIndex ) )
+                _model.selectKey( keyIndex );
             ImGui::PopID();
         }
 
-        if ( _selectedKey < 0 || _selectedKey >= static_cast<int32>( _listKey.size() ) )
+        SpriteClipKey* pKey = _model.editSelectedKey();
+        if ( pKey == nullptr )
             return;
-        TransformKey& k = _listKey[static_cast<size_t>( _selectedKey )];
-        drawEditedDragFloat( "time", &k._time, 0.01f, SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ), "Edit Sprite Key", "sprite-clip-key" );
-        drawEditedDragFloat( "x", &k._position._x, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
-        drawEditedDragFloat( "y", &k._position._y, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
+        drawEditedDragFloat( "time", &pKey->_time, 0.01f, SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ), "Edit Sprite Key", "sprite-clip-key" );
+        drawEditedDragFloat( "x", &pKey->_position._x, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
+        drawEditedDragFloat( "y", &pKey->_position._y, 0.1f, nullptr, "Edit Sprite Key", "sprite-clip-key" );
         // 키는 라디안으로 담고(엔진의 각도 단위) 편집은 도로 한다.
-        float32 angleDeg = MathUtil::toDegree( k._angle );
+        float32 angleDeg = MathUtil::toDegree( pKey->_angle );
         if ( ImGui::DragFloat( "angleDeg", &angleDeg, 0.5f ) )
-            k._angle = MathUtil::toRadian( angleDeg );
+            pKey->_angle = MathUtil::toRadian( angleDeg );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );
@@ -195,32 +157,7 @@ namespace sw::editor
 
     ToolAssetLoadResult SpriteClipPanel::loadDocument()
     {
-        if ( EditorAssetTypeRegistry::matches( EditorAssetType{ Texture2D::kAssetType }, getLoadedAssetPath().c_str() ) )
-        {
-            _atlasPath = getLoadedAssetPath().c_str();
-            return ToolAssetLoadResult::Loaded;
-        }
-
-        SpriteClipAsset           data;
-        const ToolAssetLoadResult result = EditorToolAssetCommands::loadSpriteClip( data, _status, getLoadedAssetPath() );
-        if ( result != ToolAssetLoadResult::Loaded )
-            return result;
-
-        adoptClip( std::move( data ) );
-        return ToolAssetLoadResult::Loaded;
-    }
-
-    void SpriteClipPanel::adoptClip( SpriteClipAsset&& clip )
-    {
-        if ( clip._atlasPath.empty() == false )
-            _atlasPath = clip._atlasPath.c_str();
-        _listFrame         = std::move( clip._listFrame );
-        _listKey           = std::move( clip._listKey );
-        _listAnimation     = std::move( clip._listAnimation );
-        _selectedFrame     = _listFrame.empty() ? -1 : 0;
-        _selectedKey       = _listKey.empty() ? -1 : 0;
-        _selectedAnimation = _listAnimation.empty() ? -1 : 0;
-        _animationName     = ( _selectedAnimation >= 0 ) ? _listAnimation[0]._name.c_str() : "";
+        return _model.loadDocument( getLoadedAssetPath() );
     }
 
     void SpriteClipPanel::drawAtlasPicker()
@@ -228,19 +165,18 @@ namespace sw::editor
         ImGui::Separator();
         ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
         EditorChrome::setNextItemWidthColumns( 12.0f );
-        ImGui::InputInt( "Columns", &_sliceColumns );
+        ImGui::InputInt( "Columns", &_model.editSliceColumns() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 12.0f );
-        ImGui::InputInt( "Rows", &_sliceRows );
+        ImGui::InputInt( "Rows", &_model.editSliceRows() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
-        _sliceColumns = MathUtil::clamp( _sliceColumns, 1, 64 );
-        _sliceRows    = MathUtil::clamp( _sliceRows, 1, 64 );
+        _model.clampSliceGrid();
 
-        void* pTexture = _atlasPath.empty() ? nullptr : _atlasThumbnail.findTexture( _atlasPath.c_str() );
+        void* pTexture = _model.hasAtlasPath() ? _atlasThumbnail.findTexture( _model.getAtlasPath() ) : nullptr;
         if ( pTexture == nullptr )
         {
-            ImGui::TextDisabled( "%s", _atlasPath.empty() ? SW_LOCKEY( "EditorSpriteClip", "NoAtlas" ) : SW_LOCKEY( "EditorSpriteClip", "LoadingAtlas" ) );
+            ImGui::TextDisabled( "%s", _model.hasAtlasPath() ? SW_LOCKEY( "EditorSpriteClip", "LoadingAtlas" ) : SW_LOCKEY( "EditorSpriteClip", "NoAtlas" ) );
             return;
         }
 
@@ -252,20 +188,22 @@ namespace sw::editor
 
         // 셀 격자와 고른 프레임 사각형을 이미지 위에 그린다.
         static constexpr Color kSliceGrid{ Color::fromBytes( 255, 255, 255, 90 ) };
-        ImDrawList*            pDrawList = ImGui::GetWindowDrawList();
-        for ( int32 column = 1; column < _sliceColumns; ++column )
+        ImDrawList*            pDrawList    = ImGui::GetWindowDrawList();
+        const int32            sliceColumns = _model.getSliceColumns();
+        const int32            sliceRows    = _model.getSliceRows();
+        for ( int32 column = 1; column < sliceColumns; ++column )
         {
-            const float32 x = imageMin.x + side * static_cast<float32>( column ) / static_cast<float32>( _sliceColumns );
+            const float32 x = imageMin.x + side * static_cast<float32>( column ) / static_cast<float32>( sliceColumns );
             pDrawList->AddLine( ImVec2( x, imageMin.y ), ImVec2( x, imageMin.y + side ), EditorColorUtil::toImU32( kSliceGrid ) );
         }
-        for ( int32 row = 1; row < _sliceRows; ++row )
+        for ( int32 row = 1; row < sliceRows; ++row )
         {
-            const float32 y = imageMin.y + side * static_cast<float32>( row ) / static_cast<float32>( _sliceRows );
+            const float32 y = imageMin.y + side * static_cast<float32>( row ) / static_cast<float32>( sliceRows );
             pDrawList->AddLine( ImVec2( imageMin.x, y ), ImVec2( imageMin.x + side, y ), EditorColorUtil::toImU32( kSliceGrid ) );
         }
-        if ( 0 <= _selectedFrame && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
+        if ( const SpriteClipFrame* pFrame = _model.editSelectedFrame(); pFrame != nullptr )
         {
-            const float4& uvRect = _listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
+            const float4& uvRect = pFrame->_uvRect;
             pDrawList->AddRect( ImVec2( imageMin.x + uvRect._x * side, imageMin.y + uvRect._y * side ),
                                 ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ),
                                 0.0f, 0, 2.0f );
@@ -273,18 +211,13 @@ namespace sw::editor
 
         if ( bHovered == false || EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) == false )
             return;
-        const ImVec2 mouse = ImGui::GetMousePos();
-        const int32  cell  = AtlasGridUtil::findCellAtUv( ( mouse.x - imageMin.x ) / side, ( mouse.y - imageMin.y ) / side, _sliceColumns, _sliceRows );
-        if ( cell < 0 )
-            return;
-        const bool bAddFrame = EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift ) || _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() );
-        if ( bAddFrame )
-        {
-            _listFrame.push_back( Frame{} );
-            _selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
-        }
-        _listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUvRect( cell, _sliceColumns, _sliceRows );
-        notifyDocumentEdited( bAddFrame ? "Add Sprite Frame" : "Edit Sprite Frame", bAddFrame ? string_view{} : string_view{ "sprite-clip-frame" } );
+        const ImVec2                           mouse  = ImGui::GetMousePos();
+        const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( ( mouse.x - imageMin.x ) / side, ( mouse.y - imageMin.y ) / side,
+                                                                              EditorInputGUI::readPointer().hasModifier( ModifierKey::Shift ) );
+        if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
+            notifyDocumentEdited( "Add Sprite Frame" );
+        else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
+            notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
     }
 
     void SpriteClipPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
@@ -298,108 +231,63 @@ namespace sw::editor
         ImGui::TextUnformatted( "Animations (name, first frame, frame count, loop) - none means the whole clip is one loop" );
         if ( ImGui::Button( "Add Animation" ) )
         {
-            Animation animation{};
-            animation._name       = formatToString( "anim%#", _listAnimation.size() );
-            animation._frameCount = static_cast<int32>( _listFrame.size() );
-            _listAnimation.push_back( std::move( animation ) );
-            _selectedAnimation = static_cast<int32>( _listAnimation.size() ) - 1;
-            _animationName     = _listAnimation.back()._name.c_str();
+            _model.addAnimation();
             notifyDocumentEdited( "Add Sprite Animation" );
         }
         ImGui::SameLine();
-        const bool bHasSelection = 0 <= _selectedAnimation && _selectedAnimation < static_cast<int32>( _listAnimation.size() );
-        if ( ImGui::Button( "Remove Animation" ) && bHasSelection )
-        {
-            _listAnimation.erase( _listAnimation.begin() + _selectedAnimation );
-            if ( _selectedAnimation >= static_cast<int32>( _listAnimation.size() ) )
-                _selectedAnimation = static_cast<int32>( _listAnimation.size() ) - 1;
-            _animationName = ( _selectedAnimation >= 0 ) ? _listAnimation[static_cast<size_t>( _selectedAnimation )]._name.c_str() : "";
+        if ( ImGui::Button( "Remove Animation" ) && _model.removeSelectedAnimation() )
             notifyDocumentEdited( "Remove Sprite Animation" );
-        }
 
-        for ( int32 animationIndex = 0; animationIndex < static_cast<int32>( _listAnimation.size() ); ++animationIndex )
+        const vector<SpriteClipAnimation>& listAnimation  = _model.getAnimations();
+        const int32                        animationCount = static_cast<int32>( listAnimation.size() );
+        for ( int32 animationIndex = 0; animationIndex < animationCount; ++animationIndex )
         {
             ImGui::PushID( 2000 + animationIndex );
-            if ( ImGui::Selectable( _listAnimation[static_cast<size_t>( animationIndex )]._name.c_str(), _selectedAnimation == animationIndex ) )
-            {
-                _selectedAnimation = animationIndex;
-                _animationName     = _listAnimation[static_cast<size_t>( animationIndex )]._name.c_str();
-            }
+            if ( ImGui::Selectable( listAnimation[static_cast<size_t>( animationIndex )]._name.c_str(), _model.getSelectedAnimation() == animationIndex ) )
+                _model.selectAnimation( animationIndex );
             ImGui::PopID();
         }
 
-        if ( 0 <= _selectedAnimation && _selectedAnimation < static_cast<int32>( _listAnimation.size() ) )
-        {
-            Animation& animation = _listAnimation[static_cast<size_t>( _selectedAnimation )];
-            ImGui::InputText( "name", _animationName.data(), _animationName.capacity() );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-            {
-                animation._name = _animationName.c_str();
-                notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
-            ImGui::InputInt( "first frame", &animation._firstFrame );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
-            ImGui::InputInt( "frame count", &animation._frameCount );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );
-            bool bLoop = animation._bLoop == SW_TRUE;
-            if ( ImGui::Checkbox( "loop", &bLoop ) )
-            {
-                animation._bLoop = bLoop ? SW_TRUE : SW_FALSE;
-                notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            }
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationLoopTip" ) );
-        }
-    }
-
-    void SpriteClipPanel::saveClip()
-    {
-        if ( getLoadedAssetPath().empty() )
+        SpriteClipAnimation* pAnimation = _model.editSelectedAnimation();
+        if ( pAnimation == nullptr )
             return;
-        if ( EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() ) )
+        fixed_string<constant::kMaxBuffer64>& animationName = _model.editAnimationName();
+        ImGui::InputText( "name", animationName.data(), animationName.capacity() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() && _model.commitAnimationName() )
+            notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
+        ImGui::InputInt( "first frame", &pAnimation->_firstFrame );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
+        ImGui::InputInt( "frame count", &pAnimation->_frameCount );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );
+        bool bLoop = pAnimation->_bLoop == SW_TRUE;
+        if ( ImGui::Checkbox( "loop", &bLoop ) )
         {
-            clearDocumentDirty();
-            syncDocumentUndoBaseline();
+            pAnimation->_bLoop = bLoop ? SW_TRUE : SW_FALSE;
+            notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
         }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationLoopTip" ) );
     }
 
     bool SpriteClipPanel::saveDocument()
     {
-        if ( getLoadedAssetPath().empty() )
+        if ( _model.saveDocument( getLoadedAssetPath() ) == false )
             return false;
-        if ( EditorToolAssetCommands::saveSpriteClip( captureClipData(), getLoadedAssetPath() ) )
-        {
-            clearDocumentDirty();
-            syncDocumentUndoBaseline();
-            return true;
-        }
-        return false;
-    }
-
-    SpriteClipAsset SpriteClipPanel::captureClipData() const
-    {
-        SpriteClipAsset data;
-        data._atlasPath     = _atlasPath.c_str();
-        data._listFrame     = _listFrame;
-        data._listKey       = _listKey;
-        data._listAnimation = _listAnimation;
-        return data;
+        syncDocumentUndoBaseline();
+        return true;
     }
 
     string SpriteClipPanel::captureDocumentText() const
     {
-        return captureClipData().toXML();
+        return _model.captureText();
     }
 
     void SpriteClipPanel::applyDocumentText( string_view text )
     {
-        SpriteClipAsset restored;
-        if ( text.empty() == false && restored.parseXML( text ) == false )
-            SW_LOG_WARNING( "Sprite clip undo snapshot could not be read - showing an empty clip" );
-        adoptClip( std::move( restored ) );
+        _model.applyText( text );
     }
 } // namespace sw::editor

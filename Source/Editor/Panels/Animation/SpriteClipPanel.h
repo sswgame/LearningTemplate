@@ -1,21 +1,17 @@
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
-#include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-
-#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Editor/Panels/Animation/Model/SpriteClipModel.h"
 
 namespace sw::editor
 {
     /**
      * @brief 프레임 목록 · 이름 붙은 애니메이션 구간 · 선택적 TransformAnimation 키를 편집합니다 (AnimationGraph과 별개)
      * @details 문서는 런타임 타입 `SpriteClipAsset` 하나입니다 — 게임이 읽는 것과 같은 파서 · 같은 구조체를 편집합니다.
+     *          문서 상태와 명령은 `SpriteClipModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기 · 아틀라스 썸네일 · 문서 dirty · 되돌리기 기록만 맡는다.
      */
     class SpriteClipPanel : public EditorDocumentPanel
     {
@@ -43,48 +39,22 @@ namespace sw::editor
         /** @brief 변형 키 목록과 고른 키의 시간 · 위치 · 각도 칸입니다. */
         void drawKeySection();
         /** @brief 실수 드래그 필드 하나입니다. 손을 떼며 값이 바뀌었으면 편집으로 기록합니다. @p pTooltip 이 nullptr 이면 툴팁이 없습니다. */
-        void            drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel, const utf8* pMergeKey );
-        string          captureDocumentText() const override;
-        void            applyDocumentText( string_view text ) override;
-        SpriteClipAsset captureClipData() const;
-        /** @brief 읽은(또는 되돌린) 클립으로 편집 상태를 바꿉니다. 아틀라스가 비어 있으면 지금 아틀라스를 그대로 둡니다. */
-        void adoptClip( SpriteClipAsset&& clip );
+        void   drawEditedDragFloat( const utf8* pLabel, float32* pValue, float32 speed, const utf8* pTooltip, const utf8* pUndoLabel, const utf8* pMergeKey );
+        string captureDocumentText() const override;
+        void   applyDocumentText( string_view text ) override;
         /** @brief 이름 붙은 애니메이션 구간 목록을 그립니다. */
         void drawAnimationSection();
         /**
          * @brief 아틀라스 이미지를 열 · 행 셀로 나눠 보이고, 누른 셀을 고른 프레임의 UV 로 넣습니다(Shift 는 새 프레임으로 더한다).
-         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `AtlasGridUtil`.
+         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipModel::pickAtlasCell`(`AtlasGridUtil`).
          */
         void drawAtlasPicker();
 
-    private:
-        // ------------------------------------------------------------------------------
-        // 2) 프레임 · 트랜스폼 키
-        // ------------------------------------------------------------------------------
-        using Frame        = SpriteClipFrame;
-        using TransformKey = SpriteClipKey;
-        using Animation    = SpriteClipAnimation;
-
-        // ------------------------------------------------------------------------------
-        // 3) SpriteClip.xml 로드/저장
-        // ------------------------------------------------------------------------------
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
-        /** @brief SpriteClip.xml을 저장합니다. */
-        void saveClip();
 
     private:
-        fixed_string<constant::kMaxBuffer256> _atlasPath;
-        string                                _status;
-        vector<Frame>                         _listFrame;
-        vector<TransformKey>                  _listKey;
-        vector<Animation>                     _listAnimation;
-        fixed_string<constant::kMaxBuffer64>  _animationName; ///< 고른 애니메이션 이름의 편집 칸입니다
-        int32                                 _selectedFrame;
-        int32                                 _selectedKey;
-        int32                                 _selectedAnimation;
-        int32                                 _sliceColumns; ///< 아틀라스를 나눌 열 수(셀 고르기)
-        int32                                 _sliceRows;    ///< 아틀라스를 나눌 행 수
-        EditorThumbnailCache                  _atlasThumbnail;
+        SpriteClipModel      _model;
+        EditorThumbnailCache _atlasThumbnail;
     };
 } // namespace sw::editor
