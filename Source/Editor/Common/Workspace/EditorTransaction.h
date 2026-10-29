@@ -7,8 +7,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
-
-#include "EditorFoundation/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
 
 namespace sw
 {
@@ -24,8 +23,8 @@ namespace sw::editor
     /**
      * @class EditorTransaction
      * @brief GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
-     * @details 오브젝트 편집(수정 · 생성 · 삭제)은 엔진의 데이터 명령(`ObjectUndoUtil`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 문서 편집
-     *          (`push` · `recordDocumentText`)은 패널의 코드를 쥔 모듈 명령이라 모듈이 언로드될 때 분리됩니다(`ImGuiEditor::shutdown`).
+     * @details 오브젝트 편집(수정 · 생성 · 삭제)은 데이터 명령(`ObjectUndoUtil`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 열린 문서 편집
+     *          (`recordDocumentText`)은 패널 버퍼에 묶인 코드 단계라 기록을 맡길 때 버립니다.
      */
     class SW_EDITOR_API EditorTransaction
     {
@@ -56,9 +55,11 @@ namespace sw::editor
         /** @brief 생성·삭제를 한 절차로 기록합니다. 두 절차를 만들고 @p edit 이 순서를 정합니다. */
         static void recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit );
 
-        /** @brief 문서 Undo/Redo를 스택에 올립니다. */
-        static void push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
-                          string_view coalesceKey = {} );
+        /**
+         * @brief 되돌리기 · 다시 하기 단계를 스택에 올립니다. 대상이 씬 · 파일이면 데이터 단계(`SW_UNDO_STEP` — 리로드를 넘는다), 패널 인스턴스에만 있으면
+         *        코드 단계(`UndoStep::makeTransient` — 기록을 맡길 때 버린다)다.
+         */
+        static void push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey = {} );
         /** @brief 문서 변경 구간만 Undo/Redo에 등록합니다. capture가 있으면 현재 본문에서 복원합니다. */
         static void recordDocumentText( string_view beforeText, string_view afterText, string_view label,
                                         const EditorDocumentRestoreDelegate& restore, string_view coalesceKey = {} );

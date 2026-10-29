@@ -36,7 +36,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/UI/Accessibility/UIAccessibilityBridgeFactory.h"
 #include "Engine/UI/UISystem.h"
@@ -48,11 +47,7 @@
 
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
-
-#if !defined( SW_SHIPPING )
-    #include "EditorFoundation/CommandStack.h"
-    #include "EditorFoundation/EditSessionState.h"
-#endif
+#include "ModuleManager/ModuleStateStore.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -162,14 +157,6 @@ namespace sw
             return false;
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
-#if !defined( SW_SHIPPING )
-        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 비운다(엔진은 되돌리기를 모르고 알림만 낸다).
-        // 헤드리스 작업에는 씬 관리자가 없을 수 있다.
-        CommandStack* const pCommandStack = engine::findSubsystem<CommandStack>();
-        SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>();
-        if ( pCommandStack != nullptr && pSceneManager != nullptr )
-            _commandStackClearSubscription = pSceneManager->onSceneObjectsInvalidated().add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, pCommandStack ) );
-#endif
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가
@@ -278,15 +265,10 @@ namespace sw
             _pAutomationSession = &_host.addSubsystem( make_unique<AutomationSession>() );
         }
 #endif
-#if !defined( SW_SHIPPING )
-        {
-            // 편집기 토대(EditorFoundation) — 되돌리기 기록 · 편집 세션 상태는 편집기 모듈을 리로드해도 남아야 해서 편집기 인스턴스가 아니라 호스트가 든다.
-            // Engine 은 이 타입을 모른다. 편집기는 `editor::findSubsystem` 으로, 교체기는 `engine::findSubsystem` 으로(엔진 범위 → 호스트 범위) 찾는다.
-            SW_MEMORY_SCOPE( EngineMisc );
-            _host.addSubsystem( make_unique<CommandStack>() );
-            _host.addSubsystem( make_unique<EditSessionState>() );
-        }
-#endif
+        // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
+        const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
+        SW_ASSERT( bStateStoreBound );
+        (void)bStateStoreBound;
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleLibrarys, this ), "App" );
         return _pModuleImageHost != nullptr;
     }
@@ -549,7 +531,6 @@ namespace sw
         ScenarioPlayback::bindPlayer( nullptr ); // 재생기(세션)를 내리기 전에 푼다
 #endif
         _automationFrameSubscription.reset();
-        _commandStackClearSubscription.reset();
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         // 엔진이 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).

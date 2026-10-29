@@ -30,6 +30,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -40,8 +41,6 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-
-#include "EditorFoundation/CommandStack.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"

@@ -10,10 +10,6 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-
-#if !defined( SW_SHIPPING )
-    #include "EditorFoundation/EditSessionState.h"
-#endif
 #include "Engine/Renderer/RenderThread.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -186,18 +182,8 @@ namespace sw
         pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
 #endif
 
-        // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
-        // 모듈 라이브러리는 내리지 않고 인스턴스만 다시 만든다 — 에디터가 자기 코드를 가진 되돌리기 명령(지형 붓질 등)을 스택에 남기게 알린다.
-#if !defined( SW_SHIPPING )
-        EditSessionState* pEditSession = engine::findSubsystem<EditSessionState>();
-        if ( pEditSession != nullptr )
-            pEditSession->setModuleLibraryKept( true );
-#endif
+        // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
         _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
-#if !defined( SW_SHIPPING )
-        if ( pEditSession != nullptr )
-            pEditSession->setModuleLibraryKept( false );
-#endif
 
         const bool bSwapOk = _pEngine->applyPendingBackendChange();
         RHI*       pRHI    = _pEngine->getRHI();

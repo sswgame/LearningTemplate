@@ -28,10 +28,9 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
-
-#include "EditorFoundation/CommandStack.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"

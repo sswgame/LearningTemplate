@@ -10,9 +10,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "EditorFoundation/CommandStack.h"
-#include "EditorFoundation/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -288,7 +287,7 @@ namespace sw::editor
             SW_LOG_ERROR( "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
             return;
         }
-        _pPreviewStack->push( ObjectUndoUtil::makeModify( *_pPreviewStack, *pSceneManager, obj, before, after, label ) );
+        _pPreviewStack->push( ObjectUndoUtil::makeModify( *pSceneManager, obj, before, after, label ) );
     }
 
     void EditorSelection::notifyChanged()

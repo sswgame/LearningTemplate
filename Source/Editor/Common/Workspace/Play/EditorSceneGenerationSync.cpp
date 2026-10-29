@@ -3,8 +3,7 @@
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "EditorFoundation/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 namespace sw::editor
 {

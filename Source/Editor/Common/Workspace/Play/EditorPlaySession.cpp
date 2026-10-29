@@ -10,8 +10,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
-
-#include "EditorFoundation/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"

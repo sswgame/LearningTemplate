@@ -15,9 +15,8 @@
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
-
-#include "EditorFoundation/CommandStack.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"

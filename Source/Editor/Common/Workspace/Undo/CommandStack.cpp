@@ -1,9 +1,114 @@
 #include "pch.h"
 
-#include "EditorFoundation/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+
+#include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct CommandStackInternal
+        {
+            /** @brief 기록 형식의 판입니다. 명령 · 단계의 모양이 바뀌면 올린다(옛 판의 기록은 버린다). */
+            static constexpr uint32 kSaveVersion = 1;
+
+            /** @brief 실행 중인 스택(`findExecuting`)입니다. 편집기 UI 스레드만 실행한다. */
+            static inline CommandStack* s_pExecuting = nullptr;
+
+            static void writeStep( Archive& archive, const editor::UndoStep& step )
+            {
+                archive << step._functionHash;
+                archive << step._arguments;
+            }
+
+            [[nodiscard]] static bool readStep( Archive& archive, editor::UndoStep& outStep )
+            {
+                archive >> outStep._functionHash;
+                archive >> outStep._arguments;
+                return archive.isOk();
+            }
+
+            static void writeCommand( Archive& archive, const CommandStack::Command& cmd )
+            {
+                archive.writeString( cmd._label );
+                const uint32 childCount = cmd._listChild != nullptr ? static_cast<uint32>( cmd._listChild->size() ) : 0u;
+                archive << childCount;
+                if ( childCount > 0 )
+                {
+                    for ( const CommandStack::Command& child : *cmd._listChild )
+                    {
+                        writeCommand( archive, child );
+                    }
+                    return;
+                }
+                writeStep( archive, cmd._undo );
+                writeStep( archive, cmd._redo );
+            }
+
+            [[nodiscard]] static bool readCommand( Archive& archive, CommandStack::Command& outCmd )
+            {
+                uint32 childCount{ 0 };
+                if ( archive.readString( outCmd._label ) == false )
+                    return false;
+                archive >> childCount;
+                if ( archive.isOk() == false )
+                    return false;
+                if ( childCount > 0 )
+                {
+                    vector<CommandStack::Command> listChild( childCount );
+                    for ( CommandStack::Command& child : listChild )
+                    {
+                        if ( readCommand( archive, child ) == false )
+                            return false;
+                    }
+                    outCmd._listChild = sw::make_shared<const vector<CommandStack::Command>>( std::move( listChild ) );
+                    return true;
+                }
+                return readStep( archive, outCmd._undo ) && readStep( archive, outCmd._redo );
+            }
+
+            /** @brief 맡길 수 있는 명령만 쓰고, 위치(@p index)는 그 앞에 남은 수로 맞춰 쓴다. */
+            static void writeList( Archive& archive, const vector<CommandStack::Command>& listCommand, size_t index,
+                                   bool ( *isPersistable )( const CommandStack::Command& ) )
+            {
+                uint32 keptCount{ 0 };
+                uint32 keptBeforeIndex{ 0 };
+                for ( size_t commandIndex = 0; commandIndex < listCommand.size(); ++commandIndex )
+                {
+                    if ( isPersistable( listCommand[commandIndex] ) == false )
+                        continue;
+                    ++keptCount;
+                    if ( commandIndex < index )
+                        ++keptBeforeIndex;
+                }
+                archive << keptCount << keptBeforeIndex;
+                for ( const CommandStack::Command& cmd : listCommand )
+                {
+                    if ( isPersistable( cmd ) )
+                        writeCommand( archive, cmd );
+                }
+            }
+
+            [[nodiscard]] static bool readList( Archive& archive, vector<CommandStack::Command>& outListCommand, size_t& outIndex )
+            {
+                uint32 count{ 0 };
+                uint32 index{ 0 };
+                archive >> count >> index;
+                if ( archive.isOk() == false || index > count )
+                    return false;
+                outListCommand.resize( count );
+                for ( CommandStack::Command& cmd : outListCommand )
+                {
+                    if ( readCommand( archive, cmd ) == false )
+                        return false;
+                }
+                outIndex = index;
+                return true;
+            }
+        };
+    } // namespace
+
     CommandStack::CommandStack()
         : _listCommand{}
         , _listPendingTransactionCommand{}
@@ -248,14 +353,15 @@ namespace sw
             return;
         }
 
-        const Delegate<void()>& step = bUndo ? cmd._undo : cmd._redo;
-        if ( step.isBound() )
-            step();
+        CommandStack* const pPrevious      = CommandStackInternal::s_pExecuting;
+        CommandStackInternal::s_pExecuting = this;
+        ( bUndo ? cmd._undo : cmd._redo ).execute();
+        CommandStackInternal::s_pExecuting = pPrevious;
     }
 
     bool CommandStack::holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd )
     {
-        if ( cmd._undo.isCodeWithin( pBegin, pEnd ) || cmd._redo.isCodeWithin( pBegin, pEnd ) )
+        if ( cmd._undo._transient.isCodeWithin( pBegin, pEnd ) || cmd._redo._transient.isCodeWithin( pBegin, pEnd ) )
             return true;
         if ( cmd._listChild == nullptr )
             return false;
@@ -265,6 +371,55 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    bool CommandStack::isPersistable( const Command& cmd )
+    {
+        if ( cmd._listChild != nullptr )
+        {
+            for ( const Command& child : *cmd._listChild )
+            {
+                if ( isPersistable( child ) == false )
+                    return false;
+            }
+            return true;
+        }
+        return cmd._undo.isPersistable() && cmd._redo.isPersistable();
+    }
+
+    CommandStack* CommandStack::findExecuting()
+    {
+        return CommandStackInternal::s_pExecuting;
+    }
+
+    void CommandStack::save( Archive& outArchive ) const
+    {
+        outArchive << CommandStackInternal::kSaveVersion;
+        CommandStackInternal::writeList( outArchive, _listCommand, _index, &CommandStack::isPersistable );
+        outArchive << _bHistoryParked;
+        CommandStackInternal::writeList( outArchive, _listParkedCommand, _parkedIndex, &CommandStack::isPersistable );
+    }
+
+    bool CommandStack::load( Archive& archive )
+    {
+        clear();
+        _listParkedCommand.clear();
+        _parkedIndex    = 0;
+        _bHistoryParked = false;
+        uint32 version{ 0 };
+        archive >> version;
+        bool       bParked{ false };
+        const bool bLoaded = archive.isOk() && version == CommandStackInternal::kSaveVersion && CommandStackInternal::readList( archive, _listCommand, _index ) &&
+                             ( archive >> bParked ).isOk() && CommandStackInternal::readList( archive, _listParkedCommand, _parkedIndex );
+        if ( bLoaded == false )
+        {
+            clear();
+            _listParkedCommand.clear();
+            _parkedIndex = 0;
+            return false;
+        }
+        _bHistoryParked = bParked;
+        return true;
     }
 
     bool CommandStack::isExecutable( const Command& cmd )

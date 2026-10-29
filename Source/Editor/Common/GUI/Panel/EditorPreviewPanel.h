@@ -10,8 +10,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-
-#include "EditorFoundation/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 namespace sw
 {

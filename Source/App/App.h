@@ -25,6 +25,7 @@
 #include "Engine/Module/ModuleCatalog.h"
 
 #include "ModuleManager/ModuleReloadDriver.h"
+#include "ModuleManager/ModuleStateStore.h"
 
 namespace sw
 {
@@ -131,6 +132,8 @@ namespace sw
          *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
          */
         SubsystemScope _host;
+        /** @brief 모듈이 리로드 사이에 맡기는 칸입니다. 호스트 범위에 `IModuleStateStore` 로 건다(`initializeHostScope`). 범위보다 먼저 선언해 나중에 사라진다. */
+        ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
         /** @brief 호스트 범위의 자동화 구동기입니다(`_host` 소유 — 빌려 쓴다). `-scenario` 가 있을 때만 `begin` 으로 시작합니다. */
@@ -138,8 +141,6 @@ namespace sw
         Engine             _engine;
         /** @brief 자동화 구동기를 엔진 프레임 관찰자로 붙인 구독입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 놓는다). */
         Subscription _automationFrameSubscription;
-        /** @brief 씬이 바뀌면 편집기 되돌리기 기록(`CommandStack` — 호스트 범위)을 비우는 구독입니다. 개발 App 만 건다(`startEditorFoundation`). 엔진 종료 전에 놓는다. */
-        Subscription _commandStackClearSubscription;
         /** @brief `installRuntimeUIHooks` 가 등록한 UI 전역 명령 `QuitGame` 의 구독입니다(`removeRuntimeUIHooks` 가 놓는다). */
         Subscription _quitCommandRegistration;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */

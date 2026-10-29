@@ -38,7 +38,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/ObjectCopyBuffer.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 #include "Editor/EditorModuleUnloadListener.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -78,6 +80,12 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorWorkspace>( &selection ) );
         _scope.addSubsystem( make_unique<EditorNotificationManager>() );
         _scope.addSubsystem( make_unique<EditorCommandRegistry>() );
+        // 메인 되돌리기 기록과 복사 버퍼 — 인스턴스가 내려갈 때 호스트의 맡김 칸에 맡기고 새 인스턴스가 되찾는다(리로드 · 백엔드 교체).
+        EditorUndoHistory& undoHistory = _scope.addSubsystem( make_unique<EditorUndoHistory>() );
+        const bool         bStackBound = _scope.bind( &undoHistory.getStack() ); // `findSubsystem<CommandStack>()` 이 찾는다
+        SW_ASSERT( bStackBound );
+        (void)bStackBound;
+        _scope.addSubsystem( make_unique<ObjectCopyBuffer>() );
         _scope.addSubsystem( make_unique<EditorObjectEditBindings>() ); // 커맨드 스택 알림 칸의 주인 — 컨텍스트와 함께 놓는다
         _scope.addSubsystem( make_unique<EditorInputActions>() );       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
@@ -137,6 +145,7 @@ namespace sw::editor
             pExtensions->releaseAll();
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
+        _scope.unbind<CommandStack>();       // `EditorUndoHistory` 가 소유한 스택 — 방금 사라졌다
     }
 
     void EditorContext::setDockLayout( EditorDockLayout* pDockLayout )

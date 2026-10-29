@@ -84,21 +84,15 @@ namespace sw::editor
 
             static void recordWeight( uint64 objectID, uint32 nodeIndex, float32 before, float32 after )
             {
-                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, before]()
-                { applyWeight( objectID, nodeIndex, before ); } ),
-                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, after]()
-                { applyWeight( objectID, nodeIndex, after ); } ),
-                                         "Edit Rig Node Weight" );
+                EditorTransaction::push( SW_UNDO_STEP( RigDebugPanelInternal::applyWeight, objectID, nodeIndex, before ),
+                                         SW_UNDO_STEP( RigDebugPanelInternal::applyWeight, objectID, nodeIndex, after ), "Edit Rig Node Weight" );
             }
 
             static void recordEnabled( uint64 objectID, uint32 nodeIndex, bool bAfter )
             {
                 const bool bBefore = bAfter == false;
-                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bBefore]()
-                { applyEnabled( objectID, nodeIndex, bBefore ); } ),
-                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [objectID, nodeIndex, bAfter]()
-                { applyEnabled( objectID, nodeIndex, bAfter ); } ),
-                                         "Toggle Rig Node" );
+                EditorTransaction::push( SW_UNDO_STEP( RigDebugPanelInternal::applyEnabled, objectID, nodeIndex, bBefore ),
+                                         SW_UNDO_STEP( RigDebugPanelInternal::applyEnabled, objectID, nodeIndex, bAfter ), "Toggle Rig Node" );
             }
 
             /**
@@ -145,11 +139,8 @@ namespace sw::editor
                     return string( "The rig file could not be written" );
                 if ( pUndoLabel != nullptr )
                 {
-                    EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePath, text]()
-                    { writeRigText( writePath, text ); } ),
-                                             SW_DELEGATE_LAMBDA( Delegate<void()>, [writePath, rewritten]()
-                    { writeRigText( writePath, rewritten ); } ),
-                                             pUndoLabel );
+                    EditorTransaction::push( SW_UNDO_STEP( RigDebugPanelInternal::writeRigText, writePath, text ),
+                                             SW_UNDO_STEP( RigDebugPanelInternal::writeRigText, writePath, rewritten ), pUndoLabel );
                 }
                 SW_LOG_INFO( "Rig settings saved to %#", writePath.c_str() );
                 return string( "Saved" );

@@ -10,8 +10,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "EditorFoundation/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/Scene.h"
@@ -263,7 +262,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeModify( *pStack, *pSceneManager, *pObj, before, after, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeModify( *pSceneManager, *pObj, before, after, label ) );
     }
 
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
@@ -282,7 +281,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "No SceneManager - the lifetime edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
                 return;
             }
-            pPreviewStack->push( ObjectUndoUtil::makeLifetime( *pPreviewStack, *pSceneManager, pObj, edit, label ) );
+            pPreviewStack->push( ObjectUndoUtil::makeLifetime( *pSceneManager, pObj, edit, label ) );
             return;
         }
 
@@ -293,7 +292,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeLifetime( *pStack, *pSceneManager, pObj, edit, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeLifetime( *pSceneManager, pObj, edit, label ) );
     }
 
     void EditorTransaction::recordCreation( GameObject* pObj, string_view label )
@@ -306,8 +305,7 @@ namespace sw::editor
         recordObjectLifetime( pObj, label, ObjectLifetimeEdit::Destroyed );
     }
 
-    void EditorTransaction::push( Delegate<void()> undo, Delegate<void()> redo, string_view label,
-                                  string_view coalesceKey )
+    void EditorTransaction::push( UndoStep undo, UndoStep redo, string_view label, string_view coalesceKey )
     {
         // 선택 조회(②): 스택이 없는 곳은 종료 뒤 · 테스트 · 도구뿐이다. 되돌리기 기록은 남기지 못하지만 편집 자체는 이미 끝났으므로 로그만 남기고 넘어간다.
         CommandStack* pStack = editor::findSubsystem<CommandStack>();
@@ -343,28 +341,28 @@ namespace sw::editor
         const EditorTransactionInternal::StringChangeSpan span = EditorTransactionInternal::makeChangeSpan( beforeText, afterText );
         if ( capture.isBound() )
         {
-            push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+            push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
                 restore( EditorTransactionInternal::reconstructBefore( span, capture() ) );
-            } ),
-                  SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
+            } ) ),
+                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
                 restore( EditorTransactionInternal::reconstructAfter( span, capture() ) );
-            } ),
+            } ) ),
                   label, coalesceKey );
             return;
         }
 
         const string beforeStr{ beforeText };
         const string afterStr{ afterText };
-        push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
+        push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, beforeStr]()
         {
             restore( beforeStr );
-        } ),
-              SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
+        } ) ),
+              UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, afterStr]()
         {
             restore( afterStr );
-        } ),
+        } ) ),
               label, coalesceKey );
     }
 } // namespace sw::editor

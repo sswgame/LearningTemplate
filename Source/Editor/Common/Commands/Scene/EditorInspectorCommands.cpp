@@ -33,6 +33,15 @@ namespace sw::editor
     {
         struct EditorInspectorCommandsInternal
         {
+            /** @brief 프리팹 파일 글을 쓰고 캐시를 다시 읽습니다(되돌리기 데이터 단계 — "Write Prefab"). */
+            static void writePrefabFile( string prefabPath, string filePath, string text )
+            {
+                if ( FileUtil::writeTextFile( filePath, text ) == false )
+                    SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
+                // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
+                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath }, nullptr );
+            }
+
             /**
              * @brief 인스턴스를 프리팹 상태로 되돌립니다. 인스턴스의 위치 정보(부모, 이름, 루트의 위치와 회전)는 유지합니다(유니티 `PrefabUtility.RevertPrefabInstance` 규칙 —
              *        루트의 위치와 회전은 인스턴스의 것이고 스케일은 되돌린다).
@@ -173,17 +182,8 @@ namespace sw::editor
         if ( bHadFile )
         {
             const string savedPath{ prefabPath };
-            const auto   writePrefabFile = [savedPath, filePath]( const string& text )
-            {
-                if ( FileUtil::writeTextFile( filePath, text ) == false )
-                    SW_LOG_ERROR( "Could not write '%#' back", filePath.c_str() );
-                // 이 되돌리기 · 다시 하기는 위에서 에셋 관리자가 있을 때(`pPrefabCache`)만 등록된다 - 여기서는 필수다.
-                editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ savedPath }, nullptr );
-            };
-            EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [writePrefabFile, oldFileText]()
-            { writePrefabFile( oldFileText ); } ),
-                                     SW_DELEGATE_LAMBDA( Delegate<void()>, [writePrefabFile, newFileText]()
-            { writePrefabFile( newFileText ); } ),
+            EditorTransaction::push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, string{ filePath }, string{ oldFileText } ),
+                                     SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, string{ filePath }, string{ newFileText } ),
                                      "Write Prefab" );
         }
         uint32 updatedCount = 0;

@@ -738,14 +738,14 @@ namespace sw::editor
             ++_slotEditCount;
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
+        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
         {
             pSession->apply( generation, ordinal, propertyName, oldText );
-        } ),
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
+        } ) ),
+                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
         {
             pSession->apply( generation, ordinal, propertyName, newText );
-        } ),
+        } ) ),
                                  "Edit UI Widget", coalesceKey );
     }
 
@@ -787,14 +787,14 @@ namespace sw::editor
         afterStructureEdit( screen, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
+        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
         {
             pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
-        } ),
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
+        } ) ),
+                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
         {
             pSession->insert( generation, typeName, parentOrdinal, index );
-        } ),
+        } ) ),
                                  "Add UI Widget" );
         return true;
     }
@@ -818,14 +818,14 @@ namespace sw::editor
         afterStructureEdit( screen, parentOrdinal );
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
-        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+        EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->reattach( generation, parentOrdinal, index, pHolder );
-        } ),
-                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+        } ) ),
+                                 UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->detach( generation, parentOrdinal, index, pHolder );
-        } ),
+        } ) ),
                                  "Delete UI Widget" );
         return true;
     }
@@ -1338,14 +1338,14 @@ namespace sw::editor
             ++_slotEditCount;
             const uint32                  generation = _generation;
             const shared_ptr<EditSession> pSession   = _pSession;
-            EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+            EditorTransaction::push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
             {
                 pSession->move( generation, parentOrdinal, toIndex, fromIndex );
-            } ),
-                                     SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
+            } ) ),
+                                     UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
             {
                 pSession->move( generation, parentOrdinal, fromIndex, toIndex );
-            } ),
+            } ) ),
                                      "Reorder UI Widget" );
             return;
         }

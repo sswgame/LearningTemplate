@@ -7,8 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
-
-#include "EditorFoundation/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -114,7 +113,7 @@ namespace sw::editor
 
     bool EditorPreviewPanel::recordPreviewModify( GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after, string_view label )
     {
-        _commandStack.push( ObjectUndoUtil::makeModify( _commandStack, editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
+        _commandStack.push( ObjectUndoUtil::makeModify( editor::getSubsystem<SceneManager>(), obj, before, after, label ) ); // 인스펙터 편집은 `_selection.recordModify` 로 같은 스택
         return true;
     }
 

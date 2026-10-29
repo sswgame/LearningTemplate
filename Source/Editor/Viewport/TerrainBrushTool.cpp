@@ -321,11 +321,8 @@ namespace sw::editor
                 record->_resolutionAfter = heightfield.getResolution();
                 record->_listHeightAfter = heightfield.getHeightSamples();
                 record->_listHoleAfter   = heightfield.getHoleCells();
-                EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
-                { applyResizeRecord( *record, false ); } ),
-                                         SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
-                { applyResizeRecord( *record, true ); } ),
-                                         "Resize Terrain" );
+                EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolInternal::applyResizeRecord, *record, false ),
+                                         SW_UNDO_STEP( TerrainBrushToolInternal::applyResizeRecord, *record, true ), "Resize Terrain" );
                 state._lastEdited = record->_object;
                 state._bUnsaved   = true;
                 return true;
@@ -448,11 +445,8 @@ namespace sw::editor
                             break;
                         }
                     }
-                    EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
-                    { applyRecord( *record, false ); } ),
-                                             SW_DELEGATE_LAMBDA( Delegate<void()>, [record]()
-                    { applyRecord( *record, true ); } ),
-                                             pName );
+                    EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolInternal::applyRecord, *record, false ),
+                                             SW_UNDO_STEP( TerrainBrushToolInternal::applyRecord, *record, true ), pName );
                     ++state._strokeCount;
                 }
                 stroke           = Stroke{};
@@ -671,6 +665,47 @@ namespace sw::editor
                 return true;
             }
         };
+        /** @brief 붓질 기록을 되돌리기 단계 인자로 씁니다(`UndoStep` — 리로드를 넘는 데이터). */
+        void writeUndoArg( Archive& archive, const TerrainBrushToolInternal::EditRecord& record )
+        {
+            editor::writeUndoArg( archive, record._object );
+            editor::writeUndoArg( archive, record._rect );
+            editor::writeUndoArg( archive, record._listHeightBefore );
+            editor::writeUndoArg( archive, record._listHeightAfter );
+            editor::writeUndoArg( archive, record._listWeightBefore );
+            editor::writeUndoArg( archive, record._listWeightAfter );
+            editor::writeUndoArg( archive, record._listHoleBefore );
+            editor::writeUndoArg( archive, record._listHoleAfter );
+            editor::writeUndoArg( archive, record._target );
+        }
+
+        [[nodiscard]] bool readUndoArg( Archive& archive, TerrainBrushToolInternal::EditRecord& outRecord )
+        {
+            return editor::readUndoArg( archive, outRecord._object ) && editor::readUndoArg( archive, outRecord._rect ) && editor::readUndoArg( archive, outRecord._listHeightBefore ) &&
+                   editor::readUndoArg( archive, outRecord._listHeightAfter ) && editor::readUndoArg( archive, outRecord._listWeightBefore ) &&
+                   editor::readUndoArg( archive, outRecord._listWeightAfter ) && editor::readUndoArg( archive, outRecord._listHoleBefore ) &&
+                   editor::readUndoArg( archive, outRecord._listHoleAfter ) && editor::readUndoArg( archive, outRecord._target );
+        }
+
+        /** @brief 크기 바꾸기 기록을 되돌리기 단계 인자로 씁니다. */
+        void writeUndoArg( Archive& archive, const TerrainBrushToolInternal::ResizeRecord& record )
+        {
+            editor::writeUndoArg( archive, record._object );
+            editor::writeUndoArg( archive, record._resolutionBefore );
+            editor::writeUndoArg( archive, record._resolutionAfter );
+            editor::writeUndoArg( archive, record._listHeightBefore );
+            editor::writeUndoArg( archive, record._listHeightAfter );
+            editor::writeUndoArg( archive, record._listHoleBefore );
+            editor::writeUndoArg( archive, record._listHoleAfter );
+        }
+
+        [[nodiscard]] bool readUndoArg( Archive& archive, TerrainBrushToolInternal::ResizeRecord& outRecord )
+        {
+            return editor::readUndoArg( archive, outRecord._object ) && editor::readUndoArg( archive, outRecord._resolutionBefore ) &&
+                   editor::readUndoArg( archive, outRecord._resolutionAfter ) && editor::readUndoArg( archive, outRecord._listHeightBefore ) &&
+                   editor::readUndoArg( archive, outRecord._listHeightAfter ) && editor::readUndoArg( archive, outRecord._listHoleBefore ) &&
+                   editor::readUndoArg( archive, outRecord._listHoleAfter );
+        }
     } // namespace
 
     TerrainBrushSettings& TerrainBrushTool::getSettings()

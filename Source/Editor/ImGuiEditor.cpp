@@ -43,13 +43,12 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/EditorModuleExports.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-
-#include "EditorFoundation/CommandStack.h"
-#include "EditorFoundation/EditSessionState.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -63,9 +62,12 @@
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
+
+#include "ModuleAPI/Service/IModuleStateStore.h"
 
 #include <imgui.h>
 #include <ImGuiNotify.hpp>
@@ -173,47 +175,61 @@ namespace sw::editor
                     SW_LOG_ERROR( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 
-            /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 엔진(`EditSessionState`)에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
+            /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
+            static constexpr string_view kSessionStoreKey = "editor.session";
+            static constexpr uint32      kSessionVersion  = 1;
+
+            /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 호스트의 맡김 칸에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )
             {
                 // 선택 조회(②): 종료 경로라 호스트가 서비스 결합을 먼저 풀었을 수 있다. 그때는 다음 인스턴스가 이어받을 상태가 없다.
-                EditSessionState* pSession      = editor::findSubsystem<EditSessionState>();
-                SceneManager*     pSceneManager = editor::findSubsystem<SceneManager>();
-                if ( pSession == nullptr || pSceneManager == nullptr )
+                IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+                if ( pStore == nullptr )
                     return;
-                const EditorWorkspace&     workspace = context.getSubsystem<EditorWorkspace>();
-                const EditorSelection&     selection = editor::getMainSceneSelection();
-                EditSessionState::Snapshot snapshot{};
-                // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
-                snapshot._sceneGeneration = workspace.getObservedSceneGeneration();
-                snapshot._bSceneDirty     = workspace.isSceneDirty();
+                const EditorWorkspace& workspace = context.getSubsystem<EditorWorkspace>();
+                const EditorSelection& selection = editor::getMainSceneSelection();
+                vector<uint64>         listSelectedObjectID;
                 for ( const GameObjectHandle& handle : selection.getSelectedHandles() )
                 {
-                    snapshot._listSelectedObjectID.push_back( handle.objectID() );
+                    listSelectedObjectID.push_back( handle.objectID() );
                 }
-                snapshot._listSelectedAsset = selection.getSelectedAssets();
-                pSession->store( std::move( snapshot ) );
+                // 워크스페이스가 아직 이 세대를 보지 못했으면 선택 · 표시는 옛 씬의 것이다 — 세대를 그대로 적어 다음 인스턴스가 버리게 한다.
+                Archive archive;
+                archive << kSessionVersion << workspace.getObservedSceneGeneration() << workspace.isSceneDirty();
+                writeUndoArg( archive, listSelectedObjectID );
+                writeUndoArg( archive, selection.getSelectedAssets() );
+                pStore->store( kSessionStoreKey, vector<uint8>( archive.getData(), archive.getData() + archive.getSize() ) );
             }
 
             /**
              * @brief 앞선 인스턴스가 맡긴 선택 · 미저장 표시를 되찾습니다. 앞선 인스턴스가 있었으면 true 입니다(씬이 그 뒤에 바뀌었으면 값은 버리지만 true).
-             * @details 워크스페이스는 지금 씬 세대를 이미 본 것으로 둔다 — 새 인스턴스가 지금 씬을 "새 씬" 으로 여겨 엔진의 되돌리기 스택을 비우지 않게 한다
+             * @details 워크스페이스는 지금 씬 세대를 이미 본 것으로 둔다 — 새 인스턴스가 지금 씬을 "새 씬" 으로 여겨 되돌리기 기록을 비우지 않게 한다
              *          (`EditorSceneGenerationSync`). 씬 오브젝트는 같은 id 로 이어지므로(게임 상태 복원 · 같은 씬) 선택 id 와 되돌리기 명령이 그대로 맞는다.
              */
             static bool resumeEditSession( EditorContext& context )
             {
-                EditSessionState& session    = editor::getSubsystem<EditSessionState>(); // 필수 - 기동 경로다
-                const bool        bResumed   = session.hasSnapshot();
-                const uint64      generation = editor::getSubsystem<SceneManager>().getSceneGeneration();
-                EditorWorkspace&  workspace  = context.getSubsystem<EditorWorkspace>();
+                const uint64     generation = editor::getSubsystem<SceneManager>().getSceneGeneration();
+                EditorWorkspace& workspace  = context.getSubsystem<EditorWorkspace>();
                 workspace.setObservedSceneGeneration( generation );
-                EditSessionState::Snapshot snapshot{};
-                if ( session.take( generation, snapshot ) == false )
-                    return bResumed;
-                if ( snapshot._bSceneDirty )
+                // 선택 조회(②): 맡김 칸이 없는 호스트(테스트 · 도구)는 이어받을 것이 없다.
+                IModuleStateStore* const pStore = editor::findSubsystem<IModuleStateStore>();
+                vector<uint8>            bytes;
+                if ( pStore == nullptr || pStore->take( kSessionStoreKey, bytes ) == false )
+                    return false;
+                Archive        archive( bytes.data(), bytes.size() );
+                uint32         version{ 0 };
+                uint64         storedGeneration{ 0 };
+                bool           bSceneDirty{ false };
+                vector<uint64> listSelectedObjectID;
+                vector<string> listSelectedAsset;
+                archive >> version >> storedGeneration >> bSceneDirty;
+                const bool bRead = archive.isOk() && version == kSessionVersion && readUndoArg( archive, listSelectedObjectID ) && readUndoArg( archive, listSelectedAsset );
+                if ( bRead == false || storedGeneration != generation )
+                    return true; // 앞선 인스턴스는 있었다 — 씬이 바뀌었거나 형식이 달라 값만 버린다
+                if ( bSceneDirty )
                     workspace.markSceneDirty();
                 vector<GameObject*> listObject;
-                for ( const uint64 objectID : snapshot._listSelectedObjectID )
+                for ( const uint64 objectID : listSelectedObjectID )
                 {
                     if ( GameObject* pObject = editor::findGameObject( GameObjectHandle::make( objectID ) ) )
                         listObject.push_back( pObject );
@@ -221,35 +237,11 @@ namespace sw::editor
                 EditorSelection& selection = editor::getMainSceneSelection();
                 if ( listObject.empty() == false )
                     selection.selectObjects( listObject, SelectionMode::Replace );
-                if ( snapshot._listSelectedAsset.empty() == false )
-                    selection.selectAssets( snapshot._listSelectedAsset, SelectionMode::Replace );
+                if ( listSelectedAsset.empty() == false )
+                    selection.selectAssets( listSelectedAsset, SelectionMode::Replace );
                 SW_LOG_INFO( "Resumed the edit session: %# selected object(s), %#", static_cast<uint32>( listObject.size() ),
-                             snapshot._bSceneDirty ? "unsaved changes" : "no unsaved changes" );
+                             bSceneDirty ? "unsaved changes" : "no unsaved changes" );
                 return true;
-            }
-
-            /**
-             * @brief 이 모듈이 Undo 스택에 넣은 모듈 명령(패널 람다, 문서 편집)과 알림 처리기를 제거합니다. 오브젝트 편집(엔진 데이터 명령)은 남깁니다.
-             * @details Undo 스택은 엔진이 소유하므로 이 모듈보다 오래 산다. 모듈 명령을 남긴 채 모듈을 언로드하면 리로드 뒤 Ctrl+Z 가 언맵된 코드로 점프하고,
-             *          종료할 때는 델리게이트 소멸자(`Delegate::_managerFunc`)가 그 코드로 점프한다. 제거 범위는 이 함수가 속한 이미지다.
-             */
-            static void releaseModuleUndoCommands()
-            {
-                // 선택 조회(②): 종료 경로라 스택이 먼저 풀렸을 수 있다. 없으면 이 모듈이 넣은 명령도 없다.
-                CommandStack* pCommandStack = editor::findSubsystem<CommandStack>();
-                const void*   pBegin{ nullptr };
-                const void*   pEnd{ nullptr };
-                if ( pCommandStack == nullptr )
-                    return;
-                if ( ModuleLibraryUtil::findLoadedLibraryRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
-                {
-                    SW_LOG_ERROR( "Could not find the editor module image range - its undo commands stay on the stack" );
-                    return;
-                }
-                // 알림 칸도 이 훑기가 비운다(처리기가 이 이미지의 코드다). 구독 주인(에디터 범위)은 이미 놓았거나 곧 놓는다.
-                const uint32 droppedCount = pCommandStack->removeCodeWithin( pBegin, pEnd );
-                if ( droppedCount > 0 )
-                    SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
             }
         };
     } // namespace
@@ -729,12 +721,7 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownEditorContext()
     {
-        // Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
-        // 호스트가 이미지를 내리지 않고 인스턴스만 다시 만들면(백엔드 교체) 모듈 명령도 남긴다 — 다음 인스턴스가 되돌릴 수 있다.
-        // 선택 조회(②): 종료 경로 - 서비스 결합이 먼저 풀렸으면 모듈 라이브러리를 유지하는 표시도 없다(내리는 쪽으로 간주).
-        const EditSessionState* pEditSession = editor::findSubsystem<EditSessionState>();
-        if ( pEditSession == nullptr || pEditSession->isModuleLibraryKept() == false )
-            ImGuiEditorInternal::releaseModuleUndoCommands();
+        // 되돌리기 기록 · 복사 버퍼는 컨텍스트의 서브시스템이 내려가며 맡긴다(`EditorUndoHistory` · `ObjectCopyBuffer`). 선택 · 미저장 표시는 여기서.
         if ( _editorContext == nullptr )
             return;
         ImGuiEditorInternal::storeEditSession( *_editorContext );

@@ -14,9 +14,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/ObjectCopyBuffer.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-
-#include "EditorFoundation/ObjectCopyBuffer.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -629,19 +628,19 @@ namespace sw::editor
             ++rootCount;
         }
         if ( rootCount > 0 )
-            ObjectCopyBuffer::setEntries( std::move( listCopied ) );
+            editor::getSubsystem<ObjectCopyBuffer>().setEntries( std::move( listCopied ) );
         return rootCount;
     }
 
     bool EditorSceneCommands::hasCopiedObjects()
     {
-        return ObjectCopyBuffer::getEntries().empty() == false;
+        return editor::getSubsystem<ObjectCopyBuffer>().getEntries().empty() == false;
     }
 
     void EditorSceneCommands::pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const vector<ObjectCopyEntry>& listCopied      = ObjectCopyBuffer::getEntries();
+        const vector<ObjectCopyEntry>& listCopied      = editor::getSubsystem<ObjectCopyBuffer>().getEntries();
         const bool                     bNothingToPaste = EditorPlaySession::refuseSceneEdit( "Paste GameObjects" ) || pManager == nullptr || listCopied.empty();
         if ( bNothingToPaste )
             return;

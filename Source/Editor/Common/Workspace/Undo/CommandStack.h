@@ -1,5 +1,5 @@
 /**
- * @file CommandStack.h
+ * @file Editor/Common/Workspace/Undo/CommandStack.h
  * @brief 실행 취소와 다시 실행 명령 스택입니다(에디터와 툴 공용).
  */
 #pragma once
@@ -11,12 +11,14 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleLibraryUtil.h"
-#include "Core/Subsystem/ISubsystem.h"
 
-#include "EditorFoundation/EditorFoundationExports.h"
+#include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 되돌리기와 다시 하기가 오브젝트에 한 일입니다(`CommandStack::ObjectEditNotice`). */
     enum class ObjectEditKind : uint8
     {
@@ -27,33 +29,25 @@ namespace sw
 
     /**
      * @class CommandStack
-     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 엔진(`Engine`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
-     * @details 명령은 둘로 나뉜다.
-     *          - **데이터 명령**: 코드는 엔진에 있고 나머지는 값(오브젝트 id, 직렬화한 상태)인 명령이다(`ObjectUndoUtil`). 모듈이 언로드되어도 남는다.
-     *          - **모듈 명령**: undo 와 redo 가 모듈 라이브러리의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
-     *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
+     * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 메인 스택은 `EditorUndoHistory`(편집기 범위)가 소유해 범위에 노출하고, 미리보기 창은 자기 스택을 멤버로 든다.
+     * @details 단계는 데이터다(`UndoStep` — 함수 이름 해시 + 인자 바이트). 그래서 편집기 모듈을 리로드해도 기록이 넘어간다. 언리얼의 `FTransaction`
+     *          (오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo` 와 같은 구조다. 패널 인스턴스에 묶인 코드 단계를 가진 명령은 맡길 때 버리고, 그 코드가 든
+     *          다른 DLL(편집기 확장)만 내려갈 때는 `removeCodeWithin` 이 뗀다.
      */
-    class SW_EDITOR_FOUNDATION_API CommandStack final : public ISubsystem
+    class SW_EDITOR_API CommandStack final
     {
     public:
-        /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
-        static constexpr const utf8* kSubsystemName = "CommandStack";
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
         /**
          * @struct Command
-         * @brief 레이블과 undo/redo 델리게이트를 담는 한 명령입니다.
+         * @brief 레이블과 undo/redo 단계를 담는 한 명령입니다.
          * @details 트랜잭션으로 묶인 명령은 `_listChild` 에 안쪽 명령을 그대로 가진다(undo 와 redo 는 비어 있고 스택이 차례로 부른다). 안쪽이 보여야
          *          모듈 코드를 가진 명령을 가려낼 수 있다.
          */
         struct Command
         {
             string                            _label;
-            Delegate<void()>                  _undo;
-            Delegate<void()>                  _redo;
+            editor::UndoStep                  _undo;
+            editor::UndoStep                  _redo;
             shared_ptr<const vector<Command>> _listChild; ///< 트랜잭션의 안쪽 명령이다(앞에서 뒤로 redo, 뒤에서 앞으로 undo). 묶음이 아니면 nullptr
         };
 
@@ -137,9 +131,21 @@ namespace sw
         /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
 
+        /**
+         * @brief 기록(명령 · 위치 · 보관한 내역)을 씁니다. 코드 단계를 가진 명령은 빼고 위치를 맞춘다. 진행 중인 트랜잭션은 쓰지 않는다.
+         * @details 편집기 인스턴스가 내려갈 때 호스트의 맡김 칸(`IModuleStateStore`)에 맡긴다 — 리로드 · 백엔드 교체 뒤의 새 인스턴스가 `load` 로 되찾는다.
+         */
+        void save( Archive& outArchive ) const;
+        /** @brief `save` 가 쓴 기록으로 바꿉니다. 읽지 못하면 빈 스택으로 두고 false 입니다. 알림 처리기는 그대로입니다. */
+        [[nodiscard]] bool load( Archive& archive );
+        /** @brief 지금 실행 중인 스택입니다(단계의 처리기가 알림을 보낼 곳 — `ObjectUndoUtil`). 실행 중이 아니면 nullptr 입니다. */
+        static CommandStack* findExecuting();
+
     private:
         /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */
-        static void execute( const Command& cmd, bool bUndo );
+        void execute( const Command& cmd, bool bUndo );
+        /** @brief @p cmd(와 그 안쪽)가 모두 데이터 단계면 true 입니다(맡길 수 있다). */
+        static bool isPersistable( const Command& cmd );
         /** @brief @p cmd(와 그 안쪽)가 [@p pBegin, @p pEnd) 의 코드를 가지고 있는지 확인합니다. */
         static bool holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd );
         /** @brief 실행할 것이 있는 명령인지 확인합니다(undo 와 redo 가 둘 다 있거나 트랜잭션 묶음). */
