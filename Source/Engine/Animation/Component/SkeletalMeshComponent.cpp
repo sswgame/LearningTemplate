@@ -111,7 +111,7 @@ namespace sw
         , _listSkinPalette{}
         , _listDependency{}
         , _listTask{}
-        , _phaseTaskSource{ *this }
+        , _phaseTaskSubscriptions{ ItemSubscriptionList<IAnimationPhaseTask>::ReleaseFunction::create<&SkeletalMeshComponent::detachAnimationPhaseTask>( this ) }
         , _listLeaderBone{}
         , _leader{}
         , _pLeaderSkeletonForMap{ nullptr }
@@ -463,7 +463,7 @@ namespace sw
             return {};
         _listTask.push_back( pTask );
         _bPoseDirty = SW_TRUE;
-        return _phaseTaskSource.issue( pTask );
+        return _phaseTaskSubscriptions.issue( pTask );
     }
 
     void SkeletalMeshComponent::detachAnimationPhaseTask( IAnimationPhaseTask* pTask )

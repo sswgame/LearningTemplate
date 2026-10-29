@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -165,45 +166,29 @@ namespace sw
         vector<float32>          _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
         const IFacialLiveSource* _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
-        /** @brief 실시간 입력 등록의 출처입니다(구독 id 는 입력 주소). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
-        class LiveSourceSlot final : public SubscriptionSource
-        {
-        public:
-            explicit LiveSourceSlot( FacialAnimationComponent& owner )
-                : _owner{ owner }
-            {
-            }
-            [[nodiscard]] Subscription issue( const IFacialLiveSource* pSource ) { return issueSubscription( reinterpret_cast<uint64>( pSource ) ); }
-
-        private:
-            /** @brief 지금 입력이 이 구독의 것일 때만 뗍니다(교체된 옛 구독이면 할 일이 없다). */
-            void releaseSubscription( uint64 id ) override { _owner.detachLiveSource( reinterpret_cast<const IFacialLiveSource*>( id ) ); }
-
-            FacialAnimationComponent& _owner;
-        };
-        /** @brief 지금 입력이 @p pSource 이면 뗍니다. */
-        void                                        detachLiveSource( const IFacialLiveSource* pSource );
-        LiveSourceSlot                              _liveSourceSlot;       ///< `_pLiveSource` 의 등록 구독을 내준다
-        vector<vector<int32>>                       _listExpressionTarget; ///< 표정마다 타깃 → 메시 타깃 번호
-        vector<vector<int32>>                       _listVisemeTarget;     ///< 비즘마다 타깃 → 메시 타깃 번호
-        vector<int32>                               _listBlinkTarget;      ///< 깜빡임 타깃 → 메시 타깃 번호
-        vector<int32>                               _listEyeBone;          ///< 눈 본 번호
-        vector<int32>                               _listTrackToRigViseme; ///< 립싱크 비즘 순서 → 리그 비즘 번호
-        vector<float32>                             _listScratchVisemeWeight;
-        TComponentHandle<SkeletalAnimatorComponent> _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
-        SkeletalMeshComponent*                      _pUnit;
-        const Mesh*                                 _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
-        const Skeleton*                             _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
-        float3                                      _lookAtWorld;
-        float3                                      _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
-        float2                                      _saccadeOffset;
-        float32                                     _speechTime;
-        uint32                                      _speechSampleRate;
-        float32                                     _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
-        float32                                     _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
-        float32                                     _blinkAmount;
-        float32                                     _saccadeTimer;
-        DeterministicRandom32                       _random; ///< 깜빡임 · 사카드 박자(씨앗은 컴포넌트 id)
+        /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
+        void                                          detachLiveSource( const IFacialLiveSource* pSource );
+        ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        vector<vector<int32>>                         _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호
+        vector<vector<int32>>                         _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호
+        vector<int32>                                 _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호
+        vector<int32>                                 _listEyeBone;             ///< 눈 본 번호
+        vector<int32>                                 _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호
+        vector<float32>                               _listScratchVisemeWeight;
+        TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
+        SkeletalMeshComponent*                        _pUnit;
+        const Mesh*                                   _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
+        const Skeleton*                               _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)
+        float3                                        _lookAtWorld;
+        float3                                        _lookAtModel; ///< 게임 스레드가 옮겨 둔 모델 공간 목표
+        float2                                        _saccadeOffset;
+        float32                                       _speechTime;
+        uint32                                        _speechSampleRate;
+        float32                                       _blinkTimer;   ///< 다음 깜빡임까지 남은 시간
+        float32                                       _blinkElapsed; ///< 깜빡이는 중 지난 시간(음수 = 깜빡이지 않음)
+        float32                                       _blinkAmount;
+        float32                                       _saccadeTimer;
+        DeterministicRandom32                         _random; ///< 깜빡임 · 사카드 박자(씨앗은 컴포넌트 id)
         PROPERTY( Category = "Facial", DisplayName = "Blink", Tooltip = "Blink automatically with the rig's interval and duration" )
         uint8 _bBlink : 1;
         PROPERTY( Category = "Facial", DisplayName = "Saccades", Tooltip = "Add small random eye jumps while looking at a target" )

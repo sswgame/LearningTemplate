@@ -6,6 +6,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -260,22 +261,6 @@ namespace sw
         /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
         void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
 
-        /** @brief 단계 작업 등록의 출처입니다. 구독이 풀리면 그 작업을 뗍니다. 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
-        class PhaseTaskSource final : public SubscriptionSource
-        {
-        public:
-            explicit PhaseTaskSource( SkeletalMeshComponent& unit )
-                : _unit{ unit }
-            {
-            }
-            [[nodiscard]] Subscription issue( IAnimationPhaseTask* pTask ) { return issueSubscription( reinterpret_cast<uint64>( pTask ) ); }
-
-        private:
-            void releaseSubscription( uint64 id ) override { _unit.detachAnimationPhaseTask( reinterpret_cast<IAnimationPhaseTask*>( id ) ); }
-
-            SkeletalMeshComponent& _unit;
-        };
-
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", AssetPath, AssetType = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         string _skeletonPath;
         PROPERTY( Category = "Animation", DisplayName = "Update Rate Divisor", Tooltip = "Build the pose every N frames (animation LOD)", Min = 1.0, Max = 16.0 )
@@ -289,8 +274,8 @@ namespace sw
         vector<float4x4>                                _listSkinPalette;
         vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
         vector<IAnimationPhaseTask*>                    _listTask;
-        PhaseTaskSource                                 _phaseTaskSource; ///< `_listTask` 의 등록 구독을 내준다
-        vector<int32>                                   _listLeaderBone;  ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
+        ItemSubscriptionList<IAnimationPhaseTask>       _phaseTaskSubscriptions; ///< `_listTask` 의 등록 구독을 내준다(풀리면 `detachAnimationPhaseTask`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        vector<int32>                                   _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
         TComponentHandle<SkeletalMeshComponent>         _leader;
         const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
         AnimationSystem*                                _pAnimationSystem;

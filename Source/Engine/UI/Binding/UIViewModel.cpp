@@ -8,15 +8,16 @@ namespace sw
 {
     UIViewModel::UIViewModel()
         : _listFieldChange{}
-        , _observerTable{}
+        , _listObserver{}
         , _changeSerial{ 0 }
+        , _observerSubscriptions{ ItemSubscriptionList<UIBindingSet>::ReleaseFunction::create<&UIViewModel::removeObserver>( this ) }
     {
     }
 
     UIViewModel::~UIViewModel()
     {
         // 묶인 화면이 남아 있으면 이 뷰모델을 해제하게 한다. 관찰자가 스스로 제거하므로 사본을 순회한다.
-        const vector<UIBindingSet*> listObserver = _observerTable._listObserver;
+        const vector<UIBindingSet*> listObserver = _listObserver;
         for ( UIBindingSet* pBindingSet : listObserver )
         {
             pBindingSet->onViewModelDestroyed( *this );

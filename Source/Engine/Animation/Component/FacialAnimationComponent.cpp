@@ -124,7 +124,7 @@ namespace sw
         , _listExpressionWeight{}
         , _listLiveWeight{}
         , _pLiveSource{ nullptr }
-        , _liveSourceSlot{ *this }
+        , _liveSourceSubscriptions{ ItemSubscriptionList<const IFacialLiveSource>::ReleaseFunction::create<&FacialAnimationComponent::detachLiveSource>( this ) }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}
@@ -255,7 +255,7 @@ namespace sw
         _pLiveSource = pSource;
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
-        return _liveSourceSlot.issue( pSource );
+        return _liveSourceSubscriptions.issue( pSource );
     }
 
     void FacialAnimationComponent::detachLiveSource( const IFacialLiveSource* pSource )

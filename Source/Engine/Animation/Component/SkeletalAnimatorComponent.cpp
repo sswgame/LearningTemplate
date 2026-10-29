@@ -211,7 +211,7 @@ namespace sw
         , _listFiredNotify{}
         , _listActivePlayable{}
         , _listRootMotionModifier{}
-        , _rootMotionModifierSource{ _listRootMotionModifier }
+        , _rootMotionModifierSubscriptions{ ItemSubscriptionList<IRootMotionModifier>::ReleaseFunction::create<&SkeletalAnimatorComponent::releaseRootMotionModifier>( this ) }
         , _curves{}
         , _scratchPose{}
         , _scratchTrackPose{}
@@ -795,7 +795,7 @@ namespace sw
         if ( pModifier == nullptr )
             return {};
         _listRootMotionModifier.push_back( pModifier );
-        return _rootMotionModifierSource.issue( pModifier );
+        return _rootMotionModifierSubscriptions.issue( pModifier );
     }
 
     void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )

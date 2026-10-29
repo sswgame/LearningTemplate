@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -72,37 +73,20 @@ namespace sw
             uint64        _serial;
         };
 
-        /**
-         * @class ObserverTable
-         * @brief 이 뷰모델을 보는 바인딩 집합의 목록입니다. 등록은 바인딩 집합이 쥔 구독이 소유한다(구독이 사라지면 빠진다).
-         * @details 리플렉션 클래스에 기반을 더 붙이지 않으려고 구독의 출처를 멤버로 둔다.
-         */
-        class ObserverTable final : public SubscriptionSource
+        /** @brief 이 뷰모델을 보는 바인딩 집합을 등록하고 그 구독을 돌려줍니다(지울 때 알립니다). 바인딩 집합 하나에 구독 하나입니다. 구독이 사라지면 빠진다. */
+        [[nodiscard]] Subscription registerObserver( UIBindingSet& bindingSet )
         {
-        public:
-            /** @brief @p bindingSet 을 올리고 그 구독을 돌려줍니다. */
-            [[nodiscard]] Subscription add( UIBindingSet& bindingSet )
-            {
-                _listObserver.push_back( &bindingSet );
-                return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( &bindingSet ) ) );
-            }
-
-            vector<UIBindingSet*> _listObserver; ///< 이 뷰모델을 보는 바인딩 집합입니다(지울 때 해제하게 합니다).
-
-        private:
-            void releaseSubscription( uint64 id ) override
-            {
-                const UIBindingSet* const pBindingSet = reinterpret_cast<const UIBindingSet*>( static_cast<uintptr_t>( id ) );
-                VectorUtil::removeFirst( _listObserver, pBindingSet );
-            }
-        };
-
-        /** @brief 이 뷰모델을 보는 바인딩 집합을 등록하고 그 구독을 돌려줍니다(지울 때 알립니다). 바인딩 집합 하나에 구독 하나입니다. */
-        [[nodiscard]] Subscription registerObserver( UIBindingSet& bindingSet ) { return _observerTable.add( bindingSet ); }
+            _listObserver.push_back( &bindingSet );
+            return _observerSubscriptions.issue( &bindingSet );
+        }
 
     private:
-        vector<FieldChange> _listFieldChange; ///< 필드마다 한 줄입니다(중복 없이 필드 수만큼만 늘어납니다).
-        ObserverTable       _observerTable;   ///< 이 뷰모델을 보는 바인딩 집합과 그 구독
-        uint64              _changeSerial;
+        /** @brief 바인딩 집합의 등록 구독이 풀렸습니다. 목록에서 뺍니다(주소로만 찾는다). */
+        void removeObserver( UIBindingSet* pBindingSet ) { VectorUtil::removeFirst( _listObserver, pBindingSet ); }
+
+        vector<FieldChange>                _listFieldChange; ///< 필드마다 한 줄입니다(중복 없이 필드 수만큼만 늘어납니다).
+        vector<UIBindingSet*>              _listObserver;    ///< 이 뷰모델을 보는 바인딩 집합입니다(지울 때 해제하게 합니다).
+        uint64                             _changeSerial;
+        ItemSubscriptionList<UIBindingSet> _observerSubscriptions; ///< `_listObserver` 의 등록 구독(풀리면 `removeObserver`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다
     };
 } // namespace sw

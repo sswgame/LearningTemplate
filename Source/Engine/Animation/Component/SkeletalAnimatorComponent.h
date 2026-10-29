@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -254,21 +255,8 @@ namespace sw
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
     private:
-        /** @brief 루트 모션 수정자 등록의 출처입니다. 구독이 풀리면 그 수정자를 뺍니다. 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다. */
-        class RootMotionModifierSource final : public SubscriptionSource
-        {
-        public:
-            explicit RootMotionModifierSource( vector<IRootMotionModifier*>& listModifier )
-                : _listModifier{ listModifier }
-            {
-            }
-            [[nodiscard]] Subscription issue( IRootMotionModifier* pModifier ) { return issueSubscription( reinterpret_cast<uint64>( pModifier ) ); }
-
-        private:
-            void releaseSubscription( uint64 id ) override { VectorUtil::removeFirst( _listModifier, reinterpret_cast<IRootMotionModifier*>( id ) ); }
-
-            vector<IRootMotionModifier*>& _listModifier;
-        };
+        /** @brief 루트 모션 수정자 등록의 구독이 풀렸습니다. 그 수정자를 뺍니다(주소로만 찾는다). */
+        void releaseRootMotionModifier( IRootMotionModifier* pModifier ) { VectorUtil::removeFirst( _listRootMotionModifier, pModifier ); }
 
         /**
          * @brief 화면에 보인 지난 두 포즈입니다. inertialization · 이어 섞기의 출발 포즈와 출발 속도가 여기서 나옵니다.
@@ -439,8 +427,8 @@ namespace sw
         vector<AnimationFiredNotify>                                  _listFiredNotify;
         vector<const IAnimationPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 항목이다(재사용)
         vector<IRootMotionModifier*>                                  _listRootMotionModifier;
-        RootMotionModifierSource                                      _rootMotionModifierSource; ///< `_listRootMotionModifier` 의 등록 구독을 내준다
-        CurveAccumulator                                              _curves;                   ///< 이번 프레임 커브(이름 → 값)
+        ItemSubscriptionList<IRootMotionModifier>                     _rootMotionModifierSubscriptions; ///< `_listRootMotionModifier` 의 등록 구독을 내준다(풀리면 `releaseRootMotionModifier`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        CurveAccumulator                                              _curves;                          ///< 이번 프레임 커브(이름 → 값)
         Pose                                                          _scratchPose;
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;
