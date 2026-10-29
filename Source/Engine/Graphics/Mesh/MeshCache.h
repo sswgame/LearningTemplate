@@ -52,7 +52,7 @@ namespace sw
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 종료될 때 이 캐시가 보관하는 GPU 자원이 남지 않습니다. 같은 경로는 같은 `Mesh` 이므로
      *          배치 키(메시 포인터)가 갈라지지 않습니다. 씬 로드 워커에서 불러도 됩니다(내부에서 잠급니다).
      *
-     *          메시를 다시 읽거나 비우면 무효화 고리(`MeshInvalidationHook`)를 불러, 메시에서 기하를 만든 위 층 캐시(물리 셰이프)도 비우게 합니다.
+     *          메시를 다시 읽거나 비우면 엔진 범위의 `IMeshDerivedCache` 를 불러, 메시에서 기하를 만든 위 층 캐시(물리 셰이프)도 비우게 합니다.
      */
     class SW_API MeshCache final : public IAssetCache
     {
@@ -101,38 +101,7 @@ namespace sw
         static MeshHandle requestWith( string_view path, AssetLoadStart start );
         /** @brief 지금 누가 쥔 @p path 의 메시입니다(없으면 nullptr). 핫 리로드(`MeshCacheReload.cpp`)가 같은 표를 본다. */
         static shared_ptr<Mesh> findLiveMesh( string_view path );
+        /** @brief 메시에서 기하를 만든 위 층 캐시(엔진 범위의 `IMeshDerivedCache`)를 비웁니다. 걸린 것이 없으면(물리 없는 실행) 할 일이 없다. */
+        static void invalidateDerivedCaches();
     };
 } // namespace sw
-
-namespace sw
-{
-    /** @brief 메시가 다시 읽히거나 비워졌을 때 불리는 함수입니다. */
-    using MeshInvalidatedFunction = void ( * )();
-
-    /**
-     * @struct MeshInvalidationHook
-     * @brief 메시에서 기하를 만들어 따로 들고 있는 위 층 캐시(물리 셰이프)가 정적 초기화에서 거는 무효화 고리입니다(`SW_MESH_INVALIDATION_HOOK`).
-     * @details `MeshCache` 는 다시 읽기(`reload`)와 비우기(`clear`) 뒤에 모두 부른다. 위 층이 아래 층에 거는 방향이라 그래픽스가 물리를 include 하지 않는다
-     *          (`BuiltInAssetCacheRegistry` 와 같은 모양). 고리 객체가 공용 등록 목록(`RegistrationList`)에 자기를 올리고 사라질 때(이미지 언로드의 정적 소멸) 뺀다.
-     */
-    struct SW_API MeshInvalidationHook
-    {
-        explicit MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated );
-        ~MeshInvalidationHook();
-        MeshInvalidationHook( const MeshInvalidationHook& )            = delete;
-        MeshInvalidationHook& operator=( const MeshInvalidationHook& ) = delete;
-
-        /** @brief 건 고리를 모두 부릅니다(`MeshCache` 가 부른다). */
-        static void notifyAll();
-
-    private:
-        MeshInvalidatedFunction _pfnInvalidated; ///< 메시가 다시 읽히거나 비워졌을 때 부르는 함수
-    };
-} // namespace sw
-
-/** @brief 메시 무효화 고리 @p pfn 을 겁니다(그 캐시의 .cpp, 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-#define SW_MESH_INVALIDATION_HOOK( id, pfn )                             \
-    static const ::sw::MeshInvalidationHook sw_meshInvalidationHook_##id \
-    {                                                                    \
-        pfn                                                              \
-    }

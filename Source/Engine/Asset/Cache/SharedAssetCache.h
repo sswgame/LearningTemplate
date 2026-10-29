@@ -12,7 +12,7 @@
  *
  *          이 템플릿으로 합치지 않은 캐시와 그 이유입니다(모양이 "경로 → 공유 `const` 에셋, 디바이스 없음, 자체 상태 없음" 이 아닙니다).
  *          - `MeshCache`: 쓰는 쪽이 고치는 `shared_ptr<Mesh>`(const 아님)를 `WeakInternTable` 에 두고, `reloadShared( path, pDevice )` 가 정점을 바꾸기 전에
- *            `waitIdle` 하며, 경고한 경로 집합과 물리 셰이프 캐시(`PhysicsMeshShapeCache`) 읽기 함수 등록 · 비우기를 함께 가집니다(MeshCache.cpp).
+ *            `waitIdle` 하며, 경고한 경로 집합과 물리 셰이프 표 비우기(`IMeshDerivedCache`)를 함께 가집니다(MeshCache.cpp).
  *          - `TextureCache`: `acquire( path, pDevice )` 가 GPU 텍스처를 만들어 `Texture2D*` 를 참조 횟수로 빌려 주고(`release` 짝), 렌더 타깃 크기 바꾸기 ·
  *            영역 갱신 큐를 매니저마다의 `Impl` 에 둡니다(TextureCache.h).
  *          - `MaterialCache`: `acquire( path, pDevice )` 가 `Material*` 를 돌려주고 디바이스 초기화를 미뤄 두는 큐(`initializePending`)를 매니저마다 가집니다

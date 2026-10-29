@@ -10,11 +10,12 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/RegistrationList.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -223,7 +224,7 @@ namespace sw
             pState->_warned.clear();
         }
         MeshCacheInternal::getStats().recordClear();
-        MeshInvalidationHook::notifyAll();
+        invalidateDerivedCaches();
     }
 } // namespace sw
 
@@ -234,33 +235,10 @@ namespace sw
 
 namespace sw
 {
-    namespace
+    void MeshCache::invalidateDerivedCaches()
     {
-        /** @brief 무효화 고리 목록입니다. 정적 초기화에서 채우므로 함수 안 정적으로 둔다(초기화 순서). 정적 등록부는 모두 `RegistrationList` 하나로 쓴다. */
-        RegistrationList<const MeshInvalidationHook>& getMeshInvalidationHooks()
-        {
-            static RegistrationList<const MeshInvalidationHook> s_listHook{ "MeshInvalidationHook" };
-            return s_listHook;
-        }
-    } // namespace
-
-    MeshInvalidationHook::MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated )
-        : _pfnInvalidated{ pfnInvalidated }
-    {
-        SW_ASSERT( pfnInvalidated != nullptr );
-        (void)getMeshInvalidationHooks().addLogged( this, "Mesh invalidation hook" ); // 고리 객체마다 한 번 오른다
-    }
-
-    MeshInvalidationHook::~MeshInvalidationHook()
-    {
-        (void)getMeshInvalidationHooks().remove( this );
-    }
-
-    void MeshInvalidationHook::notifyAll()
-    {
-        for ( const MeshInvalidationHook* pHook : getMeshInvalidationHooks().getItems() )
-        {
-            pHook->_pfnInvalidated();
-        }
+        IMeshDerivedCache* const pDerived = engine::findSubsystem<IMeshDerivedCache>();
+        if ( pDerived != nullptr )
+            pDerived->onMeshesInvalidated();
     }
 } // namespace sw

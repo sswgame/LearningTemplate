@@ -39,6 +39,7 @@
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
+#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -128,6 +129,11 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<TickBatchRegistry>() ); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
         services.addSubsystem( sw::make_unique<GameTimeScale>() );     // 정지 요청 · 이번 프레임의 실제 경과
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
+        // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
+        PhysicsMeshShapeTable& meshShapeTable = services.addSubsystem( sw::make_unique<PhysicsMeshShapeTable>() );
+        const bool             bExposed       = services.expose<IMeshDerivedCache>( meshShapeTable );
+        SW_ASSERT( bExposed ); // 받는 쪽이 둘이면 등록의 잘못이다(`IMeshDerivedCache`)
+        (void)bExposed;
         {
             SW_MEMORY_SCOPE( RenderCPU );
             services.addSubsystem( sw::make_unique<DebugDrawQueue>() );

@@ -111,6 +111,8 @@ SW_ENGINE_SERVICE_OPT( class, StateHashHistory, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, RenderTargetRegistry, HostOnly )
 // GPU 브레드크럼 상태(패스 이름 표 · 마지막 기록 패스 · 소실 보고). 패스마다 표지를 남기는 창구(`GPUBreadcrumbs::mark`)가 칸으로 읽는다. OPT 인 까닭은 위와 같다.
 SW_ENGINE_SERVICE_OPT( class, GPUBreadcrumbLog, HostOnly )
+// 메시 셰이프 기하 표(경로 → 합친 점 · 인덱스). 바디를 만드는 백엔드 · 씬 로드 워커가 창구(`PhysicsMeshShapeCache`)로 읽는다. OPT 인 까닭은 위와 같다.
+SW_ENGINE_SERVICE_OPT( class, PhysicsMeshShapeTable, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 // 모듈 렌더 패스(이름 → 패스 상수). 렌더러가 읽고 게임 · 키트 모듈이 등록한다. **OPT 다** — 렌더러 폴더를 짓지 않는 Server 타깃에는 이 타입이 없다.
 // 클라이언트 엔진은 늘 서비스 범위에 넣는다(Engine.cpp).
