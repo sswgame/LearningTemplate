@@ -4,15 +4,14 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/LockedMulticastDelegate.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -215,7 +214,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 텍스트가 바뀔 때(언어 변경, 같은 언어의 다시 읽기이며 이때는 두 인자가 같습니다) 부를 콜백을 등록하고 그 구독을 돌려줍니다.
-         * @details 구독이 사라지면 뗍니다. 어느 스레드에서나 부를 수 있습니다(등록 표는 `_mutex`, 구독 목록은 출처 잠금). 빈 콜백은 오류 없이 빈 구독입니다.
+         * @details 구독이 사라지면 뗍니다 — 뗀 뒤에는 다른 스레드의 알림도 그 콜백을 부르지 않습니다(`LockedMulticastDelegate`). 어느 스레드에서나 부를 수 있습니다.
+         *          등록 순서대로 부릅니다. 빈 콜백은 오류 없이 빈 구독입니다.
          */
         [[nodiscard]] Subscription registerLanguageChangedCallback( LanguageChangedCallback callback );
 
@@ -243,8 +243,6 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
-        /** @brief 콜백 구독 @p id 가 풀렸습니다. 표에서 지웁니다(`_mutex`). */
-        void releaseSubscription( uint64 id );
 
     private:
         mutable shared_mutex                                            _mutex;
@@ -258,16 +256,12 @@ namespace sw
         unordered_map<string, unique_ptr<StringTable>>                  _mapLanguageTable;
         map<string, LocalizationCultureStatistics> _mapCultureStatistic SW_GUARDED_BY( _mutex );
         vector<string> _listLookupCulture                               SW_GUARDED_BY( _mutex );
-        unordered_map<uint64, LanguageChangedCallback> _mapCallback     SW_GUARDED_BY( _mutex ); ///< 구독 번호 → 콜백
 
         mutable mutex                         _missingMutex;
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
         std::atomic<uint32> _textRevision;
-        IDAllocator<uint32> _callbackIDAllocator;
-
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalizationManager::releaseSubscription>( this ) };
+        /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
+        LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
     };
 } // namespace sw

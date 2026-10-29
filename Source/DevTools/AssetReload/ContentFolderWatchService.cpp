@@ -21,7 +21,7 @@ namespace sw
 
     ContentFolderWatchService::ContentFolderWatchService()
         : _listWatch{}
-        , _nextID{ 1 }
+        , _watchIDAllocator{}
     {
     }
 
@@ -33,7 +33,7 @@ namespace sw
         watch->_pDispatcher     = make_unique<FileWatchDispatcher>();
         if ( watch->_pDispatcher->initialize( absoluteFolder ) == false )
             return {}; // 감시자가 이유를 남겼다
-        watch->_id        = _nextID++;
+        watch->_id        = _watchIDAllocator.allocate();
         watch->_onChanged = onChanged;
         watch->_match     = watch->_pDispatcher->registerWatch( absoluteFolder, listExtension, FileWatchMatchDelegate::create<&Watch::onFileChanged>( watch.get() ) );
         const uint64 id   = watch->_id;

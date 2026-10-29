@@ -73,11 +73,10 @@ namespace sw
         , _mapLanguageTable{}
         , _mapCultureStatistic{}
         , _listLookupCulture{}
-        , _mapCallback{}
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
-        , _callbackIDAllocator{}
+        , _onLanguageChanged{}
     {
     }
 
@@ -90,11 +89,11 @@ namespace sw
             _listProject.clear();
             _mapLooseTable.clear();
             _mapBinaryTable.clear();
-            _mapCallback.clear();
             _currentLanguage.clear();
             rebuildTablesLocked();
             rebuildLookupChainLocked();
         }
+        _onLanguageChanged.removeAll();
         clearMissingKeys();
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
     }
@@ -868,39 +867,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     Subscription LocalizationManager::registerLanguageChangedCallback( LanguageChangedCallback callback )
     {
-        if ( callback == nullptr )
-            return Subscription{};
-        uint64 callbackID{ 0 };
-        {
-            UniqueLock<shared_mutex> lock( _mutex );
-            callbackID               = _callbackIDAllocator.allocate();
-            _mapCallback[callbackID] = std::move( callback );
-        }
-        return _subscriptions.issue( callbackID );
-    }
-
-    void LocalizationManager::releaseSubscription( uint64 id )
-    {
-        UniqueLock<shared_mutex> lock( _mutex );
-        _mapCallback.erase( id );
+        return _onLanguageChanged.add( callback ); // 빈 콜백은 빈 구독이다
     }
 
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )
     {
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
-        vector<LanguageChangedCallback> listCallback;
-        {
-            ScopedSharedLock<shared_mutex> lock{ _mutex };
-            listCallback.reserve( _mapCallback.size() );
-            for ( const auto& pair : _mapCallback )
-            {
-                if ( pair.second.isBound() )
-                    listCallback.push_back( pair.second );
-            }
-        }
-        for ( size_t index = 0; index < listCallback.size(); ++index )
-        {
-            listCallback[index]( oldLanguage, newLanguage );
-        }
+        _onLanguageChanged.broadcast( oldLanguage, newLanguage );
     }
 } // namespace sw

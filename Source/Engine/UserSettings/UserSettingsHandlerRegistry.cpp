@@ -11,13 +11,13 @@ namespace sw
     UserSettingsHandlerRegistry::UserSettingsHandlerRegistry()
         : _listHandler{}
         , _listProvider{}
-        , _nextSubscriptionID{ 1 }
+        , _subscriptionIDAllocator{}
     {
     }
 
     Subscription UserSettingsHandlerRegistry::registerHandler( const hashed_string& name, const UserSettingHandlerDelegate& handler, const UserSettingValueFilterDelegate& filter )
     {
-        const uint64 subscriptionID = _nextSubscriptionID++;
+        const uint64 subscriptionID = _subscriptionIDAllocator.allocate();
         for ( HandlerEntry& entry : _listHandler )
         {
             if ( entry._name == name )
@@ -57,7 +57,7 @@ namespace sw
 
     Subscription UserSettingsHandlerRegistry::registerOptionProvider( const hashed_string& name, const UserSettingOptionProviderDelegate& provider )
     {
-        const uint64 subscriptionID = _nextSubscriptionID++;
+        const uint64 subscriptionID = _subscriptionIDAllocator.allocate();
         for ( ProviderEntry& entry : _listProvider )
         {
             if ( entry._name == name )

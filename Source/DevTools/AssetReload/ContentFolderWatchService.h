@@ -3,6 +3,7 @@
  * @brief 콘텐츠 폴더 감시 확장점(`IContentFolderWatch`)의 개발 도구 구현입니다 — 감시마다 파일 감시 분배기 하나를 든다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Memory/Memory.h"
@@ -37,7 +38,7 @@ namespace sw
         void releaseWatch( uint64 id );
 
         vector<unique_ptr<Watch>> _listWatch;
-        uint64                    _nextID;
+        IDAllocator<uint64>       _watchIDAllocator;
         SubscriptionList          _subscriptions{ SubscriptionList::ReleaseFunction::create<&ContentFolderWatchService::releaseWatch>( this ) }; ///< 맨 끝 — 먼저 사라져 남은 구독을 끊는다
     };
 } // namespace sw

@@ -7,11 +7,10 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
-#include "Core/Container/pair.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/SubscriptionList.h"
+#include "Core/Delegate/LockedMulticastDelegate.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -58,7 +57,7 @@ namespace sw
 
         /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
         void writeLogWithID( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override;
-        /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 이 싱크가 소유한 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`_mutex`). */
+        /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙이고 그 구독을 돌려줍니다. 어느 스레드에서나 부를 수 있습니다(`LockedMulticastDelegate`). */
         Subscription registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
 
         /**
@@ -89,29 +88,10 @@ namespace sw
         void flushQueue();
         /** @brief 타임스탬프를 붙여 큐에 넣거나 바로 씁니다. */
         void writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID );
-        /** @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)에게 한 줄을 알립니다. 락 밖에서 부르며 그 세대 칸에 "부르는 중" 을 올려 둡니다. */
-        void broadcastToListeners( const LogEntry& entry );
         /** @brief 레코드를 비동기 I/O 큐에 넣고 작업 스레드를 깨웁니다. 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 씁니다. */
         void submitRecord( LogRecord&& record );
         /** @brief 달려 있는 모든 출력 장치에 한 줄을 넘깁니다. 장치마다 자기 락을 가집니다. */
         void dispatchToOutputs( const LogRecord& record );
-        /**
-         * @brief 리스너를 제거한 뒤, 제거 **전에** 시작한 방송이 모두 끝날 때까지 기다립니다.
-         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 기다리지 않으면 제거가 돌아온 뒤에도 다른 스레드의 방송이 제거한 리스너를
-         *          부를 수 있습니다(에디터 콘솔 패널이 파괴되거나 모듈이 언로드된 뒤에 그 코드로 들어감). 이 스레드가 방송 도중(리스너 안)이면
-         *          자기 자신을 기다리게 되므로 기다리지 않습니다. 끊임없는 로그로 세대가 비지 않으면 2 초 뒤 경고하고 돌아옵니다.
-         * @param retiredSlot 제거 직전 세대 슬롯(_mutex 안에서 읽은 값)
-         */
-        void waitForRetiredBroadcasts( uint32 retiredSlot );
-        /** @brief 세대를 넘기고 넘기기 전 칸을 돌려줍니다. _mutex 를 쥐고 부릅니다. */
-        uint32 retireBroadcastSlot() SW_REQUIRES_LOCK( _mutex );
-        /**
-         * @brief 리스너 목록이 바뀐 뒤 생산자가 볼 사본(`_listenerSnapshot`)을 새로 만듭니다. _mutex 를 쥐고 부릅니다.
-         * @details 생산자는 줄마다 목록을 복사하지 않고 이 사본의 참조 하나만 잡습니다(리스너가 바뀔 때만 복사한다).
-         */
-        void rebuildListenerSnapshot() SW_REQUIRES_LOCK( _mutex );
-        /** @brief 리스너 구독 @p id 가 풀렸습니다. 항목을 떼고 그 전에 시작한 방송이 끝나기를 기다립니다(`waitForRetiredBroadcasts`). */
-        void releaseSubscription( uint64 id );
 
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
@@ -128,38 +108,27 @@ namespace sw
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
-        LogWrittenMulticast _onLogWritten SW_GUARDED_BY( _mutex );
         /**
-         * @brief 등록된 리스너의 구독과, 그 구독을 찾는 핸들입니다. _mutex 로 보호한다.
-         * @details 바깥에 돌려준 구독은 이 싱크가 낸 것(id = 핸들)이다. 그것이 풀리면 핸들로 안쪽 구독(멀티캐스트 항목)을 찾아 지운다 —
-         *          멀티캐스트의 구독을 그대로 내주면 해제가 `_mutex` 와 방송 대기를 지나지 않는다.
+         * @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)입니다. 방송은 잠금 밖에서 불변 사본을 부르고, 해제는 그 전에 시작한 방송이 끝나기를 기다린다
+         *        (콘솔 패널 파괴 · 모듈 언로드 뒤에 그 코드로 들어가지 않게). 이 싱크의 `_mutex` 와 따로인 잎 잠금이다.
          */
-        vector<pair<DelegateHandle, Subscription>> _listListenerSubscription SW_GUARDED_BY( _mutex );
-        vector<unique_ptr<ILogOutput>> _listOutput                           SW_GUARDED_BY( _mutex );
-        FileLogOutput*                                                       _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
-        ConcurrentQueue<LogRecord, 4096>                                     _queue;
-        sw::thread                                                           _workerThread;
-        std::condition_variable_any                                          _cv;
-        mutex                                                                _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
-        mutex                                                                _cvMutex; ///< 조건 변수 대기용 뮤텍스
-        /** @brief 리스너 목록의 불변 사본입니다. 리스너가 없으면 nullptr 입니다. _mutex 로 보호하고, 생산자는 참조만 잡아 락 밖에서 부른다. */
-        shared_ptr<const LogWrittenMulticast> _listenerSnapshot SW_GUARDED_BY( _mutex );
-        atomic<uint32>                                          _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 슬롯). 제거가 이전 세대가 빌 때까지 기다린다
-        uint32 _broadcastEpoch                                  SW_GUARDED_BY( _mutex );  ///< 방송 세대. _mutex 로 보호한다
-        atomic<bool>                                            _bIsRunning;
-        atomic<bool>                                            _bInitialized;      ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
-        atomic<bool>                                            _bHasListener;      ///< 리스너가 하나라도 있으면 true. 생산자가 없을 때 _mutex 를 건너뛴다
-        atomic<bool>                                            _bWantsStructured;  ///< `needsStructuredFields` 장치가 달렸으면 true. 생산자가 줄마다 JSON 을 만들지 정한다
-        atomic<bool>                                            _bJSONLinesEnabled; ///< `enableJSONLinesOutput` 이 이미 장치를 달았다
+        LockedMulticastDelegate<void( const LogEntry& )> _onLogWritten;
+        vector<unique_ptr<ILogOutput>> _listOutput       SW_GUARDED_BY( _mutex );
+        FileLogOutput*                                   _pFileOutput; ///< _listOutput 이 소유한다. getLogFolderPath 용 비소유 포인터
+        ConcurrentQueue<LogRecord, 4096>                 _queue;
+        sw::thread                                       _workerThread;
+        std::condition_variable_any                      _cv;
+        mutex                                            _mutex;   ///< 리스너 목록과 출력 목록을 보호한다
+        mutex                                            _cvMutex; ///< 조건 변수 대기용 뮤텍스
+        atomic<bool>                                     _bIsRunning;
+        atomic<bool>                                     _bInitialized;      ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
+        atomic<bool>                                     _bWantsStructured;  ///< `needsStructuredFields` 장치가 달렸으면 true. 생산자가 줄마다 JSON 을 만들지 정한다
+        atomic<bool>                                     _bJSONLinesEnabled; ///< `enableJSONLinesOutput` 이 이미 장치를 달았다
         /**
          * @brief 작업 스레드가 조건 변수에서 잠들려 하거나 잠들어 있으면 true 입니다. 생산자는 이때만 깨웁니다.
          * @details 작업 스레드는 `_cvMutex` 를 쥔 채 이 값을 올리고(seq_cst) 큐를 확인한 뒤 잠들고, 생산자는 넣기 → 펜스 → 이 값을 봅니다(Dekker 짝).
          *          생산자는 깨우기 전에 `_cvMutex` 를 한 번 잡았다 놓아, 작업 스레드가 확인과 잠들기 사이에 있을 때 깨우기를 놓치지 않게 합니다.
          */
         atomic<bool> _bWorkerSleeping;
-
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AsyncLogSink::releaseSubscription>( this ) };
     };
 } // namespace sw

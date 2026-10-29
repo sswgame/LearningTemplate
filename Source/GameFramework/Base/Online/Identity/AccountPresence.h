@@ -10,6 +10,7 @@
  *          언리얼 `IOnlinePresence::QueryPresence`(사용자 id 에서 상태, 완료 델리게이트)와 Nakama status registry 에 해당한다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
@@ -54,7 +55,7 @@ namespace sw
         IAccountPresence& operator=( const IAccountPresence& ) = delete;
 
         /** @brief 찾기 주인의 몫을 엽니다. 주인이 멤버로 들고, 놓으면(소멸 · `reset`) 그 몫으로 맡긴 찾기의 델리게이트가 불리지 않습니다. */
-        [[nodiscard]] Subscription openFindOwner() { return _subscriptions.issue( _nextFindOwnerID++ ); }
+        [[nodiscard]] Subscription openFindOwner() { return _subscriptions.issue( _findOwnerIDAllocator.allocate() ); }
         /**
          * @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id 를 돌려주며, 결과는 @p onFound 로 한 번 옵니다.
          * @details @p owner 가 이 인터페이스가 연 살아 있는 몫이 아니면 맡지 않고 0 입니다.
@@ -82,7 +83,7 @@ namespace sw
         virtual bool relayRemotePush( const OnlinePushRelay& relay ) = 0;
 
     private:
-        uint64 _nextFindOwnerID{ 1 };
+        IDAllocator<uint64> _findOwnerIDAllocator{};
 
     protected:
         /** @brief 구독 @p id 가 풀렸습니다 — 구현이 그 등록을 지운다(`_subscriptions` 가 부른다). */

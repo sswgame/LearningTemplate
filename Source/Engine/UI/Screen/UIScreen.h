@@ -3,6 +3,7 @@
  * @brief 화면 하나를 정의합니다. 위젯 트리 하나와 그 성질(레이어, 모달, 포커스, 커서, 게임 정지)을 가지며, `UISystem` 이 레이어마다 스택으로 쌓습니다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -198,8 +199,8 @@ namespace sw
         unique_ptr<UIBindingSet>                                            _bindingSet;      ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).
         UIAnimationPlayer                                                   _animationPlayer; ///< 문서 애니메이션과 코드 트윈 재생기입니다(트리를 가리키므로 `_tree` 뒤에 생성합니다).
         unordered_map<hashed_string, CommandEntry, hashed_string::HashFunc> _mapCommandToHandler;
-        uint64                                                              _nextCommandID; ///< 다음 명령 등록 구독 번호(0 은 쓰지 않는다)
-        UISystem*                                                           _pUISystem;     ///< 이 화면을 올린 시스템입니다(올리기 전에는 nullptr).
+        IDAllocator<uint64>                                                 _commandIDAllocator; ///< 명령 등록 구독 번호
+        UISystem*                                                           _pUISystem;          ///< 이 화면을 올린 시스템입니다(올리기 전에는 nullptr).
         UIScreenHandle                                                      _handle;
         WidgetID                                                            _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯입니다. 다시 활성이 되면 돌려줍니다.
         uint32                                                              _pushOrder;   ///< 같은 레이어 안의 쌓인 순서입니다(클수록 위).

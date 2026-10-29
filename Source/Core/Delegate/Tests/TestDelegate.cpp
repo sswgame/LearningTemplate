@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Delegate/AtomicSlot.h"
+#include "Core/Delegate/LockedMulticastDelegate.h"
 #include "Core/Testing/TestFramework.h"
 
 static int32 s_TestValue{ 0 };
@@ -518,4 +520,48 @@ SW_TEST_CASE( DelegateTest, MovingAnInlineLambdaDestroysTheSource )
         SW_EXPECT_EQUAL( 1, DelegateLiveCapture::s_liveCount );
     }
     SW_EXPECT_EQUAL( 0, DelegateLiveCapture::s_liveCount );
+}
+
+/**
+ * @brief [DelegateTest] LockedMulticastDelegate 는 등록 순서대로 부르고, 방송 안에서 자기 구독을 풀어도 멈추지 않으며(자기를 기다리지 않는다) 다음 방송에서 빠진다
+ */
+SW_TEST_CASE( DelegateTest, LockedMulticastReleaseInsideBroadcastDoesNotWaitForItself )
+{
+    sw::LockedMulticastDelegate<void( int32 )> multiDel;
+    sw::vector<int32>                          listCalled;
+    sw::Subscription                           subscriptionA;
+    subscriptionA                  = multiDel.add( sw::Delegate<void( int32 )>::create( [&]( int32 value )
+    {
+        listCalled.push_back( value );
+        subscriptionA.reset();
+    } ) );
+    sw::Subscription subscriptionB = multiDel.add( sw::Delegate<void( int32 )>::create( [&]( int32 value )
+    { listCalled.push_back( value * 10 ); } ) );
+    SW_EXPECT_TRUE( multiDel.isBound() );
+
+    multiDel.broadcast( 1 );
+    multiDel.broadcast( 2 );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listCalled.size() );
+    SW_EXPECT_EQUAL( 1, listCalled[0] );
+    SW_EXPECT_EQUAL( 10, listCalled[1] );
+    SW_EXPECT_EQUAL( 20, listCalled[2] );
+
+    subscriptionB.reset();
+    SW_EXPECT_FALSE( multiDel.isBound() );
+}
+
+/**
+ * @brief [DelegateTest] AtomicSlot 은 다시 걸면 갈아 끼우고, 옛 구독이 늦게 풀려도 새 값을 지우지 않는다
+ */
+SW_TEST_CASE( DelegateTest, AtomicSlotLateReleaseKeepsTheNewerValue )
+{
+    static int32           s_first  = 1;
+    static int32           s_second = 2;
+    sw::AtomicSlot<int32*> slot;
+    sw::Subscription       oldBinding = slot.bind( &s_first );
+    sw::Subscription       newBinding = slot.bind( &s_second );
+    oldBinding.reset();
+    SW_EXPECT_TRUE( slot.get() == &s_second );
+    newBinding.reset();
+    SW_EXPECT_TRUE( slot.get() == nullptr );
 }

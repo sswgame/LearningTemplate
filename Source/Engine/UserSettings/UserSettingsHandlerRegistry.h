@@ -5,6 +5,7 @@
  *          스키마(데이터)는 `target="handler:<name>"` 과 `optionsFrom="<name>"` 으로 여기의 이름을 고른다. 코드는 이름과 동작만 가진다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -98,7 +99,7 @@ namespace sw
     private:
         vector<HandlerEntry>  _listHandler;
         vector<ProviderEntry> _listProvider;
-        uint64                _nextSubscriptionID; ///< 다음 구독 번호(0 은 쓰지 않는다)
+        IDAllocator<uint64>   _subscriptionIDAllocator; ///< 구독 번호
 
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

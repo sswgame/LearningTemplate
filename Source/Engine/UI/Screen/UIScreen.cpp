@@ -24,7 +24,7 @@ namespace sw
         , _bindingSet{}
         , _animationPlayer{ _tree }
         , _mapCommandToHandler{}
-        , _nextCommandID{ 1 }
+        , _commandIDAllocator{}
         , _pUISystem{ nullptr }
         , _handle{ kInvalidUIScreenHandle }
         , _lastFocused{ kInvalidWidgetID }
@@ -111,7 +111,7 @@ namespace sw
 
     Subscription UIScreen::registerCommand( const hashed_string& command, const UICommandDelegate& handler )
     {
-        const uint64 id               = _nextCommandID++;
+        const uint64 id               = _commandIDAllocator.allocate();
         _mapCommandToHandler[command] = CommandEntry{ handler, id };
         return _subscriptions.issue( id );
     }

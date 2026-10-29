@@ -217,7 +217,7 @@ namespace sw
         , _pServerBus{}
         , _listenerTransport{}
         , _nowMs{ 0 }
-        , _nextBusSubscriptionID{ 1 }
+        , _busSubscriptionIDAllocator{}
         , _nextHelloSweepMs{ 0 }
         , _schemaHash{ 0 }
         , _bInitialized{ SW_FALSE }
@@ -507,7 +507,7 @@ namespace sw
         }
         if ( bTopicOpen == false )
             _settings._pServerBusTransport->subscribe( topic );
-        const uint64 subscriptionID = _nextBusSubscriptionID++;
+        const uint64 subscriptionID = _busSubscriptionIDAllocator.allocate();
         _listBusSubscription.push_back( BusSubscription{ string( topic ), pService, subscriptionID } );
         return _subscriptions.issue( subscriptionID );
     }

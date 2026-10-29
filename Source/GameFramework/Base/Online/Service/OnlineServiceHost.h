@@ -22,6 +22,7 @@
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
  */
 #pragma once
+#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -301,9 +302,9 @@ namespace sw
         unique_ptr<ServerBus>                            _pServerBus;               ///< `_settings._pServerBusTransport` 의 앞이다
         unique_ptr<ListenerTransport>                    _listenerTransport;        ///< 빌린 전송(플레이어 · GM)을 묶은 것. 엔드포인트는 이것 하나를 본다
         UnixMilliseconds                                 _nowMs;
-        uint64                                           _nextBusSubscriptionID; ///< 다음 버스 구독 번호(0 은 쓰지 않는다)
-        int64                                            _nextHelloSweepMs;      ///< 다음 Hello 기한 검사 시각
-        uint64                                           _schemaHash;            ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
+        IDAllocator<uint64>                              _busSubscriptionIDAllocator; ///< 버스 구독 번호
+        int64                                            _nextHelloSweepMs;           ///< 다음 Hello 기한 검사 시각
+        uint64                                           _schemaHash;                 ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;
 
     private:

@@ -27,9 +27,6 @@ namespace sw
          */
         struct LogReentryDepth
         {
-            /// @brief 지금 리스너를 부르는 중인 방송 깊이입니다(리스너 안에서 또 로그를 쓰면 겹친다). 리스너 제거가 자기 자신을 기다리지 않게 한다.
-            uint32 broadcast{ 0 };
-
             /**
              * @brief 지금 출력 장치의 `write` 를 부르는 중인 깊이입니다(`dispatchToOutputs`).
              * @details 안전망입니다. 이 싱크의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 **자기 락을 쥔 채** `write` 하고
@@ -154,7 +151,6 @@ namespace sw
 {
     AsyncLogSink::AsyncLogSink( string fixedLogFilePath )
         : _onLogWritten{}
-        , _listListenerSubscription{}
         , _listOutput{}
         , _pFileOutput{ nullptr }
         , _queue{}
@@ -162,12 +158,8 @@ namespace sw
         , _cv{}
         , _mutex{}
         , _cvMutex{}
-        , _listenerSnapshot{}
-        , _arrBroadcastInFlight{}
-        , _broadcastEpoch{ 0 }
         , _bIsRunning{ false }
         , _bInitialized{ false }
-        , _bHasListener{ false }
         , _bWantsStructured{ false }
         , _bJSONLinesEnabled{ false }
         , _bWorkerSleeping{ false }
@@ -238,13 +230,7 @@ namespace sw
             arrDevice[index]->close();
         }
 
-        {
-            ScopedLock<mutex> lock{ _mutex };
-            _onLogWritten.removeAll();
-            _listListenerSubscription.clear(); // removeAll 이 이미 무효로 만들었다 — 푸는 일 없이 비운다
-            _subscriptions.detachAll();        // 바깥 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
-            rebuildListenerSnapshot();
-        }
+        _onLogWritten.removeAll(); // 남은 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
         _bInitialized = false;
     }
 
@@ -261,63 +247,7 @@ namespace sw
      */
     Subscription AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
-        ScopedLock<mutex>    lock{ _mutex };
-        const DelegateHandle handle = DelegateHandle::allocate();
-        _listListenerSubscription.emplace_back( handle, _onLogWritten.add( listener ) );
-        rebuildListenerSnapshot();
-        return _subscriptions.issue( handle._id );
-    }
-
-    /**
-     * @brief 리스너의 구독이 풀렸습니다. 항목을 떼고, 떼기 **전에** 시작한 방송이 끝나기를 기다립니다.
-     */
-    void AsyncLogSink::releaseSubscription( uint64 id )
-    {
-        const DelegateHandle handle{ id };
-        uint32               retiredSlot{ 0 };
-        {
-            ScopedLock<mutex> lock{ _mutex };
-            // 안쪽 구독(멀티캐스트 항목)을 지우면 그 소멸자가 항목을 뺀다(_mutex 안이라 다른 등록 · 해제와 겹치지 않는다).
-            const std::optional<size_t> index = VectorUtil::findIndexBy<&pair<DelegateHandle, Subscription>::first>( _listListenerSubscription, handle );
-            if ( index.has_value() )
-                VectorUtil::removeAtSwap( _listListenerSubscription, *index );
-            rebuildListenerSnapshot();
-            retiredSlot = retireBroadcastSlot();
-        }
-        waitForRetiredBroadcasts( retiredSlot );
-    }
-
-    uint32 AsyncLogSink::retireBroadcastSlot()
-    {
-        const uint32 retiredSlot = _broadcastEpoch & 1u;
-        ++_broadcastEpoch;
-        return retiredSlot;
-    }
-
-    void AsyncLogSink::rebuildListenerSnapshot()
-    {
-        const bool bBound = _onLogWritten.isBound();
-        _listenerSnapshot.reset();
-        if ( bBound )
-            _listenerSnapshot = sw::make_shared<LogWrittenMulticast>( _onLogWritten );
-        _bHasListener.store( bBound, std::memory_order_release );
-    }
-
-    void AsyncLogSink::waitForRetiredBroadcasts( uint32 retiredSlot )
-    {
-        if ( t_reentryDepth.broadcast > 0 )
-            return;
-
-        const Deadline deadline = Deadline::afterMilliseconds( 2000 );
-        while ( _arrBroadcastInFlight[retiredSlot].load( std::memory_order_acquire ) != 0 )
-        {
-            if ( deadline.isExpired() )
-            {
-                std::fputs( "[Logger] Timed out waiting for in-flight log broadcasts after removing a listener\n", stderr );
-                return;
-            }
-            ThreadUtil::yield();
-        }
+        return _onLogWritten.add( listener );
     }
 
     void AsyncLogSink::flushForCrash()
@@ -488,29 +418,6 @@ namespace sw
         return deviceCount;
     }
 
-    void AsyncLogSink::broadcastToListeners( const LogEntry& entry )
-    {
-        // 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)의 불변 사본 참조를 잡고 락 밖에서 알린다(줄마다 목록을 복사하지 않는다). 그 세대 칸에
-        // "부르는 중" 을 올려 두어, 리스너 제거가 이 방송이 끝날 때까지 기다리게 한다(`waitForRetiredBroadcasts`).
-        shared_ptr<const LogWrittenMulticast> listenerSnapshot;
-        uint32                                broadcastSlot{ 0 };
-        {
-            ScopedLock<mutex> lock{ _mutex };
-            if ( _listenerSnapshot != nullptr )
-            {
-                listenerSnapshot = _listenerSnapshot;
-                broadcastSlot    = _broadcastEpoch & 1u;
-                _arrBroadcastInFlight[broadcastSlot].fetch_add( 1, std::memory_order_acq_rel );
-            }
-        }
-        if ( listenerSnapshot == nullptr )
-            return;
-        ++t_reentryDepth.broadcast;
-        listenerSnapshot->broadcastSnapshot( entry );
-        --t_reentryDepth.broadcast;
-        _arrBroadcastInFlight[broadcastSlot].fetch_sub( 1, std::memory_order_acq_rel );
-    }
-
     void AsyncLogSink::submitRecord( LogRecord&& record )
     {
         // 초기화 전이거나 큐가 가득 차면 이 스레드에서 바로 쓴다.
@@ -609,7 +516,7 @@ namespace sw
         }
 
         // 4단계: 리스너에게 락 밖에서 알린다. 리스너가 없으면 락도 잡지 않는다.
-        if ( _bHasListener.load( std::memory_order_acquire ) )
+        if ( _onLogWritten.isBound() )
         {
             LogEntry entry;
             entry._level     = level;
@@ -621,7 +528,7 @@ namespace sw
             entry._pID       = pID;
             entry._timeStamp = stamp._text.c_str();
             entry._context   = context;
-            broadcastToListeners( entry );
+            _onLogWritten.broadcast( entry );
         }
 
         // 5단계: 비동기 I/O 큐에 넣는다

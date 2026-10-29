@@ -74,7 +74,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _mutex };
             _mapCodec[type] = std::move( codec );
-            id              = _nextOwnerID++;
+            id              = _ownerIDAllocator.allocate();
             _mapOwner[type] = id; // 교체 — 옛 구독은 이제 아무것도 거두지 않는다
         }
         return _subscriptions.issue( id );
