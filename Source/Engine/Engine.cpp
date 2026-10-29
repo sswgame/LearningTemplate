@@ -382,7 +382,7 @@ namespace sw
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
-        _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
+        _frameHooks.clear();                   // 남은 구독을 무효화하고 저장소를 놓는다
         _mainWindowResizeSubscription.reset(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
