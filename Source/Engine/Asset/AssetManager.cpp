@@ -16,7 +16,6 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/Pack/PackManager.h"
 #include "Engine/FileSystem/Pack/PackPatchTrustSource.h"
@@ -115,14 +114,10 @@ namespace sw
         }
     }
 
-    AssetManager::~AssetManager()
-    {
-        AssetIO::bindPackManager( nullptr ); // 초기화가 중간에 실패해 shutdown 없이 사라져도 걸린 포인터가 남지 않게
-    }
+    AssetManager::~AssetManager() = default;
 
     bool AssetManager::initialize()
     {
-        AssetIO::bindPackManager( _pPackManager.get() );
         if ( AssetPaths::initialize() == false )
         {
             SW_LOG_ERROR( "Failed to initialize AssetManager!" );
@@ -221,7 +216,6 @@ namespace sw
 
     void AssetManager::shutdown()
     {
-        AssetIO::bindPackManager( nullptr );
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
 

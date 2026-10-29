@@ -21,7 +21,6 @@ namespace sw
     enum class AsyncIOPriority : uint8;
 
     class AsyncReadHandle;
-    class PackManager;
 
     /** @brief 리소스 폴더 나열(`AssetIO::collectAssets`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
     enum class AssetFolderListing : uint8
@@ -43,14 +42,8 @@ namespace sw
     {
     public:
         /**
-         * @brief 마운트된 팩을 찾을 팩 매니저를 겁니다. `AssetManager` 가 초기화할 때 걸고 종료할 때 nullptr 로 풉니다.
-         * @details 팩 매니저는 에셋 층(위)이 소유하고 이 입구는 그보다 낮은 파일 시스템 층이다 — 위 층을 include 하지 않고 걸린 것을 본다(언리얼
-         *          `FPlatformFileManager` 가 팩 파일 계층을 걸어 두는 것과 같다).
-         */
-        static void bindPackManager( const PackManager* pPackManager );
-        /**
          * @brief 콘텐츠 정책입니다 — 쿠킹본 · 소스 중 무엇을 읽는가를 묻는 곳은 모두 이것 하나를 본다(씬 · 프리팹 · 셰이더 · 낱개 파일).
-         * @details 걸린 팩 매니저의 값이고, 걸리지 않았으면(엔진 없이 도는 도구) 빌드 기본값(`kBuildContentSource`)이다.
+         * @details 엔진 범위의 팩 매니저(`engine::findSubsystem<PackManager>()` — 에셋 매니저가 소유하고 범위에 건다)의 값이고, 없으면(엔진 없이 도는 도구) 빌드 기본값(`kBuildContentSource`)이다.
          */
         static ContentSource getContentSource();
         /**
@@ -111,6 +104,6 @@ namespace sw
          * @return 폴더가 없으면 `FolderMissing`, 인자가 잘못됐거나 디스크 폴더를 읽지 못하면 `Failed` 입니다. 그 둘이면 @p outListID 는 비어 있습니다.
          */
         [[nodiscard]] static AssetFolderListing collectAssets( const AssetID& folderID, string_view extension, vector<AssetID>& outListID );
-        // VFS 팩 매니저는 `AssetManager` 가 소유한다 — `engine::getSubsystem<AssetManager>().getPackManager()` 로 닿는다(정적 창구를 두지 않는다).
+        // VFS 팩 매니저는 `AssetManager` 가 소유하고 엔진 범위에 건다 — 이 입구는 `engine::findSubsystem<PackManager>()`(서비스 표의 칸)로 읽는다. 정적 칸을 두지 않는다.
     };
 } // namespace sw

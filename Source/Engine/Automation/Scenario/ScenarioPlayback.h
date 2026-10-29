@@ -2,7 +2,7 @@
  * @file ScenarioPlayback.h
  * @brief 게임 · 콘솔이 시나리오를 **재생**하는 창구입니다 — 데모 · 어트랙트 모드, 내장 벤치마크 경로, 튜토리얼 연출, 개발 매크로.
  * @details 테스트 실행(`-scenario`)은 판정이 끝나면 프로세스를 끝내지만, 재생은 프로세스를 그대로 두고 끝을 델리게이트로 알린다. 같은 시나리오 형식 · 단계 · 가상 입력을 쓴다.
- *          재생기(`IScenarioPlayer`)는 위 층의 호스트가 건다(App 의 `AutomationSession` — `AssetIO::bindPackManager` 처럼 위가 아래에 건다). 걸린 재생기가 없으면
+ *          재생기(`IScenarioPlayer`)는 위 층의 호스트가 건다(App 의 `AutomationSession` 을 호스트 범위에 `IScenarioPlayer` 로). 걸린 재생기가 없으면
  *          (전용 서버 · 자동화를 뺀 구성) `play` 가 false 다. 한 번에 하나만 돈다 — 테스트 실행이 돌고 있어도 false 다.
  *          언리얼 Gauntlet 의 데모 · 어트랙트 루프와 Source 엔진의 `timedemo` · `exec` 매크로를 한 형식으로 받는 자리다.
  */

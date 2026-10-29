@@ -194,7 +194,8 @@ namespace sw::engine
         (void)startup.bind( &parts._pConfigManager->getHostGameConfig() );   // 새 범위 - 겹치지 않는다
         {
             SW_MEMORY_SCOPE( Asset );
-            startup.addSubsystem( sw::make_unique<AssetManager>() );
+            AssetManager& assetManager = startup.addSubsystem( sw::make_unique<AssetManager>() );
+            (void)startup.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
         }
         if ( setup._defaultAssets == nullptr )
             setup._defaultAssets = sw::make_unique<EngineDefaultAssetsSubsystem>();

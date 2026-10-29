@@ -2,7 +2,6 @@
 
 #include "Engine/FileSystem/AssetIO.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
@@ -21,16 +20,14 @@ namespace sw
 
     namespace
     {
-        /** @brief `AssetManager` 가 초기화하며 건 팩 매니저입니다(`AssetIO::bindPackManager`). */
-        atomic<const PackManager*> s_pPackManager{ nullptr };
-
         /**
-         * @brief 마운트된 팩을 든 매니저입니다. 에셋 매니저가 걸지 않았으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
+         * @brief 마운트된 팩을 든 매니저입니다 — 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 표의 칸으로 읽는다(`EngineServiceList.xxx`).
+         *        엔진 범위가 없으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `AssetIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
          */
         const PackManager* findPackManager()
         {
-            return s_pPackManager.load( std::memory_order_acquire );
+            return engine::findSubsystem<PackManager>();
         }
 
         /** @brief 낱개 파일을 읽어도 되는지입니다. 팩 매니저의 콘텐츠 정책이 정하고, 엔진 밖이면 빌드 기본값이다(배포 구성은 금지). */
@@ -113,11 +110,6 @@ namespace sw
 
 namespace sw
 {
-    void AssetIO::bindPackManager( const PackManager* pPackManager )
-    {
-        s_pPackManager.store( pPackManager, std::memory_order_release );
-    }
-
     ContentSource AssetIO::getContentSource()
     {
         const PackManager* pPackManager = findPackManager();

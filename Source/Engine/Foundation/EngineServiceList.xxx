@@ -87,6 +87,9 @@ SW_ENGINE_SERVICE_OPT( class, MemoryProfiler, HostOnly )
 // 진단 도구 둘 — 에셋 로드 기록부와 상태 해시 이력. 엔진 루프와 테스트 하네스가 서비스 범위에 넣고, 엔진 범위를 세우지 않는 호스트(도구)는 없다(그때 기록은 꺼진 것과 같다).
 // OPT 인 까닭은 아래 RenderTargetRegistry 와 같다 — 진단용 칸 하나 때문에 `areEngineServicesBound()` 가 꺼져서는 안 된다.
 SW_ENGINE_SERVICE_OPT( class, AssetLoadProfiler, HostOnly )
+// 팩 매니저 — 에셋 매니저(위 층)가 소유하고 엔진 범위에 건다(`EngineSubsystemSet`). 리소스 입구(`AssetIO`, 아래 층 · 아무 스레드)가 칸으로 읽는다.
+// OPT 인 까닭: 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고 빌드 기본 정책을 읽는다(언리얼 `FPakPlatformFile` 이 플랫폼 파일 계층에 걸리는 자리).
+SW_ENGINE_SERVICE_OPT( class, PackManager, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, StateHashHistory, HostOnly )
 // 렌더 타깃 목록. 렌더러가 공개하고 에디터 패널이 읽는다(패널은 렌더러 내부 상태 대신 이 목록만 본다).
 // **OPT 다.** Required 로 두면 이것을 바인딩하지 않는 호스트(도구 · 테스트 하네스)에서
