@@ -37,6 +37,7 @@
 
 - A static registration table is a `RegistrationList`. On the user-configuration side the name is `Handler`.
 - A name-keyed registry does not reject empty or duplicate names with its own `if`: borrowed pointers go in a `RegistrationList` (`bRequireName`), owned values in a `NameRegistry`, and the caller only reports the result of `add`.
+- A registration that returns a `Subscription` for a borrowed pointer never turns the subscription id back into an address by hand: a `RegistrationList` issues it (`addSubscribed`, release function taking `T*` given to the list's constructor), an O(1) or order-keeping list uses an `ItemSubscriptionList<T>` per kind (no kind bits in the id), and a callback list is a `MulticastDelegate` / `LockedMulticastDelegate`. `SubscriptionList` (plain `uint64` ids) is for id-keyed entries that carry values.
 - When the program cannot go on: `SW_FATAL( "...%#", value )` (below the log tier: `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result (`VkResult`, `HRESULT`). Take it with `isVkSuccess` / `isHrSuccess` or `requireVk` / `requireHr`, or `if ( FAILED( … ) )` when failure is a normal answer (say so in a comment). SDK types cannot carry `[[nodiscard]]`, so review keeps this rule.
 
