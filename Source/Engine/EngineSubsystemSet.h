@@ -67,7 +67,6 @@ namespace sw
         /** @brief 서비스 범위의 호스트별 값입니다. */
         struct ServiceSetup
         {
-            bool _bAuthorityGhost{ false }; ///< 서버 포즈 고스트(개발 명령이 켜진 구성에서만 선다 — 하네스에는 두지 않는다)
         };
     } // namespace engine
 

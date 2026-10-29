@@ -67,7 +67,6 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Profiling/FrameStall.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
@@ -100,7 +99,6 @@
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
 
-#include "Engine/Scene/ServerPoseOverlay.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -237,8 +235,7 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
             engine::ServiceSetup serviceSetup;
-            serviceSetup._bAuthorityGhost = true;
-            _pEventDispatcher             = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
+            _pEventDispatcher = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {
@@ -375,11 +372,6 @@ namespace sw
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _subscriptions.detachAll();
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
-#if SW_DEV_COMMANDS_ENABLED
-        ServerPoseOverlay* const pAuthorityGhost = engine::findSubsystem<ServerPoseOverlay>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
-        if ( pAuthorityGhost != nullptr )
-            pAuthorityGhost->shutdown(); // 작업 스레드는 이 이미지의 코드다 - 이미지가 내려가기 전에 합류한다
-#endif
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
@@ -699,10 +691,6 @@ namespace sw
         // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
-#if SW_DEV_COMMANDS_ENABLED
-        // 개발 명령 `profile.stall` 이 건 지연을 이 구간 안에서 소비합니다. 스파이크를 프레임 비용에 기대지 않고 만듭니다.
-        FrameStall::consume();
-#endif
 
         // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
         updateFrameServices( deltaTime );
@@ -711,13 +699,6 @@ namespace sw
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _pSceneManager != nullptr )
             SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
-#if SW_DEV_COMMANDS_ENABLED
-        // 서버가 가진 위치를 고스트로 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
-        if ( _pSceneManager != nullptr )
-            if ( ServerPoseOverlay* pAuthorityGhost = engine::findSubsystem<ServerPoseOverlay>(); pAuthorityGhost != nullptr )
-                pAuthorityGhost->update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
-#endif
-
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
         if ( _listFrameObserver.empty() == false )
         {

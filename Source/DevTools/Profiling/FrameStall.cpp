@@ -1,13 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Profiling/FrameStall.h"
+#include "DevTools/Profiling/FrameStall.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     namespace
@@ -55,4 +54,3 @@ namespace sw
     SW_DEV_COMMAND( ProfileStall, "profile.stall", "profile.stall <ms>", "Hold the next game thread frame for that many milliseconds (profiler spike checks)",
                     &FrameStallInternal::runStall );
 } // namespace sw
-#endif

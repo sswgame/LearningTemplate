@@ -57,7 +57,6 @@
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Asset/AssetDataKind.h"
-#include "Engine/Scene/ServerPoseOverlay.h" // 헤더가 SW_DEV_COMMANDS_ENABLED 로 스스로 감싼다(여기서 #if 로 감싸면 그 매크로를 아직 모를 수 있다)
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -111,10 +110,6 @@ namespace sw::engine
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
         services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
-#if SW_DEV_COMMANDS_ENABLED
-        if ( setup._bAuthorityGhost )
-            services.addSubsystem( sw::make_unique<ServerPoseOverlay>() ); // 서버 포즈 고스트(개발 도구) — Shipping 에는 없다
-#endif
         {
             SW_MEMORY_SCOPE( RenderCPU );
             services.addSubsystem( sw::make_unique<DebugDrawQueue>() );

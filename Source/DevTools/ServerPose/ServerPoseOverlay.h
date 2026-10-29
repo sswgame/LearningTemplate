@@ -1,5 +1,5 @@
 /**
- * @file Engine/Scene/ServerPoseOverlay.h
+ * @file DevTools/ServerPose/ServerPoseOverlay.h
  * @brief 권위 겹쳐 보기 — 서버가 가진 오브젝트 위치를 클라이언트 화면에 와이어프레임 고스트로 겹치고, 내 화면과 서버의 차이를 숫자로 알립니다(서버 디버깅 S6). **Shipping 에는 없습니다.**
  * @details 클라이언트가 `-gv_serverPoseOverlayPort=N -gv_serverPoseOverlayToken=T` 로 켜면 작업 스레드가 서버의 디버그 채널(`DebugChannel`)에 붙어 `scene.poses` 를 4 Hz 안팎으로 읽습니다.
  *          게임 스레드의 `update` 는 최근 서버 포즈를 이름으로 로컬 씬의 오브젝트와 맞춰 차이(`AuthorityDelta`)를 구하고, 서버 위치에 고스트 상자를,
@@ -10,20 +10,18 @@
  *          읽기는 `scene.poses` 명령의 글(`<이름> x y z [rot …] [box …]`)이라 파서와 비교(`parsePoses` · `writePoses` · `computeDeltas`)는 서버 없이 테스트합니다.
  */
 #pragma once
-#include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Concurrency/atomic.h"
-    #include "Core/Concurrency/mutex.h"
-    #include "Core/Concurrency/thread.h"
-    #include "Core/Container/GameObjectHandle.h"
-    #include "Core/Container/string.h"
-    #include "Core/Container/vector.h"
-    #include "Core/Math/VectorMath.h"
-    #include "Core/Subsystem/ISubsystem.h"
+#include "DevTools/DevToolsAPI.h"
 
 namespace sw
 {
@@ -77,13 +75,13 @@ namespace sw
      * @brief 서버 포즈를 읽어 고스트를 겹치는 엔진 서비스입니다(`engine::findSubsystem<ServerPoseOverlay>()`). 서비스 범위가 소유하고, 게임 스레드가 `update` 를 부릅니다.
      * @details 작업 스레드가 엔진 이미지의 코드라서 엔진은 이미지가 내려가기 전에 `shutdown` 으로 합류시킨다(범위가 사라질 때 소멸자도 한 번 더 부른다).
      */
-    class SW_API ServerPoseOverlay final : public ISubsystem
+    class SW_DEVTOOLS_API ServerPoseOverlay final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "ServerPoseOverlay";
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
+        void                shutdownSubsystem() override { shutdown(); } // 작업 스레드를 합류시킨다
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         ServerPoseOverlay();
@@ -128,5 +126,3 @@ namespace sw
         [[maybe_unused]] uint8                _reserved  : 6;
     };
 } // namespace sw
-
-#endif

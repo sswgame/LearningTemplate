@@ -1,30 +1,28 @@
 #include "pch.h"
 
+#include "DevTools/ServerPose/ServerPoseOverlay.h"
+
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/AABB.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Time/MonotonicClock.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Observability/DebugChannel.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
-    #include "Engine/Scene/ServerPoseOverlay.h"
-
-    #include "Core/Container/StringUtil.h"
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Math/AABB.h"
-    #include "Core/Math/MathUtil.h"
-    #include "Core/Math/MatrixMath.h"
-    #include "Core/Time/MonotonicClock.h"
-
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Graphics/Debug/DebugDrawQueue.h"
-    #include "Engine/Object/Component/SceneComponent.h"
-    #include "Engine/Object/GameObject/GameObject.h"
-    #include "Engine/Object/GameObject/GameObjectManager.h"
-    #include "Engine/Observability/DebugChannel.h"
-    #include "Engine/Scene/Scene.h"
-
-    #include <algorithm>
-    #include <charconv>
-    #include <cmath>
+#include <algorithm>
+#include <charconv>
+#include <cmath>
 
 namespace sw
 {
@@ -452,6 +450,29 @@ namespace sw
         outText += report;
         return true;
     }
-} // namespace sw
 
-#endif
+    namespace
+    {
+        /** @brief `scene.poses` — 서버가 내는 포즈 글(이 고스트가 읽는 형식과 같은 파일에 둔다): 이름 있는 오브젝트의 월드 위치 · 회전 · 히트박스, 이름 순. */
+        struct ServerPoseOverlayCommands
+        {
+            static bool runPoses( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                vector<AuthorityPose> listPose;
+                ServerPoseOverlay::collectPoses( *pManager, listPose );
+                ServerPoseOverlay::writePoses( listPose, outReply );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( ScenePoses, "scene.poses", "scene.poses", "Print the world position, rotation and hit box of every named object that has a transform (name x y z [rot qx qy qz qw] [box cx cy cz hx hy hz])", &ServerPoseOverlayCommands::runPoses );
+} // namespace sw

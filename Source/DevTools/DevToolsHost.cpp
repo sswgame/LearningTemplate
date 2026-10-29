@@ -9,6 +9,8 @@
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugHUD/DebugHUD.h"
+#include "DevTools/Profiling/FrameStall.h"
+#include "DevTools/ServerPose/ServerPoseOverlay.h"
 #include "DevTools/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Shader/ShaderRecompiler.h"
 
@@ -16,7 +18,9 @@
 #include "Engine/Engine.h"
 #include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw
@@ -64,6 +68,8 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             (void)startup.addSubsystem( sw::make_unique<ConfigReloadSubsystem>( *parts._pConfigManager ) );
         }
+        // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
+        (void)startup.addSubsystem( sw::make_unique<ServerPoseOverlay>() );
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
         if ( parts._pUserSettings != nullptr )
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
@@ -75,6 +81,12 @@ namespace sw
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
     {
         // 디버그 HUD — 씬 틱 뒤 · 런타임 UI 앞(HUD 화면이 UI 갱신의 틱에서 섹션을 부른다). 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다.
+        // 개발 명령 `profile.stall` 이 건 지연 — 엔진의 `GT.Frame` 구간 안이다(스파이크를 프레임 비용에 기대지 않고 만든다).
+        FrameStall::consume();
+        // 서버 포즈 고스트 — 씬 틱 · 디버그 그리기 뒤(이번 프레임에 넣은 선이 프레임 끝에 확정된다).
+        if ( ServerPoseOverlay* const pServerPose = engine::findSubsystem<ServerPoseOverlay>() )
+            if ( SceneManager* const pSceneManager = engine::findSubsystem<SceneManager>() )
+                pServerPose->update( pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
         InputMap* const pShellMap = _pEngine != nullptr ? _pEngine->getDebugKeyInputMap() : nullptr;
         if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
             pDebugHUD->update( pShellMap );
