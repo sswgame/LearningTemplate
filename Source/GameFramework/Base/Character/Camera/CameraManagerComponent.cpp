@@ -52,7 +52,7 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            _shakeSubscription = pManager->getCameraRegistry().getShakeChannel().bind(
+            _shakeSubscription = pManager->getCameraRegistry().getShakeChannel().add(
                 SW_DELEGATE_METHOD( CameraShakeRequestCallback, &CameraManagerComponent::onCameraShakeRequested, this ) );
     }
 
