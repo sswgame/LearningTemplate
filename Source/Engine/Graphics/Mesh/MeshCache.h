@@ -113,16 +113,20 @@ namespace sw
      * @struct MeshInvalidationHook
      * @brief 메시에서 기하를 만들어 따로 들고 있는 위 층 캐시(물리 셰이프)가 정적 초기화에서 거는 무효화 고리입니다(`SW_MESH_INVALIDATION_HOOK`).
      * @details `MeshCache` 는 다시 읽기(`reload`)와 비우기(`clear`) 뒤에 모두 부른다. 위 층이 아래 층에 거는 방향이라 그래픽스가 물리를 include 하지 않는다
-     *          (`BuiltInAssetCacheRegistry` 와 같은 모양). 고리는 내리지 않으므로 Engine 이미지 안에서만 건다.
+     *          (`BuiltInAssetCacheRegistry` 와 같은 모양). 고리 객체가 공용 등록 목록(`RegistrationList`)에 자기를 올리고 사라질 때(이미지 언로드의 정적 소멸) 뺀다.
      */
     struct SW_API MeshInvalidationHook
     {
         explicit MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated );
+        ~MeshInvalidationHook();
         MeshInvalidationHook( const MeshInvalidationHook& )            = delete;
         MeshInvalidationHook& operator=( const MeshInvalidationHook& ) = delete;
 
         /** @brief 건 고리를 모두 부릅니다(`MeshCache` 가 부른다). */
         static void notifyAll();
+
+    private:
+        MeshInvalidatedFunction _pfnInvalidated; ///< 메시가 다시 읽히거나 비워졌을 때 부르는 함수
     };
 } // namespace sw
 

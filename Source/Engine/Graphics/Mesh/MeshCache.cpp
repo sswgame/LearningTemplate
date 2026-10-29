@@ -10,6 +10,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
@@ -235,25 +236,31 @@ namespace sw
 {
     namespace
     {
-        /** @brief 무효화 고리 목록입니다. 정적 초기화에서 채우므로 함수 안 정적으로 둔다(초기화 순서). Engine 이미지 안에서만 채운다. */
-        vector<MeshInvalidatedFunction>& getMeshInvalidationHooks()
+        /** @brief 무효화 고리 목록입니다. 정적 초기화에서 채우므로 함수 안 정적으로 둔다(초기화 순서). 정적 등록부는 모두 `RegistrationList` 하나로 쓴다. */
+        RegistrationList<const MeshInvalidationHook>& getMeshInvalidationHooks()
         {
-            static vector<MeshInvalidatedFunction> s_listHook;
+            static RegistrationList<const MeshInvalidationHook> s_listHook{ "MeshInvalidationHook" };
             return s_listHook;
         }
     } // namespace
 
     MeshInvalidationHook::MeshInvalidationHook( MeshInvalidatedFunction pfnInvalidated )
+        : _pfnInvalidated{ pfnInvalidated }
     {
         SW_ASSERT( pfnInvalidated != nullptr );
-        getMeshInvalidationHooks().push_back( pfnInvalidated );
+        (void)getMeshInvalidationHooks().addLogged( this, "Mesh invalidation hook" ); // 고리 객체마다 한 번 오른다
+    }
+
+    MeshInvalidationHook::~MeshInvalidationHook()
+    {
+        (void)getMeshInvalidationHooks().remove( this );
     }
 
     void MeshInvalidationHook::notifyAll()
     {
-        for ( MeshInvalidatedFunction pfnInvalidated : getMeshInvalidationHooks() )
+        for ( const MeshInvalidationHook* pHook : getMeshInvalidationHooks().getItems() )
         {
-            pfnInvalidated();
+            pHook->_pfnInvalidated();
         }
     }
 } // namespace sw
