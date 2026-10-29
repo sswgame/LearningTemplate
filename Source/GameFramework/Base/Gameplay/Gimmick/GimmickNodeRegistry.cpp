@@ -801,5 +801,8 @@ namespace sw
     }
 } // namespace sw
 
-// 엔진 범위 아래 GameFramework 의 자식 범위에 선다 — 기믹 회로 컴포넌트 · 그래프 편집기가 제 타입으로 찾는다.
-SW_MODULE_SUBSYSTEM( Engine, GimmickNodeKindCatalog, GimmickNodeKindCatalog );
+namespace sw
+{
+    // 엔진 범위 아래 GameFramework 의 자식 범위에 선다 — 기믹 회로 컴포넌트 · 그래프 편집기가 제 타입으로 찾는다.
+    SW_MODULE_SUBSYSTEM( Engine, GimmickNodeKindCatalog, GimmickNodeKindCatalog );
+} // namespace sw

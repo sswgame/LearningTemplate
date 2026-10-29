@@ -79,10 +79,10 @@ namespace sw
 /**
  * @brief 서브시스템 @p TSubsystem 을 이 이미지의 모듈 서브시스템으로 등록합니다. @p targetScope 는 `ModuleSubsystemScope` 의 열거자 이름, 나머지는 공개할 타입입니다.
  * @details 예: `SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecurityProvider, INetSecurityProvider );` — 프로세스 범위에 서고 `INetSecurityProvider` 로 찾힌다.
- *          .cpp 의 전역 자리(이름공간 밖)에 둔다. 유니티 빌드가 여러 .cpp 를 합쳐도 겹치지 않게 변수 이름에 타입 이름을 붙인다.
+ *          .cpp 의 `namespace sw` 안(함수 밖)에 둔다 — 타입 이름을 그 이름공간에서 찾는다. 유니티 빌드가 여러 .cpp 를 합쳐도 겹치지 않게 변수 이름에 타입 이름을 붙인다.
  */
-#define SW_MODULE_SUBSYSTEM( targetScope, TSubsystem, ... )                                                       \
-    static const ::sw::ModuleSubsystemRegistration<::sw::TSubsystem, __VA_ARGS__> sw_moduleSubsystem_##TSubsystem \
-    {                                                                                                             \
-        ::sw::ModuleSubsystemScope::targetScope                                                                   \
+#define SW_MODULE_SUBSYSTEM( targetScope, TSubsystem, ... )                                                 \
+    static const ::sw::ModuleSubsystemRegistration<TSubsystem, __VA_ARGS__> sw_moduleSubsystem_##TSubsystem \
+    {                                                                                                       \
+        ::sw::ModuleSubsystemScope::targetScope                                                             \
     }
