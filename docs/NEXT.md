@@ -46,7 +46,7 @@
 | 테스트 늘리기 | 옛 `Test/`(3f70e665f^ 에 약 950 파일)에서 옮길 것을 기능 옆 `Tests/` 로 — 매크로 이름이 같아 순수 함수 테스트는 include 와 위치만 바꾸면 된다. 엔진 서비스가 이미 서 있으므로 옛 하네스는 필요 없다 |
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
-| 남은 처리기 인터페이스 | `IEngineFrameObserver` · `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다) |
+| 남은 처리기 인터페이스 | `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다). 프레임 관찰자는 델리게이트 묶음 `EngineFrameHooks` 가 됐다 |
 | `-log-file` 과 크래시 묶기 | 크래시 리포트 묶기(`CrashReportService::collectSessionLog`)는 `*_<세션>.txt` 로 로그를 찾아 고정 이름 로그를 못 찾는다 — ctest 는 크래시 파일 옆에 로그가 있어 당장은 문제없다 |
 | 그 밖 | 없는 스크립트를 부르는 곳(`Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 생성기 · CMake 파일 이름의 `Abi`(`Scripts/generate/EngineAbiStamp.py` · `cmake/Engine/EngineAbiStamp.cmake`) |
 
@@ -119,7 +119,7 @@
 | 단위 | 담는 것 | 짓는 빌드 |
 |---|---|---|
 | `Core` · `Engine` | 런타임, 읽기 API, 읽기 · 쓰기 짝 직렬화, 확장점(이벤트 · 등록표 · 감쌀 수 있는 인터페이스) | 모두 |
-| `DevTools`(`Source/DevTools`, 정적 라이브러리) | 개발 전용 — 설정 · 셰이더 리로드, 파일 감시 분배기. 호스트가 `DevToolsHost` 를 호스트 범위에 걸면 엔진이 기동 확장점(`IEngineStartupExtension`)으로 서브시스템을 더하게 하고, 프레임 끝은 `IEngineFrameObserver` 로 받는다 | 개발 App · Server · 에디터 · GameFramework |
+| `DevTools`(`Source/DevTools`, 공유 라이브러리 `SW_DEVTOOLS_API`) | 개발 전용 — 설정 · 셰이더 리로드, 파일 감시 분배기, 개발 콘솔(UI 오버레이) · 디버그 HUD, 서버 포즈 고스트, 프레임 지연. 호스트가 `Engine::setStartupExtension` 으로 기동 단계에 서브시스템을 더하고 `Engine::registerFrameHooks` 로 프레임 시점에 붙는다(상속 없음) | 개발 App · Server · 에디터 · GameFramework |
 | `EditorModule` · 편집기 확장 | 편집 기능 전부(저장 · 프리팹 작업 · 굽기 · 패널). 데이터 사본을 고쳐 엔진 직렬화로 쓰고 런타임이 다시 읽는다 | 개발 App |
 
 **끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. 리타깃 `*ForEdit` → 일반 설정자.
@@ -131,7 +131,7 @@
 키트 · 게임 모듈도 같은 칸으로 리로드 사이 상태를 넘길 수 있다.
 
 **남은 것**(순서대로):
-1. `DevTools` 단위 — 파일 감시 분배기 · 설정 리로드 · `LiveShaderSubsystem` · `ShaderRecompiler` 는 옮겼다(엔진은 `IEngineStartupExtension` 만 안다). 남은 것: Core 의 OS 파일 감시기, J5(개발 명령 · 디버그 HUD · 개발 콘솔), J9.
+1. `DevTools` 단위 — 리로드 · 감시 분배기 · 콘솔 · HUD · 서버 포즈 고스트 · 프레임 지연은 옮겼다(엔진은 기동 확장 델리게이트와 프레임 훅만 안다). 기능별 개발 명령은 기능 옆 `*DevCommands.cpp` 이고 배포 구성은 그 이름을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`, `Tests/` 와 같은 규칙). 남은 것: Core 의 OS 파일 감시기, J9, `RenderThread` 의 장치 손실 주입(`rhi.removeDevice`), 자동화 실행기(4).
 2. 에셋 리로드를 데코레이터로 — `IAssetCache::reload` 를 런타임 계약에서 빼고, `DevTools` 가 캐시를 감싸 리로드를 덧붙인다(리로드 전용 어댑터 캐시도 그쪽으로). 텍스처 캐시의 리로드 세대는 비동기 로드와 섞여 인터페이스부터 나눈다(가장 큰 일).
 3. 편집기 `AssetHotReload` 는 편집기에 두고 `DevTools` 의 감시 위에 선다.
 4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
@@ -160,7 +160,7 @@
 | 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
 | 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 호스트 전용 `SceneManager::update`(HostOnly 노출), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
 
-**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
+**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
 12 는 층 문제(엔진에 편집기 이름 · 뜻)만 풀었다(`setRenderHidden`) — 편집기 뷰에서만 숨기기는 층이 아니라 기능이고, 렌더러에 뷰 마스크가 없어(GPU 인스턴스 예비 칸 · 컬링 셰이더 · 그림자 · CPU 경로)
 필요해질 때 기능으로 더한다(편집기 플레이는 씬 사본이 아니라 제자리라 플레이 중에도 숨긴 채다).
 13: 패킷 사진은 우편함의 "다음 패킷에 찍기" 칸(`ScreenshotRequestQueue::putForNextPacket`), 창 제목은 자동화 세션이 든다 — 관찰자 인터페이스에 자동화 칸이 없다.
@@ -175,7 +175,7 @@
 **전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
 `ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · AssetPaths 해석 캐시 · SystemFontLocator · GameDataCache …),
 `ScenarioPlayback::s_pPlayer`(호스트 범위 조회로), `GameTimeScale` 의 프레임 시간, `PackPatchTrustSource` 의 공급자 함수, `MeshCache` 무효화 훅 목록, `TickBatchRegistry` 상태, `AutomationSceneSteps` 의 대기 목록(실행기 상태로),
-편집기의 포커스 스택 · 선택(`EditorService` 의 `s_pFocused*`), `ViewportInputOverlay` 설정. 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
+편집기의 포커스 스택 · 선택(`EditorService` 의 `s_pFocused*`) · `CommandStack::s_pExecuting`, `ViewportInputOverlay` 설정, `ProfilerBackend::s_pActive`(호스트 범위 걸기로), Jolt 백엔드의 `s_pFactory` · `s_pJobSystem`(물리 백엔드 서브시스템으로), `RenderDocCapture::_s_pAPI`. 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
