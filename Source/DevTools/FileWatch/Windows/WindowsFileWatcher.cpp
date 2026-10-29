@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/File/Windows/WindowsFileWatcher.h"
+#include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"

@@ -8,8 +8,10 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/IFileWatcher.h"
 #include "Core/Foundation/StdHeaders.h"
+
+#include "DevTools/DevToolsAPI.h"
+#include "DevTools/FileWatch/IFileWatcher.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -27,7 +29,7 @@ namespace sw
      * @class WindowsFileWatcher
      * @brief Windows 전용 FileWatcher 입니다(ReadDirectoryChangesW 사용).
      */
-    class SW_API WindowsFileWatcher final : public IFileWatcher
+    class SW_DEVTOOLS_API WindowsFileWatcher final : public IFileWatcher
     {
     public:
         /** @brief 핸들과 큐가 빈 상태로 만듭니다. */

@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Core/File/IFileWatcher.h"
+#include "DevTools/FileWatch/IFileWatcher.h"
 
 #include "Core/Log/Logger.h"
 

@@ -4,13 +4,14 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/File/IFileWatcher.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Task/TaskManager.h"
+
+#include "DevTools/FileWatch/IFileWatcher.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/EngineABIStamp.h"
@@ -26,9 +27,9 @@
 #include "sw/config/ConfigConstants.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/File/Windows/WindowsFileWatcher.h"
+    #include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/File/Linux/LinuxFileWatcher.h"
+    #include "DevTools/FileWatch/Linux/LinuxFileWatcher.h"
 #endif
 
 namespace sw

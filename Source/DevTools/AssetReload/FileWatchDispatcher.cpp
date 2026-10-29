@@ -10,10 +10,10 @@
 #include "Engine/FileSystem/AssetPaths.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/File/Windows/WindowsFileWatcher.h"
+    #include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/PlatformOSHeaders.h"
-    #include "Core/File/Linux/LinuxFileWatcher.h"
+    #include "DevTools/FileWatch/Linux/LinuxFileWatcher.h"
 #endif
 
 namespace sw

@@ -10,6 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 namespace sw
 {
     // ------------------------------------------------------------------------------
@@ -59,7 +61,7 @@ namespace sw
      * @class IFileWatcher
      * @brief 디렉터리와 파일의 변경을 감시하는 크로스 플랫폼 인터페이스입니다.
      */
-    class SW_API IFileWatcher
+    class SW_DEVTOOLS_API IFileWatcher
     {
     public:
         /** @brief 가상 소멸자입니다. 감시를 멈추고 워커 스레드를 조인하는 일은 구현 클래스가 합니다. */

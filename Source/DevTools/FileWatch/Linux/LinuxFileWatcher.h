@@ -9,9 +9,11 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/IFileWatcher.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+
+#include "DevTools/DevToolsAPI.h"
+#include "DevTools/FileWatch/IFileWatcher.h"
 
 #if defined( SW_PLATFORM_LINUX )
 
@@ -26,7 +28,7 @@ namespace sw
      * @class LinuxFileWatcher
      * @brief Linux 전용 FileWatcher 입니다(inotify + eventfd).
      */
-    class SW_API LinuxFileWatcher final : public IFileWatcher
+    class SW_DEVTOOLS_API LinuxFileWatcher final : public IFileWatcher
     {
     public:
         /** @brief fd 와 큐가 빈 상태로 만듭니다. */

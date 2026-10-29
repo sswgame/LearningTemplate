@@ -9,12 +9,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/SubscriptionList.h"
-#include "Core/File/IFileWatcher.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "DevTools/DevToolsAPI.h"
+#include "DevTools/FileWatch/IFileWatcher.h"
 
 namespace sw
 {

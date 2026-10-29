@@ -28,4 +28,8 @@ target_link_libraries(ModuleManager
 		sw_global_options
 )
 target_compile_definitions(ModuleManager PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
+# 핫 리로드(`LiveReload/`)의 소스 감시는 개발 도구의 OS 파일 감시기다 — 배포 빌드는 그 폴더도 DevTools 도 짓지 않는다.
+if(NOT SW_SHIPPING_BUILD)
+	target_link_libraries(ModuleManager PRIVATE DevTools)
+endif()
 sw_configurePCH(ModuleManager "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

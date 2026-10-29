@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/DevTools/CMakeLists.txt
-# @brief 개발 도구 공유 라이브러리(DevTools.dll) — 배포 게임이 쓰지 않는 개발 기능(셰이더 · 설정 · 파일 감시 리로드)을 엔진 밖에 둔다.
+# @brief 개발 도구 공유 라이브러리(DevTools.dll) — 배포 게임이 쓰지 않는 개발 기능(리로드 · OS 파일 감시 · 콘솔 · HUD · 회선 흉내)을 엔진 밖에 둔다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -11,6 +11,7 @@
 # include 경로는 `DevTools/...` 다.
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE DEVTOOLS_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.h")
+sw_filterPlatformSources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Windows` · `FileWatch/Linux`)
 
 add_library(DevTools SHARED ${DEVTOOLS_SOURCES})
 set_target_properties(DevTools PROPERTIES
