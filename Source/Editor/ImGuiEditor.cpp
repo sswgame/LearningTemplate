@@ -2,6 +2,7 @@
 
 #include "Editor/ImGuiEditor.h"
 
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -772,7 +773,7 @@ namespace sw::editor
         // 열려 있는 파일 대화상자의 결과 델리게이트를 해제한다. 모듈을 언로드하기 전에 제거해야 하는 이 DLL 안의 주소다.
         // 전역 변수는 모듈을 언로드하는 쪽이 모듈 이름으로 정리한다. 그 델리게이트는 이 DLL 안의 함수와 `this` 를 참조하고,
         // 네이티브 대화상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
-        FileUtil::cancelFileDialogResults();
+        FileDialog::cancelResults();
 
         // 기다리지 않는다. 여기로 오는 경로(GameModuleManager::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤이므로
         // 기다릴 대상이 없다.

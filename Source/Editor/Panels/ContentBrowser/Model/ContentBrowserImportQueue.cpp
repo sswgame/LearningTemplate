@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserImportQueue.h"
 
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -26,7 +27,7 @@ namespace sw::editor
         params._listFilterExtension = {};
         EditorAssetTypeRegistry::appendImportExtensions( params._listFilterExtension );
 
-        FileUtil::openFileDialog( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserImportQueue::onDialogResult, this ) );
+        FileDialog::open( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserImportQueue::onDialogResult, this ) );
     }
 
     void ContentBrowserImportQueue::onDialogResult( const vector<string>& listPath )

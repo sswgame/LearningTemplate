@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Input/EditorCommandGUI.h"
 
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -111,7 +112,7 @@ namespace sw::editor
                 else if ( AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
                     params._initialDirectory = AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath();
 
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
+                FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }
 
             // 포커스된 툴 창(미리보기 씬)이 자기 스택을 걸었으면 그것을 — 미리보기 창의 Undo 가 메인 씬 기록을 건드리지 않는다.
@@ -274,7 +275,7 @@ namespace sw::editor
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml", ".xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
+                FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onLoadPresetDialogResult ) );
             }
 
             static void commandSaveComponentPreset()
@@ -291,7 +292,7 @@ namespace sw::editor
                 params._bEnableMultiselect  = false;
                 params._listFilterExtension = { ".preset.xml" };
                 params._initialDirectory    = EditorGlobalVariableCommands::getComponentPresetFolderPath();
-                FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
+                FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
             }
 
             // 테이블이 `void()` 를 요구하므로 인자를 고정하는 함수는 필요하지만, 축마다 함수를 만들 이유는 없다. 축을 템플릿 인자로 받으면 테이블은 `&commandAlign<AlignAxis::X>` 로 가리킨다.

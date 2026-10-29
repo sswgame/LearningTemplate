@@ -91,6 +91,7 @@
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
 #if !defined( SW_SHIPPING )
+    #include "Core/File/FileDialog.h"
     #include "Engine/AssetReload/ConfigReloadSubsystem.h"
 #endif
 #include "Engine/Asset/AssetDatabase.h"
@@ -594,9 +595,9 @@ namespace sw
             pollShaderReloadHotkey();
             if ( _pConfigReload != nullptr )
                 _pConfigReload->update();
+            // 파일 대화 상자 결과를 **여기서** 메인 스레드로 넘긴다. 대화 상자는 별도 스레드가 띄운다(편집기 빌드만).
+            FileDialog::pumpResults();
 #endif
-            // 파일 대화 상자 결과를 **여기서** 메인 스레드로 넘긴다. 대화 상자는 별도 스레드가 띄운다.
-            FileUtil::pumpFileDialogResults();
             engine::getSubsystem<AssetStreamingQueue>().update();
 
             if ( _pSceneManager != nullptr )

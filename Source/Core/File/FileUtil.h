@@ -1,6 +1,6 @@
 /**
  * @file FileUtil.h
- * @brief 경로 · 파일 I/O · 다이얼로그 · 동적 라이브러리 유틸리티입니다.
+ * @brief 경로 · 파일 I/O · 동적 라이브러리 유틸리티입니다. 파일 대화상자는 `FileDialog`(편집기 빌드만).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -14,33 +14,6 @@
 
 namespace sw
 {
-
-    // ------------------------------------------------------------------------------
-    // 1) FileDialogParams — 열기/저장, 필터 · 시작 폴더 · 다중 선택
-    // ------------------------------------------------------------------------------
-    /** @brief 네이티브 파일 열기 · 저장 다이얼로그의 매개변수입니다. */
-    struct FileDialogParams
-    {
-        /** @brief 열기인지 저장인지 나타냅니다. */
-        enum class Type : uint8
-        {
-            Open,
-            Save,
-        };
-
-        Type           _type{ Type::Open };         ///< Open 또는 Save
-        string         _title;                      ///< 다이얼로그 창 제목(비어 있으면 OS 기본값)
-        string         _description;                ///< 필터 설명 문자열
-        vector<string> _listFilterExtension;        ///< 허용 확장자 목록(예: ".png", "hlsl")
-        string         _initialDirectory;           ///< 시작 폴더(비어 있으면 OS 기본값)
-        bool           _bEnableMultiselect{ true }; ///< 다중 선택 허용(열기에서만)
-    };
-} // namespace sw
-
-namespace sw
-{
-    SW_DECLARE_DELEGATE( void, FileDialogDelegate, const vector<string>& fileName );
-
     /**
      * @brief 파일 하나의 크기와 마지막 쓰기 시각입니다. "지난번에 본 그 파일 그대로인가" 를 파일을 열지 않고 확인할 때 씁니다.
      * @details 시각은 플랫폼 고유의 단위 그대로입니다(Windows 는 100 ns, 리눅스는 `stat` 의 ns). 같은 기계 ·
@@ -301,31 +274,6 @@ namespace sw
         /** @brief 버퍼가 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 포인터와 크기를 3바이트 건너뛰도록 고칩니다. */
         static void skipUTF8Bom( const uint8*& pData, size_t& size );
 
-        /**
-         * @brief 네이티브 파일 다이얼로그를 엽니다. **결과 델리게이트는 메인 스레드에서 불립니다.**
-         * @details 다이얼로그 자체는 분리된(detached) 스레드가 띄웁니다. 네이티브 다이얼로그는 사용자가 닫을 때까지 돌아오지
-         *          않으므로 그 호출에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 큐에 담고, `pumpFileDialogResults`
-         *          가 메인 스레드에서 꺼내 델리게이트를 부릅니다.
-         *
-         *          그 스레드에서 곧바로 델리게이트를 부르면 콜백이 씬 · 컴포넌트 · 에디터 상태처럼 메인 스레드가 매 프레임
-         *          만지는 것들을 **동시에** 고치게 됩니다(씬 직렬화 · 컴포넌트 역직렬화 등). 호출하는 곳마다 큐를 하나씩 두는 대신
-         *          여기서 한 번에 막습니다.
-         * @param params 다이얼로그 설정
-         * @param onSuccess 사용자가 파일을 골랐을 때 **메인 스레드에서** 불릴 델리게이트(취소하면 불리지 않습니다)
-         */
-        static void openFileDialog( const FileDialogParams& params, FileDialogDelegate onSuccess );
-        /**
-         * @brief 완료된 파일 다이얼로그 결과를 처리합니다. **메인 스레드에서 프레임마다** 부릅니다.
-         * @details 아무도 부르지 않으면 결과가 전달되지 않을 뿐 경합은 없습니다(헤드리스 · 도구 실행이 그렇습니다).
-         */
-        static void pumpFileDialogResults();
-        /**
-         * @brief 아직 전달하지 않은 파일 다이얼로그 결과를 버립니다. 종료할 때나 모듈을 언로드할 때 부릅니다.
-         * @details 델리게이트는 로드 가능한 모듈(EditorModule 등) 안의 코드를 가리킬 수 있고, 델리게이트는 대상이 살아 있는지
-         *          확인하지 않습니다. 그래서 그 모듈이 내려가기 전에 이 함수를 불러 연결을 끊어야 합니다. 이미 열려 있는
-         *          다이얼로그의 결과도 세대 번호로 함께 버려집니다.
-         */
-        static void cancelFileDialogResults();
         /**
          * @brief 디렉터리를 훑으며 항목마다 @p visit 를 부릅니다. 들어갈 수 없는 하위 폴더는 건너뜁니다. 예외를 던지지 않습니다.
          * @details 순회가 도중에 멈추면(폴더가 순회 중에 지워짐 등) 경고하고 거기까지로 끝납니다. 항목 경로는 버퍼 하나를 다시 써서 넘깁니다.

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileDialog.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

@@ -3,6 +3,7 @@
 #include "Core/File/Windows/WindowsFileDialog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 

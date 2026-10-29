@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -31,7 +32,7 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 메인 스레드에서 호출합니다.
+            /// @brief 파일 대화상자의 결과를 받습니다. `FileDialog::pumpResults` 가 메인 스레드에서 호출합니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )
@@ -286,6 +287,6 @@ namespace sw::editor
         const string mapsDir = AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ).getDiskPath();
         if ( FileUtil::isDirectory( mapsDir ) )
             params._initialDirectory = mapsDir;
-        FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorSceneFileCommandsInternal::onSaveSceneDialogResult ) );
+        FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorSceneFileCommandsInternal::onSaveSceneDialogResult ) );
     }
 } // namespace sw::editor

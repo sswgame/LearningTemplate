@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/File/FileDialog.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/Windows/WindowsFileDialog.h"
 #include "Core/Testing/TestFramework.h"
