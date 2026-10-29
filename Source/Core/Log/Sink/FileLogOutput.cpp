@@ -63,6 +63,8 @@ namespace sw
             return false; // 오류는 `ensureDirectoryExists` 가 남겼다. 열린 것이 아니므로 `write` 는 줄을 버린다
         // 크래시 덤프와 리포트도 같은 폴더에 둔다. 사용자가 폴더 하나만 보내면 되도록.
         setCrashReportFolder( _logFolderPath );
+        if ( fixedAbsPath.empty() == false )
+            CrashContextStore::get().set( CrashContextStore::kLogFileKey, fixedAbsPath );
 
         _bOpened = true;
         return true;

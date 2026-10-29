@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
@@ -24,8 +25,13 @@ namespace sw
     {
         /** @brief 키 하나의 최대 길이입니다(넘으면 잘립니다). */
         static constexpr uint32 kMaxKeyLength = 32;
-        /** @brief 값 하나의 최대 길이입니다(넘으면 잘립니다). */
-        static constexpr uint32 kMaxValueLength = 160;
+        /** @brief 값 하나의 최대 길이입니다(넘으면 잘립니다). 경로 하나가 들어가야 한다(`kLogFileKey`). */
+        static constexpr uint32 kMaxValueLength = constant::kMaxPathSize;
+        /**
+         * @brief 이 세션의 로그가 고정 이름 파일(`-log-file`)이면 그 절대 경로를 담는 키입니다. 기본 로그는 세션 접미사(`LOG_…_<세션>.txt`)로 찾으므로 적지 않는다.
+         * @details 크래시 묶음(`CrashReportService`)은 다음 실행에서 이 값으로 로그를 찾는다 — 죽은 프로세스의 싱크에 물을 수 없다.
+         */
+        static constexpr const utf8* kLogFileKey = "LogFile";
 
         struct Entry
         {

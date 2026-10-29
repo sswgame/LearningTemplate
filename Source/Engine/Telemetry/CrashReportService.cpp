@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/pair.h"
+#include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
@@ -147,11 +148,14 @@ namespace sw
             }
 
             /** @brief 그 세션의 로그(`*_<세션>.txt`)를 이름 순으로 이어 끝 @p maxBytes 만 남깁니다. */
-            static string collectSessionLog( const string& crashFolder, string_view sessionID, uint64 maxBytes )
+            /** @brief 세션의 로그 — 고정 이름(@p fixedLogPath, 크래시 컨텍스트의 `LogFile`)이면 그 파일, 아니면 크래시 폴더의 `*_<세션>.txt` 를 시간 순으로 잇는다. */
+            static string collectSessionLog( const string& crashFolder, string_view sessionID, string_view fixedLogPath, uint64 maxBytes )
             {
                 vector<string> listFile;
                 string         log;
-                if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
+                if ( fixedLogPath.empty() == false )
+                    log = readText( string( fixedLogPath ) );
+                else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
                     return log;
                 std::sort( listFile.begin(), listFile.end() );
                 string suffix( "_" );
@@ -308,12 +312,13 @@ namespace sw
         Internal::readContextInto( contextText, context );
         // 자주 보는 칸은 맨 위에 — 받는 쪽 목록 화면이 컨텍스트를 풀지 않고 보인다.
         // 값을 먼저 꺼낸다 — 루트에 칸을 더하면 루트의 멤버 저장소가 옮겨 가 앞서 받은 핸들(context)이 낡는다.
-        const string reason   = context.get( "reason" ).asString();
-        const string buildID  = context.get( "BuildID" ).asString();
-        const string build    = context.get( "Build" ).asString();
-        const string platform = context.get( "Platform" ).asString();
-        const string rhi      = context.get( "RHI" ).asString();
-        const string gpu      = context.get( "GPU" ).asString();
+        const string reason       = context.get( "reason" ).asString();
+        const string buildID      = context.get( "BuildID" ).asString();
+        const string build        = context.get( "Build" ).asString();
+        const string platform     = context.get( "Platform" ).asString();
+        const string rhi          = context.get( "RHI" ).asString();
+        const string gpu          = context.get( "GPU" ).asString();
+        const string fixedLogPath = context.get( CrashContextStore::kLogFileKey ).asString();
         root.set( "reason" ).setString( reason );
         root.set( "buildID" ).setString( buildID );
         root.set( "build" ).setString( build );
@@ -350,7 +355,7 @@ namespace sw
             entry.set( "name" ).setString( kind._pBundleName );
             entry.set( "bytes" ).setUint( FileUtil::getFileSize( target ) );
         }
-        const string log = Internal::collectSessionLog( _crashFolder, sessionID, kMaxLogBytes );
+        const string log = Internal::collectSessionLog( _crashFolder, sessionID, fixedLogPath, kMaxLogBytes );
         if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::joinPath( bundleFolder, "last.log" ), log ) )
         {
             const JSONValue entry = files.pushBack();
