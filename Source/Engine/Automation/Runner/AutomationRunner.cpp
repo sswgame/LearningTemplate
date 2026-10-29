@@ -88,9 +88,9 @@ namespace sw
         : _scenario{}
         , _inputScript{}
         , _judge{}
+        , _run{}
         , _reportWriter{}
         , _wallProfile{}
-        , _run{}
         , _outputDirectory{}
         , _finishReason{}
         , _startedAt{}

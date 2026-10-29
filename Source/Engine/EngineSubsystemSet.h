@@ -65,14 +65,6 @@ namespace sw
 
     namespace engine
     {
-        /** @brief 서비스 범위의 호스트별 값입니다. */
-        struct ServiceSetup
-        {
-        };
-    } // namespace engine
-
-    namespace engine
-    {
         /** @brief 서비스 범위에서 호스트가 직접 쓰는 서브시스템입니다(범위가 소유한다). */
         struct ServiceParts
         {
@@ -128,7 +120,7 @@ namespace sw
         [[nodiscard]] SW_API bool initializeCoreSubsystems( SubsystemScope& coreScope, const CoreParts& parts );
 
         /** @brief @p services 에 엔진 범위보다 오래 사는 공용 서비스를 넣습니다. 초기화는 호출한 쪽이 한다. */
-        SW_API ServiceParts addServiceSubsystems( SubsystemScope& services, const ServiceSetup& setup );
+        SW_API ServiceParts addServiceSubsystems( SubsystemScope& services );
 
         /** @brief @p startup 에 기동 단계 서브시스템을 넣고 안의 객체(타입 표 · 기본 에셋 표 · 팩 설정 · 프레임 렌더러)를 겁니다. 부모 범위는 미리 정해 둔다. */
         SW_API StartupParts addStartupSubsystems( SubsystemScope& startup, StartupSetup&& setup );

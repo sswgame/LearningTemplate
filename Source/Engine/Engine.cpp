@@ -232,8 +232,7 @@ namespace sw
             // 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다(누가 소멸자에서 부르든 살아 있다).
             SW_MEMORY_SCOPE( EngineMisc );
             _services.setParentScope( &_coreScope );
-            engine::ServiceSetup serviceSetup;
-            _pEventDispatcher = engine::addServiceSubsystems( _services, serviceSetup )._pEventDispatcher;
+            _pEventDispatcher = engine::addServiceSubsystems( _services )._pEventDispatcher;
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {

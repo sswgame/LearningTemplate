@@ -46,9 +46,9 @@ namespace sw
     public:
         using delegate_type = Delegate<R( Args... )>;
 
-        /** @brief 해제가 방송을 기다리는 한 번의 잠듦(ms)과 그 횟수입니다 — 합쳐 약 2 초면 멈춘 리스너로 보고 경고한다. */
+        /** @brief 해제가 방송을 기다리는 한 번의 잠듦(ms)과 알림 주기입니다 — 기다림은 끝날 때까지 하고, 오래 걸리면 멈춘 리스너일 수 있다고 주기마다 알린다. */
         static constexpr uint32 kRetireWaitStepMs   = 10;
-        static constexpr uint32 kRetireWaitMaxSteps = 200;
+        static constexpr uint32 kRetireWaitReportMs = 10000; ///< 기다림이 이만큼 이어지면 알린다(포기하지 않는다)
 
         LockedMulticastDelegate()
             : SubscriptionSource{}
@@ -151,15 +151,21 @@ namespace sw
         {
             if ( _s_broadcastDepth > 0 )
                 return;
-            for ( uint32 step = 0; step < kRetireWaitMaxSteps; ++step )
+            // 끝날 때까지 기다린다 — 포기하고 돌아가면 해제한 리스너(그 객체)를 앞선 방송이 아직 부른다. 오래 걸리면 주기마다 알린다.
+            uint32 waitedMs = 0;
+            for ( ;; )
             {
                 const uint32 inFlight = _arrInFlight[slot].load( std::memory_order_acquire );
                 if ( inFlight == 0 )
                     return;
                 (void)Futex::waitFor( _arrInFlight[slot], inFlight, kRetireWaitStepMs ); // 0 이 될 때만 깨우므로 한 번에 짧게 잔다
+                waitedMs += kRetireWaitStepMs;
+                if ( waitedMs >= kRetireWaitReportMs )
+                {
+                    SW_LOW_LEVEL_WARNING( "Still waiting for in-flight broadcasts after removing a listener - a listener may be blocked" );
+                    waitedMs = 0;
+                }
             }
-            if ( _arrInFlight[slot].load( std::memory_order_acquire ) != 0 )
-                SW_LOW_LEVEL_WARNING( "Timed out waiting for in-flight broadcasts after removing a listener - a listener may be blocked" );
         }
 
         /// @brief 이 스레드가 지금 이 시그니처의 방송 안에 있는 깊이입니다. 인스턴스마다 둘 수 없어 시그니처마다 하나다(다른 인스턴스의 해제도 기다리지 않는 쪽으로 기운다).
