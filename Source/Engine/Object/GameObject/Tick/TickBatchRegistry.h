@@ -42,14 +42,13 @@ namespace sw
 
         /**
          * @struct Entry
-         * @brief 등록 줄 하나입니다. 등록하는 객체(`TickBatchRegistration<T>`)가 멤버로 들고, 레지스트리가 `_pNext` 로 침입 연결 목록을 잇습니다(등록에 할당이 없다).
+         * @brief 등록 줄 하나입니다. 등록하는 객체(`TickBatchRegistration<T>`)가 멤버로 들고, 레지스트리는 그 주소를 공용 등록 목록(`RegistrationList`)에 올립니다.
          * @details 줄이 레지스트리에 있는 동안 살아 있고 옮겨지지 않아야 합니다 — 등록 객체가 정적 객체(모듈의 수명)이거나 테스트의 지역 객체입니다.
          */
         struct Entry
         {
             StaticTypeFunction _pStaticType; ///< 타입의 `StaticType`
             TickBatchFunction  _pFunction;   ///< 그 타입의 일괄 틱 함수
-            Entry*             _pNext;       ///< 레지스트리의 연결 고리(레지스트리만 쓴다)
         };
 
         /** @brief 줄 하나를 등록합니다. 세대를 올립니다. 같은 함수의 줄이 둘 오를 수 있으며(정적 등록자와 테스트의 지역 객체), 각자 자기 줄만 지웁니다. */
@@ -102,7 +101,7 @@ namespace sw
     {
     public:
         TickBatchRegistration()
-            : _entry{ &TComponent::StaticType, &TickBatchOf<TComponent>::tickRange, nullptr }
+            : _entry{ &TComponent::StaticType, &TickBatchOf<TComponent>::tickRange }
         {
             TickBatchRegistry::registerType( _entry );
         }
@@ -112,7 +111,7 @@ namespace sw
         TickBatchRegistration& operator=( const TickBatchRegistration& ) = delete;
 
     private:
-        TickBatchRegistry::Entry _entry; ///< 레지스트리의 연결 목록에 오르는 줄 — 이 객체가 사는 동안 오른다
+        TickBatchRegistry::Entry _entry; ///< 레지스트리의 등록 목록에 오르는 줄 — 이 객체가 사는 동안 오른다
     };
 } // namespace sw
 
