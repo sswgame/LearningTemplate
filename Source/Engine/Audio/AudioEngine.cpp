@@ -47,7 +47,7 @@ namespace sw
         , _blockOutput{}
         , _listAttenuation{}
         , _snapshotMixer{}
-        , _music{}
+        , _musicPlayer{}
         , _mapLibrary{}
         , _mapEventState{}
         , _mapParameter{}
@@ -119,9 +119,7 @@ namespace sw
             _libraryGeneration.fetch_add( 1, std::memory_order_release );
         }
         _mapEmitter.clear();
-        _music._pDesc.reset();
-        _music._segment        = -1;
-        _music._pendingSegment = -1;
+        _musicPlayer.reset();
         _pMixer.reset();
         _published.clear();
     }
@@ -881,17 +879,17 @@ namespace sw
             case CommandType::StartMusic:
             {
                 _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
-                applyStartMusic( command );
+                _musicPlayer.start( *this, command._pMusic, command._playingID, command._value );
                 break;
             }
             case CommandType::SetMusicSegment:
             {
-                applySetMusicSegment( command._name, false );
+                _musicPlayer.setSegment( *this, command._name );
                 break;
             }
             case CommandType::StopMusic:
             {
-                applyStopMusic( command._value );
+                _musicPlayer.stop( *this, command._value );
                 break;
             }
             case CommandType::SetSnapshotIntensity:
@@ -923,6 +921,68 @@ namespace sw
         slot._bWaitingForClip = false;
         slot._playingID       = 0;
         slot._instanceIndex   = -1;
+    }
+
+    bool AudioEngine::isMusicVoice( const VoiceSlot& slot, AudioPlayingID playingID, int32 segment )
+    {
+        return slot._bInUse && slot._playingID == playingID && ( segment == AudioMusicPlayer::kAnySegment || slot._musicSegment == segment );
+    }
+
+    bool AudioEngine::startMusicVoice( const AudioMusicVoiceRequest& request )
+    {
+        VoiceSlot* pSlot = allocateVoice();
+        if ( pSlot == nullptr )
+            return false;
+        pSlot->_playingID       = request._playingID;
+        pSlot->_clipPath        = request._clipPath;
+        pSlot->_busName         = request._bus;
+        pSlot->_busIndex        = resolveBusIndex( request._bus );
+        pSlot->_musicSegment    = request._segment;
+        pSlot->_musicLayer      = request._layer;
+        pSlot->_musicGain       = request._gain;
+        pSlot->_startFrame      = request._startFrame;
+        pSlot->_fadeInSeconds   = request._fadeInSeconds;
+        pSlot->_priority        = 100;
+        pSlot->_virtualMode     = AudioVirtualMode::KeepReal; // 박을 지키려면 가상으로 빠지지 않는다
+        pSlot->_bLoop           = request._bLoop;
+        pSlot->_bWaitingForClip = true;
+        startWaitingVoice( *pSlot );
+        return true;
+    }
+
+    void AudioEngine::fadeMusicVoices( AudioPlayingID playingID, int32 segment, uint32 fadeFrames, uint32 delayFrames )
+    {
+        for ( VoiceSlot& slot : _listVoice )
+        {
+            if ( isMusicVoice( slot, playingID, segment ) == false )
+                continue;
+            if ( slot._bWaitingForClip )
+                freeVoice( slot );
+            else
+                slot._voice.setFade( 0.0f, fadeFrames, delayFrames, true );
+        }
+    }
+
+    void AudioEngine::freeMusicVoices( AudioPlayingID playingID, int32 segment )
+    {
+        for ( VoiceSlot& slot : _listVoice )
+        {
+            if ( isMusicVoice( slot, playingID, segment ) )
+                freeVoice( slot );
+        }
+    }
+
+    void AudioEngine::stepMusicLayerGains( AudioPlayingID playingID, float32 maxStep, const AudioMusicPlayer& player )
+    {
+        for ( VoiceSlot& slot : _listVoice )
+        {
+            const bool bLayeredMusicVoice = isMusicVoice( slot, playingID, AudioMusicPlayer::kAnySegment ) && slot._musicSegment >= 0 && slot._musicLayer >= 0;
+            if ( bLayeredMusicVoice == false )
+                continue;
+            const float32 target = player.computeLayerGain( *this, slot._musicSegment, slot._musicLayer );
+            const float32 delta  = target - slot._musicGain;
+            slot._musicGain      = MathUtil::abs( delta ) <= maxStep ? target : slot._musicGain + ( delta > 0.0f ? maxStep : -maxStep );
+        }
     }
 
     void AudioEngine::stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds )
@@ -1121,7 +1181,7 @@ namespace sw
         updateParameters();
         _snapshotMixer.update( *_pMixer );
         updateEmitters();
-        updateMusic();
+        _musicPlayer.update( *this );
 
         AudioMixer& mixer = *_pMixer;
         mixer.beginBlock( audio::kBlockFrameCount );
@@ -1221,7 +1281,7 @@ namespace sw
             stats._instanceCount += instance._bInUse ? 1u : 0u;
         }
 
-        _published.publish( stats, _music.makeStatus( _renderedFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
+        _published.publish( stats, _musicPlayer.makeStatus( _renderedFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
         {
             uint32 voiceCount = 0;
             for ( const VoiceSlot& slot : _listVoice )

@@ -28,6 +28,7 @@
 #include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/AudioMusicPlayer.h"
 #include "Engine/Audio/AudioSnapshotMixer.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
@@ -59,15 +60,17 @@ namespace sw
     /**
      * @class AudioEngine
      * @brief 오디오 엔진 하나입니다. `IAudioService` 이 하나를 가지고 있고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
+     * @details 적응형 음악은 `AudioMusicPlayer`, 스냅샷 · 버스 사용자 상태는 `AudioSnapshotMixer` 가 맡는다. 엔진은 명령 큐 · 이벤트 라이브러리 · 보이스 · 에미터를 들고,
+     *          음악 플레이어에게는 보이스 풀의 창(`IAudioMusicVoices`)만 비공개 상속으로 내준다 — 플레이어는 보이스 슬롯의 생김새를 모른다.
      */
-    class SW_API AudioEngine
+    class SW_API AudioEngine : private IAudioMusicVoices
     {
     public:
         /** @brief 리스너 슬롯 수입니다. 분할 화면 4개를 지원합니다. */
         static constexpr uint32 kMaxListenerCount = 4;
 
         AudioEngine();
-        ~AudioEngine();
+        ~AudioEngine() override;
 
         AudioEngine( const AudioEngine& )            = delete;
         AudioEngine& operator=( const AudioEngine& ) = delete;
@@ -432,21 +435,15 @@ namespace sw
         /** @brief 빈 인스턴스 슬롯을 잡습니다. */
         int32 allocateInstance();
 
-        // AudioEngineMusic.cpp: 적응형 음악
-        /** @brief 음악을 시작합니다. 현재 블록에서 시작 구간을 재생합니다. */
-        void applyStartMusic( const Command& command );
-        /** @brief 구간 전환을 맞춤 지점에 예약합니다. @p bAtSegmentEnd 가 true 면 규칙과 상관없이 구간 끝에서 전환하며, 루프하지 않는 구간의 다음 구간에 쓰입니다. */
-        void applySetMusicSegment( const hashed_string& segment, bool bAtSegmentEnd );
-        /** @brief 음악 보이스를 @p fadeSeconds 로 멈춥니다. */
-        void applyStopMusic( float32 fadeSeconds );
-        /** @brief 예약한 전환 시각이 되면 구간을 넘깁니다. 루프하지 않는 구간의 끝은 다음 구간으로 연결하고, 레이어 게인을 파라미터에 맞춥니다. */
-        void updateMusic();
-        /** @brief 현재 구간에서 @p sync 의 다음 맞춤 지점(렌더 프레임)을 반환합니다. */
-        uint64 computeMusicSyncFrame( AudioMusicSync sync ) const;
-        /** @brief 구간의 레이어 보이스를 @p startFrame 에 시작하도록 만듭니다. */
-        void scheduleMusicSegment( int32 segmentIndex, uint64 startFrame, float32 fadeInSeconds );
-        /** @brief 레이어의 목표 게인(선형)을 반환합니다. 볼륨과 파라미터 곡선을 합친 값입니다. */
-        float32 computeMusicLayerGain( int32 segmentIndex, int32 layerIndex ) const;
+        // AudioEngine.cpp: 음악 플레이어에게 내주는 보이스 풀의 창(`IAudioMusicVoices`)
+        uint64             getMusicClock() const override { return _renderedFrameCount; }
+        float32            findMusicParameter( const hashed_string& name ) const override { return getParameterValue( name ); }
+        [[nodiscard]] bool startMusicVoice( const AudioMusicVoiceRequest& request ) override;
+        void               fadeMusicVoices( AudioPlayingID playingID, int32 segment, uint32 fadeFrames, uint32 delayFrames ) override;
+        void               freeMusicVoices( AudioPlayingID playingID, int32 segment ) override;
+        void               stepMusicLayerGains( AudioPlayingID playingID, float32 maxStep, const AudioMusicPlayer& player ) override;
+        /** @brief 슬롯이 재생 @p playingID 의 구간 @p segment(`AudioMusicPlayer::kAnySegment` 면 모두) 음악 보이스인지 봅니다. */
+        static bool isMusicVoice( const VoiceSlot& slot, AudioPlayingID playingID, int32 segment );
 
     private:
         using LibraryMap   = unordered_map<hashed_string, shared_ptr<const AudioEventLibrary>, hashed_string::HashFunc>;
@@ -472,7 +469,7 @@ namespace sw
         AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
         AudioSnapshotMixer                           _snapshotMixer;                  /**< 켜 둔 스냅샷과 버스 사용자 상태입니다(그래프를 바꿔도 이름으로 남는다). */
-        AudioMusicPlayback                           _music;                          /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
+        AudioMusicPlayer                             _musicPlayer;                    /**< 적응형 음악의 재생 위치 · 전환 예약 · 레이어 게인입니다. */
         LibraryMap                                   _mapLibrary;                     /**< 로드한 라이브러리입니다. */
         EventMap                                     _mapEventState;                  /**< 이벤트 이름에서 상태로 가는 맵입니다. */
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름에서 상태로 가는 맵입니다. */

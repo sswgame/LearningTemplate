@@ -1,6 +1,6 @@
 /**
  * @file AudioEngineState.h
- * @brief `AudioEngine` 이 값 멤버로 가지는 부품입니다. 적응형 음악의 재생 위치와, 오디오 스레드가 게임 스레드에 게시하는 사본을 따로 둡니다.
+ * @brief `AudioEngine` 과 `AudioMusicPlayer` 가 값 멤버로 가지는 부품입니다. 적응형 음악의 재생 위치와, 오디오 스레드가 게임 스레드에 게시하는 사본을 따로 둡니다.
  * @details 둘 다 비가상이고 할당을 늘리지 않습니다. 오디오 상태를 바꾸는 순서는 `AudioEngine` 이 정합니다.
  */
 #pragma once
