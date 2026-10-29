@@ -108,3 +108,37 @@ SW_TEST_CASE( SubsystemScopeTest, DestroyAllDropsOwnedEntriesOnly )
     SW_EXPECT_TRUE( scope.find<IScopeProbe>() == nullptr ); // 드러낸 칸도 함께 사라진다(지운 객체를 가리키지 않는다)
     SW_EXPECT_TRUE( scope.find<ScopeCatalog>() == &catalog );
 }
+
+/**
+ * @brief [SubsystemScopeTest] 매단 자식 범위가 공개한 칸만 부모의 조회에 보이고, 떼거나 부모를 지우면 자식 서브시스템이 함께 사라진다
+ */
+SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
+{
+    bool           bDestroyed = false;
+    SubsystemScope parent;
+    {
+        SubsystemScope&      child = parent.mountChildScope( "ModuleA" );
+        ScopeProbeSubsystem& probe = child.addSubsystem( make_unique<ScopeProbeSubsystem>( &bDestroyed ) );
+        SW_EXPECT_TRUE( &parent.mountChildScope( "ModuleA" ) == &child ); // 같은 이름은 같은 자식이다
+        SW_EXPECT_TRUE( parent.find<ScopeProbeSubsystem>() == nullptr );  // 공개하기 전에는 부모가 보지 못한다
+        SW_EXPECT_TRUE( child.publish<IScopeProbe>( probe ) );
+        SW_EXPECT_TRUE( child.publish<ScopeProbeSubsystem>( probe ) ); // 제 타입은 공개 표시만 더한다
+        SW_EXPECT_EQUAL( 7, parent.find<IScopeProbe>()->getValue() );
+        SW_EXPECT_TRUE( parent.find<ScopeProbeSubsystem>() == &probe );
+        SW_EXPECT_TRUE( child.getParentScope() == &parent ); // 자식은 위로 찾는다
+    }
+    ScopeCatalog catalog{ 5 };
+    SW_EXPECT_TRUE( parent.bind( &catalog ) );
+    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( parent.findChildScope( "ModuleA" ) ) == &catalog );
+
+    parent.unmountChildScope( "ModuleA" );
+    SW_EXPECT_TRUE( bDestroyed );
+    SW_EXPECT_TRUE( parent.findChildScope( "ModuleA" ) == nullptr );
+    SW_EXPECT_TRUE( parent.find<IScopeProbe>() == nullptr );
+
+    bool bSecondDestroyed = false;
+    parent.mountChildScope( "ModuleB" ).addSubsystem( make_unique<ScopeProbeSubsystem>( &bSecondDestroyed ) );
+    parent.destroyAll();
+    SW_EXPECT_TRUE( bSecondDestroyed ); // 부모를 지우면 매단 자식도 먼저 사라진다
+    SW_EXPECT_TRUE( parent.find<ScopeCatalog>() == &catalog );
+}

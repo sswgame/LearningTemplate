@@ -7,10 +7,14 @@
  *          타입 해시로 찾게 합니다. 조회(`locateSubsystem`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
  *          범위는 그것을 든 객체(게임 인스턴스 · 에디터 컨텍스트)와 수명이 같아, 모듈 라이브러리가 내려갈 때 그 객체와 함께 사라진다 —
  *          "건 칸을 풀지 않고 내려간 이미지" 를 훑어 회수할 일이 없다.
+ *          **매단 자식 범위**(`mountChildScope`): 범위가 이름 붙은 자식 범위를 소유하고, 자식이 **공개한**(`publish`) 칸은 이 범위의 조회에도 보인다.
+ *          모듈 라이브러리 하나가 자기 서브시스템을 프로세스 · 엔진 범위에 더했다가 내려갈 때 통째로 걷는 자리다(`ModuleSubsystemRegistrar`) —
+ *          언리얼이 모듈을 올릴 때 그 모듈의 `UEngineSubsystem` 을 컬렉션에 더하고 내릴 때 빼는 것과 같다. 자식의 부모는 이 범위라 자식 서브시스템은 위로 찾는다.
  * @note 같은 범위에 같은 타입을 두 번 걸 수 없다(`bind` · `expose` 가 false). 조회는 선형 검색이라 핫 패스에서는 한 번 얻은 포인터를 든다.
  */
 #pragma once
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -105,6 +109,31 @@ namespace sw
         }
 
         /**
+         * @brief 이미 걸린 객체 @p object 를 타입 @p TInterface 로 **공개**합니다 — 이 범위를 매단 부모 범위의 조회(`findInScope`)에도 보입니다.
+         * @details 낮은 층이 높은 층의 구현을 받는 자리(공개 슬롯)다. 함수 칸 · 정적 포인터를 두고 높은 층이 채우게 하는 대신, 높은 층의 서브시스템이 자기 모듈 범위에서
+         *          인터페이스를 공개하고 낮은 층은 그 인터페이스 타입으로 찾는다(언리얼 `IModularFeatures` 의 구현 등록과 같은 자리). @p TInterface 가 이미 같은 객체로
+         *          걸려 있으면(소유한 서브시스템의 제 타입) 공개 표시만 더한다.
+         * @return 같은 타입이 다른 객체로 이미 걸려 있으면 false 입니다.
+         */
+        template <class TInterface, class TObject>
+        [[nodiscard]] bool publish( TObject& object )
+        {
+            static_assert( std::is_base_of_v<TInterface, TObject>, "SubsystemScope::publish needs a base interface" );
+            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &object ), isOwnedEntry( getSubsystemTypeHash<TObject>() ) );
+        }
+
+        /**
+         * @brief 이름 @p name 의 자식 범위를 만들어 매답니다(이미 있으면 그것). 자식은 이 범위가 소유하고, 자식의 부모는 이 범위입니다.
+         * @details 자식이 공개한 칸은 이 범위의 조회에 보인다. 서브시스템을 더한 뒤 초기화는 부른 쪽이 한다(`getCollection().initializeAll`).
+         *          `destroyAll` · 소멸은 자식을 매단 역순으로 먼저 지운 뒤 이 범위의 서브시스템을 지운다.
+         */
+        SubsystemScope& mountChildScope( string_view name );
+        /** @brief 이름 @p name 의 자식 범위를 떼고 지웁니다(그 서브시스템을 종료 · 역순 소멸). 없으면 아무것도 하지 않습니다. */
+        void unmountChildScope( string_view name );
+        /** @brief 이름 @p name 의 자식 범위입니다. 없으면 nullptr 입니다. */
+        SubsystemScope* findChildScope( string_view name ) const;
+
+        /**
          * @brief 소유하지 않는 객체를 타입 @p T 로 겁니다. 객체는 범위보다 오래 살아야 하고, 먼저 사라지면 `unbind` 합니다.
          * @return 같은 타입이 이미 걸려 있으면 false 이고 걸지 않습니다(먼저 `unbind`).
          */
@@ -121,7 +150,7 @@ namespace sw
             unregisterBorrowed( getSubsystemTypeHash<T>() );
         }
 
-        /** @brief 이 범위만 봐서 @p T 를 찾습니다. 없으면 nullptr 입니다. */
+        /** @brief 이 범위(와 매단 자식이 공개한 칸)만 봐서 @p T 를 찾습니다. 상위 범위는 보지 않습니다. 없으면 nullptr 입니다. */
         template <class T>
         T* find() const
         {
@@ -142,7 +171,7 @@ namespace sw
         SubsystemCollection&       getCollection() { return _collection; }
         const SubsystemCollection& getCollection() const { return _collection; }
 
-        /** @brief 소유한 서브시스템을 모두 종료 · 소멸하고 그 조회 칸을 지웁니다. 빌려 건 객체는 남습니다. */
+        /** @brief 매단 자식 범위를 매단 역순으로 지운 뒤, 소유한 서브시스템을 모두 종료 · 소멸하고 그 조회 칸을 지웁니다. 빌려 건 객체는 남습니다. */
         void destroyAll();
 
         /** @brief 상위 범위를 바꿉니다(없으면 nullptr). */
@@ -155,21 +184,36 @@ namespace sw
         /** @brief 조회 칸 하나입니다. */
         struct Entry
         {
-            uint64 _typeHash; ///< 걸린 타입의 해시
-            void*  _pObject;  ///< 걸린 객체(그 타입으로 바꾼 주소)
-            bool   _bOwned;   ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true
+            uint64 _typeHash;            ///< 걸린 타입의 해시
+            void*  _pObject;             ///< 걸린 객체(그 타입으로 바꾼 주소)
+            bool   _bOwned;              ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true
+            bool   _bPublished{ false }; ///< 매단 부모 범위의 조회에도 보이면 true(`publish`)
         };
 
-        /** @brief 칸을 더합니다. 같은 타입이 이미 있으면 false 입니다. */
+        /** @brief 매단 자식 범위 하나입니다(이 범위가 소유한다). */
+        struct MountedScope
+        {
+            string                     _name;  ///< 매단 이름(모듈 이름)
+            unique_ptr<SubsystemScope> _scope; ///< 자식 범위
+        };
+
+        /** @brief 칸을 더합니다. 이 범위의 칸에 같은 타입이 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned );
+        /** @brief 칸을 공개합니다. 같은 객체로 이미 걸렸으면 표시만 더하고, 다른 객체로 걸렸으면 false 입니다. */
+        [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, bool bOwned );
+        /** @brief 이 범위 자신의 칸에서만 찾습니다(자식 · 상위는 보지 않는다). */
+        const Entry* findOwnEntry( uint64 typeHash ) const;
+        /** @brief 공개한 칸을 이 범위와 그 자식에서 찾습니다(매단 부모가 부른다). */
+        void* findPublished( uint64 typeHash ) const;
         /** @brief 빌려 건 칸 하나를 지웁니다. */
         void unregisterBorrowed( uint64 typeHash );
         /** @brief @p typeHash 칸이 소유한 서브시스템이면 true 입니다. */
         bool isOwnedEntry( uint64 typeHash ) const;
 
     private:
-        SubsystemCollection      _collection; ///< 소유한 서브시스템
-        vector<Entry>            _listEntry;  ///< 조회 칸(소유 · 빌림)
-        const ISubsystemLocator* _pParent;    ///< 상위 범위(없으면 nullptr)
+        SubsystemCollection      _collection;  ///< 소유한 서브시스템
+        vector<Entry>            _listEntry;   ///< 조회 칸(소유 · 빌림)
+        vector<MountedScope>     _listMounted; ///< 매단 자식 범위(매단 순서)
+        const ISubsystemLocator* _pParent;     ///< 상위 범위(없으면 nullptr)
     };
 } // namespace sw
