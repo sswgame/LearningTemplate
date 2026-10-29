@@ -676,12 +676,26 @@ namespace sw
             if ( bReady && _run._holdFrameCount > 0 )
                 SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _run._holdFrameCount );
             _run._holdFrameCount = 0;
+            _run.clearHeldStepState(); // 놓인 단계의 상태는 이번 붙잡기의 것이다
             return AutomationStepHold::Run;
         }
         ++_run._holdFrameCount;
         // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
         _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         return AutomationStepHold::Hold;
+    }
+
+    IAutomationStepState* AutomationRunner::findHeldStepState( const AutomationStep& step ) const
+    {
+        return _run._pHeldStateStep == &step ? _run._pHeldStepState.get() : nullptr;
+    }
+
+    IAutomationStepState& AutomationRunner::setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state )
+    {
+        SW_ASSERT( state != nullptr );
+        _run._pHeldStepState = std::move( state );
+        _run._pHeldStateStep = &step;
+        return *_run._pHeldStepState;
     }
 
     bool AutomationRunner::holdClockForBackgroundWork( InputManager& input )
@@ -752,6 +766,7 @@ namespace sw
             return;
         _bEnded              = SW_TRUE;
         _run._wallEndSeconds = AutomationRunnerInternal::readNowSeconds();
+        _run.clearHeldStepState(); // 붙잡힌 채 끝난 단계의 상태(요청한 씬 로드 …)를 이 실행과 함께 걷는다
         releaseWriteGate();
         _hangWatchdog.stop(); // 정상 끝맺음이 보고를 쓴다 — 감시가 같은 보고를 덮거나 프로세스를 끝내지 못하게 먼저 내린다
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )

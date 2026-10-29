@@ -23,6 +23,8 @@ namespace sw
         , _screenshotCompletedCount{ 0 }
         , _imageWaitFrameCount{ 0 }
         , _assetSettledFrameCount{ 0 }
+        , _pHeldStepState{}
+        , _pHeldStateStep{ nullptr }
         , _holdFrameCount{ 0 }
         , _clockHoldFrameCount{ 0 }
         , _seenFrameCount{ 0 }

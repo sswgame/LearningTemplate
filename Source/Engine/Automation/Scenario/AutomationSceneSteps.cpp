@@ -9,7 +9,6 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/vector.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
@@ -32,18 +31,16 @@ namespace sw
             static constexpr uint32 kDefaultLoadTimeoutFrames     = 600;
             static constexpr uint32 kDefaultSequenceTimeoutFrames = 3600;
 
-            /** @brief 로드를 요청한 `LoadScene` 단계와 그 답입니다 — 단계는 시나리오가 끝날 때까지 산다(주소로 가린다). 게임 스레드에서만 만진다. */
-            struct PendingLoad
+            /** @brief `LoadScene` 이 요청한 씬 로드의 답입니다 — 이번 실행의 붙잡은 단계 상태라 실행기가 소유하고, 단계가 놓이거나 실행이 끝나면 지운다. */
+            struct PendingLoad final : IAutomationStepState
             {
-                const AutomationStep* _pStep{ nullptr };
-                TaskFuture<Scene*>    _future{};
-            };
+                explicit PendingLoad( TaskFuture<Scene*> future )
+                    : _future{ std::move( future ) }
+                {
+                }
 
-            static vector<PendingLoad>& getPendingLoads()
-            {
-                static vector<PendingLoad> s_listPending;
-                return s_listPending;
-            }
+                TaskFuture<Scene*> _future;
+            };
 
             static uint32 readTimeoutFrames( const AutomationStep& step, uint32 defaultFrames )
             {
@@ -83,10 +80,9 @@ namespace sw
 
             static AutomationStepHold holdLoadScene( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                vector<PendingLoad>& listPending = getPendingLoads();
-                auto                 it          = std::find_if( listPending.begin(), listPending.end(), [&step]( const PendingLoad& pending )
-                                         { return pending._pStep == &step; } );
-                if ( it == listPending.end() )
+                // 상태는 맡긴 이 단계만 만든다 — 같은 타입으로 되돌려 읽는다.
+                PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
+                if ( pPending == nullptr )
                 {
                     TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( *step.findAttribute( "path" ), SceneLoadKind::Travel );
                     if ( future.isValid() == false )
@@ -94,17 +90,14 @@ namespace sw
                         context.recordFailure( step, "the scene load could not be requested" );
                         return AutomationStepHold::Run;
                     }
-                    listPending.push_back( PendingLoad{ &step, std::move( future ) } );
-                    it = listPending.end() - 1;
+                    pPending = static_cast<PendingLoad*>( &context.setHeldStepState( step, make_unique<PendingLoad>( std::move( future ) ) ) );
                 }
-                const bool               bLoaded = it->_future.isReady() && it->_future.get() != nullptr && engine::getSubsystem<SceneManager>().getActiveScene() == it->_future.get();
-                const AutomationStepHold hold    = context.holdUntilReady( step, input, bLoaded, readTimeoutFrames( step, kDefaultLoadTimeoutFrames ) );
-                if ( hold == AutomationStepHold::Run )
-                {
-                    if ( bLoaded == false )
-                        context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
-                    listPending.erase( it );
-                }
+                const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
+                                     engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
+                // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, readTimeoutFrames( step, kDefaultLoadTimeoutFrames ) );
+                if ( hold == AutomationStepHold::Run && bLoaded == false )
+                    context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
                 return hold;
             }
 

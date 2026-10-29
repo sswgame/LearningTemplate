@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -30,6 +31,18 @@ namespace sw
     };
 
     /**
+     * @class IAutomationStepState
+     * @brief 시계를 붙잡는 단계 하나가 프레임을 넘어 드는 상태입니다(요청한 씬 로드의 답 …). 단계가 제 타입으로 상속해 문맥에 맡긴다.
+     * @details 실행기가 이번 실행의 것으로 소유하고, 그 단계가 놓이면(`holdUntilReady` 가 Run) · 실행이 끝나면 지운다 — 단계 함수의 정적 목록이 실행을 넘어 남지 않는다.
+     *          언리얼 latent 명령이 제 상태를 명령 객체에 들고 대기열이 그 수명을 쥐는 것과 같은 자리다.
+     */
+    class IAutomationStepState
+    {
+    public:
+        virtual ~IAutomationStepState() = default;
+    };
+
+    /**
      * @class AutomationStepContext
      * @brief 단계 함수(`AutomationStepFunction` · `AutomationStepPrepareFunction` · `AutomationStepHoldFunction`)가 받는 문맥입니다. 게임 스레드에서만 씁니다.
      */
@@ -45,6 +58,13 @@ namespace sw
          * @return 붙잡았으면 Hold, 준비됐거나 @p timeoutFrames 를 다 기다렸으면 Run 입니다(그 단계가 돌며 실패를 적는다).
          */
         virtual AutomationStepHold holdUntilReady( const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames ) = 0;
+        /**
+         * @brief 붙잡고 있는 단계 @p step 의 상태입니다(`setHeldStepState` 로 맡긴 것). 맡긴 적이 없거나 다른 단계의 것이면 nullptr 입니다.
+         * @details 맡긴 단계만 같은 타입으로 되돌려 읽는다(`static_cast`) — 상태 칸은 붙잡은 단계 하나의 것이다.
+         */
+        virtual IAutomationStepState* findHeldStepState( const AutomationStep& step ) const = 0;
+        /** @brief 붙잡고 있는 단계 @p step 의 상태를 맡깁니다(앞 것은 지운다). 그 단계가 놓이거나 실행이 끝나면 실행기가 지운다. 맡긴 상태를 돌려줍니다. */
+        virtual IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) = 0;
         /** @brief 시나리오를 바로 끝냅니다. 이미 끝났으면 무시합니다. */
         virtual void endScenario( AutomationStepEnd end, string_view reason ) = 0;
 
