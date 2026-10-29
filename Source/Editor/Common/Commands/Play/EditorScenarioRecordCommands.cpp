@@ -9,6 +9,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
@@ -75,7 +76,7 @@ namespace sw::editor
                     outReply = "could not write '" + getState()._outputPath + "'";
                     return false;
                 }
-                outReply = "wrote " + getState()._outputPath + " (" + to_string( output._writtenStepCount ) + " steps, " + to_string( output._skippedEventCount ) + " events skipped)";
+                outReply = formatToString( "wrote %# (%# steps, %# events skipped)", getState()._outputPath, output._writtenStepCount, output._skippedEventCount );
                 return true;
             }
 

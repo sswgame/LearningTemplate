@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountGMLogin.h"
 
+#include "Core/String/StringBuilder.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "AccountGMLogin" );
@@ -73,7 +75,7 @@ namespace sw
                 continue;
             }
             _state       = AccountGMLoginState::Failed;
-            _failureText = "login refused: error " + to_string( static_cast<int32>( reply._errorCode ) ) + ", result " + to_string( static_cast<int32>( reply._result ) );
+            _failureText = formatToString( "login refused: error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result ) );
         }
     }
 } // namespace sw

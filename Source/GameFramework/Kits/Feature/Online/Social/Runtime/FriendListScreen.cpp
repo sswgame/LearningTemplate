@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -59,8 +60,8 @@ namespace sw
             static string makeRowText( const FriendEntry& entry )
             {
                 if ( entry._activity.empty() )
-                    return "#" + to_string( entry._accountID ) + "  " + getPresenceText( entry._status );
-                return "#" + to_string( entry._accountID ) + "  " + getPresenceText( entry._status ) + "  " + entry._activity;
+                    return formatToString( "#%#  %#", entry._accountID, getPresenceText( entry._status ) );
+                return formatToString( "#%#  %#  %#", entry._accountID, getPresenceText( entry._status ), entry._activity );
             }
         };
     } // namespace
@@ -156,12 +157,12 @@ namespace sw
             {
                 statusText = listEntry.empty() ? "No friends yet" : "Friends";
                 if ( _pModel->getPendingRequestCount() > 0 )
-                    statusText += "  (" + to_string( _pModel->getPendingRequestCount() ) + " pending requests)";
+                    statusText += formatToString( "  (%# pending requests)", _pModel->getPendingRequestCount() );
                 break;
             }
             case FriendListState::Failed:
             {
-                statusText = "Could not load the friend list (error " + to_string( static_cast<uint32>( _pModel->getErrorCode() ) ) + ")";
+                statusText = formatToString( "Could not load the friend list (error %#)", static_cast<uint32>( _pModel->getErrorCode() ) );
                 break;
             }
         }

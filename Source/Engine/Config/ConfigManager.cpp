@@ -2,6 +2,8 @@
 
 #include "Engine/Config/ConfigManager.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
@@ -86,7 +88,7 @@ namespace sw
                 {
                     const JSONValue element = value.at( elementIndex );
                     if ( element.isObject() )
-                        collectMissingRequired( element, *pNested, path + "[" + to_string( static_cast<uint64>( elementIndex ) ) + "]", outListPath );
+                        collectMissingRequired( element, *pNested, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ), outListPath );
                 }
             }
         }
@@ -123,7 +125,7 @@ namespace sw
                 size_t elementIndex{ 0 };
                 for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
                 {
-                    collectMissingRequiredXML( item, *pNested, path + "[" + to_string( static_cast<uint64>( elementIndex ) ) + "]", outListPath );
+                    collectMissingRequiredXML( item, *pNested, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ), outListPath );
                 }
             }
         }

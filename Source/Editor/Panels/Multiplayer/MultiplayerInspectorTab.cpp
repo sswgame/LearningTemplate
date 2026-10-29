@@ -3,6 +3,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -92,7 +93,7 @@ namespace sw::editor
                 if ( listArgument.empty() )
                 {
                     if ( inspector.refreshTree() )
-                        outReply = "inspector read " + to_string( inspector.getObjectRows().size() ) + " object(s)";
+                        outReply = formatToString( "inspector read %# object(s)", inspector.getObjectRows().size() );
                     else
                         outReply = inspector.getLastError();
                     return true;

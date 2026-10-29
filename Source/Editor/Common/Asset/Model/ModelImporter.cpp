@@ -868,13 +868,13 @@ namespace sw::editor
         // VRM 이면 아바타 파일 형식 버전도 섞는다. 그 형식만 바뀌었을 때 VRM 원본만 다시 임포트하게 한다(임포터 버전을 올리면 모든 모델이 어긋난다).
         if ( ModelImporterInternal::containsVrmExtension( bytes ) )
         {
-            const string avatarText = "avatar=" + to_string( VrmAvatarImporter::kVersion );
+            const string avatarText = formatToString( "avatar=%#", VrmAvatarImporter::kVersion );
             hash                    = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
         const string fractureText = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {
-            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
+            const string fractureVersion = formatToString( "%#;format=%#;algorithm=%#", fractureText, FractureAsset::kVersion, MeshFractureUtil::kAlgorithmVersion );
             hash                         = HashUtil::computeStringHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
         // LOD 규칙이 없으면 섞지 않는다 — LOD 를 쓰지 않는 모델의 해시가 그대로다(다시 임포트하지 않는다).

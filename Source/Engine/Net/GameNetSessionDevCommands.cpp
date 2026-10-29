@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
@@ -86,7 +87,7 @@ namespace sw
                         sentCount += bSent ? 1 : 0;
                     }
                 }
-                outReply = "net traffic queued " + to_string( sentCount ) + " reliable message(s) to " + to_string( listConnection.size() ) + " connection(s)";
+                outReply = formatToString( "net traffic queued %# reliable message(s) to %# connection(s)", sentCount, listConnection.size() );
                 return true;
             }
 
@@ -113,7 +114,7 @@ namespace sw
                 }
                 outReply = string( "net session: " ) + getEnumName( pSession->getRole() ) + ", connected " + to_string( pSession->getConnectedCount() );
                 if ( pSession->getRole() == GameNetRole::Server )
-                    outReply += ", port " + to_string( pSession->getListenPort() ) + ", shards " + to_string( pSession->getShardCount() );
+                    outReply += formatToString( ", port %#, shards %#", pSession->getListenPort(), pSession->getShardCount() );
                 return true;
             }
         };

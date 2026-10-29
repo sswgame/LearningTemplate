@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -109,7 +110,7 @@ namespace sw
         column->setSpacing( _settings._nameplateSpacing );
         unique_ptr<TextWidget> name = make_unique<TextWidget>();
         name->setLocalized( false );
-        name->setText( "Unit " + to_string( index ) );
+        name->setText( formatToString( "Unit %#", index ) );
         StressTestSceneWatchesInternal::setFixedSize( *name, _settings._nameplateWidth, _settings._nameplateTextHeight );
         (void)column->addChild( std::move( name ) );
         unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();

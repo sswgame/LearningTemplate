@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -544,7 +545,7 @@ namespace sw
         Internal::appendText( outBytes, " HTTP/1.1\r\n" );
         string host = url._host;
         if ( ( url._bSecure == SW_TRUE && url._port != 443 ) || ( url._bSecure == SW_FALSE && url._port != 80 ) )
-            host += ":" + to_string( static_cast<int32>( url._port ) );
+            host += formatToString( ":%#", static_cast<int32>( url._port ) );
         Internal::appendHeader( outBytes, "Host", host );
         Internal::appendHeader( outBytes, "Connection", "close" );
         if ( request._method == HTTPMethod::Post || request._bodyBytes.empty() == false )

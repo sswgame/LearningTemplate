@@ -328,11 +328,11 @@ namespace sw
         if ( args._bExactCount )
         {
             if ( matchCount != args._expected )
-                context.recordFailure( step, string( pTarget ) + needle + "' count == " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+                context.recordFailure( step, formatToString( "%#%#' count == %#, got %#", string( pTarget ), needle, args._expected, matchCount ) );
             return;
         }
         if ( matchCount < args._expected )
-            context.recordFailure( step, string( pTarget ) + needle + "' count >= " + to_string( args._expected ) + ", got " + to_string( matchCount ) );
+            context.recordFailure( step, formatToString( "%#%#' count >= %#, got %#", string( pTarget ), needle, args._expected, matchCount ) );
     }
 
     void AutomationJudge::runExpectImage( AutomationStepContext& context, const AutomationStep& step )

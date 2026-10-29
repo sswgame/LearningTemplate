@@ -16,6 +16,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -247,7 +248,7 @@ namespace sw::test
         _listRegistration.reserve( count ); // 크기를 먼저 정한다 — 등록표가 원소의 주소를 쥔다
         for ( size_t index = 0; index < count; ++index )
         {
-            _listName.push_back( string( pBaseName ) + "/" + to_string( index ) );
+            _listName.push_back( formatToString( "%#/%#", string( pBaseName ), index ) );
         }
         for ( size_t index = 0; index < count; ++index )
         {
@@ -266,7 +267,7 @@ namespace sw::test
 
     void reportFailure( const utf8* pFile, int32 line, string_view message )
     {
-        TestRunnerInternal::addFailure( string( pFile ) + "(" + to_string( line ) + "): error: " + string( message ) );
+        TestRunnerInternal::addFailure( formatToString( "%#(%#): error: %#", string( pFile ), line, string( message ) ) );
     }
 
     void countAssertion()
@@ -550,11 +551,11 @@ namespace sw::test
                     ScopedLock<mutex> lock{ state._mutex };
                     state._bActive = false;
                     if ( state._assertionCount == 0 )
-                        listLateFailure.push_back( string( pCase->_pFile ) + "(" + to_string( pCase->_line ) + "): error: the case made no assertion - a case that checks nothing is not a pass" );
+                        listLateFailure.push_back( formatToString( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line ) );
                     for ( const Internal::ExpectedLog& expected : state._listExpectedLog )
                     {
                         if ( expected._seenCount == 0 )
-                            listLateFailure.push_back( string( expected._pFile ) + "(" + to_string( expected._line ) + "): error: expected log [id:" + expected._id + "] never appeared" );
+                            listLateFailure.push_back( formatToString( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id ) );
                     }
                 }
                 for ( string& failure : listLateFailure )
@@ -578,7 +579,7 @@ namespace sw::test
 
                 caseReport += caseReport.empty() ? "\n" : ",\n";
                 caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"round\": " + to_string( roundIndex ) + ", \"passed\": " +
-                              ( bPassed ? "true" : "false" ) + ", \"milliseconds\": " + to_string( caseMilliseconds ) + ", \"failures\": [";
+                              formatToString( "%#, \"milliseconds\": %#, \"failures\": [", ( bPassed ? "true" : "false" ), caseMilliseconds );
                 for ( size_t failureIndex = 0; failureIndex < listFailure.size(); ++failureIndex )
                 {
                     caseReport += ( failureIndex == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listFailure[failureIndex] ) + "\"";
@@ -604,7 +605,7 @@ namespace sw::test
             string report = "{\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
                             to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
                             ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"shard\": \"" + to_string( options._shardIndex ) + "/" +
-                            to_string( options._shardCount ) + "\",\n  \"disabled\": [";
+                            formatToString( "%#\",\n  \"disabled\": [", options._shardCount );
             for ( size_t index = 0; index < listDisabled.size(); ++index )
             {
                 report += string( index == 0 ? "" : ", " ) + "{\"name\": \"" + Internal::escapeJSON( listDisabled[index]->_pName ) + "\", \"reason\": \"" +

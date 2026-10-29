@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/Fit/SurfaceState.h"
@@ -42,12 +43,12 @@ namespace sw
 
     hashed_string SurfaceParameterNames::makeRegion( uint32 region, uint32 chunk )
     {
-        return hashed_string( ( string( "_surfaceRegion" ) + to_string( region ) + "Chunk" + to_string( chunk ) ).c_str() );
+        return hashed_string( ( formatToString( "%#%#Chunk%#", string( "_surfaceRegion" ), region, chunk ) ).c_str() );
     }
 
     string SurfaceParameterNames::makeMaskTexturePath( uint64 ownerKey, uint32 part, const hashed_string& channel )
     {
-        return string( "cpu/surface/" ) + to_string( ownerKey ) + "/" + to_string( part ) + "/" + channel.c_str();
+        return formatToString( "%#%#/%#/%#", string( "cpu/surface/" ), ownerKey, part, channel.c_str() );
     }
 } // namespace sw
 

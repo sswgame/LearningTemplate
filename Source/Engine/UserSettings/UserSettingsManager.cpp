@@ -9,6 +9,7 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
@@ -1051,7 +1052,7 @@ namespace sw
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 무인 실행은 그 PC 사용자의 파일을 읽지도 쓰지도 않는다 — 실행마다 빈 파일 자리(프로세스별)를 쓴다.
         // 예전에는 띄우는 쪽이 `-gv_userSettingsFile` 을 빠뜨리면 사람의 설정이 그림을 바꾸고, 시나리오가 바꾼 값이 사람의 파일에 남았다.
         const string gameName      = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
-        const string automatedPath = string( "Saved/Automation/UserSettings/" ) + to_string( Process::getCurrentProcessID() ) + ".json";
+        const string automatedPath = formatToString( "%#%#.json", string( "Saved/Automation/UserSettings/" ), Process::getCurrentProcessID() );
         setUserFilePath( gv_userSettingsFile.empty() == false ? gv_userSettingsFile : bAutomatedRun ? automatedPath
                                                                                                     : makeDefaultUserFilePath( gameName ) );
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )

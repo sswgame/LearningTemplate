@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
@@ -25,7 +26,7 @@ namespace sw::editor
     {
         if ( node.name != nullptr && node.name[0] != '\0' )
             return string( node.name );
-        return "node" + to_string( static_cast<uint64>( &node - data.nodes ) );
+        return formatToString( "node%#", static_cast<uint64>( &node - data.nodes ) );
     }
 
     string ModelImportUtil::makeFileStem( string_view name )

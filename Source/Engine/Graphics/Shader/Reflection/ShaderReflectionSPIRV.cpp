@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
@@ -112,7 +113,7 @@ namespace sw
                         outSize = columnSize * spirvType._count;
                         if ( spirvType._count == 4 )
                             return "Float4x4";
-                        return "Float" + to_string( spirvType._count ) + "x" + to_string( spirvType._count );
+                        return formatToString( "Float%#x%#", spirvType._count, spirvType._count );
                     }
                     case SPIRVType::Kind::Array:
                     {

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -222,7 +223,7 @@ namespace sw
         JSONDocument document;
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
-            result._failureText = "apple does not know this transaction (status " + to_string( response._statusCode ) + ")";
+            result._failureText = formatToString( "apple does not know this transaction (status %#)", response._statusCode );
             return;
         }
         const JSONValue                  signedInfo = document.getRoot().get( "signedTransactionInfo" );

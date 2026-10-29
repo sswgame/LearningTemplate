@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -183,7 +184,7 @@ namespace sw
     {
         const utf8* pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
         return _settings._baseURL + "/" + pInterface + "/GetReport/v4/?key=" + _settings._key + "&appid=" + _settings._appID + "&type=STANDARD&time=" + formatTime( sinceUnixMs ) +
-               "&maxresults=" + to_string( kReportMaxResults );
+               formatToString( "&maxresults=%#", kReportMaxResults );
     }
 
     void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds /*now*/ )
@@ -219,7 +220,7 @@ namespace sw
         if ( Internal::isTransientStatus( response ) )
         {
             result._status      = ReceiptStatus::Retry;
-            result._failureText = response._bTransportFailed == SW_TRUE ? response._failureText : string( "steam answered status " + to_string( response._statusCode ) );
+            result._failureText = response._bTransportFailed == SW_TRUE ? response._failureText : string( formatToString( "steam answered status %#", response._statusCode ) );
             if ( response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden )
                 SW_LOG_ERROR( "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
             return;
@@ -228,7 +229,7 @@ namespace sw
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
             result._status      = ReceiptStatus::Invalid; // 주문이 없으면(4xx) 스팀이 에러로 답한다
-            result._failureText = "steam does not know this order (status " + to_string( response._statusCode ) + ")";
+            result._failureText = formatToString( "steam does not know this order (status %#)", response._statusCode );
             return;
         }
         const JSONValue root = document.getRoot();

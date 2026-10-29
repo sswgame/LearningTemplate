@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
@@ -250,7 +251,7 @@ namespace sw
             pMessage->setText( entry._desc._text );
         if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
         {
-            pCount->setText( "x" + to_string( entry._count ) );
+            pCount->setText( formatToString( "x%#", entry._count ) );
             pCount->setVisibility( entry._count > 1 ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
         }
     }

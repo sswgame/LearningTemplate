@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -59,7 +60,7 @@ namespace sw
                                          entry.findAttribute( "source" ) == nullptr || entry.findAttribute( "text" ) == nullptr;
             if ( bMalformedEntry )
             {
-                error = string( sourceName ) + ": entries[" + to_string( static_cast<uint64>( index ) ) + "] needs exactly \"source\" and \"text\"";
+                error = formatToString( "%#: entries[%#] needs exactly \"source\" and \"text\"", string( sourceName ), static_cast<uint64>( index ) );
                 break;
             }
             mapPair[string{ entry.getAttributeText( "source" ) }] = string{ entry.getAttributeText( "text" ) };

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
@@ -75,7 +77,7 @@ namespace sw
                     const bool bFloat4x4Matrix = rows == 4 && columns == 4 && varType == D3D_SVT_FLOAT;
                     if ( bFloat4x4Matrix )
                         return string( "Float4x4" );
-                    return string( pBase ) + to_string( rows ) + "x" + to_string( columns );
+                    return formatToString( "%#%#x%#", string( pBase ), rows, columns );
                 }
                 if ( varClass == D3D_SVC_VECTOR )
                 {

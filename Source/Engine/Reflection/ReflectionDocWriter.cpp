@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -206,7 +207,7 @@ namespace sw
         { return lhs.first < rhs.first || ( lhs.first == rhs.first && lhs.second.lexicalLess( rhs.second ) ); } );
         for ( const auto& [value, name] : listEntry )
         {
-            out += "| `" + string( name.c_str() ) + "` | " + to_string( value ) + " |\n";
+            out += formatToString( "| `%#` | %# |\n", string( name.c_str() ), value );
         }
         out += "\n";
         return out;
@@ -274,7 +275,7 @@ namespace sw
                 continue;
             ++fileCount;
             index += "| [" + string( moduleName.empty() ? "Unknown" : moduleName.c_str() ) + "](" + fileName + ") | " + to_string( typeCount ) + " | " +
-                     to_string( enumCount ) + " |\n";
+                     formatToString( "%# |\n", enumCount );
         }
         index += "\n## 타입\n\n";
         for ( const TypeInfo* pType : listType )

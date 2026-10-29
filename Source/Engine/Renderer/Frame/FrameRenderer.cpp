@@ -4,6 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -218,7 +219,7 @@ namespace sw
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_viewMode=" + to_string( static_cast<int64>( gv_viewMode ) ) + " is not a view mode (0 .. " +
-                             to_string( static_cast<int64>( RenderViewMode::Count ) - 1 ) + ")";
+                             formatToString( "%#)", static_cast<int64>( RenderViewMode::Count ) - 1 );
             SW_LOG_ERROR( "initialize: %#", _statusMessage );
             return false;
         }

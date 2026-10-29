@@ -7,6 +7,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -76,7 +77,7 @@ namespace sw
                 const SceneStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
                 if ( streaming.isStreaming() )
                 {
-                    outReply = "streaming: " + to_string( streaming.getLoadedCellCount() ) + " of " + to_string( streaming.getCellCount() ) + " cells loaded";
+                    outReply = formatToString( "streaming: %# of %# cells loaded", streaming.getLoadedCellCount(), streaming.getCellCount() );
                     return true;
                 }
                 if ( pScene->getSceneSettings()._bStreaming == false )
@@ -97,7 +98,7 @@ namespace sw
                     return false;
                 }
                 outReply = to_string( static_cast<uint32>( preview._listCell.size() ) ) + " cells, " +
-                           to_string( static_cast<uint32>( preview._listAlwaysLoadedID.size() ) ) + " entities always loaded";
+                           formatToString( "%# entities always loaded", static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
                 return true;
             }
 

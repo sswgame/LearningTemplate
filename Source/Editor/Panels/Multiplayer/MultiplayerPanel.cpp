@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
@@ -113,7 +114,7 @@ namespace sw::editor
                 }
                 pSession->updateUntil( static_cast<int64>( seconds ) * constant::kMillisecondsPerSecond, [&]()
                 { return pSession->getConnectedClientCount() >= clientCount; } );
-                outReply = "netplay connected clients " + to_string( pSession->getConnectedClientCount() ) + " of " + to_string( clientCount );
+                outReply = formatToString( "netplay connected clients %# of %#", pSession->getConnectedClientCount(), clientCount );
                 return true;
             }
 

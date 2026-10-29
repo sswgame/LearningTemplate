@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/ConfigKeyDoc.h"
@@ -159,7 +160,7 @@ namespace sw::editor
             {
                 const JSONValue   ruleObj = rulesVal.at( index );
                 TextureImportRule rule;
-                if ( applyInheritance( ruleObj, rule ) == false || parseRuleObject( ruleObj, rule, "TextureImportConfig rule " + to_string( index ) ) == false )
+                if ( applyInheritance( ruleObj, rule ) == false || parseRuleObject( ruleObj, rule, formatToString( "TextureImportConfig rule %#", index ) ) == false )
                     return clearAndFail();
                 _listRule.push_back( rule );
             }

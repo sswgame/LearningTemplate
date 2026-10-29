@@ -6,6 +6,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -25,7 +26,7 @@ namespace sw
                     return false;
                 engine::getSubsystem<GameTimeScale>().set( scale );
             }
-            outReply = "time scale = " + to_string( engine::getSubsystem<GameTimeScale>().get() );
+            outReply = formatToString( "time scale = %#", engine::getSubsystem<GameTimeScale>().get() );
             return true;
         }
     } // namespace

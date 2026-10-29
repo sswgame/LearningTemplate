@@ -6,6 +6,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -96,7 +97,7 @@ namespace sw::editor
                 if ( listArgument.empty() == false || pContext == nullptr )
                     return false;
                 const uint32 resetCount = pContext->getSubsystem<EditorPanelManager>().resetOptionalPanels( pContext->getSubsystem<EditorRenderViews>().getRHIDevice() );
-                outReply                = "reset " + to_string( resetCount ) + " optional panel(s)";
+                outReply                = formatToString( "reset %# optional panel(s)", resetCount );
                 return true;
             }
 

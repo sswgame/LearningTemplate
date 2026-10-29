@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlayPresetStore.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 
@@ -106,7 +107,7 @@ namespace sw::editor
             const string& name = file._listPreset[presetIndex]._name;
             if ( name.empty() )
             {
-                outReason = "preset " + to_string( presetIndex ) + " has no name";
+                outReason = formatToString( "preset %# has no name", presetIndex );
                 return false;
             }
             for ( size_t laterIndex = presetIndex + 1; laterIndex < file._listPreset.size(); ++laterIndex )

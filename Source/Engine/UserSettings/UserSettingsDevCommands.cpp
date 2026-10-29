@@ -2,6 +2,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -39,7 +40,7 @@ namespace sw
                     if ( bTaken == false )
                     {
                         pSettings->revertPending();
-                        outReply = "settings: '" + argument + "' was not taken (result " + to_string( static_cast<uint32>( result ) ) + ") - nothing applied";
+                        outReply = formatToString( "settings: '%#' was not taken (result %#) - nothing applied", argument, static_cast<uint32>( result ) );
                         return true;
                     }
                 }

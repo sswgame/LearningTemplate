@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -131,7 +132,7 @@ namespace sw
     string GoogleReceiptValidator::makeVoidedURL( int64 sinceUnixMs ) const
     {
         return _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) +
-               "/purchases/voidedpurchases?startTime=" + to_string( sinceUnixMs ) + "&maxResults=" + to_string( kVoidedMaxResults ) + "&type=0";
+               formatToString( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
     }
 
     void GoogleReceiptValidator::submitCall( const WaitingCall& call, UnixMilliseconds /*now*/ )
@@ -229,7 +230,7 @@ namespace sw
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {
             result._status      = ReceiptStatus::Invalid; // 모르는 토큰(400 · 404 · 410)
-            result._failureText = "google does not know this purchase (status " + to_string( response._statusCode ) + ")";
+            result._failureText = formatToString( "google does not know this purchase (status %#)", response._statusCode );
             return;
         }
         const JSONValue root  = document.getRoot();
@@ -253,7 +254,7 @@ namespace sw
         result._status   = mapPurchaseState( purchaseState );
         result._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
         if ( result._status != ReceiptStatus::Valid )
-            result._failureText = "google purchase state " + to_string( purchaseState );
+            result._failureText = formatToString( "google purchase state %#", purchaseState );
         if ( result._transactionID.empty() && result._status != ReceiptStatus::Retry )
         {
             result._status      = ReceiptStatus::Invalid; // 주문 번호가 없으면 분개 키를 만들 수 없다

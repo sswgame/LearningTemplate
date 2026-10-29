@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -102,7 +103,7 @@ namespace sw
         PushPayloadUtil::writeOptionalText( writer, "body_key", message._bodyKey );
         for ( int32 index = 0; index < argumentCount; ++index )
         {
-            writer.key( "arg" + to_string( index ) );
+            writer.key( formatToString( "arg%#", index ) );
             writer.valueString( message._arrArgument[index] );
         }
         writer.endObject();

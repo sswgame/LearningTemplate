@@ -7,6 +7,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -57,7 +58,7 @@ namespace sw
                     return true;
                 }
                 const int32 addedCount = inventory.addItem( hashed_string( listArgument[0] ), count );
-                outReply               = "cheat.give added " + to_string( addedCount ) + " of " + to_string( count ) + " '" + listArgument[0] + "'";
+                outReply               = formatToString( "cheat.give added %# of %# '%#'", addedCount, count, listArgument[0] );
                 return true;
             }
 
@@ -74,7 +75,7 @@ namespace sw
                 const hashed_string currency = listArgument.size() == 2 ? hashed_string( listArgument[1] ) : Wallet::getDefaultCurrency();
                 Wallet&             wallet   = pState->getWallet();
                 wallet.add( currency, amount );
-                outReply = "cheat.money balance " + to_string( wallet.getBalance( currency ) ) + ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) );
+                outReply = formatToString( "cheat.money balance %#%#", wallet.getBalance( currency ), ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) ) );
                 return true;
             }
         };

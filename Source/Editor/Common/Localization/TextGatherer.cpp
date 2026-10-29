@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -317,7 +318,7 @@ namespace sw
                 return true;
             }
 
-            string makeLocation( uint32 line ) const { return string( _originName ) + ":" + to_string( line ); }
+            string makeLocation( uint32 line ) const { return formatToString( "%#:%#", string( _originName ), line ); }
 
             void readMacroCall( string_view macroName )
             {

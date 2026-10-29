@@ -3,6 +3,7 @@
 #include "Editor/Popups/CommandPalettePopup.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -172,7 +173,7 @@ namespace sw::editor
             CommandPaletteEntry entry;
             entry._category = "GameObject";
             entry._label    = "Select GameObject: " + objName;
-            entry._detail   = "Scene Object (ID: " + to_string( objID ) + ")";
+            entry._detail   = formatToString( "Scene Object (ID: %#)", objID );
             entry._action   = [objID]()
             {
                 GameObjectManager* pCurrentObjects = editor::getActiveObjectManager();

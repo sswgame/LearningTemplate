@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -52,7 +53,7 @@ namespace sw
                 {
                     pPlayer->addWaveAmmo();
                 }
-                outReply = "cheat.ammo refilled " + to_string( listPlayer.size() ) + " player(s)";
+                outReply = formatToString( "cheat.ammo refilled %# player(s)", listPlayer.size() );
                 return true;
             }
 
@@ -72,7 +73,7 @@ namespace sw
                     pPlayer->restoreHealth( pPlayer->getMaxHealth() ); // 최대 체력만큼 채우면 가득 찬다(heal 이 최대에서 자른다).
                     ++healedCount;
                 }
-                outReply = "cheat.shooter.heal healed " + to_string( healedCount ) + " of " + to_string( listPlayer.size() ) + " player(s)";
+                outReply = formatToString( "cheat.shooter.heal healed %# of %# player(s)", healedCount, listPlayer.size() );
                 return true;
             }
 
@@ -92,7 +93,7 @@ namespace sw
                 {
                     pPlayer->setDamageImmune( bImmune );
                 }
-                outReply = string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ) + to_string( listPlayer.size() ) + " player(s)";
+                outReply = formatToString( "%#%# player(s)", string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ), listPlayer.size() );
                 return true;
             }
         };

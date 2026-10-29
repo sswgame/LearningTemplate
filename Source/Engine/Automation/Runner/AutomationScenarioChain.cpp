@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/EnumName.h"
 
@@ -94,7 +95,7 @@ namespace sw
         string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
                       string( scenarioName ) + ")";
         if ( result != AutomationOutcome::Passed && _skippedStageCount > 0 )
-            text += " - " + to_string( _skippedStageCount ) + " later stage(s) skipped";
+            text += formatToString( " - %# later stage(s) skipped", _skippedStageCount );
         return text;
     }
 } // namespace sw

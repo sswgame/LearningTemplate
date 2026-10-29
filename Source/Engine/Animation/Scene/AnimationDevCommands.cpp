@@ -7,6 +7,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Animation/Scene/AnimationRewind.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -33,9 +34,9 @@ namespace sw
                 string line = string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + ", window " +
                               to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ) + " s, " + to_string( static_cast<uint32>( rewind.getTracks().size() ) ) +
                               " tracks, " + to_string( rewind.getByteCount() / 1024u ) + " KB, history " +
-                              to_string( static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() ) ) + " s";
+                              formatToString( "%# s", static_cast<float32>( rewind.getLatestTime() - rewind.getEarliestTime() ) );
                 if ( rewind.isScrubbing() )
-                    line += ", scrubbing " + to_string( static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) ) + " s ago";
+                    line += formatToString( ", scrubbing %# s ago", static_cast<float32>( rewind.getLatestTime() - rewind.getScrubTime() ) );
                 return line;
             }
 
@@ -63,7 +64,7 @@ namespace sw
                 if ( bInvalidWindowArguments )
                     return false;
                 AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
-                outReply = "rewind window = " + to_string( AnimationRewindRecorder::getRequestedWindowSeconds() ) + " s";
+                outReply = formatToString( "rewind window = %# s", AnimationRewindRecorder::getRequestedWindowSeconds() );
                 return true;
             }
 

@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -219,7 +220,7 @@ namespace sw
                     else if ( orphan._name.empty() == false )
                         shownName = orphan._name.c_str();
                     else
-                        shownName = "#" + to_string( nameHash ); // 바이너리는 이름 없이 해시만 싣는다
+                        shownName = formatToString( "#%#", nameHash ); // 바이너리는 이름 없이 해시만 싣는다
                     const uint32 shownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ shownName } ) );
                     if ( VectorUtil::contains( listListedHash, shownHash ) )
                         continue;

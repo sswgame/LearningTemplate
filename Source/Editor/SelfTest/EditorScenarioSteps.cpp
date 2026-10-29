@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -391,7 +393,7 @@ namespace sw::editor
                 }
                 if ( foundCount != expectedCount )
                 {
-                    runner.recordFailure( step, "found " + to_string( foundCount ) + " object(s), expected " + to_string( expectedCount ) );
+                    runner.recordFailure( step, formatToString( "found %# object(s), expected %#", foundCount, expectedCount ) );
                     return true;
                 }
                 if ( bSelected != 0 && pickCount == 0 )

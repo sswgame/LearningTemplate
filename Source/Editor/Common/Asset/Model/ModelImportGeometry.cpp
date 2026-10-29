@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
@@ -212,7 +213,7 @@ namespace sw::editor
         const bool bHasMorphTargetName = pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr;
         if ( bHasMorphTargetName )
             return hashed_string( pMesh->target_names[targetIndex] );
-        return hashed_string( "target" + to_string( static_cast<uint64>( targetIndex ) ) );
+        return hashed_string( formatToString( "target%#", static_cast<uint64>( targetIndex ) ) );
     }
 
     bool ModelImportUtil::appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,

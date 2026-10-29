@@ -4,6 +4,7 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
@@ -94,7 +95,7 @@ namespace sw
                     text += ServiceKeyUtil::makeHex64( side._accountID );
                     for ( const TradeLeg& leg : side._listLeg )
                     {
-                        text += "," + leg._assetID + "x" + to_string( leg._amount );
+                        text += formatToString( ",%#x%#", leg._assetID, leg._amount );
                     }
                 }
                 return text;

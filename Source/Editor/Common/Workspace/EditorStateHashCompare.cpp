@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorStateHashCompare.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Observability/DebugChannel.h"
 
@@ -40,7 +41,7 @@ namespace sw::editor
     {
         const bool bValid = 0 <= sourceIndex && sourceIndex < kSourceCount;
         if ( bValid == false )
-            _lastError = "no history slot " + to_string( sourceIndex );
+            _lastError = formatToString( "no history slot %#", sourceIndex );
         return bValid;
     }
 
@@ -91,7 +92,7 @@ namespace sw::editor
         }
         string     body;
         const bool bSceneChannel = _hashChannel == StateHashHistory::kSceneChannelName;
-        const bool bAnswered     = client.request( "state.hashes 0 " + to_string( kMaxRequestedTicks ) + ( bSceneChannel ? string{} : " " + _hashChannel ), kChannelTimeoutMilliseconds, body );
+        const bool bAnswered     = client.request( formatToString( "state.hashes 0 %#%#", kMaxRequestedTicks, ( bSceneChannel ? string{} : " " + _hashChannel ) ), kChannelTimeoutMilliseconds, body );
         client.disconnect();
         if ( bAnswered == false )
         {
@@ -112,7 +113,7 @@ namespace sw::editor
         const ChannelOrigin& origin = _arrChannel[sourceIndex];
         if ( origin._bValid == false )
         {
-            _lastError = "slot " + to_string( sourceIndex ) + " was not read from a debug channel - object hashes come only from a live process";
+            _lastError = formatToString( "slot %# was not read from a debug channel - object hashes come only from a live process", sourceIndex );
             return false;
         }
         DebugChannelClient client;
@@ -184,7 +185,7 @@ namespace sw::editor
         if ( leftTick != rightTick )
         {
             // 두 서버가 다른 틱에서 답했다 — 그 해시를 견주면 움직이는 오브젝트가 모두 다른 것으로 나온다. 두 서버를 pause 한 채 다시 누른다.
-            _lastError = "the two servers answered at different ticks (" + to_string( leftTick ) + " vs " + to_string( rightTick ) + ") - pause both and try again";
+            _lastError = formatToString( "the two servers answered at different ticks (%# vs %#) - pause both and try again", leftTick, rightTick );
             return false;
         }
         vector<string> listName;

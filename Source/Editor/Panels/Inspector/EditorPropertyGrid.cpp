@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/MemoryBlock.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
@@ -1047,7 +1048,7 @@ namespace sw::editor
             {
                 // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
                 // 좁은 창에서 위젯 사각형의 가운데가 레이블 글 위에 놓이므로 입력 칸만 표식으로 남긴다.
-                const string argMark = string( "inspector.method.arg." ) + method._name.c_str() + "." + to_string( paramIndex );
+                const string argMark = formatToString( "%#%#.%#", string( "inspector.method.arg." ), method._name.c_str(), paramIndex );
                 EditorSelfTestMarks::noteInputFrame( argMark.c_str() );
             }
             ImGui::PopID();

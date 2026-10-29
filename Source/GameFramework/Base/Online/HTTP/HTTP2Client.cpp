@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -117,7 +118,7 @@ namespace sw
             failImmediately( requestID, "no TLS context for this host" );
             return requestID;
         }
-        const string key      = url._host + ":" + to_string( static_cast<int32>( url._port ) );
+        const string key      = formatToString( "%#:%#", url._host, static_cast<int32>( url._port ) );
         Session*     pSession = nullptr;
         const auto   keyIt    = _mapKeyToSession.find( key );
         if ( keyIt != _mapKeyToSession.end() )

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -296,7 +297,7 @@ namespace sw::editor
         if ( ImGui::Button( "Add Animation" ) )
         {
             Animation animation{};
-            animation._name       = "anim" + to_string( _listAnimation.size() );
+            animation._name       = formatToString( "anim%#", _listAnimation.size() );
             animation._frameCount = static_cast<int32>( _listFrame.size() );
             _listAnimation.push_back( std::move( animation ) );
             _selectedAnimation = static_cast<int32>( _listAnimation.size() ) - 1;

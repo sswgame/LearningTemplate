@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/OutfitAtlas.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include <algorithm>
 
@@ -40,7 +41,7 @@ namespace sw
             const OutfitAtlasSource& source    = listSource[index];
             const bool               bNoPixels = source._width == 0 || source._height == 0;
             if ( source._part.empty() || bNoPixels )
-                return Internal::fail( pOutError, string( "atlas texture " ) + to_string( index ) + " has no part name or no pixels" );
+                return Internal::fail( pOutError, formatToString( "%#%# has no part name or no pixels", string( "atlas texture " ), index ) );
             for ( size_t other = 0; other < index; ++other )
             {
                 if ( listSource[other]._part == source._part )
@@ -79,7 +80,7 @@ namespace sw
                 shelfSize = 0;
             }
             if ( cursorY + cellH > atlasSize )
-                return Internal::fail( pOutError, string( "atlas " ) + to_string( atlasSize ) + " is too small - part '" + source._part.c_str() + "' does not fit" );
+                return Internal::fail( pOutError, formatToString( "%#%# is too small - part '%#' does not fit", string( "atlas " ), atlasSize, source._part.c_str() ) );
             OutfitAtlasRect rect;
             rect._part         = source._part;
             rect._x            = cursorX + padding;
@@ -145,7 +146,7 @@ namespace sw
     {
         using Internal = OutfitAtlasInternal;
         if ( textureWidth != rect._width || textureHeight != rect._height )
-            return Internal::fail( pOutError, string( "texture of part '" ) + rect._part.c_str() + "' is " + to_string( textureWidth ) + "x" + to_string( textureHeight ) + " but its atlas slot is " + to_string( rect._width ) + "x" + to_string( rect._height ) );
+            return Internal::fail( pOutError, formatToString( "%#%#' is %#x%# but its atlas slot is %#x%#", string( "texture of part '" ), rect._part.c_str(), textureWidth, textureHeight, rect._width, rect._height ) );
         const size_t expectedBytes = static_cast<size_t>( textureWidth ) * textureHeight * Internal::kChannelCount;
         const size_t atlasBytes    = static_cast<size_t>( atlasSize ) * atlasSize * Internal::kChannelCount;
         const bool   bTextureShort = textureRGBA.size() < expectedBytes;

@@ -6,6 +6,7 @@
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
@@ -146,7 +147,7 @@ namespace sw
                     dependency._name = entry._name;
                     if ( dependency._name.empty() || dependency._name == inoutManifest._name )
                     {
-                        outError = errorContext + ": dependency " + to_string( index ) + " has no name or names the module itself";
+                        outError = formatToString( "%#: dependency %# has no name or names the module itself", errorContext, index );
                         return false;
                     }
                     if ( entry._minVersion.empty() == false && ModuleVersion::parse( entry._minVersion, dependency._minVersion ) == false )
@@ -171,7 +172,7 @@ namespace sw
                 {
                     if ( inoutFile._listModuleOverride[index]._name.empty() )
                     {
-                        outError = errorContext + ": module override " + to_string( index ) + " must be { \"_name\": ..., \"_bEnabled\": true|false }";
+                        outError = formatToString( "%#: module override %# must be { \"_name\": ..., \"_bEnabled\": true|false }", errorContext, index );
                         return false;
                     }
                 }
@@ -407,7 +408,7 @@ namespace sw
 
     string ModuleVersion::toString() const
     {
-        return to_string( _major ) + "." + to_string( _minor ) + "." + to_string( _patch );
+        return formatToString( "%#.%#.%#", _major, _minor, _patch );
     }
 
     bool ModuleResolution::isActive( string_view name ) const

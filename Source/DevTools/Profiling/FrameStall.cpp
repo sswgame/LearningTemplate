@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw
@@ -28,11 +29,11 @@ namespace sw
                 const bool bInRange = 1 <= milliseconds && milliseconds <= kMaxStallMilliseconds;
                 if ( bInRange == false )
                 {
-                    outReply = "stall must be 1.." + to_string( kMaxStallMilliseconds ) + " ms";
+                    outReply = formatToString( "stall must be 1..%# ms", kMaxStallMilliseconds );
                     return true;
                 }
                 FrameStall::request( milliseconds );
-                outReply = "next game frame stalls " + to_string( milliseconds ) + " ms";
+                outReply = formatToString( "next game frame stalls %# ms", milliseconds );
                 return true;
             }
         };

@@ -8,6 +8,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
@@ -262,7 +263,7 @@ namespace sw::editor
                     ImGui::TableNextColumn();
 
                     // 호출 스택을 펼쳐 볼 수 있도록 트리로 만든다
-                    string treeLabel = "Stack Hash: " + to_string( info._stack._hash );
+                    string treeLabel = formatToString( "Stack Hash: %#", info._stack._hash );
                     if ( ImGui::TreeNode( treeLabel.c_str() ) )
                     {
                         string stackStr = CallStackCapture::symbolize( info._stack );
@@ -644,7 +645,7 @@ namespace sw::editor
         _bLoadedTrace    = SW_TRUE;
         _bTimelineZoomed = SW_FALSE;
         _traceStatus     = "Loaded " + FileUtil::getFileNamePart( path ) + " (" + to_string( _loadedTrace._listThread.size() ) + " threads, " +
-                       to_string( _loadedTrace._listSlotName.size() ) + " scopes)";
+                       formatToString( "%# scopes)", _loadedTrace._listSlotName.size() );
         SW_LOG_INFO( "Trace loaded: %#", _traceStatus );
         return true;
     }

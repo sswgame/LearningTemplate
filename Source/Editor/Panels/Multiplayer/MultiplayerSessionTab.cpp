@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -198,7 +199,7 @@ namespace sw::editor
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerSessionTabInternal::kMaxStepTickCount );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
-                (void)session.sendServerCommand( "step " + to_string( _stepTickCount ) ); // 답은 서버 로그 줄로 온다
+                (void)session.sendServerCommand( formatToString( "step %#", _stepTickCount ) ); // 답은 서버 로그 줄로 온다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) )
@@ -241,7 +242,7 @@ namespace sw::editor
             if ( status._bRunning )
                 EditorWidgets::drawChip( "running", EditorThemeUtil::getSuccessColor() );
             else
-                EditorWidgets::drawChip( ( "exited " + to_string( status._exitCode ) ).c_str(), EditorThemeUtil::getWarningColor() );
+                EditorWidgets::drawChip( ( formatToString( "exited %#", status._exitCode ) ).c_str(), EditorThemeUtil::getWarningColor() );
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( processIndex == EditorNetPlaySession::kServerProcessIndex ? "server" : ( status._bConnected ? "connected" : "-" ) );
             ImGui::TableNextColumn();

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/UI/Marker/ObjectiveMarkerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Layout/BoxPanel.h"
@@ -77,7 +78,7 @@ namespace sw
             return;
         _shownMeters = meters;
         if ( TextWidget* pDistance = castTo<TextWidget>( pPanel->getChild( Internal::kDistanceIndex ) ); pDistance != nullptr )
-            pDistance->setText( to_string( meters ) + " m" );
+            pDistance->setText( formatToString( "%# m", meters ) );
     }
 
     unique_ptr<Widget> ObjectiveMarkerComponent::createContent() const

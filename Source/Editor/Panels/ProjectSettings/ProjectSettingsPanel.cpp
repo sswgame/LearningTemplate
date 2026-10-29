@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringBuilder.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
@@ -257,7 +258,7 @@ namespace sw::editor
             EditorWidgets::drawChip( "No file - defaults", EditorThemeUtil::getWarningColor() );
         const uint32 keyCount = document.countNonDefaultKeys();
         ImGui::SameLine();
-        EditorWidgets::drawChip( ( to_string( keyCount ) + " non-default" ).c_str(), EditorThemeUtil::getAccentColor() );
+        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), EditorThemeUtil::getAccentColor() );
         if ( document.isLoadFailed() )
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
 

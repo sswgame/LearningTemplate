@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -56,7 +57,7 @@ namespace sw
 
             static string makeRowText( const ServerListEntry& server )
             {
-                return server._region + "  " + to_string( static_cast<int32>( server._fillPercent ) ) + "%  " + getStateText( server._state );
+                return formatToString( "%#  %#%%  %#", server._region, static_cast<int32>( server._fillPercent ), getStateText( server._state ) );
             }
         };
     } // namespace
@@ -184,7 +185,7 @@ namespace sw
             }
             case ServerListState::Failed:
             {
-                pStatus->setText( "Could not load the server list (error " + to_string( static_cast<int32>( _pModel->getErrorCode() ) ) + ")" );
+                pStatus->setText( formatToString( "Could not load the server list (error %#)", static_cast<int32>( _pModel->getErrorCode() ) ) );
                 break;
             }
         }

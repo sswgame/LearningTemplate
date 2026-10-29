@@ -334,4 +334,16 @@ namespace sw
         uint32      _capacity;
         uint32      _length;
     };
+
+    /**
+     * @brief 서식(`%#` · printf)으로 만든 새 글을 돌려줍니다. 스택 버퍼에 먼저 쓰고 넘칠 때만 늘린다.
+     * @details `"a" + to_string( x ) + "b"` 이어 붙이기(조각마다 임시 글)를 대신한다. 실수의 `%#` 는 `to_string` 과 같은 가장 짧은 왕복 표기다.
+     */
+    template <typename... Args>
+    [[nodiscard]] string formatToString( string_view format, Args&&... args )
+    {
+        StringBuilder<constant::kMaxBuffer256> builder;
+        builder.appendFormat( format, std::forward<Args>( args )... );
+        return string( builder.view() );
+    }
 } // namespace sw

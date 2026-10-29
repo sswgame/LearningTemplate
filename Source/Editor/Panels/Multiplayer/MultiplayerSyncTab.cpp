@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -91,8 +92,8 @@ namespace sw::editor
                 if ( comparison._commonTickCount == 0 )
                     return "the two histories share no tick - record them over the same ticks";
                 if ( comparison._bDiverged )
-                    return "first divergent tick " + to_string( comparison._firstDivergentTick ) + " (" + to_string( comparison._commonTickCount ) + " common tick(s))";
-                return "no divergence over " + to_string( comparison._commonTickCount ) + " common tick(s)";
+                    return formatToString( "first divergent tick %# (%# common tick(s))", comparison._firstDivergentTick, comparison._commonTickCount );
+                return formatToString( "no divergence over %# common tick(s)", comparison._commonTickCount );
             }
 
             /** @brief 감시 값 `Editor.NetPlaySyncCommonTicks` — 마지막 비교에서 두 이력에 모두 있던 틱 수입니다. */
@@ -156,7 +157,7 @@ namespace sw::editor
                     bDone = compare.readObjectsFromChannel( 0, serverTick, listServer ) && compare.compareObjects( serverTick, listServer, status._objectHashTick, status._listObjectHash );
                 }
                 if ( bDone )
-                    outReply = "netplay sync objects tick " + to_string( compare.getObjectTick() ) + ": " + to_string( compare.getDifferingObjects().size() ) + " differing object(s)";
+                    outReply = formatToString( "netplay sync objects tick %#: %# differing object(s)", compare.getObjectTick(), compare.getDifferingObjects().size() );
                 else
                     outReply = compare.getLastError();
                 return true;
@@ -314,7 +315,7 @@ namespace sw::editor
             if ( ImGui::Button( status._label.c_str() ) )
             {
                 const string& channel = MultiplayerSyncTabInternal::getCompare().getHashChannel();
-                const string  command = "state.hashline " + to_string( MultiplayerSyncTabInternal::kClientHistoryTicks ) + ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel );
+                const string  command = formatToString( "state.hashline %#%#", MultiplayerSyncTabInternal::kClientHistoryTicks, ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel ) );
                 if ( session.sendProcessCommand( processIndex, command ) )
                 {
                     _arrPendingProcess[sourceIndex]     = processIndex;
@@ -353,7 +354,7 @@ namespace sw::editor
                 if ( _arrPendingWatch[sourceIndex].getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
                 {
                     _arrPendingProcess[sourceIndex] = -1;
-                    _errorText                      = "Timed out waiting for " + status._label + "'s history (no valid answer within " + to_string( MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() ) + " ms)";
+                    _errorText                      = formatToString( "Timed out waiting for %#'s history (no valid answer within %# ms)", status._label, MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
                     SW_LOG_WARNING( "Sync %#", _errorText );
                 }
                 continue;
@@ -437,7 +438,7 @@ namespace sw::editor
                 {
                     _arrObjectPendingProcess[sourceIndex] = -1;
                 }
-                _errorText = "Timed out waiting for the object hashes (no valid answer within " + to_string( MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() ) + " ms)";
+                _errorText = formatToString( "Timed out waiting for the object hashes (no valid answer within %# ms)", MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
                 SW_LOG_WARNING( "Sync %#", _errorText );
             }
             return;
@@ -520,7 +521,7 @@ namespace sw::editor
         ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Step" ) );
-        if ( ImGui::Button( "Step" ) && session.sendServerCommand( "step " + to_string( _replayStepCount ) ) == false )
+        if ( ImGui::Button( "Step" ) && session.sendServerCommand( formatToString( "step %#", _replayStepCount ) ) == false )
             _errorText = "The server did not take the step command";
         ImGui::EndDisabled();
     }
@@ -564,7 +565,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {
-            ImGui::TextUnformatted( ( "tick " + to_string( compare.getObjectTick() ) ).c_str() );
+            ImGui::TextUnformatted( ( formatToString( "tick %#", compare.getObjectTick() ) ).c_str() );
             if ( compare.getDifferingObjects().empty() )
                 ImGui::TextUnformatted( "every named object matches" );
             for ( const string& name : compare.getDifferingObjects() )

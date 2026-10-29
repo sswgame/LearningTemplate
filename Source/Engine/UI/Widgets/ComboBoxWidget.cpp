@@ -4,6 +4,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Foundation/Defines.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionCast.h"
@@ -73,7 +74,7 @@ namespace sw
             /** @brief 오른쪽 화살표 영역(안쪽 여백)입니다. */
             static constexpr float32 kArrowSpace = 32.0f;
 
-            static hashed_string makeOptionName( uint32 index ) { return hashed_string( "option" + to_string( index ) ); }
+            static hashed_string makeOptionName( uint32 index ) { return hashed_string( formatToString( "option%#", index ) ); }
         };
     } // namespace
 } // namespace sw

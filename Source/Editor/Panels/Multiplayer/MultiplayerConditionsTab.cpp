@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
@@ -113,7 +114,7 @@ namespace sw::editor
                 {
                     sentCount += pSession->sendProcessCommand( processIndex, command ) ? 1 : 0;
                 }
-                outReply = "sent to " + to_string( sentCount ) + " process(es): " + command;
+                outReply = formatToString( "sent to %# process(es): %#", sentCount, command );
                 return true;
             }
 
@@ -149,7 +150,7 @@ namespace sw::editor
                 const NetEmulationReport total = sumReports( session );
                 return "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
                        to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +
-                       to_string( static_cast<int32>( total._measuredLossPercent ) ) + "%";
+                       formatToString( "%#%%", static_cast<int32>( total._measuredLossPercent ) );
             }
 
             /**
@@ -208,9 +209,9 @@ namespace sw::editor
                 }
                 outReply = makeStatsReply( *pSession, answeredCount, askedCount );
                 if ( bReached )
-                    outReply += " (resent reached " + to_string( wantedCount ) + ")";
+                    outReply += formatToString( " (resent reached %#)", wantedCount );
                 else
-                    outReply += " (resent stayed below " + to_string( wantedCount ) + " for " + to_string( seconds ) + " s)";
+                    outReply += formatToString( " (resent stayed below %# for %# s)", wantedCount, seconds );
                 return true;
             }
         };

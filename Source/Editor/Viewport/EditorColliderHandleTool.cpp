@@ -3,6 +3,7 @@
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/EditorColor.h"
@@ -80,7 +81,7 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
                 static const utf8* const arrAxisName[3] = { "x", "y", "z" };
-                const string             key            = "collider.handle." + to_string( handle._shapeIndex ) + "." + arrAxisName[handle._axis] + ( handle._sign > 0.0f ? "+" : "-" );
+                const string             key            = formatToString( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
                 EditorSelfTestMarks::noteRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
                                                float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
             }

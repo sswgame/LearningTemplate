@@ -3,6 +3,7 @@
 #include "Games/Empty/UIStressTestScreen.h"
 
 #include "Core/Container/string.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -47,7 +48,7 @@ namespace sw
                 setFixedSize( *icon, 24.0f, 24.0f );
                 (void)row->addChild( std::move( icon ) );
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();
-                text->setText( "Cell " + to_string( index ) );
+                text->setText( formatToString( "Cell %#", index ) );
                 setFixedSize( *text, UIStressTestScreen::kCellWidth - 48.0f, 24.0f );
                 outTextID = text->getID();
                 (void)row->addChild( std::move( text ) );
@@ -135,7 +136,7 @@ namespace sw
             const uint32 cell = _churnCursor;
             _churnCursor      = ( _churnCursor + 1 ) % window;
             if ( TextWidget* pText = castTo<TextWidget>( tree.findWidgetByID( _listCellText[cell] ) ); pText != nullptr )
-                pText->setText( "Cell " + to_string( cell ) + " #" + to_string( _frameIndex ) );
+                pText->setText( formatToString( "Cell %# #%#", cell, _frameIndex ) );
         }
     }
 } // namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
@@ -154,7 +155,7 @@ namespace sw
             {
                 string error( path );
                 if ( line > 0 )
-                    error += ":" + to_string( line );
+                    error += formatToString( ":%#", line );
                 error += ": ";
                 error += message;
                 return error;
@@ -371,7 +372,7 @@ namespace sw
                 return Internal::fail( context, root, string( "UIStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIStyleSheetAsset::kVersion ) )
-                return Internal::fail( context, root, string( "_schemaVersion '" ) + attribute.getValue() + "' is not supported (expected " + to_string( UIStyleSheetAsset::kVersion ) + ")" );
+                return Internal::fail( context, root, formatToString( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIStyleSheetAsset::kVersion ) );
             bVersioned = true;
         }
         if ( bVersioned == false )

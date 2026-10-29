@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/String/StringBuilder.h"
 
 #include <algorithm>
 #include <limits>
@@ -94,7 +95,7 @@ namespace sw
                     const NetStatsKindEntry& entry = listEntry[index];
                     if ( index > 0 )
                         inoutText += ',';
-                    inoutText += to_string( static_cast<int32>( entry._kind ) ) + ":" + to_string( entry._messageCount ) + ":" + to_string( entry._byteCount );
+                    inoutText += formatToString( "%#:%#:%#", static_cast<int32>( entry._kind ), entry._messageCount, entry._byteCount );
                 }
             }
 
@@ -111,7 +112,7 @@ namespace sw
                 {
                     if ( NetStatsReport::isValidReplicaName( entry._name ) == false )
                         continue;
-                    const string item = entry._name + ":" + to_string( entry._updateCount ) + ":" + to_string( entry._byteCount );
+                    const string item = formatToString( "%#:%#:%#", entry._name, entry._updateCount, entry._byteCount );
                     if ( inoutText.size() + ( bFirst ? 0u : 1u ) + item.size() > maxBytes )
                     {
                         bDropped = true;
@@ -173,10 +174,10 @@ namespace sw
     string NetStatsReport::makeLine() const
     {
         string text{ kLinePrefix };
-        text += " connections=" + to_string( _connectionCount );
-        text += " sentPackets=" + to_string( _sentPacketCount );
-        text += " receivedPackets=" + to_string( _receivedPacketCount );
-        text += " resent=" + to_string( _resentMessageCount );
+        text += formatToString( " connections=%#", _connectionCount );
+        text += formatToString( " sentPackets=%#", _sentPacketCount );
+        text += formatToString( " receivedPackets=%#", _receivedPacketCount );
+        text += formatToString( " resent=%#", _resentMessageCount );
         NetStatsReportInternal::appendFloat( text, "sentBps", _sentBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "receivedBps", _receivedBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "rttMs", _rttMilliseconds );

@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -492,14 +493,14 @@ namespace sw::editor
                     inoutDesc._alphaMode = ToonAlphaMode::Transparent;
                 else
                 {
-                    outError = context + ": unknown _BlendMode " + to_string( static_cast<int64>( blendMode ) );
+                    outError = formatToString( "%#: unknown _BlendMode %#", context, static_cast<int64>( blendMode ) );
                     return false;
                 }
                 inoutDesc._alphaCutoff = arrFloat[Vrm0Cutoff];
                 const int32 cullMode   = static_cast<int32>( arrFloat[Vrm0CullMode] + 0.5f );
                 if ( cullMode != 0 && cullMode != 2 )
                 {
-                    outError = context + ": unsupported _CullMode " + to_string( static_cast<int64>( cullMode ) ) + " (only Off = 0 and Back = 2)";
+                    outError = formatToString( "%#: unsupported _CullMode %# (only Off = 0 and Back = 2)", context, static_cast<int64>( cullMode ) );
                     return false;
                 }
                 inoutDesc._bTwoSided = ( cullMode == 0 ) ? SW_TRUE : SW_FALSE;
@@ -520,7 +521,7 @@ namespace sw::editor
                     inoutDesc._outlineMode = ToonOutlineMode::Screen;
                 else
                 {
-                    outError = context + ": unknown _OutlineWidthMode " + to_string( static_cast<int64>( outlineMode ) );
+                    outError = formatToString( "%#: unknown _OutlineWidthMode %#", context, static_cast<int64>( outlineMode ) );
                     return false;
                 }
                 inoutDesc._outlineWidth         = outlineWidth * ( inoutDesc._outlineMode == ToonOutlineMode::Screen ? 0.005f : 0.01f );

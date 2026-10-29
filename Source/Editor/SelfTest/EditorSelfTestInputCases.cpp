@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -164,7 +165,7 @@ namespace sw::editor
                         what += describeInputTarget( "hierarchy.filter" );
                         what += "]";
                         (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
-                        const string rootCountWhat = "the typed tag filter did not find the probe object (visible roots " + to_string( pHierarchy->getVisibleRootCount() ) + ")";
+                        const string rootCountWhat = formatToString( "the typed tag filter did not find the probe object (visible roots %#)", pHierarchy->getVisibleRootCount() );
                         (void)context.expect( pHierarchy->getVisibleRootCount() == 1, rootCountWhat.c_str() );
                         // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
                         ImGui::ClearActiveID();
@@ -396,7 +397,7 @@ namespace sw::editor
                     const float32 height    = mark._max._y - mark._min._y;
                     const float32 iconWidth = ImGui::CalcTextSize( editoricon::kEyeSlash ).x;
                     string        what{ "the visibility toggle (" };
-                    what += to_string( width ) + " px) is narrower than its icon (" + to_string( iconWidth ) + " px)";
+                    what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
                     (void)context.expect( width >= iconWidth, what.c_str() );
                     (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
                 }
@@ -448,7 +449,7 @@ namespace sw::editor
                 if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )
                 {
                     string what{ "the selected row starts at x " };
-                    what += to_string( row._min._x ) + ", over the toggle that ends at x " + to_string( toggle._max._x );
+                    what += formatToString( "%#, over the toggle that ends at x %#", row._min._x, toggle._max._x );
                     (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
                 }
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();

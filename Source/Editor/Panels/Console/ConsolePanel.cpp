@@ -8,6 +8,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -183,7 +184,7 @@ namespace sw::editor
                     else
                         SW_LOG_INFO( "%#", text.c_str() );
                 }
-                outReply = "logged " + to_string( count ) + " lines";
+                outReply = formatToString( "logged %# lines", count );
                 return true;
             }
 
@@ -573,7 +574,7 @@ namespace sw::editor
         {
             string full = formatEntryLine( entry );
             if ( entry._file.empty() == false )
-                full += " (" + entry._file + ":" + to_string( entry._line ) + ")";
+                full += formatToString( " (%#:%#)", entry._file, entry._line );
             ImGui::SetClipboardText( full.c_str() );
         }
         fixed_string<constant::kMaxBuffer64> copySelectedLabel;

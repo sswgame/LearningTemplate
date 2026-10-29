@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -672,7 +673,7 @@ namespace sw::editor
                 _selectedNodeID = 0;
             }
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( "animationGraph.link." + to_string( static_cast<uint64>( index ) ) ).c_str() );
+                EditorSelfTestMarks::note( ( formatToString( "animationGraph.link.%#", static_cast<uint64>( index ) ) ).c_str() );
             ImGui::PopID();
         }
     }
@@ -721,7 +722,7 @@ namespace sw::editor
                     bEdited    = true;
                 }
                 if ( EditorSelfTestMarks::isEnabled() )
-                    EditorSelfTestMarks::note( ( "animationGraph.condition.op." + to_string( static_cast<uint64>( op ) ) ).c_str() );
+                    EditorSelfTestMarks::note( ( formatToString( "animationGraph.condition.op.%#", static_cast<uint64>( op ) ) ).c_str() );
             }
             ImGui::EndCombo();
         }

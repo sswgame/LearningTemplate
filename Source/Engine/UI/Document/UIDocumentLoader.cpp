@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryBlock.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -57,7 +58,7 @@ namespace sw
             {
                 string error( path );
                 if ( line > 0 )
-                    error += ":" + to_string( line );
+                    error += formatToString( ":%#", line );
                 error += ": ";
                 error += message;
                 return error;
@@ -424,7 +425,7 @@ namespace sw
                 return Internal::fail( context, root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
-                return Internal::fail( context, root, string( "_schemaVersion '" ) + attribute.getValue() + "' is not supported (expected " + to_string( UIDocumentAsset::kVersion ) + ")" );
+                return Internal::fail( context, root, formatToString( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIDocumentAsset::kVersion ) );
             bVersioned = true;
         }
         if ( bVersioned == false )

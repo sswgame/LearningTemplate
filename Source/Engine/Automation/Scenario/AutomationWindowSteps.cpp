@@ -14,6 +14,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -167,7 +168,7 @@ namespace sw
                 }
                 runner.recordFailure( step, string( "cursor clip is not " ) + ( bWantLocked ? "inside the client area" : "the whole screen" ) + " (clip " +
                                                 to_string( static_cast<int32>( clip.left ) ) + "," + to_string( static_cast<int32>( clip.top ) ) + "," +
-                                                to_string( static_cast<int32>( clip.right ) ) + "," + to_string( static_cast<int32>( clip.bottom ) ) + ")" );
+                                                formatToString( "%#,%#)", static_cast<int32>( clip.right ), static_cast<int32>( clip.bottom ) ) );
                 return true;
             }
 

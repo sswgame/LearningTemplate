@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
@@ -160,7 +161,7 @@ namespace sw
     {
         using Internal             = AutomationBackendMatrixInternal;
         const string scenarioStem  = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
-        const string defaultFolder = string( kAutomationOutputFolder ) + "/" + scenarioStem + "/matrix-" + to_string( Process::getCurrentProcessID() );
+        const string defaultFolder = formatToString( "%#/%#/matrix-%#", string( kAutomationOutputFolder ), scenarioStem, Process::getCurrentProcessID() );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
@@ -180,8 +181,8 @@ namespace sw
             if ( bTileWindows )
             {
                 const uint32 tileIndex = static_cast<uint32>( listChild.size() );
-                listArgument.push_back( "-WinX=" + to_string( ( tileIndex % Internal::kTileColumnCount ) * ( options._windowWidth + Internal::kFrameMarginX ) ) );
-                listArgument.push_back( "-WinY=" + to_string( ( tileIndex / Internal::kTileColumnCount ) * ( options._windowHeight + Internal::kFrameMarginY ) ) );
+                listArgument.push_back( formatToString( "-WinX=%#", ( tileIndex % Internal::kTileColumnCount ) * ( options._windowWidth + Internal::kFrameMarginX ) ) );
+                listArgument.push_back( formatToString( "-WinY=%#", ( tileIndex / Internal::kTileColumnCount ) * ( options._windowHeight + Internal::kFrameMarginY ) ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 

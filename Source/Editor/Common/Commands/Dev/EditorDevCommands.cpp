@@ -11,6 +11,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
@@ -126,7 +127,7 @@ namespace sw::editor
                 if ( bInvalidStepArguments )
                     return false;
                 EditorPlaySession::stepFrames( frameCount );
-                outReply = "step " + to_string( frameCount );
+                outReply = formatToString( "step %#", frameCount );
                 return true;
             }
 
@@ -393,7 +394,7 @@ namespace sw::editor
                 }
                 vector<GameObject*> listObject;
                 EditorSceneCommands::collectObjectsWithComponent( *pManager, pType, listObject );
-                outReply = "selected " + to_string( EditorSceneCommands::selectObjects( listObject ) );
+                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
                 return true;
             }
 
@@ -412,7 +413,7 @@ namespace sw::editor
                     if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
                         ++addedCount;
                 }
-                outReply = "added " + listArgument[0] + " to " + to_string( addedCount ) + " object(s)";
+                outReply = formatToString( "added %# to %# object(s)", listArgument[0], addedCount );
                 return addedCount > 0;
             }
 
@@ -503,7 +504,7 @@ namespace sw::editor
                     return false;
                 vector<GameObject*> listObject;
                 EditorSceneCommands::collectObjectsWithTag( *pManager, TagID::request( listArgument[0] ), listObject );
-                outReply = "selected " + to_string( EditorSceneCommands::selectObjects( listObject ) );
+                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
                 return true;
             }
 
@@ -529,7 +530,7 @@ namespace sw::editor
                 pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 editor::getSubsystem<DebugOverlayState>().setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
-                outReply = "debug draw demo for " + to_string( seconds ) + " s";
+                outReply = formatToString( "debug draw demo for %# s", seconds );
                 return true;
             }
         };

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -70,11 +71,11 @@ namespace sw
             }
             case ChatResult::Muted:
             {
-                return "You are muted (" + to_string( retryAfterMs / 1000 ) + " s left)";
+                return formatToString( "You are muted (%# s left)", retryAfterMs / 1000 );
             }
             case ChatResult::RateLimited:
             {
-                return "Too fast, wait " + to_string( retryAfterMs ) + " ms";
+                return formatToString( "Too fast, wait %# ms", retryAfterMs );
             }
             case ChatResult::Repeated:
             {

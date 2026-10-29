@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Programs/ReflectionParser/ParserConfig.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
@@ -156,7 +157,7 @@ namespace sw
         string stampText = inputFile + "\n" + GeneratedFilesInternal::kStampInputTimeKey + " " + to_string( inputWriteTime ) + "\n";
         for ( const StampDependency& dependency : listDependency )
         {
-            stampText += string( GeneratedFilesInternal::kStampDependencyKey ) + " " + to_string( dependency._writeTime ) + " " + dependency._path + "\n";
+            stampText += formatToString( "%# %# %#\n", string( GeneratedFilesInternal::kStampDependencyKey ), dependency._writeTime, dependency._path );
         }
         if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
         {

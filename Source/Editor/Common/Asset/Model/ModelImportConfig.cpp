@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 
@@ -91,7 +92,7 @@ namespace sw::editor
         const float32 arrValue[4] = { _animationSampleRate, _animationPrecision, _animationShellDistance, _bodySurfaceDistance };
         for ( const float32 value : arrValue )
         {
-            text += ";" + to_string( BitUtil::floatToBits( value ) );
+            text += formatToString( ";%#", BitUtil::floatToBits( value ) );
         }
         return text;
     }
@@ -104,22 +105,22 @@ namespace sw::editor
         text += FractureSettings::getPatternName( _fracture._pattern );
         text += ";volume=";
         text += FractureSettings::getVolumeName( _fracture._volume );
-        text += ";pieces=" + to_string( _fracture._pieceCount ) + ";seed=" + to_string( _fracture._seed ) + ";hull=" + to_string( _fracture._maxHullPoint ) + ";levels=";
+        text += formatToString( ";pieces=%#;seed=%#;hull=%#;levels=", _fracture._pieceCount, _fracture._seed, _fracture._maxHullPoint );
         for ( const uint32 count : _fracture._listLevelCount )
         {
-            text += to_string( count ) + ",";
+            text += formatToString( "%#,", count );
         }
         text += ";slices=";
         for ( const uint32 count : _fracture._arrSliceCount )
         {
-            text += to_string( count ) + ",";
+            text += formatToString( "%#,", count );
         }
         const float32 arrValue[11] = { _fracture._impactPoint._x, _fracture._impactPoint._y, _fracture._impactPoint._z, _fracture._clusterRadius,
                                        _fracture._clusterFraction, _fracture._sliceJitter, _fracture._interiorUvScale, _fracture._interiorColor._x,
                                        _fracture._interiorColor._y, _fracture._interiorColor._z, _fracture._interiorColor._w };
         for ( const float32 value : arrValue )
         {
-            text += ";" + to_string( BitUtil::floatToBits( value ) );
+            text += formatToString( ";%#", BitUtil::floatToBits( value ) );
         }
         return text;
     }
@@ -449,7 +450,7 @@ namespace sw::editor
             const float32 arrValue[3] = { lod._triangleRatio, lod._screenSize, lod._maxError };
             for ( const float32 value : arrValue )
             {
-                text += to_string( BitUtil::floatToBits( value ) ) + ",";
+                text += formatToString( "%#,", BitUtil::floatToBits( value ) );
             }
             text += ";";
         }

@@ -6,6 +6,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
@@ -100,7 +101,7 @@ namespace sw::editor
             const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
             if ( pInfo != nullptr )
                 item._color = pInfo->_defaultColor;
-            item._name = string( GetItemTypeName( type ) ) + " " + to_string( _listItem.size() );
+            item._name = formatToString( "%# %#", string( GetItemTypeName( type ) ), _listItem.size() );
             _listItem.push_back( item );
         }
 

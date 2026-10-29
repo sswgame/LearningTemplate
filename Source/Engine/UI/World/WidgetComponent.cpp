@@ -3,6 +3,7 @@
 #include "Engine/UI/World/WidgetComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/2D/SpriteRenderUtil.h"
@@ -176,7 +177,7 @@ namespace sw
 
     string WidgetComponent::getRenderTargetPath() const
     {
-        return "rendertarget/widget_" + to_string( getComponentID() );
+        return formatToString( "rendertarget/widget_%#", getComponentID() );
     }
 
     void WidgetComponent::attachMarker()

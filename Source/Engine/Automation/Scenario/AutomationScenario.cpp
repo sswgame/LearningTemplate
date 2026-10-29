@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -166,7 +167,7 @@ namespace sw
 
     string AutomationStep::describe() const
     {
-        return "frame " + to_string( _frameIndex ) + " <" + _kind + "> #" + to_string( _orderInFile + 1 );
+        return formatToString( "frame %# <%#> #%#", _frameIndex, _kind, _orderInFile + 1 );
     }
 
     bool AutomationStep::hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const

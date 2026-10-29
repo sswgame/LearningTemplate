@@ -9,6 +9,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -726,7 +727,7 @@ namespace sw::editor
             const string oldText = baseline._text;
             baseline._text       = newText;
             // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, "uipreview." + to_string( _selectedOrdinal ) + "." + name );
+            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, formatToString( "uipreview.%#.%#", _selectedOrdinal, name ) );
             return;
         }
     }

@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Defines.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -53,7 +54,7 @@ namespace sw
             {
                 writer.beginObject();
                 writer.key( "beforeStep" );
-                writer.valueString( wait._stepKind + " #" + to_string( wait._stepNumber ) );
+                writer.valueString( formatToString( "%# #%#", wait._stepKind, wait._stepNumber ) );
                 writer.key( "frame" );
                 writer.valueUint( wait._frameIndex );
                 writer.key( "frames" );

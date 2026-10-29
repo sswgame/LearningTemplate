@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -259,7 +260,7 @@ namespace sw
 
             static string formatLocation( const utf8* pFormat, uint32 space, uint32 bindPoint )
             {
-                return string( pFormat ) + "(" + to_string( space ) + ", " + to_string( bindPoint ) + ")";
+                return formatToString( "%#(%#, %#)", string( pFormat ), space, bindPoint );
             }
         };
 
@@ -504,7 +505,7 @@ namespace sw
                     }
                 }
                 if ( limit > 0 && reflected._bindPoint >= limit )
-                    report( reflected._name, string( Internal::registerClassLetter( registerClass ) ) + to_string( reflected._bindPoint ) + " 은 루트 시그니처의 슬롯 수(" + to_string( limit ) + ")를 넘습니다" );
+                    report( reflected._name, formatToString( "%#%# 은 루트 시그니처의 슬롯 수(%#)를 넘습니다", string( Internal::registerClassLetter( registerClass ) ), reflected._bindPoint, limit ) );
             }
 
             /** @brief 3) DX12: space0 = 슬롯(CB 는 루트 CBV, t · u 는 디스크립터 테이블, 그리고 정적 샘플러), space1 = 텍스처 배열(t0, 무제한), space2 = 루트 상수(b0). 그 밖은 루트 시그니처에 없다. */
@@ -529,7 +530,7 @@ namespace sw
                 }
                 else
                 {
-                    report( reflected._name, string( "루트 시그니처에 없는 register space " ) + to_string( reflected._space ) + " 을 참조합니다" );
+                    report( reflected._name, formatToString( "%#%# 을 참조합니다", string( "루트 시그니처에 없는 register space " ), reflected._space ) );
                 }
             }
 
@@ -544,7 +545,7 @@ namespace sw
                     if ( rangeClass == Internal::RegisterClass::Other )
                     {
                         report( reflected._name, string( "세트 0 의 슬롯 범위 밖 binding " ) + to_string( reflected._bindPoint ) + " 입니다 (b 0.., t " + to_string( vk::kTShift ) + ".., u " +
-                                                     to_string( vk::kUShift ) + "..)" );
+                                                     formatToString( "%#..)", vk::kUShift ) );
                     }
                     else if ( Internal::vulkanRangeAcceptsKind( rangeClass, reflected._kind ) == false )
                     {
@@ -563,7 +564,7 @@ namespace sw
                 }
                 else
                 {
-                    report( reflected._name, string( "파이프라인 레이아웃에 없는 descriptor set " ) + to_string( reflected._space ) + " 을 참조합니다 (세트는 0·1)" );
+                    report( reflected._name, formatToString( "%#%# 을 참조합니다 (세트는 0·1)", string( "파이프라인 레이아웃에 없는 descriptor set " ), reflected._space ) );
                 }
             }
 
@@ -588,13 +589,13 @@ namespace sw
                     {
                         const Internal::GlNamespace nsA = Internal::glNamespaceOf( reflectedA._kind );
                         bCollide                        = ( nsA != Internal::GlNamespace::Other && nsA == Internal::glNamespaceOf( reflectedB._kind ) );
-                        where                           = string( Internal::glNamespaceName( nsA ) ) + " binding " + to_string( reflectedA._bindPoint );
+                        where                           = formatToString( "%# binding %#", string( Internal::glNamespaceName( nsA ) ), reflectedA._bindPoint );
                     }
                     else
                     {
                         const Internal::RegisterClass registerClassA = Internal::registerClassOf( reflectedA._kind );
                         bCollide                                     = ( reflectedA._space == reflectedB._space && registerClassA != Internal::RegisterClass::Other && registerClassA == Internal::registerClassOf( reflectedB._kind ) );
-                        where                                        = string( Internal::registerClassLetter( registerClassA ) ) + to_string( reflectedA._bindPoint ) + " space" + to_string( reflectedA._space );
+                        where                                        = formatToString( "%#%# space%#", string( Internal::registerClassLetter( registerClassA ) ), reflectedA._bindPoint, reflectedA._space );
                     }
                     if ( bCollide )
                         report( reflectedA._name, string( "'" ) + reflectedB._name + "' 와 같은 자리를 차지합니다 (" + where + ")" );
@@ -614,7 +615,7 @@ namespace sw
                     if ( _bOpenGl && reflectedA._space != 0 )
                     {
                         report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
-                                                      to_string( reflectedA._bindPoint ) + " 하나로 취급됩니다" );
+                                                      formatToString( "%# 하나로 취급됩니다", reflectedA._bindPoint ) );
                     }
                     checkAssertSlot( reflectedA );
                     checkCollisionsAfter( listReflected, indexA );
@@ -660,7 +661,7 @@ namespace sw
                     if ( ( _bVulkan || _bOpenGl ) && input._location != pAttribute->_location )
                     {
                         report( label, string( "location 이 정점 레이아웃 표와 다릅니다 — 기대 " ) + to_string( pAttribute->_location ) + ", 리플렉션 " +
-                                           to_string( input._location ) + " (Vulkan·GL 은 선언 순서로 location 을 매긴다 — VertexInput 을 쓸 것)" );
+                                           formatToString( "%# (Vulkan·GL 은 선언 순서로 location 을 매긴다 — VertexInput 을 쓸 것)", input._location ) );
                     }
                 }
             }

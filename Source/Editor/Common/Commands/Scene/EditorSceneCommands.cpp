@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
@@ -679,7 +680,7 @@ namespace sw::editor
             return;
         }
         EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        const string   label    = "Paste " + to_string( listCopy.size() ) + " GameObject(s)";
+        const string   label    = formatToString( "Paste %# GameObject(s)", listCopy.size() );
         EditorTransaction::beginTransaction( label );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {

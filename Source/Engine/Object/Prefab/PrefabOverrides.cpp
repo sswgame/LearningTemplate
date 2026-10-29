@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -92,7 +93,7 @@ namespace sw
                     const bool   bNoLabel   = StringUtil::isNullOrEmpty( pLabel ) || StringUtil::equals( pLabel, "None" );
                     const string baseName   = bNoLabel ? string{ child.getName() } : string{ pLabel };
                     int32&       occurrence = mapCount[baseName];
-                    outListComponent.push_back( KeyedComponent{ child, baseName + "#" + to_string( occurrence ), false } );
+                    outListComponent.push_back( KeyedComponent{ child, formatToString( "%##%#", baseName, occurrence ), false } );
                     ++occurrence;
                 }
             }

@@ -12,6 +12,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -70,18 +71,18 @@ namespace sw
             MemoryTag                tag{ MemoryTag::Unknown };
             if ( MemoryProfiler::findMemoryTagByName( entry._tag, tag ) == false )
             {
-                outError = "budget entry " + to_string( index ) + ": unknown memory tag '" + entry._tag + "'";
+                outError = formatToString( "budget entry %#: unknown memory tag '%#'", index, entry._tag );
                 return false;
             }
             if ( entry._megabytes <= 0.0 )
             {
-                outError = "budget entry " + to_string( index ) + " (" + entry._tag + "): _megabytes must be a positive number";
+                outError = formatToString( "budget entry %# (%#): _megabytes must be a positive number", index, entry._tag );
                 return false;
             }
             const uint32 tagIndex = static_cast<uint32>( tag );
             if ( arrBudgetBytes[tagIndex] != 0 )
             {
-                outError = "budget entry " + to_string( index ) + ": tag '" + entry._tag + "' is listed twice";
+                outError = formatToString( "budget entry %#: tag '%#' is listed twice", index, entry._tag );
                 return false;
             }
             arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( constant::kBytesPerMegabyte ) );

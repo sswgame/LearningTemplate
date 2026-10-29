@@ -9,6 +9,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
@@ -75,7 +76,7 @@ namespace sw::editor
                 return false;
             }
             if ( outListToon[index]._name.empty() )
-                outListToon[index]._name = "material" + to_string( static_cast<uint64>( index ) );
+                outListToon[index]._name = formatToString( "material%#", static_cast<uint64>( index ) );
         }
         return true;
     }

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -209,7 +210,7 @@ namespace sw
                 const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
                 if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < kMinPollSeconds )
                 {
-                    outError = "receipt provider '" + outConfig._kind + "' needs " + pPollKey + " of at least " + to_string( kMinPollSeconds );
+                    outError = formatToString( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, kMinPollSeconds );
                     return false;
                 }
                 if ( bSteam )

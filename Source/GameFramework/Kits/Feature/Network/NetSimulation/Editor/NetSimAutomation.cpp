@@ -2,6 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -86,13 +87,13 @@ namespace sw::editor
                 NetSimWorld* pWorld = worldIndex == 0 ? &pHarness->getServer() : pHarness->findClient( worldIndex );
                 if ( pWorld == nullptr )
                 {
-                    outValue.setText( "no world " + to_string( worldIndex ) );
+                    outValue.setText( formatToString( "no world %#", worldIndex ) );
                     return false;
                 }
                 const GameObject* pObject = pWorld->getObjectManager().findGameObjectByName( hashed_string( string( query._key ) ) );
                 if ( pObject == nullptr || pObject->getPrimarySceneComponent() == nullptr )
                 {
-                    outValue.setText( "world " + to_string( worldIndex ) + " has no object '" + string( query._key ) + "'" );
+                    outValue.setText( formatToString( "world %# has no object '%#'", worldIndex, string( query._key ) ) );
                     return false;
                 }
                 const float3 position = pObject->getPrimarySceneComponent()->getWorldPosition();

@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Accessibility/Linux/AtSpiAccessibilityBridge.h"
 
+#include "Core/String/StringBuilder.h"
+
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_ATSPI )
 
     #include "Core/Container/string.h"
@@ -56,7 +58,7 @@ namespace sw
 
             string makeNodePath( const AccessibleNode& node )
             {
-                return string( kPathPrefix ) + "/n" + to_string( node._screen ) + "_" + to_string( node._widget );
+                return formatToString( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget );
             }
 
             /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯>` 에서 두 번호를 읽습니다. 모양이 다르면 false. */

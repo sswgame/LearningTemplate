@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
@@ -873,7 +874,7 @@ namespace sw
     {
         if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
         {
-            outError = "the level table has " + to_string( listLevelExperience.size() ) + " levels, at most " + to_string( static_cast<int32>( GuildLimit::kMaxLevelCount ) ) + " are allowed";
+            outError = formatToString( "the level table has %# levels, at most %# are allowed", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
             return false;
         }
         int64 previous = 0;
@@ -881,7 +882,7 @@ namespace sw
         {
             if ( experience <= previous )
             {
-                outError = "level experience " + to_string( experience ) + " must be positive and greater than the previous " + to_string( previous );
+                outError = formatToString( "level experience %# must be positive and greater than the previous %#", experience, previous );
                 return false;
             }
             previous = experience;

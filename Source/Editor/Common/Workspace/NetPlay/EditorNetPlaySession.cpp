@@ -12,6 +12,7 @@
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
@@ -169,7 +170,7 @@ namespace sw::editor
         const int32 row    = windowIndex / settings._windowColumnCount;
         const int32 x      = column * ( settings._windowWidth + EditorNetPlaySessionInternal::kWindowFrameWidth );
         const int32 y      = row * ( settings._windowHeight + EditorNetPlaySessionInternal::kWindowFrameHeight );
-        return { "-W=" + to_string( settings._windowWidth ), "-H=" + to_string( settings._windowHeight ), "-WinX=" + to_string( x ), "-WinY=" + to_string( y ) };
+        return { formatToString( "-W=%#", settings._windowWidth ), formatToString( "-H=%#", settings._windowHeight ), formatToString( "-WinX=%#", x ), formatToString( "-WinY=%#", y ) };
     }
 
     EditorNetPlaySession::~EditorNetPlaySession()
@@ -305,7 +306,7 @@ namespace sw::editor
         {
             _traceDirectory = settings._traceDirectory.empty()
                                 ? FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Saved/Traces" ),
-                                                      "netplay_" + to_string( WallClock::nowUnixMilliseconds().count() ) )
+                                                      formatToString( "netplay_%#", WallClock::nowUnixMilliseconds().count() ) )
                                 : settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
@@ -323,7 +324,7 @@ namespace sw::editor
         // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7). 포커스는 한 창만 가지므로 나머지 클라이언트가 배경 상한에 걸리지 않게 전속을 명시로 고른다
         // (`FramePacingState::FullSpeed`). 리슨 호스트는 넷 역할로 이미 전속(`Server`)이다.
         vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
-                                           "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ), "-gv_framePacing=FullSpeed" };
+                                           formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ), "-gv_framePacing=FullSpeed" };
         listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
 
         // 서버를 먼저 띄운다. 클라이언트는 서버가 늦게 떠도 연결 시한 안에서 다시 시도하지만, 서버가 먼저 떠 있으면 첫 시도에 연결된다.
@@ -342,8 +343,8 @@ namespace sw::editor
         if ( bDedicated )
         {
             _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
-            vector<string> listServerArgument{ "-gv_netListenPort=" + port, "-gv_debugChannelPort=" + to_string( _debugChannelPort ),
-                                               "-gv_debugChannelToken=" + _debugChannelToken, "-gv_stateHashHistory=" + to_string( kServerStateHashHistoryTicks ) };
+            vector<string> listServerArgument{ "-gv_netListenPort=" + port, formatToString( "-gv_debugChannelPort=%#", _debugChannelPort ),
+                                               "-gv_debugChannelToken=" + _debugChannelToken, formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ) };
             if ( _bReplayServer )
                 listServerArgument.push_back( "-gv_serverStartPaused=1" );
             bLaunched = launchChild( "Server", serverPath, std::move( listServerArgument ), makeTracePath( "server" ) );

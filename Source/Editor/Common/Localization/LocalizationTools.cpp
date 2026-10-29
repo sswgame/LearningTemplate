@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/MarkupTagScanner.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/TranslationMemory.h"
@@ -101,7 +102,7 @@ namespace sw
                     inoutReport._listIssue.push_back( { location, "translation rich text tags differ from the source tags", false } );
                 const uint32 length = countCharacters( translation._text );
                 if ( source._maxLength != 0 && length > source._maxLength )
-                    inoutReport._listIssue.push_back( { location, "translation is " + to_string( length ) + " characters, over maxLength " + to_string( source._maxLength ), false } );
+                    inoutReport._listIssue.push_back( { location, formatToString( "translation is %# characters, over maxLength %#", length, source._maxLength ), false } );
             }
 
             /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
@@ -280,7 +281,7 @@ namespace sw
                     if ( pSource->_comment.empty() == false )
                         entry._listExtractedComment.push_back( pSource->_comment );
                     if ( pSource->_maxLength != 0 )
-                        entry._listExtractedComment.push_back( "Max length: " + to_string( pSource->_maxLength ) );
+                        entry._listExtractedComment.push_back( formatToString( "Max length: %#", pSource->_maxLength ) );
                     for ( const string& origin : pSource->_listOrigin )
                     {
                         entry._listReference.push_back( origin );

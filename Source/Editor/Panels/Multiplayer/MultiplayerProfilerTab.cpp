@@ -3,6 +3,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -131,7 +132,7 @@ namespace sw::editor
                     return false; // 시한까지 모은다
                 } );
                 outReply = "netplay profile has " + to_string( history.computeSampleCount() ) + " sample(s) from " + to_string( history.getTrackCount() ) +
-                           " process(es), peak sent " + to_string( static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) ) + " B/s";
+                           formatToString( " process(es), peak sent %# B/s", static_cast<int64>( history.computePeak( EditorNetProfilerChannel::SentBytesPerSecond ) ) );
                 return true;
             }
         };

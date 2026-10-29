@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw
 {
@@ -110,7 +111,7 @@ namespace sw
         }
         if ( version != kVersion )
         {
-            outError = "intent recording version " + to_string( version ) + " is not " + to_string( kVersion );
+            outError = formatToString( "intent recording version %# is not %#", version, kVersion );
             return false;
         }
         const uint64 trackCount = reader.readVarUint();

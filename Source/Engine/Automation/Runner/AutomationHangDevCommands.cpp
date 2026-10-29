@@ -2,6 +2,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 개발 명령 `automation.hang <seconds>` — 행 감시(`AutomationHangWatchdog`)를 통합에서 시험하는 교착 시나리오가 게임 스레드를 멈추는 데 쓴다.
@@ -27,11 +28,11 @@ namespace sw
                 const bool bInRange = 1 <= seconds && seconds <= kMaxHangSeconds;
                 if ( bInRange == false )
                 {
-                    outReply = "hang must be 1.." + to_string( kMaxHangSeconds ) + " s";
+                    outReply = formatToString( "hang must be 1..%# s", kMaxHangSeconds );
                     return true;
                 }
                 MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds ) * constant::kNanosecondsPerSecond );
-                outReply = "the game thread was held for " + to_string( seconds ) + " s";
+                outReply = formatToString( "the game thread was held for %# s", seconds );
                 return true;
             }
         };

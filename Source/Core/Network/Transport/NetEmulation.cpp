@@ -8,6 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/DebugReplyLine.h"
+#include "Core/String/StringBuilder.h"
 
 #include <algorithm>
 
@@ -127,10 +128,10 @@ namespace sw
     string NetEmulationReport::makeLine() const
     {
         string text{ kLinePrefix };
-        text += " connections=" + to_string( _connectionCount );
-        text += " sent=" + to_string( _sentPacketCount );
-        text += " dropped=" + to_string( _droppedPacketCount );
-        text += " resent=" + to_string( _resentMessageCount );
+        text += formatToString( " connections=%#", _connectionCount );
+        text += formatToString( " sent=%#", _sentPacketCount );
+        text += formatToString( " dropped=%#", _droppedPacketCount );
+        text += formatToString( " resent=%#", _resentMessageCount );
         NetEmulationInternal::appendValue( text, "lossPercent", static_cast<float64>( _measuredLossPercent ) );
         NetEmulationInternal::appendValue( text, "rttMs", static_cast<float64>( _rttMilliseconds ) );
         return DebugReplyLine::makeFixed( std::move( text ) );

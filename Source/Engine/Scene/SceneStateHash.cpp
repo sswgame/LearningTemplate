@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
@@ -172,7 +173,7 @@ namespace sw
 
     void SceneStateHash::writeTickedObjectReport( uint64 tick, const vector<SceneObjectHash>& listObject, string& outText )
     {
-        outText = "tick " + to_string( tick ) + "\n";
+        outText = formatToString( "tick %#\n", tick );
         writeObjectReport( listObject, outText );
     }
 

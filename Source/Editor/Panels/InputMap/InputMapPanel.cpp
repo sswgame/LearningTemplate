@@ -6,6 +6,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
@@ -418,7 +419,7 @@ namespace sw::editor
         const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
         if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::note( ( "inputMap.binding." + to_string( static_cast<uint64>( bindIndex ) ) + ".trigger" ).c_str() );
+            EditorSelfTestMarks::note( ( formatToString( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) ) ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
         if ( bOpen == false )
             return;
@@ -428,7 +429,7 @@ namespace sw::editor
             if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && _inputMap.setBindingTrigger( action, bindIndex, value ) )
                 markDocumentDirty();
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( "inputMap.trigger." + to_string( static_cast<uint64>( option ) ) ).c_str() );
+                EditorSelfTestMarks::note( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
         }
         ImGui::EndCombo();
     }

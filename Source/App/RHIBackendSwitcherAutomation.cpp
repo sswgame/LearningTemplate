@@ -11,6 +11,7 @@
 #include "App/RHIBackendSwitcher.h"
 
 #include "Core/Console/DevCommandsEnabled.h"
+#include "Core/String/StringBuilder.h"
 
 // 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 한 가지다(`DevCommand` 단계와 같다) — 이 파일이 개발 명령 레지스트리를 쓰는 구성에서만 컴파일된다.
 #if SW_DEV_COMMANDS_ENABLED
@@ -103,7 +104,7 @@ namespace sw
                     const bool bInRange = 1 <= waitMilliseconds && static_cast<uint32>( waitMilliseconds ) <= RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds;
                     if ( bInRange == false )
                     {
-                        outReply = "driver wait must be 1.." + to_string( RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds ) + " ms";
+                        outReply = formatToString( "driver wait must be 1..%# ms", RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds );
                         return false;
                     }
                     if ( pSwitcher == nullptr )
@@ -112,7 +113,7 @@ namespace sw
                         return false;
                     }
                     pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) );
-                    outReply = "next render frame waits " + to_string( waitMilliseconds ) + " ms where the fence wait is, then removes the device";
+                    outReply = formatToString( "next render frame waits %# ms where the fence wait is, then removes the device", waitMilliseconds );
                     return true;
                 }
                 if ( pSwitcher == nullptr || pSwitcher->removeDeviceForTest() == false )

@@ -6,6 +6,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DebugKeyActions.h"
@@ -48,7 +49,7 @@ namespace sw
                 const bool          bRebindRejected = bindIndex < 0 || map.hasAction( action ) == false || map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) ) == false;
                 if ( bRebindRejected )
                 {
-                    outReply = "'" + listArgument[0] + "' has no rebindable binding " + to_string( bindIndex );
+                    outReply = formatToString( "'%#' has no rebindable binding %#", listArgument[0], bindIndex );
                     return false;
                 }
                 const bool bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();

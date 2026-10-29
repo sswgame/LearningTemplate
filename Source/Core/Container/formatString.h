@@ -496,15 +496,24 @@ namespace sw
                     outHasSpec = true;
                     return true;
                 }
-                case 'd':
-                case 'i':
-                case 'u':
                 case 'f':
                 case 'F':
                 case 'g':
                 case 'G':
                 case 'e':
                 case 'E':
+                {
+                    // printf 실수 서식은 자릿수를 안 적으면 여섯 자리다. 자릿수 없는 `%#` 는 가장 짧은 왕복 표기다(`to_string` 과 같다 — `floatToString`).
+                    if ( outFormat.hasPrecision() == false )
+                    {
+                        outFormat.precision( 6 );
+                        outHasSpec = true;
+                    }
+                    return true;
+                }
+                case 'd':
+                case 'i':
+                case 'u':
                 case 's':
                 case 'c':
                 {
@@ -741,7 +750,7 @@ namespace sw
                     return integerToString( pBuf, value, format );
             }
             else if constexpr ( std::is_floating_point_v<DecayT> )
-                return static_cast<uint32>( floatToString( pBuf, static_cast<float64>( value ), format ) );
+                return static_cast<uint32>( floatToString( pBuf, value, format ) );
             else if constexpr ( std::is_pointer_v<DecayT> )
             {
                 if constexpr ( std::is_same_v<std::decay_t<std::remove_pointer_t<DecayT>>, utf8> ||
@@ -895,7 +904,8 @@ namespace sw
         }
 
         /** @brief 실수를 문자열로 바꿉니다. */
-        static size_t floatToString( utf8* pBuf, float64 value, const Format& format ) noexcept
+        template <typename T>
+        static size_t floatToString( utf8* pBuf, T value, const Format& format ) noexcept
         {
             if ( MathUtil::isNan( value ) )
             {
@@ -922,8 +932,9 @@ namespace sw
             else if ( format.isShowSign() )
                 *pCurrent++ = '+';
 
-            const int32 precision = format.hasPrecision() ? format.getPrecision() : 6;
-            auto [pPtr, ec]       = std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, precision );
+            // 자릿수를 정했으면 고정 소수점, 아니면(`%#`) 그 타입의 가장 짧은 왕복 표기다 — `to_string` 과 같은 글이 나온다(실수를 글로 바꾸는 규칙은 하나).
+            auto [pPtr, ec] = format.hasPrecision() ? std::to_chars( pCurrent, pBuf + kFloatBufferSize, value, std::chars_format::fixed, format.getPrecision() )
+                                                    : std::to_chars( pCurrent, pBuf + kFloatBufferSize, value );
 
             // kFloatBufferSize 가 고정소수점 최대 길이를 담으므로 실패할 수 없다. 그래도 실패하면 조용한 쓰레기 값 대신 표시를 남긴다.
             if ( static_cast<int32>( ec ) != 0 )

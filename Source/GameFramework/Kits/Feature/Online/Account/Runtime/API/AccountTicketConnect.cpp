@@ -5,6 +5,7 @@
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -23,7 +24,7 @@ namespace sw
 
             static string describeFailure( const AccountClientReply& reply )
             {
-                return "error " + to_string( static_cast<int32>( reply._errorCode ) ) + ", result " + to_string( static_cast<int32>( reply._result ) );
+                return formatToString( "error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result ) );
             }
         };
     } // namespace

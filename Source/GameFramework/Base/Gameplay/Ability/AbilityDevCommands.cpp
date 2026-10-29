@@ -8,6 +8,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -61,7 +62,7 @@ namespace sw
                     if ( pComponent->setAttributeBaseValue( health, *maxHealth ) )
                         ++healedCount;
                 }
-                outReply = "cheat.heal healed " + to_string( healedCount ) + " of " + to_string( listComponent.size() ) + " ability system(s)";
+                outReply = formatToString( "cheat.heal healed %# of %# ability system(s)", healedCount, listComponent.size() );
                 return true;
             }
 
@@ -86,7 +87,7 @@ namespace sw
                     outReply = "cheat.attribute: no ability system has the attribute '" + listArgument[0] + "'";
                     return true;
                 }
-                outReply = "cheat.attribute set " + listArgument[0] + " on " + to_string( changedCount ) + " ability system(s)";
+                outReply = formatToString( "cheat.attribute set %# on %# ability system(s)", listArgument[0], changedCount );
                 return true;
             }
 
@@ -140,7 +141,7 @@ namespace sw
                     outReply = "cheat.god: no player-controlled ability system in the active scene";
                     return true;
                 }
-                outReply = "cheat.god invulnerable " + to_string( godCount ) + " of " + to_string( playerCount ) + " player ability system(s)";
+                outReply = formatToString( "cheat.god invulnerable %# of %# player ability system(s)", godCount, playerCount );
                 return true;
             }
 
@@ -172,7 +173,7 @@ namespace sw
                     if ( cooldownTags.getTagCount() > 0 )
                         removedCount += pComponent->removeActiveEffectsWithTags( cooldownTags );
                 }
-                outReply = "cheat.resetCooldowns removed " + to_string( removedCount ) + " cooldown effect(s)";
+                outReply = formatToString( "cheat.resetCooldowns removed %# cooldown effect(s)", removedCount );
                 return true;
             }
         };

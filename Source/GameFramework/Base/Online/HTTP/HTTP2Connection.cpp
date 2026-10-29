@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include <algorithm>
 
@@ -34,7 +35,7 @@ namespace sw
                 vector<HpackHeader> listHeader;
                 string              authority = url._host;
                 if ( url._port != kDefaultHTTPSPort )
-                    authority += ":" + to_string( static_cast<int32>( url._port ) );
+                    authority += formatToString( ":%#", static_cast<int32>( url._port ) );
                 listHeader.push_back( HpackHeader{ ":method", toString( request._method ) } );
                 listHeader.push_back( HpackHeader{ ":scheme", "https" } );
                 listHeader.push_back( HpackHeader{ ":authority", authority } );
@@ -251,7 +252,7 @@ namespace sw
                 if ( header._streamID == 0 || header._length != HTTP2ConnectionInternal::kRstStreamBodySize )
                     return failConnection( "malformed RST_STREAM", outError );
                 const uint32 errorCode = HTTP2FrameUtil::readUint32( pBody );
-                failStream( header._streamID, ( "stream was reset by the server (error " + to_string( errorCode ) + ")" ).c_str(), false, 0, outBytes );
+                failStream( header._streamID, ( formatToString( "stream was reset by the server (error %#)", errorCode ) ).c_str(), false, 0, outBytes );
                 return true;
             }
             case HTTP2FrameType::GoAway:

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 
 #include "Engine/Scene/Scene.h"
@@ -50,7 +52,7 @@ namespace sw::editor
         }
         if ( settings._clientCount < 1 || settings._clientCount > kMaxClients )
         {
-            outError = "client count must be 1 to " + to_string( kMaxClients );
+            outError = formatToString( "client count must be 1 to %#", kMaxClients );
             return false;
         }
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
@@ -81,7 +83,7 @@ namespace sw::editor
         {
             if ( _pHarness->addClient( settings._conditions ) < 0 )
             {
-                outError = "client " + to_string( index + 1 ) + " did not start (see the log)";
+                outError = formatToString( "client %# did not start (see the log)", index + 1 );
                 stop();
                 return false;
             }

@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -248,7 +249,7 @@ namespace sw::editor
                     return string{ "-" };
                 string text = listBone[0] < skeleton.getBoneCount() ? string{ skeleton.getBone( listBone[0] )._name.c_str() } : string{ "?" };
                 if ( listBone.size() > 1 )
-                    text += " (+" + to_string( listBone.size() - 1 ) + ")";
+                    text += formatToString( " (+%#)", listBone.size() - 1 );
                 return text;
             }
 

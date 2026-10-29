@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Localization/TimeZoneUtil.h"
 
@@ -75,7 +76,7 @@ namespace sw
             bool fail( string_view reason )
             {
                 if ( _error.empty() )
-                    _error = string( reason ) + " at offset " + to_string( static_cast<uint64>( _position ) );
+                    _error = formatToString( "%# at offset %#", string( reason ), static_cast<uint64>( _position ) );
                 return false;
             }
 

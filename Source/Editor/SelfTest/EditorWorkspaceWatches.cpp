@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/HexUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -229,7 +230,7 @@ namespace sw::editor
             const CommandStack* pStack = editor::findSubsystem<CommandStack>();
             if ( pStack == nullptr )
                 return false;
-            outText = to_string( pStack->getCurrentIndex() ) + "/" + to_string( pStack->getCommandCount() ) + ":";
+            outText = formatToString( "%#/%#:", pStack->getCurrentIndex(), pStack->getCommandCount() );
             for ( size_t index = 0; index < pStack->getCommandCount(); ++index )
             {
                 if ( index > 0 )

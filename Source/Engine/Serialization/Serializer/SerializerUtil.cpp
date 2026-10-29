@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/Reflection.h"
@@ -60,7 +61,7 @@ namespace sw
                     return;
                 const string lower = range._bHasMin ? to_string( range._min ) : string( "-" );
                 const string upper = range._bHasMax ? to_string( range._max ) : string( "-" );
-                outListError.push_back( path + " = " + to_string( value ) + " is outside [" + lower + ", " + upper + "]" );
+                outListError.push_back( formatToString( "%# = %# is outside [%#, %#]", path, value, lower, upper ) );
             }
 
             /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
@@ -1050,7 +1051,7 @@ namespace sw
                 const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                 {
-                    const string      elementPath   = path + "[" + to_string( elementIndex ) + "]";
+                    const string      elementPath   = formatToString( "%#[%#]", path, elementIndex );
                     const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                     float64           value         = 0.0;
                     // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.

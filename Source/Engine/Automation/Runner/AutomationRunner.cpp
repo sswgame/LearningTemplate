@@ -54,7 +54,7 @@ namespace sw
              */
             static string makeOutputDirectory( string_view scenarioName )
             {
-                return string( kAutomationOutputFolder ) + "/" + string( scenarioName ) + "/" + to_string( Process::getCurrentProcessID() );
+                return formatToString( "%#/%#/%#", string( kAutomationOutputFolder ), string( scenarioName ), Process::getCurrentProcessID() );
             }
 
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
@@ -468,13 +468,13 @@ namespace sw
         const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
         if ( elapsedSeconds <= static_cast<float64>( _scenario.getWallTimeoutSeconds() ) )
             return;
-        string reason = "the wall-clock limit of " + to_string( _scenario.getWallTimeoutSeconds() ) + " s (wallTimeoutSeconds) was exceeded at " + describeRunPosition();
+        string reason = formatToString( "the wall-clock limit of %# s (wallTimeoutSeconds) was exceeded at %#", _scenario.getWallTimeoutSeconds(), describeRunPosition() );
         if ( _bStarted == SW_FALSE )
-            reason += ", the scenario never started (" + to_string( _run._waitFrameCount ) + " frame(s) spent waiting for the start condition)";
+            reason += formatToString( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
         if ( _run._holdFrameCount > 0 )
-            reason += ", the current step has held the scenario clock for " + to_string( _run._holdFrameCount ) + " frame(s)";
+            reason += formatToString( ", the current step has held the scenario clock for %# frame(s)", _run._holdFrameCount );
         if ( _run._clockHoldFrameCount > 0 )
-            reason += ", " + _run._clockHolderName + " has held the scenario clock for " + to_string( _run._clockHoldFrameCount ) + " frame(s)";
+            reason += formatToString( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
         finish( AutomationOutcome::TimedOut, reason );
     }
 
@@ -709,7 +709,7 @@ namespace sw
         // 시한은 `AutomationTimeLimits` 한 곳에 있다(저장 검증은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다).
         if ( nowSeconds - _run._clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
             finish( AutomationOutcome::TimedOut, _run._clockHolderName + " held the scenario clock for more than " +
-                                                     to_string( static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) + " s" );
+                                                     formatToString( "%# s", static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) );
         return true;
     }
 
@@ -731,7 +731,7 @@ namespace sw
         if ( holdUntilReady( step, input, bReady, timeoutFrames ) == AutomationStepHold::Hold )
             return true;
         if ( bReady == false )
-            recordFailure( step, "WaitUntil gave up after " + to_string( heldFrameCount ) + " frame(s): " + message );
+            recordFailure( step, formatToString( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message ) );
         return false;
     }
 
@@ -778,7 +778,7 @@ namespace sw
             }
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( _result != AutomationOutcome::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
-                detail += "\n    (" + to_string( static_cast<uint32>( _judge.getUnhandledLogs().size() ) ) + " unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)";
+                detail += formatToString( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).

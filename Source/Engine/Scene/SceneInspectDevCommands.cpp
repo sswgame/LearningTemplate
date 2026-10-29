@@ -12,6 +12,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/DebugReplyLine.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
@@ -280,7 +281,7 @@ namespace sw
                     return false;
                 if ( count > StateHashHistory::kMaxReportLineSamples )
                 {
-                    outReply = "count " + to_string( count ) + " does not fit one line (at most " + to_string( StateHashHistory::kMaxReportLineSamples ) + ") - use state.hashes";
+                    outReply = formatToString( "count %# does not fit one line (at most %#) - use state.hashes", count, StateHashHistory::kMaxReportLineSamples );
                     return false;
                 }
                 const StateHashHistory* pHistory = findRecordingHistory( outReply );
@@ -298,7 +299,7 @@ namespace sw
                 }
                 if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
                 {
-                    outReply = "the hash history does not fit one line (limit " + to_string( DebugReplyLine::kMaxBytes ) + " bytes) - use state.hashes";
+                    outReply = formatToString( "the hash history does not fit one line (limit %# bytes) - use state.hashes", DebugReplyLine::kMaxBytes );
                     return false;
                 }
                 return true;

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -212,7 +213,7 @@ namespace sw
                 continue;
             const string& documentPath = _pScreen->getDocumentPath();
             string        message      = documentPath.empty() ? string( "(code)" ) : documentPath;
-            message += ":" + to_string( desc._sourceLine ) + ": binding '" + desc._expression + "' on " + desc._propertyPath + ": " + error;
+            message += formatToString( ":%#: binding '%#' on %#: %#", desc._sourceLine, desc._expression, desc._propertyPath, error );
             SW_LOG_ERROR( "[UI] %#", message.c_str() );
             _listError.push_back( std::move( message ) );
         }

@@ -2,6 +2,8 @@
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
+#include "Core/String/StringBuilder.h"
+
 #if SW_PROFILER_TRACE_ENABLED
 
     #include "Core/Container/StringUtil.h"
@@ -185,7 +187,7 @@ namespace sw
                 }
                 inoutState._listKey.push_back( { pid, tid } );
                 ProfilerTimelineThread thread;
-                thread._name = "tid " + to_string( tid );
+                thread._name = formatToString( "tid %#", tid );
                 inoutTrace._listThread.push_back( thread );
                 return inoutState._listKey.size() - 1;
             }
@@ -218,7 +220,7 @@ namespace sw
                     int64 tid{ 0 };
                     if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
                     {
-                        outError = "event " + to_string( index ) + " has a pid or tid that is not an integer";
+                        outError = formatToString( "event %# has a pid or tid that is not an integer", index );
                         return false;
                     }
                     if ( phase == "X" )
@@ -227,7 +229,7 @@ namespace sw
                         const std::optional<float64> duration = event.readRequired<float64>( "dur" );
                         if ( begin.has_value() == false || duration.has_value() == false )
                         {
-                            outError = "complete event " + to_string( index ) + " needs numeric ts and dur";
+                            outError = formatToString( "complete event %# needs numeric ts and dur", index );
                             return false;
                         }
                         ProfilerTimelineEvent loaded;
@@ -250,7 +252,7 @@ namespace sw
                         const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
                         if ( frameBegin.has_value() == false )
                         {
-                            outError = "frame marker " + to_string( index ) + " needs a numeric ts";
+                            outError = formatToString( "frame marker %# needs a numeric ts", index );
                             return false;
                         }
                         inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::kNanosecondsPerMicrosecond + 0.5 ) );
@@ -276,7 +278,7 @@ namespace sw
                     return;
                 for ( size_t index = 0; index < state._listKey.size(); ++index )
                 {
-                    string processName = "pid " + to_string( state._listKey[index]._pid );
+                    string processName = formatToString( "pid %#", state._listKey[index]._pid );
                     for ( const TraceParseState::ProcessName& entry : state._listProcessName )
                     {
                         if ( entry._pid == state._listKey[index]._pid )
@@ -323,14 +325,14 @@ namespace sw
             {
                 if ( outSource._document.parse( input._json ) == false )
                 {
-                    outReport = "input " + to_string( index ) + " is not valid JSON: " + outSource._document.getLastError();
+                    outReport = formatToString( "input %# is not valid JSON: %#", index, outSource._document.getLastError() );
                     return false;
                 }
                 const JSONValue root = outSource._document.getRoot();
                 outSource._listEvent = root.isArray() ? root : root.get( "traceEvents" );
                 if ( outSource._listEvent.isArray() == false )
                 {
-                    outReport = "input " + to_string( index ) + " has no traceEvents array";
+                    outReport = formatToString( "input %# has no traceEvents array", index );
                     return false;
                 }
                 const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
@@ -341,7 +343,7 @@ namespace sw
                     const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
                     if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
                     {
-                        outReport = "input " + to_string( index ) + " has a clock header that is not integers";
+                        outReport = formatToString( "input %# has a clock header that is not integers", index );
                         return false;
                     }
                     outSource._bHasClock            = true;
@@ -353,7 +355,7 @@ namespace sw
                 if ( outSource._label.empty() && other.isObject() )
                     outSource._label = other.get( "processName" ).asString();
                 if ( outSource._label.empty() )
-                    outSource._label = "trace " + to_string( index );
+                    outSource._label = formatToString( "trace %#", index );
                 for ( size_t eventIndex = 0; eventIndex < outSource._listEvent.size(); ++eventIndex )
                 {
                     const JSONValue pid = outSource._listEvent.at( eventIndex ).get( "pid" );
@@ -362,7 +364,7 @@ namespace sw
                         const std::optional<int64> sourcePID = pid.read<int64>();
                         if ( sourcePID.has_value() == false )
                         {
-                            outReport = "input " + to_string( index ) + " has a pid that is not an integer";
+                            outReport = formatToString( "input %# has a pid that is not an integer", index );
                             return false;
                         }
                         outSource._sourcePID = *sourcePID;
@@ -557,7 +559,7 @@ namespace sw
                         if ( bSlotNamed )
                             writer.valueString( listSlotName[event._slot] );
                         else
-                            writer.valueString( "slot " + to_string( event._slot ) );
+                            writer.valueString( formatToString( "slot %#", event._slot ) );
                         writer.key( "cat" );
                         writer.valueString( "cpu" );
                         writer.key( "ph" );
@@ -812,7 +814,7 @@ namespace sw
                 eventCount += thread._listEvent.size();
             }
             outReply = "saved " + path + " (" + to_string( listThread.size() ) + " threads, " + to_string( eventCount ) + " events, " +
-                       to_string( listFrameBegin.size() ) + " frame marks, " + to_string( metaWithFlow._listFlow.size() ) + " net flows)";
+                       formatToString( "%# frame marks, %# net flows)", listFrameBegin.size(), metaWithFlow._listFlow.size() );
             return true;
         }
 
@@ -929,7 +931,7 @@ namespace sw
             ProfilerTraceMeta meta      = makeCurrentMeta( processName );
             const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::kNanosecondsPerMicrosecond;
             meta._listMarker.push_back(
-                { "Slow tick " + to_string( tickMicro / constant::kMicrosecondsPerMillisecond ) + "." + to_string( ( tickMicro % constant::kMicrosecondsPerMillisecond ) / 100 ) + " ms", capture._slowBeginNanos } );
+                { formatToString( "Slow tick %#.%# ms", tickMicro / constant::kMicrosecondsPerMillisecond, ( tickMicro % constant::kMicrosecondsPerMillisecond ) / 100 ), capture._slowBeginNanos } );
             const string path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
             string       reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
@@ -1024,7 +1026,7 @@ namespace sw
             outReport = "the traces have no events";
             return false;
         }
-        outReport = "merged " + to_string( listSource.size() ) + " traces (" + to_string( eventCount ) + " events)";
+        outReport = formatToString( "merged %# traces (%# events)", listSource.size(), eventCount );
         return true;
     }
 

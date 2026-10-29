@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/ImageUtil.h"
@@ -299,7 +300,7 @@ namespace sw::editor
                     outReply = "outfit atlas '" + listArgument[0] + "' failed (see the log) - nothing was written";
                     return false;
                 }
-                outReply = "baked " + to_string( result._partCount ) + " parts (" + to_string( result._vertexCount ) + " vertices) into " + result._meshPath + " and " + to_string( static_cast<uint32>( result._listTexturePath.size() ) ) + " atlas image(s) - run --import-textures for the images";
+                outReply = formatToString( "baked %# parts (%# vertices) into %# and %# atlas image(s) - run --import-textures for the images", result._partCount, result._vertexCount, result._meshPath, static_cast<uint32>( result._listTexturePath.size() ) );
                 return true;
             }
         };

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
@@ -117,7 +118,7 @@ namespace sw::editor
                     // 카메라 끌기는 초점 월드에서만 받는다 — 다른 칸을 클릭하면 먼저 초점이 옮겨 간다.
                     pViewport->draw( float2{ width, height }, bFocused );
                     if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( "multiplayer.inprocess.world" + to_string( worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
+                        EditorSelfTestMarks::note( ( formatToString( "multiplayer.inprocess.world%#", worldIndex ) ).c_str() ); // 자동화가 클릭해 입력 초점을 옮긴다
                     if ( EditorInputGUI::wasItemClicked() && bFocused == false )
                         (void)_session.setInputFocus( worldIndex );
                 }

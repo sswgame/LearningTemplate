@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/string_splitter.h"
 
 namespace sw
@@ -121,7 +122,7 @@ namespace sw
 
     void AutomationImageMetric::encodePpm( const AutomationImage& image, vector<uint8>& outBytes )
     {
-        const string header = "P6\n" + to_string( image._width ) + " " + to_string( image._height ) + "\n255\n";
+        const string header = formatToString( "P6\n%# %#\n255\n", image._width, image._height );
         outBytes.assign( header.begin(), header.end() );
         outBytes.insert( outBytes.end(), image._listRGB.begin(), image._listRGB.end() );
     }
@@ -134,7 +135,7 @@ namespace sw
         const uint32 y1 = MathUtil::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
         if ( x1 <= x0 || y1 <= y0 )
         {
-            outError = "the region covers no pixel of the " + to_string( image._width ) + "x" + to_string( image._height ) + " image";
+            outError = formatToString( "the region covers no pixel of the %#x%# image", image._width, image._height );
             return false;
         }
         const uint32 sourceWidth  = x1 - x0;
@@ -179,7 +180,7 @@ namespace sw
         if ( actual._width != golden._width || actual._height != golden._height )
         {
             outError = "the image is " + to_string( actual._width ) + "x" + to_string( actual._height ) + " but the golden is " + to_string( golden._width ) + "x" +
-                       to_string( golden._height ) + " (region or window size changed - record the golden again)";
+                       formatToString( "%# (region or window size changed - record the golden again)", golden._height );
             return false;
         }
         const size_t pixelCount     = static_cast<size_t>( actual._width ) * actual._height;
