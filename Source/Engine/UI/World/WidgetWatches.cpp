@@ -47,7 +47,7 @@ namespace sw
         {
             (void)pManager;
             const UISystem* pUI = engine::findSubsystem<UISystem>();
-            outValue            = pUI != nullptr ? static_cast<float64>( pUI->getDeferredGlyphCount() ) : 0.0;
+            outValue            = pUI != nullptr ? static_cast<float64>( pUI->getPaintState().getDeferredGlyphCount() ) : 0.0;
             return pUI != nullptr && pUI->isInitialized();
         }
     } // namespace

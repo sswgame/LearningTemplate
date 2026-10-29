@@ -72,12 +72,15 @@ namespace sw
      *
      *          핫 리로드: 언로드되는 모듈 라이브러리에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      *
-     *          **나눈 책임**(값 멤버, 비가상 직접 호출): 입력 라우팅은 `UIInputRouter`, 테마 고르기와 스타일 세트 짓기는 `UIThemeController`,
-     *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수는 `UICanvasPaintState`,
-     *          화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
-     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
-     *          바인딩 변환기 `UIBindingConverterRegistry`(이 시스템이 의존), 알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService`
-     *          (이 시스템에 의존하고 UI 갱신 칸 `onUpdateBeforeScreens` · `onUpdateAfterScreens` 에 건다).
+     *          **화면 스택 자신의 책임**(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
+     *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
+     *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
+     *          `addLayerHideRequest` · `removeLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
+     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
+     *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
+     *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
+     *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
     class SW_API UISystem final : public ISubsystem
     {
@@ -203,14 +206,6 @@ namespace sw
         /** @brief 스타일 시트 @p sheetPath 가 바뀌었을 때, 그 시트를 쓰는 화면의 스타일 시트를 다시 적용하고 위젯을 다시 맞춥니다(트리는 그대로). */
         void onStyleSheetReloaded( string_view sheetPath );
 
-        // --- 애니메이션 ---------------------------------------------------------------
-        /**
-         * @brief 위젯 @p widget 의 프로퍼티 @p propertyPath 를 지금 값에서 @p endValue(텍스트 표기)까지 @p duration 초 동안 옮깁니다(코드 한 줄 트윈, Godot 의 `Tween` 에 해당).
-         * @details 그 위젯이 속한 화면의 재생기(`UIScreen::getAnimationPlayer`)가 돌린다. 같은 위젯과 경로의 트윈은 새 것이 대신한다.
-         * @return 위젯이 어느 화면에도 없거나 경로나 값을 읽지 못하면 경고하고 false 입니다.
-         */
-        bool tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
-
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
          * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
@@ -258,8 +253,6 @@ namespace sw
         void addLayerHideRequest( UILayerMask layers );
         /** @brief `addLayerHideRequest` 로 건 요청을 하나 풉니다. 건 적 없는 레이어를 풀면 단언으로 멈춥니다. */
         void removeLayerHideRequest( UILayerMask layers );
-        /** @brief 레이어 @p layer 에 숨김 요청이 하나라도 걸려 있으면 true 입니다. */
-        bool isLayerHidden( UILayer layer ) const { return _paintState.isLayerHidden( layer ); }
         /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
         /**
@@ -296,17 +289,12 @@ namespace sw
         /** @brief 지금 글리프 캐시, 텍스트 레이아웃, 배율, 프레임 번호로 그리기 컨텍스트를 만듭니다(그리기 순회에 넘깁니다). */
         UIPaintContext makePaintContext() const;
         /**
-         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀, 대상 크기는 뷰포트의 물리 크기). `Engine` 가 렌더 패킷의 주 출력 캔버스에 싣습니다.
+         * @brief 이번 프레임에 화면 스택을 칠한 결과입니다 — 그리기 목록(`getCanvas`, 물리 픽셀, 대상 크기는 뷰포트의 물리 크기)과 내용 번호(`getCanvasRevision`),
+         *        글리프 예산으로 미룬 글리프 수(`getDeferredGlyphCount`), 레이어 숨김 요청(`isLayerHidden`).
          * @details 화면을 그리기 순서(레이어, 쌓인 순서)로 이어 붙이면서 화면마다 위젯 그리기 캐시를 연결하고, 탐색 입력 방식이면 포커스 테두리를 그 화면 위에 덧그린다.
+         *          `Engine` 가 렌더 패킷의 주 출력 캔버스에 싣고, 자동화 감시 값 `UI.DeferredGlyphs` 가 읽는다.
          */
-        const CanvasDrawList& getCanvas() const { return _paintState.getCanvas(); }
-        /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 시작하며, 같으면 렌더러가 사각형을 다시 업로드하지 않습니다). */
-        uint64 getCanvasRevision() const { return _paintState.getCanvasRevision(); }
-        /**
-         * @brief 지난 그리기가 글리프 래스터화 예산(`gv_uiGlyphRasterBudgetMicros`) 때문에 못 그리고 다음 프레임으로 미룬 글리프 수입니다. 0 이면 화면의 글자가 다 그려졌다.
-         * @details 지난 그리기를 그대로 재사용한 프레임은 0 이다(미룬 위젯은 다시 무효화되므로 재사용할 수 없다). 자동화 감시 값 `UI.DeferredGlyphs` 가 읽는다.
-         */
-        uint32 getDeferredGlyphCount() const { return _paintState.getDeferredGlyphCount(); }
+        const UICanvasPaintState& getPaintState() const { return _paintState; }
         /**
          * @brief 스택의 화면마다 레이아웃 덤프(`UILayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다. 화면마다 첫 줄은 `## <문서 경로 또는 (code)>` 입니다.
          * @details 실기동 테스트(`AppUITest`, 시나리오 단계 `UILayoutDump`)가 위젯 이름으로 스크린샷 안의 사각형을 찾는 경로다.

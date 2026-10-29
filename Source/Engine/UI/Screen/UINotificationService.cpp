@@ -256,7 +256,7 @@ namespace sw
         entry._widget = widget->getID();
         widget->setOpacity( 0.0f ); // 페이드로 들어온다(움직임 줄이기이면 아래 트윈이 바로 1 을 쓴다)
         (void)pStack->addChild( std::move( widget ) );
-        if ( _pUI->tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
+        if ( pScreen->getAnimationPlayer().tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
         {
             if ( Widget* pAdded = pScreen->getTree().findWidgetByID( entry._widget ); pAdded != nullptr )
                 pAdded->setOpacity( 1.0f ); // 트윈을 걸지 못하면 보이지 않는 채로 남지 않게 한다
@@ -286,7 +286,7 @@ namespace sw
         Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pWidget == nullptr )
             return; // 위젯을 만들지 못했던 항목이다
-        if ( gv_uiReduceMotion || _pUI->tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
+        if ( gv_uiReduceMotion || pScreen->getAnimationPlayer().tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
         {
             removeEntryWidget( entry._widget );
             return;

@@ -343,17 +343,6 @@ namespace sw
         }
     }
 
-    bool UISystem::tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
-    {
-        for ( const unique_ptr<UIScreen>& screen : _listScreen )
-        {
-            if ( screen->getTree().findWidgetByID( widget ) != nullptr )
-                return screen->_animationPlayer.tween( widget, propertyPath, endValue, duration, curve );
-        }
-        SW_LOG_WARNING( "[UI] Tween of '%#': widget %# is not in any screen", string( propertyPath ).c_str(), widget );
-        return false;
-    }
-
     unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, UIScreenDesc& outDesc, vector<UIBindingDesc>& outListBinding,
                                                       vector<string>& outListStyleSheet )
     {

@@ -425,13 +425,13 @@ namespace sw
         // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 테스트 그림은 그 위에.
         // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
         const bool bUIReady          = pUISystem != nullptr && pUISystem->isInitialized();
-        const bool bSubmitMainCanvas = bSceneMain == false && bUIReady && pUISystem->getCanvas().isEmpty() == false;
+        const bool bSubmitMainCanvas = bSceneMain == false && bUIReady && pUISystem->getPaintState().getCanvas().isEmpty() == false;
         if ( bSubmitMainCanvas )
         {
             const UIScreenMarkers& markers  = engine::getSubsystem<UIWidgetComponentService>().getMarkers();
-            packet._canvas._mainOutput      = pUISystem->getCanvas();
+            packet._canvas._mainOutput      = pUISystem->getPaintState().getCanvas();
             packet._canvas._listAnchor      = markers.getCanvasAnchors(); // 화면 마커 위치 — 사각형과 달리 프레임마다 바뀐다
-            packet._canvas._contentRevision = pUISystem->getCanvasRevision();
+            packet._canvas._contentRevision = pUISystem->getPaintState().getCanvasRevision();
             // GPU 가 투영하는 마커 — 월드 점만 싣고 화면 좌표는 렌더러의 컴퓨트(`CanvasRenderer::recordMarkerProjection`)가 앵커 원소에 쓴다. 켜진 마커가 없으면 싣지 않는다.
             if ( markers.getGPUMarkerCount() > 0 )
             {
