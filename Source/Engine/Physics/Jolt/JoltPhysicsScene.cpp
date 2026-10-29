@@ -1013,7 +1013,7 @@ namespace sw
     void JoltPhysicsScene::flushContactReports()
     {
         // 잡 스레드가 붙인 순서는 매번 다르다. 바디 쌍, 서브 셰이프, 종류 순으로 정렬해 같은 입력이면 같은 이벤트를 낸다.
-        std::sort( _listContactReport.begin(), _listContactReport.end(), &JoltPhysicsScene::isEarlierReport );
+        VectorUtil::sort( _listContactReport, &JoltPhysicsScene::isEarlierReport );
         for ( ContactReport& report : _listContactReport )
         {
             if ( report._bodyA._body.isValid() == false || report._bodyB._body.isValid() == false )

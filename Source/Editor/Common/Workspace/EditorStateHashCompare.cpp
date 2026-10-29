@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorStateHashCompare.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -66,7 +67,7 @@ namespace sw::editor
             _lastError = string( label ) + " has no recorded ticks";
             return false;
         }
-        std::sort( listSample.begin(), listSample.end(), []( const StateHashSample& left, const StateHashSample& right )
+        VectorUtil::sort( listSample, []( const StateHashSample& left, const StateHashSample& right )
         {
             return left._tick < right._tick;
         } );

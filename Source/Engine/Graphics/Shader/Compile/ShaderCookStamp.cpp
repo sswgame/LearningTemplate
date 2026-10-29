@@ -604,7 +604,7 @@ namespace sw
                 }
                 if ( listUncovered.empty() == false )
                 {
-                    std::sort( listUncovered.begin(), listUncovered.end() );
+                    VectorUtil::sort( listUncovered );
                     appendProblem( outListProblem, "%#: '%#' manifest misses %# binaries (first: %#) - cook again or delete the stale files", label, shaderFolder,
                                    listUncovered.size(), listUncovered.front() );
                 }
@@ -687,7 +687,7 @@ namespace sw
             const string   gameRoot = FileUtil::joinPath( resourceRoot, path::kGamePack );
             if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
                 return false;
-            std::sort( listGameFolder.begin(), listGameFolder.end() );
+            VectorUtil::sort( listGameFolder );
             for ( const string& gameFolder : listGameFolder )
             {
                 string domain = string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) );

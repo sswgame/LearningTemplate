@@ -740,7 +740,7 @@ namespace sw
         {
             outListPath.push_back( _topology.toCell( index ) );
         }
-        std::reverse( outListPath.begin(), outListPath.end() );
+        VectorUtil::reverse( outListPath );
         outListPath.erase( outListPath.begin() ); // 지금 타일은 빼고 다음 타일부터 간다
         return true;
     }

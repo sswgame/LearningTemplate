@@ -3,6 +3,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
@@ -59,7 +60,7 @@ namespace sw::editor
                 if ( entry._kind == _kind && acceptsDocumentPath( entry._path ) )
                     _listOpenCandidate.push_back( entry._path );
             }
-            std::sort( _listOpenCandidate.begin(), _listOpenCandidate.end() );
+            VectorUtil::sort( _listOpenCandidate );
             _openFilter.clear();
             EditorInputGUI::openPopup( "##DocumentOpen" );
         }

@@ -344,7 +344,7 @@ namespace sw
         }
 
         // 먼저 닿은 것이 먼저 받는다(총알이 뒤의 적부터 맞지 않는다). 같은 시점끼리는 모은 순서 그대로다.
-        std::stable_sort( listSwept.begin(), listSwept.end(), []( const SweptOverlap2D& lhs, const SweptOverlap2D& rhs )
+        VectorUtil::stableSort( listSwept, []( const SweptOverlap2D& lhs, const SweptOverlap2D& rhs )
         { return lhs._hitFraction < rhs._hitFraction; } );
         for ( const SweptOverlap2D& overlap : listSwept )
         {

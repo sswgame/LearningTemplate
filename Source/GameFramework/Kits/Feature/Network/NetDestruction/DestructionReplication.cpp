@@ -631,7 +631,7 @@ namespace sw
         // 스냅숏보다 앞 번호는 버리고, 이어지는 번호는 적용한다.
         vector<BufferedEvent> listFuture;
         listFuture.swap( entry._listFutureEvent );
-        std::sort( listFuture.begin(), listFuture.end(), []( const BufferedEvent& lhs, const BufferedEvent& rhs )
+        VectorUtil::sort( listFuture, []( const BufferedEvent& lhs, const BufferedEvent& rhs )
         { return lhs._index < rhs._index; } );
         for ( const BufferedEvent& buffered : listFuture )
         {

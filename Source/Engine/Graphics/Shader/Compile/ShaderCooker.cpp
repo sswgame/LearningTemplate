@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -88,7 +89,7 @@ namespace sw
         if ( listSorted.empty() )
             return 0;
 
-        std::sort( listSorted.begin(), listSorted.end() );
+        VectorUtil::sort( listSorted );
 
         uint64 hash{ HashUtil::kFNVOffset64 }; // FNV-1a 64비트 오프셋 기저값
         for ( const string& define : listSorted )

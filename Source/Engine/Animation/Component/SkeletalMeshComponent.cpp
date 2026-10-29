@@ -529,7 +529,7 @@ namespace sw
 
     bool SkeletalMeshComponent::hasActiveMorphWeights() const
     {
-        return std::any_of( _listMorphWeight.begin(), _listMorphWeight.end(), []( float32 weight )
+        return VectorUtil::containsIf( _listMorphWeight, []( float32 weight )
         { return weight != 0.0f; } );
     }
 
@@ -549,7 +549,7 @@ namespace sw
 
     bool SkeletalMeshComponent::hasPoseWriter() const
     {
-        return std::any_of( _listTask.begin(), _listTask.end(), []( const IAnimationPhaseTask* pTask )
+        return VectorUtil::containsIf( _listTask, []( const IAnimationPhaseTask* pTask )
         { return pTask->getPoseAccess() == AnimationPoseAccess::Writes; } );
     }
 

@@ -227,7 +227,7 @@ namespace sw
                 listOpen.push_back( OpenWindow{ definition._eventID, windowEndMs } );
                 const auto isSameWindow = [&definition, windowEndMs]( const OpenWindow& window )
                 { return window._eventID == definition._eventID && window._windowEndMs == windowEndMs; };
-                const bool bKnown      = std::any_of( _listOpenWindow.begin(), _listOpenWindow.end(), isSameWindow );
+                const bool bKnown      = VectorUtil::containsIf( _listOpenWindow, isSameWindow );
                 const bool bJustOpened = nowMs.count() - windowStartMs <= LiveOpsPush::kStartGraceMs;
                 if ( bKnown || bJustOpened == false )
                     continue;

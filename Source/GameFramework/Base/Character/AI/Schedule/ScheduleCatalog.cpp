@@ -552,7 +552,7 @@ namespace sw
             if ( block._condition.isEmpty() && block._appointment.empty() )
                 listOrder.push_back( blockIndex );
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), ScheduleCatalogInternal::BlockStartLess{ &listBlock } );
+        VectorUtil::stableSort( listOrder, ScheduleCatalogInternal::BlockStartLess{ &listBlock } );
         for ( size_t orderIndex = 1; orderIndex < listOrder.size(); ++orderIndex )
         {
             const ScheduleBlockDef& previous = listBlock[static_cast<size_t>( listOrder[orderIndex - 1] )];

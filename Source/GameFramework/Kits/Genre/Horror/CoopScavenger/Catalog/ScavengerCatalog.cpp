@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -68,7 +69,7 @@ namespace sw
         }
 
         // 매입률 점은 남은 날 순서로 둔다. 같은 날이 두 번이면 어느 값인지 모르므로 오류이고 뒤의 것을 버린다.
-        std::stable_sort( _listBuyRate.begin(), _listBuyRate.end(), []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
+        VectorUtil::stableSort( _listBuyRate, []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )
         { return lhs._daysLeft < rhs._daysLeft; } );
         for ( size_t index = 1; index < _listBuyRate.size(); ++index )
         {

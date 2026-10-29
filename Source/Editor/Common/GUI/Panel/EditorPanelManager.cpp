@@ -227,8 +227,7 @@ namespace sw::editor
             if ( entry._drawNanosSum > 0 )
                 listEntry.push_back( &entry );
         }
-        std::sort( listEntry.begin(), listEntry.end(),
-                   []( const EditorPanelEntry* pLeft, const EditorPanelEntry* pRight )
+        VectorUtil::sort( listEntry, []( const EditorPanelEntry* pLeft, const EditorPanelEntry* pRight )
         { return pLeft->_drawNanosSum > pRight->_drawNanosSum; } );
         const uint64 frameCount = MathUtil::max<uint64>( 1u, _panelTimeFrameCount );
         for ( const EditorPanelEntry* pEntry : listEntry )

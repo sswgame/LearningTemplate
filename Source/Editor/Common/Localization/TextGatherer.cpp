@@ -623,7 +623,7 @@ namespace sw
                 added._context         = text._context;
                 added._maxLength       = text._maxLength;
                 added._listOrigin      = text._listOrigin;
-                std::sort( added._listOrigin.begin(), added._listOrigin.end() );
+                VectorUtil::sort( added._listOrigin );
                 report._listAdded.push_back( text._key );
                 continue;
             }
@@ -639,7 +639,7 @@ namespace sw
             if ( pEntry->_maxLength == 0 )
                 pEntry->_maxLength = text._maxLength;
             pEntry->_listOrigin = text._listOrigin;
-            std::sort( pEntry->_listOrigin.begin(), pEntry->_listOrigin.end() );
+            VectorUtil::sort( pEntry->_listOrigin );
         }
 
         // 수집기가 넣었던 줄(위치가 있는 줄)이 이번에 나오지 않았으면 지운다. 손으로 넣은 줄은 둔다.

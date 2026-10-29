@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Fit/SurfaceBVH.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>
@@ -165,7 +166,7 @@ namespace sw
             hit._bFrontFace = bFrontFace ? SW_TRUE : SW_FALSE;
             outListHit.push_back( hit );
         }
-        std::sort( outListHit.begin(), outListHit.end(), SurfaceBVHInternal::HitDistanceLess{} );
+        VectorUtil::sort( outListHit, SurfaceBVHInternal::HitDistanceLess{} );
     }
 
     bool SurfaceBVH::findClosestPoint( const float3& point, float32 maxDistance, GeometryClosestPoint& outClosest, uint16 partFilter ) const

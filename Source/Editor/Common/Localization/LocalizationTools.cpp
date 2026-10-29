@@ -3,6 +3,7 @@
 #include "Editor/Common/Localization/LocalizationTools.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -378,7 +379,7 @@ namespace sw
                         gatherer.addIssue( codeRoot, "code root does not exist", true );
                         continue;
                     }
-                    std::sort( listFile.begin(), listFile.end() );
+                    VectorUtil::sort( listFile );
                     for ( const string& filePath : listFile )
                     {
                         bool bCode{ false };
@@ -410,7 +411,7 @@ namespace sw
                         gatherer.addIssue( assetRoot, "asset root does not exist", true );
                         continue;
                     }
-                    std::sort( listFile.begin(), listFile.end() );
+                    VectorUtil::sort( listFile );
                     for ( const string& filePath : listFile )
                     {
                         const bool bCandidate = FileUtil::hasExtension( filePath, ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
@@ -452,7 +453,7 @@ namespace sw
             vector<string> listPack;
             if ( FileUtil::collectFolders( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), "game" ), listPack, false ) )
             {
-                std::sort( listPack.begin(), listPack.end() );
+                VectorUtil::sort( listPack );
                 for ( const string& packFolder : listPack )
                 {
                     listGameFolder.push_back( FileUtil::joinPath( packFolder, localizationFolder ) );

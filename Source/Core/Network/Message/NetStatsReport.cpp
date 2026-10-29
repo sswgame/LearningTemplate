@@ -3,6 +3,7 @@
 #include "Core/Network/Message/NetStatsReport.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
@@ -79,7 +80,7 @@ namespace sw
                         continue;
                     outListEntry.push_back( NetStatsKindEntry{ entry._messageCount, entry._byteCount, static_cast<uint8>( kind ) } );
                 }
-                std::sort( outListEntry.begin(), outListEntry.end(), &isLargerKind );
+                VectorUtil::sort( outListEntry, &isLargerKind );
                 if ( outListEntry.size() > static_cast<size_t>( NetStatsReport::kMaxKindEntry ) )
                     outListEntry.resize( static_cast<size_t>( NetStatsReport::kMaxKindEntry ) );
             }

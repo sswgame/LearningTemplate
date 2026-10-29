@@ -47,7 +47,7 @@ namespace sw
             if ( contribution > 0 && VectorUtil::contains( listLevel, contribution ) == false )
                 listLevel.push_back( contribution );
         }
-        std::sort( listLevel.begin(), listLevel.end() );
+        VectorUtil::sort( listLevel );
 
         int32 previousLevel = 0;
         for ( const int32 level : listLevel )

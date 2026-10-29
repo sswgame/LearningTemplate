@@ -2,6 +2,8 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Log/Logger.h"
@@ -98,7 +100,7 @@ namespace sw
             if ( StringUtil::startsWith( pRegistration->_pName, prefix, true ) )
                 outListName.push_back( pRegistration->_pName );
         }
-        std::sort( outListName.begin(), outListName.end() );
+        VectorUtil::sort( outListName );
     }
 
     DevCommandRegistrar::DevCommandRegistrar( const DevCommandRegistration* pRegistration )

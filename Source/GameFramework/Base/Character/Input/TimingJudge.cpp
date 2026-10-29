@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Character/Input/TimingJudge.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -14,7 +15,7 @@ namespace sw
     void TimingJudge::setWindows( const vector<TimingWindow>& listWindow )
     {
         _listWindow = listWindow;
-        std::stable_sort( _listWindow.begin(), _listWindow.end(), []( const TimingWindow& lhs, const TimingWindow& rhs )
+        VectorUtil::stableSort( _listWindow, []( const TimingWindow& lhs, const TimingWindow& rhs )
         {
             return lhs._earlyWidth + lhs._lateWidth < rhs._earlyWidth + rhs._lateWidth;
         } );

@@ -211,6 +211,43 @@ namespace sw
             return removeCount;
         }
 
+        /** @brief 오름차순(`operator<`)으로 정렬합니다(같은 원소의 순서는 정하지 않는다). 언리얼 `Algo::Sort` 자리. */
+        template <typename TVector>
+        static void sort( TVector& list )
+        {
+            std::sort( list.begin(), list.end() );
+        }
+        /** @brief `compare` 로 정렬합니다(같은 원소의 순서는 정하지 않는다). */
+        template <typename TVector, typename TCompare>
+        static void sort( TVector& list, TCompare compare )
+        {
+            std::sort( list.begin(), list.end(), compare );
+        }
+        /** @brief 오름차순(`operator<`)으로 정렬하고 같은 원소는 원래 순서를 지킵니다. */
+        template <typename TVector>
+        static void stableSort( TVector& list )
+        {
+            std::stable_sort( list.begin(), list.end() );
+        }
+        /** @brief `compare` 로 정렬하고 같은 원소는 원래 순서를 지킵니다(결정적 순서가 필요한 곳). */
+        template <typename TVector, typename TCompare>
+        static void stableSort( TVector& list, TCompare compare )
+        {
+            std::stable_sort( list.begin(), list.end(), compare );
+        }
+        /** @brief 순서를 뒤집습니다. */
+        template <typename TVector>
+        static void reverse( TVector& list )
+        {
+            std::reverse( list.begin(), list.end() );
+        }
+        /** @brief 모든 원소가 `predicate` 를 만족하면 true 입니다(빈 목록은 true). */
+        template <typename TVector, typename TPredicate>
+        [[nodiscard]] static bool allOf( const TVector& list, TPredicate predicate )
+        {
+            return std::all_of( list.begin(), list.end(), predicate );
+        }
+
         /** @brief 오름차순(`operator<`)으로 정렬하고 같은(`operator==`) 이웃을 하나만 남깁니다. */
         template <typename TVector>
         static void sortUnique( TVector& list )

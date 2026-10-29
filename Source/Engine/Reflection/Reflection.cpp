@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -1015,7 +1016,7 @@ namespace sw
         {
             listEntry.emplace_back( value, name.c_str() );
         }
-        std::sort( listEntry.begin(), listEntry.end(), []( const auto& lhs, const auto& rhs )
+        VectorUtil::sort( listEntry, []( const auto& lhs, const auto& rhs )
         { return lhs.first < rhs.first; } );
         for ( const auto& [value, pName] : listEntry )
         {

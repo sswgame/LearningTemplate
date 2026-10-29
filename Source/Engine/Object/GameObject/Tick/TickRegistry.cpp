@@ -304,7 +304,7 @@ namespace sw
             /** @brief 한 레벨의 후보를 순서 키 순으로 정렬합니다. */
             static void sortLevel( const vector<StageCandidate>& listCandidate, vector<uint32>& listLevel )
             {
-                std::stable_sort( listLevel.begin(), listLevel.end(), [&listCandidate]( uint32 left, uint32 right )
+                VectorUtil::stableSort( listLevel, [&listCandidate]( uint32 left, uint32 right )
                 { return isBefore( listCandidate[left], listCandidate[right] ); } );
             }
 
@@ -605,7 +605,7 @@ namespace sw
 
         // (그룹, 선행 조건 여부, 순서 키) 순으로 정렬한다. 같은 키끼리는 컴포넌트 순서 그대로다(안정 정렬). 선행 조건을 가진 항목은 그룹의
         // 끝에 모인다 — 칸은 그 앞까지만 들고, 뒤는 스테이지가 돈다. 오브젝트 하나의 항목은 몇 개뿐이다.
-        std::stable_sort( listItem.begin(), listItem.end(), []( const TickItem& left, const TickItem& right )
+        VectorUtil::stableSort( listItem, []( const TickItem& left, const TickItem& right )
         {
             if ( left._group != right._group )
                 return left._group < right._group;
@@ -682,7 +682,7 @@ namespace sw
 
         // 오브젝트마다 마지막 제거 요청 하나만 남기고 id 순으로 둔다(스테이지를 훑을 때 이분 탐색한다).
         vector<StageRemoval>& listRemoval = _listStageRemoval;
-        std::sort( listRemoval.begin(), listRemoval.end(), []( const StageRemoval& left, const StageRemoval& right )
+        VectorUtil::sort( listRemoval, []( const StageRemoval& left, const StageRemoval& right )
         {
             if ( left._objectID != right._objectID )
                 return left._objectID < right._objectID;
@@ -786,7 +786,7 @@ namespace sw
                 entry._item._group = entry._externalGroup;
             listNew.push_back( entry );
         }
-        std::stable_sort( listNew.begin(), listNew.end(), []( const NewItem& left, const NewItem& right )
+        VectorUtil::stableSort( listNew, []( const NewItem& left, const NewItem& right )
         {
             if ( left._item._group != right._item._group )
                 return left._item._group < right._item._group;

@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneCooker.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
@@ -151,7 +152,7 @@ namespace sw
                     {
                         listEntry.push_back( string( name.view() ) + "=" + sw::to_string( value ) );
                     }
-                    std::sort( listEntry.begin(), listEntry.end() );
+                    VectorUtil::sort( listEntry );
                     string text = "enum " + string( info._fullyQualifiedName.view() );
                     for ( const string& entry : listEntry )
                     {
@@ -159,7 +160,7 @@ namespace sw
                     }
                     listTypeText.push_back( std::move( text ) );
                 } );
-                std::sort( listTypeText.begin(), listTypeText.end() );
+                VectorUtil::sort( listTypeText );
                 string canonical;
                 for ( const string& text : listTypeText )
                 {
@@ -270,7 +271,7 @@ namespace sw
                     }
                     listCell[cellIndex]._listSceneObjectNode.push_back( std::move( entity ) );
                 }
-                std::sort( listCell.begin(), listCell.end(), []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
+                VectorUtil::sort( listCell, []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
                 { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );
                 inoutDoc._listSceneObjectNode = std::move( listBase );
                 inoutDoc._listStreamingCell   = std::move( listCell );
@@ -550,7 +551,7 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        std::sort( listSceneFile.begin(), listSceneFile.end() );
+        VectorUtil::sort( listSceneFile );
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      normalizedOut  = FileUtil::normalizeSeparators( cookedDir );

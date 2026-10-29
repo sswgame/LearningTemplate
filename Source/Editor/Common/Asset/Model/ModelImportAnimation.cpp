@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -276,7 +277,7 @@ namespace sw::editor
             for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
                 const hashed_string name       = makeMorphTargetName( &mesh, targetIndex );
-                const bool          bDuplicate = std::any_of( outListCurve.begin(), outListCurve.end(), [&name]( const AnimationClipCurve& curve )
+                const bool          bDuplicate = VectorUtil::containsIf( outListCurve, [&name]( const AnimationClipCurve& curve )
                          { return curve._name == name; } );
                 if ( bDuplicate )
                     continue;

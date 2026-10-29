@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -295,7 +296,7 @@ namespace sw
             {
                 listOrder[index] = index;
             }
-            std::sort( listOrder.begin(), listOrder.end(), [&listOwnHole, &listPoint]( size_t lhs, size_t rhs )
+            VectorUtil::sort( listOrder, [&listOwnHole, &listPoint]( size_t lhs, size_t rhs )
             {
                 float32 lhsMax = -MathUtil::kMaxFloat;
                 float32 rhsMax = -MathUtil::kMaxFloat;

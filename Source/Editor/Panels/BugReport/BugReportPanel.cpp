@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/BugReport/BugReportPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Defines.h"
 
@@ -80,7 +81,7 @@ namespace sw::editor
         if ( FileUtil::collectFolders( BugReportPanelInternal::makeRoot(), listFolder, false ) == false )
             return; // 아직 한 번도 모으지 않았으면 루트가 없다
         // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
-        std::sort( listFolder.begin(), listFolder.end(), []( const string& lhs, const string& rhs )
+        VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
         { return rhs < lhs; } );
         _listRow.reserve( listFolder.size() );
         for ( const string& folder : listFolder )

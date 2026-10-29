@@ -178,7 +178,7 @@ namespace sw
         {
             listOrder.push_back( static_cast<int32>( index ) );
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [this]( int32 lhs, int32 rhs )
+        VectorUtil::stableSort( listOrder, [this]( int32 lhs, int32 rhs )
         {
             const RunNode& lhsNode = _listNode[static_cast<size_t>( lhs )];
             const RunNode& rhsNode = _listNode[static_cast<size_t>( rhs )];
@@ -196,7 +196,7 @@ namespace sw
         }
         for ( RunNode& node : _listNode )
         {
-            std::sort( node._listNext.begin(), node._listNext.end(), [this]( int32 lhs, int32 rhs )
+            VectorUtil::sort( node._listNext, [this]( int32 lhs, int32 rhs )
             {
                 return _listNode[static_cast<size_t>( lhs )]._column < _listNode[static_cast<size_t>( rhs )]._column;
             } );

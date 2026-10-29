@@ -3,6 +3,7 @@
 #include "Engine/FileSystem/Pack/PackPatch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
@@ -134,8 +135,8 @@ namespace sw
             if ( mapTarget.find( entry._path ) == mapTarget.end() )
                 outDelta._listRemovedPath.push_back( entry._path );
         }
-        std::sort( outDelta._listChangedPath.begin(), outDelta._listChangedPath.end() );
-        std::sort( outDelta._listRemovedPath.begin(), outDelta._listRemovedPath.end() );
+        VectorUtil::sort( outDelta._listChangedPath );
+        VectorUtil::sort( outDelta._listRemovedPath );
         return true;
     }
 
@@ -307,7 +308,7 @@ namespace sw
         {
             listSorted.push_back( &entry );
         }
-        std::sort( listSorted.begin(), listSorted.end(), []( const PackContentEntry* pLeft, const PackContentEntry* pRight )
+        VectorUtil::sort( listSorted, []( const PackContentEntry* pLeft, const PackContentEntry* pRight )
         { return pLeft->_path < pRight->_path; } );
         XMLDocument   document;
         const XMLNode root = document.appendRoot( PackPatchInternal::kRecordRoot );

@@ -51,7 +51,7 @@ namespace sw
 
     void NetSnapshot::sortEntities()
     {
-        std::sort( _listEntity.begin(), _listEntity.end(), Ascending<&NetEntityState::_entityID>{} );
+        VectorUtil::sort( _listEntity, Ascending<&NetEntityState::_entityID>{} );
     }
 
     void NetSnapshot::writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder,
@@ -192,7 +192,7 @@ namespace sw
             }
             if ( reader.hasOverflowed() )
                 return false;
-            std::sort( listRemoved.begin(), listRemoved.end() );
+            VectorUtil::sort( listRemoved );
             VectorUtil::removeIf( outSnapshot._listEntity, [&listRemoved]( const NetEntityState& entity )
             { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityID ); } );
         }

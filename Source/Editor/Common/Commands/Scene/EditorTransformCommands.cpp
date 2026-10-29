@@ -352,7 +352,7 @@ namespace sw::editor
 
         EditorTransformCommandsInternal::AlignSortLess sortLess{};
         sortLess._axis = axis;
-        std::sort( listSel.begin(), listSel.end(), sortLess );
+        VectorUtil::sort( listSel, sortLess );
 
         const float3 firstPos = listSel.front()->getPrimarySceneComponent()->getWorldPosition();
         const float3 lastPos  = listSel.back()->getPrimarySceneComponent()->getWorldPosition();

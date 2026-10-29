@@ -136,7 +136,7 @@ namespace sw::editor
         {
             share._share = totalBytes > 0 ? static_cast<float32>( static_cast<float64>( share._byteCount ) / static_cast<float64>( totalBytes ) ) : 0.0f;
         }
-        std::sort( outListShare.begin(), outListShare.end(), &EditorNetProfilerHistoryInternal::isLargerShare );
+        VectorUtil::sort( outListShare, &EditorNetProfilerHistoryInternal::isLargerShare );
     }
 } // namespace sw::editor
 
@@ -164,7 +164,7 @@ namespace sw::editor
         {
             rate._share = totalBytesPerSecond > 0.0 ? static_cast<float32>( static_cast<float64>( rate._bytesPerSecond ) / totalBytesPerSecond ) : 0.0f;
         }
-        std::sort( outListRate.begin(), outListRate.end(), []( const EditorNetReplicaRate& left, const EditorNetReplicaRate& right )
+        VectorUtil::sort( outListRate, []( const EditorNetReplicaRate& left, const EditorNetReplicaRate& right )
         {
             return left._bytesPerSecond != right._bytesPerSecond ? left._bytesPerSecond > right._bytesPerSecond : left._name < right._name;
         } );

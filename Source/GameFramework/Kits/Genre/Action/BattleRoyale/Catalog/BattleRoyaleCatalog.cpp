@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -103,7 +104,7 @@ namespace sw
         } );
         if ( bValid == false )
             return false;
-        std::sort( supplyDrop._listTime.begin(), supplyDrop._listTime.end() );
+        VectorUtil::sort( supplyDrop._listTime );
         _supplyDrop = supplyDrop;
         return true;
     }

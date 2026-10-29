@@ -233,7 +233,7 @@ namespace sw::editor
             if ( pType != nullptr && pType->canConstruct() )
                 outListType.push_back( pType );
         }
-        std::sort( outListType.begin(), outListType.end(), []( const TypeInfo* pLeft, const TypeInfo* pRight )
+        VectorUtil::sort( outListType, []( const TypeInfo* pLeft, const TypeInfo* pRight )
         { return string_view{ pLeft->_name.c_str() } < string_view{ pRight->_name.c_str() }; } );
     }
 

@@ -3,6 +3,7 @@
 #include "Engine/FileSystem/AssetIO.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
@@ -280,7 +281,7 @@ namespace sw
             if ( bSkip == false )
                 listKeyed.emplace_back( StringUtil::toLower( path.c_str() ), std::move( path ) );
         }
-        std::stable_sort( listKeyed.begin(), listKeyed.end(), []( const pair<string, string>& lhs, const pair<string, string>& rhs )
+        VectorUtil::stableSort( listKeyed, []( const pair<string, string>& lhs, const pair<string, string>& rhs )
         { return lhs.first < rhs.first; } );
         for ( size_t index = 0; index < listKeyed.size(); ++index )
         {

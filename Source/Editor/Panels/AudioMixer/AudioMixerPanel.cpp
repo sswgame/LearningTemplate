@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/AudioMixer/AudioMixerPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
@@ -147,7 +148,7 @@ namespace sw::editor
             _eventNameGeneration = engine.getEventLibraryGeneration();
             engine.collectEventNames( _listEventName );
             // 라이브러리 로드 순서는 정해져 있지 않으므로 사전순으로 보인다.
-            std::sort( _listEventName.begin(), _listEventName.end(), HashedStringLexicalLess{} );
+            VectorUtil::sort( _listEventName, HashedStringLexicalLess{} );
         }
         if ( _selectedEvent >= _listEventName.size() )
             _selectedEvent = 0;

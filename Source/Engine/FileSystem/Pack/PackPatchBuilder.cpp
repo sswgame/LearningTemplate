@@ -3,6 +3,7 @@
 #include "Engine/FileSystem/Pack/PackPatchBuilder.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -61,7 +62,7 @@ namespace sw
                     SW_LOG_ERROR( "Pack folder '%#' could not be listed completely", packsDirectory );
                     return false;
                 }
-                std::sort( listFile.begin(), listFile.end() );
+                VectorUtil::sort( listFile );
                 for ( const string& file : listFile )
                 {
                     if ( StringUtil::endsWith( file, PackPatchUtil::kManifestExtension, true ) )
@@ -105,7 +106,7 @@ namespace sw
                         outListSource.push_back( std::move( source ) );
                     }
                 }
-                std::sort( outListSource.begin(), outListSource.end(), []( const Source& left, const Source& right )
+                VectorUtil::sort( outListSource, []( const Source& left, const Source& right )
                 { return left._fullPath < right._fullPath; } );
                 return true;
             }

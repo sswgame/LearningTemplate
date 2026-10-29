@@ -2,6 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Math/MathUtil.h"
@@ -124,7 +125,7 @@ namespace sw
             vector<int64> listSorted = _listSampleByAction[actionIndex];
             if ( listSorted.empty() )
                 continue;
-            std::sort( listSorted.begin(), listSorted.end() );
+            VectorUtil::sort( listSorted );
             LoadBotActionSummary& summary = outListSummary.emplace_back();
             summary._actionName           = toString( static_cast<LoadBotAction>( actionIndex ) );
             summary._p50Us                = computePercentile( listSorted, LoadBotMetricsInternal::kPercentileMedian );
@@ -267,7 +268,7 @@ namespace sw
     int64 LoadBotMetrics::getDistinctMatchCount() const
     {
         vector<uint64> listMatchID = _listMatchID;
-        std::sort( listMatchID.begin(), listMatchID.end() );
+        VectorUtil::sort( listMatchID );
         return static_cast<int64>( std::unique( listMatchID.begin(), listMatchID.end() ) - listMatchID.begin() );
     }
 } // namespace sw

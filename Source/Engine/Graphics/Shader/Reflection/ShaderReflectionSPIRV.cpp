@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/String/StringBuilder.h"
 
@@ -515,8 +516,7 @@ namespace sw
                     }
                     outData._listVertexInput.push_back( std::move( input ) );
                 }
-                std::sort( outData._listVertexInput.begin(), outData._listVertexInput.end(),
-                           []( const ShaderVertexInputInfo& lhs, const ShaderVertexInputInfo& rhs )
+                VectorUtil::sort( outData._listVertexInput, []( const ShaderVertexInputInfo& lhs, const ShaderVertexInputInfo& rhs )
                 { return lhs._location < rhs._location; } );
             }
         };

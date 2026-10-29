@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -221,9 +222,9 @@ namespace sw
             bValid = false;
         }
         _baseBpm = baseBpm.has_value() ? *baseBpm : findBpmAt( 0.0f );
-        std::stable_sort( _listMeasureChange.begin(), _listMeasureChange.end(), &RhythmChartInternal::isMeasureChangeBefore );
+        VectorUtil::stableSort( _listMeasureChange, &RhythmChartInternal::isMeasureChangeBefore );
 
-        std::stable_sort( _listNote.begin(), _listNote.end(), &RhythmChartInternal::isNoteBefore );
+        VectorUtil::stableSort( _listNote, &RhythmChartInternal::isNoteBefore );
 
         // 같은 레인에서 앞 노트(롱노트면 그 끝)와 겹치는 노트는 칠 수 없다.
         vector<float32> listLaneFreeBeat;
@@ -257,9 +258,9 @@ namespace sw
     void RhythmChart::makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop )
     {
         vector<RhythmBpmChange> listSortedBpm = listBpmChange;
-        std::stable_sort( listSortedBpm.begin(), listSortedBpm.end(), &RhythmChartInternal::isBpmChangeBefore );
+        VectorUtil::stableSort( listSortedBpm, &RhythmChartInternal::isBpmChangeBefore );
         vector<RhythmStop> listSortedStop = listStop;
-        std::stable_sort( listSortedStop.begin(), listSortedStop.end(), &RhythmChartInternal::isStopBefore );
+        VectorUtil::stableSort( listSortedStop, &RhythmChartInternal::isStopBefore );
 
         // 박 0 의 BPM 은 박 0 이하의 마지막 변화이고, 없으면 첫 변화이다.
         float32 bpm = listSortedBpm.empty() ? RhythmChartRootDef{}._bpm : listSortedBpm.front()._bpm;

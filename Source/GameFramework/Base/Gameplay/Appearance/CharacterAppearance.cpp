@@ -556,7 +556,7 @@ namespace sw
                 return false; // 알 수 없는 부모
         }
         // 루트에서 잎 방향으로 처리한다.
-        std::reverse( outListChain.begin(), outListChain.end() );
+        VectorUtil::reverse( outListChain );
         return outListChain.empty() == false;
     }
 

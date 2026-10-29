@@ -396,7 +396,7 @@ namespace sw
         const bool bAboveMax = encounter._maxIntensity >= 0.0f && _intensity > encounter._maxIntensity;
         if ( bBelowMin || bAboveMax )
             mask |= AIDirectorBlock::kIntensity;
-        if ( encounter._listArea.empty() == false && std::any_of( encounter._listArea.begin(), encounter._listArea.end(), [this]( const hashed_string& area )
+        if ( encounter._listArea.empty() == false && VectorUtil::containsIf( encounter._listArea, [this]( const hashed_string& area )
         { return VectorUtil::contains( _context._listAreaTag, area ); } ) == false )
             mask |= AIDirectorBlock::kArea;
         if ( encounter._condition.isEmpty() == false )

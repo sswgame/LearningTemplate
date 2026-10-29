@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
@@ -100,7 +101,7 @@ namespace sw
                     listKept.push_back( StringUtil::utf8ToUTF16( ( entry._name + "=" + entry._value ).c_str() ) );
                     listLine = std::move( listKept );
                 }
-                std::sort( listLine.begin(), listLine.end(), []( const wstring& left, const wstring& right )
+                VectorUtil::sort( listLine, []( const wstring& left, const wstring& right )
                 {
                     return _wcsicmp( left.c_str(), right.c_str() ) < 0;
                 } );

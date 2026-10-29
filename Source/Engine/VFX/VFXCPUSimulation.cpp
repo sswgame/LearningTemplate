@@ -2,6 +2,7 @@
 
 #include "Engine/VFX/VFXCPUSimulation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -154,8 +155,7 @@ namespace sw
         }
         if ( def._renderMode == VFXRenderMode::Ribbon )
         {
-            std::sort( listOrder.begin(), listOrder.end(),
-                       [this]( uint32 slotA, uint32 slotB )
+            VectorUtil::sort( listOrder, [this]( uint32 slotA, uint32 slotB )
             { return _listParticle[slotA]._particleIndex < _listParticle[slotB]._particleIndex; } );
         }
         for ( const uint32 slot : listOrder )

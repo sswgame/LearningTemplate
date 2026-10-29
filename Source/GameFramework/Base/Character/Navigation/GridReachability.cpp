@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Character/Navigation/GridReachability.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -36,7 +37,7 @@ namespace sw
         {
             outListCell.push_back( _topology.toCell( index ) );
         }
-        std::reverse( outListCell.begin(), outListCell.end() );
+        VectorUtil::reverse( outListCell );
         return true;
     }
 

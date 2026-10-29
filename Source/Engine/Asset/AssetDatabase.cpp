@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -315,7 +316,7 @@ namespace sw
         vector<string> listDomain;
         vector<string> listTopFolder;
         (void)FileUtil::collectFolders( resourceRoot, listTopFolder, false ); // 루트가 없으면 도메인이 없다 — 아래가 아무것도 쓰지 않는다
-        std::sort( listTopFolder.begin(), listTopFolder.end() );
+        VectorUtil::sort( listTopFolder );
         for ( const string& topFolder : listTopFolder )
         {
             const string name = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( topFolder ) );
@@ -326,7 +327,7 @@ namespace sw
             }
             vector<string> listGameFolder;
             (void)FileUtil::collectFolders( topFolder, listGameFolder, false ); // 방금 찾은 폴더다
-            std::sort( listGameFolder.begin(), listGameFolder.end() );
+            VectorUtil::sort( listGameFolder );
             for ( const string& gameFolder : listGameFolder )
             {
                 listDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );

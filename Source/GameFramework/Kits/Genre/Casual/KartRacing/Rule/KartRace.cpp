@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -711,7 +712,7 @@ namespace sw
             _listPlaceOrder[static_cast<size_t>( racer )] = racer;
         }
         // 들어온 차는 들어온 순서로, 나머지는 진행값 순으로 정렬한다. 같으면 번호 순이다(결정적).
-        std::stable_sort( _listPlaceOrder.begin(), _listPlaceOrder.end(), [this]( int32 lhs, int32 rhs )
+        VectorUtil::stableSort( _listPlaceOrder, [this]( int32 lhs, int32 rhs )
         {
             const KartRacer& left  = _listRacer[static_cast<size_t>( lhs )];
             const KartRacer& right = _listRacer[static_cast<size_t>( rhs )];

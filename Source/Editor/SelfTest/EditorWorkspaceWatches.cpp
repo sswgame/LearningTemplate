@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/HexUtil.h"
@@ -182,7 +183,7 @@ namespace sw::editor
                 const string      state   = ObjectStateSerializer::saveToXMLString( pObject, options );
                 listEntry.emplace_back( std::move( key ), HashUtil::computeStringHash64( state, false ) );
             } );
-            std::sort( listEntry.begin(), listEntry.end() );
+            VectorUtil::sort( listEntry );
             const GlobalVariableInfo* pDump = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_automationHashDump" );
             const bool                bDump = pDump != nullptr && pDump->getValueAsInt() != 0;
             uint64                    hash  = HashUtil::kFNVOffset64;
@@ -211,7 +212,7 @@ namespace sw::editor
                 if ( pObject != nullptr )
                     listName.emplace_back( pObject->getName().c_str() );
             }
-            std::sort( listName.begin(), listName.end() );
+            VectorUtil::sort( listName );
             outText.clear();
             for ( const string& name : listName )
             {

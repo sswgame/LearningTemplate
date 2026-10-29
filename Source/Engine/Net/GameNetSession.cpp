@@ -3,6 +3,7 @@
 #include "Engine/Net/GameNetSession.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -639,7 +640,7 @@ namespace sw
             listOrder.push_back( &stat );
         }
         const size_t cap = static_cast<size_t>( NetStatsReport::kMaxReplicaEntry );
-        std::sort( listOrder.begin(), listOrder.end(), [&increaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        VectorUtil::sort( listOrder, [&increaseOf]( const ReplicaStat* pLeft, const ReplicaStat* pRight )
         {
             const uint64 leftIncrease  = increaseOf( *pLeft );
             const uint64 rightIncrease = increaseOf( *pRight );
@@ -653,7 +654,7 @@ namespace sw
             if ( increaseOf( *listOrder[index] ) > 0 && uniqueSetPicked.insert( listOrder[index] ).second )
                 listPicked.push_back( listOrder[index] );
         }
-        std::sort( listOrder.begin(), listOrder.end(), []( const ReplicaStat* pLeft, const ReplicaStat* pRight )
+        VectorUtil::sort( listOrder, []( const ReplicaStat* pLeft, const ReplicaStat* pRight )
         {
             return pLeft->_entry._byteCount != pRight->_entry._byteCount ? pLeft->_entry._byteCount > pRight->_entry._byteCount : pLeft->_entry._name < pRight->_entry._name;
         } );
@@ -666,7 +667,7 @@ namespace sw
         {
             report._listReplicaEntry.push_back( pStat->_entry );
         }
-        std::sort( report._listReplicaEntry.begin(), report._listReplicaEntry.end(), []( const NetStatsReplicaEntry& left, const NetStatsReplicaEntry& right )
+        VectorUtil::sort( report._listReplicaEntry, []( const NetStatsReplicaEntry& left, const NetStatsReplicaEntry& right )
         {
             return left._byteCount != right._byteCount ? left._byteCount > right._byteCount : left._name < right._name;
         } );

@@ -273,7 +273,7 @@ namespace sw
         {
             listOrder[vertexIndex] = vertexIndex;
         }
-        std::sort( listOrder.begin(), listOrder.end(), MeshInternal::WeldLess{ &inoutListVertex } );
+        VectorUtil::sort( listOrder, MeshInternal::WeldLess{ &inoutListVertex } );
         uint32 groupStart = 0;
         while ( groupStart < vertexCount )
         {

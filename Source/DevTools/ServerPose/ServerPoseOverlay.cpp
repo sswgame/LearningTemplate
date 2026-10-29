@@ -4,6 +4,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/AABB.h"
@@ -236,7 +237,7 @@ namespace sw
             ServerPoseOverlayInternal::readPoseValues( *pRoot, pose );
             pose._object = pObject->getHandle();
         } );
-        std::sort( outListPose.begin(), outListPose.end(), []( const AuthorityPose& left, const AuthorityPose& right )
+        VectorUtil::sort( outListPose, []( const AuthorityPose& left, const AuthorityPose& right )
         { return left._name < right._name; } );
     }
 
@@ -267,7 +268,7 @@ namespace sw
                 break;
             }
         }
-        std::stable_sort( outListDelta.begin(), outListDelta.end(), []( const AuthorityDelta& left, const AuthorityDelta& right )
+        VectorUtil::stableSort( outListDelta, []( const AuthorityDelta& left, const AuthorityDelta& right )
         { return left._distance > right._distance; } );
     }
 

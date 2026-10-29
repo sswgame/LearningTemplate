@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
@@ -135,7 +136,7 @@ namespace sw
             if ( bKnown == false )
                 outListResolution.push_back( resolution );
         }
-        std::sort( outListResolution.begin(), outListResolution.end(), &HardwareDetectionInternal::isResolutionBefore );
+        VectorUtil::sort( outListResolution, &HardwareDetectionInternal::isResolutionBefore );
 #endif
     }
 } // namespace sw

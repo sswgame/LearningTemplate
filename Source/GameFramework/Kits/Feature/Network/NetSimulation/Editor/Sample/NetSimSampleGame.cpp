@@ -229,7 +229,7 @@ namespace sw
                 }
                 for ( const int32 connectionID : listConnection )
                 {
-                    const bool bKnown = std::any_of( _listAvatar.begin(), _listAvatar.end(), [connectionID]( const Avatar& avatar )
+                    const bool bKnown = VectorUtil::containsIf( _listAvatar, [connectionID]( const Avatar& avatar )
                     { return avatar._connectionID == connectionID; } );
                     if ( bKnown )
                         continue;
@@ -354,7 +354,7 @@ namespace sw
                 for ( size_t shownIndex = 0; shownIndex < _listShown.size(); )
                 {
                     const uint32 shownID = _listShown[shownIndex]._entityID;
-                    const bool   bKept   = std::any_of( _listTarget.begin(), _listTarget.end(), [shownID]( const Target& target )
+                    const bool   bKept   = VectorUtil::containsIf( _listTarget, [shownID]( const Target& target )
                         { return target._entityID == shownID; } );
                     if ( bKept )
                     {

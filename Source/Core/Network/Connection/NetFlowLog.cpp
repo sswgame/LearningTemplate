@@ -2,6 +2,8 @@
 
 #include "Core/Network/Connection/NetFlowLog.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #if SW_NET_FLOW_LOG_ENABLED
 
     #include "Core/Hash/HashUtil.h"
@@ -100,7 +102,7 @@ namespace sw
                 continue;
             outListFlow.push_back( flow );
         }
-        std::stable_sort( outListFlow.begin(), outListFlow.end(), Ascending<&NetFlowEvent::_nanos>{} );
+        VectorUtil::stableSort( outListFlow, Ascending<&NetFlowEvent::_nanos>{} );
     }
 } // namespace sw
 

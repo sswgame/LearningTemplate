@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -94,7 +95,7 @@ namespace sw
             }
         }
         // 순회 순서에 기대지 않는다 — (오브젝트 id, 슬롯) 순이라 같은 씬이면 늘 같은 후보 순서다.
-        std::sort( outListCandidate.begin(), outListCandidate.end(), Ascending<&Candidate::_objectID, &Candidate::_slot>{} );
+        VectorUtil::sort( outListCandidate, Ascending<&Candidate::_objectID, &Candidate::_slot>{} );
     }
 
     bool UsableObjectScheduleLocator::computeReservationPosition( const Reservation& reservation, float3& outPosition ) const

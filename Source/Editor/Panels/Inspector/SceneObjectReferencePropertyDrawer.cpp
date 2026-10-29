@@ -8,6 +8,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
@@ -98,7 +99,7 @@ namespace sw::editor
                 _listChoice.clear();
                 scene.getObjectManager()->forEachGameObject( [this]( GameObject* pObject )
                 { _listChoice.push_back( SceneObjectChoice{ string( pObject->getName().c_str() ), pObject->getObjectID() } ); } );
-                std::sort( _listChoice.begin(), _listChoice.end(), []( const SceneObjectChoice& lhs, const SceneObjectChoice& rhs )
+                VectorUtil::sort( _listChoice, []( const SceneObjectChoice& lhs, const SceneObjectChoice& rhs )
                 { return lhs._label < rhs._label; } );
 
                 bool bPicked = false;

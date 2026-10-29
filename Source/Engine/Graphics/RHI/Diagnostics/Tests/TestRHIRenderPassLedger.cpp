@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassLedger.h"
@@ -54,7 +55,7 @@ SW_TEST_CASE( RHIRenderPassLedgerTest, ConcurrentAddsNeverShareAHandle )
         thread.join();
     }
 
-    std::sort( listHandle.begin(), listHandle.end() );
+    sw::VectorUtil::sort( listHandle );
     bool bSequential = true;
     for ( size_t index = 0; index < listHandle.size(); ++index )
     {

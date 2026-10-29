@@ -3,6 +3,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 
 #include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -127,7 +128,7 @@ namespace sw
             if ( bFits )
             {
                 _listSlowest.push_back( record );
-                std::stable_sort( _listSlowest.begin(), _listSlowest.end(), Descending<&AssetLoadRecord::computeTotalNanos>{} );
+                VectorUtil::stableSort( _listSlowest, Descending<&AssetLoadRecord::computeTotalNanos>{} );
                 if ( _listSlowest.size() > kSlowestCount )
                     _listSlowest.resize( kSlowestCount );
             }
@@ -155,7 +156,7 @@ namespace sw
                     outListSummary.push_back( entry._summary );
             }
         }
-        std::stable_sort( outListSummary.begin(), outListSummary.end(), []( const AssetLoadKindSummary& lhs, const AssetLoadKindSummary& rhs )
+        VectorUtil::stableSort( outListSummary, []( const AssetLoadKindSummary& lhs, const AssetLoadKindSummary& rhs )
         { return AssetLoadProfilerInternal::computeSummaryTotal( lhs ) > AssetLoadProfilerInternal::computeSummaryTotal( rhs ); } );
     }
 

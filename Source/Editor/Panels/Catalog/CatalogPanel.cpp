@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -161,7 +162,7 @@ namespace sw::editor
             row._kindLabel = listKind[0]->_pLabel;
             _listFile.push_back( std::move( row ) );
         }
-        std::sort( _listFile.begin(), _listFile.end(), &CatalogPanel::isFileBefore );
+        VectorUtil::sort( _listFile, &CatalogPanel::isFileBefore );
         s_catalogFileCount.store( static_cast<int32>( _listFile.size() ) );
     }
 

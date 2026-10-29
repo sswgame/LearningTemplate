@@ -2,6 +2,7 @@
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #if SW_PROFILER_TRACE_ENABLED
@@ -294,8 +295,7 @@ namespace sw
                 bool bFirst = true;
                 for ( ProfilerTimelineThread& thread : inoutTrace._listThread )
                 {
-                    std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(),
-                                      []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
+                    VectorUtil::stableSort( thread._listEvent, []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
                     { return left._beginNanos < right._beginNanos; } );
                     vector<uint64> listOpenEnd;
                     for ( ProfilerTimelineEvent& event : thread._listEvent )
@@ -708,7 +708,7 @@ namespace sw
             return false;
         Internal::prefixProcessNames( state, outTrace );
         Internal::assignDepthsAndRange( outTrace );
-        std::sort( outTrace._listFrameBegin.begin(), outTrace._listFrameBegin.end() );
+        VectorUtil::sort( outTrace._listFrameBegin );
         return true;
     }
 

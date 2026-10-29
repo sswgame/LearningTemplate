@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -68,7 +69,7 @@ namespace sw
         combined += to_string( static_cast<uint32>( targetFormat ) );
 
         vector<string> listSortedDefine = desc._listShaderDefine;
-        std::sort( listSortedDefine.begin(), listSortedDefine.end() );
+        VectorUtil::sort( listSortedDefine );
         for ( const string& define : listSortedDefine )
         {
             combined += "|";

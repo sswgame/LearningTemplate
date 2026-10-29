@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.h"
 
 #include "Core/Container/LittleEndianUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -84,7 +85,7 @@ namespace sw
             chunk._count    = entity._buffer[9];
             listChunk.push_back( chunk );
         }
-        std::sort( listChunk.begin(), listChunk.end(), []( const GimmickChunk& lhs, const GimmickChunk& rhs )
+        VectorUtil::sort( listChunk, []( const GimmickChunk& lhs, const GimmickChunk& rhs )
         { return lhs._ownerKey != rhs._ownerKey ? lhs._ownerKey < rhs._ownerKey : lhs._index < rhs._index; } );
 
         uint32 skipped = 0;

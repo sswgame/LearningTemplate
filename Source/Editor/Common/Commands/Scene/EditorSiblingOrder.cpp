@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -85,7 +86,7 @@ namespace sw::editor
 
     void EditorSiblingOrder::sortSiblings( vector<GameObject*>& inoutListSibling )
     {
-        std::stable_sort( inoutListSibling.begin(), inoutListSibling.end(), &EditorSiblingOrder::isBefore );
+        VectorUtil::stableSort( inoutListSibling, &EditorSiblingOrder::isBefore );
     }
 
     void EditorSiblingOrder::collectChildrenInOrder( const GameObject& parent, vector<GameObject*>& outListChild )

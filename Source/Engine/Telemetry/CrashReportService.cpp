@@ -3,6 +3,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
@@ -144,7 +145,7 @@ namespace sw
                     if ( StringUtil::startsWith( FileUtil::getFileNamePart( folder ), CrashReportService::kBundlePrefix ) )
                         outListFolder.push_back( folder );
                 }
-                std::sort( outListFolder.begin(), outListFolder.end() );
+                VectorUtil::sort( outListFolder );
             }
 
             /** @brief 그 세션의 로그(`*_<세션>.txt`)를 이름 순으로 이어 끝 @p maxBytes 만 남깁니다. */
@@ -157,7 +158,7 @@ namespace sw
                     log = readText( string( fixedLogPath ) );
                 else if ( FileUtil::collectFiles( crashFolder, "", listFile, false ) == false )
                     return log;
-                std::sort( listFile.begin(), listFile.end() );
+                VectorUtil::sort( listFile );
                 string suffix( "_" );
                 suffix += sessionID;
                 suffix += ".txt";
@@ -421,7 +422,7 @@ namespace sw
             const std::optional<uint64> crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().readRequired<uint64>( "crashTime" ) : std::nullopt;
             listByTime.push_back( { crashTime.has_value() ? *crashTime : 0u, folder } );
         }
-        std::sort( listByTime.begin(), listByTime.end() );
+        VectorUtil::sort( listByTime );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
         {
             (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
@@ -454,7 +455,7 @@ namespace sw
             summary._state     = Internal::getState( manifest );
             outListReport.push_back( summary );
         }
-        std::stable_sort( outListReport.begin(), outListReport.end(), Internal::CrashTimeLess{} );
+        VectorUtil::stableSort( outListReport, Internal::CrashTimeLess{} );
     }
 
     bool CrashReportService::decide( string_view sessionID, bool bSend )

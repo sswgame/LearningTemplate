@@ -88,8 +88,7 @@ namespace sw
         {
             _listScratchOrder[order] = order;
         }
-        std::stable_sort( _listScratchOrder.begin(), _listScratchOrder.end(),
-                          [this]( uint32 lhs, uint32 rhs )
+        VectorUtil::stableSort( _listScratchOrder, [this]( uint32 lhs, uint32 rhs )
         {
             if ( _listScratchOverdue[lhs] != _listScratchOverdue[rhs] )
                 return _listScratchOverdue[lhs] > _listScratchOverdue[rhs];

@@ -3,6 +3,7 @@
 #include "DevTools/Console/DevConsole.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
@@ -286,7 +287,7 @@ namespace sw
             addVariables();
         else if ( listToken.size() == 2 && StringUtil::equals( listToken[0], "help", true ) )
             DevCommandRegistry::get().collectNames( partial, outListCandidate );
-        std::sort( outListCandidate.begin(), outListCandidate.end() );
+        VectorUtil::sort( outListCandidate );
     }
 
     bool DevConsole::complete( string& inoutLine, vector<string>& outListCandidate ) const

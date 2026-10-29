@@ -3,6 +3,7 @@
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 
 #include "Core/Container/UnionFindUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw
@@ -433,7 +434,7 @@ namespace sw
                 link._leafB          = swapped;
             }
         }
-        std::sort( inoutListLink.begin(), inoutListLink.end(), []( const FractureLink& lhs, const FractureLink& rhs )
+        VectorUtil::sort( inoutListLink, []( const FractureLink& lhs, const FractureLink& rhs )
         {
             return lhs._leafA < rhs._leafA || ( lhs._leafA == rhs._leafA && lhs._leafB < rhs._leafB );
         } );

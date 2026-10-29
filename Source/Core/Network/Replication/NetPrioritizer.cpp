@@ -58,7 +58,7 @@ namespace sw
     void NetPrioritizer::collectOrder( vector<uint32>& outListEntity )
     {
         _listRankScratch.assign( _listEntry.begin(), _listEntry.end() );
-        std::sort( _listRankScratch.begin(), _listRankScratch.end(), []( const Entry& lhs, const Entry& rhs )
+        VectorUtil::sort( _listRankScratch, []( const Entry& lhs, const Entry& rhs )
         { return lhs._accumulated != rhs._accumulated ? lhs._accumulated > rhs._accumulated : lhs._entityID < rhs._entityID; } );
         outListEntity.resize( _listRankScratch.size() );
         for ( size_t index = 0; index < _listRankScratch.size(); ++index )

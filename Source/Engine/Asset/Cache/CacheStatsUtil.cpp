@@ -2,6 +2,7 @@
 
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -100,7 +101,7 @@ namespace sw
                 listRow.push_back( std::move( row ) );
             }
         }
-        std::sort( listRow.begin(), listRow.end(), &Internal::isNameBefore );
+        VectorUtil::sort( listRow, &Internal::isNameBefore );
 
         SW_LOG_INFO( "[CacheStats] %# - %# caches (hit / miss / clear counted since the measure window started; 'no counters' = the cache has no lookup to count)", pTitle,
                      listRow.size() );

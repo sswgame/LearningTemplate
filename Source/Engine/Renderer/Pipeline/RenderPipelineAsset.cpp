@@ -413,8 +413,7 @@ namespace sw
                     for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
                     {
                         const RenderPassInputRole required = pContract->_arrRequired[requiredIndex];
-                        const bool                bFound   = std::any_of( pass._listResolvedInput.begin(), pass._listResolvedInput.end(),
-                                                                          [required]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                        const bool                bFound   = VectorUtil::containsIf( pass._listResolvedInput, [required]( const RenderGraphPassDesc::ResolvedAttachment& input )
                                          { return static_cast<RenderPassInputRole>( input._role ) == required; } );
                         if ( bFound )
                             continue;

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>
@@ -85,7 +86,7 @@ namespace sw::editor
             }
             if ( listChild.size() < 2 )
                 continue;
-            std::stable_sort( listChild.begin(), listChild.end(), [&inoutListNode]( uint32 left, uint32 right )
+            VectorUtil::stableSort( listChild, [&inoutListNode]( uint32 left, uint32 right )
             { return inoutListNode[left]._totalNanos > inoutListNode[right]._totalNanos; } );
             node._firstChild = listChild[0];
             for ( size_t index = 0; index < listChild.size(); ++index )
@@ -103,7 +104,7 @@ namespace sw::editor
             if ( listNode[index]._parent == kNoParent && listNode[index]._callCount > 0 )
                 outListRoot.push_back( index );
         }
-        std::stable_sort( outListRoot.begin(), outListRoot.end(), [&listNode]( uint32 left, uint32 right )
+        VectorUtil::stableSort( outListRoot, [&listNode]( uint32 left, uint32 right )
         {
             if ( listNode[left]._threadIndex != listNode[right]._threadIndex )
                 return listNode[left]._threadIndex < listNode[right]._threadIndex;

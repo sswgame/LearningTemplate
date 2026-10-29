@@ -3,6 +3,7 @@
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
@@ -143,8 +144,7 @@ namespace sw::editor
 
         const ProfilerSortColumn column      = query._sortColumn;
         const bool               bDescending = query._bDescending;
-        std::stable_sort( outListRow.begin(), outListRow.end(),
-                          [column, bDescending]( const ProfilerScopeRow& lhs, const ProfilerScopeRow& rhs )
+        VectorUtil::stableSort( outListRow, [column, bDescending]( const ProfilerScopeRow& lhs, const ProfilerScopeRow& rhs )
         {
             if ( column == ProfilerSortColumn::Name )
                 return bDescending ? ( rhs._name < lhs._name ) : ( lhs._name < rhs._name );
@@ -310,7 +310,7 @@ namespace sw::editor
         outRow._sampleCount = static_cast<uint32>( listSorted.size() );
         if ( listSorted.empty() )
             return;
-        std::sort( listSorted.begin(), listSorted.end() );
+        VectorUtil::sort( listSorted );
         outRow._average = sum / static_cast<float64>( listSorted.size() );
         outRow._p50     = ProfilerScopeHistoryInternal::pickPercentile( listSorted, 50 );
         outRow._p99     = ProfilerScopeHistoryInternal::pickPercentile( listSorted, 99 );

@@ -291,7 +291,7 @@ namespace sw
             if ( bAlways == false && _interest.isOutsideLeaveRadius( center, entityIter->second._position ) )
                 listLeave.push_back( visible.first );
         }
-        std::sort( listLeave.begin(), listLeave.end() );
+        VectorUtil::sort( listLeave );
         const size_t pendingLeaveIndex = sendLeaves( connectionID, observer, scratch );
 
         // 2) 새로 보임 · 3) 갱신

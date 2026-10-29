@@ -9,12 +9,13 @@
  *          `operator<` 가 없는 키(`hashed_string`)는 컴파일되지 않습니다 — 그 키는 `HashedStringLexicalLess` 를 씁니다.
  *
  * @code
- *   std::sort( listItem.begin(), listItem.end(), Ascending<&Item::_order>{} );
- *   std::sort( listItem.begin(), listItem.end(), Ascending<&Item::_layer, &Item::_order>{} );                  // 두 키 오름차순
- *   std::sort( listItem.begin(), listItem.end(), Lexicographic<Descending<&Item::_priority>, Ascending<&Item::_id>>{} );
+ *   VectorUtil::sort( listItem, Ascending<&Item::_order>{} );
+ *   VectorUtil::sort( listItem, Ascending<&Item::_layer, &Item::_order>{} );                  // 두 키 오름차순
+ *   VectorUtil::sort( listItem, Lexicographic<Descending<&Item::_priority>, Ascending<&Item::_id>>{} );
  * @endcode
  */
 #pragma once
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 namespace sw

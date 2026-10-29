@@ -222,7 +222,7 @@ namespace sw
         }
         while ( listQueue.empty() == false )
         {
-            std::sort( listQueue.begin(), listQueue.end(), []( const Internal::NodeStrain& lhs, const Internal::NodeStrain& rhs )
+            VectorUtil::sort( listQueue, []( const Internal::NodeStrain& lhs, const Internal::NodeStrain& rhs )
             { return lhs._node > rhs._node; } );
             const Internal::NodeStrain current = listQueue.back();
             listQueue.pop_back();
@@ -260,7 +260,7 @@ namespace sw
                 listTouchedLink.push_back( link );
             }
         }
-        std::sort( listTouchedLink.begin(), listTouchedLink.end() );
+        VectorUtil::sort( listTouchedLink );
         listTouchedLink.erase( std::unique( listTouchedLink.begin(), listTouchedLink.end() ), listTouchedLink.end() );
         for ( const uint32 link : listTouchedLink )
         {

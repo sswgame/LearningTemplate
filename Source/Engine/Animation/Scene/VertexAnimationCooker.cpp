@@ -3,6 +3,7 @@
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
@@ -192,7 +193,7 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        std::sort( listFile.begin(), listFile.end() );
+        VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc( framesPerSecond );

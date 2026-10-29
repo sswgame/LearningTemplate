@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -130,7 +131,7 @@ namespace sw
                 bValid = false;
             }
         } );
-        std::sort( dish._listQualityLevel.begin(), dish._listQualityLevel.end() );
+        VectorUtil::sort( dish._listQualityLevel );
         if ( bValid )
             addDish( dish );
         return bValid;

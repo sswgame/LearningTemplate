@@ -339,7 +339,7 @@ namespace sw::editor
 
                 vector<string> listPath;
                 (void)FileUtil::collectFiles( rawFolder, "", listPath, true ); // 폴더는 방금 훑어서 찾았다
-                std::sort( listPath.begin(), listPath.end() );
+                VectorUtil::sort( listPath );
 
                 vector<SourceFile> listFile;
                 for ( const string& path : listPath )
@@ -440,7 +440,7 @@ namespace sw::editor
             static bool hasScopeUnder( const unordered_set<string>& uniqueScope, string_view resourceFolder )
             {
                 const string prefix = makeScopeKey( resourceFolder ) + "/";
-                return std::any_of( uniqueScope.begin(), uniqueScope.end(), [&prefix]( const string& key )
+                return VectorUtil::containsIf( uniqueScope, [&prefix]( const string& key )
                 { return StringUtil::startsWith( key, prefix ); } );
             }
 
@@ -458,7 +458,7 @@ namespace sw::editor
                     return summary;
                 }
 
-                std::sort( listFolder.begin(), listFolder.end() );
+                VectorUtil::sort( listFolder );
                 for ( const string& folder : listFolder )
                 {
                     const string normalizedFolder = FileUtil::normalizeSeparators( folder );

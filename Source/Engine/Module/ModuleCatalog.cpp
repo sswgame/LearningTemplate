@@ -462,7 +462,7 @@ namespace sw
             outError = "Cannot list the module catalog folder: " + string( directoryPath );
             return false;
         }
-        std::sort( listFile.begin(), listFile.end() );
+        VectorUtil::sort( listFile );
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, kManifestExtension, true ) == false )
@@ -530,7 +530,7 @@ namespace sw
             if ( listActive[index] == SW_FALSE )
                 outResolution._listInactive.push_back( ModuleInactiveEntry{ _listManifest[index]._name, listReason[index] } );
         }
-        std::sort( outResolution._listInactive.begin(), outResolution._listInactive.end(), []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
+        VectorUtil::sort( outResolution._listInactive, []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
         { return lhs._name < rhs._name; } );
         return true;
     }

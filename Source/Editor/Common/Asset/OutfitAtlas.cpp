@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
@@ -55,7 +56,7 @@ namespace sw
         {
             listOrder[index] = static_cast<uint32>( index );
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [&listSource]( uint32 left, uint32 right )
+        VectorUtil::stableSort( listOrder, [&listSource]( uint32 left, uint32 right )
         {
             if ( listSource[left]._height != listSource[right]._height )
                 return listSource[left]._height > listSource[right]._height;

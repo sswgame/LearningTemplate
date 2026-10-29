@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Material/Material.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -995,7 +996,7 @@ namespace sw
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
             }
 
-            std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
+            VectorUtil::sort( _listCachedDefine );
             _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
             _bDefinesDirty         = SW_FALSE;
         }

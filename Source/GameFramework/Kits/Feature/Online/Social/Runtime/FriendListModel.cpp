@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListModel.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include <algorithm>
 
 namespace sw
@@ -181,6 +183,6 @@ namespace sw
 
     void FriendListModel::sortEntries()
     {
-        std::sort( _listEntry.begin(), _listEntry.end(), FriendListModelInternal::EntryOrder{} );
+        VectorUtil::sort( _listEntry, FriendListModelInternal::EntryOrder{} );
     }
 } // namespace sw

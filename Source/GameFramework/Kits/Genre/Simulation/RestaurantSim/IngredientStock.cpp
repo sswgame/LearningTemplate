@@ -90,7 +90,7 @@ namespace sw
         // 이름 순으로 돌아서, 결과(원가 합과 로그)가 해시 순서에 기대지 않게 한다.
         vector<hashed_string> listItem;
         items.getItemIDs( listItem );
-        std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( listItem, HashedStringLexicalLess{} );
         for ( const hashed_string& itemID : listItem )
         {
             if ( _pInventory->hasItem( itemID, items.getItemCount( itemID ) * times ) == false )
@@ -164,7 +164,7 @@ namespace sw
 
     void IngredientStock::sortBatches()
     {
-        std::stable_sort( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& lhs, const IngredientBatch& rhs )
+        VectorUtil::stableSort( _listBatch, []( const IngredientBatch& lhs, const IngredientBatch& rhs )
         { return IngredientStockInternal::makeExpiryKey( lhs ) < IngredientStockInternal::makeExpiryKey( rhs ); } );
     }
 

@@ -3,6 +3,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -253,7 +254,7 @@ namespace sw
                 if ( Internal::isSpoolFile( path ) )
                     _listClosedFile.push_back( path );
             }
-            std::sort( _listClosedFile.begin(), _listClosedFile.end(), Internal::SpoolFileLess{} );
+            VectorUtil::sort( _listClosedFile, Internal::SpoolFileLess{} );
         }
     }
 

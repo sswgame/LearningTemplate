@@ -89,8 +89,7 @@ namespace sw
         {
             actor._tieBreak = random.nextUint();
         }
-        std::sort( listSorted.begin(), listSorted.end(),
-                   Lexicographic<Descending<&Combatant::_priority, &Combatant::_speed>, Ascending<&Combatant::_tieBreak>>{} );
+        VectorUtil::sort( listSorted, Lexicographic<Descending<&Combatant::_priority, &Combatant::_speed>, Ascending<&Combatant::_tieBreak>>{} );
         outListQueue.clear();
         for ( const Combatant& actor : listSorted )
         {

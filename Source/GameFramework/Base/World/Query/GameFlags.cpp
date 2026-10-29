@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -316,7 +318,7 @@ namespace sw
             outListEntry.push_back( GameFlagEntry{ name, value } );
         }
         const HashedStringLexicalLess lexicalLess;
-        std::sort( outListEntry.begin(), outListEntry.end(), [&]( const GameFlagEntry& lhs, const GameFlagEntry& rhs )
+        VectorUtil::sort( outListEntry, [&]( const GameFlagEntry& lhs, const GameFlagEntry& rhs )
         {
             return lexicalLess( lhs._name, rhs._name );
         } );

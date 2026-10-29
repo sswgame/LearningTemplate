@@ -280,7 +280,7 @@ namespace sw::editor
         // 포인터를 담은 컨테이너를 정렬하지만 비교는 포인터 값이 아니라 (모듈, 이름) 으로 한다.
         // 전역 변수 이름은 GlobalVariableManager 의 키이므로 유일하고, 순서가 매번 같다.
         // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-        std::sort( listAll.begin(), listAll.end(), GlobalVariablesPanelInternal::compareVariableInfo );
+        VectorUtil::sort( listAll, GlobalVariablesPanelInternal::compareVariableInfo );
     }
 
     void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )

@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/FrameArenaAllocator.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
@@ -396,7 +397,7 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
     SW_EXPECT_EQUAL( static_cast<size_t>( kThreadCount * kBlocksPerThread ), listAll.size() );
 
     // 같은 주소를 두 번 내줬으면 두 소유자가 같은 메모리를 쓴다.
-    std::sort( listAll.begin(), listAll.end() );
+    sw::VectorUtil::sort( listAll );
     uint32 duplicateCount = 0;
     for ( size_t index = 1; index < listAll.size(); ++index )
     {

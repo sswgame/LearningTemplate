@@ -2,6 +2,7 @@
 
 #include "Engine/Net/NetMessageChannel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 
 #include <algorithm>
@@ -59,7 +60,7 @@ namespace sw
             return false;
         }
         // 등록 순서가 아니라 종류 순이다 — 두 빌드가 같은 메시지를 다른 순서로 등록해도 같은 버전이 된다.
-        std::sort( _listEntry.begin(), _listEntry.end(), []( const Entry& left, const Entry& right )
+        VectorUtil::sort( _listEntry, []( const Entry& left, const Entry& right )
         { return left._kind < right._kind; } );
         uint32 version = foldNetChannelWord( HashUtil::kFNVOffset32, baseSettings._wireVersion );
         for ( const Entry& entry : _listEntry )

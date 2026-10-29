@@ -335,7 +335,7 @@ namespace sw
                 outListFrame.push_back( key._time );
             }
         }
-        std::sort( outListFrame.begin(), outListFrame.end() );
+        VectorUtil::sort( outListFrame );
         // 채널마다 같은 프레임에 찍힌 키는 키 프레임 하나다.
         const auto itUnique = std::unique( outListFrame.begin(), outListFrame.end(), []( float32 left, float32 right )
         { return MathUtil::abs( left - right ) < kSequenceKeyFrameTolerance; } );

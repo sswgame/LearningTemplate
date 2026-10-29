@@ -3,6 +3,7 @@
 #include "Engine/Navigation/SceneNavigationCooker.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -71,7 +72,7 @@ namespace sw
             }
         } );
         // 매니저 순회는 순서를 약속하지 않는다. 쿠킹 항목이 방문 순서에 따라 달라지지 않게 이름순으로 정렬하고, 같은 에이전트 타입은 한 번만 베이크한다.
-        std::sort( listAgentType.begin(), listAgentType.end(), []( const hashed_string& lhs, const hashed_string& rhs )
+        VectorUtil::sort( listAgentType, []( const hashed_string& lhs, const hashed_string& rhs )
         {
             return lhs.view() < rhs.view();
         } );
@@ -106,7 +107,7 @@ namespace sw
             ++outFailedCount;
             return 0;
         }
-        std::sort( listFile.begin(), listFile.end() );
+        VectorUtil::sort( listFile );
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc();

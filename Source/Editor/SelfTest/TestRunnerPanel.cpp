@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
@@ -242,7 +243,7 @@ namespace sw::editor
                         _listScenarioPath.push_back( relative );
                 }
             }
-            std::sort( _listScenarioPath.begin(), _listScenarioPath.end() );
+            VectorUtil::sort( _listScenarioPath );
         }
 
         const bool bBusy           = _pJob->isPending();
@@ -309,7 +310,7 @@ namespace sw::editor
                     _listTestExecutablePath.push_back( filePath );
             }
         }
-        std::sort( _listTestExecutablePath.begin(), _listTestExecutablePath.end() );
+        VectorUtil::sort( _listTestExecutablePath );
     }
 
     void TestRunnerPanel::drawExecutableCombo( const string& binDirectory, bool bBusy, bool bExecutableChosen )

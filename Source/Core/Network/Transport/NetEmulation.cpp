@@ -403,7 +403,7 @@ namespace sw
             { return pending._deliverTime <= _time; } );
             listDue.assign( std::make_move_iterator( _listPending.begin() ), std::make_move_iterator( dueEnd ) );
             _listPending.erase( _listPending.begin(), dueEnd );
-            std::sort( listDue.begin(), listDue.end(), Ascending<&Pending::_deliverTime, &Pending::_order>{} );
+            VectorUtil::sort( listDue, Ascending<&Pending::_deliverTime, &Pending::_order>{} );
             for ( const Pending& pending : listDue )
             {
                 LinkState& link   = getOrCreateLink( pending._to );

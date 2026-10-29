@@ -157,7 +157,7 @@ SW_TEST_CASE( CompareUtilTest, LexicographicMixesDirections )
         {3, 0, 5},
         {4, 0, 1}
     };
-    std::sort( listItem.begin(), listItem.end(), sw::Lexicographic<sw::Descending<&KeyedItem::_order>, sw::Ascending<&KeyedItem::_id>>{} );
+    sw::VectorUtil::sort( listItem, sw::Lexicographic<sw::Descending<&KeyedItem::_order>, sw::Ascending<&KeyedItem::_id>>{} );
     SW_EXPECT_EQUAL( 2, listItem[0]._id );
     SW_EXPECT_EQUAL( 3, listItem[1]._id );
     SW_EXPECT_EQUAL( 1, listItem[2]._id );

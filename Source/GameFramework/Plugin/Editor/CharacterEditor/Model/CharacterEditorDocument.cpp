@@ -2,6 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorDocument.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -492,7 +493,7 @@ namespace sw::editor
             if ( fileName.size() > extensionLength )
                 _listClipName.push_back( hashed_string( string_view( fileName ).substr( 0, fileName.size() - extensionLength ) ) );
         }
-        std::sort( _listClipName.begin(), _listClipName.end(), []( const hashed_string& left, const hashed_string& right )
+        VectorUtil::sort( _listClipName, []( const hashed_string& left, const hashed_string& right )
         { return string_view( left.c_str() ) < string_view( right.c_str() ); } );
     }
 

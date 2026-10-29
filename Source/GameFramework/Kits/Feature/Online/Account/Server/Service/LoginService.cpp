@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -648,7 +649,7 @@ namespace sw
         {
             listOnline.push_back( LoginSessionRef{ accountID, sessionID, LoginRevokeReason::None } );
         }
-        std::sort( listOnline.begin(), listOnline.end(), LoginServiceInternal::SessionRefLess{} );
+        VectorUtil::sort( listOnline, LoginServiceInternal::SessionRefLess{} );
         unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work       = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
         const int32                                            checkCount = MathUtil::min( maxCount, static_cast<int32>( listOnline.size() ) );
         for ( int32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )

@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -207,7 +208,7 @@ namespace sw
             _listPair.push_back( pair );
         }
         // 대상 본 순서(부모가 먼저)로 처리한다. 모델 회전을 쓸 때 부모가 이미 이번 값이어야 하기 때문이다.
-        std::sort( _listPair.begin(), _listPair.end(), &PoseRetargeter::isPairBefore );
+        VectorUtil::sort( _listPair, &PoseRetargeter::isPairBefore );
     }
 
     bool RetargetPoseUtil::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )

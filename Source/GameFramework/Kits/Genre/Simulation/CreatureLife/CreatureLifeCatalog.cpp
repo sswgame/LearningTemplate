@@ -171,7 +171,7 @@ namespace sw
         {
             _listHabitatOrder.push_back( index );
         }
-        std::stable_sort( _listHabitatOrder.begin(), _listHabitatOrder.end(), [this]( int32 lhs, int32 rhs )
+        VectorUtil::stableSort( _listHabitatOrder, [this]( int32 lhs, int32 rhs )
         {
             return _habitatCatalog.getAt( static_cast<size_t>( lhs ) ).countClaimedCells() > _habitatCatalog.getAt( static_cast<size_t>( rhs ) ).countClaimedCells();
         } );
@@ -309,7 +309,7 @@ namespace sw
         }
         if ( bValid == false )
             return false;
-        std::stable_sort( appeal._listTier.begin(), appeal._listTier.end(), []( const TownAppealTier& lhs, const TownAppealTier& rhs )
+        VectorUtil::stableSort( appeal._listTier, []( const TownAppealTier& lhs, const TownAppealTier& rhs )
         { return lhs._minScore < rhs._minScore; } );
         _appeal = appeal;
         return true;

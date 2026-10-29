@@ -121,7 +121,7 @@ namespace sw
             if ( mapIndegree[name] == 0 )
                 listReady.push_back( name );
         }
-        std::sort( listReady.begin(), listReady.end() );
+        VectorUtil::sort( listReady );
 
         vector<string> listOrder;
         listOrder.reserve( uniqueSubgraph.size() );

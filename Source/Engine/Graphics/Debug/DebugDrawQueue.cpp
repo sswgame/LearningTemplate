@@ -3,6 +3,7 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -236,7 +237,7 @@ namespace sw
                 outListCategory.push_back( category );
             }
         }
-        std::sort( outListCategory.begin(), outListCategory.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( outListCategory, HashedStringLexicalLess{} );
     }
 
     void DebugDrawQueue::appendVisibleSegments( bool bFlat2D, vector<DebugLine>& outListLine ) const

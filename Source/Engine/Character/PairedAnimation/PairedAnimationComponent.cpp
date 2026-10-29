@@ -2,6 +2,8 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
@@ -164,7 +166,7 @@ namespace sw
         manager.getAllGameObjects( listObject );
         for ( const PairedAnimationRoleDef& role : _def->getRoles() )
         {
-            const bool bBound = std::any_of( inoutListBinding.begin(), inoutListBinding.end(), [&role]( const PairedAnimationBinding& binding )
+            const bool bBound = VectorUtil::containsIf( inoutListBinding, [&role]( const PairedAnimationBinding& binding )
             { return binding._role == role._name; } );
             if ( bBound )
                 continue;

@@ -2,6 +2,7 @@
 
 #include "Engine/Curve/FloatCurve.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>
@@ -70,7 +71,7 @@ namespace sw
 
     void FloatCurve::sortAndComputeAutoTangents()
     {
-        std::stable_sort( _listKey.begin(), _listKey.end(), &FloatCurveInternal::isKeyBefore );
+        VectorUtil::stableSort( _listKey, &FloatCurveInternal::isKeyBefore );
         const size_t keyCount = _listKey.size();
         for ( size_t index = 0; index < keyCount; ++index )
         {

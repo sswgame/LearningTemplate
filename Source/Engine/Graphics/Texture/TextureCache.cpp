@@ -321,8 +321,7 @@ namespace sw
                     const auto it = mapScreenSize.find( upgrade._key );
                     return it != mapScreenSize.end() ? it->second : 0.0f;
                 };
-                std::stable_sort( _impl->_listStreamingUpgrade.begin(), _impl->_listStreamingUpgrade.end(),
-                                  [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
+                VectorUtil::stableSort( _impl->_listStreamingUpgrade, [&sizeOf]( const Impl::StreamingUpgrade& lhs, const Impl::StreamingUpgrade& rhs )
                 { return sizeOf( lhs ) > sizeOf( rhs ); } );
                 _impl->_mapScreenSize.clear();
             }

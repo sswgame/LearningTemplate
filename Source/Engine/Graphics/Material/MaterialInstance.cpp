@@ -646,7 +646,7 @@ namespace sw
                     MaterialUtil::appendUniqueDefine( _listCachedDefine, pKey );
             }
 
-            std::sort( _listCachedDefine.begin(), _listCachedDefine.end() );
+            VectorUtil::sort( _listCachedDefine );
             _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
             _bDefinesDirty         = SW_FALSE;
         }

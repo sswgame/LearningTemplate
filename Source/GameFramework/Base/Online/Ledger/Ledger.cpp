@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -199,7 +200,7 @@ namespace sw
                             credit._firstCreditIndex = static_cast<int32>( postingIndex );
                     }
                 }
-                std::sort( outListDelta.begin(), outListDelta.end(), Ascending<&LedgerInternal::Delta::_holderKey, &LedgerInternal::Delta::_assetID>{} );
+                VectorUtil::sort( outListDelta, Ascending<&LedgerInternal::Delta::_holderKey, &LedgerInternal::Delta::_assetID>{} );
             }
 
             static int64 computeCap( const LedgerTransferRequest& request, const LedgerHolder& holder, string_view assetID )

@@ -3,6 +3,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -500,7 +501,7 @@ namespace sw
         if ( parseChildren( root, outError ) == false )
             return false;
         // 프레임 순이다(같은 프레임은 파일 순이며 안정 정렬이다).
-        std::stable_sort( _listStep.begin(), _listStep.end(), []( const AutomationStep& lhs, const AutomationStep& rhs )
+        VectorUtil::stableSort( _listStep, []( const AutomationStep& lhs, const AutomationStep& rhs )
         {
             return lhs._frameIndex < rhs._frameIndex;
         } );

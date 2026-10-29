@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
@@ -251,7 +252,7 @@ namespace sw
             if ( slot._sequence != 0 )
                 outListSlot.push_back( slot );
         }
-        std::sort( outListSlot.begin(), outListSlot.end(), Descending<&AutosaveSlotInfo::_sequence>{} );
+        VectorUtil::sort( outListSlot, Descending<&AutosaveSlotInfo::_sequence>{} );
     }
 
     const AutosaveSlotInfo* AutosaveManager::findLatestSlot() const

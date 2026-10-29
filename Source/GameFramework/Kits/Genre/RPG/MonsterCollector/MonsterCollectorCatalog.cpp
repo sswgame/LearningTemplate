@@ -352,7 +352,7 @@ namespace sw
         if ( bValid == false )
             return false;
         // 레벨 순서가 흐트러져 있어도 "그 레벨까지 배운 마지막 네 개"가 맞게 나오도록 정렬한다. 같은 레벨은 적힌 순서를 지킨다.
-        std::stable_sort( def._listLearn.begin(), def._listLearn.end(), []( const MonsterLearnEntry& lhs, const MonsterLearnEntry& rhs )
+        VectorUtil::stableSort( def._listLearn, []( const MonsterLearnEntry& lhs, const MonsterLearnEntry& rhs )
         { return lhs._level < rhs._level; } );
         (void)_speciesCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;

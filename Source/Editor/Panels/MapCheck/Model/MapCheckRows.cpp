@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/MapCheck/Model/MapCheckRows.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -56,6 +57,6 @@ namespace sw::editor
             if ( bMatched )
                 outListRow.push_back( issue );
         }
-        std::stable_sort( outListRow.begin(), outListRow.end(), &isRowBefore );
+        VectorUtil::stableSort( outListRow, &isRowBefore );
     }
 } // namespace sw::editor

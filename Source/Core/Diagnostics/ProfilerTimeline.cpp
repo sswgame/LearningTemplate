@@ -6,6 +6,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
@@ -266,7 +267,7 @@ namespace sw
             ProfilerTimelineThread thread;
             thread._name      = pBuffer->_name;
             thread._listEvent = pBuffer->_listLong;
-            std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(), Ascending<&ProfilerTimelineEvent::_beginNanos>{} );
+            VectorUtil::stableSort( thread._listEvent, Ascending<&ProfilerTimelineEvent::_beginNanos>{} );
             outListThread.push_back( std::move( thread ) );
         }
         return outListThread.empty() == false;
@@ -332,7 +333,7 @@ namespace sw
             }
             if ( thread._listEvent.empty() )
                 continue;
-            std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(), Ascending<&ProfilerTimelineEvent::_beginNanos>{} );
+            VectorUtil::stableSort( thread._listEvent, Ascending<&ProfilerTimelineEvent::_beginNanos>{} );
             outListThread.push_back( std::move( thread ) );
         }
         return true;

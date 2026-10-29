@@ -199,7 +199,7 @@ namespace sw
                 {
                     listSorted.push_back( float2{ point._x, point._y } );
                 }
-                std::sort( listSorted.begin(), listSorted.end(), []( const float2& lhs, const float2& rhs )
+                VectorUtil::sort( listSorted, []( const float2& lhs, const float2& rhs )
                 { return lhs._x < rhs._x || ( lhs._x == rhs._x && lhs._y < rhs._y ); } );
                 outListPolygon.clear();
                 const auto cross = []( const float2& origin, const float2& a, const float2& b )
@@ -1253,7 +1253,7 @@ namespace sw
                 continue;
             createGroupRuntime( *pGroup, bFirst, listRemoved, pEvent, random );
         }
-        std::sort( _listRuntime.begin(), _listRuntime.end(), []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
+        VectorUtil::sort( _listRuntime, []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
         { return lhs._groupID < rhs._groupID; } );
         syncStaticBodies( listDestroy );
         if ( listDestroy.empty() == false )
@@ -1449,7 +1449,7 @@ namespace sw
                 if ( runtime._body.isValid() && runtime._bFading == SW_FALSE )
                     listEvictOrder.push_back( index );
             }
-            std::sort( listEvictOrder.begin(), listEvictOrder.end(), [this]( uint32 lhs, uint32 rhs )
+            VectorUtil::sort( listEvictOrder, [this]( uint32 lhs, uint32 rhs )
             {
                 const FractureGroupRuntime& left        = _listRuntime[lhs];
                 const FractureGroupRuntime& right       = _listRuntime[rhs];

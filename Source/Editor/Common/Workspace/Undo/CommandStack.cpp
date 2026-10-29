@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -132,7 +134,7 @@ namespace sw
             if ( pStep->_pOwner == nullptr )
                 continue;
             const uint64 ownerID  = pStep->_ownerID;
-            const bool   bWatched = std::any_of( _listOwnerWatch.begin(), _listOwnerWatch.end(), [ownerID]( const OwnerWatch& watch )
+            const bool   bWatched = VectorUtil::containsIf( _listOwnerWatch, [ownerID]( const OwnerWatch& watch )
               { return watch._ownerID == ownerID; } );
             if ( bWatched == false )
                 _listOwnerWatch.push_back( OwnerWatch{ ownerID, pStep->_pOwner->subscribeReleased( editor::UndoStepOwner::ReleasedDelegate::create<&CommandStack::onOwnerReleased>( this ) ) } );

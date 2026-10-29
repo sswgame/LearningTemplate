@@ -171,8 +171,7 @@ namespace sw
             {
                 listExitCandidate.push_back( room );
             }
-            std::stable_sort( listExitCandidate.begin(), listExitCandidate.end(),
-                              [&]( int32 lhs, int32 rhs )
+            VectorUtil::stableSort( listExitCandidate, [&]( int32 lhs, int32 rhs )
             { return listDepth[static_cast<size_t>( lhs )] > listDepth[static_cast<size_t>( rhs )]; } );
             const int32 exitCount = MathUtil::min( settings._fireExits, static_cast<int32>( listExitCandidate.size() ) );
             for ( int32 exitIndex = 0; exitIndex < exitCount; ++exitIndex )

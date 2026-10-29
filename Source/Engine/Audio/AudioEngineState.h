@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -136,7 +137,7 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _listPlaying.clear();
             stats._voiceCount = fillPlaying( _listPlaying );
-            std::sort( _listPlaying.begin(), _listPlaying.end() );
+            VectorUtil::sort( _listPlaying );
             _stats = stats;
             _music = music;
             _appliedPlayingID.store( appliedPlayingID, std::memory_order_release );

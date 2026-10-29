@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -103,7 +104,7 @@ namespace sw
 
         // 3) 문: 결승선(0) 다음에 체크포인트를 거리 순으로 둔다.
         vector<float32> listCheckpoint = def._listCheckpoint;
-        std::sort( listCheckpoint.begin(), listCheckpoint.end() );
+        VectorUtil::sort( listCheckpoint );
         _def._listCheckpoint.clear();
         _listGate.push_back( makeGate( 0.0f ) );
         for ( const float32 fraction : listCheckpoint )

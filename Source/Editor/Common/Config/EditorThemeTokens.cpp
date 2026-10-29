@@ -3,6 +3,7 @@
 #include "Editor/Common/Config/EditorThemeTokens.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
@@ -85,7 +86,7 @@ namespace sw::editor
             return;
         // 폴더가 없으면 목록이 비고, 부르는 쪽이 기본 벌을 찾다 실패를 남긴다.
         (void)FileUtil::forEachDirectoryEntry( folder, false, &EditorThemeTokensInternal::addThemeName, &outListName );
-        std::sort( outListName.begin(), outListName.end() );
+        VectorUtil::sort( outListName );
     }
 
     bool EditorThemeTokens::loadTheme( string_view name, EditorThemeConfig& outConfig, string& outError )

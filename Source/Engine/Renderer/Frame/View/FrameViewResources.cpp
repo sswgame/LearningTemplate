@@ -66,8 +66,7 @@ namespace sw
                 const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
                 if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
-                return std::all_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
-                                    [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                return VectorUtil::allOf( pass._listResolvedColorOutput, [&listPass]( const RenderGraphPassDesc::ResolvedAttachment& output )
                 { return countWriters( listPass, output._attachment ) == 1; } );
             }
 
@@ -78,8 +77,7 @@ namespace sw
                 {
                     for ( const RenderGraphPassDesc& other : listPass )
                     {
-                        const bool bReads = std::any_of( other._listResolvedInput.begin(), other._listResolvedInput.end(),
-                                                         [&output]( const RenderGraphPassDesc::ResolvedAttachment& input )
+                        const bool bReads = VectorUtil::containsIf( other._listResolvedInput, [&output]( const RenderGraphPassDesc::ResolvedAttachment& input )
                         { return input._attachment == output._attachment; } );
                         if ( &other != &pass && bReads )
                             return true;
@@ -396,8 +394,7 @@ namespace sw
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._resolvedType );
             const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill );
-            const bool                bOutputNeeded = std::any_of( pass._listResolvedColorOutput.begin(), pass._listResolvedColorOutput.end(),
-                                                                   [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
+            const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );
             const bool                bForwards     = bOff && info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) && pSource != nullptr;

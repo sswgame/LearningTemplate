@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/World/Land/AreaGraph.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -265,7 +266,7 @@ namespace sw
         {
             outListArea.push_back( _catalog.getAt( static_cast<size_t>( areaIndex ) )._id );
         }
-        std::reverse( outListArea.begin(), outListArea.end() );
+        VectorUtil::reverse( outListArea );
         return true;
     }
 
@@ -337,7 +338,7 @@ namespace sw
             if ( listMark[index] == SW_TRUE )
                 outListArea.push_back( _catalog.getAt( index )._id );
         }
-        std::sort( outListArea.begin(), outListArea.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( outListArea, HashedStringLexicalLess{} );
     }
 
     void AreaGraph::fillVisitedAreas( vector<hashed_string>& outListArea ) const

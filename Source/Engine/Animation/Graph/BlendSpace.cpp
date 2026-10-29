@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Graph/BlendSpace.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
@@ -95,7 +96,7 @@ namespace sw
         _listSample.push_back( BlendSpaceSample{ position, clipName } );
         if ( _axisCount == 1 )
         {
-            std::stable_sort( _listSample.begin(), _listSample.end(), []( const BlendSpaceSample& lhs, const BlendSpaceSample& rhs )
+            VectorUtil::stableSort( _listSample, []( const BlendSpaceSample& lhs, const BlendSpaceSample& rhs )
             {
                 return lhs._position._x < rhs._position._x;
             } );

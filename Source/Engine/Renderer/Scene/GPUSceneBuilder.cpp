@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -194,7 +195,7 @@ namespace sw
             // 연속 배치를 한 번의 drawIndirect(멀티 드로우)로 내므로, 그것들이 앞 키여야 그룹이 길다. 메시는 정점 풀 하나라 키가 아니어도
             // 되지만 풀 밖 메시(예산 초과)끼리 모이도록 뒤에 둔다. 이 순서의 이득은 상태 변경이 아니라 호출 수다
             // (상태 변경만 줄이는 순서는 측정 잡음 범위였다).
-            std::sort( _listScratchOpaqueEntry.begin(), _listScratchOpaqueEntry.end(), []( const SortEntry& entryA, const SortEntry& entryB )
+            VectorUtil::sort( _listScratchOpaqueEntry, []( const SortEntry& entryA, const SortEntry& entryB )
             {
                 if ( entryA._key._permutationHash != entryB._key._permutationHash )
                     return entryA._key._permutationHash < entryB._key._permutationHash;
@@ -1126,7 +1127,7 @@ namespace sw
         {
             outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( defaultSortKey, listBatch[batchIndex]._world.getTranslation(), eye, axis, batchIndex );
         }
-        std::sort( outListKey.begin(), outListKey.end(), &GPUTransparentSorter::isDrawnBefore );
+        VectorUtil::sort( outListKey, &GPUTransparentSorter::isDrawnBefore );
     }
 
     void GPUSceneBuilder::fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const

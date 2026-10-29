@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/Fracture/MeshFracture.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
@@ -1151,7 +1152,7 @@ namespace sw
                         if ( other != site )
                             inoutListOrder.emplace_back( float3::getDistanceSquared( listSite[site], listSite[other] ), other );
                     }
-                    std::sort( inoutListOrder.begin(), inoutListOrder.end() );
+                    VectorUtil::sort( inoutListOrder );
                     float32 radiusSquared = computeRadiusSquared( listPieceTriangle, listSite[site] );
                     for ( const std::pair<float32, uint32>& entry : inoutListOrder )
                     {

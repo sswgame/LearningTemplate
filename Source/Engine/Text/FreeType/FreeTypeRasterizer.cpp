@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/IDAllocator.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -87,7 +88,7 @@ namespace sw
         /** @brief 윤곽의 진행 방향을 뒤집습니다(간선 순서와 간선 안의 점 순서). */
         void reverseContour( MSDFContour& inoutContour )
         {
-            std::reverse( inoutContour._listEdge.begin(), inoutContour._listEdge.end() );
+            VectorUtil::reverse( inoutContour._listEdge );
             for ( MSDFEdge& edge : inoutContour._listEdge )
             {
                 const size_t pointCount = edge._kind == MSDFEdgeKind::Linear ? 2 : ( edge._kind == MSDFEdgeKind::Quadratic ? 3 : 4 );

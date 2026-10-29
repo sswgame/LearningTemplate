@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -105,7 +106,7 @@ namespace sw
         }
         if ( bValid == false )
             return false;
-        std::stable_sort( grading._listGrade.begin(), grading._listGrade.end(), ActionPlatformerCatalogInternal::isGradeHigher );
+        VectorUtil::stableSort( grading._listGrade, ActionPlatformerCatalogInternal::isGradeHigher );
         _grading = grading;
         return true;
     }

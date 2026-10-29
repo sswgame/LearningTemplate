@@ -197,9 +197,9 @@ namespace sw
                 ++loadedCount;
         }
 
-        std::stable_sort( _listPursuit.begin(), _listPursuit.end(), WesternCatalogInternal::isLowerLevel<WesternPursuitDef> );
-        std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), WesternCatalogInternal::isLowerLevel<WesternBondLevelDef> );
-        std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), WesternCatalogInternal::isLowerLevel<WesternDeadEyeLevelDef> );
+        VectorUtil::stableSort( _listPursuit, WesternCatalogInternal::isLowerLevel<WesternPursuitDef> );
+        VectorUtil::stableSort( _listBondLevel, WesternCatalogInternal::isLowerLevel<WesternBondLevelDef> );
+        VectorUtil::stableSort( _listDeadEyeLevel, WesternCatalogInternal::isLowerLevel<WesternDeadEyeLevelDef> );
         // 유대 단계는 기반 레벨 진행으로 센다. 단계 사이의 임계값 차이가 경험치 테이블이 된다(첫 단계가 시작점이다).
         vector<int64> listXPToNext;
         for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )
@@ -240,7 +240,7 @@ namespace sw
             faction._listTier.push_back( tier );
             _listHonorTier.push_back( effect );
         }
-        std::stable_sort( faction._listTier.begin(), faction._listTier.end(), []( const ReputationTier& lhs, const ReputationTier& rhs )
+        VectorUtil::stableSort( faction._listTier, []( const ReputationTier& lhs, const ReputationTier& rhs )
         { return lhs._minValue < rhs._minValue; } );
         for ( XMLNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {

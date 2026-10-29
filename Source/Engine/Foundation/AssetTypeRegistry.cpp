@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 
@@ -61,7 +62,7 @@ namespace sw
                         table._listSuffix.push_back( SuffixEntry{ pType, &pType->_pSuffix[index], order++ } );
                     }
                 }
-                std::stable_sort( table._listSuffix.begin(), table._listSuffix.end(), &isLongerFirst );
+                VectorUtil::stableSort( table._listSuffix, &isLongerFirst );
             }
 
             /** @brief 문제 한 줄을 남깁니다(표의 잠금 안에서 부른다). */

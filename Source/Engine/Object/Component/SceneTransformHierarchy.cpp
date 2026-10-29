@@ -479,7 +479,7 @@ namespace sw
 
         // **대상 단위로 정렬한다.** 같은 대상의 건이 연속하고, 그 안은 (쓴 오브젝트, 순번) 순이다 — 이기는 값이 스레드 배정과 무관하다.
         // 다른 오브젝트에 쓰는 건만 여기 오므로(자기 오브젝트는 대기 칸) 수가 작다.
-        std::sort( _listOrderedWrite.begin(), _listOrderedWrite.end(), &SceneTransformHierarchyInternal::isWriteOrderedBefore<OrderedTickWrite> );
+        VectorUtil::sort( _listOrderedWrite, &SceneTransformHierarchyInternal::isWriteOrderedBefore<OrderedTickWrite> );
         if ( totalCount < kParallelWriteCount )
             return applyOrderedWrites( _listOrderedWrite.data(), 0, totalCount );
 

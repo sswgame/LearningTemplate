@@ -273,7 +273,7 @@ namespace sw
         {
             listOrderKey.push_back( ( static_cast<uint64>( listRemoved[removedIndex]->_firstEntry ) << 32 ) | static_cast<uint64>( removedIndex ) );
         }
-        std::sort( listOrderKey.begin(), listOrderKey.end() );
+        VectorUtil::sort( listOrderKey );
         const uint32   entryTotal = static_cast<uint32>( _listInstanceEntry.size() );
         uint32         readIndex  = 0;
         uint32         writeIndex = 0;

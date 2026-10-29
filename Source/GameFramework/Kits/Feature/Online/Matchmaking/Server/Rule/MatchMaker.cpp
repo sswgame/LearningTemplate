@@ -122,7 +122,7 @@ namespace sw
 
     void MatchMaker::processBackfills( int64 nowMs, vector<MatchBackfilled>& outListBackfilled )
     {
-        std::stable_sort( _listTicket.begin(), _listTicket.end(), MatchMakerInternal::AgeOrder{} );
+        VectorUtil::stableSort( _listTicket, MatchMakerInternal::AgeOrder{} );
         for ( size_t backfillIndex = 0; backfillIndex < _listBackfill.size(); )
         {
             MatchBackfillRequest& request = _listBackfill[backfillIndex];
@@ -205,7 +205,7 @@ namespace sw
         _listTicket.swap( listWaiting );
 
         // 2) 오래 기다린 순으로 앵커를 잡는다
-        std::sort( _listTicket.begin(), _listTicket.end(), MatchMakerInternal::AgeOrder{} );
+        VectorUtil::sort( _listTicket, MatchMakerInternal::AgeOrder{} );
         vector<uint8> listUsed( _listTicket.size(), 0 );
         for ( int32 anchorIndex = 0; anchorIndex < static_cast<int32>( _listTicket.size() ); ++anchorIndex )
         {
@@ -251,7 +251,7 @@ namespace sw
                 continue;
             listCandidate.push_back( MatchMakerInternal::Candidate{ index, distance } );
         }
-        std::sort( listCandidate.begin(), listCandidate.end(), MatchMakerInternal::CandidateOrder{ &_listTicket } );
+        VectorUtil::sort( listCandidate, MatchMakerInternal::CandidateOrder{ &_listTicket } );
 
         vector<int32> listChosen{ anchorIndex };
         int32         filledSlots = static_cast<int32>( anchor._listMember.size() );
@@ -291,7 +291,7 @@ namespace sw
     {
         // 큰 티켓부터 넣는다. 작은 티켓이 먼저 슬롯을 나눠 가지면 파티가 들어갈 팀이 남지 않기 때문이다.
         vector<int32> listOrder = listTicketIndex;
-        std::stable_sort( listOrder.begin(), listOrder.end(), MatchMakerInternal::TicketSizeOrder{ &_listTicket } );
+        VectorUtil::stableSort( listOrder, MatchMakerInternal::TicketSizeOrder{ &_listTicket } );
         outMatch._listTeam.assign( static_cast<size_t>( _definition._teamCount ), MatchFormedTeam{} );
         vector<int64> listTeamRating( static_cast<size_t>( _definition._teamCount ), 0 );
         for ( const int32 ticketIndex : listOrder )

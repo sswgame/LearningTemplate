@@ -2,6 +2,8 @@
 
 #include "Engine/Renderer/Scene/GPUTransparentSorter.h"
 
+#include "Core/Container/VectorUtil.h"
+
 namespace sw
 {
     vector<GPUTransparentSortKey>& GPUTransparentSorter::resizeKeys( size_t count )
@@ -38,7 +40,7 @@ namespace sw
             moveCount += sortIndex - insertIndex;
         }
         if ( moveCount > moveBudget )
-            std::sort( _listKey.begin(), _listKey.end(), isFartherFirst );
+            VectorUtil::sort( _listKey, isFartherFirst );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
         {
             outListCandidateIndex[sortIndex] = _listKey[sortIndex]._candidateIndex;
@@ -76,7 +78,7 @@ namespace sw
     {
         const uint32 tailCount = static_cast<uint32>( _listViewKey.size() );
         // 1) 이 뷰의 시점으로 꼬리 전체를 정렬한다. 같은 깊이는 주 순서(꼬리 번호)로 가른다. 전순서라 결정적이다.
-        std::sort( _listViewKey.begin(), _listViewKey.end(), &GPUTransparentSorter::isDrawnBefore );
+        VectorUtil::sort( _listViewKey, &GPUTransparentSorter::isDrawnBefore );
 
         GPUViewTransparentOrder order;
         order._viewID                       = viewID;
@@ -115,8 +117,7 @@ namespace sw
         {
             order._listBatchOrder[batchIndex] = batchIndex;
         }
-        std::stable_sort( order._listBatchOrder.begin(), order._listBatchOrder.end(),
-                          [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
+        VectorUtil::stableSort( order._listBatchOrder, [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
         { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
 
         // 3) 입자 자리 — 배치 순서마다 가장 먼저 그리는 인스턴스의 키(정렬된 꼬리 키의 그 순번)와 비교한다. 꼬리 밖 배치는 키가 없어 모든 입자 뒤다.

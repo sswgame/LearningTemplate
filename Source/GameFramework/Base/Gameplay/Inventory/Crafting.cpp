@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -273,7 +274,7 @@ namespace sw
     void Crafter::writeState( Archive& outArchive ) const
     {
         vector<hashed_string> listLearned( _uniqueLearnedRecipe.begin(), _uniqueLearnedRecipe.end() );
-        std::sort( listLearned.begin(), listLearned.end(), []( const hashed_string& left, const hashed_string& right )
+        VectorUtil::sort( listLearned, []( const hashed_string& left, const hashed_string& right )
         {
             return string_view( left.c_str() ) < string_view( right.c_str() );
         } );

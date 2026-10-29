@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -156,7 +157,7 @@ namespace sw::editor
         {
             listOrder[triangle] = triangle;
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [&listKey]( uint32 lhs, uint32 rhs )
+        VectorUtil::stableSort( listOrder, [&listKey]( uint32 lhs, uint32 rhs )
         { return listKey[lhs] < listKey[rhs]; } );
         vector<uint32>                listIndex;
         vector<const cgltf_material*> listMaterial;

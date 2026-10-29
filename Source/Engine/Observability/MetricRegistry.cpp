@@ -2,6 +2,7 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
@@ -319,7 +320,7 @@ namespace sw
         {
             listFamily.push_back( family.get() );
         }
-        std::sort( listFamily.begin(), listFamily.end(), &MetricRegistry::isFamilyNameLess );
+        VectorUtil::sort( listFamily, &MetricRegistry::isFamilyNameLess );
         for ( const Family* pFamily : listFamily )
         {
             outText += "# HELP ";

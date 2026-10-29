@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -126,7 +127,7 @@ namespace sw::editor
                 listExtension.reserve( listConfigured.size() );
                 for ( const string& extension : listConfigured )
                 {
-                    if ( std::any_of( listHandled.begin(), listHandled.end(), [&extension]( const string& handled )
+                    if ( VectorUtil::containsIf( listHandled, [&extension]( const string& handled )
                     { return StringUtil::equals( handled, extension, true ); } ) )
                     {
                         listExtension.push_back( extension );

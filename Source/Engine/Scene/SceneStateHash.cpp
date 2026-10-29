@@ -3,6 +3,7 @@
 #include "Engine/Scene/SceneStateHash.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -124,7 +125,7 @@ namespace sw
             object._hash            = SceneStateHashInternal::hashObject( *pObject, object._name );
         } );
         SW_PROFILE_COUNT( "GT.StateHash.objects", static_cast<uint32>( outListObject.size() ) );
-        std::sort( outListObject.begin(), outListObject.end(), []( const SceneObjectHash& left, const SceneObjectHash& right )
+        VectorUtil::sort( outListObject, []( const SceneObjectHash& left, const SceneObjectHash& right )
         {
             return left._name != right._name ? left._name < right._name : left._hash < right._hash;
         } );
@@ -282,8 +283,8 @@ namespace sw
         };
         vector<SceneObjectHash> listSortedLeft  = listLeft;
         vector<SceneObjectHash> listSortedRight = listRight;
-        std::sort( listSortedLeft.begin(), listSortedLeft.end(), less );
-        std::sort( listSortedRight.begin(), listSortedRight.end(), less );
+        VectorUtil::sort( listSortedLeft, less );
+        VectorUtil::sort( listSortedRight, less );
         size_t leftIndex  = 0;
         size_t rightIndex = 0;
         while ( leftIndex < listSortedLeft.size() || rightIndex < listSortedRight.size() )

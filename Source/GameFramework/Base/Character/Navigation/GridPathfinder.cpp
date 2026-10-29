@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Character/Navigation/GridPathfinder.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Character/Navigation/NavGrid.h"
@@ -162,7 +163,7 @@ namespace sw
             if ( index == startIndex )
                 break;
         }
-        std::reverse( outListCell.begin(), outListCell.end() );
+        VectorUtil::reverse( outListCell );
         if ( query._bSmooth != SW_FALSE )
             smoothPath( grid, outListCell );
         return bReached ? GridPathResult::Found : GridPathResult::Partial;

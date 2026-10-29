@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -107,7 +108,7 @@ namespace sw
                 {
                     listKey.push_back( key );
                 }
-                std::sort( listKey.begin(), listKey.end() );
+                VectorUtil::sort( listKey );
                 return listKey;
             }
 

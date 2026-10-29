@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -96,7 +97,7 @@ namespace sw
             if ( pRegistration->_pReload != nullptr )
                 _listReloadEntry.push_back( ReloadEntry{ _listBuiltInAssetCache.back(), pRegistration->_pReload } );
         }
-        std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), isKindNameLess );
+        VectorUtil::sort( _listBuiltInAssetCache, isKindNameLess );
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
         {
             (void)addAssetCache( pCache ); // 거절은 목록이 로그로 남겼다

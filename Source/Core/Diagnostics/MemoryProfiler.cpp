@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
@@ -561,7 +562,7 @@ namespace sw
             computeTagLive( tagIndex, arrLiveBytes[tagIndex], liveCount );
             arrTag[tagIndex] = static_cast<MemoryTag>( tagIndex );
         }
-        std::stable_sort( arrTag.begin(), arrTag.end(), [&arrLiveBytes]( MemoryTag lhs, MemoryTag rhs )
+        VectorUtil::stableSort( arrTag, [&arrLiveBytes]( MemoryTag lhs, MemoryTag rhs )
         { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
         return arrTag;
     }
@@ -688,7 +689,7 @@ namespace sw
             collectLeakWindowTagTotals( report );
         }
 
-        std::sort( report._listEntry.begin(), report._listEntry.end(), Descending<&LeakWindowEntry::_bytes>{} );
+        VectorUtil::sort( report._listEntry, Descending<&LeakWindowEntry::_bytes>{} );
         for ( const LeakWindowEntry& entry : report._listEntry )
         {
             report._totalBytes += entry._bytes;
@@ -823,7 +824,7 @@ namespace sw
         }
         MemoryProfilerInternal::t_bIsInsideProfiler = false;
 
-        std::sort( listSample.begin(), listSample.end(), Ascending<&LeakBlockSample::_tag, &LeakBlockSample::_stackHash, &LeakBlockSample::_round>{} );
+        VectorUtil::sort( listSample, Ascending<&LeakBlockSample::_tag, &LeakBlockSample::_stackHash, &LeakBlockSample::_round>{} );
 
         // 같은 (태그, 스택, 회차) 가 이웃해 있으니 한 줄로 합친다. 첫 프레임은 스택마다 한 번만 심볼로 바꾼다(전역 잠금을 잡는 느린 길).
         unordered_map<uint64, string> mapFirstFrame;
@@ -997,11 +998,11 @@ namespace sw
         MemoryProfilerInternal::t_bIsInsideProfiler = false;
         if ( order == TopCallStackOrder::LiveBytes )
         {
-            std::sort( listResult.begin(), listResult.end(), Descending<&CallStackAllocInfo::_currentBytes>{} );
+            VectorUtil::sort( listResult, Descending<&CallStackAllocInfo::_currentBytes>{} );
         }
         else
         {
-            std::sort( listResult.begin(), listResult.end(), Descending<&CallStackAllocInfo::_totalCount>{} );
+            VectorUtil::sort( listResult, Descending<&CallStackAllocInfo::_totalCount>{} );
         }
         return listResult;
     }

@@ -536,9 +536,9 @@ namespace sw
                     _listEntry.push_back( std::move( entry ) );
                 }
                 if ( _order == LeaderboardOrder::Descending )
-                    std::sort( _listEntry.begin(), _listEntry.end(), isHigherFirst );
+                    VectorUtil::sort( _listEntry, isHigherFirst );
                 else
-                    std::sort( _listEntry.begin(), _listEntry.end(), isLowerFirst );
+                    VectorUtil::sort( _listEntry, isLowerFirst );
                 for ( size_t index = 0; index < _listEntry.size(); ++index )
                 {
                     _listEntry[index]._rank = static_cast<int32>( index ) + 1;
@@ -637,9 +637,9 @@ namespace sw
                 if ( LeaderboardServiceInternal::readAllScores( connection, _scorePrefix, _listRanked ) == false )
                     return;
                 if ( _order == LeaderboardOrder::Descending )
-                    std::sort( _listRanked.begin(), _listRanked.end(), isHigherFirst );
+                    VectorUtil::sort( _listRanked, isHigherFirst );
                 else
-                    std::sort( _listRanked.begin(), _listRanked.end(), isLowerFirst );
+                    VectorUtil::sort( _listRanked, isLowerFirst );
                 _bReadOk = SW_TRUE;
             }
 
@@ -1398,7 +1398,7 @@ namespace sw
             (void)achievementID;
             listDefinition.push_back( definition );
         }
-        std::sort( listDefinition.begin(), listDefinition.end(), LeaderboardServiceInternal::isAchievementIDLess );
+        VectorUtil::sort( listDefinition, LeaderboardServiceInternal::isAchievementIDLess );
         ++_pendingCount;
         _dependencies._pStore->submit( sw::make_unique<AchievementProgressWork>( this, std::move( listDefinition ), accountID, requestTag ) );
     }

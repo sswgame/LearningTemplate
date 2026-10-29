@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -104,7 +106,7 @@ namespace sw::editor
                 }
             }
         }
-        std::sort( outDetail._listDependent.begin(), outDetail._listDependent.end() );
+        VectorUtil::sort( outDetail._listDependent );
         const ModuleManifest* pProject = catalog.findManifest( projectModule );
         if ( pProject != nullptr )
         {

@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
@@ -95,8 +96,7 @@ namespace sw
         {
             listOrder[itemIndex] = itemIndex;
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(),
-                          [pItem]( uint32 left, uint32 right )
+        VectorUtil::stableSort( listOrder, [pItem]( uint32 left, uint32 right )
         { return pItem[left]._significance < pItem[right]._significance; } );
         const uint32 maxDivisor = MathUtil::max( maxUpdateRateDivisor, 1u );
         for ( const uint32 itemIndex : listOrder )

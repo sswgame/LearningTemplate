@@ -11,6 +11,7 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 
@@ -75,7 +76,7 @@ namespace sw
                 }
                 vector<GameObject*> listObject;
                 pManager->getAllGameObjects( listObject );
-                std::sort( listObject.begin(), listObject.end(), []( const GameObject* pLeft, const GameObject* pRight )
+                VectorUtil::sort( listObject, []( const GameObject* pLeft, const GameObject* pRight )
                 {
                     return pLeft->getObjectID() < pRight->getObjectID();
                 } );

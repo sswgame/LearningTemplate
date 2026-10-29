@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSession.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/String/StringBuilder.h"
 
@@ -158,7 +159,7 @@ namespace sw
         {
             listEntryHash.push_back( DestructionHashRecord{ entry._pFracture->getState().computeStateHash(), entry._netID, 0 } );
         }
-        std::sort( listEntryHash.begin(), listEntryHash.end(), []( const DestructionHashRecord& left, const DestructionHashRecord& right )
+        VectorUtil::sort( listEntryHash, []( const DestructionHashRecord& left, const DestructionHashRecord& right )
         { return left._netID < right._netID; } );
         StateHashBuilder builder;
         for ( const DestructionHashRecord& record : listEntryHash )

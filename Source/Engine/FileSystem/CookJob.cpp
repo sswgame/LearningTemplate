@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -119,7 +120,7 @@ namespace sw
         // 폴더가 없으면 빈 목록이 맞다(목록 해시 0 으로 기록된다). 도중에 멈춘 부분 목록은 구울 것을 빠뜨리므로 실패다(`FileUtil::collectFiles` 가 경로를 알린다).
         if ( FileUtil::isDirectory( folderPath ) && FileUtil::collectFiles( folderPath, extension, outListFile, true ) == false )
             return false;
-        std::sort( outListFile.begin(), outListFile.end() );
+        VectorUtil::sort( outListFile );
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
             return true;
@@ -149,7 +150,7 @@ namespace sw
             const string normalized = FileUtil::normalizeSeparators( filePath );
             listRelative.push_back( normalized.size() > root.size() ? string( normalized.substr( root.size() + 1 ) ) : normalized );
         }
-        std::sort( listRelative.begin(), listRelative.end() );
+        VectorUtil::sort( listRelative );
         string canonical;
         for ( const string& relative : listRelative )
         {
@@ -185,7 +186,7 @@ namespace sw
         {
             listSorted.push_back( &input );
         }
-        std::sort( listSorted.begin(), listSorted.end(), []( const CookInput* pLeft, const CookInput* pRight )
+        VectorUtil::sort( listSorted, []( const CookInput* pLeft, const CookInput* pRight )
         {
             if ( pLeft->_kind != pRight->_kind )
                 return pLeft->_kind < pRight->_kind;

@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 
 #include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetDataKind.h"
@@ -64,7 +65,7 @@ namespace sw
                     bValid = false;
                 }
             }
-            std::stable_sort( faction._listTier.begin(), faction._listTier.end(), Ascending<&ReputationTier::_minValue>{} );
+            VectorUtil::stableSort( faction._listTier, Ascending<&ReputationTier::_minValue>{} );
             for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
             {
                 // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.

@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -39,7 +41,7 @@ namespace sw::editor
         manager.forEachComponentOfType( &targetType, [&outListChoice]( Component* pComp )
         { outListChoice.push_back( InspectorComponentChoice{ pComp->getHandle(), makeLabel( *pComp ) } ); } );
         // 방문 순서는 약속되지 않는다.
-        std::sort( outListChoice.begin(), outListChoice.end(), []( const InspectorComponentChoice& lhs, const InspectorComponentChoice& rhs )
+        VectorUtil::sort( outListChoice, []( const InspectorComponentChoice& lhs, const InspectorComponentChoice& rhs )
         { return lhs._label < rhs._label; } );
     }
 

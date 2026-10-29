@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Online/HTTP/Hpack.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "GameFramework/Base/Online/HTTP/HpackHuffmanTable.h"
 #include "GameFramework/Base/Online/HTTP/HpackStaticTable.h"
 
@@ -46,7 +48,7 @@ namespace sw
                 const HpackHuffmanCode& entry = HpackHuffman::kArrCode[symbol];
                 listLookup.push_back( ( ( ( static_cast<uint64>( entry._bits ) << 32 ) | entry._code ) << 9 ) | static_cast<uint64>( symbol ) );
             }
-            std::sort( listLookup.begin(), listLookup.end() );
+            VectorUtil::sort( listLookup );
             return listLookup;
         }
 

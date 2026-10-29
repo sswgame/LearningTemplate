@@ -3,6 +3,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -20,13 +21,13 @@ namespace sw::editor
             {
                 if ( pSeen == pType )
                 {
-                    std::reverse( outListType.begin(), outListType.end() );
+                    VectorUtil::reverse( outListType );
                     return;
                 }
             }
             outListType.push_back( pType );
         }
-        std::reverse( outListType.begin(), outListType.end() );
+        VectorUtil::reverse( outListType );
     }
 } // namespace sw::editor
 

@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -69,7 +70,7 @@ namespace sw::editor
                 continue;
             outListName.push_back( fileName.substr( 0, fileName.size() - suffix.size() ) );
         }
-        std::sort( outListName.begin(), outListName.end() );
+        VectorUtil::sort( outListName );
     }
 
     bool EditorLayoutStore::save( string_view folder, string_view name, string_view imguiINIText, const EditorPanelVisibility& panelVisibility )

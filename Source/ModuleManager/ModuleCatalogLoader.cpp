@@ -3,6 +3,7 @@
 #include "ModuleManager/ModuleCatalogLoader.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
@@ -50,7 +51,7 @@ namespace sw
                     SW_LOG_ERROR( "Module catalog: cannot list %#", directoryPath.c_str() );
                     return false;
                 }
-                std::sort( listFile.begin(), listFile.end() );
+                VectorUtil::sort( listFile );
                 for ( const string& filePath : listFile )
                 {
                     if ( StringUtil::endsWith( filePath, ModuleCatalog::kManifestExtension, true ) == false )
@@ -240,7 +241,7 @@ namespace sw
         {
             outResolution._listInactive.push_back( std::move( removed ) );
         }
-        std::sort( outResolution._listInactive.begin(), outResolution._listInactive.end(), []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
+        VectorUtil::sort( outResolution._listInactive, []( const ModuleInactiveEntry& lhs, const ModuleInactiveEntry& rhs )
         { return lhs._name < rhs._name; } );
         SW_LOG_INFO( "Modules: %# active, %# off", outResolution._listLoadOrder.size(), outResolution._listInactive.size() );
         for ( [[maybe_unused]] const ModuleInactiveEntry& inactive : outResolution._listInactive ) // Shipping 은 로그가 빠진다

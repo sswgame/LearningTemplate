@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -55,7 +56,7 @@ namespace sw
         {
             listKnown.push_back( entry._object );
         }
-        std::sort( listKnown.begin(), listKnown.end() );
+        VectorUtil::sort( listKnown );
 
         // 새 씬 번호는 모았다가 정렬해 한 번에 끼운다(하나씩 끼우면 목록 뒤쪽을 매번 옮겨 O(N²)). 이 호출 안에서 새로 잡은 번호끼리 겹치면 해시 표로 가린다.
         // 겹친 번호는 먼저 만난 오브젝트의 항목이 모호 표시를 달고 남는다(하나씩 끼울 때와 같다).
@@ -97,7 +98,7 @@ namespace sw
             return;
         const auto byNetID = []( const Entry& left, const Entry& right )
         { return left._netID < right._netID; };
-        std::sort( listNew.begin(), listNew.end(), byNetID );
+        VectorUtil::sort( listNew, byNetID );
         const size_t oldCount = _listScene.size();
         _listScene.reserve( oldCount + listNew.size() );
         for ( const Entry& entry : listNew )

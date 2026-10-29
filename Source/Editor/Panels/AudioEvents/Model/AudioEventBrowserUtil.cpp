@@ -3,6 +3,7 @@
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -105,7 +106,7 @@ namespace sw::editor
             if ( StringUtil::contains( name.view(), filter, true ) )
                 outListName.push_back( name );
         }
-        std::sort( outListName.begin(), outListName.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( outListName, HashedStringLexicalLess{} );
     }
 
     void AudioEventBrowserUtil::makeEventFieldRows( const AudioEventDesc& eventDesc, const AudioAttenuationDesc& attenuation, vector<AudioEventFieldRow>& outListRow )
@@ -149,7 +150,7 @@ namespace sw::editor
             if ( eventFilter.empty() || status._event == eventFilter )
                 outListRow.push_back( status );
         }
-        std::sort( outListRow.begin(), outListRow.end(), []( const AudioInstanceStatus& lhs, const AudioInstanceStatus& rhs )
+        VectorUtil::sort( outListRow, []( const AudioInstanceStatus& lhs, const AudioInstanceStatus& rhs )
         {
             const bool bLhsOpen = lhs._remainingSeconds < 0.0f;
             const bool bRhsOpen = rhs._remainingSeconds < 0.0f;

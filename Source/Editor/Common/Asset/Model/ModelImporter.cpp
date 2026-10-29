@@ -940,7 +940,7 @@ namespace sw::editor
         {
             file = FileUtil::normalizeSeparators( file );
         }
-        std::sort( listFile.begin(), listFile.end() );
+        VectorUtil::sort( listFile );
         for ( const string& file : listFile )
         {
             string relative = file;

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -80,7 +81,7 @@ namespace sw::editor
         unique_ptr<vector<string>> pListChild = make_unique<vector<string>>();
         if ( _pfnScan != nullptr )
             _pfnScan( folderAbs, *pListChild );
-        std::sort( pListChild->begin(), pListChild->end() );
+        VectorUtil::sort( *pListChild );
         const vector<string>& listChild = *pListChild;
         _mapChildFolder.emplace( key, std::move( pListChild ) );
         return listChild;

@@ -125,7 +125,7 @@ namespace sw::editor
         {
             vector<string> listPackFolder;
             (void)FileUtil::collectFolders( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
-            std::sort( listPackFolder.begin(), listPackFolder.end() );
+            VectorUtil::sort( listPackFolder );
             for ( const string& packFolder : listPackFolder )
             {
                 const string packName = string( ContentBrowserModelInternal::kGameDomainPrefix ) + FileUtil::normalizePath( FileUtil::getFileNamePart( packFolder ) );
@@ -180,7 +180,7 @@ namespace sw::editor
     {
         // 목록을 보기만 하고 `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시, 프리팹, 씬 저장, 임포트)이 만든다.
         _listEntry = std::move( listEntry );
-        std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
+        VectorUtil::sort( _listEntry, []( const AssetEntry& entryA, const AssetEntry& entryB )
         {
             if ( entryA._bIsDirectory != entryB._bIsDirectory )
                 return entryA._bIsDirectory > entryB._bIsDirectory;

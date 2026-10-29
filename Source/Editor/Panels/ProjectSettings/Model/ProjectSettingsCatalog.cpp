@@ -3,6 +3,7 @@
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -33,7 +34,7 @@ namespace sw::editor
             entry._relativePath = std::move( relativePath );
             outListEntry.push_back( std::move( entry ) );
         } );
-        std::sort( outListEntry.begin(), outListEntry.end(), []( const ProjectSettingsEntry& lhs, const ProjectSettingsEntry& rhs )
+        VectorUtil::sort( outListEntry, []( const ProjectSettingsEntry& lhs, const ProjectSettingsEntry& rhs )
         { return lhs._page < rhs._page; } );
     }
 } // namespace sw::editor

@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -148,8 +150,7 @@ namespace sw
 
         // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
         // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
-        std::sort( listTarget.begin(), listTarget.end(),
-                   []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
+        VectorUtil::sort( listTarget, []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
         { return lhs._name < rhs._name; } );
 
         pRegistry->publish( std::move( listTarget ) );

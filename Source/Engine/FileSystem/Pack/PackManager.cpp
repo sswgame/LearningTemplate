@@ -4,6 +4,7 @@
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
@@ -279,7 +280,7 @@ namespace sw
         {
             listRemovedPathHash.push_back( HashUtil::computeStringHash64( removedPath ) );
         }
-        std::sort( listRemovedPathHash.begin(), listRemovedPathHash.end() );
+        VectorUtil::sort( listRemovedPathHash );
         return mountReader( packFilePath, priority, std::move( listRemovedPathHash ) );
     }
 
@@ -339,7 +340,7 @@ namespace sw
             _listMountedPack.push_back( std::move( mounted ) );
 
             // 우선순위 내림차순으로 정렬한다(높은 priority 가 앞)
-            std::stable_sort( _listMountedPack.begin(), _listMountedPack.end(), Descending<&MountedPack::_priority>{} );
+            VectorUtil::stableSort( _listMountedPack, Descending<&MountedPack::_priority>{} );
         }
 
         SW_LOG_INFO( "Mounted resource pack: %# (Priority: %#)", normalizedPath, effectivePriority );

@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/AudioGraph/AudioGraphPanel.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -192,7 +193,7 @@ namespace sw::editor
         }
         ed::EndDelete();
         // 번호가 밀리지 않게 큰 id 부터 지운다(같은 노드의 입력 자리도 뒤 자리가 큰 id 다). 링크를 먼저 지운 뒤 노드를 지운다.
-        std::sort( listLinkID.begin(), listLinkID.end(), std::greater<int32>{} );
+        VectorUtil::sort( listLinkID, std::greater<int32>{} );
         for ( const int32 linkID : listLinkID )
         {
             uint32 readerIndex = 0;
@@ -200,7 +201,7 @@ namespace sw::editor
             if ( AudioGraphEditUtil::tryDecodeLinkID( _editGraph, linkID, readerIndex, inputSlot ) && AudioGraphEditUtil::disconnect( _editGraph, readerIndex, inputSlot ) )
                 _bEditDirty = true;
         }
-        std::sort( listNodeID.begin(), listNodeID.end(), std::greater<int32>{} );
+        VectorUtil::sort( listNodeID, std::greater<int32>{} );
         for ( const int32 nodeID : listNodeID )
         {
             uint32 nodeIndex = 0;

@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
@@ -178,7 +179,7 @@ namespace sw
             const float32 priority = pPriorityViewProj != nullptr ? computeLocalShadowPriority( inoutListLight[lightIndex], *pPriorityViewProj ) : 0.0f;
             listOrder.push_back( Internal::PriorityEntry{ priority, lightIndex } );
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), Internal::isHigherPriority );
+        VectorUtil::stableSort( listOrder, Internal::isHigherPriority );
 
         for ( const Internal::PriorityEntry& entry : listOrder )
         {

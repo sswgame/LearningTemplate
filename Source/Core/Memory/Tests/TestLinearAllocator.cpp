@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -179,7 +180,7 @@ SW_TEST_CASE( LinearAllocatorTest, ConcurrentAllocateNeverHandsOutOverlappingMem
         listAddress.push_back( chunk._pData );
     }
 
-    std::sort( listAddress.begin(), listAddress.end() );
+    VectorUtil::sort( listAddress );
     uint32 duplicateCount = 0;
     for ( size_t index = 1; index < listAddress.size(); ++index )
     {

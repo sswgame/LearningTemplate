@@ -1632,7 +1632,7 @@ namespace sw
             return 0;
         }
         // 순서를 정한다 — 같은 쿠킹본을 쓰는 두 소스 가운데 어느 것이 먼저인지가 실행마다 같아야 한다.
-        std::sort( listFile.begin(), listFile.end() );
+        VectorUtil::sort( listFile );
 
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( sourceRoot ) );
         string       out  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( cookedDir ) );

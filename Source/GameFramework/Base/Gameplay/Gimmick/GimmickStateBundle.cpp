@@ -30,7 +30,7 @@ namespace sw
             _listEntry.push_back( std::move( entry ) );
         }
         // 등록 순서에 기대지 않는다 — 키 순이라 같은 씬이면 늘 같은 묶음이다.
-        std::sort( _listEntry.begin(), _listEntry.end(), Ascending<&GimmickStateEntry::_ownerKey>{} );
+        VectorUtil::sort( _listEntry, Ascending<&GimmickStateEntry::_ownerKey>{} );
     }
 
     uint32 GimmickStateBundle::apply( GameObjectManager& manager, uint32* pOutSkippedCount ) const
@@ -48,7 +48,7 @@ namespace sw
             if ( pOwner != nullptr && pCircuit->isPendingDestroy() == false )
                 listLive.push_back( Live{ makeOwnerKey( pOwner->getName() ), pCircuit } );
         }
-        std::stable_sort( listLive.begin(), listLive.end(), Ascending<&Live::_ownerKey>{} );
+        VectorUtil::stableSort( listLive, Ascending<&Live::_ownerKey>{} );
 
         uint32 applied = 0;
         uint32 skipped = 0;

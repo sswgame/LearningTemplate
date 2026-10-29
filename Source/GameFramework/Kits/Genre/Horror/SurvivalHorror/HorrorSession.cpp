@@ -45,7 +45,7 @@ namespace sw
             static void writeSortedSet( Archive& outArchive, const unordered_set<hashed_string>& uniqueName )
             {
                 vector<hashed_string> listName( uniqueName.begin(), uniqueName.end() );
-                std::sort( listName.begin(), listName.end(), HashedStringLexicalLess{} );
+                VectorUtil::sort( listName, HashedStringLexicalLess{} );
                 outArchive << static_cast<uint32>( listName.size() );
                 for ( const hashed_string& name : listName )
                 {
@@ -77,7 +77,7 @@ namespace sw
                 {
                     listName.push_back( name );
                 }
-                std::sort( listName.begin(), listName.end(), HashedStringLexicalLess{} );
+                VectorUtil::sort( listName, HashedStringLexicalLess{} );
                 outArchive << static_cast<uint32>( listName.size() );
                 for ( const hashed_string& name : listName )
                 {

@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -103,7 +104,7 @@ namespace sw
             /** @brief @p text 가 비지 않은 10 진 숫자만이면 그 값을 @p outValue 에 넣고 true 입니다. */
             [[nodiscard]] static bool parseProcessID( string_view text, int32& outValue )
             {
-                const bool bDigits = text.empty() == false && std::all_of( text.begin(), text.end(), []( utf8 character )
+                const bool bDigits = text.empty() == false && VectorUtil::allOf( text, []( utf8 character )
                 {
                     return '0' <= character && character <= '9';
                 } );

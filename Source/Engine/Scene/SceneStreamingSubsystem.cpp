@@ -160,7 +160,7 @@ namespace sw
             return;
 
         // 3. 가까운 셀부터 프레임당 예산만큼 짓는다. 같은 거리는 셀 순서(z, x)로 — 결정적이다.
-        std::sort( _listScratchLoad.begin(), _listScratchLoad.end(), [this]( uint32 lhs, uint32 rhs )
+        VectorUtil::sort( _listScratchLoad, [this]( uint32 lhs, uint32 rhs )
         {
             const float32 lhsDistance = computeNearestSourceDistanceSquared( _listCell[lhs]._cell );
             const float32 rhsDistance = computeNearestSourceDistanceSquared( _listCell[rhs]._cell );

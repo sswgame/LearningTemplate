@@ -116,7 +116,7 @@ namespace sw
                 // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
                 if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
                     return false;
-                std::sort( listGameFolder.begin(), listGameFolder.end() );
+                VectorUtil::sort( listGameFolder );
                 for ( const string& gameFolder : listGameFolder )
                 {
                     outListDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );

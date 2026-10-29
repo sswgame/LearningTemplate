@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -118,7 +119,7 @@ namespace sw
             if ( part._ownerObjectID == ownerObjectID )
                 listOrdered.emplace_back( part._registrationOrder, objectID );
         }
-        std::sort( listOrdered.begin(), listOrdered.end() );
+        VectorUtil::sort( listOrdered );
         outListObjectID.reserve( listOrdered.size() );
         for ( const std::pair<uint64, uint64>& entry : listOrdered )
         {

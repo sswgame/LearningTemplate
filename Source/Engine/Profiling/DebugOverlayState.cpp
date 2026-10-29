@@ -3,6 +3,7 @@
 #include "Engine/Profiling/DebugOverlayState.h"
 
 #include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/String/fixed_string.h"
@@ -62,6 +63,6 @@ namespace sw
             if ( value.empty() == false )
                 outListRow.push_back( DebugOverlayRow{ string( key.c_str() ), value } );
         }
-        std::sort( outListRow.begin(), outListRow.end(), Ascending<&DebugOverlayRow::_key>{} );
+        VectorUtil::sort( outListRow, Ascending<&DebugOverlayRow::_key>{} );
     }
 } // namespace sw

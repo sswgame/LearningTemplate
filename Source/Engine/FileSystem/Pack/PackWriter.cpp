@@ -4,6 +4,7 @@
 
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
@@ -151,7 +152,7 @@ namespace sw
             listSorted.push_back( &entry );
             outInputBytes += entry._bytes.size();
         }
-        std::stable_sort( listSorted.begin(), listSorted.end(), []( const Entry* pLeft, const Entry* pRight )
+        VectorUtil::stableSort( listSorted, []( const Entry* pLeft, const Entry* pRight )
         { return pLeft->_pathHash < pRight->_pathHash; } );
         for ( size_t index = 1; index < listSorted.size(); ++index )
         {
@@ -186,7 +187,7 @@ namespace sw
         {
             listOrder[index] = index;
         }
-        std::stable_sort( listOrder.begin(), listOrder.end(), [&listSorted]( uint32 left, uint32 right )
+        VectorUtil::stableSort( listOrder, [&listSorted]( uint32 left, uint32 right )
         { return listSorted[left]->_bytes.size() > listSorted[right]->_bytes.size(); } );
 
         outListSlot.clear();
@@ -267,7 +268,7 @@ namespace sw
             if ( entry._compressedSize != 0 ) // 빈 항목은 자리를 차지하지 않는다
                 listPlaced.push_back( { entry._pathHash, entry._dataOffset, entry._compressedSize } );
         }
-        std::sort( listPlaced.begin(), listPlaced.end(), []( const Placed& left, const Placed& right )
+        VectorUtil::sort( listPlaced, []( const Placed& left, const Placed& right )
         { return left._offset < right._offset; } );
         for ( size_t index = 0; index < listPlaced.size(); ++index )
         {

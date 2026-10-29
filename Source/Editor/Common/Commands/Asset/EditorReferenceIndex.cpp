@@ -213,7 +213,7 @@ namespace sw::editor
             if ( assetID.empty() == false )
                 outData._listKnownID.push_back( std::move( assetID ) );
         }
-        std::sort( outData._listKnownID.begin(), outData._listKnownID.end() );
+        VectorUtil::sort( outData._listKnownID );
 
         vector<const string*> listTextID;
         for ( const string& assetID : outData._listKnownID )
@@ -310,8 +310,7 @@ namespace sw::editor
             if ( reference._referrerPath == referrerID )
                 outListReference.push_back( reference );
         }
-        std::sort( outListReference.begin(), outListReference.end(),
-                   []( const EditorAssetReference& left, const EditorAssetReference& right )
+        VectorUtil::sort( outListReference, []( const EditorAssetReference& left, const EditorAssetReference& right )
         { return left._line < right._line; } );
     }
 
@@ -332,7 +331,7 @@ namespace sw::editor
 
     void EditorReferenceIndex::sortByTarget( vector<EditorAssetReference>& inoutListReference )
     {
-        std::sort( inoutListReference.begin(), inoutListReference.end(), &EditorReferenceIndexInternal::lessByTarget );
+        VectorUtil::sort( inoutListReference, &EditorReferenceIndexInternal::lessByTarget );
         inoutListReference.erase( std::unique( inoutListReference.begin(), inoutListReference.end(), &EditorReferenceIndexInternal::isSameReference ),
                                   inoutListReference.end() );
     }

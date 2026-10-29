@@ -88,7 +88,7 @@ namespace sw::editor
             if ( _listCommand[index]._menuPath.empty() == false )
                 listPlacedIndex.push_back( index );
         }
-        std::stable_sort( listPlacedIndex.begin(), listPlacedIndex.end(), EditorCommandRegistryInternal::MenuOrderLess{ &_listCommand } );
+        VectorUtil::stableSort( listPlacedIndex, EditorCommandRegistryInternal::MenuOrderLess{ &_listCommand } );
 
         // 순서대로 훑으므로 메뉴는 자기 가장 작은 순서의 항목을 만날 때 생긴다 — 메뉴끼리의 순서가 저절로 맞는다.
         for ( const uint32 commandIndex : listPlacedIndex )
@@ -162,7 +162,7 @@ namespace sw::editor
             if ( _listCommand[index]._contextMenuKind == kind )
                 listIndex.push_back( index );
         }
-        std::stable_sort( listIndex.begin(), listIndex.end(), [this]( uint32 lhsIndex, uint32 rhsIndex )
+        VectorUtil::stableSort( listIndex, [this]( uint32 lhsIndex, uint32 rhsIndex )
         { return _listCommand[lhsIndex]._contextMenuOrder < _listCommand[rhsIndex]._contextMenuOrder; } );
         for ( const uint32 commandIndex : listIndex )
         {

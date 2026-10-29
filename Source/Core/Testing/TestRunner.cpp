@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -445,7 +446,7 @@ namespace sw::test
                 listName.emplace_back( pCase->_pName );
             }
         }
-        std::sort( listName.begin(), listName.end() );
+        VectorUtil::sort( listName );
         return listName;
     }
 
@@ -464,7 +465,7 @@ namespace sw::test
             }
         }
         // 이름 순으로 놓은 뒤 섞는다 — 등록 순서(링크 순서)에 기대지 않고, 씨앗이 같으면 어느 빌드에서나 같은 순서다.
-        std::sort( listCase.begin(), listCase.end(), []( const TestCaseRegistration* pA, const TestCaseRegistration* pB )
+        VectorUtil::sort( listCase, []( const TestCaseRegistration* pA, const TestCaseRegistration* pB )
         { return StringUtil::compare( pA->_pName, pB->_pName ) < 0; } );
         if ( options._bListOnly )
         {

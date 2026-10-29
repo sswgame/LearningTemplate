@@ -21,7 +21,7 @@ namespace sw
     {
         vector<hashed_string> listItem;
         getItemIDs( listItem );
-        std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( listItem, HashedStringLexicalLess{} );
         outArchive << static_cast<uint32>( listItem.size() );
         for ( const hashed_string& itemID : listItem )
         {

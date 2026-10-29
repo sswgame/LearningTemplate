@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -366,7 +368,7 @@ namespace sw
             return;
 
         // 우선순위 → 들림 → 먼저 낸 것 순서로 앞의 budget 개만 섞는다.
-        std::sort( _listVoiceOrder.begin(), _listVoiceOrder.end(), [this]( uint32 lhsIndex, uint32 rhsIndex )
+        VectorUtil::sort( _listVoiceOrder, [this]( uint32 lhsIndex, uint32 rhsIndex )
         {
             const VoiceSlot& lhs = _listVoice[lhsIndex];
             const VoiceSlot& rhs = _listVoice[rhsIndex];

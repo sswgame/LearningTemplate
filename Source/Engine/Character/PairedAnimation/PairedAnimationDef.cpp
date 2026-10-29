@@ -3,6 +3,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
@@ -392,7 +393,7 @@ namespace sw
                 reader.addError( "Character.PairedSelectRoleInvalid", arrMessage );
         }
         // 세션이 시각 순서로 한 커서를 지나며 낸다.
-        std::stable_sort( _content._listNotify.begin(), _content._listNotify.end(), []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )
+        VectorUtil::stableSort( _content._listNotify, []( const PairedAnimationNotifyDef& lhs, const PairedAnimationNotifyDef& rhs )
         { return lhs._time < rhs._time; } );
     }
 } // namespace sw

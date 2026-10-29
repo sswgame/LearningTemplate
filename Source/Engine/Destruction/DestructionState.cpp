@@ -3,6 +3,7 @@
 #include "Engine/Destruction/DestructionState.h"
 
 #include "Core/Container/UnionFindUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/BitUtil.h"
@@ -399,7 +400,7 @@ namespace sw
             {
                 neighbor._capacity = outGraph._listPairCapacity[neighbor._pairIndex];
             }
-            std::sort( list.begin(), list.end(), []( const OverloadNeighbor& lhs, const OverloadNeighbor& rhs )
+            VectorUtil::sort( list, []( const OverloadNeighbor& lhs, const OverloadNeighbor& rhs )
             { return lhs._other < rhs._other; } );
         }
     }
@@ -489,7 +490,7 @@ namespace sw
 
     void DestructionState::regroup( vector<uint32>& inoutListDirtyGroupID, DestructionChange& outChange )
     {
-        std::sort( inoutListDirtyGroupID.begin(), inoutListDirtyGroupID.end() );
+        VectorUtil::sort( inoutListDirtyGroupID );
         vector<DestructionGroup> listNewGroup;
         for ( const uint32 groupID : inoutListDirtyGroupID )
         {

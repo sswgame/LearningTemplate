@@ -3,6 +3,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
@@ -43,7 +44,7 @@ namespace sw
                     if ( bSameBase )
                         outListObject.push_back( pObject );
                 } );
-                std::sort( outListObject.begin(), outListObject.end(), []( const GameObject* pLhs, const GameObject* pRhs )
+                VectorUtil::sort( outListObject, []( const GameObject* pLhs, const GameObject* pRhs )
                 { return pLhs->getObjectID() < pRhs->getObjectID(); } );
             }
 

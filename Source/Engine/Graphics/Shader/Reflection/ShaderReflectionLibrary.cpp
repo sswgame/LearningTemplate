@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -238,8 +239,7 @@ namespace sw
         {
             listEntry.push_back( &pair );
         }
-        std::sort( listEntry.begin(), listEntry.end(),
-                   []( const EntryMap::value_type* pLhs, const EntryMap::value_type* pRhs )
+        VectorUtil::sort( listEntry, []( const EntryMap::value_type* pLhs, const EntryMap::value_type* pRhs )
         { return pLhs->first < pRhs->first; } );
 
         Archive archive;

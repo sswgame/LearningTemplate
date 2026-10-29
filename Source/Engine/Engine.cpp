@@ -7,6 +7,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
@@ -352,7 +353,7 @@ namespace sw
         {
             listTiming.push_back( timing );
         }
-        std::sort( listTiming.begin(), listTiming.end(), []( const SubsystemCollection::InitTiming& lhs, const SubsystemCollection::InitTiming& rhs )
+        VectorUtil::sort( listTiming, []( const SubsystemCollection::InitTiming& lhs, const SubsystemCollection::InitTiming& rhs )
         { return lhs._micros > rhs._micros; } );
 
         StringBuilder text;

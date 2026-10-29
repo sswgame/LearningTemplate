@@ -218,7 +218,7 @@ namespace sw
             scored._member                = member;
             scored._score                 = score;
         }
-        std::sort( listMember.begin(), listMember.end(), Descending<&EphemeralScoredMember::_score, &EphemeralScoredMember::_member>{} );
+        VectorUtil::sort( listMember, Descending<&EphemeralScoredMember::_score, &EphemeralScoredMember::_member>{} );
         return listMember;
     }
 

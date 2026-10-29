@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw
@@ -208,7 +210,7 @@ namespace sw
                 arrKind[kindIndex]      = static_cast<RHIMemoryKind>( kindIndex );
             }
         }
-        std::stable_sort( arrKind.begin(), arrKind.end(), [&arrLiveBytes]( RHIMemoryKind lhs, RHIMemoryKind rhs )
+        VectorUtil::stableSort( arrKind, [&arrLiveBytes]( RHIMemoryKind lhs, RHIMemoryKind rhs )
         { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
         return arrKind;
     }

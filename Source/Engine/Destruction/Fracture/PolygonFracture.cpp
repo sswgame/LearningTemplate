@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -180,7 +181,7 @@ namespace sw
                     if ( other != site )
                         inoutListNear.emplace_back( float2::getDistanceSquared( listSite[site], listSite[other] ), other );
                 }
-                std::sort( inoutListNear.begin(), inoutListNear.end() );
+                VectorUtil::sort( inoutListNear );
                 for ( const std::pair<float32, uint32>& entry : inoutListNear )
                 {
                     float32 radiusSquared = 0.0f;
@@ -347,7 +348,7 @@ namespace sw
             listOrder[index] = index;
         }
         if ( PolygonTriangulationUtil::computeSignedArea( listShape, listOrder ) < 0.0f )
-            std::reverse( listShape.begin(), listShape.end() );
+            VectorUtil::reverse( listShape );
 
         vector<float2> listSite;
         Internal::placeSites( listShape, settings, listSite );

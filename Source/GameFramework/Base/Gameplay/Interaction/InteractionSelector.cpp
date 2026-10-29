@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Interaction/InteractionSelector.h"
 
 #include "Core/Container/CompareUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/World/Query/WorldQuery.h"
@@ -81,7 +82,7 @@ namespace sw
             reachable._index    = static_cast<int32>( index );
             listReachable.push_back( reachable );
         }
-        std::sort( listReachable.begin(), listReachable.end(), Internal::ReachableOrder{} );
+        VectorUtil::sort( listReachable, Internal::ReachableOrder{} );
         for ( const Internal::ReachableCandidate& reachable : listReachable )
         {
             const InteractionCandidate& candidate = listCandidate[static_cast<size_t>( reachable._index )];

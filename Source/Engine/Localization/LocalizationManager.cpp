@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -692,7 +693,7 @@ namespace sw
                 listLanguage.push_back( code );
             }
         }
-        std::sort( listLanguage.begin(), listLanguage.end() );
+        VectorUtil::sort( listLanguage );
         return listLanguage;
     }
 

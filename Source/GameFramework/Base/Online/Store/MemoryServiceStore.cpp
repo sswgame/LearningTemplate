@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Math/MathUtil.h"
@@ -219,7 +220,7 @@ namespace sw
             if ( entries.empty() == false )
                 listTable.push_back( table );
         }
-        std::sort( listTable.begin(), listTable.end(), HashedStringLexicalLess{} );
+        VectorUtil::sort( listTable, HashedStringLexicalLess{} );
         uint64 hash = HashUtil::kFNVOffset64;
         for ( const hashed_string& table : listTable )
         {

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -269,7 +270,7 @@ namespace sw
             return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listMaintenance = std::move( listMaintenance );
         _listNotice      = std::move( listNotice );
-        std::sort( _listNotice.begin(), _listNotice.end(), ServerDirectoryServiceInternal::NoticeOrder{} );
+        VectorUtil::sort( _listNotice, ServerDirectoryServiceInternal::NoticeOrder{} );
         markStatusIfChanged( nowMs );
     }
 

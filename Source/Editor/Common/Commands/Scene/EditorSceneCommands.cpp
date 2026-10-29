@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
@@ -97,7 +98,7 @@ namespace sw::editor
         // 자식은 원본 밑에 남는다. 부모부터 모은다. 되돌리기 배치의 다시 하기가 부모를 먼저 복원하기 때문이다.
         vector<GameObject*> listSource;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pSrc, listSource );
-        std::reverse( listSource.begin(), listSource.end() );
+        VectorUtil::reverse( listSource );
 
         vector<vector<uint8>> listState( listSource.size() );
         for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
@@ -573,8 +574,7 @@ namespace sw::editor
         }
 
         // 많은 것부터 보여 주는 편이 읽기 쉽다. 수가 같으면 이름순으로 안정화한다.
-        std::sort( stats._listDistribution.begin(), stats._listDistribution.end(),
-                   []( const ComponentDistributionRow& lhs, const ComponentDistributionRow& rhs )
+        VectorUtil::sort( stats._listDistribution, []( const ComponentDistributionRow& lhs, const ComponentDistributionRow& rhs )
         {
             if ( lhs._instanceCount != rhs._instanceCount )
                 return lhs._instanceCount > rhs._instanceCount;
@@ -613,7 +613,7 @@ namespace sw::editor
                 continue;
             vector<GameObject*> listSubtree;
             EditorSceneCommandsInternal::collectSubtreeChildFirst( pRoot, listSubtree );
-            std::reverse( listSubtree.begin(), listSubtree.end() ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
+            VectorUtil::reverse( listSubtree ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
             for ( GameObject* pObj : listSubtree )
             {
                 ObjectCopyEntry copied{};

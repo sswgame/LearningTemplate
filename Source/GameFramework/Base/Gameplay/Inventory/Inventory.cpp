@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -268,7 +269,7 @@ namespace sw
             }
         }
         const ItemCatalog* pCatalog = _pCatalog;
-        std::stable_sort( listStack.begin(), listStack.end(), [pCatalog]( const InventorySlot& lhs, const InventorySlot& rhs )
+        VectorUtil::stableSort( listStack, [pCatalog]( const InventorySlot& lhs, const InventorySlot& rhs )
         {
             const ItemDef*    pLhs        = pCatalog != nullptr ? pCatalog->find( lhs._itemID ) : nullptr;
             const ItemDef*    pRhs        = pCatalog != nullptr ? pCatalog->find( rhs._itemID ) : nullptr;
