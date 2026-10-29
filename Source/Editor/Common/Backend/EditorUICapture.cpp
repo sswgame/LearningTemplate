@@ -93,7 +93,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief RGBA8 행을 위아래로 뒤집습니다(OpenGL FBO 는 0 행이 아래쪽이다). */
+            /** @brief RGBA8 행을 위아래로 뒤집습니다(렌더러가 0 행을 아래쪽에 그렸을 때 — `rendersTargetRowsBottomUp`). */
             static void flipRows( vector<uint8>& inoutRGBABytes, uint32 width, uint32 height )
             {
                 const size_t  rowBytes = static_cast<size_t>( width ) * 4u;
@@ -212,8 +212,9 @@ namespace sw::editor
         // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. Vulkan · DX12 · DX11 은 이미 닫혔거나 상태만 비우는 호출이다.
         pStream->endRenderPass();
 
-        _renderedJob = job;
-        _bRendered   = SW_TRUE;
+        _renderedJob           = job;
+        _bRendered             = SW_TRUE;
+        _bRenderedRowsBottomUp = rendererBackend.rendersTargetRowsBottomUp() ? SW_TRUE : SW_FALSE;
     }
 
     void EditorUICapture::finishJob( IRHIDevice& device )
@@ -235,7 +236,7 @@ namespace sw::editor
                            RenderTargetImageFile::unpackRGBA8( bytes, layout, device.getBackBufferFormat(), rgbaBytes );
         if ( bRead )
         {
-            if ( device.getBackendType() == RHIBackend::OpenGL )
+            if ( _bRenderedRowsBottomUp == SW_TRUE )
                 EditorUICaptureInternal::flipRows( rgbaBytes, layout._width, layout._height );
             result._magentaFraction = EditorUICaptureInternal::computeMagentaFraction( rgbaBytes );
 

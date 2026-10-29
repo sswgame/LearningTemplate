@@ -41,6 +41,7 @@ namespace sw::editor
         void processTextureUpdates() override;
         /** @brief GL 컨텍스트가 렌더 스레드 전용이므로 true 입니다. */
         bool requiresRenderThreadContext() const override { return true; }
+        bool rendersTargetRowsBottomUp() const override { return true; }
         /** @brief ImGui draw data를 OpenGL로 그립니다. */
         void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) override;
 

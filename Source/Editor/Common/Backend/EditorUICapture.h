@@ -9,7 +9,7 @@
  *          흐름: 시나리오 단계(`CaptureEditorUI`)나 `-gv_screenshotEditor` 가 `request` → UI 스레드가 ImGui 를 닫은 뒤 `takeJob`(창 잘림 지표를 이때 측정한다) →
  *          스냅샷이 합본을 복사 → 렌더 스레드 `renderJob`(present 훅) → `finishJob`(postPresent, GPU 를 기다려 읽는다) → `findResult`.
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
- *          주의: OpenGL 은 FBO 의 0 행이 아래쪽이라 읽은 뒤 뒤집는다(엔진 텍스처와 달리 ImGui GL 렌더러는 클립 원점을 보고 위아래를 바꿔 그린다).
+ *          주의: 렌더러가 0 행을 아래쪽에 그리면(`IImGuiRendererBackend::rendersTargetRowsBottomUp`, OpenGL) 읽은 뒤 뒤집는다 — 백엔드 이름으로 가르지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -106,8 +106,9 @@ namespace sw::editor
         uint32                                    _textureWidth{ 0 };
         uint32                                    _textureHeight{ 0 };
         uint32                                    _nextTicket{ 1 };
-        uint32                                    _uiFrameCount{ 0 };     ///< `-gv_screenshotEditor` 대기 프레임 수
-        uint8                                     _bRendered{ SW_FALSE }; ///< 렌더 스레드 전용
+        uint32                                    _uiFrameCount{ 0 };                 ///< `-gv_screenshotEditor` 대기 프레임 수
+        uint8                                     _bRendered{ SW_FALSE };             ///< 렌더 스레드 전용
+        uint8                                     _bRenderedRowsBottomUp{ SW_FALSE }; ///< 렌더 스레드 전용 — 그린 렌더러가 0 행을 아래쪽에 두었다(`rendersTargetRowsBottomUp`)
         uint8                                     _bGlobalRequested{ SW_FALSE };
     };
 } // namespace sw::editor

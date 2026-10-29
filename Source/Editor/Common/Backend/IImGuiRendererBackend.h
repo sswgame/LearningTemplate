@@ -75,6 +75,12 @@ namespace sw::editor
          *          이 값이 true 이면 ImGuiEditor 가 해당 호출들을 present 훅(렌더 스레드)으로 옮겨 실행한다. DX12, Vulkan 은 false 이다.
          */
         virtual bool requiresRenderThreadContext() const { return false; }
+        /**
+         * @brief 렌더 타깃 텍스처에 그린 결과를 되읽으면 0 행이 아래쪽이면 true 입니다(되읽은 쪽이 위아래를 뒤집는다 — `EditorUICapture`).
+         * @details OpenGL 렌더러는 클립 원점을 보고 FBO 에 위아래를 바꿔 그린다(엔진 텍스처는 투영에서 맞춰 그렇지 않다). 디바이스가 아니라 이 렌더러의 성질이라
+         *          `RHICapabilities` 가 아니라 여기에 둔다(그 헤더의 "에디터 능력을 넣지 말 것"). DX11 · DX12 · Vulkan 은 false 이다.
+         */
+        virtual bool rendersTargetRowsBottomUp() const { return false; }
 
         /**
          * @brief 보조(플로팅) 뷰포트를 렌더하고 present 합니다. `requiresRenderThreadContext()` 가 true 면 렌더 스레드(present 훅)에서, 아니면 UI 스레드에서 부릅니다.
