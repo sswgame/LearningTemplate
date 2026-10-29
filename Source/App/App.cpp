@@ -489,7 +489,10 @@ namespace sw
             pRenderThread->setScenarioCaptureEnabled( true );
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
         _automationFrameSubscription = _engine.registerFrameHooks( _pAutomationSession->makeFrameHooks() );
-        ScenarioPlayback::bindPlayer( _pAutomationSession );
+        // 재생기는 호스트 범위에 인터페이스로 건다 — `ScenarioPlayback` 이 범위에서 찾는다(정적 칸을 두지 않는다).
+        const bool bPlayerBound = _host.bind<IScenarioPlayer>( _pAutomationSession );
+        SW_ASSERT( bPlayerBound );
+        (void)bPlayerBound;
     }
 
     bool App::isAutomationBusy() const
@@ -552,7 +555,7 @@ namespace sw
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 라이브러리 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
 #if SW_AUTOMATION_ENABLED
-        ScenarioPlayback::bindPlayer( nullptr ); // 재생기(세션)를 내리기 전에 푼다
+        _host.unbind<IScenarioPlayer>(); // 재생기(세션)를 내리기 전에 푼다
 #endif
         if ( _pAutomationSession != nullptr )
             _pAutomationSession->onDetachedFromEngine();

@@ -53,8 +53,6 @@ namespace sw
     /** @struct ScenarioPlayback @brief 걸린 재생기로 넘기는 창구입니다. 게임 스레드에서만 부른다. */
     struct SW_API ScenarioPlayback
     {
-        /** @brief 재생기를 겁니다(nullptr 이면 풉니다). 호스트가 세울 때 걸고 내리기 전에 푼다. */
-        static void bindPlayer( IScenarioPlayer* pPlayer );
         /** @brief 시나리오를 재생합니다. 재생기가 없거나 이미 돌고 있으면 이유를 남기고 false 입니다. */
         [[nodiscard]] static bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options = {} );
         /** @brief 재생 중이면 멈춥니다. */
