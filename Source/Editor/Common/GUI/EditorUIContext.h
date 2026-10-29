@@ -31,6 +31,13 @@ namespace sw::editor
         static constexpr const utf8* kKindName = "uibinder";
 
         void ( *_pfnBind )( const EditorUIContextState& state );
+
+        /**
+         * @brief 목록에 붙는 순간 UI 컨텍스트가 이미 있으면 바로 겁니다(에디터가 뜬 뒤 붙은 확장 모듈 · 핫 리로드).
+         * @details 붙기 전에 만든 컨텍스트는 `EditorUIContext::publish` 가 목록을 돌며 걸지만, 그 뒤에 붙은 모듈은 목록에 없어 빠진다 — 예전에는 등록자 생성자(정적 초기화)에서만 걸어,
+         *          "DLL 이 실린 뒤 · 컨텍스트가 생긴 뒤 · 모듈이 붙기 전" 순서면 그 DLL 의 ImGui 사본이 끝내 비어 첫 그리기에서 죽었다(Mesh Modifiers 패널).
+         */
+        static void onAttached( const EditorExtensionRegistration& registration );
     };
 } // namespace sw::editor
 
@@ -51,18 +58,12 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /**
-     * @class EditorUIBinderRegistrar
-     * @brief 결속 함수를 등록하고, 이미 컨텍스트가 있으면 **바로** 겁니다(에디터가 뜬 뒤 로드된 확장 모듈 — 핫 리로드).
-     */
-    class EditorUIBinderRegistrar : public EditorExtensionRegistrar<EditorUIBinderRegistration>
+    // 확장 DLL 의 등록자가 부르므로 헤더에 둔다(이 형식은 내보내지 않는다). 컨텍스트는 에디터 모듈이 내보낸 `getCurrent` 가 준다.
+    inline void EditorUIBinderRegistration::onAttached( const EditorExtensionRegistration& registration )
     {
-    public:
-        explicit EditorUIBinderRegistrar( const EditorUIBinderRegistration& registration )
-            : EditorExtensionRegistrar<EditorUIBinderRegistration>{ registration }
-        {
-            if ( EditorUIContext::getCurrent()._pImGuiContext != nullptr && registration._pfnBind != nullptr )
-                registration._pfnBind( EditorUIContext::getCurrent() );
-        }
-    };
+        const auto&                binder = static_cast<const EditorUIBinderRegistration&>( registration );
+        const EditorUIContextState state  = EditorUIContext::getCurrent();
+        if ( state._pImGuiContext != nullptr && binder._pfnBind != nullptr )
+            binder._pfnBind( state );
+    }
 } // namespace sw::editor

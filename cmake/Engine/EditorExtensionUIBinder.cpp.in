@@ -26,6 +26,6 @@ namespace sw::editor
             }
         };
 
-        const EditorUIBinderRegistrar s_editorUIBinder{ EditorUIBinderRegistration{ { "@SW_EDITOR_EXTENSION_NAME@", 0 }, &EditorExtensionUIBinderInternal::bind } };
+        const EditorExtensionRegistrar<EditorUIBinderRegistration> s_editorUIBinder{ EditorUIBinderRegistration{ { "@SW_EDITOR_EXTENSION_NAME@", 0 }, &EditorExtensionUIBinderInternal::bind } };
     } // namespace
 } // namespace sw::editor

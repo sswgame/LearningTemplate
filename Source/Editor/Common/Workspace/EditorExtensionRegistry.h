@@ -28,6 +28,8 @@ namespace sw::editor
         static constexpr uint32 kDetachPass = 0;
         /** @brief 떼기 직전에 불립니다(`EditorExtensionRegistrar::detach`). 기본은 할 일이 없다 — 종류가 같은 이름으로 가린다(환경설정은 저장한다). */
         static void onDetaching( const EditorExtensionRegistration& registration ) { (void)registration; }
+        /** @brief 목록에 붙은 직후(`attach`) 부릅니다. 종류가 같은 이름의 정적 함수로 덮는다(붙는 순간 할 일 — 예: 결속기는 이미 있는 UI 컨텍스트를 건다). */
+        static void onAttached( const EditorExtensionRegistration& registration ) { (void)registration; }
 
         const utf8* _pID;   ///< 종류 안에서 유일한 id. 같은 id 의 두 번째 등록은 거절된다
         int32       _order; ///< 표시 순서. 작을수록 앞이고, 같으면 id 사전순이다
@@ -127,7 +129,7 @@ namespace sw::editor
      * @details 만들 때는 링크 때 목록에만 달린다(`ModuleObjectRegistrar`) — 핫 리로드가 새 이미지를 먼저 올려도 옛 이미지의 같은 id 와 부딪히지 않는다.
      *          빼면 목록이 알리고(`subscribeEditorExtensionRemoved`) 에디터가 그 줄로 만든 인스턴스를 그 자리에서 거둔다 — 코드 주소로 고르지 않는다.
      *          EditorModule 과 확장 모듈은 DLL 이므로 소스의 오브젝트 파일이 모두 링크된다. 아무도 참조하지 않는 등록자도 버려지지 않는다.
-     *          직접 쓰지 말고 `SW_EDITOR_PANEL` 같은 종류별 매크로를 쓴다. 빼기 전에 `TRegistration::onDetaching` 을 부른다.
+     *          직접 쓰지 말고 `SW_EDITOR_PANEL` 같은 종류별 매크로를 쓴다. 붙은 뒤 `TRegistration::onAttached`, 빼기 전에 `TRegistration::onDetaching` 을 부른다.
      */
     template <typename TRegistration>
     class EditorExtensionRegistrar : public ModuleObjectRegistrar
@@ -149,7 +151,12 @@ namespace sw::editor
         EditorExtensionRegistrar( const EditorExtensionRegistrar& )            = delete;
         EditorExtensionRegistrar& operator=( const EditorExtensionRegistrar& ) = delete;
 
-        void attach() override { _bRegistered = EditorExtensionRegistry<TRegistration>::getList().addRegistration( _registration ); }
+        void attach() override
+        {
+            _bRegistered = EditorExtensionRegistry<TRegistration>::getList().addRegistration( _registration );
+            if ( _bRegistered )
+                TRegistration::onAttached( _registration );
+        }
         void detach() override
         {
             if ( _bRegistered == false )
