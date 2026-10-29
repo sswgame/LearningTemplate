@@ -3,7 +3,8 @@
  * @brief 물리 씬 인터페이스입니다. 월드(고정 스텝, 중력, 레이어, 접촉 이벤트)를 다루고, 역할별 인터페이스(바디 · 관절 · 캐릭터 · 질의 · 바퀴 차)를 모두 상속합니다
  *        (`IPhysicsScene3D`, `IPhysicsScene2D`).
  * @details 엔진 코드는 이 인터페이스들만 본다. 구현(Jolt, Box2D)은 백엔드 폴더(`Physics/Jolt`, `Physics/Box2D`) 안에 있고, 라이브러리 헤더는 거기서만
- *          include 한다. 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsSystem` 의 생성 코드 한 줄을 바꾼다.
+ *          include 한다. 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsBackend` 를 정의하는 .cpp 를 그 백엔드 것으로 바꾼다
+ *          (`PhysicsSystem` 은 백엔드 이름을 모른다 — `NavMeshBackend` 와 같은 모양).
  *          Godot 의 PhysicsServer3D 에 해당한다.
  *
  *          **역할 나눔.** 씬 하나가 역할 다섯을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다. 언리얼 Chaos 가 월드(`FPhysScene`),
@@ -33,6 +34,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
@@ -96,5 +98,29 @@ namespace sw
         virtual const CollisionLayers& getLayerCollision() const = 0;
         /** @brief 바디마다 셰이프를 선으로 냅니다(`PhysicsDebugDrawUtil`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    struct PhysicsSettings;
+
+    /**
+     * @struct PhysicsBackend
+     * @brief 쓰는 물리 백엔드를 고르는 곳입니다. 3D 는 Jolt(`Physics/Jolt/JoltPhysicsBackend.cpp`), 2D 는 Box2D(`Physics/Box2D`)가 정의합니다.
+     * @details `PhysicsSystem` 만 부른다. 바꾸려면 이 선언을 정의하는 .cpp 를 바꾼다 — 언리얼이 Chaos 를 `FPhysicsInterface` 뒤에, Godot 가 서버를 `PhysicsServer3D` 뒤에 두는 자리.
+     */
+    struct SW_API PhysicsBackend
+    {
+        /**
+         * @brief 3D 백엔드의 전역 상태(할당자, 로그 · 단언, 셰이프 타입 등록, 잡 시스템)를 올립니다. 헤더와 라이브러리의 빌드 설정이 다르면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool initialize3D();
+        /** @brief 3D 백엔드의 전역 상태를 내립니다. 모든 3D 씬이 먼저 사라져 있어야 합니다. */
+        static void shutdown3D();
+        /** @brief 설정(중력, 레이어 테이블, 재질)으로 3D 씬 하나를 만듭니다. 올라와 있지 않으면 nullptr 입니다. */
+        static unique_ptr<IPhysicsScene3D> createScene3D( const PhysicsSettings& settings );
+        /** @brief 설정(중력, 레이어 테이블, 재질, 서브 스텝)으로 2D 씬 하나를 만듭니다. 2D 백엔드는 전역 상태가 없다(월드마다 따로 있다). */
+        static unique_ptr<IPhysicsScene2D> createScene2D( const PhysicsSettings& settings );
     };
 } // namespace sw

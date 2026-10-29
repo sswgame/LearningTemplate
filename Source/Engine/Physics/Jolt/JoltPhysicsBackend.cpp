@@ -1,10 +1,13 @@
+/**
+ * @file JoltPhysicsBackend.cpp
+ * @brief 3D 물리 백엔드(Jolt)입니다 — `PhysicsBackend` 의 3D 쪽(전역 초기화와 씬 생성)을 정의합니다. Jolt 헤더는 `Physics/Jolt` 밖에서 보지 않는다.
+ */
 #include "pch.h"
-
-#include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltPhysicsScene.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"
@@ -100,7 +103,7 @@ namespace sw
             static JoltJobSystem* s_pJobSystem;
             /**
              * @brief 백엔드가 올라와 있는지입니다. 지연 초기화 플래그가 아니라 수명 상태이고, `initialize` · `shutdown` 은 소유자(`PhysicsSystem`)가 한 스레드에서
-             *        부른다. 읽는 쪽(`isInitialized` · `createScene`)은 다른 스레드일 수 있어 원자 값으로 둔다.
+             *        부른다. 읽는 쪽(`createScene3D`)은 다른 스레드일 수 있어 원자 값으로 둔다.
              */
             static std::atomic<bool> s_bInitialized;
         };
@@ -114,7 +117,7 @@ namespace sw
 
 namespace sw
 {
-    bool JoltPhysicsBackend::initialize()
+    bool PhysicsBackend::initialize3D()
     {
         if ( JoltPhysicsBackendInternal::s_bInitialized.load() )
             return true;
@@ -147,7 +150,7 @@ namespace sw
         return true;
     }
 
-    void JoltPhysicsBackend::shutdown()
+    void PhysicsBackend::shutdown3D()
     {
         if ( JoltPhysicsBackendInternal::s_bInitialized.load() == false )
             return;
@@ -160,12 +163,7 @@ namespace sw
         JoltPhysicsBackendInternal::s_bInitialized.store( false );
     }
 
-    bool JoltPhysicsBackend::isInitialized()
-    {
-        return JoltPhysicsBackendInternal::s_bInitialized.load();
-    }
-
-    unique_ptr<IPhysicsScene3D> JoltPhysicsBackend::createScene( const PhysicsSettings& settings )
+    unique_ptr<IPhysicsScene3D> PhysicsBackend::createScene3D( const PhysicsSettings& settings )
     {
         if ( JoltPhysicsBackendInternal::s_bInitialized.load() == false )
         {

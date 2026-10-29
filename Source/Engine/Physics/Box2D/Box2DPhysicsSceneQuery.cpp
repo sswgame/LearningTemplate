@@ -3,9 +3,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsScene.h"
 #include "Engine/Physics/Box2D/Box2DUtil.h"
+#include "Engine/Physics/IPhysicsScene.h"
 
 #include <box2d/box2d.h>
 
@@ -269,7 +269,10 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IPhysicsScene2D> Box2DPhysicsBackend::createScene( const PhysicsSettings& settings )
+    // 2D 백엔드(Box2D v3)의 입구. Box2D 는 전역 상태가 없어(월드마다 따로 있다) 초기화하고 해제할 것이 없다. 월드는 기본으로 한 스레드로 돈다.
+    // Box2D 의 솔버 태스크는 워커들이 **동시에** 돌며 서로를 바쁘게 기다리므로(스테이지 동기화), 엔진의 공유 작업 풀(다른 일로 바쁜 워커가 있을 수 있다)에
+    // 그대로 넘기면 교착할 수 있다. 바디가 수천이면 설정(`PhysicsSettings::_workerCount2D`)으로 씬마다 전용 워커를 붙인다(`Box2DWorkerPool`).
+    unique_ptr<IPhysicsScene2D> PhysicsBackend::createScene2D( const PhysicsSettings& settings )
     {
         SW_MEMORY_SCOPE( Physics );
         return make_unique<Box2DPhysicsScene>( settings );

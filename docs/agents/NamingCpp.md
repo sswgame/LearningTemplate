@@ -69,7 +69,7 @@ A suffix says what the class does with the objects it names, the way the commerc
 | `…Registry` | Lookup table filled by registration, keyed by name or ID. No lifetime policy (Unreal `AssetRegistry`) |
 | `…System` | Runs every frame over many objects / components with the same logic (Unity DOTS `System`) |
 | `…Service` | Replaceable function window reached through service binding or a remote endpoint |
-| `…Backend` | Platform or library implementation of an interface (`JoltPhysicsBackend`, `XAudio2AudioBackend`) |
+| `…Backend` | Platform or library implementation of an interface (`XAudio2AudioBackend`, `ImGuiDX12RendererBackend`) |
 | `…API` | A C function table (`GameAPI`, `EditorAPI`, `ModuleAPI`) |
 
 Fixed rules that go with it:

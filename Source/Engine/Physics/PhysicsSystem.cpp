@@ -7,8 +7,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
-#include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
+#include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -54,7 +53,7 @@ namespace sw
         }
         _settings = settings;
 
-        if ( JoltPhysicsBackend::initialize() == false )
+        if ( PhysicsBackend::initialize3D() == false )
             return false;
         _bInitialized = true;
         SW_LOG_INFO( "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
@@ -65,7 +64,7 @@ namespace sw
     {
         if ( _bInitialized == false )
             return;
-        JoltPhysicsBackend::shutdown();
+        PhysicsBackend::shutdown3D();
         _bInitialized = false;
     }
 
@@ -83,7 +82,7 @@ namespace sw
         }
         if ( settings.validate() == false )
             return nullptr;
-        return JoltPhysicsBackend::createScene( settings );
+        return PhysicsBackend::createScene3D( settings );
     }
 
     unique_ptr<IPhysicsScene2D> PhysicsSystem::createScene2D() const
@@ -100,7 +99,7 @@ namespace sw
         }
         if ( settings.validate() == false )
             return nullptr;
-        return Box2DPhysicsBackend::createScene( settings );
+        return PhysicsBackend::createScene2D( settings );
     }
 
     float3 PhysicsSystem::getConfiguredGravity()
