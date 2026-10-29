@@ -141,8 +141,8 @@ namespace sw
         , _listCodecSubscription{}
         , _debugKeyActions{}
         , _listFrameHook{}
-        , _nextFrameHookID{ 1 }
         , _startupExtension{}
+        , _nextFrameHookID{ 1 }
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
         , _bQuitRequested{ false }

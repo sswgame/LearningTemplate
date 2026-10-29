@@ -11,7 +11,6 @@
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Window/IRenderSurface.h"
 
 namespace sw

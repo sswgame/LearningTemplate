@@ -10,7 +10,6 @@
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {

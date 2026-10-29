@@ -10,7 +10,6 @@
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
