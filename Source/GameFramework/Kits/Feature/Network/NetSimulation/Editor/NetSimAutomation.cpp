@@ -4,6 +4,8 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -12,7 +14,7 @@
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/EditorNetSimSession.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
-// 한 프로세스 재생의 자동화 감시 값(`Editor.NetSim*`) — 에디터 시나리오(`engine/automation/editor/netsim.scenario.xml`)가 탭이 가진 세션을 읽는다.
+// 한 프로세스 재생의 자동화 감시 값(`Editor.NetSim*`) — 에디터 시나리오(`engine/automation/editor/netsim.scenario.xml`)가 세션(에디터 서브시스템)을 읽는다.
 // 세션이 돌지 않으면 값을 내지 않는다(0 으로 지어내지 않는다) — 단, 돌고 있는지 묻는 `Editor.NetSimRunning` 은 0 · 1 이다.
 
 namespace sw::editor
@@ -21,15 +23,22 @@ namespace sw::editor
     {
         struct NetSimAutomationInternal
         {
+            /** @brief 돌고 있는 한 프로세스 재생 세션입니다(에디터 서브시스템이 없거나 돌지 않으면 nullptr). */
+            static const EditorNetSimSession* findRunningSession()
+            {
+                const EditorNetSimSession* pSession = editor::findSubsystem<EditorNetSimSession>();
+                return pSession != nullptr && pSession->isRunning() ? pSession : nullptr;
+            }
+
             [[nodiscard]] static bool readRunning( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = EditorNetSimSession::findRunning() != nullptr ? 1.0 : 0.0;
+                outValue = findRunningSession() != nullptr ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readTick( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorNetSimSession* pSession = EditorNetSimSession::findRunning();
+                const EditorNetSimSession* pSession = findRunningSession();
                 if ( pSession == nullptr )
                     return false;
                 outValue = static_cast<float64>( pSession->getHarness()->getTick() );
@@ -39,7 +48,7 @@ namespace sw::editor
             /** @brief 서버 하나와 살아 있는 클라이언트의 합입니다. */
             [[nodiscard]] static bool readWorldCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorNetSimSession* pSession = EditorNetSimSession::findRunning();
+                const EditorNetSimSession* pSession = findRunningSession();
                 if ( pSession == nullptr )
                     return false;
                 outValue = static_cast<float64>( 1 + pSession->getHarness()->getClientCount() );
@@ -48,7 +57,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readInputFocus( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorNetSimSession* pSession = EditorNetSimSession::findRunning();
+                const EditorNetSimSession* pSession = findRunningSession();
                 if ( pSession == nullptr )
                     return false;
                 outValue = static_cast<float64>( pSession->getInputFocus() );
@@ -57,7 +66,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readViewportCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const EditorNetSimSession* pSession = EditorNetSimSession::findRunning();
+                const EditorNetSimSession* pSession = findRunningSession();
                 if ( pSession == nullptr )
                     return false;
                 outValue = static_cast<float64>( pSession->getViewportCount() );
@@ -77,7 +86,7 @@ namespace sw::editor
                     outValue.setText( "target must be the world number and key the object name" );
                     return false;
                 }
-                const EditorNetSimSession* pSession = EditorNetSimSession::findRunning();
+                const EditorNetSimSession* pSession = findRunningSession();
                 NetSimHarness*             pHarness = pSession != nullptr ? pSession->getHarness() : nullptr;
                 if ( pHarness == nullptr )
                 {

@@ -13,6 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimPreviewSceneSource.h"
 
@@ -34,19 +36,26 @@ namespace sw::editor
 {
     /**
      * @class EditorNetSimSession
-     * @brief 하니스 · 씬 공급자 · 월드마다 뷰포트를 함께 가집니다. Multiplayer 창의 In process 탭이 하나를 들고 있습니다.
+     * @brief 하니스 · 씬 공급자 · 월드마다 뷰포트를 함께 가집니다. 확장의 에디터 서브시스템이다(`SW_EDITOR_SUBSYSTEM`) — Multiplayer 창의 In process 탭이 돌리고
+     *        자동화 감시 값(`Editor.NetSim*`)이 읽는다. 둘 다 `editor::findSubsystem<EditorNetSimSession>()` 으로 찾는다(정적 "지금 세션" 칸이 없다).
+     * @details 세션은 에디터에 하나다 — 언리얼 PIE 세션을 에디터 엔진이 갖는 것과 같은 자리. 확장이 내려가면 범위에서 떼고 종료가 하니스를 내린다.
      */
-    class EditorNetSimSession
+    class EditorNetSimSession final : public EditorSubsystem
     {
     public:
-        static constexpr int32  kMaxClients       = 4;
-        static constexpr uint32 kMaxStepsPerFrame = 4;
+        static constexpr const utf8* kSubsystemName    = "EditorNetSimSession";
+        static constexpr int32       kMaxClients       = 4;
+        static constexpr uint32      kMaxStepsPerFrame = 4;
 
         EditorNetSimSession();
-        ~EditorNetSimSession();
+        ~EditorNetSimSession() override;
 
         EditorNetSimSession( const EditorNetSimSession& )            = delete;
         EditorNetSimSession& operator=( const EditorNetSimSession& ) = delete;
+
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 확장이 내려가거나 에디터가 닫힐 때 하니스를 내립니다. */
+        void shutdownSubsystem() override { stop(); }
 
         /** @brief 하니스를 세우고 클라이언트를 붙입니다. 실패하면 이유를 @p outError 에 적고 아무것도 남기지 않습니다. */
         [[nodiscard]] bool start( const EditorNetSimSettings& settings, string& outError );
@@ -68,12 +77,6 @@ namespace sw::editor
         NetSimHarness* getHarness() const { return _pHarness.get(); }
         /** @brief 이 세션이 만든 뷰포트 수입니다(탭이 보여 `findViewport` 로 월드의 씬을 붙인 월드 수). */
         int32 getViewportCount() const { return static_cast<int32>( _listView.size() ); }
-
-        /**
-         * @brief 지금 돌고 있는 세션입니다. 없으면 nullptr 입니다. 자동화 감시 값(`Editor.NetSim*`)이 탭이 든 세션을 읽는 창구입니다.
-         * @details 세션은 하나만 돈다는 전제다 — 두 번째 세션이 시작하면 그것이 이 값이 되고, 멈추면 앞의 것으로 돌아가지 않고 비운다.
-         */
-        static EditorNetSimSession* findRunning();
 
     private:
         struct WorldView

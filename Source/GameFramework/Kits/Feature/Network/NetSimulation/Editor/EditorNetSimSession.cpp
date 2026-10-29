@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -15,17 +16,6 @@
 namespace sw::editor
 {
     SW_LOG_CALLER( "EditorNetSimSession" );
-
-    namespace
-    {
-        /** @brief 지금 돌고 있는 세션(`EditorNetSimSession::findRunning`). `start` 가 채우고 `stop` 이 자기일 때만 비운다. */
-        EditorNetSimSession* s_pRunningSession{ nullptr };
-    } // namespace
-
-    EditorNetSimSession* EditorNetSimSession::findRunning()
-    {
-        return s_pRunningSession;
-    }
 
     EditorNetSimSession::EditorNetSimSession()
         : _pSceneSource{}
@@ -88,7 +78,6 @@ namespace sw::editor
                 return false;
             }
         }
-        s_pRunningSession = this;
         SW_LOG_INFO( "In-process play started: %# with %# client(s)", settings._gameName, settings._clientCount );
         return true;
     }
@@ -96,8 +85,6 @@ namespace sw::editor
     void EditorNetSimSession::stop()
     {
         // 뷰포트(렌더 타깃)를 먼저 놓고, 하니스가 씬을 공급자에 돌려준 뒤 공급자를 내린다.
-        if ( s_pRunningSession == this )
-            s_pRunningSession = nullptr;
         _listView.clear();
         if ( _pHarness != nullptr )
             _pHarness->shutdown();
@@ -180,4 +167,6 @@ namespace sw::editor
         _listView.push_back( WorldView{ worldIndex, std::move( pViewport ) } );
         return _listView.back()._pViewport.get();
     }
+
+    SW_EDITOR_SUBSYSTEM( EditorNetSimSession, 9420 );
 } // namespace sw::editor
