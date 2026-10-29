@@ -285,8 +285,8 @@ namespace sw
             return false;
         const bool bStructured = output->needsStructuredFields();
 
-        // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`broadcastToListeners` ·
-        // `dispatchToOutputs`), 리스너가 있으면 방송까지 하므로 락 밖에서 남긴다.
+        // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`dispatchToOutputs`),
+        // 리스너가 있으면 방송(`_onLogWritten`)까지 하므로 락 밖에서 남긴다.
         // 상한을 **여기서** 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
         // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
         bool bRejected{ false };
