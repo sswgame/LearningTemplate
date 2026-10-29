@@ -5,13 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Defines.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Log/LogOnce.h"
-#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -19,18 +15,13 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 
@@ -47,23 +38,6 @@ namespace sw::editor
             static constexpr float32 kPreviewSide = 160.0f;
             /// @brief 미리보기 씬 뷰포트의 가로 / 세로 비율입니다.
             static constexpr float32 kPreviewSceneAspect = 1.5f;
-            /// @brief 미리보기 씬에 스폰하는 구 오브젝트 이름입니다.
-            static constexpr const utf8* kPreviewSubjectName = "PreviewSubject";
-
-            static void writeFloats( string& out, const float32* pVal, uint32 count )
-            {
-                fixed_string<constant::kMaxBuffer128> buf;
-                if ( count == 1 )
-                    formatstring( buf.data(), buf.capacity(), "%g", pVal[0] );
-                else if ( count == 2 )
-                    formatstring( buf.data(), buf.capacity(), "%g,%g", pVal[0], pVal[1] );
-                else if ( count == 3 )
-                    formatstring( buf.data(), buf.capacity(), "%g,%g,%g", pVal[0], pVal[1], pVal[2] );
-                else if ( count >= 4 )
-                    formatstring( buf.data(), buf.capacity(), "%g,%g,%g,%g", pVal[0], pVal[1], pVal[2], pVal[3] );
-                out = buf.c_str();
-            }
-
             /**
              * @brief 값 글을 형식대로 읽지 못한 행입니다. 0 으로 메운 슬라이더 대신 경고 표시와 원문 칸을 보여 사용자가 글을 고치게 한다.
              * @return 원문 칸을 고쳤으면 true 입니다(다른 행과 같이 편집으로 알린다).
@@ -113,7 +87,7 @@ namespace sw::editor
                         else
                             bChanged = ImGui::DragFloat( pLabel, &arrVal[0], 0.01f );
                         if ( bChanged )
-                            writeFloats( prop._value, arrVal, 1 );
+                            MaterialModel::writeFloats( prop._value, arrVal, 1 );
                         return bChanged;
                     }
                     case MaterialPropertyType::Float2:
@@ -123,7 +97,7 @@ namespace sw::editor
                             return drawUnreadableValue( pLabel, prop );
                         const bool bChanged = ImGui::DragFloat2( pLabel, arrVal, 0.01f );
                         if ( bChanged )
-                            writeFloats( prop._value, arrVal, 2 );
+                            MaterialModel::writeFloats( prop._value, arrVal, 2 );
                         return bChanged;
                     }
                     case MaterialPropertyType::Float3:
@@ -133,7 +107,7 @@ namespace sw::editor
                             return drawUnreadableValue( pLabel, prop );
                         const bool bChanged = ImGui::DragFloat3( pLabel, arrVal, 0.01f );
                         if ( bChanged )
-                            writeFloats( prop._value, arrVal, 3 );
+                            MaterialModel::writeFloats( prop._value, arrVal, 3 );
                         return bChanged;
                     }
                     case MaterialPropertyType::Color:
@@ -152,7 +126,7 @@ namespace sw::editor
                             arrVal[1] = color._g;
                             arrVal[2] = color._b;
                             arrVal[3] = color._a;
-                            writeFloats( prop._value, arrVal, 4 );
+                            MaterialModel::writeFloats( prop._value, arrVal, 4 );
                         }
                         return bChanged;
                     }
@@ -277,7 +251,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "MaterialPanel" );
     SW_EDITOR_PANEL( MaterialPanel, MaterialPanel::kPanelID, EditorPanelCategory::Tool, 1300 );
     SW_AUTOMATION_WATCH( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
                          "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
@@ -294,13 +267,7 @@ namespace sw::editor
 
     MaterialPanel::MaterialPanel()
         : EditorPreviewPanel{ EditorAssetType{ Material::kAssetType }, false }
-        , _material{ Material::create() }
-        , _name{}
-        , _shaderPath{}
-        , _status{}
-        , _previewMaterialPath{}
-        , _previewRedMinusBlue{ 0.0f }
-        , _bPreviewDrawn{ false }
+        , _model{}
     {
     }
 
@@ -310,7 +277,7 @@ namespace sw::editor
         ensureDocumentLoaded();
         beginPreviewFrame();
         drawDocumentOpenBar( "material" );
-        _bPreviewDrawn = false;
+        _model.beginFrame();
 
         if ( getLoadedAssetPath().empty() )
         {
@@ -338,20 +305,20 @@ namespace sw::editor
         drawPreviewViewport( float2{ previewSide * MaterialPanelInternal::kPreviewSceneAspect, previewSide }, false ); // 기즈모가 없다
         EditorSelfTestMarks::note( "material.previewScene" );
 
-        ImGui::InputText( "Name", _name.data(), _name.capacity() );
+        fixed_string<constant::kMaxBuffer128>& name = _model.editName();
+        ImGui::InputText( "Name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            _material->getDesc()._name = _name.c_str();
+            _model.commitName();
             notifyDocumentEdited( "Edit Material Name", "material-name" );
             applyLivePreview();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
-        string shaderPath = _shaderPath.c_str();
+        string shaderPath = _model.getShaderPath();
         ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 그룹 전체에 붙인다
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
-            _shaderPath = shaderPath;
-            _material->setShaderPath( _shaderPath.c_str() );
+            _model.setShaderPath( shaderPath );
             notifyDocumentEdited( "Edit Material Shader", "material-shader" );
         }
         ImGui::EndGroup();
@@ -359,13 +326,14 @@ namespace sw::editor
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Properties" );
-        const vector<MaterialProperty>& listProp = _material->getProperties();
+        Material&                       material = _model.editMaterial();
+        const vector<MaterialProperty>& listProp = material.getProperties();
         for ( uint32 propIndex = 0; propIndex < static_cast<uint32>( listProp.size() ); ++propIndex )
         {
             const MaterialProperty& src = listProp[propIndex];
             if ( src._bHidden == SW_TRUE )
                 continue;
-            MaterialProperty* pProp = _material->findProperty( hashed_string( src._name.c_str() ) );
+            MaterialProperty* pProp = material.findProperty( hashed_string( src._name.c_str() ) );
             if ( pProp == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( propIndex ) );
@@ -380,7 +348,7 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
     void MaterialPanel::drawPreview()
@@ -389,7 +357,7 @@ namespace sw::editor
         constexpr int32 kRingCount    = 20;
         constexpr int32 kSegmentCount = 48;
 
-        const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _material->getProperties() );
+        const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _model.getMaterial().getProperties() );
         const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
@@ -448,70 +416,31 @@ namespace sw::editor
             }
         }
 
-        _previewRedMinusBlue = MaterialPreviewShading::computeMeanRedMinusBlue( inputs );
-        _bPreviewDrawn       = true;
-    }
-
-    bool MaterialPanel::findPreviewRedMinusBlue( float32& outValue ) const
-    {
-        if ( _bPreviewDrawn == false )
-            return false;
-        outValue = _previewRedMinusBlue;
-        return true;
+        _model.notePreviewDrawn( MaterialPreviewShading::computeMeanRedMinusBlue( inputs ) );
     }
 
     void MaterialPanel::populatePreviewScene( Scene& scene )
     {
-        GameObjectManager* pManager = scene.getObjectManager();
-        GameObject*        pSubject = pManager != nullptr ? pManager->createGameObject( hashed_string( MaterialPanelInternal::kPreviewSubjectName ) ) : nullptr;
-        MeshComponent*     pMesh    = pSubject != nullptr ? pSubject->addComponent<MeshComponent>() : nullptr;
-        if ( pMesh != nullptr )
-            pMesh->setMeshID( "Sphere" );
+        _model.populateScene( scene );
         getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, 0.75f );
-        _previewMaterialPath.clear(); // 새 씬의 구에는 아직 머티리얼이 없다
-    }
-
-    MeshComponent* MaterialPanel::findPreviewSubject() const
-    {
-        Scene*             pScene   = getPreviewScene();
-        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-        GameObject*        pSubject = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( MaterialPanelInternal::kPreviewSubjectName ) ) : nullptr;
-        return pSubject != nullptr ? pSubject->getComponent<MeshComponent>() : nullptr;
     }
 
     void MaterialPanel::syncPreviewSubjectMaterial()
     {
-        const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false;
-        if ( bDocumentReady == false || _previewMaterialPath == getLoadedAssetPath() )
+        if ( isDocumentLoadFailed() )
             return;
-        MeshComponent* pMesh = findPreviewSubject();
-        if ( pMesh == nullptr )
-            return;
-        // 캐시의 머티리얼을 바인딩한다 — 편집은 `applyLivePreview` 가 캐시 사본에 옮기므로 구도 따라온다.
-        pMesh->setMaterialPath( getLoadedAssetPath() );
-        _previewMaterialPath = getLoadedAssetPath();
+        _model.syncPreviewSubject( getPreviewScene(), getLoadedAssetPath() );
     }
 
     void MaterialPanel::applyLivePreview()
     {
-        EditorViewportPreview::applyMaterial( _material.get(), getLoadedAssetPath() );
+        _model.applyLivePreview( getLoadedAssetPath() );
     }
 
     bool MaterialPanel::saveDocument()
     {
-        if ( getLoadedAssetPath().empty() )
+        if ( _model.saveDocument( getLoadedAssetPath() ) == false )
             return false;
-        _material->getDesc()._name = _name.c_str();
-        _material->setShaderPath( _shaderPath.c_str() );
-        if ( _material->saveToFile( getLoadedAssetPath() ) == false )
-        {
-            _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
-            return false;
-        }
-        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().reload( AssetID{ getLoadedAssetPath() }, editor::getSubsystem<EditorRenderViews>().getRHIDevice() );
-        applyLivePreview();
-        _status = SW_LOCKEY( "EditorMaterial", "SavedStatus" );
-        clearDocumentDirty();
         syncDocumentUndoBaseline();
         return true;
     }
@@ -525,34 +454,16 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        if ( _material->loadFromFile( AssetID{ path } ) == false )
-        {
-            _status = SW_LOCKEY( "EditorMaterial", "LoadFailedStatus" );
-            return ToolAssetLoadResult::Malformed;
-        }
-        syncNameBuffers();
-        _status = SW_LOCKEY( "EditorMaterial", "LoadedStatus" );
-        return ToolAssetLoadResult::Loaded;
-    }
-
-    void MaterialPanel::syncNameBuffers()
-    {
-        _name       = _material->getName().c_str();
-        _shaderPath = _material->getShaderPath().c_str();
+        return _model.loadDocument( path );
     }
 
     string MaterialPanel::captureDocumentText() const
     {
-        return _material->saveToString();
+        return _model.captureText();
     }
 
     void MaterialPanel::applyDocumentText( string_view text )
     {
-        if ( text.empty() )
-            return;
-        if ( _material->loadFromXML( text ) == false )
-            SW_LOG_WARNING( "Material undo snapshot could not be read - the material is left as it was" );
-        syncNameBuffers();
-        applyLivePreview();
+        _model.applyText( text, getLoadedAssetPath() );
     }
 } // namespace sw::editor
