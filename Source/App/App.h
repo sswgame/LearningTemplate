@@ -101,8 +101,6 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
-        /** @brief tick 안에서 필요할 때 조회하는 에디터 씬 뷰 카메라입니다. */
-        CameraComponent* getSceneViewCamera();
         /** @brief 에디터 렌더 훅 콜백입니다(렌더 스레드). EditorModuleManager 로 넘깁니다. */
         void onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& framePacket );
         /** @brief 에디터 멀티 뷰포트 · 플랫폼 창 훅 콜백입니다(Present 뒤에 실행됩니다). */

@@ -482,7 +482,8 @@ namespace sw
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
         {
-            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
+            // 모듈 매니저는 루프가 도는 동안 산다(호스트 서비스 Game 이 세우고 루프 뒤 `shutdown` 이 내린다) — App 이 중계하지 않고 바로 묶는다.
+            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &EditorModuleManager::getSceneViewCamera, static_cast<const EditorModuleManager*>( _gameModuleManager.get() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
             // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
@@ -732,11 +733,6 @@ namespace sw
 
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.
         return false;
-    }
-
-    CameraComponent* App::getSceneViewCamera()
-    {
-        return _gameModuleManager != nullptr ? _gameModuleManager->getSceneViewCamera() : nullptr;
     }
 
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
