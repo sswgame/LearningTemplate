@@ -170,9 +170,26 @@ namespace sw
 
         /** @brief 스테이지에 속한 모든 태스크가 끝날 때까지 호출 스레드를 막고 기다립니다(기다리는 동안 다른 일을 돕습니다). */
         void waitStage( const TaskStageHandle& stage );
+        /**
+         * @brief `waitStage` 와 같이 끝날 때까지 기다리되, 오래 걸리면 `kStageWaitReportMs` 마다 @p owner 와 남은 수 · 그 스테이지의 남은 태스크 이름 하나를 오류로 남깁니다.
+         * @details 주인이 "내가 낸 일만" 기다리는 자리(종료 · 취소)가 씁니다. **기한을 넘겨 그만 기다리지 않는다** — 낸 일은 반드시 끝나고(영구 태스크를 두지 않는 계약),
+         *          기다리다 이어 가면 도는 태스크가 곧 지울 상태를 건드려 멈춤이 메모리 오염이 된다. 오래 걸리는 일은 주인이 먼저 협조 중단(`StopSource`)을 올린다.
+         *          정말 멈춘 것은 프로세스의 행 감시가 잡는다. 스테이지는 태스크가 도는 중에도 `addTask` 할 수 있어(남은 수가 0 에서 다시 오르면 스스로를 다시 잡는다)
+         *          오래 사는 주인이 스테이지 하나를 계속 쓴다. 엔진 전체 대기(`waitAll`)는 남이 낸 일까지 기다려 쓰지 않는다.
+         */
+        void waitStage( const TaskStageHandle& stage, string_view owner );
+        /** @brief `waitStage( stage, owner )` 가 진단을 남기는 간격(밀리초)입니다. */
+        static constexpr uint32 kStageWaitReportMs = 10000;
 
         /** @brief 스테이지의 모든 작업이 끝났는지 확인합니다. */
         bool isStageComplete( const TaskStageHandle& stage );
+        /**
+         * @brief @p task 를 @p inoutStage 에 넣습니다(제출 **전에** 부른다). 스테이지가 아직 없으면 @p stageName 으로 만듭니다 — 오래 사는 주인이 처음 낼 때 만든다.
+         * @details @p inoutStage 를 쓰는 일은 부르는 쪽이 직렬로 한다(주인의 잠금 · 한 스레드). 만들어진 뒤의 `addTask` 는 원자 연산이라 어느 스레드든 된다.
+         */
+        void addToStage( TaskStageHandle& inoutStage, const TaskHandle& task, string_view stageName );
+        /** @brief 스테이지에 아직 끝나지 않은 태스크 수입니다. */
+        uint32 getStagePendingCount( const TaskStageHandle& stage );
 
         /**
          * @brief 만들 때(빌더) 걸어 둔 임시 잠금 의존성을 해제하고 태스크를 스케줄러에 제출합니다.
@@ -427,7 +444,7 @@ namespace sw
 
         bool            _bInitialized; ///< 매니저를 초기화했는지 여부
         std::thread::id _mainThreadID; ///< 메인 스레드의 ID
-        atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그
+        atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
         /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
         atomic<uint32>                 _runningWorkerCount;
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다

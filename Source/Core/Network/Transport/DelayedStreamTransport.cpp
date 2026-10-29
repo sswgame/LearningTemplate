@@ -16,7 +16,7 @@ namespace sw
         , _delayNanoseconds{ sendDelaySeconds > 0.0 ? static_cast<int64>( sendDelaySeconds * static_cast<float64>( constant::kNanosecondsPerSecond ) ) : 0 }
         , _mutex{}
         , _listItem{}
-        , _bStopping{ SW_FALSE }
+        , _stop{}
         , _bManualPoll{ SW_FALSE }
         , _timerThread{}
     {
@@ -34,7 +34,7 @@ namespace sw
         _bManualPoll = SW_FALSE;
         if ( _pInner->initialize( pHandler, settings ) == false )
             return false;
-        _bStopping.store( SW_FALSE, std::memory_order_release );
+        _stop        = StopSource{};
         _bManualPoll = settings._ioThreadCount == 0 ? SW_TRUE : SW_FALSE;
         if ( _bManualPoll == SW_FALSE )
             _timerThread = sw::thread( &DelayedStreamTransport::runTimer, this );
@@ -45,7 +45,7 @@ namespace sw
     {
         if ( _timerThread.joinable() )
         {
-            _bStopping.store( SW_TRUE, std::memory_order_release );
+            _stop.requestStop();
             _timerThread.join();
         }
         {
@@ -117,7 +117,7 @@ namespace sw
     void DelayedStreamTransport::runTimer()
     {
         ThreadName::setCurrentThreadName( "DelayedStream" );
-        while ( _bStopping.load( std::memory_order_acquire ) == false )
+        while ( _stop.isStopRequested() == false )
         {
             (void)flushDue();
             std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) ); // 1 ms 해상도 — 측정 도구라 바쁘게 돌지 않는다

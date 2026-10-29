@@ -4,7 +4,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
-#include "Core/Task/TaskHandleTracker.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -45,6 +45,8 @@ namespace sw
 
         void initialize();
         void shutdown();
+        /** @brief 이 큐가 낸 태스크(스테이지)가 끝나기를 기다립니다(종료 앞). */
+        void waitForOwnTasks();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "AssetStreaming";
@@ -160,7 +162,7 @@ namespace sw
          */
         vector<AsyncReadHandle> _listDetachedIO SW_GUARDED_BY( _mutex );
         /** @brief 이 큐가 낸 태스크(찾기 · 존재 확인)만 든다. `shutdown` 은 엔진 전체(`TaskManager::waitAll`)가 아니라 이것만 기다린다 — 영구 태스크가 종료를 막지 않게. */
-        TaskHandleTracker _taskTracker;
+        TaskStageHandle _taskStage SW_GUARDED_BY( _mutex ); ///< 이 큐가 낸 태스크의 스테이지(처음 낼 때 만든다 — 종료가 이것만 기다린다)
         /**
          * @brief `update` 가 부를 완료 목록입니다. **크기 상한이 없다.** 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
          *        말없이 버린다.

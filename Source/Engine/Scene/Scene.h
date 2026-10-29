@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
@@ -49,7 +50,7 @@ namespace sw
          *          전체 상태가 실린 프리팹 엔티티는 그 상태가 기준입니다. 프리팹 엔티티를 만든 뒤 그 프리팹의 중첩 인스턴스를 부품으로 스폰합니다
          *          (`PrefabCache::spawnNestedInstances`) — 부품은 씬 파일에 없고 로드할 때마다 원본에서 다시 만듭니다.
          */
-        [[nodiscard]] bool instantiate( const SceneDocument& doc, const atomic<bool>* pStop = nullptr );
+        [[nodiscard]] bool instantiate( const SceneDocument& doc, const StopToken& stopToken = {} );
         /**
          * @brief 스트리밍 셀 하나의 엔티티를 이 씬에 더해 짓습니다(`SceneStreamingSubsystem` 이 부릅니다). 지은 오브젝트 id 를 @p outListObjectID 에 더합니다.
          * @details 셀의 엔티티는 같은 셀이나 이미 지은 늘 올라 있는 엔티티를 파일 id 로 가리킨다 — 지금 씬에 있는 파일 id 의 오브젝트를 같은 배치에 기록해
@@ -162,7 +163,7 @@ namespace sw
          *                       프리팹을 찾지 못한 엔티티는 보관하지 않습니다(셀은 다시 지어질 때마다 같은 엔티티를 낸다 — 쿠킹본은 저장하지 않는다).
          * @param pOutListObjectID 주면 지은 오브젝트 id 를 더합니다(엔티티마다 하나, 중첩 프리팹 부품 제외).
          */
-        [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID, const atomic<bool>* pStop = nullptr );
+        [[nodiscard]] bool instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID, const StopToken& stopToken = {} );
 
         /** @brief 컴포넌트 핸들로 카메라를 다시 찾습니다. */
         CameraComponent* resolveCamera( TComponentHandle<CameraComponent> handle ) const;

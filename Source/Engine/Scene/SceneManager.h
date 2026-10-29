@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/span.h"
@@ -10,7 +11,6 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
-#include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -312,7 +312,7 @@ namespace sw
             unique_ptr<Scene>   _scene;
             atomic<bool>        _bReady{ false };
             atomic<bool>        _bAccepting{ true };
-            atomic<bool>        _bStop{ false }; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
+            StopSource          _stop; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
             TaskPromise<Scene*> _promise{};
             uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
             SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
@@ -336,7 +336,7 @@ namespace sw
         atomic<bool>        _bLoadInFlight;
         TaskHandle          _loadHandle;
         /** @brief 이 매니저가 띄운 씬 로드 태스크 전부(핸들 하나는 다시 띄우면 덮인다). 종료 · 취소는 엔진 전체(`waitAll`)가 아니라 이것만 기다린다. */
-        TaskHandleTracker               _loadTracker;
+        TaskStageHandle                 _loadStage;                 ///< 이 매니저가 띄운 로드 잡의 스테이지(처음 띄울 때 만든다 — 종료 · 취소가 이것만 기다린다, 게임 스레드에서만 쓴다)
         string                          _saveBlockReason;           ///< 비어 있지 않으면 씬 저장을 막는다(`setSaveBlockReason`)
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`

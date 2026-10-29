@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
-#include "Core/Task/TaskHandleTracker.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -21,21 +20,21 @@ namespace sw::editor
         }
 
         TaskHandle handle = pTaskManager->emplaceTask( name, delegate, args );
-        // 추적기는 에디터 컨텍스트가 만든 상태 저장소에 산다. 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 올리지 않는다.
+        // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
         if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pStore->get<TaskHandleTracker>().track( handle );
+            pTaskManager->addToStage( pStore->get<EditorBackgroundWork>()._stage, handle, "EditorBackgroundJobs" );
         handle.submit();
     }
 
     void requestEditorBackgroundStop()
     {
         if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
-            pStore->get<TaskHandleTracker>().requestStop();
+            pStore->get<EditorBackgroundWork>()._stop.requestStop();
     }
 
-    shared_ptr<const atomic<bool>> acquireEditorBackgroundStopSignal()
+    StopToken acquireEditorBackgroundStopSignal()
     {
         EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>();
-        return pStore != nullptr ? pStore->get<TaskHandleTracker>().getStopSignal() : nullptr;
+        return pStore != nullptr ? pStore->get<EditorBackgroundWork>()._stop.getToken() : StopToken{};
     }
 } // namespace sw::editor

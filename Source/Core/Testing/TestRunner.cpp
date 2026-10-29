@@ -143,10 +143,10 @@ namespace sw::test
                 return s_watchdog;
             }
 
-            static void watchCaseDeadline( ThreadStopToken stopToken )
+            static void watchCaseDeadline( StopToken stopToken )
             {
                 Watchdog& watchdog = getWatchdog();
-                while ( stopToken.stop_requested() == false )
+                while ( stopToken.isStopRequested() == false )
                 {
                     MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 100 * constant::kNanosecondsPerMillisecond );
                     const int64 deadline = watchdog._deadlineNanoseconds.load( std::memory_order_acquire );

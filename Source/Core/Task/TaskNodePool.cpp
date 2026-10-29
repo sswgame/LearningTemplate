@@ -118,7 +118,7 @@ namespace sw
         }
     }
 
-    string TaskNodePool::describeFirstUnfinished()
+    string TaskNodePool::describeFirstUnfinished( [[maybe_unused]] const StageNode* pStage )
     {
 #if !defined( SW_SHIPPING )
         // 이름은 **참조를 잡은 뒤에** 읽는다. 참조가 있는 노드는 풀로 돌아가 이름을 지우거나 다시 쓰이지 않는다. 제출됐다(`_bScheduled`, 이름은 제출 전에 정해진다)는 것도
@@ -140,7 +140,9 @@ namespace sw
                         continue;
                     if ( node.tryRetain() == false )
                         continue;
-                    const bool bStillUnfinished = node._bScheduled.load( std::memory_order_acquire ) && node._pendingChildren.load( std::memory_order_acquire ) > 0;
+                    // 스테이지를 주면 그 스테이지에 든 태스크만 본다(주인의 기한 대기 진단 — `TaskManager::waitStage`).
+                    const bool bInStage         = pStage == nullptr || node._parentStage == pStage;
+                    const bool bStillUnfinished = bInStage && node._bScheduled.load( std::memory_order_acquire ) && node._pendingChildren.load( std::memory_order_acquire ) > 0;
                     if ( bStillUnfinished && node._arrName[0] != '\0' )
                     {
                         name  = string( node._arrName );

@@ -305,10 +305,10 @@ namespace sw
         _thread   = sw::thread( &ServerPoseOverlay::runPoller, this );
     }
 
-    void ServerPoseOverlay::runPoller( ThreadStopToken stopToken )
+    void ServerPoseOverlay::runPoller( StopToken stopToken )
     {
         DebugChannelClient client;
-        while ( stopToken.stop_requested() == false )
+        while ( stopToken.isStopRequested() == false )
         {
             int64 sleepNanoseconds = ServerPoseOverlayInternal::kPollIntervalNanoseconds;
             if ( client.isConnected() == false &&

@@ -34,9 +34,9 @@ namespace sw::editor
 
         vector<string> listFile;
         // 표시용 목록이다 — 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 collectFiles 가 경로와 함께 알린 뒤 모은 데까지 보인다.
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, pStop.get() );
-        if ( isStopRaised( pStop ) )
+        const StopToken stopToken = readStopSignal( pState );
+        (void)FileUtil::collectFiles( input._folder, input._extension, listFile, input._bRecursive, stopToken );
+        if ( stopToken.isStopRequested() )
             return; // 종료가 시작돼 훑기가 멈췄다 — 짧은 목록을 싣지 않는다
 
         publish( pState, generation, std::move( listFile ) );
@@ -63,14 +63,14 @@ namespace sw::editor
         if ( readInput( pState, generation, projectPath ) == false )
             return;
 
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        if ( isStopRaised( pStop ) )
+        const StopToken stopToken = readStopSignal( pState );
+        if ( stopToken.isStopRequested() )
             return; // 종료가 시작됐다 — 읽기를 시작하지 않는다
         // 읽지 못한 테이블은 경고가 남고 그 칸만 빈다 — 나머지는 그대로 보인다(저장은 그 파일을 덮지 않는다).
         LocalizationSheet sheet;
         (void)EditorDataTableCommands::loadLocalizationProject( projectPath, sheet ); // 읽지 못한 테이블은 경고로 남고 그 칸만 빈다
 
-        if ( isStopRaised( pStop ) )
+        if ( stopToken.isStopRequested() )
             return;
         publish( pState, generation, std::move( sheet ) );
     }
@@ -96,14 +96,14 @@ namespace sw::editor
         if ( readInput( pState, generation, dataFolder ) == false )
             return;
 
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        if ( isStopRaised( pStop ) )
+        const StopToken stopToken = readStopSignal( pState );
+        if ( stopToken.isStopRequested() )
             return;
         vector<GameDataFileEntry> listEntry;
         // 표시용 목록이다 — data 폴더가 없으면 빈 목록이 맞고, 도중에 멈춘 목록은 경로와 함께 알린 뒤 모은 데까지 보인다.
         (void)EditorDataTableCommands::collectGameDataFiles( dataFolder, listEntry );
 
-        if ( isStopRaised( pStop ) )
+        if ( stopToken.isStopRequested() )
             return;
         publish( pState, generation, std::move( listEntry ) );
     }
@@ -129,10 +129,10 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<EditorAssetIndexEntry>        listEntry;
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorAssetIndex::collectEntries( listEntry, pStop.get() );
-        if ( isStopRaised( pStop ) )
+        vector<EditorAssetIndexEntry> listEntry;
+        const StopToken               stopToken = readStopSignal( pState );
+        EditorAssetIndex::collectEntries( listEntry, stopToken );
+        if ( stopToken.isStopRequested() )
             return;
 
         publish( pState, generation, std::move( listEntry ) );
@@ -163,10 +163,10 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        vector<EditorFolderListingEntry>     listEntry;
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorFolderListing::collectFolderListing( input._folder, listEntry, input._bRecursive, pStop.get() );
-        if ( isStopRaised( pStop ) )
+        vector<EditorFolderListingEntry> listEntry;
+        const StopToken                  stopToken = readStopSignal( pState );
+        EditorFolderListing::collectFolderListing( input._folder, listEntry, input._bRecursive, stopToken );
+        if ( stopToken.isStopRequested() )
             return;
 
         publish( pState, generation, std::move( listEntry ) );
@@ -194,10 +194,10 @@ namespace sw::editor
         if ( readInput( pState, generation, resourceRoot ) == false )
             return;
 
-        EditorReferenceIndexData             data{};
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorReferenceIndex::scan( resourceRoot, data, pTasks, pStop.get() );
-        if ( isStopRaised( pStop ) )
+        EditorReferenceIndexData data{};
+        const StopToken          stopToken = readStopSignal( pState );
+        EditorReferenceIndex::scan( resourceRoot, data, pTasks, stopToken );
+        if ( stopToken.isStopRequested() )
             return; // 종료가 시작돼 스캔이 중간에 멈췄다 — 불완전한 색인을 싣지 않는다
 
         publish( pState, generation, std::move( data ) );
@@ -224,10 +224,10 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
-        EditorResourceCatalogCounts          counts{};
-        const shared_ptr<const atomic<bool>> pStop = readStopSignal( pState );
-        EditorAssetIndex::collectCatalogCounts( counts, pStop.get() );
-        if ( isStopRaised( pStop ) )
+        EditorResourceCatalogCounts counts{};
+        const StopToken             stopToken = readStopSignal( pState );
+        EditorAssetIndex::collectCatalogCounts( counts, stopToken );
+        if ( stopToken.isStopRequested() )
             return;
 
         publish( pState, generation, std::move( counts ) );

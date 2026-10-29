@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/Windows/XAudio2AudioBackend.h"
 
+#include "Core/Concurrency/StopToken.h"
+
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
 
@@ -236,14 +238,14 @@ namespace sw
                 uint32               _channelCount{ 0 }; ///< 엔진 레이아웃의 채널 수다. 장치로 보내는 교차 버퍼의 프레임 크기다.
                 vector<float32>      _listBuffer{};      ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
                 uint32               _nextBuffer{ 0 };
-                std::atomic<bool>    _bStopping{ false };
+                StopSource           _stop;
 
                 virtual ~StreamCallback() = default;
 
                 /** @brief 다음 버퍼를 렌더해 제출합니다. */
                 void submitNext()
                 {
-                    if ( _bStopping.load( std::memory_order_acquire ) || _pVoice == nullptr )
+                    if ( _stop.isStopRequested() || _pVoice == nullptr )
                         return;
                     float32* pBuffer = _listBuffer.data() + static_cast<size_t>( _nextBuffer ) * kStreamBufferFrameCount * _channelCount;
                     _pEngine->render( pBuffer, kStreamBufferFrameCount );
@@ -395,7 +397,7 @@ namespace sw
         callback._pVoice                                      = _impl->_pStreamVoice;
         callback._channelCount                                = channelCount;
         callback._nextBuffer                                  = 0;
-        callback._bStopping.store( false, std::memory_order_release );
+        callback._stop                                        = StopSource{};
         callback._listBuffer.assign( static_cast<size_t>( XAudio2AudioBackendInternal::kStreamBufferFrameCount ) * channelCount *
                                          XAudio2AudioBackendInternal::kStreamBufferCount,
                                      0.0f );
@@ -422,7 +424,7 @@ namespace sw
         if ( _impl == nullptr )
             return;
         // 콜백이 더 제출하지 않게 먼저 표시하고, 보이스를 파괴한다. DestroyVoice 는 처리 중인 콜백이 끝날 때까지 기다린다.
-        _impl->_callback._bStopping.store( true, std::memory_order_release );
+        _impl->_callback._stop.requestStop();
         if ( _impl->_pStreamVoice != nullptr )
         {
             (void)_impl->_pStreamVoice->Stop( 0 ); // 바로 아래에서 보이스를 파괴한다

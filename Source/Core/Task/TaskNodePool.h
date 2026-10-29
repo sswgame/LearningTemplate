@@ -59,7 +59,7 @@ namespace sw
          *          이름은 노드의 참조를 하나 잡은 뒤(`TaskNode::tryRetain`)에 읽는다 — 참조가 있는 동안 노드는 풀로 돌아가 이름이 지워지거나 새 태스크로 쓰이지 않고,
          *          제출 뒤에는 이름이 바뀌지 않으므로 이름 읽기에 데이터 레이스가 없다. 오류 경로에서만 부른다.
          */
-        [[nodiscard]] string describeFirstUnfinished();
+        [[nodiscard]] string describeFirstUnfinished( const StageNode* pStage );
 
         /** @brief 노드를 낸 매니저입니다. 매니저가 사라졌으면(`detachOwner` 뒤) nullptr 입니다. */
         TaskManager* getOwner() const { return _pOwner; }

@@ -410,7 +410,7 @@ namespace sw
         return true;
     }
 
-    bool Scene::instantiate( const SceneDocument& doc, const atomic<bool>* pStop )
+    bool Scene::instantiate( const SceneDocument& doc, const StopToken& stopToken )
     {
         if ( _objectManager == nullptr )
             return false;
@@ -420,7 +420,7 @@ namespace sw
         // 서비스가 쿠킹본(내비메시 `<씬>.navmesh` 등)을 찾는 이름이다.
         _objectManager->notifySceneLoading( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
-        if ( instantiateNodes( doc._listSceneObjectNode, false, nullptr, pStop ) == false )
+        if ( instantiateNodes( doc._listSceneObjectNode, false, nullptr, stopToken ) == false )
             return false;
         // 셀로 나눈 쿠킹본이면 셀은 지금 짓지 않는다 — 스트리밍 원점이 다가올 때 서비스가 짓는다(`instantiateCell`).
         if ( doc._listStreamingCell.empty() )
@@ -450,7 +450,7 @@ namespace sw
         }
     }
 
-    bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID, const atomic<bool>* pStop )
+    bool Scene::instantiateNodes( const vector<SceneDocument::SceneObjectNode>& listNode, bool bStreamingCell, vector<uint64>* pOutListObjectID, const StopToken& stopToken )
     {
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 해석할 수 있다. 엔티티를 모두 하나의 배치로 읽고 끝에서 연결한다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 의미가 있는 값이라 배치 안에서만 해석한다). 이름으로 찾으면 이름이 겹친
@@ -474,7 +474,7 @@ namespace sw
         for ( const SceneDocument::SceneObjectNode& entity : listNode )
         {
             // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
-            if ( pStop != nullptr && pStop->load( std::memory_order_acquire ) )
+            if ( stopToken.isStopRequested() )
                 return false;
             SW_LOG_TRACE( "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)

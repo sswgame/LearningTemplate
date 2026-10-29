@@ -11,6 +11,8 @@
  *       따로 검증할 수 있다.
  */
 #pragma once
+#include "Core/Concurrency/StopToken.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -20,6 +22,16 @@
 
 namespace sw::editor
 {
+    /**
+     * @struct EditorBackgroundWork
+     * @brief 에디터가 낸 백그라운드 잡의 스테이지와 협조 중단 신호입니다. 에디터 상태 저장소(`EditorStateStore`)에 하나 — 컨텍스트 종료가 이 스테이지만 기다린다.
+     */
+    struct EditorBackgroundWork
+    {
+        TaskStageHandle _stage; ///< 낸 잡(게임 스레드에서 낸다 — `TaskManager::addToStage`)
+        StopSource      _stop;  ///< `requestEditorBackgroundStop` 이 올린다(내리지 않는다)
+    };
+
     /**
      * @brief 잡 본문을 TaskManager 워커에 제출합니다. TaskManager 가 없으면(테스트 · 초기화 전) 같은 스레드에서 바로 돌립니다.
      * @details 작업 시스템은 부르는 스레드(에디터 서비스 범위를 등록한 스레드)에서 찾는다 — 워커 본문은 범위를 찾지 않는다(`findEditorScope`).
@@ -32,7 +44,7 @@ namespace sw::editor
      */
     void requestEditorBackgroundStop();
     /** @brief 에디터 잡 하나가 제출 때 잡아 둔 중단 신호입니다(`beginRequest` 가 채운다). 에디터 컨텍스트가 없으면 nullptr — 멈출 일이 없다. */
-    [[nodiscard]] shared_ptr<const atomic<bool>> acquireEditorBackgroundStopSignal();
+    [[nodiscard]] StopToken acquireEditorBackgroundStopSignal();
     // 낸 잡은 에디터 범위의 `TaskHandleTracker`(`getEditorState`)에 올라가고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
 } // namespace sw::editor
 
@@ -113,14 +125,14 @@ namespace sw::editor
         /** @brief 게임 스레드와 워커가 함께 보는 상태입니다. */
         struct State
         {
-            mutable mutex                  _mutex{};
-            TInput                         _input{};
-            TResult                        _result{};
-            uint32                         _generation{ 0 };
-            shared_ptr<const atomic<bool>> _pStop{}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). nullptr 이면 멈출 일이 없다
-            uint8                          _bPending : 1;
-            uint8                          _bReady   : 1;
-            [[maybe_unused]] uint8         _reserved : 6;
+            mutable mutex          _mutex{};
+            TInput                 _input{};
+            TResult                _result{};
+            uint32                 _generation{ 0 };
+            StopToken              _stopToken{}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). 묶이지 않았으면 멈출 일이 없다
+            uint8                  _bPending : 1;
+            uint8                  _bReady   : 1;
+            [[maybe_unused]] uint8 _reserved : 6;
 
             State()
                 : _mutex{}
@@ -142,11 +154,11 @@ namespace sw::editor
         {
             ScopedLock<mutex> lock{ _pState->_mutex };
             ++_pState->_generation;
-            _pState->_input    = std::move( input );
-            _pState->_result   = TResult{};
-            _pState->_pStop    = acquireEditorBackgroundStopSignal();
-            _pState->_bPending = SW_TRUE;
-            _pState->_bReady   = SW_FALSE;
+            _pState->_input     = std::move( input );
+            _pState->_result    = TResult{};
+            _pState->_stopToken = acquireEditorBackgroundStopSignal();
+            _pState->_bPending  = SW_TRUE;
+            _pState->_bReady    = SW_FALSE;
             return _pState->_generation;
         }
 
@@ -165,16 +177,16 @@ namespace sw::editor
         }
 
         /** @brief 워커에서 호출합니다. 이 잡이 잡아 둔 중단 신호의 사본입니다(새 요청이 칸을 덮어써도 이 사본은 유효하다). 긴 일에 신호 포인터로 넘긴다. */
-        [[nodiscard]] static shared_ptr<const atomic<bool>> readStopSignal( const shared_ptr<State>& pState )
+        [[nodiscard]] static StopToken readStopSignal( const shared_ptr<State>& pState )
         {
             if ( pState == nullptr )
-                return nullptr;
+                return {};
             ScopedLock<mutex> lock{ pState->_mutex };
-            return pState->_pStop;
+            return pState->_stopToken;
         }
 
         /** @brief 워커에서 호출합니다. `readStopSignal` 로 받은 신호가 올라갔으면(nullptr 이면 올라갈 일이 없다) true — 잡은 결과를 싣지 않고 돌아간다. */
-        [[nodiscard]] static bool isStopRaised( const shared_ptr<const atomic<bool>>& pStop ) { return pStop != nullptr && pStop->load( std::memory_order_acquire ); }
+        [[nodiscard]] static bool isStopRaised( const StopToken& stopToken ) { return stopToken.isStopRequested(); }
 
         /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시하며, 오래된 세대면 버립니다. */
         static void publish( const shared_ptr<State>& pState, uint32 generation, TResult&& result )

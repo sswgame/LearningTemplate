@@ -55,7 +55,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorFolderListing::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive, const atomic<bool>* pStop )
+    void EditorFolderListing::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive, const StopToken& stopToken )
     {
         outList.clear();
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
@@ -64,8 +64,8 @@ namespace sw::editor
         vector<string> listFolder;
         vector<string> listFile;
         // 표시용 목록이다(폴더는 위에서 확인했다) — 도중에 멈춘 목록은 collect 가 경로와 함께 알리고, 모은 데까지 보인다.
-        (void)FileUtil::collectFolders( folderAbs, listFolder, false );             // 표시용 — 모은 데까지 보인다
-        (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, pStop ); // 표시용 — 모은 데까지 보인다
+        (void)FileUtil::collectFolders( folderAbs, listFolder, false );                 // 표시용 — 모은 데까지 보인다
+        (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
 
         const string& resourceRoot = AssetPaths::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
@@ -76,7 +76,7 @@ namespace sw::editor
         }
         for ( const string& file : listFile )
         {
-            if ( pStop != nullptr && pStop->load( std::memory_order_acquire ) )
+            if ( stopToken.isStopRequested() )
                 return;
             EditorFolderListingInternal::appendFolderListingEntry( outList, file, false, rootNorm );
         }

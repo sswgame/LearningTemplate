@@ -952,9 +952,49 @@ namespace sw
 #endif
     }
 
+    void TaskManager::waitStage( const TaskStageHandle& stage, const string_view owner )
+    {
+        if ( stage._pNode == nullptr )
+            return;
+        Stopwatch     reportWatch;
+        WaitSpinState spinState{};
+        JoinCounter&  join = stage._pNode->_join;
+        while ( join.getPending() > 0 )
+        {
+            if ( helpOrSpin( spinState, true ) )
+                continue;
+            const int64 elapsed = reportWatch.getElapsedMilliseconds();
+            if ( elapsed >= static_cast<int64>( kStageWaitReportMs ) )
+            {
+                SW_LOG_ERROR( "%#: still waiting for %# task(s) after %# ms (first unfinished: '%#')", owner, join.getPending(), kStageWaitReportMs,
+                              _nodePool->describeFirstUnfinished( stage._pNode ) );
+                reportWatch = Stopwatch{};
+                continue;
+            }
+            // 대기자 칸(스테이지마다 하나)에 적지 않고 브로드캐스트로 잔다 — 진단 간격마다 깨어야 하고, 같은 스테이지를 둘이 기다릴 수 있다. 스테이지 완료는 늘 브로드캐스트를 보낸다.
+            const uint32 epoch = prepareBroadcastWait();
+            if ( join.getPending() > 0 )
+                commitBroadcastWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
+            else
+                cancelBroadcastWait();
+        }
+    }
+
     bool TaskManager::isStageComplete( const TaskStageHandle& stage )
     {
         return stage._pNode == nullptr || stage._pNode->_join.getPending() == 0;
+    }
+
+    void TaskManager::addToStage( TaskStageHandle& inoutStage, const TaskHandle& task, const string_view stageName )
+    {
+        if ( inoutStage.isValid() == false )
+            inoutStage = createStage( stageName );
+        inoutStage.addTask( task );
+    }
+
+    uint32 TaskManager::getStagePendingCount( const TaskStageHandle& stage )
+    {
+        return stage._pNode == nullptr ? 0u : stage._pNode->_join.getPending();
     }
 
     // ------------------------------------------------------------------------------
@@ -1033,7 +1073,7 @@ namespace sw
 
     string TaskManager::describeUnfinishedTask()
     {
-        return _nodePool->describeFirstUnfinished();
+        return _nodePool->describeFirstUnfinished( nullptr );
     }
 
     void TaskManager::parkOnJoin( JoinCounter& join )

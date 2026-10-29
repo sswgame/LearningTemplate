@@ -8,6 +8,7 @@
  *       채널 순서는 ALSA 순서(FL FR RL RR FC LFE SL SR)로 바꿔 씁니다.
  */
 #pragma once
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -42,7 +43,7 @@ namespace sw
 
     private:
         /** @brief 스트림 스레드 본문입니다. 멈추라는 표시가 설 때까지 블록을 렌더해 씁니다. */
-        void runStream();
+        void runStream( StopToken stopToken );
 
     private:
         unique_ptr<AlsaAudioBackendImpl> _impl; /**< 리눅스 전용 상태입니다. 헤더에서 ALSA 형식을 가립니다. */

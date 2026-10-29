@@ -14,7 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
-#include "Core/Task/TaskHandleTracker.h"
+#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/FileSystem/AssetID.h"
@@ -165,6 +165,6 @@ namespace sw
         AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
         float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
         mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
-        TaskHandleTracker                                                            _decodeTracker;          /**< 띄운 워커 디코드 태스크의 핸들입니다(소멸자가 이것만 기다린다). */
+        TaskStageHandle _decodeStage                                                 SW_GUARDED_BY( _mutex ); /**< 띄운 워커 디코드 태스크의 스테이지입니다(처음 띄울 때 만든다 — 소멸자가 이것만 기다린다). */
     };
 } // namespace sw

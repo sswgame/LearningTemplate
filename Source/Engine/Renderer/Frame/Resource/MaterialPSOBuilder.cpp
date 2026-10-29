@@ -52,10 +52,10 @@ namespace sw
         --_inFlight;
     }
 
-    void MaterialPSOBuilder::run( ThreadStopToken stopToken )
+    void MaterialPSOBuilder::run( StopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "MaterialPSOBuilder" );
-        while ( stopToken.stop_requested() == false )
+        while ( stopToken.isStopRequested() == false )
         {
             const uint32 seenWake = _wakeWord.load( std::memory_order_acquire );
             Job          job;

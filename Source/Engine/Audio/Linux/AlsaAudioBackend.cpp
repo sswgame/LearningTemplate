@@ -75,7 +75,6 @@ namespace sw
         thread                                                           _streamThread;        /**< 스트림 스레드입니다. */
         void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
         void*                                                            _pPcm;                /**< 열린 재생 장치입니다. */
-        atomic<bool>                                                     _bStopping;           /**< 스트림 스레드를 멈추라는 표시입니다. */
         uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
 
         AlsaAudioBackendImpl()
@@ -95,7 +94,6 @@ namespace sw
             , _streamThread{}
             , _pLibrary{ nullptr }
             , _pPcm{ nullptr }
-            , _bStopping{ false }
             , _channelCount{ 0 }
         {
         }
@@ -187,19 +185,18 @@ namespace sw
         _impl->_channelCount = channelCount;
         _impl->_listRender.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
         _impl->_listDevice.assign( static_cast<size_t>( Internal::kWriteFrameCount ) * channelCount, 0.0f );
-        _impl->_bStopping.store( false, std::memory_order_release );
         _impl->_streamThread = thread( &AlsaAudioBackend::runStream, this );
         SW_LOG_INFO( "ALSA stream ready (%# Hz, %# channels, %# frames per write).", audio::kSampleRate, channelCount, Internal::kWriteFrameCount );
         return true;
     }
 
-    void AlsaAudioBackend::runStream()
+    void AlsaAudioBackend::runStream( StopToken stopToken )
     {
         using Internal            = AlsaAudioBackendInternal;
         const uint32 channelCount = _impl->_channelCount;
         // 두 채널(스테레오 · 바이노럴)은 순서가 같다. 5.1 · 7.1 만 ALSA 순서로 옮긴다.
         const bool bReorder = channelCount > audio::kStereoChannelCount;
-        while ( _impl->_bStopping.load( std::memory_order_acquire ) == false )
+        while ( stopToken.isStopRequested() == false )
         {
             getEngine().render( _impl->_listRender.data(), Internal::kWriteFrameCount );
             const float32* pWrite = _impl->_listRender.data();
@@ -209,7 +206,7 @@ namespace sw
                 pWrite = _impl->_listDevice.data();
             }
             uint32 written = 0;
-            while ( written < Internal::kWriteFrameCount && _impl->_bStopping.load( std::memory_order_acquire ) == false )
+            while ( written < Internal::kWriteFrameCount && stopToken.isStopRequested() == false )
             {
                 const int64 result = _impl->_pfnWritei( _impl->_pPcm, pWrite + static_cast<size_t>( written ) * channelCount, Internal::kWriteFrameCount - written );
                 if ( result < 0 )
@@ -228,7 +225,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-        _impl->_bStopping.store( true, std::memory_order_release );
+        _impl->_streamThread.request_stop(); // 스레드 토큰으로 알린다(`runStream`)
         // 막혀 있는 writei 를 바로 풀기 위해 버퍼를 버린다.
         if ( _impl->_pPcm != nullptr && _impl->_pfnDrop != nullptr )
             (void)_impl->_pfnDrop( _impl->_pPcm ); // 스레드를 멈추려는 것이라 결과는 보지 않는다

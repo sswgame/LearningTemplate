@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/Windows/IocpStreamTransport.h"
 
 #include "Core/Concurrency/OnceInit.h"
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -167,7 +168,7 @@ namespace sw
         atomic<uint64>                                     _sentBytes{ 0 };
         atomic<uint64>                                     _receiveCallCount{ 0 };
         atomic<uint64>                                     _sendCallCount{ 0 };
-        atomic<bool>                                       _bStopping{ false };
+        StopSource                                         _stop;
         atomic<bool>                                       _bExitThreads{ false }; ///< I/O 스레드가 끝난다. 종료 키는 깨우기만 한다(한 배치에서 종료 키 여럿을 한 스레드가 가져갈 수 있다).
         uint16                                             _listenPort{ 0 };
         uint8                                              _bInitialized{ SW_FALSE };
@@ -493,7 +494,7 @@ namespace sw
             const SOCKET    accepted = slot._socket;
             slot._socket             = INVALID_SOCKET;
             _pendingAcceptCount.fetch_sub( 1, std::memory_order_relaxed );
-            const bool bStopping     = _bStopping.load( std::memory_order_acquire );
+            const bool bStopping     = _stop.isStopRequested();
             const bool bAcceptUsable = bSucceeded && bStopping == false && accepted != INVALID_SOCKET;
             if ( bAcceptUsable )
             {
@@ -682,7 +683,7 @@ namespace sw
         }
         _state->_pHandler.set( pHandler );
         _state->_settings.set( settings );
-        _state->_bStopping.store( false, std::memory_order_release );
+        _state->_stop = StopSource{};
         _state->_bExitThreads.store( false, std::memory_order_release );
         _state->_bInitialized = SW_TRUE;
         for ( int32 index = 0; index < settings._ioThreadCount; ++index )
@@ -697,7 +698,7 @@ namespace sw
         State& state = *_state;
         if ( state._bInitialized == SW_FALSE )
             return;
-        state._bStopping.store( true, std::memory_order_release );
+        state._stop.requestStop();
         if ( state._listenSocket != INVALID_SOCKET )
         {
             closesocket( state._listenSocket ); // 걸린 AcceptEx 가 실패로 돌아온다.
@@ -787,7 +788,7 @@ namespace sw
     StreamConnectionHandle IocpStreamTransport::connect( const NetAddress& remote )
     {
         State& state = *_state;
-        if ( state._bInitialized == SW_FALSE || state._bStopping.load() )
+        if ( state._bInitialized == SW_FALSE || state._stop.isStopRequested() )
             return StreamConnectionHandle{};
         const SOCKET socket = IocpStreamTransportInternal::openStreamSocket();
         if ( socket == INVALID_SOCKET )

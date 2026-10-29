@@ -9,13 +9,13 @@
 
 namespace sw
 {
-    bool StandardInputReader::readLinePlatform( const ThreadStopToken& stopToken, string& outLine )
+    bool StandardInputReader::readLinePlatform( const StopToken& stopToken, string& outLine )
     {
         for ( ;; )
         {
             if ( takeLine( outLine ) )
                 return true;
-            if ( stopToken.stop_requested() )
+            if ( stopToken.isStopRequested() )
                 return false;
             pollfd      descriptor{ STDIN_FILENO, POLLIN, 0 };
             const int32 ready = poll( &descriptor, 1, 100 );

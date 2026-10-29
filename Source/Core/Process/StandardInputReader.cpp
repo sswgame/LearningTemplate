@@ -50,11 +50,11 @@ namespace sw
         _listLine.clear();
     }
 
-    void StandardInputReader::readLoop( ThreadStopToken stopToken )
+    void StandardInputReader::readLoop( StopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "StandardInput" );
         string line;
-        while ( stopToken.stop_requested() == false )
+        while ( stopToken.isStopRequested() == false )
         {
             if ( readLinePlatform( stopToken, line ) == false )
             {

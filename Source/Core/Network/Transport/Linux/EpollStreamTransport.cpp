@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/Linux/EpollStreamTransport.h"
 
 #include "Core/Concurrency/OnceInit.h"
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -135,7 +136,7 @@ namespace sw
         atomic<uint64>                      _sentBytes{ 0 };
         atomic<uint64>                      _receiveCallCount{ 0 };
         atomic<uint64>                      _sendCallCount{ 0 };
-        atomic<bool>                        _bStopping{ false };
+        StopSource                          _stop;
         uint16                              _listenPort{ 0 };
         uint8                               _bThreaded{ SW_FALSE };
         uint8                               _bInitialized{ SW_FALSE };
@@ -486,7 +487,7 @@ namespace sw
                         continue;
                     return; // EAGAIN 이나 그 밖의 오류다(EMFILE 은 로그를 남긴다).
                 }
-                if ( _bStopping.load( std::memory_order_acquire ) || _openCount.load( std::memory_order_relaxed ) >= _settings->_maxConnections )
+                if ( _stop.isStopRequested() || _openCount.load( std::memory_order_relaxed ) >= _settings->_maxConnections )
                 {
                     Internal::closeAbortive( fd );
                     continue;
@@ -519,7 +520,7 @@ namespace sw
                 }
             }
             const int64 idleNanoseconds = Internal::toNanoseconds( _settings->_idleTimeoutSeconds );
-            const bool  bStopping       = _bStopping.load( std::memory_order_acquire );
+            const bool  bStopping       = _stop.isStopRequested();
             for ( const uint32 index : listIndex )
             {
                 EpollConnection& connection = getConnection( index );
@@ -603,7 +604,7 @@ namespace sw
         {
             ThreadName::setCurrentThreadName( "StreamIO" );
             int64 nextSweep = 0;
-            while ( _bStopping.load( std::memory_order_acquire ) == false || _openCount.load( std::memory_order_acquire ) > 0 )
+            while ( _stop.isStopRequested() == false || _openCount.load( std::memory_order_acquire ) > 0 )
             {
                 (void)runOnce( loopIndex, Internal::kLoopWaitMilli, nextSweep );
             }
@@ -649,7 +650,7 @@ namespace sw
                 return false; // shutdown 이 연 것을 닫는다.
             }
         }
-        state._bStopping.store( false, std::memory_order_release );
+        state._stop         = StopSource{};
         state._bInitialized = SW_TRUE;
         if ( state._bThreaded == SW_TRUE )
         {
@@ -667,7 +668,7 @@ namespace sw
         if ( state._listLoop.empty() )
             return;
         // 리슨 소켓은 루프를 모두 멈춘 뒤에 닫는다. 루프 0 이 acceptAvailable 에서 `_listenFd` 를 읽고 있기 때문이다. 멈추는 동안 받은 연결은 acceptAvailable 이 바로 끊는다.
-        state._bStopping.store( true, std::memory_order_release );
+        state._stop.requestStop();
         {
             ScopedLock<mutex> lock{ state._tableMutex };
             for ( uint32 index = 0; index < static_cast<uint32>( state._listConnection.size() ); ++index )
@@ -773,7 +774,7 @@ namespace sw
     StreamConnectionHandle EpollStreamTransport::connect( const NetAddress& remote )
     {
         State& state = *_state;
-        if ( state._bInitialized == SW_FALSE || state._bStopping.load() )
+        if ( state._bInitialized == SW_FALSE || state._stop.isStopRequested() )
             return StreamConnectionHandle{};
         const int32 fd = socket( AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
         if ( fd < 0 )

@@ -7,12 +7,13 @@
  *          합류 키는 스레드 식별자로 만든 홀수 값이라 정렬된 `mutex` 주소와 겹치지 않고 할당도 없다.
  *          언리얼 `FRunnableThread` 처럼 스레드를 엔진 타입으로 감싸 진단을 붙이는 자리다.
  *          C++20 `std::jthread` 처럼 **정지 요청 칸**과 **소멸자 합류**를 가진다(C++17 이라 자체 구현). 그래서 소유자가 `join` 을 빠뜨려도
- *          `std::terminate` 로 끝나지 않고, 스레드 함수가 첫 인자로 `ThreadStopToken` 을 받으면 소멸이 정지를 요청한 뒤 합류한다.
+ *          `std::terminate` 로 끝나지 않고, 스레드 함수가 첫 인자로 `StopToken` 을 받으면 소멸이 정지를 요청한 뒤 합류한다.
  * @note 주의: 로더 락을 쥔 스레드(Windows `DllMain`, DLL 을 내릴 때 도는 모듈 안 정적 소멸자)에서 `join` 하면 영원히 멈춘다 — 끝나는 스레드도
  *       `DLL_THREAD_DETACH` 를 돌리려고 로더 락을 기다린다. `join` 은 이 경우 단언하고 스레드를 떼어(detach) 프로세스가 멈추지 않게 한다.
  *       소멸자 합류도 같은 `join` 을 지난다. 스레드를 가진 객체는 수명이 명시적인 소유자(`initialize` · `shutdown`)에 둔다. 리눅스(`dlclose` 안의 소멸자)는 검사하지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -24,37 +25,9 @@
 namespace sw
 {
     /**
-     * @class ThreadStopToken
-     * @brief `sw::thread` 의 정지 요청을 읽는 쪽입니다(`std::stop_token` 과 같은 역할). 스레드 함수의 첫 인자로 받습니다.
-     * @details 요청 칸은 스레드 객체와 스레드가 함께 가진다(`shared_ptr`) — 스레드 객체를 옮기거나 떼어도 토큰이 가리키는 칸은 살아 있다.
-     */
-    class ThreadStopToken
-    {
-    public:
-        /** @brief 아무 스레드에도 묶이지 않은 토큰입니다. 정지 요청을 받는 일이 없습니다. */
-        ThreadStopToken() noexcept = default;
-
-        /** @brief 정지를 요청받았으면 true 입니다. */
-        bool stop_requested() const noexcept { return _pStopFlag != nullptr && _pStopFlag->load( std::memory_order_acquire ); }
-
-    private:
-        friend class thread;
-
-        explicit ThreadStopToken( std::shared_ptr<const atomic<bool>> pStopFlag ) noexcept
-            : _pStopFlag{ std::move( pStopFlag ) }
-        {
-        }
-
-        std::shared_ptr<const atomic<bool>> _pStopFlag{}; ///< 스레드 객체와 함께 가진 정지 요청 칸
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @class thread
      * @brief std::thread 와 같은 모양(생성 · `join` · `detach` · `joinable` · `get_id`)이고, 시작 · 끝 · 합류 대기를 잠금 관찰자에 알립니다.
-     * @details `std::jthread` 처럼 소멸 · 이동 대입이 정지를 요청하고 합류합니다. 스레드 함수가 첫 인자로 `ThreadStopToken` 을 받을 수 있으면 토큰을 넘깁니다.
+     * @details `std::jthread` 처럼 소멸 · 이동 대입이 정지를 요청하고 합류합니다. 스레드 함수가 첫 인자로 `StopToken` 을 받을 수 있으면 토큰을 넘깁니다.
      */
     class SW_API thread
     {
@@ -65,13 +38,13 @@ namespace sw
         thread() noexcept = default;
         /**
          * @brief @p function 을 @p args 로 부르는 스레드를 시작합니다(std::thread 와 같이 인자를 복사해 넘긴다).
-         * @details @p function 이 `( ThreadStopToken, args... )` 로 불릴 수 있으면 첫 인자로 이 스레드의 정지 토큰을 넘긴다(`std::jthread` 와 같은 규칙).
-         *          그렇지 않고 `( args..., ThreadStopToken )` 로 불릴 수 있으면 마지막에 넘긴다 — 멤버 함수(`sw::thread( &X::run, this )`, `run( ThreadStopToken )`)가 람다 없이 받는다.
+         * @details @p function 이 `( StopToken, args... )` 로 불릴 수 있으면 첫 인자로 이 스레드의 정지 토큰을 넘긴다(`std::jthread` 와 같은 규칙).
+         *          그렇지 않고 `( args..., StopToken )` 로 불릴 수 있으면 마지막에 넘긴다 — 멤버 함수(`sw::thread( &X::run, this )`, `run( StopToken )`)가 람다 없이 받는다.
          */
         template <typename TFunction, typename... TArgs, typename = std::enable_if_t<!std::is_same_v<std::decay_t<TFunction>, thread>>>
         explicit thread( TFunction&& function, TArgs&&... args )
-            : _pStopFlag{ std::make_shared<atomic<bool>>( false ) }
-            , _thread{ startThread( _pStopFlag, std::forward<TFunction>( function ), std::forward<TArgs>( args )... ) }
+            : _stopSource{}
+            , _thread{ startThread( _stopSource.getToken(), std::forward<TFunction>( function ), std::forward<TArgs>( args )... ) }
         {
         }
         /** @brief 합류할 스레드가 있으면 정지를 요청하고 합류합니다(`std::jthread` 와 같이). */
@@ -86,8 +59,8 @@ namespace sw
             if ( this != &other )
             {
                 stopAndJoin();
-                _pStopFlag = std::move( other._pStopFlag );
-                _thread    = std::move( other._thread );
+                _stopSource = std::move( other._stopSource );
+                _thread     = std::move( other._thread );
             }
             return *this;
         }
@@ -104,14 +77,10 @@ namespace sw
         /** @brief 스레드 식별자입니다. 없으면 기본값입니다. */
         id get_id() const noexcept { return _thread.get_id(); }
 
-        /** @brief 스레드에 정지를 요청합니다. 스레드가 없으면 아무것도 하지 않습니다. 스레드 함수는 토큰(`stop_requested`)으로 읽습니다. */
-        void request_stop() noexcept
-        {
-            if ( _pStopFlag != nullptr )
-                _pStopFlag->store( true, std::memory_order_release );
-        }
+        /** @brief 스레드에 정지를 요청합니다. 스레드가 없으면 아무것도 하지 않습니다. 스레드 함수는 토큰(`isStopRequested`)으로 읽습니다. */
+        void request_stop() noexcept { _stopSource.requestStop(); }
         /** @brief 이 스레드의 정지 토큰입니다. 스레드가 없으면 묶이지 않은 토큰입니다. */
-        ThreadStopToken get_stop_token() const noexcept { return ThreadStopToken{ _pStopFlag }; }
+        StopToken get_stop_token() const noexcept { return _stopSource.getToken(); }
 
         /**
          * @brief 이 프로세스가 쓸 수 있는 논리 프로세서 수입니다(최소 1). 워커 풀 크기와 사양 조사는 이 값을 씁니다.
@@ -123,17 +92,17 @@ namespace sw
     private:
         /** @brief 스레드를 띄웁니다. 함수가 정지 토큰을 첫 인자로(아니면 마지막 인자로) 받을 수 있으면 그 자리에 토큰을 넣습니다. */
         template <typename TFunction, typename... TArgs>
-        static std::thread startThread( const std::shared_ptr<atomic<bool>>& pStopFlag, TFunction&& function, TArgs&&... args )
+        static std::thread startThread( const StopToken& stopToken, TFunction&& function, TArgs&&... args )
         {
-            if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, ThreadStopToken, std::decay_t<TArgs>...> )
+            if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, StopToken, std::decay_t<TArgs>...> )
             {
-                return std::thread{ &thread::runThread<std::decay_t<TFunction>, ThreadStopToken, std::decay_t<TArgs>...>, std::forward<TFunction>( function ),
-                                    ThreadStopToken{ pStopFlag }, std::forward<TArgs>( args )... };
+                return std::thread{ &thread::runThread<std::decay_t<TFunction>, StopToken, std::decay_t<TArgs>...>, std::forward<TFunction>( function ),
+                                    stopToken, std::forward<TArgs>( args )... };
             }
-            else if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, std::decay_t<TArgs>..., ThreadStopToken> )
+            else if constexpr ( std::is_invocable_v<std::decay_t<TFunction>, std::decay_t<TArgs>..., StopToken> )
             {
-                return std::thread{ &thread::runThread<std::decay_t<TFunction>, std::decay_t<TArgs>..., ThreadStopToken>, std::forward<TFunction>( function ),
-                                    std::forward<TArgs>( args )..., ThreadStopToken{ pStopFlag } };
+                return std::thread{ &thread::runThread<std::decay_t<TFunction>, std::decay_t<TArgs>..., StopToken>, std::forward<TFunction>( function ),
+                                    std::forward<TArgs>( args )..., stopToken };
             }
             else
             {
@@ -163,7 +132,7 @@ namespace sw
         /** @brief 끝나는 스레드에서 부릅니다 — 자기 합류 키를 놓았다고 알립니다. */
         static void notifyExiting();
 
-        std::shared_ptr<atomic<bool>> _pStopFlag{}; ///< 정지 요청 칸. 스레드의 토큰과 함께 가진다(스레드가 없으면 nullptr). `_thread` 보다 먼저 선언한다 — 생성자가 이 칸으로 토큰을 만든다
-        std::thread                   _thread;
+        StopSource  _stopSource{}; ///< 정지 요청 원천. 스레드의 토큰이 이 칸을 읽는다. `_thread` 보다 먼저 선언한다 — 생성자가 이 원천으로 토큰을 만든다
+        std::thread _thread;
     };
 } // namespace sw

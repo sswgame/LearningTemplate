@@ -867,22 +867,22 @@ namespace sw
         return current;
     }
 
-    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive, const atomic<bool>* pStop )
+    bool FileUtil::collectFiles( string_view directory, string_view filterExtension, vector<string>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
         if ( isDirectory( directory ) == false )
             return false;
 
         const bool bHasFilter = filterExtension.empty() == false;
-        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, pStop]( const DirectoryEntry& entry )
+        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
            {
-            if ( pStop != nullptr && pStop->load( std::memory_order_acquire ) )
+            if ( stopToken.isStopRequested() )
                 return false;
             if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
                 return true;
             outListFilePath.push_back( string( entry._path ) );
             return true;
         } );
-        const bool bStopped   = pStop != nullptr && pStop->load( std::memory_order_acquire );
+        const bool bStopped   = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
             SW_LOG_WARNING( "Collecting files under '%#' stopped partway - the list is incomplete", directory );
         return bWalked;

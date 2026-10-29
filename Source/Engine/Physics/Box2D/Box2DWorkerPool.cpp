@@ -151,17 +151,17 @@ namespace sw
         return true;
     }
 
-    void Box2DWorkerPool::runWorker( uint32 workerIndex, ThreadStopToken stopToken )
+    void Box2DWorkerPool::runWorker( uint32 workerIndex, StopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Box2DWorker" );
-        while ( stopToken.stop_requested() == false )
+        while ( stopToken.isStopRequested() == false )
         {
             const uint32 seenWake = _wakeWord.load( std::memory_order_acquire );
             if ( tryRunOne( workerIndex ) )
                 continue;
             const int64 spinEnd = MonotonicClock::nowNanoseconds() + Box2DWorkerPoolInternal::kSpinNanoseconds;
             bool        bRan    = false;
-            while ( MonotonicClock::nowNanoseconds() < spinEnd && stopToken.stop_requested() == false )
+            while ( MonotonicClock::nowNanoseconds() < spinEnd && stopToken.isStopRequested() == false )
             {
                 if ( tryRunOne( workerIndex ) )
                 {

@@ -147,7 +147,7 @@ namespace sw
         }
     }
 
-    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName, const ThreadStopToken& stopToken )
+    bool ModuleCompiler::recordBuildResult( const string& targetDisplayName, const StopToken& stopToken )
     {
         int32 exitCode = -1;
         {
@@ -165,7 +165,7 @@ namespace sw
         _lastDurationSec.store( durationSec, std::memory_order_relaxed );
         _lastExitCode.store( exitCode, std::memory_order_relaxed );
 
-        if ( stopToken.stop_requested() )
+        if ( stopToken.isStopRequested() )
         {
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             SW_LOG_WARNING( "Compilation was cancelled by user." );
@@ -191,7 +191,7 @@ namespace sw
         return false;
     }
 
-    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag, ThreadStopToken stopToken )
+    void ModuleCompiler::runBuildThread( const string& targetName, MemoryTag memoryTag, StopToken stopToken )
     {
         // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };

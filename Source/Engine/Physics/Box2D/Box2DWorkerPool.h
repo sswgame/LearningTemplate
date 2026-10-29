@@ -76,7 +76,7 @@ namespace sw
         void  finish( Task* pTask ) SW_REQUIRES_LOCK( _stepThread );
         /** @brief 대기열의 조각 하나를 꺼내 @p workerIndex 로 실행합니다. 꺼낼 것이 없으면 false 입니다. */
         [[nodiscard]] bool tryRunOne( uint32 workerIndex );
-        void               runWorker( uint32 workerIndex, ThreadStopToken stopToken );
+        void               runWorker( uint32 workerIndex, StopToken stopToken );
 
         vector<sw::thread>                 _listThread;
         ThreadRole                         _stepThread;                  ///< 스텝 스레드(월드를 가진 쪽) 역할 — 잠금이 아니라 분석용 능력이다

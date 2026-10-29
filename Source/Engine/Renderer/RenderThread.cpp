@@ -138,7 +138,7 @@ namespace sw
         , _beginFrameHook{}
         , _thread{}
         , _bRunning{ false }
-        , _bStop{ false }
+        , _stop{}
         , _bContextBound{ false }
         , _bLastImmediateSubmit{ false }
         , _bScreenshotTaken{ SW_FALSE }
@@ -197,7 +197,7 @@ namespace sw
 
         RenderThreadInternal::unbindGraphicsContext( pDevice );
 
-        _bStop    = false;
+        _stop     = StopSource{};
         _bRunning = true;
         _thread   = sw::thread( &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
@@ -218,11 +218,11 @@ namespace sw
             return;
         }
         {
-            // 멈춤 표시는 **대기 쪽과 같은 락 안에서** 설정한다. 렌더 스레드는 `_mutex` 를 잡은 채 조건(_bStop, 새 패킷)을 보고 잠드는데, 락 밖에서
+            // 멈춤 표시는 **대기 쪽과 같은 락 안에서** 설정한다. 렌더 스레드는 `_mutex` 를 잡은 채 조건(_stop, 새 패킷)을 보고 잠드는데, 락 밖에서
             // 설정하고 알리면 "조건을 거짓으로 본 뒤, 실제로 잠들기 전" 틈에 알림이 끼어 사라지고, 렌더 스레드는 영영 자고 아래 join 이 멈춘다
             // (백엔드 교체와 gv_useRenderThread 토글에서 가장 잘 드러났다).
             ScopedLock<mutex> lock{ _mutex };
-            _bStop.store( true, std::memory_order_release );
+            _stop.requestStop();
         }
         _cvProduce.notify_all();
         _cvConsume.notify_all();
@@ -286,9 +286,9 @@ namespace sw
         {
             UniqueLock<mutex> lock{ _mutex };
             _cvProduce.wait( lock, [this, nextHead]() SW_REQUIRES_LOCK( _mutex )
-            { return _bStop.load( std::memory_order_relaxed ) || nextHead != _tail.load( std::memory_order_acquire ); } );
+            { return _stop.isStopRequested() || nextHead != _tail.load( std::memory_order_acquire ); } );
 
-            if ( _bStop.load( std::memory_order_relaxed ) )
+            if ( _stop.isStopRequested() )
                 return;
         }
         // 끝날 때까지 다른 스레드가 해제하는 자원 핸들은 미뤄진다(`IRHIDevice::releaseHandle`. 이 프레임을 병렬로 기록하는 동안 테이블을 바꾸지 않게 한다).
@@ -315,7 +315,7 @@ namespace sw
             return;
         UniqueLock<mutex> lock{ _mutex };
         _cvIdle.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
-        { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
+        { return _stop.isStopRequested() || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
 
     void RenderThread::waitIdle( RHIWaitIdleReason reason )
@@ -327,7 +327,7 @@ namespace sw
         {
             UniqueLock<mutex> lock{ _mutex };
             _cvIdle.wait( lock, [this]() SW_REQUIRES_LOCK( _mutex )
-            { return _bStop.load( std::memory_order_relaxed ) || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
+            { return _stop.isStopRequested() || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
         }
 
         if ( _pDevice != nullptr )
@@ -357,10 +357,10 @@ namespace sw
             {
                 UniqueLock<mutex> lock{ _mutex };
                 _cvConsume.wait( lock, [this, currentTail]() SW_REQUIRES_LOCK( _mutex )
-                { return _bStop.load( std::memory_order_relaxed ) || currentTail != _head.load( std::memory_order_acquire ); } );
+                { return _stop.isStopRequested() || currentTail != _head.load( std::memory_order_acquire ); } );
             }
 
-            if ( _bStop.load( std::memory_order_relaxed ) && currentTail == _head.load( std::memory_order_acquire ) )
+            if ( _stop.isStopRequested() && currentTail == _head.load( std::memory_order_acquire ) )
             {
                 // 이 스레드가 태스크를 기다리며 받은 도우미 슬롯을 반환한다. 렌더 스레드는 백엔드 교체와 토글마다 새로 만들어진다.
                 if ( engine::areEngineServicesBound() )

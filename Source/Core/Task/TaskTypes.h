@@ -447,7 +447,7 @@ namespace sw
          *          후속(`runBefore` · `then` · `whenAll`)의 선행 하나가 풀립니다. 그래서 취소가 후속의 `waitAll` 을 영영 막지
          *          않습니다(만들기만 하고 버린 선행도 같은 길로 끝납니다). 후속까지 멈추려면 후속도 `cancel` 하거나, 후속 본문에서
          *          선행의 `isCancelled` 로 물어 일을 건너뜁니다(선행 핸들을 캡처해 둡니다).
-         *          이미 실행 중인 본문은 끊지 않습니다. 협력 취소가 필요하면 `CancellationToken` 을 씁니다.
+         *          이미 실행 중인 본문은 끊지 않습니다. 협력 취소가 필요하면 `StopToken`(`Core/Concurrency/StopToken.h`)을 씁니다.
          *          태스크 본문에서 예외를 던지면 안 됩니다 — 잡는 곳이 없고 실패는 반환값 · 로그로 다룹니다.
          */
         bool cancel();
@@ -470,33 +470,6 @@ namespace sw
         TaskNode* _pNode{ nullptr };
     };
 } // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct CancellationToken
-     * @brief 비동기 태스크에 넘겨, 밖에서 취소 신호를 보내거나 확인할 수 있게 하는 토큰입니다.
-     */
-    struct SW_API CancellationToken
-    {
-        shared_ptr<atomic<bool>> _pCancelled;
-
-        CancellationToken()
-            : _pCancelled{ sw::make_shared<atomic<bool>>( false ) } {}
-
-        void cancel()
-        {
-            if ( _pCancelled != nullptr )
-                _pCancelled->store( true, std::memory_order_release );
-        }
-
-        bool isCancelled() const
-        {
-            return _pCancelled != nullptr && _pCancelled->load( std::memory_order_acquire );
-        }
-    };
-} // namespace sw
-
 namespace sw
 {
     /**

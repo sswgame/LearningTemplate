@@ -5,6 +5,7 @@
  *          bind() 만 하면(start 없음) submit() 이 부르는 스레드에서 executeInline 합니다.
  */
 #pragma once
+#include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -168,7 +169,7 @@ namespace sw
         BeginFrameHookDelegate _beginFrameHook;
         sw::thread             _thread;
         atomic<bool>           _bRunning;
-        atomic<bool>           _bStop;
+        StopSource             _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
         atomic<bool>           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool             _bLastImmediateSubmit;

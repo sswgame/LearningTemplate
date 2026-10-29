@@ -40,9 +40,6 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadPinMegabytes, 256, "씬 프리로드가 캐시에 붙드는 에셋 바이트 합의 상한 (MB, 넘으면 오래 안 쓴 것부터 놓는다)" );
     SW_GLOBAL_VARIABLE( int32, gv_scenePreloadHoldFrames, 120, "로드가 끝난 뒤 프리로드를 붙들고 있는 프레임 수 (씬이 에셋을 잡을 시간)" );
 
-    /** @brief 종료 · 취소가 자기가 띄운 씬 로드를 기다리는 최대 시간입니다. 로드 잡은 파싱 · 인스턴스화만 한다 — 넘기면 멈춘 것이므로 오류로 알린다. */
-    constexpr uint32 kLoadWaitMs = 30000;
-
     SceneManager::SceneManager()
         : _listLoadedScene{}
         , _pActiveScene{ nullptr }
@@ -58,7 +55,7 @@ namespace sw
         , _queuedPromise{}
         , _bLoadInFlight{ false }
         , _loadHandle{}
-        , _loadTracker{}
+        , _loadStage{}
         , _saveBlockReason{}
         , _onSceneObjectsInvalidated{}
         , _onSceneLoadRequested{}
@@ -128,7 +125,7 @@ namespace sw
         const bool bNeedWait     = _services._pTaskManager != nullptr && ( bLoading || bAsyncReady );
 
         if ( bNeedWait )
-            (void)_loadTracker.waitIdle( kLoadWaitMs, "SceneManager::shutdown" ); // 시간 초과는 추적기가 원인 태스크 이름과 함께 오류로 남긴다
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::shutdown" ); // 오래 걸리면 남은 태스크 이름이 주기적으로 오류로 남는다
 
         if ( _asyncLoad != nullptr )
         {
@@ -290,7 +287,7 @@ namespace sw
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
             MakeTaskArgs( slot, string( path ) ) );
 
-        _loadTracker.track( _loadHandle );
+        _services._pTaskManager->addToStage( _loadStage, _loadHandle, "SceneLoadAsync" ); // 제출 전에 넣는다
         _loadHandle.submit();
         if ( _loadHandle.isValid() == false )
         {
@@ -375,8 +372,8 @@ namespace sw
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
-            const bool bInstantiated = newScene->instantiate( doc, &slot->_bStop );
-            if ( bInstantiated == false && slot->_bStop.load( std::memory_order_acquire ) == false ) // 종료 신호로 멈춘 것은 실패가 아니다
+            const bool bInstantiated = newScene->instantiate( doc, slot->_stop.getToken() );
+            if ( bInstantiated == false && slot->_stop.isStopRequested() == false ) // 종료 신호로 멈춘 것은 실패가 아니다
                 SW_LOG_WARNING( "[SceneLoad] '%#' could not be instantiated", pathStr );
         }
 
@@ -400,24 +397,16 @@ namespace sw
     void SceneManager::waitForPendingLoad() const
     {
         // 로드 잡은 워커에서 파싱 · 인스턴스화만 하고 게임 스레드 일을 기다리지 않는다. 그래도 멈춤이 매달림으로 숨지 않게 시간으로 끊고 알린다.
-        constexpr int64 kWaitLimitSeconds = 30;
-        const Deadline  deadline          = Deadline::afterMilliseconds( kWaitLimitSeconds * constant::kMillisecondsPerSecond );
-        while ( _loadHandle.isValid() && _loadHandle.isCompleted() == false )
-        {
-            if ( deadline.isExpired() )
-            {
-                SW_LOG_ERROR( "Waited %# s for the in-flight scene load before changing reflected types - continuing without it", kWaitLimitSeconds );
-                return;
-            }
-            std::this_thread::yield();
-        }
+        // 기다리는 동안 다른 일을 돕는다(양보 루프가 아니다). 로드를 두고 이어 가지 않는다 — 타입 표가 바뀌는 동안 로드가 옛 타입으로 짓는다.
+        if ( _services._pTaskManager != nullptr )
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::waitForPendingLoad (reflected types are about to change)" );
     }
 
     void SceneManager::requestAsyncLoadStop()
     {
         if ( _asyncLoad != nullptr )
         {
-            _asyncLoad->_bStop.store( true, std::memory_order_release );
+            _asyncLoad->_stop.requestStop();
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
         }
     }
@@ -430,7 +419,7 @@ namespace sw
         // 이 매니저가 띄운 로드(`dispatchLoad`)만 기다린다. 엔진 전체를 기다리면 영구 태스크(오디오 등)가 취소를 막는다. 로드 잡은 `_bAccepting` 이 꺼진 것을
         // 보면 씬을 스스로 내리고 돌아와 약속을 건드리지 않는다 — 약속은 아래에서 한 번만 채운다(이중 해제 없음).
         if ( _services._pTaskManager != nullptr )
-            (void)_loadTracker.waitIdle( kLoadWaitMs, "SceneManager::cancelPendingAsyncLoads" );
+            _services._pTaskManager->waitStage( _loadStage, "SceneManager::cancelPendingAsyncLoads" );
 
         _bLoadInFlight.store( false, std::memory_order_release );
         if ( _queuedPath.empty() == false )

@@ -110,7 +110,7 @@ namespace sw
 
     private:
         void startPoller();
-        void runPoller( ThreadStopToken stopToken );
+        void runPoller( StopToken stopToken );
 
         mutable mutex                         _mutex;
         string _latestText                    SW_GUARDED_BY( _mutex );        ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)

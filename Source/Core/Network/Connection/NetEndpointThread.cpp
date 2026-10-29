@@ -48,12 +48,12 @@ namespace sw
         _bRunning.store( false, std::memory_order_release );
     }
 
-    void NetEndpointThread::run( ThreadStopToken stopToken )
+    void NetEndpointThread::run( StopToken stopToken )
     {
         ThreadName::setCurrentThreadName( "Net" );
         _pHost->bindUpdateThread();
         const float64 maxWait = _settings._maxWaitSeconds > 0.0f ? static_cast<float64>( _settings._maxWaitSeconds ) : 0.0;
-        while ( stopToken.stop_requested() == false )
+        while ( stopToken.isStopRequested() == false )
         {
             _pHost->update( getTime() );
             _updateCount.fetch_add( 1, std::memory_order_relaxed );

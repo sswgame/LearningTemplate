@@ -74,7 +74,7 @@ namespace sw
         void shutdown( IRHIDevice* pDevice );
 
     private:
-        void run( ThreadStopToken stopToken );
+        void run( StopToken stopToken );
         /** @brief 급한 줄 먼저 하나 꺼냅니다. 없으면 false 입니다. 꺼낸 작업은 만드는 중으로 셉니다(`_inFlight`). */
         bool popJob( Job& outJob, IRHIDevice*& outDevice );
         void pushResult( Job&& job, RHIPipelineStateHandle handle );

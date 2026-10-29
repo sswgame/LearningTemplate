@@ -36,7 +36,7 @@ namespace sw
         };
     } // namespace
 
-    bool StandardInputReader::readLinePlatform( const ThreadStopToken& stopToken, string& outLine )
+    bool StandardInputReader::readLinePlatform( const StopToken& stopToken, string& outLine )
     {
         const HANDLE                                        hInput = GetStdHandle( STD_INPUT_HANDLE );
         const WindowsStandardInputReaderInternal::InputKind kind   = WindowsStandardInputReaderInternal::classify( hInput );
@@ -44,7 +44,7 @@ namespace sw
         {
             if ( takeLine( outLine ) )
                 return true;
-            if ( stopToken.stop_requested() )
+            if ( stopToken.isStopRequested() )
                 return false;
             switch ( kind )
             {
