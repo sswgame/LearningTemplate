@@ -98,7 +98,7 @@ namespace sw
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
         ExtensionViewInfo view{};
-        view._bMainView = _pActiveView == &_mainView;
+        view._bMainView = _pActiveView == &_state._mainView;
         view._width     = activePool().getWidth();
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );

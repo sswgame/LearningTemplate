@@ -32,7 +32,7 @@ namespace sw
     void FrameRenderer::bindPassCallbacks()
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
-        _graph.clear();
+        _state._graph.clear();
         _mapPassNameToIndex.clear();
         // Swapchain 을 쓰는 마지막 패스다. 그래프는 같은 출력의 쓰기를 선언 순서로 연결한다(쓰기 사슬). 스크린샷 캡처를 백버퍼로 복사하는 일은 그 패스 끝에서 한다.
         _pLastSwapchainWriter = nullptr;
@@ -81,8 +81,8 @@ namespace sw
                         listExtensionOutput.push_back( depthName );
                 }
                 _mapExtensionPassIndex[modulePass._graphName] = moduleIndex;
-                _graph.addPass( modulePass._graphName, std::move( listExtensionInput ), std::move( listExtensionOutput ),
-                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this ) );
+                _state._graph.addPass( modulePass._graphName, std::move( listExtensionInput ), std::move( listExtensionOutput ),
+                                       SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this ) );
             }
         };
         auto addModulePassesAt = [&]( size_t index )
@@ -125,15 +125,15 @@ namespace sw
             RenderGraphPassExecuteFn execute =
                 SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this );
 
-            _graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
+            _state._graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
         }
 
         addModulePassesAt( listPass.size() ); // 자리를 못 찾은 단계(출력 패스가 없는 파이프라인)는 끝에 붙는다
         _extensionHost.markBound();
 
-        _graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
+        _state._graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
 
-        if ( _graph.compile() == false )
+        if ( _state._graph.compile() == false )
         {
             SW_LOG_ERROR( "Callback bind compile failed" );
         }
@@ -141,7 +141,7 @@ namespace sw
         {
             _bCallbacksBound = SW_TRUE;
             if ( gv_dumpRenderGraph )
-                SW_LOG_INFO( "[gv_dumpRenderGraph]\n%#", _graph.describeCompiledOrder().c_str() );
+                SW_LOG_INFO( "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
         }
     }
 
@@ -203,7 +203,7 @@ namespace sw
         // 벡터 **자체**는 병렬 기록 중 읽기만 한다(슬롯은 패스마다 다르다). 비-const 인덱싱이나 data() 는 컨테이너 레이스
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 슬롯만 고쳐 쓴다.
         FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
-        passContext                   = _frameContext;
+        passContext                   = _state._frameContext;
         passContext._passName         = graphContext._passName;
         if ( graphContext._pCmdList != nullptr )
             passContext._pCmd = graphContext._pCmdList;
@@ -240,7 +240,7 @@ namespace sw
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 기록한다(추가 뷰가 같은 슬롯을 다시 쓰면 주 시점의 시간이 덮인다).
         const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
         const bool                   bWriteGPUTime = pTimestamps != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
-                                   _gpuPassTimeline.isRecording() &&
+                                   _state._gpuPassTimeline.isRecording() &&
                                    static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
@@ -638,7 +638,7 @@ namespace sw
         if ( pSceneDepthCopyInput != nullptr )
             registerPassTexture( context, attachmentNames()._sceneDepthCopy, pSceneDepthCopyInput->_attachment.view() );
 
-        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         // 메시 투명 배치와 입자(방출기 하나 = 후보 하나)를 그 뷰의 한 순서로 섞어 그린다(GPUSceneBuilder::populateParticleBatches · computeViewTransparentOrders).
         SW_ASSERT( input._bTransparentBatch );
@@ -713,12 +713,12 @@ namespace sw
         const RHIPipelineStateHandle skyPSO       = _psoManager.getEnginePSO( RenderPassType::Sky );
         const bool                   bShowsSky    = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
         const bool                   bHasTargets  = input._passDepth.empty() == false;
-        const bool                   bDrawsSky    = _bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
+        const bool                   bDrawsSky    = _state._bHasFrameSky == SW_TRUE && bHasTargets && skyPSO != 0 && bShowsSky;
         if ( bDrawsSky == false )
             return;
         FramePassContext&    context     = input._context;
         const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+        if ( beginColorPass( context, colorTarget.view(), input._passDepth.view(), _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );
         context._pCmd->endRenderPass();
@@ -741,7 +741,7 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
 
         // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 읽는다(추가 뷰는 볼륨을 계산하지 않는다). 상수는 이 패스의 복사본에만 쓴다.
-        const bool bVolume      = _postProcess.isFogVolumeActive() && _pActiveView == &_mainView && _postProcess.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
+        const bool bVolume      = _postProcess.isFogVolumeActive() && _pActiveView == &_state._mainView && _postProcess.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
         float4     volumeParams = _postProcess.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
@@ -789,7 +789,7 @@ namespace sw
             registerPassTexture( context, names._gbufferAlbedo, pSrcName );
         else if ( activeView._taaHistory != 0 )
             context._resourceRegistry.registerTexture( names._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySRV );
-        if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
+        if ( beginColorPass( context, taaTarget.view(), "", _state._clearColor, colorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.
             drawFullscreen( context, _psoManager.getEnginePSO( RenderPassType::TAA ) );
@@ -824,7 +824,7 @@ namespace sw
         const RHIRenderPassLoadOp outputLoad  = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
                                               : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
                                                                                                   : RHIRenderPassLoadOp::Clear;
-        const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
+        const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _state._clearColor;
         // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다. 셋업에 없으면 findOutputPSO 가 멈춘다(복사로 대신하지 않는다).
         const RHIPipelineStateHandle psoBlit = _psoManager.findOutputPSO( RenderPassType::Present, target._format );
         if ( src != 0 )
@@ -888,7 +888,7 @@ namespace sw
             // 원본이 없으면 PSO 없이(백엔드 기본 파이프라인으로) 대신 그리지 않는다. 출력 대상의 상태 전이만 위해 패스를 열고 닫는다.
             SW_LOG_ERROR_ONCE( "Present source color has no transient (its allocation failed) - the output is not drawn" );
             RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
+            beginInfo.setColorTarget( dstTarget, _state._clearColor, RHIRenderPassLoadOp::Load );
             beginInfo._bBindColor = SW_TRUE;
             context._pCmd->beginRenderPass( beginInfo );
             context._pCmd->endRenderPass();
@@ -904,7 +904,7 @@ namespace sw
         // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
         FramePassContext&   context = input._context;
         const PresentTarget target  = resolvePresentTarget();
-        const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
+        const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _state._canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
         if ( bDraw )
         {
             const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
@@ -916,8 +916,8 @@ namespace sw
             beginInfo._width             = target._width;
             beginInfo._height            = target._height;
             context._pCmd->beginRenderPass( beginInfo );
-            (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, _canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
-                                            _pDevice->supportsNativeBindlessSampling(), _canvasFrame._colorVisionMode );
+            (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame._mainOutput, _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
+                                                   _pDevice->supportsNativeBindlessSampling(), _state._canvasFrame._colorVisionMode );
             context._pCmd->endRenderPass();
         }
         const bool bLastWriter = isLastSwapchainWriter( input._passDesc );
@@ -996,7 +996,7 @@ namespace sw
 
     uint32 FrameRenderer::computeShadowTileCountPerView() const
     {
-        return _frameShadow._layout.getCascadeCount() + static_cast<uint32>( _frameShadow._listLocalTile.size() );
+        return _state._frameShadow._layout.getCascadeCount() + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
     }
 
     void FrameRenderer::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
@@ -1008,8 +1008,8 @@ namespace sw
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 
         // 캐스케이드 하나가 아틀라스 전체이고 점광 · 스폿 타일이 없으면 아틀라스가 생기기 전과 같다 — 뷰포트도 행렬도 바꾸지 않는다.
-        const bool bWholeAtlas = shadow._cascadeCount <= 1 && _frameShadow._listLocalTile.empty() &&
-                                 shadow._arrCascadeTile[0]._cell._size == _frameShadow._layout.getAtlasResolution();
+        const bool bWholeAtlas = shadow._cascadeCount <= 1 && _state._frameShadow._listLocalTile.empty() &&
+                                 shadow._arrCascadeTile[0]._cell._size == _state._frameShadow._layout.getAtlasResolution();
         if ( bWholeAtlas )
         {
             drawSceneMeshes( context, pso, bTransparentBatch );
@@ -1018,10 +1018,10 @@ namespace sw
         {
             // 타일마다 그 칸을 뷰포트로 잡고(가위도 같이 잡힌다) 그 타일의 행렬로 씬을 그린다. 상수가 바뀌므로 드로우는 새 상수 버퍼 슬롯을 받는다.
             const PassConstantNames& names     = passConstantNames();
-            const uint32             tileCount = shadow._cascadeCount + static_cast<uint32>( _frameShadow._listLocalTile.size() );
+            const uint32             tileCount = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
             for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
             {
-                const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
+                const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _state._frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
                 RHIViewport           viewport{};
                 viewport._x      = static_cast<float32>( tile._cell._x );
                 viewport._y      = static_cast<float32>( tile._cell._y );
@@ -1034,8 +1034,8 @@ namespace sw
                     continue;
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
-                const bool bCascadeSlot = _pActiveView == &_mainView && tileIndex < _cascadeCullCount;
-                context._cullViewIndex  = bCascadeSlot ? _cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
+                const bool bCascadeSlot = _pActiveView == &_state._mainView && tileIndex < _state._cascadeCullCount;
+                context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
                 drawSceneMeshes( context, pso, bTransparentBatch );
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
@@ -1068,7 +1068,7 @@ namespace sw
         // 주의: 여기서 updatePassConstants 를 부르지 않는다. 이 함수는 드로우 루프 안에서 불리므로 그러면
         // 드로우마다 라이트와 뷰 행렬을 다시 만들고(정규화, 외적, 4x4 곱 두 번) 카메라를 다시 찾고
         // hashed_string 을 여덟 개씩 intern 한다. 그 값들은 모두 프레임 상수라 execute/executePacket
-        // 이 프레임 시드(_frameContext)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
+        // 이 프레임 시드(_state._frameContext)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
         // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.
 
         // DX11 과 GL 은 패스가 이름으로 건 엔진 텍스처를 역할마다 제 칸에 바인딩한다(bindless 에뮬레이션 — shaderslot::emulated 표).
@@ -1105,18 +1105,18 @@ namespace sw
         else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )
             ownOutput = activeView._hostTarget;
         const bool bOwnOutput = ownOutput != 0;
-        const bool bCapture   = bOwnOutput == false && ( _outputRenderTarget == 0 ) && _capture.isPresentActive();
+        const bool bCapture   = bOwnOutput == false && ( _state._outputRenderTarget == 0 ) && _capture.isPresentActive();
         // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다. 크기를 덮어쓴 출력(초상화 베이크)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
-        const bool bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
+        const bool bCaptureToBack = bCapture && _state._outputWidth == _pDevice->getBackBufferWidth() && _state._outputHeight == _pDevice->getBackBufferHeight();
         // 출력이 RT(에디터 게임 뷰)면 그 RT 에 그대로 그리고 끝에 캡처로 복사한다. 화면 사각형 뷰도 같은 RT 에 겹쳐 그리므로 뷰마다 복사하면
         // 마지막 복사가 화면과 같다.
-        const bool bCaptureFromOutput = bOwnOutput == false && _outputRenderTarget != 0 && _capture.isPresentActive();
+        const bool bCaptureFromOutput = bOwnOutput == false && _state._outputRenderTarget != 0 && _capture.isPresentActive();
 
         PresentTarget target{};
         target._texture = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
-                                                            : _outputRenderTarget;
-        target._width   = bOwnOutput ? activeView._outputWidth : _outputWidth;
-        target._height  = bOwnOutput ? activeView._outputHeight : _outputHeight;
+                                                            : _state._outputRenderTarget;
+        target._width   = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
+        target._height  = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과)이고, 텍스처는 그 텍스처가 기록한 포맷이다.
         target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
         target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;

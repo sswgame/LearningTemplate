@@ -72,7 +72,7 @@ namespace sw
         /**
          * @brief 뷰 @p view 의 이번 프레임 노출을 정합니다 — 잴지, 측정 상수(EV 범위 · 다가가는 비율), 쓰는 기록 칸입니다. 셋업에서 뷰마다 한 번 부릅니다.
          * @details 카메라의 최소 EV 와 최대 EV 가 같으면 재지 않고 고정 노출 2^-EV 를 `g_CameraGrade.x` 가 될 @p inoutExposureScale 에 곱한다.
-         * @param now 렌더러 시계(초, `FrameRenderer::getAnimationTime`)입니다. 쉬던 추가 뷰는 그동안의 시간만큼 한 번에 다가간다.
+         * @param now 렌더러 시계(초, `FrameRenderState::getAnimationTime`)입니다. 쉬던 추가 뷰는 그동안의 시간만큼 한 번에 다가간다.
          */
         void prepareAutoExposure( FrameViewTarget& view, float32 now, float32& inoutExposureScale ) const;
         /**

@@ -41,17 +41,17 @@ namespace sw
             if ( _pDevice->getBackBufferHeight() > 0 )
                 height = _pDevice->getBackBufferHeight();
         }
-        _outputWidth  = width;
-        _outputHeight = height;
+        _state._outputWidth  = width;
+        _state._outputHeight = height;
 
         // 주 시점의 풀은 출력 × 사각형 × 해상도 배율이다(분할 화면의 한 칸 · 낮춘 해상도). 비율을 지키려고 둘 다 같은 배율로 줄인다.
         // 정수 업스케일이면 사각형 픽셀 / 배율(내림)이다 — Present 가 그 배로 키운다.
-        const RenderViewSettings& settings   = _mainView._settings;
+        const RenderViewSettings& settings   = _state._mainView._settings;
         const uint32              poolWidth  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( width ) * settings._screenRect._z,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
-        if ( _viewResources.updateViewTransients( _mainView, poolWidth, poolHeight ) )
+        if ( _viewResources.updateViewTransients( _state._mainView, poolWidth, poolHeight ) )
         {
             publishRenderTargets();
             reportRenderTargetMemory();
@@ -59,8 +59,8 @@ namespace sw
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
-        _postProcess.prepareUpscale( _mainView, viewportWidth, viewportHeight );
-        _capture.ensurePresent( _outputWidth, _outputHeight );
+        _postProcess.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
+        _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -69,8 +69,8 @@ namespace sw
         if ( RenderTargetRegistry* pRegistry = engine::findSubsystem<RenderTargetRegistry>(); pRegistry != nullptr )
             pRegistry->clear();
 
-        _viewResources.releaseViewTransients( _mainView );
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        _viewResources.releaseViewTransients( _state._mainView );
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             _viewResources.releaseViewTransients( *pView );
         }
@@ -84,14 +84,14 @@ namespace sw
         // 주 시점의 첨부마다 크기를 남긴다(렌더 타깃 패널 `RenderTargetRegistry` 와 같은 목록). `[Profile] GPU memory by kind` 가 늘면 어느 첨부가 늘었는지 이 줄로 나눈다(측정 기준을 다시 뜰 때 함께 본다).
         // 풀을 다시 만들 때와 꺼져 있던 효과의 타깃을 처음 만들 때만 부른다.
         uint64 totalBytes = 0;
-        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
+        for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
             totalBytes += static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format );
         }
         const uint64 totalKilobytes = totalBytes / 1024u;
-        SW_LOG_INFO( "[RenderTargets] main view %#x%#: %# KB in %# attachments", _mainView._transientPool.getWidth(), _mainView._transientPool.getHeight(),
-                     totalKilobytes, _mainView._transientPool.getAll().size() );
-        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
+        SW_LOG_INFO( "[RenderTargets] main view %#x%#: %# KB in %# attachments", _state._mainView._transientPool.getWidth(), _state._mainView._transientPool.getHeight(),
+                     totalKilobytes, _state._mainView._transientPool.getAll().size() );
+        for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
             const uint64 kilobytes = static_cast<uint64>( attachment._width ) * attachment._height * getRHIFormatBytesPerPixel( attachment._format ) / 1024u;
             SW_LOG_INFO( "[RenderTargets]   %#  %#x%#  %# KB", name, attachment._width, attachment._height, kilobytes );
@@ -133,7 +133,7 @@ namespace sw
         // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
         // 백버퍼의 클리어 색은 렌더러의 클리어 색(SceneColor 선언에서 온다) 하나다.
         const TransientAttachmentPool::Attachment attachment = activePool().find( attachmentName );
-        return attachment._texture != 0 ? attachment._clearColor : _clearColor;
+        return attachment._texture != 0 ? attachment._clearColor : _state._clearColor;
     }
 
     TransientAttachmentPool::Attachment FrameRenderer::findTransientAttachment( string_view name ) const
@@ -156,11 +156,11 @@ namespace sw
         // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 **지금 보이는 그림**을
         // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
         // 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
-        const string_view presented = _mainView._transientPool.resolveName( getPresentedAttachmentName() );
+        const string_view presented = _state._mainView._transientPool.resolveName( getPresentedAttachmentName() );
 
         vector<RenderTargetInfo> listTarget;
-        listTarget.reserve( _mainView._transientPool.getAll().size() );
-        for ( const auto& [name, attachment] : _mainView._transientPool.getAll() )
+        listTarget.reserve( _state._mainView._transientPool.getAll().size() );
+        for ( const auto& [name, attachment] : _state._mainView._transientPool.getAll() )
         {
             if ( attachment._texture == 0 )
                 continue;

@@ -27,41 +27,41 @@ namespace sw
     void FrameRenderer::applyFrameSky( bool bHasSky, const SkyGradient& sky )
     {
         // 셰이더 상수 배치는 SkyGradient 머리 주석이 기준이다(sky.hlsl 의 evaluateSky 가 같은 순서로 읽는다).
-        _bHasFrameSky   = bHasSky ? SW_TRUE : SW_FALSE;
-        _frameSkySource = bHasSky ? sky : SkyGradient{};
+        _state._bHasFrameSky   = bHasSky ? SW_TRUE : SW_FALSE;
+        _state._frameSkySource = bHasSky ? sky : SkyGradient{};
         if ( bHasSky == false )
         {
-            _frameSky = FrameSkyState{};
+            _state._frameSky = FrameSkyState{};
             return;
         }
-        _frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
-        _frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
-        _frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
+        _state._frameSky._zenithExponent  = float4{ sky._zenithColor._x, sky._zenithColor._y, sky._zenithColor._z, sky._horizonExponent };
+        _state._frameSky._horizon         = float4{ sky._horizonColor._x, sky._horizonColor._y, sky._horizonColor._z, 0.0f };
+        _state._frameSky._groundIntensity = float4{ sky._groundColor._x, sky._groundColor._y, sky._groundColor._z, sky._intensity };
 
         // 대기 산란 — 셰이더가 해 방향 · 색을 키 라이트 상수에서 읽으므로 여기에는 대기의 값만 싣는다. 그러데이션 모드는 w = 0 이라 셰이더가 그 길을 고른다.
-        const SkyAtmosphere& atmosphere = sky._atmosphere;
-        const float3         rayleigh   = atmosphere.computeRayleighBeta();
-        _frameSky._atmosphereRayleigh   = float4{ rayleigh._x, rayleigh._y, rayleigh._z, sky._mode == SkyMode::Atmosphere ? 1.0f : 0.0f };
-        _frameSky._atmosphereMie        = float4{ atmosphere.computeMieBeta(), SkyAtmosphere::kMieScaleHeightKm, atmosphere._mieAnisotropy, atmosphere._sunIntensity };
-        _frameSky._atmosphereGeometry   = float4{ atmosphere._planetRadiusKm, atmosphere._atmosphereHeightKm, atmosphere._observerAltitudeKm, atmosphere._sunDiscAngle };
+        const SkyAtmosphere& atmosphere      = sky._atmosphere;
+        const float3         rayleigh        = atmosphere.computeRayleighBeta();
+        _state._frameSky._atmosphereRayleigh = float4{ rayleigh._x, rayleigh._y, rayleigh._z, sky._mode == SkyMode::Atmosphere ? 1.0f : 0.0f };
+        _state._frameSky._atmosphereMie      = float4{ atmosphere.computeMieBeta(), SkyAtmosphere::kMieScaleHeightKm, atmosphere._mieAnisotropy, atmosphere._sunIntensity };
+        _state._frameSky._atmosphereGeometry = float4{ atmosphere._planetRadiusKm, atmosphere._atmosphereHeightKm, atmosphere._observerAltitudeKm, atmosphere._sunDiscAngle };
 
         // 구름 층 — 바람 방향은 라디안을 단위 벡터로 바꿔 싣는다.
-        const SkyClouds& clouds = sky._clouds;
-        _frameSky._cloudShape   = float4{ MathUtil::saturate( clouds._coverage ), clouds._altitudeKm, clouds._scale, MathUtil::saturate( clouds._opacity ) };
-        _frameSky._cloudWind    = float4{ MathUtil::cos( clouds._windDirection ), MathUtil::sin( clouds._windDirection ), clouds._windSpeedKmPerSecond, clouds._softness };
-        _frameSky._cloudColor   = float4{ clouds._color._x, clouds._color._y, clouds._color._z, clouds._bEnabled == SW_TRUE ? 1.0f : 0.0f };
+        const SkyClouds& clouds      = sky._clouds;
+        _state._frameSky._cloudShape = float4{ MathUtil::saturate( clouds._coverage ), clouds._altitudeKm, clouds._scale, MathUtil::saturate( clouds._opacity ) };
+        _state._frameSky._cloudWind  = float4{ MathUtil::cos( clouds._windDirection ), MathUtil::sin( clouds._windDirection ), clouds._windSpeedKmPerSecond, clouds._softness };
+        _state._frameSky._cloudColor = float4{ clouds._color._x, clouds._color._y, clouds._color._z, clouds._bEnabled == SW_TRUE ? 1.0f : 0.0f };
     }
 
     void FrameRenderer::applyFrameShadow()
     {
         // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
         const uint32 atlasResolution = getShadowMapResolution();
-        if ( _frameShadow._layout.getAtlasResolution() != atlasResolution )
-            _frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _frameShadow._layout.getCascadeCount(), static_cast<uint32>( _frameShadow._listLocalTile.size() ) );
+        if ( _state._frameShadow._layout.getAtlasResolution() != atlasResolution )
+            _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ) );
         // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
-        if ( _frameShadow._mainView._bValid == SW_FALSE )
-            _frameShadow._mainView = ShadowSetupUtil::makeUnshadowedView( _frameShadow._layout );
-        _mainView._shadow = _frameShadow._mainView;
+        if ( _state._frameShadow._mainView._bValid == SW_FALSE )
+            _state._frameShadow._mainView = ShadowSetupUtil::makeUnshadowedView( _state._frameShadow._layout );
+        _state._mainView._shadow = _state._frameShadow._mainView;
     }
 
     void FrameRenderer::applyViewShadowConstants( FramePassContext& context, const ViewShadowData& shadow )
@@ -78,18 +78,18 @@ namespace sw
 
     void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
     {
-        // **프레임당 한 번** 프레임 시드(_frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
+        // **프레임당 한 번** 프레임 시드(_state._frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
         // 주 시점 뷰-투영은 호출자가 카메라에서 만들어 넘긴다(씬 직접 경로는 씬의 게임 카메라, 패킷 경로는 패킷의 주 시점).
         // 그림자는 `applyFrameShadow` 가 준비한 주 시점의 것이다(그림자 빛이 없으면 그림자 없는 뷰).
-        applyViewShadowConstants( context, _mainView._shadow );
-        view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
+        applyViewShadowConstants( context, _state._mainView._shadow );
+        _state.view( RenderViewType::Shadow ).setViewProjection( _state._mainView._shadow._cullViewProj );
 
-        beginViewHistory( _mainView );
+        beginViewHistory( _state._mainView );
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _mainView, mainViewProj );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj );
         if ( selection._bTargetsRepointed == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -97,17 +97,17 @@ namespace sw
         applyViewProjection( context, mainViewProj );
         context._passValues.setMatrix( passConstantNames()._world, context._world );
 
-        context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
-        context._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        context._passValues.setFloat4( passConstantNames()._skyZenith, _frameSky._zenithExponent );
-        context._passValues.setFloat4( passConstantNames()._skyHorizon, _frameSky._horizon );
-        context._passValues.setFloat4( passConstantNames()._skyGround, _frameSky._groundIntensity );
-        context._passValues.setFloat4( passConstantNames()._skyAtmosphereRayleigh, _frameSky._atmosphereRayleigh );
-        context._passValues.setFloat4( passConstantNames()._skyAtmosphereMie, _frameSky._atmosphereMie );
-        context._passValues.setFloat4( passConstantNames()._skyAtmosphereGeometry, _frameSky._atmosphereGeometry );
-        context._passValues.setFloat4( passConstantNames()._skyCloudShape, _frameSky._cloudShape );
-        context._passValues.setFloat4( passConstantNames()._skyCloudWind, _frameSky._cloudWind );
-        context._passValues.setFloat4( passConstantNames()._skyCloudColor, _frameSky._cloudColor );
+        context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _state._frameLight._dirIntensity );
+        context._passValues.setFloat4( passConstantNames()._keyLightColor, _state._frameLight._colorAmbient );
+        context._passValues.setFloat4( passConstantNames()._skyZenith, _state._frameSky._zenithExponent );
+        context._passValues.setFloat4( passConstantNames()._skyHorizon, _state._frameSky._horizon );
+        context._passValues.setFloat4( passConstantNames()._skyGround, _state._frameSky._groundIntensity );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereRayleigh, _state._frameSky._atmosphereRayleigh );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereMie, _state._frameSky._atmosphereMie );
+        context._passValues.setFloat4( passConstantNames()._skyAtmosphereGeometry, _state._frameSky._atmosphereGeometry );
+        context._passValues.setFloat4( passConstantNames()._skyCloudShape, _state._frameSky._cloudShape );
+        context._passValues.setFloat4( passConstantNames()._skyCloudWind, _state._frameSky._cloudWind );
+        context._passValues.setFloat4( passConstantNames()._skyCloudColor, _state._frameSky._cloudColor );
         context._passValues.setFloat4( passConstantNames()._fogColorDensity, _postProcess.getFrameFog()._colorDensity );
         context._passValues.setFloat4( passConstantNames()._fogHeightParams, _postProcess.getFrameFog()._heightParams );
         context._passValues.setFloat4( passConstantNames()._fogInscatter, _postProcess.getFrameFog()._inscatter );
@@ -133,13 +133,13 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
         float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
-        _postProcess.prepareAutoExposure( *_pActiveView, getAnimationTime(), exposureScale );
+        _postProcess.prepareAutoExposure( *_pActiveView, _state.getAnimationTime(), exposureScale );
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),
                                                                                  MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
         // 색각 보정은 화면 · 호스트 출력 뷰만 건다. 렌더 텍스처는 주 화면에 그려진 뒤 그 뷰의 톤맵에서 보정된다(두 번 걸지 않는다).
         const bool    bScreenOutput   = _pActiveView->_pOutputTexture == nullptr;
-        const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _canvasFrame._colorVisionMode ) : 0.0f;
+        const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
         // 피사계 심도(depthoffield.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.

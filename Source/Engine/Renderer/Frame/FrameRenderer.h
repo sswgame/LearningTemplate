@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
+#include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
@@ -181,10 +182,10 @@ namespace sw
         /** @brief 지금 그리는 파이프라인 XML 입니다(불러오기 전이면 빈 글). */
         const string& getPipelinePath() const { return _pipelinePath; }
         /** @brief 렌더 그래프를 반환합니다. */
-        const RenderGraph& getGraph() const { return _graph; }
+        const RenderGraph& getGraph() const { return _state._graph; }
         /** @brief GPUScene 을 반환합니다. */
-        const GPUScene& getGPUScene() const { return _gpuScene; }
-        GPUScene&       getGPUScene() { return _gpuScene; }
+        const GPUScene& getGPUScene() const { return _state._gpuScene; }
+        GPUScene&       getGPUScene() { return _state._gpuScene; }
         /** @brief 셰이더 핫 리로드를 알립니다. 그 셰이더의 바인딩 레이아웃을 무효화하고 패스 PSO 를 모두 다시 만듭니다. */
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
         /**
@@ -200,7 +201,7 @@ namespace sw
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
         /** @brief 캔버스(화면 2D · 렌더 텍스처 대상) 렌더러입니다. 다시 그린 대상 수 같은 진단 값을 읽을 때 씁니다. */
-        const CanvasRenderer& getCanvasRenderer() const { return _canvasRenderer; }
+        const CanvasRenderer& getCanvasRenderer() const { return _state._canvasRenderer; }
 
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.
@@ -264,9 +265,9 @@ namespace sw
          */
         [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
-        RHITextureHandle getTAAHistory() const { return _mainView._taaHistory; }
+        RHITextureHandle getTAAHistory() const { return _state._mainView._taaHistory; }
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
-        const TransientAttachmentPool& getMainViewPool() const { return _mainView._transientPool; }
+        const TransientAttachmentPool& getMainViewPool() const { return _state._mainView._transientPool; }
         /**
          * @brief 씬 직접 경로(`execute( scene )`)의 출력 크기를 정합니다. 0 이면 백버퍼 크기를 씁니다. 초상화 베이크처럼 창과 다른 크기로 그릴 때 씁니다.
          * @details 패킷 경로는 패킷의 뷰포트 크기를 따르므로 이 값을 보지 않는다.
@@ -279,7 +280,7 @@ namespace sw
         /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다. 갱신 주기나 예산 때문에 쉰 뷰는 빠집니다(진단과 테스트용). */
         uint32 getLastRenderedExtraViewCount() const { return _lastRenderedExtraViewCount; }
         /** @brief 가지고 있는 추가 뷰 수입니다. 쉬는 뷰도 포함합니다. */
-        uint32 getExtraViewCount() const { return static_cast<uint32>( _listExtraView.size() ); }
+        uint32 getExtraViewCount() const { return static_cast<uint32>( _state._listExtraView.size() ); }
 
     private:
         friend class ExtensionPassContext;
@@ -368,10 +369,10 @@ namespace sw
         /** @brief 지금 그리는 뷰의 트랜지언트 풀입니다. */
         TransientAttachmentPool&       activePool() { return _pActiveView->_transientPool; }
         const TransientAttachmentPool& activePool() const { return _pActiveView->_transientPool; }
-        /** @brief 지금 그리는 뷰의 컬링 입력입니다. 주 시점은 `_arrView[Main]` 입니다. */
-        RenderView& activeCullInput() { return _pActiveView == &_mainView ? view( RenderViewType::Main ) : _pActiveView->_cullInput; }
+        /** @brief 지금 그리는 뷰의 컬링 입력입니다. 주 시점은 `_state._arrView[Main]` 입니다. */
+        RenderView& activeCullInput() { return _pActiveView == &_state._mainView ? _state.view( RenderViewType::Main ) : _pActiveView->_cullInput; }
         /** @brief 지금 그리는 뷰가 추가 뷰면 true 입니다. */
-        bool isRenderingExtraView() const { return _pActiveView != &_mainView; }
+        bool isRenderingExtraView() const { return _pActiveView != &_state._mainView; }
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /**
@@ -488,37 +489,10 @@ namespace sw
         /** @brief 지금 그리는 뷰에 따라 달라지는 패스 상수를 채웁니다. 외곽선 텍셀 크기와 패스 플래그(후처리 끄기)가 해당합니다. */
         void applyViewPassConstants( FramePassContext& context );
 
-        /**
-         * @brief 이번 프레임의 주 광원 값입니다(`g_KeyLightDirIntensity` · `g_KeyLightColor`). 패킷이 값을 실어 오면 그 값을, 아니면 빛 없음을 씁니다.
-         * @details 방향, 색, 세기, 앰비언트는 씬의 주 광원에서 온다. 기본값은 "주 광원 없음" 이다. 세기와 색과 앰비언트가 0 이라 그 씬은 어둡게 그려진다.
-         *          방향은 단위 벡터로 둔다. 셰이더가 정규화하기 때문이다(water.hlsl 반사).
-         */
-        struct FrameLightState
-        {
-            float4 _dirIntensity{ 0.0f, -1.0f, 0.0f, 0.0f };
-            float4 _colorAmbient{ 0.0f, 0.0f, 0.0f, 0.0f };
-        };
-        /**
-         * @brief 이번 프레임의 하늘을 셰이더 상수 모양으로 둔 것입니다(`g_SkyZenith` · `g_SkyHorizon` · `g_SkyGround`, 배치는 `SkyGradient` 머리 주석).
-         * @details 씬에 하늘이 없으면 `_bHasFrameSky` 가 0 이고 스카이 패스가 그리지 않는다 — 배경은 SceneColor 클리어 색이다(기본 하늘로 대신 칠하지 않는다).
-         */
-        struct FrameSkyState
-        {
-            float4 _zenithExponent{};  ///< rgb 천정 색, w 지평선 지수
-            float4 _horizon{};         ///< rgb 지평선 색
-            float4 _groundIntensity{}; ///< rgb 땅 색, w 세기
-            // 대기 산란 모드(`SkyMode::Atmosphere`)와 구름 층의 상수다. 배치는 `SkyAtmosphere` · `SkyClouds` 머리 주석과 sky.hlsl 머리 주석.
-            float4 _atmosphereRayleigh{}; ///< rgb 레일리 산란 계수(1/km), w 대기 모드면 1 · 그러데이션이면 0
-            float4 _atmosphereMie{};      ///< x 미 산란 계수(1/km), y 미 규모 높이(km), z 미 이방성, w 해 복사휘도 배율(해 색에 곱한다)
-            float4 _atmosphereGeometry{}; ///< x 행성 반지름(km), y 대기 두께(km), z 눈 고도(km), w 해 원반 각 반지름(라디안)
-            float4 _cloudShape{};         ///< x 덮는 비율, y 층 고도(km), z 노이즈 배율(1/km), w 최대 불투명도
-            float4 _cloudWind{};          ///< xy 바람 방향 단위 벡터(xz 평면), z 바람 속도(km/s), w 경계 부드러움
-            float4 _cloudColor{};         ///< rgb 구름 색, w 구름을 그리면 1
-        };
-        /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
+        /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );
         /**
-         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
+         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_state._listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
          * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).
          */
         void prepareRealtimeProbes( IRHIDevice* pDevice );
@@ -527,7 +501,7 @@ namespace sw
         /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FramePostProcess` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /**
-         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
+         * @brief 이번 프레임의 그림자 배치(`_state._frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
          * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
          */
         void applyFrameShadow();
@@ -739,11 +713,11 @@ namespace sw
          *          가지면 RHI 가 Renderer 를 include 하게 된다.
          */
         unique_ptr<RenderPipelineAssetCache> _renderPipelineAssetCache;
-        IRHIDevice*                          _pCmdOwnerDevice;
-        unique_ptr<IRHICommandList>          _frameCmd;
-        IRHICommandList*                     _pCmd;
-        TaskManager*                         _pTaskManager;
-        GPUScene                             _gpuScene;
+        /** @brief 셋업이 채우고 패스 기록이 읽는 프레임 데이터(GPUScene · 그래프 · 뷰 · 라이트 · 그림자 · 하늘 · 패스 상수 링 · 캔버스 · 입자)입니다. 협력 객체가 참조하므로 그들보다 앞에 선언한다. */
+        FrameRenderState            _state;
+        IRHIDevice*                 _pCmdOwnerDevice;
+        unique_ptr<IRHICommandList> _frameCmd;
+        IRHICommandList*            _pCmd;
         /// @brief 씬 직접 경로(`execute( scene )`, 에디터와 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 Engine 의 빌더를 씁니다.
         GPUSceneBuilder     _sceneBuilder;
         RenderPipelineAsset _pipelineResource;
@@ -767,21 +741,10 @@ namespace sw
          * @details `_postProcess` 를 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
          */
         FrameViewResources _viewResources;
-        RenderGraph        _graph;
         string             _pipelinePath;
         string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        float4             _clearColor;
-        /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
-        FrameViewTarget _mainView;
-        /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
-        vector<unique_ptr<FrameViewTarget>> _listExtraView;
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `_mainView` 입니다.
         FrameViewTarget* _pActiveView;
-        /**
-         * @brief 프레임 단위 패스 상태입니다. 직렬 경로에서 쓰며 병렬 패스의 시드가 됩니다.
-         * @details 병렬 기록에서는 패스마다 이것을 복사해 각자의 커맨드 리스트와 상수 버퍼를 붙인다.
-         */
-        FramePassContext _frameContext;
         /**
          * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다. 용량이 남아 있어 힙을 건드리지 않습니다.
          * @details 패스마다 지역 복사본을 만들면 상수 값 목록과 레지스트리 맵이 프레임마다 패스 수만큼 새로
@@ -791,8 +754,6 @@ namespace sw
         vector<FramePassContext> _listPassContext;
         /// @brief 씬 직접 경로가 내보내는 스냅샷입니다. 맞바꾸기(swap)로 저장소를 돌려받습니다.
         GPUSceneSnapshot _sceneSnapshotScratch;
-        /// @brief 주 시점의 패스 시드입니다. 추가 뷰는 이것에서 출발해 자기 값(뷰 행렬, 플래그, 컬링 슬롯)만 덮어씁니다. 프레임마다 대입하므로 용량이 남습니다.
-        FramePassContext _mainSeedScratch;
         /// @brief 씬 직접 경로(`execute( scene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다. 패킷 경로에서는 Engine 의 것을 씁니다.
         RenderViewScheduler       _directViewScheduler;
         vector<RenderViewRequest> _listDirectViewScratch;
@@ -800,39 +761,13 @@ namespace sw
         uint32 collectFrameViewModeMask() const;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
-        /// @brief 패스와 드로우별 상수 버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 가져갑니다.
-        PassConstantRing _passCbRing;
-        /**
-         * @brief 이번 프레임의 뷰들입니다. 행렬, 절두체, 상수 버퍼를 각자 소유합니다.
-         * @details 뷰를 얻으면 그 뷰의 값이 함께 따라온다. 주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰
-         *          것인가" 를 사람이 기억해야 하고, 컬링 상수 버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어쓴다.
-         */
-        RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
-        /**
-         * @brief 주 시점 방향광 캐스케이드마다의 그림자 컬링 입력(절두체 · 자기 컬링 상수 버퍼)입니다. 앞 `_cascadeCullCount` 개만 씁니다.
-         * @details 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다(`_cascadeCullSlotBase` + 캐스케이드 번호). 추가 뷰(CCTV · PiP)는 작은 장면이라 합친 칸 하나를 그대로 쓴다.
-         */
-        RenderView _arrCascadeCullInput[shaderslot::kShadowCascadeMax];
-        uint32     _cascadeCullSlotBase{ 0 }; ///< 캐스케이드 컬링 슬롯의 첫 번호
-        uint32     _cascadeCullCount{ 0 };    ///< 이번 프레임 캐스케이드 컬링 슬롯 수. 0 이면 합친 칸(`_shadowCullSlot`) 하나로 모든 타일을 거른다
 
-        /// @brief 정점 변형(인스턴스 애니메이션, 모프, 스킨, VAT) 컴퓨트의 상수 버퍼, 풀, 스크래치, 시계입니다.
-        FrameMeshDeformState _deform;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
-        /**
-         * @brief 패스별 GPU 시간입니다. 지난 프레임의 타임스탬프를 읽어 프로파일러(`GPU.<패스>`)와 Tracy GPU 타임라인으로 냅니다.
-         * @details 프로파일러는 `initialize` 가 주입한다. 타임스탬프를 쓸지(`isRecording`)도 여기에 묻는다.
-         *          GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로 추측하거나 패스를 하나씩 지워 가며
-         *          차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
-         */
-        GPUPassTimeline _gpuPassTimeline;
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
-        uint32 _disabledInputRoleMask;
-        /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
-        GPULightBuffer   _lightBuffer;
+        uint32           _disabledInputRoleMask;
         vector<float4x4> _listScratchGridViewProj; ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
@@ -843,22 +778,8 @@ namespace sw
         vector<GPULightCookie> _listScratchLightCookie; ///< 직접 경로의 쿠키 목록(`collectSceneLights`)
         /// @brief 실시간 프로브 갱신 요청입니다 - 직접 경로가 모으는 임시 버퍼(`_listScratchRealtimeProbe`)와, 이번 프레임 기록이 읽는 사본(`_listFrameRealtimeProbe` - 패킷 경로도 여기에 받는다).
         vector<RealtimeProbeRequest> _listScratchRealtimeProbe;
-        vector<RealtimeProbeRequest> _listFrameRealtimeProbe;
-        RealtimeProbeUpdater         _probeUpdater;   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`prepareRealtimeProbes` · `dispatchRealtimeProbes`)
-        SkyGradient                  _frameSkySource; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
-        /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
-        Light2DCookieAtlas _cookieAtlas;
         /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
         vector<uint32> _listScratchShadowLightIndex;
-        /**
-         * @brief 이번 프레임의 그림자 배치(아틀라스 칸 · 주 시점 캐스케이드 · 점광 · 스폿 타일)입니다.
-         * @details 패킷 경로는 패킷과 맞바꾸기로 받고, 씬 직접 경로는 여기에 바로 채운다. 기록 중에는 읽기만 한다.
-         */
-        FrameShadowData _frameShadow;
-
-        /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬, 절두체, 상수 버퍼가 함께 옵니다. */
-        RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
-        const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
 
         /** @brief 이번 프레임에 컴퓨트로 드로우 커맨드를 만들 예정인지 반환합니다. 업로드 전에 GPUScene 에 알리는 데 씁니다. */
         bool usesGPUGeneratedCommands() const;
@@ -889,8 +810,6 @@ namespace sw
         MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
         /** @brief `gv_meshMorphDebugMode` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
         [[nodiscard]] static bool isMeshMorphDiagValid();
-        /** @brief 시간으로 구동하는 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 로 받은 값(0 이상, 배포본에는 없음)을 쓰고, 없으면 `_animationTimer` 의 누적 시간을 씁니다. */
-        float32 getAnimationTime() const;
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */
         bool isDrawMergeEnabled() const;
         /**
@@ -937,15 +856,8 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         /// @brief 모듈 확장 패스(`FrameExtensionHost::getPasses`)의 그래프 노드 이름 → 목록 번호입니다. `bindPassCallbacks` 가 채웁니다.
         unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
-        RHITextureHandle                     _outputRenderTarget;
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;
-        /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
-        CanvasRenderer _canvasRenderer;
-        /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.
-        VFXParticleRenderer _particleRenderer;
-        /// @brief 그릴 캔버스입니다. 패킷과 `setCanvasFrame` 에서 맞바꾸기로 받으며, 기록 중에는 읽기만 합니다.
-        CanvasFrameData _canvasFrame;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
         const RenderGraphPassDesc* _pLastSwapchainWriter;
         /**
@@ -966,11 +878,6 @@ namespace sw
         RenderGraphExecutionContext  _graphContext;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
-        FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
-        FrameSkyState   _frameSky;   ///< float4 셋(48바이트)이다. `_bHasFrameSky` 가 0 이면 쓰지 않는다.
-        /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
-        uint32 _outputWidth;
-        uint32 _outputHeight;
         /// @brief 마지막 프레임에 그린 추가 뷰 수입니다.
         uint32 _lastRenderedExtraViewCount;
         /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
@@ -992,7 +899,6 @@ namespace sw
         uint8               _bCallbacksBound            : 1;
         uint8               _bPassResourcesReady        : 1;
         uint8               _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
-        uint8               _bHasFrameSky               : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.

@@ -41,7 +41,7 @@ namespace sw
         {
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
-                const TransientAttachmentPool::Attachment attachment = _mainView._transientPool.find( output._attachment.view() );
+                const TransientAttachmentPool::Attachment attachment = _state._mainView._transientPool.find( output._attachment.view() );
                 const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
                 if ( bScannable == false || VectorUtil::contains( listScanned, attachment._texture ) )
                     continue;

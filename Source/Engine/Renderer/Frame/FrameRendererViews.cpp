@@ -36,7 +36,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
             return;
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             pView->_bSeenThisFrame = SW_FALSE;
         }
@@ -48,35 +48,35 @@ namespace sw
         }
 
         // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bSeenThisFrame == SW_FALSE )
                 releaseExtraView( *pView );
         }
-        VectorUtil::removeIf( _listExtraView, []( const unique_ptr<FrameViewTarget>& pView )
+        VectorUtil::removeIf( _state._listExtraView, []( const unique_ptr<FrameViewTarget>& pView )
         { return pView->_bSeenThisFrame == SW_FALSE; } );
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _listExtraView.size() ); ++viewIndex )
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _state._listExtraView.size() ); ++viewIndex )
         {
-            _listExtraView[viewIndex]->_cullSlot       = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView;
-            _listExtraView[viewIndex]->_shadowCullSlot = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView + 1u;
+            _state._listExtraView[viewIndex]->_cullSlot       = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView;
+            _state._listExtraView[viewIndex]->_shadowCullSlot = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView + 1u;
         }
         // 캐스케이드 컬링 슬롯은 추가 뷰 슬롯 뒤에 붙는다. 슬롯 수가 바뀌면(캐스케이드 수 · 스위치) 새 칸의 버퍼는 다음 업로드가 만든다.
-        _cascadeCullSlotBase = kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) * kCullSlotsPerExtraView;
-        _cascadeCullCount    = prepareCascadeCullInputs();
-        _gpuScene.setCullViewCount( _pDevice, _cascadeCullSlotBase + _cascadeCullCount );
+        _state._cascadeCullSlotBase = kFirstExtraCullView + static_cast<uint32>( _state._listExtraView.size() ) * kCullSlotsPerExtraView;
+        _state._cascadeCullCount    = prepareCascadeCullInputs();
+        _state._gpuScene.setCullViewCount( _pDevice, _state._cascadeCullSlotBase + _state._cascadeCullCount );
     }
 
     uint32 FrameRenderer::prepareCascadeCullInputs()
     {
         // 캐스케이드 하나뿐이면 합친 칸이 곧 그 캐스케이드라 나눌 이득이 없다. 그림자 없는 뷰(`makeUnshadowedView`)도 캐스케이드 1 이다.
-        const ViewShadowData& shadow       = _mainView._shadow;
+        const ViewShadowData& shadow       = _state._mainView._shadow;
         const bool            bHasCascades = shadow._bValid == SW_TRUE && shadow._cascadeCount >= 2;
         const bool            bEnabled     = gv_shadowCascadeCulling && _pDevice != nullptr && bHasCascades;
         if ( bEnabled == false )
             return 0;
         for ( uint32 cascadeIndex = 0; cascadeIndex < shadow._cascadeCount; ++cascadeIndex )
         {
-            RenderView& input = _arrCascadeCullInput[cascadeIndex];
+            RenderView& input = _state._arrCascadeCullInput[cascadeIndex];
             if ( input._cullCb.isValid() || input._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) ) )
                 continue;
             // 만들지 못하면 이 프레임은 합친 칸으로 돌아간다(같은 결과, 컬링만 덜 좁다). 칸마다 부분적으로 섞어 쓰지 않는다.
@@ -88,13 +88,13 @@ namespace sw
 
     FrameViewTarget& FrameRenderer::getOrCreateExtraView( uint64 viewID )
     {
-        for ( unique_ptr<FrameViewTarget>& pExisting : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pExisting : _state._listExtraView )
         {
             if ( pExisting->_viewID == viewID )
                 return *pExisting;
         }
-        _listExtraView.push_back( make_unique<FrameViewTarget>() );
-        FrameViewTarget& view = *_listExtraView.back();
+        _state._listExtraView.push_back( make_unique<FrameViewTarget>() );
+        FrameViewTarget& view = *_state._listExtraView.back();
         view._viewID          = viewID;
         return view;
     }
@@ -196,16 +196,16 @@ namespace sw
         view._listTransparentBatchOrder.clear();
         view._listParticleSlot.clear();
         view._bHasParticleOrder               = SW_FALSE;
-        const GPUViewTransparentOrder* pOrder = _gpuScene.findViewTransparentOrder( view._viewID );
+        const GPUViewTransparentOrder* pOrder = _state._gpuScene.findViewTransparentOrder( view._viewID );
         // 배치 순서와 입자 자리는 한 쌍이다 — 입자 자리(`_drawPosition`)는 그 순서 안의 번호라, 뷰의 순서에 주 시점의 자리를 섞으면 입자가 엉뚱한 배치 사이에 끼인다.
         // 그래서 둘 다 이 뷰의 것을 쓰거나 둘 다 주 시점의 것을 쓴다. 빌더는 입자마다 자리를 싣는다(`computeViewTransparentOrders`) — 수가 다르면 계약 위반이다.
-        const bool bParticleSlotsComplete = pOrder != nullptr && pOrder->_listParticleSlot.size() == _gpuScene.getParticleBatches().size();
+        const bool bParticleSlotsComplete = pOrder != nullptr && pOrder->_listParticleSlot.size() == _state._gpuScene.getParticleBatches().size();
         SW_ASSERT( pOrder == nullptr || bParticleSlotsComplete );
         const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
-                             pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
-                             pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();
+                             pOrder->_listBatchOrder.size() == _state._gpuScene.getTransparentBatches().size() &&
+                             pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstances().size();
         // 메시 투명이 없으면 입자 자리만 이 뷰의 것이다(배치 순서가 비어 짝이 될 것이 없다).
-        const bool bParticleOrderOnly  = bParticleSlotsComplete && pOrder->_listBatchOrder.empty() && _gpuScene.getTransparentBatches().empty();
+        const bool bParticleOrderOnly  = bParticleSlotsComplete && pOrder->_listBatchOrder.empty() && _state._gpuScene.getTransparentBatches().empty();
         const bool bParticleSlotsMatch = bUsable || bParticleOrderOnly;
         if ( bParticleSlotsMatch )
         {
@@ -217,7 +217,7 @@ namespace sw
         view._listTransparentBatchOrder = pOrder->_listBatchOrder;
         view._transparentTailBase       = pOrder->_tailBase;
         const uint32 tailCount          = static_cast<uint32>( pOrder->_pListRank->size() );
-        if ( _gpuScene.areIndirectCountsGPUFilled() )
+        if ( _state._gpuScene.areIndirectCountsGPUFilled() )
         {
             // GPU 정렬이 순번으로 되돌린다(instancesort.hlsl). 표는 뷰마다 자기 것 — 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮는다(정렬 CB 와 같은 함정).
             if ( view._transparentRank.ensureCapacity( _pDevice, sizeof( uint32 ), tailCount, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
@@ -275,18 +275,18 @@ namespace sw
             return;
 
         // 주 시점의 시드에서 출발해 이 뷰의 것(뷰-투영 · 풀 크기 · 플래그 · 컬링 칸 · 방향광 그림자)만 덮어쓴다. 라이트 목록과 점광 · 스폿 그림자는 프레임 공통이다.
-        _pActiveView  = &view;
-        _frameContext = _mainSeedScratch;
-        applyViewProjection( _frameContext, view._cullInput._viewProj );
-        applyViewPassConstants( _frameContext );
-        applyViewShadowConstants( _frameContext, view._shadow );
-        _frameContext._cullViewIndex = view._cullSlot;
-        _frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
+        _pActiveView         = &view;
+        _state._frameContext = _state._mainSeedScratch;
+        applyViewProjection( _state._frameContext, view._cullInput._viewProj );
+        applyViewPassConstants( _state._frameContext );
+        applyViewShadowConstants( _state._frameContext, view._shadow );
+        _state._frameContext._cullViewIndex = view._cullSlot;
+        _state._frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
         pCmd->beginCommandList();
-        if ( _graph.execute( _graphContext, pCmd ) == false )
+        if ( _state._graph.execute( _graphContext, pCmd ) == false )
             SW_LOG_ERROR_ONCE( "Render graph could not run for an extra view (cycle or compile failure)" );
         // 렌더 텍스처는 이어서 주 시점의 머티리얼이, 호스트 타깃은 에디터 UI 가 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
         if ( view._outputKind == RenderViewOutputKind::RenderTexture && view._pOutputTexture != nullptr )
@@ -296,7 +296,7 @@ namespace sw
         pCmd->endCommandList();
         pDevice->executeCommandList( pCmd );
 
-        _pActiveView = &_mainView;
+        _pActiveView = &_state._mainView;
     }
 
     uint32 FrameRenderer::collectFrameViewModeMask() const
@@ -309,8 +309,8 @@ namespace sw
             const uint32 bit = 1u << static_cast<uint32>( getRenderViewModePipelineMode( viewMode ) );
             return getRenderViewModeInfo( viewMode )._bOverlay ? ( bit | ( 1u << static_cast<uint32>( RenderViewMode::Lit ) ) ) : bit;
         };
-        uint32 viewModeMask = viewModeBits( _mainView._settings._viewMode );
-        for ( const unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        uint32 viewModeMask = viewModeBits( _state._mainView._settings._viewMode );
+        for ( const unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 viewModeMask |= viewModeBits( pView->_settings._viewMode );
@@ -326,7 +326,7 @@ namespace sw
         if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
             return true;
         const GPUShaderPermutation* pPermutation =
-            ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( batch._shaderPermutation );
+            ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
         return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 

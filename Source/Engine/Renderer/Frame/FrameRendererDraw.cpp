@@ -56,81 +56,81 @@ namespace sw
 
     void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
     {
-        if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSRV() == kInvalidDescriptorIndex )
+        if ( _state._gpuScene.getInstanceBuffer() == 0 || _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex )
             return;
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
         context._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
-                                                  _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV() );
-        context._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
+                                                  _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV() );
+        context._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
 
         // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
-        if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSRV() != kInvalidDescriptorIndex )
+        if ( _state._gpuScene.getBatchInfoBuffer() != 0 && _state._gpuScene.getBatchInfoSRV() != kInvalidDescriptorIndex )
         {
-            context._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSRV() );
-            context._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _state._gpuScene.getBatchInfoBuffer(), _state._gpuScene.getBatchInfoSRV() );
+            context._passValues.setUint( passConstantNames()._swBatchCount, _state._gpuScene.getIndirectCommandCount() );
         }
 
         // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
-        const RHIStructuredBufferSlot& morphBuffer = ( _deform._bMorphBindsRest != SW_FALSE ) ? _deform._meshMorphPool.getRestBuffer()
-                                                                                              : _deform._meshMorphPool.getMorphBuffer();
+        const RHIStructuredBufferSlot& morphBuffer = ( _state._deform._bMorphBindsRest != SW_FALSE ) ? _state._deform._meshMorphPool.getRestBuffer()
+                                                                                                     : _state._deform._meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
             // 진단(레스트를 그대로 물림)이면 레스트 버퍼는 모프 구간만 담는다 — 스킨 구간 번호는 범위 밖으로 걸러 입력 스트림을 쓴다.
-            const uint32 morphElementCount = ( _deform._bMorphBindsRest != SW_FALSE ) ? _deform._meshMorphPool.getMorphVertexCount() : _deform._meshMorphPool.getVertexCount();
+            const uint32 morphElementCount = ( _state._deform._bMorphBindsRest != SW_FALSE ) ? _state._deform._meshMorphPool.getMorphVertexCount() : _state._deform._meshMorphPool.getVertexCount();
             context._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
-        const RHIStructuredBufferSlot& vertexAnimationBuffer = _deform._vertexAnimationPool.getBuffer();
+        const RHIStructuredBufferSlot& vertexAnimationBuffer = _state._deform._vertexAnimationPool.getBuffer();
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _deform._vertexAnimationPool.getWordCount() );
-            context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
+            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _state._deform._vertexAnimationPool.getWordCount() );
+            context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _state._gpuScene.getVertexAnimationTime() );
         }
         // 머티리얼 애니메이션 시계(툰 UV 애니메이션) — VAT 와 같은 장면 애니메이션 시계지만 VAT 표와 무관하게 늘 건다.
-        context._passValues.setFloat( passConstantNames()._swMaterialTime, _gpuScene.getVertexAnimationTime() );
+        context._passValues.setFloat( passConstantNames()._swMaterialTime, _state._gpuScene.getVertexAnimationTime() );
 
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIDsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        const GPUCullViewResources& cullView                  = _gpuScene.getCullView( context._cullViewIndex );
+        const GPUCullViewResources& cullView                  = _state._gpuScene.getCullView( context._cullViewIndex );
         const bool                  bVisibleInstanceListReady = _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
                                                cullView._visibleInstances._srv != kInvalidDescriptorIndex;
         if ( bVisibleInstanceListReady )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
-            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _gpuScene.getVisibleSlotCount() );
+            context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getVisibleSlotCount() );
         }
     }
 
     void FrameRenderer::registerLightBuffer( FramePassContext& context )
     {
         // 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 빛이 있는 프레임에만 역할 텍스처로 건다(셰이더는 g_Light2DCookieAtlasIndex 로 걸렸는지 본다).
-        const Texture2D* pCookieAtlas = _cookieAtlas.hasCookies() ? _cookieAtlas.findAtlas() : nullptr;
+        const Texture2D* pCookieAtlas = _state._cookieAtlas.hasCookies() ? _state._cookieAtlas.findAtlas() : nullptr;
         if ( pCookieAtlas != nullptr )
             context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSRV() );
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
-        context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
+        context._passValues.setUint( passConstantNames()._swLightCount, _state._lightBuffer.isBindable() ? _state._lightBuffer.getCount() : 0u );
         // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling=None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
         // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
-        const RHIStructuredBufferSlot* pGridBuffer = _lightBuffer.isBindable() ? _lightBuffer.findGridBuffer() : nullptr;
+        const RHIStructuredBufferSlot* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
         const bool                     bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;
-        const uint32                   gridBase    = bGridReady ? _lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
+        const uint32                   gridBase    = bGridReady ? _state._lightBuffer.getGridBase( _pActiveView->_lightGridIndex ) : invalid_index::kUint32;
         context._passValues.setUint( passConstantNames()._swLightGridBase, gridBase );
-        if ( _lightBuffer.isBindable() == false )
+        if ( _state._lightBuffer.isBindable() == false )
             return;
-        const RHIStructuredBufferSlot& buffer = _lightBuffer.getBuffer();
+        const RHIStructuredBufferSlot& buffer = _state._lightBuffer.getBuffer();
         context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
         if ( bGridReady )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightGrid, pGridBuffer->_buffer, pGridBuffer->_srv );
         // 라이트 프로브 SH9(t13) — 볼륨 원소가 라이트 목록에 있는 프레임에만 있다. 셰이더는 g_SwLightProbesIndex 로 걸렸는지 본다.
-        const RHIStructuredBufferSlot* pProbeBuffer = _lightBuffer.findProbeBuffer();
+        const RHIStructuredBufferSlot* pProbeBuffer = _state._lightBuffer.findProbeBuffer();
         if ( pProbeBuffer != nullptr )
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
@@ -224,7 +224,7 @@ namespace sw
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
-        if ( _gpuScene.isUploaded() )
+        if ( _state._gpuScene.isUploaded() )
         {
             drawGPUBatches( context, pso, bTransparentPass, nullptr );
             return;
@@ -247,7 +247,7 @@ namespace sw
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
         const vector<GPUTransparentParticleSlot>& listParticleSlot = findActiveParticleSlots();
-        if ( _gpuScene.isUploaded() )
+        if ( _state._gpuScene.isUploaded() )
         {
             drawGPUBatches( context, pso, true, &listParticleSlot );
             return;
@@ -261,7 +261,7 @@ namespace sw
     {
         if ( isRenderingExtraView() && _pActiveView->_bHasParticleOrder == SW_TRUE )
             return _pActiveView->_listParticleSlot;
-        return _gpuScene.getParticleSlots();
+        return _state._gpuScene.getParticleSlots();
     }
 
     uint32 FrameRenderer::countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const
@@ -321,7 +321,7 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
         // 패스 PSO 가 없으면(셋업이 만들지 못하고 알렸다) 앞서 묶인 파이프라인으로 대신 그리지 않는다.
-        const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false || pso == 0;
+        const bool bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || _state._gpuScene.isUploaded() == false || pso == 0;
         if ( bCannotDraw )
             return;
 
@@ -331,19 +331,19 @@ namespace sw
         commitBindlessTextureBindings( context );
 
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
-                                _gpuScene.getInstanceSRV() != kInvalidDescriptorIndex;
+                                _state._gpuScene.getInstanceSRV() != kInvalidDescriptorIndex;
         if ( bInstanced )
             registerInstanceBuffer( context );
 
         BatchDrawState state{};
         state._pso      = pso;
         state._boundPSO = pso;
-        state._batches  = bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
+        state._batches  = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", state._batches.size() );
 
         // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
-        state._batchOffset = bTransparentPass ? static_cast<uint32>( _gpuScene.getOpaqueBatches().size() ) : 0u;
+        state._batchOffset = bTransparentPass ? static_cast<uint32>( _state._gpuScene.getOpaqueBatches().size() ) : 0u;
 
         // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
@@ -354,7 +354,7 @@ namespace sw
         // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
         state._passType = context._passType;
 
-        state._argsBuffer = _gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
+        state._argsBuffer = _state._gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
         // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
         const bool bExtraView     = isRenderingExtraView();
         const bool bUsesViewOrder = bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == state._batches.size();
@@ -362,7 +362,7 @@ namespace sw
             state._pOrder = &_pActiveView->_listTransparentBatchOrder;
         // 인스턴스 슬롯 스트림(슬롯 1). 패스당 한 번 건다. 씬 드로우는 모두 이 스트림에서 자기 자리를 읽는다.
         // 컬링 없는 백엔드의 추가 뷰는 꼬리를 그 뷰 순서로 다시 놓은 자기 스트림을 쓴다(GPU 정렬 백엔드는 늘 공용 스트림).
-        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
+        state._slotStream = ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _state._gpuScene.getInstanceSlotStream();
         if ( state._slotStream != 0 )
             context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, state._slotStream, constant::kInstanceSlotStreamStride, 0 );
         // 투명 큐의 입자는 배치 순서의 자기 자리(`GPUTransparentParticleSlot::_drawPosition`) 앞에 끼운다. 입자 그리기가 PSO 와 정점 슬롯을 바꾸므로
@@ -473,7 +473,7 @@ namespace sw
 
     bool FrameRenderer::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
     {
-        const vector<GPUParticleBatch>& listBatch   = _gpuScene.getParticleBatches();
+        const vector<GPUParticleBatch>& listBatch   = _state._gpuScene.getParticleBatches();
         const RHIPipelineStateHandle    pso         = _psoManager.findParticlePSO();
         const bool                      bCannotDraw = _pDevice == nullptr || context._pCmd == nullptr || listBatch.empty() || listSlot.empty() || pso == 0;
         if ( bCannotDraw )
@@ -485,18 +485,18 @@ namespace sw
         setIdentityWorld( context );
         // PassCB(g_ViewProj · g_InvViewProj)를 건다. 입자 버퍼 · 텍스처 · 루트 상수는 그 뒤에 입자 렌더러가 건다.
         bindForDraw( context, pso, kInvalidDescriptorIndex );
-        (void)_particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
+        (void)_state._particleRenderer.drawBatches( *context._pCmd, listBatch, listSlot, _pDevice->supportsNativeBindlessSampling() );
         return true;
     }
 
     void FrameRenderer::drawLight2DCookieAtlas()
     {
-        const vector<Light2DCookieAtlas::CellDraw>& listDraw       = _cookieAtlas.getPendingDraws();
-        const Texture2D*                            pAtlas         = _cookieAtlas.findAtlas();
+        const vector<Light2DCookieAtlas::CellDraw>& listDraw       = _state._cookieAtlas.getPendingDraws();
+        const Texture2D*                            pAtlas         = _state._cookieAtlas.findAtlas();
         const bool                                  bNothingToDraw = listDraw.empty() || pAtlas == nullptr || _pDevice == nullptr || _pCmd == nullptr;
         if ( bNothingToDraw )
         {
-            _cookieAtlas.clearPendingDraws();
+            _state._cookieAtlas.clearPendingDraws();
             return;
         }
 
@@ -504,7 +504,7 @@ namespace sw
         const RHIPipelineStateHandle pso = _psoManager.findOrCreateCookieAtlasPSO( pAtlas->getFormat() );
         if ( pso == 0 )
         {
-            _cookieAtlas.clearPendingDraws();
+            _state._cookieAtlas.clearPendingDraws();
             return;
         }
 
@@ -527,7 +527,7 @@ namespace sw
         _pCmd->beginRenderPass( beginInfo );
 
         // 칸마다 뷰포트를 그 칸으로 잡고 쿠키를 원본(SourceColor)으로 걸어 블릿한다. 원본이 칸마다 달라 상수 슬롯도 칸마다 새로 잡는다(그림자 타일과 같은 이유).
-        FramePassContext context = _frameContext;
+        FramePassContext context = _state._frameContext;
         context._pCmd            = _pCmd;
         for ( const Light2DCookieAtlas::CellDraw& draw : listDraw )
         {
@@ -549,7 +549,7 @@ namespace sw
         }
         _pCmd->endRenderPass();
         _pCmd->prepareTextureForShaderRead( pAtlas->getHandle() );
-        _cookieAtlas.clearPendingDraws();
+        _state._cookieAtlas.clearPendingDraws();
     }
 
     void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )

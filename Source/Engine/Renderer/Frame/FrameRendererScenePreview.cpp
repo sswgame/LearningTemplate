@@ -39,7 +39,7 @@ namespace sw
             created._renderer->_bScenePreview = SW_TRUE;
             created._renderer->_psoManager.shareCacheOf( _psoManager );
             created._sceneKey = packet._sceneKey;
-            if ( created._renderer->initialize( pDevice, _pTaskManager, _pipelinePath ) == false )
+            if ( created._renderer->initialize( pDevice, _state._pTaskManager, _pipelinePath ) == false )
             {
                 SW_LOG_ERROR( "Scene preview renderer for scene key %# could not start: %#", packet._sceneKey, created._renderer->getStatusMessage() );
                 return false;

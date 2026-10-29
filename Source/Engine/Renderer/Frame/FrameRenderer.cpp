@@ -81,34 +81,23 @@ namespace sw
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
+        , _state{}
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{ nullptr }
         , _pCmd{ nullptr }
-        , _pTaskManager{ nullptr }
-        , _gpuScene{}
         , _sceneBuilder{}
         , _pipelineResource{}
-        , _psoManager{ _pDevice, _pipelineResource, _gpuScene }
+        , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene }
         , _postProcess{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _postProcess }
-        , _graph{}
         , _pipelinePath{}
-        , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
-        , _mainView{}
-        , _listExtraView{}
-        , _pActiveView{ &_mainView }
-        , _frameContext{}
-        , _mainSeedScratch{}
+        , _pActiveView{ &_state._mainView }
         , _directViewScheduler{}
         , _listDirectViewScratch{}
-        , _passCbRing{}
-        , _arrView{}
-        , _deform{}
 #if !defined( SW_SHIPPING )
 #endif
         , _indirectDrawCallCount{ 0 }
-        , _gpuPassTimeline{}
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _transparentRankPlaceholder{}
@@ -118,20 +107,12 @@ namespace sw
         , _gpuAssert{}
         , _nanCheck{}
         , _nanCheckCommandList{}
-        , _outputRenderTarget{ 0 }
-        , _capture{ _pDevice, _mainView._transientPool, _pipelineResource }
-        , _canvasRenderer{}
-        , _particleRenderer{}
-        , _canvasFrame{}
+        , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
         , _listScenePreviewRenderer{}
         , _statusMessage{}
         , _graphContext{}
-        , _frameLight{}
-        , _frameSky{}
-        , _outputWidth{ 0 }
-        , _outputHeight{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
@@ -143,7 +124,6 @@ namespace sw
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
         , _bScenePreview{ SW_FALSE }
-        , _bHasFrameSky{ SW_FALSE }
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
@@ -168,8 +148,8 @@ namespace sw
     {
         _pDevice = pDevice;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
-        _deform._animationTimer.resetTimer();
-        _deform._animationTimer.startTimer();
+        _state._deform._animationTimer.resetTimer();
+        _state._deform._animationTimer.startTimer();
         if ( pDevice == nullptr )
         {
             _status        = FrameRendererStatus::Failed;
@@ -185,7 +165,7 @@ namespace sw
         // 패스별 GPU 시간을 보고할 프로파일러다. 서비스가 없는 실행(서비스 없이 렌더러만 쓰는 도구)은 계측하지 않는다.
         // 미리보기 씬 렌더러는 계측하지 않는다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 주 렌더러의 것이다).
         const bool bProfile = engine::areEngineServicesBound() && _bScenePreview == SW_FALSE;
-        _gpuPassTimeline.bindProfiler( bProfile ? &engine::getSubsystem<FrameProfiler>() : nullptr );
+        _state._gpuPassTimeline.bindProfiler( bProfile ? &engine::getSubsystem<FrameProfiler>() : nullptr );
 
         _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
         if ( _renderPipelineAssetCache->initialize() == false )
@@ -267,7 +247,7 @@ namespace sw
 
     void FrameRenderer::bindServices( TaskManager* pTaskManager )
     {
-        _pTaskManager = pTaskManager;
+        _state._pTaskManager = pTaskManager;
     }
 
     void FrameRenderer::shutdown()
@@ -287,23 +267,23 @@ namespace sw
         }
         _listScenePreviewRenderer.clear();
         _scenePreviewRendererCount.store( 0 );
-        _graph.releaseCommandLists();
+        _state._graph.releaseCommandLists();
         if ( _pDevice != nullptr )
-            _gpuScene.releaseGPU( _pDevice );
-        _gpuScene.clear();
+            _state._gpuScene.releaseGPU( _pDevice );
+        _state._gpuScene.clear();
         _sceneBuilder.clear();
 
         // 추가 뷰는 통째로 해제한다(빌린 렌더 텍스처, 컬링 상수 버퍼, 리스트). 주 시점의 리스트도 이 디바이스의 것이다.
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             releaseExtraView( *pView );
         }
-        _listExtraView.clear();
-        _mainView._commandList.reset();
+        _state._listExtraView.clear();
+        _state._mainView._commandList.reset();
         _directViewScheduler.clear();
         releaseTransientResources();
         releasePassResources();
-        _graph.clear();
+        _state._graph.clear();
         // 리소스 상태 추적은 이름에서 상태를 찾는 구조라 디바이스가 바뀌어도 살아남는다. 새 디바이스의 텍스처는 다시 Undefined 다.
         // 지우지 않으면 첫 프레임이 "이미 렌더 타깃 상태" 로 믿고 배리어를 건너뛴다.
         _graphContext.reset();
@@ -314,14 +294,14 @@ namespace sw
             _renderPipelineAssetCache->shutdown();
             _renderPipelineAssetCache.reset();
         }
-        _pCmdOwnerDevice    = nullptr;
-        _pCmd               = nullptr;
-        _frameContext._pCmd = nullptr;
-        _pDevice            = nullptr;
+        _pCmdOwnerDevice           = nullptr;
+        _pCmd                      = nullptr;
+        _state._frameContext._pCmd = nullptr;
+        _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
-        _gpuPassTimeline.forgetDevice();
-        _pTaskManager = nullptr;
-        _status       = FrameRendererStatus::Uninitialized;
+        _state._gpuPassTimeline.forgetDevice();
+        _state._pTaskManager = nullptr;
+        _status              = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
         _bCallbacksBound = SW_FALSE;
         _pipelinePath.clear();
@@ -333,7 +313,7 @@ namespace sw
         const string_view pipelineXMLPath = assetID.view();
         _pipelinePath                     = pipelineXMLPath;
         _bCallbacksBound                  = SW_FALSE;
-        _graph.clear();
+        _state._graph.clear();
         releaseTransientResources();
 
         if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
@@ -375,7 +355,7 @@ namespace sw
 
         float4 sceneColorClear;
         if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
-            _clearColor = sceneColorClear;
+            _state._clearColor = sceneColorClear;
 
         // 파이프라인 패스 설정(셰이더, 진입점, 블렌드, 퍼뮤테이션)으로 PSO 를 다시 만든다.
         releasePassResources();
@@ -398,8 +378,8 @@ namespace sw
         {
             // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
-            _mainView._commandList.reset();
-            for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+            _state._mainView._commandList.reset();
+            for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
             {
                 pView->_commandList.reset();
             }
@@ -411,7 +391,7 @@ namespace sw
         _pCmdOwnerDevice = pDevice;
         _pCmd            = _frameCmd.get();
         // 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이것을 쓴다).
-        _frameContext._pCmd = _pCmd;
+        _state._frameContext._pCmd = _pCmd;
 
         if ( _pCmd == nullptr )
         {
@@ -441,13 +421,13 @@ namespace sw
         _pCmd->beginCommandList();
         _bGPUCullingActive = SW_FALSE;
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
-        _deform._animationTimer.updateTimer();
+        _state._deform._animationTimer.updateTimer();
 
 #if SW_PROFILE_COMPILED
         // 프레임의 첫 GPU 명령 위치다. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
         // 프리패스, 업로드, 배리어)이다. 게이트는 패스 타임스탬프와 같다(FrameRendererPassExecute).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
-        const bool                   bWriteGPUTime = pTimestamps != nullptr && _gpuPassTimeline.isRecording() &&
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && _state._gpuPassTimeline.isRecording() &&
                                    FrameRendererUtil::kGPUTimestampSlotFrameBegin < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
         {
@@ -465,8 +445,8 @@ namespace sw
         recordDepthHistories();
         // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
         // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
-        _particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
-        const uint32 animationInstanceCount = static_cast<uint32>( _gpuScene.getInstances().size() );
+        _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
+        const uint32 animationInstanceCount = static_cast<uint32>( _state._gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animationInstanceCount );
         dispatchMeshMorph();
         dispatchMeshSkin();
@@ -474,16 +454,16 @@ namespace sw
         // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
         dispatchLightGrid();
         // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
-        _postProcess.dispatchVolumetricFog( *_pCmd, _lightBuffer, _transparentRankPlaceholder._srv );
+        _postProcess.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
         // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
         dispatchRealtimeProbes();
         // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
-                                                _gpuAssert, _mainView._settings._viewMode == RenderViewMode::MarkerSlots );
+        _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
+                                                       _gpuAssert, _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
         // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
         _gpuAssert.requestReadback( *_pCmd );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _canvasRenderer.drawTargets( *_pCmd, *pDevice, _canvasFrame, _psoManager.getCache() );
+        _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
         drawLight2DCookieAtlas();
 
@@ -499,15 +479,15 @@ namespace sw
         _pCmd = nullptr;
 
         // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 보존해 둔다.
-        _mainSeedScratch          = _frameContext;
+        _state._mainSeedScratch   = _state._frameContext;
         uint32 renderedExtraCount = renderExtraViewsOfKind( pDevice, RenderViewOutputKind::RenderTexture );
         // 주 시점의 시드와 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
-        _frameContext = _mainSeedScratch;
+        _state._frameContext = _state._mainSeedScratch;
         _bHasExecutedDepthPrepass.store( 0 );
 
         // 주 출력의 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다. 화면 사각형 뷰는 주 시점 뒤에 겹치므로, 주 시점이 그리면 그 뷰가 UI 를 덮는다.
-        _pMainOutputCanvasView = &_mainView;
-        for ( const unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        _pMainOutputCanvasView = &_state._mainView;
+        for ( const unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE && pView->_outputKind == RenderViewOutputKind::ScreenRect )
                 _pMainOutputCanvasView = pView.get();
@@ -521,7 +501,7 @@ namespace sw
         renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ScreenRect );
         // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다. 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있도록 마지막에 그린다.
         renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::HostTarget );
-        _frameContext               = _mainSeedScratch;
+        _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
         rememberDepthHistoryViews();
@@ -531,7 +511,7 @@ namespace sw
     uint32 FrameRenderer::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
     {
         uint32 renderedCount = 0;
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != outputKind )
                 continue;
@@ -545,22 +525,22 @@ namespace sw
     {
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
-        const bool bCanRunParallel = _pTaskManager != nullptr &&
+        const bool bCanRunParallel = _state._pTaskManager != nullptr &&
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
-                                     _graph.getExecutionOrder().size() > 1;
+                                     _state._graph.getExecutionOrder().size() > 1;
         if ( bCanRunParallel )
-            return _graph.executeParallel( _graphContext, _pTaskManager, pDevice );
+            return _state._graph.executeParallel( _graphContext, _state._pTaskManager, pDevice );
 
         // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-        if ( _mainView._commandList == nullptr )
-            _mainView._commandList = pDevice->createCommandList();
-        IRHICommandList* pMainCmd = _mainView._commandList.get();
+        if ( _state._mainView._commandList == nullptr )
+            _state._mainView._commandList = pDevice->createCommandList();
+        IRHICommandList* pMainCmd = _state._mainView._commandList.get();
         if ( pMainCmd == nullptr )
             return false;
         // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다). 그래서 시드를 이 리스트로 돌린다.
-        _frameContext._pCmd = pMainCmd;
+        _state._frameContext._pCmd = pMainCmd;
         pMainCmd->beginCommandList();
-        const bool bOk = _graph.execute( _graphContext, pMainCmd );
+        const bool bOk = _state._graph.execute( _graphContext, pMainCmd );
         pMainCmd->endCommandList();
         pDevice->executeCommandList( pMainCmd );
         return bOk;
@@ -583,11 +563,11 @@ namespace sw
         }
         Scene* const pScene = &scene;
 
-        _pDevice            = pDevice;
-        _outputRenderTarget = 0;
+        _pDevice                   = pDevice;
+        _state._outputRenderTarget = 0;
         // 주 시점의 출력 설정(사각형, 배율, 끌 기능, 컷)은 패킷 경로와 같은 규칙으로 카메라에서 읽는다.
-        _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera, RenderViewCollector::kDirectPathAutoScale ); // 자동 렌더 배율은 패킷 경로(RenderPacketBuilder)만 쓴다: 직접 경로(테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 한다
-        _mainView._settings._viewMode = getViewMode();                                                                                   // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
+        _state._mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera, RenderViewCollector::kDirectPathAutoScale ); // 자동 렌더 배율은 패킷 경로(RenderPacketBuilder)만 쓴다: 직접 경로(테스트 · 초상화 베이크)는 프레임 시계가 없고 출력이 결정적이어야 한다
+        _state._mainView._settings._viewMode = getViewMode();                                                                                   // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 Engine 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
         collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex, &_listScratchLightProbe, &_listScratchLightCookie, &_listScratchRealtimeProbe );
@@ -598,14 +578,14 @@ namespace sw
         DirectionalLightComponent* pShadowLight = scene.findShadowCastingDirectionalLight();
         if ( pKeyLight != nullptr )
         {
-            const float3 lightDir     = pKeyLight->getLightDirection();
-            const float3 lightColor   = pKeyLight->getColor();
-            _frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
-            _frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
+            const float3 lightDir            = pKeyLight->getLightDirection();
+            const float3 lightColor          = pKeyLight->getColor();
+            _state._frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
+            _state._frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
         }
         else
         {
-            _frameLight = FrameLightState{};
+            _state._frameLight = FrameLightState{};
         }
         // 하늘도 패킷 경로(RenderPacketBuilder)와 같은 규칙으로 씬에서 읽는다.
         SkyGradient sceneSky;
@@ -620,37 +600,37 @@ namespace sw
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
         // 주 시점 뷰-투영은 하나다. 그림자 맞춤과 그리기가 같은 행렬을 쓰고, 비율은 패킷 경로(`RenderPacketBuilder`)와 같은 규칙(출력 × 사각형)이다.
         // 둘을 따로 측정하면 출력 설정의 비율과 풀의 비율이 어긋나 그림자 볼륨이 그리는 절두체를 덮지 못한다.
-        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _outputWidth, _outputHeight ) );
+        const float4x4 mainCameraViewProj = pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _state._mainView._settings, _state._outputWidth, _state._outputHeight ) );
         // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(Engine)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
         ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, &mainCameraViewProj, getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight,
-                                        _frameShadow );
+                                        _state._frameShadow );
         applyFrameShadow();
         // 쿠키를 쓰는 2D 빛에 아틀라스 칸을 나눠 원소에 적는다(업로드 전). 칸에 그리는 것은 기록 중 프리패스(drawLight2DCookieAtlas)다.
-        _cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
-        _listFrameRealtimeProbe = _listScratchRealtimeProbe;
-        _lightBuffer.populate( _listScratchLight, _frameShadow._listTileElement, _listScratchLightProbe, _listFrameRealtimeProbe.empty() == false );
+        _state._cookieAtlas.assignCells( pDevice, _listScratchLightCookie, _listScratchLight );
+        _state._listFrameRealtimeProbe = _listScratchRealtimeProbe;
+        _state._lightBuffer.populate( _listScratchLight, _state._frameShadow._listTileElement, _listScratchLightProbe, _state._listFrameRealtimeProbe.empty() == false );
         resetPassCbRing();
-        setIdentityWorld( _frameContext );
-        updatePassConstants( _frameContext, mainCameraViewProj );
+        setIdentityWorld( _state._frameContext );
+        updatePassConstants( _state._frameContext, mainCameraViewProj );
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
-        const float3 cameraPos                 = pMainCamera->getCameraPosition();
-        view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
+        const float3 cameraPos                        = pMainCamera->getCameraPosition();
+        _state.view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
         // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
         const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _occlusionMailbox.getLatest();
         if ( scene.getObjectManager() != nullptr )
         {
-            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, cameraPos, _outputWidth, _outputHeight, RenderViewCollector::kDirectPathAutoScale,
-                                                    static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
+            RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, _state.view( RenderViewType::Main )._viewProj, cameraPos, _state._outputWidth, _state._outputHeight, RenderViewCollector::kDirectPathAutoScale,
+                                                    static_cast<float64>( _state.getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     occlusionSnapshot.get(), _listDirectViewScratch );
         }
         // 추가 뷰마다 자기 카메라에 맞춘 방향광 그림자 — 패킷 경로(RenderPacketBuilder)와 같은 함수다.
         for ( RenderViewRequest& request : _listDirectViewScratch )
         {
             if ( request._bRender == SW_TRUE )
-                request._shadow = ShadowSetupUtil::makeViewShadowFor( pKeyLight != nullptr ? pShadowLight : nullptr, request._viewProj, _frameShadow );
+                request._shadow = ShadowSetupUtil::makeViewShadowFor( pKeyLight != nullptr ? pShadowLight : nullptr, request._viewProj, _state._frameShadow );
         }
         // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
         // 주 카메라의 정렬 축도 패킷 경로(Engine)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
@@ -661,7 +641,7 @@ namespace sw
         {
             // 스크래치 하나를 돌려 쓴다. 맞바꾸기라서 지난 스냅샷의 저장소가 여기로 돌아온다.
             _sceneBuilder.exportCPUSnapshot( _sceneSnapshotScratch );
-            _gpuScene.adoptCPUSnapshot( _sceneSnapshotScratch );
+            _state._gpuScene.adoptCPUSnapshot( _sceneSnapshotScratch );
         }
         return uploadSceneAndSubmit( pDevice, "execute" );
     }
@@ -706,46 +686,46 @@ namespace sw
             (void)textures.updateStreaming( pDevice, bFinishAssetWork ? UINT32_MAX : TextureCache::kMaxStreamingUpgradesPerFrame );
         }
 
-        _pDevice            = pDevice;
-        _outputRenderTarget = packet._outputRenderTarget;
-        _mainView._settings = packet._mainView;
-        // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼, 핸들, 머티리얼 데이터 버퍼를 보존한다).
+        _pDevice                   = pDevice;
+        _state._outputRenderTarget = packet._outputRenderTarget;
+        _state._mainView._settings = packet._mainView;
+        // _state._gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼, 핸들, 머티리얼 데이터 버퍼를 보존한다).
         // 패킷에서는 CPU 스냅샷(인스턴스와 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
         // GPU 버퍼와 디스크립터를 releaseGPU() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
-        _gpuScene.adoptCPUSnapshot( packet._gpuScene );
+        _state._gpuScene.adoptCPUSnapshot( packet._gpuScene );
         // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         setCanvasFrame( packet._canvas );
 
         // 주 광원은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다.
         if ( packet._bHasLight != SW_FALSE )
         {
-            _frameLight._dirIntensity = packet._lightDirIntensity;
-            _frameLight._colorAmbient = packet._lightColorAmbient;
+            _state._frameLight._dirIntensity = packet._lightDirIntensity;
+            _state._frameLight._colorAmbient = packet._lightColorAmbient;
         }
         else
         {
-            _frameLight = FrameLightState{};
+            _state._frameLight = FrameLightState{};
         }
         // 하늘도 패킷으로만 온다.
         applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
         _postProcess.applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
-        std::swap( _frameShadow, packet._shadow );
+        std::swap( _state._frameShadow, packet._shadow );
         applyFrameShadow();
         // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
-        _cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
-        _listFrameRealtimeProbe = packet._listRealtimeProbe;
-        _lightBuffer.populate( packet._listLight, _frameShadow._listTileElement, packet._listLightProbe, _listFrameRealtimeProbe.empty() == false );
+        _state._cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
+        _state._listFrameRealtimeProbe = packet._listRealtimeProbe;
+        _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._listLightProbe, _state._listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
-        setIdentityWorld( _frameContext );
+        setIdentityWorld( _state._frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
-        updatePassConstants( _frameContext, packet._viewProj );
-        view( RenderViewType::Main )._position = packet._cameraPos;
+        updatePassConstants( _state._frameContext, packet._viewProj );
+        _state.view( RenderViewType::Main )._position = packet._cameraPos;
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
@@ -759,17 +739,17 @@ namespace sw
     {
         // 그리드 번호는 이 목록의 순서다 — 주 시점이 0 번, 이번 프레임에 그리는 추가 뷰가 그 뒤다. 뷰-투영은 그 뷰의 g_ViewProj 와 같은 값이다.
         _listScratchGridViewProj.clear();
-        _mainView._lightGridIndex = invalid_index::kUint32;
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        _state._mainView._lightGridIndex = invalid_index::kUint32;
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             pView->_lightGridIndex = invalid_index::kUint32;
         }
         const LightGridProducer producer = selectLightGridProducer();
         if ( producer != LightGridProducer::None )
         {
-            _mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
-            _listScratchGridViewProj.push_back( view( RenderViewType::Main )._viewProj );
-            for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+            _state._mainView._lightGridIndex = static_cast<uint32>( _listScratchGridViewProj.size() );
+            _listScratchGridViewProj.push_back( _state.view( RenderViewType::Main )._viewProj );
+            for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
             {
                 if ( pView->_bRenderThisFrame == SW_FALSE )
                     continue;
@@ -779,8 +759,8 @@ namespace sw
         }
         // GPU 방출기의 파티클 라이트 — 방출기가 요청한 슬롯의 합이 라이트 버퍼의 GPU 구간 크기다(GPU 생산자가 아니면 버퍼가 거절하고 오류를 남긴다).
         // 범위 나누기는 시뮬레이션(prepareFrame)이 같은 함수로 다시 한다.
-        const VFXGPULightAssignment lightAssignment = VFXGPUSimulation::assignLightRanges( _gpuScene.getParticleBatches(), _gpuScene.getVFXMeshEmitters(), _listScratchGPULightRange );
-        _lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
+        const VFXGPULightAssignment lightAssignment = VFXGPUSimulation::assignLightRanges( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _listScratchGPULightRange );
+        _state._lightBuffer.update( pDevice, _listScratchGridViewProj, producer, lightAssignment._slotCount );
     }
 
     LightGridProducer FrameRenderer::selectLightGridProducer()
@@ -807,7 +787,7 @@ namespace sw
 
     void FrameRenderer::setCanvasFrame( CanvasFrameData& inoutFrame )
     {
-        std::swap( _canvasFrame, inoutFrame );
+        std::swap( _state._canvasFrame, inoutFrame );
     }
 
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
@@ -819,10 +799,10 @@ namespace sw
             return uploadSceneAndSubmitFrame( pDevice, pCallerName );
         RenderExtensionRegistry::RenderScope moduleScope( *pExtensionRegistry );
         // 선언이 그래프에 묶인 것과 다르면 다음 `bindPassCallbacks` 가 모듈 노드를 새로 넣는다. 임시 텍스처는 이번 프레임에 그리는 뷰마다 기록 전에 만든다.
-        if ( _extensionHost.collectFrame( *pExtensionRegistry, _outputWidth, _outputHeight ) )
+        if ( _extensionHost.collectFrame( *pExtensionRegistry, _state._outputWidth, _state._outputHeight ) )
             _bCallbacksBound = SW_FALSE;
-        _extensionHost.allocateTextures( _mainView );
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        _extensionHost.allocateTextures( _state._mainView );
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 _extensionHost.allocateTextures( *pView );
@@ -836,20 +816,20 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
+        _state._gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         prepareMeshMorphPool();
         bool bVertexPool = gv_vertexPool;
-        _gpuScene.setVertexPoolEnabled( bVertexPool );
-        _gpuScene.upload( pDevice );
+        _state._gpuScene.setVertexPoolEnabled( bVertexPool );
+        _state._gpuScene.upload( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
         // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
-        _postProcess.prepareVolumetricFog( pDevice, view( RenderViewType::Main ), _frameLight._dirIntensity, _frameLight._colorAmbient, _lightBuffer, _mainView._lightGridIndex );
+        _postProcess.prepareVolumetricFog( pDevice, _state.view( RenderViewType::Main ), _state._frameLight._dirIntensity, _state._frameLight._colorAmbient, _state._lightBuffer, _state._mainView._lightGridIndex );
         // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
         prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
-        for ( unique_ptr<FrameViewTarget>& pView : _listExtraView )
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 applyViewTransparentOrder( *pView );
@@ -873,10 +853,10 @@ namespace sw
         _psoManager.pumpMaterialPSOBuilds();
 
         // 캔버스의 아틀라스 텍스처, 사각형 버퍼, 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스와 대상 그리기는 그리기만 한다).
-        _canvasRenderer.prepareFrame( *pDevice, _canvasFrame, _psoManager.getCache() );
+        _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
-        _particleRenderer.prepareFrame( *pDevice, _gpuScene.getParticleBatches(), _gpuScene.getVFXMeshEmitters(), makeVFXSimulationInput() );
+        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), makeVFXSimulationInput() );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )
             return false;
@@ -885,7 +865,7 @@ namespace sw
         _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         if ( _bScenePreview == SW_FALSE )
-            _gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
+            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
         return bOk;
     }
 } // namespace sw
