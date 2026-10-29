@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 끌어 놓기(드래그 앤 드롭). Hierarchy 의 TestKeyLight 줄을 TestParent 줄에 끌어 놓으면 부모가 바뀌고(탐침 Editor.ObjectDepth 0 → 1) 되돌리기 하나가 쌓이며 Undo 로 루트로 돌아온다.
+  받는 쪽은 `EditorDrag` 의 `toMark` 로 잡는다 — 줄 사이 픽셀 거리를 시나리오에 적지 않는다. 같은 길이 에셋 끌기(EditorWidgets::drawAssetDragSource → acceptAssetDrop)에도 쓰인다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/hierarchydrag.scenario.xml -unattended
+-->
+<Scenario name="editor.hierarchydrag" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<Variable name="gv_editorWatchObject" value="TestKeyLight"/>
+	<Wait frames="10"/>
+	<Expect watch="Editor.ObjectDepth" equals="0"/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorDrag mark="hierarchy.row.TestKeyLight" toMark="hierarchy.row.TestParent"/>
+	<Wait frames="25"/>
+	<WaitUntil watch="Editor.ObjectDepth" equals="1" timeoutFrames="180"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.undo"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ObjectDepth" equals="0"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

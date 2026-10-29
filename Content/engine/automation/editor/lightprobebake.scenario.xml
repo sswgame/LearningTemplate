@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — lighting.bakeProbes 커맨드(Build > Bake Light Probes, 결정 기록 5-5 P6).
+  볼륨이 없는 씬에서 커맨드가 돌고("Nothing to bake" 경고) 구운 볼륨 수가 0 인지, 볼륨을 붙인 뒤에도 굽기 전에는 0 인지 본다.
+  볼륨이 있는 굽기는 씬 옆에 .probes 파일을 쓰므로 이 시나리오는 하지 않는다(저장소 리소스를 바꾸지 않는다) — 파일 쓰기와 읽기는 LightProbeGridTest 가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/lightprobebake.scenario.xml -unattended
+-->
+<Scenario name="editor.lightprobebake" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.LightProbeBakeCount" equals="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor lighting.bakeProbes"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Editor.LightProbeBakeCount" equals="1" timeoutFrames="300"/>
+	<Wait frames="24"/>
+	<Expect watch="Editor.LightProbeBakeCount" equals="1"/>
+	<Wait frames="2"/>
+	<Expect watch="Editor.BakedLightProbeVolumeCount" equals="0"/>
+	<Wait frames="8"/>
+	<EditorClick mark="hierarchy.row.TestMesh"/>
+	<Wait frames="15"/>
+	<DevCommand line="component.add LightProbeVolumeComponent"/>
+	<!-- 굽기 전 볼륨은 검증 경고("is not baked")를 낸다 — 이 시나리오가 일부러 만드는 상태다 -->
+	<Wait frames="20"/>
+	<Expect watch="Editor.BakedLightProbeVolumeCount" equals="0"/>
+	<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
+	<!-- 눈 확인용(GPU 검증): 굽지 않은 볼륨 안의 장면 — 볼륨이 간접광을 주지 않아 주변광만 남는다 -->
+	<Wait frames="5"/>
+	<CaptureEditorUI file="lightprobebake/unbaked.png"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

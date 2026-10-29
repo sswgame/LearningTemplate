@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 체인 사이의 에디터 모듈 리로드 — 에디터 DLL(과 그것에 의존하는 확장)을 다시 올린 뒤에도 패널이 그려지고 씬이 그대로인지 본다. 리로드가 끝나면 도크를 확인한다.
+  `engine/automation/editor/*.scenario.xml` 을 한 프로세스로 묶을 때 시나리오 사이에 끼운다. 혼자 돌려도 통과한다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/reloadeditor.scenario.xml -unattended
+-->
+<Scenario name="editor.chainreloadeditor" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="Immediately" input="exclusive">
+	<DevCommand line="module.reload EditorModule"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="6000"/>
+	<Wait frames="59"/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Module.BindingsOk" equals="1"/>
+	<Expect watch="Editor.ObjectCount" atLeast="1"/>
+	<EditorExpectDockLayout/>
+	<ExpectLog contains="Manual Live Reload queued for EditorModule" atLeast="1"/>
+	<Pass/>
+</Scenario>

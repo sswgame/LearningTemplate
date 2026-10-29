@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 노드 그래프 찾아 넣기(T3): Dialogue Graph 캔버스 빈 곳을 오른쪽 클릭하면 검색 팝업이 열리고, 글자를 치고 Enter 를 누르면
+  맨 위 줄의 노드가 그 자리에 하나 생긴다(탐침 Editor.GraphNodeCount). 같은 것을 Animation Graph 로 한 번 더 한다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/graphaddnode.scenario.xml -unattended
+-->
+<Scenario name="editor.graphaddnode" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus dialogue_graph"/>
+	<Wait frames="50"/>
+	<Expect watch="Editor.GraphNodeCount" equals="5"/>
+	<Wait frames="5"/>
+	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
+	<Wait frames="20"/>
+	<EditorText value="choi"/>
+	<Wait frames="10"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.GraphNodeCount" equals="6"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus animation_graph"/>
+	<Wait frames="50"/>
+	<Expect watch="Editor.GraphNodeCount" equals="2"/>
+	<Wait frames="5"/>
+	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
+	<Wait frames="20"/>
+	<EditorText value="att"/>
+	<Wait frames="10"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.GraphNodeCount" equals="3"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

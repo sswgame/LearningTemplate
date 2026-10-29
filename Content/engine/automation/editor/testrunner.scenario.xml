@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Test Runner 창(panel test_runner)의 Editor Self Tests 탭에서 자체 테스트 하나(hierarchy.tagFilter)를 골라 Run Selected 를 누르면
+  그 자리에서 돌고(앱은 그대로) 결과가 PASS 로 찬다(Editor.TestRunnerPassCount 1). 시나리오 · 단위 테스트 탭은 새 프로세스를 띄우므로 여기서 돌리지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/testrunner.scenario.xml -unattended
+-->
+<Scenario name="editor.testrunner" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="5"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus test_runner"/>
+	<!-- 목록이 길어 그 테스트가 창 밖에 있다 — 검색 칸에 이름을 넣어 앞으로 가져온다 -->
+	<Wait frames="20"/>
+	<Expect watch="Editor.TestRunnerPassCount" equals="0"/>
+	<EditorClick mark="testRunner.filter"/>
+	<Wait frames="5"/>
+	<EditorText value="hierarchy.tagFilter"/>
+	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="up"/>
+	<Wait frames="7"/>
+	<EditorClick mark="testRunner.runSelected" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="testRunner.runSelected" state="up"/>
+	<Wait frames="12"/>
+	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

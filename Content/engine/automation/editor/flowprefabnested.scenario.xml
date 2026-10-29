@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 흐름 시나리오 — 중첩 프리팹. 안쪽 프리팹에 적용한 값이 바깥 프리팹이 스폰한 부품에도 퍼진다(유니티 중첩 프리팹 · 언리얼 차일드 액터).
+  ① Lamp(점광)를 만들어 임시 프리팹 lamp 로 만든다. ② Post 를 만들고 Lamp 를 그 아래로 끌어 놓은 뒤 Post 를 프리팹 post 로 만든다 —
+     자식 프리팹 인스턴스 Lamp 는 post 의 중첩 프리팹 부품이 된다(prefab.create → adoptChildPrefabInstances).
+  ③ lamp 를 하나 더 스폰해 LampTop 으로 이름을 바꾸고 반경을 7 로 고쳐 Apply Overrides 한다.
+  ④ Post 아래의 부품 Lamp 도 반경 7 이 된다(PrefabInstanceRegistry 의 부품도 같은 프리팹의 인스턴스다). 되돌리기 한 번이면 원래 값으로 돌아온다.
+  ⑤ 씬을 저장하고 새 씬 → 다시 열기 — 부품은 씬에 엔티티로 저장되지 않고 Post 가 새 lamp 로 다시 스폰한다(Lamp 는 하나, 반경 7).
+  실행: App -EnableEditor -scenario=engine/automation/editor/flowprefabnested.scenario.xml -unattended
+-->
+<Scenario name="editor.flowprefabnested" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<!-- ① 안쪽 프리팹 lamp -->
+	<Wait frames="20"/>
+	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Lamp"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="component.add PointLightComponent"/>
+	<Wait frames="15"/>
+	<DevCommand line="prefab.create Saved/Automation/editor.flowprefabnested/lamp.prefab.xml"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="Lamp" component="PointLightComponent" selected="1"/>
+	<Remember watch="Object.Property" target="Lamp" key="PointLightComponent._radius" as="templateRadius"/>
+	<!-- ② 바깥 프리팹 post — Lamp 를 자식으로 둔다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Post"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<EditorDrag mark="hierarchy.row.Lamp" toMark="hierarchy.row.Post"/>
+	<Wait frames="30"/>
+	<EditorClick mark="hierarchy.row.Post"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="Post"/>
+	<DevCommand line="prefab.create Saved/Automation/editor.flowprefabnested/post.prefab.xml"/>
+	<Wait frames="10"/>
+	<ExpectLog contains="took 1 child prefab instance(s) as nested prefabs" count="1"/>
+	<!-- ③ 둘째 lamp 를 고쳐 프리팹에 쓴다 -->
+	<Wait frames="10"/>
+	<DevCommand line="prefab.spawn Saved/Automation/editor.flowprefabnested/lamp.prefab.xml"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="LampTop"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="7"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="LampTop"/>
+	<Expect watch="Object.Property" target="LampTop" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" sameAs="templateRadius"/>
+	<Remember watch="Editor.UndoIndex" as="beforeApply"/>
+	<DevCommand line="editor prefab.applyOverrides"/>
+	<!-- ④ 부품에 퍼짐 · 되돌리기 -->
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Editor.UndoIndex" differsFrom="beforeApply"/>
+	<ExpectLog contains="Updated 1 other instance(s) of" count="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.undo"/>
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" sameAs="templateRadius"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.redo"/>
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" equals="7"/>
+	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
+	<Wait frames="10"/>
+	<DevCommand line="scene.saveAs Saved/Automation/editor.flowprefabnested/flowprefabnested.scene.xml"/>
+	<Wait frames="15"/>
+	<DevCommand line="editor scene.new"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="Lamp" count="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="scene.open Saved/Automation/editor.flowprefabnested/flowprefabnested.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="24"/>
+	<EditorExpectObject name="Lamp" count="1"/>
+	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Object.Property" target="LampTop" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

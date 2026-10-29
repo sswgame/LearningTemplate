@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터의 씬 오브젝트 참조 선택기(SceneObjectReference, 씬 파일을 넘는 오브젝트 참조). 에디터 테스트 컴포넌트 EditorSceneReferenceTestComponent(_target)를
+  오브젝트 Prober 에 달아 본다. 값은 탐침 Editor.SelectedSceneReference 가 `<씬 파일> / <오브젝트>` 로 읽는다.
+  ① 컴포넌트를 달면 값이 (none) 이다. ② 콤보를 열어 올라와 있는 씬의 TestMesh 를 고르면 값이 바뀌고 되돌리기 하나가 쌓인다(고르는 순간 그 오브젝트에 파일 id 가 생긴다).
+  ③ Ctrl+Z 로 비운다. ④ 다시 고른 뒤 `(none)` 을 고르면 비워진다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/scenereference.scenario.xml -unattended
+-->
+<Scenario name="editor.scenereference" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="2300" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Variable name="gv_editorWatchProperty" value="EditorSceneReferenceTestComponent._target"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.close prefab_editor"/>
+	<!-- ① 오브젝트에 컴포넌트를 단다 -->
+	<Wait frames="15"/>
+	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Prober"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="component.add EditorSceneReferenceTestComponent"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedNames" is="Prober"/>
+	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
+	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<CaptureEditorUI file="scenereference/inspector.png"/>
+	<!-- ② 콤보로 고른다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
+	<Wait frames="20"/>
+	<CaptureEditorUI file="scenereference/combo.png"/>
+	<Wait frames="10"/>
+	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh"/>
+	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
+	<CaptureEditorUI file="scenereference/picked.png"/>
+	<!-- ③ 되돌리기 -->
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+Z"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
+	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
+	<!-- ④ 다시 고르고 (none) -->
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
+	<Wait frames="20"/>
+	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh"/>
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
+	<Wait frames="20"/>
+	<EditorHover mark="inspector.sceneref.none"/>
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.sceneref.none"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

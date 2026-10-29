@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 흐름 시나리오 — 선택 · 포커스 · 되돌리기가 창을 넘어 하나다(언리얼 · 유니티의 전역 선택과 전역 되돌리기).
+  ① Hierarchy 에서 고른 오브젝트가 씬 뷰 외곽선과 인스펙터의 대상이 된다. Ctrl+클릭은 선택에 더한다.
+  ② 인스펙터로 이름을 바꾼 뒤 포커스를 콘텐츠 브라우저로 옮겨 Ctrl+Z 를 눌러도 씬 편집이 되돌려지고, 씬 뷰에 포커스를 두고 다시 실행해도 같다.
+  ③ Hierarchy 에서 Delete 로 지우면 선택이 비고, 되돌리면 같은 id 로 돌아와 다시 골라진다 — 씬 내용 해시가 지우기 전과 같다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/flowselection.scenario.xml -unattended
+-->
+<Scenario name="editor.flowselection" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedNames" is="(none)"/>
+	<Remember watch="Editor.SceneHash" as="opened"/>
+	<!-- ① Hierarchy 선택 → 씬 뷰 외곽선 · 인스펙터 -->
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.row.TestMesh"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
+	<Expect watch="Editor.SelectionOutlineBoxes" atLeast="1"/>
+	<Expect watch="Editor.SelectedComponentCount" atLeast="1"/>
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.row.GameCamera" mods="ctrl"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedNames" is="GameCamera,TestMesh"/>
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.row.TestMesh"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
+	<!-- ② 인스펙터로 이름 → 다른 창에 포커스를 두고 되돌리기 · 다시 실행 -->
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Renamed"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="Renamed"/>
+	<Expect watch="Editor.UndoState" is="1/1:Rename GameObject"/>
+	<Remember watch="Editor.SceneHash" as="renamed"/>
+	<Wait frames="10"/>
+	<DevCommand line="panel.focus content_browser"/>
+	<Wait frames="20"/>
+	<EditorKey key="Ctrl+Z"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.UndoIndex" equals="0"/>
+	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
+	<Expect watch="Editor.SceneHash" sameAs="opened"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="20"/>
+	<EditorKey key="Ctrl+Y"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.UndoIndex" equals="1"/>
+	<Expect watch="Editor.SelectedNames" is="Renamed"/>
+	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
+	<!-- ③ 지우기 → 되돌리기: 같은 오브젝트가 돌아와 골라진다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.row.Renamed"/>
+	<Wait frames="10"/>
+	<EditorKey key="Delete"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="Renamed" count="0"/>
+	<Expect watch="Editor.SelectedNames" is="(none)"/>
+	<Expect watch="Editor.UndoIndex" equals="2"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+Z"/>
+	<Wait frames="20"/>
+	<EditorExpectObject name="Renamed" selected="1"/>
+	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
+	<Expect watch="Editor.UndoIndex" equals="1"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

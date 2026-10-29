@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 뷰포트 빌보드와 클릭 선택(R4): 테스트 씬(editortest)의 게임 카메라는 메시가 없어 레이 피킹으로 집히지 않는다. 뷰포트에 그 아이콘 배지
+  (이름표 viewport.billboard.GameCamera)가 보이고, 누르면 그 카메라 오브젝트가 골라진다(선택 하나 · 그 선택에 카메라 우선순위 프로퍼티가 있다).
+  툴바의 Icons(billboard) 체크박스로 끄고 켤 수 있다(끄면 그리기와 클릭 선택이 함께 꺼진다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/billboardpick.scenario.xml -unattended
+-->
+<Scenario name="editor.billboardpick" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="35"/>
+	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
+	<Variable name="gv_editorWatchVisualizer" value="billboard"/>
+	<Expect watch="Editor.VisualizerOn" equals="1"/>
+	<Expect watch="Editor.SelectionCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="viewport.billboard.GameCamera"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<Expect watch="Editor.SelectedProperty" equals="0"/>
+	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="viewport.visualizer.billboard"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.VisualizerOn" equals="0"/>
+	<Wait frames="25"/>
+	<EditorClick mark="viewport.visualizer.billboard"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

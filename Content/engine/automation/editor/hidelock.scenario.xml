@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터에서만 숨김과 고르기 잠금(N12): Hierarchy 의 눈(hierarchy.toggle.<이름>)은 에디터에서만 숨긴다 — 씬 dirty · 되돌리기에 남지 않고
+  오브젝트 활성 비트는 그대로다(게임 동작이 바뀌지 않는다). 자물쇠(hierarchy.lock.<이름>)를 건 오브젝트는 뷰포트에서 눌러도(빌보드) 골라지지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/hidelock.scenario.xml -unattended
+-->
+<Scenario name="editor.hidelock" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<Variable name="gv_editorWatchObject" value="TestMesh"/>
+	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="hierarchy.toggle.TestMesh"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ObjectHiddenInEditor" equals="1"/>
+	<Expect watch="Editor.ObjectActive" equals="1"/>
+	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="hierarchy.toggle.TestMesh"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ObjectHiddenInEditor" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="hierarchy.lock.GameCamera"/>
+	<Wait frames="15"/>
+	<EditorClick mark="viewport.billboard.GameCamera"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectionCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="hierarchy.lock.GameCamera"/>
+	<Wait frames="15"/>
+	<EditorClick mark="viewport.billboard.GameCamera"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

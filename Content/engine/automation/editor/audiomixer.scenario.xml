@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 오디오 믹서 창: 커맨드로 열면 기본 믹서 그래프(master · music · sfx · voice · ambient · ui · reverb)의 버스마다 띠가 선다.
+  sfx 의 M 을 누르면 음소거 버스가 1 개가 되고 다시 누르면 0, S 도 같다. sfx 페이더 가운데를 누르면 사용자 볼륨이 0.5 근처로 간다.
+  값은 오디오 스레드가 블록마다 게시한 사본에서 읽으므로 눌러도 몇 프레임 뒤에 보인다. 장치가 없는 환경에서도 엔진이 오프라인으로 돌아 결과가 같다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/audiomixer.scenario.xml -unattended
+-->
+<Scenario name="editor.audiomixer" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="40"/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
+	<EditorText value="Audio Mixer"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus audiomixer"/>
+	<Wait frames="45"/>
+	<Expect watch="Editor.AudioMixerBusCount" atLeast="7"/>
+	<Expect watch="Editor.AudioMixerMutedCount" equals="0"/>
+	<Expect watch="Editor.AudioMixerSoloCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="audiomixer.mute.sfx"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.AudioMixerMutedCount" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="audiomixer.mute.sfx"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.AudioMixerMutedCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="audiomixer.solo.sfx"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.AudioMixerSoloCount" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="audiomixer.solo.sfx"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.AudioMixerSoloCount" equals="0"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorWatchBus" value="sfx"/>
+	<Wait frames="5"/>
+	<EditorClick mark="audiomixer.volume.sfx"/>
+	<Wait frames="35"/>
+	<Expect watch="Editor.AudioMixerBusVolume" near="0.5" tolerance="0.15"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

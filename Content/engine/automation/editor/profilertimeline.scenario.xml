@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 프로파일러 패널의 Timeline 탭: 녹화 단추(profiler.timeline.record)를 누르면 최근 프레임의 계측 구간이 스레드마다 쌓인다.
+  게임 스레드(GT.Frame)와 렌더 스레드(RT.Frame)가 모두 있어야 한다(Editor.ProfilerTimelineThreadCount 2 이상). 다시 누르면 녹화가 멈춘다.
+  Load Trace 는 가장 최근 저장 파일을 살아 있는 스레드 아래에 겹쳐 그리고(첫 시각을 맞춘다), 검색 칸은 맞는 구간만 또렷하게 둔다. Unload 로 지운다.
+  Save Trace 단추(profiler.timeline.saveTrace)는 보이는 프레임을 Saved/Traces/trace_<시각>.trace.json(Chrome Trace Event)으로 저장하고 로그에 "Timeline trace: saved" 를 남긴다.
+  시작 상태: 타임라인 기록은 패널이 아니라 엔진 서비스(FrameProfiler 의 ProfilerTimeline)가 프로세스 동안 들고 있다 — 녹화를 멈춰도 남은 사건이 보이고
+  체인 초기화는 엔진 서비스를 비우지 않는다. 그래서 같은 프레임에 `profile.trace on`(기록을 비우고 켠다)과 `off` 를 이어 불러, 앞 실행의 기록을 지우고 녹화 전 스레드 수 0 에서 시작한다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -unattended
+-->
+<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+	<Wait frames="3"/>
+	<DevCommand line="profile.trace on"/>
+	<DevCommand line="profile.trace off"/>
+	<Wait frames="2"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="5"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus profiler"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProfilerTimelineThreadCount" equals="0"/>
+	<EditorClick mark="profiler.timeline.tab" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="profiler.timeline.tab" state="up"/>
+	<Wait frames="7"/>
+	<EditorClick mark="profiler.timeline.record"/>
+	<Wait frames="60"/>
+	<Expect watch="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
+	<!-- 눈 확인용(GPU 검증): 녹화 중 타임라인 — GPU 타임스탬프 칸(64)을 실제로 얼마나 쓰는지 렌더 스레드 줄에서 본다 -->
+	<Wait frames="2"/>
+	<CaptureEditorUI file="profilertimeline/recording.png"/>
+	<!-- 다시 누르면 녹화가 멈춘다 — 남은 사건은 그대로 보인다 -->
+	<Wait frames="8"/>
+	<EditorClick mark="profiler.timeline.record"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
+	<Wait frames="5"/>
+	<EditorClick mark="profiler.timeline.saveTrace"/>
+	<Wait frames="15"/>
+	<ExpectLog contains="Timeline trace: saved" atLeast="1"/>
+	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="profiler.timeline.loadTrace"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProfilerLoadedTraceThreads" atLeast="2"/>
+	<Wait frames="5"/>
+	<EditorClick mark="profiler.timeline.traceSearch"/>
+	<Wait frames="5"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="3"/>
+	<EditorText value="GT.Frame"/>
+	<Wait frames="17"/>
+	<Expect watch="Editor.ProfilerTraceSearchMatches" atLeast="2"/>
+	<Wait frames="3"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="3"/>
+	<EditorText value="zzNoSuchScope"/>
+	<Wait frames="19"/>
+	<Expect watch="Editor.ProfilerTraceSearchMatches" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="profiler.timeline.unloadTrace"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProfilerLoadedTraceThreads" equals="0"/>
+	<Pass/>
+</Scenario>

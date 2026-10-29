@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 메시 모디파이어 패널(GF_EditorPlugIn_MeshModifiers, 후보 MeshModifierStack): 파괴 쇼케이스의 왼쪽 상자(CrateLeft, crate_medium.mesh - 통은 벽 뒤라 씬 뷰 그림에서 가려진다)을 골라 패널 대상으로 삼고
+  모디파이어를 쌓는다. ① 휘기(Bend)를 더하고 각을 넣으면 GPU 미리보기(모프 풀 + 변형 프로그램)가 대상 메시에 걸리고 씬 뷰 그림이 레스트와 달라진다.
+  ② 뷰포트의 이동 화살표(시각화 meshmodifiers.preview)를 끌면 기즈모 중심이 움직이고 **선택은 그대로다** — 손잡이를 집는 첫 클릭이 뷰포트 클릭 선택으로 새지 않는다.
+  ③ 곡선 목록(Curve Sculpt Layered "Layer Curves") 항목 추가 · 항목마다 곡선 편집기 팝업에서 키 추가, ④ 참조 목록(Conform Multi "Targets") 항목 추가 · 선택 사용,
+  ⑤ 묶음(Deformable) 하위 스택에 모디파이어 추가. CPU 전용 모디파이어가 들어오면 GPU 미리보기는 내려가고 CPU 결과 정점으로 셰이딩한다(그림은 GPU 결과와 같다).
+  스크린샷은 렌더 출력(씬 뷰)만 담는다 — 패널 · 기즈모는 ImGui 오버레이라 그림에 없어 이름표 클릭과 탐침으로 보고, 눈으로 볼 그림은 CaptureEditorUI(meshmodifiers/*.png)로 남긴다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/meshmodifiers.scenario.xml -unattended
+-->
+<Scenario name="editor.meshmodifiers" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="10"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.resetOptional"/>
+	<Wait frames="10"/>
+	<DevCommand line="scene.open game/empty/maps/destructionshowcase.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Editor.ObjectCount" atLeast="9" timeoutFrames="600"/>
+	<Wait frames="50"/>
+	<EditorClick mark="hierarchy.row.CrateLeft"/>
+	<Wait frames="10"/>
+	<EditorExpectObject name="CrateLeft" selected="1"/>
+	<!-- 씬 뷰가 상자를 비추게 한다(F = 고른 것에 맞추기) -->
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="10"/>
+	<EditorKey key="F"/>
+	<Wait frames="25"/>
+	<DevCommand line="panel.focus game_view"/>
+	<Wait frames="5"/>
+	<Screenshot file="game.ppm"/>
+	<Wait frames="2"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<!-- 기준 그림은 게임 뷰 탭을 다녀온 뒤에 찍는다 — 탭을 바꾼 뒤 씬 뷰 폭이 1 px 달라져 앞에서 찍으면 뒤의 그림과 크기가 다르다 -->
+	<Wait frames="5"/>
+	<Screenshot file="rest.ppm"/>
+	<!-- ① 대상 고르기 · 휘기 더하기 · 각 넣기 -->
+	<Wait frames="8"/>
+	<DevCommand line="panel.focus meshmodifiers.stack"/>
+	<Wait frames="15"/>
+	<EditorClick mark="meshmodifiers.useSelection"/>
+	<Wait frames="15"/>
+	<EditorClick mark="meshmodifiers.add"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.category.Deform"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.item.bend"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.ModifierCount" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorText value="80"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<Expect watch="MeshModifiers.SelectedFirstParam" equals="80"/>
+	<Expect watch="MeshModifiers.GPUPreviewActive" equals="1"/>
+	<CaptureEditorUI file="meshmodifiers/panel.png"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="20"/>
+	<Screenshot file="gpubend.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImage file="gpubend.ppm" golden="gpubend"/>
+	<!-- ② 이동 화살표 끌기 - 기즈모가 움직이고 선택(상자)은 그대로다 -->
+	<!-- 패널이 씬 뷰 위에 떠 있으면 손잡이를 가린다 - 닫아도 세션(대상 · 스택)과 시각화는 그대로다 -->
+	<Wait frames="3"/>
+	<DevCommand line="panel.close meshmodifiers.stack"/>
+	<Wait frames="5"/>
+	<Expect watch="MeshModifiers.SelectedCenterOffset" atMost="0.0001"/>
+	<Wait frames="5"/>
+	<EditorDrag mark="meshmodifiers.handle.move.0" dx="70"/>
+	<Wait frames="30"/>
+	<Expect watch="MeshModifiers.SelectedCenterOffset" atLeast="0.01"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<EditorExpectObject name="CrateLeft" selected="1"/>
+	<CaptureEditorUI file="meshmodifiers/gizmo.png"/>
+	<!-- 휘기는 X 이동에 모양이 그대로다(옆 방향은 Z) - 그림은 남기기만 한다 -->
+	<Wait frames="5"/>
+	<Screenshot file="gpubendmoved.ppm"/>
+	<!-- ③ 곡선 목록: 항목 둘 → 둘째 항목 곡선 편집기에서 키 하나 더하기. CPU 전용이라 GPU 미리보기는 내려간다 -->
+	<Wait frames="10"/>
+	<DevCommand line="panel.focus meshmodifiers.stack"/>
+	<Wait frames="15"/>
+	<EditorClick mark="meshmodifiers.add"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.category.Curve"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.item.curvesculptlayered"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.ModifierCount" equals="2"/>
+	<Expect watch="MeshModifiers.CurveListItemCount" equals="0"/>
+	<Expect watch="MeshModifiers.GPUPreviewActive" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.curveList.add"/>
+	<Wait frames="15"/>
+	<EditorClick mark="meshmodifiers.curveList.add"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.CurveListItemCount" equals="2"/>
+	<Expect watch="MeshModifiers.CurveListKeyCount" equals="4"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.curve.1"/>
+	<Wait frames="20"/>
+	<EditorClick mark="curve.canvas" button="1"/>
+	<Wait frames="15"/>
+	<EditorClick mark="curve.menu.addKey"/>
+	<Wait frames="20"/>
+	<Expect watch="MeshModifiers.CurveListKeyCount" equals="5"/>
+	<Wait frames="5"/>
+	<EditorKey key="Escape"/>
+	<!-- CPU 로 내려가도 셰이딩 미리보기는 남는다: 빈 곡선 층은 항등이라 그림이 GPU 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
+	<Wait frames="8"/>
+	<Screenshot file="cpubend.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImage file="cpubend.ppm" golden="cpubend"/>
+	<!-- ④ 참조 목록: 항목 하나 → 선택 사용(상자 자신) -->
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.add"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.category.Surface"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.item.conformmulti"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.ModifierCount" equals="3"/>
+	<Expect watch="MeshModifiers.ReferenceListCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.referenceList.add"/>
+	<Wait frames="15"/>
+	<EditorClick mark="meshmodifiers.referenceList.0.useSelection"/>
+	<!-- 클릭의 반영은 ImGui 입력 → 다음 프레임 그리기를 지나 도착한다 — 고정 프레임 수에 단언하지 않고 도착을 기다린다(MeshModifiersChainFailure: 부하 아래 한 번 0) -->
+	<Wait frames="15"/>
+	<WaitUntil watch="MeshModifiers.ReferenceListCount" equals="1" timeoutFrames="120"/>
+	<Wait frames="1"/>
+	<Expect watch="MeshModifiers.ReferenceListCount" equals="1"/>
+	<!-- ⑤ 묶음 하위 스택에 비틀기 더하기 -->
+	<Wait frames="9"/>
+	<EditorClick mark="meshmodifiers.add"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.category.Group"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.item.deformable"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.ModifierCount" equals="4"/>
+	<Expect watch="MeshModifiers.NestedCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.nested.add"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.nested.category.Deform"/>
+	<Wait frames="10"/>
+	<EditorClick mark="meshmodifiers.nested.item.twist"/>
+	<Wait frames="15"/>
+	<Expect watch="MeshModifiers.ModifierCount" equals="4"/>
+	<Expect watch="MeshModifiers.NestedCount" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="meshmodifiers.nested.row.0"/>
+	<Wait frames="10"/>
+	<CaptureEditorUI file="meshmodifiers/nested.png"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="20"/>
+	<Screenshot file="stacked.ppm"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

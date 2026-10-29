@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 카탈로그 편집기(Panels/Catalog): 데이터 파일 종류 레지스트리에 올라온 카탈로그 파일이 목록에 서고, 첫 파일을 열면 원소별 표로 보이며,
+  셀 편집 · 되돌리기 · 행 더하기 · 되돌리기 단추가 돌고, 그 종류의 실제 로더로 검증이 통과한다. 파일은 저장하지 않는다(저장소의 데이터를 건드리지 않는다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/catalogeditor.scenario.xml -unattended
+-->
+<Scenario name="editor.catalogeditor" isolated="true" fixedDelta="0.0166667" timeoutFrames="1400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus catalog_editor"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/>
+	<Wait frames="30"/>
+	<EditorClick mark="catalog.file.first"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.CatalogRowCount" atLeast="1" timeoutFrames="300"/>
+	<Wait frames="15"/>
+	<ExpectLog contains="Catalog opened " count="1"/>
+	<Expect watch="Editor.CatalogRowCount" atLeast="1"/>
+	<!-- 첫 셀을 고치면 입력 칸을 떠날 때(Enter) 문서에 반영된다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="catalog.cell.first"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="zz_edit"/>
+	<Wait frames="10"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<ExpectLog contains="Catalog Edited " count="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="catalog.undo"/>
+	<Wait frames="20"/>
+	<ExpectLog contains="Catalog undo" count="1"/>
+	<!-- 행을 더하면 행 수가 늘고, 되돌리기(Revert)가 저장된 글로 돌린다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="catalog.addrow.first"/>
+	<Wait frames="20"/>
+	<ExpectLog contains="Catalog Added row to" count="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="catalog.revert"/>
+	<Wait frames="20"/>
+	<ExpectLog contains="Catalog reverted " count="1"/>
+	<!-- 저장된 파일을 그 종류의 로더로 읽어 경고가 없으면 통과다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="catalog.validate"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.CatalogValidation" equals="1" timeoutFrames="300"/>
+	<Wait frames="15"/>
+	<ExpectLog contains="Catalog validation passed" count="1"/>
+	<Expect watch="Editor.CatalogValidation" equals="1"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

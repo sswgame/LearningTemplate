@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 흐름 시나리오 — 프리팹 편집이 씬의 다른 인스턴스에 퍼진다(유니티 Apply Overrides · 언리얼 블루프린트 컴파일 뒤 레벨 인스턴스 갱신).
+  ① 오브젝트를 만들고(Hierarchy "+ Create") 이름 · 점광을 달아 임시 프리팹(Saved/Automation)으로 만든다(prefab.create — 그 오브젝트가 첫 인스턴스가 된다).
+  ② 같은 프리팹을 하나 더 스폰해 이름을 LanternB 로 바꾸고, 인스펙터로 세기(_intensity)를 3 으로 덮어쓴다(인스턴스 덮어쓰기).
+  ③ 첫 인스턴스의 반경(_radius)을 인스펙터로 7 로 고치고 Apply Overrides(prefab.applyOverrides)로 프리팹에 쓴다.
+  ④ LanternB 의 반경이 7 이 되고(퍼짐) 세기는 3 으로 남아야 한다(덮어쓴 값 유지). 되돌리기 한 번이면 LanternB 가 퍼지기 전 값으로 돌아온다.
+  ⑤ 씬을 저장하고 새 씬 → 다시 열기 뒤에도 두 인스턴스의 값이 그대로다(씬은 덮어쓴 값만 저장하고 프리팹 원형에 얹는다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/flowprefab.scenario.xml -unattended
+-->
+<Scenario name="editor.flowprefab" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<!-- ① 만들기 → 이름 → 점광 → 프리팹 -->
+	<Wait frames="20"/>
+	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Lantern"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="component.add PointLightComponent"/>
+	<Wait frames="15"/>
+	<DevCommand line="prefab.create Saved/Automation/editor.flowprefab/lantern.prefab.xml"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="Lantern" component="PointLightComponent" selected="1"/>
+	<Remember watch="Object.Property" target="Lantern" key="PointLightComponent._radius" as="templateRadius"/>
+	<!-- ② 둘째 인스턴스 — 이름을 바꾸고 세기를 덮어쓴다 -->
+	<Wait frames="10"/>
+	<DevCommand line="prefab.spawn Saved/Automation/editor.flowprefab/lantern.prefab.xml"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="LanternB"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.property.PointLightComponent._intensity" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="3"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="LanternB"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius"/>
+	<!-- ③ 첫 인스턴스의 반경을 고쳐 프리팹에 쓴다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="hierarchy.row.Lantern"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="7"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectedNames" is="Lantern"/>
+	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
+	<Remember watch="Editor.UndoIndex" as="beforeApply"/>
+	<DevCommand line="editor prefab.applyOverrides"/>
+	<!-- ④ 퍼짐 · 덮어쓴 값 유지 · 되돌리기 -->
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
+	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Editor.UndoIndex" differsFrom="beforeApply"/>
+	<ExpectLog contains="Saved prefab changes to" count="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.undo"/>
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
+	<Expect watch="Editor.UndoIndex" sameAs="beforeApply"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.redo"/>
+	<Wait frames="15"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
+	<Wait frames="10"/>
+	<DevCommand line="scene.saveAs Saved/Automation/editor.flowprefab/flowprefab.scene.xml"/>
+	<Wait frames="15"/>
+	<DevCommand line="editor scene.new"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="LanternB" count="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="scene.open Saved/Automation/editor.flowprefab/flowprefab.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="24"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
+	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
+	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<!-- 에디터 문구 표가 올라왔다(인스펙터의 프리팹 줄 툴팁이 키 그대로 나오지 않는다) -->
+	<ExpectLog contains="Missing localized text" count="0"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

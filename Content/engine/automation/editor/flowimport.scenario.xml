@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 흐름 시나리오 — 에셋 임포트 → 씬에서 쓰기 → 저장 → 다시 열기.
+  임포트는 콘텐츠 브라우저 Import 와 같은 길(EditorAssetFileCommands::importFiles — 복사와 .meta)이고 OS 파일 대화상자만 건너뛴다(asset.import).
+  가져온 에셋은 리소스 id 가 있어야 씬이 쓴다 — 그래서 대상은 리소스 트리 안의 임시 폴더 scratch/import/ 뿐이다(.gitignore 가 무시).
+  시나리오는 처음과 끝에 그 폴더를 지운다(asset.removeImportFolder) — 남은 파일이 있으면 같은 이름이 새 이름을 받아 단계가 어긋난다.
+  ① 프리팹 원본 하나를 임시 폴더로 가져온다. ② 가져온 리소스 id 로 스폰한다(점광이 붙은 FlickerLight). ③ 씬을 저장하고 새 씬 → 다시 열기 뒤에도 그 인스턴스가 있다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/flowimport.scenario.xml -unattended
+-->
+<Scenario name="editor.flowimport" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<DevCommand line="asset.removeImportFolder scratch/import/editor.flowimport"/>
+	<!-- ① 임포트 -->
+	<Wait frames="10"/>
+	<DevCommand line="asset.import common/prefabs/gimmicks/horror/flickerlight.prefab.xml scratch/import/editor.flowimport"/>
+	<!-- ② 가져온 리소스 id 로 스폰 -->
+	<Wait frames="15"/>
+	<DevCommand line="prefab.spawn scratch/import/editor.flowimport/flickerlight.prefab.xml"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="FlickerLight" component="PointLightComponent" selected="1"/>
+	<Expect watch="Object.Property" target="FlickerLight" key="PointLightComponent._radius" equals="6"/>
+	<!-- ③ 저장 → 새 씬 → 다시 열기 -->
+	<Wait frames="10"/>
+	<DevCommand line="scene.saveAs Saved/Automation/editor.flowimport/flowimport.scene.xml"/>
+	<Wait frames="15"/>
+	<DevCommand line="editor scene.new"/>
+	<Wait frames="15"/>
+	<EditorExpectObject name="FlickerLight" count="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="scene.open Saved/Automation/editor.flowimport/flowimport.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="24"/>
+	<EditorExpectObject name="FlickerLight" component="PointLightComponent" count="1"/>
+	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor scene.new"/>
+	<Wait frames="15"/>
+	<DevCommand line="asset.removeImportFolder scratch/import/editor.flowimport"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

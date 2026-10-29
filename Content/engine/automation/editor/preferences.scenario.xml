@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 환경설정 창(P2): 커맨드 팔레트로 열고, 검색 칸에 snap 을 치면 Viewport 섹션만 남는다.
+  이동 스냅 간격(_gridSnapValue)을 2 로 바꾸면 0.5 초 뒤 저장되고, 파일에는 기본과 다른 그 키 하나만 있다(빈 에디터 상태 폴더라 처음엔 0 개).
+  실행: App -EnableEditor -scenario=engine/automation/editor/preferences.scenario.xml -unattended
+-->
+<Scenario name="editor.preferences" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.PreferencesSavedKeyCount" equals="0"/>
+	<Wait frames="20"/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
+	<EditorText value="Open editor preferences"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus preferences"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.PreferencesVisibleSections" equals="7"/>
+	<Wait frames="5"/>
+	<EditorClick mark="preferences.search"/>
+	<Wait frames="10"/>
+	<EditorText value="snap"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.PreferencesVisibleSections" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="inspector.property.EditorViewportPreferences._gridSnapValue" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="2"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Editor.PreferencesSavedKeyCount" equals="1"/>
+	<Wait frames="10"/>
+	<ExpectLog contains="Editor preferences saved: 1 key(s)" atLeast="1"/>
+	<Expect watch="Editor.PreferencesSavedKeyCount" equals="1"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

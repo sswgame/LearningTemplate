@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터의 열거형 콤보를 직접 고른다. GameCamera 의 CameraComponent._role(열거형)을 콤보를 열어 Custom 으로 고르면 값이 바뀌고(탐침 Editor.SelectedEnumValue) 되돌리기 하나가 쌓이며,
+  Undo 로 Game 으로 돌아온다. 항목은 `inspector.enum.<프로퍼티>.<열거자>` 이름표로 누른다(콤보를 연 프레임에만 그려진다).
+  열거형의 크기가 uint8 이라 뒤 필드를 덮어쓰던 결함(EditorPropertyGrid::drawEnumProperty)이 되살아나면 이웃 필드 단언(_bOrthographic)이 진다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/inspectorcombo.scenario.xml -unattended
+-->
+<Scenario name="editor.inspectorcombo" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Variable name="gv_editorWatchProperty" value="CameraComponent._role"/>
+	<Wait frames="25"/>
+	<Expect watch="Editor.SelectedEnumValue" equals="0"/>
+	<Expect watch="Editor.UndoCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="inspector.property.CameraComponent._role"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.enum._role.Custom"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedEnumValue" equals="2"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor edit.undo"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedEnumValue" equals="0"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

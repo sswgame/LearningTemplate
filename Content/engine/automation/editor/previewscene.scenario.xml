@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 미리보기 씬(다중 월드, D3-7): Quick Open 으로 빨간 테스트 머티리얼을 열면 Material 패널이 자기 미리보기 씬(구 · 방향광 · 바닥)을 만들고,
+  엔진이 그 씬을 씬마다 따로 둔 스냅샷 빌더 · 렌더러로 패널의 렌더 타깃에 그린다(HostSceneView → RenderPacketBuilder::populateScenePreviews →
+  FrameRenderer::executeScenePreviewPacket). 탐침 Editor.MaterialPreviewSceneFrames 가 패널이 뷰를 요청한 프레임 수다.
+  눈 확인: -gv_editorPreviewScreenshot=<경로> 를 주면 30 프레임 그린 뒤 미리보기 타깃을 찍는다(빨간 구 + 바닥, 메인 씬의 오브젝트가 없어야 한다).
+  메인 씬 쪽은 -gv_screenshot 으로 찍는다(미리보기의 구가 없어야 한다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/previewscene.scenario.xml -unattended (백엔드 vk 도 같다)
+-->
+<Scenario name="editor.previewscene" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
+	<Wait frames="30"/>
+	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
+	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="60" timeoutFrames="600"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

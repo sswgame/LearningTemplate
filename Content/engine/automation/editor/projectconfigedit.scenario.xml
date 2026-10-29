@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 프로젝트 설정 창: 커맨드 팔레트로 열면 설정 색인(docs/Config/ConfigReference.json)에서 만든 파일 목록이 보인다.
+  EngineConfig 를 고르면 바탕 층(값이 파일에만 있다)이라 모든 키를 쓰는 문서다. _maxFrameDeltaTime 을 0.2 로 바꾸면 페이지가 바뀜 상태가 되고, Revert 를 누르면 돌아온다.
+  끝으로 활성 팩의 <Engine> 요소 페이지(PackEngineSettings)를 열어 캡처한다.
+  저장하지 않으므로 저장소의 Config 파일과 팩 파일은 건드리지 않는다. 저장과 호스트 다시 읽기는 EditorTest 의 ProjectSettingsDocument 테스트가 임시 폴더에서 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/projectconfigedit.scenario.xml -unattended
+-->
+<Scenario name="editor.projectconfigedit" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="40"/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
+	<EditorText value="Open project settings"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus projectsettings"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProjectSettingsPageCount" atLeast="3"/>
+	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="projectsettings.page.EngineConfig"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" atLeast="7"/>
+	<Wait frames="10"/>
+	<EditorClick mark="inspector.property.EngineConfig._maxFrameDeltaTime" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="0.2"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
+	<Wait frames="10"/>
+	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
+	<Wait frames="10"/>
+	<EditorClick mark="projectsettings.revert"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
+	<!-- 활성 팩의 <Engine> 요소(PackEngineSettings) — 팩 gamesettings.xml 안의 요소 하나를 고치는 페이지다. 창 제목은 늘 적혀 있다. -->
+	<Wait frames="10"/>
+	<EditorClick mark="projectsettings.page.PackEngineSettings"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ProjectSettingsKeyCount" atLeast="1"/>
+	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
+	<CaptureEditorUI file="projectconfigedit/packenginesettings.png"/>
+	<Wait frames="15"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 디버그 HUD 의 에디터 연결. 게임 뷰 툴바의 HUD 단추가 게임 HUD 를 켜고(Editor.DebugHUDEnabled), 오른쪽 클릭 팝업의
+  섹션 체크 상자가 섹션을 켠다(Editor.DebugHUDShownSections — 기본 켜짐 넷 + physics). 씬 뷰 HUD 상자는 같은 섹션을 그리고
+  (Editor.SceneViewHUDSections), 툴바 HUD 단추로 뷰마다 끄고 켠다. 환경설정의 Editor/Debug HUD 쪽에서 게임 HUD 를 다시 끈다.
+  HUD 상태는 엔진 사용자 설정이라 사용자 파일에 남는다 — 처음과 끝에 기본값(꺼짐 · physics 꺼짐)으로 둔다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/debughudcontrols.scenario.xml -unattended
+-->
+<Scenario name="editor.debughudcontrols" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="5"/>
+	<DevCommand line="hud off"/>
+	<DevCommand line="hud physics off"/>
+	<Wait frames="15"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus game_view"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.DebugHUDEnabled" equals="0"/>
+	<Expect watch="Editor.DebugHUDShownSections" equals="4"/>
+	<Wait frames="5"/>
+	<EditorClick mark="gameView.hud"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.DebugHUDEnabled" equals="1"/>
+	<Wait frames="5"/>
+	<EditorClick mark="gameView.hud" button="1"/>
+	<Wait frames="20"/>
+	<EditorClick mark="debugHUD.section.physics"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.DebugHUDShownSections" equals="5"/>
+	<EditorKey key="Escape"/>
+	<Wait frames="10"/>
+	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SceneViewHUDSections" equals="0"/>
+	<EditorClick mark="viewport.hud"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.SceneViewHUDSections" atLeast="2"/>
+	<Wait frames="5"/>
+	<EditorClick mark="viewport.hud"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SceneViewHUDSections" equals="0"/>
+	<Wait frames="5"/>
+	<EditorClick mark="viewport.hud"/>
+	<Wait frames="30"/>
+	<Expect watch="Editor.SceneViewHUDSections" atLeast="2"/>
+	<Wait frames="5"/>
+	<DevCommand line="editor editor.preferences"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus preferences"/>
+	<Wait frames="20"/>
+	<EditorClick mark="preferences.search"/>
+	<Wait frames="10"/>
+	<EditorText value="Debug HUD"/>
+	<Wait frames="30"/>
+	<EditorClick mark="preferences.debugHUD.shown"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.DebugHUDEnabled" equals="0"/>
+	<Wait frames="5"/>
+	<DevCommand line="hud off"/>
+	<DevCommand line="hud physics off"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.DebugHUDShownSections" equals="4"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

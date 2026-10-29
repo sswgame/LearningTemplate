@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 기본 배치(Reset Default Layout)는 가운데 영역의 앞 탭이 Scene 이다. 열린 도구 패널(Prefab Overrides)이 같은 영역에 붙어도 그렇다.
+  ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고 처음 나타난 창에 포커스를 주므로, 붙인 순서로는 Scene 이 앞에 서지 않는다(EditorDockLayout::updateDefaultTabSelection).
+  저장된 레이아웃이 없으면(AppScenarioTest 는 늘 빈 상태 폴더로 시작한다) 이 규칙이 Scene 탭을 앞에 둔다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/defaultlayout.scenario.xml -unattended
+-->
+<Scenario name="editor.defaultlayout" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<!-- Prefab Overrides 를 연다(가운데 영역의 앞 탭이 된다) — 씬 뷰가 가려진 상태에서 시작한다 -->
+	<Wait frames="2"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="3"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus prefab_editor"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SceneViewDrawn" equals="0"/>
+	<!-- 기본 배치로 되돌리면 Prefab Overrides 가 열린 채여도 Scene 탭이 앞이다 -->
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="35"/>
+	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
+	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
+	<Wait frames="5"/>
+	<EditorClick mark="sceneView.canvas"/>
+	<!-- 기본 배치의 아래 도크는 글자 높이의 배수라 Output Log 내용 영역에 글자 줄이 8줄 넘게 든다(첫 화면에서 로그가 한두 줄만 보이던 결함) -->
+	<Wait frames="5"/>
+	<Variable name="gv_editorWatchPanel" value="console"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelContentLines" atLeast="8"/>
+	<!-- 좌우 도크 폭도 글자 너비의 배수 아래로 내려가지 않는다(Hierarchy 왼쪽 40칸, Inspector 오른쪽 48칸). 내용 영역은 창 안쪽 여백을 뺀 값이라 조금 작다 -->
+	<Wait frames="5"/>
+	<Variable name="gv_editorWatchPanel" value="hierarchy"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelContentColumns" atLeast="34"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorWatchPanel" value="inspector"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelContentColumns" atLeast="42"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

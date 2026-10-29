@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 버그 리포트 한 방: 개발 명령 bugit 이 Saved/BugIt/<시각>/ 에 info · 로그 · 씬 사본 · 재현 명령(다음 프레임 스크린샷)을 모으고,
+  카메라를 옮긴 뒤 bugitgo(폴더를 주지 않으면 가장 최근)가 씬 뷰 카메라를 기록한 자리로 되돌린다(씬 뷰가 바깥에서 옮긴 에디터 카메라를 이어받는다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/engine/automation/editor/bugreport.scenario.xml.scenario.xml -unattended
+-->
+<Scenario name="editor.bugreport" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="5"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Wait frames="50"/>
+	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
+	<!-- 에디터 카메라를 오른쪽으로 3 m 남짓(오른쪽 단추 + D) -->
+	<Wait frames="10"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
+	<EditorKey key="D" state="down"/>
+	<Wait frames="42"/>
+	<EditorKey key="D" state="up"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
+	<Wait frames="8"/>
+	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
+	<DevCommand line="bugreport scenario check"/>
+	<Wait frames="5"/>
+	<ExpectLog contains="BugIt report saved to" atLeast="1"/>
+	<!-- 다시 왼쪽으로 옮긴다(A) — 기록과 다른 자리 -->
+	<Wait frames="5"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
+	<EditorKey key="A" state="down"/>
+	<Wait frames="70"/>
+	<EditorKey key="A" state="up"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
+	<Wait frames="10"/>
+	<Expect watch="Editor.SceneViewCameraX" atMost="1"/>
+	<!-- bugitgo — 가장 최근 폴더의 자리로 -->
+	<Wait frames="10"/>
+	<DevCommand line="bugreport.goto"/>
+	<Wait frames="10"/>
+	<ExpectLog contains="BugItGo moved the view camera" atLeast="1"/>
+	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
+	<Wait frames="10"/>
+	<Pass/>
+</Scenario>

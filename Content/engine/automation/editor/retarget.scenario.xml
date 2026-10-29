@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 리타깃 프로필 창(결정 기록 5-6 A4): 새 프로필(없는 경로의 빈 문서) · 기존 프로필 열기 · 3D 미리보기(두 스켈레톤 겹침) · 리타깃 포즈 줄 더하기.
+  새 프로필: 경로 칸에 없는 리소스 id 를 적고 New 를 누르면 빈 문서로 열린다(사슬 0). 저장은 스켈레톤 · 뿌리와 골반이 묶이기 전에는 막힌다(저장하지 않고 닫는다).
+  기존 프로필: knight_to_minion 을 열면 사슬이 채워지고, 미리보기가 두 스켈레톤을 선으로 긋는다(탐침 Editor.RetargetPreviewSegments). 대상 본 upperarm.l 을 더하면 리타깃 포즈 줄이 하나가 되고
+  미리보기의 대상(주황)과 레퍼런스(회색)가 갈린다 — 눈으로 볼 사진을 찍는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/retarget.scenario.xml -unattended
+-->
+<Scenario name="editor.retarget" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<Wait frames="10"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="10"/>
+	<ResizeWindow width="1900" height="1300"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="40"/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
+	<EditorText value="Retarget Profile"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="panel.focus charactereditor.retarget"/>
+	<!-- 새 프로필: 없는 경로 → 빈 문서 -->
+	<Wait frames="25"/>
+	<EditorClick mark="retarget.newPath"/>
+	<Wait frames="10"/>
+	<EditorText value="scratch/import/scenario_new.retarget.xml"/>
+	<Wait frames="15"/>
+	<EditorClick mark="retarget.new"/>
+	<Wait frames="45"/>
+	<Expect watch="Editor.RetargetChainCount" equals="0"/>
+	<CaptureEditorUI file="retarget/new.png"/>
+	<!-- 기존 프로필 열기 -->
+	<Wait frames="10"/>
+	<EditorClick mark="retarget.open"/>
+	<Wait frames="15"/>
+	<EditorClick mark="retarget.open.knight_to_minion.retarget.xml"/>
+	<Wait frames="65"/>
+	<Expect watch="Editor.RetargetChainCount" atLeast="6"/>
+	<Expect watch="Editor.RetargetPoseCount" equals="0"/>
+	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
+	<CaptureEditorUI file="retarget/opened.png"/>
+	<!-- 리타깃 포즈 줄 더하기: 대상 스켈레톤에 있는 본만 받는다 -->
+	<!-- 미리보기와 사슬 목록이 길어 아래 칸이 창의 보이는 영역 밖으로 밀린다 — 미리보기만 남기고 위 구역을 접어 닿게 한다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="retarget.section.Skeletons"/>
+	<Wait frames="5"/>
+	<EditorClick mark="retarget.section.Root and pelvis"/>
+	<Wait frames="5"/>
+	<EditorClick mark="retarget.section.Options"/>
+	<Wait frames="5"/>
+	<EditorClick mark="retarget.section.Chains"/>
+	<Wait frames="10"/>
+	<EditorClick mark="retarget.targetPose.newBone"/>
+	<Wait frames="10"/>
+	<EditorText value="upperarm.l"/>
+	<Wait frames="15"/>
+	<EditorClick mark="retarget.targetPose.add"/>
+	<Wait frames="25"/>
+	<Expect watch="Editor.RetargetPoseCount" equals="1"/>
+	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
+	<CaptureEditorUI file="retarget/targetpose.png"/>
+	<Wait frames="30"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

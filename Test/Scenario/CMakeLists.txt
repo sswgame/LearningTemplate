@@ -60,3 +60,27 @@ if(listScenario)
 	set_tests_properties(${testName} PROPERTIES LABELS hostgpu TIMEOUT ${chainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${swScenarioBackendCount})
 	message(STATUS "[Scenario] ${testName}: ${stageCount} scenario(s)")
 endif()
+
+# 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`)로 돌린다. 하위 폴더는 줍지 않는다
+# (`chain/` — 체인 사이에 끼우는 리로드, `statedir/` — 두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍). 백엔드는 기본 하나다 — 편집기 시나리오의 그림 확인은
+# 백엔드별 골든이 아니라 UI 캡처 검사(`CaptureEditorUI`)라 네 백엔드를 돌면 시간만 네 배다. 편집기 모듈 리로드는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭).
+if(TARGET EditorModule)
+	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
+	list(SORT listEditorScenario)
+	set(swLastEditorScenario "engine/automation/editor/editormodulereload.scenario.xml")
+	if(swLastEditorScenario IN_LIST listEditorScenario)
+		list(REMOVE_ITEM listEditorScenario "${swLastEditorScenario}")
+		list(APPEND listEditorScenario "${swLastEditorScenario}")
+	endif()
+	if(listEditorScenario)
+		list(LENGTH listEditorScenario editorStageCount)
+		list(JOIN listEditorScenario "," editorScenarioList)
+		math(EXPR editorChainTimeout "120 * ${editorStageCount}")
+		add_test(NAME Scenario.editor
+			COMMAND $<TARGET_FILE:App> -EnableEditor -scenario=${editorScenarioList} -scenario-keep-going -unattended
+				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Scenario.editor.log
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(Scenario.editor PROPERTIES LABELS hostgpu TIMEOUT ${editorChainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+		message(STATUS "[Scenario] Scenario.editor: ${editorStageCount} scenario(s)")
+	endif()
+endif()

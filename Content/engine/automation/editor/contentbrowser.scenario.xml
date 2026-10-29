@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저(A1): 게임 루트는 활성 팩 하나이고, All packs 를 켜면 game/ 의 팩이 모두 루트가 된다.
+  참조 역색인이 다 만들어지면 활성 팩의 crate_medium.mesh 를 오른쪽 클릭해 Find References 를 누르고, 그 메시를 쓰는 씬이 결과에 나오는지 본다.
+  CaptureEditorUI 의 PNG(Saved/Automation/editor.contentbrowser/)는 결과 창까지 든 화면이다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/contentbrowser.scenario.xml -unattended
+-->
+<Scenario name="editor.contentbrowser" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus content_browser"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ContentGameRootCount" equals="1"/>
+	<!-- 체크박스는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="5"/>
+	<EditorClick mark="contentBrowser.allPacks" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.allPacks" state="up"/>
+	<Wait frames="12"/>
+	<Expect watch="Editor.ContentGameRootCount" atLeast="2"/>
+	<Wait frames="5"/>
+	<EditorClick mark="contentBrowser.allPacks" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.allPacks" state="up"/>
+	<Wait frames="12"/>
+	<Expect watch="Editor.ContentGameRootCount" equals="1"/>
+	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
+	<!-- 폴더로 가서 검색으로 그 메시만 남긴다(도킹 칸이 낮아 타일 한 줄만 보인다) -->
+	<Wait frames="5"/>
+	<DevCommand line="content.open game/empty/models"/>
+	<Wait frames="10"/>
+	<EditorClick mark="contentBrowser.search"/>
+	<Wait frames="5"/>
+	<EditorText value="crate_medium.mesh"/>
+	<Wait frames="20"/>
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="up"/>
+	<Wait frames="12"/>
+	<EditorClick mark="menu.asset.findReferences" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="menu.asset.findReferences" state="up"/>
+	<Wait frames="17"/>
+	<Expect watch="Editor.ReferenceResultCount" atLeast="1"/>
+	<CaptureEditorUI file="references.png"/>
+	<Wait frames="15"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

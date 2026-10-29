@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 어긋남 찾기(서버 디버깅 S7). 전용 서버 + App 클라이언트 1 을 띄우면 세션이 서버에 -gv_stateHashHistory 를 켠다.
+  netplay.sync save 는 Multiplayer 창 Sync 탭의 "Session server" + "Save" 를, netplay.sync compare 는 세션 서버를 A · 저장한 파일을 B 로 담아 "Compare" 를 한다.
+  같은 서버의 이력을 견주므로 겹친 틱(Editor.NetPlaySyncCommonTicks)이 있고 어긋남(Editor.NetPlaySyncDiverged)은 없어야 한다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/netsync.scenario.xml -unattended
+-->
+<Scenario name="editor.netsync" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<Expect watch="Editor.NetPlaySyncCommonTicks" equals="0"/>
+	<DevCommand line="netplay.start dedicated 1"/>
+	<Wait frames="1"/>
+	<DevCommand line="netplay.wait 1 120"/>
+	<Wait frames="1"/>
+	<DevCommand line="netplay.sync save Saved/StateHashes/netsync.txt"/>
+	<Wait frames="1"/>
+	<ExpectLog contains="netplay sync saved" atLeast="1"/>
+	<DevCommand line="netplay.sync compare Saved/StateHashes/netsync.txt"/>
+	<Wait frames="1"/>
+	<ExpectLog contains="netplay sync no divergence over" atLeast="1"/>
+	<Expect watch="Editor.NetPlaySyncCommonTicks" atLeast="1"/>
+	<Expect watch="Editor.NetPlaySyncDiverged" equals="0"/>
+	<DevCommand line="netplay.stop"/>
+	<Wait frames="1"/>
+	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 기본값과 다른 프로퍼티의 되돌리기 단추(I2): GameCamera 의 _priority 를 4 로 바꾸면 이름 칸 끝에 되돌리기 단추가 생기고
+  (이름표 inspector.reset.CameraComponent._priority), 누르면 기본(0)으로 돌아온다. 기본값은 컴포넌트의 기본 인스턴스(CDO)에서 온다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/propertyreset.scenario.xml -unattended
+-->
+<Scenario name="editor.propertyreset" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="4"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedProperty" equals="4"/>
+	<Wait frames="5"/>
+	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.SelectedProperty" equals="0"/>
+	<Expect watch="Editor.UndoCount" equals="2"/>
+	<Wait frames="10"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

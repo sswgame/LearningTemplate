@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — lighting.bakeReflectionProbes 커맨드(Build > Bake Reflection Probes, 결정 기록 5-5 P4). lightprobebake 의 반사 프로브 짝이다.
+  반사 프로브가 없는 씬(기본 에디터 씬)에서 커맨드가 돌고("Nothing to bake" 알림) 끝난 베이크 횟수가 1 이 되며 베이크가 돌고 있지 않고 구운 프로브가 0 인지 본다.
+  프로브가 있는 굽기는 씬 옆에 .reflprobe 파일을 쓰므로 이 시나리오는 하지 않는다(저장소 리소스를 바꾸지 않는다). 끝난 횟수는 조건 대기로 기다린다(세션이 에디터 프레임에 도는 만큼만).
+  실행: App -EnableEditor -scenario=engine/automation/editor/reflectionprobebake.scenario.xml -unattended
+-->
+<Scenario name="editor.reflectionprobebake" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="1"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="1"/>
+	<Expect watch="Editor.ReflectionProbeBakeCount" equals="0"/>
+	<Expect watch="Editor.ReflectionProbeBakeRunning" equals="0"/>
+	<Expect watch="Editor.BakedReflectionProbeCount" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="editor lighting.bakeReflectionProbes"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Editor.ReflectionProbeBakeCount" equals="1" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<Expect watch="Editor.ReflectionProbeBakeRunning" equals="0"/>
+	<Expect watch="Editor.BakedReflectionProbeCount" equals="0"/>
+	<Wait frames="1"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

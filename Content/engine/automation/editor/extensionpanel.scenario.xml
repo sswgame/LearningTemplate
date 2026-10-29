@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 확장 모듈(GF_EditorPlugIn_Admin, 확장 지점 C5)이 로드되어 커맨드 · 패널 · 서브시스템이 에디터에 붙는다.
+  커맨드 팔레트로 확장의 커맨드(admin.openToolPanel)를 실행해 GM Tool 패널을 열고, 패널의 Lookup 단추를 누른다(메모리 제공자가 기본 계정을 답한다).
+  결속기가 틀리면 확장의 ImGui 호출이 다른 컨텍스트로 가서 이름표가 남지 않고 클릭 단계가 진다. 확장이 기여한 서브시스템(AdminToolSession)이
+  에디터 범위에 없으면 패널이 그 절을 그리지 않아 역시 진다. 기본 게임(Empty)이 쓰는 키트의 확장이다 — 고른 게임이 쓰지 않는 키트의 확장은 오르지 않는다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/extensionpanel.scenario.xml -unattended
+-->
+<Scenario name="editor.extensionpanel" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<Wait frames="40"/>
+	<Variable name="gv_editorWatchPanel" value="admin.tool"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.PanelOpen" equals="0"/>
+	<Wait frames="15"/>
+	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
+	<EditorText value="Open the GM tool"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.PanelOpen" equals="1"/>
+	<ExpectLog contains="GM Tool panel opened" count="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.focus admin.tool"/>
+	<Wait frames="20"/>
+	<EditorClick mark="admin.lookup"/>
+	<Wait frames="15"/>
+	<ExpectLog contains="Admin command LookupAccount: Ok" count="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="panel.close admin.tool"/>
+	<Wait frames="5"/>
+	<Pass/>
+</Scenario>

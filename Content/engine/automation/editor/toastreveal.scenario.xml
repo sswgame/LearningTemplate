@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 토스트의 "Show in Explorer" 단추(후보 B-4): 단추가 달린 토스트를 띄우고 단추를 눌러, 탐색기 명령줄이 만들어지는지(호출 직전)까지 본다.
+  explorer.dryRun 1 이 실제 탐색기 실행을 막는다 — 명령줄 조립과 횟수만 단언한다(Editor.ExplorerCommandWellFormed: 경로를 따옴표로 싸고 Windows 에서는 백슬래시만 쓴다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/toastreveal.scenario.xml -unattended
+-->
+<Scenario name="editor.toastreveal" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1600" height="900"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="10"/>
+	<DevCommand line="explorer.dryRun 1"/>
+	<Wait frames="5"/>
+	<DevCommand line="notify.reveal /tmp/reveal/shot.png"/>
+	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<Wait frames="10"/>
+	<EditorClick mark="notification.showInExplorer" state="down"/>
+	<Wait frames="3"/>
+	<EditorClick mark="notification.showInExplorer" state="up"/>
+	<Wait frames="12"/>
+	<Expect watch="Editor.ExplorerLaunchCount" atLeast="1"/>
+	<Expect watch="Editor.ExplorerCommandWellFormed" equals="1"/>
+	<Wait frames="10"/>
+	<DevCommand line="explorer.dryRun 0"/>
+	<Wait frames="5"/>
+	<Pass/>
+</Scenario>

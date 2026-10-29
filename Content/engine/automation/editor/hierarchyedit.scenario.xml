@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Hierarchy 편집 기본기(N2): 첫 줄(GameCamera)을 누르고 Shift 를 누른 채 셋째 줄(TestSprite)을 누르면 세 줄이 골라진다.
+  Ctrl+C · Ctrl+V 로 셋이 붙여 넣어지고(오브젝트 수 +3, 되돌리기 한 줄) Ctrl+Z 한 번에 돌아온다. ↓ 는 다음 줄로 선택을 옮긴다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/hierarchyedit.scenario.xml -unattended
+-->
+<Scenario name="editor.hierarchyedit" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Wait frames="15"/>
+	<EditorClick mark="hierarchy.row.TestSprite" mods="shift"/>
+	<Wait frames="15"/>
+	<Expect watch="Editor.SelectionCount" equals="3"/>
+	<Expect watch="Editor.ObjectCount" equals="9"/>
+	<Wait frames="5"/>
+	<EditorKey key="Ctrl+C"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+V"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ObjectCount" equals="12"/>
+	<Expect watch="Editor.SelectionCount" equals="3"/>
+	<Expect watch="Editor.UndoCount" equals="1"/>
+	<Wait frames="5"/>
+	<EditorKey key="Ctrl+Z"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.ObjectCount" equals="9"/>
+	<Wait frames="5"/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Wait frames="15"/>
+	<EditorKey key="DownArrow"/>
+	<Wait frames="15"/>
+	<Variable name="gv_editorWatchObject" value="TestMesh"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<Expect watch="Editor.SelectedComponentCount" equals="1"/>
+	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

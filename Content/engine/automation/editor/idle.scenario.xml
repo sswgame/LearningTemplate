@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터 유휴(FramePacingState::EditorIdle = 6)에서 깨어나는 조건이 빠지지 않았는지 본다(감사 SB P1 후속).
+  에디터가 다시 그릴 까닭(EditorRedrawReason: 입력 · 잡은 항목 · 플레이 · 알림 · 패널의 연속 프레임 요청)이 없는 프레임이 이어지면 앱 루프는 창 메시지까지 잔다.
+  까닭 하나를 빠뜨리면 그 화면이 멈추므로, 유휴에 든 뒤의 ① 키 입력 ② 마우스 이동이 바로 반영되고 ③ 알림 토스트가 떠 있는 동안 깨어 있다가 시간이 지나 사라지는지 본다.
+  시나리오 실행은 보통 전속(Automation = 3)이라 유휴에 들지 않는다 — gv_framePacing=WindowState 로 자동화 중에도 창 · 에디터 상태를 따르게 한다(끝에서 Auto 로 되돌린다).
+  탐침: Engine.FramePacingState(앱 루프 상태 번호), Editor.NotificationCount(떠 있는 알림 수). 개발 명령 notify.push <초> <글> 이 토스트를 띄운다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/idle.scenario.xml -unattended
+-->
+<Scenario name="editor.idle" fixedDelta="0.0166667" timeoutFrames="60000" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Variable name="gv_editorWatchPanel" value="material"/>
+	<Wait frames="5"/>
+	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<Wait frames="5"/>
+	<Variable name="gv_framePacing" value="WindowState"/>
+	<!-- 기동 알림이 사라지고 조용한 프레임이 쌓이면 유휴에 든다 -->
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.NotificationCount" equals="0" timeoutFrames="20000"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<!-- ① 키 입력: Quick Open 으로 머티리얼을 연다 — 유휴 중에 친 키가 그대로 문서를 연다 -->
+	<Wait frames="4"/>
+	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
+	<Wait frames="5"/>
+	<EditorKey key="Ctrl+P"/>
+	<Wait frames="1"/>
+	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Wait frames="14"/>
+	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<!-- 미리보기 창은 틱하는 씬을 그려 연속 프레임을 청한다 — 닫으면 다시 조용해진다 -->
+	<Wait frames="5"/>
+	<DevCommand line="panel.close material"/>
+	<Wait frames="5"/>
+	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<!-- ② 마우스 이동: 유휴 중의 이동이 바로 깨운다 -->
+	<Wait frames="10"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.30,0.50"/>
+	<Wait frames="1"/>
+	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Wait frames="1"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.60,0.50"/>
+	<Wait frames="8"/>
+	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<!-- ③ 알림: 떠 있는 동안은 깨어 있고, 시간이 지나 사라진 뒤 다시 잔다 -->
+	<Wait frames="10"/>
+	<DevCommand line="notify.push 1 idle scenario toast"/>
+	<Wait frames="2"/>
+	<Expect watch="Editor.NotificationCount" equals="1"/>
+	<Expect watch="Engine.FramePacingState" atMost="1"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Editor.NotificationCount" equals="0" timeoutFrames="20000"/>
+	<Wait frames="1"/>
+	<WaitUntil watch="Engine.FramePacingState" equals="6" timeoutFrames="600"/>
+	<Wait frames="6"/>
+	<Variable name="gv_framePacing" value="Auto"/>
+	<Wait frames="2"/>
+	<Expect watch="Engine.FramePacingState" equals="3"/>
+	<Wait frames="3"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
