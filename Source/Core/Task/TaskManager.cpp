@@ -1270,13 +1270,13 @@ namespace sw
             {
                 if ( _globalWorkerQueue.enqueue( item ) )
                     return;
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
             return;
         }
         while ( _globalWorkerQueue.enqueue( item ) == false )
         {
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
     }
 
@@ -1347,7 +1347,7 @@ namespace sw
                 if ( isMainThread() )
                     dispatchMainThreadTasks();
                 else
-                    std::this_thread::yield();
+                    ThreadUtil::yield();
             }
             // 이 작업을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든 잠들어 있으면 깨워야
             // 한다(아무나 하나 깨우면 엉뚱한 스레드가 깨어 메인과 태스크가 서로를 기다린다).
@@ -1365,14 +1365,14 @@ namespace sw
         {
             while ( _globalHighQueue.enqueue( item ) == false )
             {
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
         }
         else if ( pNode->_priority == TaskPriority::Low )
         {
             while ( _globalLowQueue.enqueue( item ) == false )
             {
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
         }
         else

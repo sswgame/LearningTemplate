@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/NetTransport.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -16,7 +17,7 @@ namespace sw
     bool INetTransport::waitForReceive( float64 timeoutSeconds )
     {
         if ( timeoutSeconds > 0.0 )
-            std::this_thread::sleep_for( std::chrono::duration<float64>( timeoutSeconds ) );
+            ThreadUtil::sleepForSeconds( timeoutSeconds );
         return false;
     }
 
@@ -152,7 +153,7 @@ namespace sw
         {
             if ( deadline.isExpired() )
                 return false;
-            std::this_thread::sleep_for( std::chrono::microseconds( 200 ) );
+            ThreadUtil::sleepForMicroseconds( 200 );
         }
         return true;
     }

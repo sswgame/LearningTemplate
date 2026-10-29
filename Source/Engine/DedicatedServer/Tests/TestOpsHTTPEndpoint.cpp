@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
@@ -206,7 +207,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     const Deadline openDeadline = Deadline::afterMilliseconds( 5000 );
     while ( probe._bOpened.load( std::memory_order_acquire ) == false && openDeadline.isExpired() == false )
     {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+        ThreadUtil::sleepForMilliseconds( 1 );
     }
     SW_REQUIRE_TRUE( probe._bOpened.load( std::memory_order_acquire ) );
     const string request = "GET /healthz HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
@@ -214,7 +215,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     const Deadline closeDeadline = Deadline::afterMilliseconds( 5000 );
     while ( probe._bClosed.load( std::memory_order_acquire ) == false && closeDeadline.isExpired() == false )
     {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+        ThreadUtil::sleepForMilliseconds( 1 );
     }
     const string received = probe.getReceived();
     SW_EXPECT_TRUE_MSG( StringUtil::startsWith( received, "HTTP/1.1 200 OK\r\n" ), received.c_str() );

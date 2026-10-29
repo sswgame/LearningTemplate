@@ -2,6 +2,7 @@
 
 #include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -140,7 +141,7 @@ namespace sw
         {
             if ( FileUtil::readFile( path, outBytes ) )
                 return true;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            ThreadUtil::sleepForMilliseconds( 100 );
         }
         return false;
     }

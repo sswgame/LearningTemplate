@@ -723,7 +723,7 @@ namespace sw
             }
             else
             {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+                ThreadUtil::sleepForMilliseconds( 1 );
             }
         }
         if ( state._openCount.load() > 0 || state._pendingAcceptCount.load() > 0 )

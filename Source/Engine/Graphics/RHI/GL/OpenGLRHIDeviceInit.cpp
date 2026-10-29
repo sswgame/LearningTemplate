@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -598,7 +599,7 @@ namespace sw
         const Deadline deadline = Deadline::afterMilliseconds( timeoutMs );
         while ( deadline.isExpired() == false )
         {
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            ThreadUtil::sleepForMilliseconds( 1 );
             if ( tryMakeCurrentAndRecordOwner() )
                 return true;
         }

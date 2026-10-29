@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -609,7 +610,7 @@ namespace sw
         }
         if ( pTransport != nullptr )
             return pTransport->waitForReceive( timeoutSeconds );
-        std::this_thread::sleep_for( std::chrono::duration<float64>( timeoutSeconds ) );
+        ThreadUtil::sleepForSeconds( timeoutSeconds );
         return false;
     }
 

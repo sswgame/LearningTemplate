@@ -13,6 +13,7 @@
  *     * 포인터를 참조로 받아 반납 직후 비우므로, 해제한 객체를 다시 쓰는 실수를 막습니다
  */
 #pragma once
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/array.h"
 #include "Core/Foundation/Macros.h"
@@ -165,9 +166,9 @@ namespace sw
             {
                 ++attemptCount;
                 if ( attemptCount <= kReleaseYieldAttempt )
-                    std::this_thread::yield();
+                    ThreadUtil::yield();
                 else
-                    std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
+                    ThreadUtil::sleepForMicroseconds( 100 );
 
                 if ( deadline.isExpired() == false )
                     continue;

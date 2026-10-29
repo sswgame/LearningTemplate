@@ -115,7 +115,7 @@ namespace sw
                         FileUtil::noteFileCreated();
                         return true;
                     }
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+                    ThreadUtil::sleepForMilliseconds( 20 );
                 }
                 SW_LOG_ERROR( "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
                 discardTempFile( tempPath );

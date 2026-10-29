@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/GameTimer.h"
 
@@ -17,7 +18,7 @@ SW_TEST_CASE( TimeTest, GameTimerBasic )
 
     timer.resetTimer();
     timer.startTimer();
-    std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 15 );
     timer.updateTimer();
 
     SW_EXPECT_TRUE( timer.getDeltaTime() >= 0.005f );
@@ -35,7 +36,7 @@ SW_TEST_CASE( TimeTest, ScopedTimerBasic )
     float32 elapsedSec{ 0.0f };
     {
         sw::ScopedTimer timer( "TestScopedTimer" );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        sw::ThreadUtil::sleepForMilliseconds( 10 );
         elapsedSec = timer.getElapsedTimeInSeconds();
     }
     SW_EXPECT_TRUE( elapsedSec > 0.005f );
@@ -55,7 +56,7 @@ SW_TEST_CASE( TimeTest, FreshTimerDoesNotReportTimeSinceBoot )
     timer.startTimer();
     SW_EXPECT_FALSE( timer.isStopped() );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 10 );
     timer.updateTimer();
 
     SW_EXPECT_TRUE( timer.getDeltaTime() >= 0.005f );
@@ -71,11 +72,11 @@ SW_TEST_CASE( TimeTest, GameTimerResetAndPause )
     sw::GameTimer timer;
     timer.resetTimer();
     timer.startTimer();
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 5 );
     timer.stopTimer();
 
     float32 pausedTotal = timer.getTotalTime();
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 5 );
 
     SW_EXPECT_NEAR( pausedTotal, timer.getTotalTime(), 1e-2f );
 
@@ -95,7 +96,7 @@ SW_TEST_CASE( TimeTest, ContinuousFrameTicksAndTotalTime )
     float32 accumulatedDelta{ 0.0f };
     for ( int32 frame = 0; frame < 5; ++frame )
     {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 3 ) );
+        sw::ThreadUtil::sleepForMilliseconds( 3 );
         timer.updateTimer();
         accumulatedDelta += timer.getDeltaTime();
         SW_EXPECT_TRUE( timer.getDeltaTime() > 0.0f );

@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Backend/DrawSnapshotHandoff.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Foundation/StdHeaders.h"
 
 namespace sw::editor
@@ -16,7 +17,7 @@ namespace sw::editor
     {
         while ( _inFlightSlot.load( std::memory_order_acquire ) != kInvalidSlot )
         {
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
     }
 
@@ -25,7 +26,7 @@ namespace sw::editor
         const uint32 writeSlot = ( _publishedSlot.load( std::memory_order_acquire ) + 1u ) % constant::kMaxFrameCountInFlight;
         while ( _inFlightSlot.load( std::memory_order_acquire ) == writeSlot )
         {
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
         return writeSlot;
     }

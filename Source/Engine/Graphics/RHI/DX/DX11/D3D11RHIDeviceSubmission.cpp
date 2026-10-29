@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Time/MonotonicClock.h"
@@ -100,7 +101,7 @@ namespace sw
         {
             if ( deadline.isExpired() )
                 return false;
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
         return true;
     }
@@ -151,7 +152,7 @@ namespace sw
             }
             if ( deadline.isExpired() )
                 return false;
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
         outGPUNanos = RHITimestamp::convertTickToNanos( tick, constant::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
         return true;
@@ -225,7 +226,7 @@ namespace sw
                 }
                 if ( deadline.isExpired() )
                     return false;
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
             return true;
         };

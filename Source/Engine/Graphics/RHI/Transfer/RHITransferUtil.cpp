@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 
+#include "Core/Concurrency/thread.h"
+
 #include <chrono>
 #include <thread>
 
@@ -57,9 +59,9 @@ namespace sw
     void RHITransferUtil::backoff( uint32 iteration )
     {
         if ( iteration < kYieldCountBeforeSleep )
-            std::this_thread::yield();
+            ThreadUtil::yield();
         else
-            std::this_thread::sleep_for( std::chrono::microseconds( kSleepMicroseconds ) );
+            ThreadUtil::sleepForMicroseconds( kSleepMicroseconds );
     }
 
     void RHITransferUtil::assertBlockingAllowed()

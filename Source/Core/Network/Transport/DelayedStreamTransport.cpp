@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/DelayedStreamTransport.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -120,7 +121,7 @@ namespace sw
         while ( _stop.isStopRequested() == false )
         {
             (void)flushDue();
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) ); // 1 ms 해상도 — 측정 도구라 바쁘게 돌지 않는다
+            ThreadUtil::sleepForMilliseconds( 1 ); // 1 ms 해상도 — 측정 도구라 바쁘게 돌지 않는다
         }
     }
 } // namespace sw

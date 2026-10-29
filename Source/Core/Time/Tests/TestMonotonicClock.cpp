@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
@@ -24,7 +25,7 @@ SW_TEST_CASE( MonotonicClockTest, ClockStopwatchAndDeadlineFollowRealTime )
     SW_EXPECT_FALSE( deadline.isExpired() );
     SW_EXPECT_TRUE( deadline.getRemainingMilliseconds() <= 20 );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 30 );
     SW_EXPECT_TRUE( stopwatch.getElapsedMilliseconds() >= 25 );
     SW_EXPECT_TRUE( stopwatch.getElapsedMicroseconds() >= stopwatch.getElapsedMilliseconds() * 1000 );
     SW_EXPECT_TRUE( deadline.isExpired() );
@@ -55,7 +56,7 @@ SW_TEST_CASE( MonotonicClockTest, GameTimerUsesTheSameCounter )
     sw::GameTimer timer;
     timer.resetTimer();
     const sw::Stopwatch stopwatch;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    sw::ThreadUtil::sleepForMilliseconds( 20 );
     timer.updateTimer();
     const float64 timerMilli     = static_cast<float64>( timer.getDeltaTime() ) * 1000.0;
     const float64 stopwatchMilli = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / 1000.0;

@@ -3,6 +3,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -83,7 +84,7 @@ namespace sw
             s_bStderrHeld.store( true );
             while ( true )
             {
-                std::this_thread::sleep_for( std::chrono::hours( 1 ) );
+                ThreadUtil::sleepForSeconds( 1 * 3600.0 );
             }
         }
 
@@ -472,7 +473,7 @@ namespace sw
                 holder.detach();
                 while ( s_bStderrHeld.load() == false )
                 {
-                    std::this_thread::yield();
+                    ThreadUtil::yield();
                 }
                 volatile int32* pNull = nullptr;
                 *pNull                = 1;

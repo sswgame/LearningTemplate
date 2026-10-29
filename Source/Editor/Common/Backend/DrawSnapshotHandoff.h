@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Types.h"
 
@@ -37,7 +38,7 @@ namespace sw::editor
      *          그때 풀면 UI 스레드가 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임을 그려 같은 렌더 백엔드를 두 스레드가 함께 쓴다.
      *          인스턴스를 없앨 때는 그 프레임을 그릴 쪽이 없으므로 풀어야 종료 단계의 `waitForIdle` 이 반환한다.
      *
-     *          기다림은 `std::this_thread::yield` 로 돈다. 렌더 스레드가 한 프레임 안에 끝내는 짧은 기다림이기 때문이다.
+     *          기다림은 `ThreadUtil::yield` 로 돈다. 렌더 스레드가 한 프레임 안에 끝내는 짧은 기다림이기 때문이다.
      */
     class DrawSnapshotHandoff
     {

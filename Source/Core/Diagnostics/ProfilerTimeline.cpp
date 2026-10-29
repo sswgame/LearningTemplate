@@ -3,6 +3,7 @@
 #include "Core/Diagnostics/ProfilerTimeline.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
@@ -238,12 +239,12 @@ namespace sw
             ThreadBuffer* pBuffer = _arrThreadBuffer[threadIndex].load( std::memory_order_acquire );
             while ( pBuffer != nullptr && pBuffer->_bLongBusy.load( std::memory_order_acquire ) )
             {
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
         }
         while ( _bLongFrameBusy.load( std::memory_order_acquire ) )
         {
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
         setRecording( _bLongPrevRecording.load( std::memory_order_relaxed ) );
     }

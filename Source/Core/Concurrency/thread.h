@@ -135,4 +135,21 @@ namespace sw
         StopSource  _stopSource{}; ///< 정지 요청 원천. 스레드의 토큰이 이 칸을 읽는다. `_thread` 보다 먼저 선언한다 — 생성자가 이 원천으로 토큰을 만든다
         std::thread _thread;
     };
+
+    /**
+     * @struct ThreadUtil
+     * @brief 지금 스레드를 재우거나 양보합니다(전부 static). `std::this_thread` 를 부르는 쪽마다 `std::chrono` 단위를 고르지 않게 단위를 이름에 둔다(언리얼 `FPlatformProcess::Sleep`).
+     * @details 기다림은 되도록 이벤트(퓨텍스 · 조건 변수 · 태스크 스테이지)로 한다 — 이것은 폴링이 맞는 자리(장치 · 소켓 대기, 회선 흉내 지연, 스핀 뒤 물러나기)만 쓴다.
+     */
+    struct ThreadUtil
+    {
+        /** @brief @p milliseconds 만큼 재웁니다. */
+        static void sleepForMilliseconds( int64 milliseconds ) { std::this_thread::sleep_for( std::chrono::milliseconds( milliseconds ) ); }
+        /** @brief @p microseconds 만큼 재웁니다. */
+        static void sleepForMicroseconds( int64 microseconds ) { std::this_thread::sleep_for( std::chrono::microseconds( microseconds ) ); }
+        /** @brief @p seconds(소수)만큼 재웁니다. */
+        static void sleepForSeconds( float64 seconds ) { std::this_thread::sleep_for( std::chrono::duration<float64>( seconds ) ); }
+        /** @brief 남은 시간 조각을 다른 스레드에 넘깁니다. */
+        static void yield() { std::this_thread::yield(); }
+    };
 } // namespace sw

@@ -125,7 +125,7 @@ namespace sw
         while ( pTask->_remainingRangeCount.load( std::memory_order_acquire ) != 0 )
         {
             if ( tryRunOne( 0 ) == false )
-                std::this_thread::yield();
+                ThreadUtil::yield();
         }
         _listFreeTask.push_back( pTask );
     }
@@ -168,7 +168,7 @@ namespace sw
                     bRan = true;
                     break;
                 }
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
             if ( bRan == false )
                 Futex::wait( _wakeWord, seenWake ); // 그 사이 넣었으면 워드가 바뀌어 바로 돌아온다

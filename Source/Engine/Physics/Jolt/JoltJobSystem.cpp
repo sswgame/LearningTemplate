@@ -2,6 +2,7 @@
 
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
@@ -73,7 +74,7 @@ namespace sw
             index = _jobs.ConstructObject( pJobName, color, this, jobFunction, dependencyCount );
             if ( index != JPH::FixedSizeFreeList<Job>::cInvalidObjectIndex )
                 break;
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
         Job* pJob = &_jobs.Get( index );
 
@@ -141,7 +142,7 @@ namespace sw
             const uint64        enteredCount = slot._enterCount.load( std::memory_order_acquire );
             while ( slot._exitCount.load( std::memory_order_acquire ) < enteredCount )
             {
-                std::this_thread::yield();
+                ThreadUtil::yield();
             }
         }
     }

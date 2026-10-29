@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/FixedTimestep.h"
 
@@ -25,7 +26,7 @@ namespace
     /** @brief 최대 델타보다 확실히 긴 시간. 잠이 길어져도 결과는 같다(상한에서 잘리므로). */
     void sleepLongerThanAnyClamp()
     {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
+        ThreadUtil::sleepForMilliseconds( 300 );
     }
 
     /** @brief 만들 때 넘기는 정책(엔진에서는 `EngineConfig.json` 의 값)이다. 몫이 6 이 되게 둔다. */
@@ -141,7 +142,7 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
 
     // 루프에 들어가 한 프레임을 보낸다. 측정한 값은 이 100ms 여야 한다 — 앞의 300ms 가 섞였다면
     // 최대 델타(0.25)에 붙고, 타이머가 아예 돌지 않았다면 0 이다. 양쪽을 다 본다.
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    ThreadUtil::sleepForMilliseconds( 100 );
     const FrameTime firstFrame = timeline.advance();
 
     SW_EXPECT_TRUE_MSG( firstFrame._deltaTime > 0.05f, "start 뒤에 타이머가 돌지 않았다" );

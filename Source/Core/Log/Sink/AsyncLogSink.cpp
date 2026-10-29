@@ -316,7 +316,7 @@ namespace sw
                 std::fputs( "[Logger] Timed out waiting for in-flight log broadcasts after removing a listener\n", stderr );
                 return;
             }
-            std::this_thread::yield();
+            ThreadUtil::yield();
         }
     }
 
