@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Fit/OutfitAtlas.h"
+#include "Editor/Common/Asset/OutfitAtlas.h"
 
 #include "Core/Math/MathUtil.h"
 

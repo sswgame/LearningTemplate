@@ -24,6 +24,8 @@
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
+
 namespace sw::editor
 {
     class EditorProjectedLineRenderer;

@@ -33,7 +33,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 본 하나의 덮어쓰기입니다. `_fieldMask` 는 적은 필드를 나타냅니다(1 위치, 2 회전, 4 스케일). */
-    struct SW_API BoneOverride
+    struct BoneOverride
     {
         static constexpr uint8 kTranslationBit = 1u << 0;
         static constexpr uint8 kRotationBit    = 1u << 1;
@@ -50,7 +50,7 @@ namespace sw
 namespace sw
 {
     /** @brief 좌우 대칭 짝입니다. */
-    struct SW_API BoneMirrorPair
+    struct BoneMirrorPair
     {
         hashed_string _left{};
         hashed_string _right{};
@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     /** @brief 레퍼런스 포즈 덮어쓰기 에셋 하나입니다. */
-    class SW_API ReferencePoseOverride
+    class ReferencePoseOverride
     {
     public:
         /** @brief XML 텍스트에서 읽습니다. @p pBones 가 있으면 본 이름을 대조합니다(없는 본은 오류). */

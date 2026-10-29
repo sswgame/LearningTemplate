@@ -14,6 +14,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Character/Fit/MeshMerger.h"
 
 namespace sw
@@ -43,7 +45,7 @@ namespace sw
 namespace sw
 {
     /** @brief 아틀라스 배치입니다(전부 static). */
-    struct SW_API OutfitAtlasLayout
+    struct SW_EDITOR_API OutfitAtlasLayout
     {
         /** @brief 아틀라스 한 변의 상한(픽셀)입니다. */
         static constexpr uint32 kMaxAtlasSize = 8192;
@@ -66,7 +68,7 @@ namespace sw
      * @details 배치에 있는 부품은 모두 @p groupName 그룹이 되고, 없는 부품은 자기 이름의 그룹으로 남아 UV 도 그대로다. 옮길 UV 는 0..1 안이어야 한다 —
      *          타일링 UV 는 아틀라스에 앉힐 수 없어 범위 밖 UV 는 가장자리로 자르고 센다(`getClampedUvCount`; 부르는 쪽이 데이터 오류로 알린다).
      */
-    class SW_API OutfitAtlasHooks final : public IMeshMergeHooks
+    class SW_EDITOR_API OutfitAtlasHooks final : public IMeshMergeHooks
     {
     public:
         OutfitAtlasHooks( const hashed_string& groupName, uint32 atlasSize, vector<OutfitAtlasRect> listRect );
@@ -89,7 +91,7 @@ namespace sw
 namespace sw
 {
     /** @brief 부품 텍스처 픽셀을 아틀라스에 옮겨 그리는 합성입니다(RGBA8, 전부 static). */
-    struct SW_API OutfitAtlasComposer
+    struct SW_EDITOR_API OutfitAtlasComposer
     {
         /** @brief 한 변 @p atlasSize 인 RGBA8 아틀라스를 투명한 검정으로 채워 만듭니다. */
         static void initialize( uint32 atlasSize, vector<uint8>& outListPixel );

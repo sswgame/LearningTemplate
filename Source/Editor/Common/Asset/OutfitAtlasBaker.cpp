@@ -7,12 +7,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/ImageUtil.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
-#include "Engine/Character/Fit/OutfitAtlas.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
