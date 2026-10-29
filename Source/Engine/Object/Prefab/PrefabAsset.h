@@ -280,7 +280,7 @@ namespace sw
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
          * @param pDevice 쓰지 않습니다. 프리팹은 GPU 리소스를 가지지 않습니다(`IAssetCache` 계약).
          */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice = nullptr ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice = nullptr );
 
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";
@@ -312,6 +312,9 @@ namespace sw
 
     private:
         friend class PrefabLoadBlock;
+
+        /** @brief 경로의 캐시 키입니다(본문 · 핫 리로드 `PrefabCacheReload.cpp` 가 같은 키를 쓴다). */
+        static string makeCacheKey( string_view assetRelativePath );
 
         /** @brief `request` 와 `loadPrefab` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         PrefabHandle requestWith( string_view assetRelativePath, AssetLoadStart start );

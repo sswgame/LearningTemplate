@@ -40,8 +40,8 @@ namespace sw
      */
     struct SW_GF_API GameDataCacheRegistry
     {
-        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다. 캐시 생성자가 부릅니다. */
-        static void registerCache( IAssetCache* pCache );
+        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr). 캐시 생성자가 부릅니다. */
+        static void registerCache( IAssetCache* pCache, AssetCacheReloadFunction pReload );
         /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다. 프로세스 끝에는 매니저가 이미 사라졌을 수 있으므로 매니저는 건드리지 않습니다. */
         static void unregisterCache( const IAssetCache* pCache );
         /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 등록합니다. 앞서 바인딩된 매니저가 있으면 거기서 먼저 해제합니다. nullptr 이면 해제만 합니다. */
@@ -72,7 +72,7 @@ namespace sw
             , _listRetired{}
             , _reloadCount{ 0 }
         {
-            GameDataCacheRegistry::registerCache( this );
+            GameDataCacheRegistry::registerCache( this, SW_ASSET_CACHE_RELOAD_FUNCTION( GameDataCache<TableType> ) );
         }
 
         ~GameDataCache() override { GameDataCacheRegistry::unregisterCache( this ); }
@@ -115,7 +115,7 @@ namespace sw
         }
 
         /** @brief 읽은 적 있는 경로면 새 테이블로 다시 읽어 항목을 바꿉니다. 읽지 못하면 옛 테이블을 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override
+        void reload( const AssetID& assetID, IRHIDevice* pDevice )
         {
             const string_view relativePath = assetID.view();
             (void)pDevice;

@@ -63,30 +63,6 @@ namespace sw
         return _mapPathToAsset.find( FileUtil::normalizePath( relativePath ) ) != _mapPathToAsset.end();
     }
 
-    void UITextAssetCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
-    {
-        const string_view relativePath = assetID.view();
-        (void)pDevice;
-        const string key = FileUtil::normalizePath( relativePath );
-        string       text;
-        if ( readText( key, assetID, text ) == false )
-        {
-            SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
-            return;
-        }
-        ++_parseCount;
-        string                       error;
-        const shared_ptr<const void> asset = _pParse( text, relativePath, error );
-        if ( asset == nullptr )
-        {
-            SW_LOG_ERROR( "[UI] %# reload failed, keeping the old one: %#", _pAssetLabel, error.c_str() );
-            return;
-        }
-        _mapPathToAsset[key] = asset;
-        if ( _reloadedHandler.isBound() )
-            _reloadedHandler.get()( key );
-    }
-
     void UITextAssetCache::clear()
     {
         _mapPathToAsset.clear();

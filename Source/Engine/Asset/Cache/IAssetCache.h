@@ -96,14 +96,6 @@ namespace sw
         /** @brief 그 경로를 지금 캐시가 들고 있는지 반환합니다. */
         virtual bool isCached( string_view relativePath ) const = 0;
 
-        /**
-         * @brief 캐시에 있으면 디스크에서 다시 읽습니다(에디터 핫 리로드).
-         * @param pDevice GPU 자원을 다시 올려야 하는 캐시가 씁니다. 필요 없는 캐시는 무시합니다.
-         * @details **디바이스를 인자로 받습니다.** 캐시가 마지막으로 본 디바이스를 들고 있으면
-         *          백엔드를 바꾼 뒤 그 포인터가 사라진 디바이스를 가리킵니다.
-         */
-        virtual void reload( const AssetID& assetID, IRHIDevice* pDevice ) = 0;
-
         /** @brief 지금 들고 있는 항목 수입니다. */
         virtual size_t getCachedCount() const = 0;
 
@@ -136,4 +128,28 @@ namespace sw
         CacheStatsHandle _stats;
         const utf8*      _pUncountedReason;
     };
+    /**
+     * @brief 캐시 하나의 핫 리로드 함수입니다 — 캐시에 있으면 디스크에서 다시 읽습니다(에디터 · 개발 도구). 런타임 계약(`IAssetCache`)에는 없다.
+     * @details 캐시를 등록할 때 같이 넘긴다(`SW_BUILT_IN_ASSET_CACHE` · `AssetManager::registerAssetCache`). 배포 빌드는 `nullptr` 이라 리로드 본문이
+     *          인스턴스화되지도 링크되지도 않는다(템플릿이 아닌 캐시의 본문은 개발 전용 `<캐시>Reload.cpp` 다). **디바이스를 인자로 받는다** —
+     *          캐시가 마지막으로 본 디바이스를 들고 있으면 백엔드를 바꾼 뒤 그 포인터가 사라진 디바이스를 가리킨다.
+     */
+    using AssetCacheReloadFunction = void ( * )( IAssetCache& cache, const AssetID& assetID, IRHIDevice* pDevice );
+
+    /** @brief 캐시 형식 @p TCache 의 비가상 멤버 `reload( assetID, pDevice )` 를 부르는 리로드 함수입니다(`SW_ASSET_CACHE_RELOAD_FUNCTION`). */
+    template <typename TCache>
+    void reloadAssetCacheOf( IAssetCache& cache, const AssetID& assetID, IRHIDevice* pDevice )
+    {
+        static_cast<TCache&>( cache ).reload( assetID, pDevice );
+    }
 } // namespace sw
+
+/**
+ * @brief 캐시 형식 @p Type 의 리로드 함수(`AssetCacheReloadFunction`)입니다. 배포 빌드는 리로드가 없다 — `nullptr` 이고 리로드 본문을 참조하지 않는다.
+ * @details 빌드 스위치는 여기 한 곳이다(캐시마다 `#if` 를 두지 않는다).
+ */
+#if defined( SW_SHIPPING )
+    #define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( static_cast<::sw::AssetCacheReloadFunction>( nullptr ) )
+#else
+    #define SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) ( &::sw::reloadAssetCacheOf<Type> )
+#endif

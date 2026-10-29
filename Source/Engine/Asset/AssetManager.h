@@ -122,11 +122,14 @@ namespace sw
          *          **모듈은 언로드되기 전에 구독을 놓는다** — 레지스트리는 포인터만 가지고 있어 모듈 DLL 이 내려가면 포인터도,
          *          가상 함수 테이블도 같이 사라진다(남기면 다음 종료나 비우기가 사라진 코드로 점프한다. 언로드 훑기가 마지막 그물이다).
          *          nullptr · 같은 포인터 · 같은 종류 이름의 둘째 캐시면 빈 구독입니다.
-         * @param pCache 구독보다 오래 사는 캐시.
+         * @param pCache  구독보다 오래 사는 캐시.
+         * @param pReload 핫 리로드 함수(`SW_ASSET_CACHE_RELOAD_FUNCTION( 캐시 형식 )`). 다시 읽을 파일이 없으면 nullptr.
          */
-        [[nodiscard]] Subscription registerAssetCache( IAssetCache* pCache );
+        [[nodiscard]] Subscription registerAssetCache( IAssetCache* pCache, AssetCacheReloadFunction pReload );
         /** @brief 등록된 캐시 목록을 반환합니다. 소유하지 않습니다. */
         vector<IAssetCache*> getAllAssetCache() const;
+        /** @brief @p pCache 를 등록할 때 넘긴 리로드 함수입니다. 없으면(배포 · 다시 읽을 파일이 없는 캐시 · 등록하지 않은 캐시) nullptr 입니다. */
+        AssetCacheReloadFunction findReloadFunction( const IAssetCache* pCache ) const;
         /**
          * @brief 종류 이름으로 캐시를 찾습니다("Material", "Texture", "Prefab"). 없으면 nullptr 입니다.
          * @details 이름으로 도는 코드(진단, 도구)가 캐시 종류를 다시 나열하지 않게 하는 함수다.
@@ -193,6 +196,13 @@ namespace sw
          *          같은 종류 이름의 둘째 캐시는 거절한다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않는다).
          */
         RegistrationList<IAssetCache> _registeredAssetCache;
+        /** @struct ReloadEntry @brief 캐시 하나의 리로드 함수입니다(`registerAssetCache` · 내장 등록 줄). */
+        struct ReloadEntry
+        {
+            const IAssetCache*       _pCache;
+            AssetCacheReloadFunction _pReload;
+        };
+        vector<ReloadEntry> _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
         /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. */
         ContentSource _contentSource;
 

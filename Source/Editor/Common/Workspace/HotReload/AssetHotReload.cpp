@@ -527,8 +527,14 @@ namespace sw::editor
                 SW_LOG_ERROR( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
                 return ReloadOutcome::Failed;
             }
+            const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
+            if ( pReload == nullptr )
+            {
+                SW_LOG_ERROR( "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
+                return ReloadOutcome::Failed;
+            }
             SW_LOG_INFO( "Hot-Reloading asset: %#", relativePath );
-            pCache->reload( assetID, pDevice );
+            pReload( *pCache, assetID, pDevice );
         }
 
         Scene*             pScene   = getActiveScene();
@@ -544,10 +550,11 @@ namespace sw::editor
         uint32            reloadedCount{ 0 };
         for ( IAssetCache* pCache : resources.getAllAssetCache() )
         {
-            if ( pCache->isCached( relativePath ) == false )
+            const AssetCacheReloadFunction pReload = resources.findReloadFunction( pCache );
+            if ( pReload == nullptr || pCache->isCached( relativePath ) == false )
                 continue;
             SW_LOG_INFO( "Hot-Reloading asset: %# (%#)", relativePath, pCache->getAssetKindName() );
-            pCache->reload( assetID, pDevice );
+            pReload( *pCache, assetID, pDevice );
             ++reloadedCount;
         }
         return reloadedCount;

@@ -41,6 +41,7 @@ namespace sw
         , _pPackManager{ make_unique<PackManager>() }
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{ "AssetManager.AssetCache" }
+        , _listReloadEntry{}
         , _contentSource{ ContentSource::Cooked }
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
@@ -56,6 +57,12 @@ namespace sw
             {
                 _listBuiltInAssetCache.push_back( &pRegistration->_pGetShared() );
             }
+            else
+            {
+                continue;
+            }
+            if ( pRegistration->_pReload != nullptr )
+                _listReloadEntry.push_back( ReloadEntry{ _listBuiltInAssetCache.back(), pRegistration->_pReload } );
         }
         std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), isKindNameLess );
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
@@ -192,11 +199,23 @@ namespace sw
         // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
     }
 
-    Subscription AssetManager::registerAssetCache( IAssetCache* pCache )
+    Subscription AssetManager::registerAssetCache( IAssetCache* pCache, AssetCacheReloadFunction pReload )
     {
         if ( addAssetCache( pCache ) == false )
             return {};
+        if ( pReload != nullptr )
+            _listReloadEntry.push_back( ReloadEntry{ pCache, pReload } );
         return _subscriptions.issue( reinterpret_cast<uint64>( pCache ) );
+    }
+
+    AssetCacheReloadFunction AssetManager::findReloadFunction( const IAssetCache* pCache ) const
+    {
+        for ( const ReloadEntry& entry : _listReloadEntry )
+        {
+            if ( entry._pCache == pCache )
+                return entry._pReload;
+        }
+        return nullptr;
     }
 
     bool AssetManager::addAssetCache( IAssetCache* pCache )
@@ -221,7 +240,11 @@ namespace sw
 
     void AssetManager::releaseSubscription( uint64 id )
     {
-        (void)_registeredAssetCache.remove( reinterpret_cast<const IAssetCache*>( id ) ); // 언로드 훑기가 먼저 뺐으면 없다
+        const IAssetCache* const pCache = reinterpret_cast<const IAssetCache*>( id );
+        (void)_registeredAssetCache.remove( pCache ); // 언로드 훑기가 먼저 뺐으면 없다
+        _listReloadEntry.erase( std::remove_if( _listReloadEntry.begin(), _listReloadEntry.end(), [pCache]( const ReloadEntry& entry )
+        { return entry._pCache == pCache; } ),
+                                _listReloadEntry.end() );
     }
 
     vector<IAssetCache*> AssetManager::getAllAssetCache() const

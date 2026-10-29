@@ -88,7 +88,7 @@ namespace sw
         /** @brief 그 경로의 메시가 사용 중이면 true 입니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 제자리에서 다시 읽습니다(`reloadShared`). 물리 셰이프 캐시는 사용 중인 메시가 없어도 비웁니다(다음 셰이프가 새 정점을 읽습니다). */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice );
         /** @brief 지금 사용 중인 메시 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 캐시와 경고 기록, 물리 셰이프 캐시를 비웁니다. 사용 중인 메시는 그대로이고, 다음 요청은 파일을 새로 읽습니다. */
@@ -99,6 +99,8 @@ namespace sw
     private:
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         static MeshHandle requestWith( string_view path, AssetLoadStart start );
+        /** @brief 지금 누가 쥔 @p path 의 메시입니다(없으면 nullptr). 핫 리로드(`MeshCacheReload.cpp`)가 같은 표를 본다. */
+        static shared_ptr<Mesh> findLiveMesh( string_view path );
     };
 } // namespace sw
 

@@ -86,7 +86,7 @@ namespace sw
         /** @brief 그 경로의 에셋을 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 다시 읽습니다(`reloadShared`). 디바이스는 쓰지 않습니다. */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override;
+        void reload( const AssetID& assetID, IRHIDevice* pDevice );
         /** @brief 지금 누가 쥔 에셋 수입니다. */
         size_t getCachedCount() const override;
         /** @brief 표를 비웁니다. 쥔 쪽의 에셋은 그대로이고, 다음 요청은 파일을 새로 읽습니다. */

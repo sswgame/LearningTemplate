@@ -31,6 +31,7 @@ namespace sw
     {
         CreateAssetCacheFunction    _pCreate;    ///< 소유 캐시면 만드는 함수, 아니면 nullptr
         GetSharedAssetCacheFunction _pGetShared; ///< 공유 캐시면 빌려 주는 함수, 아니면 nullptr
+        AssetCacheReloadFunction    _pReload;    ///< 핫 리로드 함수(배포 · 다시 읽을 파일이 없는 캐시는 nullptr)
     };
 } // namespace sw
 
@@ -79,20 +80,21 @@ namespace sw
 /**
  * @brief 이름이 식별자가 아닌 소유 캐시 @p Type(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 등)을 등록합니다. @p id 는 정적 이름을 만드는 식별자입니다.
  */
-#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                   \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>, \
-                                                                                nullptr };                            \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                               \
-    {                                                                                                                 \
-        &sw_builtInAssetCache_##id                                                                                    \
+#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                                \
+    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>,              \
+                                                                                nullptr, SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) }; \
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                                            \
+    {                                                                                                                              \
+        &sw_builtInAssetCache_##id                                                                                                 \
     }
 
 /**
  * @brief 공유 캐시를 내장 캐시로 등록합니다. @p id 는 정적 이름을 만드는 식별자, @p pGetShared 는 `IAssetCache&` 를 돌려주는 함수입니다.
+ *        공유 캐시는 코드로 짓는 값 표라 다시 읽을 파일이 없다(리로드 함수 없음).
  */
-#define SW_BUILT_IN_SHARED_ASSET_CACHE( id, pGetShared )                                               \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ nullptr, pGetShared }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                \
-    {                                                                                                  \
-        &sw_builtInAssetCache_##id                                                                     \
+#define SW_BUILT_IN_SHARED_ASSET_CACHE( id, pGetShared )                                                        \
+    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ nullptr, pGetShared, nullptr }; \
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                         \
+    {                                                                                                           \
+        &sw_builtInAssetCache_##id                                                                              \
     }

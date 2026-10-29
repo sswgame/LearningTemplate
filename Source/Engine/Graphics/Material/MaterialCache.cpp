@@ -15,6 +15,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCacheImpl.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
@@ -39,104 +40,6 @@ namespace sw
             return s_stats;
         }
     } // namespace
-
-    struct MaterialCache::Impl
-    {
-        struct Entry
-        {
-            shared_ptr<Material> _material; ///< shared 인 이유는 Material.h 머리 주석에 있습니다(렌더 패킷이 소유를 빌립니다)
-            string               _path;
-            uint32               _refCount{ 0 };
-        };
-
-        unordered_map<string, Entry> _mapEntry;
-        vector<string>               _listPendingKey; ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
-        vector<string>               _listPSOWarmKey; ///< 고정(`pinAsset`)이 넣은, PSO 를 미리 만들 경로(`_mutex` 아래)
-        atomic<uint32>               _pendingCount;   ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
-        atomic<uint32>               _psoWarmCount;   ///< `_listPSOWarmKey` 의 크기. 0 이면 `takePSOWarmMaterials` 가 잠그지 않는다(매 프레임 불린다)
-        shared_mutex                 _mutex;
-        /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
-        atomic<std::thread::id> _initOwner;
-        uint32                  _initDepth; ///< 쥔 스레드의 중첩 깊이입니다. 쥔 스레드만 읽고 씁니다
-
-        Impl()
-            : _mapEntry{}
-            , _listPendingKey{}
-            , _listPSOWarmKey{}
-            , _pendingCount{ 0 }
-            , _psoWarmCount{ 0 }
-            , _mutex{}
-            , _initOwner{ std::thread::id{} }
-            , _initDepth{ 0 }
-        {
-        }
-
-        /**
-         * @brief 디바이스로 머티리얼을 초기화하는 구간을 한 스레드가 쥐게 합니다. 다른 스레드가 쥐고 있으면 오류를 남기고 멈춥니다(모든 구성).
-         * @details 초기화는 `_mutex` 밖에서 한다(GL 은 렌더 스레드의 프레임 끝을 기다리는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
-         *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · `initializePending` · 에디터 `reload`)이고
-         *          비용은 원자 비교 한 번이라 Release 에서도 확인한다. 같은 스레드의 중첩은 허용한다.
-         */
-        struct DeviceInitScope
-        {
-            Impl& _impl;
-            bool  _bOwns{ false };
-
-            /// @brief 쥘 수 없으면 기다리지도 멈추지도 않고 `owns()` 가 false 가 되는 생성입니다(렌더 스레드의 `initializePending`).
-            struct TryTag
-            {
-            };
-
-            DeviceInitScope( Impl& impl, TryTag )
-                : _impl{ impl }
-            {
-                const std::thread::id self = std::this_thread::get_id();
-                std::thread::id       expected{};
-                if ( _impl._initOwner.compare_exchange_strong( expected, self ) )
-                {
-                    _impl._initDepth = 1;
-                    _bOwns           = true;
-                }
-                else if ( expected == self )
-                {
-                    ++_impl._initDepth;
-                    _bOwns = true;
-                }
-            }
-
-            bool owns() const { return _bOwns; }
-
-            explicit DeviceInitScope( Impl& impl )
-                : _impl{ impl }
-                , _bOwns{ true }
-            {
-                const std::thread::id self = std::this_thread::get_id();
-                std::thread::id       expected{};
-                if ( _impl._initOwner.compare_exchange_strong( expected, self ) )
-                {
-                    _impl._initDepth = 1;
-                    return;
-                }
-                if ( expected == self )
-                {
-                    ++_impl._initDepth;
-                    return;
-                }
-                SW_FATAL( "Materials are initialized on two threads at once - initialize them on the game thread (MaterialCache::acquire with a device, reload, initializePending)" );
-            }
-
-            ~DeviceInitScope()
-            {
-                if ( _bOwns == false )
-                    return;
-                if ( --_impl._initDepth == 0 )
-                    _impl._initOwner.store( std::thread::id{} );
-            }
-
-            DeviceInitScope( const DeviceInitScope& )            = delete;
-            DeviceInitScope& operator=( const DeviceInitScope& ) = delete;
-        };
-    };
 
     MaterialCache::MaterialCache()
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
@@ -311,43 +214,6 @@ namespace sw
         const string                   key = FileUtil::normalizePath( relativePath );
         ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
         return _impl->_mapEntry.find( key ) != _impl->_mapEntry.end();
-    }
-
-    void MaterialCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
-    {
-        const string_view relativePath = assetID.view();
-        SW_MEMORY_SCOPE( Material );
-        if ( relativePath.empty() || _impl == nullptr )
-            return;
-
-        const string key{ FileUtil::normalizePath( relativePath ) };
-
-        // 대기와 초기화는 잠금 밖에서 한다. `waitIdle` 은 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
-        // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
-        shared_ptr<Material> material;
-        {
-            ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
-            const auto                     it = _impl->_mapEntry.find( key );
-            if ( it == _impl->_mapEntry.end() )
-                return;
-            material = it->second._material;
-        }
-        if ( pDevice == nullptr )
-            return;
-
-        const Impl::DeviceInitScope initScope{ *_impl };
-        if ( material->isRHIValid() )
-        {
-            // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고
-            // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
-            // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
-            // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
-            pDevice->waitIdle( RHIWaitIdleReason::HotReload );
-            material->releaseRHI( pDevice );
-        }
-
-        if ( material->initialize( pDevice, AssetID{ key } ) == false )
-            SW_LOG_ERROR( "Hot-Reload failed for Material %#", key.c_str() );
     }
 
     shared_ptr<const void> MaterialCache::pinAsset( string_view relativePath )

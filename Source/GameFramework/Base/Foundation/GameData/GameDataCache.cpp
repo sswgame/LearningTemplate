@@ -16,8 +16,9 @@ namespace sw
             /** @brief 캐시 하나와, 묶인 매니저에 올린 등록 구독입니다(묶인 매니저가 없으면 빈 구독). */
             struct CacheEntry
             {
-                IAssetCache* _pCache{ nullptr };
-                Subscription _registration{};
+                IAssetCache*             _pCache{ nullptr };
+                Subscription             _registration{};
+                AssetCacheReloadFunction _pReload{ nullptr };
             };
 
             struct RegistryState
@@ -39,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    void GameDataCacheRegistry::registerCache( IAssetCache* pCache )
+    void GameDataCacheRegistry::registerCache( IAssetCache* pCache, AssetCacheReloadFunction pReload )
     {
         if ( pCache == nullptr )
             return;
@@ -50,8 +51,9 @@ namespace sw
         ScopedLock<mutex>                  lock{ pState->_mutex };
         GameDataCacheInternal::CacheEntry& entry = pState->_listCache.emplace_back();
         entry._pCache                            = pCache;
+        entry._pReload                           = pReload;
         if ( pState->_pAssetManager != nullptr )
-            entry._registration = pState->_pAssetManager->registerAssetCache( pCache );
+            entry._registration = pState->_pAssetManager->registerAssetCache( pCache, pReload );
     }
 
     void GameDataCacheRegistry::unregisterCache( const IAssetCache* pCache )
@@ -83,7 +85,7 @@ namespace sw
         // 대입이 이전 매니저의 등록을 먼저 푼다. 풀 때(nullptr)는 빈 구독을 넣는다.
         for ( GameDataCacheInternal::CacheEntry& entry : pState->_listCache )
         {
-            entry._registration = pAssetManager != nullptr ? pAssetManager->registerAssetCache( entry._pCache ) : Subscription{};
+            entry._registration = pAssetManager != nullptr ? pAssetManager->registerAssetCache( entry._pCache, entry._pReload ) : Subscription{};
         }
     }
 } // namespace sw

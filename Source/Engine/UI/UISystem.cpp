@@ -221,8 +221,8 @@ namespace sw
             _uiKeyBindingRegistration = userSettings.addKeyBindingInputMap( *pUIInputMap );
         // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
         AssetManager& assetManager   = engine::getSubsystem<AssetManager>();
-        _documentCacheRegistration   = assetManager.registerAssetCache( &_documentCache );
-        _styleSheetCacheRegistration = assetManager.registerAssetCache( &_styleSheetCache );
+        _documentCacheRegistration   = assetManager.registerAssetCache( &_documentCache, SW_ASSET_CACHE_RELOAD_FUNCTION( UIDocumentCache ) );
+        _styleSheetCacheRegistration = assetManager.registerAssetCache( &_styleSheetCache, SW_ASSET_CACHE_RELOAD_FUNCTION( UIStyleSheetCache ) );
         // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
         UIThemeCatalog themes{};
         if ( themes.loadFromAsset( AssetID{ PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) } ) == false )

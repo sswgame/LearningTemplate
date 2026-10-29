@@ -58,13 +58,6 @@ namespace sw
             (void)relativePath;
             return false;
         }
-        /** @brief 다시 읽을 파일이 없습니다. */
-        void reload( const AssetID& assetID, IRHIDevice* pDevice ) override
-        {
-            const string_view relativePath = assetID.view();
-            (void)relativePath;
-            (void)pDevice;
-        }
         /** @brief 지금 누가 쥔 값의 수입니다. */
         size_t getCachedCount() const override { return _table.countLive(); }
         /** @brief 표를 비웁니다. 쥔 쪽의 값은 그대로이고, 다음 요청은 새로 짓습니다. */
