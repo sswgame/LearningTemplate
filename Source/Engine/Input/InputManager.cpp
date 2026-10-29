@@ -88,6 +88,7 @@ namespace sw
         , _arrOnTextComposition{}
         , _arrCapturedKeyMask{}
         , _arrCapturedGamepadMask{}
+        , _arrSavedAccessibilityFlags{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _virtualInputMode{ VirtualInputMode::Exclusive }
         , _cursorShape{ CursorShape::Arrow }
@@ -100,7 +101,7 @@ namespace sw
         , _bAltHeld{ SW_FALSE }
         , _bCursorHiddenApplied{ SW_FALSE }
         , _bOSDeviceInputBlocked{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bAccessibilityShortcutsDisabled{ SW_FALSE }
     {
     }
 

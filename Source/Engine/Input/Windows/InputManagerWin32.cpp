@@ -186,12 +186,6 @@ namespace sw
 
         /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 나타냅니다. TrackMouseEvent 는 이탈을 한 번 알리고 해제됩니다. */
         atomic<bool> s_bTrackingLeave{ false };
-
-        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키, 토글 키, 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
-        STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
-        TOGGLEKEYS s_prevToggleKeys{ sizeof( TOGGLEKEYS ), 0 };
-        FILTERKEYS s_prevFilterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
-        bool       s_bDisabled{ false };
     } // namespace
 } // namespace sw
 
@@ -557,39 +551,52 @@ namespace sw
 
     void InputManager::disableWindowsAccessibilityShortcuts()
     {
-        SW_ASSERT( engine::isOnPoolWorker() == false ); // `s_bDisabled` 검사 뒤 채우기 — 입력 설정은 메인 스레드 전용이다(`InputManager` 의 다른 메서드와 같다)
-        if ( s_bDisabled == false )
-        {
-            SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );
-            SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &s_prevToggleKeys, 0 );
-            SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &s_prevFilterKeys, 0 );
+        SW_ASSERT( engine::isOnPoolWorker() == false ); // 검사 뒤 채우기 — 입력 설정은 메인 스레드 전용이다(`InputManager` 의 다른 메서드와 같다)
+        if ( _bAccessibilityShortcutsDisabled == SW_TRUE )
+            return;
+        // 바꾸는 것은 dwFlags 뿐이다 — 끄기 전 dwFlags 만 적어 두고, 되돌릴 때 그 사이 사용자가 바꾼 다른 칸(필터 키 시간 …)은 그대로 둔다.
+        STICKYKEYS stickyKeys{ sizeof( STICKYKEYS ), 0 };
+        SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
+        _arrSavedAccessibilityFlags[0] = stickyKeys.dwFlags;
+        stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
+        SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
-            STICKYKEYS stickyKeys = s_prevStickyKeys;
-            stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
-            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
+        TOGGLEKEYS toggleKeys{ sizeof( TOGGLEKEYS ), 0 };
+        SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
+        _arrSavedAccessibilityFlags[1] = toggleKeys.dwFlags;
+        toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
+        SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
-            TOGGLEKEYS toggleKeys = s_prevToggleKeys;
-            toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
-            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
+        FILTERKEYS filterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
+        SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
+        _arrSavedAccessibilityFlags[2] = filterKeys.dwFlags;
+        filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
+        SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
-            FILTERKEYS filterKeys = s_prevFilterKeys;
-            filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
-            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
-
-            s_bDisabled = true;
-        }
+        _bAccessibilityShortcutsDisabled = SW_TRUE;
     }
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
-        SW_ASSERT( engine::isOnPoolWorker() == false ); // `disable…` 와 같은 `s_bDisabled` 를 쓴다(`shutdown` 이 부른다)
-        if ( s_bDisabled )
-        {
-            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &s_prevStickyKeys, 0 );
-            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &s_prevToggleKeys, 0 );
-            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &s_prevFilterKeys, 0 );
-            s_bDisabled = false;
-        }
+        SW_ASSERT( engine::isOnPoolWorker() == false ); // `disable…` 와 같은 칸을 쓴다(`shutdown` 이 부른다)
+        if ( _bAccessibilityShortcutsDisabled == SW_FALSE )
+            return;
+        STICKYKEYS stickyKeys{ sizeof( STICKYKEYS ), 0 };
+        SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
+        stickyKeys.dwFlags = _arrSavedAccessibilityFlags[0];
+        SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
+
+        TOGGLEKEYS toggleKeys{ sizeof( TOGGLEKEYS ), 0 };
+        SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
+        toggleKeys.dwFlags = _arrSavedAccessibilityFlags[1];
+        SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
+
+        FILTERKEYS filterKeys{ sizeof( FILTERKEYS ), 0, 0, 0, 0, 0 };
+        SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
+        filterKeys.dwFlags = _arrSavedAccessibilityFlags[2];
+        SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
+
+        _bAccessibilityShortcutsDisabled = SW_FALSE;
     }
 } // namespace sw
 

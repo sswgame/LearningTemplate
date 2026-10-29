@@ -38,10 +38,8 @@ namespace sw
          */
         struct X11InputInternal
         {
-            static inline bool s_bAccessibilityDisabled{ false };
             /** @brief 창이 X11 포커스를 가지고 있는지 나타냅니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
-            static inline bool   s_bWindowFocused{ false };
-            static inline uint32 s_prevXkbEnabledControls{ 0 };
+            static inline bool s_bWindowFocused{ false };
 
             /**
              * @brief X11 창이면 서버 연결과 창 ID 를 담고 true 입니다. X11 호출(`XQueryPointer` 등)은 이 함수로 얻은 값으로만 한다.
@@ -532,7 +530,7 @@ namespace sw
         // AccessX 팝업이 뜨는 것을 막기 위해서다.
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToDisable = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled;
+        const bool           bNothingToDisable = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_TRUE;
         if ( bNothingToDisable )
             return;
 
@@ -548,10 +546,10 @@ namespace sw
         // 반환값 0 은 X11 Success 이다. X11MacroUndef.h 가 Success 매크로를 지우므로 리터럴 0 을 쓴다.
         if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
-            X11InputInternal::s_prevXkbEnabledControls = pXkb->ctrls->enabled_ctrls;
+            _arrSavedAccessibilityFlags[0] = pXkb->ctrls->enabled_ctrls; // 끄기 전 값은 이 관리자의 칸이다
             pXkb->ctrls->enabled_ctrls &= static_cast<uint32>( ~( XkbStickyKeysMask | XkbSlowKeysMask | XkbBounceKeysMask | XkbAccessXKeysMask ) );
             XkbSetControls( pDisplay, XkbControlsEnabledMask, pXkb );
-            X11InputInternal::s_bAccessibilityDisabled = true;
+            _bAccessibilityShortcutsDisabled = SW_TRUE;
         }
         XkbFreeKeyboard( pXkb, 0, 1 ); // freeDesc=1(True). X11MacroUndef.h 가 True 매크로를 지운다.
     }
@@ -563,7 +561,7 @@ namespace sw
 
         MainWindowSubsystem* pWindowHost       = engine::findSubsystem<MainWindowSubsystem>();
         IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-        const bool           bNothingToRestore = pWindow == nullptr || X11InputInternal::s_bAccessibilityDisabled == false;
+        const bool           bNothingToRestore = pWindow == nullptr || _bAccessibilityShortcutsDisabled == SW_FALSE;
         if ( bNothingToRestore )
             return;
 
@@ -578,9 +576,9 @@ namespace sw
 
         if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
-            pXkb->ctrls->enabled_ctrls = X11InputInternal::s_prevXkbEnabledControls;
+            pXkb->ctrls->enabled_ctrls = _arrSavedAccessibilityFlags[0];
             XkbSetControls( pDisplay, XkbControlsEnabledMask, pXkb );
-            X11InputInternal::s_bAccessibilityDisabled = false;
+            _bAccessibilityShortcutsDisabled = SW_FALSE;
         }
         XkbFreeKeyboard( pXkb, 0, 1 );
     }

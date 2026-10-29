@@ -328,7 +328,12 @@ namespace sw
         void onNativeWindowEvent( const NativeWindowEvent& event );
         void processNativeEvent( const NativeWindowEvent& event );
         void pollPlatform();
+        /**
+         * @brief OS 접근성 단축키(Windows 고정 · 토글 · 필터 키, X11 AccessX)를 끄고 끄기 전 상태를 이 관리자에 적어 둡니다. 이미 껐으면 아무것도 하지 않습니다.
+         * @details 끄기 전 상태는 이 관리자의 칸이다(`_arrSavedAccessibilityFlags`) — 언리얼 `FWindowsApplication` 이 시작 때의 StickyKeys 를 멤버로 들고 내릴 때 되돌리는 것과 같다.
+         */
         void disableWindowsAccessibilityShortcuts();
+        /** @brief `disableWindowsAccessibilityShortcuts` 가 적어 둔 상태로 되돌립니다(`shutdown` 이 부른다). 끈 적이 없으면 아무것도 하지 않습니다. */
         void restoreWindowsAccessibilityShortcuts();
 
     private:
@@ -450,6 +455,7 @@ namespace sw
         DelegateSlot<TextInputDelegate>           _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
         uint64                                    _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
         uint32                                    _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
+        uint32                                    _arrSavedAccessibilityFlags[3];             /**< 접근성 단축키를 끄기 전의 OS 값입니다 — Windows 는 고정 · 토글 · 필터 키의 dwFlags, X11 은 [0] 에 XKB enabled_ctrls. */
         InputKeyboardFocus                        _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
         VirtualInputMode                          _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
         CursorShape                               _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
@@ -457,13 +463,13 @@ namespace sw
         uint8                                     _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
         uint8                                     _bInitialized          : 1;
         uint8                                     _bInputMuted           : 1;
-        uint8                                     _bWindowFocused        : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
-        uint8                                     _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
-        uint8                                     _bAltHeld              : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
-        uint8                                     _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
-        uint8                                     _bOSDeviceInputBlocked : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
-        uint64                                    _humanInputSerial{ 0 };     /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
-        [[maybe_unused]] uint8                    _reserved : 1;
+        uint8                                     _bWindowFocused        : 1;           /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
+        uint8                                     _bMouseLockEngaged     : 1;           /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
+        uint8                                     _bAltHeld              : 1;           /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
+        uint8                                     _bCursorHiddenApplied  : 1;           /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
+        uint8                                     _bOSDeviceInputBlocked : 1;           /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
+        uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
+        uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
 
     private:
     };
