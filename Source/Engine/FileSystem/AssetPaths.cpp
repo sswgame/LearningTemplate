@@ -202,7 +202,12 @@ namespace sw
             /** @brief 칸이 믿을 만한지 가르는 에포크입니다. 음성 칸(@p path 가 빔)은 만든 횟수, 양성 칸은 지운 횟수입니다. */
             static uint64 selectEpoch( const string& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
 
-            /** @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_state._pathCache._mutex` 아래에서만 한다. */
+            /**
+             * @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_state._pathCache._mutex` 아래에서만 한다.
+             * @details 서브시스템으로 옮기지 않은 까닭: 경로 표 · 검색 우선순위 · 디스크 도메인 · 초기화가 모두 이 파일의 프로세스 정적이고, 서비스 바인딩 전(코어 범위의 리소스 루트 단계 ·
+             *          `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구에서도 불린다 — 캐시만 떼어 서비스 칸으로 보내면 바인딩 전 부름이 멈추고 한 상태가 두 주인으로 갈린다.
+             *          `AssetPaths` 전체를 리소스 루트 서브시스템(`ContentRootSubsystem`) 객체로 옮기는 묶음(쓰는 파일 ~105)으로 남긴다(NEXT.md K).
+             */
             inline static ScopeOwned<unordered_map<string, ResolvedEntry>> _s_mapResolvedPath{};
 
             /** @brief 푼 경로 캐시의 계측 칸입니다(`AssetPath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). */
