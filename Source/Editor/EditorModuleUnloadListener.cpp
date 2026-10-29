@@ -28,7 +28,7 @@ namespace sw::editor
 
     EditorModuleUnloadListener::~EditorModuleUnloadListener() = default;
 
-    uint32 EditorModuleUnloadListener::onModuleUnloading( const void* pBegin, const void* pEnd, bool& /*outKeepLibraryMapped*/ )
+    uint32 EditorModuleUnloadListener::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
         // 확장 모듈의 환경설정 섹션 값은 그 이미지의 소유자(`EditorSettingsRegistrar`) 멤버다. 환경설정 창은 고친 뒤 잠시 기다렸다 저장하므로, 그 사이에 언로드되면 고친 값이 사라진다.
         // 그 이미지가 섹션을 가지면 내리기 전에 저장한다(등록 줄은 이미지의 정적 소멸 때 빠지므로 지금은 아직 목록에 있다).

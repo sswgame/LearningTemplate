@@ -32,9 +32,8 @@ namespace sw
                 return issueSubscription( static_cast<uint64>( reinterpret_cast<uintptr_t>( pCreate ) ) );
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
             {
-                (void)outKeepLibraryMapped;
                 return releaseWithin( _pCreateServiceStore, pBegin, pEnd ) + releaseWithin( _pCreateEphemeralStore, pBegin, pEnd );
             }
 

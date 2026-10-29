@@ -33,7 +33,7 @@ namespace sw::editor
         EditorModuleUnloadListener( const EditorModuleUnloadListener& )            = delete;
         EditorModuleUnloadListener& operator=( const EditorModuleUnloadListener& ) = delete;
 
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
     private:
         EditorContext& _context;

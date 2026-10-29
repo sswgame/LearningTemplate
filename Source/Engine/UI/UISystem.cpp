@@ -736,9 +736,8 @@ namespace sw
             _input.restoreFocus( *pActive );
     }
 
-    uint32 UISystem::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+    uint32 UISystem::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        (void)outKeepLibraryMapped;
         uint32 closedCount = 0;
         // 언로드되는 모듈의 변환기 함수와 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다).
         const bool bConverterRemoved = _bindingConverters.removeCodeWithin( pBegin, pEnd ) > 0;

@@ -310,7 +310,7 @@ namespace sw
         /** @brief 실행 중에 바뀐 화면 요청을 꺼냅니다(호스트가 프레임 맨 앞에서). */
         bool consumeDisplayRequest( DisplaySettingsRequest& outRequest ) { return _engineHandlers.consumeDisplayRequest( outRequest ); }
 
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
     private:
         /** @brief 키 바인딩 대상 맵의 구독이 풀렸습니다(@p id 는 맵 주소). 맵을 뗍니다. */

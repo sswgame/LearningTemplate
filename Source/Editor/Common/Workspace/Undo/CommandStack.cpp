@@ -325,9 +325,8 @@ namespace sw
         return droppedCount;
     }
 
-    uint32 CommandStack::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+    uint32 CommandStack::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        (void)outKeepLibraryMapped;
         return removeCodeWithin( pBegin, pEnd );
     }
 

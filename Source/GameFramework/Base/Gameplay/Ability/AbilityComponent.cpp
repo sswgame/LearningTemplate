@@ -38,9 +38,8 @@ namespace sw
         {
         }
 
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
         {
-            (void)outKeepLibraryMapped; // 모두 지울 수 있다
             return _owner.onModuleUnloading( pBegin, pEnd );
         }
 

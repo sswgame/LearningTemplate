@@ -795,7 +795,6 @@ namespace sw
 
         const string previousTempModule = context._tempModulePath;
         void*        pPreviousHandle    = context._pLibraryModule;
-        bool         bKeepPreviousLibrary{ false };
 
         BLOCK( "Swap Module Handles" )
         {
@@ -811,7 +810,7 @@ namespace sw
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
                 engine::unregisterModuleTypes( context._moduleName );
-                bKeepPreviousLibrary = ModuleLibraryUtil::releaseLibraryCode( context._moduleName, pPreviousHandle ) == false;
+                ModuleLibraryUtil::releaseLibraryCode( context._moduleName, pPreviousHandle );
             }
 
             context._pLibraryModule      = prepared._pHandle;
@@ -828,7 +827,7 @@ namespace sw
 
             // 옛 라이브러리는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
-                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousLibrary );
+                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -882,8 +881,8 @@ namespace sw
         if ( prepared._pHandle != nullptr )
         {
             engine::setGlobalRegistrarHeads( prepared._previousHeads );
-            if ( ModuleLibraryUtil::releaseLibraryCode( context._moduleName, prepared._pHandle ) )
-                ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
+            ModuleLibraryUtil::releaseLibraryCode( context._moduleName, prepared._pHandle );
+            ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
 
@@ -905,8 +904,8 @@ namespace sw
             drainTasksBeforeUnload();
 
             engine::unregisterModuleTypes( context._moduleName );
-            if ( ModuleLibraryUtil::releaseLibraryCode( context._moduleName, context._pLibraryModule ) )
-                ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
+            ModuleLibraryUtil::releaseLibraryCode( context._moduleName, context._pLibraryModule );
+            ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
             context._pLibraryModule = nullptr;
         }
 
@@ -929,8 +928,8 @@ namespace sw
         {
             SW_LOG_INFO( "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
             engine::unregisterModuleTypes( it->_name );
-            if ( ModuleLibraryUtil::releaseLibraryCode( it->_name, it->_pHandle ) )
-                ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
+            ModuleLibraryUtil::releaseLibraryCode( it->_name, it->_pHandle );
+            ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
             it->_pHandle = nullptr;
         }
         _listSharedModule.clear();

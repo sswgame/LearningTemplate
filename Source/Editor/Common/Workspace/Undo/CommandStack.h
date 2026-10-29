@@ -129,7 +129,7 @@ namespace sw
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         /**
          * @brief 기록(명령 · 위치 · 보관한 내역)을 씁니다. 코드 단계를 가진 명령은 빼고 위치를 맞춘다. 진행 중인 트랜잭션은 쓰지 않는다.

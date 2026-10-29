@@ -213,7 +213,7 @@ namespace sw
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백(이 관리자의 콜백 네 개와 장치별 콜백)을 해제하고, vtable 이 그 범위에 있는 장치를 등록에서 제거합니다.
          * @details 장치 소멸자는 아직 로드되어 있는 그 이미지의 코드이므로 지금 제거해야 한다. 해제한 개수(콜백 + 장치)를 반환한다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         bool wasAnyInputPressed() const;
         /**

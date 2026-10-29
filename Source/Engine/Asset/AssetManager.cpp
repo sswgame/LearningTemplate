@@ -269,9 +269,8 @@ namespace sw
         }
     }
 
-    uint32 AssetManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+    uint32 AssetManager::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        (void)outKeepLibraryMapped;
         vector<IAssetCache*> listModuleCache;
         for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
         {

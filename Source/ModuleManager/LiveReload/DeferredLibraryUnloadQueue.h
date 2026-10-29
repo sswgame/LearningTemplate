@@ -15,7 +15,6 @@ namespace sw
      * @brief 교체된 옛 라이브러리를 배치 단위로 남겨 두었다가, 배치가 상한을 넘으면 가장 오래된 배치부터 언로드합니다.
      * @details 옛 코드를 가리키는 것(델리게이트, 함수 포인터, vtable, 문자열 리터럴)이 어딘가 남아 있어도, 라이브러리가 로드돼 있는 동안은
      *          크래시가 나지 않고 옛 동작이 한 번 더 돈다. 배치 안에서는 나중에 넣은 것(의존하는 쪽)부터 언로드합니다.
-     *          다른 코드가 구독 중인 채널을 만든 라이브러리(`bKeepMapped`)는 큐에서만 빼고 언로드하지도, 파일을 지우지도 않습니다.
      */
     class DeferredLibraryUnloadQueue final
     {
@@ -28,9 +27,8 @@ namespace sw
         /**
          * @brief 교체된 옛 라이브러리를 지금 배치에 넣고, 배치가 상한을 넘으면 가장 오래된 배치를 언로드합니다. @p pHandle 이 nullptr 이면 아무것도 하지 않습니다.
          * @param shadowPath 라이브러리의 섀도 복사본 경로입니다. 언로드할 때 지웁니다.
-         * @param bKeepMapped 다른 코드가 아직 구독하는 이벤트 채널을 만든 라이브러리다(`ModuleLibraryUtil::releaseModuleCode`) — 언로드하지 않습니다.
          */
-        void deferUnload( string_view moduleName, void* pHandle, string_view shadowPath, bool bKeepMapped );
+        void deferUnload( string_view moduleName, void* pHandle, string_view shadowPath );
         /**
          * @brief 가장 오래된 배치 하나를 언로드합니다. 배치 안에서는 나중에 넣은 것(의존하는 쪽)부터 언로드합니다.
          * @details 언로드를 미룬 라이브러리는 **같은 배치의 미룬 라이브러리나 지금 살아 있는 라이브러리에만** 바인딩돼 있다(의존이 바뀌면 의존하는
@@ -51,7 +49,6 @@ namespace sw
             string _shadowPath;
             void*  _pHandle{ nullptr };
             uint32 _batchID{ 0 };
-            bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 라이브러리 — 내리지 않는다(`ModuleLibraryUtil::releaseModuleCode`)
         };
 
         vector<DeferredLibrary> _listLibrary;   ///< 언로드를 미룬 옛 라이브러리. 오래된 것부터

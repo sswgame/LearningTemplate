@@ -53,9 +53,8 @@ namespace sw
         struct GlobalLogListenerUnloadListener final
         {
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
             {
-                (void)outKeepLibraryMapped;
                 return Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             }
 

@@ -777,9 +777,8 @@ namespace sw
         return _onEvent.add( listener );
     }
 
-    uint32 UserSettingsManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+    uint32 UserSettingsManager::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        (void)outKeepLibraryMapped;
         return _onEvent.removeCodeWithin( pBegin, pEnd ) + _registry.removeCodeWithin( pBegin, pEnd );
     }
 

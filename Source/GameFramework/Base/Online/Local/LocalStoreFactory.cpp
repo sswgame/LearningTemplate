@@ -68,9 +68,8 @@ namespace sw
                 return pBackend == nullptr ? nullptr : pBackend->_createFunction;
             }
 
-            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd )
             {
-                (void)outKeepLibraryMapped;
                 ScopedLock<mutex> lock{ _mutex };
                 uint32            releasedCount = 0;
                 for ( uint32 index = _registeredBackend.getCount(); index > 0; --index )

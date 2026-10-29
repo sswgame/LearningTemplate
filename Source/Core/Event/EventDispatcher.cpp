@@ -121,17 +121,17 @@ namespace sw
 
                 for ( IEvent* pEvent = pHead; pEvent != nullptr; )
                 {
-                    ChannelDispatchEntry callback;
+                    shared_ptr<ChannelMulticast> pMulticast;
                     {
                         ScopedLock<SpinLock>             lock{ _busSpinLock };
                         pair<hashed_string, EventTypeID> key( channel, pEvent->getEventType() );
                         auto                             iter = _mapChannelDispatchTable.find( key );
                         if ( iter != _mapChannelDispatchTable.end() )
-                            callback = iter->second;
+                            pMulticast = iter->second;
                     }
 
-                    if ( callback.isBound() )
-                        callback.invoke( *pEvent );
+                    if ( pMulticast != nullptr )
+                        pMulticast->broadcast( *pEvent );
 
                     IEvent* pNextEvent = pEvent->_next.load( std::memory_order_relaxed );
                     pEvent->~IEvent();
@@ -141,61 +141,47 @@ namespace sw
         }
     }
 
-    uint32 EventDispatcher::removeCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount )
+    Subscription EventDispatcher::subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const IEvent& )> delegate )
     {
-        outRemainingEntryCount = 0;
-        const uintptr_t begin  = reinterpret_cast<uintptr_t>( pBegin );
-        const uintptr_t end    = reinterpret_cast<uintptr_t>( pEnd );
+        assertBusThread();
+        // `add` 를 잠금 안에서 한다 — 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가 동시에 구독할 때 멀티캐스트의 벡터가 경쟁한다.
+        ScopedLock<SpinLock> lock{ _busSpinLock };
+        return findOrCreateChannelUnlocked( channel, type )->add( std::move( delegate ) );
+    }
 
-        uint32                                   releasedCount{ 0 };
-        vector<pair<hashed_string, EventTypeID>> listErase;
-        ScopedLock<SpinLock>                     lock{ _busSpinLock };
-        for ( const auto& [key, entry] : _mapChannelDispatchTable )
+    void EventDispatcher::publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef )
+    {
+        assertBusThread();
+        shared_ptr<ChannelMulticast> pMulticast;
         {
-            if ( entry.isBound() == false || entry._pfnRemoveCodeWithin == nullptr )
-                continue;
-            bool bHasSubscriber{ false };
-            releasedCount += entry._pfnRemoveCodeWithin( entry._pMulticast.get(), pBegin, pEnd, bHasSubscriber );
-
-            // 항목의 함수들은 그 타입을 처음 만진 쪽에서 인스턴스화된다. 그것이 이 범위면 범위가 내려간 뒤 이 항목은 내려간 코드로 뛴다.
-            const uintptr_t broadcastCode   = reinterpret_cast<uintptr_t>( entry._pfnBroadcast );
-            const bool      bCreatedByRange = begin <= broadcastCode && broadcastCode < end;
-            if ( bCreatedByRange == false )
-                continue;
-            if ( bHasSubscriber )
-            {
-                ++outRemainingEntryCount;
-                continue;
-            }
-            listErase.push_back( key );
+            ScopedLock<SpinLock> lock{ _busSpinLock };
+            pMulticast = findOrCreateChannelUnlocked( channel, type );
         }
-        // 멀티캐스트의 해제자도 그 범위의 코드다. 범위가 아직 올라와 있는 지금 지운다.
-        for ( const pair<hashed_string, EventTypeID>& key : listErase )
+        pMulticast->broadcast( eventRef );
+    }
+
+    shared_ptr<EventDispatcher::ChannelMulticast> EventDispatcher::findOrCreateChannelUnlocked( hashed_string channel, EventTypeID type )
+    {
+        shared_ptr<ChannelMulticast>& pMulticast = _mapChannelDispatchTable[pair<hashed_string, EventTypeID>( channel, type )];
+        if ( pMulticast == nullptr )
+            pMulticast = sw::make_shared<ChannelMulticast>();
+        return pMulticast;
+    }
+
+    uint32 EventDispatcher::removeCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32               releasedCount{ 0 };
+        ScopedLock<SpinLock> lock{ _busSpinLock };
+        for ( const auto& [key, pMulticast] : _mapChannelDispatchTable )
         {
-            _mapChannelDispatchTable.erase( key );
+            releasedCount += pMulticast->removeCodeWithin( pBegin, pEnd );
         }
         return releasedCount;
     }
 
-    uint32 EventDispatcher::countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const
+    uint32 EventDispatcher::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        uint32               count{ 0 };
-        ScopedLock<SpinLock> lock{ _busSpinLock };
-        for ( const auto& [key, entry] : _mapChannelDispatchTable )
-        {
-            if ( ModuleLibraryUtil::isAddressWithin( reinterpret_cast<const void*>( reinterpret_cast<uintptr_t>( entry._pfnBroadcast ) ), pBegin, pEnd ) )
-                ++count;
-        }
-        return count;
-    }
-
-    uint32 EventDispatcher::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
-    {
-        uint32       remainingEntryCount{ 0 };
-        const uint32 releasedCount = removeCodeWithin( pBegin, pEnd, remainingEntryCount );
-        if ( remainingEntryCount > 0 )
-            outKeepLibraryMapped = true;
-        return releasedCount + removeQueuedEventsWithin( pBegin, pEnd );
+        return removeCodeWithin( pBegin, pEnd ) + removeQueuedEventsWithin( pBegin, pEnd );
     }
 
     uint32 EventDispatcher::removeQueuedEventsWithin( const void* pBegin, const void* pEnd )

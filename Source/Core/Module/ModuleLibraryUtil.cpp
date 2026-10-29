@@ -134,7 +134,6 @@ namespace sw
             {
                 const utf8* _pHandlerName{ nullptr };
                 uint32      _releasedCount{ 0 };
-                bool        _bKeepLibraryMapped{ false };
                 bool        _bExpected{ false };
             };
 
@@ -171,7 +170,7 @@ namespace sw
                     ReleaseResult result{};
                     result._pHandlerName  = entry._desc._pName;
                     result._bExpected     = entry._desc._bReleaseExpected;
-                    result._releasedCount = entry._function( pBegin, pEnd, result._bKeepLibraryMapped );
+                    result._releasedCount = entry._function( pBegin, pEnd );
                     outListResult.push_back( result );
                 }
                 _walkingThread = std::thread::id{};
@@ -519,11 +518,8 @@ namespace sw
     }
 
 #if SW_WITH_DYNAMIC_MODULES
-    uint32 ModuleLibraryUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepLibraryMapped )
+    uint32 ModuleLibraryUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd )
     {
-        if ( pOutKeepLibraryMapped != nullptr )
-            *pOutKeepLibraryMapped = false;
-
         // 모듈은 자기가 등록한 것을 스스로 해제해야 한다 — 등록 API 는 구독(`Subscription`)을 돌려주므로 구독을 든 객체가 사라지면 풀린다.
         // 이 훑기는 정리가 아니라 탐지기다: 여기서 뗀 것이 있으면 형식 밖의 등록(원시 포인터 · 이름 등록)이 해제를 빠뜨렸다는 뜻이라 오류로 남긴다(뗀 뒤 라이브러리는 내린다).
         vector<ModuleUnloadHandlerList::ReleaseResult> listResult;
@@ -538,13 +534,6 @@ namespace sw
                 SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
             else if ( result._releasedCount > 0 )
                 SW_LOG_ERROR_ID( "Module.ListenerLeftBehind", "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHandlerName );
-            // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 라이브러리의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
-            if ( result._bKeepLibraryMapped )
-            {
-                SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pHandlerName );
-                if ( pOutKeepLibraryMapped != nullptr )
-                    *pOutKeepLibraryMapped = true;
-            }
         }
         return releasedCount;
     }
@@ -585,23 +574,20 @@ namespace sw
     #endif
     }
 
-    bool ModuleLibraryUtil::releaseLibraryCode( string_view moduleName, void* pHandle )
+    void ModuleLibraryUtil::releaseLibraryCode( string_view moduleName, void* pHandle )
     {
         const void* pBegin{ nullptr };
         const void* pEnd{ nullptr };
         if ( pHandle == nullptr || findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
-            return true;
-        bool bKeepLibraryMapped{ false };
-        (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepLibraryMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
-        return bKeepLibraryMapped == false;
+            return;
+        (void)releaseModuleCode( moduleName, pBegin, pEnd ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
     }
 
     bool ModuleLibraryUtil::unloadModuleLibrary( string_view moduleName, void* pHandle )
     {
         if ( pHandle == nullptr )
             return false;
-        if ( releaseLibraryCode( moduleName, pHandle ) == false )
-            return false;
+        releaseLibraryCode( moduleName, pHandle );
 
         // 이 라이브러리가 끌어온 의존 라이브러리가 함께 언로드되지 않게 한다. 그 라이브러리의 코드를 가리키는 등록은 여기서 해제할 수 없다.
         (void)pinDynamicLibraryDependencies( pHandle );

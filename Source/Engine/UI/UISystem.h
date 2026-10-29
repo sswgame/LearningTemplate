@@ -403,7 +403,7 @@ namespace sw
         void setUserSettings( UserSettingsManager* pSettings );
 
         /** @brief vtable 이 [@p pBegin, @p pEnd) 안에 있는 화면과 위젯을 가진 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
     private:
         /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */

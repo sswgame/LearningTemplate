@@ -19,9 +19,8 @@ namespace sw
 {
     /**
      * @brief 모듈 언로드 처리기입니다(`ModuleLibraryUtil::registerUnloadHandler`). [@p pBegin, @p pEnd) 안의 코드를 가리키는 등록을 떼고 뗀 수를 돌려준다.
-     *        떼어 낼 수 없어 라이브러리를 내리면 안 되면 @p outKeepLibraryMapped 를 true 로 둔다.
      */
-    using ModuleUnloadFunction = Delegate<uint32( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )>;
+    using ModuleUnloadFunction = Delegate<uint32( const void* pBegin, const void* pEnd )>;
 } // namespace sw
 
 namespace sw
@@ -139,23 +138,18 @@ namespace sw
          *          레지스트리를 하나 더하려면 처리기 구독 멤버 한 줄을 더하면 되고, 이 함수는 고치지 않는다.
          *          이 훑기는 탐지기다. 등록은 구독(`Subscription`)이 소유해 모듈 객체와 함께 풀리므로, 예상 밖으로 해제한 것(`_bReleaseExpected` 가 아닌 처리기)은
          *          처리기 이름과 함께 **오류**로 남긴다(`Module.ListenerLeftBehind`). 모듈이 스스로 해제하지 않고 남긴 것이므로 모듈 쪽 버그다.
-         * @param pOutKeepLibraryMapped 주면, 이 라이브러리를 **언로드하면 안 되는지** 받습니다. 라이브러리가 만든 이벤트 채널을 다른 코드가 아직 구독하면 true 입니다.
-         *                            채널의 브로드캐스트 함수와 멀티캐스트의 해제자(`shared_ptr` 컨트롤 블록)가 그 라이브러리의 코드라, 언로드하면 다음
-         *                            발행이나 디스패처 소멸이 언로드된 코드로 점프한다. 그런 라이브러리는 프로세스 끝까지 로드해 둔다(해제할 방법이 없다).
          * @return 모든 처리기에서 해제한 항목 수입니다. 모듈이 제대로 정리했으면 0 입니다.
          */
-        static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepLibraryMapped = nullptr );
+        static uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd );
         /**
          * @brief `loadDynamicLibrary` 로 로드한 라이브러리 @p pHandle 의 코드를 가리키는 등록을 해제합니다(`releaseModuleCode` 를 그 라이브러리 범위로 부릅니다).
          * @details 언로드를 미루는 핫 리로드처럼 등록 해제와 언로드 사이가 벌어지는 곳이 쓴다. 바로 언로드하면 `unloadModuleLibrary` 가 이것까지 한다.
-         * @return 라이브러리를 언로드해도 되면 true 입니다. 라이브러리가 만든 이벤트 채널을 다른 코드가 아직 구독하면 false 이며, 프로세스 끝까지 로드해 둡니다.
-         *         범위를 찾지 못하면(핸들이 null 등) 해제할 것이 없으므로 true 입니다.
          */
-        [[nodiscard]] static bool releaseLibraryCode( string_view moduleName, void* pHandle );
+        static void releaseLibraryCode( string_view moduleName, void* pHandle );
 
         /**
          * @brief `loadDynamicLibrary` 로 로드한 모듈 라이브러리 @p pHandle 을 언로드합니다.
-         * @details 언로드하기 전에 그 라이브러리의 코드를 가리키는 등록을 해제한다(`releaseModuleCode`). 해제할 수 없는 것이 남으면 언로드하지 않고 false 를 반환한다.
+         * @details 언로드하기 전에 그 라이브러리의 코드를 가리키는 등록을 해제한다(`releaseModuleCode`).
          *          그 라이브러리가 끌어온 의존 라이브러리(GameFramework 같은 공유 모듈)는 **언로드하지 않는다**. 의존 라이브러리가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
          *          Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 붙잡으므로 원래 그렇다. 리눅스는 `DT_NEEDED` 참조가 함께 풀려 언로드되므로 여기서 고정한다(`pinDynamicLibraryDependencies`).
          *          핫 리로드(`LiveReloadManager`)는 등록 해제와 언로드 사이에 언로드를 미루므로 `releaseLibraryCode` 만 쓴다.

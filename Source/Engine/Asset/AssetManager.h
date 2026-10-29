@@ -169,7 +169,7 @@ namespace sw
          * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 등록하고 제거하지 않은 것)를 레지스트리에서 제거합니다. 비우지는 않습니다.
          *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 로드되어 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
          */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();

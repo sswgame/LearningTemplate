@@ -72,16 +72,15 @@ namespace sw
 
         /**
          * @brief 지정한 채널에서 이벤트를 구독합니다. 돌려준 구독이 사라지면 해제됩니다.
-         * @details `add` 를 **잠금 안에서** 합니다. 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가 동시에 구독할 때 멀티캐스트의 벡터가 경쟁합니다.
-         *          구독은 채널의 멀티캐스트를 가리킵니다. 해제(구독의 소멸)는 버스 함수라 **소유 스레드에서** 합니다. 채널 항목이 지워지면(`clear` ·
-         *          `removeCodeWithin`) 멀티캐스트와 함께 구독도 무효가 됩니다.
+         * @details 채널은 타입을 지운 멀티캐스트(`ChannelMulticast`) 하나이고 그 코드는 Core 에만 있다 — 구체 타입으로 바꾸는 일은 **구독자 쪽** 델리게이트가 한다.
+         *          그래서 채널 표가 이벤트 타입을 처음 만진 모듈의 코드를 가리키지 않아, 모듈을 내려도 채널은 그대로다(구독자의 델리게이트만 떼어진다).
+         *          해제(구독의 소멸)는 버스 함수라 **소유 스레드에서** 합니다. `clear` 가 채널을 지우면 구독도 무효가 됩니다.
          */
         template <typename T>
         [[nodiscard]] Subscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
         {
-            assertBusThread();
-            ScopedLock<SpinLock> lock{ _busSpinLock };
-            return findOrCreateChannelDelegateUnlocked<T>( channel )->add( delegate );
+            return subscribeErased( channel, T::kType, SW_DELEGATE_LAMBDA( Delegate<void( const IEvent& )>, [delegate]( const IEvent& eventRef )
+            { delegate( static_cast<const T&>( eventRef ) ); } ) );
         }
 
         /** @brief 기본 채널로 이벤트를 즉시 발행합니다. */
@@ -98,13 +97,7 @@ namespace sw
         template <typename T>
         void publish( hashed_string channel, const T& event )
         {
-            assertBusThread();
-            shared_ptr<MulticastDelegate<void( const T& )>> mcast;
-            {
-                ScopedLock<SpinLock> lock{ _busSpinLock };
-                mcast = findOrCreateChannelDelegateUnlocked<T>( channel );
-            }
-            mcast->broadcast( event );
+            publishErased( channel, T::kType, event );
         }
 
         /** @brief 기본 채널 큐에 넣고, processEvents 때 브로드캐스트합니다. */
@@ -157,14 +150,8 @@ namespace sw
         /** @brief 모든 구독과 큐를 비웁니다. */
         void clear();
 
-        /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 해제하고, 그 범위가 만든 채널 항목을 정리합니다. 해제한 구독 수를 반환합니다.
-         * @param outRemainingEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
-         * @details 핫 리로드가 모듈 라이브러리를 언로드하기 전에 부른다(`ModuleLibraryUtil::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트와
-         *          해제)는 그 이벤트 타입을 **처음** 구독하거나 발행한 쪽에서 인스턴스화된다. 그래서 모듈이 만든 항목은 모듈이 언로드된 뒤 발행하면
-         *          언로드된 코드로 점프한다. 그런 항목은 비어 있으면 지운다(다음 구독이나 발행이 자기 쪽에서 새로 만든다).
-         */
-        uint32 removeCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
+        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 해제하고 해제한 수를 반환합니다(모듈 언로드 — 채널 자체는 Core 코드라 남는다). */
+        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /**
          * @brief 큐에 쌓인 이벤트 중 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 제거합니다. 제거한 수를 반환합니다. 어느 스레드에서나 부를 수 있습니다.
@@ -173,17 +160,8 @@ namespace sw
          */
         uint32 removeQueuedEventsWithin( const void* pBegin, const void* pEnd );
 
-        /**
-         * @brief 브로드캐스트 함수가 [@p pBegin, @p pEnd) 안인 채널 항목의 수를 반환합니다. 그 범위의 코드가 처음 구독하거나 발행해 만든 항목이며, 진단과 테스트용입니다.
-         * @details 주소만 비교하고 항목의 함수를 부르지 않으므로, 이미 언로드된 이미지의 범위를 넘겨도 된다.
-         */
-        uint32 countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const;
-
-        /**
-         * @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepLibraryMapped 를 true 로 둡니다.
-         *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 언로드하면 다음 발행이나 디스패처 소멸이 언로드된 코드로 점프하기 때문입니다.
-         */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        /** @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 이미지를 붙들 일은 없다(채널 코드는 Core). */
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         /** @brief 기본 채널 이름을 반환합니다. */
         static const hashed_string& getDefaultChannel()
@@ -257,72 +235,26 @@ namespace sw
             atomic<IEvent*> _pHead{ nullptr };
         };
 
-        /** @brief 타입을 지운 채널 브로드캐스트 엔트리입니다. 람다 없이 함수 포인터와 멀티캐스트만 둡니다. */
-        struct ChannelDispatchEntry
-        {
-            using BroadcastFn  = void ( * )( void* pMulticast, const IEvent& eventRef );
-            using RemoveCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber );
+        /** @brief 채널 하나 — 타입을 지운 멀티캐스트입니다. 이 형의 코드는 `EventDispatcher.cpp`(Core)에서만 인스턴스화된다. */
+        using ChannelMulticast = MulticastDelegate<void( const IEvent& )>;
 
-            BroadcastFn      _pfnBroadcast{ nullptr };
-            RemoveCodeFn     _pfnRemoveCodeWithin{ nullptr }; ///< `removeCodeWithin` 이 타입을 모르는 채 구독을 떼고 남았는지 묻는 길
-            shared_ptr<void> _pMulticast;
-
-            /** @brief 호출할 수 있는 엔트리면 true 입니다. */
-            bool isBound() const { return _pfnBroadcast != nullptr && _pMulticast != nullptr; }
-            /** @brief 저장된 멀티캐스트로 이벤트를 브로드캐스트합니다. */
-            void invoke( const IEvent& eventRef ) const
-            {
-                if ( isBound() )
-                    _pfnBroadcast( _pMulticast.get(), eventRef );
-            }
-        };
-
-        /** @brief IEvent 를 구체 타입으로 캐스팅해 타입별 멀티캐스트로 브로드캐스트합니다. */
-        template <typename T>
-        static void broadcastTypedChannel( void* pMulticast, const IEvent& eventRef )
-        {
-            static_cast<MulticastDelegate<void( const T& )>*>( pMulticast )->broadcast( static_cast<const T&>( eventRef ) );
-        }
-
-        /** @brief 타입별 멀티캐스트에서 [@p pBegin, @p pEnd) 가 만든 구독을 떼고 뗀 수를 반환합니다. @p outHasSubscriber 는 뗀 뒤 남은 구독이 있는지입니다. */
-        template <typename T>
-        static uint32 removeTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber )
-        {
-            MulticastDelegate<void( const T& )>* pTyped        = static_cast<MulticastDelegate<void( const T& )>*>( pMulticast );
-            const uint32                         releasedCount = pTyped->removeCodeWithin( pBegin, pEnd );
-            outHasSubscriber                                   = pTyped->isBound();
-            return releasedCount;
-        }
-
-        /**
-         * @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오.
-         * @details 잠금 범위는 호출부가 정합니다 — 여기서 잡았다 놓으면 호출부의 `add` / `remove` / `broadcast` 가 모두
-         *          잠금 밖에서 돕니다.
-         */
-        template <typename T>
-        shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel ) SW_REQUIRES_LOCK( _busSpinLock )
-        {
-            pair<hashed_string, EventTypeID> key( channel, T::kType );
-
-            const auto iter = _mapChannelDispatchTable.find( key );
-            if ( iter != _mapChannelDispatchTable.end() )
-                return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second._pMulticast );
-
-            shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &removeTypedCodeWithin<T>, mcast };
-            return mcast;
-        }
+        /** @brief 타입을 지운 구독입니다(`subscribe` 의 본체). */
+        Subscription subscribeErased( hashed_string channel, EventTypeID type, Delegate<void( const IEvent& )> delegate );
+        /** @brief 타입을 지운 즉시 발행입니다(`publish` 의 본체). */
+        void publishErased( hashed_string channel, EventTypeID type, const IEvent& eventRef );
+        /** @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오. */
+        shared_ptr<ChannelMulticast> findOrCreateChannelUnlocked( hashed_string channel, EventTypeID type ) SW_REQUIRES_LOCK( _busSpinLock );
 
     private:
         mutable SpinLock _busSpinLock;
         mutable SpinLock _queueSpinLock;
         /**
-         * @brief (채널, 이벤트 타입) → 브로드캐스트 함수 + 멀티캐스트 표입니다. **이 표 하나만 기준입니다.**
+         * @brief (채널, 이벤트 타입) → 멀티캐스트 표입니다. **이 표 하나만 기준입니다.**
          * @details 같은 키로 멀티캐스트를 가리키는 표를 따로 두지 말 것 — 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면,
          *          한쪽만 고친 날 디스패치가 이미 사라진 멀티캐스트를 부르게 됩니다.
          */
-        unordered_map<pair<hashed_string, EventTypeID>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable SW_GUARDED_BY( _busSpinLock );
-        unordered_map<hashed_string, unique_ptr<ChannelEventList>> _mapChannelQueue                              SW_GUARDED_BY( _queueSpinLock );
+        unordered_map<pair<hashed_string, EventTypeID>, shared_ptr<ChannelMulticast>, HashPair> _mapChannelDispatchTable SW_GUARDED_BY( _busSpinLock );
+        unordered_map<hashed_string, unique_ptr<ChannelEventList>> _mapChannelQueue                                      SW_GUARDED_BY( _queueSpinLock );
 
         /**
          * @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다.

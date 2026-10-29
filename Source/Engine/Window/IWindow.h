@@ -317,7 +317,7 @@ namespace sw
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief `removeCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped );
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();

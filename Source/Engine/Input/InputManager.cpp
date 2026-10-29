@@ -141,9 +141,8 @@ namespace sw
         return true;
     }
 
-    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepLibraryMapped )
+    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd )
     {
-        (void)outKeepLibraryMapped;
         uint32 releasedCount{ 0 };
         releasedCount += _onActiveDeviceChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
         releasedCount += _onGamepadConnectionChanged.releaseIfCodeWithin( pBegin, pEnd ) ? 1u : 0u;
