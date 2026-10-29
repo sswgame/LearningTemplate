@@ -358,10 +358,11 @@ namespace sw
         if ( pUI == nullptr )
             return false;
         const string&                           documentPath = findRowDocument( pUI->getEngineDocuments(), setting, pUI->getInputRouter().getInputMode() );
+        UIDocumentCache&                        documents    = engine::getSubsystem<UIDocumentCache>();
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( documentPath, error );
+        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, error );
         vector<UIBindingDesc>                   listBinding;
-        unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, pUI->getDocumentCache(), listBinding, error ) : nullptr;
+        unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( row == nullptr )
         {
             SW_LOG_ERROR( "[UI] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );

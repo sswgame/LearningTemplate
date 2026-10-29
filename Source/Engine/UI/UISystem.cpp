@@ -7,7 +7,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -32,6 +31,7 @@
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
 #include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
@@ -41,6 +41,7 @@
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
+#include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -96,8 +97,8 @@ namespace sw
     UISystem::UISystem()
         : _listScreen{}
         , _offscreen{}
-        , _documentCache{}
-        , _styleSheetCache{}
+        , _pDocumentCache{ nullptr }
+        , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
         , _styleSheetReloadedSubscription{}
         , _theme{}
@@ -148,8 +149,10 @@ namespace sw
         _pFontService                   = pFontService;
         _actionGlyphs._pInput           = &inputManager;
         _actionGlyphs._pUIInputMap      = nullptr;
-        _documentReloadedSubscription   = _documentCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
-        _styleSheetReloadedSubscription = _styleSheetCache.bindReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
+        _pDocumentCache                 = &engine::getSubsystem<UIDocumentCache>();
+        _pStyleSheetCache               = &engine::getSubsystem<UIStyleSheetCache>();
+        _documentReloadedSubscription   = _pDocumentCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
+        _styleSheetReloadedSubscription = _pStyleSheetCache->onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
         _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
         if ( _input.initialize( inputManager, assetID ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
@@ -190,7 +193,8 @@ namespace sw
     span<const utf8* const> UISystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
-                                                          UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName };
+                                                          UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName,
+                                                          UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName };
         return kArrDependency;
     }
 
@@ -213,10 +217,6 @@ namespace sw
         // UI 행동(일시정지 · 확인 · 뒤로 …)도 키 바인딩 설정의 대상이다 — 사용자 파일의 UI 키를 지금 넣고, 옵션 메뉴가 바꿀 수 있게 한다.
         if ( InputMap* pUIInputMap = _input.getUIInputMap(); pUIInputMap != nullptr )
             _uiKeyBindingRegistration = userSettings.addKeyBindingInputMap( *pUIInputMap );
-        // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
-        AssetManager& assetManager   = engine::getSubsystem<AssetManager>();
-        _documentCacheRegistration   = assetManager.registerAssetCache( &_documentCache, SW_ASSET_CACHE_RELOAD_FUNCTION( UIDocumentCache ) );
-        _styleSheetCacheRegistration = assetManager.registerAssetCache( &_styleSheetCache, SW_ASSET_CACHE_RELOAD_FUNCTION( UIStyleSheetCache ) );
         // 테마 목록 — 팩 설정이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
         UIThemeCatalog themes{};
         if ( themes.loadFromAsset( AssetID{ PackEngineSettings::resolve( packSettings._uiThemes, defaultAssets._uiThemes ) } ) == false )
@@ -237,10 +237,10 @@ namespace sw
     void UISystem::shutdownSubsystem()
     {
         _moduleUnloadingSubscription.reset();
-        _styleSheetCacheRegistration.reset();
-        _documentCacheRegistration.reset();
         _uiKeyBindingRegistration.reset();
         shutdown();
+        _pDocumentCache   = nullptr;
+        _pStyleSheetCache = nullptr;
         setLocalization( nullptr );
         setUserSettings( nullptr );
     }
@@ -406,13 +406,13 @@ namespace sw
     {
         string                                  error;
         unique_ptr<Widget>                      root;
-        const shared_ptr<const UIDocumentAsset> document = _documentCache.findOrLoad( documentPath, error );
+        const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( documentPath, error );
         if ( document == nullptr )
         {
             SW_LOG_ERROR( "[UI] Screen document is not loaded: %#", error.c_str() );
             return root;
         }
-        root = UIDocumentLoader::instantiate( *document, _documentCache, outListBinding, error );
+        root = UIDocumentLoader::instantiate( *document, *_pDocumentCache, outListBinding, error );
         if ( root == nullptr )
         {
             SW_LOG_ERROR( "[UI] Screen document cannot be built: %#", error.c_str() );
@@ -424,7 +424,7 @@ namespace sw
         for ( size_t index = 0; index < listDocument.size(); ++index )
         {
             string                                  fragmentError;
-            const shared_ptr<const UIDocumentAsset> current = _documentCache.findOrLoad( listDocument[index], fragmentError );
+            const shared_ptr<const UIDocumentAsset> current = _pDocumentCache->findOrLoad( listDocument[index], fragmentError );
             if ( current == nullptr )
                 continue;
             for ( const string& sheet : current->_listStyleSheet )
@@ -455,7 +455,7 @@ namespace sw
         // 애니메이션은 문서의 것을 쓴다(방금 만들었으므로 캐시에 이미 있다).
         screen._animationPlayer.stopAll();
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = _documentCache.findOrLoad( screen._documentPath, error );
+        const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( screen._documentPath, error );
         screen._animationPlayer.setAnimations( document != nullptr ? document->_listAnimation : vector<UIAnimation>{} );
     }
 
@@ -544,7 +544,7 @@ namespace sw
             if ( listDocument[index] == usedPath )
                 return true;
             string                                  error;
-            const shared_ptr<const UIDocumentAsset> document = _documentCache.findOrLoad( listDocument[index], error );
+            const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( listDocument[index], error );
             if ( document == nullptr )
                 continue;
             for ( const string& fragment : document->_listFragment )
@@ -663,7 +663,7 @@ namespace sw
 
     void UISystem::rebuildStyleSet( UIScreen& screen, const hashed_string& themeName )
     {
-        _theme.rebuildStyleSet( screen, _styleSheetCache, themeName );
+        _theme.rebuildStyleSet( screen, *_pStyleSheetCache, themeName );
     }
 
     UIScreen* UISystem::findScreen( UIScreenHandle handle ) const

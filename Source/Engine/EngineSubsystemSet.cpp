@@ -66,11 +66,13 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/Screen/UITooltipService.h"
+#include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -245,6 +247,9 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<UIClipboardService>() );
         startup.addSubsystem( sw::make_unique<UIGlobalCommandRegistry>() );
         startup.addSubsystem( sw::make_unique<UIBindingConverterRegistry>() );
+        // UI 문서 · 스타일 시트 캐시 — 화면 스택 · 오프스크린 화면 · 테마 · 에디터 미리보기가 같이 읽는 에셋 캐시라 화면 스택 앞에 따로 선다.
+        startup.addSubsystem( sw::make_unique<UIDocumentCache>() );
+        startup.addSubsystem( sw::make_unique<UIStyleSheetCache>() );
         parts._pUISystem = &startup.addSubsystem( sw::make_unique<UISystem>() );
         // 화면 스택 위의 UI 서비스 — 화면 스택에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens`)에 건다.
         startup.addSubsystem( sw::make_unique<UISubtitleService>() );

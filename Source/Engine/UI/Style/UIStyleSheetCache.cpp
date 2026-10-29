@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Style/UIStyleSheetCache.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 
 namespace sw
@@ -22,10 +24,29 @@ namespace sw
 {
     UIStyleSheetCache::UIStyleSheetCache()
         : UITextAssetCache{ "UIStyleSheet", "UI style sheet", &parseSheet }
+        , _assetCacheRegistration{}
     {
     }
 
     UIStyleSheetCache::~UIStyleSheetCache() = default;
+
+    SubsystemInitResult UIStyleSheetCache::initializeSubsystem()
+    {
+        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( this, SW_ASSET_CACHE_RELOAD_FUNCTION( UIStyleSheetCache ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UIStyleSheetCache::shutdownSubsystem()
+    {
+        _assetCacheRegistration.reset();
+        clear();
+    }
+
+    span<const utf8* const> UIStyleSheetCache::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName };
+        return kArrDependency;
+    }
 
     shared_ptr<const UIStyleSheetAsset> UIStyleSheetCache::findOrLoad( string_view path, string& outError )
     {

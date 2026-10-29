@@ -33,7 +33,6 @@ namespace sw
             return;
         }
         _mapPathToAsset[key] = asset;
-        if ( _reloadedHandler.isBound() )
-            _reloadedHandler.get()( key );
+        _onReloaded.broadcast( key );
     }
 } // namespace sw

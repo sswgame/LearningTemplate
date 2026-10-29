@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/DelegateSlot.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -17,8 +17,10 @@
 
 namespace sw
 {
-    /** @brief UI 에셋(문서, 스타일 시트)을 다시 읽어 바꿨다는 알림입니다(인자는 정규화한 경로). `UISystem` 이 받아 화면을 다시 만들거나 맞춥니다. */
+    /** @brief UI 에셋(문서, 스타일 시트)을 다시 읽어 바꿨다는 알림입니다(인자는 정규화한 경로). 화면 스택 · 오프스크린 화면 · 테마가 받아 화면을 다시 만들거나 맞춥니다. */
     using UIAssetReloadedDelegate = Delegate<void( string_view )>;
+    /** @brief 다시 읽기 알림의 칸입니다(받는 쪽이 여럿이다 — 화면 스택 `UISystem` 과 오프스크린 화면 `UIOffscreenScreens`). */
+    using UIAssetReloadedEvent = MulticastDelegate<void( string_view )>;
 
     /**
      * @brief 텍스트 하나를 에셋으로 파싱합니다. 실패하면 nullptr 를 반환하고 @p outError 에 `<경로>:<줄>: <이유>` 를 둡니다.
@@ -42,10 +44,10 @@ namespace sw
         ~UITextAssetCache() override;
 
         /**
-         * @brief 다시 읽어 바꾼 에셋을 알릴 함수를 겁니다(`UISystem` 이 걸며, 그 에셋을 쓰는 화면을 다시 만들거나 맞춥니다).
-         * @details 캐시는 `UISystem::getDocumentCache` 로 누구나 닿으므로 칸 주인을 구독으로 정한다 — 이미 걸려 있으면 단언, 구독이 풀리면 빈다.
+         * @brief 다시 읽어 바꾼 에셋을 알리는 칸입니다(`add` 가 돌려준 구독을 든다). 그 에셋을 쓰는 화면을 가진 서비스(화면 스택 · 오프스크린 화면)가 저마다 건다.
+         * @details 언리얼 `FCoreUObjectDelegates::OnObjectsReplaced` 처럼 받는 쪽이 여럿이라 한 칸 슬롯이 아니라 다중 칸이다.
          */
-        [[nodiscard]] Subscription bindReloadedHandler( UIAssetReloadedDelegate handler ) { return _reloadedHandler.bind( std::move( handler ) ); }
+        UIAssetReloadedEvent& onReloaded() { return _onReloaded; }
 
         const utf8* getAssetKindName() const override { return _pAssetKindName; }
         bool        isCached( string_view relativePath ) const override;
@@ -77,7 +79,7 @@ namespace sw
     private:
         unordered_map<string, shared_ptr<const void>> _mapPathToAsset;      ///< 정규화한 경로에서 파싱한 에셋을 찾는 맵입니다.
         unordered_map<string, string>                 _mapPathToMemoryText; ///< 정규화한 경로에서 메모리 텍스트를 찾는 맵입니다.
-        DelegateSlot<UIAssetReloadedDelegate>         _reloadedHandler;
+        UIAssetReloadedEvent                          _onReloaded;
         const utf8*                                   _pAssetKindName;
         const utf8*                                   _pAssetLabel;
         UITextAssetParseFunction                      _pParse;

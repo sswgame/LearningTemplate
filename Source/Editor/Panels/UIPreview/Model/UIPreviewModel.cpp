@@ -21,6 +21,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -379,13 +380,14 @@ namespace sw::editor
 
     bool UIPreviewModel::saveDocument()
     {
-        UISystem*       pUI     = editor::findSubsystem<UISystem>();
-        const UIScreen* pScreen = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
-        if ( pScreen == nullptr )
+        UISystem*        pUI        = editor::findSubsystem<UISystem>();
+        UIDocumentCache* pDocuments = editor::findSubsystem<UIDocumentCache>();
+        const UIScreen*  pScreen    = pUI != nullptr ? pUI->getOffscreenScreens().findScreen( _screen ) : nullptr;
+        if ( pScreen == nullptr || pDocuments == nullptr )
             return false;
         string text;
         string error;
-        if ( UIPreviewLogic::makeDocumentText( *pUI, *pScreen, _openedDocument, text, error ) == false )
+        if ( UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, text, error ) == false )
         {
             SW_LOG_ERROR( "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
             return false;

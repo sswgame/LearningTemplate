@@ -20,7 +20,6 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
-#include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
@@ -30,7 +29,6 @@
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenMarkers.h"
-#include "Engine/UI/Style/UIStyleSheetCache.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
@@ -43,6 +41,8 @@ namespace sw
     class InputMap;
     class LocalizationManager;
     class TextLayoutEngine;
+    class UIDocumentCache;
+    class UIStyleSheetCache;
     class UserSettingsManager;
     class GameObjectManager;
     class WidgetComponent;
@@ -62,7 +62,7 @@ namespace sw
      *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
      *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
      *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 테마 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
-     *          문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올리며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
+     *          문서 · 스타일 시트 캐시(서브시스템 `UIDocuments` · `UIStyleSheets`)의 다시 읽기 알림을 받으며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
      *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
      *          맨 위에서 포커스를 받는 화면이 **활성 화면**이며 포커스와 UI 액션을 받는다.
@@ -156,9 +156,6 @@ namespace sw
                 return kInvalidUIScreenHandle;
             return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
         }
-        /** @brief UI 문서 캐시입니다. 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록하며, 핫 리로드와 진단에 쓰입니다. */
-        UIDocumentCache&       getDocumentCache() { return _documentCache; }
-        const UIDocumentCache& getDocumentCache() const { return _documentCache; }
 
         // --- 엔진 기본 메뉴(옵션, 일시정지) ---------------------------------------------------
         /**
@@ -186,8 +183,6 @@ namespace sw
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
         // --- 스타일과 테마 ---------------------------------------------------------------
-        /** @brief 스타일 시트 캐시입니다. 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록합니다. */
-        UIStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
         /**
          * @brief 선택할 수 있는 테마를 등록합니다(기동 단계 `UI`, `engine/ui/uithemes.xml`, 팩 설정 `_uiThemes`).
          * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그 테마로, 없으면 목록의 기본 테마로 바꾼다. 그 뒤 설정이 바뀌면
@@ -450,12 +445,10 @@ namespace sw
             UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
-        vector<unique_ptr<UIScreen>>       _listScreen; ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
-        UIOffscreenScreens                 _offscreen;  ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
-        UIDocumentCache                    _documentCache;
-        UIStyleSheetCache                  _styleSheetCache;
-        Subscription                       _documentCacheRegistration;      ///< 문서 캐시의 에셋 캐시 등록 구독(`initializeSubsystem` 이 받고 `shutdownSubsystem` 이 놓는다)
-        Subscription                       _styleSheetCacheRegistration;    ///< 스타일 시트 캐시의 에셋 캐시 등록 구독
+        vector<unique_ptr<UIScreen>>       _listScreen;                     ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
+        UIOffscreenScreens                 _offscreen;                      ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
+        UIDocumentCache*                   _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)
+        UIStyleSheetCache*                 _pStyleSheetCache;               ///< 스타일 시트 캐시(서브시스템 `UIStyleSheets` — 기동이 찾는다)
         Subscription                       _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
         Subscription                       _documentReloadedSubscription;   ///< 문서 캐시의 다시 읽기 알림 칸 구독(`initialize` 가 걸고 `shutdown` 이 놓는다)
         Subscription                       _styleSheetReloadedSubscription; ///< 스타일 시트 캐시의 다시 읽기 알림 칸 구독

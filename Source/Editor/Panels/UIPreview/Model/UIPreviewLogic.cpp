@@ -28,7 +28,6 @@
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -351,7 +350,7 @@ namespace sw::editor
         return false;
     }
 
-    bool UIPreviewLogic::makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
+    bool UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
@@ -359,7 +358,7 @@ namespace sw::editor
             outError = "the preview has no widget tree";
             return false;
         }
-        const shared_ptr<const UIDocumentAsset> document = ui.getDocumentCache().findOrLoad( documentPath, outError );
+        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, outError );
         if ( document == nullptr )
             return false;
         outText = UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );

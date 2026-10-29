@@ -23,7 +23,7 @@ namespace sw
     class PanelWidget;
     class TypeRegistry;
     class UIScreen;
-    class UISystem;
+    class UIDocumentCache;
     class Widget;
     class WidgetTree;
 } // namespace sw
@@ -149,12 +149,12 @@ namespace sw::editor
          */
         [[nodiscard]] static bool applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text );
         /**
-         * @brief 미리보기 화면 @p screen 을 문서 텍스트로 씁니다(`UIDocumentWriter`) — 저장할 파일의 내용입니다.
+         * @brief 미리보기 화면 @p screen 을 문서 텍스트로 씁니다(`UIDocumentWriter`) — 저장할 파일의 내용입니다. 문서 @p documentPath 는 @p documents 에서 읽습니다.
          * @details 스타일 시트 목록은 화면이 아니라 문서 @p documentPath 의 것이다. 화면의 목록은 조각 문서의 시트까지 모은 것이라 그대로 쓰면 조각의 시트가 이 문서로 복사된다.
          *          애니메이션은 화면의 재생기가 가진 문서 애니메이션을 그대로 쓴다.
          * @return 문서나 루트가 없으면 false 이고 @p outError 에 까닭을 적습니다.
          */
-        [[nodiscard]] static bool makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError );
+        [[nodiscard]] static bool makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, string& outText, string& outError );
         // --- 디자이너: 팔레트 · 끌어 놓기 · 슬롯 손잡이 ---------------------------------------------------------------
         /** @brief 문서 순서 번호 @p ordinal 의 위젯이 패널이면 그 패널입니다. 패널이 아니거나 범위 밖이면 nullptr 입니다. */
         static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );

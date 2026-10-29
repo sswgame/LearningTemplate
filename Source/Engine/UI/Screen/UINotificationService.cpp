@@ -87,7 +87,7 @@ namespace sw
 
     span<const utf8* const> UINotificationService::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIDocumentCache::kSubsystemName };
         return kArrDependency;
     }
 
@@ -235,10 +235,11 @@ namespace sw
             SW_LOG_ERROR( "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
             return;
         }
+        UIDocumentCache&                        documents = engine::getSubsystem<UIDocumentCache>();
         string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = _pUI->getDocumentCache().findOrLoad( _pUI->getEngineDocuments()._notificationEntry, error );
+        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( _pUI->getEngineDocuments()._notificationEntry, error );
         vector<UIBindingDesc>                   listBinding;
-        unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, _pUI->getDocumentCache(), listBinding, error ) : nullptr;
+        unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
         if ( widget == nullptr )
         {
             SW_LOG_ERROR( "[UI] Notification entry failed: %#", error.c_str() );
