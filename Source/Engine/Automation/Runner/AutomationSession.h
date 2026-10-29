@@ -65,7 +65,7 @@ namespace sw
          * @param completedScreenshotCount 지금까지 렌더 스레드가 쓴 시나리오 스크린샷 수
          * @return 돌릴 시나리오가 하나라도 있으면 true 입니다(없으면 아무것도 하지 않고 체인도 남기지 않는다).
          */
-        [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount );
+        [[nodiscard]] bool begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing );
         /**
          * @brief 플레이를 시나리오로 녹화합니다(`-scenario-record=<Saved/Automation/...scenario.xml>`). 활성 씬이 플레이를 시작한 첫 프레임부터 입력을 적고,
          *        시나리오가 끝나거나 창이 닫힐 때 파일을 씁니다.
@@ -89,15 +89,15 @@ namespace sw
          * @return 체인이 끝났으면 프로세스 종료 코드, 아니면 `kRunning` 입니다(입력이 없어도 `kRunning`).
          */
         [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
-        /** @brief 돌고 있는 시나리오 단계의 이름 · 단계 · 프레임입니다(창 제목). 돌고 있지 않으면 false 입니다. */
-        [[nodiscard]] bool tryGetRunStatus( string& outScenarioName, string& outStepKind, uint32& outStepNumber, uint32& outFrame ) const override;
+        /** @brief 씬 틱 뒤 — `<Screenshot>` 이 요청한 경로를 이번 프레임의 패킷에 맡깁니다(`ScreenshotRequestQueue::putForNextPacket`, 앞 것이 남았으면 다음 프레임). */
+        void onAfterSceneTick( const EngineFrameContext& context ) override;
+        /** @brief 세션이 엔진에서 떨어집니다(App 이 프레임 구독을 놓기 전) — 창 제목 추적을 처음으로 돌린다. */
+        void onDetachedFromEngine() { _runTitle.reset(); }
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. 지금 단계를 그 결과로 끝맺고, 돌릴 단계가 남았으면 실패로 봅니다(`CloseWindow` 는 마지막 단계에만 둔다).
          * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kRunning` 입니다.
          */
         [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
-        /** @brief `<Screenshot>` 이 요청한 경로를 하나 꺼내 이번 패킷에 싣습니다(앞 관찰자가 이미 채웠으면 다음 패킷으로 미룬다). */
-        void onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) override;
 
     private:
         /** @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다. */
@@ -114,6 +114,10 @@ namespace sw
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */
         void finishRecording();
+        /** @brief 창 제목에 실행 정보를 적습니다(바뀔 때와 일정 프레임마다만 시스템 호출). 시나리오가 없어도 벤치 인자만 있으면 적는다. */
+        void updateRunTitle();
+        /** @brief 처리한 패킷 사진 수입니다(우편함이 없는 호스트는 0). */
+        static uint32 findCompletedScreenshotCount();
 
         unique_ptr<AutomationRunner>        _pRunner;
         unique_ptr<AutomationScenarioChain> _pChain;
@@ -129,5 +133,6 @@ namespace sw
         string                              _playPreviousFixedDelta{};  ///< 재생이 고정 프레임 시간을 걸기 전 값(끝나면 되돌린다)
         uint64                              _playHumanInputSerial{ 0 }; ///< 재생을 시작할 때의 사람 입력 수
         bool                                _bPlayback{ false };        ///< 재생 중(테스트 실행이 아니다)
+        AutomationRunTitleTracker           _runTitle;                  ///< 창 제목의 실행 정보(시나리오 · 백엔드 · 단계 · 프레임)
     };
 } // namespace sw

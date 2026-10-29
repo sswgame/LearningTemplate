@@ -17,8 +17,6 @@ namespace sw
     {
         /** @brief 이번 프레임의 입력 관리자입니다. 입력 단계가 서지 않은 호스트에서는 nullptr 입니다. */
         InputManager* _pInput = nullptr;
-        /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수(프로세스 전체 누적)입니다. 렌더 스레드가 없으면 0 입니다. */
-        uint32 _completedScreenshotCount = 0;
         /** @brief 이번 프레임 시간(초, 시간 배율이 든 값 — 루프가 `beginFrame` · `tick` 에 받은 것)입니다. 창 닫힘에서는 마지막 프레임의 값입니다. */
         float32 _deltaSeconds = 0.0f;
         /**
@@ -26,16 +24,6 @@ namespace sw
          * @details 씬의 문자열을 가리키므로 훅 안에서만 유효합니다. 들고 있으려면 복사합니다. 씬 전환은 프레임 안에서 일어나므로 훅마다 다를 수 있습니다.
          */
         string_view _activeSceneID{};
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 렌더 패킷을 채우는 동안 관찰자에게 넘기는 문맥입니다. 관찰자가 실을 것만 칸으로 둡니다(관찰자는 렌더러 헤더를 몰라도 된다). */
-    struct EngineRenderPacketContext
-    {
-        /** @brief 이 패킷을 그린 뒤 화면 이미지를 쓸 경로입니다. 비어 있으면 찍지 않습니다. 앞 관찰자가 이미 채웠으면 덮어쓰지 않습니다. */
-        string* _pScreenshotPath = nullptr;
     };
 } // namespace sw
 
@@ -69,23 +57,9 @@ namespace sw
          */
         [[nodiscard]] virtual int32 onFrameEnd( const EngineFrameContext& context ) = 0;
         /**
-         * @brief 창 제목에 적을 "지금 무엇을 돌리는가" 입니다. 적을 것이 없으면 false 입니다(기본).
-         * @param outScenarioName 돌고 있는 시나리오 이름
-         * @param outStepKind 마지막으로 시작한 단계 이름(아직 없으면 빈 글)
-         * @param outStepNumber 그 단계가 파일에서 몇 번째인지(0 부터)
-         * @param outFrame 시나리오 프레임
-         */
-        [[nodiscard]] virtual bool tryGetRunStatus( [[maybe_unused]] string& outScenarioName, [[maybe_unused]] string& outStepKind, [[maybe_unused]] uint32& outStepNumber,
-                                                    [[maybe_unused]] uint32& outFrame ) const
-        {
-            return false;
-        }
-        /**
          * @brief 창이 닫혀 루프가 끝났습니다(App 이 루프 뒤에 한 번 부른다).
          * @return 이 관찰자가 정하는 종료 코드, 정할 것이 없으면 `kRunning` 입니다. 코드를 내면 다른 종료 요청(프로파일 세션)보다 이깁니다.
          */
         [[nodiscard]] virtual int32 onWindowClosed( const EngineFrameContext& context ) = 0;
-        /** @brief 이번 프레임의 렌더 패킷을 채우는 중입니다(게임 스레드, 제출 전). */
-        virtual void onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) = 0;
     };
 } // namespace sw

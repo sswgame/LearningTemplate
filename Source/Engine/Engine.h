@@ -12,7 +12,6 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/HeadlessSubsystem.h"
@@ -248,8 +247,6 @@ namespace sw
         vector<IEngineFrameObserver*> _listFrameObserver;
         /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
         Subscription _telemetryFrameSubscription;
-        /** @brief 시나리오 · 벤치 실행 정보를 창 제목에 적습니다(`endFrame` 이 부른다). */
-        AutomationRunTitleTracker _runTitle;
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;

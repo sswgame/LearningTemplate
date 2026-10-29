@@ -242,7 +242,7 @@ namespace sw
     }
 
     void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName,
-                                                const vector<IEngineFrameObserver*>& listObserver )
+                                                const AutomationRunStatus* pRunStatus )
     {
         if ( _bInitialized == false )
         {
@@ -270,18 +270,12 @@ namespace sw
         ++_frame;
 
         AutomationRunTitleInput input;
-        string                  scenarioName;
-        string                  stepKind;
-        uint32                  stepNumber = 0;
-        uint32                  frame      = _frame;
-        bool                    bScenario  = false;
-        for ( const IEngineFrameObserver* pObserver : listObserver )
-        {
-            bScenario = pObserver->tryGetRunStatus( scenarioName, stepKind, stepNumber, frame );
-            if ( bScenario )
-                break;
-        }
-        const bool bBench = bScenario == false && _benchSummary.empty() == false;
+        const bool              bScenario    = pRunStatus != nullptr;
+        const string            scenarioName = bScenario ? pRunStatus->_scenarioName : string{};
+        const string            stepKind     = bScenario ? pRunStatus->_stepKind : string{};
+        const uint32            stepNumber   = bScenario ? pRunStatus->_stepNumber : 0u;
+        const uint32            frame        = bScenario ? pRunStatus->_frame : _frame;
+        const bool              bBench       = bScenario == false && _benchSummary.empty() == false;
         if ( pTitleTarget == nullptr )
             return;
         // 제목 주인은 이 함수 하나다 — 평소 제목은 호스트가 들고(에디터가 프레임마다 정한다), 정한 적이 없으면 창이 처음 가진 제목이다.

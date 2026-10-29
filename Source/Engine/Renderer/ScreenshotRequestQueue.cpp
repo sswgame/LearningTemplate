@@ -33,6 +33,31 @@ namespace sw
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
     }
 
+    bool ScreenshotRequestQueue::putForNextPacket( string_view filePath )
+    {
+        const ScopedLock<mutex> lock{ _mutex };
+        if ( _pendingPacketPath.empty() == false )
+            return false;
+        _pendingPacketPath = string{ filePath };
+        return true;
+    }
+
+    bool ScreenshotRequestQueue::isPacketSlotFree() const
+    {
+        const ScopedLock<mutex> lock{ _mutex };
+        return _pendingPacketPath.empty();
+    }
+
+    bool ScreenshotRequestQueue::takeForPacket( string& outPath )
+    {
+        const ScopedLock<mutex> lock{ _mutex };
+        if ( _pendingPacketPath.empty() )
+            return false;
+        outPath = std::move( _pendingPacketPath );
+        _pendingPacketPath.clear();
+        return true;
+    }
+
     string ScreenshotRequestQueue::getLastPath() const
     {
         const ScopedLock<mutex> lock{ _mutex };

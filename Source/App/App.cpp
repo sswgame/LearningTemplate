@@ -463,7 +463,7 @@ namespace sw
         const bool    bKeepGoing    = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
         const bool    bScenario     = commandLineManager.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
         const bool    bStarted =
-            bScenario && _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u );
+            bScenario && _pAutomationSession->begin( scenarioPath, reportPath, bKeepGoing );
         if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
@@ -530,6 +530,8 @@ namespace sw
 #if SW_AUTOMATION_ENABLED
         ScenarioPlayback::bindPlayer( nullptr ); // 재생기(세션)를 내리기 전에 푼다
 #endif
+        if ( _pAutomationSession != nullptr )
+            _pAutomationSession->onDetachedFromEngine();
         _automationFrameSubscription.reset();
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );

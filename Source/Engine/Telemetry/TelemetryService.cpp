@@ -630,10 +630,6 @@ namespace sw
         return kRunning;
     }
 
-    void TelemetryService::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext )
-    {
-    }
-
     void TelemetryService::emitSceneSummaryLocked()
     {
         if ( _frames.getCount() > 0 && _schema.findEvent( hashed_string( kSceneSummaryEvent ) ) != nullptr )

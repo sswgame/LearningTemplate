@@ -14,8 +14,11 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/HostSubsystemNames.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/RHISubsystem.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -114,7 +117,7 @@ namespace sw
                      ScenarioRecorder::makeReplayID( _recordPath ).c_str() );
     }
 
-    bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing, uint32 completedScreenshotCount )
+    bool AutomationSession::begin( string_view scenarioArgument, string_view reportPath, bool bKeepGoing )
     {
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
@@ -139,7 +142,7 @@ namespace sw
             _pChain.reset();
             return false;
         }
-        startStage( completedScreenshotCount );
+        startStage( findCompletedScreenshotCount() );
         return true;
     }
 
@@ -256,6 +259,7 @@ namespace sw
 
     int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
+        updateRunTitle();
         if ( _bPlayback )
             return updatePlayback( context );
         // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 포함된다.
@@ -265,7 +269,7 @@ namespace sw
         const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
         if ( bNoRunnerToUpdate )
             return kRunning;
-        const uint32 completedScreenshotCount = context._completedScreenshotCount;
+        const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
         const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationOutcome::Running )
@@ -276,16 +280,29 @@ namespace sw
         return exitCode;
     }
 
-    bool AutomationSession::tryGetRunStatus( string& outScenarioName, string& outStepKind, uint32& outStepNumber, uint32& outFrame ) const
+    uint32 AutomationSession::findCompletedScreenshotCount()
     {
-        const bool bRunning = _pRunner != nullptr && _pRunner->isActive();
-        if ( bRunning == false )
-            return false;
-        outScenarioName = _pRunner->getScenario().getName();
-        outStepKind     = _pRunner->getCurrentStepKind();
-        outStepNumber   = _pRunner->getCurrentStepNumber();
-        outFrame        = _pRunner->getFrameIndex();
-        return true;
+        const ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+        return pMailbox != nullptr ? pMailbox->getCompletedPacketSerial() : 0u;
+    }
+
+    void AutomationSession::updateRunTitle()
+    {
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const RHISubsystem* const  pRHIHost    = engine::findSubsystem<RHISubsystem>();
+        const RHI* const           pRHI        = pRHIHost != nullptr ? pRHIHost->findRHI() : nullptr;
+        const utf8* const          pBackend    = pRHI != nullptr && pRHI->hasDevice() ? RHI::getBackendTypeName( pRHI->getCommittedBackend() ) : "";
+        AutomationRunStatus        status{};
+        const bool                 bRunning = _pRunner != nullptr && _pRunner->isActive();
+        if ( bRunning )
+        {
+            status._scenarioName = _pRunner->getScenario().getName();
+            status._stepKind     = _pRunner->getCurrentStepKind();
+            status._stepNumber   = _pRunner->getCurrentStepNumber();
+            status._frame        = _pRunner->getFrameIndex();
+        }
+        _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, engine::findSubsystem<CommandLineManager>(), pBackend,
+                              bRunning ? &status : nullptr );
     }
 
     int32 AutomationSession::onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount )
@@ -336,12 +353,14 @@ namespace sw
         return getAutomationExitCode( result );
     }
 
-    void AutomationSession::onBuildRenderPacket( EngineRenderPacketContext& inoutContext )
+    void AutomationSession::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
     {
-        // 패킷 하나에는 스크린샷이 하나다 — 이미 찼으면 꺼내지 않고 다음 패킷에 싣는다.
-        const bool bCannotTakeScreenshot = _pRunner == nullptr || inoutContext._pScreenshotPath == nullptr || inoutContext._pScreenshotPath->empty() == false;
-        if ( bCannotTakeScreenshot )
+        ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+        if ( _pRunner == nullptr || pMailbox == nullptr )
             return;
-        (void)_pRunner->takePendingScreenshotPath( *inoutContext._pScreenshotPath ); // 요청이 없으면 빈 채로 둔다
+        // 패킷 하나에는 사진이 하나다 — 앞 것이 아직 실리지 않았으면 꺼내지 않고 다음 프레임에 맡긴다.
+        string path;
+        if ( pMailbox->isPacketSlotFree() && _pRunner->takePendingScreenshotPath( path ) )
+            (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 } // namespace sw

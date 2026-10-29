@@ -63,6 +63,20 @@ namespace sw
         /** @brief 마지막으로 처리한 요청이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
         string getLastPath() const;
 
+        /**
+         * @brief 다음에 짓는 렌더 패킷이 그린 이미지(그 게임 프레임)를 @p filePath 에 쓰도록 맡깁니다. 앞 요청이 아직 패킷에 실리지 않았으면 false 입니다(다음 프레임에 다시 맡긴다).
+         * @details `put` 은 렌더 스레드가 다음에 처리하는 프레임을 찍어 어느 게임 프레임인지 정해지지 않는다 — 이 칸은 그 프레임을 정해야 하는 쪽(자동화 `<Screenshot>` · 사진 모드)이 쓴다.
+         */
+        [[nodiscard]] bool putForNextPacket( string_view filePath );
+        /** @brief 패킷을 지을 때(엔진 게임 스레드) 맡긴 경로를 꺼내 @p outPath 에 담습니다. 맡긴 것이 없으면 false 이고 @p outPath 는 그대로입니다. */
+        bool takeForPacket( string& outPath );
+        /** @brief 맡긴 패킷 사진이 없으면(다음 것을 받을 수 있으면) true 입니다. */
+        [[nodiscard]] bool isPacketSlotFree() const;
+        /** @brief 패킷이 실은 사진 하나를 처리했음을 알립니다(쓰지 못했어도 센다 — 기다리는 쪽이 끝을 안다). 렌더 스레드가 부릅니다. */
+        void reportPacketCaptureCompleted() { (void)_completedPacketSerial.fetch_add( 1, std::memory_order_acq_rel ); }
+        /** @brief 처리한 패킷 사진 수입니다(이 우편함이 선 뒤 누적). */
+        uint32 getCompletedPacketSerial() const { return _completedPacketSerial.load( std::memory_order_acquire ); }
+
         /** @brief 이 종류(`RenderThread::CaptureKind` 비트)의 사진을 찍겠다고 알립니다. */
         void expectCapture( uint32 kindBit ) { (void)_expectedCaptureMask.fetch_or( kindBit ); }
         /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다. */
@@ -77,9 +91,11 @@ namespace sw
         mutable mutex                    _mutex;
         string _pendingPath              SW_GUARDED_BY( _mutex );
         string _lastPath                 SW_GUARDED_BY( _mutex );
+        string _pendingPacketPath        SW_GUARDED_BY( _mutex );
         RHITextureHandle _pendingTexture SW_GUARDED_BY( _mutex ){ 0 };
         RHIFormat _pendingFormat         SW_GUARDED_BY( _mutex ){ RHIFormat::R8G8B8A8_UNORM };
         atomic<uint32>                   _completedSerial{ 0 };
+        atomic<uint32>                   _completedPacketSerial{ 0 };
         atomic<uint32>                   _expectedCaptureMask{ 0 };
         atomic<uint32>                   _finishedCaptureMask{ 0 };
         atomic<uint32>                   _failedCaptureMask{ 0 };

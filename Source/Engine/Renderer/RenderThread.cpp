@@ -145,7 +145,6 @@ namespace sw
         , _screenshotShotCount{ 0 }
         , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
-        , _completedScenarioScreenshotCount{ 0 }
         , _bScenarioCaptureEnabled{ false }
         , _requestedScreenshotPath{}
         , _requestedScreenshotTexture{ 0 }
@@ -551,12 +550,14 @@ namespace sw
 
         takeCommandLineScreenshotIfDue( packet );
 
-        // 자동화 시나리오의 `<Screenshot>` 이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다. gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(시나리오가 시작 조건 뒤에 찍는다).
+        // 패킷이 실은 사진(`ScreenshotRequestQueue::putForNextPacket` — 자동화 `<Screenshot>` 등)이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다.
+        // gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(맡긴 쪽이 시점을 정했다).
         if ( packet._screenshotPath.empty() == false )
         {
             if ( _pFrameRenderer == nullptr || writePresentedImage( packet._screenshotPath ) == false )
-                SW_LOG_WARNING( "Scenario screenshot was not written: %#", packet._screenshotPath.c_str() );
-            _completedScenarioScreenshotCount.fetch_add( 1, std::memory_order_acq_rel );
+                SW_LOG_WARNING( "Packet screenshot was not written: %#", packet._screenshotPath.c_str() );
+            if ( ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox() )
+                pMailbox->reportPacketCaptureCompleted();
         }
 
         // 실행 중 요청(`requestScreenshot`: 개발 명령 screenshot, 에디터 버튼)을 처리한다.

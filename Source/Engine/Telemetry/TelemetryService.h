@@ -137,7 +137,6 @@ namespace sw
         void                onAfterSceneTick( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
-        void                onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) override;
 
         /** @brief 스풀 폴더 · 문맥을 정하고 섭니다. 동의는 꺼진 채로 시작합니다. 폴더의 지난 스풀 파일을 닫힌 파일로 이어 받습니다. */
         void initialize( string_view spoolFolder, const TelemetryContext& context );

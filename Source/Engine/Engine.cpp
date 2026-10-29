@@ -88,6 +88,7 @@
     #endif
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThread.h"
+    #include "Engine/Renderer/ScreenshotRequestQueue.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
 #endif
 #if !defined( SW_SHIPPING )
@@ -152,7 +153,6 @@ namespace sw
         , _listCodecSubscription{}
         , _debugKeyActions{}
         , _listFrameObserver{}
-        , _runTitle{}
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
         , _bQuitRequested{ false }
@@ -391,7 +391,6 @@ namespace sw
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _subscriptions.detachAll();
         vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
-        _runTitle.reset(); // 프레임마다 모은 창 제목도 같다
 #if SW_DEV_COMMANDS_ENABLED
         ServerPoseOverlay* const pAuthorityGhost = engine::findSubsystem<ServerPoseOverlay>(); // 서비스 범위가 소유한다(켜지 않은 구성에는 없다)
         if ( pAuthorityGhost != nullptr )
@@ -503,12 +502,7 @@ namespace sw
     EngineFrameContext Engine::makeFrameContext() const
     {
         EngineFrameContext context;
-        context._pInput = _pInputManager;
-#if defined( SW_WITH_CLIENT_CODE )
-        context._completedScreenshotCount = _pRenderThread != nullptr ? _pRenderThread->getCompletedScenarioScreenshotCount() : 0u;
-#else
-        context._completedScreenshotCount = 0u; // Server 타깃 — 렌더 스레드가 없어 찍은 사진이 없다
-#endif
+        context._pInput           = _pInputManager;
         context._deltaSeconds     = _frameDeltaSeconds;
         const Scene* pActiveScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
         if ( pActiveScene != nullptr )
@@ -687,16 +681,9 @@ namespace sw
         {
             SW_MEMORY_SCOPE( RenderCPU );
             RenderFramePacket& packet = _pPacketBuilder->beginPacket();
-            // 관찰자가 실을 것(시나리오 `<Screenshot>` 의 경로)은 다음에 그리는 이 패킷에 싣는다.
-            if ( _listFrameObserver.empty() == false )
-            {
-                EngineRenderPacketContext packetContext;
-                packetContext._pScreenshotPath = &packet._screenshotPath;
-                for ( IEngineFrameObserver* pObserver : _listFrameObserver )
-                {
-                    pObserver->onBuildRenderPacket( packetContext );
-                }
-            }
+            // 이 프레임을 찍어 달라고 맡긴 것(`ScreenshotRequestQueue::putForNextPacket`)은 다음에 그리는 이 패킷에 싣는다.
+            if ( ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>() )
+                (void)pMailbox->takeForPacket( packet._screenshotPath );
 
             // 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 기다리는 동안만 판정한다 — 첫 씬이 플레이를 시작하기 전(로딩 화면을 열기 전)은 자리 잡지 않았다.
             if ( RenderThread::needsCaptureReadiness() )
@@ -819,13 +806,6 @@ namespace sw
                 if ( observerExitCode != IEngineFrameObserver::kRunning )
                     requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
             }
-        }
-        // 캡처한 화면에서 어느 시나리오 · 백엔드 · 단계 · 프레임인지 읽도록 창 제목에 적는다(바뀔 때와 30 프레임마다만 시스템 호출). 벤치 인자만 있어도 적는다.
-        {
-            MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-            const bool                 bBackendUp  = _pRHI != nullptr && _pRHI->hasDevice();
-            const utf8* const          pBackend    = bBackendUp ? RHI::getBackendTypeName( _pRHI->getCommittedBackend() ) : "";
-            _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, getCommandLineManager(), pBackend, _listFrameObserver );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
 #if defined( SW_WITH_CLIENT_CODE )

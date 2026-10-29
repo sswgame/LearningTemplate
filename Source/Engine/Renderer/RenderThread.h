@@ -86,8 +86,6 @@ namespace sw
 
         /** @brief 자동화 시나리오 동안 Present 캡처를 켜 둡니다(`<Screenshot>` 이 화면에 나간 이미지를 캡처합니다). 게임 스레드에서 부릅니다. */
         void setScenarioCaptureEnabled( bool bEnabled ) { _bScenarioCaptureEnabled.store( bEnabled, std::memory_order_release ); }
-        /** @brief 패킷의 스크린샷 요청을 처리한 수입니다(게임 스레드가 읽습니다). */
-        uint32 getCompletedScenarioScreenshotCount() const { return _completedScenarioScreenshotCount.load( std::memory_order_acquire ); }
 
 #if SW_DEV_COMMANDS_ENABLED
         /** @brief `requestDeviceLossAfterDriverWait` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
@@ -189,18 +187,17 @@ namespace sw
         atomic<bool>        _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool             _bLastImmediateSubmit;
-        uint8            _bScreenshotTaken;                 ///< -gv_screenshot 은 한 장만 찍는다.
-        uint8            _bScreenshotWriteFailed;           ///< -gv_screenshot 의 장 중 쓰지 못한 것이 있다(`-gv_screenshotQuit` 의 종료 코드).
-        uint32           _screenshotFrameCounter;           ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
-        uint32           _screenshotShotCount;              ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
-        int64            _screenshotWaitStartMicroseconds;  ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
-        uint32           _budgetFrameCounter;               ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
-        atomic<uint32>   _completedScenarioScreenshotCount; ///< 패킷이 요청한 스크린샷을 처리한 수(쓰지 못했어도 센다. 시나리오가 기다림을 끝낸다)
-        atomic<bool>     _bScenarioCaptureEnabled;          ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
-        string           _requestedScreenshotPath;          ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
-        RHITextureHandle _requestedScreenshotTexture;       ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
-        RHIFormat        _requestedScreenshotFormat;        ///< `_requestedScreenshotTexture` 의 포맷
-        uint32           _requestedScreenshotWaitFrames;    ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
+        uint8            _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.
+        uint8            _bScreenshotWriteFailed;          ///< -gv_screenshot 의 장 중 쓰지 못한 것이 있다(`-gv_screenshotQuit` 의 종료 코드).
+        uint32           _screenshotFrameCounter;          ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
+        uint32           _screenshotShotCount;             ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
+        int64            _screenshotWaitStartMicroseconds; ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
+        uint32           _budgetFrameCounter;              ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
+        atomic<bool>     _bScenarioCaptureEnabled;         ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
+        string           _requestedScreenshotPath;         ///< 받은 `requestScreenshot` 요청의 경로(렌더 스레드만 쓴다). 비면 요청이 없다.
+        RHITextureHandle _requestedScreenshotTexture;      ///< 0이면 Present 캡처이고, 아니면 그 렌더 타깃이다.
+        RHIFormat        _requestedScreenshotFormat;       ///< `_requestedScreenshotTexture` 의 포맷
+        uint32           _requestedScreenshotWaitFrames;   ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         struct PendingRenderTargetRead;
         unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 

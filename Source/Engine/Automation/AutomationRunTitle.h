@@ -77,12 +77,20 @@ namespace sw
 namespace sw
 {
     class CommandLineManager;
-    class IEngineFrameObserver;
+
+    /** @brief 창 제목에 적는 "지금 무엇을 돌리는가" 입니다(`AutomationSession` 이 채운다). */
+    struct AutomationRunStatus
+    {
+        string _scenarioName;    ///< 돌고 있는 시나리오 이름
+        string _stepKind;        ///< 마지막으로 시작한 단계 이름(아직 없으면 빈 글)
+        uint32 _stepNumber{ 0 }; ///< 그 단계가 파일에서 몇 번째인지(0 부터)
+        uint32 _frame{ 0 };      ///< 시나리오 프레임
+    };
     class IWindowTitleTarget;
 
     /**
      * @class AutomationRunTitleTracker
-     * @brief 엔진이 프레임 끝마다 부르면, 시나리오 단계가 바뀔 때와 `kTitleRefreshFrames` 프레임마다만 창 제목을 바꿉니다(바뀔 때만 시스템 호출).
+     * @brief 자동화 세션이 프레임 끝마다 부르면, 시나리오 단계가 바뀔 때와 `kTitleRefreshFrames` 프레임마다만 창 제목을 바꿉니다(바뀔 때만 시스템 호출).
      * @details 시나리오가 없고 벤치 인자(`-gv_stressTest*`)만 있으면 벤치 요약을 적습니다. 처음 부를 때 벤치 인자가 있으면 `[Bench]` 로그 한 줄을 남깁니다.
      *          창 제목을 거는 곳은 여기 하나입니다. 평소 제목은 `MainWindowSubsystem::setBaseTitle`(에디터가 프레임마다 씬 · 미저장 표시를 넣어 정한다)이고,
      *          정한 적이 없으면 창이 처음 가진 제목입니다. 실행 중이면 그 뒤에 `AutomationRunTitleUtil::makeWindowTitle` 로 실행 정보를 붙이고, 아니면 평소 제목 그대로 겁니다.
@@ -101,10 +109,10 @@ namespace sw
          * @param pTitleTarget 제목을 거는 이음매(`MainWindowSubsystem::getTitleTarget`, 없으면 nullptr — 창 없는 실행)
          * @param pCommandLine 명령줄(벤치 인자를 읽는다. 없으면 nullptr)
          * @param backendName 지금 RHI 백엔드 이름(없으면 빈 글)
-         * @param listObserver 프레임 관찰자(시나리오 세션이 실행 정보를 낸다)
+         * @param pRunStatus 돌고 있는 시나리오(없으면 nullptr — 벤치 요약이나 평소 제목)
          */
-        void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName, const vector<IEngineFrameObserver*>& listObserver );
-        /** @brief 처음 상태로 돌아가며 프레임마다 모은 제목 · 요약 글을 저장소까지 놓습니다. 엔진 종료가 종료 누수 창이 닫히기 전에 부릅니다(트래커는 엔진 멤버라 그보다 오래 산다). */
+        void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName, const AutomationRunStatus* pRunStatus );
+        /** @brief 처음 상태로 돌아가며 프레임마다 모은 제목 · 요약 글을 저장소까지 놓습니다. 세션이 엔진에서 떨어질 때 부릅니다(종료 누수 창이 닫히기 전 — 세션은 엔진보다 오래 산다). */
         void reset();
 
     private:
