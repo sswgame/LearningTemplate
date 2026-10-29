@@ -121,7 +121,6 @@ namespace sw
         , _devToolsFrameSubscription{}
         , _engine{}
         , _moduleReload{}
-        , _devConsole{}
         , _gameModuleManager{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
@@ -390,7 +389,9 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _devConsole.initialize( _pWindow, bEnableEditor );
+#if !defined( SW_SHIPPING )
+                _pDevTools->startConsole( bEnableEditor );
+#endif
                 return true;
             }
             case HostServiceID::Observability:
@@ -436,7 +437,9 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _devConsole.shutdown();
+#if !defined( SW_SHIPPING )
+                _pDevTools->stopConsole();
+#endif
                 return;
             }
             case HostServiceID::Observability:
@@ -611,9 +614,8 @@ namespace sw
 
             framePacer.markFrameStart();
 
-            _devConsole.runPendingExec();
-            // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
-            if ( _engine.isQuitRequested() || _devConsole.pollStandardInputCommands() )
+            // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다(개발 도구 관찰자).
+            if ( _engine.isQuitRequested() )
             {
                 _pWindow->requestClose();
                 break;
@@ -629,12 +631,11 @@ namespace sw
             // 모든 단계가 같은 답을 본다.
             _gameModuleManager->beginFrame();
 
-            // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 둘이 읽는다. Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
+            // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
 #if !defined( SW_SHIPPING )
             _engine.updateDebugKeyActions( frameTime._deltaTime );
 #endif
             pollReloadHotkeys();
-            _devConsole.update( _engine.getDebugKeyInputMap() );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.

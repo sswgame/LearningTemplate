@@ -6,12 +6,11 @@
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
- *          핫 리로드는 ModuleReloadDriver(Server 와 같이 쓰는 `Source/GameModuleManager`), 개발 콘솔과 표준 입력 명령은 DevConsoleHost, 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
+ *          핫 리로드는 ModuleReloadDriver(Server 와 같이 쓰는 `Source/GameModuleManager`), 개발 콘솔과 표준 입력 명령은 개발 도구(`DevToolsHost`), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`_host`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 두 가지(일시정지 메뉴의 "끝내기", 운영체제 클립보드)는 App 의 함수 셋이 맡습니다(`installRuntimeUIHooks`).
  */
 #pragma once
-#include "App/DevConsoleHost.h"
 #include "App/RHIBackendSwitcher.h"
 #include "App/UserSettingsHost.h"
 
@@ -149,7 +148,6 @@ namespace sw
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
-        DevConsoleHost                  _devConsole;
         unique_ptr<EditorModuleManager> _gameModuleManager;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(Dev). */
         ModuleCatalog    _moduleCatalog;

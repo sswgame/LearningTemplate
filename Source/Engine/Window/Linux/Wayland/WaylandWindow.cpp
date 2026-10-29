@@ -1224,21 +1224,6 @@ namespace sw
         return _pState->_pFractionalScaleManager != nullptr;
     }
 
-    bool WaylandWindow::tryGetOverlayHandles( WaylandOverlayHandles& outHandles ) const
-    {
-        outHandles                = WaylandOverlayHandles{};
-        const State& state        = *_pState;
-        const bool   bUnavailable = state._pDisplay == nullptr || state._pCompositor == nullptr || state._pSubcompositor == nullptr || state._pShm == nullptr || state._pSurface == nullptr;
-        if ( bUnavailable )
-            return false;
-        outHandles._pDisplay       = state._pDisplay;
-        outHandles._pCompositor    = state._pCompositor;
-        outHandles._pSubcompositor = state._pSubcompositor;
-        outHandles._pShm           = state._pShm;
-        outHandles._pParentSurface = state._pSurface;
-        return true;
-    }
-
     bool WaylandWindow::supportsPointerLock() const
     {
         return _pState->_pPointerConstraints != nullptr && _pState->_pRelativePointerManager != nullptr && _pState->_pPointer != nullptr;
@@ -1490,12 +1475,6 @@ namespace sw
 
     bool WaylandWindow::supportsFractionalScale() const
     {
-        return false;
-    }
-
-    bool WaylandWindow::tryGetOverlayHandles( WaylandOverlayHandles& outHandles ) const
-    {
-        outHandles = WaylandOverlayHandles{};
         return false;
     }
 

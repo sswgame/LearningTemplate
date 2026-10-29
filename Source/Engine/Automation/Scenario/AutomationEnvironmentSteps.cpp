@@ -14,7 +14,6 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Console/DevConsole.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -33,7 +32,7 @@ namespace sw
                     return false;
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                DevConsole::tokenize( *step.findAttribute( "line" ), listToken );
+                DevCommandRegistry::tokenize( *step.findAttribute( "line" ), listToken );
                 if ( listToken.empty() )
                 {
                     outError = step.describe() + ": line is empty";
@@ -56,7 +55,7 @@ namespace sw
             {
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                DevConsole::tokenize( *step.findAttribute( "line" ), listToken );
+                DevCommandRegistry::tokenize( *step.findAttribute( "line" ), listToken );
                 const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : DevCommandRegistry::get().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {

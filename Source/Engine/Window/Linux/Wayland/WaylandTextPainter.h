@@ -1,6 +1,6 @@
 /**
  * @file WaylandTextPainter.h
- * @brief CPU 픽셀 버퍼에 UTF-8 글을 그립니다 — Wayland 에는 X11 의 서버 글꼴(`XDrawString` · Xft)이 없어 스플래시 창 · 개발 콘솔 덧그림이 이것으로 그린다.
+ * @brief CPU 픽셀 버퍼에 UTF-8 글을 그립니다 — Wayland 에는 X11 의 서버 글꼴(`XDrawString` · Xft)이 없어 스플래시 창이 이것으로 그린다.
  * @details 엔진의 글꼴 래스터라이저(`IFontRasterizer`, FreeType)로 시스템 글꼴의 거리장(SDF) 글리프를 만들고 윤곽(거리 0)을 기준으로 가장자리 덮임 비율을 구해 찍는다.
  *          글꼴은 라틴 고정폭 한 벌과 한글 · 일본어를 채우는 폴백 한 벌이다(`SystemFontLocator` 가 이름으로 찾는다). 라틴 글꼴이 하나도 없으면 `initialize` 가 false 다(깨진 글자로 그리지 않는다).
  *          폴백 글꼴이 없으면 그 글꼴에만 있는 글자는 건너뛴다. 그린 글리프는 코드 포인트별로 기억한다. 게임 스레드에서만 부른다(래스터라이저가 그렇다).

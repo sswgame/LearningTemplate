@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
@@ -13,6 +14,7 @@
 
 namespace sw
 {
+    class DevConsoleHost;
     class Engine;
 
     /**
@@ -37,6 +39,14 @@ namespace sw
         void                shutdownSubsystem() override { _pEngine = nullptr; }
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
+        /**
+         * @brief 게임 창 개발 콘솔과 표준 입력 명령 채널을 세웁니다(App 이 호스트 서비스 `DevConsole` 자리에서 부른다). @p bEnableEditor 면 입력은 받지 않고 시작 명령만 돌린다.
+         * @details 이후 프레임마다 관찰자 훅이 돌린다 — 프레임 앞에 시작 명령, 씬 틱 뒤에 콘솔 키, 프레임 끝에 표준 입력(종료 낱말이면 종료 코드 0).
+         */
+        void startConsole( bool bEnableEditor );
+        /** @brief 콘솔을 내립니다(입력 관리자 · UI 보다 먼저 — 엔진 종료 전). 세우지 않았으면 아무것도 하지 않습니다. */
+        void stopConsole();
+
         /** @brief 단축키를 읽을 엔진입니다(디버그 키 맵은 엔진이 든다). 엔진이 선 뒤 · 프레임 관찰자로 붙이기 전에 겁니다. nullptr 이면 단축키를 읽지 않습니다. */
         void setEngine( const Engine* pEngine ) { _pEngine = pEngine; }
 
@@ -44,12 +54,13 @@ namespace sw
         void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts ) override;
 
         // IEngineFrameObserver
-        void                onFrameBegin( const EngineFrameContext& /*context*/ ) override {}
+        void                onFrameBegin( const EngineFrameContext& context ) override;
         void                onAfterSceneTick( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
         [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& /*context*/ ) override { return kRunning; }
 
     private:
-        const Engine* _pEngine;
+        const Engine*              _pEngine;
+        unique_ptr<DevConsoleHost> _pConsole; ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
     };
 } // namespace sw

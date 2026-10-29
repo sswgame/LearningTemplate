@@ -67,6 +67,9 @@ namespace sw
          */
         static const utf8* getImageMarker();
 
+        /** @brief 명령 줄을 낱말로 나눕니다. 큰따옴표로 묶은 것은 공백이 있어도 한 낱말입니다(콘솔 · 시나리오 `<Command>` 단계가 같은 규칙을 쓴다). */
+        static void tokenize( string_view line, vector<string>& outListToken );
+
         /** @brief 명령을 올립니다. 이름이 비었거나 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerCommand( const DevCommandRegistration* pRegistration );
         /** @brief 명령을 뺍니다(없으면 아무 일도 없습니다). */

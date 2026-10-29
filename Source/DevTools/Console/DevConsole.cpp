@@ -1,15 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Console/DevConsole.h"
+#include "DevTools/Console/DevConsole.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Network/DebugReplyLine.h"
 
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Container/StringUtil.h"
-    #include "Core/Network/DebugReplyLine.h"
-
-    #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -130,40 +128,11 @@ namespace sw
         return engine::areEngineServicesBound() ? &engine::getSubsystem<GlobalVariableManager>() : nullptr;
     }
 
-    void DevConsole::tokenize( string_view line, vector<string>& outListToken )
-    {
-        outListToken.clear();
-        string current;
-        bool   bInQuote{ false };
-        bool   bHasToken{ false };
-        for ( const utf8 ch : line )
-        {
-            if ( ch == '"' )
-            {
-                bInQuote  = bInQuote == false;
-                bHasToken = true;
-                continue;
-            }
-            if ( ( ch == ' ' || ch == '\t' ) && bInQuote == false )
-            {
-                if ( bHasToken )
-                    outListToken.push_back( std::move( current ) );
-                current.clear();
-                bHasToken = false;
-                continue;
-            }
-            current += ch;
-            bHasToken = true;
-        }
-        if ( bHasToken )
-            outListToken.push_back( std::move( current ) );
-    }
-
     DevConsoleResult DevConsole::execute( string_view line, string& outReply ) const
     {
         outReply.clear();
         vector<string> listToken;
-        tokenize( line, listToken );
+        DevCommandRegistry::tokenize( line, listToken );
         if ( listToken.empty() )
             return DevConsoleResult::Empty;
 
@@ -279,7 +248,7 @@ namespace sw
     {
         outListCandidate.clear();
         vector<string> listToken;
-        tokenize( line, listToken );
+        DevCommandRegistry::tokenize( line, listToken );
         const bool bNewToken = line.empty() == false && ( line.back() == ' ' || line.back() == '\t' );
         if ( bNewToken )
             listToken.emplace_back();
@@ -327,7 +296,7 @@ namespace sw
             return false;
 
         vector<string> listToken;
-        tokenize( inoutLine, listToken );
+        DevCommandRegistry::tokenize( inoutLine, listToken );
         const bool bNewToken = inoutLine.empty() == false && ( inoutLine.back() == ' ' || inoutLine.back() == '\t' );
         if ( bNewToken || listToken.empty() )
             listToken.emplace_back();
@@ -374,5 +343,3 @@ namespace sw
         return true;
     }
 } // namespace sw
-
-#endif

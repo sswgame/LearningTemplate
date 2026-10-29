@@ -9,6 +9,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
+#include "DevTools/Console/DevConsole.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
@@ -38,7 +40,6 @@
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
-#include "Engine/Console/DevConsole.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"

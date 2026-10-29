@@ -1,18 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Input/DevConsoleController.h"
+#include "DevTools/Console/DevConsoleController.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/UTF8Util.h"
+#include "Core/Log/Logger.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "DevTools/Console/DevConsoleOverlay.h"
 
-    #include "Core/Log/Logger.h"
-    #include "Core/Container/StringUtil.h"
-
-    #include "Engine/Input/InputManager.h"
-    #include "Engine/Input/Map/InputMap.h"
-    #include "Engine/Window/DevConsoleWindow.h"
-    #include "Engine/Window/IWindow.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputMap.h"
 
 namespace sw
 {
@@ -71,15 +68,15 @@ namespace sw
         shutdown();
     }
 
-    bool DevConsoleController::initialize( InputManager* pInput, IWindow* pOwner )
+    bool DevConsoleController::initialize( InputManager* pInput, UISystem* pUI )
     {
         shutdown();
         _pInput = pInput;
         if ( _pInput != nullptr )
             _textInputSubscription =
                 _pInput->bindTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &DevConsoleController::onTextInput, this ), InputKeyboardFocus::DevConsole );
-        if ( pOwner != nullptr )
-            _pWindow = IDevConsoleWindow::createPlatform( *pOwner );
+        if ( pUI != nullptr )
+            _pWindow = make_unique<DevConsoleOverlay>( *pUI );
         return _pWindow != nullptr;
     }
 
@@ -135,7 +132,7 @@ namespace sw
 
         if ( _bOpen == SW_FALSE || _pWindow == nullptr )
             return;
-        // 창 위치는 게임 창을 따라가야 하므로(창을 옮기거나 크기를 바꿀 수 있다) 열려 있는 동안 프레임마다 넘긴다.
+        // 열려 있는 동안 프레임마다 넘긴다(글이 같으면 위젯이 무효화하지 않는다).
         vector<string> listLine;
         vector<uint8>  listErrorFlag;
         collectVisibleLines( listLine, listErrorFlag );
@@ -224,5 +221,3 @@ namespace sw
         outListErrorFlag.push_back( SW_FALSE );
     }
 } // namespace sw
-
-#endif

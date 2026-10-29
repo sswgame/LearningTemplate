@@ -10,26 +10,25 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Console/DevConsole.h"
-
-#if SW_DEV_COMMANDS_ENABLED
+#include "DevTools/Console/DevConsole.h"
+#include "DevTools/DevToolsAPI.h"
 
 namespace sw
 {
-    class IDevConsoleWindow;
+    class DevConsoleOverlay;
     class InputManager;
     class InputMap;
-    class IWindow;
+    class UISystem;
 
     /**
      * @class DevConsoleController
      * @brief 에디터 없이 띄운 게임 창의 개발 콘솔입니다.
      * @details 여는 키와 편집 키는 셸 InputMap(`default.input.xml`)의 액션이고, 글자는 `InputManager` 의 글자 입력(포커스 `DevConsole`)으로 받는다.
      *          열려 있는 동안 `InputManager` 키보드 포커스를 가진다. 그동안 게임 쪽 키 조회와 통합 InputMap 의 키보드 · 패드 바인딩은 "안 눌림" 으로 보인다(패드는 `InputManager::isGamepadControlVisibleToGame`).
-     *          명령, `gv_`, 자동완성, 기록의 해석은 `DevConsole` 이 하고, 그리기는 `IDevConsoleWindow` 가 한다.
-     *          테스트는 플랫폼 창 없이 `RawInputEvent` 를 넣어 돌린다.
+     *          명령, `gv_`, 자동완성, 기록의 해석은 `DevConsole` 이 하고, 그리기는 런타임 UI 오버레이(`DevConsoleOverlay`)가 한다.
+     *          테스트는 UI 없이 `RawInputEvent` 를 넣어 돌린다.
      */
-    class SW_API DevConsoleController
+    class SW_DEVTOOLS_API DevConsoleController
     {
     public:
         /** @brief 입력 줄 위에 보이는 출력 줄 수입니다. */
@@ -44,15 +43,15 @@ namespace sw
         DevConsoleController& operator=( const DevConsoleController& ) = delete;
 
         /**
-         * @brief @p pInput 에 콘솔용 글자 콜백을 등록하고, @p pOwner 가 있으면 그 위에 그릴 플랫폼 창을 만듭니다.
-         * @return 그릴 창을 만들었으면 true 입니다. 만들지 못해도 입력은 받습니다.
+         * @brief @p pInput 에 콘솔용 글자 콜백을 등록하고, @p pUI 가 있으면 그 위에 그릴 오버레이를 둡니다.
+         * @return 그릴 오버레이를 두었으면 true 입니다. 없어도 입력은 받습니다.
          */
-        [[nodiscard]] bool initialize( InputManager* pInput, IWindow* pOwner );
-        /** @brief 글자 콜백을 해제하고 키보드 포커스를 게임에 돌려준 뒤 플랫폼 창을 없앱니다. `InputManager` 보다 먼저 부릅니다. */
+        [[nodiscard]] bool initialize( InputManager* pInput, UISystem* pUI );
+        /** @brief 글자 콜백을 해제하고 키보드 포커스를 게임에 돌려준 뒤 오버레이를 닫습니다. `InputManager` 보다 먼저 부릅니다. */
         void shutdown();
 
         /**
-         * @brief 셸 InputMap 의 콘솔 액션과 이번 프레임 글자를 처리하고, 열려 있으면 창에 그립니다. 디버그 키 맵을 갱신한 뒤 프레임마다 부릅니다.
+         * @brief 셸 InputMap 의 콘솔 액션과 이번 프레임 글자를 처리하고, 열려 있으면 오버레이에 그립니다. 디버그 키 맵을 갱신한 뒤 프레임마다 부릅니다.
          * @details 열기와 닫기가 발화한 프레임의 글자는 버린다. 여는 키가 같은 프레임에 내는 글자(`` ` ``, `~`)가 입력 줄에 들어가지 않게 하기 위해서다.
          *          콘솔 레이어(`InputMapDefaults::kDevConsoleLayerName`)는 콘솔이 열리고 닫히는 것에 맞춰 켜고 끈다.
          */
@@ -81,7 +80,7 @@ namespace sw
         DevConsole                    _console;
         string                        _inputLine;
         string                        _pendingText; /**< 이번 프레임에 온 글자입니다(`update` 가 비웁니다). */
-        unique_ptr<IDevConsoleWindow> _pWindow;
+        unique_ptr<DevConsoleOverlay> _pWindow;
         InputManager*                 _pInput;
         Subscription                  _textInputSubscription; ///< 입력 관리자의 콘솔 포커스 글자 칸 구독
         uint8                         _bOpen             : 1;
@@ -90,5 +89,3 @@ namespace sw
         [[maybe_unused]] uint8        _reserved          : 5;
     };
 } // namespace sw
-
-#endif

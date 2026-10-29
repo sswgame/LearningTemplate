@@ -7,6 +7,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Shader/ShaderRecompiler.h"
@@ -24,10 +25,33 @@ namespace sw
 
     DevToolsHost::DevToolsHost()
         : _pEngine{ nullptr }
+        , _pConsole{}
     {
     }
 
     DevToolsHost::~DevToolsHost() = default;
+
+    void DevToolsHost::startConsole( bool bEnableEditor )
+    {
+        stopConsole();
+        _pConsole = make_unique<DevConsoleHost>();
+        _pConsole->initialize( bEnableEditor );
+    }
+
+    void DevToolsHost::stopConsole()
+    {
+        if ( _pConsole == nullptr )
+            return;
+        _pConsole->shutdown();
+        _pConsole.reset();
+    }
+
+    void DevToolsHost::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        // 시작 명령(`-gv_devConsoleExec`)은 시작 씬이 열린 뒤 한 번 — 이 프레임의 입력 재생 앞이다.
+        if ( _pConsole != nullptr )
+            _pConsole->runPendingExec();
+    }
 
     void DevToolsHost::addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts )
     {
@@ -51,8 +75,12 @@ namespace sw
     void DevToolsHost::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
     {
         // 디버그 HUD — 씬 틱 뒤 · 런타임 UI 앞(HUD 화면이 UI 갱신의 틱에서 섹션을 부른다). 꺼져 있으면 디버그 키 맵 액션 하나를 읽고 끝난다.
+        InputMap* const pShellMap = _pEngine != nullptr ? _pEngine->getDebugKeyInputMap() : nullptr;
         if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
-            pDebugHUD->update( _pEngine != nullptr ? _pEngine->getDebugKeyInputMap() : nullptr );
+            pDebugHUD->update( pShellMap );
+        // 게임 창 콘솔 — 호스트가 이번 프레임의 디버그 키 액션을 갱신한 뒤다(App 루프가 `beginFrame` 뒤에 갱신한다).
+        if ( _pConsole != nullptr )
+            _pConsole->update( pShellMap );
     }
 
     int32 DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
@@ -72,6 +100,9 @@ namespace sw
 #endif
         if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
             pConfigReload->update();
+        // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
+        if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
+            return 0;
         return kRunning;
     }
 } // namespace sw

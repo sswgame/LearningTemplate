@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Console/DevCommandRegistry.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "DevTools/DevToolsAPI.h"
 
 namespace sw
 {
@@ -40,7 +40,7 @@ namespace sw
      *          ③ 전역 변수 이름으로 시작하면 값 하나는 읽기, 그 뒤가 있으면 쓰기(`gv_timeScale 0.5`). 쓰기는 `setValueFromString` 이라
      *          변경 콜백이 불린다(패널 · 명령줄과 같은 길). 답은 출력 줄에 쌓고 로그(`DevConsole`)에도 남긴다 — 에디터 Output Log 에 보인다.
      */
-    class SW_API DevConsole
+    class SW_DEVTOOLS_API DevConsole
     {
     public:
         static constexpr uint32 kMaxHistoryCount = 64;
@@ -59,9 +59,6 @@ namespace sw
          *        넘으면 답을 자르고 끝에 ` truncated=<원래 길이>` 를 붙입니다(명령이 길어도 같다).
          */
         [[nodiscard]] static string makeLogLine( string_view command, string_view reply );
-
-        /** @brief 줄을 낱말로 나눕니다. 큰따옴표로 묶은 것은 공백이 있어도 한 낱말입니다. */
-        static void tokenize( string_view line, vector<string>& outListToken );
 
         /**
          * @brief 줄의 마지막 낱말을 마칠 후보를 사전순으로 채웁니다. 첫 낱말은 내장 명령 · 개발 명령 · 전역 변수, `set`/`get` 뒤는 전역 변수,
@@ -104,5 +101,3 @@ namespace sw
         uint32                 _historyCursor;
     };
 } // namespace sw
-
-#endif

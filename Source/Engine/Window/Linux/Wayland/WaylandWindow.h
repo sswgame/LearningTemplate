@@ -14,28 +14,6 @@
 
 #include "Engine/Window/IWindow.h"
 
-struct wl_compositor;
-struct wl_display;
-struct wl_shm;
-struct wl_subcompositor;
-struct wl_surface;
-
-namespace sw
-{
-    /**
-     * @struct WaylandOverlayHandles
-     * @brief 창 위에 덧그림(서브표면)을 얹는 코드가 창의 연결에서 빌리는 객체입니다(개발 콘솔 `WaylandDevConsoleWindow`). 수명은 창의 것이다 — 창보다 오래 쥐지 않는다.
-     */
-    struct WaylandOverlayHandles
-    {
-        wl_display*       _pDisplay{ nullptr };
-        wl_compositor*    _pCompositor{ nullptr };
-        wl_subcompositor* _pSubcompositor{ nullptr };
-        wl_shm*           _pShm{ nullptr };
-        wl_surface*       _pParentSurface{ nullptr }; ///< 서브표면의 부모(게임 창 표면)
-    };
-} // namespace sw
-
 namespace sw
 {
     /** @class WaylandWindow @brief 파일 머리말 참고. */
@@ -93,12 +71,6 @@ namespace sw
         [[nodiscard]] bool writeClipboardText( string_view text ) override;
         /** @brief 전체 화면은 `xdg_toplevel_set_fullscreen`, 창 모드는 크기를 정하고 크기 통보를 보냅니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
-
-        /**
-         * @brief 서브표면 덧그림에 필요한 객체(연결 · 합성기 · 서브합성기 · 공유 메모리 · 이 창의 표면)를 @p outHandles 에 담습니다.
-         * @return 창이 아직 없거나 컴포지터가 `wl_subcompositor` · `wl_shm` 를 내놓지 않았으면 false 이며 @p outHandles 는 비어 있다.
-         */
-        [[nodiscard]] bool tryGetOverlayHandles( WaylandOverlayHandles& outHandles ) const;
 
         /** @brief 포인터가 이 창 위에 있을 때 커서를 숨기거나 되돌립니다(wl_pointer_set_cursor; 보일 때는 커서 모양 확장이 있으면 기억해 둔 모양, 없으면 커서 테마의 `left_ptr`). 커서 테마가 없으면 false 입니다. */
         [[nodiscard]] bool setCursorVisible( bool bVisible ) override;

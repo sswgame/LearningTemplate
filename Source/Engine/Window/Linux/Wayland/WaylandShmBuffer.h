@@ -1,6 +1,6 @@
 /**
  * @file WaylandShmBuffer.h
- * @brief 공유 메모리(`wl_shm`) 픽셀 버퍼와 그 묶음입니다 — 스플래시 창 · 개발 콘솔 덧그림이 CPU 로 그린 그림을 컴포지터에 넘길 때 쓴다.
+ * @brief 공유 메모리(`wl_shm`) 픽셀 버퍼와 그 묶음입니다 — 스플래시 창이 CPU 로 그린 그림을 컴포지터에 넘길 때 쓴다.
  * @details 형식은 XRGB8888(리틀 엔디언 메모리에서 B · G · R · 안 쓰는 바이트)이라 스플래시의 BGRA 픽셀과 같은 순서다. 라이브러리 헤더는 .cpp 에만 있다.
  *          버퍼는 컴포지터가 `release` 를 알리기 전까지 "쓰는 중"이라 다시 그리면 안 된다 — 묶음(`WaylandShmBufferPool`)이 놀고 있는 것을 골라 준다.
  *          `release` 는 연결 이벤트를 처리(dispatch)해야 온다.

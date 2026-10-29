@@ -54,7 +54,7 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #if SW_DEV_COMMANDS_ENABLED
-    #include "Engine/Console/DevConsole.h"
+    #include "DevTools/Console/DevConsole.h"
 #endif
 
 #include "sw/config/ConfigConstants.h"

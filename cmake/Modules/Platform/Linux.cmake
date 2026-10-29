@@ -30,13 +30,6 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	target_include_directories(sw_platform_linux INTERFACE ${SW_XCB_INCLUDE_DIR})
 	target_link_libraries(sw_platform_linux INTERFACE ${SW_XCB_LIBRARY} ${SW_X11_XCB_LIBRARY})
 
-	# 개발 콘솔 오버레이(X11DevConsoleWindow)가 Xft(fontconfig 폴백 글꼴)로 한글 · 일본어 글자를 그린다. 패키지: libxft-dev(fontconfig · freetype 를 끌고 온다).
-	# 라이선스: libXft · fontconfig 는 MIT 계열, FreeType 은 FTL(BSD 계열)/GPLv2 중 FTL 로 쓴다. 동적 링크이고 배포물에 싣지 않는 시스템 라이브러리다.
-	# 다른 폴더의 대상이 이 INTERFACE 를 쓰므로 가져온 대상은 GLOBAL 이어야 한다.
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(SW_XFT REQUIRED IMPORTED_TARGET GLOBAL xft fontconfig)
-	target_link_libraries(sw_platform_linux INTERFACE PkgConfig::SW_XFT)
-
 	# AT-SPI 접근성 브리지(`SW_ENABLE_ATSPI`) — D-Bus 위의 org.a11y.atspi 객체를 libdbus-1 로 내보낸다. 패키지: libdbus-1-dev(apt 로 깐다).
 	# 라이선스: libdbus 는 AFL-2.1 또는 GPL-2.0+ 이중 — AFL-2.1(허용 라이선스)로 쓴다. 동적 링크이고 배포물에 싣지 않는 시스템 라이브러리다.
 	if(SW_ENABLE_ATSPI)
