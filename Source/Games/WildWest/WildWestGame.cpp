@@ -44,7 +44,7 @@ namespace sw
     bool WildWestGame::onInitialize()
     {
         // 서부극 카탈로그는 디렉터가 씬 데이터의 경로로 읽는다(코드에 경로를 두지 않는다).
-        (void)requestFirstScene(); // 실패는 씬 흐름이 알린다
+        (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 씬 흐름이 알린다
         return true;
     }
 } // namespace sw

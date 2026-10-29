@@ -4,7 +4,7 @@
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
  *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstance::saveStateToFile` 과 `loadStateFromFile` 이 끝날 때 낸다. 성공과 실패 모두 낸다.
- *          - `SceneLoadRequestedEvent`: `GameInstance::requestFirstScene` 과 `requestEntranceScene` 이 씬 로드를 요청할 때 낸다.
+ *          - `SceneLoadRequestedEvent`: `GameSceneFlow` 가 게임 이동 씬 로드를 받아들일 때(`requestFirstScene` · `requestEntranceScene` · `requestTitleScene` 포함) 씬 로드를 요청할 때 낸다.
  *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
  *
  *          언리얼의 `FCoreUObjectDelegates::PreLoadMap` 과 `PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.

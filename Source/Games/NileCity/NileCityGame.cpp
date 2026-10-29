@@ -45,7 +45,7 @@ namespace sw
     {
         // 사운드 이벤트(모두 2D — 위에서 내려다보는 도시)는 베이스가 gamesettings 의 audioEvents 로 올렸다.
         // 도시 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)requestFirstScene();
+        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw

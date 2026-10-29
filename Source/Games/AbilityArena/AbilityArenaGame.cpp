@@ -56,7 +56,7 @@ namespace sw
         if ( loadRequiredCatalog( _abilityCatalog ) == false )
             return false;
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
-        (void)requestFirstScene();
+        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw

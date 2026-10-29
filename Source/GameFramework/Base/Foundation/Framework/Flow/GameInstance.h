@@ -10,11 +10,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Task/TaskFuture.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
+#include "GameFramework/Base/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/IGame.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Base/Foundation/Framework/Save/GameStateSnapshot.h"
@@ -27,10 +27,6 @@ namespace sw
 
     class GameObjectManager;
     class LoadingScreenController;
-    class Scene;
-    class UIGlobalCommandRegistry;
-    enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
-    class Widget;
 
     // ------------------------------------------------------------------------------
     // 1) GameInstance — 수명주기는 여기, 파생은 훅만
@@ -58,8 +54,7 @@ namespace sw
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /**
-         * @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다.
-         * @details 그 앞에 화면 전환(페이드)을 진행하고 로딩 화면을 갱신한다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중이면 로딩 중으로 본다.
+         * @brief 씬 흐름(`GameSceneFlow::update` — 페이드 · 로딩 화면 · 끝난 씬 로드의 `SceneLoadCompletedEvent`) → 넷 세션 → onUpdate 순으로 한 프레임을 넘깁니다.
          */
         void update( float32 deltaTime ) final;
 
@@ -95,37 +90,13 @@ namespace sw
         [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
 
         // --------------------------------------------------------------------------
-        // 팩 설정 씬 흐름 (GameSettings 의 씬 칸을 읽는 자리)
-        // --------------------------------------------------------------------------
-        /** @brief 게임이 처음 여는 씬입니다 — `-gv_firstScene` > 타이틀 씬 > 시작 맵(gamesettings). 모두 비었으면 빈 문자열입니다. */
-        const string& getFirstScene() const;
-        /** @brief 타이틀 다음에 여는 씬입니다 — 입구 씬 > 시작 맵. */
-        const string& getEntranceScene() const;
-        /**
-         * @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다).
-         * @details 요청이 들어가면 `SceneLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가
-         *          `SceneLoadCompletedEvent` 를 냅니다.
-         *          인스턴스가 살아 있는 월드 위에 다시 섰으면 요청하지 않고 false 를 반환한다.
-         *          게임 모듈 핫 리로드나 백엔드 교체가 그 경우이며, `initialize` 때 이미 활성 씬이 있었다는 뜻이다.
-         *          그 씬은 곧 스냅샷으로 되살아나거나 에디터가 연 씬이다. 언리얼의 핫 리로드도 `GameInstance::Init` 을 다시 부르지 않는다.
-         */
-        [[nodiscard]] bool requestFirstScene();
-        /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
-        [[nodiscard]] bool requestEntranceScene();
-        /**
-         * @brief gamesettings 의 타이틀 씬(`titleScene`) 로드를 요청합니다. 타이틀 씬이 없거나 요청이 실패하면 false 입니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다.
-         * @details 타이틀 씬이 있는 게임이면 `initialize` 가 UI 전역 명령 `ReturnToTitle` 로 이 함수를 등록해 일시정지 메뉴에 "타이틀로" 가 보인다
-         *          (언리얼 Lyra 의 "Quit to Main Menu", 유니티 템플릿의 메뉴 씬 로드). 없는 게임은 등록하지 않아 단추가 접힌 채다.
-         */
-        [[nodiscard]] bool requestTitleScene();
-
-        // --------------------------------------------------------------------------
         // 게임 인스턴스 서브시스템
         // --------------------------------------------------------------------------
         /**
-         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController`). 생성 뒤에는 늘 있다.
+         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameSceneFlow`). 생성 뒤에는 늘 있다.
          * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::findSubsystem<T>()` 로도 찾는다.
-         *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를 맡는다.
+         *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 씬 흐름은 첫 씬 · 타이틀 요청과 로드 알림을 맡는다
+         *          (파생의 `onInitialize` 가 `getSubsystem<GameSceneFlow>().requestFirstScene()` 으로 첫 씬을 연다).
          *          네트워크 세션(`GameNetSession`)은 엔진 수명이라 여기 없다 — 키트와 게임은 `game::findSubsystem<GameNetSession>()` 의 라우터에 처리기를 단다.
          */
         template <class T>
@@ -135,12 +106,6 @@ namespace sw
         }
 
     protected:
-        /**
-         * @brief 타이틀 씬이 있으면 UI 전역 명령 표 @p commands 에 `ReturnToTitle` 을 등록합니다(`initialize` 가 UI 가 있을 때 부른다). `unregisterSessionCommands` 가 거둡니다.
-         * @details 표를 인자로 받는 까닭: 창 없이 게임 인스턴스를 세우는 테스트가 표를 직접 줘서 "타이틀로" 흐름(등록 · 누르면 타이틀 씬 로드)을 본다.
-         */
-        void registerSessionCommands( UIGlobalCommandRegistry& commands );
-        void unregisterSessionCommands();
         /** @brief 파생 클래스가 팩 루트 · 팩 설정을 설정합니다. */
         virtual void configurePackConfig( GamePackConfig& outConfig ) { (void)outConfig; }
         /** @brief 팩의 gamesettings 를 `_packConfig` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
@@ -231,13 +196,6 @@ namespace sw
         IRHIDevice*    _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
-        /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
-        struct PendingSceneLoad
-        {
-            string             _scenePath;
-            TaskFuture<Scene*> _future;
-        };
-
         /**
          * @brief 기동(`initialize`)이 쓰는 엔진 서비스가 있는지 아무것도 걸기 전에 확인합니다(언리얼 `InitializeDependency`). 들고 있지 않고 쓰는 자리에서 게임 창구로 찾는다.
          * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
@@ -259,24 +217,9 @@ namespace sw
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
-        /**
-         * @brief @p scenePath 의 로드를 `SceneManager` 에 게임 이동으로 맡깁니다. 로딩 화면 · `SceneLoadRequestedEvent` 는 `onSceneLoadRequested` 가 붙인다.
-         * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
-         */
-        [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
-        /** @brief 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`)입니다. 게임 이동(`SceneLoadKind::Travel`)이면 대기 목록에 넣고 로딩 화면을 띄우고 `SceneLoadRequestedEvent` 를 냅니다. */
-        void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
-        /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
-        void publishFinishedSceneLoads();
-        /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
-        void onReturnToTitleCommand( const hashed_string& command, Widget& source );
 
-        vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        GameStateSnapshot        _stateSnapshot;                  ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
-        SubsystemScope           _gameScope;                      ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        string                   _loadedAudioEvents;              ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
-        Subscription             _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
-        Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(`initialize` 가 걸고 `shutdown` 이 푼다)
-        uint8                    _bResumingWorld;                 ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        GameStateSnapshot _stateSnapshot;     ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
+        SubsystemScope    _gameScope;         ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        string            _loadedAudioEvents; ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
     };
 } // namespace sw

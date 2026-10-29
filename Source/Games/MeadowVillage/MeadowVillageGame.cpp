@@ -66,7 +66,7 @@ namespace sw
                              loadRequiredCatalog( _questCatalog );
         if ( bLoaded == false )
             return false;
-        (void)requestFirstScene();
+        (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
     }
 } // namespace sw
