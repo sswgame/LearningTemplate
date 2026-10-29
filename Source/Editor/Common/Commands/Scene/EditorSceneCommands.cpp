@@ -587,7 +587,7 @@ namespace sw::editor
     {
         if ( pObj == nullptr )
             return;
-        pObj->setHiddenInEditor( bHidden );
+        pObj->setRenderHidden( bHidden );
         for ( Component* pComponent : pObj->getComponents() )
         {
             if ( pComponent != nullptr && isA<MeshComponent>( pComponent ) )

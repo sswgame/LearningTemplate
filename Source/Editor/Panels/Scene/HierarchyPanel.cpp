@@ -512,7 +512,7 @@ namespace sw::editor
             static void drawRowToggles( EditorContext* pContext, GameObject* pObj, uint64 objectID )
             {
                 // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
-                const bool bVisible = pObj->isHiddenInEditor() == false;
+                const bool bVisible = pObj->isRenderHidden() == false;
                 if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
                                                           SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );

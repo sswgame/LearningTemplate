@@ -149,7 +149,7 @@ namespace sw::editor
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportRayPick 의 테이블이 정한다. ImGui 없이 테스트한다.
         EditorPickResult pickResult{};
         const bool       bNothingPicked = EditorViewportRayPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
-                                    workspace.isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor();
+                                    workspace.isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isRenderHidden();
         if ( bNothingPicked )
             return false;
         pOutObject    = pickResult._pObject;

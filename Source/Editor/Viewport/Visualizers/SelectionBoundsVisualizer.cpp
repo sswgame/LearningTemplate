@@ -110,7 +110,7 @@ namespace sw::editor
                 for ( const GameObject* pObject : listSelected )
                 {
                     AABB       box{};
-                    const bool bNoObjectBox = pObject == nullptr || pObject->isHiddenInEditor() || computeObjectBox( *pObject, box ) == false;
+                    const bool bNoObjectBox = pObject == nullptr || pObject->isRenderHidden() || computeObjectBox( *pObject, box ) == false;
                     if ( bNoObjectBox )
                         continue;
                     drawBox( args, box, color, 2.0f );

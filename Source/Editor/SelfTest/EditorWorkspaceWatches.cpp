@@ -328,7 +328,7 @@ namespace sw::editor
             const GameObject* pObject = findWatchedObject();
             if ( pObject == nullptr )
                 return false;
-            outValue = pObject->isHiddenInEditor() ? 1.0 : 0.0;
+            outValue = pObject->isRenderHidden() ? 1.0 : 0.0;
             return true;
         }
 

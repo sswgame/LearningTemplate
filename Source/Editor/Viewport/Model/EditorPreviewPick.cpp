@@ -19,7 +19,7 @@ namespace sw::editor
         pManager->flushSceneTransforms(); // 레이가 읽는 월드 경계를 이번 프레임 값으로
 
         EditorPickResult result{};
-        const bool       bHit = EditorViewportRayPick::pick( pManager, ray, false, result ) && result._pObject != nullptr && result._pObject->isHiddenInEditor() == false;
+        const bool       bHit = EditorViewportRayPick::pick( pManager, ray, false, result ) && result._pObject != nullptr && result._pObject->isRenderHidden() == false;
         if ( bHit )
         {
             selection.selectObject( result._pObject, mode );

@@ -269,7 +269,7 @@ namespace sw
             return false;
         // 컴포넌트를 꺼도 빠진다(`isActive` 는 자기 비트와 소유 오브젝트의 계층 활성을 함께 본다).
         // 소유 오브젝트만 보면 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려진다.
-        const bool bExcludedMeshComponent = pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isHiddenInEditor();
+        const bool bExcludedMeshComponent = pMeshComp->getOwner() == nullptr || pMeshComp->isActive() == false || pMeshComp->getOwner()->isRenderHidden();
         if ( bExcludedMeshComponent )
             return false;
         Mesh* pMesh = pMeshComp->getRawMesh();
@@ -324,7 +324,7 @@ namespace sw
         // 배치를 가진 컴포넌트를 끄면(자기 비트나 소유 오브젝트의 계층 활성) 빠진다. `fillCandidateFromPrimitive` 와 같은 규칙이다.
         const Component* pOwnerComponent = pBatch->getOwnerComponent();
         if ( pOwnerComponent != nullptr && ( pOwnerComponent->isActive() == false ||
-                                             ( pOwnerComponent->getOwner() != nullptr && pOwnerComponent->getOwner()->isHiddenInEditor() ) ) )
+                                             ( pOwnerComponent->getOwner() != nullptr && pOwnerComponent->getOwner()->isRenderHidden() ) ) )
             return false;
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )

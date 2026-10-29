@@ -80,7 +80,7 @@ namespace sw
         , _bActive{ true }
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingDestroy{ false }
-        , _bHiddenInEditor{ false }
+        , _bRenderHidden{ false }
         , _managerIndex{ invalid_index::kUint32 }
         , _listComponent{}
         , _pPrimaryScene{ nullptr }

@@ -71,7 +71,7 @@ namespace sw::editor
                 {
                     const GameObject* pObject     = pComponent->getOwner();
                     const bool        bSkipObject = pComponent->isActive() == false || pComponent->isPendingDestroy() || pObject == nullptr ||
-                                             pObject->isActiveInHierarchy() == false || pObject->isHiddenInEditor();
+                                             pObject->isActiveInHierarchy() == false || pObject->isRenderHidden();
                     if ( bSkipObject )
                         continue;
                     if ( const RigidBodyComponent* pBody3D = castTo<RigidBodyComponent>( pComponent, pBody3DType ); pBody3D != nullptr )

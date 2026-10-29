@@ -120,12 +120,13 @@ namespace sw
         bool isActive() const { return _bActive.load( std::memory_order_relaxed ); }
 
         /**
-         * @brief 에디터에서만 숨깁니다(언리얼의 bHiddenEd, 유니티의 Scene Visibility). 저장되지 않고 게임 동작(활성, 틱)은 그대로입니다.
-         * @details 렌더러의 프리미티브 수집이 이 비트를 본다. 바꾼 쪽이 그 오브젝트의 메시 렌더 상태를 더티로 표시해야 한다(`EditorSceneCommands::setHiddenInEditor`).
+         * @brief 렌더에서만 뺍니다(언리얼 `SetActorHiddenInGame` — 활성 · 틱 · 충돌은 그대로). 저장되지 않는 실행 상태입니다.
+         * @details 렌더러의 프리미티브 수집이 이 비트를 본다. 바꾼 쪽이 그 오브젝트의 메시 렌더 상태를 더티로 표시해야 한다. 편집기의 씬 가시성 · 게임의 사진 모드가 쓴다
+         *          (편집기 기능은 `EditorSceneCommands::setHiddenInEditor`).
          */
-        void setHiddenInEditor( bool bHidden ) { _bHiddenInEditor.store( bHidden, std::memory_order_relaxed ); }
-        /** @brief 에디터에서만 숨겼으면 true 입니다. */
-        bool isHiddenInEditor() const { return _bHiddenInEditor.load( std::memory_order_relaxed ); }
+        void setRenderHidden( bool bHidden ) { _bRenderHidden.store( bHidden, std::memory_order_relaxed ); }
+        /** @brief 렌더에서 뺐으면 true 입니다. */
+        bool isRenderHidden() const { return _bRenderHidden.load( std::memory_order_relaxed ); }
 
         /**
          * @brief 월드 스트리밍이 이 오브젝트를 셀에 넣지 않고 늘 올려 둘지 정합니다(언리얼 `bIsSpatiallyLoaded` 를 끈 것과 같다).
@@ -423,7 +424,7 @@ namespace sw
         atomic<bool> _bActive;              ///< 자기 활성 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
         atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
-        atomic<bool> _bHiddenInEditor;      ///< 에디터에서만 숨긴다. PROPERTY 가 아니라서 저장되지 않으며, 플래그 뒤의 패딩 공간을 쓴다
+        atomic<bool> _bRenderHidden;        ///< `setRenderHidden` — 저장하지 않는다
         uint32       _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스다. 플래그 뒤의 패딩 공간을 쓰며, 끝에 두면 객체 크기가 8 B 늘어난다
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 슬롯 4개). 별칭으로 적으면 리플렉션 파서가 컨테이너로 인식하지 못합니다.
         PROPERTY()
