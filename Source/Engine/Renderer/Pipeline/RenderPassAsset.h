@@ -124,7 +124,7 @@ namespace sw
         DepthHistory,
         /**
          * @brief 자동 노출의 측정 · 적응 풀스크린(autoexposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
-         *        톤맵하는 패스(Tonemap, 후처리 체인 Present)가 자기 그리기 바로 앞에 같은 리스트로 기록한다(`FrameRenderer::recordAutoExposure`).
+         *        톤맵하는 패스(Tonemap, 후처리 체인 Present)가 자기 그리기 바로 앞에 같은 리스트로 기록한다(`FramePostProcess::recordAutoExposure`).
          */
         AutoExposure,
         /// @brief FSR 1 의 EASU(fsr1.hlsl) — Present 원본(배율 크기)을 뷰포트 크기 중간 RT 로 키웁니다. Present 가 렌더 패스를 열기 전에 기록한다(`FrameRenderer::recordUpscaleEasu`).
@@ -138,7 +138,7 @@ namespace sw
         OcclusionTiles,
         /**
          * @brief 볼륨 안개 컴퓨트(volumetricfog.hlsl)입니다. 뷰의 froxel 격자(화면 칸 × 깊이 조각)마다 안개 밀도와 라이트 산란(방향광 + 라이트 그리드의 점광 · 스폿)을 구하고
-         *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FrameRenderer::dispatchVolumetricFog`).
+         *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FramePostProcess::dispatchVolumetricFog`).
          */
         VolumetricFog,
         /**

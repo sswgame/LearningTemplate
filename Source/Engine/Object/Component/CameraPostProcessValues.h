@@ -39,7 +39,7 @@ namespace sw
         /**
          * @brief 자동 노출이 고를 수 있는 가장 어두운 장면 밝기(EV, 0 = 평균 휘도가 중간 회색 0.18)입니다. 최대와 같으면 측정하지 않는 고정 노출 2^-EV 입니다.
          * @details 언리얼 PostProcessSettings 의 AutoExposureMinBrightness · MaxBrightness(EV100)에 해당한다. 기본 0 · 0 은 노출 1(중립)이라 자동 노출을 쓰지 않는
-         *          카메라의 화면이 그대로다. 두 카메라 사이를 섞으면 범위가 직선으로 섞인다. 측정 · 적응은 렌더러가 뷰마다 한다(`FrameRenderer::prepareAutoExposure`).
+         *          카메라의 화면이 그대로다. 두 카메라 사이를 섞으면 범위가 직선으로 섞인다. 측정 · 적응은 렌더러가 뷰마다 한다(`FramePostProcess::prepareAutoExposure`).
          */
         PROPERTY( Tooltip = "Darkest scene brightness auto exposure adapts to (EV, 0 = mean luminance 0.18); equal to the maximum is a fixed exposure", Meta = "Units=EV" )
         float32 _autoExposureMinEv{ 0.0f };

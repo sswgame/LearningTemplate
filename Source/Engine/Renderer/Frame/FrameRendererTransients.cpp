@@ -198,7 +198,7 @@ namespace sw
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
-        prepareUpscale( _mainView, viewportWidth, viewportHeight );
+        _postProcess.prepareUpscale( _mainView, viewportWidth, viewportHeight );
         _capture.ensurePresent( _outputWidth, _outputHeight );
     }
 
@@ -233,7 +233,7 @@ namespace sw
         ensureTAAHistory( view );
         ensureDepthHistory( view );
         ensureOcclusionTiles( view );
-        ensureAutoExposureHistory( view );
+        _postProcess.ensureAutoExposureHistory( view );
         // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다. 시간 누적 기록(TAA · 지난 뷰-투영 · 노출)도 새것이라 첫 프레임은 버린다.
         view._bLastFrameDepthValid = SW_FALSE;
         view._bHasHistory          = SW_FALSE;
@@ -325,8 +325,8 @@ namespace sw
 
     void FrameRenderer::releaseViewTransients( FrameViewTarget& view )
     {
-        releaseAutoExposureHistory( view );
-        releaseUpscaleIntermediate( view );
+        _postProcess.releaseAutoExposureHistory( view );
+        _postProcess.releaseUpscaleIntermediate( view );
         view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {

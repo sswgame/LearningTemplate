@@ -549,7 +549,7 @@ namespace sw
         if ( activePool().isForwarded( pTarget->view() ) )
             return;
         registerDeclaredInputs( context, passDesc );
-        recordAutoExposure( context, passDesc );
+        _postProcess.recordAutoExposure( context, *_pActiveView, passDesc );
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
@@ -724,6 +724,43 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
+    void FrameRenderer::executeFogPass( const PassExecuteInput& input )
+    {
+        // 안개다. 장면 깊이로 광학 두께를 구해 선언한 컬러 출력(앞 패스가 칠한 색) 위에 프리멀티플라이 블렌드한다(fog.hlsl).
+        // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
+        // 출력이 곧 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다 — 일반 풀스크린 패스의 복사 · 지우기 길을 타면 장면이 지워진다.
+        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::Fog );
+        const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+        const bool                   bDraws       = _postProcess.hasFrameFog() && pso != 0 && bShowsScene;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+
+        // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 읽는다(추가 뷰는 볼륨을 계산하지 않는다). 상수는 이 패스의 복사본에만 쓴다.
+        const bool bVolume      = _postProcess.isFogVolumeActive() && _pActiveView == &_mainView && _postProcess.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
+        float4     volumeParams = _postProcess.getFrameFog()._volumeParams;
+        volumeParams._x         = bVolume ? 1.0f : 0.0f;
+        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
+
+        if ( beginColorPass( context, target.view(), "", getTargetClearColor( target.view() ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        // drawFullscreen 과 같은 순서다. 볼륨 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다.
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        if ( bVolume )
+            context._pCmd->bindStructuredBuffer( _postProcess.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
+        context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
     void FrameRenderer::executeTAAPass( const PassExecuteInput& input )
     {
         // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTAAHistory).
@@ -797,9 +834,9 @@ namespace sw
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
-            recordAutoExposure( context, passDesc );
+            _postProcess.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
-            const bool             bUpscale = recordUpscaleEasu( context, srcName );
+            const bool             bUpscale = _postProcess.recordUpscaleEasu( context, *_pActiveView, srcName );
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = dstTarget;
@@ -836,7 +873,7 @@ namespace sw
                 const float4& rect      = activeView._settings._screenRect;
                 const float32 viewportX = bFullRect ? 0.0f : rect._x * static_cast<float32>( outputWidth );
                 const float32 viewportY = bFullRect ? 0.0f : rect._y * static_cast<float32>( outputHeight );
-                drawUpscaleRcas( context, target._format, viewportX, viewportY );
+                _postProcess.drawUpscaleRcas( context, *_pActiveView, target._format, viewportX, viewportY );
             }
             else
             {
@@ -1092,16 +1129,6 @@ namespace sw
     bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const
     {
         return _pLastSwapchainWriter == nullptr || &passDesc == _pLastSwapchainWriter;
-    }
-
-    const RenderGraphPassDesc* FrameRenderer::findTonemapPass() const
-    {
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            if ( passAppliesTonemap( pass ) )
-                return &pass;
-        }
-        return nullptr;
     }
 
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const

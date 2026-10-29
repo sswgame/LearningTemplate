@@ -52,27 +52,6 @@ namespace sw
         _frameSky._cloudColor   = float4{ clouds._color._x, clouds._color._y, clouds._color._z, clouds._bEnabled == SW_TRUE ? 1.0f : 0.0f };
     }
 
-    void FrameRenderer::applyFrameFog( bool bHasFog, const FogSettings& fog )
-    {
-        // 셰이더 상수 배치는 FogSettings 머리 주석이 정본이다(fog.hlsl 이 같은 순서로 읽는다).
-        _bHasFrameFog = bHasFog ? SW_TRUE : SW_FALSE;
-        if ( bHasFog == false )
-        {
-            _frameFog = FrameFogState{};
-            return;
-        }
-        // 방향광 산란 세기가 0 이면 색도 0 으로 보내 셰이더가 분기 없이 더하게 한다.
-        const float32 inscatterScale = MathUtil::max( fog._inscatterIntensity, 0.0f );
-        _frameFog._colorDensity      = float4{ fog._color._x, fog._color._y, fog._color._z, MathUtil::max( fog._density, 0.0f ) };
-        _frameFog._heightParams      = float4{ MathUtil::max( fog._heightFalloff, 0.0f ), fog._baseHeight, MathUtil::max( fog._startDistance, 0.0f ), MathUtil::saturate( fog._maxOpacity ) };
-        _frameFog._inscatter         = float4{ fog._inscatterColor._x * inscatterScale, fog._inscatterColor._y * inscatterScale, fog._inscatterColor._z * inscatterScale,
-                                       MathUtil::max( fog._inscatterExponent, 1.0f ) };
-        // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 켠다(executeFogPass 가 x 를 정한다). 물속 안개는 볼륨이 없다.
-        const bool bVolumetric  = fog._bVolumetric == SW_TRUE && fog._bUnderwater == SW_FALSE;
-        _frameFog._volumeParams = float4{ 0.0f, MathUtil::max( fog._volumeDistance, 1.0f ), MathUtil::max( fog._scattering, 0.0f ), MathUtil::clamp( fog._anisotropy, -0.95f, 0.95f ) };
-        _frameFog._bVolumetric  = bVolumetric ? SW_TRUE : SW_FALSE;
-    }
-
     void FrameRenderer::applyFrameShadow()
     {
         // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 레이아웃을 지금 크기로 다시 만든다.
@@ -124,10 +103,10 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudShape, _frameSky._cloudShape );
         context._passValues.setFloat4( passConstantNames()._skyCloudWind, _frameSky._cloudWind );
         context._passValues.setFloat4( passConstantNames()._skyCloudColor, _frameSky._cloudColor );
-        context._passValues.setFloat4( passConstantNames()._fogColorDensity, _frameFog._colorDensity );
-        context._passValues.setFloat4( passConstantNames()._fogHeightParams, _frameFog._heightParams );
-        context._passValues.setFloat4( passConstantNames()._fogInscatter, _frameFog._inscatter );
-        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _frameFog._volumeParams );
+        context._passValues.setFloat4( passConstantNames()._fogColorDensity, _postProcess.getFrameFog()._colorDensity );
+        context._passValues.setFloat4( passConstantNames()._fogHeightParams, _postProcess.getFrameFog()._heightParams );
+        context._passValues.setFloat4( passConstantNames()._fogInscatter, _postProcess.getFrameFog()._inscatter );
+        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _postProcess.getFrameFog()._volumeParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( context );
     }
@@ -149,7 +128,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
         float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
-        prepareAutoExposure( exposureScale );
+        _postProcess.prepareAutoExposure( *_pActiveView, getAnimationTime(), exposureScale );
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),
                                                                                  MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;

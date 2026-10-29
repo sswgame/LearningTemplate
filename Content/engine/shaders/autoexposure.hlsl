@@ -2,7 +2,7 @@
 // EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다. 목표는 카메라의 범위(최소 · 최대 EV)로 자른 측정값이고, 밝아질 때와 어두워질 때 다가가는 비율이 다르다(언리얼 Speed Up · Down).
 // 비율이 1 이면(처음 · 컷 프레임) 지난 값을 섞지 않는다 — 새 기록에는 값이 없어 NaN 일 수 있으므로 lerp 가 아니라 고르기다.
 // 원본 · 지난 EV 는 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(C++ 가 shaderslot::emulated::getSlot 의 레지스터에 건다)이다.
-// 톤맵(postgrade.hlsli)이 이 RT 를 g_AutoExposureIndex 로 읽어 2^-EV 를 곱한다. C++: FrameRenderer::recordAutoExposure — 톤맵하는 패스 앞에 같은 리스트로 그린다.
+// 톤맵(postgrade.hlsli)이 이 RT 를 g_AutoExposureIndex 로 읽어 2^-EV 를 곱한다. C++: FramePostProcess::recordAutoExposure — 톤맵하는 패스 앞에 같은 리스트로 그린다.
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
 

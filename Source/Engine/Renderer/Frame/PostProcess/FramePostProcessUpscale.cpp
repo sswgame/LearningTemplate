@@ -1,5 +1,5 @@
 /**
- * @file FrameRendererUpscale.cpp
+ * @file FramePostProcessUpscale.cpp
  * @brief Present 의 FSR 1 업스케일입니다 — 렌더 배율(`gv_renderScale`)로 작게 그린 뷰를 선형 블릿 대신 EASU + RCAS 로 출력 크기로 키웁니다(fsr1.hlsl).
  * @details 흐름: 셋업(`prepareUpscale`, 뷰마다 프레임에 한 번)이 키울지 정하고 뷰포트 크기 중간 RT 를 맞춘다. Present 가 렌더 패스를 열기 전에 EASU(풀 크기 원본 →
  *          중간 RT)를 기록하고(`recordUpscaleEasu`), 렌더 패스 안에서 블릿 대신 RCAS(중간 RT → 대상 뷰포트)를 그린다(`drawUpscaleRcas`).
@@ -8,19 +8,24 @@
  */
 #include "pch.h"
 
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
+#include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FramePostProcess" );
 
     /**
      * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
@@ -29,7 +34,7 @@ namespace sw
 
     namespace
     {
-        struct FrameRendererUpscaleInternal
+        struct FramePostProcessUpscaleInternal
         {
             /// `gv_upscaler` 의 FSR 1 선택지 순번입니다(engine.settings.xml 의 graphics.upscaler — off 0, spatial 1).
             static constexpr int32 kUpscalerSpatial = 1;
@@ -50,7 +55,7 @@ namespace sw
         };
     } // namespace
 
-    void FrameRenderer::releaseUpscaleIntermediate( FrameViewTarget& view )
+    void FramePostProcess::releaseUpscaleIntermediate( FrameViewTarget& view )
     {
         if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
@@ -63,9 +68,9 @@ namespace sw
         view._bUpscaleThisFrame      = SW_FALSE;
     }
 
-    void FrameRenderer::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
+    void FramePostProcess::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
     {
-        using Internal                                  = FrameRendererUpscaleInternal;
+        using Internal                                  = FramePostProcessUpscaleInternal;
         view._bUpscaleThisFrame                         = SW_FALSE;
         const TransientAttachmentPool& pool             = view._transientPool;
         const bool                     bSpatial         = static_cast<int32>( gv_upscaler ) == Internal::kUpscalerSpatial;
@@ -78,7 +83,7 @@ namespace sw
         {
             // 이 파이프라인은 Present 가 톤맵까지 한다 — 키울 톤맵한 중간 그림이 없다(EASU 는 톤맵한 색을 받는다). 데이터(파이프라인)와 설정이 맞지 않는 것을 알린다.
             SW_LOG_ERROR( "Pipeline '%#' tonemaps in its Present pass - FSR 1 needs a tonemapped image to upscale, so this view is upscaled linearly",
-                          _pipelineResource.getDesc()._name.c_str() );
+                          _pipeline.getDesc()._name.c_str() );
             _bUpscalePostChainLogged = SW_TRUE;
         }
         const bool bUpscale = bCandidate && bPostChain == false && _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) != 0;
@@ -114,12 +119,11 @@ namespace sw
         view._bUpscaleThisFrame = SW_TRUE;
     }
 
-    bool FrameRenderer::recordUpscaleEasu( FramePassContext& context, string_view sourceName )
+    bool FramePostProcess::recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const
     {
-        const FrameViewTarget& view = *_pActiveView;
         if ( view._bUpscaleThisFrame == SW_FALSE )
             return false;
-        const TransientAttachmentPool::Attachment source = findTransientAttachment( sourceName );
+        const TransientAttachmentPool::Attachment source = view._transientPool.find( sourceName );
         if ( source._texture == 0 )
             return false;
 
@@ -139,8 +143,8 @@ namespace sw
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FrameRendererUpscaleInternal::RootConstants constants{};
+        const bool                                     bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FramePostProcessUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
         constants._inputWidth        = static_cast<float32>( source._width );
         constants._inputHeight       = static_cast<float32>( source._height );
@@ -158,16 +162,15 @@ namespace sw
         return true;
     }
 
-    void FrameRenderer::drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY )
+    void FramePostProcess::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const
     {
-        const FrameViewTarget&       view = *_pActiveView;
-        const RHIPipelineStateHandle pso  = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
-        IRHICommandList&             cmd  = *context._pCmd;
+        const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
+        IRHICommandList&             cmd = *context._pCmd;
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( pso );
-        const bool                                  bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FrameRendererUpscaleInternal::RootConstants constants{};
+        const bool                                     bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FramePostProcessUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
         constants._viewportX         = viewportX;
         constants._viewportY         = viewportY;

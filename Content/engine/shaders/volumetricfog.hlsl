@@ -18,7 +18,7 @@
  * 시간 누적(재투영)은 아직 없다 — 조각 사이 선형 보간이 줄무늬를 줄인다.
  *
  * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_FogParams, 배치는 아래 kRow*) · t2 라이트 그리드 단어(뷰의 그리드가 없으면 자리표), 쓰기 u0 볼륨.
- * 라이트 수(행 14 의 x)가 0 이면 라이트 버퍼를 읽지 않는다. 상수 버퍼는 없다. C++: FrameRenderer::dispatchVolumetricFog — dispatchCompute( ceil(DIM_X / 8), ceil(DIM_Y / 8), 1 ).
+ * 라이트 수(행 14 의 x)가 0 이면 라이트 버퍼를 읽지 않는다. 상수 버퍼는 없다. C++: FramePostProcess::dispatchVolumetricFog — dispatchCompute( ceil(DIM_X / 8), ceil(DIM_Y / 8), 1 ).
  */
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_FogLights, 0 );
@@ -26,7 +26,7 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_FogParams, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_FogLightGrid, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( float4, g_FogVolumeRW, 0 );
 
-// 입력 행 배치(C++ FrameRenderer::prepareVolumetricFog 가 같은 순서로 올린다). 행렬은 행벡터 규약의 행 넷이다.
+// 입력 행 배치(C++ FramePostProcess::prepareVolumetricFog 가 같은 순서로 올린다). 행렬은 행벡터 규약의 행 넷이다.
 static const uint kRowInverseViewProj = 0u;  // 0..3
 static const uint kRowViewProj        = 4u;  // 4..7
 static const uint kRowEyeNear         = 8u;  // 눈 xyz, 가까운 거리

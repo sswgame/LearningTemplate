@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
@@ -402,36 +403,6 @@ namespace sw
          * @details 파이프라인에 장면 깊이 첨부(`FrameRendererUtil::Attachment::kSceneDepth`)가 없으면 만들지 않는다(2D 파이프라인 — 깊이 충돌을 쓸 깊이가 없다).
          */
         void ensureDepthHistory( FrameViewTarget& view );
-        /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다(`ensureTAAHistory` 와 같은 이유). 톤맵하는 패스가 없으면 만들지 않습니다. */
-        void ensureAutoExposureHistory( FrameViewTarget& view );
-        /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseAutoExposureHistory( FrameViewTarget& view );
-        /**
-         * @brief 지금 그리는 뷰의 이번 프레임 노출을 정합니다 — 잴지, 측정 상수(EV 범위 · 다가가는 비율), 쓰는 기록 칸입니다.
-         * @details 셋업에서 뷰마다 한 번(`applyViewPassConstants`) 부른다. 기록 중의 패스(`recordAutoExposure`)는 여기서 정한 것을 읽기만 한다(병렬 기록 — 뷰 상태를 쓰지 않는다).
-         *          카메라의 최소 EV 와 최대 EV 가 같으면 재지 않고 고정 노출 2^-EV 를 `g_CameraGrade.x` 가 될 @p inoutExposureScale 에 곱한다.
-         */
-        void prepareAutoExposure( float32& inoutExposureScale );
-        /**
-         * @brief 톤맵하는 패스(`findTonemapPass`) 앞에서 자동 노출 측정 · 적응 풀스크린을 같은 리스트에 기록하고, 그 패스가 읽을 이번 EV 를 `AutoExposure` 이름으로 겁니다(autoexposure.hlsl).
-         * @details @p passDesc 가 톤맵하는 패스가 아니거나 이번 프레임에 재지 않는 뷰면 아무것도 하지 않는다. 측정하는 원본은 그 패스의 SourceColor 입력이다.
-         */
-        void recordAutoExposure( FramePassContext& context, const RenderGraphPassDesc& passDesc );
-        /**
-         * @brief 뷰 @p view 가 이번 프레임에 Present 에서 FSR 1 로 키울지 정하고, 키우면 중간 RT 를 **셋업 단계에서** 뷰포트 크기로 맞춥니다.
-         * @details 키우는 조건: 업스케일러가 spatial(`gv_upscaler`), 정수 업스케일이 아님, 풀이 뷰포트보다 작음, Present 가 톤맵하지 않음(EASU 는 톤맵한 색을 받는다).
-         *          Present 가 톤맵하는 파이프라인(후처리 체인)에서 켜면 한 번 오류를 남기고 선형으로 키운다 — 그 파이프라인에는 톤맵한 중간 그림이 없다.
-         */
-        void prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight );
-        /** @brief 뷰의 FSR 중간 RT 를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
-        void releaseUpscaleIntermediate( FrameViewTarget& view );
-        /**
-         * @brief Present 렌더 패스를 열기 **전에** EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
-         * @return true 면 Present 는 블릿 대신 `drawUpscaleRcas` 로 그린다
-         */
-        bool recordUpscaleEasu( FramePassContext& context, string_view sourceName );
-        /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
-        void drawUpscaleRcas( FramePassContext& context, RHIFormat targetFormat, float32 viewportX, float32 viewportY );
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /**
@@ -580,35 +551,13 @@ namespace sw
         /** @brief 이번 프레임의 하늘(`_frameSky` · `_bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky );
         /**
-         * @brief 이번 프레임의 안개를 셰이더 상수 모양으로 둔 것입니다(`g_FogColorDensity` · `g_FogHeightParams` · `g_FogInscatter` · `g_FogVolumeParams`, 배치는 `FogSettings` 머리 주석).
-         * @details 씬에 안개(`FogComponent` · 물속)가 없으면 `_bHasFrameFog` 가 0 이고 안개 패스가 그리지 않는다. 볼륨 안개 값(`_volumeParams`)은 주 시점에서 볼륨이 실제로 계산된 프레임에만
-         *          x=1 로 켜진다(`executeFogPass` 가 뷰마다 덮는다 — 추가 뷰는 볼륨을 계산하지 않는다).
-         */
-        struct FrameFogState
-        {
-            float4 _colorDensity{};          ///< rgb 안개 색, w 밀도
-            float4 _heightParams{};          ///< x 높이 감쇠, y 기준 높이, z 시작 거리, w 최대 불투명도
-            float4 _inscatter{};             ///< rgb 방향광 산란 색 × 세기, w 지수
-            float4 _volumeParams{};          ///< x 볼륨 안개를 켠 1 · 끈 0, y 볼륨 거리, z 산란 배율, w 이방성
-            uint8  _bVolumetric{ SW_FALSE }; ///< 설정이 볼륨 안개를 켰다(컴퓨트가 돌지는 `_bFogVolumeActive`)
-        };
-        /** @brief 이번 프레임의 안개(`_frameFog` · `_bHasFrameFog`)를 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
-        void applyFrameFog( bool bHasFog, const FogSettings& fog );
-        /**
-         * @brief 볼륨 안개의 버퍼(froxel 출력, 갱신 입력)를 갖추고 주 시점의 입력을 올립니다. **기록 전에** 부릅니다(라이트 그리드와 주 시점이 정해진 뒤 — `uploadSceneAndSubmit`).
-         * @details 설정이 볼륨 안개를 켰고 컴퓨트 PSO · 라이트 버퍼가 있을 때만 켠다(`_bFogVolumeActive`). 못 만들면 오류를 한 번 남기고 볼륨 없이 평범한 안개로 그린다 — 다른 갈래가 아니라 같은 패스의 꺼진 상태다.
-         */
-        void prepareVolumetricFog( IRHIDevice* pDevice );
-        /** @brief 볼륨 안개 컴퓨트를 기록합니다(라이트 그리드 디스패치 뒤). `_bFogVolumeActive` 일 때만 돕니다. */
-        void dispatchVolumetricFog();
-        /**
          * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
          * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).
          */
         void prepareRealtimeProbes( IRHIDevice* pDevice );
         /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다(라이트 그리드 · 볼륨 안개 뒤, 조명 패스 앞). `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
         void dispatchRealtimeProbes();
-        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다. */
+        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FramePostProcess` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /**
          * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(게임 스레드가 배치를 만들지 않았다) 그림자 없는 뷰로 두고, 주 시점 뷰에 옮깁니다.
@@ -803,12 +752,6 @@ namespace sw
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
         /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
-        /**
-         * @brief HDR 색을 톤맵하는 첫 패스입니다(Tonemap, 또는 퍼뮤테이션 `SW_POST_TONEMAP` 을 켠 후처리 체인 Present — `passAppliesTonemap`). 없으면(2D 파이프라인) nullptr 입니다.
-         * @details 자동 노출은 이 패스의 원본을 재고 이 패스 바로 앞에 기록한다(뷰마다 프레임에 한 번). 포인터를 들고 있지 않고 지금 파이프라인에서 찾는다 —
-         *          파이프라인을 다시 읽으면 패스 목록이 바뀌는데, 트랜지언트 준비가 콜백 바인딩보다 먼저라 들고 있던 포인터는 옛 목록을 가리킨다.
-         */
-        const RenderGraphPassDesc* findTonemapPass() const;
 
         // --- 모듈 확장(ExtensionRenderPass M3 · M4) — 구현은 FrameRendererModule.cpp ---
         /**
@@ -856,10 +799,15 @@ namespace sw
          * @details `_pipelineResource` · `_gpuScene` 을 참조로 읽으므로 그 둘보다 뒤에 선언한다. 언리얼이 PSO 조립을 메시 패스 프로세서 · PSO 캐시로 렌더러 밖에 두는 것과 같다.
          */
         FramePSOManager _psoManager;
-        RenderGraph     _graph;
-        string          _pipelinePath;
-        string          _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        float4          _clearColor;
+        /**
+         * @brief 후처리 효과 셋(자동 노출 · FSR 1 업스케일 · 안개와 볼륨 안개)의 셋업과 기록입니다. 지금 그리는 뷰는 인자로 넘긴다.
+         * @details `_psoManager` 를 참조로 읽으므로 그 뒤에 선언한다. 언리얼의 효과별 `AddXxxPass` 처럼 장면 렌더러 밖에 둔다.
+         */
+        FramePostProcess _postProcess;
+        RenderGraph      _graph;
+        string           _pipelinePath;
+        string           _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
+        float4           _clearColor;
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
         FrameViewTarget _mainView;
         /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
@@ -1049,8 +997,6 @@ namespace sw
         CanvasFrameData _canvasFrame;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
         const RenderGraphPassDesc* _pLastSwapchainWriter;
-        /// @brief Present 가 톤맵하는 파이프라인에서 FSR 1 을 켰다는 오류를 남겼다(셋업에서만 읽고 쓴다 — 한 번만 알린다).
-        uint8 _bUpscalePostChainLogged;
         /**
          * @brief 이번 프레임에 주 출력의 캔버스(화면 2D)를 그리는 뷰입니다. 주 출력에 마지막으로 그리는 뷰(마지막 화면 사각형 뷰, 없으면 주 시점)입니다.
          * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.
@@ -1071,12 +1017,6 @@ namespace sw
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
         FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
         FrameSkyState   _frameSky;   ///< float4 셋(48바이트)이다. `_bHasFrameSky` 가 0 이면 쓰지 않는다.
-        FrameFogState   _frameFog;   ///< 안개 상수 float4 넷이다. `_bHasFrameFog` 가 0 이면 쓰지 않는다.
-        /// @brief 볼륨 안개의 froxel 출력(구조 버퍼 float4 — 산란 rgb, 투과율 a)입니다. 컴퓨트가 쓰고 안개 패스가 t11 로 읽습니다(`volumetricfog.hlsl`).
-        RHIStructuredBufferSlot _fogVolumeBuffer;
-        /// @brief 볼륨 안개 컴퓨트의 입력(float4 행, `SW_FOG_VOLUME_PARAM_FLOAT4_COUNT` 개)입니다. 프레임마다 올립니다.
-        RHIStructuredBufferSlot _fogVolumeParamBuffer;
-        vector<float4>          _listScratchFogVolumeParam; ///< 그 행의 업로드 임시 버퍼(프레임마다 다시 쓴다)
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;
@@ -1103,8 +1043,6 @@ namespace sw
         uint8               _bScenePreview              : 1; ///< 미리보기 씬 렌더러다 — 프로파일러 보고 · 렌더 타깃 공개를 하지 않는다
         uint8               _bHasFrameSky               : 1; ///< 이번 프레임의 씬에 하늘이 있다(`_frameSky`). 기록 전에 정하고 패스 콜백은 읽기만 한다
         uint8               _bLightGridPSOMissingLogged : 1; ///< 라이트 그리드 컴퓨트 PSO 가 없다는 것을 한 번만 알리는 래치다(셋업 단계에서만 쓴다)
-        uint8               _bHasFrameFog               : 1; ///< 이번 프레임에 안개(`FogComponent` · 물속)가 있다(`_frameFog`). 기록 전에 정하고 패스 콜백은 읽기만 한다
-        uint8               _bFogVolumeActive           : 1; ///< 이번 프레임에 볼륨 안개 컴퓨트가 돈다(`prepareVolumetricFog` 가 정한다) — 안개 패스가 주 시점에서 볼륨을 읽는다
         /**
          * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
          * @details 게임 스레드(패킷)와 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 본다. 쓰는 쪽이 다른 스레드이므로 atomic 이다.

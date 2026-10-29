@@ -10,7 +10,7 @@
 
 // 그래픽: 품질 번들(`graphics.quality`)이 함께 바꾸는 값
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_renderScale );       ///< 3D 렌더 해상도 배율(0.5~1). 화면 출력 뷰의 내부 해상도에 곱하고(`RenderViewCollector`) Present 가 출력 크기로 키운다 — 업스케일러(`gv_upscaler`)가 그 필터를 고른다.
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< Present 가 배율 크기 뷰를 키우는 필터(선택지 순번 — 0 off 선형, 1 spatial FSR 1 EASU + RCAS). Present 가 톤맵하지 않는 파이프라인에서 쓴다(`FrameRenderer::prepareUpscale`).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_upscaler );            ///< Present 가 배율 크기 뷰를 키우는 필터(선택지 순번 — 0 off 선형, 1 spatial FSR 1 EASU + RCAS). Present 가 톤맵하지 않는 파이프라인에서 쓴다(`FramePostProcess::prepareUpscale`).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_shadowMapResolution ); ///< 그림자 맵 한 변의 텍셀 수입니다. 품질 단계마다의 값은 설정 스키마 `graphics.shadowQuality` 선택지의 `targetValue` 입니다.
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_postQuality );         ///< 후처리 품질 0~3. 파이프라인 패스의 `_minPostQuality` 보다 낮으면 그 패스를 건너뛴다(SSAO · 블룸, `FrameRenderer::executePass`).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_motionBlur );           ///< 모션 블러. 3D 파이프라인(디퍼드 · 포워드 넷)의 MotionBlur 패스가 읽는다(끄면 원본을 넘긴다).
