@@ -7,6 +7,7 @@
 #include "Core/String/HexUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -14,8 +15,6 @@ namespace sw
 
     namespace
     {
-        PackPatchProviderGetter s_pfnProviderGetter = nullptr;
-
         struct PackPatchTrustSourceInternal
         {
             static constexpr size_t kCoordinateHexLength = 64; ///< P-256 좌표 하나(32 바이트)의 16 진 길이
@@ -30,22 +29,6 @@ namespace sw
         };
     } // namespace
 
-    void PackPatchTrustSource::setProviderGetter( PackPatchProviderGetter pfnGetter )
-    {
-        s_pfnProviderGetter = pfnGetter;
-    }
-
-    void PackPatchTrustSource::clearProviderGetter( PackPatchProviderGetter pfnGetter )
-    {
-        if ( s_pfnProviderGetter == pfnGetter )
-            s_pfnProviderGetter = nullptr;
-    }
-
-    INetSecurityProvider* PackPatchTrustSource::findProvider()
-    {
-        return s_pfnProviderGetter != nullptr ? &s_pfnProviderGetter() : nullptr;
-    }
-
     PackPatchTrustResult PackPatchTrustSource::resolve( const EngineConfig& config, PackPatchTrust& outTrust )
     {
         outTrust = PackPatchTrust{};
@@ -59,10 +42,11 @@ namespace sw
             SW_LOG_ERROR( "Engine config _patchTrustPublicKeyXHex / _patchTrustPublicKeyYHex must both be 64 hex digits (an ES256 P-256 public key) - the pack patch signature requirement is not usable" );
             return PackPatchTrustResult::Invalid;
         }
-        INetSecurityProvider* pProvider = findProvider();
+        // 제공자는 GameFramework 가 프로세스 범위에 공개한 모듈 서브시스템이다 — 범위를 올라가며 인터페이스 타입으로 찾는다.
+        INetSecurityProvider* pProvider = engine::findSubsystem<INetSecurityProvider>();
         if ( pProvider == nullptr )
         {
-            SW_LOG_ERROR( "Pack patch signatures are required (the engine config holds a public key) but the crypto provider slot is empty - the GameFramework module did not fill it before the packs were mounted" );
+            SW_LOG_ERROR( "Pack patch signatures are required (the engine config holds a public key) but no INetSecurityProvider is published - the GameFramework module was not loaded before the packs were mounted" );
             return PackPatchTrustResult::Invalid;
         }
         outTrust._pProvider = pProvider;

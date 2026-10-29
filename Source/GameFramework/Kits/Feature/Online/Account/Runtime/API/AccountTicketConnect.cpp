@@ -9,6 +9,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 namespace sw
@@ -89,7 +90,7 @@ namespace sw
             _bServiceRegistered = true;
         }
         // 서버의 서비스 스트림은 늘 TLS 1.3 이다 — 평문으로 붙으면 핸드셰이크가 닫힌다.
-        _tlsContext = NetSecurity::createClientTLSContext( request._tlsTrustFile, "", outError );
+        _tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), request._tlsTrustFile, "", outError );
         if ( _tlsContext == nullptr )
             return false;
         OnlineServiceClientConfig settings{ OnlineClientSecurity::tls( *_tlsContext ) };

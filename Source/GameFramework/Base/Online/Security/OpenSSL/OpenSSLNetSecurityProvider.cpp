@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/HexUtil.h"
 
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
+
 #include <cstring>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
@@ -1073,3 +1075,6 @@ namespace sw
         return bMade;
     }
 } // namespace sw
+
+// 프로세스 범위 아래 GameFramework 의 자식 범위에 서고 `INetSecurityProvider` 로 공개한다 — 엔진(팩 패치 서명)도 그 타입으로 찾는다.
+SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecurityProvider, INetSecurityProvider );

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
@@ -53,10 +54,10 @@ namespace sw
                     shutdown();
                     return false;
                 }
-                entry._provider = AppleLoginProvider::create( settings, &NetSecurity::getProvider(), &entry._httpClient->get(), &entry._secondHTTPClient->get() );
+                entry._provider = AppleLoginProvider::create( settings, &game::getSubsystem<INetSecurityProvider>(), &entry._httpClient->get(), &entry._secondHTTPClient->get() );
             }
             else
-                entry._provider = PlatformLoginProviderFactory::create( settings, &NetSecurity::getProvider(), &entry._httpClient->get() );
+                entry._provider = PlatformLoginProviderFactory::create( settings, &game::getSubsystem<INetSecurityProvider>(), &entry._httpClient->get() );
             if ( entry._provider == nullptr )
             {
                 outError = "platform login provider '" + settings._name + "' has invalid settings";

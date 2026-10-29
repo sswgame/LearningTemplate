@@ -26,6 +26,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "ModuleManager/ModuleLoaderSubsystem.h"
@@ -310,7 +311,7 @@ int32 main( int32 argc, utf8* argv[] )
     unique_ptr<ITLSContext> tlsContext;
     if ( options._bTLS == SW_TRUE )
     {
-        tlsContext = NetSecurity::createClientTLSContext( options._tlsTrustFile, "", error );
+        tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "", error );
         if ( tlsContext == nullptr )
         {
             SW_LOG_ERROR( "OnlineLoadBot: TLS client context failed: %#", error );

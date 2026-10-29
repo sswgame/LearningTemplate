@@ -34,7 +34,7 @@ namespace sw
         {
         public:
             AccountGameConnectOnlineServerKit()
-                : _crypto{ &NetSecurity::getProvider() }
+                : _crypto{ &game::getSubsystem<INetSecurityProvider>() }
                 , _ticketAuthority{}
                 , _admitEveryAccount{}
                 , _pAuthenticator{}

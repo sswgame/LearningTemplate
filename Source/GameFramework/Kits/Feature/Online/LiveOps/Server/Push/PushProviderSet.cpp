@@ -8,6 +8,7 @@
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/HTTP/OwnedHTTP2Client.h"
 #include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
@@ -59,7 +60,7 @@ namespace sw
                 if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "pushTrustFile", outError ) == false ||
                      httpClient.registerHostTLS( settings._sendBaseURL, trustFile, "pushTrustFile", outError ) == false )
                     return nullptr;
-                return make_unique<FcmPushProvider>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
+                return make_unique<FcmPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
 
             /** @brief 환경 변수의 인증 키로 APNs 제공자를 만들고 HTTP/2 클라이언트의 TLS(ALPN h2)를 준비합니다. 키가 ES256 서명에 못 쓰이면 기동을 멈춘다. */
@@ -81,7 +82,7 @@ namespace sw
                     settings._baseURL = config._sendBaseURL;
                 vector<uint8> probeSignature;
                 const uint8   probe      = 0;
-                const bool    bKeyUsable = NetSecurity::getProvider().signData( NetSignatureAlgorithm::EcdsaP256Sha256, settings._privateKeyPem, &probe, 1, probeSignature );
+                const bool    bKeyUsable = game::getSubsystem<INetSecurityProvider>().signData( NetSignatureAlgorithm::EcdsaP256Sha256, settings._privateKeyPem, &probe, 1, probeSignature );
                 bool          bReady     = bKeyUsable;
                 if ( bKeyUsable == false )
                     outError = "the APNs authentication key in '" + config._keyEnvironment + "' is not a usable ES256 private key (.p8 PEM)";
@@ -92,7 +93,7 @@ namespace sw
                     Memory::set( settings._privateKeyPem.data(), 0, settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
                     return nullptr;
                 }
-                return make_unique<ApnsPushProvider>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
+                return make_unique<ApnsPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
         };
     } // namespace

@@ -7,9 +7,6 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/FileSystem/Pack/PackPatchTrustSource.h"
-
-#include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 namespace sw
 {
@@ -31,18 +28,6 @@ namespace sw
                 return false;
             }
         };
-
-        /**
-         * @brief GameFramework 가 올라와 있는 동안 패치 서명 신뢰 설정의 제공자 함수 칸(`PackPatchTrustSource`)을 채웁니다. 모듈 라이브러리가 올라올 때(정적 초기화)
-         *        채우고 내려갈 때 자기 함수만 비운다 - Engine 은 OpenSSL 을 링크하지 않으므로 칸으로만 제공자를 받는다.
-         */
-        struct PackPatchProviderRegistrar
-        {
-            PackPatchProviderRegistrar() { PackPatchTrustSource::setProviderGetter( &NetSecurity::getProvider ); }
-            ~PackPatchProviderRegistrar() { PackPatchTrustSource::clearProviderGetter( &NetSecurity::getProvider ); }
-        };
-
-        const PackPatchProviderRegistrar s_packPatchProviderRegistrar;
     } // namespace
 } // namespace sw
 
@@ -57,15 +42,10 @@ namespace sw
         return FileUtil::joinPath( projectFolder, path );
     }
 
-    INetSecurityProvider& NetSecurity::getProvider()
-    {
-        static OpenSSLNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
-        return s_provider;
-    }
-
-    bool NetSecurity::ensureDevCertificate( string& outCertificateFile, string& outPrivateKeyFile, string& outError )
+    bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
     {
 #if defined( SW_SHIPPING )
+        (void)provider;
         (void)outCertificateFile;
         (void)outPrivateKeyFile;
         outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
@@ -81,7 +61,7 @@ namespace sw
         string     certificatePem;
         string     privateKeyPem;
         const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
-                              getProvider().createSelfSignedCertificate( "localhost", NetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
+                              provider.createSelfSignedCertificate( "localhost", NetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
                               FileUtil::writeTextFile( outCertificateFile, certificatePem + privateKeyPem ); // 한 번의 원자적 쓰기 — 늘 한 쌍
         if ( bCreated == false )
         {
@@ -93,8 +73,8 @@ namespace sw
 #endif
     }
 
-    unique_ptr<ITLSContext> NetSecurity::createServerTLSContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
-                                                                 string& outError )
+    unique_ptr<ITLSContext> NetSecurity::createServerTLSContext( INetSecurityProvider& provider, string_view certificateFile, string_view privateKeyFile,
+                                                                 string_view privateKeyPassphrase, string& outError )
     {
         using Internal         = NetSecurityInternal;
         string certificatePath = makeProjectPath( certificateFile );
@@ -104,7 +84,7 @@ namespace sw
             outError = "the TLS certificate and private key files must be configured together";
             return nullptr;
         }
-        if ( certificatePath.empty() && ensureDevCertificate( certificatePath, privateKeyPath, outError ) == false )
+        if ( certificatePath.empty() && ensureDevCertificate( provider, certificatePath, privateKeyPath, outError ) == false )
             return nullptr;
         TLSContextConfig settings;
         settings._role                 = TLSRole::Server;
@@ -112,12 +92,13 @@ namespace sw
         if ( Internal::readPem( certificatePath, settings._certificatePem, outError ) == false ||
              Internal::readPem( privateKeyPath, settings._privateKeyPem, outError ) == false )
             return nullptr;
-        unique_ptr<ITLSContext> context = getProvider().createTLSContext( settings, outError );
+        unique_ptr<ITLSContext> context = provider.createTLSContext( settings, outError );
         settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
         return context;
     }
 
-    unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( string_view trustFile, string_view serverName, string& outError, string_view alpnProtocol )
+    unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( INetSecurityProvider& provider, string_view trustFile, string_view serverName, string& outError,
+                                                                 string_view alpnProtocol )
     {
         using Internal = NetSecurityInternal;
         TLSContextConfig settings;
@@ -128,9 +109,9 @@ namespace sw
         if ( trustPath.empty() )
         {
             string privateKeyPath;
-            if ( ensureDevCertificate( trustPath, privateKeyPath, outError ) == false || Internal::readPem( trustPath, settings._trustPem, outError ) == false )
+            if ( ensureDevCertificate( provider, trustPath, privateKeyPath, outError ) == false || Internal::readPem( trustPath, settings._trustPem, outError ) == false )
                 return nullptr;
-            if ( getProvider().computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
+            if ( provider.computeCertificateSHA256( settings._trustPem, settings._pinnedCertificateSHA256Hex ) == false )
             {
                 outError = "cannot compute the SHA-256 of the development certificate";
                 return nullptr;
@@ -140,6 +121,6 @@ namespace sw
         {
             return nullptr;
         }
-        return getProvider().createTLSContext( settings, outError );
+        return provider.createTLSContext( settings, outError );
     }
 } // namespace sw

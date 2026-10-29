@@ -10,6 +10,7 @@
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
@@ -90,7 +91,7 @@ namespace sw
                 settings._historyPollIntervalMs = config._pollSeconds * kMillisecondsPerSecond;
                 if ( httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
-                return make_unique<AppleReceiptValidator>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
+                return make_unique<AppleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
 
             [[nodiscard]] static unique_ptr<IReceiptValidator> createGoogle( const ReceiptProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient, string& outError )
@@ -115,7 +116,7 @@ namespace sw
                 if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "receiptTrustFile", outError ) == false ||
                      httpClient.registerHostTLS( settings._baseURL, trustFile, "receiptTrustFile", outError ) == false )
                     return nullptr;
-                return make_unique<GoogleReceiptValidator>( std::move( settings ), &NetSecurity::getProvider(), &httpClient.get() );
+                return make_unique<GoogleReceiptValidator>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
 
             /** @brief 항목의 `sandbox`(참 · 거짓, 없으면 거짓)를 읽습니다. 참 · 거짓이 아니면 오류를 남기고 false 입니다. */

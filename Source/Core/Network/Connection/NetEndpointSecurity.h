@@ -51,7 +51,7 @@ namespace sw
     /** @brief `NetEndpointConfig::_security` 입니다. */
     struct NetSecurityConfig
     {
-        INetSecurityProvider*     _pProvider{ nullptr };      ///< Encrypted 면 필수(`NetSecurity::getProvider()`)
+        INetSecurityProvider*     _pProvider{ nullptr };      ///< Encrypted 면 필수(GameFramework 가 공개한 `INetSecurityProvider` 서브시스템)
         INetConnectAuthenticator* _pAuthenticator{ nullptr }; ///< 서버 — 있으면 토큰 없는 · 모르는 토큰 · 증명이 틀린 연결을 거절한다
         NetSecurityMode           _mode{ NetSecurityMode::LanUnsecured };
         NetAeadAlgorithm          _algorithm{ NetAeadAlgorithm::AES256Gcm };

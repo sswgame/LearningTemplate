@@ -19,7 +19,7 @@ namespace sw
     class SW_KIT_SERVER_API NetSecurityLoginCrypto final : public ILoginCrypto
     {
     public:
-        /** @brief @p pProvider 는 빌려 씁니다. 이 객체보다 오래 살아야 하며 `NetSecurity::getProvider()` 로 얻습니다. */
+        /** @brief @p pProvider 는 빌려 씁니다. 이 객체보다 오래 살아야 하며 `game::getSubsystem<INetSecurityProvider>()` 로 얻습니다(프로세스 범위의 모듈 서브시스템이라 키트 리로드보다 오래 산다). */
         explicit NetSecurityLoginCrypto( INetSecurityProvider* pProvider );
 
         [[nodiscard]] bool fillRandom( uint8* pOut, int32 size ) override;

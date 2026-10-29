@@ -6,6 +6,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
@@ -52,7 +53,7 @@ namespace sw
             outError = "https URL '" + string( url ) + "' needs " + string( trustOption ) + " (a CA bundle PEM that verifies the provider)";
             return false;
         }
-        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( trustFile, address._host, outError );
+        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), trustFile, address._host, outError );
         if ( context == nullptr )
             return false;
         _client.registerTLSContext( address._host, context.get() );

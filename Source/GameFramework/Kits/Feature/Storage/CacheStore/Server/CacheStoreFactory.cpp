@@ -9,6 +9,7 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Server/OnlineStoreDriverTable.h"
@@ -102,7 +103,7 @@ namespace sw
         unique_ptr<ITLSContext> tlsContext;
         if ( parsed._bTLS == SW_TRUE )
         {
-            tlsContext = NetSecurity::createClientTLSContext( parsed._trustFile, parsed._host, outError );
+            tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), parsed._trustFile, parsed._host, outError );
             if ( tlsContext == nullptr )
                 return nullptr;
         }

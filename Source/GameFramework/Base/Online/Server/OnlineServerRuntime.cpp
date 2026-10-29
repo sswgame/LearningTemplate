@@ -8,6 +8,7 @@
 
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/EphemeralServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
@@ -539,7 +540,7 @@ namespace sw
         if ( settings._bTLS == SW_TRUE )
         {
             // 서비스 스트림은 TLS 1.3 이다. 경로가 둘 다 비면 Dev 만 개발용 인증서를 쓰고 Shipping 은 여기서 멈춘다.
-            parts._tlsContext = NetSecurity::createServerTLSContext( settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase, outError );
+            parts._tlsContext = NetSecurity::createServerTLSContext( game::getSubsystem<INetSecurityProvider>(), settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase, outError );
             OnlineServerRuntimeInternal::wipeSecret( settings._tlsPrivateKeyPassphrase );
             if ( parts._tlsContext == nullptr )
             {

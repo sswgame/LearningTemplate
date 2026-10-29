@@ -190,7 +190,7 @@ namespace sw
             return false;
         if ( isEncrypted() && _settings._security._pProvider == nullptr )
         {
-            SW_LOG_ERROR( "NetEndpoint: encrypted mode needs a security provider (NetSecurity::getProvider())" );
+            SW_LOG_ERROR( "NetEndpoint: encrypted mode needs a security provider (the INetSecurityProvider subsystem GameFramework publishes)" );
             return false;
         }
 #if defined( SW_SHIPPING )

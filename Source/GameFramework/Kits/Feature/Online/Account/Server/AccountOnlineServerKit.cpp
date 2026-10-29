@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
@@ -47,7 +48,7 @@ namespace sw
         {
         public:
             AccountOnlineServerKit()
-                : _crypto{ &NetSecurity::getProvider() }
+                : _crypto{ &game::getSubsystem<INetSecurityProvider>() }
                 , _secretVault{}
                 , _platformProviders{}
                 , _loginService{}
@@ -222,7 +223,7 @@ namespace sw
                 uint8 arrVaultKey[LoginSecretVault::kKeySize];
                 if ( LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey, outError ) == false )
                     return false;
-                _secretVault.initialize( &NetSecurity::getProvider(), arrVaultKey );
+                _secretVault.initialize( &game::getSubsystem<INetSecurityProvider>(), arrVaultKey );
                 Memory::set( arrVaultKey, 0, sizeof( arrVaultKey ) );
                 _loginService.setSecretVault( &_secretVault );
                 return true;

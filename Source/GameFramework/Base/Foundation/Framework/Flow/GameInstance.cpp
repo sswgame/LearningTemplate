@@ -190,7 +190,7 @@ namespace sw
         // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
         // 티켓 게임 포트가 쓸 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 세션을 열기 전에 넣는다.
         GameNetSession& netSession = game::getSubsystem<GameNetSession>(); // `bindEngineServices` 가 있음을 확인했다
-        netSession.getConnectSecurity().setProvider( &NetSecurity::getProvider() );
+        netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
         const bool bNetSessionOpened = netSession.openFromLaunch();
         if ( bNetSessionOpened == false )
             SW_LOG_ERROR( "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
