@@ -13,7 +13,7 @@
 	<At frame="30"><Screenshot file="frame30.ppm"/></At>
 	<!-- 화면에 무언가 나갔다(완전히 검지 않다) — 첫 프레임에 그릴 것이 없는 백엔드 결함의 그물 -->
 	<At frame="31">
-		<ExpectImage file="frame30.ppm" metric="meanLuma" atLeast="0.01" provisional="측정값 기록 없음(GPU 통과만 확인) - 다음 GPU 실행의 metric 줄로 정한다"/>
+		<ExpectImage file="frame30.ppm" metric="meanLuma" atLeast="0.01" measured="2026-10-29 all:0.1635"/>
 		<ExpectLog contains="Quit requested" count="0"/>
 		<Pass/>
 	</At>

@@ -26,7 +26,7 @@ namespace sw
     {
 #if defined( SW_WITH_CLIENT_CODE )
         // 모듈 렌더 확장 시연(ExtensionRenderPass M3 · M4): 렌더 스레드 확장 객체(패스 둘)와 큐브 프록시를 등록한다. 패스의 셰이더는 파이프라인
-        // `game/empty/pipeline/extensionpasspipeline.xml` 의 `_listExtensionShader` 가 선언한다 — 그 파이프라인을 고르지 않은 실행에서는 두 패스가 오류를 한 번 남기고 빠진다.
+        // `game/empty/pipeline/extensionpasspipeline.xml` 의 `_listExtensionShader` 가 선언한다 — 확장 셰이더를 선언하지 않은 파이프라인에서는 확장이 쉰다(오류 아님).
         // 소멸(핫 리로드 · 종료)은 렌더 스레드의 모듈 구간이 끝나기를 기다린 뒤 등록을 푼다.
         RenderExtensionRegistry* pPassRegistry = game::findSubsystem<RenderExtensionRegistry>();
         if ( pPassRegistry != nullptr )

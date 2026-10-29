@@ -111,6 +111,10 @@ namespace sw
 
         // 1) 프록시 갱신 적용 → 확장 훅 → 프록시 요소. 모두 모듈 코드이고 렌더 스레드의 모듈 구간(RenderScope) 안이다.
         registry.applyPendingProxyUpdates();
+        // 파이프라인이 확장 셰이더를 하나도 선언하지 않았으면 확장 패스를 받지 않는 파이프라인이다 — 이번 프레임 확장은 쉬고 오류가 아니다
+        // (언리얼 SceneViewExtension 의 IsActiveThisFrame). 선언한 파이프라인에서 목록에 빠진 셰이더는 아래 2) 가 오류로 알린다(쿠킹되지 않는다).
+        if ( _pipelineResource.getDesc()._listExtensionShader.empty() )
+            return;
         const ExtensionFrameInfo  frameInfo{ _outputWidth, _outputHeight };
         ExtensionPassBuilder      builder;
         vector<IRenderExtension*> listExtension;

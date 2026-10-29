@@ -191,7 +191,8 @@ namespace sw
                 StampInfo    info{};
                 const string stampPath = FileUtil::joinPath( binDirectory, "cook.stamp" );
                 string       text;
-                if ( FileUtil::readTextFile( stampPath, text ) )
+                // 첫 쿠킹에는 스탬프가 없다 — 없음은 "모두 낡음" 이지 오류가 아니므로 읽기 전에 묻는다(`readTextFile` 은 없는 파일을 오류로 남긴다).
+                if ( FileUtil::exists( stampPath ) && FileUtil::readTextFile( stampPath, text ) )
                     info = parseCookStamp( text );
 
                 // 도구 지문이 다르면(컴파일러 · 옵션이 바뀌었으면) 소스가 같아도 모두 낡았다. 빈 결과와 같게 다룬다.
