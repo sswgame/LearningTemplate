@@ -20,6 +20,8 @@
  *  맵이 들고 있거나 맵을 읽는 협력 클래스는 따로 있다(언리얼 Enhanced Input 이 매핑 컨텍스트와 플레이어 설정 · 아이콘을 가르는 나눔).
  *  - InputActionBuffer: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정(맵이 들고 프레임마다 진행).
  *  - InputGlyphResolver: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회(상태 없음).
+ *  - InputAccessibilitySettings: 감도 · 축 반전 · 데드존 · 토글 액션(맵이 들고, 맵을 다시 읽어도 남는다).
+ *  - InputRemapSerializer: 플레이어 리매핑 파일(`<UserBindings>`)의 쓰기 · 읽기. 두 XML 형식이 함께 쓰는 칸 읽기는 InputMapXMLUtil.
  */
 
 namespace sw

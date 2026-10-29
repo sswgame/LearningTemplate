@@ -4,7 +4,9 @@
  * @details `ActionBinding` 하나로 단일 슬롯, 1D/2D 합성 축, 스틱, 조합 키를 모두 표현한다.
  *          액션은 `ActionPhase` 상태 머신(Started, Ongoing, Triggered, Completed, Canceled)으로 평가하고,
  *          모디파이어 파이프라인(데드존, 축 반전, 감도 배율, 바인딩마다 부호 뒤집기)을 거친다. 시간을 쓰는 트리거는 바인딩마다 시간을 둘 수 있다.
- *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, XML 직렬화를 제공한다. 선입력 버퍼링과 격투 커맨드 판정은 `InputActionBuffer`(`getActionBuffer`)가 맡는다.
+ *          그 밖에 LIFO 컨텍스트 스택, 이벤트 델리게이트 디스패치, 맵 정의 XML 직렬화를 제공한다(언리얼 Enhanced Input 의 매핑 컨텍스트 + 모디파이어 · 트리거 자리).
+ *          맵 둘레의 일은 협력 클래스가 맡는다 — 선입력 · 격투 커맨드는 `InputActionBuffer`(`getActionBuffer`), 플레이어 설정 · 토글은 `InputAccessibilitySettings`
+ *          (`getAccessibilitySettings`), 플레이어 리매핑 파일은 `InputRemapSerializer`, UI 글리프는 `InputGlyphResolver`.
  */
 #pragma once
 #include "Core/Container/string.h"
