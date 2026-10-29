@@ -23,6 +23,7 @@
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 #include "Engine/CoreServices/NamePoolSubsystem.h"
 #include "Engine/CoreServices/StaticStorageSubsystem.h"
+#include "Engine/FileSystem/ContentHash.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -127,6 +128,7 @@ namespace sw::engine
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
         services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
         services.addSubsystem( sw::make_unique<TickBatchRegistry>() ); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
+        services.addSubsystem( sw::make_unique<ContentHashCache>() );  // 파일 내용 해시 캐시 — 셰이더 컴파일 · 쿠킹이 워커에서 묻는다
         services.addSubsystem( sw::make_unique<GameTimeScale>() );     // 정지 요청 · 이번 프레임의 실제 경과
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
         // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
