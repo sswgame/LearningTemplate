@@ -132,6 +132,8 @@ namespace sw
         float32 getValueAsFloat() const;
         /** @brief 타입에 맞게 문자열로 바꿉니다. */
         string getValueAsString() const;
+        /** @brief 기본값(`_defaultValue`)을 `getValueAsString` 과 같은 형식의 글로 바꿉니다. 지금 값은 건드리지 않고 변경 콜백도 부르지 않습니다. */
+        string getDefaultValueAsString() const;
         /**
          * @brief 타입을 표시 · 프리셋용 이름으로 반환합니다(`Bool` · `Int32` · `Float` · `String`). enum 변수는 enum 타입 이름입니다.
          * @details 에디터 패널과 프리셋 저장이 같은 이름을 쓰도록 여기 한 곳에서 정합니다.
@@ -236,6 +238,18 @@ namespace sw
          *       맵이 흔들려도 가리키는 객체는 제자리에 있습니다(값으로 담고 그 주소를 내주면 안 됩니다).
          */
         GlobalVariableInfo* findVariable( string_view name );
+        /**
+         * @brief 변수 객체(정의 매크로의 C++ 변수 — 다른 TU 는 `SW_EXTERN_GLOBAL_VARIABLE`)로 정보를 찾습니다. 등록하지 않았으면 nullptr 입니다.
+         * @details 코드가 자기 변수를 구독할 때 이름 글자 대신 쓴다 — 철자가 틀리면 실행이 아니라 컴파일에서 멈춘다. 포인터 수명은 이름 조회와 같다.
+         *          이름이 `findVariable` 과 다른 까닭: 같은 이름의 템플릿이면 문자열 리터럴 호출(`findVariable( "gv_x" )`)을 템플릿이 가져간다.
+         */
+        template <typename T>
+        GlobalVariableInfo* findVariableOf( const T& variable )
+        {
+            return findVariableByStorage( &variable );
+        }
+        /** @brief 값 칸 주소(`GlobalVariableInfo::_pData`)로 찾습니다. 템플릿 `findVariableOf( variable )` 이 부릅니다. */
+        GlobalVariableInfo* findVariableByStorage( const void* pData );
 
         /**
          * @brief 등록된 변수의 포인터를 @p outListVariable 에 채웁니다(먼저 비운다, 순서 없음, 스레드 안전).

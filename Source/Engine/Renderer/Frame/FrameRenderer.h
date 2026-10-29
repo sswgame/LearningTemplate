@@ -120,6 +120,11 @@ namespace sw
         /** @brief RenderPipeline XML 로 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번만 바인딩합니다. */
         [[nodiscard]] bool loadPipeline( const AssetID& assetID );
         /**
+         * @brief 파이프라인을 고르는 순서(초기화 인자 > `gv_renderPipeline` > `gv_deferredShading` > 팩 설정 > 기본 포워드)로 다시 골라 불러옵니다.
+         * @details 초기화가 부르고, 실행 중에는 두 변수가 바뀔 때 렌더 스레드를 재운 뒤 부른다(`FrameRendererSubsystem`) — 언리얼 `r.*` 렌더 설정을 실행 중에 바꾸는 것과 같다.
+         */
+        [[nodiscard]] bool selectPipeline();
+        /**
          * @brief 컴파일된 그래프를 실행합니다. 자기 빌더로 scene 의 스냅샷을 만들고, 패킷 경로와 같은 경로로 GPU 에 올립니다.
          * @details 주 시점은 scene 의 게임 카메라(`Scene::pickActiveGameCamera`)다. 쓸 카메라가 없으면 오류로 알리고 그리지 않은 채 false 입니다.
          */
@@ -164,6 +169,8 @@ namespace sw
         FrameRendererStatus getStatus() const { return _status; }
         /** @brief Failed 일 때의 원인 메시지입니다(그 밖에는 비어 있습니다). */
         const string& getStatusMessage() const { return _statusMessage; }
+        /** @brief 지금 그리는 파이프라인 XML 입니다(불러오기 전이면 빈 글). */
+        const string& getPipelinePath() const { return _pipelinePath; }
         /** @brief 렌더 그래프를 반환합니다. */
         const RenderGraph& getGraph() const { return _graph; }
         /** @brief GPUScene 을 반환합니다. */
@@ -1105,6 +1112,7 @@ namespace sw
         RenderPipelineAsset _pipelineResource;
         RenderGraph         _graph;
         string              _pipelinePath;
+        string              _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
         float4              _clearColor;
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
         ViewTarget _mainView;

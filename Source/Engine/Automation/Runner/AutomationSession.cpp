@@ -32,6 +32,8 @@ namespace sw
     {
         /** @brief 시나리오가 첫 씬을 선언하는 `<Launch>` 변수 — 게임 프레임워크가 정의하는 이름이다(`GameInstance`). 체인의 단계는 이 씬을 새로 열고 시작한다. */
         constexpr string_view kStartSceneVariable = "gv_firstScene";
+        /** @brief 단계 사이에 앞 씬을 비우는 빈 씬의 이름입니다. */
+        constexpr string_view kStageResetSceneName = "AutomationStageReset";
     } // namespace
 
     AutomationSession::AutomationSession()
@@ -43,6 +45,7 @@ namespace sw
         , _reportPath{}
         , _workingFolder{}
         , _listStartVariable{}
+        , _processStartScenePath{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
     {
@@ -143,6 +146,7 @@ namespace sw
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
         (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
         _listStartVariable.clear();
+        _processStartScenePath.clear();
         vector<GlobalVariableInfo*> listVariable;
         engine::getSubsystem<GlobalVariableManager>().collectVariables( listVariable );
         for ( const GlobalVariableInfo* pVariable : listVariable )
@@ -174,7 +178,12 @@ namespace sw
 
         const bool bLaterStage = _pChain->getStageIndex() > 0;
         if ( bLaterStage )
+        {
+            // 앞 단계의 씬을 먼저 비운다 — 변수를 되돌리고 거는 사이에 앞 씬이 다음 단계의 설정(렌더 파이프라인)으로 그려지면 둘이 맞지 않는 조합이 생긴다
+            // (2D 쿠키 빛을 3D 파이프라인이 그리면 DX11 · GL 의 흉내 슬롯이 겹친다). 빈 씬은 어느 설정으로 그려도 된다.
+            (void)engine::getSubsystem<SceneManager>().createEmptyActiveScene( kStageResetSceneName );
             restoreStartVariables();
+        }
 
         _pRunner = make_unique<AutomationRunner>();
         _pRunner->setReproduceInput( _reproduceInput );
@@ -183,23 +192,42 @@ namespace sw
         _screenshotBaseline = completedScreenshotCount;
         if ( _pRunner->isActive() )
         {
-            const vector<AutomationAttribute>& listLaunch = _pRunner->getScenario().getTestOptions()._listLaunchVariable;
-            const auto                         itScene    = std::find_if( listLaunch.begin(), listLaunch.end(), []( const AutomationAttribute& variable )
-                                       { return variable._name == kStartSceneVariable; } );
-            if ( itScene != listLaunch.end() )
+            // 단계의 `<Launch>` 값을 건다(첫 단계는 명령줄로 이미 같다). 실행 중에 걸어도 다 듣는다 — 렌더 파이프라인은 다시 고르고(`FrameRendererSubsystem`),
+            // 씬이 세울 때 읽는 값(스트레스 씬 · 첫 씬)은 아래에서 씬을 새로 열 때 읽힌다. 실행기의 `<Launch>` 확인(`prepare`)이 걸렸는지 본다.
+            GlobalVariableManager& globalVariables = engine::getSubsystem<GlobalVariableManager>();
+            string                 startScene;
+            for ( const AutomationAttribute& variable : _pRunner->getScenario().getTestOptions()._listLaunchVariable )
             {
-                // 변수도 맞춘다 — 실행기의 `<Launch>` 확인과 재현 명령이 이 값을 본다.
-                (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( kStartSceneVariable, itScene->_value );
-                _pRunner->requireStartScene( itScene->_value, bLaterStage );
+                GlobalVariableInfo* const pVariable = globalVariables.findVariable( variable._name );
+                if ( pVariable == nullptr )
+                    continue; // 모르는 변수는 `prepare` 가 읽기 오류로 낸다
+                if ( bLaterStage == false )
+                    forgetStartValue( variable._name, pVariable->getDefaultValueAsString() );
+                if ( pVariable->getValueAsString() != variable._value )
+                    (void)pVariable->setValueFromString( variable._value );
+                if ( variable._name == kStartSceneVariable )
+                    startScene = variable._value;
             }
+            // 둘째 단계부터는 앞 단계의 씬을 이어받지 않는다 — 선언한 첫 씬이 없으면 프로세스가 처음 연 씬을 새로 연다.
+            if ( startScene.empty() && bLaterStage )
+                startScene = _processStartScenePath;
+            if ( startScene.empty() == false )
+                _pRunner->requireStartScene( startScene, bLaterStage );
             else if ( bLaterStage )
-            {
-                SW_LOG_WARNING( "[Scenario] stage %# declares no <Launch variable=\"%#\"> - it starts in the scene the previous stage left",
-                                static_cast<uint32>( _pChain->getStageIndex() ), kStartSceneVariable );
-            }
+                SW_LOG_WARNING( "[Scenario] stage %# has no start scene to reopen - it starts in the scene the previous stage left",
+                                static_cast<uint32>( _pChain->getStageIndex() ) );
             const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
                 SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
+        }
+    }
+
+    void AutomationSession::forgetStartValue( string_view name, string_view value )
+    {
+        for ( auto& [startName, startValue] : _listStartVariable )
+        {
+            if ( startName == name )
+                startValue = string( value );
         }
     }
 
@@ -327,6 +355,12 @@ namespace sw
         const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
         if ( bNoRunnerToUpdate )
             return kEngineFrameRunning;
+        // 프로세스가 처음 연 씬 — 첫 단계가 시작한 프레임의 활성 씬이다(첫 씬을 선언하지 않은 다음 단계가 이 씬을 새로 연다).
+        if ( _processStartScenePath.empty() && _pChain != nullptr && _pChain->getStageIndex() == 0 && _pRunner->hasStarted() )
+        {
+            if ( const Scene* const pActive = engine::getSubsystem<SceneManager>().getActiveScene() )
+                _processStartScenePath = pActive->getSourcePath();
+        }
         const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
         const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );

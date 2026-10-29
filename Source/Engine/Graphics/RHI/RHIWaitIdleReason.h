@@ -7,12 +7,15 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /**
      * @enum RHIWaitIdleReason
-     * @brief 장치 · 렌더 스레드를 비우는 이유입니다. 프레임마다 도는 경로에는 어느 이유도 맞지 않는다 — 맞는 이유가 없으면 대기를 쓰지 않고 지연 해제 · 티켓 폴링으로 푼다.
+     * @brief 장치 · 렌더 스레드를 비우는 이유입니다(리플렉션 열거형 — 이름은 `getEnumName` 이 준다). 프레임마다 도는 경로에는 어느 이유도 맞지 않는다 — 맞는 이유가 없으면 대기를 쓰지 않고 지연 해제 · 티켓 폴링으로 푼다.
      */
+    ENUM()
     enum class RHIWaitIdleReason : uint8
     {
         Shutdown = 0,    ///< 엔진 · 서브시스템 종료. 모든 GPU 일을 끝내고 자원을 거둔다
@@ -22,28 +25,6 @@ namespace sw
         SceneActivation, ///< 씬 전환 — 이전 씬의 GPU 일이 끝난 뒤에 새 씬의 기본 자원을 잡는다
         Capture,         ///< 초상 · 반사 프로브 베이크 같은 캡처가 한 번 GPU 결과를 기다린다(프레임 경로 밖)
         Tool,            ///< 에디터 · 테스트 · 개발 토글 같은 도구 경로(프레임 경로가 아니다)
+        PipelineSwitch,  ///< 렌더 파이프라인을 실행 중에 바꾼다(`gv_renderPipeline` · `gv_deferredShading`) — 옛 파이프라인의 패스 자원을 거두기 전
     };
-
-    /** @brief 이유의 이름입니다(로그 · 진단용 정적 문자열). */
-    [[nodiscard]] constexpr const utf8* getRHIWaitIdleReasonName( RHIWaitIdleReason reason ) noexcept
-    {
-        switch ( reason )
-        {
-            case RHIWaitIdleReason::Shutdown:
-                return "Shutdown";
-            case RHIWaitIdleReason::BackendSwap:
-                return "BackendSwap";
-            case RHIWaitIdleReason::Resize:
-                return "Resize";
-            case RHIWaitIdleReason::HotReload:
-                return "HotReload";
-            case RHIWaitIdleReason::SceneActivation:
-                return "SceneActivation";
-            case RHIWaitIdleReason::Capture:
-                return "Capture";
-            case RHIWaitIdleReason::Tool:
-                return "Tool";
-        }
-        return "Unknown";
-    }
 } // namespace sw

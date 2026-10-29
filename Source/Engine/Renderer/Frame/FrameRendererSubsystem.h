@@ -12,6 +12,7 @@
 namespace sw
 {
     class FrameRenderer;
+    struct GlobalVariableInfo;
     class RenderPacketBuilder;
     class RHISubsystem;
 
@@ -43,6 +44,9 @@ namespace sw
         RenderPacketBuilder& getPacketBuilder() const { return *_packetBuilder; }
 
     private:
+        /** @brief 파이프라인을 고르는 변수(`gv_renderPipeline` · `gv_deferredShading`)가 바뀌면 렌더 스레드를 재우고 다시 고릅니다. */
+        void onPipelineVariableChanged( GlobalVariableInfo* pVariable );
+
         unique_ptr<FrameRenderer>       _frameRenderer;
         unique_ptr<RenderPacketBuilder> _packetBuilder;
         const RHISubsystem&             _rhiSubsystem;

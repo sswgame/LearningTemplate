@@ -106,11 +106,14 @@ namespace sw
          * @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다.
          * @details 둘째 단계부터는 앞 단계의 상태를 이어받지 않는다(언리얼 Automation 이 테스트마다 맵을 열고 CVar 를 되돌리는 것과 같다) — 전역 변수를 세션 시작의
          *          값으로 되돌리고(`restoreStartVariables`), 시나리오가 선언한 첫 씬(`<Launch variable="gv_firstScene">`)을 새로 연다(`AutomationRunner::requireStartScene`).
-         *          첫 씬 밖의 `<Launch>` 값은 기동 때만 정해지므로 명령줄과 같아야 한다 — CTest 는 그 값이 같은 시나리오끼리만 체인으로 묶는다(`Test/Scenario/CMakeLists.txt`).
+         *          `<Launch>` 값은 단계를 시작할 때 걸고(렌더 파이프라인도 실행 중에 바뀐다), 첫 씬을 선언하지 않은 단계는 프로세스가 처음 연 씬을 새로 연다 — 그래서 CTest 는
+         *          시나리오 모두를 한 체인으로 돌린다(`Test/Scenario/CMakeLists.txt`).
          */
         void startStage( uint32 completedScreenshotCount );
         /** @brief 세션 시작 때 찍어 둔 전역 변수 값과 지금 값이 다른 것을 되돌립니다(`_listStartVariable`). */
         void restoreStartVariables();
+        /** @brief 찍어 둔 값 하나를 @p value 로 바꿉니다 — 첫 단계가 명령줄로 받은 `<Launch>` 값은 다음 단계로 넘기지 않고 기본값에서 시작한다. */
+        void forgetStartValue( string_view name, string_view value );
         /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationOutcome`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
         [[nodiscard]] int32 onStageEnded( AutomationOutcome result, uint32 completedScreenshotCount );
         /** @brief 재생 실행기를 새로 세웁니다(처음 · 반복). */
@@ -136,6 +139,7 @@ namespace sw
         string                              _reportPath;                ///< `-scenario-report` 원본(단계마다 `AutomationScenarioChain::makeStageReportPath`)
         string                              _workingFolder;             ///< 시작할 때의 작업 폴더(단계마다 이 폴더에서 시작한다)
         vector<std::pair<string, string>>   _listStartVariable;         ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
+        string                              _processStartScenePath;     ///< 프로세스가 처음 연 씬(첫 단계가 시작한 프레임의 활성 씬) — 첫 씬을 선언하지 않은 단계가 새로 연다
         AutomationReproduceInput            _reproduceInput;            ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;        ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
         ScenarioPlayOptions                 _playOptions{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)

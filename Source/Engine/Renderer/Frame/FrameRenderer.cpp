@@ -233,17 +233,26 @@ namespace sw
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass.get() );
 
+        _argumentPipelinePath = pipelineXMLPath;
+        return selectPipeline();
+    }
+
+    bool FrameRenderer::selectPipeline()
+    {
         // 인자, `-gv_renderPipeline`, `-gv_deferredShading`, 팩 설정(`PackEngineSettings::_renderPipeline`), EngineDefaultAssets 의 포워드 순서로 고른다.
         // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다.
-        const DataPath&                   packPipeline = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
+        const EngineDefaultAssets&        engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
+        const DataPath&                   packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
         FrameRendererUtil::PipelineChoice choice{};
-        choice._argumentPath               = pipelineXMLPath;
+        choice._argumentPath               = _argumentPipelinePath;
         choice._commandLinePath            = gv_renderPipeline;
         choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline.get();
         choice._gamePath                   = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
         choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline.get();
         choice._bDeferred                  = gv_deferredShading;
         const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
+        if ( _status == FrameRendererStatus::Ready && resolvedPipeline == _pipelinePath )
+            return true; // 고른 결과가 같다(디퍼드를 켰지만 `gv_renderPipeline` 이 이긴다 등)
 
         if ( loadPipeline( AssetID{ resolvedPipeline } ) == false )
         {

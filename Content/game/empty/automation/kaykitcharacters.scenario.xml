@@ -10,5 +10,7 @@
 	<Wait frames="60"/>
 	<Screenshot file="empty/kaykit_characters.ppm"/>
 	<Wait frames="10"/>
+	<!-- 그림을 골든과 견준다 — 사진만 남기면 화면이 틀려도 통과다(시점이 경사면에 막힌 view2 가 그렇게 지나갔다). -->
+	<ExpectImage file="empty/kaykit_characters.ppm" golden="kaykit_characters"/>
 	<Pass/>
 </Scenario>

@@ -321,6 +321,22 @@ namespace sw
         return GlobalVariableTypeTable::getRow( _type )._formatValue( *this );
     }
 
+    string GlobalVariableInfo::getDefaultValueAsString() const
+    {
+        if ( _pData == nullptr )
+            return "";
+        if ( _type == GlobalVariableType::String )
+            return std::holds_alternative<string>( _defaultValue ) ? std::get<string>( _defaultValue ) : string{};
+        // 값 칸이 아니라 빈 칸에 기본값을 써서 같은 형식기로 글을 만든다(bool · 정수 · 실수 · enum 은 8 바이트 안이다).
+        int64              storage       = 0;
+        GlobalVariableInfo scratch       = *this;
+        scratch._pData                   = &storage;
+        scratch._onValueChanged          = {};
+        const GlobalVariableTypeOps& row = GlobalVariableTypeTable::getRow( _type );
+        row._writeDefault( scratch );
+        return row._formatValue( scratch );
+    }
+
     string GlobalVariableInfo::getTypeName() const
     {
         // enum 타입 이름은 enum 변수에만 있다(`GlobalVariableRegistrar` 가 다른 타입에는 비워 둔다).
@@ -726,6 +742,17 @@ namespace sw
         const auto                     iter = _mapVariable.find( name );
         if ( iter != _mapVariable.end() )
             return iter->second.get();
+        return nullptr;
+    }
+
+    GlobalVariableInfo* GlobalVariableManager::findVariableByStorage( const void* pData )
+    {
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        for ( const auto& [name, pInfo] : _mapVariable )
+        {
+            if ( pInfo->_pData == pData )
+                return pInfo.get();
+        }
         return nullptr;
     }
 

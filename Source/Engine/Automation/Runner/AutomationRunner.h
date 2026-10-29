@@ -133,6 +133,8 @@ namespace sw
         void finish( AutomationOutcome result, string_view reason );
 
         bool isActive() const { return _result == AutomationOutcome::Running; }
+        /** @brief 시작 조건을 지나 단계를 돌기 시작했으면 true 입니다. */
+        bool hasStarted() const { return _bStarted == SW_TRUE; }
         /** @brief 마지막으로 시작한 실행 단계의 이름입니다(아직 없으면 빈 글). 창 제목과 단계 로그가 씁니다. */
         const string& getCurrentStepKind() const { return _run._currentStepKind; }
         /** @brief 그 단계가 파일에서 몇 번째인지(0 부터)입니다. */
