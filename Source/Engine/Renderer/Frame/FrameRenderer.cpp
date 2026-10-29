@@ -101,7 +101,6 @@ namespace sw
         , _arrView{}
         , _deform{}
 #if !defined( SW_SHIPPING )
-        , _debugOverrides{}
 #endif
         , _indirectDrawCallCount{ 0 }
         , _gpuPassTimeline{}
@@ -424,10 +423,6 @@ namespace sw
 
     bool FrameRenderer::isDrawMergeEnabled() const
     {
-#if !defined( SW_SHIPPING )
-        if ( _debugOverrides._drawMerge.has_value() )
-            return *_debugOverrides._drawMerge;
-#endif
         return gv_drawMerge;
     }
 
@@ -826,10 +821,6 @@ namespace sw
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
         prepareMeshMorphPool();
         bool bVertexPool = gv_vertexPool;
-#if !defined( SW_SHIPPING )
-        if ( _debugOverrides._vertexPool.has_value() )
-            bVertexPool = *_debugOverrides._vertexPool;
-#endif
         _gpuScene.setVertexPoolEnabled( bVertexPool );
         _gpuScene.upload( pDevice );
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).

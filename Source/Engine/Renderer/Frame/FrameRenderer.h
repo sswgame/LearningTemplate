@@ -44,8 +44,6 @@
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
 
-#include <optional>
-
 namespace sw
 {
     struct FogSettings;
@@ -76,30 +74,6 @@ namespace sw
         Failed             ///< initialize 나 loadPipeline 이 실패했다(getStatusMessage 참고).
     };
 
-    /**
-     * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_meshMorphDebugMode` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
-     * @details `std::nullopt`(시각은 음수)가 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
-     *          배포본의 렌더러는 이 값을 갖지 않고(`FrameRenderer::setDebugOverrides` 가 없다) 늘 전역 변수를 따른다.
-     */
-    struct FrameDebugOverrides
-    {
-        /**
-         * @brief GPU 메시 모프 진단 모드입니다. `-gv_meshMorphDebugMode` 와 같은 `MeshMorphDiagMode` 입니다(Normal / ForceOn / SkipDispatch / IndexTag).
-         * @details 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다. 그래서 이 모드 하나로
-         *          "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다. OpenGL 드라이버가 early-return 형태의
-         *          `MorphPool::computeElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
-         */
-        std::optional<MeshMorphDiagMode> _meshMorphDiag{};
-        /// @brief true 면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶고, false 면 배치마다 드로우를 부릅니다(`gv_drawMerge`). 멀티 드로우가 없는 백엔드(DX11)는 늘 배치마다입니다.
-        std::optional<bool> _drawMerge{};
-        /// @brief true 면 씬 메시 정점을 한 풀 버퍼에 모으고, false 면 메시마다 자기 정점 버퍼로 그립니다(`gv_vertexPool`, 진단과 A/B 비교용).
-        std::optional<bool> _vertexPool{};
-        /**
-         * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다.
-         * @details 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
-         */
-        float32 _animationTime{ -1.0f };
-    };
 } // namespace sw
 
 namespace sw
@@ -178,12 +152,6 @@ namespace sw
         /** @brief Ready 상태면 true 입니다. */
         bool isReady() const { return _status == FrameRendererStatus::Ready; }
 
-#if !defined( SW_SHIPPING )
-        /** @brief 진단 · 테스트 덮어쓰기를 통째로 바꿉니다. 다음 프레임부터 적용됩니다. 배포본에는 없습니다(늘 전역 변수를 따른다). */
-        void setDebugOverrides( const FrameDebugOverrides& overrides ) { _debugOverrides = overrides; }
-        /** @brief 지금의 진단 · 테스트 덮어쓰기입니다. */
-        const FrameDebugOverrides& getDebugOverrides() const { return _debugOverrides; }
-#endif
         /** @brief 마지막 프레임에서 씬이 낸 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 호출이 있다는 뜻입니다. */
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
         /**
@@ -1214,10 +1182,6 @@ namespace sw
 
         /// @brief 정점 변형(인스턴스 애니메이션, 모프, 스킨, VAT) 컴퓨트의 상수 버퍼, 풀, 스크래치, 시계입니다.
         FrameMeshDeformState _deform;
-#if !defined( SW_SHIPPING )
-        /// @brief `setDebugOverrides` 로 받은 값입니다. 음수인 칸은 전역 변수(시각은 `_deform._animationTimer`)를 따릅니다.
-        FrameDebugOverrides _debugOverrides;
-#endif
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
         /**

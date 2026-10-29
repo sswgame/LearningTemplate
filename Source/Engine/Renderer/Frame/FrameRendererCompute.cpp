@@ -95,10 +95,6 @@ namespace sw
 
     MeshMorphDiagMode FrameRenderer::getEffectiveMeshMorphDiag() const
     {
-#if !defined( SW_SHIPPING )
-        if ( _debugOverrides._meshMorphDiag.has_value() )
-            return *_debugOverrides._meshMorphDiag;
-#endif
         return gv_meshMorphDebugMode;
     }
 
@@ -121,10 +117,6 @@ namespace sw
 
     float32 FrameRenderer::getAnimationTime() const
     {
-#if !defined( SW_SHIPPING )
-        if ( _debugOverrides._animationTime >= 0.0f )
-            return _debugOverrides._animationTime;
-#endif
         return _deform._animationTimer.getTotalTime();
     }
 
