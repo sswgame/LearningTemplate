@@ -16,7 +16,7 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TextAddress.h"
-#include "Engine/Reflection/TypeAncestry.h"
+#include "Engine/Reflection/TypeCastHeader.h"
 
 namespace sw
 {
@@ -873,7 +873,7 @@ namespace sw
     {
         /**
          * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 테이블과 자기 깊이입니다. **맨 앞 멤버다** — `castTo` 가
-         *        이 타입을 전방 선언만 보고 그 주소에서 읽는다(`TypeAncestry::of`, Reflection.cpp 의 `static_assert` 가 지킨다).
+         *        이 타입을 전방 선언만 보고 그 주소에서 읽는다(`TypeCastHeader::of`, Reflection.cpp 의 `static_assert` 가 지킨다).
          * @details 캐스트의 핫패스는 이 테이블만 본다. `테이블[pTarget 의 깊이] == pTarget 의 이름` 이면 파생 관계다.
          *          포인터가 아니라 이름을 비교하므로, 레지스트리 밖 사본(테스트 목이 손으로 만든 `StaticType()`)도 이름이 같으면 같은 타입으로 본다.
          *          이 규칙은 부모를 따라가는 `isSameTypeName` 과 같다. `_typeID` 를 쓰지 않는 이유도 그 사본이다. 사본은 자기 id 를 따로 가진다.
@@ -882,8 +882,8 @@ namespace sw
          *          원자값으로 둔 이유는 `_pParentType` 과 같다. 첫 조회는 여러 스레드에서 올 수 있고, 모두 같은 값을 쓴다.
          *          등록과 캐스트가 동시에 실행되는 경우는 `_pParentType` 과 마찬가지로 가정하지 않는다(모듈 로드는 단일 스레드다).
          */
-        TypeAncestry _ancestry;
-        size_t       _size;
+        TypeCastHeader _castHeader;
+        size_t         _size;
         /** @brief `$ctor` 로 placement new 한 인스턴스를 소멸시킵니다. 없으면 nullptr 입니다. */
         void ( *_destroyInstance )( void* ) = nullptr;
         /**
@@ -931,14 +931,6 @@ namespace sw
          */
         mutable atomic<uint32> _parentMissGeneration;
         uint32                 _typeID;
-        /**
-         * @brief 레지스트리에 살아 있는 타입인지 나타냅니다. 모듈을 해제하면 항목을 지우지 않고 이 값을 내립니다(묘비).
-         * @details `TypeInfo` 의 주소는 고정이다. 레지스트리가 `unique_ptr` 로 보관하고, 테이블이 커져도 옮기지 않으며, 해제해도
-         *          지우지 않는다. 그래서 `_pParentType` 은 세대 검사 없이 포인터를 그대로 쓰고, 이 플래그 하나로 해제 여부를 확인한다.
-         *          레지스트리보다 오래 사는 정적 캐시(`TypeLookupCache`)는 레지스트리 파괴도 봐야 하므로 세대를 담은 칸에 둔다.
-         *          같은 FQN 을 다시 등록하면 같은 객체에 덮어써서 복원한다. 레지스트리 밖에서 만든 사본은 항상 살아 있다.
-         */
-        mutable atomic<uint8> _bAlive;
         /** @brief `REFLECT( Abstract )` 이거나 C++ 추상 클래스입니다. 생성할 수 없습니다(`UCLASS( Abstract )` 에 해당). */
         uint8 _bAbstract : 1;
         /** @brief `REFLECT( Static )` 타입(함수 라이브러리)입니다. `FunctionMetadata::_bStatic` 과는 다릅니다. */
@@ -1014,7 +1006,7 @@ namespace sw
             if ( pTarget == this )
                 return true;
             bool bDerived = false;
-            return _ancestry.tryCompare( pTarget->_ancestry, bDerived ) ? bDerived : isDerivedFromSlow( pTarget );
+            return _castHeader.tryCompare( pTarget->_castHeader, bDerived ) ? bDerived : isDerivedFromSlow( pTarget );
         }
         /** @brief 조상 테이블이 없을 때의 경로입니다. 만들 수 있으면 만들어서 답하고, 아니면 부모 포인터를 따라갑니다. */
         bool isDerivedFromSlow( const TypeInfo* pTarget ) const;
@@ -1032,7 +1024,7 @@ namespace sw
         /** @brief 조상 테이블이 만들어져 있으면 true 입니다. 이때 상속 검사는 부모를 따라가지 않고 O(1) 로 답합니다. */
         bool hasAncestorDisplay() const
         {
-            return _ancestry._ancestorDepth.load( std::memory_order_acquire ) < constant::reflection::kAncestorDisplayDepth;
+            return _castHeader._ancestorDepth.load( std::memory_order_acquire ) < constant::reflection::kAncestorDisplayDepth;
         }
         /**
          * @brief 부모 포인터를 따라 조상 테이블을 만듭니다. 체인을 모두 찾았고 테이블 깊이 안에 들어오면 true 입니다.
@@ -1045,7 +1037,7 @@ namespace sw
         /** @brief 조상 테이블을 비웁니다. 체인이 바뀔 수 있는 등록과 해제 뒤에 `TypeRegistry` 가 부릅니다. */
         void clearAncestorDisplay() const
         {
-            _ancestry._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
+            _castHeader._ancestorDepth.store( constant::reflection::kAncestorDepthUnknown, std::memory_order_relaxed );
         }
         /**
          * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록, 그 이름 맵, POD 판정)를 비웁니다. 다음 조회는 현재 부모로 다시 만듭니다.
@@ -1060,7 +1052,7 @@ namespace sw
          */
         void invalidateDerivedCaches();
         /** @brief 레지스트리에 살아 있으면 true 입니다. 모듈을 해제하면 내려가고 다시 등록하면 올라갑니다. 사본은 항상 true 입니다. */
-        bool isAlive() const { return _bAlive.load( std::memory_order_acquire ) != SW_FALSE; }
+        bool isAlive() const { return _castHeader.isAlive(); }
         /**
          * @brief 묘비로 남길 때 모듈이 가지고 있던 내용을 비웁니다. 이름, id, 모듈만 남습니다.
          * @details 프로퍼티와 메서드 목록은 그 모듈의 코드(델리게이트, `$ctor`, 소멸 함수)를 가리킨다. 모듈이 언로드된 뒤에

@@ -300,7 +300,7 @@ namespace sw
          * @brief FQN 하나당 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`
          *        으로 이 항목을 가리킵니다. `const TypeInfo*` 를 키로 쓰는 쪽(컴포넌트 풀 등)이
          *        이름을 무엇으로 조회했느냐에 따라 다른 포인터를 받으면 안 됩니다. 값은 **주소가 고정**입니다. 커져도
-         *        옮기지 않고, 모듈을 해제해도 지우지 않고 `_bAlive` 를 내립니다(묘비).
+         *        옮기지 않고, 모듈을 해제해도 지우지 않고 `_castHeader._bAlive` 를 내립니다(묘비).
          */
         unordered_map<hashed_string, unique_ptr<TypeInfo>> _mapFqnToClassType SW_GUARDED_BY( _mutex );
         /** @brief 짧은 이름과 별칭에서 FQN 으로 가는 맵입니다. 조회는 여기를 거쳐 `_mapFqnToClassType` 한 곳으로 모입니다. */
