@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. J7(콘텐츠 정책 하나) · 시나리오를 백엔드당 프로세스 하나로(3 절)도 끝났다. **먼저 3 절의 남은 일**(흉내 슬롯 겹침 · 게임 기동 흐름 재시작 훅), 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6(쿠커 단위, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. J7(콘텐츠 정책 하나) · 시나리오를 백엔드당 프로세스 하나로(3 절)도 끝났다. 3 절의 남은 일은 창 바둑판 간격(플랫폼 API 대기)만 남았다. **바로 다음**: 셰이더 쿠킹본을 소스 트리(`Content/<도메인>/shaders/bin`)에서 쿠킹 스테이징(`build/<프리셋>/Cooked/<도메인>/shaders/bin`)으로 — 씬 · 프리팹 쿠킹본과 같은 자리(팩 쿠커는 스테이징을 이미 모두 담는다. 스테이징 쪽에도 다른 백엔드 제외를 걸고, 실행 중 사전 컴파일 조회 · 굽기 도장의 경로를 옮긴다). 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6(쿠커 단위, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -28,21 +28,18 @@
 | 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다: 팩 매니저(`AssetIO::bindPackManager`), 메시 무효화(`SW_MESH_INVALIDATION_HOOK`), 서브시스템 순서(위 층의 의존 칸) | 언리얼 FPlatformFileManager · 모듈 등록 |
 | 키트 하나의 에디터 확장은 그 키트 폴더의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 에는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인의 <X>Editor 모듈 |
 | 폴더 · 파일 이름은 내용으로: `Engine/FileSystem`(층 1 콘텐츠 파일 시스템) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/2D`(층 6, 언리얼 Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
-| 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(실행 파일 호스트 부품 — 언리얼 Launch), `*Info` 정적 사실 표(언리얼 FPixelFormatInfo), `Core/Container` 등 폴더 이름과 같은 접두어 묶음(언리얼 Containers 처럼 평평하게) | |
+| 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(실행 파일 호스트 부품 — 언리얼 Launch), `*Info` 정적 사실 표(언리얼 FPixelFormatInfo), `Core/Container` 등 폴더 이름과 같은 접두어 묶음(언리얼 Containers 처럼 평평하게), `IWindowTitleTarget`(창 제목을 거는 길을 하나로 막는 이음매 — `MainWindowSubsystem` 이 비공개 상속, 테스트가 가짜를 넣는다) | |
 
 ## 3. 테스트 · 시나리오
 
 `Test/README.md` 가 정본이다(쓰는 법 · 옛 문제와 고친 것 표). 요약: 단위 테스트는 기능 옆 `Tests/` 의 `SW_TEST_CASE` 를 `App --test` 한 번이 엔진 위에서 섞어 돌린다(로그 게이트 · 단언 0 건 실패 · 스냅숏 · 케이스별 쓰기 폴더). 시나리오는 적은 순서대로 도는 단계(`<Wait>` · `<WaitUntil>`), 백엔드별 골든 이미지(`-scenario-update-golden`), 시나리오 안 `<AllowLog>`, 실행별 산출물 폴더 · 사용자 설정이다.
 
-- **백엔드당 프로세스 하나**: CTest 항목 `Scenario.<게임>` 하나가 시나리오 모두를 체인(`-scenario=a,b,c -scenario-keep-going`)으로 돌리고, `-scenario-backends=all` 이 백엔드마다 자식 App 하나를 띄운다(창은 2×2 바둑판 `-WinX/-WinY`). 단계마다 세션이 빈 씬으로 앞 씬을 비우고 → 전역 변수를 세션 시작 값으로 되돌리고 → `<Launch>` 값을 건 뒤 → 첫 씬(선언이 없으면 프로세스가 처음 연 씬)을 새로 연다(`AutomationSession::startStage`). 렌더 파이프라인 변수는 실행 중에 다시 고른다(`FrameRendererSubsystem`). 게임 기동 흐름이 씬을 정하는 시나리오(첫 씬 없이 `<Launch>` 만 — Empty 벤치 `gv_stressTest*`)만 자기 프로세스다. 전체 ctest 85 초(처음 272 초), 동시 App 최대 5(부모 + 넷). 단계별 결과는 `Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n`.
+- **백엔드당 프로세스 하나**: CTest 항목 `Scenario.<게임>` 하나가 시나리오 모두를 체인(`-scenario=a,b,c -scenario-keep-going`)으로 돌리고, `-scenario-backends=all` 이 백엔드마다 자식 App 하나를 띄운다(창은 2×2 바둑판 `-WinX/-WinY`). 단계마다 세션이 빈 씬으로 앞 씬을 비우고 → 전역 변수를 세션 시작 값으로 되돌리고 → `<Launch>` 값을 건 뒤 → 게임을 다시 세운다(`AutomationSession::startStage`). 렌더 파이프라인 변수는 실행 중에 다시 고른다(`FrameRendererSubsystem`). 둘째 단계부터는 게임 인스턴스를 상태 복원 없이 다시 세운다(`IGameRestarter` — App 이 `GameModuleManager` 를 호스트 범위에 건다. 게임을 내리고 → 활성 씬을 닫고 → 월드를 플레이 전으로 두고 → 새로 만든다, 언리얼 PIE 의 새 GameInstance). 그래서 단계마다 게임의 기동 흐름(첫 씬 · 벤치)이 첫 단계와 같은 길로 돌고, 시나리오 모두가 체인 하나다(벤치 · kaykit 포함 22 단계). 전체 ctest 85 초(처음 272 초), 동시 App 최대 5(부모 + 넷). 단계별 결과는 `Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n`.
+- **결정적 실행**: 시나리오는 `gv_syncAssetArrival=1` 을 건다 — 애니메이터가 시작 때 비동기로 읽는 클립을 `onBeginPlay` 에서 기다린다(언리얼 자동화의 FlushAsyncLoading). 끄면 첫 포즈가 나오는 프레임이 디스크 지연에 달려 래그돌 · 물리 이력이 갈렸다. 물리는 구성마다 같은 비트다: Jolt 는 `CROSS_PLATFORM_DETERMINISTIC=ON`(`ThirdParty/joltphysics/vcpkg-port`), `Engine/Physics` 의 TU 는 FMA 축약을 끈다(`sw_markDeterministicSources` — 파괴와 같은 규칙). 렌더는 대상이 아니다(디버그 셰이더 코드젠 · 렌더 수학의 FMA 로 전체 해상도 바이트는 다르고, 골든 비교 크기에서는 같다). 남은 문턱 안 차이(vfxgpulights 0.14 % · kaykitrig vk 0.28 %)는 그 렌더 차이다.
+- **셰이더 캐시**: 컴파일 결과 캐시는 `Bin/Saved/ShaderCompileCache`(재정의 캐시 `Bin/Saved/ShaderCache` 와 같은 바탕, 언리얼 DDC). 콘텐츠 트리에 두면 자동화가 쓰지 못해 매번 다시 컴파일했고, Debug 는 그때 디버그 코드젠이라 그림이 달라졌다. 셰이더 헤더를 고치면 `--cook-shaders` 를 다시 돈다.
 - **시작 시점의 결정성**: 로딩 화면은 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`, 요청마다 `SceneLoadKind` 필수 — 편집기 · 진단은 `Tool`)에 게임이 붙어 띄우고(언리얼 PreLoadMap), 떠 있는 동안 게임 시간을 멈춘다(`LoadingScreen` 형식). 그래서 시나리오의 첫 프레임은 늘 월드의 첫 틱이다 — 예전에는 로드 시간 · 최소 표시 시간만큼 월드가 로딩 화면 뒤에서 돌았다(cloth 골든을 다시 떴다).
 - **종료 코드**: 표 하나 `Config/Engine/ProcessExitCodes.json` → C++ `ProcessExitCode` · CMake `SW_EXIT_CODE_<이름>`.
-- **남은 일(다음 세션 먼저)**:
-  1. ~~DX11 · GL 흉내 슬롯 겹침~~ — 끝(2026-10-29): 엔진 텍스처는 역할 하나 = 칸 하나(`shaderslot::emulated::kEngineTextureNames`, DX11 t32.. · GL 유닛 0..). 공유 칸 · 겹침 검증 · `pickOne` 단언을 지웠다(언리얼 D3D11 RHI 처럼 매개변수마다 레지스터). 덧붙여 엔진이 넣는 define 이 도구 지문에 빠져 실행 셰이더 캐시가 옛 칸 번호 바이트를 돌려준 결함을 고쳤다(`ShaderCompiler::appendEngineDefines`). cloth 골든은 자기 커밋(e197e8c1e)에서도 재현되지 않았다 — 그 커밋은 단독 실행과 체인 실행이 다른 그림을 냈고(early 51 % 대 0.01 %, 앞 단계 상태가 새는 결함), 골든은 그 샌 상태의 실행에서 떴다. 단계 격리(6f36d6996) 뒤로 단독 = 체인 = 다른 체인 위치(settled 0 %)라 그 결과로 다시 떴다.
-  2. 게임 기동 흐름 재시작 훅(엔진 → 게임) — 첫 씬 없는 단계가 "프로세스가 처음 연 씬" 대신 게임의 기동 흐름(`EmptyGame::onInitialize` 의 벤치 · `requestFirstScene`)을 다시 돌게 하면 kaykit 셋도 체인에 든다.
-  3. `kaykitcharacters` 사진은 기사 여섯이 화면 위쪽에 작게 떠 있고 바닥이 없다(`frameCharacterCameras` 의 눈 높이 · 바라보는 높이) — 의도인지 보고 골든을 다시 뜬다.
-  4. switch 로 쓴 열거형 이름 함수(`getAutomationOutcomeName` 등)를 리플렉션 열거형(`ENUM()` · `getEnumName`)으로 — `RHIWaitIdleReason` 은 바꿨다. 보고 · 로그 글이 바뀌는 것(`LOAD ERROR` → `LoadError`)은 읽는 스크립트를 함께 본다.
-  5. 창 바둑판 간격은 창 틀 두께를 Win32 대략 값으로 둔다(`AutomationBackendMatrix` 의 shortcut) — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 · 창 틀 크기 API 가 생기면 그 값으로.
+- **남은 일**: 창 바둑판 간격은 창 틀 두께를 Win32 대략 값으로 둔다(`AutomationBackendMatrix` 의 shortcut) — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 · 창 틀 크기 API 가 생기면 그 값으로. (끝난 것: 흉내 슬롯 겹침, 기동 흐름 재시작 훅, kaykitcharacters 구도 — 한 줄 폭 맞춤이 의도이고 바닥은 시나리오가 `gv_stressTestGround` 를 켜지 않아 없다, 결과 이름은 리플렉션 열거형 — 행 감시는 시작할 때 복사한 이름을 쓴다)
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 
 ## 4. 남은 일
@@ -52,9 +49,6 @@
 | 테스트 늘리기 | 옛 `Test/`(3f70e665f^ 에 약 950 파일)에서 옮길 것을 기능 옆 `Tests/` 로 — 매크로 이름이 같아 순수 함수 테스트는 include 와 위치만 바꾸면 된다. 엔진 서비스가 이미 서 있으므로 옛 하네스는 필요 없다 |
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
-| 남은 처리기 인터페이스 | `IWindowTitleTarget` 은 등록 + 델리게이트 후보(프로토콜 인터페이스는 둔다). 프레임 관찰자는 델리게이트 묶음 `EngineFrameHooks` 가 됐다 |
-| `-log-file` 과 크래시 묶기 | 크래시 리포트 묶기(`CrashReportService::collectSessionLog`)는 `*_<세션>.txt` 로 로그를 찾아 고정 이름 로그를 못 찾는다 — ctest 는 크래시 파일 옆에 로그가 있어 당장은 문제없다 |
-| 그 밖 | 없는 스크립트를 부르는 곳(`Scripts/qa/ValidateAssets.py` · 설정 색인 · 아이콘 폰트 · `RunBuildBaseline.py`), 지운 `docs/plans/*` 를 가리키는 주석, 생성기 · CMake 파일 이름의 `Abi`(`Scripts/generate/EngineAbiStamp.py` · `cmake/Engine/EngineAbiStamp.cmake`) |
 
 ## 7. 다음 설계 (D · E · F)
 
