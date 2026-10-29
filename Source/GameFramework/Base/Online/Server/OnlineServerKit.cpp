@@ -16,7 +16,7 @@ namespace sw
             /** @brief 정적 초기화 순서와 상관없이 처음 쓸 때 만들어지도록 함수 안의 정적 객체로 둡니다. */
             static ServiceFactoryList& getList()
             {
-                static ServiceFactoryList s_list{};
+                static ServiceFactoryList s_list{ kListName };
                 return s_list;
             }
         };
@@ -42,7 +42,7 @@ namespace sw
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
             return;
-        (void)OnlineServerKitInternal::getList().add( pFactory, OnlineServerKitInternal::kListName );
+        (void)OnlineServerKitInternal::getList().add( pFactory );
     }
 
     void OnlineServerKitRegistry::unregisterFactory( OnlineServerKitFactory* pFactory )

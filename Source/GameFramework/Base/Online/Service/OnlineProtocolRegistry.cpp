@@ -19,7 +19,7 @@ namespace sw
             /** @brief 정적 초기화 순서와 상관없이 처음 쓸 때 만들어지도록 함수 안의 정적 객체로 둡니다. */
             static ServiceFactoryList& getList()
             {
-                static ServiceFactoryList s_list{};
+                static ServiceFactoryList s_list{ kListName };
                 return s_list;
             }
         };
@@ -80,7 +80,7 @@ namespace sw
 
     void OnlineProtocolRegistry::registerEntry( OnlineProtocolEntry* pEntry )
     {
-        if ( OnlineProtocolRegistryInternal::getList().add( pEntry, OnlineProtocolRegistryInternal::kListName ) )
+        if ( OnlineProtocolRegistryInternal::getList().add( pEntry ) )
             return;
         // 오르지 못한 항목은 해시에 빠지므로 이 빌드의 해시가 키트 목록과 어긋납니다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춥니다.
         // 모듈 로드(정적 초기화) 중이라 로거가 아직 없을 수 있다 — `SW_FATAL` 은 표준 오류에 먼저 쓴다.
