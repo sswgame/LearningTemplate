@@ -62,7 +62,7 @@ namespace sw
      * @struct AppearanceBakedMeshCache
      * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 번호 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 약한 참조라 그 메시를 그리는 유닛이 없으면 사라집니다.
      * @details 같은 차림의 NPC 가 한 번 베이크한 메시를 같이 그린다 — 베이크하는 비용이 한 번이고, 스킨 원본이 같은 객체라 군중 포즈 묶음도 나눌 수 있다(언리얼 Mutable 의 결과 캐시).
-     *          표는 엔진 수명 범위가 소유한다(`ScopeOwned`). 게임 스레드에서 부른다.
+     *          표는 GameFramework 의 모듈 서브시스템이 갖는다(`AppearanceBakedMeshTable` — 게임 서비스가 없는 실행에는 없어 매번 굽는다). 게임 스레드에서 부른다.
      */
     struct SW_GF_API AppearanceBakedMeshCache
     {
