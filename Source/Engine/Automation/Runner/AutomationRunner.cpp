@@ -34,6 +34,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -106,7 +107,6 @@ namespace sw
         , _bEnded{ SW_FALSE }
         , _bHangWatchArmed{ SW_FALSE }
         , _bWriteGateHeld{ SW_FALSE }
-        , _bReopenStartScene{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -155,10 +155,9 @@ namespace sw
         startHangWatchdog();
     }
 
-    void AutomationRunner::requireStartScene( string_view scenePath, bool bReopen )
+    void AutomationRunner::requireStartScene( string_view scenePath )
     {
-        _startScenePath    = string( scenePath );
-        _bReopenStartScene = bReopen ? SW_TRUE : SW_FALSE;
+        _startScenePath = string( scenePath );
     }
 
     bool AutomationRunner::holdForStartScene()
@@ -169,15 +168,12 @@ namespace sw
         if ( _startSceneLoad.isValid() == false )
         {
             const Scene* pActive = sceneManager.getActiveScene();
-            if ( _bReopenStartScene == SW_FALSE )
+            if ( pActive == nullptr )
+                return true; // 게임이 기동하며 연 씬이 아직 서는 중이다 — 선 뒤에 그 씬인지 본다
+            if ( pActive->getSourcePath() == _startScenePath )
             {
-                if ( pActive == nullptr )
-                    return true; // 프로세스가 연 씬이 아직 서는 중이다 — 선 뒤에 그 씬인지 본다
-                if ( pActive->getSourcePath() == _startScenePath )
-                {
-                    _startScenePath.clear();
-                    return false;
-                }
+                _startScenePath.clear();
+                return false;
             }
             _startSceneLoad = sceneManager.requestLoadFuture( _startScenePath, SceneLoadKind::Travel );
             if ( _startSceneLoad.isValid() == false )
@@ -544,6 +540,7 @@ namespace sw
         AutomationHangPayload::assign( _hangPayload._startedAt, AutomationHangPayload::kStartedAtBytes, _startedAt );
         AutomationHangPayload::assign( _hangPayload._reproduce, AutomationHangPayload::kReproduceBytes, makeReproduceCommand() );
         AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
+        AutomationHangPayload::assign( _hangPayload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationOutcome::TimedOut ) );
         _hangPayload._startedUnixMs         = _startedUnixMs;
         _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 );
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
@@ -782,13 +779,13 @@ namespace sw
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( _result != AutomationOutcome::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
                 detail += "\n    (" + to_string( static_cast<uint32>( _judge.getUnhandledLogs().size() ) ) + " unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)";
-            SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getAutomationOutcomeName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
+            SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
-        SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getAutomationOutcomeName( _result ), _run._frameIndex );
+        SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getEnumName( _result ), _run._frameIndex );
         AutomationReportParams report{};
         report._scenarioName       = _scenario.getName();
-        report._pResultName        = getAutomationOutcomeName( _result );
+        report._pResultName        = getEnumName( _result );
         report._exitCode           = getAutomationExitCode( _result );
         report._frameCount         = _run._frameIndex;
         report._reason             = _finishReason;
@@ -814,6 +811,6 @@ namespace sw
         report._reproduce                = reproduce;
         report._pTimeline                = &_wallProfile;
         _reportWriter.write( report );
-        updateCrashContext( string( "ended " ) + getAutomationOutcomeName( _result ) );
+        updateCrashContext( string( "ended " ) + getEnumName( _result ) );
     }
 } // namespace sw

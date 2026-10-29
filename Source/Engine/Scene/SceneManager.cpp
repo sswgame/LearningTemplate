@@ -168,6 +168,20 @@ namespace sw
         return adoptScene( sw::make_unique<Scene>( name, _services ), SceneRole::Active );
     }
 
+    void SceneManager::closeActiveScene()
+    {
+        cancelPendingAsyncLoads();
+        Scene* const pPrevious = _pActiveScene;
+        if ( pPrevious == nullptr )
+            return;
+        // 씬을 바꿀 때(`adoptScene`)와 같은 순서 — 활성을 비우고 알린 뒤 내린다.
+        activateScene( nullptr );
+        ++_sceneGeneration;
+        broadcastSceneObjectsInvalidated();
+        unloadScene( pPrevious );
+        garbageCollectUnusedAssets();
+    }
+
     Scene* SceneManager::adoptScene( unique_ptr<Scene> scene, SceneRole role )
     {
         SW_MEMORY_SCOPE( Scene );

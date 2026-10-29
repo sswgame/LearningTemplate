@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Module/GameRestarter.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
@@ -42,6 +43,7 @@ namespace sw
     {
         Reload,      ///< 모듈 리로드 앞 — 시한을 넘기면 그래프를 막는다(옛 라이브러리를 내리면 도는 태스크가 해제된 코드를 탄다)
         BackendSwap, ///< RHI 백엔드 교체 앞 — 같은 라이브러리로 다시 세우지만 리로드와 같이 막는다
+        Restart,     ///< 게임 재시작 앞(`restartGame`) — 라이브러리를 내리지 않으니 시한을 넘겨도 그래프를 막지 않는다
         Shutdown,    ///< 종료 앞 — 다시 설 리로드가 없으니 남은 태스크만 알린다
     };
 
@@ -92,12 +94,12 @@ namespace sw
      *
      *   파생 클래스는 소멸자에서 `shutdown()` 을 먼저 부릅니다. 이 클래스의 소멸자 안에서는 가상 함수가 파생 클래스 쪽으로 가지 않기 때문입니다.
      */
-    class GameModuleManager
+    class GameModuleManager : public IGameRestarter
     {
     public:
         // 1) 생성 · 소멸과 initialize/shutdown
         GameModuleManager();
-        virtual ~GameModuleManager();
+        ~GameModuleManager() override;
 
         GameModuleManager( const GameModuleManager& )            = delete;
         GameModuleManager& operator=( const GameModuleManager& ) = delete;
@@ -131,6 +133,13 @@ namespace sw
          *          리로드가 돌 때 이미 사라진 객체를 부르게 됩니다. 놓는 것은 이 객체가 건 것뿐입니다(서버가 건 배치 콜백은 그대로다).
          */
         void shutdown();
+
+        /**
+         * @brief 게임 인스턴스를 상태 복원 없이 내리고 활성 씬을 닫은 뒤 새로 만듭니다(`IGameRestarter` — 시나리오 체인의 단계 사이).
+         * @details 활성 씬이 남아 있으면 새 인스턴스가 다시 선 인스턴스로 여겨 첫 씬을 요청하지 않는다(`GameInstance::requestFirstScene`) — 그래서 씬을 닫는다.
+         *          에디터 인스턴스는 건드리지 않는다.
+         */
+        [[nodiscard]] bool restartGame() override;
 
         // 2) 프레임 단위 처리
         /**

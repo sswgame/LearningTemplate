@@ -29,6 +29,7 @@ namespace sw
         static constexpr uint32 kLastStepBytes   = 160;
         static constexpr uint32 kReproduceBytes  = 1024;
         static constexpr uint32 kReportPathBytes = 520;
+        static constexpr uint32 kResultBytes     = 16;
 
         int64  _startedUnixMs{ 0 };
         uint32 _frame{ 0 };
@@ -40,6 +41,7 @@ namespace sw
         utf8   _lastStep[kLastStepBytes]{};
         utf8   _reproduce[kReproduceBytes]{};
         utf8   _reportPath[kReportPathBytes]{};
+        utf8   _result[kResultBytes]{}; ///< 행 결과의 이름(`TimedOut`) — 게임 스레드가 시작할 때 채운다(감시 스레드는 리플렉션 조회의 잠금을 타지 않는다)
 
         /** @brief @p text 를 @p capacity 바이트 배열 @p pDestination 에 복사합니다(넘으면 자르고, 늘 0 으로 끝낸다). */
         static void assign( utf8* pDestination, uint32 capacity, string_view text );

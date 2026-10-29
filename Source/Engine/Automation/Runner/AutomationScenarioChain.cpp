@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 namespace sw
 {
     namespace
@@ -89,7 +91,7 @@ namespace sw
 
     string AutomationScenarioChain::describeStageEnd( size_t stageIndex, AutomationOutcome result, string_view scenarioName ) const
     {
-        string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getAutomationOutcomeName( result ) + " (" +
+        string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
                       string( scenarioName ) + ")";
         if ( result != AutomationOutcome::Passed && _skippedStageCount > 0 )
             text += " - " + to_string( _skippedStageCount ) + " later stage(s) skipped";

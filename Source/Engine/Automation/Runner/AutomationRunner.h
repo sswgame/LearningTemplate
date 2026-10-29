@@ -74,11 +74,10 @@ namespace sw
         [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
 
         /**
-         * @brief 시작 조건을 보기 전에 @p scenePath 를 활성 씬으로 엽니다 — 체인의 단계가 앞 단계가 남긴 씬을 이어받지 않게 한다(`AutomationSession`).
-         * @param bReopen true 면 이미 활성인 같은 씬도 새로 엽니다(앞 단계가 그 씬을 바꿨다). false 면 활성 씬이 다른 씬일 때만 엽니다(프로세스가 막 연 씬).
+         * @brief 시작 조건을 보기 전에 @p scenePath 가 활성 씬이기를 기다립니다 — 게임이 기동하며 그 씬을 열고(`gv_firstScene`), 다른 씬이 서면 이것이 엽니다.
          * @details 열리기를 시작 시한(`startTimeoutFrames`) 안에서 기다리고, 못 열면 읽기 오류(11)다. `startFromPath` 뒤 첫 `onFrameBegin` 전에 부른다.
          */
-        void requireStartScene( string_view scenePath, bool bReopen );
+        void requireStartScene( string_view scenePath );
 
         /** @brief 프레임 시작(입력 `beginFrame` 전)에 부릅니다. 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌립니다. */
         void onFrameBegin( InputManager& input );
@@ -236,12 +235,11 @@ namespace sw
         string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
         TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;
-        uint8                    _bStarted          : 1;
-        uint8                    _bEnded            : 1;
-        uint8                    _bHangWatchArmed   : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                    _bWriteGateHeld    : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
-        uint8                    _bReopenStartScene : 1; ///< 시작 씬이 이미 활성이어도 새로 연다(`requireStartScene`)
-        [[maybe_unused]] uint8   _reserved          : 3;
+        uint8                    _bStarted        : 1;
+        uint8                    _bEnded          : 1;
+        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
+        [[maybe_unused]] uint8   _reserved        : 4;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
     };
 } // namespace sw

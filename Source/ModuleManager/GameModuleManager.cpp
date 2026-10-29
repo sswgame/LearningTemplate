@@ -363,8 +363,13 @@ namespace sw
         if ( reason == DrainReason::Shutdown && _pSceneManager != nullptr )
             _pSceneManager->requestAsyncLoadStop(); // 도는 비동기 씬 로드가 인스턴스화까지 가지 않게 한다
         // 비우는 까닭(`DrainReason`)이 곧 장치 대기의 이유다.
-        const RHIWaitIdleReason waitReason = reason == DrainReason::BackendSwap ? RHIWaitIdleReason::BackendSwap
-                                                                                : ( reason == DrainReason::Shutdown ? RHIWaitIdleReason::Shutdown : RHIWaitIdleReason::HotReload );
+        RHIWaitIdleReason waitReason = RHIWaitIdleReason::HotReload;
+        if ( reason == DrainReason::BackendSwap )
+            waitReason = RHIWaitIdleReason::BackendSwap;
+        else if ( reason == DrainReason::Shutdown )
+            waitReason = RHIWaitIdleReason::Shutdown;
+        else if ( reason == DrainReason::Restart )
+            waitReason = RHIWaitIdleReason::Tool;
 #if defined( SW_WITH_CLIENT_CODE )
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle( waitReason );
@@ -394,6 +399,11 @@ namespace sw
                 if ( reason == DrainReason::Shutdown )
                 {
                     SW_LOG_ERROR( "Task fencing timeout (%# ms) at shutdown — %# task(s) still running (first unfinished: '%#'); the task manager joins them next.", LiveReloadManager::kModuleDrainTimeoutMs,
+                                  taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
+                }
+                else if ( reason == DrainReason::Restart )
+                {
+                    SW_LOG_ERROR( "Task fencing timeout (%# ms) before a game restart — %# task(s) still running (first unfinished: '%#').", LiveReloadManager::kModuleDrainTimeoutMs,
                                   taskManager.getActiveTaskCount(), taskManager.describeUnfinishedTask() );
                 }
                 else
@@ -482,6 +492,30 @@ namespace sw
         }
         if ( bSuspendGame )
             destroyGameInstance( bReleaseAPITable );
+        return true;
+    }
+
+    bool GameModuleManager::restartGame()
+    {
+        if ( _game == nullptr )
+        {
+            SW_LOG_ERROR( "restartGame: there is no game instance to restart" );
+            return false;
+        }
+        drainRenderWorkers( DrainReason::Restart );
+        destroyGameInstance( false );
+        SceneManager& sceneManager = engine::getSubsystem<SceneManager>();
+        sceneManager.closeActiveScene();
+        // 기동처럼 월드를 플레이 전으로 두고 새 게임을 세운다 — 다음 `beginFrame` 이 켠다. 켜 둔 채면 게임이 세우는 오브젝트가 하나씩 플레이를 시작해
+        // 기동(다 세운 뒤 한꺼번에 `beginPlay`)과 컴포넌트 틱 순서가 달라지고, 그림이 한 프레임 어긋난다(벤치 kaykit 의 애니메이션 알림).
+        if ( controlsWorldPlay() == false )
+            sceneManager.setWorldPlaying( false );
+        if ( createGameInstance() == false )
+        {
+            SW_LOG_ERROR( "restartGame: the game instance could not be created again" );
+            return false;
+        }
+        SW_LOG_INFO( "Game instance restarted" );
         return true;
     }
 

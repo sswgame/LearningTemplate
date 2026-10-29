@@ -16,7 +16,9 @@
 #include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Module/GameRestarter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
@@ -45,7 +47,6 @@ namespace sw
         , _reportPath{}
         , _workingFolder{}
         , _listStartVariable{}
-        , _processStartScenePath{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
     {
@@ -146,7 +147,6 @@ namespace sw
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
         (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
         _listStartVariable.clear();
-        _processStartScenePath.clear();
         vector<GlobalVariableInfo*> listVariable;
         engine::getSubsystem<GlobalVariableManager>().collectVariables( listVariable );
         for ( const GlobalVariableInfo* pVariable : listVariable )
@@ -208,14 +208,23 @@ namespace sw
                 if ( variable._name == kStartSceneVariable )
                     startScene = variable._value;
             }
-            // 둘째 단계부터는 앞 단계의 씬을 이어받지 않는다 — 선언한 첫 씬이 없으면 프로세스가 처음 연 씬을 새로 연다.
-            if ( startScene.empty() && bLaterStage )
-                startScene = _processStartScenePath;
+            // 결정적 실행 — 비동기 도착을 기다린다(`gv_syncAssetArrival`). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다).
+            if ( globalVariables.setValueFromString( "gv_syncAssetArrival", "1" ) == false )
+                SW_LOG_WARNING( "[Scenario] this host has no gv_syncAssetArrival - streamed assets arrive on the disk's schedule" );
+            // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
+            // 그래서 단계는 첫 단계와 같은 길로 선다(첫 씬을 선언하지 않은 단계도 체인에 든다). 재시작할 호스트가 없으면 앞 단계의 상태로 돌지 않고 멈춘다.
+            if ( bLaterStage )
+            {
+                IGameRestarter* const pRestarter = engine::findSubsystem<IGameRestarter>();
+                if ( pRestarter == nullptr || pRestarter->restartGame() == false )
+                {
+                    _pRunner->finish( AutomationOutcome::Failed,
+                                      pRestarter == nullptr ? "this host cannot restart the game for a later chain stage" : "the game could not be restarted for this stage" );
+                    return;
+                }
+            }
             if ( startScene.empty() == false )
-                _pRunner->requireStartScene( startScene, bLaterStage );
-            else if ( bLaterStage )
-                SW_LOG_WARNING( "[Scenario] stage %# has no start scene to reopen - it starts in the scene the previous stage left",
-                                static_cast<uint32>( _pChain->getStageIndex() ) );
+                _pRunner->requireStartScene( startScene );
             const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
             if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
                 SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
@@ -355,12 +364,6 @@ namespace sw
         const bool bNoRunnerToUpdate = _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr;
         if ( bNoRunnerToUpdate )
             return kEngineFrameRunning;
-        // 프로세스가 처음 연 씬 — 첫 단계가 시작한 프레임의 활성 씬이다(첫 씬을 선언하지 않은 다음 단계가 이 씬을 새로 연다).
-        if ( _processStartScenePath.empty() && _pChain != nullptr && _pChain->getStageIndex() == 0 && _pRunner->hasStarted() )
-        {
-            if ( const Scene* const pActive = engine::getSubsystem<SceneManager>().getActiveScene() )
-                _processStartScenePath = pActive->getSourcePath();
-        }
         const uint32 completedScreenshotCount = findCompletedScreenshotCount();
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
         const AutomationOutcome result = _pRunner->onFrameEnd( *context._pInput );
@@ -416,7 +419,7 @@ namespace sw
             return kEngineFrameRunning;
         }
         if ( _pChain->isChain() )
-            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getAutomationOutcomeName( _pChain->getFinalResult() ),
+            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", getEnumName( _pChain->getFinalResult() ),
                          static_cast<uint32>( _pChain->getStageCount() ), static_cast<uint32>( _pChain->getFailedStageCount() ),
                          static_cast<uint32>( _pChain->getSkippedResultCount() ), static_cast<uint32>( _pChain->getSkippedStageCount() ) );
         return getAutomationExitCode( _pChain->getFinalResult() );

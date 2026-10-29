@@ -4,7 +4,9 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
+#include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
@@ -120,21 +122,19 @@ namespace sw
         if ( pOutText == nullptr || capacity == 0 )
             return 0;
         // 게임 스레드가 멈춘 채 힙 잠금을 쥐고 있을 수 있다 — 고정 버퍼 쓰기기와 스택 버퍼만 쓰고 할당하지 않는다.
-        JSONWriter        writer{ pOutText, capacity, 2 };
-        const string_view lastStep = Internal::toView( payload._lastStep );
-        utf8              arrReason[Internal::kReasonCapacity];
-        const int32       reasonLength = std::snprintf( arrReason, Internal::kReasonCapacity,
-                                                        "hang watchdog: the scenario was not ended by the runner within its wall-clock limit of %u ms plus grace "
-                                                              "(elapsed %u ms) - the game thread stopped running frames; last known position: %s",
-                                                        payload._wallLimitMilliseconds, elapsedMilliseconds, payload._lastStep );
-        // 넘쳐 잘렸으면 snprintf 가 돌려준 길이가 버퍼보다 길다 — 버퍼 안으로 줄인다(글자 중간에서 잘린 바이트는 쓰기기가 U+FFFD 로 바꾼다).
-        const size_t reasonSize = reasonLength < 0 ? 0 : std::min( static_cast<size_t>( reasonLength ), static_cast<size_t>( Internal::kReasonCapacity - 1 ) );
+        JSONWriter                              writer{ pOutText, capacity, 2 };
+        const string_view                       lastStep = Internal::toView( payload._lastStep );
+        fixed_string<Internal::kReasonCapacity> reason;
+        formatstring( reason.data(), reason.capacity(),
+                      "hang watchdog: the scenario was not ended by the runner within its wall-clock limit of %# ms plus grace (elapsed %# ms) - the game thread stopped running frames; "
+                      "last known position: %#",
+                      payload._wallLimitMilliseconds, elapsedMilliseconds, payload._lastStep );
         writer.beginObject();
         Internal::writeStringField( writer, "name", Internal::toView( payload._scenario ) );
-        Internal::writeStringField( writer, "result", getAutomationOutcomeName( AutomationOutcome::TimedOut ) );
+        Internal::writeStringField( writer, "result", Internal::toView( payload._result ) );
         Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationOutcome::TimedOut ) ) );
         Internal::writeNumberField( writer, "frames", payload._frame );
-        Internal::writeStringField( writer, "reason", string_view{ arrReason, reasonSize } );
+        Internal::writeStringField( writer, "reason", reason.view() );
         Internal::writeStringField( writer, "backend", Internal::toView( payload._backend ) );
         Internal::writeStringField( writer, "game", Internal::toView( payload._game ) );
         Internal::writeStringField( writer, "startedAt", Internal::toView( payload._startedAt ) );

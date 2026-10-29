@@ -2,10 +2,9 @@
 # @file Test/Scenario/CMakeLists.txt
 # @brief 시나리오를 CTest 항목 하나로 — `Content/engine/automation/` 과 활성 게임의 `Content/game/<게임>/automation/` 바로 아래 `*.scenario.xml` 모두를
 #        체인 하나(`App -scenario=a,b,c -scenario-keep-going -scenario-backends=all -unattended`, 라벨 hostgpu — 창과 GPU 가 있는 PC 에서)로 돌린다. 목록이 없다 — 폴더를 훑는다.
-#        게임의 기동 흐름이 씬을 정하는 시나리오(첫 씬 없이 `<Launch>` 만 있다)만 자기 프로세스다 — 아래 규칙.
 #        그 App 은 창 · GPU 없이 백엔드마다 자식 App 을 하나씩 동시에 띄우고 결과를 모은다(`AutomationBackendMatrix` — 언리얼 Gauntlet 의 컨트롤러 자리).
-#        자식 하나가 시나리오를 차례로 돌고, 단계마다 전역 변수를 되돌리고 `<Launch>` 값을 건 뒤 첫 씬을 새로 연다(`AutomationSession::startStage` — 언리얼 Automation 이
-#        테스트마다 맵을 열고 CVar 를 되돌리는 것과 같다). 프로세스는 백엔드 수 + 부모 하나다. 시나리오 하나만 돌리려면 `App -scenario=<경로>` 를 직접 띄운다.
+#        자식 하나가 시나리오를 차례로 돌고, 단계마다 전역 변수를 되돌리고 `<Launch>` 값을 건 뒤 게임을 처음부터 다시 세운다(`AutomationSession::startStage` — 언리얼 PIE 가
+#        플레이마다 새 GameInstance 를 만들고 CVar 를 되돌리는 것과 같다). 첫 씬을 정하는 것은 게임의 기동 흐름이라 벤치(`gv_stressTest*`)도 체인에 든다. 프로세스는 백엔드 수 + 부모 하나다. 시나리오 하나만 돌리려면 `App -scenario=<경로>` 를 직접 띄운다.
 #        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드는 그 백엔드만 건너뛴다.
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
@@ -33,54 +32,31 @@ if(swLastScenario IN_LIST listScenario)
 	list(REMOVE_ITEM listScenario "${swLastScenario}")
 	list(APPEND listScenario "${swLastScenario}")
 endif()
-# 시나리오의 `<Launch>` 를 명령줄 인자로 읽는다(`out` 에 `-이름=값` 목록, `outFirstScene` 에 첫 씬).
-function(sw_readScenarioLaunch scenarioPath out outFirstScene)
+# 시나리오의 `<Launch>` 를 명령줄 인자(`-이름=값` 목록)로 읽는다.
+function(sw_readScenarioLaunch scenarioPath out)
 	file(STRINGS "${swScenarioRoot}/${scenarioPath}" listLaunchLine REGEX "^[ 	]*<Launch ")
 	set(listArgument "")
-	set(firstScene "")
 	foreach(launchLine IN LISTS listLaunchLine)
 		if(NOT launchLine MATCHES "variable=\"([^\"]+)\"[ 	]+value=\"([^\"]*)\"")
 			message(FATAL_ERROR "${scenarioPath}: <Launch> must be <Launch variable=\"…\" value=\"…\"/> on one line — ${launchLine}")
 		endif()
 		list(APPEND listArgument "-${CMAKE_MATCH_1}=${CMAKE_MATCH_2}")
-		if(CMAKE_MATCH_1 STREQUAL "gv_firstScene")
-			set(firstScene "${CMAKE_MATCH_2}")
-		endif()
 	endforeach()
 	set(${out} "${listArgument}" PARENT_SCOPE)
-	set(${outFirstScene} "${firstScene}" PARENT_SCOPE)
 endfunction()
 
-# 시나리오 하나 · 여럿을 백엔드마다 한 프로세스로 — 첫 단계의 `<Launch>` 는 명령줄로 준다(첫 단계가 기동한 씬을 다시 열지 않게). 다음 단계의 값은 세션이 단계를 시작할 때 건다.
-function(sw_addScenarioTest testName)
-	set(listPath ${ARGN})
-	list(LENGTH listPath stageCount)
-	list(GET listPath 0 firstPath)
-	sw_readScenarioLaunch("${firstPath}" listLaunchArgument unusedFirstScene)
-	list(JOIN listPath "," scenarioList)
+# 시나리오 모두를 백엔드마다 한 프로세스로 — 첫 단계의 `<Launch>` 는 명령줄로 준다(게임이 기동하며 그 값을 읽는다). 다음 단계의 값은 세션이 단계를 시작할 때 건다.
+if(listScenario)
+	list(LENGTH listScenario stageCount)
+	list(GET listScenario 0 firstPath)
+	sw_readScenarioLaunch("${firstPath}" listLaunchArgument)
+	list(JOIN listScenario "," scenarioList)
 	math(EXPR chainTimeout "300 * ${stageCount}")
+	set(testName Scenario.${swActiveGamePack})
 	add_test(NAME ${testName}
 		COMMAND $<TARGET_FILE:App> -scenario=${scenarioList} -scenario-keep-going -scenario-backends=all -unattended
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${testName}.log ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${testName} PROPERTIES LABELS hostgpu TIMEOUT ${chainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${swScenarioBackendCount})
 	message(STATUS "[Scenario] ${testName}: ${stageCount} scenario(s)")
-endfunction()
-
-# `<Launch>` 가 있는데 첫 씬을 선언하지 않은 시나리오는 게임의 기동 흐름이 씬을 정한다(Empty 의 벤치는 기동 때 `gv_stressTest*` 를 읽어 자기 씬을 만든다) —
-# 세션이 다시 열 씬이 없으므로 자기 프로세스로 돈다. 나머지는 체인 하나다.
-set(listChainScenario "")
-foreach(scenarioPath IN LISTS listScenario)
-	sw_readScenarioLaunch("${scenarioPath}" listLaunchArgument firstScene)
-	if(listLaunchArgument AND firstScene STREQUAL "")
-		string(REGEX REPLACE "\.scenario\.xml$" "" scenarioName "${scenarioPath}")
-		string(REPLACE "/automation/" "." scenarioName "${scenarioName}")
-		string(REPLACE "/" "." scenarioName "${scenarioName}")
-		sw_addScenarioTest(Scenario.${scenarioName} "${scenarioPath}")
-	else()
-		list(APPEND listChainScenario "${scenarioPath}")
-	endif()
-endforeach()
-if(listChainScenario)
-	sw_addScenarioTest(Scenario.${swActiveGamePack} ${listChainScenario})
 endif()

@@ -34,6 +34,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Module/GameRestarter.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -370,8 +371,12 @@ namespace sw
                 const bool bStarted =
                     _gameModuleManager->initialize( _moduleReload.getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
                 if ( bStarted == false )
+                {
                     SW_LOG_ERROR( "GameModuleManager initialization failed." );
-                return bStarted;
+                    return false;
+                }
+                // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
+                return _host.bind<IGameRestarter>( _gameModuleManager.get() );
             }
             case HostServiceID::BackendSwitcher:
             {
@@ -415,6 +420,7 @@ namespace sw
         {
             case HostServiceID::Game:
             {
+                _host.unbind<IGameRestarter>();
                 // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
                 _gameModuleManager->shutdown();
                 _gameModuleManager.reset();

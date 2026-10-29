@@ -113,6 +113,8 @@ namespace sw
         Scene* createScene( string_view name );
         /** @brief 빈 씬을 만들어 활성으로 바꾸고 이전 활성 씬을 언로드합니다. */
         Scene* createEmptyActiveScene( string_view name );
+        /** @brief 도는 로드를 거두고 활성 씬을 내려 활성 씬이 없는 상태(프로세스 기동과 같은 자리)로 둡니다. 게임 재시작(`IGameRestarter`)이 부릅니다. */
+        void closeActiveScene();
         /**
          * @brief 씬 파일의 비동기 로드를 요청하고, 끝나면 활성 씬을 주는 TaskFuture 를 반환합니다.
          * @details **대기열에 들어가도 자기 답을 받습니다.** 이미 로드가 도는 중이면 이 요청은
