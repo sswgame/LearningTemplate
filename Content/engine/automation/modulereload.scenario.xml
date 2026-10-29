@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 게임 모듈 핫 리로드: 씬이 돌 때 개발 명령 module.reload 로 SWGame(과 그에 기대는 모듈)을 섀도 복사본으로 갈아 끼우고,
+  리로드가 끝나 그래프가 막히지 않았는지(Module.GraphBroken) · 모듈이 의존 이미지에 묶였는지(Module.BindingsOk) · 씬이 이어지는지(Scene.ObjectCount) 본다.
+  두 번 갈아 끼운다 — 옛 이미지를 미뤄 내리는 큐(DeferredLibraryUnloadQueue)가 실제로 한 이미지를 내리게 하고, 그 뒤에도 이벤트 · 입력 · UI · 설정 등록이 남아 있지 않은지(로그 게이트) 본다.
+  편집기를 켜고(-EnableEditor) 돌려도 된다 — 편집기 확장도 SWGame 에 기대면 함께 갈아 끼운다. 편집기 모듈 자체는 editor/editormodulereload.scenario.xml.
+  실행: App -scenario=engine/automation/modulereload.scenario.xml -unattended
+-->
+<Scenario name="engine.modulereload" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<Wait frames="60"/>
+	<DevCommand line="module.reload SWGame"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Module.BindingsOk" equals="1"/>
+	<Expect watch="Module.ReloadCount" atLeast="1"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Wait frames="10"/>
+	<DevCommand line="module.reload SWGame"/>
+	<WaitUntil watch="Module.ReloadPending" equals="0" timeoutFrames="600"/>
+	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Expect watch="Module.BindingsOk" equals="1"/>
+	<Expect watch="Module.ReloadCount" atLeast="2"/>
+	<Expect watch="Scene.ObjectCount" atLeast="1"/>
+	<Pass/>
+</Scenario>
