@@ -5,8 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
-#include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -58,11 +56,8 @@ namespace sw::editor
 
     PrefabEditorPanel::PrefabEditorPanel()
         : EditorPreviewPanel{ EditorAssetType{ PrefabAsset::kAssetType }, false }
-        , _isolation{}
+        , _model{}
         , _gizmo{}
-        , _pendingNestedPath{}
-        , _spawnedDocumentPath{}
-        , _status{}
     {
     }
 
@@ -102,8 +97,7 @@ namespace sw::editor
     void PrefabEditorPanel::populatePreviewScene( Scene& /*scene*/ )
     {
         getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
-        _spawnedDocumentPath.clear(); // 새 씬에는 문서 루트가 아직 없다
-        _isolation.clear();
+        _model.resetForNewScene();
     }
 
     ToolAssetLoadResult PrefabEditorPanel::loadDocument()
@@ -115,7 +109,7 @@ namespace sw::editor
             return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        _spawnedDocumentPath.clear(); // 다시 읽으면 루트도 다시 스폰한다(`syncDocumentRoot`)
+        _model.requestRebuild(); // 다시 읽으면 루트도 다시 스폰한다(`syncDocumentRoot`)
         return ToolAssetLoadResult::Loaded;
     }
 
@@ -125,117 +119,51 @@ namespace sw::editor
         if ( pManager == nullptr || getLoadedAssetPath().empty() )
             return false;
 
-        // 옛 문서 — 루트를 지우면 중첩 단계의 루트 · 숨긴 오브젝트도 함께 사라진다(모두 문서 루트의 자손이다).
-        GameObject* pOldRoot = _isolation.isActive() ? pManager->findGameObjectByID( _isolation.getDocumentRootObjectID() ) : nullptr;
-        getPreviewSelection().clearObjectSelection();
-        _isolation.clear();
-        if ( pOldRoot != nullptr )
-            pManager->destroyObject( pOldRoot );
-        resetPreviewEdits();
-        _spawnedDocumentPath = getLoadedAssetPath();
-
-        GameObject* pRoot = EditorAssetCommands::spawnPrefabWithoutUndo( pManager, getLoadedAssetPath().c_str(), nullptr );
-        if ( pRoot == nullptr )
-        {
-            _status = "Could not spawn the prefab";
-            return false;
-        }
-        _status.clear();
-        _isolation.push( *pManager, getLoadedAssetPath(), *pRoot, true );
-        getPreviewSelection().selectObject( pRoot );
-        getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
-        return true;
+        const bool bSpawned = _model.rebuildRoot( *pManager, getPreviewSelection(), getLoadedAssetPath() );
+        resetPreviewEdits(); // 옛 문서의 편집 기록은 새 루트와 맞지 않는다
+        if ( bSpawned )
+            getPreviewViewport().frameSphere( float3{ 0.0f, 0.0f, 0.0f }, PrefabEditorPanelInternal::kFrameRadius );
+        return bSpawned;
     }
 
     void PrefabEditorPanel::syncDocumentRoot()
     {
         const bool bDocumentReady = getLoadedAssetPath().empty() == false && isDocumentLoadFailed() == false && isDocumentLoaded();
-        if ( bDocumentReady == false || _spawnedDocumentPath == getLoadedAssetPath() )
+        if ( bDocumentReady == false || _model.needsRebuild( getLoadedAssetPath() ) == false )
             return;
-        (void)rebuildDocumentRoot(); // 실패는 상태 줄에 남는다 — 같은 경로로 프레임마다 다시 스폰하지 않게 `_spawnedDocumentPath` 는 이미 채웠다
+        (void)rebuildDocumentRoot(); // 실패는 상태 줄에 남는다 — 같은 경로로 프레임마다 다시 스폰하지 않게 모델이 스폰한 경로를 이미 채웠다
     }
 
     bool PrefabEditorPanel::enterNestedIsolation( string_view prefabPath )
     {
-        GameObjectManager* pManager      = findPreviewManager();
-        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
-        const bool         bCannotEnter  = pManager == nullptr || prefabPath.empty() || _isolation.isActive() == false;
-        if ( bCannotEnter )
-            return false;
-
-        GameObject* pUnderRoot = pManager->findGameObjectByID( _isolation.getRootObjectID() );
-        GameObject* pRoot      = EditorPrefabIsolation::findInstance( *pManager, editorContext.getSubsystem<EditorWorkspace>(), prefabPath,
-                                                                      getPreviewSelection().getPrimaryObject(), pUnderRoot );
-        bool        bSpawned{ false };
-        if ( pRoot == nullptr )
-        {
-            const string path{ prefabPath };
-            pRoot = EditorAssetCommands::spawnPrefabWithoutUndo( pManager, path.c_str(), pUnderRoot );
-            if ( pRoot == nullptr )
-                return false;
-            bSpawned = true;
-        }
-        _isolation.push( *pManager, prefabPath, *pRoot, bSpawned );
-        getPreviewSelection().selectObject( pRoot );
-        return true;
+        return _model.enterNested( findPreviewManager(), getPreviewSelection(), prefabPath );
     }
 
     bool PrefabEditorPanel::exitIsolation( bool bSaveToPrefab )
     {
-        GameObjectManager* pManager = findPreviewManager();
-        const auto*        pFrame   = _isolation.getFrame();
-        if ( pManager == nullptr || pFrame == nullptr )
+        const PrefabFrameExit result = _model.exitFrame( findPreviewManager(), getPreviewSelection(), bSaveToPrefab );
+        if ( result == PrefabFrameExit::Failed )
             return false;
-
-        const PrefabIsolationFrame frame = *pFrame;
-        GameObject*                pRoot = pManager->findGameObjectByID( frame._rootObjectID );
-
-        // 저장하지 못하면 나가지 않는다. 나가면 편집한 프리팹 내용이 저장 없이 사라진다.
-        const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ frame._prefabPath } ) == false;
-        if ( bSaveFailed )
-        {
-            SW_LOG_ERROR( "Prefab window could not save '%#' - still editing it", frame._prefabPath.c_str() );
-            _status = "Could not save the prefab";
-            return false;
-        }
         if ( bSaveToPrefab )
         {
             clearDocumentDirty();
             acknowledgePreviewEdits();
         }
-
-        if ( _isolation.getDepth() <= 1 )
+        if ( result == PrefabFrameExit::DocumentStep )
         {
             setOpen( false ); // 문서 단계 — 창을 닫는다(편집이 남았으면 확인을 거친다). 문서 루트는 씬에 남는다
             if ( isOpen() == false )
                 PrefabEditorPanelInternal::notifyExited(); // 확인을 기다리는 중이면 아직 나가지 않았다
             return true;
         }
-
-        PrefabIsolationFrame popped;
-        (void)_isolation.pop( pManager, popped );
-        const bool bDiscardSpawnedRoot = popped._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pRoot != nullptr;
-        if ( bDiscardSpawnedRoot )
-        {
-            getPreviewSelection().selectObject( pRoot, SelectionMode::Remove );
-            pManager->destroyObject( pRoot );
-        }
-        getPreviewSelection().selectObject( pManager->findGameObjectByID( _isolation.getRootObjectID() ) );
         PrefabEditorPanelInternal::notifyExited();
         return true;
     }
 
     bool PrefabEditorPanel::saveDocument()
     {
-        GameObjectManager* pManager = findPreviewManager();
-        const auto*        pFrame   = _isolation.getFrame();
-        GameObject*        pRoot    = ( pManager != nullptr && pFrame != nullptr ) ? pManager->findGameObjectByID( pFrame->_rootObjectID ) : nullptr;
-        if ( pRoot == nullptr || EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ pFrame->_prefabPath } ) == false )
-        {
-            _status = "Could not save the prefab";
+        if ( _model.saveFrame( findPreviewManager() ) == false )
             return false;
-        }
-        _status = "Saved";
         acknowledgePreviewEdits();
         return true;
     }
@@ -265,7 +193,7 @@ namespace sw::editor
 
     void PrefabEditorPanel::drawIsolationBar()
     {
-        const bool bNested = _isolation.getDepth() > 1;
+        const bool bNested = _model.getIsolation().getDepth() > 1;
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다 — 실패는 상태 줄에 남는다
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( bNested ? "Save & Back" : "Save & Close" ) );
@@ -286,22 +214,17 @@ namespace sw::editor
         beginPreviewFrame();
         drawDocumentOpenBar( "prefabwindow" );
         syncDocumentRoot();
-        if ( _pendingNestedPath.empty() == false )
-        {
-            const string path = std::move( _pendingNestedPath );
-            _pendingNestedPath.clear();
-            if ( enterNestedIsolation( path ) == false )
-                _status = "Could not open the nested prefab";
-        }
+        _model.enterPendingNested( findPreviewManager(), getPreviewSelection() );
 
-        if ( getLoadedAssetPath().empty() || _isolation.isActive() == false )
+        const EditorPrefabIsolation& isolation = _model.getIsolation();
+        if ( getLoadedAssetPath().empty() || isolation.isActive() == false )
         {
             EditorWidgets::drawEmptyHint( "Open a prefab with Open... above" );
-            EditorWidgets::drawPanelStatus( _status.c_str() );
+            EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
             return;
         }
 
-        ImGui::TextDisabled( "%s%s", _isolation.getPrefabPath().data(), isDocumentDirty() ? " *" : "" );
+        ImGui::TextDisabled( "%s%s", isolation.getPrefabPath().data(), isDocumentDirty() ? " *" : "" );
         drawIsolationBar();
 
         const float32 side   = PrefabEditorPanelInternal::kMinViewportSide;
@@ -312,7 +235,7 @@ namespace sw::editor
         _gizmo.draw( *this );
 
         GameObjectManager* pManager = findPreviewManager();
-        GameObject*        pTop     = pManager != nullptr ? pManager->findGameObjectByID( _isolation.getRootObjectID() ) : nullptr;
+        GameObject*        pTop     = pManager != nullptr ? pManager->findGameObjectByID( isolation.getRootObjectID() ) : nullptr;
         if ( pTop != nullptr )
         {
             ImGui::Separator();
@@ -320,6 +243,6 @@ namespace sw::editor
             drawChildTree( *pTop, 0 );
             ImGui::EndChild();
         }
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 } // namespace sw::editor

@@ -1,13 +1,13 @@
 /**
  * @file PrefabEditorPanel.h
  * @brief 프리팹을 자기 미리보기 씬에서 편집하는 창입니다 — 메인 씬을 더럽히지 않고, 창마다 Undo 스택 · 선택을 가집니다.
+ * @details 격리 스택 · 문서 루트 스폰 · 중첩 들어가기 · 나가기 · 저장은 `PrefabEditorModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 기즈모 · 문서 dirty · 창 닫기만 맡는다.
  */
 #pragma once
-#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Scene/EditorPrefabIsolation.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
+#include "Editor/Panels/Prefab/Model/PrefabEditorModel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
 namespace sw
@@ -52,11 +52,11 @@ namespace sw::editor
         void revertDocument() override;
 
         /** @brief 격리 스택입니다(읽기). */
-        const EditorPrefabIsolation& getIsolation() const { return _isolation; }
+        const EditorPrefabIsolation& getIsolation() const { return _model.getIsolation(); }
         /** @brief 이 창이 프리팹을 격리 중이면(문서가 열려 루트가 있으면) true 입니다. */
-        bool isIsolating() const { return _isolation.isActive(); }
+        bool isIsolating() const { return _model.getIsolation().isActive(); }
         /** @brief 문서 프리팹 안의 @p prefabPath 중첩 프리팹을 격리하라고 요청합니다. 씬이 없을 수도 있어 다음 그리기에서 쌓습니다. */
-        void requestNestedIsolation( string_view prefabPath ) { _pendingNestedPath = string{ prefabPath }; }
+        void requestNestedIsolation( string_view prefabPath ) { _model.requestNested( prefabPath ); }
 
         /**
          * @brief 지금 단계를 나갑니다. @p bSaveToPrefab 이면 먼저 지금 단계의 루트를 프리팹 파일에 씁니다. 쓰지 못하면 나가지 않고 false 입니다.
@@ -80,10 +80,7 @@ namespace sw::editor
         void drawIsolationBar();
         void drawChildTree( GameObject& object, int32 depth );
 
-        EditorPrefabIsolation _isolation;
-        EditorPreviewGizmo    _gizmo;
-        string                _pendingNestedPath;
-        string                _spawnedDocumentPath; ///< 문서 루트를 마지막으로 스폰한 프리팹 경로
-        string                _status;
+        PrefabEditorModel  _model;
+        EditorPreviewGizmo _gizmo;
     };
 } // namespace sw::editor
