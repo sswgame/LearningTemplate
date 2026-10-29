@@ -2,7 +2,7 @@
  * @file Engine/Module/ModuleSubsystemRegistrar.h
  * @brief 모듈 이미지가 범위가 서기 전에(정적 초기화) 미리 적어 두는 서브시스템 등록입니다 — 모듈을 올릴 때 그 모듈의 자식 범위에 서고, 내리기 전에 함께 걷힙니다.
  * @details 언리얼은 모듈이 올라오면 그 모듈의 `UEngineSubsystem` · `UGameInstanceSubsystem` 클래스를 훑어 컬렉션에 더하고, 내릴 때 뺀다. 여기서는 클래스 순회 대신
- *          링크 때 목록(`getHead`)에 달린 등록자를 모듈을 올린 쪽(`engine::registerModuleTypes`)이 걷어 `ModuleSubsystemHost` 에 넘긴다 — 타입 · 데이터 종류 ·
+ *          링크 때 목록(`getHead`)에 달린 등록자를 모듈을 올린 쪽(`engine::registerModuleTypes`)이 걷어 `ModuleRegistrationHost` 에 넘긴다 — 타입 · 데이터 종류 ·
  *          모듈 객체 등록자와 같은 사슬(`ModuleRegistrarHeads`)이다. 서브시스템은 고른 범위(`ModuleSubsystemScope`) 아래 모듈 이름의 **자식 범위**에 서고,
  *          등록이 공개한 타입(`SubsystemScope::publish`)만 그 범위의 조회에 보인다. 그래서 낮은 층(엔진)이 높은 층(GameFramework)의 구현을 함수 칸 · 정적 객체 없이
  *          인터페이스로 찾는다. Godot 의 엔진 싱글턴 등록(`Engine::add_singleton`)과 달리 이름이 아니라 타입으로 찾고, 모듈이 내려가면 자식 범위째 사라져 남는 칸이 없다.

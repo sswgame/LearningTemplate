@@ -8,13 +8,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
-#include "Engine/Module/ModuleSubsystemHost.h"
+#include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -28,23 +27,24 @@ namespace sw
 {
     namespace
     {
-        struct ModuleHeadRecord
-        {
-            TypeRegistrar* _pTypeHead{ nullptr };
-            EnumRegistrar* _pEnumHead{ nullptr };
-        };
+        using ModuleHeadRecord = ModuleRegistrationHost::HeadRecord;
 
-        /** @brief 모듈 이름 → 마지막으로 걷은 정적 등록기 머리(핫 리로드가 같은 모듈을 다시 올릴 때 쓴다). 엔진 수명 범위가 소유한다 — 함수 정적이면 종료 보고 뒤까지 남는다. */
-        ScopeOwned<unordered_map<string, ModuleHeadRecord>> s_mapModuleHead;
+        /**
+         * @brief 모듈마다의 등록 상태를 가진 서브시스템입니다(엔진 서비스 범위). 모듈 등록 · 해제는 엔진 서비스가 선 동안에만 일어난다(아래가 서비스를 부른다).
+         * @details 없으면 엔진을 세우지 않은 실행의 잘못이라 모든 구성에서 멈춘다 — 예전에는 소유자 없는 엔진 수명 맵 둘이 이 상태를 들었다.
+         */
+        ModuleRegistrationHost& getRegistrationHost()
+        {
+            ModuleRegistrationHost* const pHost = engine::findSubsystem<ModuleRegistrationHost>();
+            if ( pHost == nullptr )
+                ::sw::internal::reportMissingRequiredService( "ModuleRegistrationHost" );
+            return *pHost;
+        }
 
         unordered_map<string, ModuleHeadRecord>& getModuleHeadCache()
         {
-            // 모듈 등록 · 해제는 엔진 서비스가 선 동안에만 일어난다(아래가 서비스를 부른다) — 범위는 열려 있다.
-            return s_mapModuleHead.getRequired();
+            return getRegistrationHost().getHeadCache();
         }
-
-        /** @brief 모듈 이름 → 붙인 등록자(붙인 순서)입니다. 내리기 전에 떼고 지운다. 엔진 수명 범위가 소유한다. */
-        ScopeOwned<unordered_map<string, vector<ModuleObjectRegistrar*>>> s_mapModuleObjectRegistrar;
 
         /** @brief @p pHead 의 등록자를 만든 순서(정적 초기화 순서)로 붙이고 @p moduleName 아래 기록합니다. */
         void attachModuleObjects( string_view moduleName, ModuleObjectRegistrar* pHead )
@@ -54,7 +54,7 @@ namespace sw
             {
                 listRegistrar.push_back( pRegistrar );
             }
-            vector<ModuleObjectRegistrar*>& listAttached = s_mapModuleObjectRegistrar.getRequired()[string{ moduleName }];
+            vector<ModuleObjectRegistrar*>& listAttached = getRegistrationHost().getAttachedObjects()[string{ moduleName }];
             for ( size_t index = listRegistrar.size(); index > 0; --index )
             {
                 listRegistrar[index - 1]->attach();
@@ -65,7 +65,7 @@ namespace sw
         /** @brief @p moduleName 아래 붙인 등록자를 차례(`getDetachPass`)대로, 같은 차례 안에서는 붙인 역순으로 뗍니다. */
         void detachModuleObjects( string_view moduleName )
         {
-            unordered_map<string, vector<ModuleObjectRegistrar*>>& mapRegistrar = s_mapModuleObjectRegistrar.getRequired();
+            unordered_map<string, vector<ModuleObjectRegistrar*>>& mapRegistrar = getRegistrationHost().getAttachedObjects();
             const auto                                             it           = mapRegistrar.find( string{ moduleName } );
             if ( it == mapRegistrar.end() )
                 return;
@@ -84,17 +84,6 @@ namespace sw
                         listAttached[index - 1]->detach();
                 }
             }
-        }
-
-        /**
-         * @brief 모듈 서브시스템을 세우는 자리입니다(엔진 서비스 범위). 모듈 서브시스템 등록이 있는데 없으면 호스트가 엔진을 세우지 않은 실행이라 오류다.
-         */
-        ModuleSubsystemHost* findModuleSubsystemHost( string_view moduleName )
-        {
-            ModuleSubsystemHost* const pHost = engine::findSubsystem<ModuleSubsystemHost>();
-            if ( pHost == nullptr )
-                SW_LOG_ERROR( "Module '%#' registers module subsystems but no ModuleSubsystemHost is in the engine scope", moduleName );
-            return pHost;
         }
 
         /**
@@ -201,8 +190,7 @@ namespace sw
             // 모듈 서브시스템은 타입이 오른 뒤에 선다(초기화가 그 모듈의 리플렉션 타입을 쓸 수 있다). 새로 뗀 것만 — 리로드는 내릴 때 걷었다.
             if ( heads._pSubsystem != nullptr )
             {
-                if ( ModuleSubsystemHost* const pHost = findModuleSubsystemHost( moduleName ) )
-                    (void)pHost->mountModule( moduleName, heads._pSubsystem ); // 실패는 오류로 남았다 — 그 서브시스템을 찾는 쪽이 없다는 오류로 멈춘다
+                (void)getRegistrationHost().mountModule( moduleName, heads._pSubsystem ); // 실패는 오류로 남았다 — 그 서브시스템을 찾는 쪽이 없다는 오류로 멈춘다
             }
 
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
@@ -255,8 +243,7 @@ namespace sw
                 scene->getObjectManager()->destroyComponentsOfModule( moduleName );
             }
             // 모듈 서브시스템은 그것을 빌려 쓰는 인스턴스(컴포넌트 · 등록 줄)가 모두 놓은 뒤, 타입과 코드가 아직 있을 때 걷는다.
-            if ( ModuleSubsystemHost* const pHost = findSubsystem<ModuleSubsystemHost>() )
-                pHost->unmountModule( moduleName );
+            getRegistrationHost().unmountModule( moduleName );
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
             (void)getSubsystem<AssetDataKindRegistry>().unregisterModuleKinds( moduleName );

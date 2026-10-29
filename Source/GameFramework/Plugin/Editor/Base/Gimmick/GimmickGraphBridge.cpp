@@ -4,6 +4,7 @@
 
 #include "Engine/Reflection/ReflectionTypes.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
 
 namespace sw::editor
@@ -41,7 +42,7 @@ namespace sw::editor
 
     uint64 GimmickGraphBridge::computeSignature( const GimmickCircuitComponent& component )
     {
-        GimmickGraphModel scratch( GimmickNodeRegistry::getDefault() );
+        GimmickGraphModel scratch( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
         if ( load( component, scratch ) == false )
             return 0;
         return scratch.computeSignature();

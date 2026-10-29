@@ -61,7 +61,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
-#include "Engine/Module/ModuleSubsystemHost.h"
+#include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -236,7 +236,7 @@ namespace sw
             _pEventDispatcher = engine::addServiceSubsystems( _services )._pEventDispatcher;
             // 모듈 서브시스템의 자식 범위를 매다는 자리 — 기동 단계(모듈을 올리고 내리는 단계)보다 오래 살아야 해 서비스 범위에 둔다. 프로세스 범위는 범위 사슬의
             // 뿌리다: 호스트가 범위를 넘겼으면 그것, 넘기지 않은 실행(테스트 하네스)은 코어 범위가 뿌리다.
-            _services.addSubsystem( make_unique<ModuleSubsystemHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask ) );
+            _services.addSubsystem( make_unique<ModuleRegistrationHost>( pHostScope != nullptr ? *pHostScope : _coreScope, _startup, hostMask ) );
             _services.getCollection().setInitClock( &MonotonicClock::nowNanoseconds ); // 시동 요약 로그의 서브시스템별 시간
             if ( _services.getCollection().initializeAll( hostMask ) == false )
             {

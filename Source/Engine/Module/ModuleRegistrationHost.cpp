@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Engine/Module/ModuleSubsystemHost.h"
+#include "Engine/Module/ModuleRegistrationHost.h"
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-SW_LOG_CALLER( "ModuleSubsystemHost" );
+SW_LOG_CALLER( "ModuleRegistrationHost" );
 namespace sw
 {
     namespace
@@ -15,19 +15,21 @@ namespace sw
         constexpr uint8 kScopeCount = static_cast<uint8>( ModuleSubsystemScope::Engine ) + 1; ///< 범위 열거자 수
     } // namespace
 
-    ModuleSubsystemHost::ModuleSubsystemHost( SubsystemScope& processScope, SubsystemScope& engineScope, SubsystemHostMask hostMask )
+    ModuleRegistrationHost::ModuleRegistrationHost( SubsystemScope& processScope, SubsystemScope& engineScope, SubsystemHostMask hostMask )
         : _pProcessScope{ &processScope }
         , _pEngineScope{ &engineScope }
         , _hostMask{ hostMask }
+        , _mapHead{}
+        , _mapAttachedObject{}
     {
     }
 
-    SubsystemScope& ModuleSubsystemHost::resolveScope( uint8 scope ) const
+    SubsystemScope& ModuleRegistrationHost::resolveScope( uint8 scope ) const
     {
         return scope == static_cast<uint8>( ModuleSubsystemScope::Process ) ? *_pProcessScope : *_pEngineScope;
     }
 
-    bool ModuleSubsystemHost::mountModule( string_view moduleName, const ModuleSubsystemRegistrar* pHead )
+    bool ModuleRegistrationHost::mountModule( string_view moduleName, const ModuleSubsystemRegistrar* pHead )
     {
         // 사슬은 나중에 만든 것이 앞이다 — 만든 순서(정적 초기화 순서)로 더한다. 초기화 순서는 그와 상관없이 의존이 정한다.
         vector<const ModuleSubsystemRegistrar*> listRegistrar;
@@ -69,14 +71,14 @@ namespace sw
         return bMounted;
     }
 
-    void ModuleSubsystemHost::unmountModule( string_view moduleName )
+    void ModuleRegistrationHost::unmountModule( string_view moduleName )
     {
         // 엔진 범위 쪽이 프로세스 범위 쪽을 찾을 수 있다 — 매단 반대 순서로 뗀다.
         _pEngineScope->unmountChildScope( moduleName );
         _pProcessScope->unmountChildScope( moduleName );
     }
 
-    void* ModuleSubsystemHost::findInScope( uint64 typeHash ) const
+    void* ModuleRegistrationHost::findInScope( uint64 typeHash ) const
     {
         void* const pFound = _pProcessScope->findInMounted( typeHash );
         return pFound != nullptr ? pFound : _pEngineScope->findInMounted( typeHash );

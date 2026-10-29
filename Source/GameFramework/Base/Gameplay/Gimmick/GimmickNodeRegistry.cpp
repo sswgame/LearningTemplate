@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -640,23 +640,6 @@ namespace sw
                 return true;
             }
         };
-
-        /** @brief 내장 종류를 모두 가진 기본 레지스트리 하나입니다. 만들 때(`ScopeOwned` 의 생성 락 안) 내장 종류를 채웁니다. */
-        struct DefaultRegistryHolder
-        {
-            DefaultRegistryHolder()
-                : _registry{}
-            {
-                GimmickNodeRegistry::registerBuiltinKinds( _registry );
-            }
-
-            GimmickNodeRegistry _registry;
-        };
-
-        // 기본 레지스트리는 엔진 수명 범위가 소유한다. 처음 부르는 쪽(기믹 그래프 창 · 기믹 회로 컴포넌트)이 메모리 태그 기준선 뒤에 세워도
-        // 엔진 종료가 범위를 닫을 때 종료 누수 보고 전에 사라진다 — 예전에는 이를 피하려고 타입 등록 단계(기준선 전)에 미리 세웠다.
-        // 종류 이름이 hashed_string 이라 이름 풀이 서기 전(정적 초기화)에는 만들 수 없는데, `ScopeOwned` 는 처음 쓸 때 만들어 그 걱정도 없다.
-        ScopeOwned<DefaultRegistryHolder> s_defaultRegistry;
     } // namespace
 } // namespace sw
 
@@ -707,10 +690,17 @@ namespace sw
         return -1;
     }
 
-    const GimmickNodeRegistry& GimmickNodeRegistry::getDefault()
+    SubsystemInitResult GimmickNodeKindCatalog::initializeSubsystem()
     {
-        // 엔진 수명 범위가 닫힌 뒤의 접근이다 — 기본 레지스트리를 줄 곳이 없으므로 모든 구성에서 멈춘다(`getRequired`).
-        return s_defaultRegistry.getRequired()._registry;
+        // 종류 이름이 hashed_string 이라 이름 풀(코어 범위)이 선 뒤에 채운다 — 서브시스템 기동이 그 순서를 지킨다. 다시 세우면 처음부터 채운다.
+        _registry = GimmickNodeRegistry{};
+        GimmickNodeRegistry::registerBuiltinKinds( _registry );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void GimmickNodeKindCatalog::shutdownSubsystem()
+    {
+        _registry = GimmickNodeRegistry{};
     }
 
     bool GimmickNodeRegistry::registerKind( const GimmickNodeKind& kind )
@@ -810,3 +800,6 @@ namespace sw
         }
     }
 } // namespace sw
+
+// 엔진 범위 아래 GameFramework 의 자식 범위에 선다 — 기믹 회로 컴포넌트 · 그래프 편집기가 제 타입으로 찾는다.
+SW_MODULE_SUBSYSTEM( Engine, GimmickNodeKindCatalog, GimmickNodeKindCatalog );

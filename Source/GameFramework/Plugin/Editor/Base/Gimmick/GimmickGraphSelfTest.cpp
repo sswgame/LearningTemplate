@@ -8,6 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Plugin/Editor/Base/Gimmick/GimmickGraphModel.h"
 #include "GameFramework/Plugin/Editor/Base/Gimmick/GimmickGraphPanel.h"
 
@@ -42,7 +43,7 @@ namespace sw::editor
             /** @brief 모델이 확장 이미지 안에서 노드 · 배선을 만들고 내보내는지 확인합니다. 기본 노드 종류 레지스트리가 확장에서도 보여야 합니다. */
             static EditorSelfTestStep runModelBuildsACircuit( EditorSelfTestContext& context )
             {
-                GimmickGraphModel model( GimmickNodeRegistry::getDefault() );
+                GimmickGraphModel model( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
                 const int32       plate = model.addNode( hashed_string( "Signal" ) );
                 const int32       door  = model.addNode( hashed_string( "Door" ) );
                 context.expect( plate != GimmickGraphModel::kNoGraphID && door != GimmickGraphModel::kNoGraphID, "the default node registry has no Signal or Door" );
