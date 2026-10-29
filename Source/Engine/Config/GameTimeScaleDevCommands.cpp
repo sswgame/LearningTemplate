@@ -26,7 +26,9 @@ namespace sw
                     return false;
                 engine::getSubsystem<GameTimeScale>().set( scale );
             }
-            outReply = formatToString( "time scale = %#", engine::getSubsystem<GameTimeScale>().get() );
+            // 정한 배율을 답한다 — 정지 요청(정지 메뉴 · 로딩 화면)이 걸려 있으면 실효 배율은 0 이라 그것을 덧붙인다.
+            const GameTimeScale& timeScale = engine::getSubsystem<GameTimeScale>();
+            outReply                       = formatToString( "time scale = %#%#", timeScale.getSetting(), timeScale.isPaused() ? " (paused)" : "" );
             return true;
         }
     } // namespace

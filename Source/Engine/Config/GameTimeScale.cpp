@@ -22,9 +22,17 @@ namespace sw
 
     float32 GameTimeScale::get() const
     {
-        if ( _pauseRequestCount.load( std::memory_order_relaxed ) > 0 )
-            return 0.0f;
+        return isPaused() ? 0.0f : getSetting();
+    }
+
+    float32 GameTimeScale::getSetting() const
+    {
         return MathUtil::clamp( gv_timeScale, kMinScale, kMaxScale );
+    }
+
+    bool GameTimeScale::isPaused() const
+    {
+        return _pauseRequestCount.load( std::memory_order_relaxed ) > 0;
     }
 
     void GameTimeScale::set( float32 scale )

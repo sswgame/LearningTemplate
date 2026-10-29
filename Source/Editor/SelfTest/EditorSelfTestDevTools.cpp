@@ -214,8 +214,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kEcho         = "> timescale 0.75 : time scale = 0.75";
-                EditorContext&        editorContext = editor::getSubsystem<EditorContext>();
+                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<ConsolePanel>( true );
                 ConsolePanel* pConsole = editorContext.getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>();
                 if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
@@ -226,11 +225,13 @@ namespace sw::editor
                 {
                     (void)context.expect( DevCommandRegistry::get().findCommand( "select.tag" ) != nullptr, "the editor module did not register its dev commands" );
                     (void)context.expect( pConsole->getDevConsole().submit( "timescale 0.75" ) == DevConsoleResult::Ok, "timescale failed in the editor console" );
-                    (void)context.expect( editor::getSubsystem<GameTimeScale>().get() == 0.75f, "the console command did not change the time scale" );
+                    // 정한 배율을 본다 — 멈춘 편집기는 첫 Play 까지 로딩 화면의 정지 요청이 남아 실효 배율(`get`)이 0 이다.
+                    (void)context.expect( editor::getSubsystem<GameTimeScale>().getSetting() == 0.75f, "the console command did not change the time scale" );
                     editor::getSubsystem<GameTimeScale>().set( 1.0f );
                     return EditorSelfTestStep::Continue;
                 }
-                const bool bShown = pConsole->isMessageInSnapshot( kEcho );
+                const bool bPaused = editor::getSubsystem<GameTimeScale>().isPaused(); // 멈춘 편집기에서는 바뀌지 않는다
+                const bool bShown  = pConsole->isMessageInSnapshot( bPaused ? "> timescale 0.75 : time scale = 0.75 (paused)" : "> timescale 0.75 : time scale = 0.75" );
                 if ( bShown == false && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bShown, "the console reply never reached the Output Log" );

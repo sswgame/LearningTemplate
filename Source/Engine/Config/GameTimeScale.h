@@ -30,6 +30,10 @@ namespace sw
 
         /** @brief 지금 배율입니다(범위로 자른 값). 정지 요청이 하나라도 걸려 있으면 0 입니다. */
         float32 get() const;
+        /** @brief 정한 배율입니다(범위로 자른 값, 정지 요청과 무관). 요청이 모두 풀리면 `get` 이 이 값이 된다. */
+        float32 getSetting() const;
+        /** @brief 정지 요청이 하나라도 걸려 있으면 true 입니다(정지 메뉴 · 로딩 화면 — 멈춘 편집기에서는 첫 Play 까지 로딩 화면이 남는다). */
+        bool isPaused() const;
         /** @brief 배율을 정합니다(범위로 자릅니다). 정지 요청과 따로 남습니다 — 요청이 모두 풀리면 이 값으로 돌아갑니다. */
         void set( float32 scale );
         /**
