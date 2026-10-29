@@ -126,14 +126,10 @@
 **끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. 리타깃 `*ForEdit` → 일반 설정자.
 파일 대화상자는 편집기(`Editor/Common/Backend/FileDialog`)로 — 스레드를 들고 있다가 닫히면 합류시키고, 그 전까지 `LiveReloadManager::addReloadHold`(편집기 API `isReloadHeld`)가 리로드를 대기열에 잡아 둔다(버리지 않는다).
 
-**지금 과도기**: `Source/EditorFoundation`(개발 App 이 링크하는 SHARED — `CommandStack` · `ObjectUndoUtil` · `EditSessionState` · `ObjectCopyBuffer`)이 남아 있다. **없앤다**(사용자 결정 2026-10-29 — 내리지 않는 토대 대신 "데이터로 맡기기"):
-- **되돌리기를 데이터로**(언리얼 `FTransaction` 처럼): 명령 = 레이블 + 종류 이름 + 직렬화한 내용(+ 묶음의 안쪽 명령). 실행은 종류 이름으로 찾는 처리기 표(편집기 · 편집기 확장이 정적 등록 — 다시 올라오면 다시 등록)가 한다.
-  오브젝트 스냅숏 명령(33 곳, `ObjectUndoUtil`)은 이미 데이터라 모양만 바꾼다. 코드 명령 12 곳(`EditorTransaction.cpp` 문서 글 · `pushCoalesce`, `RigDebugPanel` · `UIPreviewPanel` · `TerrainBrushTool` · `EditorInspectorCommands`)은
-  "열린 문서 · 도구를 키로 찾는 표 + 종류별 처리기"로 바꾸고, 대상이 닫혀 있으면 그 명령은 건너뛴다. 그러면 `removeCodeWithin` · 모듈 언로드 처리기도 되돌리기에서 빠진다.
-- **리로드 사이 맡기기**: 모듈이 이름 붙은 데이터 묶음을 맡겼다 되찾는 순수 가상 인터페이스(`IModuleStateStore`)를 `ModuleAPI` 에, 구현은 App(호스트 범위). 편집기는 인스턴스를 없앨 때 되돌리기 기록 · 세션 상태(선택 · 미저장) · 복사 버퍼를 맡기고 새 인스턴스가 되찾는다.
-  리로드든 백엔드 교체든 같은 길이라 `EditSessionState::setModuleLibraryKept`(App `RHIBackendSwitcher`)도 없어진다. 키트 · 게임 모듈도 같은 인터페이스로 리로드 사이 상태를 넘길 수 있다.
-- 다 옮기면 `Source/EditorFoundation` · App 의 호스트 범위 등록 · 씬 변경 구독(`App::_commandStackClearSubscription` — 편집기가 직접 구독)을 지운다.
-찾는 법: 편집기 DLL 만 가져다 쓰는 Engine.dll 내보내기를 import 표로 본다(`dumpbin /imports:Engine.dll` 을 EditorModule · `GF_EditorPlugin_*` 와 그 밖의 바이너리에 돌려 차집합, 그 이름이 Engine 소스 안에서 안 쓰이면 후보 — 2026-10-29 에 253 개, 대부분은 편집기가 마침 유일하게 부르는 런타임 조회 · 설정이라 둔다).
+**`EditorFoundation` 없앰(2026-10-29)**: 되돌리기는 데이터 단계(`UndoStep` — 함수 이름 해시 + 인자 바이트, `SW_UNDO_STEP( 함수, 인자... )`, 처리기는 처음 쓰일 때 스스로 등록)이고,
+리로드 · 백엔드 교체 사이 상태는 호스트의 맡김 칸(`ModuleAPI/Service/IModuleStateStore` — App 의 `ModuleStateStore`, 호스트 범위)으로 넘긴다. 편집기 쪽 주인: `EditorUndoHistory`(메인 스택 · 씬 변경 구독) ·
+`ObjectCopyBuffer`(정적 전역 → 편집기 서브시스템) · `ImGuiEditor` 세션(선택 · 미저장). 패널 인스턴스에 묶인 명령(UI 미리보기 · 열린 문서)만 코드 단계(`UndoStep::makeTransient`)이고 맡길 때 버린다.
+키트 · 게임 모듈도 같은 칸으로 리로드 사이 상태를 넘길 수 있다.
 
 **남은 것**(순서대로):
 1. `DevTools` 단위 신설 — `Engine/AssetReload`(파일 감시 분배기 · 설정 리로드), `LiveShaderSubsystem` · `ShaderRecompiler`, Core 의 OS 파일 감시기를 옮긴다. 엔진은 "설정을 다시 읽어라" · "이 셰이더를 바꿔라" 같은 확장점만 둔다.
@@ -142,6 +138,33 @@
 4. 테스트 · 자동화도 같은 기준("배포한 게임이 쓰는가") — 테스트 틀(`Core/Testing`)과 기능 옆 `Tests/` 는 소스 자리는 두고 Engine.dll 이 아니라 테스트 단위(Core · Engine 테스트 DLL, `App --test` 가 올린다)가 짓는다.
    자동화의 판정 · 골든 · 보고 · 백엔드 행렬 · 종료 코드(`Engine/Automation/Runner`)는 엔진 밖 개발 단위로. 시나리오 재생기 · 단계 · 프레임 통계(내장 벤치마크 · 어트랙트 모드)는 배포 게임이 쓰므로 Engine 에 남는다.
 5. 굽기(`LightProbeBaker` · `ReflectionProbeBaker`)는 편집기만 부른다 — 쿠커처럼 헤드리스 App 이 부르는 길이 없으면 편집기로(테스트 `TestLightProbeBaker` 는 편집기 쪽 테스트 자리가 생길 때 같이).
+
+### J. 구조로 풀 수 있는데 우회로 막는 자리 (감사 2026-10-29)
+
+원칙(I 와 같다): 게이트 · `#if` · 주소 훑기 · 주석 규칙 대신 빌드 단위 · 확장점 · 데이터 · 형식. 값이 큰 순서:
+
+| # | 지금 | 고칠 모양 | 크기 |
+|---|---|---|---|
+| 1 | 안 쓰는 테스트 훅 `FrameRenderer::setDebugOverrides`(`FrameDebugOverrides`) · `Memory::injectAllocationFailures` | 지운다 | 5 파일 |
+| 2 | `EventDispatcher` 채널 표가 처음 만든 모듈의 템플릿 썽크를 가리켜 그 DLL 을 매핑한 채 둔다(`outKeepLibraryMapped` · `DeferredLibraryUnloadQueue::_bKeepMapped`) | 채널 항목을 타입 지운 `MulticastDelegate<void(const IEvent&)>` + Core 의 비템플릿 broadcast 로 — keep-mapped 경로 전체가 빠진다 | 4–5 |
+| 3 | 모듈 언로드 때 레지스트리마다 주소 범위를 훑어 뗀다(`SW_MODULE_UNLOAD_HANDLER` · `isCodeWithin` · `removeCodeWithin` 9 종 — AssetManager 는 vtable 주소까지) | 모듈의 모든 등록을 모듈이 소유한 `Subscription` 묶음(ModuleScope)에 담고 언로드 = 묶음 파괴. `Subscription` 을 안 돌려주는 등록(`UIBindingConverterRegistry` · `CompressionCodecRegistry` · InputManager 슬롯 · IWindow 처리기)만 고친다 | ~20 |
+| 4 | 등록 해제를 주석 규칙에 맡김(`CompressionCodecRegistry::unregisterCodec`, `CrashContext::setCrashExtraTextWriter`, `ServerServiceManager::stopAll`, `AssetManager` 종료 경고) | 모두 `Subscription` 을 돌려주고 3 의 ModuleScope 가 소유 | 6–8 |
+| 5 | 개발 명령 · 디버그 HUD · 개발 콘솔이 Engine/Core 안에서 `#if SW_DEV_COMMANDS_ENABLED` 로 파일째 감싸짐(~28 파일) · 엔진 루프가 개발 도구를 이름으로 부른다(`Engine.cpp` `#if` 13 곳) | `DevTools` 단위(I 절)로 옮기고 `IEngineFrameObserver` · 서브시스템 등록으로 붙는다 | ~40 |
+| 6 | 쿠커(PackCooker · SceneCooker · ShaderCooker …)가 Engine.dll 에 있고 런타임 읽기마다 `CookJob::admitRead`, `HeadlessSubsystem` 의 하드코딩 분기 | 쿠킹 단위로 분리, 헤드리스 작업은 이름 등록 commandlet, `AssetIO` 에는 읽기 관찰자 자리 하나 | ~25 |
+| 7 | "쿠킹본만 읽기" 를 `#if SW_SHIPPING` 으로 파일마다(SceneDocument · PrefabAsset · ShaderCache · ConfigManager …) | 호스트 조립 때 고르는 읽기 정책 하나(`ContentSource`), 소스 XML 리더는 쿠킹 단위로 | 8–10 |
+| 8 | 리플렉션 메타데이터의 에디터 칸(category · tooltip · `_bCallInEditor` …)이 `#if !SW_SHIPPING` | 생성기가 에디터 메타를 사이드 테이블(`*.editor.gen.cpp`)로 내고 편집기가 짓는다 | 생성기 + 6 |
+| 9 | 회선 에뮬레이션 데코레이터를 `GameNetSession` 이 `#if` 로 붙임 | 세션에 transport 데코레이터 등록 자리, `DevTools` 가 등록 | 3 |
+| 10 | `RHIBackendRegistry` 가 백엔드 헤더 넷을 include 하고 DLL 로드까지 | 백엔드가 스스로 등록, DLL 로드는 ModuleManager | 4 |
+| 11 | 모듈 언로드 정리 함수가 런타임 타입에 `#if`(`GameObjectManager::destroyComponentsOfModule` 등) | 범용 API + 타입의 모듈 태그(데이터), 절차는 ModuleManager | 6 |
+| 12 | `GameObject::_bHiddenInEditor` 를 렌더러가 읽음 | 편집기 숨김 집합을 뷰의 제외 필터로 | 4 + 편집기 |
+| 13 | `IEngineFrameObserver` 에 자동화 전용 칸(실행 상태 · 사진 경로) | 자동화 관찰자가 자기 서비스로 | 4 |
+| 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
+| 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 호스트 전용 `SceneManager::update`(HostOnly 노출), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
+
+**전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
+`ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · AssetPaths 해석 캐시 · SystemFontLocator · GameDataCache …),
+`ScenarioPlayback::s_pPlayer`(호스트 범위 조회로), `GameTimeScale` 의 프레임 시간, `PackPatchTrustSource` 의 공급자 함수, `MeshCache` 무효화 훅 목록, `TickBatchRegistry` 상태, `AutomationSceneSteps` 의 대기 목록(실행기 상태로),
+편집기의 포커스 스택 · 선택(`EditorService` 의 `s_pFocused*`), `ViewportInputOverlay` 설정. 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
 
 ### H. 뜻이 안 보이는 이름 (조사 2026-10-29, `BugIt` → `BugReport` 와 같은 종류)
 
