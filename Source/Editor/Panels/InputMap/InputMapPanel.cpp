@@ -3,14 +3,12 @@
 #include "Editor/Panels/InputMap/InputMapPanel.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -22,8 +20,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -128,35 +124,17 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_LOG_CALLER( "InputMapPanel" );
-
     InputMapPanel::InputMapPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
-        , _inputMap{}
-        , _replay{}
-        , _inputMapPath{ getSubsystem<const EngineDefaultAssets>()._debugKeyInputMap } // 처음 여는 맵은 디버그 키 맵이다 — 경로의 원본은 enginedefaultassets.xml
-        , _replayFilePath{ getEditorToolDefaults()._inputReplayFile }                  // 처음 가리키는 파일 — 원본은 editortooldefaults.json
+        , _document{}
         , _newActionName{ "" }
-        , _selectedAction{ "" }
         , _arrActionFilter{}
         , _testComboPattern{ "236P" }
-        , _arrPlotLeftStickX{}
-        , _arrPlotLeftStickY{}
-        , _arrPlotMouseDeltaX{}
-        , _arrPlotMouseDeltaY{}
-        , _arrPlotTriggerL{}
-        , _arrPlotTriggerR{}
         , _testVibLeft{ 0.5f }
         , _testVibRight{ 0.5f }
         , _simStick{}
-        , _plotOffset{ 0 }
-        , _recordedBeginFrameCount{ 0 }
-        , _capturingBindIndex{ 0 }
         , _newActionValueType{ 0 }
         , _simKeyToInject{ 1 }
-        , _bLoaded{ SW_FALSE }
-        , _bCapturingKey{ SW_FALSE }
-        , _bPlotPaused{ SW_FALSE }
         , _bSelectFirstTab{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -164,60 +142,9 @@ namespace sw::editor
 
     void InputMapPanel::drawContent()
     {
-        if ( _bLoaded == SW_FALSE )
-        {
+        if ( _document.needsFirstLoad() )
             reloadFromFile();
-            _bLoaded = SW_TRUE;
-        }
-
-        InputManager& input = editor::getSubsystem<InputManager>();
-        if ( _inputMap.getInputManager() != &input )
-            _inputMap.setInputManager( &input );
-
-        // ActionPhase 상태 머신, 커맨드 히스토리, 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
-        // 프레임마다 호출해야 액션 테이블, 콤보 테스터, 버퍼링 데모가 실제로 동작한다.
-        _inputMap.update( ImGui::GetIO().DeltaTime );
-
-        // 실시간 시계열 샘플링
-        if ( _bPlotPaused == SW_FALSE )
-        {
-            float32        lx = 0.0f, ly = 0.0f, lt = 0.0f, rt = 0.0f;
-            GamepadDevice* pGamepad = input.getGamepad( 0 );
-            if ( pGamepad != nullptr && pGamepad->isConnected() )
-            {
-                const float2 vecLeftStick1 = pGamepad->getLeftStick();
-                lx                         = vecLeftStick1._x;
-                ly                         = vecLeftStick1._y;
-                lt                         = pGamepad->getLeftTrigger();
-                rt                         = pGamepad->getRightTrigger();
-            }
-
-            int32      mdx = 0, mdy = 0;
-            const int2 vecMouseDelta1 = input.getMouseDelta();
-            mdx                       = vecMouseDelta1._x;
-            mdy                       = vecMouseDelta1._y;
-
-            _arrPlotLeftStickX[_plotOffset]  = lx;
-            _arrPlotLeftStickY[_plotOffset]  = ly;
-            _arrPlotMouseDeltaX[_plotOffset] = static_cast<float32>( mdx );
-            _arrPlotMouseDeltaY[_plotOffset] = static_cast<float32>( mdy );
-            _arrPlotTriggerL[_plotOffset]    = lt;
-            _arrPlotTriggerR[_plotOffset]    = rt;
-
-            _plotOffset = ( _plotOffset + 1 ) % kPlotSampleCount;
-        }
-
-        // 입력 녹화는 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 이벤트를 기록한다.
-        const bool bNewRecordingFrame = _replay.isRecording() && input.getBeginFrameCount() != _recordedBeginFrameCount;
-        if ( bNewRecordingFrame )
-        {
-            _recordedBeginFrameCount = input.getBeginFrameCount();
-            _replay.recordFrame( ImGui::GetIO().DeltaTime, input.getLastFrameEvents() );
-        }
-        // 재생(가상 입력으로 붙인 리플레이)이 끝나면 해제한다.
-        const bool bReplayFinished = input.getVirtualInput() == &_replay && _replay.isFinished( input.getVirtualFrameIndex() );
-        if ( bReplayFinished )
-            input.detachVirtualInput();
+        _document.tick( editor::getSubsystem<InputManager>(), ImGui::GetIO().DeltaTime );
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
@@ -248,27 +175,11 @@ namespace sw::editor
         drawCaptureModal();
     }
 
-    bool InputMapPanel::readSelectedBindingCount( uint32& outCount ) const
-    {
-        if ( _selectedAction.empty() )
-            return false;
-        outCount = _inputMap.getBindingCount( hashed_string( _selectedAction.c_str() ) );
-        return true;
-    }
-
-    bool InputMapPanel::readSelectedTrigger( uint32& outTrigger ) const
-    {
-        if ( _selectedAction.empty() || _inputMap.getBindingCount( hashed_string( _selectedAction.c_str() ) ) == 0 )
-            return false;
-        outTrigger = static_cast<uint32>( _inputMap.getBindingTrigger( hashed_string( _selectedAction.c_str() ), 0 ) );
-        return true;
-    }
-
     void InputMapPanel::drawMappingsTab()
     {
         ImGui::TextUnformatted( "Input Map" );
         ImGui::SameLine();
-        (void)_inputMapPath.drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
+        (void)_document.editInputMapPath().drawField( "##InputMapPath", 260.0f ); // 확정한 경로는 Reload · Save 가 쓴다 — 바꾸기만 해서는 다시 읽지 않는다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "MapPathTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reload" ) ); // 경로 칸이 고정 폭이라 좁은 패널에서는 단추가 창 밖에 놓이므로 줄을 바꾼다
         if ( ImGui::Button( "Reload" ) )
@@ -282,7 +193,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Revert All to Default" ) );
         if ( ImGui::Button( "Revert All to Default" ) )
         {
-            _inputMap.resetAllBindingsToDefault();
+            _document.editInputMap().resetAllBindingsToDefault();
             markDocumentDirty();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RevertAllTip" ) );
@@ -291,12 +202,13 @@ namespace sw::editor
             ImGui::SameLine();
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorInputMap", "UnsavedChanges" ) );
         }
-        InputMapConflicts::collect( _inputMap, _listConflict );
-        if ( _listConflict.empty() == false )
+        _document.refreshConflicts();
+        const vector<InputMapConflict>& listConflict = _document.getConflicts();
+        if ( listConflict.empty() == false )
         {
             ImGui::SameLine();
             const string conflictText = SW_LOCKEYFORMAT( "EditorInputMap", "ConflictCount",
-                                                         TextArgumentList().addInteger( "count", static_cast<int64>( _listConflict.size() ) ) );
+                                                         TextArgumentList().addInteger( "count", static_cast<int64>( listConflict.size() ) ) );
             EditorThemeUtil::textError( conflictText.c_str() );
         }
         ImGui::Separator();
@@ -322,17 +234,18 @@ namespace sw::editor
         EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::kMaxBuffer64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ) );
         EditorSelfTestMarks::note( "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
-        for ( const hashed_string& actionName : _inputMap.getActionNames() )
+        const InputMap&        inputMap = _document.getInputMap();
+        for ( const hashed_string& actionName : inputMap.getActionNames() )
         {
             if ( filter.matches( actionName.view() ) == false )
                 continue;
-            const bool bConflict = InputMapConflicts::involves( _listConflict, actionName );
-            const bool bDown     = _inputMap.isActionDown( actionName );
+            const bool bConflict = InputMapConflicts::involves( _document.getConflicts(), actionName );
+            const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
             if ( bConflict )
                 EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
-            if ( ImGui::Selectable( actionName.c_str(), _selectedAction == actionName.view() ) )
-                _selectedAction = actionName.c_str();
+            if ( ImGui::Selectable( actionName.c_str(), _document.getSelectedAction() == actionName.view() ) )
+                _document.selectAction( actionName.view() );
             if ( bConflict )
                 EditorThemeUtil::popTextColor();
             if ( EditorSelfTestMarks::isEnabled() )
@@ -340,7 +253,7 @@ namespace sw::editor
             if ( bConflict )
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ActionConflictTip" ) );
             // 키 글리프는 오른쪽 끝에 맞춘다 — 고정 폭으로 비워 두면 "[ LeftControl+... ]" 같은 긴 글리프가 잘린다.
-            const string glyphText = bDown ? string{ "DOWN" } : InputGlyphResolver::findActionGlyph( _inputMap, actionName );
+            const string glyphText = bDown ? string{ "DOWN" } : InputGlyphResolver::findActionGlyph( inputMap, actionName );
             ImGui::SameLine( MathUtil::max( ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize( glyphText.c_str() ).x - ImGui::GetStyle().ItemSpacing.x, 0.0f ) );
             if ( bDown )
                 EditorThemeUtil::textSuccess( glyphText.c_str() );
@@ -352,27 +265,29 @@ namespace sw::editor
 
     void InputMapPanel::drawActionDetails()
     {
-        if ( _selectedAction.empty() )
+        const string& selectedAction = _document.getSelectedAction();
+        if ( selectedAction.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "SelectActionHint" ) );
             return;
         }
-        const hashed_string action( _selectedAction.c_str() );
-        ImGui::SeparatorText( _selectedAction.c_str() );
-        const ActionPhase phase = _inputMap.getActionPhase( action );
-        ImGui::Text( "State: %s  hold %.2f s", _inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( _inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
-                     static_cast<float64>( _inputMap.getActionHoldDuration( action ) ) );
+        InputMap&           inputMap = _document.editInputMap();
+        const hashed_string action( selectedAction.c_str() );
+        ImGui::SeparatorText( selectedAction.c_str() );
+        const ActionPhase phase = inputMap.getActionPhase( action );
+        ImGui::Text( "State: %s  hold %.2f s", inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
+                     static_cast<float64>( inputMap.getActionHoldDuration( action ) ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Reset to Default" ) );
-        if ( ImGui::SmallButton( "Reset to Default" ) && _inputMap.resetActionToDefault( action ) )
+        if ( ImGui::SmallButton( "Reset to Default" ) && inputMap.resetActionToDefault( action ) )
             markDocumentDirty();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
 
         // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 버튼을 둔다.
         ImGui::SeparatorText( "Bindings" );
-        const uint32 bindingCount = _inputMap.getBindingCount( action );
+        const uint32 bindingCount = inputMap.getBindingCount( action );
         for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
         {
-            const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
+            const ActionBinding* pBinding = inputMap.getBinding( action, bindIndex );
             if ( pBinding == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( bindIndex ) );
@@ -388,22 +303,20 @@ namespace sw::editor
 
     void InputMapPanel::drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding )
     {
-        const float32 rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
-        InputSlot     slot{};
-        const bool    bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
-        const string  slotGlyph   = bRebindable ? InputGlyphResolver::makeSlotGlyph( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
+        const float32   rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
+        InputSlot       slot{};
+        const InputMap& inputMap    = _document.getInputMap();
+        const bool      bRebindable = inputMap.findRebindSlot( action, bindIndex, slot );
+        const string    slotGlyph   = bRebindable ? InputGlyphResolver::makeSlotGlyph( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
         ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
-        ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
+        ImGui::TextDisabled( "%s", inputMap.findBindingLayer( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
         drawTriggerCombo( action, bindIndex );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind" ) );
         ImGui::BeginDisabled( bRebindable == false );
         if ( ImGui::SmallButton( "Rebind" ) )
-        {
-            _capturingBindIndex = bindIndex;
-            _bCapturingKey      = SW_TRUE;
-        }
+            _document.beginKeyCapture( bindIndex );
         ImGui::EndDisabled();
         if ( bRebindable == false )
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NotRebindableTip" ) );
@@ -416,7 +329,8 @@ namespace sw::editor
     {
         // 가장 긴 트리거 이름(HoldThreshold · HoldAndRelease)이 잘리지 않을 만큼 — 고정 8 em 이면 "HoldThresho" 로 끊긴다.
         ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
-        const ActionTrigger trigger  = _inputMap.getBindingTrigger( action, bindIndex );
+        InputMap&           inputMap = _document.editInputMap();
+        const ActionTrigger trigger  = inputMap.getBindingTrigger( action, bindIndex );
         const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
         if ( EditorSelfTestMarks::isEnabled() )
@@ -427,7 +341,7 @@ namespace sw::editor
         for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
         {
             const ActionTrigger value = static_cast<ActionTrigger>( option );
-            if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && _inputMap.setBindingTrigger( action, bindIndex, value ) )
+            if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && inputMap.setBindingTrigger( action, bindIndex, value ) )
                 markDocumentDirty();
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
@@ -438,7 +352,8 @@ namespace sw::editor
     void InputMapPanel::drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX )
     {
         // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 필드는 숨긴다.
-        const float32 effectiveTime = _inputMap.getEffectiveTriggerTime( binding );
+        InputMap&     inputMap      = _document.editInputMap();
+        const float32 effectiveTime = inputMap.getEffectiveTriggerTime( binding );
         const bool    bUsesTime     = effectiveTime > 0.0f;
         const bool    bUsesTaps     = binding._trigger == ActionTrigger::MultiTap;
         // 시간 · 횟수 필드가 필요하거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 열 위치에서 시작하는 다음 줄로 내린다.
@@ -458,7 +373,7 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
-            if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && _inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
+            if ( ImGui::DragFloat( "s##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f" ) && inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
                 markDocumentDirty();
         }
         // MultiTap 만 누름 횟수를 고른다(2 이상).
@@ -469,25 +384,26 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
-            if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && _inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
+            if ( ImGui::DragInt( "taps##taps", &editTaps, 0.1f, 2, 9 ) && inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
                 markDocumentDirty();
         }
         bool bNegate = binding._bNegate;
         if ( bLineStart == false )
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Negate" ) );
-        if ( ImGui::Checkbox( "Negate", &bNegate ) && _inputMap.setBindingNegate( action, bindIndex, bNegate ) )
+        if ( ImGui::Checkbox( "Negate", &bNegate ) && inputMap.setBindingNegate( action, bindIndex, bNegate ) )
             markDocumentDirty();
     }
 
     void InputMapPanel::drawActionConflicts( const hashed_string& action )
     {
         // 충돌은 같은 레이어에서 같은 키를 쓰는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
-        if ( InputMapConflicts::involves( _listConflict, action ) == false )
+        const vector<InputMapConflict>& listConflict = _document.getConflicts();
+        if ( InputMapConflicts::involves( listConflict, action ) == false )
             return;
         ImGui::SeparatorText( "Conflicts" );
-        for ( size_t index = 0; index < _listConflict.size(); ++index )
+        for ( size_t index = 0; index < listConflict.size(); ++index )
         {
-            const InputMapConflict& conflict = _listConflict[index];
+            const InputMapConflict& conflict = listConflict[index];
             const bool              bIsA     = conflict._actionA == action;
             if ( bIsA == false && conflict._actionB != action )
                 continue;
@@ -500,13 +416,10 @@ namespace sw::editor
             EditorThemeUtil::textError( conflictText.c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Rebind this" ) );
             if ( ImGui::SmallButton( "Rebind this" ) )
-            {
-                _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
-                _bCapturingKey      = SW_TRUE;
-            }
+                _document.beginKeyCapture( bIsA ? conflict._bindIndexA : conflict._bindIndexB );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unbind other" ) );
-            if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
+            if ( ImGui::SmallButton( "Unbind other" ) && _document.editInputMap().rebindKey( other, Key::Unknown, otherIndex ) )
                 markDocumentDirty();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
             ImGui::PopID();
@@ -523,7 +436,7 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "%s", kArrStyleName[index] );
             ImGui::SameLine( ImGui::CalcTextSize( kArrStyleName[0] ).x + ImGui::GetStyle().ItemSpacing.x * 2.0f ); // 가장 긴 이름 뒤에 맞춘다(고정 폭이면 글꼴에 따라 겹친다)
-            ImGui::TextUnformatted( InputGlyphResolver::findActionGlyph( _inputMap, action, kArrStyle[index] ).c_str() );
+            ImGui::TextUnformatted( InputGlyphResolver::findActionGlyph( _document.getInputMap(), action, kArrStyle[index] ).c_str() );
         }
     }
 
@@ -544,7 +457,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Pattern (numpad notation)", _testComboPattern, 150.0f );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PatternTip" ) );
         ImGui::SameLine();
-        if ( _inputMap.getActionBuffer().wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
+        if ( _document.getInputMap().getActionBuffer().wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
             EditorThemeUtil::textSuccess( "MATCHED" );
         else
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "WaitingForInput" ) );
@@ -553,7 +466,8 @@ namespace sw::editor
 
     void InputMapPanel::drawLayerList()
     {
-        const vector<hashed_string>& listLayer = _inputMap.getLayerNames();
+        InputMap&                    inputMap  = _document.editInputMap();
+        const vector<hashed_string>& listLayer = inputMap.getLayerNames();
 
         if ( ImGui::CollapsingHeader( "Input Layers" ) )
         {
@@ -569,20 +483,20 @@ namespace sw::editor
                 {
                     InputMapPanelInternal::beginNamedRow( layerName );
                     ImGui::PushID( layerName.c_str() );
-                    bool bEnabled = _inputMap.isLayerEnabled( layerName );
+                    bool bEnabled = inputMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
                     {
-                        _inputMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
+                        inputMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
                         markDocumentDirty();
                     }
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LayerEnabledTip" ) );
                     ImGui::PopID();
 
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%d", _inputMap.getLayerPriority( layerName ) );
+                    ImGui::Text( "%d", inputMap.getLayerPriority( layerName ) );
 
                     ImGui::TableNextColumn();
-                    if ( _inputMap.getCurrentTopLayer() == layerName.view() )
+                    if ( inputMap.getCurrentTopLayer() == layerName.view() )
                         EditorThemeUtil::textSuccess( "Top (Active)" );
                     else if ( bEnabled )
                         ImGui::Text( "Active" );
@@ -608,11 +522,8 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Create Action" ) );
-            if ( ImGui::Button( "Create Action" ) && _newActionName.empty() == false )
+            if ( ImGui::Button( "Create Action" ) && _document.createAction( _newActionName, _newActionValueType ) )
             {
-                static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
-                const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( _newActionValueType, 0, 2 )];
-                _inputMap.createAction( sw::hashed_string( _newActionName.c_str() ), valueType );
                 _newActionName = "";
                 markDocumentDirty();
             }
@@ -622,13 +533,13 @@ namespace sw::editor
 
     void InputMapPanel::drawCaptureModal()
     {
-        if ( _bCapturingKey == SW_FALSE )
+        if ( _document.isCapturingKey() == false )
             return;
 
         EditorInputGUI::openPopup( "Press Key / Button To Bind" );
         if ( EditorWidgets::beginCenteredModal( "Press Key / Button To Bind" ) )
         {
-            ImGui::Text( "Binding for Action: %s", _selectedAction.c_str() );
+            ImGui::Text( "Binding for Action: %s", _document.getSelectedAction().c_str() );
             ImGui::TextUnformatted( SW_LOCKEY( "EditorInputMap", "CaptureInstruction" ) );
             ImGui::Separator();
 
@@ -637,8 +548,7 @@ namespace sw::editor
             const Key pressedKey = ImGuiKeyForward::findPressedKey();
             if ( pressedKey != Key::Unknown )
             {
-                rebindSelectedAction( pressedKey );
-                _bCapturingKey = SW_FALSE;
+                finishKeyCapture( pressedKey );
                 ImGui::CloseCurrentPopup();
             }
 
@@ -653,8 +563,7 @@ namespace sw::editor
                     if ( ImGui::Button( pKeyName, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 11.0f, 1.25f ) ) ) )
 
                     {
-                        rebindSelectedAction( key );
-                        _bCapturingKey = SW_FALSE;
+                        finishKeyCapture( key );
                         ImGui::CloseCurrentPopup();
                         break;
                     }
@@ -666,28 +575,16 @@ namespace sw::editor
 
             if ( ImGui::Button( "Cancel", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 16.0f, 0.0f ) ) ) )
             {
-                _bCapturingKey = SW_FALSE;
+                _document.cancelKeyCapture();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
         }
     }
 
-    void InputMapPanel::rebindSelectedAction( sw::Key newKey )
+    void InputMapPanel::finishKeyCapture( sw::Key newKey )
     {
-        // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩이 직접 안다.
-        const sw::ActionBinding* pBinding = _inputMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
-        const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
-
-        sw::string conflictingAction;
-        if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
-        {
-            SW_LOG_WARNING( "Binding '%#' to %# - conflicts with '%#' on the same layer.",
-                            _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
-        }
-
-        // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
-        if ( _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex ) )
+        if ( _document.finishKeyCapture( newKey ) )
             markDocumentDirty();
     }
 
@@ -864,26 +761,29 @@ namespace sw::editor
     {
         ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
         ImGui::SameLine( 450.0f );
-        bool bPaused = ( _bPlotPaused == SW_TRUE );
+        bool bPaused = _document.isPlotPaused();
         if ( ImGui::Checkbox( "Pause Graph", &bPaused ) )
-            _bPlotPaused = bPaused ? SW_TRUE : SW_FALSE;
+            _document.setPlotPaused( bPaused );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PauseGraphTip" ) );
 
         ImGui::Separator();
 
+        const InputMapPlotSamples& plot        = _document.getPlotSamples();
+        const int32                sampleCount = static_cast<int32>( InputMapPlotSamples::kSampleCount );
+        const int32                plotOffset  = static_cast<int32>( plot._offset );
         ImGui::Text( "Gamepad Left Stick (X/Y):" );
-        ImGui::PlotLines( "Stick X", _arrPlotLeftStickX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "X [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
-        ImGui::PlotLines( "Stick Y", _arrPlotLeftStickY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Y [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
+        ImGui::PlotLines( "Stick X", plot._arrLeftStickX, sampleCount, plotOffset, "X [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
+        ImGui::PlotLines( "Stick Y", plot._arrLeftStickY, sampleCount, plotOffset, "Y [-1.0 ~ +1.0]", -1.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.5f ) ) );
 
         ImGui::Separator();
         ImGui::Text( "Analog Triggers (LT/RT):" );
-        ImGui::PlotLines( "LT", _arrPlotTriggerL, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Left [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
-        ImGui::PlotLines( "RT", _arrPlotTriggerR, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Right [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
+        ImGui::PlotLines( "LT", plot._arrTriggerL, sampleCount, plotOffset, "Left [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
+        ImGui::PlotLines( "RT", plot._arrTriggerR, sampleCount, plotOffset, "Right [0.0 ~ 1.0]", 0.0f, 1.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
 
         ImGui::Separator();
         ImGui::Text( "Mouse Delta Speed (dX/dY):" );
-        ImGui::PlotLines( "dX", _arrPlotMouseDeltaX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta X", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
-        ImGui::PlotLines( "dY", _arrPlotMouseDeltaY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta Y", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
+        ImGui::PlotLines( "dX", plot._arrMouseDeltaX, sampleCount, plotOffset, "Delta X", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
+        ImGui::PlotLines( "dY", plot._arrMouseDeltaY, sampleCount, plotOffset, "Delta Y", -100.0f, 100.0f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ) );
     }
 
     void InputMapPanel::drawInputSimulatorTab()
@@ -955,46 +855,35 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
         ImGui::Separator();
 
-        (void)_replayFilePath.drawField( "##ReplayFile", 260.0f ); // 확정한 경로만 Save · Load 가 쓴다
+        (void)_document.editReplayFilePath().drawField( "##ReplayFile", 260.0f ); // 확정한 경로만 Save · Load 가 쓴다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ReplayFileTip" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Replay" ) );
         if ( ImGui::Button( "Save Replay" ) )
-        {
-            const string diskPath = AssetPaths::resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
-            if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
-                SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
-        }
+            _document.saveReplay();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveReplayTip" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load Replay" ) );
         if ( ImGui::Button( "Load Replay" ) )
-        {
-            if ( input.getVirtualInput() == &_replay )
-                input.detachVirtualInput();
-            const string diskPath = AssetPaths::findLooseFile( _replayFilePath.get() ).getDiskPath();
-            if ( diskPath.empty() )
-                SW_LOG_ERROR( "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
-            else if ( _replay.loadFromFile( diskPath ) == false )
-                SW_LOG_ERROR( "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath.c_str() );
-        }
+            _document.loadReplay( input );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LoadReplayTip" ) );
 
         ImGui::Separator();
 
-        const bool bPlaying = input.getVirtualInput() == &_replay;
+        const InputReplay& replay   = _document.getReplay();
+        const bool         bPlaying = _document.isReplayPlaying( input );
         drawRecordControls( input, bPlaying );
 
         ImGui::Separator();
 
         // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 분리한다). 탐색도 seekTo 다.
-        ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
-        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? input.getVirtualFrameIndex() : 0u );
+        ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", replay.getFrameCount(), static_cast<float64>( replay.getTotalDuration() ) );
+        const uint32 currentFrame = _document.getReplayCurrentFrame( input );
         drawPlaybackControls( input, bPlaying, currentFrame );
 
-        if ( currentFrame < _replay.getFrameCount() )
+        if ( currentFrame < replay.getFrameCount() )
         {
-            const InputReplayFrame&               frame = _replay.getFrames()[currentFrame];
+            const InputReplayFrame&               frame = replay.getFrames()[currentFrame];
             fixed_string<constant::kMaxBuffer128> frameBuf;
             formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
                           Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
@@ -1005,23 +894,21 @@ namespace sw::editor
     void InputMapPanel::drawRecordControls( InputManager& input, bool bPlaying )
     {
         // 녹화 제어
-        if ( _replay.isRecording() )
+        const InputReplay& replay = _document.getReplay();
+        if ( replay.isRecording() )
         {
             EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
-            ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", _replay.getFrameCount() );
+            ImGui::Text( "● RECORDING LIVE INPUTS... (Frames: %u)", replay.getFrameCount() );
             EditorThemeUtil::popTextColor();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "■ Stop Recording" ) );
             if ( ImGui::Button( "■ Stop Recording" ) )
-                _replay.stopRecording();
+                _document.stopRecording();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopRecordingTip" ) );
         }
         else if ( bPlaying == false )
         {
             if ( ImGui::Button( "● Start Recording" ) )
-            {
-                _replay.startRecording( "GameplaySession" );
-                _recordedBeginFrameCount = input.getBeginFrameCount();
-            }
+                _document.startRecording( input );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StartRecordingTip" ) );
         }
     }
@@ -1031,35 +918,31 @@ namespace sw::editor
         if ( bPlaying )
         {
             if ( ImGui::Button( "⏸ Pause" ) )
-                _replay.seekTo( input, currentFrame );
+                _document.seekReplay( input, currentFrame );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PauseReplayTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏹ Stop" ) );
             if ( ImGui::Button( "⏹ Stop" ) )
-                _replay.seekTo( input, 0 );
+                _document.seekReplay( input, 0 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StopReplayTip" ) );
         }
-        else if ( _replay.isRecording() == false && _replay.getFrameCount() > 0 )
+        else if ( _document.getReplay().isRecording() == false && _document.getReplay().getFrameCount() > 0 )
         {
             if ( ImGui::Button( "▶ Play Replay" ) )
-            {
-                if ( currentFrame >= _replay.getFrameCount() )
-                    _replay.seekTo( input, 0 );
-                input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
-            }
+                _document.playReplay( input );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "PlayReplayTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏮ Step Back" ) );
             if ( ImGui::Button( "⏮ Step Back" ) && currentFrame > 0 )
-                _replay.seekTo( input, currentFrame - 1 );
+                _document.seekReplay( input, currentFrame - 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepBackTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "⏭ Step Forward (1 Frame)" ) );
             if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
-                _replay.seekTo( input, currentFrame + 1 );
+                _document.seekReplay( input, currentFrame + 1 );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "StepForwardTip" ) );
 
             int32       frameIdx  = static_cast<int32>( currentFrame );
-            const int32 maxFrames = static_cast<int32>( _replay.getFrameCount() );
+            const int32 maxFrames = static_cast<int32>( _document.getReplay().getFrameCount() );
             if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
-                _replay.seekTo( input, static_cast<uint32>( frameIdx ) );
+                _document.seekReplay( input, static_cast<uint32>( frameIdx ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TimelineFrameTip" ) );
         }
     }
@@ -1108,27 +991,15 @@ namespace sw::editor
 
     void InputMapPanel::reloadFromFile()
     {
-        // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
-        if ( _inputMap.loadFromAsset( AssetID{ _inputMapPath.c_str() } ) == false )
-        {
-            SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
-            return;
-        }
-        clearDocumentDirty();
-        SW_LOG_INFO( "Reloaded InputMap from %#", _inputMapPath.c_str() );
+        if ( _document.reload() )
+            clearDocumentDirty();
     }
 
     bool InputMapPanel::saveToFile()
     {
-        // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reloadFromFile`)와 같은 형식, 같은 위치에 쓴다.
-        // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
-        if ( _inputMap.saveToAsset( _inputMapPath.c_str() ) == false )
-        {
-            SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
+        if ( _document.save() == false )
             return false;
-        }
         clearDocumentDirty();
-        SW_LOG_INFO( "Saved InputMap to %#", _inputMapPath.c_str() );
         return true;
     }
 
