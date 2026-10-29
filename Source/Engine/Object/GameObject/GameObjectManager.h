@@ -539,8 +539,7 @@ namespace sw
         /** @brief @p component 의 타입이 @p pToType 이거나 그 파생이면 true 입니다. 타입 정보가 없으면(모듈이 내려감) false 입니다. */
         static bool isComponentOfType( const Component& component, const TypeInfo* pToType )
         {
-            const TypeInfo* pTypeInfo = component.findCachedTypeInfo();
-            return pTypeInfo != nullptr && pTypeInfo->isDerivedFrom( pToType );
+            return isTypeDerivedFrom( component.findCachedTypeInfo(), pToType );
         }
         /** @brief `makeTypedHandle` 의 확인입니다(템플릿 밖에서 찾고 로그를 남깁니다). */
         [[nodiscard]] TypedHandleResult resolveTypedHandleResult( ComponentHandle handle, const TypeInfo* pToType ) const;

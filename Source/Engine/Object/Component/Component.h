@@ -14,7 +14,6 @@
 #include "Engine/Foundation/AnimationNotifyPhase.h"
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
@@ -508,13 +507,10 @@ namespace sw
          * @brief 만들 때 받은 TypeInfo 가 살아 있으면 그것을, 아니면 가상 `getTypeInfo()` 의 결과를 반환합니다.
          * @details `castTo` 의 핫패스다. 캐시에 적중하면 가상 호출 없이 포인터 하나와 원자 로드 하나로 끝난다. 테스트 목처럼
          *          `getTypeInfo()` 를 오버라이드하는 타입도 `addComponent<T>` 가 같은 `T::StaticType()` 을 넘기므로 결과가 같다.
+         *          본문은 .cpp 에 둔다. 인라인이면 이 헤더가 `ReflectionTypes.h` 를 끌어 와 컴포넌트를 쓰는 TU 모두가 그것을 읽는다.
+         *          비가상 호출 하나가 늘었다 — `castTo` 비용(약 4 ns)이 눈에 띄게 늘면 측정해 다시 정한다.
          */
-        const TypeInfo* findCachedTypeInfo() const
-        {
-            if ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() )
-                return _pTypeInfo;
-            return getTypeInfo();
-        }
+        const TypeInfo* findCachedTypeInfo() const;
         /** @brief 소유자 GameObject 를 반환합니다. */
         GameObject* getOwner() const { return _pOwner; }
         /** @brief 활성 상태이면 true 입니다(자기 활성 비트와 소유자 활성을 모두 봅니다). */

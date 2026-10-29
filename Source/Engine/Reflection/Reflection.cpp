@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -1418,6 +1419,11 @@ namespace sw
             pCurrent = pCurrent->getParentType();
         }
         return false;
+    }
+
+    bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget )
+    {
+        return pType != nullptr && pType->isDerivedFrom( pTarget );
     }
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const

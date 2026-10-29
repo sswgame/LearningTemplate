@@ -12,6 +12,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 #include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"

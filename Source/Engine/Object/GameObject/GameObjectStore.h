@@ -182,7 +182,7 @@ namespace sw
             const WalkScope                walkScope{};
             for ( const ComponentPoolEntry* pEntry : _listComponentPoolEntry )
             {
-                if ( pEntry->_pType == nullptr || pEntry->_pType->isDerivedFrom( pToType ) == false )
+                if ( isTypeDerivedFrom( pEntry->_pType, pToType ) == false )
                     continue;
                 for ( Component* pComp : pEntry->_listComponent )
                 {

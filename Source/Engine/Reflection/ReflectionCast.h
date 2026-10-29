@@ -4,10 +4,17 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
+    struct TypeInfo;
+
+    /**
+     * @brief pType 이 pTarget 이거나 그 파생이면 true 입니다. 둘 중 하나가 nullptr 이면 false 입니다(`TypeInfo::isDerivedFrom`).
+     * @details 본문은 .cpp 에 둔다. 이 헤더가 `ReflectionTypes.h`(약 700 TU 에 닿는다)를 끌지 않게 하려는 것이다.
+     *          캐스트는 같은 타입이면 이것을 부르지 않고 인라인 포인터 비교로 끝낸다.
+     */
+    SW_API bool isTypeDerivedFrom( const TypeInfo* pType, const TypeInfo* pTarget );
 
     /**
      * @brief 코드젠이 REFLECT 타입마다 특수화합니다(T::StaticType 없이 FQN 으로 조회).
@@ -124,7 +131,7 @@ namespace sw
     /**
      * @brief To 의 TypeInfo 를 밖에서 받아 To* 로 캐스트합니다. 실패하면 nullptr 입니다. 조회 루프용입니다.
      * @details 업캐스트(To 가 From 의 기반)는 컴파일 타임에 끝나 런타임 비용이 0 입니다. 다운캐스트는 `getTypeInfo()` 가
-     *          준 동적 타입의 조상 표를 한 번 봅니다(`TypeInfo::isDerivedFrom`). 잠금 · 할당 · 이름 비교 · 걷기가 없습니다.
+     *          준 동적 타입의 조상 표를 한 번 봅니다(`isTypeDerivedFrom`). 잠금 · 할당 · 이름 비교 · 걷기가 없습니다.
      *          To 에 정적 타입이 없으면 pToType 은 무시되고, To 가 From 의 파생이면 검사 없이 내려갑니다(리플렉션 밖 타입의
      *          규칙). 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 합니다. 동적 타입이 To 의 자손이 아니면
      *          그보다 위인 정적 타입도 자손일 리 없기 때문입니다.
@@ -159,7 +166,11 @@ namespace sw
             if ( pSrcType == nullptr )
                 pSrcType = findStaticType<From>();
 
-            if ( pSrcType == nullptr || pSrcType->isDerivedFrom( pToType ) == false )
+            // 같은 타입은 인라인으로 끝내고, 파생 검사만 DLL 경계를 넘는다. 측정할 것: 이 호출이 약 4 ns 의 캐스트 비용을
+            // 눈에 띄게 늘리면 조상 표 비교를 작은 헤더로 떼어 다시 인라인으로 올린다.
+            if ( pSrcType == nullptr )
+                return nullptr;
+            if ( pSrcType != pToType && isTypeDerivedFrom( pSrcType, pToType ) == false )
                 return nullptr;
             if constexpr ( std::is_base_of_v<From, To> )
                 return static_cast<To*>( pSrc );

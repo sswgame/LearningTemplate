@@ -340,6 +340,13 @@ namespace sw
         return ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() ) ? _pTypeInfo : nullptr;
     }
 
+    const TypeInfo* Component::findCachedTypeInfo() const
+    {
+        if ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() )
+            return _pTypeInfo;
+        return getTypeInfo();
+    }
+
     hashed_string Component::getTypeName() const
     {
         const TypeInfo* pTypeInfo = findCachedTypeInfo();
