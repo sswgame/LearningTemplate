@@ -94,13 +94,12 @@ namespace sw
         }
         _listHandler.push_back( pHandler );
         rebuildKindTable();
-        return _subscriptions.issue( static_cast<uint64>( reinterpret_cast<uintptr_t>( pHandler ) ) );
+        return _subscriptions.issue( pHandler );
     }
 
-    void NetMessageRouter::releaseSubscription( uint64 id )
+    void NetMessageRouter::releaseHandler( INetMessageHandler* pHandler )
     {
-        const INetMessageHandler* const pHandler = reinterpret_cast<const INetMessageHandler*>( static_cast<uintptr_t>( id ) );
-        VectorUtil::removeFirst( _listHandler, pHandler );
+        VectorUtil::removeFirst( _listHandler, pHandler ); // 주소로만 찾는다 — 역참조하지 않는다
         rebuildKindTable();
     }
 

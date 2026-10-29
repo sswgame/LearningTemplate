@@ -198,13 +198,13 @@ namespace sw
         const NetMessageKindTallyTable& getKindTally() const { return _kindTally; }
 
     private:
-        /** @brief 구독 @p id(처리기 주소)가 풀렸습니다. 그 처리기를 뺍니다. */
-        void releaseSubscription( uint64 id );
+        /** @brief 처리기의 등록 구독이 풀렸습니다. 그 처리기(같은 처리기가 여럿 올랐으면 먼저 것 하나)를 빼고 종류 표를 다시 짓습니다. */
+        void releaseHandler( INetMessageHandler* pHandler );
         void rebuildKindTable();
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
         void dispatchNotice( const NetDeliveryNotice& notice );
 
-        vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다.
+        vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
         INetMessageHandler*         _arrNoticeHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
         NetMessageKindTallyTable    _kindTally;                    ///< `pump` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
@@ -213,7 +213,7 @@ namespace sw
         uint64                      _unclaimedNoticeCount;
 
     private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&NetMessageRouter::releaseSubscription>( this ) };
+        /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<INetMessageHandler> _subscriptions{ ItemSubscriptionList<INetMessageHandler>::ReleaseFunction::create<&NetMessageRouter::releaseHandler>( this ) };
     };
 } // namespace sw

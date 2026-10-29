@@ -36,6 +36,13 @@ namespace sw
         {
             return string_view{ pLeft->getAssetKindName() } < string_view{ pRight->getAssetKindName() };
         }
+
+        /** @brief 캐시를 올릴 때 복사할 종류 이름입니다(`RegistrationList` 가 지금 복사한다 — 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다). nullptr 이면 빈 글입니다. */
+        string_view findKindName( const IAssetCache* pCache )
+        {
+            const utf8* const pKindName = pCache != nullptr ? pCache->getAssetKindName() : nullptr;
+            return pKindName != nullptr ? string_view{ pKindName } : string_view{};
+        }
     } // namespace
 } // namespace sw
 
@@ -78,7 +85,7 @@ namespace sw
         , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<PackManager>() }
         , _listBuiltInAssetCache{}
-        , _registeredAssetCache{ "AssetManager.AssetCache" }
+        , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<IAssetCache>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
         , _listReloadEntry{}
     {
         // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
@@ -234,11 +241,11 @@ namespace sw
 
     Subscription AssetManager::registerAssetCache( IAssetCache* pCache, AssetCacheReloadFunction pReload )
     {
-        if ( addAssetCache( pCache ) == false )
-            return {};
-        if ( pReload != nullptr )
+        // nullptr · 같은 종류 이름은 목록이 거절하고 로그로 남긴다(빈 구독).
+        Subscription subscription = _registeredAssetCache.addSubscribed( pCache, "Asset cache kind", findKindName( pCache ) );
+        if ( subscription.isActive() && pReload != nullptr )
             _listReloadEntry.push_back( ReloadEntry{ pCache, pReload } );
-        return _subscriptions.issue( reinterpret_cast<uint64>( pCache ) );
+        return subscription;
     }
 
     AssetCacheReloadFunction AssetManager::findReloadFunction( const IAssetCache* pCache ) const
@@ -255,10 +262,7 @@ namespace sw
     {
         if ( pCache == nullptr )
             return false;
-        // 이름은 **지금** 복사해 둔다(`RegistrationList`). 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
-        const utf8*       pKindName = pCache->getAssetKindName();
-        const string_view kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
-        return _registeredAssetCache.addLogged( pCache, "Asset cache kind", kindName ) == RegistrationResult::Added;
+        return _registeredAssetCache.addLogged( pCache, "Asset cache kind", findKindName( pCache ) ) == RegistrationResult::Added;
     }
 
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
@@ -271,10 +275,9 @@ namespace sw
         return false;
     }
 
-    void AssetManager::releaseSubscription( uint64 id )
+    void AssetManager::releaseAssetCache( IAssetCache* pCache )
     {
-        const IAssetCache* const pCache = reinterpret_cast<const IAssetCache*>( id );
-        (void)_registeredAssetCache.remove( pCache ); // 언로드 훑기가 먼저 뺐으면 없다
+        (void)_registeredAssetCache.remove( pCache ); // 구독 하나가 등록 하나라 늘 있다(주소로만 찾는다 — 역참조하지 않는다)
         _listReloadEntry.erase( std::remove_if( _listReloadEntry.begin(), _listReloadEntry.end(), [pCache]( const ReloadEntry& entry )
         { return entry._pCache == pCache; } ),
                                 _listReloadEntry.end() );

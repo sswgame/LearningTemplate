@@ -17,18 +17,17 @@ namespace sw
     Subscription CameraRegistry::add( CameraComponent* pCamera )
     {
         ScopedLock<mutex> lock{ _mutex };
-        // nullptr · 이미 등록된 카메라는 목록이 거절한다 — 먼저 받은 구독이 쥔다.
-        if ( _registeredCamera.addLogged( pCamera, "Camera" ) != RegistrationResult::Added )
-            return {};
-        _registrySerial.fetch_add( 1, std::memory_order_relaxed );
-        return _subscriptions.issue( reinterpret_cast<uint64>( pCamera ) );
+        // nullptr · 이미 등록된 카메라는 목록이 거절한다(빈 구독) — 먼저 받은 구독이 쥔다.
+        Subscription subscription = _registeredCamera.addSubscribed( pCamera, "Camera" );
+        if ( subscription.isActive() )
+            _registrySerial.fetch_add( 1, std::memory_order_relaxed );
+        return subscription;
     }
 
-    void CameraRegistry::releaseSubscription( uint64 id )
+    void CameraRegistry::releaseCamera( CameraComponent* pCamera )
     {
-        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다. 주소로만 찾고 역참조하지 않는다.
-        CameraComponent* const pCamera = reinterpret_cast<CameraComponent*>( id );
-        ScopedLock<mutex>      lock{ _mutex };
+        // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
+        ScopedLock<mutex> lock{ _mutex };
         if ( _registeredCamera.remove( pCamera ) )
             _registrySerial.fetch_add( 1, std::memory_order_relaxed );
         if ( _pCutCamera == pCamera )

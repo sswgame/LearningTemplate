@@ -18,7 +18,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
@@ -188,10 +187,10 @@ namespace sw
     private:
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 확인합니다. 종료 경고와 모듈 코드 순회에서 제외합니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
-        /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. */
+        /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. 모듈 캐시는 `registerAssetCache` 가 구독으로 올린다. */
         bool addAssetCache( IAssetCache* pCache );
-        /** @brief 캐시 등록 구독이 풀렸습니다(@p id 는 캐시 주소). 목록에서 뺍니다. 언로드 훑기가 먼저 뺐으면 할 일이 없다. */
-        void releaseSubscription( uint64 id );
+        /** @brief 캐시 등록 구독이 풀렸습니다. 목록과 리로드 함수 표에서 뺍니다. */
+        void releaseAssetCache( IAssetCache* pCache );
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
 
@@ -215,11 +214,5 @@ namespace sw
             AssetCacheReloadFunction _pReload;
         };
         vector<ReloadEntry> _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
-        /** @brief 마지막 `mountContent` 가 로드한 콘텐츠의 출처입니다. */
-
-    private:
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AssetManager::releaseSubscription>( this ) };
     };
 } // namespace sw

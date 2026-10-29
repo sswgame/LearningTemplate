@@ -13,7 +13,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
@@ -105,11 +104,11 @@ namespace sw
         static bool isUsableCamera( const CameraComponent* pCamera );
 
     private:
-        /** @brief 카메라 등록 구독이 풀렸습니다(@p id 는 카메라 주소). 순서를 지키며 빼고 컷 카메라였으면 풉니다. */
-        void releaseSubscription( uint64 id );
+        /** @brief 카메라 등록 구독이 풀렸습니다. 순서를 지키며 빼고 컷 카메라였으면 풉니다. 주소로만 찾고 역참조하지 않는다. */
+        void releaseCamera( CameraComponent* pCamera );
 
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. 카메라는 뷰마다 하나(화면 분할 · CCTV · 미리보기)라 많아야 수십 개이므로 선형 등록 목록으로 충분합니다. */
-        RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera" };
+        RegistrationList<CameraComponent> _registeredCamera{ "CameraRegistry.Camera", RegistrationList<CameraComponent>::ReleaseFunction::create<&CameraRegistry::releaseCamera>( this ) };
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
         mutable mutex      _mutex;
         atomic<uint32>     _registrySerial{ 0 };   ///< 등록 · 해제 때마다 오릅니다(`getRegistrySerial`)
@@ -118,9 +117,5 @@ namespace sw
         uint32             _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
         float32            _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
         CameraShakeChannel _shakeChannel;          ///< 흔들림 요청 채널(`getShakeChannel`). 자기 잠금을 쓴다
-
-    private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&CameraRegistry::releaseSubscription>( this ) };
     };
 } // namespace sw

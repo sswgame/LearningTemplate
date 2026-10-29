@@ -103,8 +103,13 @@ namespace sw
             float32       _intensity{ 0.0f };
         };
 
-        /** @brief 등록 구독이 풀렸습니다(@p id 는 컴포넌트 주소). 세 목록은 서로 다른 컴포넌트 종류라 주소가 겹치지 않으므로 든 목록에서 뺍니다. */
-        void releaseSubscription( uint64 id );
+        // 등록 구독이 풀렸습니다 — 목록마다 해제 함수 하나. 주소로만 찾고 역참조하지 않는다(컴포넌트가 소멸 중에 놓는다).
+        /** @brief 리스너를 뺍니다. */
+        void releaseListener( AudioListenerComponent* pListener );
+        /** @brief 에미터를 빼고, 빠졌으면 잠금 밖에서 엔진의 에미터를 지웁니다. */
+        void releaseEmitter( AudioEmitterComponent* pEmitter );
+        /** @brief 리버브 존을 뺍니다. */
+        void releaseReverbZone( AudioReverbZoneComponent* pZone );
 
         // `update` 의 단계들 — 잠금을 잡은 채로 부른다.
         /** @brief 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬). 지난 프레임에 켰는데 이번에 없는 칸은 끈다. */
@@ -116,9 +121,9 @@ namespace sw
         /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
         void updateReverbZones( AudioEngine& audioEngine ) SW_REQUIRES_LOCK( _mutex );
 
-        RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );  /**< 리스너 컴포넌트입니다. 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
+        RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );  /**< 리스너 컴포넌트입니다(구독으로 올린다). 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
         IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );  /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
-        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );  /**< 리버브 존입니다. 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
+        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );  /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
         vector<AudioEmitterComponent*>                     _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<ZoneValue>                                  _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                                  _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
@@ -135,7 +140,7 @@ namespace sw
         bool                                               _bUpdateEnabled;          /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
 
     private:
-        /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
-        SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&SceneAudio::releaseSubscription>( this ) };
+        /** @brief 에미터 등록의 구독입니다(에미터는 O(1) 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseEmitter` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<AudioEmitterComponent> _emitterSubscriptions{ ItemSubscriptionList<AudioEmitterComponent>::ReleaseFunction::create<&SceneAudio::releaseEmitter>( this ) };
     };
 } // namespace sw

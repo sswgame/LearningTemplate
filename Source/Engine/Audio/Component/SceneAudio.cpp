@@ -56,9 +56,9 @@ namespace sw
     SW_SCENE_SERVICE( SceneAudio, FlushEnd )
 
     SceneAudio::SceneAudio( GameObjectManager& manager )
-        : _listener{ "SceneAudio.Listener" }
+        : _listener{ "SceneAudio.Listener", RegistrationList<AudioListenerComponent>::ReleaseFunction::create<&SceneAudio::releaseListener>( this ) }
         , _emitter{}
-        , _zone{ "SceneAudio.ReverbZone" }
+        , _zone{ "SceneAudio.ReverbZone", RegistrationList<AudioReverbZoneComponent>::ReleaseFunction::create<&SceneAudio::releaseReverbZone>( this ) }
         , _listEmitterSnapshot{}
         , _listZoneValue{}
         , _listZoneCurrent{}
@@ -91,9 +91,7 @@ namespace sw
     Subscription SceneAudio::addListener( AudioListenerComponent* pListener )
     {
         ScopedLock<mutex> lock{ _mutex };
-        if ( _listener.addLogged( pListener, "Audio listener" ) != RegistrationResult::Added )
-            return {};
-        return _subscriptions.issue( reinterpret_cast<uint64>( pListener ) );
+        return _listener.addSubscribed( pListener, "Audio listener" );
     }
 
     Subscription SceneAudio::addEmitter( AudioEmitterComponent* pEmitter )
@@ -106,25 +104,31 @@ namespace sw
         }
         if ( _emitter.add( pEmitter ) == false )
             return {}; // 이미 올라 있다 — 먼저 받은 구독이 쥔다
-        return _subscriptions.issue( reinterpret_cast<uint64>( pEmitter ) );
+        return _emitterSubscriptions.issue( pEmitter );
     }
 
     Subscription SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
     {
         ScopedLock<mutex> lock{ _mutex };
-        if ( _zone.addLogged( pZone, "Audio reverb zone" ) != RegistrationResult::Added )
-            return {};
-        return _subscriptions.issue( reinterpret_cast<uint64>( pZone ) );
+        return _zone.addSubscribed( pZone, "Audio reverb zone" );
     }
 
-    void SceneAudio::releaseSubscription( uint64 id )
+    void SceneAudio::releaseListener( AudioListenerComponent* pListener )
     {
-        void* const                  pItem    = reinterpret_cast<void*>( id ); // 주소로만 찾는다 — 든 목록을 찾기 전에는 역참조하지 않는다
-        AudioEmitterComponent* const pEmitter = static_cast<AudioEmitterComponent*>( pItem );
+        ScopedLock<mutex> lock{ _mutex };
+        (void)_listener.remove( pListener ); // 구독 하나가 등록 하나라 늘 있다
+    }
+
+    void SceneAudio::releaseReverbZone( AudioReverbZoneComponent* pZone )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        (void)_zone.remove( pZone ); // 구독 하나가 등록 하나라 늘 있다
+    }
+
+    void SceneAudio::releaseEmitter( AudioEmitterComponent* pEmitter )
+    {
         {
             ScopedLock<mutex> lock{ _mutex };
-            if ( _listener.remove( static_cast<AudioListenerComponent*>( pItem ) ) || _zone.remove( static_cast<AudioReverbZoneComponent*>( pItem ) ) )
-                return;
             if ( _emitter.remove( pEmitter ) == false )
                 return;
         }
