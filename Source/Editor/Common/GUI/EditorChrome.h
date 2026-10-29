@@ -13,6 +13,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+struct ImVec2;
+
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
@@ -170,6 +172,12 @@ namespace sw::editor
          * @details 작은 창에서도 닫기 단추가 화면 안에 남게 하는 상한이다. 0 이하인 축은 0 을 돌려 정하지 않는다.
          */
         [[nodiscard]] static float2 resolveTextExtent( const EditorTextExtent& extent );
+        /**
+         * @brief 글자 칸 · 줄 수를 ImGui 크기 인자(`BeginChild` · `BeginTable`)로 바꿉니다. 0 인 축은 0(남은 영역을 채움)이고, `resolveTextExtent` 와 달리 뷰포트 비율로 자르지 않는다(부모 영역 안에 놓이는 크기).
+         * @details child · table 크기를 픽셀 리터럴로 적지 않게 하는 입구다. 음수 칸은 ImGui 규칙대로 오른쪽(아래) 여백이다.
+         *          `ImVec2` 는 전방 선언만 둔다 — 부르는 쪽은 이미 `<imgui.h>` 를 include 한 뷰 코드다(프로젝트 헤더가 ImGui 를 끌지 않는다).
+         */
+        [[nodiscard]] static ImVec2 measureTextExtent( const EditorTextExtent& extent );
         /**
          * @brief 다음 항목(입력란 · 콤보)의 폭을 숫자 "0" 폭의 @p columns 배로 정합니다(`ImGui::SetNextItemWidth` 를 숫자 리터럴로 부르지 않는 입구).
          * @details 음수면 ImGui 규칙대로 오른쪽 여백이 그 칸 수만큼 남는 폭입니다. 글꼴 크기(UI 배율 포함)를 따라가므로 배율을 따로 곱하지 않는다.

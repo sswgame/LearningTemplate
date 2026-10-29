@@ -21,7 +21,6 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
@@ -825,7 +824,7 @@ namespace sw::editor
         const size_t              visibleCount = std::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
         const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
         string                    openPath;
-        if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( measureExtent( EditorTextExtent::ofText( 75.0f, 0.0f ) ).x, tableHeight ) ) )
+        if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( EditorChrome::measureTextExtent( EditorTextExtent::ofText( 75.0f, 0.0f ) ).x, tableHeight ) ) )
         {
             ImGui::TableSetupColumn( "Asset", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableSetupColumn( "Line", ImGuiTableColumnFlags_WidthFixed, 48.0f * dpiScale );

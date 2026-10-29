@@ -203,6 +203,13 @@ namespace sw::editor
         ImGui::SetNextWindowSize( ImVec2{ size._x, size._y }, bAlways ? ImGuiCond_Always : ImGuiCond_Appearing );
     }
 
+    ImVec2 EditorChrome::measureTextExtent( const EditorTextExtent& extent )
+    {
+        const float32 width  = extent._columns != 0.0f ? extent._columns * ImGui::CalcTextSize( "0" ).x : 0.0f;
+        const float32 height = extent._lines != 0.0f ? extent._lines * ImGui::GetTextLineHeightWithSpacing() : 0.0f;
+        return ImVec2{ width, height };
+    }
+
     void EditorChrome::setNextWindowExtentFirstUse( const EditorTextExtent& extent )
     {
         const float2 size = resolveTextExtent( extent );

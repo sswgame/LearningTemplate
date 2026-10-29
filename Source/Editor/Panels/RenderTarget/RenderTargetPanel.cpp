@@ -9,7 +9,6 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -284,7 +283,7 @@ namespace sw::editor
     {
         const EditorListFilter filter{ _searchFilter.c_str() };
 
-        ImGui::BeginChild( "##rtlist", measureExtent( EditorTextExtent::ofText( kListColumns, 0.0f ) ), ImGuiChildFlags_Borders );
+        ImGui::BeginChild( "##rtlist", EditorChrome::measureTextExtent( EditorTextExtent::ofText( kListColumns, 0.0f ) ), ImGuiChildFlags_Borders );
         uint32 shownCount = 0;
         for ( const RenderTargetInfo& info : _listTarget )
         {

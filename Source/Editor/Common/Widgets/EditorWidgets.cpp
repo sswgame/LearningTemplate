@@ -7,9 +7,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorAssetFilter.h"
@@ -406,7 +406,7 @@ namespace sw::editor
         if ( bShowClear )
         {
             ImGui::SameLine();
-            if ( ImGui::Button( "X", measureExtent( EditorTextExtent::ofText( 3.0f, 0.0f ) ) ) && pBuffer[0] != '\0' )
+            if ( ImGui::Button( "X", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 3.0f, 0.0f ) ) ) && pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';
                 bChanged   = true;

@@ -8,7 +8,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -368,7 +367,7 @@ namespace sw::editor
         ImGui::PushID( curve._elementIndex );
         ImGui::TextUnformatted( curve._label.c_str() );
         if ( CatalogCurveModel::sample( curve, CatalogCurveModel::computeEndTime( curve ), 48, _listSample ) )
-            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, measureExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
+            ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
         else
             ImGui::TextDisabled( "No keys yet" );
         for ( const CatalogCurveKey& key : curve._listKey )

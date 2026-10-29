@@ -4,7 +4,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -89,7 +88,7 @@ namespace sw::editor
         const ScheduleSystem& system = *listActive[static_cast<size_t>( _systemIndex )];
         published._npcCount          = static_cast<uint32>( system.getNPCCount() );
 
-        if ( ImGui::BeginChild( "##ScheduleNPCList", measureExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+        if ( ImGui::BeginChild( "##ScheduleNPCList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 27.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
             drawNPCList( system );
         ImGui::EndChild();
         ImGui::SameLine();
@@ -142,7 +141,7 @@ namespace sw::editor
 
         ScheduleTimelineRows::populate( system.getPlan( npcIndex ), _previewMinute, _listRow );
         const ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
-        if ( ImGui::BeginTable( "##ScheduleTimeline", 5, flags, measureExtent( EditorTextExtent::ofText( 0.0f, 14.0f ) ) ) )
+        if ( ImGui::BeginTable( "##ScheduleTimeline", 5, flags, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 14.0f ) ) ) )
         {
             ImGui::TableSetupScrollFreeze( 0, 1 );
             ImGui::TableSetupColumn( SW_LOCKEY( "EdSchedule", "ColumnTime" ) );

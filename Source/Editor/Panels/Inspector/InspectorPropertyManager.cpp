@@ -17,7 +17,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -170,7 +169,7 @@ namespace sw::editor
                     EditorSelfTestMarks::note( "inspector.assetPicker.search" );
                     const EditorListFilter filter{ picker._search.c_str() };
                     uint32                 shownCount{ 0 };
-                    ImGui::BeginChild( "##pickerList", measureExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
+                    ImGui::BeginChild( "##pickerList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
                     for ( const EditorAssetIndexEntry& entry : picker._listEntry )
                     {
                         if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||

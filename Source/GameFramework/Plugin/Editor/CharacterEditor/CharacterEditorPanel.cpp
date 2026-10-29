@@ -9,7 +9,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -928,7 +927,7 @@ namespace sw::editor
                 _selectedSocket = name;
         }
 
-        if ( ImGui::BeginChild( "##SocketList", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kSocketListLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##SocketList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kSocketListLines ) ), ImGuiChildFlags_Borders ) )
         {
             bool bFirst = true;
             for ( const SocketDef& socket : _sockets.getSockets().getSockets() )
@@ -1065,7 +1064,7 @@ namespace sw::editor
             ImGui::TextDisabled( "Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file." );
             return;
         }
-        if ( ImGui::BeginChild( "##BoneTree", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kBoneTreeLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##BoneTree", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kBoneTreeLines ) ), ImGuiChildFlags_Borders ) )
         {
             vector<uint32> listRoot;
             _pose.collectChildren( -1, listRoot );
@@ -1474,7 +1473,7 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Slot %s: %s -> %s (%s)", fallback._slot.c_str(), fallback._requestedItem.c_str(), fallback._fallbackItem.c_str(),
                                 getEnumName( fallback._reason ) );
         }
-        if ( ImGui::BeginChild( "##RuleTrace", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##RuleTrace", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( resolved._listTrace.empty() )
                 ImGui::TextDisabled( "No rule fired." );
@@ -1554,7 +1553,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
         EditorWidgets::drawTooltip( "Writes the Preview tab's picture next to the preset file and attaches it to the preset of this name (save the preset first; it is saved again with the current selection)" );
 
-        if ( ImGui::BeginChild( "##PresetList", measureExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##PresetList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
         {
             for ( const UserAppearancePreset& preset : _presetStore.getPresets() )
             {

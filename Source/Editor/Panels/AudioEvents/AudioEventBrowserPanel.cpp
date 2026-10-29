@@ -13,7 +13,6 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -383,7 +382,7 @@ namespace sw::editor
         engine.getInstanceStatuses( _listInstanceStatus );
         const AudioEngineStats stats = engine.getStats();
 
-        ImGui::BeginChild( "##AudioEventList", measureExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
+        ImGui::BeginChild( "##AudioEventList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX );
         drawEventList();
         ImGui::EndChild();
         ImGui::SameLine();

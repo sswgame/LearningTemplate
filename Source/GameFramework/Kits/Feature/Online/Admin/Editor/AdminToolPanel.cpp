@@ -9,7 +9,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -328,7 +327,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "admin.audit.list" );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##AdminAudit", 5, kTableFlags, measureExtent( EditorTextExtent::ofText( 0.0f, 6.0f ) ) ) == false )
+        if ( ImGui::BeginTable( "##AdminAudit", 5, kTableFlags, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 6.0f ) ) ) == false )
             return;
         ImGui::TableSetupColumn( "Time (UTC)" );
         ImGui::TableSetupColumn( "Action" );
@@ -368,7 +367,7 @@ namespace sw::editor
             session.requestReports( false );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##AdminReport", 5, kTableFlags, measureExtent( EditorTextExtent::ofText( 0.0f, 7.0f ) ) ) == false )
+        if ( ImGui::BeginTable( "##AdminReport", 5, kTableFlags, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 7.0f ) ) ) == false )
             return;
         ImGui::TableSetupColumn( "Time (UTC)" );
         ImGui::TableSetupColumn( "Reason" );

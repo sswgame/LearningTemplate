@@ -11,7 +11,6 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -526,7 +525,7 @@ namespace sw::editor
         // 끄는 중 · 필드 입력 중이 아니면 채널에서 다시 뜬다(되돌리기 · 값 필드의 편집이 편집기에 보인다).
         if ( _curveState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
             _curveState._working = channel;
-        if ( ImGui::BeginChild( "##sequencerCurve", measureExtent( EditorTextExtent::ofText( 0.0f, SequencerPanelInternal::kCurveAreaLines ) ), ImGuiChildFlags_Borders ) )
+        if ( ImGui::BeginChild( "##sequencerCurve", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, SequencerPanelInternal::kCurveAreaLines ) ), ImGuiChildFlags_Borders ) )
         {
             if ( EditorCurveEditor::drawEditor( _curveState ) )
             {

@@ -6,9 +6,9 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
@@ -107,7 +107,7 @@ namespace sw::editor
         _grid.drawSearchBar( "preferences.search" );
 
         // 왼쪽: 검색어에 맞는 섹션 목록. 고른 섹션이 걸러지면 첫 섹션으로 옮긴다.
-        const float32 listWidth = measureExtent( EditorTextExtent::ofText( 24.0f, 0.0f ) ).x;
+        const float32 listWidth = EditorChrome::measureTextExtent( EditorTextExtent::ofText( 24.0f, 0.0f ) ).x;
         uint32        visibleCount{ 0 };
         bool          bSelectedVisible = false;
         ImGui::BeginChild( "##PreferenceSections", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );

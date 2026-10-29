@@ -13,7 +13,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/Theme/EditorTextExtentImGui.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -337,7 +336,7 @@ namespace sw::editor
             return;
         }
 
-        const float32 listWidth = measureExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ).x;
+        const float32 listWidth = EditorChrome::measureTextExtent( EditorTextExtent::ofText( 29.0f, 0.0f ) ).x;
         ImGui::BeginChild( "##ProjectSettingsPages", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         drawPageList();
         ImGui::EndChild();
