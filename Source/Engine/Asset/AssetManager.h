@@ -165,12 +165,6 @@ namespace sw
          */
         void warnAboutRemainingModuleCaches() const;
 
-        /**
-         * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 등록하고 제거하지 않은 것)를 레지스트리에서 제거합니다. 비우지는 않습니다.
-         *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 로드되어 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
-         */
-        uint32 onModuleUnloading( const void* pBegin, const void* pEnd );
-
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
@@ -204,9 +198,6 @@ namespace sw
         ContentSource _contentSource;
 
     private:
-        /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        SW_MODULE_UNLOAD_HANDLER( &AssetManager::onModuleUnloading, "asset caches" );
-
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&AssetManager::releaseSubscription>( this ) };

@@ -269,28 +269,6 @@ namespace sw
         }
     }
 
-    uint32 AssetManager::onModuleUnloading( const void* pBegin, const void* pEnd )
-    {
-        vector<IAssetCache*> listModuleCache;
-        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
-        {
-            if ( isBuiltInAssetCache( pCache ) )
-                continue;
-            // 캐시 객체가 모듈의 정적 데이터이거나, 모듈 쪽 클래스라 vtable 이 그 이미지에 있으면 이미지와 함께 사라진다.
-            const bool bObjectWithin = ModuleLibraryUtil::isAddressWithin( pCache, pBegin, pEnd );
-            const bool bVtableWithin = ModuleLibraryUtil::isAddressWithin( ModuleLibraryUtil::findVtableAddress( pCache ), pBegin, pEnd );
-            if ( bObjectWithin || bVtableWithin )
-                listModuleCache.push_back( pCache );
-        }
-        uint32 releasedCount{ 0 };
-        for ( const IAssetCache* pCache : listModuleCache )
-        {
-            if ( _registeredAssetCache.remove( pCache ) )
-                ++releasedCount;
-        }
-        return releasedCount;
-    }
-
     IAssetCache& AssetManager::getBuiltInAssetCache( string_view assetKindName ) const
     {
         IAssetCache* pCache = _registeredAssetCache.findByName( assetKindName );
