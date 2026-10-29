@@ -2,14 +2,15 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
@@ -27,17 +28,6 @@ namespace sw
     namespace
     {
         /**
-         * @brief 푼 경로 캐시의 잠금과 배치 세대입니다. 세대는 검색 목록 · 루트 · 마운트가 바뀔 때마다 오른다(`clearPathCache`, 잠금 아래).
-         * @details 세대가 표(`_s_mapResolvedPath`)의 수명과 따로라(표는 엔진 수명 범위가 닫히면 사라진다) 표가 없을 때도 읽을 수 있다.
-         *          `AssetPathsInternal` 밖에 둔다 — 안에 두면 기본 멤버 초기화가 감싸는 클래스 정의가 끝나기 전에 필요해 `inline static` 멤버를 만들 수 없다.
-         */
-        struct PathCacheGuard
-        {
-            mutex  _mutex{};
-            uint64 _layoutGeneration{ 0 };
-        };
-
-        /**
          * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. **만든 뒤 바꾸지 않는다.**
          * @details 읽는 쪽(로더 · 디코드 워커 · 게임 스레드)은 지금 표를 원자 포인터로 한 번 잡아 잠금 없이 읽는다 — 쓰는 쪽이 칸을 제자리에서 고치던 때는 읽는 쪽이
          *          반쯤 고친 벡터를 볼 수 있었다. 쓰기는 사본을 고쳐 새 표로 갈아 끼운다(`AssetPathsInternal::publishTable`).
@@ -52,57 +42,104 @@ namespace sw
         };
 
         /**
-         * @brief 지금 경로 표와 지난 표들입니다. 지난 표는 놓지 않는다 — 읽는 쪽이 잡은 표의 참조(`getRootFolderPath` 의 `const string&` 따위)가 프로세스 끝까지 유효해야 한다.
-         * @details 표는 기동 · 설정 로드 · 호스트 타깃 · 테스트의 루트 바꾸기 때만 새로 생겨 몇 개뿐이다. `AssetPathsInternal` 밖에 두는 까닭은 `PathCacheGuard` 와 같다.
+         * @brief 푼 경로 캐시의 한 칸입니다. `_path` 가 비면 "디스크에 없다" 를 기억한 칸(음성 결과)입니다.
+         * @details 없는 파일은 나중에 생길 수 있으므로 음성 칸은 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿는다. 있는 파일은 나중에 지워질 수 있으므로
+         *          양성 칸은 기억한 때의 `FileUtil::getRemovalEpoch` 가 지금과 같은 동안만 믿는다(`_epoch` 는 칸의 종류에 맞는 쪽 값이다). 이 프로세스가 파일을 만들면(지우면)
+         *          에포크가 올라 모든 음성(양성) 칸이 한꺼번에 낡는다. 검색 목록이 바뀔 때(`clearPathCache`)는 모든 칸을 버린다.
          */
-        struct AssetPathTableStore
+        struct ResolvedEntry
         {
-            AssetPathTable                     _initial{};
-            atomic<const AssetPathTable*>      _pCurrent{ &_initial };
-            mutex                              _publishMutex{};
-            vector<unique_ptr<AssetPathTable>> _listPublished{};
-            atomic<bool>                       _bInitialized{ false }; ///< `initialize()` 가 **성공했는지**
+            string _path{};
+            uint64 _epoch{ 0 };
         };
 
-        /** @brief 이 파일의 경로 상태 전부(푼 경로 캐시의 잠금 · 세대와 경로 표)입니다 — 칸을 흩어 두지 않고 한 자리에 둔다. */
-        struct AssetPathsState
+        /**
+         * @brief 해석을 시작한 때의 세대입니다. **저장은 이 값을 들고서만 할 수 있습니다**(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
+         *        결과를 새 캐시에 넣지 않는다. 찾기 전에 한 번 잡고(`captureStamp`) 찾은 뒤 저장에 넘긴다.
+         */
+        struct PathCacheStamp
         {
-            PathCacheGuard      _pathCache{};
-            AssetPathTableStore _pathTable{};
+            uint64 _layoutGeneration{ 0 };
+            uint64 _creationEpoch{ 0 };
+            uint64 _removalEpoch{ 0 };
         };
 
+        /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
+        struct MountedDiskDomain
+        {
+            string _domain; ///< 소문자 도메인 이름(`/` 없음)
+            string _folder; ///< 정규화한 절대 디스크 폴더(끝 `/` 없음)
+        };
+
+        /** @brief `readBasePriority` 의 결과입니다. 오류 문장은 부르는 쪽이 정적 초기화 가드 밖에서 로그합니다. */
+        struct BasePriority
+        {
+            vector<string> _listPriority; ///< 읽은 우선순위 목록. 읽지 못하면 비어 있다.
+            string         _error;        ///< 읽지 못한 이유. 비어 있으면 성공
+        };
+    } // namespace
+
+    /**
+     * @brief 객체 하나의 경로 상태 전부(경로 표 · 붙인 디스크 도메인 · 푼 경로 캐시)입니다 — 예전에는 이 파일의 프로세스 정적이었다.
+     * @details 정적이던 때는 서비스가 서기 전(리소스 루트 단계 · `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구가 같은 한 벌을 나눠 썼고,
+     *          캐시만 떼어 서비스로 보내면 한 상태가 두 주인으로 갈렸다. 이제 주인은 이 객체를 가진 쪽(`ContentRootSubsystem` · 도구) 하나다.
+     */
+    struct AssetPaths::State
+    {
+        // --- 푼 경로 캐시 ---
+        mutex                                                 _cacheMutex{};
+        uint64 _layoutGeneration                              SW_GUARDED_BY( _cacheMutex ){ 0 }; ///< 검색 목록 · 루트 · 마운트가 바뀔 때마다 오른다(`clearPathCache`)
+        unordered_map<string, ResolvedEntry> _mapResolvedPath SW_GUARDED_BY( _cacheMutex ){};
+
+        // --- 경로 표 ---
+        /**
+         * @brief 지금 경로 표와 지난 표들입니다. 지난 표는 놓지 않는다 — 읽는 쪽이 잡은 표의 참조(`getRootFolderPath` 의 `const string&` 따위)가 이 객체가 사는 동안 유효해야 한다.
+         * @details 표는 기동 · 설정 로드 · 호스트 타깃 때만 새로 생겨 몇 개뿐이다.
+         */
+        AssetPathTable                                         _initialTable{};
+        atomic<const AssetPathTable*>                          _pCurrentTable{ &_initialTable };
+        mutex                                                  _publishMutex{};
+        vector<unique_ptr<AssetPathTable>> _listPublishedTable SW_GUARDED_BY( _publishMutex ){};
+        bool                                                   _bInitialized{ false }; ///< `initialize()` 가 **성공했는지**(소유자가 직렬 구간에서만 쓴다)
+
+        // --- 붙인 디스크 도메인 ---
+        mutex                                     _diskDomainMutex{};
+        vector<MountedDiskDomain> _listDiskDomain SW_GUARDED_BY( _diskDomainMutex ){};
+    };
+
+    namespace
+    {
         struct AssetPathsInternal
         {
-            inline static AssetPathsState _s_state{};
+            using State = AssetPaths::State;
 
             /** @brief 지금 경로 표입니다. 한 번 잡아 그 안에서 읽는다(칸마다 다시 잡으면 둘 사이에 표가 바뀔 수 있다). */
-            static const AssetPathTable& getTable() { return *_s_state._pathTable._pCurrent.load( std::memory_order_acquire ); }
+            static const AssetPathTable& getTable( const State& state ) { return *state._pCurrentTable.load( std::memory_order_acquire ); }
 
             /**
              * @brief 지금 표의 사본을 @p edit 로 고쳐 새 표로 갈아 끼웁니다. 쓰는 API(직렬 구간)만 부른다. @p edit 안에서 다시 갈아 끼우지 않는다.
              * @return 새 표입니다.
              */
             template <typename TEdit>
-            static const AssetPathTable& publishTable( TEdit&& edit )
+            static const AssetPathTable& publishTable( State& state, TEdit&& edit )
             {
-                AssetPathTableStore&       store = _s_state._pathTable;
-                ScopedLock<mutex>          lock( store._publishMutex );
-                unique_ptr<AssetPathTable> next = make_unique<AssetPathTable>( getTable() );
+                ScopedLock<mutex>          lock( state._publishMutex );
+                unique_ptr<AssetPathTable> next = make_unique<AssetPathTable>( getTable( state ) );
                 edit( *next );
-                // 같은 내용의 표가 이미 있으면 그것으로 되돌린다 — 테스트가 루트를 바꿨다 되돌릴 때(`TestTempPath`) 표가 쌓이지 않게. 지난 표를 놓지 않는 대신 늘어나는 것은
-                // 서로 다른 내용(임시 루트마다 하나)뿐이다. 놓는 훅은 두지 않는다 — 읽는 쪽이 쥔 참조를 끊는 길이 된다.
-                const AssetPathTable* pNext = isSameTable( store._initial, *next ) ? &store._initial : nullptr;
-                for ( size_t index = 0; pNext == nullptr && index < store._listPublished.size(); ++index )
+                // 같은 내용의 표가 이미 있으면 그것으로 되돌린다 — 같은 설정을 다시 넣을 때 표가 쌓이지 않게. 지난 표를 놓지 않는 대신 늘어나는 것은
+                // 서로 다른 내용뿐이다. 놓는 훅은 두지 않는다 — 읽는 쪽이 쥔 참조를 끊는 길이 된다.
+                const AssetPathTable* pNext = isSameTable( state._initialTable, *next ) ? &state._initialTable : nullptr;
+                for ( size_t index = 0; pNext == nullptr && index < state._listPublishedTable.size(); ++index )
                 {
-                    if ( isSameTable( *store._listPublished[index], *next ) )
-                        pNext = store._listPublished[index].get();
+                    if ( isSameTable( *state._listPublishedTable[index], *next ) )
+                        pNext = state._listPublishedTable[index].get();
                 }
                 if ( pNext == nullptr )
                 {
                     pNext = next.get();
-                    store._listPublished.push_back( std::move( next ) );
+                    state._listPublishedTable.push_back( std::move( next ) );
                 }
-                store._pCurrent.store( pNext, std::memory_order_release );
+                state._pCurrentTable.store( pNext, std::memory_order_release );
                 return *pNext;
             }
 
@@ -176,41 +213,10 @@ namespace sw
                 return listFolder;
             }
 
-            /**
-             * @brief 푼 경로 캐시의 한 칸입니다. `_path` 가 비면 "디스크에 없다" 를 기억한 칸(음성 결과)입니다.
-             * @details 없는 파일은 나중에 생길 수 있으므로 음성 칸은 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿는다. 있는 파일은 나중에 지워질 수 있으므로
-             *          양성 칸은 기억한 때의 `FileUtil::getRemovalEpoch` 가 지금과 같은 동안만 믿는다(`_epoch` 는 칸의 종류에 맞는 쪽 값이다). 이 프로세스가 파일을 만들면(지우면)
-             *          에포크가 올라 모든 음성(양성) 칸이 한꺼번에 낡는다. 검색 목록이 바뀔 때(`clearPathCache`)는 모든 칸을 버린다.
-             */
-            struct ResolvedEntry
-            {
-                string _path{};
-                uint64 _epoch{ 0 };
-            };
-
-            /**
-             * @brief 해석을 시작한 때의 세대입니다. **저장은 이 값을 들고서만 할 수 있습니다**(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
-             *        결과를 새 캐시에 넣지 않는다. 찾기 전에 한 번 잡고(`captureStamp`) 찾은 뒤 저장에 넘긴다.
-             */
-            struct PathCacheStamp
-            {
-                uint64 _layoutGeneration{ 0 };
-                uint64 _creationEpoch{ 0 };
-                uint64 _removalEpoch{ 0 };
-            };
-
             /** @brief 칸이 믿을 만한지 가르는 에포크입니다. 음성 칸(@p path 가 빔)은 만든 횟수, 양성 칸은 지운 횟수입니다. */
             static uint64 selectEpoch( const string& path, uint64 creationEpoch, uint64 removalEpoch ) { return path.empty() ? creationEpoch : removalEpoch; }
 
-            /**
-             * @brief 푼 경로 캐시입니다. 엔진 수명 범위가 소유해 엔진 종료 때 저장소째 사라집니다(처음 넣을 때 만들어진다). 접근은 `_s_state._pathCache._mutex` 아래에서만 한다.
-             * @details 서브시스템으로 옮기지 않은 까닭: 경로 표 · 검색 우선순위 · 디스크 도메인 · 초기화가 모두 이 파일의 프로세스 정적이고, 서비스 바인딩 전(코어 범위의 리소스 루트 단계 ·
-             *          `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구에서도 불린다 — 캐시만 떼어 서비스 칸으로 보내면 바인딩 전 부름이 멈추고 한 상태가 두 주인으로 갈린다.
-             *          `AssetPaths` 전체를 리소스 루트 서브시스템(`ContentRootSubsystem`) 객체로 옮기는 묶음(쓰는 파일 ~105)으로 남긴다(NEXT.md K).
-             */
-            inline static ScopeOwned<unordered_map<string, ResolvedEntry>> _s_mapResolvedPath{};
-
-            /** @brief 푼 경로 캐시의 계측 칸입니다(`AssetPath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). */
+            /** @brief 푼 경로 캐시의 계측 칸입니다(`AssetPath`: 적중 = 캐시가 답함, 실패 = 디스크를 훑음). 계측 레지스트리의 손잡이라 객체 상태가 아니다. */
             static const CacheStatsHandle& getPathStats()
             {
                 static const CacheStatsHandle s_stats = CacheStats::getOrCreate( "AssetPath" );
@@ -224,23 +230,20 @@ namespace sw
             }
 
             /** @brief 해석을 시작하는 지금의 세대를 잡습니다. 찾기 전에 한 번 잡는다. */
-            static PathCacheStamp captureStamp()
+            static PathCacheStamp captureStamp( State& state )
             {
-                ScopedLock<mutex> lock( _s_state._pathCache._mutex );
-                return PathCacheStamp{ _s_state._pathCache._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
+                ScopedLock<mutex> lock( state._cacheMutex );
+                return PathCacheStamp{ state._layoutGeneration, FileUtil::getCreationEpoch(), FileUtil::getRemovalEpoch() };
             }
 
             /** @brief 캐시에서 찾습니다. 찾았으면 true 이고 @p outPath 가 비면 "없음" 입니다. 기억한 뒤 파일이 만들어졌거나(음성 칸) 지워진(양성 칸) 낡은 칸은 없는 것으로 칩니다. */
-            [[nodiscard]] static bool findResolved( const string& cacheKey, string& outPath )
+            [[nodiscard]] static bool findResolved( State& state, const string& cacheKey, string& outPath )
             {
-                const uint64                                      creationEpoch = FileUtil::getCreationEpoch();
-                const uint64                                      removalEpoch  = FileUtil::getRemovalEpoch();
-                ScopedLock<mutex>                                 lock( _s_state._pathCache._mutex );
-                const unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.find();
-                if ( pMapResolved == nullptr )
-                    return false;
-                const auto it = pMapResolved->find( cacheKey );
-                if ( it == pMapResolved->end() )
+                const uint64      creationEpoch = FileUtil::getCreationEpoch();
+                const uint64      removalEpoch  = FileUtil::getRemovalEpoch();
+                ScopedLock<mutex> lock( state._cacheMutex );
+                const auto        it = state._mapResolvedPath.find( cacheKey );
+                if ( it == state._mapResolvedPath.end() )
                     return false;
                 if ( it->second._epoch != selectEpoch( it->second._path, creationEpoch, removalEpoch ) )
                     return false; // 기억한 뒤 파일이 만들어지거나 지워졌다 — 다시 훑는다
@@ -249,18 +252,14 @@ namespace sw
             }
 
             /** @brief 푼 결과(@p path 가 비면 "없음")를 저장합니다. @p stamp 의 검색 목록 세대가 이미 낡았으면 저장하지 않습니다. */
-            static void storeResolved( string&& cacheKey, const string& path, const PathCacheStamp& stamp )
+            static void storeResolved( State& state, string&& cacheKey, const string& path, const PathCacheStamp& stamp )
             {
                 // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
                 SW_MEMORY_SCOPE( Asset );
-                ScopedLock<mutex> lock( _s_state._pathCache._mutex );
-                if ( stamp._layoutGeneration != _s_state._pathCache._layoutGeneration )
+                ScopedLock<mutex> lock( state._cacheMutex );
+                if ( stamp._layoutGeneration != state._layoutGeneration )
                     return;
-                unordered_map<string, ResolvedEntry>* const pMapResolved = _s_mapResolvedPath.getOrCreate();
-                // nullptr 은 엔진 수명 범위가 닫힌 뒤다(Debug 는 `getOrCreate` 가 단언한다) — 캐시할 곳이 없을 뿐 찾은 경로는 그대로 돌려준다.
-                if ( pMapResolved == nullptr )
-                    return;
-                const auto inserted           = pMapResolved->try_emplace( std::move( cacheKey ) );
+                const auto inserted           = state._mapResolvedPath.try_emplace( std::move( cacheKey ) );
                 inserted.first->second._path  = path;
                 inserted.first->second._epoch = selectEpoch( path, stamp._creationEpoch, stamp._removalEpoch );
                 if ( inserted.second )
@@ -277,24 +276,15 @@ namespace sw
             static constexpr bool kCaseSensitiveFileSystem = false;
 #endif
 
-            /** @brief `mountDiskDomain` 으로 붙인 도메인 하나입니다. */
-            struct MountedDiskDomain
-            {
-                string _domain; ///< 소문자 도메인 이름(`/` 없음)
-                string _folder; ///< 정규화한 절대 디스크 폴더(끝 `/` 없음)
-            };
-            inline static mutex                     _s_diskDomainMutex{};
-            inline static vector<MountedDiskDomain> _s_listDiskDomain{};
-
             /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키를 줍니다. */
-            [[nodiscard]] static bool findMountedDiskDomain( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            [[nodiscard]] static bool findMountedDiskDomain( State& state, string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
             {
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash == string_view::npos || firstSlash == 0 )
                     return false;
                 const string_view domain = lowerRel.substr( 0, firstSlash );
-                ScopedLock<mutex> lock{ _s_diskDomainMutex };
-                for ( const MountedDiskDomain& mounted : _s_listDiskDomain )
+                ScopedLock<mutex> lock{ state._diskDomainMutex };
+                for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
                     if ( mounted._domain == domain )
                     {
@@ -307,11 +297,11 @@ namespace sw
             }
 
             /** @brief 절대 경로 @p absolutePath 가 붙인 디스크 도메인 폴더 아래면 그 도메인의 id(`<도메인>/<폴더 아래 경로>`)를 적고 true 입니다. */
-            [[nodiscard]] static bool findDiskDomainID( const string& absolutePath, string& outID )
+            [[nodiscard]] static bool findDiskDomainID( State& state, const string& absolutePath, string& outID )
             {
                 const string      path = FileUtil::normalizePath( absolutePath );
-                ScopedLock<mutex> lock{ _s_diskDomainMutex };
-                for ( const MountedDiskDomain& mounted : _s_listDiskDomain )
+                ScopedLock<mutex> lock{ state._diskDomainMutex };
+                for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
                     const string folder = FileUtil::normalizePath( mounted._folder );
                     if ( path.size() <= folder.size() || FileUtil::startsWithPathComponent( path, folder ) == false )
@@ -323,31 +313,15 @@ namespace sw
             }
 
             /**
-             * @brief `initialize()` 본문을 프로세스당 한 번만 돌립니다.
-             * @details 늦게 온 스레드는 첫 호출이 **끝날 때까지 막힙니다.** 그래서 초기화 도중의 빈 경로를
-             *          보는 일이 없습니다. 이 안에서 `_s_state._pathCache._mutex` 를 다시 잡는데,
-             *          반대 순서로 잡는 곳은 없습니다.
-             */
-            inline static std::once_flag _s_initOnce{};
-
-            /**
-             * @brief 락 없는 전역(검색 목록 · 루트 · 호스트 제외 그룹)을 쓰는 API 가 병렬 단계 중에 불리지 않았는지 단언합니다.
-             * @details 읽는 쪽(`findLooseFile` · `makeSaveFolderPath`)은 락 없이 이 칸들을 읽는다 — 워커나 병렬 본문 중에 쓰면 읽는 쪽이 깨진 벡터를 본다. 쓰기는
-             *          메인 스레드의 직렬 구간(기동 · 설정 로드 · 에디터 모드 전환)에서만 한다. `initialize()` 의 첫 호출은 `call_once` 가 직렬로 만들어 대상이 아니다.
+             * @brief 락 없이 읽는 표(검색 목록 · 루트 · 호스트 제외 그룹)를 갈아 끼우는 API 가 병렬 단계 중에 불리지 않았는지 단언합니다.
+             * @details 쓰기는 메인 스레드의 직렬 구간(기동 · 설정 로드 · 에디터 모드 전환)에서만 한다. `initialize()` 의 첫 호출은 소유자의 기동(직렬)이라 대상이 아니다.
              * @param pAPIName 로그에 남길 API 이름
              */
             static void assertSerialPhase( const utf8* pAPIName )
             {
                 SW_LOG_ASSERT( TaskManager::isInParallelBody() == false && TaskManager::isOnPoolWorkerThread() == false,
-                               "AssetPaths::%# writes lock-free globals and must run in a serial phase (not on a worker or inside a parallel body)", pAPIName );
+                               "AssetPaths::%# swaps the lock-free path table and must run in a serial phase (not on a worker or inside a parallel body)", pAPIName );
             }
-
-            /** @brief `readBasePriority` 의 결과입니다. 오류 문장은 부르는 쪽이 정적 초기화 가드 밖에서 로그합니다. */
-            struct BasePriority
-            {
-                vector<string> _listPriority; ///< 읽은 우선순위 목록. 읽지 못하면 비어 있다.
-                string         _error;        ///< 읽지 못한 이유. 비어 있으면 성공
-            };
 
             /**
              * @brief 구성 때 베이크한 `EngineConfig.json` 사본의 `_listResourcePriority` 입니다. 읽지 못하면 오류 문장을 담고 빈 목록입니다.
@@ -379,17 +353,17 @@ namespace sw
              * @param outKeyUnderRoot 그 루트 아래 상대 키(팩 이름만 있으면 빈 문자열)
              * @return 알려진 전역 ID 이고 그 루트가 있으면 true 입니다.
              */
-            static bool mapGlobalIDToRoot( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            static bool mapGlobalIDToRoot( State& state, string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
             {
                 outRoot.clear();
                 outKeyUnderRoot.clear();
 
                 // 0. 붙인 디스크 도메인(`mountDiskDomain`)은 리소스 루트와 무관하게 그 폴더로 푼다.
                 const bool bAssetID = lowerRel.empty() == false && FileUtil::isAbsolutePath( lowerRel ) == false;
-                if ( bAssetID && findMountedDiskDomain( lowerRel, outRoot, outKeyUnderRoot ) )
+                if ( bAssetID && findMountedDiskDomain( state, lowerRel, outRoot, outKeyUnderRoot ) )
                     return true;
 
-                const string& resourceRoot      = AssetPaths::getRootFolderPath();
+                const string& resourceRoot      = getTable( state )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
                 const bool    bUnresolvablePath = resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel );
                 if ( bUnresolvablePath )
                     return false;
@@ -494,6 +468,13 @@ namespace sw
 {
     SW_LOG_CALLER( "AssetPaths" );
 
+    AssetPaths::AssetPaths()
+        : _pState{ make_unique<State>() }
+    {
+    }
+
+    AssetPaths::~AssetPaths() = default; // `State` 가 여기서 완전한 형식이다
+
     /**
      * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
      * @details 거르지 않으면 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽는다(언리얼은 경로를 가상
@@ -516,86 +497,69 @@ namespace sw
 
     bool AssetPaths::initialize()
     {
-        // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
-        //
-        // 본문 맨 앞에서 이 플래그를 켜면 두 가지가 깨진다.
-        //  1) 루트를 못 찾아 false 로 나가도 "초기화됨" 으로 남는다. `App::initialize` 는 반환값을
-        //     보지 않으므로, 실패를 검사하는 유일한 호출부(`AssetManager::initialize`)가 그 다음에
-        //     true 를 받아 **빈 경로로** 팩 마운트와 레지스트리 로드를 진행한다.
-        //  2) 다른 스레드가 초기화 도중에 true 를 보고 아직 비어 있는 경로를 읽는다.
-        //
-        // `call_once` 는 콜러블이 **예외 없이 반환하면 완료로 표시**한다. 그래서 성패는 콜러블 안에서
-        // 플래그에 남기고, 반환하는 값은 그 플래그를 읽는다. 본문을 그냥 감싸기만 하면 실패가 사라진다.
-        //
-        // **로그는 `call_once` 밖에서 남긴다.** `call_once` 는 끝날 때까지 늦은 스레드를 막는 잠금이다. 안에서 로그를 남기면 로그 경로(리스너 · 파일 출력)가
-        // `AssetPaths` 를 되불렀을 때 같은 스레드가 자기 `call_once` 를 다시 기다려 교착한다. 그래서 안에서는 남길 말을 지역 변수에만 적는다.
-        bool   bRootMissing = false;
-        string rootToLog;
-        std::call_once( AssetPathsInternal::_s_initOnce, [&bRootMissing, &rootToLog]()
+        // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
+        // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
+        if ( _pState->_bInitialized )
+            return true;
+        clearPathCache();
+
+        string currentPath = FileUtil::getCurrentPath();
+        string rootPath;
+        while ( currentPath.empty() == false )
         {
-            clearPathCache();
-
-            string currentPath = FileUtil::getCurrentPath();
-            string rootPath;
-            while ( currentPath.empty() == false )
+            const string folderPath = FileUtil::joinPath( currentPath, path::kContentFolder );
+            if ( FileUtil::isDirectory( folderPath ) )
             {
-                const string folderPath = FileUtil::joinPath( currentPath, path::kContentFolder );
-                if ( FileUtil::isDirectory( folderPath ) )
-                {
-                    rootPath = currentPath;
-                    break;
-                }
-                const string parent = FileUtil::getDirectoryPart( currentPath );
-                if ( parent.empty() || parent == currentPath )
-                    break;
-                currentPath = parent;
+                rootPath = currentPath;
+                break;
             }
+            const string parent = FileUtil::getDirectoryPart( currentPath );
+            if ( parent.empty() || parent == currentPath )
+                break;
+            currentPath = parent;
+        }
 
-            if ( rootPath.empty() )
-            {
-                bRootMissing = true;
-                return; // 플래그를 켜지 않는다. initialize() 가 false 를 반환한다.
-            }
+        SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder not found" );
+        if ( rootPath.empty() )
+            return false; // 플래그를 켜지 않는다.
+        SW_LOG_INFO( "RootFolder : %#", rootPath );
 
-            rootToLog = rootPath;
+        const string resourceRoot = FileUtil::joinPath( rootPath, path::kContentFolder );
+        // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
+        const string resourceRootFolderPath = FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : string{};
 
-            const string resourceRoot = FileUtil::joinPath( rootPath, path::kContentFolder );
-            // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
-            const string resourceRootFolderPath = FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : string{};
+        vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
+        if ( listSearchPriority.empty() )
+            listSearchPriority = getDefaultSearchPriority();
+        if ( listSearchPriority.empty() )
+        {
+            // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
+            SW_LOG_ERROR( "%#", AssetPathsInternal::readBasePriority()._error );
+            return false; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 false 를 반환한다.
+        }
 
-            vector<string> listSearchPriority = AssetPathsInternal::getTable()._listSearchPriority;
-            if ( listSearchPriority.empty() )
-                listSearchPriority = getDefaultSearchPriority();
-            if ( listSearchPriority.empty() )
-            {
-                // 읽지 못한 이유를 여기서 남긴다(읽는 함수는 정적 초기화 가드 안이라 로그하지 않는다). 가드 안에서 만든 값이므로 다시 읽어도 같은 문장이다.
-                SW_LOG_ERROR( "%#", AssetPathsInternal::readBasePriority()._error );
-                return; // 검색 목록 없이는 어떤 리소스도 찾지 못한다 — 플래그를 켜지 않아 initialize() 가 false 를 반환한다.
-            }
-
-            // 루트 · 우선순위 · 검색 루트를 한 표로 한 번에 갈아 끼운다(읽는 쪽이 새 루트와 옛 검색 루트를 섞어 보지 않는다).
-            vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
-            (void)AssetPathsInternal::publishTable( [&]( AssetPathTable& table )
-            {
-                table._projectFolderPath      = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
-                table._resourceRootFolderPath = resourceRootFolderPath;
-                table._listSearchPriority     = std::move( listSearchPriority );
-                table._listResourceFolder     = std::move( listAssetFolder );
-            } );
-            clearPathCache();
-
-            // 여기까지 와야 상태가 모두 채워진 것이다.
-            AssetPathsInternal::_s_state._pathTable._bInitialized.store( true, std::memory_order_release );
+        // 루트 · 우선순위 · 검색 루트를 한 표로 한 번에 갈아 끼운다(읽는 쪽이 새 루트와 옛 검색 루트를 섞어 보지 않는다).
+        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
+        (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
+        {
+            table._projectFolderPath      = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
+            table._resourceRootFolderPath = resourceRootFolderPath;
+            table._listSearchPriority     = std::move( listSearchPriority );
+            table._listResourceFolder     = std::move( listAssetFolder );
         } );
+        clearPathCache();
 
-        SW_LOG_ASSERT( bRootMissing == false, "RootFolder not found" );
-        if ( rootToLog.empty() == false )
-            SW_LOG_INFO( "RootFolder : %#", rootToLog );
-
-        return AssetPathsInternal::_s_state._pathTable._bInitialized.load( std::memory_order_acquire );
+        // 여기까지 와야 상태가 모두 채워진 것이다.
+        _pState->_bInitialized = true;
+        return true;
     }
 
-    LooseFilePath AssetPaths::findLooseFile( string_view filePath, string_view folderName )
+    bool AssetPaths::isInitialized() const
+    {
+        return _pState->_bInitialized;
+    }
+
+    LooseFilePath AssetPaths::findLooseFile( string_view filePath, string_view folderName ) const
     {
         if ( filePath.empty() )
             return {};
@@ -610,6 +574,7 @@ namespace sw
         if ( hasParentDirectoryComponent( filePath ) )
             return {};
 
+        State& state = *_pState;
         // 원문 키다 — 해시만 비교하면 충돌한 다른 파일의 경로를 조용히 돌려준다. `\n` 은 파일 id 에 들어갈 수 없어 둘을 가르는 구분자다.
         string cacheKey( filePath );
         if ( folderName.empty() == false )
@@ -619,10 +584,10 @@ namespace sw
         }
 
         // 세대는 찾기 전에 잡는다 — 찾는 동안 검색 목록이 바뀌었거나 파일이 만들어졌으면 이 결과는 낡은 채로 저장되지 못하거나(목록) 다음 조회에서 버려진다(음성).
-        const AssetPathsInternal::PathCacheStamp stamp = AssetPathsInternal::captureStamp();
+        const PathCacheStamp stamp = AssetPathsInternal::captureStamp( state );
         {
             string cached;
-            if ( AssetPathsInternal::findResolved( cacheKey, cached ) )
+            if ( AssetPathsInternal::findResolved( state, cacheKey, cached ) )
             {
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
@@ -638,7 +603,7 @@ namespace sw
         string found;
         string domainRoot;
         string keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( lowerFile, domainRoot, keyUnderRoot ) )
+        if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile, domainRoot, keyUnderRoot ) )
         {
             found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
@@ -656,7 +621,7 @@ namespace sw
             // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
             string mountedRoot;
             string mountedKey;
-            if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( lowerFile, mountedRoot, mountedKey ) )
+            if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
             {
                 const string lowerKey = lowerFolder.empty() ? mountedKey : FileUtil::joinPath( lowerFolder, mountedKey );
                 const string hit      = FileUtil::findPathIgnoringCase( mountedRoot, lowerKey );
@@ -667,7 +632,7 @@ namespace sw
         }
         else
         {
-            const vector<string>& listAssetFolder = AssetPathsInternal::getTable()._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
+            const vector<string>& listAssetFolder = AssetPathsInternal::getTable( state )._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
             found                                 = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
             if ( found.empty() && ( lowerFile != filePath || ( folderName.empty() == false && lowerFolder != folderName ) ) )
@@ -678,12 +643,12 @@ namespace sw
         if ( found.empty() )
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
-        AssetPathsInternal::storeResolved( std::move( cacheKey ), found, stamp );
+        AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
 
         return LooseFilePath( std::move( found ) );
     }
 
-    string AssetPaths::getWritePath( string_view path )
+    string AssetPaths::getWritePath( string_view path ) const
     {
         if ( FileUtil::isAbsolutePath( path ) )
             return FileUtil::normalizeSeparators( path );
@@ -702,14 +667,14 @@ namespace sw
         return result;
     }
 
-    string AssetPaths::toAssetID( string_view path )
+    string AssetPaths::toAssetID( string_view path ) const
     {
         string id;
         if ( path.empty() )
             return id;
         string relative = FileUtil::normalizeSeparators( path );
         string domainID;
-        if ( FileUtil::isAbsolutePath( relative ) && AssetPathsInternal::findDiskDomainID( relative, domainID ) )
+        if ( FileUtil::isAbsolutePath( relative ) && AssetPathsInternal::findDiskDomainID( *_pState, relative, domainID ) )
         {
             // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
             relative = std::move( domainID );
@@ -739,7 +704,7 @@ namespace sw
         return id;
     }
 
-    string AssetPaths::resolveWritePath( string_view assetID )
+    string AssetPaths::resolveWritePath( string_view assetID ) const
     {
         if ( assetID.empty() )
             return {};
@@ -759,14 +724,14 @@ namespace sw
         const string lowerID = FileUtil::normalizePath( assetID );
         string       domainRoot;
         string       keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( lowerID, domainRoot, keyUnderRoot ) == false )
+        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, lowerID, domainRoot, keyUnderRoot ) == false )
             return result;
 
         // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
         // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
         string mountedRoot;
         string mountedKey;
-        if ( AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( lowerID, mountedRoot, mountedKey ) )
+        if ( AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, lowerID, mountedRoot, mountedKey ) )
         {
             const string normalizedID = FileUtil::normalizeSeparators( assetID );
             return FileUtil::makePathIgnoringCase( mountedRoot, normalizedID.substr( normalizedID.find( '/' ) + 1 ) );
@@ -774,9 +739,9 @@ namespace sw
         return FileUtil::joinPath( domainRoot, keyUnderRoot );
     }
 
-    LooseFilePath AssetPaths::findLooseDomainFolder( string_view domainName, string_view subFolder )
+    LooseFilePath AssetPaths::findLooseDomainFolder( string_view domainName, string_view subFolder ) const
     {
-        string folder = AssetPathsInternal::findDomainFolderUnder( AssetPathsInternal::getTable()._resourceRootFolderPath, domainName, subFolder );
+        string folder = AssetPathsInternal::findDomainFolderUnder( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath, domainName, subFolder );
         if ( folder.empty() )
             return {};
         return LooseFilePath( std::move( folder ) );
@@ -797,7 +762,7 @@ namespace sw
             SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
             return false;
         }
-        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable()._resourceRootFolderPath ) );
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath ) );
         if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
         {
             SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
@@ -805,11 +770,12 @@ namespace sw
         }
         // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
         // 이 락과 얽히지 않게 한다).
+        State& state = *_pState;
         string conflictFolder;
         bool   bConflict{ false };
         {
-            ScopedLock<mutex> lock{ AssetPathsInternal::_s_diskDomainMutex };
-            for ( const AssetPathsInternal::MountedDiskDomain& mounted : AssetPathsInternal::_s_listDiskDomain )
+            ScopedLock<mutex> lock{ state._diskDomainMutex };
+            for ( const MountedDiskDomain& mounted : state._listDiskDomain )
             {
                 if ( mounted._domain != domain )
                     continue;
@@ -820,7 +786,7 @@ namespace sw
                 break;
             }
             if ( bConflict == false )
-                AssetPathsInternal::_s_listDiskDomain.push_back( AssetPathsInternal::MountedDiskDomain{ domain, folder } );
+                state._listDiskDomain.push_back( MountedDiskDomain{ domain, folder } );
         }
         if ( bConflict )
         {
@@ -831,22 +797,22 @@ namespace sw
         return true;
     }
 
-    bool AssetPaths::isMountedDiskDomainID( string_view assetID )
+    bool AssetPaths::isMountedDiskDomainID( string_view assetID ) const
     {
         string root;
         string key;
         return assetID.empty() == false && FileUtil::isAbsolutePath( assetID ) == false &&
-               AssetPathsInternal::findMountedDiskDomain( FileUtil::normalizePath( assetID ), root, key );
+               AssetPathsInternal::findMountedDiskDomain( *_pState, FileUtil::normalizePath( assetID ), root, key );
     }
 
-    const string& AssetPaths::getRootFolderPath()
+    const string& AssetPaths::getRootFolderPath() const
     {
-        return AssetPathsInternal::getTable()._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
+        return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
     }
 
-    const string& AssetPaths::getProjectFolderPath()
+    const string& AssetPaths::getProjectFolderPath() const
     {
-        return AssetPathsInternal::getTable()._projectFolderPath;
+        return AssetPathsInternal::getTable( *_pState )._projectFolderPath;
     }
 
     bool AssetPaths::setSearchPriority( const vector<string>& listPriority )
@@ -854,13 +820,13 @@ namespace sw
         if ( listPriority.empty() )
             return false;
 
-        // 첫 `initialize()` 는 `call_once` 안(직렬)에서 표를 짓는다 — 성공 표시가 서기 전의 호출은 단언 대상이 아니다.
-        if ( AssetPathsInternal::_s_state._pathTable._bInitialized.load( std::memory_order_acquire ) )
+        // 첫 `initialize()` 는 소유자의 기동(직렬)에서 표를 짓는다 — 성공 표시가 서기 전의 호출은 단언 대상이 아니다.
+        if ( _pState->_bInitialized )
             AssetPathsInternal::assertSerialPhase( "setSearchPriority" );
 
         // 검색 루트는 디스크를 보고 짓는다 — 잠금 밖에서 지은 뒤 우선순위와 함께 한 표로 갈아 끼운다.
-        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( AssetPathsInternal::getTable()._resourceRootFolderPath, listPriority );
-        (void)AssetPathsInternal::publishTable( [&]( AssetPathTable& table )
+        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath, listPriority );
+        (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         {
             table._listSearchPriority = listPriority;
             if ( table._resourceRootFolderPath.empty() == false )
@@ -870,60 +836,41 @@ namespace sw
         return true;
     }
 
-    const vector<string>& AssetPaths::getSearchPriority()
+    const vector<string>& AssetPaths::getSearchPriority() const
     {
-        return AssetPathsInternal::getTable()._listSearchPriority;
-    }
-
-    string AssetPaths::exchangeRootFolderPath( string_view resourceRootFolderPath )
-    {
-        AssetPathsInternal::assertSerialPhase( "exchangeRootFolderPath" );
-        const AssetPathTable& current  = AssetPathsInternal::getTable();
-        string                previous = current._resourceRootFolderPath;
-        const string          newRoot  = FileUtil::normalizeSeparators( resourceRootFolderPath );
-        // 검색 폴더를 새 루트에서 다시 짓고, 루트와 함께 한 표로 갈아 끼운다.
-        vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( newRoot, current._listSearchPriority );
-        (void)AssetPathsInternal::publishTable( [&]( AssetPathTable& table )
-        {
-            table._resourceRootFolderPath = newRoot;
-            table._listResourceFolder     = std::move( listAssetFolder );
-        } );
-        clearPathCache();
-        return previous;
+        return AssetPathsInternal::getTable( *_pState )._listSearchPriority;
     }
 
     const vector<string>& AssetPaths::getDefaultSearchPriority()
     {
         // 값의 출처는 `Config/Engine/EngineConfig.json` 하나다. 기동의 이 시점에는 설정을 아직 읽지 않았으므로 구성 때 베이크한 같은 파일의 사본에서
         // 이 칸만 읽는다(리플렉션이 서기 전이라 JSON 문서로). 실행 중 값은 설정을 읽은 뒤 `AssetManager::mountContent` 가 다시 넣는다.
-        // 오류 로그는 함수 정적 초기화 가드 안에서 남기지 않는다 — 로거가 가드를 쥔 채 되돌아 들어오면 교착이다. 오류 문장은 `initialize()` 가 가드 밖에서 남긴다.
-        static const AssetPathsInternal::BasePriority s_basePriority = AssetPathsInternal::readBasePriority();
+        // 구성 때 정해진 상수라 객체 상태가 아니다(어느 객체가 읽어도 같다). 오류 로그는 함수 정적 초기화 가드 안에서 남기지 않는다 — 로거가 가드를 쥔 채
+        // 되돌아 들어오면 교착이다. 오류 문장은 `initialize()` 가 가드 밖에서 남긴다.
+        static const BasePriority s_basePriority = AssetPathsInternal::readBasePriority();
         return s_basePriority._listPriority;
     }
 
     void AssetPaths::clearPathCache()
     {
-        ScopedLock<mutex> lock( AssetPathsInternal::_s_state._pathCache._mutex );
-        // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 종료 때의 반납은 엔진 수명 범위가 한다.
+        State&            state = *_pState;
+        ScopedLock<mutex> lock( state._cacheMutex );
+        // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 검색 목록이 바뀐 뒤의 캐시가 자란 만큼 남지 않게 저장소까지 놓는다. 끝의 반납은 이 객체의 소멸이 한다.
         // 세대를 올려, 이 순간 이전의 검색 목록으로 풀던 호출이 결과를 새 캐시에 넣지 못하게 한다(`storeResolved`).
-        ++AssetPathsInternal::_s_state._pathCache._layoutGeneration;
-        unordered_map<string, AssetPathsInternal::ResolvedEntry>* const pMapResolved = AssetPathsInternal::_s_mapResolvedPath.find();
-        if ( pMapResolved != nullptr )
-        {
-            AssetPathsInternal::getPathStats().addItemCount( -static_cast<int64>( pMapResolved->size() ) );
-            AssetPathsInternal::getPathStats().recordClear();
-            *pMapResolved = unordered_map<string, AssetPathsInternal::ResolvedEntry>{};
-        }
+        ++state._layoutGeneration;
+        AssetPathsInternal::getPathStats().addItemCount( -static_cast<int64>( state._mapResolvedPath.size() ) );
+        AssetPathsInternal::getPathStats().recordClear();
+        state._mapResolvedPath = unordered_map<string, ResolvedEntry>{};
     }
 
-    string AssetPaths::makeSaveFolderPath( string_view absoluteFolder )
+    string AssetPaths::makeSaveFolderPath( string_view absoluteFolder ) const
     {
         const string folderNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( absoluteFolder ) );
 
         string physicalRoot;
         string rootNorm;
 
-        for ( const string& root : AssetPathsInternal::getTable()._listResourceFolder )
+        for ( const string& root : AssetPathsInternal::getTable( *_pState )._listResourceFolder )
         {
             AssetPathsInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
@@ -949,7 +896,7 @@ namespace sw
         return result;
     }
 
-    string AssetPaths::makeSavePath( string_view absoluteFolder, string_view fileName )
+    string AssetPaths::makeSavePath( string_view absoluteFolder, string_view fileName ) const
     {
         string result = makeSaveFolderPath( absoluteFolder );
         if ( fileName.empty() == false )
@@ -963,7 +910,7 @@ namespace sw
         return result;
     }
 
-    string AssetPaths::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
+    string AssetPaths::makeUniqueSavePath( string_view absoluteFolder, string_view fileName ) const
     {
         // 반환은 `savePath` 하나로만 한다. 분기마다 다른 변수를 반환하면 NRVO 가 막힌다(-Wnrvo).
         // 그래서 `const` 도 붙이지 않는다(반환할 때 자동 이동이 막힌다).
@@ -1002,15 +949,15 @@ namespace sw
         SW_TARGET_EXCLUDED_GROUP_TABLE( SW_ADD_HOST_EXCLUDED_GROUP )
 #undef SW_ADD_HOST_EXCLUDED_GROUP
         const size_t excludedCount = listHostExcludedGroup.size();
-        (void)AssetPathsInternal::publishTable( [&]( AssetPathTable& table )
+        (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         { table._listHostExcludedGroup = std::move( listHostExcludedGroup ); } );
         if ( excludedCount > 0 )
             SW_LOG_INFO( "Host target %# does not read %# asset groups", string( buildTargetName ).c_str(), excludedCount );
     }
 
-    bool AssetPaths::isExcludedForHost( string_view assetPath )
+    bool AssetPaths::isExcludedForHost( string_view assetPath ) const
     {
-        const vector<string>& listHostExcludedGroup = AssetPathsInternal::getTable()._listHostExcludedGroup; // 표 하나를 잡아 그 안에서 읽는다
+        const vector<string>& listHostExcludedGroup = AssetPathsInternal::getTable( *_pState )._listHostExcludedGroup; // 표 하나를 잡아 그 안에서 읽는다
         if ( listHostExcludedGroup.empty() )
             return false;
         const string_view group = AssetTypeRegistry::findExcludeGroup( assetPath );

@@ -21,6 +21,7 @@
 namespace sw
 {
     class CommandLineSubsystem;
+    class ContentRootSubsystem;
     class CompressionCodecRegistry;
     class ConfigManager;
     class CrashHandlerSubsystem;
@@ -60,6 +61,7 @@ namespace sw
             DiagnosticsSubsystem*  _pDiagnostics{ nullptr };
             CommandLineSubsystem*  _pCommandLine{ nullptr };
             CrashHandlerSubsystem* _pCrashHandler{ nullptr };
+            ContentRootSubsystem*  _pContentRoot{ nullptr };  ///< 리소스 경로 상태(`AssetPaths`)의 주인 — 서비스 표가 서기 전에 경로를 쓰는 기동 코드가 받는다
             MemoryBudgetSubsystem* _pMemoryBudget{ nullptr }; ///< `_bMemoryBudget` 가 꺼졌으면 nullptr
         };
     } // namespace engine

@@ -7,7 +7,6 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
-#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw
 {
@@ -16,6 +15,7 @@ namespace sw
     ContentRootSubsystem::ContentRootSubsystem( const CommandLineSubsystem& commandLine, const CrashHandlerSubsystem& crashHandler )
         : _commandLine{ commandLine }
         , _crashHandler{ crashHandler }
+        , _assetPaths{}
     {
     }
 
@@ -23,7 +23,7 @@ namespace sw
     {
         if ( _crashHandler.isCrashReporterRun() )
             return SubsystemInitResult::Succeeded;
-        if ( AssetPaths::initialize() == false )
+        if ( _assetPaths.initialize() == false )
         {
             SW_LOG_ERROR( "Content root not found - run from a location that contains Content/." );
             return SubsystemInitResult::Failed;

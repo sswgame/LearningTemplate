@@ -37,6 +37,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
+#include "Engine/CoreServices/ContentRootSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
 #include "Engine/CoreServices/DiagnosticsSubsystem.h"
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
@@ -93,7 +94,6 @@
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/FileSystem/Pack/PackManager.h"
 #include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
@@ -225,7 +225,8 @@ namespace sw
         }
         const SubsystemHostMask hostMask = bDedicatedServer ? EngineSubsystemHost::kServer : EngineSubsystemHost::kClient;
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
-        AssetPaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
+        // 서비스 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
+        coreParts._pContentRoot->getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // 외부 프로파일러(서비스 범위의 `ProfilerBackend`)의 스레드 이름 — 서비스 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 

@@ -49,8 +49,8 @@ namespace sw
         AssetManager& operator=( const AssetManager& ) = delete;
 
         /**
-         * @brief Content/ 검색 루트를 잡고 서비스를 준비합니다. 팩 마운트는 `mountContent` 가 합니다.
-         * @return 프로젝트 루트를 찾으면 true 입니다.
+         * @brief 서비스를 준비합니다. 팩 마운트는 `mountContent` 가 합니다.
+         * @return 경로 상태(`AssetPaths`)가 프로젝트 루트를 찾았으면 true 입니다(찾는 일은 코어 범위의 `ContentRootSubsystem` 이 한다).
          */
         [[nodiscard]] bool initialize();
 

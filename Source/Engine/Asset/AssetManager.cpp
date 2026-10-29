@@ -107,9 +107,10 @@ namespace sw
 
     bool AssetManager::initialize()
     {
-        if ( AssetPaths::initialize() == false )
+        // 루트는 경로 상태의 주인(코어 범위의 `ContentRootSubsystem`)이 이미 찾았다 — 여기서 다시 찾지 않고 찾았는지만 본다.
+        if ( engine::getSubsystem<AssetPaths>().isInitialized() == false )
         {
-            SW_LOG_ERROR( "Failed to initialize AssetManager!" );
+            SW_LOG_ERROR( "Failed to initialize AssetManager - the content root was not found" );
             return false;
         }
 

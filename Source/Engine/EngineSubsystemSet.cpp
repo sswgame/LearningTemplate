@@ -95,13 +95,14 @@ namespace sw::engine
         parts._pCommandLine = &coreScope.addSubsystem( sw::make_unique<CommandLineSubsystem>( setup._argc, setup._ppArgv ) );
         coreScope.addSubsystem( sw::make_unique<LoggerSubsystem>( *parts._pCommandLine ) );
         parts._pCrashHandler = &coreScope.addSubsystem( sw::make_unique<CrashHandlerSubsystem>( parts._pCommandLine ) );
-        coreScope.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
+        parts._pContentRoot  = &coreScope.addSubsystem( sw::make_unique<ContentRootSubsystem>( *parts._pCommandLine, *parts._pCrashHandler ) );
         coreScope.addSubsystem( sw::make_unique<StaticStorageSubsystem>() );
         if ( setup._bMemoryBudget )
             parts._pMemoryBudget = &coreScope.addSubsystem( sw::make_unique<MemoryBudgetSubsystem>( *parts._pCrashHandler ) );
         // 서브시스템 안의 객체도 서비스 표의 행이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
         (void)coreScope.bind( parts._pCommandLine->findCommandLine() );
         (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
+        (void)coreScope.bind( &parts._pContentRoot->getAssetPaths() );      // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
         return parts;
     }
 

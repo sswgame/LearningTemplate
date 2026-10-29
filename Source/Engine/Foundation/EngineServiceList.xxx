@@ -35,6 +35,9 @@ SW_ENGINE_SERVICE( class, IAudioService, Required, GameVisible )
 SW_ENGINE_SERVICE( class, EventDispatcher, Required, GameVisible )
 // 비동기 파일 읽기(IOCP · io_uring · 스레드 풀). 에셋 스트리밍 큐 · 팩 리더가 쓴다. 시작 · 종료는 서브시스템 FileIO(`AsyncFileIO` 가 직접 상속)다.
 SW_ENGINE_SERVICE( class, AsyncFileIO, Required, HostOnly )
+// 리소스 경로 상태(경로 표 · 검색 우선순위 · 붙인 디스크 도메인 · 해석 캐시). 코어 범위의 리소스 루트 서브시스템(`ContentRootSubsystem`)이 소유해 그 타입으로 건다.
+// 워커(디코드 · 쿠킹)도 경로를 풀므로 칸으로 읽는다.
+SW_ENGINE_SERVICE( class, AssetPaths, Required, GameVisible )
 SW_ENGINE_SERVICE( class, AssetManager, Required, GameVisible )
 // 데이터 파일 종류(카탈로그 계약) 레지스트리. 서비스 범위가 소유하고, 모듈을 올리고 내리는 길(`engine::registerModuleTypes`)이 정적 등록자를 걷어 올리고 뺀다.
 SW_ENGINE_SERVICE( class, AssetDataKindRegistry, Required, GameVisible )
