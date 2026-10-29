@@ -1068,7 +1068,7 @@ namespace sw::editor
         ImGui::Text( "Game Viewport On-Screen Controller Overlay HUD Settings" );
         ImGui::Separator();
 
-        ViewportInputOverlayConfig& config = ViewportInputOverlay::getConfig();
+        ViewportInputOverlayConfig& config = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( "Enable Viewport On-Screen HUD Overlay", &bEnabled ) )

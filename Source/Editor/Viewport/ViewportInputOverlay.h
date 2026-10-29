@@ -6,6 +6,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/EditorSubsystem.h"
+
 namespace sw
 {
     class InputManager;
@@ -61,13 +63,20 @@ namespace sw::editor
     class ViewportInputOverlay
     {
     public:
-        /** @brief 전역 오버레이 설정 참조를 반환합니다. */
-        static ViewportInputOverlayConfig& getConfig();
-
-        /** @brief 뷰포트 영역 위에 오버레이를 렌더링합니다. */
+        /** @brief 뷰포트 영역 위에 @p config 대로 오버레이를 렌더링합니다. */
         static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config );
+    };
 
-        /** @brief 현재 전역 설정을 바탕으로 뷰포트 위에 오버레이를 렌더링합니다. */
-        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap );
+    /**
+     * @class ViewportInputOverlaySettings
+     * @brief 오버레이 설정 한 벌입니다(입력 맵 패널이 고치고 게임 뷰가 읽는다). 에디터 서브시스템이라 컨텍스트와 함께 생기고 사라진다 — 정적 칸에 두지 않는다.
+     */
+    class ViewportInputOverlaySettings final : public EditorSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ViewportInputOverlaySettings";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+
+        ViewportInputOverlayConfig _config{};
     };
 } // namespace sw::editor

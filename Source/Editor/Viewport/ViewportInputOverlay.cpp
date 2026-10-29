@@ -3,6 +3,7 @@
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
@@ -16,8 +17,6 @@ namespace sw::editor
 {
     namespace
     {
-        ViewportInputOverlayConfig s_overlayConfig{};
-
         struct ViewportInputOverlayInternal
         {
             static constexpr Color kBackground{ Color::fromBytes( 15, 18, 25 ) };
@@ -162,16 +161,6 @@ namespace sw::editor
         };
     } // namespace
 
-    ViewportInputOverlayConfig& ViewportInputOverlay::getConfig()
-    {
-        return s_overlayConfig;
-    }
-
-    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap )
-    {
-        draw( pDrawList, viewportScreenPos, viewportSize, pInput, pInputMap, s_overlayConfig );
-    }
-
     void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config )
     {
         const bool bOverlayHidden = pDrawList == nullptr || config._bEnabled == SW_FALSE || pInput == nullptr;
@@ -203,4 +192,6 @@ namespace sw::editor
         if ( pInputMap != nullptr && config._bShowCommandHistory == SW_TRUE )
             Internal::drawActiveActions( frame, *pInputMap, boxH );
     }
+
+    SW_EDITOR_SUBSYSTEM( ViewportInputOverlaySettings, 20 );
 } // namespace sw::editor
