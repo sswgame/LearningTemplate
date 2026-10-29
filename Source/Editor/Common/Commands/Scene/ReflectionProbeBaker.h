@@ -30,7 +30,7 @@ namespace sw
      *          스레드: 그래픽스 컨텍스트를 가진 스레드에서 부릅니다. `bakeProbes` 가 렌더 스레드를 비우고 이 스레드에 컨텍스트를 잡는다(`PortraitBatchUtil` 과 같은 길).
      *          GL 은 렌더 스레드가 컨텍스트를 쥐고 있으면 잡지 못할 수 있다 — 그때는 오류로 멈춘다.
      */
-    class SW_API ReflectionProbeBaker
+    class ReflectionProbeBaker
     {
     public:
         ReflectionProbeBaker();

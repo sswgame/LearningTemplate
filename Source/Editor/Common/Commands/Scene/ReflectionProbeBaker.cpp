@@ -1,14 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Capture/ReflectionProbeBaker.h"
+#include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -85,7 +86,7 @@ namespace sw
             return false;
         _pDevice  = pDevice;
         _renderer = make_unique<FrameRenderer>();
-        if ( _renderer->initialize( pDevice, engine::getSubsystem<EngineDefaultAssets>()._defaultDeferredPipeline.get() ) == false )
+        if ( _renderer->initialize( pDevice, editor::getSubsystem<EngineDefaultAssets>()._defaultDeferredPipeline.get() ) == false )
         {
             _renderer.reset();
             _pDevice = nullptr;
@@ -153,7 +154,7 @@ namespace sw
             return false;
         }
         // 찍는 카메라는 찍는 동안만 씬에 둔다. 씬의 경로로 얻은 머티리얼은 게임 루프가 틱마다 올리지만 베이크는 루프 밖이다 — 여기서 올린다.
-        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
+        editor::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( _pDevice );
         GameObjectManager& manager       = *scene.getObjectManager();
         GameObject*        pCameraObject = manager.createGameObject( hashed_string( "ReflectionProbeCaptureCamera" ) );
         CameraComponent*   pCamera       = pCameraObject != nullptr ? pCameraObject->addComponent<CameraComponent>() : nullptr;

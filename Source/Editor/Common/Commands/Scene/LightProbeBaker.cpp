@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Lighting/LightProbeBaker.h"
+#include "Editor/Common/Commands/Scene/LightProbeBaker.h"
 
 #include "Core/Math/MathUtil.h"
 

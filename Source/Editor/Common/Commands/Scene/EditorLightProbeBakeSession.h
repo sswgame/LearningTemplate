@@ -15,9 +15,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
+#include "Editor/Common/Commands/Scene/LightProbeBaker.h"
 #include "Editor/Common/EditorSubsystem.h"
-
-#include "Engine/Renderer/Lighting/LightProbeBaker.h"
 
 namespace sw
 {

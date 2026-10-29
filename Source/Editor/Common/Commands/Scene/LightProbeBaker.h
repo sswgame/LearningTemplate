@@ -48,7 +48,7 @@ namespace sw
 namespace sw
 {
     /** @brief 라이트 프로브 볼륨의 CPU 베이크입니다(전부 static). */
-    class SW_API LightProbeBaker
+    class LightProbeBaker
     {
     public:
         /**
@@ -89,7 +89,7 @@ namespace sw
      *          입력(라이트 · 하늘 · 레이 수 · 반사율)은 `begin` 때 복사해 두지만 가림 씬은 빌린다 — 부르는 쪽이 베이크하는 동안 살려 둔다(`LightProbeBaker::collectInput`).
      *          에디터는 베이크하는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 베이크하는 볼륨과 결과를 쓸 오브젝트가 그대로여야 한다).
      */
-    class SW_API LightProbeBakeJob
+    class LightProbeBakeJob
     {
     public:
         /**

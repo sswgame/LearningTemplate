@@ -3,6 +3,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Commands/Scene/LightProbeBaker.h"
+
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -11,7 +13,6 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Renderer/Lighting/LightProbeBaker.h"
 
 namespace sw
 {

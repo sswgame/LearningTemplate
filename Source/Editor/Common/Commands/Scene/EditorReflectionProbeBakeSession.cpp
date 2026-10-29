@@ -5,6 +5,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
+#include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -21,7 +22,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Renderer/Capture/ReflectionProbeBaker.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
