@@ -125,7 +125,7 @@ namespace sw::editor
 
     void MaterialModel::syncPreviewSubject( Scene* pScene, string_view path )
     {
-        if ( path.empty() || _previewMaterialPath == path )
+        if ( path.empty() || string_view( _previewMaterialPath ) == path )
             return;
         MeshComponent* pMesh = findPreviewSubject( pScene );
         if ( pMesh == nullptr )
