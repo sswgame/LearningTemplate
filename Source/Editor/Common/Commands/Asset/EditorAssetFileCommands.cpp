@@ -159,15 +159,8 @@ namespace sw::editor
 
     string EditorAssetFileCommands::makeUniquePath( string_view folderAbs, string_view stem, string_view suffix )
     {
-        string                                 candidate = FileUtil::joinPath( folderAbs, string( stem ) + string( suffix ) );
-        StringBuilder<constant::kMaxBuffer512> name;
-        for ( uint32 nameSuffix = 2; FileUtil::exists( candidate ) && nameSuffix < EditorAssetFileCommandsInternal::kMaxUniqueSuffix; ++nameSuffix )
-        {
-            name.clear();
-            name.append( stem ).append( '_' ).append( nameSuffix ).append( suffix );
-            candidate = FileUtil::joinPath( folderAbs, name.view() );
-        }
-        return candidate;
+        // 만들기가 곧 자리 잡기다(`reserveUniquePath`) — "있나 보고 고르기" 는 번호를 다 쓰면 있는 파일을 돌려줘 덮어썼다. 접미사가 빈 글이면 폴더다.
+        return FileUtil::reserveUniquePath( FileUtil::joinPath( folderAbs, stem ), suffix, suffix.empty(), EditorAssetFileCommandsInternal::kMaxUniqueSuffix, "_" );
     }
 
     uint32 EditorAssetFileCommands::replaceReference( string& inoutText, string_view oldID, string_view newID )

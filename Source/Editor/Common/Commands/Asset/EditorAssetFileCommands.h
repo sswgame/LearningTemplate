@@ -51,7 +51,7 @@ namespace sw::editor
         static bool isValidAssetName( string_view name );
         /** @brief 파일 이름을 줄기와 붙은 확장자로 나눕니다. 확장자는 첫 `.` 부터입니다(`a.scene.xml` → `a`, `.scene.xml`). */
         static void splitAssetName( string_view fileName, string& outStem, string& outSuffix );
-        /** @brief @p folderAbs 안에서 비어 있는 `<stem><suffix>` 경로입니다. 있으면 `<stem>_2<suffix>` 부터 셉니다. */
+        /** @brief @p folderAbs 안에 `<stem><suffix>`(있으면 `<stem>_2<suffix>` 부터)를 만들어 자리를 잡고 그 경로를 돌려줍니다(`FileUtil::reserveUniquePath`, 접미사가 비면 폴더). 못 잡으면 빈 글입니다. */
         static string makeUniquePath( string_view folderAbs, string_view stem, string_view suffix );
         /**
          * @brief 글 안의 @p oldID 를 @p newID 로 바꿉니다. 경로 글자(`[a-z0-9_./-]`)가 바로 앞뒤에 붙은 곳은 바꾸지 않습니다(`a.material` 이 `aa.material` 안에서 바뀌지 않게).

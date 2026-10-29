@@ -138,12 +138,12 @@ namespace sw
          */
         [[nodiscard]] static bool ensureDirectoryExists( string_view directoryPath );
         /**
-         * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath>-2<extension>` · `-3` … 가운데 처음 빈 이름을 **원자적으로 만들어** 자리를 잡고 그 경로를 돌려줍니다.
+         * @brief `<basePath><extension>` 이 없으면 그것을, 있으면 `<basePath><numberSeparator>2<extension>` · `3` … 가운데 처음 빈 이름을 **원자적으로 만들어** 자리를 잡고 그 경로를 돌려줍니다.
          * @details @p bDirectory 면 빈 폴더를, 아니면 빈 파일을 만든다(파일은 부른 쪽이 나중에 내용을 덮어쓴다 — `writeFile` 의 바꿔치기).
          *          "있나 보고 만들기" 는 그 사이에 같은 이름을 고른 다른 프로세스 · 스레드와 겹친다 — 여기서는 만들기가 실패한 쪽이 다음 번호로 간다.
          *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 글입니다.
          */
-        [[nodiscard]] static string reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000 );
+        [[nodiscard]] static string reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
         /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( string_view path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */

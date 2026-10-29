@@ -206,13 +206,20 @@ namespace sw
         return true;
     }
 
-    string FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt )
+    string FileUtil::reserveUniquePath( string_view basePath, string_view extension, bool bDirectory, uint32 maxAttempt, string_view numberSeparator )
     {
         if ( basePath.empty() || ensureParentDirectoryExists( basePath ) == false )
             return {};
         for ( uint32 attempt = 1; attempt <= maxAttempt; ++attempt )
         {
-            const string path = string( basePath ) + ( attempt > 1 ? "-" + to_string( attempt ) : string{} ) + string( extension );
+            string path{ basePath };
+            if ( attempt > 1 )
+            {
+                utf8 arrNumber[constant::kMaxBuffer64];
+                formatstring( arrNumber, constant::kMaxBuffer64, "%#%#", numberSeparator, attempt );
+                path.append( arrNumber );
+            }
+            path.append( extension );
             if ( isWriteAllowed( path ) == false )
                 return {};
             if ( bDirectory )
@@ -244,7 +251,7 @@ namespace sw
                 return {};
             }
         }
-        SW_LOG_ERROR_ID( "File.CreateFailed", "Every name from '%#%#' to suffix -%# is taken", basePath, extension, maxAttempt );
+        SW_LOG_ERROR_ID( "File.CreateFailed", "Every name from '%#%#' to suffix %#%# is taken", basePath, extension, numberSeparator, maxAttempt );
         return {};
     }
 
