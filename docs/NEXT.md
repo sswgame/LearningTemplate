@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. J7(콘텐츠 정책 하나)도 끝났다. **다음은 큰 묶음 다섯** — 시나리오를 백엔드당 프로세스 하나로(3 절 끝), I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6(쿠커 단위, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. J7(콘텐츠 정책 하나) · 시나리오를 백엔드당 프로세스 하나로(3 절)도 끝났다. **먼저 3 절의 남은 일**(흉내 슬롯 겹침 · 게임 기동 흐름 재시작 훅), 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6(쿠커 단위, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -34,13 +34,15 @@
 
 `Test/README.md` 가 정본이다(쓰는 법 · 옛 문제와 고친 것 표). 요약: 단위 테스트는 기능 옆 `Tests/` 의 `SW_TEST_CASE` 를 `App --test` 한 번이 엔진 위에서 섞어 돌린다(로그 게이트 · 단언 0 건 실패 · 스냅숏 · 케이스별 쓰기 폴더). 시나리오는 적은 순서대로 도는 단계(`<Wait>` · `<WaitUntil>`), 백엔드별 골든 이미지(`-scenario-update-golden`), 시나리오 안 `<AllowLog>`, 실행별 산출물 폴더 · 사용자 설정이다.
 
-- **병렬**: CTest 항목은 시나리오마다 하나이고, 그 App 이 `-scenario-backends=all` 로 백엔드마다 자식 App 을 동시에 띄워 모은다(`AutomationBackendMatrix` — Gauntlet 컨트롤러 자리, 자식은 `kProcessKillSeconds` 180 초 안에 끝나야 한다). 항목은 자식 수만큼 슬롯을 선언한다(`PROCESSORS` = 백엔드 수) — `ctest -j4` 면 항목 하나(자식 넷)만 돈다. 예전에는 `-j4` 가 자식 열여섯을 겹쳐 띄웠다(문서 규칙 "`-j` 는 코어의 1/4" 뿐이었다). 스레드 병렬은 쓰지 않는다 — 창 · 장치 · 전역 변수 · 씬이 프로세스에 하나라서.
-- **로그**: `-log-file=<경로>` 가 그 파일 하나에 쓴다(ctest 는 `<빌드>/Testing/Logs/<항목>[.<백엔드>].log`). 명령줄이 로거보다 먼저 서고, 싱크가 서기 전의 줄은 `Logger` 가 고정 배열 64 줄로 쌓았다가 넘긴다(언리얼 backlog).
-- **종료 코드**: 이 PC 에서 못 도는 백엔드(77)는 행렬이 그 백엔드만 건너뜀으로 센다.
-- **다음 묶음 — 백엔드당 프로세스 하나**: 지금은 시나리오마다 프로세스를 새로 띄운다(23 항목 × 백엔드 4). 체인(`-scenario=a,b,c`)은 이미 있고 행렬이 자식에 넘긴다. 막는 것은 둘이다 —
-  (1) 단계 사이 상태 초기화가 없다(에디터 58 개 체인에서 31 개가 앞 상태로 졌다, df275ea2e): 실행기가 단계 시작에 전역 변수를 찍어 두고 끝에 되돌리며, 단계마다 씬을 새로 연다(언리얼 Automation 이 테스트마다 맵을 열고 CVar 를 되돌리는 것과 같다).
-  (2) `<Launch>` 의 대부분이 `gv_firstScene` 이다(23 중 18): 첫 씬은 시나리오의 씬 열기 단계로 옮기고, 정말 기동 뒤 못 바꾸는 값(렌더 파이프라인 · 스트레스 씬 · 화질)만 남긴다. CTest 는 `<Launch>` 묶음이 같은 시나리오를 체인 하나(`-scenario-keep-going`)로 묶는다 — 무리 6–7 개.
-  격리가 꼭 필요한 시나리오(모듈 리로드)는 따로 둔다(언리얼 Gauntlet 자리).
+- **백엔드당 프로세스 하나**: CTest 항목 `Scenario.<게임>` 하나가 시나리오 모두를 체인(`-scenario=a,b,c -scenario-keep-going`)으로 돌리고, `-scenario-backends=all` 이 백엔드마다 자식 App 하나를 띄운다(창은 2×2 바둑판 `-WinX/-WinY`). 단계마다 세션이 빈 씬으로 앞 씬을 비우고 → 전역 변수를 세션 시작 값으로 되돌리고 → `<Launch>` 값을 건 뒤 → 첫 씬(선언이 없으면 프로세스가 처음 연 씬)을 새로 연다(`AutomationSession::startStage`). 렌더 파이프라인 변수는 실행 중에 다시 고른다(`FrameRendererSubsystem`). 게임 기동 흐름이 씬을 정하는 시나리오(첫 씬 없이 `<Launch>` 만 — Empty 벤치 `gv_stressTest*`)만 자기 프로세스다. 전체 ctest 85 초(처음 272 초), 동시 App 최대 5(부모 + 넷). 단계별 결과는 `Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n`.
+- **시작 시점의 결정성**: 로딩 화면은 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`, 요청마다 `SceneLoadKind` 필수 — 편집기 · 진단은 `Tool`)에 게임이 붙어 띄우고(언리얼 PreLoadMap), 떠 있는 동안 게임 시간을 멈춘다(`LoadingScreen` 형식). 그래서 시나리오의 첫 프레임은 늘 월드의 첫 틱이다 — 예전에는 로드 시간 · 최소 표시 시간만큼 월드가 로딩 화면 뒤에서 돌았다(cloth 골든을 다시 떴다).
+- **종료 코드**: 표 하나 `Config/Engine/ProcessExitCodes.json` → C++ `ProcessExitCode` · CMake `SW_EXIT_CODE_<이름>`.
+- **남은 일(다음 세션 먼저)**:
+  1. DX11 · GL 흉내 슬롯 겹침 — 코드가 거는 역할(2D 쿠키 아틀라스 · 자동 노출 · TAA 이력)이 슬롯 1 · 2 를 선언 역할과 나눠 써서, "2D 쿠키 빛 씬 + 반투명이 씬 색 사본을 읽는 파이프라인" 이면 `commitBindlessTextureBindings` 단언으로 죽는다(콘솔로 파이프라인만 바꿔도 난다). 고칠 모양: 코드 역할에 전용 흉내 슬롯(`shaderslot::emulated::kEngineTextureBindings` 에 줄 추가 → 셰이더 재쿠킹). 체인의 단계 사이 빈 씬은 테스트 격리로 두되 이 결함을 가리는 용도가 아니게 된다.
+  2. 게임 기동 흐름 재시작 훅(엔진 → 게임) — 첫 씬 없는 단계가 "프로세스가 처음 연 씬" 대신 게임의 기동 흐름(`EmptyGame::onInitialize` 의 벤치 · `requestFirstScene`)을 다시 돌게 하면 kaykit 셋도 체인에 든다.
+  3. `kaykitcharacters` 사진은 기사 여섯이 화면 위쪽에 작게 떠 있고 바닥이 없다(`frameCharacterCameras` 의 눈 높이 · 바라보는 높이) — 의도인지 보고 골든을 다시 뜬다.
+  4. switch 로 쓴 열거형 이름 함수(`getAutomationOutcomeName` 등)를 리플렉션 열거형(`ENUM()` · `getEnumName`)으로 — `RHIWaitIdleReason` 은 바꿨다. 보고 · 로그 글이 바뀌는 것(`LOAD ERROR` → `LoadError`)은 읽는 스크립트를 함께 본다.
+  5. 창 바둑판 간격은 창 틀 두께를 Win32 대략 값으로 둔다(`AutomationBackendMatrix` 의 shortcut) — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 · 창 틀 크기 API 가 생기면 그 값으로.
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 
 ## 4. 남은 일
