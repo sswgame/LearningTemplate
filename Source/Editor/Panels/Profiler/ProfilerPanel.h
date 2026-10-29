@@ -1,7 +1,8 @@
 /**
  * @file ProfilerPanel.h
  * @brief 엔진 프로파일러의 실시간 구간 테이블, GPU 패스 테이블, 프레임 그래프, 메모리, "Tracy 열기" 를 보여 주는 프로파일링 창입니다.
- * @details 상태와 집계는 ImGui 에 의존하지 않는 `ProfilerScopeHistory` 가 맡고(EditorTest), 이 창은 그리기만 한다. 엔진 테이블만 읽으므로 Tracy 가 없는 빌드에서도 같게 동작한다.
+ * @details 상태와 명령은 ImGui 에 의존하지 않는 모델(`Model/` — 구간 수집 `ProfilerCaptureModel`, 타임라인 · 호출 트리 `ProfilerTimelineModel`,
+ *          성능 `ProfilerPerformanceModel`)이 맡고, 이 창은 그리기와 입력 읽기만 한다(인스펙터의 `Model/` 과 같은 나눔). 엔진 테이블만 읽으므로 Tracy 가 없는 빌드에서도 같게 동작한다.
  *          Timeline 탭은 최근 몇 프레임의 계측 구간을 스레드별로 펼친다(`ProfilerTimeline`, 배치는 ImGui 에 의존하지 않는 `ProfilerTimelineLayout`). 빠른 확인용이다.
  *          긴 시간축 분석(GPU 큐, 락, 컨텍스트 전환)은 외부 Tracy 뷰어가 맡는다(`EditorTracyLauncher`).
  */
@@ -9,16 +10,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Defines.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
-#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/Profiler/Model/ProfilerCallTree.h"
-#include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
-#include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
-
-#include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineModel.h"
 
 namespace sw
 {
@@ -74,7 +71,7 @@ namespace sw::editor
         /** @brief 스레드 미니 타임라인 탭을 그립니다. 녹화, 최근 프레임 수, Freeze, 휠 확대, 드래그 이동, 툴팁, 프레임 경계선을 지원합니다. */
         void drawTimelineTab();
         /** @brief 타임라인 탭의 위쪽 막대(녹화 · 프레임 수 · Freeze · Fit · 트레이스 저장)입니다. */
-        void drawTimelineToolbar( FrameProfiler& profiler, ProfilerTimeline& timeline, bool bRecording );
+        void drawTimelineToolbar( FrameProfiler& profiler, bool bRecording );
         /**
          * @brief 타임라인 캔버스를 그립니다. 스레드 행, 사각형, 프레임 경계선, 툴팁이 포함됩니다.
          * @param listThread 그릴 스레드 목록입니다. 살아 있는 기록에 불러온 트레이스를 겹친 것입니다.
@@ -83,8 +80,8 @@ namespace sw::editor
         void drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName );
         /** @brief 타임라인 캔버스 한 번 그리기의 크기와 위치(화면 좌표)입니다. */
         struct TimelineGeometry;
-        /** @brief 캔버스 크기를 정하고 이벤트 사각형을 배치합니다(배치 결과 멤버와 스레드별 레인 수 멤버를 채운다). */
-        TimelineGeometry layoutTimeline( const vector<ProfilerTimelineThread>& listThread );
+        /** @brief 캔버스 크기를 정하고 이벤트 사각형을 배치합니다(배치는 타임라인 모델이 그릴 스레드로 한다). */
+        TimelineGeometry layoutTimeline();
         /** @brief 캔버스 위 휠 확대와 드래그 이동을 처리합니다. 캔버스 위에 마우스가 있으면 true 입니다. */
         bool handleTimelineInput( const TimelineGeometry& geometry );
         /** @brief 스레드 행의 배경과 이름을 그리고 행마다 위쪽 y 를 돌려줍니다. */
@@ -97,37 +94,27 @@ namespace sw::editor
 #if SW_PROFILER_TRACE_ENABLED
         /** @brief 저장한 트레이스를 불러오고 지우는 행과 구간 이름 검색란을 그립니다. */
         void drawTraceControls();
-        /** @brief 불러온 트레이스를 살아 있는 기록 아래에 겹쳐 그릴 목록으로 만듭니다. 첫 시각을 맞춰 겹칩니다. */
-        void composeTimelineDraw();
 #endif
 
         /** @brief 호출 트리 탭을 그립니다. 타임라인 녹화의 이벤트를 경로별로 합쳐 총 시간, 자기 시간, 호출 횟수를 보여 줍니다(유니티의 Profiler Hierarchy 에 해당). */
         void drawCallTreeTab();
         /** @brief 호출 트리 노드 하나와 그 자식을 테이블 행으로 그립니다. */
         void drawCallTreeNode( uint32 nodeIndex );
-        /** @brief 새로 수집한 프레임의 GT.Frame 이 임계값을 넘었으면 수집을 멈추고 플레이를 일시정지합니다(Pause on spike). */
-        void pauseOnSpike();
-        /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
-        static string getCaptureFilePath();
 
     public:
         /** @brief 프로브용입니다. 테이블이 보여 주는 프레임을 반환합니다. 0 이 가장 최근입니다. */
-        uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }
+        uint32 getSelectedFrameOffset() const { return _capture.getSelectedFrameOffset(); }
         /** @brief 프로브용입니다. 수집을 멈췄으면 true 입니다. 스파이크를 잡았거나 캡처 파일을 열었을 때 멈춥니다. */
-        bool isCapturePaused() const { return _bCapturePaused == SW_TRUE; }
+        bool isCapturePaused() const { return _capture.isPaused(); }
         /** @brief 프로브용입니다. 수집한 프레임 수를 반환합니다. */
-        uint64 getCapturedFrameCount() const { return _scopeHistory.getCapturedFrameCount(); }
+        uint64 getCapturedFrameCount() const { return _capture.getHistory().getCapturedFrameCount(); }
         /** @brief 프로브용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
-        uint32 getCallTreeNodeCount() const { return _callTree.countLiveNodes(); }
+        uint32 getCallTreeNodeCount() const { return _timeline.getCallTree().countLiveNodes(); }
 #if SW_PROFILER_TRACE_ENABLED
         /** @brief 프로브용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
-        uint32 getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
+        uint32 getLoadedTraceThreadCount() const { return _timeline.getLoadedTraceThreadCount(); }
         /** @brief 프로브용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */
-        uint32 getTraceSearchMatchCount() const { return _traceSearchMatched; }
-        /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true 입니다. */
-        [[nodiscard]] bool loadLatestTrace();
-        /** @brief 지정한 파일을 불러옵니다. 성공하면 true 입니다. "Load Trace" 단추와 `openTraceInTimeline` 이 같이 쓰는 한 길입니다. */
-        [[nodiscard]] bool loadTraceFile( string_view path );
+        uint32 getTraceSearchMatchCount() const { return _timeline.getTraceSearchMatchCount(); }
         /**
          * @brief Profiler 창을 열고 @p path 를 불러와 다음 그리기에서 Timeline 탭을 고릅니다. 창이 없거나 불러오지 못하면 false 입니다(이유는 로그 · 상태 줄에 남는다).
          * @details 멀티 프로세스 재생의 Stop 뒤에 합친 트레이스를 저절로 여는 곳이다(`EditorNetPlaySession::takeUnopenedMergedTrace`, 이 창의 프레임 단계가 부른다 — 창이 닫혀 있어도 돈다).
@@ -140,49 +127,14 @@ namespace sw::editor
         void drawSceneDistributionSection();
 
     private:
-        float32                        _arrFrameTimeHistory[120];
-        uint32                         _historyOffset;
-        Stopwatch                      _drawStopwatch; ///< 성능 탭을 마지막으로 그린 뒤의 벽시계 경과
-        EditorResourceCatalogJob       _catalogJob;
-        EditorResourceCatalogCounts    _catalogCounts;
-        ProfilerScopeHistory           _scopeHistory;      ///< 최근 N 프레임을 담는 링 버퍼(ImGui 에 의존하지 않는다)
-        ProfilerRowQuery               _rowQuery;          ///< 검색어와 정렬(종류는 탭이 정한다)
-        vector<ProfilerScopeRow>       _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
-        vector<float32>                _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
-        utf8                           _arrFilter[constant::kMaxBuffer128];
-        EditorTracyLaunchResult        _lastTracyResult;        ///< 마지막 "Open Tracy" 결과(패널에 한 줄로 보인다)
-        vector<ProfilerTimelineThread> _listTimelineThread;     ///< 타임라인 이벤트(Freeze 면 그대로 둔다)
-        vector<ProfilerTimelineRect>   _listTimelineRect;       ///< 배치 결과(프레임마다 다시 채운다)
-        vector<uint16>                 _listTimelineLaneCount;  ///< 스레드마다 겹친 레인 수
-        vector<uint64>                 _listTimelineFrameBegin; ///< 보이는 범위의 프레임 경계
-        uint64                         _timelineWindowBegin;    ///< 수집한 구간(최근 N 프레임)
-        uint64                         _timelineWindowEnd;
-        uint64                         _timelineViewBegin; ///< 보이는 범위(확대와 이동의 결과)
-        uint64                         _timelineViewEnd;
-        uint32                         _timelineFrameCount; ///< 최근 프레임 수(1 · 4 · 16)
-        ProfilerCallTreeWindow         _callTree;           ///< 최근 N 프레임의 호출 트리(새 프레임만 더하고 빠진 프레임은 뺀다, Freeze 면 그대로)
-        vector<ProfilerTimelineThread> _listCallFrame;      ///< 호출 트리에 더할 한 프레임의 사건(다시 쓰는 버퍼)
-        uint64                         _callTreeFrameEnd;   ///< 호출 트리에 마지막으로 더한 프레임의 끝(같으면 새 프레임이 없다)
-        float64                        _callTreeOrderTime;  ///< 호출 트리의 정렬을 마지막으로 다시 지은 ImGui 시각(초)
-        float32                        _spikeThresholdMs;   ///< Pause on spike 임계값(GT.Frame, ms)
-        LeakWindowReport               _leakReport;         ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
-        uint8                          _bCatalogDirty   : 1;
-        uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 수집한다
-        uint8                          _bTracyTried     : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다
-        uint8                          _bTimelineFrozen : 1; ///< Freeze 상태다. 녹화는 계속하고 화면만 멈춘다
-        uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대하거나 이동했다. 아니면 보이는 범위가 수집한 구간을 따라간다
-        uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 임계값을 넘으면 멈춘다
-        uint8                          _bCapturePaused  : 1; ///< 수집을 멈췄다. 스파이크를 잡았거나 캡처 파일을 열었을 때다
-        uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 합치지 않는다
-#if SW_PROFILER_TRACE_ENABLED
-        ProfilerLoadedTrace            _loadedTrace;         ///< 불러온 트레이스. `_bLoadedTrace` 일 때만 의미가 있다
-        vector<ProfilerTimelineThread> _listTimelineDraw;    ///< 이번 프레임에 그릴 스레드(살아 있는 것과 불러온 것, 프레임마다 다시 채운다)
-        vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 변환한 것)
-        string                         _traceStatus;         ///< 마지막 불러오기 결과 한 줄
-        utf8                           _arrTraceSearch[constant::kMaxBuffer128];
-        uint32                         _traceSearchMatched;
-        uint8                          _bLoadedTrace       : 1;
-        uint8                          _bSelectTimelineTab : 1; ///< 다음 그리기에서 Timeline 탭을 고른다(`openTraceInTimeline`)
-#endif
+        ProfilerCaptureModel     _capture;           ///< 구간 탭의 수집 · 정지 · 캡처 파일 · 고른 프레임
+        ProfilerTimelineModel    _timeline;          ///< Timeline · Call Tree 탭의 녹화 사건 · 보이는 범위 · 불러온 트레이스
+        ProfilerPerformanceModel _performance;       ///< Performance 탭의 프레임 시간 · 리소스 카탈로그
+        vector<ProfilerScopeRow> _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
+        vector<float32>          _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
+        utf8                     _arrFilter[constant::kMaxBuffer128];
+        EditorTracyLaunchResult  _lastTracyResult; ///< 마지막 "Open Tracy" 결과(패널에 한 줄로 보인다)
+        LeakWindowReport         _leakReport;      ///< Memory 탭이 마지막으로 닫은 누수 창의 보고서(`_bValid` 가 false 이면 아직 없다)
+        uint8                    _bTracyTried : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다
     };
 } // namespace sw::editor

@@ -3,7 +3,6 @@
 #include "Editor/Panels/Profiler/ProfilerPanel.h"
 
 #include "Core/Diagnostics/MemoryProfiler.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
@@ -27,7 +26,6 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/2D/SpriteComponent.h"
@@ -42,7 +40,6 @@
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -60,8 +57,6 @@ namespace sw::editor
             static constexpr Color kTracyErrorText{ 1.0f, 0.6f, 0.3f, 1.0f };
             static constexpr Color kFrameOffsetText{ 1.0f, 0.8f, 0.25f, 1.0f };
             static constexpr Color kCallThreadText{ 0.6f, 0.8f, 1.0f, 1.0f };
-            /** @brief 호출 트리의 형제 정렬 · 루트 목록을 다시 짓는 주기(초)입니다. 합은 프레임마다 맞고 순서만 이 주기로 바뀐다(유니티 Hierarchy 처럼 줄이 매 프레임 튀지 않는다). */
-            static constexpr float64 kCallTreeOrderSeconds = 0.25;
             template <uint32 N>
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
@@ -88,12 +83,8 @@ namespace sw::editor
                 formatBytes( bytes, out );
             }
 
-            /** @brief Timeline 탭에서 선택할 수 있는 최근 프레임 수입니다. */
-            static constexpr uint32 kArrTimelineFrameChoice[] = { 1, 4, 16 };
             /** @brief 휠 한 단계의 확대 배율입니다. 1 보다 작으면 확대입니다. */
             static constexpr float32 kTimelineWheelZoomFactor = 0.8f;
-            /** @brief 불러온 트레이스 구간의 슬롯 번호가 시작하는 값입니다. 살아 있는 프로파일러 슬롯(`FrameProfiler::kMaxScope` 미만)과 겹치지 않습니다. */
-            static constexpr uint32 kLoadedSlotBase = 1u << 20;
             /** @brief 스레드 이름 영역의 폭입니다. UI 단위이며 DPI 배율을 곱합니다. */
             static constexpr float32 kTimelineLabelWidth = 120.0f;
 
@@ -122,17 +113,6 @@ namespace sw::editor
                     (void)ProfilerPanel::openTraceInTimeline( context.getSubsystem<EditorPanelManager>(), mergedTracePath ); // 실패 이유는 그 함수가 로그에 남긴다
             }
 #endif
-
-            /** @brief 슬롯에서 구간 이름을 찾습니다. 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이므로 그 테이블을 봅니다. 없으면 nullptr 입니다. */
-            static const utf8* findSlotName( const FrameProfiler* pProfiler, const vector<string>* pLoadedSlotName, uint32 slot )
-            {
-                if ( slot >= kLoadedSlotBase )
-                {
-                    const size_t loadedIndex = slot - kLoadedSlotBase;
-                    return ( pLoadedSlotName != nullptr && loadedIndex < pLoadedSlotName->size() ) ? ( *pLoadedSlotName )[loadedIndex].c_str() : nullptr;
-                }
-                return pProfiler != nullptr ? pProfiler->findScopeName( slot ) : nullptr;
-            }
 
             /** @brief 태그별 메모리 통계 표입니다. */
             static void drawMemoryTagTable( MemoryProfiler& profiler )
@@ -288,60 +268,21 @@ namespace sw::editor
 
     ProfilerPanel::ProfilerPanel()
         : IEditorPanel( false )
-        , _arrFrameTimeHistory{}
-        , _historyOffset{ 0 }
-        , _catalogJob{}
-        , _catalogCounts{}
-        , _scopeHistory{}
-        , _rowQuery{}
+        , _capture{}
+        , _timeline{}
+        , _performance{}
         , _listScratchRow{}
         , _listScratchSeries{}
         , _arrFilter{}
         , _lastTracyResult{ EditorTracyLaunchResult::Launched }
-        , _listTimelineThread{}
-        , _listTimelineRect{}
-        , _listTimelineLaneCount{}
-        , _listTimelineFrameBegin{}
-        , _timelineWindowBegin{ 0 }
-        , _timelineWindowEnd{ 0 }
-        , _timelineViewBegin{ 0 }
-        , _timelineViewEnd{ 0 }
-        , _timelineFrameCount{ 4 }
-        , _callTree{}
-        , _listCallFrame{}
-        , _callTreeFrameEnd{ 0 }
-        , _callTreeOrderTime{ -1.0 }
-        , _spikeThresholdMs{ 33.3f }
         , _leakReport{}
-        , _bCatalogDirty{ SW_TRUE }
-        , _bCollect{ SW_TRUE }
         , _bTracyTried{ SW_FALSE }
-        , _bTimelineFrozen{ SW_FALSE }
-        , _bTimelineZoomed{ SW_FALSE }
-        , _bPauseOnSpike{ SW_FALSE }
-        , _bCapturePaused{ SW_FALSE }
-        , _bCallTreeFrozen{ SW_FALSE }
-#if SW_PROFILER_TRACE_ENABLED
-        , _loadedTrace{}
-        , _listTimelineDraw{}
-        , _listLoadedFrameDraw{}
-        , _traceStatus{}
-        , _arrTraceSearch{}
-        , _traceSearchMatched{ 0 }
-        , _bLoadedTrace{ SW_FALSE }
-        , _bSelectTimelineTab{ SW_FALSE }
-#endif
     {
     }
 
     void ProfilerPanel::drawContent()
     {
-        // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
-        FrameProfiler& profiler = editor::getSubsystem<FrameProfiler>();
-        if ( _bCollect == SW_TRUE && profiler.isEnabled() == false )
-            profiler.setEnabled( true );
-        if ( _bCapturePaused == SW_FALSE && _scopeHistory.capture( profiler ) )
-            pauseOnSpike();
+        _capture.tick( editor::getSubsystem<FrameProfiler>() );
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
@@ -361,8 +302,7 @@ namespace sw::editor
                 ImGui::EndTabItem();
             }
 #if SW_PROFILER_TRACE_ENABLED
-            const ImGuiTabItemFlags timelineFlags = _bSelectTimelineTab == SW_TRUE ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
-            _bSelectTimelineTab                   = SW_FALSE;
+            const ImGuiTabItemFlags timelineFlags = _timeline.consumeTimelineTabRequest() ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
 #else
             constexpr ImGuiTabItemFlags timelineFlags = ImGuiTabItemFlags_None;
 #endif
@@ -415,72 +355,48 @@ namespace sw::editor
 
     void ProfilerPanel::drawCaptureHistoryControls()
     {
-        bool bCollect = _bCollect == SW_TRUE;
+        bool bCollect = _capture.isCollecting();
         if ( ImGui::Checkbox( "Collect", &bCollect ) )
-        {
-            _bCollect = bCollect ? SW_TRUE : SW_FALSE;
-            editor::getSubsystem<FrameProfiler>().setEnabled( bCollect );
-        }
+            _capture.setCollect( editor::getSubsystem<FrameProfiler>(), bCollect );
         ImGui::SameLine();
-        const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
-        ImGui::TextDisabled( "%u frames window, %u captured", _scopeHistory.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
+        const ProfilerScopeHistory& history        = _capture.getHistory();
+        const uint64                capturedFrames = MathUtil::min( history.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
+        ImGui::TextDisabled( "%u frames window, %u captured", history.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
         if ( ImGui::SmallButton( "Clear" ) )
-        {
-            _scopeHistory.reset();
-            _rowQuery._frameOffset = 0;
-        }
+            _capture.clear();
         EditorSelfTestMarks::note( "profiler.capture.clear" );
 
         // 정지, 스파이크, 캡처 파일을 다룬다. 유니티 Profiler 의 Record 끄기, 언리얼의 stat hitches, Save/Load 에 해당한다.
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _bCapturePaused == SW_TRUE ? "Resume" : "Pause" ) );
-        if ( _bCapturePaused == SW_TRUE )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( _capture.isPaused() ? "Resume" : "Pause" ) );
+        if ( _capture.isPaused() )
         {
             if ( ImGui::SmallButton( "Resume" ) )
-            {
-                _bCapturePaused        = SW_FALSE;
-                _rowQuery._frameOffset = 0;
-            }
+                _capture.resume();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "ResumeCapture" ) );
         }
         else if ( ImGui::SmallButton( "Pause" ) )
-            _bCapturePaused = SW_TRUE;
+            _capture.pause();
         EditorSelfTestMarks::note( "profiler.capture.pause" );
         EditorChrome::sameLineIfFits( ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Pause on spike" ).x );
-        bool bPauseOnSpike = _bPauseOnSpike == SW_TRUE;
+        bool bPauseOnSpike = _capture.isPauseOnSpike();
         if ( ImGui::Checkbox( "Pause on spike", &bPauseOnSpike ) )
-            _bPauseOnSpike = bPauseOnSpike ? SW_TRUE : SW_FALSE;
+            _capture.setPauseOnSpike( bPauseOnSpike );
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
         EditorChrome::sameLineIfFits( ImGui::GetFontSize() * 4.0f );
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
-        ImGui::DragFloat( "##spikeMs", &_spikeThresholdMs, 0.1f, 0.1f, 1000.0f, "%.1f ms" );
+        ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         if ( ImGui::SmallButton( "Save" ) )
-        {
-            const string path = getCaptureFilePath();
-            if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
-                SW_LOG_INFO( "Profiler capture saved: %#", path.c_str() );
-            else
-                SW_LOG_WARNING( "Profiler capture could not be saved: %#", path.c_str() );
-        }
+            (void)_capture.saveCapture(); // 결과는 모델이 로그에 남긴다
         EditorSelfTestMarks::note( "profiler.capture.save" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveCapture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load" ) );
         if ( ImGui::SmallButton( "Load" ) )
-        {
-            const string path = getCaptureFilePath();
-            if ( _scopeHistory.loadFromFile( path ) )
-            {
-                _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮어쓰지 않게 한다
-                _rowQuery._frameOffset = 0;
-                SW_LOG_INFO( "Profiler capture loaded: %#", path.c_str() );
-            }
-            else
-                SW_LOG_WARNING( "Profiler capture could not be loaded: %#", path.c_str() );
-        }
+            (void)_capture.loadCapture(); // 결과는 모델이 로그에 남긴다
         EditorSelfTestMarks::note( "profiler.capture.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );
     }
@@ -528,17 +444,16 @@ namespace sw::editor
             ImGui::SetTooltip( "%s", SW_LOCKEY( "EditorProfiler", "RenderDocNotAttached" ) );
     }
 
-    void ProfilerPanel::drawTimelineToolbar( FrameProfiler& profiler, ProfilerTimeline& timeline, bool bRecording )
+    void ProfilerPanel::drawTimelineToolbar( FrameProfiler& profiler, bool bRecording )
     {
+        ProfilerTimeline& timeline = profiler.getTimeline();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
         {
             // 녹화는 계측이 켜져 있어야 쌓인다. 스코프가 시계를 읽어야 하기 때문이다. 켤 때 지난 이벤트를 비운다.
             if ( bRecording == false )
             {
-                timeline.clear();
-                _bCollect = SW_TRUE;
-                profiler.setEnabled( true );
-                _bTimelineZoomed = SW_FALSE;
+                _timeline.beginTimelineRecording( timeline );
+                _capture.setCollect( profiler, true );
             }
             timeline.setRecording( bRecording == false );
         }
@@ -547,38 +462,27 @@ namespace sw::editor
 
         ImGui::SameLine();
         ImGui::TextUnformatted( "Frames:" );
-        for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )
+        for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
             fixed_string<constant::kMaxBuffer16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( label.c_str() ) );
-            if ( ImGui::RadioButton( label.c_str(), _timelineFrameCount == frameChoice ) )
-            {
-                _timelineFrameCount = frameChoice;
-                _bTimelineZoomed    = SW_FALSE;
-            }
+            if ( ImGui::RadioButton( label.c_str(), _timeline.getFrameCount() == frameChoice ) )
+                _timeline.setFrameCount( frameChoice );
         }
-        bool bFrozen = _bTimelineFrozen == SW_TRUE;
+        bool bFrozen = _timeline.isTimelineFrozen();
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze" ) );
         if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
-            _bTimelineFrozen = bFrozen ? SW_TRUE : SW_FALSE;
+            _timeline.setTimelineFrozen( bFrozen );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Fit" ) );
         if ( ImGui::SmallButton( "Fit" ) )
-            _bTimelineZoomed = SW_FALSE;
+            _timeline.fit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Fit" ) );
 #if SW_PROFILER_TRACE_ENABLED
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save Trace" ) );
         if ( ImGui::SmallButton( "Save Trace" ) )
-        {
-            string     savedPath;
-            string     reply;
-            const bool bSaved = ProfilerTraceExport::saveRecentFrames( profiler, _timelineFrameCount, {}, "Editor", savedPath, reply );
-            if ( bSaved )
-                SW_LOG_INFO( "Timeline trace: %#", reply );
-            else
-                SW_LOG_WARNING( "Timeline trace not saved: %#", reply );
-        }
+            _timeline.saveTrace( profiler );
         EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveTrace" ) );
         ImGui::NewLine();
@@ -593,63 +497,19 @@ namespace sw::editor
         FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
         ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
-        drawTimelineToolbar( profiler, timeline, bRecording );
+        drawTimelineToolbar( profiler, bRecording );
 
-        if ( _bTimelineFrozen == SW_FALSE )
-        {
-            if ( timeline.collectRecentFrames( _timelineFrameCount, _listTimelineThread, _timelineWindowBegin, _timelineWindowEnd ) == false )
-                _listTimelineThread.clear();
-        }
-        if ( _bTimelineZoomed == SW_FALSE || _timelineViewEnd <= _timelineViewBegin )
-        {
-            _timelineViewBegin = _timelineWindowBegin;
-            _timelineViewEnd   = _timelineWindowEnd;
-        }
-#if SW_PROFILER_TRACE_ENABLED
-        composeTimelineDraw();
-        const vector<ProfilerTimelineThread>& listDraw = _bLoadedTrace == SW_TRUE ? _listTimelineDraw : _listTimelineThread;
-        const vector<string>*                 pLoaded  = _bLoadedTrace == SW_TRUE ? &_loadedTrace._listSlotName : nullptr;
-#else
-        const vector<ProfilerTimelineThread>& listDraw = _listTimelineThread;
-        const vector<string>*                 pLoaded  = nullptr;
-#endif
+        _timeline.collect( timeline );
+        const vector<ProfilerTimelineThread>& listDraw = _timeline.getDrawThreads();
         if ( listDraw.empty() )
         {
             ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to capture the last frames per thread, or Load Trace." );
             return;
         }
-        timeline.collectFrameBegins( _timelineViewBegin, _timelineViewEnd, _listTimelineFrameBegin );
-#if SW_PROFILER_TRACE_ENABLED
-        if ( _bLoadedTrace == SW_TRUE )
-        {
-            for ( const uint64 frameBegin : _listLoadedFrameDraw )
-            {
-                if ( _timelineViewBegin <= frameBegin && frameBegin <= _timelineViewEnd )
-                    _listTimelineFrameBegin.push_back( frameBegin );
-            }
-        }
-#endif
-        drawTimelineCanvas( listDraw, pLoaded );
+        drawTimelineCanvas( listDraw, _timeline.getLoadedSlotNames() );
     }
 
 #if SW_PROFILER_TRACE_ENABLED
-    bool ProfilerPanel::loadTraceFile( string_view path )
-    {
-        string error;
-        if ( ProfilerTraceExport::loadTraceFile( path, _loadedTrace, error ) == false )
-        {
-            _traceStatus = "Load failed: " + error;
-            SW_LOG_WARNING( "Trace not loaded: %#", error );
-            return false;
-        }
-        _bLoadedTrace    = SW_TRUE;
-        _bTimelineZoomed = SW_FALSE;
-        _traceStatus     = "Loaded " + FileUtil::getFileNamePart( path ) + " (" + to_string( _loadedTrace._listThread.size() ) + " threads, " +
-                       formatToString( "%# scopes)", _loadedTrace._listSlotName.size() );
-        SW_LOG_INFO( "Trace loaded: %#", _traceStatus );
-        return true;
-    }
-
     bool ProfilerPanel::openTraceInTimeline( EditorPanelManager& panelManager, string_view path )
     {
         ProfilerPanel* pPanel = panelManager.findPanel<ProfilerPanel>();
@@ -658,94 +518,33 @@ namespace sw::editor
             SW_LOG_WARNING( "No Profiler window to open %# in", string( path ) );
             return false;
         }
-        if ( pPanel->loadTraceFile( path ) == false )
+        if ( pPanel->_timeline.loadTraceFile( path ) == false )
             return false;
-        pPanel->_bSelectTimelineTab = SW_TRUE;
+        pPanel->_timeline.requestTimelineTab();
         return true;
-    }
-
-    bool ProfilerPanel::loadLatestTrace()
-    {
-        const string path = ProfilerTraceExport::findLatestTraceFile();
-        if ( path.empty() )
-        {
-            _traceStatus = "No trace in Saved/Traces - press Save Trace first";
-            return false;
-        }
-        return loadTraceFile( path );
     }
 
     void ProfilerPanel::drawTraceControls()
     {
-        if ( ImGui::SmallButton( "Load Trace" ) )
-            if ( loadLatestTrace() == false )
-                SW_LOG_WARNING( "%#", _traceStatus );
+        if ( ImGui::SmallButton( "Load Trace" ) && _timeline.loadLatestTrace() == false )
+            SW_LOG_WARNING( "%#", _timeline.getTraceStatus() );
         EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
-        if ( _bLoadedTrace == SW_TRUE )
+        if ( _timeline.hasLoadedTrace() )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Unload" ) );
             if ( ImGui::SmallButton( "Unload" ) )
-            {
-                _bLoadedTrace    = SW_FALSE;
-                _loadedTrace     = ProfilerLoadedTrace{};
-                _bTimelineZoomed = SW_FALSE;
-            }
+                _timeline.unloadTrace();
             EditorSelfTestMarks::note( "profiler.timeline.unloadTrace" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
+        EditorWidgets::drawSearchField( "##traceSearch", _timeline.editTraceSearch(), constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
         EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
-        if ( _traceStatus.empty() == false )
-            ImGui::TextDisabled( "%s", _traceStatus.c_str() );
+        if ( _timeline.getTraceStatus().empty() == false )
+            ImGui::TextDisabled( "%s", _timeline.getTraceStatus().c_str() );
     }
 
-    void ProfilerPanel::composeTimelineDraw()
-    {
-        _listTimelineDraw.clear();
-        _listLoadedFrameDraw.clear();
-        if ( _bLoadedTrace == SW_FALSE )
-            return;
-        // 살아 있는 기록이 있으면 불러온 트레이스의 첫 시각을 그 구간 시작에 맞춘다. 둘은 다른 프로세스의 단조 시계라 절대 시각으로는 겹칠 수 없다.
-        const bool   bLive  = _listTimelineThread.empty() == false;
-        const uint64 anchor = bLive ? _timelineWindowBegin : _loadedTrace._beginNanos;
-        const int64  shift  = static_cast<int64>( anchor ) - static_cast<int64>( _loadedTrace._beginNanos );
-        _listTimelineDraw   = _listTimelineThread;
-        for ( const ProfilerTimelineThread& source : _loadedTrace._listThread )
-        {
-            ProfilerTimelineThread copy;
-            copy._name = "[loaded] " + source._name;
-            copy._listEvent.reserve( source._listEvent.size() );
-            for ( ProfilerTimelineEvent event : source._listEvent )
-            {
-                event._beginNanos = static_cast<uint64>( static_cast<int64>( event._beginNanos ) + shift );
-                event._endNanos   = static_cast<uint64>( static_cast<int64>( event._endNanos ) + shift );
-                event._slot += ProfilerPanelInternal::kLoadedSlotBase;
-                copy._listEvent.push_back( event );
-            }
-            _listTimelineDraw.push_back( std::move( copy ) );
-        }
-        for ( const uint64 frameBegin : _loadedTrace._listFrameBegin )
-        {
-            _listLoadedFrameDraw.push_back( static_cast<uint64>( static_cast<int64>( frameBegin ) + shift ) );
-        }
-        if ( bLive == false )
-        {
-            _timelineWindowBegin = anchor;
-            _timelineWindowEnd   = static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift );
-            if ( _bTimelineZoomed == SW_FALSE || _timelineViewEnd <= _timelineViewBegin )
-            {
-                _timelineViewBegin = _timelineWindowBegin;
-                _timelineViewEnd   = _timelineWindowEnd;
-            }
-        }
-        else if ( _timelineWindowEnd < static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift ) && _bTimelineZoomed == SW_FALSE )
-        {
-            // 불러온 쪽이 더 길면 보이는 범위를 넓혀 둘 다 보이게 한다.
-            _timelineViewEnd = static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift );
-        }
-    }
 #endif
 
     struct ProfilerPanel::TimelineGeometry
@@ -760,7 +559,7 @@ namespace sw::editor
         float32 _trackLeft{ 0.0f }; ///< 이벤트가 놓이는 칸의 왼쪽(화면 좌표)
     };
 
-    ProfilerPanel::TimelineGeometry ProfilerPanel::layoutTimeline( const vector<ProfilerTimelineThread>& listThread )
+    ProfilerPanel::TimelineGeometry ProfilerPanel::layoutTimeline()
     {
         const float32    dpiScale = EditorThemeUtil::getDPIScale();
         TimelineGeometry geometry;
@@ -772,8 +571,8 @@ namespace sw::editor
         geometry._trackWidth = geometry._totalWidth - geometry._labelWidth;
         geometry._trackLeft  = geometry._origin.x + geometry._labelWidth;
 
-        ProfilerTimelineLayout::layoutRects( listThread, _timelineViewBegin, _timelineViewEnd, geometry._trackWidth, _listTimelineRect, _listTimelineLaneCount );
-        for ( const uint16 laneCount : _listTimelineLaneCount )
+        _timeline.layout( geometry._trackWidth );
+        for ( const uint16 laneCount : _timeline.getLaneCounts() )
         {
             geometry._totalHeight += static_cast<float32>( laneCount ) * geometry._laneHeight + geometry._rowGap;
         }
@@ -789,13 +588,11 @@ namespace sw::editor
         {
             const float32 factor = EditorInputGUI::readPointer()._wheel > 0.0f ? ProfilerPanelInternal::kTimelineWheelZoomFactor
                                                                                : 1.0f / ProfilerPanelInternal::kTimelineWheelZoomFactor;
-            ProfilerTimelineLayout::zoom( _timelineViewBegin, _timelineViewEnd, mouse.x - geometry._trackLeft, geometry._trackWidth, factor, _timelineWindowBegin, _timelineWindowEnd );
-            _bTimelineZoomed = SW_TRUE;
+            _timeline.zoom( mouse.x - geometry._trackLeft, geometry._trackWidth, factor );
         }
         if ( ImGui::IsItemActive() && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
         {
-            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, EditorInputGUI::readPointer()._delta._x, geometry._trackWidth, _timelineWindowBegin, _timelineWindowEnd );
-            _bTimelineZoomed = SW_TRUE;
+            _timeline.pan( EditorInputGUI::readPointer()._delta._x, geometry._trackWidth );
         }
         return bHovered;
     }
@@ -808,7 +605,7 @@ namespace sw::editor
         for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
         {
             listRowTop[threadIndex] = rowTop;
-            const float32 rowHeight = static_cast<float32>( _listTimelineLaneCount[threadIndex] ) * geometry._laneHeight;
+            const float32 rowHeight = static_cast<float32>( _timeline.getLaneCounts()[threadIndex] ) * geometry._laneHeight;
             pDrawList->AddRectFilled( ImVec2{ geometry._origin.x, rowTop }, ImVec2{ geometry._origin.x + geometry._totalWidth, rowTop + rowHeight },
                                       ImGui::GetColorU32( ImGuiCol_FrameBg, ( threadIndex % 2 == 0 ) ? 0.6f : 0.3f ) );
             pDrawList->AddText( ImVec2{ geometry._origin.x + geometry._rowGap * 2.0f, rowTop + geometry._rowGap }, ImGui::GetColorU32( ImGuiCol_Text ),
@@ -827,29 +624,21 @@ namespace sw::editor
         pDrawList->PushClipRect( ImVec2{ geometry._trackLeft, geometry._origin.y }, ImVec2{ geometry._origin.x + geometry._totalWidth, geometry._origin.y + geometry._totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
 #if SW_PROFILER_TRACE_ENABLED
-        const bool bSearching = _arrTraceSearch[0] != '\0';
-        _traceSearchMatched   = 0;
+        uint32 searchMatched{ 0 };
 #endif
-        for ( const ProfilerTimelineRect& rect : _listTimelineRect )
+        for ( const ProfilerTimelineRect& rect : _timeline.getRects() )
         {
             const ProfilerTimelineEvent& event = listThread[rect._threadIndex]._listEvent[rect._eventIndex];
             const ImVec2                 minPoint{ geometry._trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * geometry._laneHeight };
             const ImVec2                 maxPoint{ geometry._trackLeft + rect._x1, minPoint.y + geometry._laneHeight - 1.0f };
-            const utf8*                  pName     = ProfilerPanelInternal::findSlotName( pProfiler, pLoadedSlotName, event._slot );
+            const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
             ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
 #if SW_PROFILER_TRACE_ENABLED
             // 검색어가 있으면 일치하는 구간만 또렷하게 두고 나머지는 흐리게 한다.
-            if ( bSearching )
-            {
-                if ( pName != nullptr && StringUtil::contains( pName, _arrTraceSearch, true ) )
-                    ++_traceSearchMatched;
-                else
-                    slotColor = ( slotColor & 0x00FFFFFFu ) | ( 50u << IM_COL32_A_SHIFT );
-            }
+            if ( _timeline.matchesTraceSearch( pName ) )
+                ++searchMatched;
             else
-            {
-                ++_traceSearchMatched;
-            }
+                slotColor = ( slotColor & 0x00FFFFFFu ) | ( 50u << IM_COL32_A_SHIFT );
 #endif
             pDrawList->AddRectFilled( minPoint, maxPoint, slotColor );
             if ( rect._bShowsLabel == SW_TRUE && pName != nullptr )
@@ -862,10 +651,13 @@ namespace sw::editor
             if ( bUnderMouse )
                 pHoveredRect = &rect;
         }
+#if SW_PROFILER_TRACE_ENABLED
+        _timeline.setTraceSearchMatchCount( searchMatched );
+#endif
         // 프레임 경계는 세로선으로 그린다.
-        for ( const uint64 frameBegin : _listTimelineFrameBegin )
+        for ( const uint64 frameBegin : _timeline.getFrameBegins() )
         {
-            const float32 lineX = geometry._trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, geometry._trackWidth );
+            const float32 lineX = geometry._trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timeline.getViewBegin(), _timeline.getViewEnd(), geometry._trackWidth );
             pDrawList->AddLine( ImVec2{ lineX, geometry._origin.y }, ImVec2{ lineX, geometry._origin.y + geometry._totalHeight }, EditorColorUtil::toImU32( ProfilerPanelInternal::kFrameBoundary ), 1.0f );
         }
         pDrawList->PopClipRect();
@@ -876,7 +668,7 @@ namespace sw::editor
     {
         const FrameProfiler*         pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
         const ProfilerTimelineEvent& event     = listThread[hoveredRect._threadIndex]._listEvent[hoveredRect._eventIndex];
-        const utf8*                  pName     = ProfilerPanelInternal::findSlotName( pProfiler, pLoadedSlotName, event._slot );
+        const utf8*                  pName     = ProfilerTimelineModel::findSlotName( pProfiler, pLoadedSlotName, event._slot );
         ImGui::BeginTooltip();
         ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
         ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / constant::kNanosecondsPerMicrosecond, static_cast<uint32>( event._depth ) );
@@ -900,7 +692,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName )
     {
-        const TimelineGeometry geometry = layoutTimeline( listThread );
+        const TimelineGeometry geometry = layoutTimeline();
         const bool             bHovered = handleTimelineInput( geometry );
 
         const vector<float32>       listRowTop   = drawTimelineRows( listThread, geometry );
@@ -915,7 +707,7 @@ namespace sw::editor
         float32                      maxMicro{ 1000.0f };
         for ( const utf8* pSeriesName : kArrSeriesName )
         {
-            if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false )
+            if ( _capture.getHistory().copySeries( pSeriesName, _listScratchSeries ) == false )
                 continue;
             for ( const float32 value : _listScratchSeries )
             {
@@ -925,7 +717,7 @@ namespace sw::editor
         const float32 maxMs = maxMicro / constant::kMicrosecondsPerMillisecond;
         for ( const utf8* pSeriesName : kArrSeriesName )
         {
-            if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
+            if ( _capture.getHistory().copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
             {
                 ImGui::TextDisabled( "%s: no samples", pSeriesName );
                 continue;
@@ -945,33 +737,31 @@ namespace sw::editor
             const float32 frameWidth = ( plotMax.x - plotMin.x ) / static_cast<float32>( _listScratchSeries.size() );
             if ( EditorInputGUI::wasItemClicked() && frameWidth > 0.0f )
             {
-                const int32 clicked    = static_cast<int32>( ( EditorInputGUI::readPointer()._position._x - plotMin.x ) / frameWidth );
-                const int32 lastIndex  = static_cast<int32>( _listScratchSeries.size() ) - 1;
-                _rowQuery._frameOffset = static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) );
+                const int32 clicked   = static_cast<int32>( ( EditorInputGUI::readPointer()._position._x - plotMin.x ) / frameWidth );
+                const int32 lastIndex = static_cast<int32>( _listScratchSeries.size() ) - 1;
+                _capture.selectFrameOffset( static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) ) );
             }
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "profiler.graph." } + pSeriesName ).c_str() );
-            if ( _rowQuery._frameOffset > 0 )
+            const uint32 frameOffset = _capture.getSelectedFrameOffset();
+            if ( frameOffset > 0 )
             {
-                const float32 lineX = plotMax.x - ( static_cast<float32>( _rowQuery._frameOffset ) + 0.5f ) * frameWidth;
+                const float32 lineX = plotMax.x - ( static_cast<float32>( frameOffset ) + 0.5f ) * frameWidth;
                 ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( EditorThemeUtil::getHighlightColor() ) );
             }
         }
-        if ( _rowQuery._frameOffset > 0 )
+        if ( _capture.getSelectedFrameOffset() > 0 )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _rowQuery._frameOffset );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _capture.getSelectedFrameOffset() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Latest" ) );
             if ( ImGui::SmallButton( "Latest" ) )
-                _rowQuery._frameOffset = 0;
+                _capture.selectFrameOffset( 0 );
         }
     }
 
     void ProfilerPanel::drawScopeTable( ProfilerScopeKind kind )
     {
         EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FilterScopesHint" ) );
-        _rowQuery._kind       = kind;
-        _rowQuery._filterText = _arrFilter;
-
         const bool            bCounter = kind == ProfilerScopeKind::Counter;
         const utf8* const     pUnit    = bCounter ? "" : " (us)";
         const ImGuiTableFlags flags    = ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
@@ -1000,11 +790,10 @@ namespace sw::editor
         ImGuiTableSortSpecs* pSortSpecs = ImGui::TableGetSortSpecs();
         if ( pSortSpecs != nullptr && pSortSpecs->SpecsCount > 0 )
         {
-            _rowQuery._sortColumn  = static_cast<ProfilerSortColumn>( pSortSpecs->Specs[0].ColumnUserID );
-            _rowQuery._bDescending = pSortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Descending;
+            _capture.setSort( static_cast<ProfilerSortColumn>( pSortSpecs->Specs[0].ColumnUserID ), pSortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Descending );
         }
 
-        _scopeHistory.makeRows( _rowQuery, _listScratchRow );
+        _capture.makeRows( kind, _arrFilter, _listScratchRow );
         for ( const ProfilerScopeRow& row : _listScratchRow )
         {
             ImGui::TableNextRow();
@@ -1035,37 +824,12 @@ namespace sw::editor
 
     void ProfilerPanel::drawPerformanceTab()
     {
-        // ImGui 경과는 엔진 경과(자동화에서는 고정 프레임 시간)라 프레임 비용을 재려면 벽시계를 따로 읽는다.
-        const float32 dt = static_cast<float32>( _drawStopwatch.getElapsedNanoseconds() ) / static_cast<float32>( constant::kNanosecondsPerSecond );
-        _drawStopwatch.restart();
-        const float32 frameTimeMs = dt * constant::kMillisecondsPerSecond;
-        const float32 fps         = ( dt > 0.0f ) ? ( 1.0f / dt ) : 0.0f;
+        const ProfilerFrameTimeStats stats = _performance.sampleFrame();
+        ImGui::Text( "Current FPS: %.1f (%.2f ms)", static_cast<float64>( stats._currentFPS ), static_cast<float64>( stats._currentMs ) );
+        ImGui::Text( "Average FPS: %.1f (Avg: %.2f ms, Min: %.2f ms, Max: %.2f ms)", static_cast<float64>( stats._averageFPS ), static_cast<float64>( stats._averageMs ),
+                     static_cast<float64>( stats._minMs ), static_cast<float64>( stats._maxMs ) );
 
-        _arrFrameTimeHistory[_historyOffset] = frameTimeMs;
-        _historyOffset                       = ( _historyOffset + 1 ) % 120;
-
-        float32 minMs{ MathUtil::kMaxFloat };
-        float32 maxMs{ 0.0f };
-        float32 sumMs{ 0.0f };
-        for ( size_t historyIndex = 0; historyIndex < 120; ++historyIndex )
-        {
-            const float32 val = _arrFrameTimeHistory[historyIndex];
-            if ( val > 0.0f )
-            {
-                minMs = MathUtil::min( minMs, val );
-                maxMs = MathUtil::max( maxMs, val );
-                sumMs += val;
-            }
-        }
-        const float32 avgMs  = sumMs / 120.0f;
-        const float32 avgFPS = ( avgMs > 0.0f ) ? ( 1000.0f / avgMs ) : 0.0f;
-
-        ImGui::Text( "Current FPS: %.1f (%.2f ms)", static_cast<float64>( fps ), static_cast<float64>( frameTimeMs ) );
-        ImGui::Text( "Average FPS: %.1f (Avg: %.2f ms, Min: %.2f ms, Max: %.2f ms)",
-                     static_cast<float64>( avgFPS ), static_cast<float64>( avgMs ),
-                     static_cast<float64>( minMs ), static_cast<float64>( maxMs ) );
-
-        ImGui::PlotLines( "Frame Time (ms)", _arrFrameTimeHistory, 120, static_cast<int32>( _historyOffset ),
+        ImGui::PlotLines( "Frame Time (ms)", _performance.getHistory(), static_cast<int32>( ProfilerPerformanceModel::kHistoryCount ), static_cast<int32>( _performance.getHistoryOffset() ),
                           nullptr, 0.0f, 33.3f, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 4.0f ) ) );
 
         ImGui::Separator();
@@ -1074,20 +838,11 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Resource Catalog Summary", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            EditorResourceCatalogCounts counts{};
-            const EditorTaskPoll        catalogPoll = _catalogJob.take( counts );
-            if ( catalogPoll == EditorTaskPoll::Ready )
-                _catalogCounts = counts;
-            if ( _bCatalogDirty == SW_TRUE && catalogPoll != EditorTaskPoll::Running )
-            {
-                _catalogJob.request();
-                _bCatalogDirty = SW_FALSE;
-            }
-
+            _performance.pollCatalog();
             if ( ImGui::Button( "Scan Resources" ) )
-                _bCatalogDirty = SW_TRUE;
+                _performance.requestCatalogScan();
 
-            for ( const EditorResourceCatalogCount& row : _catalogCounts._listKindCount )
+            for ( const EditorResourceCatalogCount& row : _performance.getCatalogCounts()._listKindCount )
             {
                 ImGui::BulletText( "%s: %zu", row._pLabel, row._count );
             }
@@ -1259,26 +1014,6 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( "Leak Window (Blocks Born In The Window)" ) )
             ProfilerPanelInternal::drawLeakWindow( profiler, _leakReport );
     }
-    void ProfilerPanel::pauseOnSpike()
-    {
-        float32    frameMicro{ 0.0f };
-        const bool bHasFrame = _scopeHistory.readValue( "GT.Frame", 0, frameMicro );
-        const bool bSpike    = bHasFrame && frameMicro >= _spikeThresholdMs * constant::kMicrosecondsPerMillisecond;
-        if ( _bPauseOnSpike == SW_FALSE || bSpike == false )
-            return;
-        _bCapturePaused        = SW_TRUE;
-        _rowQuery._frameOffset = 0;
-        if ( EditorPlaySession::isPlaying() )
-            EditorPlaySession::pause();
-        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
-                     Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
-    }
-
-    string ProfilerPanel::getCaptureFilePath()
-    {
-        return FileUtil::joinPath( FileUtil::joinPath( path::kSavedFolder, "Profiler" ), "ProfilerCapture.txt" );
-    }
-
     void ProfilerPanel::drawCallTreeTab()
     {
         FrameProfiler&    profiler   = editor::getSubsystem<FrameProfiler>();
@@ -1288,11 +1023,8 @@ namespace sw::editor
         {
             if ( bRecording == false )
             {
-                timeline.clear();
-                _callTree.reset( _timelineFrameCount );
-                _callTreeFrameEnd = 0;
-                _bCollect         = SW_TRUE;
-                profiler.setEnabled( true );
+                _timeline.beginCallTreeRecording( timeline );
+                _capture.setCollect( profiler, true );
             }
             timeline.setRecording( bRecording == false );
         }
@@ -1300,49 +1032,24 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();
         ImGui::TextUnformatted( "Frames:" );
-        for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )
+        for ( const uint32 frameChoice : ProfilerTimelineModel::kArrFrameChoice )
         {
             ImGui::SameLine();
             fixed_string<constant::kMaxBuffer16> label;
             formatstring( label.data(), label.capacity(), "%#", frameChoice );
             ImGui::PushID( "callTreeFrames" );
-            if ( ImGui::RadioButton( label.c_str(), _timelineFrameCount == frameChoice ) )
-                _timelineFrameCount = frameChoice;
+            if ( ImGui::RadioButton( label.c_str(), _timeline.getFrameCount() == frameChoice ) )
+                _timeline.setFrameCount( frameChoice );
             ImGui::PopID();
         }
-        bool bFrozen = _bCallTreeFrozen == SW_TRUE;
+        bool bFrozen = _timeline.isCallTreeFrozen();
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Freeze##callTree" ) );
         if ( ImGui::Checkbox( "Freeze##callTree", &bFrozen ) )
-            _bCallTreeFrozen = bFrozen ? SW_TRUE : SW_FALSE;
+            _timeline.setCallTreeFrozen( bFrozen );
 
-        // 프레임 수는 Timeline 탭과 같이 쓴다. 창 크기가 바뀌었으면 처음부터 다시 채운다.
-        if ( _callTree.getFrameCapacity() != _timelineFrameCount )
-        {
-            _callTree.reset( _timelineFrameCount );
-            _callTreeFrameEnd = 0;
-        }
-        if ( _bCallTreeFrozen == SW_FALSE )
-        {
-            // 끝난 마지막 프레임 하나만 읽는다. 끝이 지난번과 같으면 새 프레임이 없다.
-            // shortcut: 두 그리기 사이에 프레임이 여럿 끝났으면 마지막 것만 더한다 — 패널이 매 프레임 그리지 않는 경우가 생기면 collectFrameBegins 로 빠진 프레임을 채운다.
-            uint64     frameBegin{ 0 };
-            uint64     frameEnd{ 0 };
-            const bool bHasFrame = timeline.collectRecentFrames( 1, _listCallFrame, frameBegin, frameEnd );
-            if ( bHasFrame && frameEnd != _callTreeFrameEnd )
-            {
-                _callTree.addFrame( _listCallFrame );
-                _callTreeFrameEnd = frameEnd;
-            }
-            const float64 now                  = ImGui::GetTime();
-            const bool    bOrderDue            = now - _callTreeOrderTime >= ProfilerPanelInternal::kCallTreeOrderSeconds;
-            const bool    bFirstRootsAvailable = _callTree.getRoots().empty() && _callTree.getFrameCount() > 0;
-            if ( bOrderDue || bFirstRootsAvailable )
-            {
-                _callTree.refreshOrder();
-                _callTreeOrderTime = now;
-            }
-        }
-        if ( _callTree.getRoots().empty() )
+        _timeline.updateCallTree( timeline, ImGui::GetTime() );
+        const ProfilerCallTreeWindow& callTree = _timeline.getCallTree();
+        if ( callTree.getRoots().empty() )
         {
             ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to fold the last frames into a call tree." );
             return;
@@ -1357,10 +1064,10 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Self (ms)", 0, 1.0f );
         ImGui::TableSetupColumn( "Calls", 0, 0.8f );
         ImGui::TableHeadersRow();
-        const vector<ProfilerCallNode>& listNode       = _callTree.getNodes();
-        const vector<string>&           listThreadName = _callTree.getThreadNames();
+        const vector<ProfilerCallNode>& listNode       = callTree.getNodes();
+        const vector<string>&           listThreadName = callTree.getThreadNames();
         uint32                          shownThread    = ProfilerCallTree::kNoParent;
-        for ( const uint32 root : _callTree.getRoots() )
+        for ( const uint32 root : callTree.getRoots() )
         {
             const uint32 threadIndex = listNode[root]._threadIndex;
             if ( threadIndex != shownThread && threadIndex < listThreadName.size() )
@@ -1378,7 +1085,8 @@ namespace sw::editor
     void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
     {
         const FrameProfiler*            pProfiler = &editor::getSubsystem<FrameProfiler>(); // 필수 서비스: 없으면 버그
-        const vector<ProfilerCallNode>& listNode  = _callTree.getNodes();
+        const ProfilerCallTreeWindow&   callTree  = _timeline.getCallTree();
+        const vector<ProfilerCallNode>& listNode  = callTree.getNodes();
         const ProfilerCallNode&         node      = listNode[nodeIndex];
         if ( node._callCount == 0 ) // 창을 벗어난 프레임에서만 불린 경로 — 노드는 남지만 보이지 않는다
             return;
@@ -1392,7 +1100,7 @@ namespace sw::editor
         if ( node._depth < 2 )
             treeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
         const bool    bOpen      = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
-        const float64 frameCount = static_cast<float64>( MathUtil::max( _callTree.getFrameCount(), 1u ) ); // 채워지는 동안은 창 크기보다 적다
+        const float64 frameCount = static_cast<float64>( MathUtil::max( callTree.getFrameCount(), 1u ) ); // 채워지는 동안은 창 크기보다 적다
         ImGui::TableNextColumn();
         ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / constant::kNanosecondsPerMillisecond / frameCount );
         ImGui::TableNextColumn();
