@@ -13,12 +13,13 @@
 #include "Core/Container/string.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -34,7 +35,7 @@ namespace sw
 {
     /**
      * @brief 에셋 종류 하나의 계측 칸입니다(`CacheStats`, 종류 이름으로 한 번 올린다). 센 값은 이 칸에 있고 `SharedAssetCache` 의 생성자가 같은 이름으로 칸을 이어 받는다(`CacheTracking::counted`).
-     * @details 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 새로 서지만, 칸은 프로세스 끝까지 살아 함수 정적 핸들이 그대로 유효하다.
+     * @details 표는 캐시(에셋 매니저 소유)가 들어 엔진을 다시 세우면 새로 서지만, 칸은 프로세스 끝까지 살아 함수 정적 핸들이 그대로 유효하다.
      */
     template <typename AssetType>
     const CacheStatsHandle& getSharedAssetCacheStats()
@@ -83,10 +84,16 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::reloadShared( string_view path )
     {
+        return reloadIn( getTable(), path );
+    }
+
+    template <typename AssetType>
+    bool SharedAssetCache<AssetType>::reloadIn( SharedAssetTable<AssetType>& table, string_view path )
+    {
         if constexpr ( SharedAssetCacheTraits<AssetType>::kReloadMode == SharedAssetReloadMode::InPlace )
-            return getTable().reloadShared( path, &SharedAssetCacheTraits<AssetType>::load );
+            return table.reloadShared( path, &SharedAssetCacheTraits<AssetType>::load );
         else
-            return getTable().detachShared( path, &SharedAssetCacheTraits<AssetType>::load );
+            return table.detachShared( path, &SharedAssetCacheTraits<AssetType>::load );
     }
 
     template <typename AssetType>
@@ -96,10 +103,17 @@ namespace sw
     }
 
     template <typename AssetType>
+    const utf8* const SharedAssetCache<AssetType>::kAssetKindName = SharedAssetCacheTraits<AssetType>::kKindName;
+
+    template <typename AssetType>
     SharedAssetCache<AssetType>::SharedAssetCache()
         : IAssetCache{ CacheTracking::counted( SharedAssetCacheTraits<AssetType>::kKindName ) }
+        , _pTable{ make_unique<SharedAssetTable<AssetType>>() }
     {
     }
+
+    template <typename AssetType>
+    SharedAssetCache<AssetType>::~SharedAssetCache() = default;
 
     template <typename AssetType>
     const utf8* SharedAssetCache<AssetType>::getAssetKindName() const
@@ -110,41 +124,34 @@ namespace sw
     template <typename AssetType>
     bool SharedAssetCache<AssetType>::isCached( string_view relativePath ) const
     {
-        return getTable().findLive( relativePath ) != nullptr;
+        return _pTable->findLive( relativePath ) != nullptr;
     }
 
     template <typename AssetType>
     void SharedAssetCache<AssetType>::reload( const AssetID& assetID, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        (void)reloadShared( assetID.view() ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
+        (void)reloadIn( *_pTable, assetID.view() ); // 아무도 쥐지 않으면 다음 acquire 가 새로 읽고, 읽지 못하면 읽는 함수가 오류를 남기고 옛 내용을 지킨다
     }
 
     template <typename AssetType>
     size_t SharedAssetCache<AssetType>::getCachedCount() const
     {
-        return getTable().countLive();
+        return _pTable->countLive();
     }
 
     template <typename AssetType>
     void SharedAssetCache<AssetType>::clear()
     {
-        getTable().clear();
+        _pTable->clear(); // 자기 표를 비운다 — 매니저 종료 때도 불려 서비스 칸을 거치지 않는다
         getSharedAssetCacheStats<AssetType>().recordClear();
     }
-
-    /**
-     * @brief 에셋 종류마다 하나인 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 표째 사라집니다(처음 쓸 때 만들어진다).
-     * @details 이 헤더는 Engine 의 .cpp 만 포함하므로 모든 사본이 Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않습니다. 함수 안 정적 지역으로 두면
-     *          종료 누수 보고 뒤까지 남고 엔진을 다시 세워도 비지 않는다.
-     */
-    template <typename AssetType>
-    inline ScopeOwned<SharedAssetTable<AssetType>> s_sharedAssetTableOwner{};
 
     template <typename AssetType>
     SharedAssetTable<AssetType>& SharedAssetCache<AssetType>::getTable()
     {
-        return s_sharedAssetTableOwner<AssetType>.getRequired(); // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
+        // 이 헤더는 Engine 의 .cpp 만 포함하므로 캐시 타입이 모두 Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않는다.
+        return *engine::getSubsystem<AssetManager>().getAssetCache<SharedAssetCache<AssetType>>()._pTable;
     }
 } // namespace sw
 

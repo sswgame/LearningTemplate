@@ -2,7 +2,8 @@
  * @file SharedAssetCache.h
  * @brief 경로로 읽는 에셋 종류 하나를 나눠 주고 에셋 캐시 레지스트리에 보이는 캐시 템플릿입니다(스켈레톤 · 클립 · 본 LOD · 리그 · 스프라이트 클립 ·
  *        파쇄 · 소켓 · 알림 표 · 페어드 애니메이션 · 물리 에셋).
- * @details 표(`SharedAssetTable`)는 종류마다 프로세스에 하나이고 Engine.dll 안에 있으며 엔진 수명 범위(`ScopeOwned`)가 소유합니다. 그래서 멤버 정의는 이 헤더에 두지 않고
+ * @details 표(`SharedAssetTable`)는 종류마다 캐시 객체가 들고, 캐시는 에셋 매니저가 내장 캐시로 만들어 소유합니다(정적 창구 `request` · `acquire` 는
+ *          `engine::getSubsystem<AssetManager>().getAssetCache<SharedAssetCache<에셋>>()` 의 표를 쓴다 — 예전에는 소유자 없는 엔진 수명 값 `ScopeOwned` 였다). 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
  *          `extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<에셋>;` 만 둡니다 — 모듈(게임 · 키트 · 에디터)이 표를 자기 이미지에 따로 만들 수
  *          없습니다. 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
@@ -57,15 +58,21 @@ namespace sw
 {
     /**
      * @class SharedAssetCache
-     * @brief 에셋 종류 하나의 공유 표를 나눠 주고(`acquire`), 레지스트리에는 `IAssetCache` 로 보입니다. 객체는 상태가 없고 표를 보이는 창구일 뿐입니다.
+     * @brief 에셋 종류 하나의 공유 표를 들고 나눠 주며(`acquire`), 레지스트리에는 `IAssetCache` 로 보입니다. 에셋 매니저가 소유합니다.
      * @tparam AssetType 기본 생성 · 이동 대입이 되는 에셋 타입입니다.
      */
     template <typename AssetType>
     class SharedAssetCache final : public IAssetCache
     {
     public:
-        /** @brief 종류 이름의 계측 칸을 올립니다(`CacheTracking::counted`). 정의는 `SharedAssetCacheDefinition.h` 라 인스턴스화하는 .cpp 에만 있습니다. */
+        /** @brief 레지스트리의 종류 이름입니다(`AssetManager::getAssetCache<T>()` 가 찾는다). 정의는 `SharedAssetCacheDefinition.h` 입니다(종류의 특수화 값). */
+        static const utf8* const kAssetKindName;
+
+        /** @brief 빈 표를 만들고 종류 이름의 계측 칸을 올립니다(`CacheTracking::counted`). 정의는 `SharedAssetCacheDefinition.h` 라 인스턴스화하는 .cpp 에만 있습니다. */
         SharedAssetCache();
+        ~SharedAssetCache() override;
+        SharedAssetCache( const SharedAssetCache& )            = delete;
+        SharedAssetCache& operator=( const SharedAssetCache& ) = delete;
 
         /**
          * @brief 경로의 에셋 로드를 요청합니다. 표에 있으면 준비된 핸들, 없으면 워커가 읽습니다(엔진 태스크가 없으면 이 자리에서). 워커에서 불러도 됩니다.
@@ -95,12 +102,16 @@ namespace sw
     private:
         friend class SharedAssetLoadBlock<AssetType>;
 
-        /** @brief 프로세스에 하나인 표입니다(Engine.dll 안에 있어 모듈 핫 리로드에도 사라지지 않고, 엔진 수명 범위가 소유해 엔진 종료 때 사라집니다). */
+        /** @brief 엔진의 에셋 매니저가 소유한 이 종류 캐시의 표입니다(정적 창구 · 로드 블록이 쓴다). 엔진 서비스가 없으면 멈춘다. */
         static SharedAssetTable<AssetType>& getTable();
+        /** @brief @p table 의 @p path 를 종류의 `kReloadMode` 대로 다시 읽습니다(`reloadShared` · `reload` 의 본문). */
+        [[nodiscard]] static bool reloadIn( SharedAssetTable<AssetType>& table, string_view path );
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         static SharedAssetHandle<AssetType> requestWith( string_view path, AssetLoadStart start );
         /** @brief 로드 단계 본문입니다. 종류의 읽는 함수로 읽어 표에 넣습니다(메모리 태그를 겁니다). */
         [[nodiscard]] static bool loadIntoTable( string_view path, shared_ptr<const AssetType>& outAsset );
+
+        unique_ptr<SharedAssetTable<AssetType>> _pTable; ///< 이 종류의 공유 표(정의가 `SharedAssetCacheDefinition.h` 에만 있어 포인터로 든다)
     };
 } // namespace sw
 

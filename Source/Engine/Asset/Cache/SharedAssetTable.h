@@ -22,7 +22,7 @@ namespace sw
 {
     /**
      * @class SharedAssetTable
-     * @brief 에셋 종류 하나의 공유 표입니다. 종류마다 프로세스에 하나(Engine.dll 안의 함수 정적 변수)를 둡니다.
+     * @brief 에셋 종류 하나의 공유 표입니다. 종류마다 그 캐시(`SharedAssetCache`, 에셋 매니저 소유)가 하나 듭니다.
      * @tparam AssetType 기본 생성 · 이동 대입이 되는 에셋 타입입니다.
      */
     template <typename AssetType>
