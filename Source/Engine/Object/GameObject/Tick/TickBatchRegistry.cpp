@@ -1,39 +1,12 @@
 /**
  * @file TickBatchRegistry.cpp
- * @brief 타입별 일괄 틱 레지스트리 구현입니다(프로세스 전역 목록 · 세대).
+ * @brief 타입별 일괄 틱 레지스트리 구현입니다(서비스 범위의 등록 목록 · 세대, 모듈을 올리고 내리는 길이 붙이고 떼는 등록자).
  */
 #include "pch.h"
 
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
-#include "Core/String/RegistrationList.h"
-
-namespace sw
-{
-    namespace
-    {
-        /**
-         * @brief 등록 줄 목록과 그 잠금 · 세대입니다.
-         * @details 모듈의 정적 초기화가 이 번역 단위의 초기화보다 먼저 등록할 수 있다(링크 때 등록 표). 그래서 함수 안 정적으로 두어 첫 등록이 만든다 — 정적 등록부는 모두
-         *          `RegistrationList` 하나로 쓴다(`BuiltInAssetCacheRegistry` 와 같은 모양). 엔진 범위가 서기 전에 올라가고 엔진을 다시 세워도 남아야 하는 표라
-         *          엔진 수명 범위(`ScopeOwned`)의 소유로 옮길 수 없다. 조회는 나중에 오른 줄이 먼저다(같은 타입의 테스트 지역 등록이 정적 등록을 덮는다).
-         */
-        struct TickBatchRegistryState
-        {
-            mutex                                                 _mutex;
-            RegistrationList<TickBatchRegistry::Entry> _listEntry SW_GUARDED_BY( _mutex ){ "TickBatchRegistry" };
-            atomic<uint32>                                        _generation{ 0 };
-        };
-
-        TickBatchRegistryState& getTickBatchRegistryState()
-        {
-            static TickBatchRegistryState s_state;
-            return s_state;
-        }
-    } // namespace
-} // namespace sw
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -41,33 +14,30 @@ namespace sw
     {
         if ( entry._pStaticType == nullptr || entry._pFunction == nullptr )
             return;
-        TickBatchRegistryState& state = getTickBatchRegistryState();
         {
-            ScopedLock<mutex> lock{ state._mutex };
-            (void)state._listEntry.addLogged( &entry, "Tick batch entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
+            ScopedLock<mutex> lock{ _mutex };
+            (void)_listEntry.addLogged( &entry, "Tick batch entry" ); // 같은 줄을 다시 올리면 `AlreadyPresent` 라 할 일이 없다
         }
-        state._generation.fetch_add( 1, std::memory_order_acq_rel );
+        _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     void TickBatchRegistry::unregisterType( Entry& entry )
     {
-        TickBatchRegistryState& state    = getTickBatchRegistryState();
-        bool                    bRemoved = false;
+        bool bRemoved = false;
         {
-            ScopedLock<mutex> lock{ state._mutex };
-            bRemoved = state._listEntry.remove( &entry );
+            ScopedLock<mutex> lock{ _mutex };
+            bRemoved = _listEntry.remove( &entry );
         }
         if ( bRemoved )
-            state._generation.fetch_add( 1, std::memory_order_acq_rel );
+            _generation.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     TickBatchFunction TickBatchRegistry::findFunction( const TypeInfo* pType )
     {
         if ( pType == nullptr )
             return nullptr;
-        TickBatchRegistryState& state = getTickBatchRegistryState();
-        ScopedLock<mutex>       lock{ state._mutex };
-        const vector<Entry*>&   listEntry = state._listEntry.getItems();
+        ScopedLock<mutex>     lock{ _mutex };
+        const vector<Entry*>& listEntry = _listEntry.getItems();
         for ( size_t index = listEntry.size(); index > 0; --index )
         {
             // 주소가 아니라 지금의 `StaticType` 과 비교한다 — 모듈을 다시 올리면 타입 정보가 새로 만들어질 수 있다.
@@ -78,15 +48,23 @@ namespace sw
         return nullptr;
     }
 
-    uint32 TickBatchRegistry::getGeneration()
-    {
-        return getTickBatchRegistryState()._generation.load( std::memory_order_acquire );
-    }
-
     uint32 TickBatchRegistry::getRegisteredCount()
     {
-        TickBatchRegistryState& state = getTickBatchRegistryState();
-        ScopedLock<mutex>       lock{ state._mutex };
-        return state._listEntry.getCount();
+        ScopedLock<mutex> lock{ _mutex };
+        return _listEntry.getCount();
+    }
+} // namespace sw
+
+namespace sw
+{
+    void TickBatchRegistrar::attach()
+    {
+        // 모듈을 올리는 길은 엔진 서비스가 선 동안에만 온다 — 레지스트리가 없으면 그 실행의 잘못이라 멈춘다(`getSubsystem`).
+        engine::getSubsystem<TickBatchRegistry>().registerType( _entry );
+    }
+
+    void TickBatchRegistrar::detach()
+    {
+        engine::getSubsystem<TickBatchRegistry>().unregisterType( _entry );
     }
 } // namespace sw

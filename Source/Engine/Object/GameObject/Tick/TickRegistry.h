@@ -45,6 +45,7 @@ namespace sw
     class Component;
     class GameObject;
     class GameObjectManager;
+    class TickBatchRegistry;
 
     /**
      * @struct TickBatchElement
@@ -262,11 +263,11 @@ namespace sw
         /** @brief 빈 일괄 목록을 걷습니다(모듈이 내려간 타입의 함수를 들고 있지 않게). */
         void removeEmptyBatchLists();
         /** @brief 오브젝트의 이 그룹 항목이 일괄 틱 대상이면 그 함수입니다(정확한 타입의 주 틱 하나). 아니면 nullptr 입니다. */
-        static TickBatchFunction findBatchFunction( const TickItem* pItem, uint32 itemCount );
+        static TickBatchFunction findBatchFunction( TickBatchRegistry* pBatchRegistry, const TickItem* pItem, uint32 itemCount );
 
         vector<TickObjectEntry>           _arrListEntry[kGroupCount];   ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 항목이다. 오브젝트를 소유하지 않는다.
         vector<TickBatchList>             _arrListBatch[kGroupCount];   ///< 그룹마다 타입별 일괄 틱 목록이다. 오브젝트는 칸 목록과 이 목록 중 한 곳에만 있다
-        uint32                            _batchGeneration;             ///< 마지막으로 본 `TickBatchRegistry::getGeneration` — 바뀌면 모두 다시 훑는다
+        uint32                            _batchGeneration;             ///< 마지막으로 본 `TickBatchRegistry::getGeneration`(표가 없으면 0) — 바뀌면 모두 다시 훑는다
         vector<uint64> _listDirtyObjectID SW_GUARDED_BY( _dirtyMutex ); ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
         vector<uint64>                    _listProcessingObjectID;      ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
         mutex                             _dirtyMutex;                  ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다

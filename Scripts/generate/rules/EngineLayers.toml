@@ -24,6 +24,8 @@ FileSystem = 1                       # 리소스 id · 경로 · 낱개 파일 �
 CoreServices = 1
 Console = 1
 "Module/ModuleTypeRegistry.h" = 1    # 모듈 이미지의 타입 등록 선언(Core 만) — 구현(.cpp)은 리로드 때 씬을 다시 묶어 맨 위 층이다
+"Module/ModuleObjectRegistrar.h" = 1   # 모듈 이미지의 정적 등록자 바탕(Core 만) — 낮은 층의 레지스트리(일괄 틱 · 5 층)가 상속해 E1 사전 등록 사슬에 단다
+"Module/ModuleObjectRegistrar.cpp" = 1 # 링크 때 목록 머리 하나뿐(Core 만)
 # 2 — 콘텐츠: 에셋 · 글 · 현지화
 Asset = 2
 Text = 2

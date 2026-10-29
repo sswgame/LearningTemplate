@@ -480,7 +480,7 @@ namespace sw
     TickRegistry::TickRegistry()
         : _arrListEntry{}
         , _arrListBatch{}
-        , _batchGeneration{ TickBatchRegistry::getGeneration() }
+        , _batchGeneration{ 0 } // 처음에는 어차피 모두 다시 훑는다(`_bAllDirty`)
         , _listDirtyObjectID{}
         , _listProcessingObjectID{}
         , _dirtyMutex{}
@@ -517,7 +517,8 @@ namespace sw
     bool TickRegistry::refresh( GameObjectManager& manager )
     {
         // 일괄 틱 타입이 등록 · 해제됐으면(모듈 적재 · 해제) 모두 다시 훑는다 — 오브젝트가 어느 목록에 갈지가 바뀌었고, 내려간 함수를 들고 있으면 안 된다.
-        const uint32 batchGeneration = TickBatchRegistry::getGeneration();
+        TickBatchRegistry* const pBatchRegistry  = manager.getSceneEngineServices()._pTickBatchRegistry;
+        const uint32             batchGeneration = pBatchRegistry != nullptr ? pBatchRegistry->getGeneration() : 0;
         if ( batchGeneration != _batchGeneration )
         {
             _batchGeneration = batchGeneration;
@@ -640,7 +641,7 @@ namespace sw
                 entry._firstItem = listItem[begin];
                 entry._pItem     = listItem.data() + begin;
                 entry._itemCount = end - begin;
-                pBatchFunction   = bActive ? findBatchFunction( entry._pItem, entry._itemCount ) : nullptr;
+                pBatchFunction   = bActive ? findBatchFunction( manager.getSceneEngineServices()._pTickBatchRegistry, entry._pItem, entry._itemCount ) : nullptr;
             }
             setMembership( pObj, group, bActive && begin < end, entry, pBatchFunction );
         }
@@ -816,13 +817,13 @@ namespace sw
         return true;
     }
 
-    TickBatchFunction TickRegistry::findBatchFunction( const TickItem* pItem, uint32 itemCount )
+    TickBatchFunction TickRegistry::findBatchFunction( TickBatchRegistry* pBatchRegistry, const TickItem* pItem, uint32 itemCount )
     {
-        // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다.
-        const bool bNotBatchable = gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
+        // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다. 표가 없는 매니저(엔진 없는 테스트)는 일괄 경로가 없다.
+        const bool bNotBatchable = pBatchRegistry == nullptr || gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr;
         if ( bNotBatchable )
             return nullptr;
-        return TickBatchRegistry::findFunction( pItem->_pComponent->findCachedTypeInfo() );
+        return pBatchRegistry->findFunction( pItem->_pComponent->findCachedTypeInfo() );
     }
 
     TickBatchList* TickRegistry::findBatchMembership( const GameObject* pObj, uint32 group )

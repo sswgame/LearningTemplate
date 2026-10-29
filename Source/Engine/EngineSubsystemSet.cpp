@@ -38,6 +38,7 @@
 #include "Engine/Module/ModuleUnloadStageSubsystem.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -124,7 +125,8 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<AssetLoadProfiler>() );
         // 데이터 파일 종류 — 정적 등록자는 링크 때 목록에만 달리고, 모듈을 올리는 길(`registerModuleTypes`)이 걷어 이 레지스트리에 올린다.
         services.addSubsystem( sw::make_unique<AssetDataKindRegistry>() );
-        services.addSubsystem( sw::make_unique<GameTimeScale>() ); // 정지 요청 · 이번 프레임의 실제 경과
+        services.addSubsystem( sw::make_unique<TickBatchRegistry>() ); // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다
+        services.addSubsystem( sw::make_unique<GameTimeScale>() );     // 정지 요청 · 이번 프레임의 실제 경과
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
         {
             SW_MEMORY_SCOPE( RenderCPU );
