@@ -108,7 +108,7 @@ namespace sw
         }
 
         shared_ptr<PhysicsMeshShapeData> loaded = make_shared<PhysicsMeshShapeData>();
-        makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, *loaded );
+        PhysicsMeshShapeCache::makeShapeData( span<const float3>{ listPosition.data(), listPosition.size() }, *loaded );
 
         ScopedLock<mutex> lock{ _mutex };
         (void)_mapFailedPathToEpoch.erase( key ); // 이제 읽혔다 — 앞서 못 읽은 기억은 버린다

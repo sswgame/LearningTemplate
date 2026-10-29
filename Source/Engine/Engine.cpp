@@ -666,7 +666,7 @@ namespace sw
             // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.
             if ( _pSceneManager != nullptr )
                 _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
-            RenderPacketBuilder::populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
+            _pPacketBuilder->populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
             _pPacketBuilder->resolveMarkerInstanceSlots( packet, _pUISystem, pActiveScene );
 
             if ( _pRenderThread != nullptr )

@@ -89,7 +89,7 @@ namespace sw
          * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 개발 테스트 이미지), 글리프 아틀라스 구간, 색각 보정을 싣습니다.
          * @param bSceneMain 씬 뷰가 주 출력인 프레임이면 화면 UI 를 싣지 않습니다. UI 는 게임 화면(게임 뷰, 백버퍼)에만 있습니다.
          */
-        static void populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
+        void populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
         /**
          * @brief 패킷의 GPU 투영 마커(`CanvasFrameData::_listMarker`) 중 활성 씬의 메시에 붙은 것에 GPUScene 인스턴스 칸을 풉니다(`populateScene` · `populateCanvas` 뒤).
          * @details 마커가 속한 관리자가 활성 씬의 것이 아니거나 칸을 못 찾으면 기록은 월드 점을 쓴다(`_instanceSlot` 이 비어 있다).
