@@ -518,6 +518,7 @@ namespace sw
         return pinnedCount;
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     uint32 ModuleLibraryUtil::releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepLibraryMapped )
     {
         if ( pOutKeepLibraryMapped != nullptr )
@@ -550,7 +551,7 @@ namespace sw
 
     void* ModuleLibraryUtil::findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
     {
-#if defined( SW_PLATFORM_WINDOWS )
+    #if defined( SW_PLATFORM_WINDOWS )
         if ( pHandle == nullptr )
             return nullptr;
         const IMAGE_NT_HEADERS* pNt = ModuleLibraryUtilInternal::findNtHeaders( pHandle );
@@ -577,11 +578,11 @@ namespace sw
             }
         }
         return nullptr;
-#else
+    #else
         (void)pHandle; // 리눅스는 import 테이블에서 바인딩을 읽을 수 없다. 부르는 쪽이 심볼로 판단한다.
         (void)dependencyFileName;
         return nullptr;
-#endif
+    #endif
     }
 
     bool ModuleLibraryUtil::releaseLibraryCode( string_view moduleName, void* pHandle )
@@ -612,6 +613,8 @@ namespace sw
     {
         return getModuleUnloadHandlerList().add( desc, function );
     }
+
+#endif // SW_WITH_DYNAMIC_MODULES
 
     bool ModuleLibraryUtil::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
     {

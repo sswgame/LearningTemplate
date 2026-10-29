@@ -13,6 +13,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Module/DynamicModules.h"
 
 namespace sw
 {
@@ -127,6 +128,7 @@ namespace sw
          */
         static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName );
 
+#if SW_WITH_DYNAMIC_MODULES
         // ------------------------------------------------------------------------------
         // 4) 코드 등록 해제와 언로드. 라이브러리의 코드를 가리키는 엔진 등록(5 절의 언로드 처리기)을 먼저 해제한다.
         // ------------------------------------------------------------------------------
@@ -166,11 +168,11 @@ namespace sw
         //    구독을 멤버로 든다(언리얼 `FModuleManager::OnModulesChanged` 와 같은 모양 — 상속하지 않는다). `releaseModuleCode` 가 처리기를 모두 부른다.
         //    처리기는 엔진(또는 App) 쪽 코드여야 한다 — 모듈 코드의 처리기는 그 모듈보다 오래 살면 훑기가 내려간 코드로 뛴다.
         //
-        //        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "input callbacks" },
-        //                                                    ModuleUnloadFunction::create<&InputManager::onModuleUnloading>( this ) ) };
+        //        SW_MODULE_UNLOAD_HANDLER( &InputManager::onModuleUnloading, "input callbacks" );   // 클래스 맨 끝 멤버
         // ------------------------------------------------------------------------------
         /** @brief 처리기를 올립니다. 돌려준 구독이 사라지면 빠진다. 훑기 안에서 올리거나 풀어도 된다(훑기는 시작 때의 사본을 돌고 풀린 것은 건너뛴다). */
         [[nodiscard]] static Subscription registerUnloadHandler( const ModuleUnloadHandlerDesc& desc, const ModuleUnloadFunction& function );
+#endif // SW_WITH_DYNAMIC_MODULES
         /** @brief 주소 @p pCode 가 [@p pBegin, @p pEnd) 안인지 봅니다. nullptr 은 늘 밖입니다. */
         static bool isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd );
         /**
@@ -180,3 +182,18 @@ namespace sw
         static const void* findVtableAddress( const void* pObject );
     };
 } // namespace sw
+
+#if SW_WITH_DYNAMIC_MODULES
+    /**
+     * @brief 모듈 언로드 처리기 구독 멤버 하나 — 레지스트리 클래스의 **맨 끝 멤버**로 둔다(먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다).
+     * @details `SW_MODULE_UNLOAD_HANDLER( &AssetManager::onModuleUnloading, "asset caches" );` — 뒤의 인자는 `ModuleUnloadHandlerDesc`(이름, 떼는 것이 정상인지).
+     *          배포 빌드(`SW_WITH_DYNAMIC_MODULES` 0)에서는 비어 등록이 없다.
+     */
+    #define SW_MODULE_UNLOAD_HANDLER( memberFunction, ... )                                                                                                            \
+        ::sw::Subscription _moduleUnloadSubscription                                                                                                                   \
+        {                                                                                                                                                              \
+            ::sw::ModuleLibraryUtil::registerUnloadHandler( ::sw::ModuleUnloadHandlerDesc{ __VA_ARGS__ }, ::sw::ModuleUnloadFunction::create<memberFunction>( this ) ) \
+        }
+#else
+    #define SW_MODULE_UNLOAD_HANDLER( memberFunction, ... ) static_assert( true, "monolithic build - modules are never unloaded" )
+#endif

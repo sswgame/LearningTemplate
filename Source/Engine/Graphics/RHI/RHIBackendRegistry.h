@@ -11,6 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Module/DynamicModules.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Config/RHIBackendType.h"
@@ -73,8 +74,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) MODULE: createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
         // ------------------------------------------------------------------------------
+#if SW_WITH_DYNAMIC_MODULES
         /** @brief createRHIDevice 를 export 하는 DLL 을 골라 로드합니다. */
         [[nodiscard]] bool tryLoadModule( RHIBackend backend, string_view modulePath );
+#endif
 
         /**
          * @brief MODULE 팩토리를 지운 뒤 FreeLibrary 합니다.

@@ -205,7 +205,7 @@ namespace sw
 
     private:
         /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "asset caches" }, ModuleUnloadFunction::create<&AssetManager::onModuleUnloading>( this ) ) };
+        SW_MODULE_UNLOAD_HANDLER( &AssetManager::onModuleUnloading, "asset caches" );
 
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

@@ -165,6 +165,7 @@ namespace sw
         return pEntry->_factory();
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
         void* pModuleHandle = ModuleLibraryUtil::loadDynamicLibrary( modulePath );
@@ -206,8 +207,11 @@ namespace sw
         return true;
     }
 
+#endif // SW_WITH_DYNAMIC_MODULES
+
     void RHIBackendRegistry::unloadModules()
     {
+#if SW_WITH_DYNAMIC_MODULES // 배포 빌드는 백엔드가 정적이라 내릴 DLL 이 없다
         if ( _listLoadedModule.empty() )
             return;
 
@@ -231,6 +235,7 @@ namespace sw
             (void)ModuleLibraryUtil::unloadModuleLibrary( module._modulePath, module._pHandle );
         }
         _listLoadedModule.clear();
+#endif
     }
 
     RHIBackendRegistry::~RHIBackendRegistry()

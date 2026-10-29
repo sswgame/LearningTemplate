@@ -336,6 +336,6 @@ namespace sw
 
     private:
         /** @brief 모듈 언로드 처리기 구독(`ModuleLibraryUtil::registerUnloadHandler`)입니다. 맨 끝 멤버라 먼저 사라져, 다른 멤버가 사라지는 동안 불리지 않는다. */
-        Subscription _moduleUnloadSubscription{ ModuleLibraryUtil::registerUnloadHandler( { "event subscriptions" }, ModuleUnloadFunction::create<&EventDispatcher::onModuleUnloading>( this ) ) };
+        SW_MODULE_UNLOAD_HANDLER( &EventDispatcher::onModuleUnloading, "event subscriptions" );
     };
 } // namespace sw
