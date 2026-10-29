@@ -2,24 +2,13 @@
  * @file BugReportPanel.h
  * @brief 버그 리포트 창입니다. 메모를 붙여 지금 상태를 `Saved/BugReports/<시각>/` 에 모으고, 지난 폴더를 열거나 경로를 복사하거나 그 위치로 돌아갑니다(언리얼 BugReport).
  * @details 모으기는 커맨드 `help.reportBug` 와 같은 `BugReport::makeInputs` → `BugReport::capture` 이고, 이 창은 메모 칸과 지난 폴더 목록만 더합니다.
+ *          상태와 명령은 `BugReportModel`(Model/, ImGui 없음)이 들고, 이 패널은 그리기와 경로 복사만 한다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-
-namespace sw::editor
-{
-    /** @brief 지난 BugReport 폴더 한 줄입니다. */
-    struct BugReportPanelRow
-    {
-        string _directory; ///< 폴더 경로(작업 폴더 기준)
-        string _name;      ///< 폴더 이름(`yyyyMMdd-HHmmss`)
-        string _note;      ///< info.txt 의 메모. 읽지 못하면 비어 있다
-    };
-} // namespace sw::editor
+#include "Editor/Panels/BugReport/Model/BugReportModel.h"
 
 namespace sw::editor
 {
@@ -40,23 +29,14 @@ namespace sw::editor
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }
 
-        /**
-         * @brief 메모 칸의 글을 붙여 지금 상태를 BugReport 폴더에 모으고 결과를 알립니다(Collect Now 단추와 같다).
-         * @return 폴더와 info.txt 를 썼으면 true 입니다.
-         */
-        bool captureNow();
-        /** @brief 지난 그리기의 폴더 줄 수입니다. */
-        uint32 getRowCount() const { return static_cast<uint32>( _listRow.size() ); }
+        /** @brief 메모 · 폴더 줄과 모으기 명령입니다. */
+        BugReportModel& getModel() { return _model; }
 
     private:
-        /** @brief `Saved/BugReports` 아래 폴더를 다시 읽어 최근 것이 먼저 오게 줄을 만듭니다. */
-        void refreshRows();
         /** @brief 폴더 줄 @p row 의 단추(탐색기 · 경로 복사 · 그 위치로)를 그립니다. */
-        void drawRowActions( const BugReportPanelRow& row ) const;
+        static void drawRowActions( const BugReportRow& row );
 
     private:
-        vector<BugReportPanelRow> _listRow;
-        string                    _note;
-        bool                      _bRowsDirty;
+        BugReportModel _model;
     };
 } // namespace sw::editor

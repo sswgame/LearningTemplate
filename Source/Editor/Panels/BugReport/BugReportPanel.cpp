@@ -2,51 +2,17 @@
 
 #include "Editor/Panels/BugReport/BugReportPanel.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
-#include "Core/Foundation/Defines.h"
-
-#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Renderer/Capture/BugReport.h"
-#include "Engine/Scene/SceneManager.h"
 
-#include <algorithm>
 #include <imgui.h>
-
-namespace sw::editor
-{
-    SW_LOG_CALLER( "BugReportPanel" );
-
-    namespace
-    {
-        struct BugReportPanelInternal
-        {
-            /** @brief BugReport 폴더들의 루트입니다(`BugReport::makeInputs` 가 쓰는 경로와 같다). */
-            static string makeRoot()
-            {
-                return FileUtil::joinPath( path::kSavedFolder, BugReport::kFolderName );
-            }
-
-            /** @brief @p directory 의 절대 경로입니다. 바꾸지 못하면 그대로 돌려줍니다. */
-            static string makeAbsolute( const string& directory )
-            {
-                string absolutePath;
-                return FileUtil::makeAbsolutePath( directory, absolutePath ) ? absolutePath : directory;
-            }
-        };
-    } // namespace
-} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -54,89 +20,44 @@ namespace sw::editor
 
     BugReportPanel::BugReportPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
-        , _listRow{}
-        , _note{}
-        , _bRowsDirty{ true }
+        , _model{}
     {
     }
 
-    bool BugReportPanel::captureNow()
-    {
-        string     directory;
-        const bool bCaptured         = BugReport::capture( BugReport::makeInputs( _note ), directory );
-        _bRowsDirty                  = true;
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        if ( bCaptured )
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
-        else
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
-        return bCaptured;
-    }
-
-    void BugReportPanel::refreshRows()
-    {
-        _bRowsDirty = false;
-        _listRow.clear();
-        vector<string> listFolder;
-        if ( FileUtil::collectFolders( BugReportPanelInternal::makeRoot(), listFolder, false ) == false )
-            return; // 아직 한 번도 모으지 않았으면 루트가 없다
-        // 이름이 yyyyMMdd-HHmmss(-n) 이라 이름 역순이 최근 순이다(BugReport::findLatestDirectory 와 같은 규칙).
-        VectorUtil::sort( listFolder, []( const string& lhs, const string& rhs )
-        { return rhs < lhs; } );
-        _listRow.reserve( listFolder.size() );
-        for ( const string& folder : listFolder )
-        {
-            BugReportPanelRow row{};
-            row._directory = folder;
-            row._name      = FileUtil::getFileNamePart( folder );
-            BugReport report;
-            if ( BugReport::readInfo( folder, report ) )
-                row._note = report._note;
-            _listRow.push_back( std::move( row ) );
-        }
-    }
-
-    void BugReportPanel::drawRowActions( const BugReportPanelRow& row ) const
+    void BugReportPanel::drawRowActions( const BugReportRow& row )
     {
         if ( ImGui::SmallButton( editoricon::kFolderOpen ) )
-            (void)EditorAssetFileCommands::showInFileExplorer( BugReportPanelInternal::makeAbsolute( row._directory ) );
+            BugReportModel::showInFileExplorer( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "ShowInExplorer" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCopy ) );
         if ( ImGui::SmallButton( editoricon::kCopy ) )
-            ImGui::SetClipboardText( BugReportPanelInternal::makeAbsolute( row._directory ).c_str() );
+            ImGui::SetClipboardText( BugReportModel::makeAbsolutePath( row ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "CopyPath" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCamera ) );
         if ( ImGui::SmallButton( editoricon::kCamera ) )
-        {
-            SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
-            string        reply;
-            if ( pSceneManager == nullptr || BugReport::goTo( *pSceneManager, row._directory, reply ) == false )
-                SW_LOG_WARNING( "BugReport go to failed: %#", reply.c_str() );
-            else
-                SW_LOG_INFO( "%#", reply.c_str() );
-        }
+            BugReportModel::goTo( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "GoTo" ) );
     }
 
     void BugReportPanel::drawContent()
     {
-        if ( _bRowsDirty )
-            refreshRows();
+        _model.refreshIfDirty();
 
-        (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _note, 3 );
+        (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _model.editNote(), 3 );
         EditorSelfTestMarks::note( "bugReport.note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBug, "Collect Now" ) ) && captureNow() )
-            _note.clear(); // 모은 메모는 info.txt 에 남았다
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBug, "Collect Now" ) ) )
+            (void)_model.captureNow(); // 결과는 알림으로 알린다
         EditorSelfTestMarks::note( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) )
-            _bRowsDirty = true;
+            _model.markDirty();
 
         ImGui::Separator();
-        if ( _listRow.empty() )
+        const vector<BugReportRow>& listRow = _model.getRows();
+        if ( listRow.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorBugReport", "NoReports" ) );
             return;
@@ -151,9 +72,9 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Note", ImGuiTableColumnFlags_WidthStretch, 2.0f );
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 96.0f * dpiScale );
         ImGui::TableHeadersRow();
-        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listRow.size() ); ++rowIndex )
+        for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( listRow.size() ); ++rowIndex )
         {
-            const BugReportPanelRow& row = _listRow[rowIndex];
+            const BugReportRow& row = listRow[rowIndex];
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
