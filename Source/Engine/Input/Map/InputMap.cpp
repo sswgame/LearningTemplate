@@ -149,7 +149,7 @@ namespace sw
         , _actionBuffer{}
         , _nextGeneration{ 1 }
         , _defaultLayerName{ InputMapDefaults::kDefaultLayerName }
-        , _playerSettings{}
+        , _accessibility{}
         , _doubleClickTime{ InputMapDefaults::kDoubleClickTime }
         , _doubleClickMaxDistance{ InputMapDefaults::kDoubleClickMaxDistance }
         , _dragThreshold{ InputMapDefaults::kDragThreshold }
@@ -278,7 +278,7 @@ namespace sw
             float32& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
             accumulator += binding._bNegate ? -bVal._x : bVal._x; // 프레임 평가(InputMapEvaluate)와 같은 부호 뒤집기
         }
-        if ( _playerSettings._bInvertX )
+        if ( _accessibility._bInvertX )
             bounded = -bounded;
         return MathUtil::clamp( bounded, -1.0f, 1.0f ) + relative;
     }
@@ -530,14 +530,6 @@ namespace sw
         }
         _listLayerStack.clear();
         _listLayerStack.push_back( hLayer );
-    }
-
-    void InputMap::setToggleMode( const hashed_string& action, bool bToggle )
-    {
-        ActionEntry& entry = getOrCreateAction( hashed_string( action ) );
-        entry._bToggleMode = bToggle ? SW_TRUE : SW_FALSE;
-        if ( bToggle == false )
-            entry._bToggleState = SW_FALSE;
     }
 
     bool InputMap::isActionToggled( const hashed_string& action ) const

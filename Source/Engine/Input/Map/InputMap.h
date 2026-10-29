@@ -21,6 +21,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputAccessibilitySettings.h"
 #include "Engine/Input/Map/InputActionBuffer.h"
 
 namespace sw
@@ -110,7 +111,7 @@ namespace sw
         static uint32 getRebindSlotIndex( BindingKind kind );
         /**
          * @brief 이번 프레임의 이동량을 내는 종류(마우스 이동, 휠)인지 묻습니다.
-         * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`InputPlayerSettings::_bInvertX/Y`)도 걸지 않는다.
+         * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`InputAccessibilitySettings::_bInvertX/Y`)도 걸지 않는다.
          *          휠 두 칸은 2 이고, 시점 반전이 확대나 핫바 방향을 뒤집지도 않는다.
          *          마우스 이동의 반전은 그 바인딩 평가에서 한 번만 적용한다.
          */
@@ -184,12 +185,6 @@ namespace sw
         Y,        ///< 세로 성분(위가 +)을 1D 값으로
     };
 
-    enum class DeadzoneShape : uint8
-    {
-        Radial = 0, ///< 360도 원형 거리 기반 데드존(자유 이동).
-        Axial       ///< X/Y 독립 십자형 데드존(4방향 그리드, 플랫포머).
-    };
-
     namespace InputMapDefaults
     {
         inline constexpr utf8 kDefaultLayerName[]    = "Gameplay";
@@ -244,12 +239,6 @@ namespace sw
 
 namespace sw
 {
-    enum class DigitalNormalization : uint8
-    {
-        Circular = 0,   ///< 대각선 입력의 반경을 1.0 으로 정규화한다(표준 3D/FPS 액션).
-        IndependentAxes ///< X/Y 를 각각 독립적으로 1.0 까지 유지한다(2D 그리드, 탑다운).
-    };
-
     /**
      * @struct ActionHandle
      * @brief 해시맵을 거치지 않고 O(1) 로 액션 상태를 읽는 핸들입니다.
@@ -326,25 +315,6 @@ namespace sw
         uint8                  _bTriggered : 1;
         uint8                  _bDown      : 1;
         [[maybe_unused]] uint8 _reserved   : 6;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct InputPlayerSettings
-     * @brief 플레이어마다의 입력 설정입니다 — 감도, 축 반전, 스틱 데드존, 대각선 정규화. 맵 정의(바인딩 · 레이어)와 수명이 달라 맵을 다시 읽어도 남습니다.
-     * @details 사용자 설정 처리기(`UserSettingsEngineHandlers`)가 채운다. 언리얼 `UEnhancedInputUserSettings` 의 플레이어 설정 자리입니다.
-     */
-    struct InputPlayerSettings
-    {
-        float2               _mouseSensitivity{ 1.0f, 1.0f };
-        float2               _gamepadSensitivity{ 1.0f, 1.0f };
-        float32              _stickDeadzoneOverride{ -1.0f }; ///< 게임패드 스틱 바인딩의 안쪽 데드존을 덮어쓴다. 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)
-        DeadzoneShape        _deadzoneShape{ DeadzoneShape::Radial };
-        DigitalNormalization _digitalNormalization{ DigitalNormalization::Circular };
-        bool                 _bInvertX{ false };
-        bool                 _bInvertY{ false };
     };
 } // namespace sw
 
@@ -473,12 +443,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 감도, 축 반전, 데드존 모드, 접근성 설정
         // ------------------------------------------------------------------------------
-        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. */
-        InputPlayerSettings&       getPlayerSettings() { return _playerSettings; }
-        const InputPlayerSettings& getPlayerSettings() const { return _playerSettings; }
+        /** @brief 플레이어 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)입니다. `clear` 나 맵 다시 읽기를 해도 남습니다. */
+        InputAccessibilitySettings&       getAccessibilitySettings() { return _accessibility; }
+        const InputAccessibilitySettings& getAccessibilitySettings() const { return _accessibility; }
 
-        /** @brief 액션의 토글 모드를 켜거나 끕니다(접근성: 조준이나 달리기를 한 번 눌러 켜기). */
-        void setToggleMode( const hashed_string& action, bool bToggle );
+        /** @brief 토글 액션(`InputAccessibilitySettings::setToggleAction`)이 지금 켜져 있는지입니다. 누를 때마다 뒤집히고, 토글에서 빠지면 꺼집니다. */
         bool isActionToggled( const hashed_string& action ) const;
 
         void setSuppressBaseActionOnChord( bool bSuppress ) { _bSuppressBaseActionOnChord = bSuppress ? SW_TRUE : SW_FALSE; }
@@ -708,8 +677,7 @@ namespace sw
             uint8                                  _bPressed     : 1;
             uint8                                  _bReleased    : 1;
             uint8                                  _bTriggered   : 1;
-            uint8                                  _bToggleMode  : 1;
-            uint8                                  _bToggleState : 1;
+            uint8                                  _bToggleState : 1; ///< 토글 액션의 켜짐. 토글 여부는 `InputAccessibilitySettings` 가 가진다(맵을 다시 읽어도 남게)
 
             ActionEntry()
                 : _valueType{ InputActionValueType::Boolean }
@@ -728,7 +696,6 @@ namespace sw
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
-                , _bToggleMode{ SW_FALSE }
                 , _bToggleState{ SW_FALSE } {}
         };
 
@@ -871,7 +838,7 @@ namespace sw
         InputActionBuffer                    _actionBuffer;
         uint32                               _nextGeneration;
         hashed_string                        _defaultLayerName;
-        InputPlayerSettings                  _playerSettings;
+        InputAccessibilitySettings           _accessibility;
         float32                              _doubleClickTime;
         float32                              _doubleClickMaxDistance;
         float32                              _dragThreshold; ///< 클릭과 끌기를 가르는 포인터 이동 거리(픽셀, `dragThreshold`)
