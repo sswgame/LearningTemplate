@@ -69,18 +69,6 @@ namespace sw
                 return string{ sb.c_str(), sb.size() };
             }
 
-            /** @brief 16 진 글자 하나의 값입니다. 16 진 글자가 아니면 -1 입니다. */
-            static int32 parseHexNibble( utf8 character )
-            {
-                if ( '0' <= character && character <= '9' )
-                    return character - '0';
-                if ( 'a' <= character && character <= 'f' )
-                    return character - 'a' + 10;
-                if ( 'A' <= character && character <= 'F' )
-                    return character - 'A' + 10;
-                return -1;
-            }
-
             [[nodiscard]] static bool readReflectAnyText( void* pPtr, string_view str )
             {
                 ReflectAny& any  = *static_cast<ReflectAny*>( pPtr );
@@ -91,18 +79,7 @@ namespace sw
                 // 찾기만 한다 — 바이너리 읽기(위)와 같다. 파일의 모르는 타입 이름을 전역 이름 표에 넣지 않는다.
                 any._typeFqn          = hashed_string::findInterned( str.substr( 0, bar ) );
                 const string_view hex = str.substr( bar + 1 );
-                if ( ( hex.size() % 2 ) != 0 )
-                    return false;
-                any._bytes.resize( hex.size() / 2 );
-                for ( size_t byteIndex = 0; byteIndex < any._bytes.size(); ++byteIndex )
-                {
-                    const int32 hiNibble = parseHexNibble( hex[byteIndex * 2] );
-                    const int32 loNibble = parseHexNibble( hex[byteIndex * 2 + 1] );
-                    if ( hiNibble < 0 || loNibble < 0 )
-                        return false;
-                    any._bytes[byteIndex] = static_cast<uint8>( ( hiNibble << 4 ) | loNibble );
-                }
-                return true;
+                return HexUtil::decodeBytes( hex, any._bytes );
             }
         };
     } // namespace

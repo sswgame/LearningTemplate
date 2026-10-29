@@ -20,12 +20,9 @@ namespace sw
         uint64 value = 0;
         for ( const utf8 ch : text )
         {
-            uint64 digit = 0;
-            if ( '0' <= ch && ch <= '9' )
-                digit = static_cast<uint64>( ch - '0' );
-            else if ( 'a' <= ch && ch <= 'f' )
-                digit = static_cast<uint64>( ch - 'a' + 10 );
-            else
+            uint8 digit = 0;
+            // 키는 소문자 하나로 정한다 — 대문자를 받으면 같은 값이 두 키가 된다.
+            if ( ( 'A' <= ch && ch <= 'F' ) || HexUtil::tryReadDigit( ch, digit ) == false )
                 return false;
             value = ( value << 4 ) | digit;
         }

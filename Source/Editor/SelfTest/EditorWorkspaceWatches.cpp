@@ -8,6 +8,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/HexUtil.h"
 
 #include "DevTools/DebugHUD/DebugHUD.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -150,12 +151,8 @@ namespace sw::editor
         /** @brief 64 비트 값을 16 자리 16 진 글로 씁니다(수 감시 값의 float 비교에서 뭉개지지 않게 글로 낸다). */
         string formatHash( uint64 hash )
         {
-            constexpr const utf8* kHexDigit = "0123456789abcdef";
-            string                text;
-            for ( int32 nibble = 15; nibble >= 0; --nibble )
-            {
-                text += kHexDigit[( hash >> ( nibble * 4 ) ) & 0xF];
-            }
+            string text;
+            HexUtil::appendUint64( text, hash );
             return text;
         }
 

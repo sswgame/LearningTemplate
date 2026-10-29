@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -37,12 +38,8 @@ namespace sw
 
             static string makeHashText( uint64 hash )
             {
-                utf8 arrDigit[kHashDigits];
-                const auto [pEnd, error] = std::to_chars( arrDigit, arrDigit + kHashDigits, hash, 16 );
-                (void)error; // 16 자리 버퍼에 64 비트가 들어간다
-                const size_t digitCount = static_cast<size_t>( pEnd - arrDigit );
-                string       text( static_cast<size_t>( kHashDigits ) - digitCount, '0' );
-                text.append( arrDigit, digitCount );
+                string text;
+                HexUtil::appendUint64( text, hash, kHashDigits );
                 return text;
             }
 
@@ -50,43 +47,22 @@ namespace sw
             static constexpr size_t      kSHA256HexDigits    = static_cast<size_t>( NetSecurityConstant::kSHA256Size ) * 2;
             static constexpr size_t      kSignatureSize      = 64; ///< ES256 은 r ‖ s(각 32 바이트)
             static constexpr size_t      kSignatureHexDigits = kSignatureSize * 2;
-            static constexpr const utf8* kHexDigits          = "0123456789abcdef";
 
-            static string toHex( const uint8* pBytes, size_t size )
-            {
-                string text;
-                text.reserve( size * 2 );
-                for ( size_t index = 0; index < size; ++index )
-                {
-                    text.push_back( kHexDigits[pBytes[index] >> 4] );
-                    text.push_back( kHexDigits[pBytes[index] & 0x0F] );
-                }
-                return text;
-            }
+            static string toHex( const uint8* pBytes, size_t size ) { return HexUtil::encodeBytes( pBytes, size ); }
 
             /** @brief 소문자 16 진 글을 바이트로 읽습니다. 홀수 길이나 소문자 16 진이 아닌 글자가 있으면 false 입니다. */
             [[nodiscard]] static bool fromHex( string_view text, vector<uint8>& outBytes )
             {
-                outBytes.clear();
-                if ( text.size() % 2 != 0 )
-                    return false;
-                const auto digitValue = []( utf8 letter ) -> int32
+                // 서명한 글은 소문자 하나로 정한다 — 대문자를 받으면 같은 바이트가 두 글로 서명된다.
+                for ( const utf8 letter : text )
                 {
-                    if ( letter >= '0' && letter <= '9' )
-                        return letter - '0';
-                    if ( letter >= 'a' && letter <= 'f' )
-                        return letter - 'a' + 10;
-                    return -1;
-                };
-                for ( size_t index = 0; index < text.size(); index += 2 )
-                {
-                    const int32 high = digitValue( text[index] );
-                    const int32 low  = digitValue( text[index + 1] );
-                    if ( high < 0 || low < 0 )
+                    if ( letter >= 'A' && letter <= 'F' )
+                    {
+                        outBytes.clear();
                         return false;
-                    outBytes.push_back( static_cast<uint8>( high * 16 + low ) );
+                    }
                 }
-                return true;
+                return HexUtil::decodeBytes( text, outBytes );
             }
 
             /** @brief 목록의 글 필드에 줄바꿈이 있으면 true 입니다(서명 글의 필드 경계가 흐려진다). */

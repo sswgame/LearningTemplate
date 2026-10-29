@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
 
@@ -19,32 +20,12 @@ namespace sw
         {
             static constexpr size_t kCoordinateHexLength = 64; ///< P-256 좌표 하나(32 바이트)의 16 진 길이
 
-            static int32 hexValue( utf8 digit )
-            {
-                if ( digit >= '0' && digit <= '9' )
-                    return digit - '0';
-                if ( digit >= 'a' && digit <= 'f' )
-                    return digit - 'a' + 10;
-                if ( digit >= 'A' && digit <= 'F' )
-                    return digit - 'A' + 10;
-                return -1;
-            }
-
             /** @brief 64 자리 16 진 글을 32 바이트로 풉니다. 길이나 글자가 틀리면 false 입니다. */
             [[nodiscard]] static bool decodeCoordinate( string_view hex, vector<uint8>& outBytes )
             {
                 if ( hex.size() != kCoordinateHexLength )
                     return false;
-                outBytes.clear();
-                for ( size_t index = 0; index < hex.size(); index += 2 )
-                {
-                    const int32 high = hexValue( hex[index] );
-                    const int32 low  = hexValue( hex[index + 1] );
-                    if ( high < 0 || low < 0 )
-                        return false;
-                    outBytes.push_back( static_cast<uint8>( high * 16 + low ) );
-                }
-                return true;
+                return HexUtil::decodeBytes( hex, outBytes );
             }
         };
     } // namespace

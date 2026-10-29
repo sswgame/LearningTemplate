@@ -72,6 +72,11 @@ namespace sw
         appendUint64( inoutText, value, digitCount, hexCase );
     }
 
+    bool HexUtil::tryReadDigit( const utf8 character, uint8& outValue )
+    {
+        return HexUtilInternal::tryReadDigit( character, outValue );
+    }
+
     bool HexUtil::decodeBytes( string_view text, vector<uint8>& outBytes )
     {
         outBytes.clear();
@@ -82,7 +87,7 @@ namespace sw
         {
             uint8      high  = 0;
             uint8      low   = 0;
-            const bool bRead = HexUtilInternal::tryReadDigit( text[index], high ) && HexUtilInternal::tryReadDigit( text[index + 1], low );
+            const bool bRead = tryReadDigit( text[index], high ) && tryReadDigit( text[index + 1], low );
             if ( bRead == false )
             {
                 outBytes.clear();
