@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/UI/Binding/UIBindingValue.h"
 
@@ -31,15 +32,22 @@ namespace sw
 {
     /**
      * @class UIBindingConverterRegistry
-     * @brief 이름으로 찾는 변환기 레지스트리입니다(`UISystem::getBindingConverters`). 엔진 기본 변환기는 `Percent`(0..1 → "75%"), `Invert`(불리언 뒤집기),
+     * @brief 이름으로 찾는 변환기 레지스트리입니다(엔진 범위 서브시스템 `UIBindingConverters`). 엔진 기본 변환기는 `Percent`(0..1 → "75%"), `Invert`(불리언 뒤집기),
      *        `NotEmpty`(텍스트가 비지 않았는지), `IsZero`(숫자가 0 인지), `Seconds`(초 → "m:ss")입니다.
      * @details 게임과 키트가 자기 변환기를 추가하고 돌려받은 구독을 든다 — 구독이 사라지면(모듈의 객체와 함께) 거두고, 엔진 기본을 덮었던 이름이면 기본으로 돌아간다.
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UIBindingConverterRegistry
+    class SW_API UIBindingConverterRegistry final : public ISubsystem
     {
     public:
         UIBindingConverterRegistry();
+
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIBindingConverterRegistry>()`, 게임은 `game::getSubsystem<UIBindingConverterRegistry>()`).
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UIBindingConverters";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override {}
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 변환기를 등록하고 그 구독을 돌려줍니다. 같은 이름이 있으면 교체합니다(엔진 기본을 같은 이름으로 덮을 수 있다). 구독이 사라지면 거둔다.

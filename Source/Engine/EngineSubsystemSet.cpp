@@ -63,6 +63,9 @@
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
+#include "Engine/UI/Binding/UIBindingConverterRegistry.h"
+#include "Engine/UI/Input/UIClipboardService.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -228,7 +231,12 @@ namespace sw::engine
         parts._pNetSession  = &startup.addSubsystem( sw::make_unique<GameNetSession>() ); // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다
         parts._pFontService = &startup.addSubsystem( sw::make_unique<FontService>() );
         parts._pTelemetry   = &startup.addSubsystem( sw::make_unique<TelemetryService>() );
-        parts._pUISystem    = &startup.addSubsystem( sw::make_unique<UISystem>() );
+        // 화면 스택에 매이지 않는 UI 서비스는 따로 선 서브시스템이다 — UI 를 위한 범위를 따로 두지 않는다(수명이 엔진 범위와 같다, 언리얼 UEngineSubsystem ·
+        // Godot DisplayServer 의 클립보드). 화면 스택(`UISystem`)은 변환기 표에 의존한다.
+        startup.addSubsystem( sw::make_unique<UIClipboardService>() );
+        startup.addSubsystem( sw::make_unique<UIGlobalCommandRegistry>() );
+        startup.addSubsystem( sw::make_unique<UIBindingConverterRegistry>() );
+        parts._pUISystem = &startup.addSubsystem( sw::make_unique<UISystem>() );
         return parts;
     }
 } // namespace sw::engine

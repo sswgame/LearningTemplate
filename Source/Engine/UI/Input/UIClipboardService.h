@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
@@ -24,16 +25,23 @@ namespace sw
 {
     /**
      * @class UIClipboardService
-     * @brief UI 가 쓰는 글 클립보드입니다(`UISystem::getClipboard`). 언리얼의 `FPlatformApplicationMisc::ClipboardCopy/Paste`, 유니티의 `GUIUtility.systemCopyBuffer`,
+     * @brief UI 가 쓰는 글 클립보드입니다(엔진 범위 서브시스템 `UIClipboard`). 언리얼의 `FPlatformApplicationMisc::ClipboardCopy/Paste`, 유니티의 `GUIUtility.systemCopyBuffer`,
      *        Godot 의 `DisplayServer.clipboard_get/set` 에 해당합니다.
      * @details 운영체제 연결(`setAPI`)이 없으면 쓴 글을 그대로 보관했다가 돌려줍니다. 그래서 헤드리스 테스트와 전용 서버에서도 복사 붙여넣기가 한 바퀴 돕니다.
      *          연결이 있으면 읽기와 쓰기 모두 운영체제 쪽만 본다(다른 프로그램에서 복사한 글이 오고, 그쪽이 비었으면 비었다). 게임 창 호스트(`App`)가
      *          `PlatformClipboard` 를 끼운다.
      */
-    class SW_API UIClipboardService
+    class SW_API UIClipboardService final : public ISubsystem
     {
     public:
         UIClipboardService();
+
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIClipboardService>()`, 게임은 `game::getSubsystem<UIClipboardService>()`).
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UIClipboard";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override { _text.clear(); }
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 운영체제 클립보드 연결을 정합니다(복사해 두며, 모듈이 내려가기 전에 비웁니다). */
         void setAPI( const UIClipboardAPI& api );

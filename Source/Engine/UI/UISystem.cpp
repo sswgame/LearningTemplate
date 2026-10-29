@@ -102,9 +102,6 @@ namespace sw
         , _styleSheetReloadedSubscription{}
         , _theme{}
         , _listReopenDocument{}
-        , _bindingConverters{}
-        , _clipboard{}
-        , _globalCommands{}
         , _notifications{ *this }
         , _actionGlyphs{}
         , _input{}
@@ -197,7 +194,7 @@ namespace sw
     span<const utf8* const> UISystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
-                                                          UserSettingsManager::kSubsystemName };
+                                                          UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName };
         return kArrDependency;
     }
 
@@ -762,9 +759,10 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.UI.Bind" );
         UIBindingContext context{};
-        context._pLocalization = findLocalization();
-        context._pConverters   = &_bindingConverters;
-        context._pSettings     = findUserSettings();
+        context._pLocalization                       = findLocalization();
+        const UIBindingConverterRegistry& converters = engine::getSubsystem<UIBindingConverterRegistry>();
+        context._pConverters                         = &converters;
+        context._pSettings                           = findUserSettings();
         // 텍스트 버전: 언어를 바꾸거나 테이블을 다시 읽으면 오른다. 정수 하나 비교라 매 프레임 확인한다(언리얼 FTextLocalizationManager 의 TextRevision 에 해당).
         const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
@@ -786,9 +784,9 @@ namespace sw
         _textRevision       = textRevision;
         _bTextRevisionKnown = SW_TRUE;
         // 바인딩은 변환기를 값(함수 포인터)으로 복사한다 — 표가 바뀌면(등록 · 구독 해제) 모든 화면을 다시 묶는다.
-        if ( _bindingConverters.getRevision() != _converterRevision )
+        if ( converters.getRevision() != _converterRevision )
         {
-            _converterRevision = _bindingConverters.getRevision();
+            _converterRevision = converters.getRevision();
             for ( const unique_ptr<UIScreen>& screen : _listScreen )
             {
                 screen->getBindingSet().markRebind();

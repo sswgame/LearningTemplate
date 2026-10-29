@@ -5,7 +5,9 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -141,7 +143,7 @@ namespace sw
     {
         if ( command.empty() )
             return;
-        const bool bHandled = onCommand( command, source ) || ( _pUISystem != nullptr && _pUISystem->getGlobalCommands().tryExecute( command, source ) );
+        const bool bHandled = onCommand( command, source ) || ( _pUISystem != nullptr && engine::getSubsystem<UIGlobalCommandRegistry>().tryExecute( command, source ) );
         if ( bHandled )
             return;
         const utf8* pOrigin = _documentPath.empty() ? "built in code" : _documentPath.c_str();

@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -282,7 +283,7 @@ namespace sw
         WidgetTree* const pTree   = getTree();
         UIScreen* const   pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
         UISystem* const   pUI     = pScreen != nullptr ? pScreen->getUISystem() : nullptr;
-        return pUI != nullptr ? &pUI->getClipboard() : nullptr;
+        return pUI != nullptr ? &engine::getSubsystem<UIClipboardService>() : nullptr; // 화면 스택의 위젯만 클립보드를 쓴다
     }
 
     void TextInputWidget::notifyClipboardWriteFailed() const

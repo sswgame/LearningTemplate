@@ -55,6 +55,10 @@ SW_ENGINE_SERVICE( class, UserSettingsManager, Required, GameVisible )
 SW_ENGINE_SERVICE( class, FontService, Required, GameVisible )
 // 런타임 UI — 화면 스택 · 입력 → UI 사건 · 갱신. 서브시스템 UI(Client 호스트)다.
 SW_ENGINE_SERVICE( class, UISystem, Required, GameVisible )
+// UI 서비스 — 화면 스택(`UISystem`)에 매이지 않는 것은 엔진 범위의 서브시스템이다(UIClipboard · UIGlobalCommands · UIBindingConverters). 게임이 명령 · 변환기를 건다.
+SW_ENGINE_SERVICE( class, UIClipboardService, Required, GameVisible )
+SW_ENGINE_SERVICE( class, UIGlobalCommandRegistry, Required, GameVisible )
+SW_ENGINE_SERVICE( class, UIBindingConverterRegistry, Required, GameVisible )
 SW_ENGINE_SERVICE( class, PhysicsSystem, Required, GameVisible )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 // 서브시스템 Telemetry(Client 호스트)다.

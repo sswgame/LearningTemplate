@@ -2,7 +2,9 @@
 
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Screen/OptionsMenuScreen.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -46,11 +48,13 @@ namespace sw
         {
             if ( command != hashed_string( pSessionCommand ) )
                 continue;
-            UISystem* pUI = getUISystem();
-            if ( pUI == nullptr || pUI->getGlobalCommands().hasCommand( command ) == false )
+            if ( getUISystem() == nullptr )
+                return false; // 화면 스택 밖의 화면이다 — 화면 디스패치가 경고한다
+            UIGlobalCommandRegistry& commands = engine::getSubsystem<UIGlobalCommandRegistry>();
+            if ( commands.hasCommand( command ) == false )
                 return false; // 처리하는 쪽이 없다 — 화면 디스패치가 경고한다
             close();
-            return pUI->getGlobalCommands().tryExecute( command, source );
+            return commands.tryExecute( command, source );
         }
         return UIScreen::onCommand( command, source );
     }
@@ -58,14 +62,14 @@ namespace sw
     void PauseMenuScreen::onTick( float32 deltaSeconds )
     {
         UIScreen::onTick( deltaSeconds );
-        const UISystem* pUI = getUISystem();
-        if ( pUI == nullptr )
+        if ( getUISystem() == nullptr )
             return;
+        const UIGlobalCommandRegistry& commands = engine::getSubsystem<UIGlobalCommandRegistry>();
         for ( const utf8* pButtonName : PauseMenuScreenInternal::kArrSessionButton )
         {
             Widget* pButton = getTree().findWidgetByName( hashed_string( pButtonName ) );
             if ( pButton != nullptr )
-                pButton->setVisibility( pUI->getGlobalCommands().hasCommand( hashed_string( pButtonName ) ) ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
+                pButton->setVisibility( commands.hasCommand( hashed_string( pButtonName ) ) ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
         }
     }
 } // namespace sw

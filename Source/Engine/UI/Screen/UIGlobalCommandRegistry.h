@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/UI/Screen/UIScreenTypes.h"
 
@@ -21,19 +22,26 @@ namespace sw
 {
     /**
      * @class UIGlobalCommandRegistry
-     * @brief 이름 → 처리 함수 표입니다(`UISystem::getGlobalCommands`). 화면이 `onCommand` 로 처리하지 않은 명령이 마지막으로 여기에 닿습니다.
+     * @brief 이름 → 처리 함수 표입니다(엔진 범위 서브시스템 `UIGlobalCommands`). 화면이 `onCommand` 로 처리하지 않은 명령이 마지막으로 여기에 닿습니다.
      * @details 언리얼 CommonUI 의 입력 액션 바인딩이 위젯 밖의 핸들러를 부르는 것, 유니티 UI Toolkit 의 명령 이벤트가 패널 밖으로 올라가는 것에 해당한다.
      *          엔진 일시정지 메뉴(`PauseMenuScreen`)의 `ReturnToTitle` · `QuitGame` 버튼은 이 표에 그 이름이 등록됐을 때만 보인다 —
      *          게임 흐름(`GameInstance`)이나 호스트(`Engine`)가 자기 처리 함수를 등록한다. 등록은 구독이라 등록한 쪽이 사라질 때 풀린다.
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API UIGlobalCommandRegistry
+    class SW_API UIGlobalCommandRegistry final : public ISubsystem
     {
     public:
         static constexpr utf8 kReturnToTitle[] = "ReturnToTitle"; ///< 일시정지 메뉴의 "타이틀로" 명령입니다.
         static constexpr utf8 kQuitGame[]      = "QuitGame";      ///< 일시정지 메뉴의 "끝내기" 명령입니다.
 
         UIGlobalCommandRegistry();
+
+        // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIGlobalCommandRegistry>()`, 게임은 `game::getSubsystem<UIGlobalCommandRegistry>()`).
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "UIGlobalCommands";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override {}
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 명령 @p command 의 처리 함수를 등록하고 그 구독을 돌려줍니다. 같은 이름이 있으면 교체합니다. 구독이 사라지면 거둡니다.
