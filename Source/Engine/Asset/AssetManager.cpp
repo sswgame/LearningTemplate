@@ -87,23 +87,12 @@ namespace sw
         , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<IAssetCache>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
         , _listReloadEntry{}
     {
-        // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
-        // 정적 값 표)는 빌려 온다. 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
+        // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 모두 여기서 만들어 소유한다(정적 창구는 `getAssetCache<T>()` 로 찾는다).
+        // 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
         for ( const BuiltInAssetCacheRegistration* pRegistration : BuiltInAssetCacheRegistry::getAll() )
         {
-            if ( pRegistration->_pCreate != nullptr )
-            {
-                _listOwnedAssetCache.push_back( pRegistration->_pCreate() );
-                _listBuiltInAssetCache.push_back( _listOwnedAssetCache.back().get() );
-            }
-            else if ( pRegistration->_pGetShared != nullptr )
-            {
-                _listBuiltInAssetCache.push_back( &pRegistration->_pGetShared() );
-            }
-            else
-            {
-                continue;
-            }
+            _listOwnedAssetCache.push_back( pRegistration->_pCreate() );
+            _listBuiltInAssetCache.push_back( _listOwnedAssetCache.back().get() );
             if ( pRegistration->_pReload != nullptr )
                 _listReloadEntry.push_back( ReloadEntry{ _listBuiltInAssetCache.back(), pRegistration->_pReload } );
         }

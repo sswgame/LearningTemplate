@@ -4,7 +4,7 @@
  * @note
  *   포함: AssetDatabase, PackManager, 에셋 캐시 레지스트리.
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
- *   매니저는 생성자에서 등록 테이블을 훑어 소유 캐시를 만들고, 코드로 만드는 값 테이블(`WeakInternCache`)은 빌려 와서 등록합니다. 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
+ *   매니저는 생성자에서 등록 테이블을 훑어 캐시를 모두 만들어 소유합니다(코드로 만드는 값 테이블 `WeakInternCache` 파생도 같다). 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
  *   - AssetPaths: Content/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -199,7 +199,7 @@ namespace sw
         TaskStageHandle _loadStage      SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
         vector<unique_ptr<IAssetCache>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
         unique_ptr<PackManager>         _pPackManager;
-        vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다. 소유 캐시와, 빌려 온 공유 캐시(Engine.dll 의 정적 값 테이블)를 종류 이름 순으로 올린다
+        vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다(`_listOwnedAssetCache` 의 것)를 종류 이름 순으로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 등록한 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **등록할 때** 복사한다. 모듈이 자기 캐시를 제거하지 않고 사라지면 그 포인터의 가상 함수 테이블도

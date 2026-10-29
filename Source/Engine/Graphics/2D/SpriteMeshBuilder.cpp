@@ -4,11 +4,12 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 namespace sw
@@ -133,7 +134,16 @@ namespace sw
                 }
             };
 
-            using SlicedMeshCache = WeakInternCache<SlicedSpriteDesc, Mesh, DescHash>;
+            /** @brief 9-슬라이스와 타일 메시 표입니다 — 에셋 매니저가 내장 캐시로 만들어 소유한다. 사라진 항목은 새 항목을 넣을 때 정리한다(크기를 끌어 바꾸는 편집은 크기마다 항목을 남긴다). */
+            class SlicedMeshCache final : public WeakInternCache<SlicedSpriteDesc, Mesh, DescHash>
+            {
+            public:
+                static constexpr const utf8* kAssetKindName = "SlicedSpriteMesh";
+                SlicedMeshCache()
+                    : WeakInternCache{ kAssetKindName }
+                {
+                }
+            };
 
             /** @brief 값에 맞는 정점을 만들어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
             static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDesc& desc )
@@ -147,20 +157,8 @@ namespace sw
                 return mesh;
             }
 
-            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
-            struct SlicedMeshCacheHolder
-            {
-                SlicedMeshCache _cache{ "SlicedSpriteMesh" };
-            };
-
-            /** @brief 9-슬라이스와 타일 메시 캐시의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). */
-            inline static ScopeOwned<SlicedMeshCacheHolder> s_slicedMeshCache{};
-
-            /** @brief 9-슬라이스와 타일 메시 캐시입니다. 사라진 항목은 새 항목을 넣을 때 정리한다. 크기를 끌어 바꾸는 편집은 크기마다 항목을 남기기 때문이다. */
-            static SlicedMeshCache& getSlicedMeshCache()
-            {
-                return s_slicedMeshCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
-            }
+            /** @brief 9-슬라이스와 타일 메시 캐시입니다. 엔진 서비스가 없으면(캐시를 쓸 엔진이 없다) 멈춘다. */
+            static SlicedMeshCache& getSlicedMeshCache() { return engine::getSubsystem<AssetManager>().getAssetCache<SlicedMeshCache>(); }
         };
     } // namespace
 } // namespace sw
@@ -225,14 +223,10 @@ namespace sw
         SW_MEMORY_SCOPE( Mesh );
         return SpriteMeshBuilderInternal::getSlicedMeshCache().acquire( desc, &SpriteMeshBuilderInternal::createSlicedMesh );
     }
-
-    IAssetCache& SpriteMeshBuilder::getSlicedMeshCache()
-    {
-        return SpriteMeshBuilderInternal::getSlicedMeshCache();
-    }
 } // namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_SHARED_ASSET_CACHE( SlicedSpriteMesh, &SpriteMeshBuilder::getSlicedMeshCache );
+    using SlicedSpriteMeshCache = SpriteMeshBuilderInternal::SlicedMeshCache;
+    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( SlicedSpriteMeshCache );
 } // namespace sw

@@ -55,8 +55,5 @@ namespace sw
          *          같은 크기와 테두리의 패널은 메시가 하나이므로 한 배치로 묶입니다.
          */
         static shared_ptr<Mesh> acquireSlicedMesh( const SlicedSpriteDesc& desc );
-
-        /** @brief `acquireSlicedMesh` 의 캐시를 에셋 캐시 레지스트리에 노출하는 함수입니다. 캐시 이름은 "SlicedSpriteMesh" 이고 진단과 비우기에 씁니다. `AssetManager` 가 로드합니다. */
-        static IAssetCache& getSlicedMeshCache();
     };
 } // namespace sw

@@ -5,8 +5,9 @@
  *          만드는 함수를 올리고, `AssetManager` 는 생성자에서 표를 훑어 캐시를 만들고 소유합니다 — 의존은 기능 → Resource 한 방향입니다.
  *          언리얼 서브시스템(모듈이 자기 타입을 올리고 엔진이 인스턴스를 만든다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 모양입니다.
  *
- *          - **소유 캐시**(`SW_BUILT_IN_ASSET_CACHE`): 매니저마다 하나씩 만들고 매니저가 지웁니다.
- *          - **공유 캐시**(`SW_BUILT_IN_SHARED_ASSET_CACHE`): Engine 이미지에 있고 엔진 수명 범위가 소유하는 객체(코드로 짓는 값 표)를 빌려 올립니다. 매니저보다 오래 삽니다.
+ *          캐시는 모두 매니저마다 하나씩 만들고 매니저가 지웁니다. 정적 창구(`MeshCache::acquire` 등)는 `engine::getSubsystem<AssetManager>().getAssetCache<T>()` 로
+ *          자기 캐시를 찾는다 — 예전의 "공유 캐시"(엔진 수명 범위가 소유한 객체를 빌려 올림)는 없다. 다시 읽을 파일이 없는 캐시(코드로 짓는 값 표)는
+ *          `SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD` 로 올린다.
  *
  * @note 표는 Engine 이미지 안에서만 채웁니다. 모듈(게임 · 키트)의 캐시는 `AssetManager::registerAssetCache` 로 올리고 내려가기 전에 그 구독을 놓습니다 —
  *       이 표의 항목은 내리지 않으므로, 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다.
@@ -21,17 +22,14 @@
 
 namespace sw
 {
-    /** @brief 소유 캐시를 하나 만듭니다. */
+    /** @brief 캐시를 하나 만듭니다. */
     using CreateAssetCacheFunction = unique_ptr<IAssetCache> ( * )();
-    /** @brief 프로세스에 하나인 공유 캐시를 빌려 줍니다. */
-    using GetSharedAssetCacheFunction = IAssetCache& (*)();
 
-    /** @struct BuiltInAssetCacheRegistration @brief 등록 줄 하나 — 둘 중 하나만 채웁니다. 등록한 .cpp 의 정적 저장소에 있습니다. */
+    /** @struct BuiltInAssetCacheRegistration @brief 등록 줄 하나입니다. 등록한 .cpp 의 정적 저장소에 있습니다. */
     struct BuiltInAssetCacheRegistration
     {
-        CreateAssetCacheFunction    _pCreate;    ///< 소유 캐시면 만드는 함수, 아니면 nullptr
-        GetSharedAssetCacheFunction _pGetShared; ///< 공유 캐시면 빌려 주는 함수, 아니면 nullptr
-        AssetCacheReloadFunction    _pReload;    ///< 핫 리로드 함수(배포 · 다시 읽을 파일이 없는 캐시는 nullptr)
+        CreateAssetCacheFunction _pCreate; ///< 만드는 함수
+        AssetCacheReloadFunction _pReload; ///< 핫 리로드 함수(배포 · 다시 읽을 파일이 없는 캐시는 nullptr)
     };
 } // namespace sw
 
@@ -62,7 +60,7 @@ namespace sw
         BuiltInAssetCacheRegistrar& operator=( const BuiltInAssetCacheRegistrar& ) = delete;
     };
 
-    /** @brief 소유 캐시를 만드는 함수입니다. 캐시 타입이 완전한 자리(그 캐시의 .cpp)에서 실체화합니다. */
+    /** @brief 캐시를 만드는 함수입니다. 캐시 타입이 완전한 자리(그 캐시의 .cpp)에서 실체화합니다. */
     template <typename TCache>
     unique_ptr<IAssetCache> createBuiltInAssetCache()
     {
@@ -73,28 +71,27 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 소유 캐시 @p Type 을 내장 캐시로 등록합니다(캐시의 .cpp, 파일 범위, `namespace sw` 안). 매니저마다 하나씩 만듭니다.
+ * @brief 캐시 @p Type 을 내장 캐시로 등록합니다(캐시의 .cpp, 파일 범위, `namespace sw` 안). 매니저마다 하나씩 만듭니다.
  */
 #define SW_BUILT_IN_ASSET_CACHE( Type ) SW_BUILT_IN_ASSET_CACHE_WITH_ID( Type, Type )
 
 /**
- * @brief 이름이 식별자가 아닌 소유 캐시 @p Type(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 등)을 등록합니다. @p id 는 정적 이름을 만드는 식별자입니다.
+ * @brief 이름이 식별자가 아닌 캐시 @p Type(템플릿 인스턴스 `SharedAssetCache<Skeleton>` 등)을 등록합니다. @p id 는 정적 이름을 만드는 식별자입니다.
  */
-#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                                \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>,              \
-                                                                                nullptr, SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                                            \
-    {                                                                                                                              \
-        &sw_builtInAssetCache_##id                                                                                                 \
+#define SW_BUILT_IN_ASSET_CACHE_WITH_ID( id, Type )                                                                       \
+    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ &::sw::createBuiltInAssetCache<Type>,     \
+                                                                                SW_ASSET_CACHE_RELOAD_FUNCTION( Type ) }; \
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                                   \
+    {                                                                                                                     \
+        &sw_builtInAssetCache_##id                                                                                        \
     }
 
 /**
- * @brief 공유 캐시를 내장 캐시로 등록합니다. @p id 는 정적 이름을 만드는 식별자, @p pGetShared 는 `IAssetCache&` 를 돌려주는 함수입니다.
- *        공유 캐시는 코드로 짓는 값 표라 다시 읽을 파일이 없다(리로드 함수 없음).
+ * @brief 다시 읽을 파일이 없는 캐시 @p Type(코드로 짓는 값 표 — `WeakInternCache` 파생)을 등록합니다. 리로드 함수가 없다.
  */
-#define SW_BUILT_IN_SHARED_ASSET_CACHE( id, pGetShared )                                                        \
-    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ nullptr, pGetShared, nullptr }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                         \
-    {                                                                                                           \
-        &sw_builtInAssetCache_##id                                                                              \
+#define SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( Type )                                                                             \
+    static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##Type{ &::sw::createBuiltInAssetCache<Type>, nullptr }; \
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##Type                                          \
+    {                                                                                                                              \
+        &sw_builtInAssetCache_##Type                                                                                               \
     }

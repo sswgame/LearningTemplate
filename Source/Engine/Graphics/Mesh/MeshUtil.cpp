@@ -5,12 +5,13 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/EnumNameTable.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 namespace sw
@@ -252,27 +253,24 @@ namespace sw
             return float3{ -0.5f + static_cast<float32>( ix ) * step, 0.0f, -0.5f + static_cast<float32>( iz ) * step };
         }
 
+        /** @brief 내장 도형 표입니다 — 에셋 매니저가 내장 캐시로 만들어 소유한다(Engine.dll 안이라 모듈 핫 리로드에 사라지지 않는다). */
+        class PrimitiveMeshCache final : public WeakInternCache<hashed_string, Mesh>
+        {
+        public:
+            static constexpr const utf8* kAssetKindName = "PrimitiveMesh";
+            PrimitiveMeshCache()
+                : WeakInternCache{ kAssetKindName }
+            {
+            }
+        };
+
         struct MeshUtilInternal
         {
-            using PrimitiveCache = WeakInternCache<hashed_string, Mesh>;
-
             /** @brief 기준 이름(`canonicalPrimitiveIDVal`)으로 흰색 도형을 짓습니다. */
             static shared_ptr<Mesh> createSharedPrimitive( const hashed_string& canonicalID ) { return MeshUtil::createPrimitive( canonicalID.c_str() ); }
 
-            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
-            struct PrimitiveCacheHolder
-            {
-                PrimitiveCache _cache{ "PrimitiveMesh" };
-            };
-
-            /** @brief 내장 도형 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). Engine.dll 안이라 모듈 핫 리로드에 사라지지 않는다. */
-            inline static ScopeOwned<PrimitiveCacheHolder> s_primitiveCache{};
-
-            /** @brief 내장 도형 표입니다. */
-            static PrimitiveCache& getPrimitiveCache()
-            {
-                return s_primitiveCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
-            }
+            /** @brief 내장 도형 표입니다. 엔진 서비스가 없으면(캐시를 쓸 엔진이 없다) 멈춘다. */
+            static PrimitiveMeshCache& getPrimitiveCache() { return engine::getSubsystem<AssetManager>().getAssetCache<PrimitiveMeshCache>(); }
         };
     } // namespace
 
@@ -404,11 +402,6 @@ namespace sw
         // 캐시는 **약한 참조**다. 소유는 쓰는 쪽에 있고, 마지막 사용자가 놓으면 메시도 같이 사라진다.
         // 그래서 디바이스가 내려갈 때 이 표가 붙들고 있는 GPU 자원이 없다.
         return MeshUtilInternal::getPrimitiveCache().acquire( hashed_string( pCanonical ), &MeshUtilInternal::createSharedPrimitive );
-    }
-
-    IAssetCache& MeshUtil::getPrimitiveCache()
-    {
-        return MeshUtilInternal::getPrimitiveCache();
     }
 
     shared_ptr<Mesh> MeshUtil::createSphere( uint32 stackCount, uint32 sliceCount )
@@ -689,5 +682,5 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_SHARED_ASSET_CACHE( PrimitiveMesh, &MeshUtil::getPrimitiveCache );
+    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( PrimitiveMeshCache );
 } // namespace sw

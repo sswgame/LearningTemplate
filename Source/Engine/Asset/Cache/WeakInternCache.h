@@ -1,7 +1,8 @@
 /**
  * @file WeakInternCache.h
  * @brief 코드로 짓는 값(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)을 키로 나눠 주는 표이자, 그 표를 에셋 캐시 레지스트리에 보이는 창구입니다.
- * @details 표는 종류마다 프로세스에 하나(Engine.dll 안에 있고 엔진 수명 범위가 소유한다)이고, `AssetManager` 가 생성자에서 레지스트리에 올립니다. 그래서 진단
+ * @details 캐시는 종류마다 이름 있는 파생 타입(`kAssetKindName` 을 둔다)이고, `AssetManager` 가 내장 캐시로 만들어 소유합니다(`SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD`).
+ *          정적 창구는 `engine::getSubsystem<AssetManager>().getAssetCache<파생 타입>()` 으로 찾는다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 그래서 진단
  *          (`getCachedCount`)과 종료 · 재초기화의 비우기(`clear`)가 경로 캐시와 같은 길을 탑니다. 키가 리소스 경로가 아니므로 핫 리로드로 다시 읽을
  *          것이 없습니다(`isCached` 는 false, `reload` 는 할 일이 없다) — 값이 기대는 파일(텍스처 · 머티리얼)은 그 파일의 캐시가 제자리로 다시 읽습니다.
  */
@@ -18,13 +19,13 @@ namespace sw
 {
     /**
      * @class WeakInternCache
-     * @brief `WeakInternTable` 하나를 들고 `IAssetCache` 로 보이는 캐시입니다.
+     * @brief `WeakInternTable` 하나를 들고 `IAssetCache` 로 보이는 캐시입니다. 종류마다 `kAssetKindName` 을 둔 파생 타입으로 씁니다.
      * @tparam KeyType   값을 정하는 키입니다.
      * @tparam ValueType 나눠 줄 값의 타입입니다.
      * @tparam KeyHash   키 해시 함수 객체입니다.
      */
     template <typename KeyType, typename ValueType, typename KeyHash = std::hash<KeyType>>
-    class WeakInternCache final : public IAssetCache
+    class WeakInternCache : public IAssetCache
     {
     public:
         /** @brief 값을 짓는 함수입니다. 지을 수 없으면 nullptr 을 돌려줍니다. */
@@ -32,7 +33,7 @@ namespace sw
 
         /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
         explicit WeakInternCache( const utf8* pKindName )
-            : IAssetCache{ CacheTracking::counted( pKindName ) } // 표는 엔진 수명 범위가 소유해 엔진을 다시 세우면 캐시도 다시 만들어진다 — 같은 칸을 이어 쓴다
+            : IAssetCache{ CacheTracking::counted( pKindName ) } // 캐시는 에셋 매니저마다 하나라 엔진을 다시 세우면 다시 만들어진다 — 같은 칸을 이어 쓴다
             , _pKindName{ pKindName }
             , _table{}
         {

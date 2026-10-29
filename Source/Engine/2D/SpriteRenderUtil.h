@@ -34,9 +34,6 @@ namespace sw
          */
         static shared_ptr<MaterialInstance> acquireTextureInstance( Material* pParent, hashed_string texture, hashed_string normalMap = {} );
 
-        /** @brief `acquireTextureInstance` 의 표를 에셋 캐시 레지스트리에 보이는 창구입니다("SpriteTextureInstance" — 진단 · 비우기). `AssetManager` 가 올립니다. */
-        static IAssetCache& getTextureInstanceCache();
-
         /**
          * @brief 정렬 레이어 이름 · 레이어 안 순서를 서비스 표의 2D 렌더 설정(`engine::getSubsystem<Render2DSettings>()`)으로 정렬 키로 풉니다.
          * @details 모르는 레이어 이름은 데이터 오류라 @p ownerLabel 과 함께 오류를 남기고 `Default` 레이어로 그립니다.

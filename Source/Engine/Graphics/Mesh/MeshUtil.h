@@ -102,8 +102,5 @@ namespace sw
          *          않으므로 디바이스가 종료될 때 보관하고 있는 것이 없습니다. 정점 색은 흰색입니다(`PrimitiveVertexColor::White`).
          */
         static shared_ptr<Mesh> acquirePrimitive( string_view meshID );
-
-        /** @brief `acquirePrimitive` 의 캐시를 에셋 캐시 레지스트리에 노출하는 함수입니다. 캐시 이름은 "PrimitiveMesh" 이고 진단과 비우기에 씁니다. `AssetManager` 가 로드합니다. */
-        static IAssetCache& getPrimitiveCache();
     };
 } // namespace sw

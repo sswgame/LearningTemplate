@@ -3,8 +3,8 @@
 #include "Engine/2D/SpriteRenderUtil.h"
 
 #include "Core/Hash/HashUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -40,7 +40,16 @@ namespace sw
                 }
             };
 
-            using TextureInstanceCache = WeakInternCache<TextureInstanceKey, MaterialInstance, TextureInstanceKeyHash>;
+            /** @brief (머티리얼, 텍스처) 인스턴스 표입니다 — 에셋 매니저가 내장 캐시로 만들어 소유한다. */
+            class TextureInstanceCache final : public WeakInternCache<TextureInstanceKey, MaterialInstance, TextureInstanceKeyHash>
+            {
+            public:
+                static constexpr const utf8* kAssetKindName = "SpriteTextureInstance";
+                TextureInstanceCache()
+                    : WeakInternCache{ kAssetKindName }
+                {
+                }
+            };
 
             /** @brief 부모 머티리얼에 텍스처(와 노멀 맵)만 덮어쓴 인스턴스를 만듭니다. */
             static shared_ptr<MaterialInstance> createTextureInstance( const TextureInstanceKey& key )
@@ -52,20 +61,8 @@ namespace sw
                 return instance;
             }
 
-            /** @brief 캐시를 엔진 수명 범위가 만들 수 있게 종류 이름을 쥔 껍데기입니다(`ScopeOwned` 는 기본 생성한다). */
-            struct TextureInstanceCacheHolder
-            {
-                TextureInstanceCache _cache{ "SpriteTextureInstance" };
-            };
-
-            /** @brief (머티리얼, 텍스처) 인스턴스 표의 소유자입니다 — 엔진 수명 범위가 소유해 엔진 종료 때 사라진다(처음 쓸 때 만들어진다). */
-            inline static ScopeOwned<TextureInstanceCacheHolder> s_textureInstanceCache{};
-
-            /** @brief (머티리얼, 텍스처) 인스턴스 표입니다. */
-            static TextureInstanceCache& getTextureInstanceCache()
-            {
-                return s_textureInstanceCache.getRequired()._cache; // 엔진 수명 범위가 닫힌 뒤의 접근은 결함이다 — 캐시를 쓸 엔진이 없다
-            }
+            /** @brief (머티리얼, 텍스처) 인스턴스 표입니다. 엔진 서비스가 없으면(캐시를 쓸 엔진이 없다) 멈춘다. */
+            static TextureInstanceCache& getTextureInstanceCache() { return engine::getSubsystem<AssetManager>().getAssetCache<TextureInstanceCache>(); }
         };
     } // namespace
 } // namespace sw
@@ -86,11 +83,6 @@ namespace sw
         return SpriteRenderUtilInternal::getTextureInstanceCache().acquire( key, &SpriteRenderUtilInternal::createTextureInstance );
     }
 
-    IAssetCache& SpriteRenderUtil::getTextureInstanceCache()
-    {
-        return SpriteRenderUtilInternal::getTextureInstanceCache();
-    }
-
     uint32 SpriteRenderUtil::resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel )
     {
         const Render2DSettings& settings = engine::getSubsystem<Render2DSettings>();
@@ -103,5 +95,6 @@ namespace sw
 
 namespace sw
 {
-    SW_BUILT_IN_SHARED_ASSET_CACHE( SpriteTextureInstance, &SpriteRenderUtil::getTextureInstanceCache );
+    using SpriteTextureInstanceCache = SpriteRenderUtilInternal::TextureInstanceCache;
+    SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD( SpriteTextureInstanceCache );
 } // namespace sw
