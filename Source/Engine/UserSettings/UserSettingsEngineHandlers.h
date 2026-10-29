@@ -39,7 +39,7 @@ namespace sw
     /**
      * @brief 화면 설정(창 방식, 해상도, VSync)이 요청하는 상태입니다.
      * @details 핸들러는 창과 스왑체인을 직접 건드리지 않고 여기에 적기만 한다. 실제 변경은 호스트(App)가 프레임 맨 앞(OS 리사이즈와 같은 위치)에서
-     *          `UserSettingsManager::consumeDisplayRequest` 로 꺼내 처리한다(렌더 스레드를 기다린 뒤 VSync 를 바꾸고, 창 크기를 알려 App::onResize 를 부른다).
+     *          `UserSettingsManager::consumeDisplayRequest` 로 꺼내 처리한다(렌더 스레드를 기다린 뒤 VSync 를 바꾸고, 창 크기를 알려 Engine::onMainWindowResize 를 부른다).
      *          `_bHas*` 는 플레이어가 고른(기본값이 아닌) 값이 있는지 나타낸다. 기동 때 엔진 설정(EngineConfig)이나 명령줄보다 우선할지 정한다.
      */
     struct DisplaySettingsRequest

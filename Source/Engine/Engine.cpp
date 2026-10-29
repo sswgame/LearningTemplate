@@ -294,6 +294,10 @@ namespace sw
         _pRHI          = _pRHISubsystem->findRHI();
         _rhiInitResult = _pRHISubsystem->getInitResult();
         _pRenderThread = startupParts._pRenderThread->findRenderThread();
+        // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
+        const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
+        if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
+            _mainWindowResizeSubscription = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &Engine::onMainWindowResize, this ) );
 #endif
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
@@ -379,6 +383,7 @@ namespace sw
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
+        _mainWindowResizeSubscription.reset(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
@@ -430,6 +435,17 @@ namespace sw
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
         if ( _pRHI != nullptr )
             _pRHI->setPreferredVSync( engine::getSubsystem<EngineConfig>()._window._bVSync );
+    }
+
+    void Engine::onMainWindowResize( const uint32 width, const uint32 height )
+    {
+        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
+            return;
+        // 렌더 스레드가 따로 돌면 그 스레드가 beginFrame/endFrame 으로 스왑체인과 렌더 타깃을 계속 건드리고 있을 수 있다. 창 메시지 스레드가 바로
+        // resize() 를 부르면 같은 자원에 대한 스레드 간 레이스가 된다. waitIdle() 로 큐를 비우고 GPU 까지 쉬게 한 뒤 크기를 바꾼다.
+        if ( _pRenderThread != nullptr )
+            _pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
+        _pRHI->getDevice().resize( width, height );
     }
 
     void Engine::requestQuit( int32 exitCode )

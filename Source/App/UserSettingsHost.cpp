@@ -101,7 +101,7 @@ namespace sw
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
-        // 렌더 스레드가 지난 프레임을 그리는 중일 수 있다 — 스왑체인 · present 값을 바꾸기 전에 비운다(App::onResize 와 같은 규칙).
+        // 렌더 스레드가 지난 프레임을 그리는 중일 수 있다 — 스왑체인 · present 값을 바꾸기 전에 비운다(Engine::onMainWindowResize 와 같은 규칙).
         RenderThread* pRenderThread = _pEngine->getRenderThread();
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
@@ -115,7 +115,7 @@ namespace sw
             SW_LOG_INFO( "VSync %#", request._bVSync ? "on" : "off" );
         }
 
-        // 창 크기가 바뀌면 이 호출 안(Win32)이나 다음 메시지 처리(X11)에서 App::onResize 가 스왑체인을 맞춘다.
+        // 창 크기가 바뀌면 이 호출 안(Win32)이나 다음 메시지 처리(X11)에서 Engine::onMainWindowResize 가 스왑체인을 맞춘다.
         if ( _pWindow != nullptr )
         {
             const bool bSameMode = _pWindow->getDisplayMode() == request._mode;

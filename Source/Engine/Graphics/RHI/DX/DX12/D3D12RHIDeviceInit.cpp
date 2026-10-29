@@ -385,7 +385,7 @@ namespace sw
 
     void D3D12RHIDevice::resizeInternal( uint32 width, uint32 height )
     {
-        // resize 는 렌더 스레드를 세운 뒤(`App::onResize` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는 이 스레드가 렌더 스레드 역할을 빌려 만진다.
+        // resize 는 렌더 스레드를 세운 뒤(`Engine::onMainWindowResize` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는 이 스레드가 렌더 스레드 역할을 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
             return;

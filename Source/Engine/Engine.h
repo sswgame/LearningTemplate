@@ -175,6 +175,11 @@ namespace sw
         [[nodiscard]] bool rebindSceneAfterDeviceRecreate();
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
+        /**
+         * @brief 주 창 크기가 바뀌었습니다 — 렌더 스레드를 쉬게 한 뒤 스왑체인 크기를 바꿉니다(창 스레드).
+         * @details 창 · RHI · 렌더 스레드를 모두 가진 엔진의 일이다(언리얼 `FSceneViewport::ResizeFrame` · Godot RenderingServer 와 같은 자리). 호스트는 모른다.
+         */
+        void onMainWindowResize( uint32 width, uint32 height );
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
@@ -205,6 +210,8 @@ namespace sw
         ConfigManager* _pConfigManager;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 설정 표가 먼저 사라지면 무효가 된다. */
         Subscription _configReloadedSubscription;
+        /** @brief 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `shutdown` 이 창보다 먼저 놓는다. */
+        Subscription _mainWindowResizeSubscription;
         /** @brief 엔진이 붙인 압축 코덱(LZ4 · Zstd · Zlib)의 등록 구독입니다(`EngineCompressionCodecUtil::registerAll`). */
         vector<Subscription> _listCodecSubscription;
         /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */

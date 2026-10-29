@@ -197,7 +197,7 @@ namespace sw
 
     void VulkanRHIDevice::waitIdleInternal()
     {
-        // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`App::onResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
+        // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _renderThread };
         // 잃은 장치는 기다리지 않는다 — 끝나지 않을 일을 기다리게 되거나(TDR 중의 드라이버) 같은 손실만 다시 듣는다.
         if ( _device && isDeviceLost() == false )

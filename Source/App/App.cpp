@@ -123,7 +123,6 @@ namespace sw
         , _runtimeUIHost{}
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
-        , _windowResizeSubscription{}
         , _windowMessageSubscription{}
         , _initializeStartMicro{ 0 }
         , _hostServices{}
@@ -474,7 +473,6 @@ namespace sw
     void App::bindHostCallbacks()
     {
         // 주 창의 처리기 칸은 주인이 하나다 — 구독을 쥐고, 창(엔진 종료 때 파괴)이 먼저 사라지면 구독이 무효가 된다.
-        _windowResizeSubscription  = _pWindow->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
         _windowMessageSubscription = _pWindow->bindCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
         // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번만 연결한다.
@@ -685,22 +683,6 @@ namespace sw
     int32 App::getExitCode() const
     {
         return _engine.getExitCode();
-    }
-
-    void App::onResize( const uint32 width, const uint32 height )
-    {
-        RHI* pRHI = _engine.getRHI();
-        if ( pRHI == nullptr || pRHI->hasDevice() == false )
-            return;
-
-        // gv_useRenderThread(기본값 true)이면 전용 RenderThread 가 별도 스레드에서 beginFrame/endFrame 으로 스왑체인과 렌더
-        // 타깃을 계속 건드리고 있을 수 있다. 이 상태에서 메인(창 메시지) 스레드가 바로 resize() 를 부르면 같은 자원에 대한
-        // 실제 스레드 간 레이스가 된다. waitIdle() 로 큐를 비우고 GPU 까지 완전히 쉬게 한 뒤 크기를 바꾼다.
-        RenderThread* pRenderThread = _engine.getRenderThread();
-        if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
-
-        pRHI->getDevice().resize( width, height );
     }
 
     void App::onConfigReloaded( const hashed_string& configTypeName )

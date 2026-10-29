@@ -17,7 +17,7 @@ namespace sw
      * @class UserSettingsHost
      * @brief App 이 프레임 맨 앞(OS 메시지 처리 직후 — OS 리사이즈와 같은 자리)에서 부릅니다.
      * @details 화면 변경 순서: 렌더 스레드를 기다린다 → VSync(`IRHIDevice::setVSync`) → 창 방식 · 크기(`IWindow::setDisplayMode`). 창 크기 통보는
-     *          `App::onResize` 로 가서 그곳이 다시 렌더 스레드를 기다리고 스왑체인을 바꿉니다 — 스왑체인을 바꾸는 길은 OS 리사이즈와 하나입니다.
+     *          `Engine::onMainWindowResize` 로 가서 그곳이 다시 렌더 스레드를 기다리고 스왑체인을 바꿉니다 — 스왑체인을 바꾸는 길은 OS 리사이즈와 하나입니다.
      *          `gv_userSettingsApply="id=value;id=value"` 는 메뉴와 같은 길(보류 → 적용)로 넣습니다. 값마다 한 번이라
      *          명령줄 값은 첫 프레임에, 시나리오(`<Variable>`)가 실행 중에 바꾼 값은 바뀐 프레임에 들어간다. 다른 시점이 필요하면 시나리오 단계로 고른다.
      */

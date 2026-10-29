@@ -36,6 +36,7 @@
 #include "ModuleManager/ModuleReloadDriver.h"
 
 #include "Server/ServerAdminChannel.h"
+#include "Server/ServerDebugControl.h"
 #include "Server/ServerObservability.h"
 
 namespace sw
@@ -49,9 +50,6 @@ namespace sw
 
     struct ServerConfig;
 
-    class DebugChannel;
-    class DevConsole;
-    class IStreamTransport;
     class GameModuleManager;
     class ModuleLoaderSubsystem;
     class ServerServiceManager;
@@ -111,13 +109,8 @@ namespace sw
         void updateOnce( float32 deltaSeconds );
         /** @brief 콘솔 명령 한 줄(종료 낱말은 `StandardInputCommands` 가 먼저 거른다)을 이 스레드(게임 스레드)에서 처리합니다. */
         void executeCommand( string_view command );
-        /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */
-        [[nodiscard]] bool executePauseCommand( string_view command );
-        void               logStatus() const;
-#if !defined( SW_SHIPPING )
-        /** @brief 디버그 채널을 열고 상태 해시 이력을 켭니다(실행 인자가 없으면 아무 일도 하지 않습니다). 열려고 했는데 못 열면 false 입니다(기동 실패). */
-        [[nodiscard]] bool startDebugTools();
-#endif
+        void logStatus() const;
+
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
@@ -135,11 +128,8 @@ namespace sw
         unique_ptr<GameModuleManager> _gameModuleManager;
         /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
-#if !defined( SW_SHIPPING )
-        unique_ptr<DevConsole>       _devConsole;     ///< Dev 서버는 개발 콘솔과 같은 명령(개발 명령 · gv_*)을 표준 입력으로 받는다
-        unique_ptr<IStreamTransport> _debugTransport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
-        unique_ptr<DebugChannel>     _debugChannel;   ///< 읽기 중심의 원격 개발 명령 채널(`gv_debugChannelPort` 가 0 이 아닐 때만, 루프백 · 토큰, 서버 디버깅 S3)
-#endif
+        /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서비스 `DevConsole` · `DebugChannel` 이 세우고 내린다. Shipping 은 몸통이 비어 있다. */
+        ServerDebugControl _debugControl;
         /** @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료)입니다. 호스트 서비스 `DebugChannel` 이 세우고 내린다. 모든 구성(Shipping 포함)이다. */
         ServerAdminChannel    _adminChannel;
         ModuleCatalog         _moduleCatalog;
@@ -160,7 +150,6 @@ namespace sw
         int64                            _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
         uint32                           _statusTickSampleCount;
         uint32                           _droppedTickCount; ///< 밀려 버린 틱 수(누적)
-        uint32                           _pendingStepCount; ///< 일시정지 중 더 돌 틱 수(`step N`)
         /**
          * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 표준 입력 · 개발 콘솔 · 디버그 채널)입니다.
          * @details 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
@@ -168,9 +157,8 @@ namespace sw
         SubsystemCollection _hostServices;
 
         uint8                  _bReady                 : 1;
-        uint8                  _bPaused                : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
         [[maybe_unused]] uint8 _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
         uint8                  _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
-        [[maybe_unused]] uint8 _reserved               : 4;
+        [[maybe_unused]] uint8 _reserved               : 5;
     };
 } // namespace sw

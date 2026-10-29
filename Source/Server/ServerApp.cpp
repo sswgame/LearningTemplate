@@ -19,9 +19,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
-#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -37,7 +35,6 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Observability/DebugChannel.h"
 #include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/Scene.h"
@@ -49,9 +46,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Telemetry/CrashReportService.h"
-#if SW_DEV_COMMANDS_ENABLED
-    #include "DevTools/Console/DevConsole.h"
-#endif
 
 #include "sw/config/ConfigConstants.h"
 
@@ -59,15 +53,6 @@ namespace sw
 {
     /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
-    /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
-    SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
-    /**
-     * @brief `-gv_serverStartPaused=1`: 첫 틱을 돌기 전에 멈춘 채로 기동합니다(서버 디버깅 S7 되감기).
-     * @details 명령(`intent.play` · `step N`)은 기동 뒤 표준 입력이나 디버그 채널로 오므로 그 사이 틱이 돌면 목표 틱에서 정확히 멈출 수 없다. 멈춘 채 뜨면 틱 0 에서
-     *          재생을 걸고 `step` 으로 한 틱씩 진행할 수 있다(언리얼 `-pause` · 유니티 Play Mode 의 Pause On Start 와 같은 쓰임). Shipping 에는 없다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_serverStartPaused, false, "첫 틱 전에 멈춘 채 기동 (재생 서버를 틱 0 에서 잡는다)" );
 } // namespace sw
 
 namespace sw
@@ -84,10 +69,6 @@ namespace sw
             static constexpr utf8 kArrServerImageMarker[] = "sw-server-only-module:Server";
             /** @brief 이 종료 까닭은 접속이 비기를 기다린다. 오케스트레이터의 종료 신호만 — 사람이 내린 것(콘솔 · Ctrl+C) · 테스트 틱 상한 · OS 가 시한을 주는 창 닫기 · 시스템 종료는 바로 내린다. */
             static bool shouldDrainFor( ShutdownCause cause ) { return cause == ShutdownCause::Terminate || cause == ShutdownCause::ServiceStop; }
-#if SW_DEV_COMMANDS_ENABLED || !defined( SW_SHIPPING )
-            /** @brief Dev 서버 루프의 명령(`executePauseCommand`)입니다. 표준 입력 `help` 와 디버그 채널 `help` 가 같은 줄을 보입니다(쓰는 두 곳과 같은 조건). */
-            static constexpr const utf8* kLoopCommandHelp = "pause | resume | step [N]";
-#endif
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / constant::kNanosecondsPerMillisecond; }
         };
@@ -129,9 +110,8 @@ namespace sw
         , _engine{}
         , _gameModuleManager{ nullptr }
         , _moduleReload{}
-#if !defined( SW_SHIPPING )
-        , _devConsole{ nullptr }
-#endif
+        , _debugControl{ SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
+    { return _tickCount; } ) }
         , _moduleCatalog{}
         , _moduleResolution{}
         , _console{}
@@ -149,10 +129,8 @@ namespace sw
         , _statusTickMaxNanoseconds{ 0 }
         , _statusTickSampleCount{ 0 }
         , _droppedTickCount{ 0 }
-        , _pendingStepCount{ 0 }
         , _hostServices{}
         , _bReady{ SW_FALSE }
-        , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
         , _bDraining{ SW_FALSE }
         , _reserved{ 0 }
@@ -233,13 +211,6 @@ namespace sw
             return false;
         }
 
-#if SW_DEV_COMMANDS_ENABLED
-        if ( gv_serverStartPaused )
-        {
-            _bPaused = SW_TRUE;
-            SW_LOG_INFO( "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount );
-        }
-#endif
         _bReady = SW_TRUE;
         _observability.beginLoadWindow( ServerAppInternal::nowMonotonicMs() );
         // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
@@ -346,16 +317,14 @@ namespace sw
                 return true;
             }
             case HostServiceID::DevConsole:
-#if SW_DEV_COMMANDS_ENABLED
-                _devConsole = make_unique<DevConsole>();
-#endif
+            {
+                _debugControl.startConsole();
                 return true;
+            }
             case HostServiceID::DebugChannel:
             {
-#if !defined( SW_SHIPPING )
-                if ( startDebugTools() == false )
+                if ( _debugControl.startChannel() == false )
                     return false;
-#endif
                 // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수). 상태는 서버 루프가 답한다.
                 return _adminChannel.start( *_pServerConfig, *_observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [this]()
                 { return ServerAdminStatus{ _tickCount, getServiceConnectionCount(), _bDraining == SW_TRUE }; } ) );
@@ -403,19 +372,16 @@ namespace sw
                 return;
             }
             case HostServiceID::DevConsole:
-#if SW_DEV_COMMANDS_ENABLED
-                _devConsole.reset();
-#endif
+            {
+                _debugControl.stopConsole();
                 return;
+            }
             case HostServiceID::DebugChannel:
-#if !defined( SW_SHIPPING )
-                if ( _debugChannel != nullptr )
-                    _debugChannel->shutdown();
-                _debugChannel.reset();
-                _debugTransport.reset();
-#endif
+            {
+                _debugControl.stopChannel();
                 _adminChannel.stop();
                 return;
+            }
             case HostServiceID::BackendSwitcher:
             case HostServiceID::UserSettings:
             case HostServiceID::RuntimeUIHooks:
@@ -529,10 +495,7 @@ namespace sw
         {
             if ( _console.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &ServerApp::executeCommand, this ) ) )
                 ShutdownSignal::request( ShutdownCause::ConsoleCommand );
-#if !defined( SW_SHIPPING )
-            if ( _debugChannel != nullptr )
-                (void)_debugChannel->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
-#endif
+            _debugControl.pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
             _adminChannel.pump();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
@@ -554,7 +517,7 @@ namespace sw
                 _serverServices->update( WallClock::nowUnixMilliseconds() );
             _observability.updateEverySecond( ServerAppInternal::nowMonotonicMs(), getServiceConnectionCount() );
 
-            if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
+            if ( _debugControl.isHoldingTick() )
             {
                 // 일시정지에서는 게임 틱만 멈춘다. 서버는 살아 있으므로 상태 확인 박동은 계속 보내(감시자가 재시작하지 않게 한다). 재개할 때 밀린 틱을 몰아서 돌지 않게 마감을 지금으로 바꾼다.
                 _observability.markAlive( ServerAppInternal::nowMonotonicMs() );
@@ -589,9 +552,7 @@ namespace sw
                     pNetSession->sendServerTick( _tickCount );
             }
 #endif
-            const bool bPausedStepCompleted = _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0;
-            if ( bPausedStepCompleted )
-                SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount );
+            _debugControl.onTickFinished();
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );
 
@@ -652,63 +613,13 @@ namespace sw
         }
         if ( command == "help" )
         {
-#if SW_DEV_COMMANDS_ENABLED
-            SW_LOG_INFO( "Server commands: quit | stop | status | help (Dev: %#, dev commands and gv_* variables too)", ServerAppInternal::kLoopCommandHelp );
-#else
-            SW_LOG_INFO( "Server commands: quit | stop | status | help" );
-#endif
+            SW_LOG_INFO( "Server commands: quit | stop | status | help%#", ServerDebugControl::getHelpSuffix() );
             return;
         }
-        if ( executePauseCommand( command ) )
+        // Dev 는 일시정지 명령과 개발 콘솔의 명령(개발 명령과 gv_* 전역 변수)도 받는다. Shipping 서버는 위의 네 가지만 받는다.
+        if ( _debugControl.executeCommand( command ) )
             return;
-#if SW_DEV_COMMANDS_ENABLED
-        // Dev 는 개발 콘솔과 같은 명령(개발 명령과 gv_* 전역 변수)을 받는다. 응답과 실패는 DevConsole 이 로그에 남긴다. Shipping 서버는 위의 네 가지만 받는다.
-        if ( _devConsole != nullptr )
-        {
-            (void)_devConsole->submit( command ); // 응답과 실패는 DevConsole 이 로그에 남긴다(위 설명)
-            return;
-        }
-#endif
         SW_LOG_WARNING( "Unknown server command '%#' - type help", string( command ).c_str() );
-    }
-
-    bool ServerApp::executePauseCommand( string_view command )
-    {
-#if SW_DEV_COMMANDS_ENABLED
-        if ( command == "pause" )
-        {
-            _bPaused          = SW_TRUE;
-            _pendingStepCount = 0;
-            SW_LOG_INFO( "Server paused at tick %#", _tickCount );
-            return true;
-        }
-        if ( command == "resume" )
-        {
-            _bPaused          = SW_FALSE;
-            _pendingStepCount = 0;
-            SW_LOG_INFO( "Server resumed at tick %#", _tickCount );
-            return true;
-        }
-        const string_view kStep = "step";
-        const bool        bStep = command.substr( 0, kStep.size() ) == kStep && ( command.size() == kStep.size() || command[kStep.size()] == ' ' );
-        if ( bStep == false )
-            return false;
-        int32             stepCount = 1;
-        const string_view argument  = StringUtil::trim( command.substr( kStep.size() ) );
-        if ( argument.empty() == false && ( StringUtil::parseInt( argument, stepCount ) == false || stepCount <= 0 ) )
-        {
-            SW_LOG_WARNING( "step takes a positive tick count - got '%#'", string( argument ).c_str() );
-            return true;
-        }
-        if ( _bPaused == SW_FALSE )
-            SW_LOG_INFO( "Server paused at tick %#", _tickCount );
-        _bPaused          = SW_TRUE; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
-        _pendingStepCount = static_cast<uint32>( stepCount );
-        return true;
-#else
-        (void)command;
-        return false;
-#endif
     }
 
     void ServerApp::logStatus() const
@@ -722,54 +633,9 @@ namespace sw
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
-                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
+                     uptimeSeconds, _tickCount, _debugControl.isPaused() ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
                      _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::kBytesPerMegabyte ) );
     }
-
-#if !defined( SW_SHIPPING )
-    bool ServerApp::startDebugTools()
-    {
-        if ( gv_debugChannelPort <= 0 )
-            return true;
-        const uint16 port = static_cast<uint16>( gv_debugChannelPort );
-        _debugTransport   = StreamTransportFactory::createPlatformTransport();
-        _debugChannel     = make_unique<DebugChannel>();
-        DebugChannelConfig settings;
-        settings._bindAddress = NetAddress::makeLoopback( port );
-        settings._token       = gv_debugChannelToken;
-        StreamTransportConfig transportSettings;
-        transportSettings._idleTimeoutSeconds = 0.0; // 에디터는 서버가 멈춰 있는 동안에도 붙어 있다
-        const bool bStarted                   = _devConsole != nullptr &&
-                              _debugChannel->initialize( _debugTransport.get(), transportSettings, settings,
-                                                         SW_DELEGATE_LAMBDA( DebugChannelExecuteDelegate, [this]( string_view line, string& outReply )
-        {
-            // 일시정지 · 한 틱 진행은 개발 명령이 아니라 서버 루프의 명령이다 - 같은 길로 받는다. 답은 서버가 지금 어디인지다.
-            if ( executePauseCommand( line ) )
-            {
-                outReply = ( _bPaused == SW_TRUE ? "paused tick " : "running tick " ) + to_string( _tickCount );
-                return true;
-            }
-            const bool bOk = _devConsole->execute( line, outReply ) == DevConsoleResult::Ok;
-            // 채널 `help` 는 채널이 받는 줄 전부를 알린다 — 개발 콘솔의 목록(변수 · 개발 명령, 에디터 자동완성의 원천) 앞에 서버 루프 명령 한 줄.
-            const string_view trimmed = StringUtil::trim( line );
-            if ( bOk && StringUtil::equals( trimmed.substr( 0, trimmed.find( ' ' ) ), "help", true ) )
-            {
-                string reply{ "server loop: " };
-                reply.append( ServerAppInternal::kLoopCommandHelp ).append( "\n" ).append( outReply );
-                outReply = std::move( reply );
-            }
-            return bOk;
-        } ) );
-        if ( bStarted == false )
-        {
-            SW_LOG_ERROR( "The debug channel was requested (-gv_debugChannelPort=%#) but could not start", gv_debugChannelPort );
-            _debugChannel.reset();
-            _debugTransport.reset();
-            return false;
-        }
-        return true;
-    }
-#endif
 
     void ServerApp::shutdown()
     {

@@ -95,8 +95,6 @@ namespace sw
          */
         void pollReloadHotkeys();
 
-        /** @brief 창 크기 변경 콜백입니다. */
-        void onResize( const uint32 width, const uint32 height );
         /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
@@ -144,8 +142,7 @@ namespace sw
         ViewCameraProviderDelegate _sceneViewCameraProvider;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 엔진이 설정 표를 내리면 무효가 된다. */
         Subscription _configReloadedSubscription;
-        /** @brief 주 창의 크기 · 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. */
-        Subscription _windowResizeSubscription;
+        /** @brief 주 창의 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. 크기 칸은 엔진이 쥔다(스왑체인). */
         Subscription _windowMessageSubscription;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
