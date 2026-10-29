@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Renderer/ScreenshotMailbox.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 namespace sw
 {
-    void ScreenshotMailbox::put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    void ScreenshotRequestQueue::put( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
         const ScopedLock<mutex> lock{ _mutex };
         _pendingPath    = string{ filePath };
@@ -12,7 +12,7 @@ namespace sw
         _pendingFormat  = sourceFormat;
     }
 
-    bool ScreenshotMailbox::take( ScreenshotRequest& outRequest )
+    bool ScreenshotRequestQueue::take( ScreenshotRequest& outRequest )
     {
         const ScopedLock<mutex> lock{ _mutex };
         if ( _pendingPath.empty() )
@@ -24,7 +24,7 @@ namespace sw
         return true;
     }
 
-    void ScreenshotMailbox::reportCompleted( bool bWritten, const string& writtenPath )
+    void ScreenshotRequestQueue::reportCompleted( bool bWritten, const string& writtenPath )
     {
         {
             const ScopedLock<mutex> lock{ _mutex };
@@ -33,20 +33,20 @@ namespace sw
         _completedSerial.fetch_add( 1, std::memory_order_acq_rel );
     }
 
-    string ScreenshotMailbox::getLastPath() const
+    string ScreenshotRequestQueue::getLastPath() const
     {
         const ScopedLock<mutex> lock{ _mutex };
         return _lastPath;
     }
 
-    void ScreenshotMailbox::reportCaptureFinished( uint32 kindBit, bool bWritten )
+    void ScreenshotRequestQueue::reportCaptureFinished( uint32 kindBit, bool bWritten )
     {
         if ( bWritten == false )
             (void)_failedCaptureMask.fetch_or( kindBit );
         (void)_finishedCaptureMask.fetch_or( kindBit ); // 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다
     }
 
-    bool ScreenshotMailbox::findAllCapturesFinished( bool& outBFailed ) const
+    bool ScreenshotRequestQueue::findAllCapturesFinished( bool& outBFailed ) const
     {
         const uint32 expected = _expectedCaptureMask.load();
         const bool   bAllDone = expected != 0u && ( _finishedCaptureMask.load() & expected ) == expected;

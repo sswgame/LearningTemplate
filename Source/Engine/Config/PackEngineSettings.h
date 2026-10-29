@@ -42,7 +42,7 @@ namespace sw
 
         /**
          * @brief 이 게임이 그리는 렌더 파이프라인 XML(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 없으면 엔진 기본(포워드)입니다.
-         * @details 명령줄(`-gv_renderPipeline` · `-gv_deferred`)이 이보다 우선합니다(`FrameRendererUtil::computePipelinePath`).
+         * @details 명령줄(`-gv_renderPipeline` · `-gv_deferredShading`)이 이보다 우선합니다(`FrameRendererUtil::computePipelinePath`).
          */
         PROPERTY()
         DataPath _renderPipeline;

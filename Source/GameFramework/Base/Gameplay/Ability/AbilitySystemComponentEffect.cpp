@@ -394,7 +394,7 @@ namespace sw
         // 결정: 무적이 체력 내림을 막은 피격은 맞은 것이 아니므로 즉시 큐(피격 섬광 · 소리)를 내지 않는다 — 언리얼 Lyra 의 `Gameplay.DamageImmunity` 가 이펙트를 막아 큐도 안 나가는 것과 같은 결과다.
         if ( _blockedHealthDecreaseCount != blockedBefore )
             return;
-        dispatchCues( spec, GameplayCuePhase::Executed, totalMagnitude );
+        dispatchCues( spec, AbilityPresentationPhase::Executed, totalMagnitude );
     }
 
     void AbilitySystemComponent::applyModifierToBase( const EvaluatedModifier& modifier, float32 stackScale, const GameplayEffectSpec& spec )
@@ -448,7 +448,7 @@ namespace sw
                     pExisting->_duration      = spec.computeDuration();
                     pExisting->_remainingTime = pExisting->_duration;
                 }
-                dispatchCues( pExisting->_spec, GameplayCuePhase::Added, static_cast<float32>( pExisting->_stackCount ) );
+                dispatchCues( pExisting->_spec, AbilityPresentationPhase::Added, static_cast<float32>( pExisting->_stackCount ) );
                 _effectAppliedMulticast.broadcast( *pExisting );
                 return pExisting->_handle;
             }
@@ -489,7 +489,7 @@ namespace sw
 
         if ( pActiveEffect->_bInhibited == SW_FALSE )
             engageActiveEffect( *pActiveEffect );
-        dispatchCues( pActiveEffect->_spec, GameplayCuePhase::Added, 1.0f );
+        dispatchCues( pActiveEffect->_spec, AbilityPresentationPhase::Added, 1.0f );
         _effectAppliedMulticast.broadcast( *pActiveEffect );
 
         const bool bExecuteNow = def.isPeriodic() && def._bExecutePeriodicOnApplication == SW_TRUE && pActiveEffect->_bPendingRemove == SW_FALSE &&
@@ -509,7 +509,7 @@ namespace sw
         // 멈춘 이펙트는 이미 뗐다.
         if ( activeEffect._bInhibited == SW_FALSE )
             disengageActiveEffect( activeEffect );
-        dispatchCues( activeEffect._spec, GameplayCuePhase::Removed, 0.0f );
+        dispatchCues( activeEffect._spec, AbilityPresentationPhase::Removed, 0.0f );
         _effectRemovedMulticast.broadcast( activeEffect );
     }
 
@@ -626,7 +626,7 @@ namespace sw
         }
     }
 
-    void AbilitySystemComponent::dispatchCues( const GameplayEffectSpec& spec, GameplayCuePhase phase, float32 magnitude )
+    void AbilitySystemComponent::dispatchCues( const GameplayEffectSpec& spec, AbilityPresentationPhase phase, float32 magnitude )
     {
         const TagContainer& cueTags = spec._pDef->_cueTags;
         if ( cueTags.getTagCount() == 0 )
@@ -635,7 +635,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         for ( const TagID& cueTag : cueTags.getTags() )
         {
-            GameplayCueEvent cueEvent;
+            AbilityPresentationEvent cueEvent;
             cueEvent._cueTag     = cueTag;
             cueEvent._target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
             cueEvent._instigator = spec._context._instigator;
@@ -647,13 +647,13 @@ namespace sw
         }
     }
 
-    void AbilitySystemComponent::playCueDef( TagID cueTag, GameplayCuePhase phase ) const
+    void AbilitySystemComponent::playCueDef( TagID cueTag, AbilityPresentationPhase phase ) const
     {
 #if defined( SW_WITH_CLIENT_CODE )
-        // 결정: 큐 태그 → 연출은 데이터(카탈로그의 `<GameplayCue>`)가 정한다. 큐를 내는 길은 이 함수 하나라 즉시 · 주기 · 걸림 · 해제가 모두 같은 표를 본다.
-        const AbilityCatalog* pCatalog = findCatalog();
-        const GameplayCueDef* pCueDef  = pCatalog != nullptr ? pCatalog->findCue( cueTag ) : nullptr;
-        const bool            bShows   = pCueDef != nullptr && ( phase != GameplayCuePhase::Removed || pCueDef->_bOnRemoved == SW_TRUE );
+        // 결정: 큐 태그 → 연출은 데이터(카탈로그의 `<AbilityPresentation>`)가 정한다. 큐를 내는 길은 이 함수 하나라 즉시 · 주기 · 걸림 · 해제가 모두 같은 표를 본다.
+        const AbilityCatalog*         pCatalog = findCatalog();
+        const AbilityPresentationDef* pCueDef  = pCatalog != nullptr ? pCatalog->findCue( cueTag ) : nullptr;
+        const bool                    bShows   = pCueDef != nullptr && ( phase != AbilityPresentationPhase::Removed || pCueDef->_bOnRemoved == SW_TRUE );
         if ( bShows == false )
             return;
         const GameObject*  pOwner   = getOwner();
@@ -661,9 +661,9 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 스폰 · 소리는 게임 스레드의 틱 뒤에 한다.
-        const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
-        const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + pCueDef->_offset;
-        const GameplayCueDef  cueDef   = *pCueDef;
+        const SceneComponent*        pRoot    = pOwner->getPrimarySceneComponent();
+        const float3                 position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + pCueDef->_offset;
+        const AbilityPresentationDef cueDef   = *pCueDef;
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, cueDef, position]()
         {
             if ( cueDef._prefab.empty() == false )

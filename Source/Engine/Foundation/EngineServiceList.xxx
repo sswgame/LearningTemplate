@@ -49,7 +49,7 @@ SW_ENGINE_SERVICE( class, CommandStack, Optional, HostOnly )
 SW_ENGINE_SERVICE( class, EditSessionState, Optional, HostOnly )
 SW_ENGINE_SERVICE( struct, DebugOverlayState, Required, GameVisible )
 SW_ENGINE_SERVICE( class, DebugDrawQueue, Required, GameVisible )
-// 시각 로그 — 프레임마다 기록을 넘기고(`Engine` 이 endFrame) 개발 명령 vlog.* 가 읽는다. DebugDrawQueue 와 같이 서비스 범위가 늘 넣는다.
+// 시각 로그 — 프레임마다 기록을 넘기고(`Engine` 이 endFrame) 개발 명령 visuallog.* 가 읽는다. DebugDrawQueue 와 같이 서비스 범위가 늘 넣는다.
 SW_ENGINE_SERVICE( class, VisualLogger, Required, GameVisible )
 SW_ENGINE_SERVICE( class, RHIBackendRegistry, Required, HostOnly )
 SW_ENGINE_SERVICE( class, CompressionCodecRegistry, Required, GameVisible )
@@ -98,7 +98,7 @@ SW_ENGINE_SERVICE_OPT( class, FrameRenderer, HostOnly )
 SW_ENGINE_SERVICE_OPT( class, RenderExtensionRegistry, GameVisible )
 // 스크린샷 요청 우편함(요청 한 칸 · 처리 결과 · `-gv_screenshotQuit` 장부). 렌더 스레드의 정적 창구(`RenderThread::requestScreenshot` …)가 찾아 쓴다.
 // **OPT 다** — 렌더러 폴더를 짓지 않는 Server 타깃에는 이 타입이 없다. 클라이언트 엔진은 늘 서비스 범위에 넣는다(EngineSubsystemSet.cpp).
-SW_ENGINE_SERVICE_OPT( class, ScreenshotMailbox, HostOnly )
+SW_ENGINE_SERVICE_OPT( class, ScreenshotRequestQueue, HostOnly )
 
 // 주 창(소유자). 입력 · RHI · 자동화 · 에디터가 읽는다. **OPT 다** — 창이 없는 호스트(전용 서버 · 테스트 하네스)에는 서지 않는다. 정적 활성 창구(`IWindow::getActiveWindow`)를 대신한다.
 SW_ENGINE_SERVICE_OPT( class, MainWindowSubsystem, HostOnly )

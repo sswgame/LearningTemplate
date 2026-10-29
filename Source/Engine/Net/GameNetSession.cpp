@@ -301,10 +301,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
     /**
-     * @brief `-gv_netEmuPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmu*` 낱값을 무시합니다.
+     * @brief `-gv_netEmulationPreset=<이름>`: 회선 흉내를 프리셋 표(`NetEmulationPresetTable`)의 한 줄로 둡니다. 있으면 `gv_netEmulation*` 낱값을 무시합니다.
      * @details 부하 검증의 `<Load network>` 와 하드웨어 프로필이 이 하나로 넘긴다 — 프리셋 값을 밖에 다시 적지 않는다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmuPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmu* 낱값)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netEmulationPreset, "", "네트워크 흉내: 회선 프리셋 이름(engine/settings/netemulation.presets.xml — 비면 gv_netEmulation* 낱값)" );
 } // namespace sw
 
 namespace sw
@@ -522,13 +522,13 @@ namespace sw
         NetEmulationConditions emulationConditions;
 #if !defined( SW_SHIPPING )
         emulationConditions = NetEmulationConditions::makeFromGlobalVariables();
-        if ( gv_netEmuPreset.empty() == false )
+        if ( gv_netEmulationPreset.empty() == false )
         {
             NetEmulationPresetTable presetTable;
             emulationConditions = NetEmulationConditions{};
             if ( presetTable.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
-                 presetTable.tryGetConditions( gv_netEmuPreset, emulationConditions ) == false )
-                SW_LOG_ERROR( "gv_netEmuPreset '%#' is not a preset (%#) - no emulation", gv_netEmuPreset.c_str(), presetTable.makePresetNames().c_str() );
+                 presetTable.tryGetConditions( gv_netEmulationPreset, emulationConditions ) == false )
+                SW_LOG_ERROR( "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.c_str(), presetTable.makePresetNames().c_str() );
         }
 #endif
         const bool           bServer = params._role == GameNetRole::Server;

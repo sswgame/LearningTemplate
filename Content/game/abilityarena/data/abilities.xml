@@ -15,14 +15,14 @@
     <Execution class="Damage" setByCaller="Damage" attackPowerCoefficient="1" base="0"/>
     <AssetTag tag="Effect.Damage.Physical"/>
     <BlockedTag tag="State.Invulnerable"/>
-    <Cue tag="GameplayCue.Hit.Physical"/>
+    <Cue tag="AbilityPresentation.Hit.Physical"/>
   </GameplayEffect>
 
   <GameplayEffect id="GE_Damage_Fireball" duration="Instant">
     <Execution class="Damage" setByCaller="Damage" attackPowerCoefficient="0.5" base="0"/>
     <AssetTag tag="Effect.Damage.Fire"/>
     <BlockedTag tag="State.Invulnerable"/>
-    <Cue tag="GameplayCue.Hit.Fire"/>
+    <Cue tag="AbilityPresentation.Hit.Fire"/>
   </GameplayEffect>
 
   <!-- 화상 — 맞은 뒤 3 초 동안 1 초마다 체력 −3, 세 번까지 쌓인다(쌓일 때 시간을 다시 채운다). -->
@@ -31,7 +31,7 @@
     <Modifier attribute="IncomingDamage" op="Add" magnitude="3"/>
     <GrantedTag tag="State.Burning"/>
     <BlockedTag tag="State.Invulnerable"/>
-    <Cue tag="GameplayCue.Burning"/>
+    <Cue tag="AbilityPresentation.Burning"/>
   </GameplayEffect>
 
   <!-- 가시 — 맞으면 때린 쪽에 고정 피해 2(방어 무시: 메타 어트리뷰트에 바로 더한다). -->
@@ -44,7 +44,7 @@
   <GameplayEffect id="GE_Heal" duration="Instant">
     <Modifier attribute="IncomingHealing" op="Add" magnitude="25" perLevel="5"/>
     <RemoveEffectsWithTag tag="State.Burning"/>
-    <Cue tag="GameplayCue.Heal"/>
+    <Cue tag="AbilityPresentation.Heal"/>
   </GameplayEffect>
 
   <!-- 대시 — 0.25 초 동안 이동 속도 ×3, 그동안 무적(피해 이펙트의 BlockedTag). -->
@@ -203,6 +203,6 @@
   <!-- ===================================================================== -->
   <!-- 큐 — 큐 태그(또는 가장 가까운 조상)가 낼 연출. 아레나의 소리는 모두 2D 다    -->
   <!-- ===================================================================== -->
-  <GameplayCue tag="GameplayCue.Hit" sound="ProjectileHit" positional="false"/>
+  <AbilityPresentation tag="AbilityPresentation.Hit" sound="ProjectileHit" positional="false"/>
 
 </AbilityCatalog>

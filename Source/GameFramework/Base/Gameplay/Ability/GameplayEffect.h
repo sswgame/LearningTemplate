@@ -74,7 +74,7 @@ namespace sw
      *          - `_applicationRequiredTags`: 대상이 이 태그를 모두 가져야 적용된다.
      *          - `_applicationBlockedTags`: 대상이 이 태그를 하나라도 가지면 걸리지 않는다(면역).
      *          - `_removeEffectsWithTags`: 걸리는 순간 대상의 활성 이펙트 중 에셋 태그나 부여 태그가 이 태그와 일치하는 것을 지운다(정화).
-     *          `_cueTags` 는 연출에 쓴다(`GameplayCueEvent`).
+     *          `_cueTags` 는 연출에 쓴다(`AbilityPresentationEvent`).
      *          `_ongoingRequiredTags` 는 걸린 **동안의** 조건이다(언리얼 `OngoingTagRequirements`). 대상이 이 태그를 모두 갖지 못하는 동안 이펙트는
      *          남아 있되 멈춘다 — 모디파이어 · 부여 태그 · 부여 어빌리티 · 주기 실행이 빠지고 시간은 흐른다. 태그가 돌아오면 다시 든다.
      *          `_listGrantedAbility` 는 걸린 동안 대상에게 주는 어빌리티의 카탈로그 id 다(장비가 스킬을 준다, 언리얼 `GrantedAbilities`).

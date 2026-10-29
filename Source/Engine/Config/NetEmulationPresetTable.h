@@ -16,7 +16,7 @@ namespace sw
 {
     struct NetEmulationConditions;
 
-    /** @brief 회선 프리셋 하나입니다(한 방향). 단위는 전역 변수 `gv_netEmu*` 와 같습니다. */
+    /** @brief 회선 프리셋 하나입니다(한 방향). 단위는 전역 변수 `gv_netEmulation*` 와 같습니다. */
     REFLECT()
     struct SW_API NetEmulationPresetDef
     {

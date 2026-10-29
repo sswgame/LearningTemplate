@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/World/Lifetime/DontDestroyOnLoadComponent.h"
+#include "GameFramework/Base/World/Lifetime/PersistAcrossScenesComponent.h"
 
 #include "Engine/Scene/SceneManager.h"
 
@@ -8,12 +8,12 @@
 
 namespace sw
 {
-    DontDestroyOnLoadComponent::DontDestroyOnLoadComponent()
+    PersistAcrossScenesComponent::PersistAcrossScenesComponent()
         : _bPersistent{ true }
     {
     }
 
-    void DontDestroyOnLoadComponent::onBeginPlay()
+    void PersistAcrossScenesComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
@@ -21,7 +21,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;
-        // 씬 매니저가 루트를 씬 전환 너머로 옮겨 심는다(유니티 `Object.DontDestroyOnLoad` — 태그를 붙이지 않는다).
+        // 씬 매니저가 루트를 씬 전환 너머로 옮겨 심는다(유니티 `Object.PersistAcrossScenes` — 태그를 붙이지 않는다).
         SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
         if ( _bPersistent && pSceneManager != nullptr )
             pSceneManager->markPersistent( pOwner );

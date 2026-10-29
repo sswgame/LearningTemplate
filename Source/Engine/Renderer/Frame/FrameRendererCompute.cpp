@@ -34,7 +34,7 @@ namespace sw
     SW_GLOBAL_VARIABLE( bool, gv_gpuCulling, true, "GPU 컬링 컴퓨트 디스패치 (false=건너뜀, 진단용)" );
 
     /**
-     * @brief `-gv_morphDiag=<Normal|ForceOn|SkipDispatch|IndexTag>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
+     * @brief `-gv_meshMorphDebugMode=<Normal|ForceOn|SkipDispatch|IndexTag>` 는 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다(`MeshMorphDiagMode`).
      * @details Normal 은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), ForceOn 은 능력 테이블을 무시하고 켬,
      *          SkipDispatch 는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 바인딩**,
      *          IndexTag 는 SkipDispatch 에 더해 풀 원소의 노멀 위치에 **원소 번호**를 기록한다.
@@ -44,7 +44,7 @@ namespace sw
      *          IndexTag 는 거기서 한 걸음 더 간다. 원소 번호를 읽으면 "제 원소를 가리켰는가" 를 위치 값과 **따로**
      *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 이미지 한 장으로 가를 수 있다.
      */
-    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_morphDiag, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표)" );
+    SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략 / IndexTag 번호표)" );
 
     bool FrameRenderer::usesGPUGeneratedCommands() const
     {
@@ -99,13 +99,13 @@ namespace sw
         if ( _debugOverrides._meshMorphDiag.has_value() )
             return *_debugOverrides._meshMorphDiag;
 #endif
-        return gv_morphDiag;
+        return gv_meshMorphDebugMode;
     }
 
     bool FrameRenderer::isMeshMorphDiagValid()
     {
         // 모든 열거자를 나열한다 — 열거자를 더하면 여기서 컴파일 경고가 난다. 범위 밖 값은 Normal 로 바꾸지 않고 알린다.
-        switch ( gv_morphDiag )
+        switch ( gv_meshMorphDebugMode )
         {
             case MeshMorphDiagMode::Normal:
             case MeshMorphDiagMode::ForceOn:
@@ -115,7 +115,7 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR( "gv_morphDiag has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_morphDiag ) );
+        SW_LOG_ERROR( "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn, SkipDispatch or IndexTag)", static_cast<uint32>( gv_meshMorphDebugMode ) );
         return false;
     }
 

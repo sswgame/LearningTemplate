@@ -108,11 +108,11 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 게임플레이 큐 하나가 무엇을 보여 줄지입니다(언리얼 `GameplayCueManager` 의 큐 태그 → 큐 노티파이에 해당). XML `<GameplayCue tag=… prefab=… sound=…/>`.
-     * @details 큐 태그의 가장 가까운 조상 정의가 맡는다("GameplayCue.Hit.Fire" 정의가 없으면 "GameplayCue.Hit"). 프리팹은 대상 자리에 스폰하고 소리는 그 자리에서 낸다.
+     * @brief 게임플레이 큐 하나가 무엇을 보여 줄지입니다(언리얼 `AbilityPresentationManager` 의 큐 태그 → 큐 노티파이에 해당). XML `<AbilityPresentation tag=… prefab=… sound=…/>`.
+     * @details 큐 태그의 가장 가까운 조상 정의가 맡는다("AbilityPresentation.Hit.Fire" 정의가 없으면 "AbilityPresentation.Hit"). 프리팹은 대상 자리에 스폰하고 소리는 그 자리에서 낸다.
      *          둘 다 비어 있는 정의는 로드 오류다. 큐는 연출 전용이라 서버(클라이언트 코드 없음)에서는 실행하지 않는다.
      */
-    struct GameplayCueDef
+    struct AbilityPresentationDef
     {
         TagID         _cueTag{};
         hashed_string _prefab{};               ///< 대상 자리에 스폰할 프리팹 리소스 경로(빈 이름이면 없음)
@@ -185,7 +185,7 @@ namespace sw
         /** @brief 어빌리티 세트를 추가합니다. 같은 id 가 있으면 교체합니다. */
         void addAbilitySet( const AbilitySetDef& def );
         /** @brief 큐 정의를 추가합니다. 같은 태그가 있으면 교체합니다. */
-        void addCue( const GameplayCueDef& def );
+        void addCue( const AbilityPresentationDef& def );
 
         // --------------------------------------------------------------------------
         // 데이터. XML 로 읽는다
@@ -200,7 +200,7 @@ namespace sw
         const GameplayAbilityDef*           findAbility( const hashed_string& abilityID ) const;
         const AbilitySetDef*                findAbilitySet( const hashed_string& setID ) const;
         /** @brief @p cueTag 나 그 가장 가까운 조상 태그의 큐 정의입니다. 없으면 nullptr 입니다(그 큐는 연출 없이 이벤트만 나간다). */
-        const GameplayCueDef* findCue( TagID cueTag ) const;
+        const AbilityPresentationDef* findCue( TagID cueTag ) const;
         /** @brief 어빌리티 정의로 인스턴스를 만들고 설정을 줍니다. 정의나 클래스가 없으면 경고를 남기고 nullptr 을 반환합니다. */
         unique_ptr<GameplayAbility> createAbility( const hashed_string& abilityID ) const;
         /** @brief 등록된 이름의 어트리뷰트 세트를 만듭니다. 없으면 nullptr 입니다. */
@@ -229,15 +229,15 @@ namespace sw
         [[nodiscard]] bool readAbility( const XMLNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const;
         /** @brief `<AbilitySet>` 하나를 읽습니다. */
         [[nodiscard]] bool readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const;
-        /** @brief `<GameplayCue>` 하나를 읽습니다. */
-        [[nodiscard]] static bool readCue( const XMLNode& node, string_view sourceName, GameplayCueDef& outDef );
+        /** @brief `<AbilityPresentation>` 하나를 읽습니다. */
+        [[nodiscard]] static bool readCue( const XMLNode& node, string_view sourceName, AbilityPresentationDef& outDef );
         /** @brief 이펙트 id 로 정의를 찾습니다. id 가 비어 있으면 nullptr 이고, 정의가 없으면 경고를 남기고 nullptr 입니다. */
         shared_ptr<const GameplayEffectDef> resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const;
 
         unordered_map<hashed_string, shared_ptr<const GameplayEffectDef>> _mapEffect;
         unordered_map<hashed_string, GameplayAbilityDef>                  _mapAbility;
         unordered_map<hashed_string, AbilitySetDef>                       _mapAbilitySet;
-        unordered_map<uint64, GameplayCueDef>                             _mapCue; ///< 큐 태그 id → 정의
+        unordered_map<uint64, AbilityPresentationDef>                     _mapCue; ///< 큐 태그 id → 정의
         unordered_map<hashed_string, AbilityFactoryFunc>                  _mapAbilityFactory;
         unordered_map<hashed_string, AttributeSetFactoryFunc>             _mapAttributeSetFactory;
         unordered_map<hashed_string, ExecutionFactoryFunc>                _mapExecutionFactory;

@@ -56,7 +56,7 @@ namespace sw
     };
 
     /** @brief 부의 상태입니다. */
-    enum class GhostBooState : uint8
+    enum class HidingGhostState : uint8
     {
         Hiding = 0, ///< 가구 속에 있다(가구가 없는 방이면 방 어딘가에 있고, 그 방에 들어가면 나온다)
         Revealed,   ///< 들켰다. `_escapeTime` 안에 잡아야 한다
@@ -64,13 +64,13 @@ namespace sw
     };
 
     /** @brief 부 하나의 지금 상태입니다. */
-    struct GhostBooRuntime
+    struct HidingGhostRuntime
     {
-        hashed_string _room{};
-        hashed_string _furniture{};
-        float32       _hp{ 0.0f };
-        Countdown     _timer{};
-        GhostBooState _state{ GhostBooState::Hiding };
+        hashed_string    _room{};
+        hashed_string    _furniture{};
+        float32          _hp{ 0.0f };
+        Countdown        _timer{};
+        HidingGhostState _state{ HidingGhostState::Hiding };
     };
 } // namespace sw
 
@@ -138,13 +138,13 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 부와 가구의 수가 다르면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        GhostEncounter&        getEncounter() { return _encounter; }
-        const GhostEncounter&  getEncounter() const { return _encounter; }
-        const hashed_string&   getCurrentRoom() const { return _currentRoom; }
-        bool                   isRoomLit( const hashed_string& roomID ) const;
-        const GhostBooRuntime* findBoo( const hashed_string& booID ) const;
-        int32                  countCaughtBoos() const;
-        bool                   isSearched( const hashed_string& furnitureID ) const;
+        GhostEncounter&           getEncounter() { return _encounter; }
+        const GhostEncounter&     getEncounter() const { return _encounter; }
+        const hashed_string&      getCurrentRoom() const { return _currentRoom; }
+        bool                      isRoomLit( const hashed_string& roomID ) const;
+        const HidingGhostRuntime* findBoo( const hashed_string& booID ) const;
+        int32                     countCaughtBoos() const;
+        bool                      isSearched( const hashed_string& furnitureID ) const;
 
     private:
         int32 findFurnitureIndex( const hashed_string& furnitureID ) const;
@@ -155,7 +155,7 @@ namespace sw
 
         GhostEncounter                 _encounter;
         GameRandom                     _random;
-        vector<GhostBooRuntime>        _listBoo;      ///< 카탈로그의 부 순서를 따른다
+        vector<HidingGhostRuntime>     _listBoo;      ///< 카탈로그의 부 순서를 따른다
         vector<uint8>                  _listSearched; ///< 카탈로그의 가구 순서를 따른다
         EventBuffer<GhostMansionEvent> _eventBuffer;
         vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다

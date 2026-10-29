@@ -28,7 +28,7 @@
 
 namespace sw
 {
-    struct GameplayCueEvent;
+    struct AbilityPresentationEvent;
     struct GameplayEventData;
 
     class AbilityCatalog;
@@ -55,7 +55,7 @@ namespace sw
      *             데이터로 하면 `_abilitySetID` 가 가리키는 카탈로그의 `<AbilitySet>` 이 플레이 시작에 어트리뷰트 세트, 어빌리티, 시작 이펙트, 태그를 한 번에 준다.
      *          2. 어빌리티를 준다(`giveAbility`, `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 어빌리티를 발동한다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기 자신이나 다른 오브젝트에 적용한다(`applyGameplayEffectSpecToTarget`).
-     *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`GameplayCueEvent`, `AbilityOwnerDiedEvent`)로 반응한다.
+     *          4. 게임은 델리게이트(어트리뷰트, 태그, 큐, 이벤트)나 "game" 채널(`AbilityPresentationEvent`, `AbilityOwnerDiedEvent`)로 반응한다.
      *
      *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부른다. 턴제 게임은 틱을 끄고(`setCanEverTick( false )`) 턴마다
      *          `advanceTime( 1 )` 을 부르면 된다. 그러면 지속 시간, 주기, 쿨다운이 턴 단위가 된다. 테스트도 이 함수로 시간을 진행한다.
@@ -81,12 +81,12 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        using AttributeChangedDelegate = Delegate<void( const AttributeChangeData& )>;
-        using EffectDelegate           = Delegate<void( const ActiveGameplayEffect& )>;
-        using AbilityActivatedDelegate = Delegate<void( const GameplayAbility& )>;
-        using AbilityEndedDelegate     = Delegate<void( const GameplayAbility&, bool )>;
-        using GameplayEventDelegate    = Delegate<void( const GameplayEventData& )>;
-        using GameplayCueDelegate      = Delegate<void( const GameplayCueEvent& )>;
+        using AttributeChangedDelegate    = Delegate<void( const AttributeChangeData& )>;
+        using EffectDelegate              = Delegate<void( const ActiveGameplayEffect& )>;
+        using AbilityActivatedDelegate    = Delegate<void( const GameplayAbility& )>;
+        using AbilityEndedDelegate        = Delegate<void( const GameplayAbility&, bool )>;
+        using GameplayEventDelegate       = Delegate<void( const GameplayEventData& )>;
+        using AbilityPresentationDelegate = Delegate<void( const AbilityPresentationEvent& )>;
 
         /** @brief 입력에 묶이지 않은 어빌리티의 입력 번호입니다. */
         static constexpr int32 kNoInputID = -1;
@@ -288,7 +288,7 @@ namespace sw
         /** @brief @p eventTag 나 그 하위 태그의 이벤트가 오면 호출할 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. 태그가 무효면 빈 구독입니다. */
         [[nodiscard]] Subscription registerGameplayEvent( TagID eventTag, const GameplayEventDelegate& delegate );
         /** @brief 이 오브젝트의 이펙트가 큐를 낼 때마다 호출할 델리게이트를 등록합니다. 채널 이벤트보다 먼저 호출됩니다. 돌려준 구독이 사라지면 뗍니다. */
-        [[nodiscard]] Subscription registerGameplayCue( const GameplayCueDelegate& delegate );
+        [[nodiscard]] Subscription registerGameplayCue( const AbilityPresentationDelegate& delegate );
 
         // --------------------------------------------------------------------------
         // 7) 표시 설정
@@ -358,9 +358,9 @@ namespace sw
         /** @brief 적용된 이펙트들의 지속 시간과 주기를 @p deltaTime 만큼 진행합니다. */
         void updateActiveEffects( float32 deltaTime );
         /** @brief 이펙트 하나의 큐를 내보냅니다. */
-        void dispatchCues( const GameplayEffectSpec& spec, GameplayCuePhase phase, float32 magnitude );
-        /** @brief 카탈로그의 큐 정의(`<GameplayCue>`)가 있으면 그 연출(프리팹 · 소리)을 틱 뒤에 냅니다. 클라이언트 코드가 없는 빌드에서는 아무것도 하지 않습니다. */
-        void playCueDef( TagID cueTag, GameplayCuePhase phase ) const;
+        void dispatchCues( const GameplayEffectSpec& spec, AbilityPresentationPhase phase, float32 magnitude );
+        /** @brief 카탈로그의 큐 정의(`<AbilityPresentation>`)가 있으면 그 연출(프리팹 · 소리)을 틱 뒤에 냅니다. 클라이언트 코드가 없는 빌드에서는 아무것도 하지 않습니다. */
+        void playCueDef( TagID cueTag, AbilityPresentationPhase phase ) const;
         /** @brief 지우라고 표시된 이펙트와 스펙을 실제로 지웁니다. 잠금이 풀렸을 때만 실행합니다. */
         void compactPendingRemovals();
 
@@ -415,7 +415,7 @@ namespace sw
         MulticastDelegate<void( const ActiveGameplayEffect& )>                                          _effectRemovedMulticast;
         MulticastDelegate<void( const GameplayAbility& )>                                               _abilityActivatedMulticast;
         MulticastDelegate<void( const GameplayAbility&, bool )>                                         _abilityEndedMulticast;
-        MulticastDelegate<void( const GameplayCueEvent& )>                                              _gameplayCueMulticast;
+        MulticastDelegate<void( const AbilityPresentationEvent& )>                                      _gameplayCueMulticast;
         unique_ptr<AbilitySystemModuleUnloadGuard>                                                      _pModuleCodeGuard; ///< 모듈을 언로드하기 전에 그 모듈의 코드를 가리키는 참조를 제거한다
         const AbilityCatalog*                                                                           _pCatalog;
         float32                                                                                         _time;

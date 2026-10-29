@@ -1,4 +1,4 @@
-<!-- 회선 흉내 프리셋(한 방향). 개발 명령 net.emulation · 에디터 Multiplayer 회선 조절 · 부하 시나리오 <Load network> · -gv_netEmuPreset 이 이 표를 읽는다(NetEmulationPresetTable). -->
+<!-- 회선 흉내 프리셋(한 방향). 개발 명령 net.emulation · 에디터 Multiplayer 회선 조절 · 부하 시나리오 <Load network> · -gv_netEmulationPreset 이 이 표를 읽는다(NetEmulationPresetTable). -->
 <NetEmulationPresetTable>
 	<_listPreset>
 		<NetEmulationPresetDef _name="off"

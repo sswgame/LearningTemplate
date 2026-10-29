@@ -56,7 +56,7 @@
     #include "Engine/Renderer/RHISubsystem.h"
     #include "Engine/Renderer/RenderThreadSubsystem.h"
     #include "Engine/Renderer/SceneRHISubsystem.h"
-    #include "Engine/Renderer/ScreenshotMailbox.h"
+    #include "Engine/Renderer/ScreenshotRequestQueue.h"
     #include "Engine/Window/MainWindowSubsystem.h"
 #endif
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -139,7 +139,7 @@ namespace sw::engine
             services.addSubsystem( sw::make_unique<RHIBackendRegistry>() );
 #if defined( SW_WITH_CLIENT_CODE )
             services.addSubsystem( sw::make_unique<RenderExtensionRegistry>() ); // 렌더러 폴더와 같이 클라이언트에만 있다
-            services.addSubsystem( sw::make_unique<ScreenshotMailbox>() );       // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
+            services.addSubsystem( sw::make_unique<ScreenshotRequestQueue>() );  // 같은 까닭 — 렌더 스레드의 스크린샷 요청이 쓰는 우편함
 #endif
         }
         return parts;

@@ -117,7 +117,7 @@ namespace sw
     };
 
     /** @brief 게임플레이 큐가 어떤 순간에 발생했는지 나타냅니다(언리얼의 `EGameplayCueEvent` 에 해당). */
-    enum class GameplayCuePhase : uint8
+    enum class AbilityPresentationPhase : uint8
     {
         Executed = 0, ///< 즉시 실행이나 주기 실행(피격 섬광, 피해 숫자)
         Added,        ///< 지속 이펙트가 걸렸다(불타는 오라 시작)

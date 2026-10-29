@@ -7,7 +7,7 @@
  *          - 적기는 어느 스레드에서 해도 된다(병렬 틱). 질의 · 다시 보기 · 저장은 게임 스레드에서 부른다.
  *          - **다시 보기**(`replayFrame`)는 그 프레임의 기록을 한 프레임짜리 디버그 드로우로 넣는다 — 에디터가 슬라이더로 프레임을 옮기며 부르면 도형이 따라 움직인다.
  *          - 파일(`*.vlog.json`)로 저장해 다른 사람에게 보낼 수 있다(버그 재현 첨부).
- *          개발 명령은 `vlog.on` · `vlog.off` · `vlog.status` · `vlog.clear` · `vlog.save <파일>` · `vlog.replay <프레임>` 이다.
+ *          개발 명령은 `visuallog.on` · `visuallog.off` · `visuallog.status` · `visuallog.clear` · `visuallog.save <파일>` · `visuallog.replay <프레임>` 이다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

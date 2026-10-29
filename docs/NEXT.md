@@ -115,9 +115,9 @@
 
 | 지금 | 바꿈 | 규모 | 까닭 |
 |---|---|---|---|
-| `DontDestroyOnLoadComponent` | `PersistAcrossScenesComponent` | 3 파일 | 유니티 API 이름 |
-| `GhostBooDef` | `HidingGhostDef` | 3 파일 | 닌텐도 캐릭터 이름 |
-| `GameplayCueDef` | `AbilityPresentationDef` | 9 파일 | 언리얼 GAS 은어 |
+| `PersistAcrossScenesComponent` | `PersistAcrossScenesComponent` | 3 파일 | 유니티 API 이름 |
+| `HidingGhostDef` | `HidingGhostDef` | 3 파일 | 닌텐도 캐릭터 이름 |
+| `AbilityPresentationDef` | `AbilityPresentationDef` | 9 파일 | 언리얼 GAS 은어 |
 | `AbilitySystemComponent` · `GameplayAbility` · `GameplayEffect*` · `GameplayTagCountContainer` · `AbilityTaskWaitGameplayEvent` | `AbilityComponent` · `Ability` · `AbilityEffect*` · `TagCountTable` · `AbilityTaskWaitEvent` | 35 파일 | "Gameplay" 가 내용을 말하지 않는다(언리얼 GAS 그대로) |
 | `SmartObjectComponent` · `SmartObjectDef` | `UseSlotComponent` · `UseSlotDef` | 12 파일 | 언리얼 기능 이름 |
 | `Br*`(배틀로얄 키트) | `BattleRoyale*` | 12 파일 | 약어 |
@@ -126,10 +126,10 @@
 | `AuthorityGhost` · `gv_authorityGhost*` · `net.ghost` | `ServerPoseOverlay` · `gv_serverPoseOverlay*` · `net.serverOverlay` | 6 파일 | 넷코드 은어 |
 | 명령 `vlog.*` | `visuallog.*` | 2 파일 | 타입은 `VisualLogger` 인데 명령만 약어 |
 | `gv_bench*` · `BenchScene*` · `UIBenchScreen` | `gv_stress*` · `StressTestScene*` · `UIStressTestScreen` | 35 파일 | 줄임말이고 좌석 슬롯 `bench` 와 겹친다 |
-| `gv_netEmu*` · `gv_ioEmu*` | `gv_netEmulation*` · `gv_ioEmulation*` | 약 30 줄 | 타입(`NetEmulation`)과 철자를 맞춘다 |
+| `gv_netEmulation*` · `gv_ioEmu*` | `gv_netEmulation*` · `gv_ioEmulation*` | 약 30 줄 | 타입(`NetEmulation`)과 철자를 맞춘다 |
 | `ShellInputActions` · `shell.rebind` · `shellbindings.xml` | `DebugKeyActions` · `debugkeys.rebind` · `debugkeys.xml` | 16 파일 | "셸" 이 무엇인지 안 보인다 |
-| `ScreenshotMailbox` | `ScreenshotRequestQueue` | 5 파일 | 비유 이름 |
-| `gv_deferred` · `gv_morphDiag` | `gv_deferredShading` · `gv_meshMorphDebugMode` | 24 줄 | 무엇이 디퍼드 · 진단인지 없다 |
+| `ScreenshotRequestQueue` | `ScreenshotRequestQueue` | 5 파일 | 비유 이름 |
+| `gv_deferredShading` · `gv_meshMorphDebugMode` | `gv_deferredShading` · `gv_meshMorphDebugMode` | 24 줄 | 무엇이 디퍼드 · 진단인지 없다 |
 
 둔 것(공용어 · 실제 이름): `Cook*`(언리얼 · 프로스트바이트 · id 가 함께 쓰는 업계 말이고 대안 "Build" 는 빌드와 겹친다 — 2 절 규칙에 적는다), `Pawn` · `Possess`(게임 프레임워크의 일반 말로 굳었고 82 파일 — 대안이 더 모호하다), `Breadcrumbs`(Aftermath · 언리얼 공용), `EditorChrome`(UI 업계 말), `Tracy` · `LiveLinkFace`(실제 라이브러리 · 앱 프로토콜), `cheat.god` · `GM`(게이머 · 운영 공용어), `KartGhost`(레이싱 장르 표준), `DrainGate`.
 

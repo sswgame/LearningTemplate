@@ -161,7 +161,7 @@ namespace sw
 {
     /** @brief 부(Boo) 하나입니다. 가구에 숨어 있다가 들키면 `_escapeTime` 안에 잡지 못할 때 다른 방으로 달아납니다. */
     REFLECT()
-    struct GhostBooDef
+    struct HidingGhostDef
     {
         REFLECT_BODY();
 
@@ -217,7 +217,7 @@ namespace sw
         const GhostDoorDef*              findDoor( const hashed_string& id ) const { return _doorCatalog.find( id ); }
         const GhostFurnitureDef*         findFurniture( const hashed_string& id ) const { return _furnitureCatalog.find( id ); }
         const vector<GhostFurnitureDef>& getFurniture() const { return _furnitureCatalog.getAll(); }
-        const vector<GhostBooDef>&       getBoos() const { return _booCatalog.getAll(); }
+        const vector<HidingGhostDef>&    getBoos() const { return _booCatalog.getAll(); }
         int32                            findBooIndex( const hashed_string& id ) const { return _booCatalog.findIndex( id ); }
 
     private:
@@ -235,7 +235,7 @@ namespace sw
         GameCatalog<GhostRoomDef>      _roomCatalog;
         GameCatalog<GhostDoorDef>      _doorCatalog;
         GameCatalog<GhostFurnitureDef> _furnitureCatalog;
-        GameCatalog<GhostBooDef>       _booCatalog;
+        GameCatalog<HidingGhostDef>    _booCatalog;
         hashed_string                  _currency;
     };
 } // namespace sw

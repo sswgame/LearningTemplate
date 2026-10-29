@@ -62,8 +62,8 @@ namespace sw
         };
     } // namespace
 
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadLatencyMs, 0, "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmuReadKilobytesPerSecond, 0, "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmulationReadLatencyMs, 0, "디스크 흉내: 파일 읽기 한 번마다 더하는 지연(ms, 0=끔)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_ioEmulationReadKilobytesPerSecond, 0, "디스크 흉내: 파일 읽기 대역폭(KB/s, 0=제한 없음)" );
     SW_TEST_GLOBAL_VARIABLE( bool, gv_ioLogReads, false, "읽으려고 연 파일마다 경로 · 바이트 · 스레드를 로그로 남긴다(기동 · 히치의 동기 읽기 찾기)" );
 } // namespace sw
 
@@ -71,9 +71,9 @@ namespace sw
 {
     void PlatformFileUtil::emulateReadDelay( size_t byteCount )
     {
-        int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmuReadLatencyMs ) ) * constant::kMicrosecondsPerMillisecond;
-        if ( gv_ioEmuReadKilobytesPerSecond > 0 )
-            delayMicro += static_cast<int64>( byteCount ) * constant::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmuReadKilobytesPerSecond ) * static_cast<int64>( constant::kBytesPerKilobyte ) );
+        int64 delayMicro = static_cast<int64>( MathUtil::max( 0, gv_ioEmulationReadLatencyMs ) ) * constant::kMicrosecondsPerMillisecond;
+        if ( gv_ioEmulationReadKilobytesPerSecond > 0 )
+            delayMicro += static_cast<int64>( byteCount ) * constant::kMicrosecondsPerSecond / ( static_cast<int64>( gv_ioEmulationReadKilobytesPerSecond ) * static_cast<int64>( constant::kBytesPerKilobyte ) );
         if ( delayMicro <= 0 )
             return;
         // 디스크 한 대(큐 깊이 1): 여러 스레드의 읽기가 장치에서 줄을 선다 — 스레드마다 따로 자면 읽기를 나눠 부르기만 해도 디스크가 빨라진 것처럼 보인다.

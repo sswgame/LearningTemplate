@@ -103,7 +103,7 @@ namespace sw
         [[nodiscard]] static bool readNativeFileAt( NativeFileHandle handle, uint64 offset, void* pDst, size_t size, size_t& outReadBytes );
 
         /**
-         * @brief 디스크 흉내(`-gv_ioEmuReadLatencyMs` · `-gv_ioEmuReadKilobytesPerSecond`, 부하 검증의 하드웨어 프로필)가 켜져 있으면 읽기 한 번만큼 이 스레드를 재웁니다.
+         * @brief 디스크 흉내(`-gv_ioEmulationReadLatencyMs` · `-gv_ioEmulationReadKilobytesPerSecond`, 부하 검증의 하드웨어 프로필)가 켜져 있으면 읽기 한 번만큼 이 스레드를 재웁니다.
          * @details 읽기 경로(`readNativeFileAt` · `FileUtil::readFile` · `readTextFile`)가 부릅니다. 꺼져 있으면(기본, 배포본은 늘) 아무것도 하지 않습니다.
          *          느린 디스크의 지연 · 대역폭을 소프트웨어로 흉내 낸 것이라 OS 캐시는 흉내 내지 않습니다. 장치는 하나이고 큐 깊이는 1 입니다 —
          *          여러 스레드의 읽기가 줄을 서므로 읽기를 나눠 부른다고 빨라지지 않습니다. 대기는 고해상도 마감(`MonotonicClock::sleepUntilNanoseconds`)이라

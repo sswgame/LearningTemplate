@@ -213,7 +213,7 @@ namespace sw
         _mapAbilitySet.insert_or_assign( def._id, def );
     }
 
-    void AbilityCatalog::addCue( const GameplayCueDef& def )
+    void AbilityCatalog::addCue( const AbilityPresentationDef& def )
     {
         if ( def._cueTag.isValid() == false )
         {
@@ -231,11 +231,11 @@ namespace sw
         _mapCue.clear();
     }
 
-    const GameplayCueDef* AbilityCatalog::findCue( TagID cueTag ) const
+    const AbilityPresentationDef* AbilityCatalog::findCue( TagID cueTag ) const
     {
         if ( cueTag.isValid() == false || _mapCue.empty() )
             return nullptr;
-        // 같은 태그부터 조상 쪽으로 찾는다("GameplayCue.Hit.Fire", "GameplayCue.Hit", "GameplayCue"). 조상 id 는 intern 하지 않고 해시만 구한다.
+        // 같은 태그부터 조상 쪽으로 찾는다("AbilityPresentation.Hit.Fire", "AbilityPresentation.Hit", "AbilityPresentation"). 조상 id 는 intern 하지 않고 해시만 구한다.
         const utf8* pTagText = cueTag.getString();
         if ( pTagText == nullptr )
         {
@@ -342,9 +342,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XMLNode node = root.findChild( "GameplayCue" ); node; node = node.findNextSibling( "GameplayCue" ) )
+        for ( XMLNode node = root.findChild( "AbilityPresentation" ); node; node = node.findNextSibling( "AbilityPresentation" ) )
         {
-            GameplayCueDef def;
+            AbilityPresentationDef def;
             if ( readCue( node, sourceName, def ) == false )
                 continue;
             addCue( def );
@@ -352,7 +352,7 @@ namespace sw
         }
 
         if ( loadedCount == 0 )
-            SW_LOG_WARNING( "%#: no <GameplayEffect>, <Ability>, <AbilitySet> or <GameplayCue> entries", sourceName );
+            SW_LOG_WARNING( "%#: no <GameplayEffect>, <Ability>, <AbilitySet> or <AbilityPresentation> entries", sourceName );
         return loadedCount;
     }
 
@@ -436,12 +436,12 @@ namespace sw
         return AbilityCatalogInternal::readEffectTagsAndGrants( node, pID, sourceName, outDef );
     }
 
-    bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, GameplayCueDef& outDef )
+    bool AbilityCatalog::readCue( const XMLNode& node, string_view sourceName, AbilityPresentationDef& outDef )
     {
         const utf8* pTag = node.findAttribute( "tag" );
         if ( StringUtil::isNullOrEmpty( pTag ) )
         {
-            SW_LOG_ERROR( "%#: <GameplayCue> without a tag - skipped", sourceName );
+            SW_LOG_ERROR( "%#: <AbilityPresentation> without a tag - skipped", sourceName );
             return false;
         }
         outDef._cueTag     = TagID::request( string_view( pTag ) );

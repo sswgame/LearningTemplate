@@ -112,7 +112,7 @@ namespace sw
                 (void)pAbilitySystem->applyGameplayEffectSpecToSelf( spec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
             if ( extraSpec.isValid() )
                 (void)pAbilitySystem->applyGameplayEffectSpecToSelf( extraSpec ); // 대상 태그 조건에 막히면 무효 핸들 — 안 걸리는 것이 규칙이다
-            // 피격음은 이펙트의 큐(`GameplayCue.Hit.*`)가 카탈로그의 `<GameplayCue>` 로 낸다 — 여기서 따로 내지 않는다.
+            // 피격음은 이펙트의 큐(`AbilityPresentation.Hit.*`)가 카탈로그의 `<AbilityPresentation>` 로 낸다 — 여기서 따로 내지 않는다.
         } ) );
     }
 

@@ -77,14 +77,14 @@ namespace sw
     };
 
     /**
-     * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
+     * @brief 진단 · 테스트가 코드에서 전역 변수(`gv_meshMorphDebugMode` · `gv_drawMerge` · `gv_vertexPool`)와 렌더러 시계를 덮어쓰는 값 하나입니다.
      * @details `std::nullopt`(시각은 음수)가 "덮어쓰지 않음" 이라 전역 변수(시각은 렌더러 시계)를 따른다. 언리얼 뷰 패밀리의 `FEngineShowFlags` 처럼 값 하나로 주고받는다(기억에 의존한 비교).
      *          배포본의 렌더러는 이 값을 갖지 않고(`FrameRenderer::setDebugOverrides` 가 없다) 늘 전역 변수를 따른다.
      */
     struct FrameDebugOverrides
     {
         /**
-         * @brief GPU 메시 모프 진단 모드입니다. `-gv_morphDiag` 와 같은 `MeshMorphDiagMode` 입니다(Normal / ForceOn / SkipDispatch / IndexTag).
+         * @brief GPU 메시 모프 진단 모드입니다. `-gv_meshMorphDebugMode` 와 같은 `MeshMorphDiagMode` 입니다(Normal / ForceOn / SkipDispatch / IndexTag).
          * @details 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다. 그래서 이 모드 하나로
          *          "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다. OpenGL 드라이버가 early-return 형태의
          *          `MorphPool::computeElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
@@ -1286,9 +1286,9 @@ namespace sw
          * @details 오프셋은 배치 테이블(g_SwBatches)에 실려 upload() 가 올리므로 테이블은 업로드 시점에 완성되어 있어야 한다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돈다.
          */
         void prepareMeshMorphPool();
-        /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_morphDiag` 를 씁니다. */
+        /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_meshMorphDebugMode` 를 씁니다. */
         MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
-        /** @brief `gv_morphDiag` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
+        /** @brief `gv_meshMorphDebugMode` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
         [[nodiscard]] static bool isMeshMorphDiagValid();
         /** @brief 시간으로 구동하는 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 로 받은 값(0 이상, 배포본에는 없음)을 쓰고, 없으면 `_animationTimer` 의 누적 시간을 씁니다. */
         float32 getAnimationTime() const;

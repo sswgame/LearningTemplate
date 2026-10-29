@@ -45,15 +45,15 @@ namespace sw
         /** @brief 회선을 나쁘게 하는 조건이 하나라도 켜져 있으면 true 를 반환합니다(꺼져 있으면 에뮬레이션은 그대로 통과시킵니다). 필터는 별개이며, 지연 없이 거르기만 합니다. */
         bool isActive() const;
         /**
-         * @brief 전역 변수에서 읽습니다. `-gv_netEmuLatencyMs`, `-gv_netEmuJitterMs`, `-gv_netEmuLossPercent`, `-gv_netEmuDuplicatePercent`,
-         *        `-gv_netEmuReorderPercent`, `-gv_netEmuBandwidthKilobytesPerSecond` 가 해당하며, 언리얼의 `PktLag`, `PktLagVariance`, `PktLoss`, `PktDup`, `PktOrder` 에 대응합니다.
-         * @details 이름 있는 회선 프리셋(`-gv_netEmuPreset`)은 Engine 의 프리셋 표(`NetEmulationPresetTable`)가 풀어 이 값 대신 씁니다.
+         * @brief 전역 변수에서 읽습니다. `-gv_netEmulationLatencyMs`, `-gv_netEmulationJitterMs`, `-gv_netEmulationLossPercent`, `-gv_netEmulationDuplicatePercent`,
+         *        `-gv_netEmulationReorderPercent`, `-gv_netEmulationBandwidthKilobytesPerSecond` 가 해당하며, 언리얼의 `PktLag`, `PktLagVariance`, `PktLoss`, `PktDup`, `PktOrder` 에 대응합니다.
+         * @details 이름 있는 회선 프리셋(`-gv_netEmulationPreset`)은 Engine 의 프리셋 표(`NetEmulationPresetTable`)가 풀어 이 값 대신 씁니다.
          */
         static NetEmulationConditions makeFromGlobalVariables();
 
         /**
          * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p inoutConditions 에 적용합니다.
-         * @details 키는 전역 변수(`gv_netEmu*`)와 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.
+         * @details 키는 전역 변수(`gv_netEmulation*`)와 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.
          */
         [[nodiscard]] static bool parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError );
         /**

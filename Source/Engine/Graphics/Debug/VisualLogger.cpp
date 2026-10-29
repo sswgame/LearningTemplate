@@ -400,7 +400,7 @@ namespace sw
             return string( text.view() );
         }
 
-        /** @brief 개발 명령 `vlog.*` 가 쓰는 로거입니다. 엔진 서비스가 묶이지 않았으면 답을 적고 nullptr 입니다. */
+        /** @brief 개발 명령 `visuallog.*` 가 쓰는 로거입니다. 엔진 서비스가 묶이지 않았으면 답을 적고 nullptr 입니다. */
         VisualLogger* findLogger( string& outReply )
         {
             VisualLogger* pLogger = engine::areEngineServicesBound() ? engine::findSubsystem<VisualLogger>() : nullptr;
@@ -496,12 +496,12 @@ namespace sw
         }
     } // namespace
 
-    SW_DEV_COMMAND( VisualLogOn, "vlog.on", "vlog.on", "Start recording visual log entries", &runOn );
-    SW_DEV_COMMAND( VisualLogOff, "vlog.off", "vlog.off", "Stop recording visual log entries (kept)", &runOff );
-    SW_DEV_COMMAND( VisualLogClear, "vlog.clear", "vlog.clear", "Drop every recorded visual log entry", &runClear );
-    SW_DEV_COMMAND( VisualLogStatus, "vlog.status", "vlog.status", "Show whether the visual log records and how many entries it holds", &runStatus );
-    SW_DEV_COMMAND( VisualLogSave, "vlog.save", "vlog.save <file.vlog.json>", "Write the recorded visual log to a file", &runSave );
-    SW_DEV_COMMAND( VisualLogReplay, "vlog.replay", "vlog.replay <frame>", "Draw the shapes of a recorded frame through the debug draw queue for one frame", &runReplay );
+    SW_DEV_COMMAND( VisualLogOn, "visuallog.on", "visuallog.on", "Start recording visual log entries", &runOn );
+    SW_DEV_COMMAND( VisualLogOff, "visuallog.off", "visuallog.off", "Stop recording visual log entries (kept)", &runOff );
+    SW_DEV_COMMAND( VisualLogClear, "visuallog.clear", "visuallog.clear", "Drop every recorded visual log entry", &runClear );
+    SW_DEV_COMMAND( VisualLogStatus, "visuallog.status", "visuallog.status", "Show whether the visual log records and how many entries it holds", &runStatus );
+    SW_DEV_COMMAND( VisualLogSave, "visuallog.save", "visuallog.save <file.vlog.json>", "Write the recorded visual log to a file", &runSave );
+    SW_DEV_COMMAND( VisualLogReplay, "visuallog.replay", "visuallog.replay <frame>", "Draw the shapes of a recorded frame through the debug draw queue for one frame", &runReplay );
 } // namespace sw
 
 #endif

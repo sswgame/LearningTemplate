@@ -7,12 +7,12 @@
 namespace sw
 {
     REFLECT()
-    class SW_GF_API DontDestroyOnLoadComponent : public Component
+    class SW_GF_API PersistAcrossScenesComponent : public Component
     {
     public:
         REFLECT_BODY();
-        DontDestroyOnLoadComponent();
-        virtual ~DontDestroyOnLoadComponent() override = default;
+        PersistAcrossScenesComponent();
+        virtual ~PersistAcrossScenesComponent() override = default;
 
         void onBeginPlay() override;
 

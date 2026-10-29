@@ -238,7 +238,7 @@ namespace sw::editor
      * @class MultiplayerConditionsTab
      * @brief Conditions 탭 — 고른 대상 프로세스의 회선 흉내를 실행 중에 바꿉니다(서버 디버깅 S4, 언리얼 Net Emulation · 유니티 Network Simulator 에 해당합니다).
      * @details 프리셋, 올림 · 내림 슬라이더(지연 · 흔들림 · 손실 · 대역폭), 끊기 · 재접속 · 스파이크를 그 프로세스의 표준 입력에 개발 명령(`net.emulation` …)으로 보낸다.
-     *          패널 값은 프로세스마다 따로 들고, 세션이 새로 서면(포트가 바뀌면) 지운다 — 자식은 `-gv_netEmu*` 기본값(꺼짐)으로 다시 뜬다.
+     *          패널 값은 프로세스마다 따로 들고, 세션이 새로 서면(포트가 바뀌면) 지운다 — 자식은 `-gv_netEmulation*` 기본값(꺼짐)으로 다시 뜬다.
      */
     class MultiplayerConditionsTab final : public IMultiplayerTab
     {

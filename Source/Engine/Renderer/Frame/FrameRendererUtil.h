@@ -92,13 +92,13 @@ namespace sw
         {
             string_view _argumentPath;    ///< `initialize` 인자(테스트 · 도구)
             string_view _commandLinePath; ///< `-gv_renderPipeline`
-            string_view _deferredPath;    ///< 엔진 기본 디퍼드(`-gv_deferred` 일 때만)
+            string_view _deferredPath;    ///< 엔진 기본 디퍼드(`-gv_deferredShading` 일 때만)
             string_view _gamePath;        ///< 팩 설정(`PackEngineSettings::_renderPipeline`)
             string_view _forwardPath;     ///< 엔진 기본 포워드
             bool        _bDeferred{ false };
         };
         /**
-         * @brief 그릴 파이프라인을 고릅니다. 인자 → `-gv_renderPipeline` → `-gv_deferred` → 팩 설정 → 엔진 기본 포워드 순서입니다.
+         * @brief 그릴 파이프라인을 고릅니다. 인자 → `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 기본 포워드 순서입니다.
          * @details 명령줄은 측정 · 검증 스위치라 게임 데이터보다 앞선다(유니티 Graphics 설정의 Render Pipeline Asset 을 실행 인자가 덮는 것과 같다).
          */
         static string_view computePipelinePath( const PipelineChoice& choice )

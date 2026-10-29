@@ -1,7 +1,7 @@
 /**
- * @file Engine/Renderer/ScreenshotMailbox.h
+ * @file Engine/Renderer/ScreenshotRequestQueue.h
  * @brief 스크린샷 요청의 우편함입니다 — 게임 스레드 · 개발 명령 · 에디터가 요청을 넣고 렌더 스레드가 꺼내 쓴 뒤 결과를 알립니다.
- * @details 엔진 범위의 서비스(선택 행)입니다. 렌더 스레드(`RenderThread`)의 정적 창구(`requestScreenshot` · `getCompletedScreenshotSerial` …)가 `engine::findSubsystem<ScreenshotMailbox>()`
+ * @details 엔진 범위의 서비스(선택 행)입니다. 렌더 스레드(`RenderThread`)의 정적 창구(`requestScreenshot` · `getCompletedScreenshotSerial` …)가 `engine::findSubsystem<ScreenshotRequestQueue>()`
  *          로 찾아 부릅니다. 우편함은 엔진 범위와 함께 서고 사라지므로 엔진을 다시 세우면 마지막 경로 · 장부가 비어 시작하고, 우편함이 없는 호스트(전용 서버)에서는 요청을 오류로 알리고 버립니다.
  *          `-gv_screenshotQuit` 의 장부(요청한 종류 · 끝낸 종류 · 쓰지 못한 종류)도 여기 둡니다.
  */
@@ -32,20 +32,20 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ScreenshotMailbox
+     * @class ScreenshotRequestQueue
      * @brief 스크린샷 요청 한 칸과 처리 결과(마지막 경로 · 처리한 수)와 `-gv_screenshotQuit` 장부를 든 서비스입니다.
      * @details 요청은 한 칸이라 앞 요청이 아직 남아 있으면 덮어씁니다. 모든 함수는 어느 스레드에서 불러도 됩니다.
      */
-    class SW_API ScreenshotMailbox final : public ISubsystem
+    class SW_API ScreenshotRequestQueue final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. */
-        static constexpr const utf8* kSubsystemName = "ScreenshotMailbox";
+        static constexpr const utf8* kSubsystemName = "ScreenshotRequestQueue";
 
-        ScreenshotMailbox()                                      = default;
-        ~ScreenshotMailbox() override                            = default;
-        ScreenshotMailbox( const ScreenshotMailbox& )            = delete;
-        ScreenshotMailbox& operator=( const ScreenshotMailbox& ) = delete;
+        ScreenshotRequestQueue()                                           = default;
+        ~ScreenshotRequestQueue() override                                 = default;
+        ScreenshotRequestQueue( const ScreenshotRequestQueue& )            = delete;
+        ScreenshotRequestQueue& operator=( const ScreenshotRequestQueue& ) = delete;
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}

@@ -381,7 +381,7 @@ namespace sw
         return pMulticast->add( delegate );
     }
 
-    Subscription AbilitySystemComponent::registerGameplayCue( const GameplayCueDelegate& delegate )
+    Subscription AbilitySystemComponent::registerGameplayCue( const AbilityPresentationDelegate& delegate )
     {
         return _gameplayCueMulticast.add( delegate );
     }

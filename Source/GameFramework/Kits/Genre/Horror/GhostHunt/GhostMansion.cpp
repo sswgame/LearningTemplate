@@ -54,9 +54,9 @@ namespace sw
         _listSearched.clear();
         if ( pCatalog == nullptr )
             return;
-        for ( const GhostBooDef& boo : pCatalog->getBoos() )
+        for ( const HidingGhostDef& boo : pCatalog->getBoos() )
         {
-            GhostBooRuntime runtime;
+            HidingGhostRuntime runtime;
             runtime._room      = boo._room;
             runtime._furniture = boo._furniture;
             runtime._hp        = boo._hp;
@@ -80,8 +80,8 @@ namespace sw
         // 가구 없이 방에 숨은 부는 들어서면 나온다.
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
-            const GhostBooRuntime& boo              = _listBoo[booIndex];
-            const bool             bBooHiddenInRoom = boo._state == GhostBooState::Hiding && boo._room == roomID && boo._furniture.empty();
+            const HidingGhostRuntime& boo              = _listBoo[booIndex];
+            const bool                bBooHiddenInRoom = boo._state == HidingGhostState::Hiding && boo._room == roomID && boo._furniture.empty();
             if ( bBooHiddenInRoom )
                 revealBoo( booIndex );
         }
@@ -124,8 +124,8 @@ namespace sw
 
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
-            GhostBooRuntime& boo = _listBoo[booIndex];
-            if ( boo._state != GhostBooState::Revealed )
+            HidingGhostRuntime& boo = _listBoo[booIndex];
+            if ( boo._state != HidingGhostState::Revealed )
                 continue;
             boo._timer.update( deltaTime );
             if ( boo._timer.isActive() == false )
@@ -158,8 +158,8 @@ namespace sw
             return GhostSearchResult::WrongMode;
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
-            const GhostBooRuntime& boo = _listBoo[booIndex];
-            if ( boo._state == GhostBooState::Hiding && boo._furniture == furnitureID )
+            const HidingGhostRuntime& boo = _listBoo[booIndex];
+            if ( boo._state == HidingGhostState::Hiding && boo._furniture == furnitureID )
             {
                 revealBoo( booIndex );
                 return GhostSearchResult::BooFound;
@@ -182,14 +182,14 @@ namespace sw
         const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : -1;
         if ( booIndex < 0 || static_cast<size_t>( booIndex ) >= _listBoo.size() )
             return false;
-        GhostBooRuntime& boo = _listBoo[static_cast<size_t>( booIndex )];
-        if ( boo._state != GhostBooState::Revealed || amount <= 0.0f )
+        HidingGhostRuntime& boo = _listBoo[static_cast<size_t>( booIndex )];
+        if ( boo._state != HidingGhostState::Revealed || amount <= 0.0f )
             return false;
         boo._hp -= amount;
         if ( boo._hp > 0.0f )
             return false;
         boo._hp    = 0.0f;
-        boo._state = GhostBooState::Caught;
+        boo._state = HidingGhostState::Caught;
         pushEvent( GhostMansionEventType::BooCaught, booID, boo._room );
         return true;
     }
@@ -213,7 +213,7 @@ namespace sw
         return _pFlags != nullptr && _pFlags->hasFlag( pRoom->_lightFlag );
     }
 
-    const GhostBooRuntime* GhostMansion::findBoo( const hashed_string& booID ) const
+    const HidingGhostRuntime* GhostMansion::findBoo( const hashed_string& booID ) const
     {
         const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : -1;
         return booIndex >= 0 && static_cast<size_t>( booIndex ) < _listBoo.size() ? &_listBoo[static_cast<size_t>( booIndex )] : nullptr;
@@ -222,9 +222,9 @@ namespace sw
     int32 GhostMansion::countCaughtBoos() const
     {
         int32 count = 0;
-        for ( const GhostBooRuntime& boo : _listBoo )
+        for ( const HidingGhostRuntime& boo : _listBoo )
         {
-            if ( boo._state == GhostBooState::Caught )
+            if ( boo._state == HidingGhostState::Caught )
                 ++count;
         }
         return count;
@@ -266,15 +266,15 @@ namespace sw
 
     void GhostMansion::revealBoo( size_t booIndex )
     {
-        GhostBooRuntime& boo = _listBoo[booIndex];
-        boo._state           = GhostBooState::Revealed;
+        HidingGhostRuntime& boo = _listBoo[booIndex];
+        boo._state              = HidingGhostState::Revealed;
         boo._timer.start( _pCatalog->getBoos()[booIndex]._escapeTime );
         pushEvent( GhostMansionEventType::BooRevealed, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
     void GhostMansion::moveBooAway( size_t booIndex )
     {
-        GhostBooRuntime& boo = _listBoo[booIndex];
+        HidingGhostRuntime& boo = _listBoo[booIndex];
         // 이웃 방을 찾는다. 유령은 벽을 지나므로 잠긴 문과 일방통행을 가리지 않는다. 연결을 읽은 순서대로이므로 항상 같은 목록이다.
         vector<hashed_string> listNeighbor;
         if ( _pAreaGraph != nullptr )
@@ -306,16 +306,16 @@ namespace sw
             if ( ( furniture._room == boo._room ) == false )
                 continue;
             bool bTaken = false;
-            for ( const GhostBooRuntime& other : _listBoo )
+            for ( const HidingGhostRuntime& other : _listBoo )
             {
-                bTaken = bTaken || ( other._state == GhostBooState::Hiding && other._furniture == furniture._id );
+                bTaken = bTaken || ( other._state == HidingGhostState::Hiding && other._furniture == furniture._id );
             }
             if ( bTaken == false )
                 listHideout.push_back( furniture._id );
         }
         boo._furniture = listHideout.empty() ? hashed_string{}
                                              : listHideout[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listHideout.size() ) - 1 ) )];
-        boo._state     = GhostBooState::Hiding;
+        boo._state     = HidingGhostState::Hiding;
         boo._timer.clear();
         pushEvent( GhostMansionEventType::BooEscaped, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
@@ -335,7 +335,7 @@ namespace sw
         _encounter.writeState( outArchive );
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << static_cast<uint32>( _listBoo.size() );
-        for ( const GhostBooRuntime& boo : _listBoo )
+        for ( const HidingGhostRuntime& boo : _listBoo )
         {
             StateArchiveUtil::writeName( outArchive, boo._room );
             StateArchiveUtil::writeName( outArchive, boo._furniture );
@@ -362,7 +362,7 @@ namespace sw
             restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCount( archive, 17, booCount );
         if ( bHeadRead == false || booCount != _listBoo.size() )
             return false;
-        for ( GhostBooRuntime& boo : restored._listBoo )
+        for ( HidingGhostRuntime& boo : restored._listBoo )
         {
             uint8      state     = 0;
             const bool bNameRead = StateArchiveUtil::readName( archive, boo._room ) && StateArchiveUtil::readName( archive, boo._furniture );
@@ -371,10 +371,10 @@ namespace sw
             archive >> boo._hp;
             const bool bTimerRead = StateArchiveUtil::readCountdown( archive, boo._timer );
             archive >> state;
-            const bool bInvalidBooState = bTimerRead == false || archive.isError() || state > static_cast<uint8>( GhostBooState::Caught );
+            const bool bInvalidBooState = bTimerRead == false || archive.isError() || state > static_cast<uint8>( HidingGhostState::Caught );
             if ( bInvalidBooState )
                 return false;
-            boo._state = static_cast<GhostBooState>( state );
+            boo._state = static_cast<HidingGhostState>( state );
         }
         uint32 searchedCount = 0;
         if ( StateArchiveUtil::readCount( archive, 1, searchedCount ) == false || searchedCount != _listSearched.size() )

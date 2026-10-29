@@ -25,7 +25,7 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/ScreenshotMailbox.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
              * @brief 스크린샷 우편함 서비스입니다. 렌더러를 짓지 않는 호스트(전용 서버)와 서비스 범위가 서지 않은 곳에는 없어 nullptr 입니다.
              * @details 없으면 요청을 받을 곳이 없다 — 정적 창구는 요청을 오류로 알리고 버리며, 읽는 창구는 "아직 아무것도 처리하지 않았다" 로 답한다.
              */
-            static ScreenshotMailbox* findMailbox() { return engine::findSubsystem<ScreenshotMailbox>(); }
+            static ScreenshotRequestQueue* findMailbox() { return engine::findSubsystem<ScreenshotRequestQueue>(); }
 
             /** @brief 컨텍스트가 스레드에 묶이는 디바이스(DX11, GL)면 이 스레드에서 컨텍스트를 뗍니다. 그 능력이 없는 디바이스는 할 일이 없습니다. */
             static void unbindGraphicsContext( const IRHIDevice* pDevice )
@@ -679,7 +679,7 @@ namespace sw
 
     void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
     {
-        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
             SW_LOG_ERROR( "Screenshot '%#' was not requested - this host has no screenshot mailbox (no renderer)", filePath );
@@ -710,13 +710,13 @@ namespace sw
 
     uint32 RenderThread::getCompletedScreenshotSerial()
     {
-        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         return pMailbox != nullptr ? pMailbox->getCompletedSerial() : 0u; // 우편함이 없으면 처리한 요청이 없다
     }
 
     void RenderThread::expectCapture( CaptureKind kind )
     {
-        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
             SW_LOG_ERROR( "A capture was announced but this host has no screenshot mailbox (no renderer)" );
@@ -727,7 +727,7 @@ namespace sw
 
     void RenderThread::reportCaptureFinished( CaptureKind kind, bool bWritten )
     {
-        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox == nullptr )
         {
             SW_LOG_ERROR( "A capture finished but this host has no screenshot mailbox (no renderer)" );
@@ -740,8 +740,8 @@ namespace sw
     {
         if ( gv_screenshotQuit == false )
             return kNoCaptureExitCode;
-        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
-        bool                           bFailed  = false;
+        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
+        bool                                bFailed  = false;
         if ( pMailbox == nullptr || pMailbox->findAllCapturesFinished( bFailed ) == false )
             return kNoCaptureExitCode; // 우편함이 없으면 요청한 사진이 하나도 없다
         return bFailed ? kCaptureWriteFailedExitCode : 0;
@@ -749,7 +749,7 @@ namespace sw
 
     string RenderThread::getLastScreenshotPath()
     {
-        const ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         return pMailbox != nullptr ? pMailbox->getLastPath() : string{}; // 우편함이 없으면 쓴 사진이 없다
     }
 
@@ -757,8 +757,8 @@ namespace sw
     {
         if ( _requestedScreenshotPath.empty() == false )
             return;
-        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
-        ScreenshotRequest        request;
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequest             request;
         if ( pMailbox == nullptr || pMailbox->take( request ) == false )
             return;
         _requestedScreenshotPath.swap( request._path );
@@ -787,7 +787,7 @@ namespace sw
         else
             SW_LOG_WARNING( "Screenshot was not written: %#", _requestedScreenshotPath.c_str() );
 
-        ScreenshotMailbox* const pMailbox = RenderThreadInternal::findMailbox();
+        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         if ( pMailbox != nullptr )
             pMailbox->reportCompleted( bWritten, _requestedScreenshotPath ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
         _requestedScreenshotPath.clear();
