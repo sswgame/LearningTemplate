@@ -518,10 +518,6 @@ namespace sw
          * @details 한 번 눌러 둘이 발화하는 겹침이다. 맵 더하기(`appendFromAsset`)와 재배치 창이 같은 검사를 쓴다.
          */
         [[nodiscard]] bool findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const;
-        /** @brief `modifier` 속성 글자(`Ctrl`, `Ctrl+Shift` …)를 수정 키 마스크로 읽습니다. 모르는 이름 · 빈 글 · 같은 이름 두 번이면 false 입니다. */
-        [[nodiscard]] static bool tryParseModifierNames( string_view text, uint8& outModifierMask );
-        /** @brief 수정 키 마스크를 `modifier` 속성 글자로 씁니다(`Ctrl+Shift`). 0 이면 빈 글입니다. */
-        static string formatModifierNames( uint8 modifierMask );
         /**
          * @brief 바인딩 @p bindIndex 가 리바인딩으로 바꾸는 슬롯(`BindingKinds::getRebindSlotIndex`)의 현재 키를 반환합니다.
          * @return 액션이나 바인딩이 없거나 키 하나로 바꿀 수 없는 종류면 false 입니다.
@@ -535,15 +531,8 @@ namespace sw
         bool hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const;
         /** @brief 지정 액션의 바인딩을 처음 등록한 기본 바인딩으로 되돌립니다. */
         bool resetActionToDefault( const hashed_string& action );
-        /** @brief 모든 액션의 바인딩을 기본값으로 한꺼번에 되돌립니다. */
+        /** @brief 모든 액션의 바인딩을 기본값으로 한꺼번에 되돌립니다. 플레이어 리매핑 파일의 쓰기 · 읽기는 `InputRemapSerializer` 가 맡는다. */
         void resetAllBindingsToDefault();
-        /** @brief 유저 키 바인딩을 XML 파일로 저장합니다. */
-        [[nodiscard]] bool saveUserBindings( string_view filePath ) const;
-        /**
-         * @brief 저장된 유저 키 바인딩 XML 파일을 로드해 적용합니다.
-         * @return 가상 커서가 마우스로 바꾸는 스틱 · 패드 버튼을 다시 묶은 바인딩이 있으면 그 바인딩은 넣지 않고 false 입니다(맵 읽기와 같은 거절).
-         */
-        [[nodiscard]] bool loadUserBindings( string_view filePath );
 
         // ------------------------------------------------------------------------------
         // 8) 입력 장치 연결, 임계값, 디버그
@@ -857,12 +846,18 @@ namespace sw
         [[nodiscard]] uint32 countVirtualCursorConflicts( string_view sourceName ) const;
         /**
          * @brief 바인딩 하나가 가상 커서가 마우스로 바꾸는 스틱 · 패드 버튼을 묶는지 보고, 묶으면 알리고 true 를 반환합니다.
-         * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`loadUserBindings`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
+         * @details 맵 읽기(`countVirtualCursorConflicts`)와 사용자 바인딩 읽기(`InputRemapSerializer::load`)가 같은 검사를 쓴다 — 한쪽만 고치면 다른 길로 같은 충돌이 들어온다.
          */
         [[nodiscard]] bool reportVirtualCursorConflict( string_view sourceName, const hashed_string& action, const ActionBinding& binding ) const;
+        /**
+         * @brief 액션 @p action 의 바인딩 중 @p firstIndex 부터 가상 커서와 겹치는 것(`reportVirtualCursorConflict`)을 알리고 지운 뒤 지운 수를 반환합니다.
+         * @details 바인딩 · 기본값 · 상태 세 목록을 함께 지운다 — 세 목록의 인덱스가 같다는 규칙은 맵이 지킨다(`commitBinding`).
+         */
+        uint32 removeVirtualCursorConflicts( string_view sourceName, const hashed_string& action, uint32 firstIndex );
 
     private:
         friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMapSerialization.cpp)
+        friend struct InputRemapSerializer; ///< 사용자 바인딩 읽기가 가상 커서와 겹친 바인딩을 지운다(`removeVirtualCursorConflicts`)
 
     private:
         InputManager*                        _pInput;

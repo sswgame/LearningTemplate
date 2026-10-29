@@ -10,6 +10,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Input/Map/InputRemapSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -130,7 +131,7 @@ namespace sw
                 bindNode.appendAttribute( kSlotAttr, slotText.c_str() );
                 if ( bKeyboardChord )
                 {
-                    const string modifierText = InputMap::formatModifierNames( pCurrent->_modifierMask );
+                    const string modifierText = InputRemapSerializer::formatModifierNames( pCurrent->_modifierMask );
                     bindNode.appendAttribute( kModifierAttr, modifierText.empty() ? kNoModifier : modifierText.c_str() );
                 }
                 ++changedCount;
@@ -190,7 +191,7 @@ namespace sw
             {
                 uint8      modifierMask = ModifierKey::None;
                 const bool bNoModifier  = StringUtil::equals( pModifierText, kNoModifier, true );
-                const bool bKnown       = bNoModifier || InputMap::tryParseModifierNames( pModifierText, modifierMask );
+                const bool bKnown       = bNoModifier || InputRemapSerializer::tryParseModifierNames( pModifierText, modifierMask );
                 bApplied                = bKnown && slot._deviceKind == InputDeviceKind::Keyboard &&
                            map.rebindKeyShortcut( action, static_cast<uint32>( bindIndex ), static_cast<Key>( slot._controlIndex ), modifierMask );
             }

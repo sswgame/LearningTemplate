@@ -21,6 +21,7 @@
 
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputRemapSerializer.h"
 #include "Engine/Input/RawInputEvent.h"
 
 #include <imgui.h>
@@ -307,7 +308,7 @@ namespace sw::editor
                 continue;
             if ( outLabel.empty() == false )
                 outLabel += " / ";
-            const string modifierText = InputMap::formatModifierNames( pBinding->_modifierMask );
+            const string modifierText = InputRemapSerializer::formatModifierNames( pBinding->_modifierMask );
             if ( modifierText.empty() == false )
             {
                 outLabel += modifierText;
