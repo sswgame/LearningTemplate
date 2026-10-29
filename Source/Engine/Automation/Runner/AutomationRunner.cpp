@@ -280,6 +280,7 @@ namespace sw
     {
         // 붙잡힌 프레임도 센다 — 시계를 붙잡는 동안에도 크래시 자리와 벽시계 감시가 갱신돼야 한다.
         ++_run._seenFrameCount;
+        _frameStats.onFrameEnd(); // 벤치마크 구간이면 이 프레임의 벽시계 시간을 쌓는다
         const size_t stepIndexBefore = _run._nextStepIndex;
         finishIfWallClockExceeded();
         const bool bRefreshCrashContext = _bStarted == SW_TRUE && _result == AutomationOutcome::Running && _run._seenFrameCount % AutomationRunTitleUtil::kTitleRefreshFrames == 0;

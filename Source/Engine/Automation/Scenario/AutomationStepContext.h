@@ -17,6 +17,7 @@ namespace sw
     struct AutomationStep;
 
     class GameObjectManager;
+    class AutomationFrameStats;
     class InputManager;
     class VirtualInputScript;
 
@@ -62,5 +63,7 @@ namespace sw
         virtual VirtualInputScript& getInputScript() = 0;
         /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). */
         virtual InputManager* getInputManager() const = 0;
+        /** @brief 프레임 시간 기록기입니다(`BeginFrameStats` · `EndFrameStats` — 실행기가 프레임 끝마다 쌓는다). */
+        virtual AutomationFrameStats& getFrameStats() = 0;
     };
 } // namespace sw

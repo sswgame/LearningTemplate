@@ -14,6 +14,7 @@
 #include "Engine/Automation/Runner/AutomationOutcome.h"
 #include "Engine/Automation/Runner/AutomationReportWriter.h"
 #include "Engine/Automation/Runner/AutomationStepTimeline.h"
+#include "Engine/Automation/Scenario/AutomationFrameStats.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationTimeline.h"
@@ -112,7 +113,8 @@ namespace sw
         /** @brief 초를 시나리오 프레임 수로 바꿉니다(고정 프레임 시간으로 반올림). 단계의 `seconds` · `timeoutSeconds` 속성이 씁니다. */
         uint32 convertSecondsToFrames( float32 seconds ) const override;
         /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
-        GameObjectManager* findActiveObjectManager() const override;
+        GameObjectManager*    findActiveObjectManager() const override;
+        AutomationFrameStats& getFrameStats() override { return _frameStats; }
         /** @brief 입력 단계가 이벤트를 넣는 가상 입력 원천입니다. 다른 모듈의 입력 단계(액션 단계)도 준비 함수에서 씁니다. */
         VirtualInputScript& getInputScript() override { return _inputScript; }
         /** @brief 시나리오를 돌리는 입력 관리자입니다(시작 프레임부터, 그 전에는 nullptr). 액션 단계가 입력 맵의 바인딩을 읽습니다. */
@@ -224,5 +226,6 @@ namespace sw
         uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
         uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
         [[maybe_unused]] uint8   _reserved        : 4;
+        AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
     };
 } // namespace sw

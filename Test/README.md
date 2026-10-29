@@ -86,6 +86,7 @@ App --test --test-run-disabled              # 꺼 둔 케이스도(고친 뒤 �
 - 로그 게이트: 시나리오 구간의 Warning · Error 는 `<ExpectLog>`(기대) 나 `<AllowLog>`(허용, 사유 필수)가 없으면 실패다. id 없는 줄은 허용할 수 없다 — 소스에 id 를 붙인다.
 - 산출물(사진 · 보고)은 `Saved/Automation/<시나리오>/<프로세스>/` 에 쓴다. 무인 실행은 사용자 설정 파일을 읽지도 쓰지도 않고 사양 자동 프리셋을 쓰지 않는다.
 - 씬 · 연출 단계: `<LoadScene path="…" timeoutFrames="600"/>`(씬을 열고 설 때까지 붙잡는다), `<PlaySequence object="이름"/>` · `<WaitSequence object="이름"/>`(그 오브젝트의 시퀀서 재생 · 끝 기다림).
+- 벤치마크: `<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>` 사이의 벽시계 프레임 시간을 요약해 산출물 폴더에 쓴다(평균 · p95 · p99 · fps). 예: `game.empty.benchmark`.
 - **재생**(테스트가 아니라 게임 · 콘솔에서): `ScenarioPlayback::play( 경로, 선택 )` 또는 콘솔 `scenario.play <경로> [loop] [demo] [fixed]` · `scenario.stop`. 판정이 끝나도 프로세스를 끝내지 않고, 반복(어트랙트) · 사람이 손대면 멈춤(데모) · 고정 프레임 시간(벤치마크)을 고른다. 끝은 델리게이트로 알린다.
 - 하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 ctest 가 줍지 않는다.
 

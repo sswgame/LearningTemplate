@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  내장 벤치마크(timedemo)의 본 — 씬이 서면 120 프레임의 벽시계 프레임 시간을 재서 산출물 폴더에 bench.json(프레임 수 · 평균 · 최소 · 최대 · p50 · p95 · p99 · 평균 fps)을 쓴다.
+  게임의 벤치마크 메뉴는 같은 시나리오를 재생한다: scenario.play game/empty/automation/benchmark.scenario.xml fixed
+  카메라 경로가 필요하면 시퀀스를 붙인 오브젝트를 두고 <PlaySequence object="…"/> 와 <WaitSequence object="…"/> 사이를 잰다.
+  실행: ctest -R Scenario.game.empty.benchmark
+-->
+<Scenario name="game.empty.benchmark" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="600"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutFrames="600"/>
+	<BeginFrameStats/>
+	<Wait frames="120"/>
+	<EndFrameStats file="bench.json"/>
+	<Pass/>
+</Scenario>

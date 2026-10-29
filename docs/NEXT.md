@@ -87,7 +87,7 @@
 | 개발 매크로(autoexec · 테스트 맵 세팅) | 소스 엔진 `.cfg` · 언리얼 `exec` | 명령 줄만 있는 시나리오를 콘솔에서 `scenario run <경로>` 로 |
 
 **(1) 끝남(2026-10-29)**: `ScenarioPlayback::play( 경로, { _bLoop, _bStopOnHumanInput, _bFixedDelta, _onFinished } )` · 콘솔 `scenario.play <경로> [loop] [demo] [fixed]` · `scenario.stop`. 재생기는 App 의 `AutomationSession`(같은 실행기 — 판정이 끝나도 프로세스를 끝내지 않고 행 감시 · 보고가 없다), 사람 입력은 창 메시지 입구에서 센다(`InputManager::getHumanInputSerial` — 가상 입력은 세지 않는다). 확인: 기동 명령으로 재생 · 반복.
-**(2) · (3) 일부 끝남**: 단계 `<LoadScene path timeoutFrames>`(씬을 열고 설 때까지 붙잡는다) · `<PlaySequence object>` · `<WaitSequence object timeoutFrames>`(시퀀서 연동). 시나리오 `game.empty.loadscene` 이 지킨다. 남은 것: 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, (4) 벤치마크 모드(프레임 통계 수집 단계 · 결과 JSON), (5) 액션 단위 녹화 · 리플레이.
+**(2) · (3) 일부 끝남**: 단계 `<LoadScene path timeoutFrames>`(씬을 열고 설 때까지 붙잡는다) · `<PlaySequence object>` · `<WaitSequence object timeoutFrames>`(시퀀서 연동). 시나리오 `game.empty.loadscene` 이 지킨다. **(4) 끝남**: `<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>` — 벽시계 프레임 시간의 수 · 평균 · 최소 · 최대 · p50 · p95 · p99 · fps 를 산출물 폴더에 쓴다(시나리오 `game.empty.benchmark`). 남은 것: 시퀀서 이벤트 트랙이 시나리오를 부르는 쪽, (5) 액션 단위 녹화 · 리플레이(고스트 · 킬캠 — `InputReplay` 를 의도 단위로).
 
 순서 제안: (1) 재생기 · 판정 분리와 게임 API(`ScenarioPlayer`), (2) 중단 조건 · 반복 · 씬 불러오기 단계, (3) 시퀀서 연동 단계, (4) 벤치마크 모드, (5) 액션 단위 녹화 · 리플레이.
 
