@@ -1,0 +1,199 @@
+#include "pch.h"
+
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
+#include "Core/Log/LogContext.h"
+#include "Core/Log/LogOnce.h"
+#include "Core/Log/Logger.h"
+#include "Core/Log/Sink/AsyncLogSink.h"
+#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Testing/TestFramework.h"
+
+#include <thread>
+
+// 로그 문맥 — 범위가 앞 문맥을 되돌림, 스레드마다 따로, 꼬리표 글(있는 칸만), 문맥 있는 줄에만 꼬리표 · 없는 줄은 예전과 같은 글, 리스너의 LogEntry 에 문맥.
+
+using namespace sw;
+
+namespace
+{
+    /** @brief 완성된 줄을 모으는 출력 장치입니다(로거 하나에 붙인다). */
+    class LogContextCaptureOutput final : public ILogOutput
+    {
+    public:
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const LogRecord& record ) override
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _listFormatted.push_back( record._formatted );
+        }
+
+        vector<string> _listFormatted{};
+        mutex          _mutex{};
+    };
+
+    struct LogContextEntryCapture
+    {
+        vector<LogEntry> _listEntry{};
+
+        void onLog( const LogEntry& entry ) { _listEntry.push_back( entry ); }
+    };
+
+    void readOtherThread( bool* pOutEmpty )
+    {
+        *pOutEmpty = LogContext::getCurrent().isEmpty();
+    }
+
+    string formatTagOf( const LogContext& context )
+    {
+        utf8        arrTag[LogContext::kMaxTagSize];
+        const int32 length = context.formatTag( arrTag, LogContext::kMaxTagSize );
+        return string( arrTag, static_cast<size_t>( length ) );
+    }
+} // namespace
+
+SW_TEST_CASE( LogContextTest, ScopeRestoresThePreviousContext )
+{
+    SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
+    LogContext outer;
+    outer._principalID = 1;
+    {
+        ScopedLogContext outerScope( outer );
+        LogContext       inner;
+        inner._traceID = LogTraceID{ 0, 9 };
+        {
+            ScopedLogContext innerScope( inner );
+            SW_EXPECT_TRUE( LogContext::getCurrent()._traceID == inner._traceID );
+            SW_EXPECT_EQUAL( LogContext::getCurrent()._principalID, uint64( 0 ) );
+        }
+        SW_EXPECT_EQUAL( LogContext::getCurrent()._principalID, uint64( 1 ) );
+    }
+    SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
+}
+
+SW_TEST_CASE( LogContextTest, ThreadsDoNotShareTheContext )
+{
+    LogContext context;
+    context._principalID = 7;
+    ScopedLogContext scope( context );
+    bool             bOtherEmpty = false;
+    std::thread      thread( &readOtherThread, &bOtherEmpty );
+    thread.join();
+    SW_EXPECT_TRUE( bOtherEmpty );
+    SW_EXPECT_EQUAL( LogContext::getCurrent()._principalID, uint64( 7 ) );
+    const LogTraceID first = LogTraceID::makeRandom();
+    SW_EXPECT_TRUE( first.isValid() );
+    SW_EXPECT_TRUE( first != LogTraceID::makeRandom() );
+}
+
+SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentFields )
+{
+    LogContext context;
+    SW_EXPECT_TRUE( formatTagOf( context ).empty() );
+    context._traceID = LogTraceID{ 0x0123456789abcdefull, 0x1 };
+    SW_EXPECT_TRUE( formatTagOf( context ) == "[trace=0123456789abcdef0000000000000001] " );
+    context._principalID = 0x42;
+    const string both    = formatTagOf( context );
+    SW_EXPECT_TRUE( both == "[trace=0123456789abcdef0000000000000001 acct=0000000000000042] " );
+    SW_EXPECT_EQUAL( static_cast<int32>( both.size() ), LogContext::kMaxTagSize - 1 ); // 가장 긴 꼬리표가 버퍼에 꼭 맞는다
+    context._traceID = LogTraceID{};
+    SW_EXPECT_TRUE( formatTagOf( context ) == "[acct=0000000000000042] " );
+    utf8 arrSmall[LogContext::kMaxTagSize - 1];
+    SW_EXPECT_EQUAL( context.formatTag( arrSmall, LogContext::kMaxTagSize - 1 ), 0 ); // 모자란 버퍼는 빈 글
+    SW_EXPECT_EQUAL( arrSmall[0], utf8( '\0' ) );
+}
+
+SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
+{
+    AsyncLogSink logger;
+    logger.initialize();
+    unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
+    LogContextCaptureOutput*            pCapture = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+    LogContextEntryCapture entryCapture;
+    const Subscription     subscription = logger.registerLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) );
+
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "plain line", __FILE__, __LINE__ );
+    LogContext context;
+    context._traceID     = LogTraceID{ 0x0123456789abcdefull, 0x1 };
+    context._principalID = 0x42;
+    {
+        ScopedLogContext scope( context );
+        logger.writeLog( LogLevel::Info, "Test", "Probe", "context line", __FILE__, __LINE__ );
+    }
+    logger.shutdown();
+
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    const string& plain  = pCapture->_listFormatted[0];
+    const string& tagged = pCapture->_listFormatted[1];
+    SW_EXPECT_TRUE_MSG( plain.find( "[Test] [Probe] [Info] - plain line\n" ) != string::npos, plain.c_str() ); // 문맥 없는 줄은 예전 형식 그대로
+    SW_EXPECT_TRUE_MSG( tagged.find( "[Test] [Probe] [Info] [trace=0123456789abcdef0000000000000001 acct=0000000000000042] - context line\n" ) != string::npos,
+                        tagged.c_str() );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( entryCapture._listEntry.size() ) );
+    SW_EXPECT_TRUE( entryCapture._listEntry[0]._context.isEmpty() );
+    SW_EXPECT_TRUE( entryCapture._listEntry[1]._context._traceID == context._traceID );
+    SW_EXPECT_EQUAL( entryCapture._listEntry[1]._context._principalID, uint64( 0x42 ) );
+}
+
+/**
+ * @brief [LogContextTest] 틱 번호를 정한 동안의 줄에만 `[tick=N]` 이 문맥 꼬리표 앞에 붙고, 떼면 예전 형식으로 돌아간다(전용 서버가 틱마다 정한다)
+ */
+SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
+{
+    AsyncLogSink logger;
+    logger.initialize();
+    unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
+    LogContextCaptureOutput*            pCapture = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+
+    LogClock clock      = LogClock::Frame;
+    uint64   tickNumber = 1;
+    SW_EXPECT_FALSE( Logger::getClockNumber( clock, tickNumber ) );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 0 ) );
+    Logger::setClockNumber( LogClock::Tick, 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "first tick", __FILE__, __LINE__ );
+    Logger::setClockNumber( LogClock::Tick, 1234 );
+    SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
+    SW_EXPECT_TRUE( clock == LogClock::Tick );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 1234 ) );
+    LogContext context;
+    context._principalID = 0x42;
+    {
+        ScopedLogContext scope( context );
+        logger.writeLog( LogLevel::Info, "Test", "Probe", "tick and context", __FILE__, __LINE__ );
+    }
+    // 리슨 호스트(App)는 고정 틱이 없어 프레임 번호를 "frame" 으로 적는다(결정 기록 5-12 `D7-3.6`).
+    Logger::setClockNumber( LogClock::Frame, 77 );
+    SW_EXPECT_TRUE( Logger::getClockNumber( clock, tickNumber ) );
+    SW_EXPECT_TRUE( clock == LogClock::Frame );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 77 ) );
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "listen frame", __FILE__, __LINE__ );
+    Logger::clearClockNumber();
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "cleared", __FILE__, __LINE__ );
+    logger.shutdown();
+
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    const string& first   = pCapture->_listFormatted[0];
+    const string& both    = pCapture->_listFormatted[1];
+    const string& frame   = pCapture->_listFormatted[2];
+    const string& cleared = pCapture->_listFormatted[3];
+    SW_EXPECT_TRUE_MSG( first.find( "[Test] [Probe] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
+    SW_EXPECT_TRUE_MSG( both.find( "[Test] [Probe] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
+    SW_EXPECT_TRUE_MSG( frame.find( "[Test] [Probe] [Info] [frame=77] - listen frame\n" ) != string::npos, frame.c_str() );
+    SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Probe] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
+}
+
+/**
+ * @brief [LogContextTest] "한 번만" 경고의 상태는 범위에 속한다 — 범위 안에서는 종류와 키마다 한 번, 새 범위에서는 다시 처음이다
+ * @details 예전에는 함수 안 정적 집합이라 앞 테스트가 낸 경고 때문에 뒤 테스트의 경고가 사라져 로그 판정이 테스트 순서에 따라 바뀌었다.
+ */
+SW_TEST_CASE( LogContextTest, LogOnceClaimsOncePerScopeAndKind )
+{
+    LogOnce::beginScope();
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
+    SW_EXPECT_FALSE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::UnknownEnumerator, 7 ) ); // 종류마다 키 공간이 따로다
+    LogOnce::beginScope();
+    SW_EXPECT_TRUE( LogOnce::tryClaim( LogOnceKind::SkippedField, 7 ) );
+}

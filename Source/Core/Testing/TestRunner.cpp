@@ -334,6 +334,14 @@ namespace sw::test
         return false;
     }
 
+    bool checkConditionWithMessage( bool bPassed, const utf8* pExpression, string_view message, const utf8* pFile, int32 line )
+    {
+        countAssertion();
+        if ( bPassed == false )
+            reportFailure( pFile, line, string( pExpression ) + " — " + string( message ) );
+        return bPassed;
+    }
+
     bool checkCondition( bool bPassed, const utf8* pExpression, const utf8* pFile, int32 line )
     {
         countAssertion();

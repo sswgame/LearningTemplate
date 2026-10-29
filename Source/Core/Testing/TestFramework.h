@@ -151,6 +151,23 @@ namespace sw::test
         return false;
     }
 
+    /** @brief `SW_EXPECT_NOT_EQUAL` 의 본체입니다. */
+    template <typename TUnexpected, typename TActual>
+    bool checkNotEqual( const TUnexpected& unexpected, const TActual& actual, const utf8* pExpression, const utf8* pFile, int32 line )
+    {
+        countAssertion();
+        if ( ( unexpected == actual ) == false )
+            return true;
+        const string valueText = describeValue( actual );
+        utf8         arrBuffer[constant::kMaxBuffer1024];
+        formatstring( arrBuffer, constant::kMaxBuffer1024, "%# — both are %#", pExpression, valueText.c_str() );
+        reportFailure( pFile, line, arrBuffer );
+        return false;
+    }
+
+    /** @brief `*_MSG` 단언의 본체입니다 — 실패 글에 식과 함께 @p message 를 붙인다. */
+    SW_API bool checkConditionWithMessage( bool bPassed, const utf8* pExpression, string_view message, const utf8* pFile, int32 line );
+
     /** @brief `SW_EXPECT_NEAR` 의 본체입니다. */
     SW_API bool checkNear( float64 expected, float64 actual, float64 tolerance, const utf8* pExpression, const utf8* pFile, int32 line );
     /** @brief `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_REQUIRE_TRUE` 의 본체입니다. */
@@ -229,12 +246,35 @@ namespace sw::test
 /** @brief 이 케이스가 일부러 내는 로그(`SW_LOG_WARNING_ID` · `SW_LOG_ERROR_ID` 의 id)를 적습니다. 케이스 끝까지 한 번은 나와야 합니다. */
 #define SW_EXPECT_LOG( logID ) ::sw::test::expectLog( ( logID ), __FILE__, __LINE__ )
 
+/** @brief 두 값이 달라야 합니다(`==` 가 거짓, 실패 글에 그 값을 쓴다). */
+#define SW_EXPECT_NOT_EQUAL( unexpected, actual ) (void)::sw::test::checkNotEqual( ( unexpected ), ( actual ), #unexpected " != " #actual, __FILE__, __LINE__ )
+/** @brief 포인터가 nullptr 이어야 합니다. */
+#define SW_EXPECT_NULL( pointer ) (void)::sw::test::checkCondition( ( pointer ) == nullptr, #pointer " == nullptr", __FILE__, __LINE__ )
+/** @brief 포인터가 nullptr 이 아니어야 합니다. */
+#define SW_EXPECT_NOT_NULL( pointer ) (void)::sw::test::checkCondition( ( pointer ) != nullptr, #pointer " != nullptr", __FILE__, __LINE__ )
+/** @brief 조건이 참이어야 하고, 실패하면 @p message 를 함께 적습니다. */
+#define SW_EXPECT_TRUE_MSG( condition, message ) (void)::sw::test::checkConditionWithMessage( static_cast<bool>( condition ), #condition, ( message ), __FILE__, __LINE__ )
+/** @brief 조건이 거짓이어야 하고, 실패하면 @p message 를 함께 적습니다. */
+#define SW_EXPECT_FALSE_MSG( condition, message ) \
+    (void)::sw::test::checkConditionWithMessage( !static_cast<bool>( condition ), "!(" #condition ")", ( message ), __FILE__, __LINE__ )
+
 /** @brief 조건이 참이어야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
 #define SW_REQUIRE_TRUE( condition )                                                                                 \
     do                                                                                                               \
     {                                                                                                                \
         if ( ::sw::test::checkCondition( static_cast<bool>( condition ), #condition, __FILE__, __LINE__ ) == false ) \
             return;                                                                                                  \
+    } while ( false )
+/** @brief 조건이 거짓이어야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
+#define SW_REQUIRE_FALSE( condition ) SW_REQUIRE_TRUE( !( condition ) )
+/** @brief 포인터가 nullptr 이 아니어야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
+#define SW_REQUIRE_NOT_NULL( pointer ) SW_REQUIRE_TRUE( ( pointer ) != nullptr )
+/** @brief 조건이 참이어야 하고, 아니면 @p message 를 적고 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
+#define SW_REQUIRE_TRUE_MSG( condition, message )                                                                                            \
+    do                                                                                                                                       \
+    {                                                                                                                                        \
+        if ( ::sw::test::checkConditionWithMessage( static_cast<bool>( condition ), #condition, ( message ), __FILE__, __LINE__ ) == false ) \
+            return;                                                                                                                          \
     } while ( false )
 /** @brief 두 값이 같아야 하고, 아니면 이 케이스를 바로 끝냅니다(케이스 함수 본문에서만). */
 #define SW_REQUIRE_EQUAL( expected, actual )                                                                             \

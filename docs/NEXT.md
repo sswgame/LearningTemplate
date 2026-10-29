@@ -61,7 +61,7 @@
 
 ### E. 테스트 틀 고도화 (안정성 · 속도 · 더하기 · 빼기)
 
-**끝남(2026-10-29)**: 아래 표의 앞 세 줄 — 케이스 시한 감시 · 크래시 문맥, 옵션(`._tags` · `._disabledReason` · `._timeoutSeconds`) · `SW_TEST_CASE_F` · `SW_TEST_CASE_EACH`, `--test-shard=i/n` + CTest `SW_UNIT_TEST_SHARDS`(지금 1). 남은 것은 넷째 줄(옛 케이스 이식)이다. 쓰는 법은 `Test/README.md`.
+**끝남(2026-10-29)**: 아래 표의 앞 세 줄 — 케이스 시한 감시 · 크래시 문맥, 옵션(`._tags` · `._disabledReason` · `._timeoutSeconds`) · `SW_TEST_CASE_F` · `SW_TEST_CASE_EACH`, `--test-shard=i/n` + CTest `SW_UNIT_TEST_SHARDS`(지금 1). 넷째 줄(옛 케이스 이식)은 기계 이식을 한 번 했다(2026-10-29): 옛 include 를 지금 트리에서 파일 이름으로 다시 찾고 옛 단언 이름을 바꾼 뒤, 지금 코드에서 컴파일(Debug · Release)되고 통과하는 파일만 남겼다 — Core 55 · Engine 41 파일, 케이스 29 → 441. 빠진 것(Core 56 · Engine 약 520 · Reflection 14 전부)은 지워진 하네스(TestBench · 자식 프로세스 · 픽스처 파일) · 바뀐 API · 다른 이미지(GameFramework) 타입에 기대 손으로 다시 써야 한다. 이식 스크립트는 세션 스크래치에 있었다 — 다시 하려면 `port_tests` 방식(파일 이름으로 include 풀기 → 티어가 가장 높은 폴더의 Tests/ → 빌드 -k 0 로 안 되는 파일 빼기 → 실행해 실패 파일 빼기)을 따른다. 쓰는 법은 `Test/README.md`.
 
 | 문제(지금) | 고칠 모양 | 근거 |
 |---|---|---|
