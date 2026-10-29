@@ -1,18 +1,13 @@
 /**
  * @file AnimationClipPreviewPanel.h
  * @brief 애니메이션 클립(`*.animclip`)을 고른 몸(프리팹)에 입혀 미리보기 씬에서 재생해 보는 창입니다(유니티 Animation 창 미리보기, 언리얼 Animation Sequence 에디터에 해당합니다).
+ * @details 몸 놓기 · 클립 재생 · 속도 · 반복 · 멈춤은 `AnimationClipPreviewModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 뷰포트만 쥔다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
-#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-
-namespace sw
-{
-    class SkeletalAnimatorComponent;
-} // namespace sw
+#include "Editor/Panels/Animation/Model/AnimationClipPreviewModel.h"
 
 namespace sw::editor
 {
@@ -44,23 +39,8 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 미리보기 씬은 조명과 바닥뿐이다 — 몸은 "Spawn" 을 누르면 놓는다. */
         void populatePreviewScene( Scene& scene ) override;
-        /** @brief 미리보기 몸의 애니메이터입니다. 몸이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
-        SkeletalAnimatorComponent* findBodyAnimator() const;
-        /** @brief 고른 몸을 놓고(경로가 바뀌었을 때만) 연 클립을 재생합니다(클립이 바뀌었을 때만). */
-        void syncPreviewBody();
-        /** @brief 몸 루트의 애니메이터에 열린 클립을 읽혀 재생합니다. 읽지 못하면 상태 줄이 알립니다. */
-        void playOpenClip( SkeletalAnimatorComponent& animator );
         void drawClipInfo();
 
-        string           _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
-        string           _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로
-        string           _spawnedPrefabPath; ///< 미리보기 씬에 놓은 몸의 프리팹 경로(비면 아직 놓지 않았다)
-        string           _playedClipPath;    ///< 몸이 재생하게 한 클립 경로(비면 다음 그리기가 다시 건다)
-        string           _status;
-        GameObjectHandle _body;
-        float32          _clipSeconds;
-        float32          _playRate;
-        bool             _bLoop;
-        bool             _bPaused;
+        AnimationClipPreviewModel _model;
     };
 } // namespace sw::editor
