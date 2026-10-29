@@ -2,7 +2,7 @@
  * depthoffield.hlsl — 피사계 심도 패스(RenderPassType::DepthOfField).
  *
  * 입력은 HDR 색(SourceColor)과 장면 깊이(SceneDepth), 출력은 같은 형식의 색이다. 렌즈 값은 PassCB 의 g_CameraLens 이고 엔진이 뷰마다 채운다
- * (FrameRenderer::applyViewPassConstants — 카메라의 CameraDepthOfFieldValues 에서 얇은 렌즈 식으로 착란원 배율을 구한다).
+ * (FramePassExecutor::applyViewPassConstants — 카메라의 CameraDepthOfFieldValues 에서 얇은 렌즈 식으로 착란원 배율을 구한다).
  *
  * 방식: 픽셀마다 착란원 반지름(px) = y · |1 - 초점 거리 / 깊이| 를 z 로 자른다. 그 반지름의 원판에 탭 16 개(안쪽 고리 6 · 바깥 고리 10)를 놓고 색을 모은다.
  * 가까운 탭(앞의 물체)은 **자기** 반지름이 이 픽셀까지 닿을 때만 센다 — 초점이 맞은 앞 물체가 뒤의 흐린 배경으로 번져 후광이 생기지 않게 한다.

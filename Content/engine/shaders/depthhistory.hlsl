@@ -2,7 +2,7 @@
 // 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다 — 그래서 그래픽스로 한 번 옮겨 두고, 읽는 컴퓨트
 // (vfxsimulate.hlsl 의 깊이 충돌)는 그 RT 를 RW 텍스처로 읽는다. 같은 크기 · 같은 텍셀이라 Load 로 텍셀을 그대로 옮긴다(필터 없음).
 // 원본은 네이티브(DX12 · Vulkan)는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(C++ 가 shaderslot::emulated::getSlot 의 레지스터에 건다)이다.
-// C++: FrameRenderer::recordDepthHistories — 컴퓨트 프리패스 리스트에서 뷰마다 drawInstanced 하나(정점 셋).
+// C++: FramePassExecutor::recordDepthHistories — 컴퓨트 프리패스 리스트에서 뷰마다 drawInstanced 하나(정점 셋).
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
 

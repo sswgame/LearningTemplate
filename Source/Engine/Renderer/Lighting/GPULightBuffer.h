@@ -96,7 +96,7 @@ namespace sw
     {
         None, ///< 그리드 없이 목록 전체를 돈다(비교 기준)
         CPU,  ///< `LightGrid::populate` 가 만들어 동적 버퍼로 올린다
-        GPU,  ///< 컴퓨트 lightgrid.hlsl 이 기본 힙 버퍼에 만든다(`FrameRenderer::dispatchLightGrid`)
+        GPU,  ///< 컴퓨트 lightgrid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassExecutor::dispatchLightGrid`)
     };
 
     /**
@@ -140,7 +140,7 @@ namespace sw
         /**
          * @brief 라이트 버퍼를 올리고, 뷰마다 라이트 그리드를 준비합니다.
          * @param listGridViewProj 그리드를 만들 뷰의 뷰-투영(셰이더의 `g_ViewProj` 와 같은 값). 순서가 그리드 번호입니다.
-         * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FrameRenderer::dispatchLightGrid`.
+         * @param producer CPU 면 여기서 만들어 그리드 버퍼(t12)로 올리고, GPU 면 뷰 정보만 올리고 그리드 버퍼(UAV)를 잡습니다 — 채우기는 `FramePassExecutor::dispatchLightGrid`.
          *                 None 이면 그리드 없이 올립니다.
          * @param requestedGPULightSlotCount GPU 방출기들이 요청한 파티클 라이트 슬롯의 합. 생산자가 GPU 가 아니면 오류를 한 번 남기고 0 으로 받는다(`selectGPULightSlotCount`).
          * @details 용량은 `ensureCapacity` 가 필요할 때만 다시 잡습니다. 그리드를 만들지 못한 뷰(투영이 깨졌다)와 GPU 그리드 버퍼를 만들지 못한 프레임은

@@ -398,7 +398,7 @@ namespace sw
          *          칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 두는 것과 같다).
          *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<칸>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHLSL`) `binding.hlsli` 의
          *          `Bindless::emulatedSlot` 이 그 매크로를 읽는다 — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
-         *          실행의 바인딩(`FrameRenderer::commitBindlessTextureBindings`)도 이 표를 돈다.
+         *          실행의 바인딩(`FramePassExecutor::commitBindlessTextureBindings`)도 이 표를 돈다.
          */
         namespace emulated
         {

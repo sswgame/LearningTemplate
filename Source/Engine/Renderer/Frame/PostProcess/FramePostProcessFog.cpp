@@ -1,23 +1,22 @@
 /**
  * @file FramePostProcessFog.cpp
- * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassType::Fog`)는 렌더러의 패스 실행이 그린다(`FrameRenderer::executeFogPass`).
+ * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassType::Fog`)는 렌더러의 패스 실행이 그린다(`FramePassExecutor::executeFogPass`).
  * @details 안개는 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 블렌드한다(fog.hlsl). 볼륨 안개를 켜면 주 시점에서만 컴퓨트(volumetricfog.hlsl)가 froxel 마다
  *          라이트 산란을 누적해 구조 버퍼에 쓰고, 안개 패스가 그 버퍼를 t11(`SW_SLOT_PASS_SRV`)로 읽는다. 컴퓨트는 라이트 그리드(`dispatchLightGrid`) 뒤에 돈다.
  *          버퍼를 만드는 준비(`prepareVolumetricFog`)는 기록 전에, 디스패치(`dispatchVolumetricFog`)는 프레임 컴퓨트 프리패스에서 한다.
  */
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
-
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Environment/Fog/FogSettings.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"

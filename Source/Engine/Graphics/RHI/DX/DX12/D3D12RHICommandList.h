@@ -28,7 +28,7 @@ namespace sw
      *          동시 기록)이 되어 커맨드 메모리가 서로 덮어써지고 GPU 가 쓰레기를 실행해 PageFault/DEVICE_HUNG
      *          으로 이어집니다. 그래서 디바이스 풀에서 리스트와 얼로케이터 쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후
      *          풀로 돌려줍니다. 리스트 객체가 프레임을 넘어
-     *          재사용되는 경우(`FrameRenderer::_frameCmd`)에도 같은 쌍을 다시 Reset 하지 않고 매
+     *          재사용되는 경우(`FramePassExecutor::_frameCmd`)에도 같은 쌍을 다시 Reset 하지 않고 매
      *          `beginCommandList` 마다 쌍을 교체합니다. 같은 계약 위반이기 때문입니다.
      */
     class D3D12RHICommandList : public RHICommandListForwarder<D3D12RHICommandContext>

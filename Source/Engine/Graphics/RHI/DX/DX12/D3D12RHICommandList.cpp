@@ -56,7 +56,7 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 리스트 객체는 프레임을 넘어 재사용된다(FrameRenderer::_frameCmd 가 대표적이다). 그런데 그
+        // 리스트 객체는 프레임을 넘어 재사용된다(FramePassExecutor::_frameCmd 가 대표적이다). 그런데 그
         // 재사용은 얼로케이터 재사용이기도 해서, 직전 프레임에 제출한 커맨드를 GPU 가 아직 읽는 중에
         // Reset 을 호출하는 계약 위반이 된다("command allocator is being reset before previous executions
         // have completed" → 커맨드 메모리 덮어쓰기 → DEVICE_HUNG). 에디터 경로는 프레임이 느려 GPU 가

@@ -177,7 +177,7 @@ namespace sw
         float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
         /// @brief 이 뷰를 그리는 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 후처리를 끈 뷰와 표면 값을 보이는 보기 모드는 읽지 않습니다.
         CameraPostProcessValues _postProcess{};
-        /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 피사계 심도 패스가 `g_CameraLens` 로 읽습니다(`FrameRenderer::applyViewPassConstants`).
+        /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 피사계 심도 패스가 `g_CameraLens` 로 읽습니다(`FramePassExecutor::applyViewPassConstants`).
         CameraDepthOfFieldValues _depthOfField{};
         /**
          * @brief 원근 투영의 세로 배율 `1 / tan( fovY / 2 )` 입니다. 직교 카메라는 0 이며 피사계 심도가 없습니다.

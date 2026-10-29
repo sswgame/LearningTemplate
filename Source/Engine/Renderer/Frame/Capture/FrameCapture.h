@@ -8,7 +8,7 @@
  *
  *          Present 캡처: 백버퍼는 핸들이 없어 읽을 수 없고 트랜지언트만 읽을 수 있다. 주의: Present 가 **읽는** 첨부를 캡처하면 톤맵과 Present 에 합친
  *          후처리가 스크린샷에서 빠진다. Present 결과를 받아 두면 둘 다 담긴다. 어디에 그릴지(백버퍼 대신 캡처, 출력 RT 를 캡처로 복사)는
- *          `FrameRenderer::resolvePresentTarget` 이 정하고, 이 클래스는 캡처 텍스처의 수명과 복사, 읽기만 맡는다.
+ *          `FramePassExecutor::resolvePresentTarget` 이 정하고, 이 클래스는 캡처 텍스처의 수명과 복사, 읽기만 맡는다.
  *          캡처 크기는 주 출력을 따르므로 트랜지언트와 함께 놓인다(`FrameRenderer::releaseTransientResources`).
  *          바이트를 파일로 바꾸는 일은 `RenderTargetImageFile` 이 맡는다.
  */

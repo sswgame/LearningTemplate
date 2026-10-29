@@ -3,7 +3,7 @@
  * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 항목에 모은 테이블입니다.
  * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있습니다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
- *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
+ *          (`FramePassExecutor::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
  *          패스 종류를 하나 추가하려면 enum 에 한 줄을 더하고 이 테이블에 case 를 하나 추가합니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 추가합니다).
  */
 #pragma once

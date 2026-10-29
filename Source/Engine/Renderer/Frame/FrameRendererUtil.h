@@ -134,7 +134,7 @@ namespace sw
 
         /**
          * @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다.
-         * @details 뒤 셋은 가림 판정이다(`FrameRenderer::recordOcclusionTiles`) — 지난 프레임 장면 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
+         * @details 뒤 셋은 가림 판정이다(`FramePassExecutor::recordOcclusionTiles`) — 지난 프레임 장면 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
          *          타일 격자(열 · 행 · 타일 한 변 px · 켬), 깊이 크기(px). 켬이 0 이면 셰이더가 나머지를 읽지 않는다(그림자 슬롯 · 기록을 버린 프레임 · `gv_occlusionCulling` 끔).
          */
         struct GPUCullParams

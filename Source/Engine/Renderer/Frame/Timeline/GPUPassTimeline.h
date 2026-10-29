@@ -2,7 +2,7 @@
  * @file GPUPassTimeline.h
  * @brief 패스별 GPU 타임스탬프를 읽어 프레임 프로파일러(`GPU.<패스>`)와 외부 프로파일러(Tracy)의 GPU 타임라인으로 내보냅니다.
  * @details 렌더 스레드가 프레임 끝에 한 번 부릅니다(패스 수만큼 도는 루프 하나). 타임스탬프를 **쓰는** 일은 패스를 기록하는 쪽
- *          (`FrameRenderer::submitGraph` 와 `onGraphPassExecute`)이 하고, 쓸지 말지는 이 클래스의 `isRecording` 이 정합니다.
+ *          (`FramePassExecutor::submitGraph` 와 `onGraphPassExecute`)이 하고, 쓸지 말지는 이 클래스의 `isRecording` 이 정합니다.
  *          프로파일러는 렌더러 초기화 때 주입받으므로 테스트가 자기 `FrameProfiler` 로 보고 결과를 확인할 수 있습니다.
  */
 #pragma once

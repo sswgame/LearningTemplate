@@ -25,7 +25,7 @@ namespace sw
     /**
      * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
      * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
-     *          (`_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
+     *          (`FramePassExecutor::_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
      */
     struct FrameViewTarget
     {

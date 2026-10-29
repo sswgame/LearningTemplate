@@ -1,7 +1,7 @@
 /**
  * @file FrameExtensionHost.h
  * @brief 모듈 렌더 확장(ExtensionRenderPass M3 · M4)을 렌더러 한 프레임에 받아들이는 자리입니다 — 확장 훅 · 프록시 요소를 모으고, 패스 선언을 검사하고, 프로그램 PSO · 임시 텍스처 · 요소 메시를 기록 전에 갖춥니다.
- * @details 받아들인 패스(`ExtensionFramePass`)를 그래프 노드로 묶고 기록하는 일은 렌더러가 한다(`FrameRenderer::bindPassCallbacks` · `executeExtensionPass`) — 그리는 길은 엔진 패스와 같다.
+ * @details 받아들인 패스(`ExtensionFramePass`)를 그래프 노드로 묶고 기록하는 일은 렌더러가 한다(`FramePassExecutor::bindPassCallbacks` · `executeExtensionPass`) — 그리는 길은 엔진 패스와 같다.
  *          언리얼 `FSceneViewExtensions` 가 확장을 모으고(`GatherActiveExtensions`) 렌더러가 훅 자리마다 부르는 것과 같은 나눔이다.
  */
 #pragma once
@@ -65,7 +65,7 @@ namespace sw
         void releaseMeshes() { _mapMesh.clear(); }
         /** @brief 이 뷰의 풀에 이번 프레임에 요청된 모듈 임시 텍스처를 만듭니다(이미 있으면 그대로). */
         void allocateTextures( FrameViewTarget& view ) const;
-        /** @brief 지금 선언을 그래프에 묶었다고 적습니다(`FrameRenderer::bindPassCallbacks`). */
+        /** @brief 지금 선언을 그래프에 묶었다고 적습니다(`FramePassExecutor::bindPassCallbacks`). */
         void markBound() { _boundSignature = _frameSignature; }
 
         /** @brief 이번 프레임에 받아들인 패스입니다. 모듈 구간 밖에서는 비어 있습니다. */

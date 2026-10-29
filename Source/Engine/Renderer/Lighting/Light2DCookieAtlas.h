@@ -26,7 +26,7 @@ namespace sw
      * @class Light2DCookieAtlas
      * @brief 쿠키 텍스처 경로마다 아틀라스 칸 하나를 주고, 텍스처를 텍스처 캐시에서 빌려 둡니다(렌더 스레드).
      * @details 이번 프레임에 안 쓰인 쿠키는 칸과 텍스처를 돌려준다. 새로 칸을 받거나 텍스처가 다시 읽힌(핫 리로드 · 디바이스 교체) 칸은 그릴 목록에 오른다 —
-     *          `FrameRenderer::drawLight2DCookieAtlas` 가 그 칸에 텍스처를 옮겨 그린다. 칸이 모자라거나 텍스처를 못 읽으면 오류를 남기고 그 빛은 쿠키 없이 그린다
+     *          `FramePassExecutor::drawLight2DCookieAtlas` 가 그 칸에 텍스처를 옮겨 그린다. 칸이 모자라거나 텍스처를 못 읽으면 오류를 남기고 그 빛은 쿠키 없이 그린다
      *          (칸 번호를 적지 않는다 — 다른 칸의 쿠키가 비치지 않는다).
      */
     class SW_API Light2DCookieAtlas

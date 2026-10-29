@@ -16,7 +16,7 @@ namespace sw
      * @details 언리얼 CineCameraComponent 의 FocusSettings · CurrentAperture · Filmback 에 해당한다.
      *          값 타입을 엔진(Object 티어)에 두어 렌더러가 아래로 읽는다. 게임 프레임워크의 프리셋 `<Lens focusDistance · aperture · sensorSize>` 와
      *          포즈 블렌드가 이 값을 쓰고, `CameraPoseUtil::applyLensToCamera` 가 카메라 컴포넌트(`CameraComponent::setDepthOfField`)에,
-     *          수집기가 `RenderViewSettings::_depthOfField` 에 싣고, `FrameRenderer::applyViewPassConstants` 가 `g_CameraLens` 로 바꿔 피사계 심도 패스(depthoffield.hlsl)가 읽는다.
+     *          수집기가 `RenderViewSettings::_depthOfField` 에 싣고, `FramePassExecutor::applyViewPassConstants` 가 `g_CameraLens` 로 바꿔 피사계 심도 패스(depthoffield.hlsl)가 읽는다.
      *          조리개 0 은 핀홀로 보아 피사계 심도가 없다 — 기본값이라 렌즈를 적지 않은 카메라는 흐리지 않는다.
      *          섞을 때는 f 값이 아니라 그 역수(구경에 비례)를 섞는다(`blend`). f 값을 그대로 섞으면 0(없음)에서 2.8 로 가는 중간이 f/1.4 라 가장 흐리다.
      */

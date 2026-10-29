@@ -86,12 +86,12 @@ namespace sw
         /**
          * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 **위에 블렌드**(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
          *        그래서 입력은 장면 깊이뿐이고 출력은 앞 패스가 칠한 색 첨부입니다(복사 첨부를 따로 두지 않는다). 불투명 · 하늘 · 반투명 뒤, 후처리 앞에 둡니다.
-         *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FrameRenderer::executeFogPass`).
+         *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeFogPass`).
          *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassType::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
          */
         Fog,
         /**
-         * @brief 장면 색 사본입니다. 원본 색(`SourceColor`)을 선언한 컬러 출력(`SceneColorCopy` 역할)으로 그대로 복사합니다 — 셰이더 · PSO 가 없습니다(`FrameRenderer::executeSceneColorCopyPass`).
+         * @brief 장면 색 사본입니다. 원본 색(`SourceColor`)을 선언한 컬러 출력(`SceneColorCopy` 역할)으로 그대로 복사합니다 — 셰이더 · PSO 가 없습니다(`FramePassExecutor::executeSceneColorCopyPass`).
          *        반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다. 반투명 패스가 이 출력을 같은 역할의 입력으로 선언하면 물의 굴절이 읽습니다(`g_SceneColorCopyIndex`).
          *        하늘 뒤 · 반투명 앞에 둡니다(언리얼의 Scene Color 사본 · 유니티 URP 의 Opaque Texture 와 같은 자리).
          */
@@ -133,7 +133,7 @@ namespace sw
         UpscaleRcas,
         /**
          * @brief 가림 타일 컴퓨트(occlusiontiles.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 16 px 타일마다 최대 깊이 하나로 줄여 구조 버퍼에 씁니다.
-         *        컬링(gpucull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FrameRenderer::recordOcclusionTiles`).
+         *        컬링(gpucull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FramePassExecutor::recordOcclusionTiles`).
          */
         OcclusionTiles,
         /**
@@ -153,7 +153,7 @@ namespace sw
         CanvasMarker,
         /**
          * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpunancheck.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
-         *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FrameRenderer::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
+         *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */
         NanCheck,
     };

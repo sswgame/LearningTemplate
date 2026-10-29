@@ -20,7 +20,7 @@
  * 바인딩 계약(bindingslots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 가림 타일 읽기 t2, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1.
  *
- * 가림 판정(g_OcclusionGrid.w = 1, C++ FrameRenderer::fillOcclusionParams): 절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 지난 프레임 장면 깊이를 그린
+ * 가림 판정(g_OcclusionGrid.w = 1, C++ FramePassExecutor::fillOcclusionParams): 절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 지난 프레임 장면 깊이를 그린
  * 뷰-투영(g_OcclusionViewProj)으로 옮겨 화면 사각형과 가장 가까운 깊이를 구하고, 사각형이 덮는 가림 타일(occlusiontiles.hlsl — 타일마다 최대 깊이)보다 모두
  * 멀면 그리지 않는다. 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면, 타일 kMaxOcclusionTestTiles 줄을 넘게 덮으면(큰 물체) 판정하지 않는다(보인다).
  */

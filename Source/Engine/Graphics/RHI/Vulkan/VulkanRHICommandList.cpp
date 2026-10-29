@@ -62,7 +62,7 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 리스트 객체는 프레임을 넘어 재사용된다(FrameRenderer::_frameCmd). 같은 버퍼를 다시 Reset
+        // 리스트 객체는 프레임을 넘어 재사용된다(FramePassExecutor::_frameCmd). 같은 버퍼를 다시 Reset
         // 하면 직전 프레임 커맨드를 GPU 가 아직 읽는 중일 수 있으므로, 두 번째 기록부터는 쌍을 통째로
         // 교체한다. 쓰던 쌍은 펜스 통과 후 반납하고(대기 없음) 새 쌍은 이미 통과한 것만 들어 있는 풀에서
         // 빌린다. DX12 의 커맨드 얼로케이터와 같은 계약이다.

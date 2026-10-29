@@ -1,7 +1,7 @@
 /**
  * @file FrameMeshDeformState.h
- * @brief `FrameRenderer` 가 값 멤버로 가지는 정점 변형 상태입니다. 인스턴스 애니메이션, 모프, 스킨, 정점 애니메이션(VAT) 컴퓨트가 함께 쓰는 상수 버퍼, 풀, 스크래치, 시계를 묶습니다.
- * @details 데이터만 담는 비가상 부품입니다. 디스패치 순서(컬링보다 앞)와 기록은 `FrameRenderer` 가 정합니다.
+ * @brief 프레임 데이터(`FrameRenderState::_deform`)가 값 멤버로 가지는 정점 변형 상태입니다. 인스턴스 애니메이션, 모프, 스킨, 정점 애니메이션(VAT) 컴퓨트가 함께 쓰는 상수 버퍼, 풀, 스크래치, 시계를 묶습니다.
+ * @details 데이터만 담는 비가상 부품입니다. 디스패치 순서(컬링보다 앞)와 기록은 패스 실행(`FramePassExecutor`)이 정합니다.
  */
 #pragma once
 #include "Core/Container/unordered_set.h"
