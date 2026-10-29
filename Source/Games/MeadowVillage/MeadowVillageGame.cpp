@@ -51,9 +51,9 @@ namespace sw
         , _questCatalog{}
     {
         // 공유 상태가 먼저 — 복원할 때 디렉터보다 먼저 바이트를 받아 두고, 첫 디렉터가 판을 열며 적용한다.
-        registerStatefulComponent<SessionStateComponent>();
-        registerDirector<MeadowFarmDirectorComponent>();
-        registerDirector<MeadowTownDirectorComponent>();
+        getStateSnapshot().registerStatefulComponent<SessionStateComponent>();
+        getStateSnapshot().registerDirector<MeadowFarmDirectorComponent>();
+        getStateSnapshot().registerDirector<MeadowTownDirectorComponent>();
     }
 
     MeadowVillageGame::~MeadowVillageGame() = default;

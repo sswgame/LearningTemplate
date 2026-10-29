@@ -35,8 +35,8 @@ namespace sw
     WildWestGame::WildWestGame()
     {
         // 디렉터는 판 상태가 없지만(머리만 싣는다) 다른 게임과 같은 자리에 올린다. 말 상태(스태미나 · 유대)는 말 컴포넌트가 싣는다.
-        registerDirector<WildWestDirectorComponent>();
-        registerStatefulComponent<WildWestHorseComponent>();
+        getStateSnapshot().registerDirector<WildWestDirectorComponent>();
+        getStateSnapshot().registerStatefulComponent<WildWestHorseComponent>();
     }
 
     WildWestGame::~WildWestGame() = default;

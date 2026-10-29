@@ -35,7 +35,7 @@ namespace sw
     PixelTownGame::PixelTownGame()
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고, 복원 뒤 돌려준다.
-        registerDirector<TownDirectorComponent>();
+        getStateSnapshot().registerDirector<TownDirectorComponent>();
     }
 
     PixelTownGame::~PixelTownGame() = default;

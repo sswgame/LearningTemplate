@@ -31,7 +31,7 @@ namespace sw
      *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
      *            `writeState` 와 `restoreState` 는 `ComponentStateStore` 가 이름으로 부르는 계약이다.
-     *            게임 인스턴스는 `GameInstance::registerDirector<T>()` 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
+     *            게임 인스턴스는 `GameStateSnapshot::registerDirector<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
      *          - **틱 뒤 플러시**: 틱(워커) 안에서는 구조를 바꾸지 못하므로 `scheduleFlush` 가 `executeOrDeferPostTick` 한 번으로 `onFlush` 를 게임 스레드에서 부른다.
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
      *            뷰 오브젝트가 정리돼 있으면 다음 틱이 스스로 플러시를 예약하고, `onFlush` 가 다시 스폰한다.

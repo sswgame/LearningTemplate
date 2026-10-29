@@ -25,7 +25,7 @@ namespace sw
      * @details 첫 틱에 디렉터(`_director`)의 카탈로그로 말을 열고 같은 오브젝트의 `WesternHorseMountComponent` 에 빌려 준다(`bindHorse`). 디렉터가 판을 열지 못했거나
      *          품종이 카탈로그에 없거나 탈것 컴포넌트가 없으면 오류를 한 번 남기고 서지 않는다(기본 품종으로 바꾸지 않는다).
      *          PostUpdate 틱에서 시간을 흘린다 — 탈것 컴포넌트(PostPhysics)가 그 프레임의 질주로 스태미나를 쓴 뒤다. 게임 시간은 실제 초 × `_gameHoursPerSecond` 이다.
-     *          상태는 스냅숏에 싣는다(`writeState` · `restoreState`, 게임 인스턴스가 `registerStatefulComponent` 로 올린다). 복원 바이트는 말을 연 뒤에 적용한다.
+     *          상태는 스냅숏에 싣는다(`writeState` · `restoreState`, 게임 인스턴스가 `getStateSnapshot().registerStatefulComponent` 로 올린다). 복원 바이트는 말을 연 뒤에 적용한다.
      */
     REFLECT( Category = "WildWest", DisplayName = "Wild West Horse", Tooltip = "Owns one WesternHorse (stamina, bond, fear), lends it to the Western Horse Mount and runs its time" )
     class WildWestHorseComponent : public Component

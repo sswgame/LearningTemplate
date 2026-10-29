@@ -659,7 +659,7 @@ namespace sw
             return 0;
 
         // 항목 하나는 적어도 이름 길이(4)와 ID(8)와 키 길이(4)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
-        // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstance::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
+        // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameStateSnapshot::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
         constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
         if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )
             return 0;

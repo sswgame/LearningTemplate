@@ -54,8 +54,8 @@ namespace sw
         , _appearanceWatcher{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
-        registerDirector<ShooterDirectorComponent>();
-        registerViewOwner<ShooterPlayerComponent>();
+        getStateSnapshot().registerDirector<ShooterDirectorComponent>();
+        getStateSnapshot().registerViewOwner<ShooterPlayerComponent>();
     }
 
     Shooter3DGame::~Shooter3DGame() = default;

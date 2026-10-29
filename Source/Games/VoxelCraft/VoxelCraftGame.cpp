@@ -45,8 +45,8 @@ namespace sw
         : _blockCatalog{}
     {
         // 상태 스냅샷에 들어가는 컴포넌트입니다. 저장하기 전에 상태를 기록하고 스폰한 오브젝트를 정리하며, 복원한 뒤에 되돌려 줍니다.
-        registerDirector<VoxelDirectorComponent>();
-        registerStatefulComponent<VoxelPlayerComponent>();
+        getStateSnapshot().registerDirector<VoxelDirectorComponent>();
+        getStateSnapshot().registerStatefulComponent<VoxelPlayerComponent>();
     }
 
     VoxelCraftGame::~VoxelCraftGame() = default;
