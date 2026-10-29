@@ -31,6 +31,7 @@ namespace sw
     class LocalizationManager;
     class UIAnimationPlayer;
     class UIScreen;
+    class UIOffscreenScreens;
     class UISystem;
 } // namespace sw
 
@@ -83,7 +84,7 @@ namespace sw::editor
 {
     /**
      * @class UIPreviewModel
-     * @brief UI 미리보기의 상태와 명령입니다. 문서를 오프스크린 화면(`UISystem::openOffscreenScreen`)으로 짓고, 보기 설정을 걸고, 고친 값을 되돌리기 항목으로 남기고, 문서로 씁니다.
+     * @brief UI 미리보기의 상태와 명령입니다. 문서를 오프스크린 화면(`UIOffscreenScreens::open`)으로 짓고, 보기 설정을 걸고, 고친 값을 되돌리기 항목으로 남기고, 문서로 씁니다.
      * @details 문서 dirty 는 패널(`IEditorPanel`)이 가진 하나다 — 모델은 바뀔 때마다 `setDirtyListener` 로 받은 함수로 알린다(값을 따로 두지 않는다).
      *          되돌리기 항목은 모델을 가리키는 길(`EditSession`)을 쥐고, 모델이 사라지면 그 길이 끊겨 옛 항목은 아무것도 하지 않는다.
      *          트리가 새로 지어질 때마다 세대(`_generation`)가 올라 옛 항목이 새 트리에 값을 쓰지 않는다. 판단(뷰포트 · 끼우기 · 슬롯 끌기 …)은 `UIPreviewLogic` 이다.
@@ -110,9 +111,9 @@ namespace sw::editor
         /** @brief 콘텐츠 브라우저에서 연 문서(작업공간의 포커스)가 바뀌었으면 그것을 미리볼 문서로 정합니다. */
         void syncFocusedDocument( bool bDirty );
         /** @brief 문서 · 뷰포트가 바뀌었으면 오프스크린 화면을 다시 열고(크기가 바뀌면 렌더 텍스처 경로도), 이번 프레임의 보기를 겁니다. 렌더 텍스처를 바꾸기 전에 `setTargetReleaseListener` 의 함수를 부릅니다. */
-        void syncPreview( UISystem& ui );
+        void syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen );
         /** @brief 고른 언어에 맞는 문화권 관리자 사본을 만들고(게임 텍스트가 바뀌면 다시) 화면에 겁니다. */
-        void syncLanguage( UISystem& ui );
+        void syncLanguage( UIOffscreenScreens& offscreen );
         /** @brief 화면 트리가 새로 지어졌으면(핫 리로드) 고른 위젯 · 포인터 · 포커스를 새 트리로 이어 갑니다. */
         void syncTree( UIScreen& screen );
         /** @brief 미리보기 화면을 닫습니다(포인터 · 포커스를 놓고 되돌리기 세대를 올린다). */

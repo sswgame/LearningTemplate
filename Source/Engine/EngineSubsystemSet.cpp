@@ -70,6 +70,7 @@
 #include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/Screen/UITooltipService.h"
 #include "Engine/UI/Style/UIStyleSheetCache.h"
@@ -257,6 +258,7 @@ namespace sw::engine
         startup.addSubsystem( sw::make_unique<UISubtitleService>() );
         startup.addSubsystem( sw::make_unique<UITooltipService>() );
         startup.addSubsystem( sw::make_unique<UINotificationService>() );
+        startup.addSubsystem( sw::make_unique<UIOffscreenScreens>() ); // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다
         return parts;
     }
 } // namespace sw::engine

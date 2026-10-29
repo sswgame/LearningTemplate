@@ -36,6 +36,7 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -1128,8 +1129,9 @@ namespace sw::editor
         }
         _model.syncFocusedDocument( isDocumentDirty() );
         drawToolbar( editor::getSubsystem<UIThemeController>() );
-        _model.syncPreview( *pUI ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
-        _model.syncLanguage( *pUI );
+        UIOffscreenScreens& offscreen = editor::getSubsystem<UIOffscreenScreens>();
+        _model.syncPreview( *pUI, offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
+        _model.syncLanguage( offscreen );
         syncTexture();
         UIScreen* pScreen = _model.findPreviewScreen();
         if ( pScreen != nullptr )

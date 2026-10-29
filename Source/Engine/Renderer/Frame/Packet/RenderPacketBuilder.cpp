@@ -35,6 +35,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphCache.h"
+#include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
@@ -437,7 +438,10 @@ namespace sw
             }
         }
         if ( bUIReady )
-            pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+        {
+            pUISystem->collectWorldCanvases( packet._canvas._listTarget );                           // 월드 공간 UI 의 렌더 텍스처
+            engine::getSubsystem<UIOffscreenScreens>().appendCanvases( packet._canvas._listTarget ); // 화면 스택 밖 화면(에디터 UI 미리보기)
+        }
         // 글리프 캐시의 프레임 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 래스터화 예산이 되살아나지 않는다). 캐시가 없으면 글리프를 그리지 않으므로 값이 쓰이지 않는다.
         const uint64 glyphFrameIndex = pFontService != nullptr && pFontService->isInitialized() ? pFontService->getGlyphCache().getFrameIndex() : 0;
         // 디버그 드로우 겹치기 — UI 위, 테스트 그림 아래. 주 시점이 카메라에서 온 패킷만(행렬이 없으면 그릴 눈이 없다).

@@ -2,34 +2,81 @@
 
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Render/UIPaintPass.h"
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/Style/UIStyleSet.h"
+#include "Engine/UI/Style/UIStyleSheet.h"
+#include "Engine/UI/Style/UIStyleSheetCache.h"
+#include "Engine/UI/Style/UIThemeController.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "UIOffscreenScreens" );
+
     UIOffscreenScreens::UIOffscreenScreens()
         : _listOffscreen{}
+        , _pUI{ nullptr }
+        , _pThemes{ nullptr }
+        , _updateSubscription{}
+        , _documentReloadedSubscription{}
+        , _styleSheetReloadedSubscription{}
+        , _themeChangedSubscription{}
     {
     }
 
     UIOffscreenScreens::~UIOffscreenScreens() = default;
 
-    UIScreen& UIOffscreenScreens::add( unique_ptr<UIScreen> screen, const hashed_string& targetPath )
+    SubsystemInitResult UIOffscreenScreens::initializeSubsystem()
     {
+        _pUI                            = &engine::getSubsystem<UISystem>();
+        _pThemes                        = &engine::getSubsystem<UIThemeController>();
+        _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIOffscreenScreens::update, this ) );
+        _documentReloadedSubscription   = engine::getSubsystem<UIDocumentCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onDocumentReloaded, this ) );
+        _styleSheetReloadedSubscription = engine::getSubsystem<UIStyleSheetCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onStyleSheetReloaded, this ) );
+        _themeChangedSubscription       = _pThemes->onThemeChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UIOffscreenScreens::onThemeChanged, this ) );
+        return SubsystemInitResult::Succeeded;
+    }
+
+    void UIOffscreenScreens::shutdownSubsystem()
+    {
+        _themeChangedSubscription.reset();
+        _styleSheetReloadedSubscription.reset();
+        _documentReloadedSubscription.reset();
+        _updateSubscription.reset();
+        _listOffscreen.clear(); // 종료 누수 보고는 이 서브시스템의 소멸보다 먼저다 — 화면 트리와 그리기 목록을 지금 놓는다
+        _pThemes = nullptr;
+        _pUI     = nullptr;
+    }
+
+    span<const utf8* const> UIOffscreenScreens::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { UISystem::kSubsystemName, UIThemeController::kSubsystemName, UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName };
+        return kArrDependency;
+    }
+
+    UIScreenHandle UIOffscreenScreens::open( string_view documentPath, string_view targetPath )
+    {
+        unique_ptr<UIScreen> screen = _pUI->createDocumentScreen( documentPath );
+        if ( screen == nullptr )
+            return kInvalidUIScreenHandle; // 오류는 문서 생성 단계가 남겼다
+        // 애니메이션은 등록만 됐다 — 스택 밖 화면은 `Open` 을 틀지 않아 문서 값 그대로다(미리보기가 고른 것만 튼다).
         UIOffscreenScreen& offscreen = _listOffscreen.emplace_back();
         offscreen._screen            = std::move( screen );
-        offscreen._targetPath        = targetPath;
-        return *offscreen._screen;
+        offscreen._targetPath        = hashed_string( targetPath );
+        return offscreen._screen->getHandle();
     }
 
     void UIOffscreenScreens::remove( UIScreenHandle handle )
@@ -53,7 +100,7 @@ namespace sw
         return nullptr;
     }
 
-    bool UIOffscreenScreens::setView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme )
+    void UIOffscreenScreens::setView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme )
     {
         for ( UIOffscreenScreen& offscreen : _listOffscreen )
         {
@@ -62,11 +109,12 @@ namespace sw
             offscreen._viewport  = viewport;
             offscreen._textScale = textScale > 0.0f ? textScale : 1.0f;
             if ( offscreen._theme == theme )
-                return false;
+                return;
+            // 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
             offscreen._theme = theme;
-            return true;
+            _pThemes->rebuildStyleSet( *offscreen._screen, theme );
+            return;
         }
-        return false;
     }
 
     void UIOffscreenScreens::setLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization )
@@ -129,7 +177,56 @@ namespace sw
         }
     }
 
-    void UIOffscreenScreens::update( const UILayoutContext& baseLayout, const UIPaintContext& basePaint )
+    void UIOffscreenScreens::update( float32 deltaSeconds )
+    {
+        if ( _listOffscreen.empty() )
+            return;
+        updateAnimations( deltaSeconds );
+        paintScreens( _pUI->makeLayoutContext(), _pUI->makePaintContext() );
+    }
+
+    void UIOffscreenScreens::onDocumentReloaded( string_view documentPath )
+    {
+        uint32 rebuiltCount = 0;
+        for ( UIOffscreenScreen& offscreen : _listOffscreen )
+        {
+            UIScreen& screen = *offscreen._screen;
+            if ( _pUI->isDocumentUsing( screen.getDocumentPath(), documentPath ) && _pUI->rebuildScreenFromDocument( screen ) )
+            {
+                _pThemes->rebuildStyleSet( screen, offscreen._theme ); // 다시 짓기는 지금 테마로 맞췄다 — 이 화면의 테마로 되돌린다
+                ++rebuiltCount;
+            }
+        }
+        if ( rebuiltCount > 0 )
+            SW_LOG_INFO( "[UI] Reloaded %# offscreen screen(s) for %#", rebuiltCount, documentPath );
+    }
+
+    void UIOffscreenScreens::onStyleSheetReloaded( string_view sheetPath )
+    {
+        for ( UIOffscreenScreen& offscreen : _listOffscreen )
+        {
+            const UIStyleSet* pStyleSet = offscreen._screen->getStyleSet();
+            if ( pStyleSet == nullptr )
+                continue;
+            bool bUses = false;
+            for ( const shared_ptr<const UIStyleSheetAsset>& sheet : pStyleSet->getSheets() )
+            {
+                bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
+            }
+            if ( bUses )
+                _pThemes->rebuildStyleSet( *offscreen._screen, offscreen._theme );
+        }
+    }
+
+    void UIOffscreenScreens::onThemeChanged()
+    {
+        for ( UIOffscreenScreen& offscreen : _listOffscreen )
+        {
+            _pThemes->rebuildStyleSet( *offscreen._screen, offscreen._theme );
+        }
+    }
+
+    void UIOffscreenScreens::paintScreens( const UILayoutContext& baseLayout, const UIPaintContext& basePaint )
     {
         for ( UIOffscreenScreen& offscreen : _listOffscreen )
         {

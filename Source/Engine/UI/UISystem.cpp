@@ -97,7 +97,7 @@ namespace sw
 {
     UISystem::UISystem()
         : _listScreen{}
-        , _offscreen{}
+
         , _pDocumentCache{ nullptr }
         , _pStyleSheetCache{ nullptr }
         , _documentReloadedSubscription{}
@@ -107,6 +107,7 @@ namespace sw
         , _listReopenDocument{}
         , _onUpdateBeforeScreens{}
         , _onUpdateAfterScreens{}
+        , _onUpdateAfterPaint{}
         , _actionGlyphs{}
         , _input{}
         , _worldPointer{}
@@ -182,7 +183,7 @@ namespace sw
         {
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
         }
-        _offscreen.clear();
+
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
         _documentReloadedSubscription.reset();
@@ -289,8 +290,7 @@ namespace sw
                 _listScreen[index]->_animationPlayer.update( deltaSeconds );
                 (void)UIStyleTransition::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환: 새로 바뀐 것은 아래 스타일 단계가 시작한다
             }
-            _offscreen.updateAnimations( deltaSeconds ); // 에디터 미리보기가 튼 애니메이션(스택 밖 화면은 `Open` 을 틀지 않는다)
-            applyPendingCloses();                        // 닫기 애니메이션이 끝난 화면을 지운다
+            applyPendingCloses(); // 닫기 애니메이션이 끝난 화면을 지운다
         }
         refreshInputGlyphs();
         updateAccessibilityFocus();
@@ -345,8 +345,7 @@ namespace sw
                 pComponent->updateWorldCanvas( layout, paint );
             }
         }
-        if ( _offscreen.isEmpty() == false )
-            _offscreen.update( makeLayoutContext(), makePaintContext() );
+        _onUpdateAfterPaint.broadcast( deltaSeconds ); // 스택 밖 화면(오프스크린 — 에디터 미리보기)
     }
 
     UIScreenHandle UISystem::pushScreen( unique_ptr<UIScreen> screen )
@@ -470,15 +469,6 @@ namespace sw
             if ( rebuildScreenFromDocument( *screen ) )
                 ++rebuiltCount;
         }
-        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
-        {
-            UIScreen& screen = *offscreen._screen;
-            if ( isDocumentUsing( screen._documentPath, documentPath ) && rebuildScreenFromDocument( screen ) )
-            {
-                rebuildStyleSet( screen, offscreen._theme );
-                ++rebuiltCount;
-            }
-        }
         if ( rebuiltCount > 0 )
             SW_LOG_INFO( "[UI] Reloaded %# screen(s) for %#", rebuiltCount, documentPath );
     }
@@ -498,43 +488,24 @@ namespace sw
             if ( bUses )
                 rebuildStyleSet( *screen );
         }
-        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
-        {
-            if ( offscreen._screen->_styleSet == nullptr )
-                continue;
-            bool bUses = false;
-            for ( const shared_ptr<const UIStyleSheetAsset>& sheet : offscreen._screen->_styleSet->getSheets() )
-            {
-                bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
-            }
-            if ( bUses )
-                rebuildStyleSet( *offscreen._screen, offscreen._theme );
-        }
     }
 
-    UIScreenHandle UISystem::openOffscreenScreen( string_view documentPath, string_view targetPath )
+    unique_ptr<UIScreen> UISystem::createDocumentScreen( string_view documentPath )
     {
         UIScreenDesc          desc{};
         vector<UIBindingDesc> listBinding{};
         vector<string>        listStyleSheet{};
         unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
-            return kInvalidUIScreenHandle;
-        UIScreen& screen       = _offscreen.add( sw::make_unique<UIScreen>( desc, std::move( root ) ), hashed_string( targetPath ) );
-        screen._documentPath   = FileUtil::normalizePath( documentPath );
-        screen._listBinding    = std::move( listBinding );
-        screen._listStyleSheet = std::move( listStyleSheet );
-        screen._handle         = _nextScreenHandle++;
-        applyDocumentAnimations( screen ); // 등록만 한다 — 스택 밖 화면은 `Open` 을 틀지 않아 문서 값 그대로다(미리보기가 고른 것만 튼다)
-        rebuildStyleSet( screen );
-        return screen._handle;
-    }
-
-    void UISystem::setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme )
-    {
-        // 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
-        if ( _offscreen.setView( handle, viewport, textScale, theme ) )
-            rebuildStyleSet( *_offscreen.findScreen( handle ), theme );
+            return nullptr;
+        unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
+        screen->_documentPath       = FileUtil::normalizePath( documentPath );
+        screen->_listBinding        = std::move( listBinding );
+        screen->_listStyleSheet     = std::move( listStyleSheet );
+        screen->_handle             = _nextScreenHandle++;
+        applyDocumentAnimations( *screen ); // 등록만 한다 — `Open` 은 스택에 올릴 때(`pushScreen`) 튼다
+        rebuildStyleSet( *screen );
+        return screen;
     }
 
     bool UISystem::isDocumentUsing( const string& documentPath, string_view usedPath )
@@ -637,10 +608,6 @@ namespace sw
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             rebuildStyleSet( *screen );
-        }
-        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
-        {
-            rebuildStyleSet( *offscreen._screen, offscreen._theme );
         }
     }
 
@@ -1145,7 +1112,6 @@ namespace sw
         {
             pComponent->appendWorldCanvas( inoutListTarget );
         }
-        _offscreen.appendCanvases( inoutListTarget );
     }
 
     void UISystem::syncScreenSwitches()

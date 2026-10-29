@@ -26,7 +26,6 @@
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Render/UICanvasPaintState.h"
 #include "Engine/UI/Render/UIPaintPass.h"
-#include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenMarkers.h"
 #include "Engine/UI/UIEngineDocuments.h"
@@ -79,7 +78,7 @@ namespace sw
      *          핫 리로드: 언로드되는 모듈 라이브러리에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      *
      *          **나눈 책임**(값 멤버, 비가상 직접 호출): 입력 라우팅은 `UIInputRouter`, 테마 고르기와 스타일 세트 짓기는 `UIThemeController`,
-     *          화면 스택 밖 미리보기는 `UIOffscreenScreens`, 그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수는 `UICanvasPaintState`,
+     *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수는 `UICanvasPaintState`,
      *          화면 마커의 화면 핸들과 앵커 표는 `UIScreenMarkers` 가 든다. 화면 스택과 프레임 순서는 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
      *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry`(이 시스템이 의존), 알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService`
@@ -237,21 +236,18 @@ namespace sw
         /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. `Engine` 가 렌더 패킷 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
-        // --- 오프스크린 화면(에디터 UI 미리보기) -----------------------------------------------
+        // --- 스택 밖 화면(오프스크린 화면 `UIOffscreenScreens` 가 쓴다) -------------------------------------------
         /**
-         * @brief 문서 @p documentPath 를 화면 스택 밖에서 생성해 렌더 텍스처 @p targetPath(`rendertarget/...`)에 그립니다. 입력과 포커스가 없고 게임 UI 와 섞이지 않습니다.
-         * @details 스타일, 테마, 핫 리로드는 스택의 화면과 같은 경로로 처리한다(문서를 고치면 미리보기도 다시 생성한다). 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상으로 내보낸다.
-         * @return 생성하지 못하면 무효 핸들입니다(오류는 로그에 남깁니다).
+         * @brief 문서 @p documentPath 로 화면을 생성하되 스택에 올리지 않습니다. 핸들(스택 화면과 같은 번호 줄)을 주고, 문서 애니메이션을 등록하고(틀지 않는다),
+         *        지금 테마로 스타일 세트를 짓습니다.
+         * @details 문서 생성은 스택 화면과 같은 경로다(`openScreen`). 입력 · 포커스 · 틱은 없다 — 그리기는 받은 쪽이 한다.
+         * @return 읽지 못하거나 생성할 수 없으면 nullptr 이며 오류를 로그에 남깁니다.
          */
-        UIScreenHandle openOffscreenScreen( string_view documentPath, string_view targetPath );
-        /** @brief 스택 밖 화면 목록입니다. 닫기 · 찾기 · 문화권 · 대상 경로 · 탐색 방식은 목록에 직접 묻습니다(`remove` · `findScreen` · `setLocalization` · `setTargetPath` · `setNavigationMode`). */
-        UIOffscreenScreens&       getOffscreenScreens() { return _offscreen; }
-        const UIOffscreenScreens& getOffscreenScreens() const { return _offscreen; }
-        /**
-         * @brief 오프스크린 화면의 뷰포트(UI 단위 크기, 배율, 안전 영역. 렌더 텍스처 크기가 물리 크기), 글자 배율, 테마(빈 이름이면 지금 테마)를 정합니다.
-         * @details 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
-         */
-        void setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
+        unique_ptr<UIScreen> createDocumentScreen( string_view documentPath );
+        /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. 스택 밖 화면도 같은 길이다. */
+        bool rebuildScreenFromDocument( UIScreen& screen );
+        /** @brief 문서 @p documentPath 가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. */
+        bool isDocumentUsing( const string& documentPath, string_view usedPath );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
@@ -283,6 +279,11 @@ namespace sw
         UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
         /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
         UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
+        /**
+         * @brief 화면 스택을 다 그린 **뒤**에서 도는 UI 서비스의 칸입니다(오프스크린 화면 `UIOffscreenScreens` — 이번 프레임의 레이아웃 · 그리기 컨텍스트로 자기 화면을 그린다).
+         * @details 화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 스택 밖 화면은 계속 그린다. 언리얼 Slate `OnPostTick` 자리다.
+         */
+        UIUpdateDelegate& onUpdateAfterPaint() { return _onUpdateAfterPaint; }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
@@ -385,12 +386,8 @@ namespace sw
         void rebuildStyleSet( UIScreen& screen, const hashed_string& themeName = hashed_string{} );
         /** @brief 테마가 바뀐 알림(`UIThemeController::onThemeChanged`)입니다 — 모든 화면의 스타일 시트를 다시 적용합니다. */
         void onThemeChanged();
-        /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. */
-        bool rebuildScreenFromDocument( UIScreen& screen );
         /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 등록합니다. 재생 중인 애니메이션과 트윈은 멈춥니다(기존 트리의 위젯 번호를 가리키기 때문입니다). */
         void applyDocumentAnimations( UIScreen& screen );
-        /** @brief 문서 @p documentPath 가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. */
-        bool isDocumentUsing( const string& documentPath, string_view usedPath );
         /** @brief 모듈 다시 로드로 닫은 문서 화면을 다시 엽니다(다음 `update` 앞). */
         void reopenClosedScreens();
         /**
@@ -431,8 +428,8 @@ namespace sw
             UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
-        vector<unique_ptr<UIScreen>>       _listScreen;                     ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
-        UIOffscreenScreens                 _offscreen;                      ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
+        vector<unique_ptr<UIScreen>> _listScreen; ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
+
         UIDocumentCache*                   _pDocumentCache;                 ///< 문서 캐시(서브시스템 `UIDocuments` — 기동이 찾는다)
         UIStyleSheetCache*                 _pStyleSheetCache;               ///< 스타일 시트 캐시(서브시스템 `UIStyleSheets` — 기동이 찾는다)
         Subscription                       _uiKeyBindingRegistration;       ///< UI 행동 맵의 키 바인딩 대상 구독(`UserSettingsManager::addKeyBindingInputMap`)
@@ -444,6 +441,7 @@ namespace sw
         vector<string>                     _listReopenDocument;             ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIUpdateDelegate                   _onUpdateBeforeScreens;          ///< 화면 틱 앞의 UI 서비스(자막 · 툴팁)
         UIUpdateDelegate                   _onUpdateAfterScreens;           ///< 화면 틱 뒤의 UI 서비스(알림)
+        UIUpdateDelegate                   _onUpdateAfterPaint;             ///< 화면 그리기 뒤의 UI 서비스(오프스크린 화면)
         UIActionGlyphSource                _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                      _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
         UIWorldPointerRouter               _worldPointer;                   ///< World 위젯의 광선 입력 상태입니다.

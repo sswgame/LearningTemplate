@@ -28,7 +28,7 @@ namespace sw::editor
 {
     /**
      * @class UIPreviewPanel
-     * @brief UI 문서를 게임 UI 와 따로 **오프스크린 화면**(`UISystem::openOffscreenScreen` — 렌더 텍스처 대상 캔버스)으로 지어 ImGui 이미지로 봅니다
+     * @brief UI 문서를 게임 UI 와 따로 **오프스크린 화면**(`UIOffscreenScreens::open` — 렌더 텍스처 대상 캔버스)으로 지어 ImGui 이미지로 봅니다
      *        (유니티 UI Builder · UMG 디자이너의 미리보기에 해당합니다).
      * @details 해상도 견본은 게임과 같은 배율 규칙(`UISystem::getScaleSettings`)으로 뷰포트를 만들고, UI 배율 · 글자 배율 · 안전 영역 · 테마 · 언어는 이 미리보기에만 겁니다.
      *          언어는 문화권이 전역이라 게임 UI 를 건드리지 않도록 **관리자 사본**(`LocalizationManager::copyStateFrom`)을 모델이 소유하고 화면에 겁니다(`qps-ploc`, `qps-plocm` 포함).
