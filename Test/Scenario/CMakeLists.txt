@@ -7,13 +7,16 @@
 # @details 종료 코드는 실행기의 것이다(0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀 · 15 처리하지 않은 로그 — 13 은 CTest 의 건너뜀). 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 줍지 않는다 — 손으로 돌린다.
 #          항목끼리도(`ctest -j`) 겹치는 쓰기가 없어 병렬로 돈다: 로그는 `<빌드>/Testing/Logs/<항목>.<백엔드>.log`(`-log-file`), 산출물 · 설정은 프로세스별 폴더 · 파일이고,
-#          실행이 나누는 캐시(Saved/ShaderCache)는 원자적 바꿔치기로만 쓴다. 항목 하나가 프로세스 다섯(부모 + 백엔드 넷)이라 `-j` 는 코어 수의 1/4 쯤이 알맞다.
+#          실행이 나누는 캐시(Saved/ShaderCache)는 원자적 바꿔치기로만 쓴다. 항목 하나가 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) —
+#          `ctest -j4` 면 항목 하나(자식 넷)만 돈다. 예전에는 "`-j` 는 코어 수의 1/4" 을 문서로만 적어 `-j4` 가 자식 열여섯을 겹쳐 띄웠다.
 #          다른 게임의 시나리오는 그 게임이 활성일 때(구성의 SW_ACTIVE_GAME) 올라온다 — App 은 활성 게임 하나만 싣는다.
 # ==============================================================================
 
 if(NOT TARGET App)
 	return()   # 전용 서버 타깃은 App 을 짓지 않는다
 endif()
+
+list(LENGTH SW_RHI_BACKEND_NAMES swScenarioBackendCount) # `-scenario-backends=all` 이 띄우는 자식 수
 
 set(swScenarioRoot "${CMAKE_SOURCE_DIR}/Content")
 string(TOLOWER "${SW_ACTIVE_GAME}" swActiveGamePack)
@@ -39,5 +42,5 @@ foreach(scenarioPath IN LISTS listScenario)
 		COMMAND $<TARGET_FILE:App> -scenario=${scenarioPath} -scenario-backends=all -unattended
 			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Scenario.${scenarioName}.log ${listLaunchArgument}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(Scenario.${scenarioName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE 13)
+	set_tests_properties(Scenario.${scenarioName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE 13 PROCESSORS ${swScenarioBackendCount})
 endforeach()

@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. **다음은 큰 묶음 넷** — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6 · J7(쿠커 단위 · 읽기 정책 하나, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+> 결론: I 절의 1(DevTools — 리로드 · 감시 · 콘솔 · HUD · 고스트 · 회선 흉내 · RenderDoc) · 2(에셋 리로드를 런타임 계약에서 빼기) · 5(굽기를 편집기로), J 절 대부분, 되돌리기 · 포커스 · 시간 배율 전역 정리가 끝났다. J7(콘텐츠 정책 하나)도 끝났다. **다음은 큰 묶음 다섯** — 시나리오를 백엔드당 프로세스 하나로(3 절 끝), I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로, Core/Console 폴더 배포 제외와 같이), J6(쿠커 단위, 의사 현지화 `#if` 도 여기서), J8(리플렉션 에디터 메타 사이드 테이블), 전역 상태 → 서브시스템의 `ScopeOwned` 캐시(권위 상태부터 — 아래 목록). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙(`SW_DEV_ONLY_SOURCE_PATTERNS`).
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -34,9 +34,13 @@
 
 `Test/README.md` 가 정본이다(쓰는 법 · 옛 문제와 고친 것 표). 요약: 단위 테스트는 기능 옆 `Tests/` 의 `SW_TEST_CASE` 를 `App --test` 한 번이 엔진 위에서 섞어 돌린다(로그 게이트 · 단언 0 건 실패 · 스냅숏 · 케이스별 쓰기 폴더). 시나리오는 적은 순서대로 도는 단계(`<Wait>` · `<WaitUntil>`), 백엔드별 골든 이미지(`-scenario-update-golden`), 시나리오 안 `<AllowLog>`, 실행별 산출물 폴더 · 사용자 설정이다.
 
-- **병렬**: CTest 항목은 시나리오마다 하나이고, 그 App 이 `-scenario-backends=all` 로 백엔드마다 자식 App 을 동시에 띄워 모은다(`AutomationBackendMatrix` — Gauntlet 컨트롤러 자리, 자식은 `kProcessKillSeconds` 180 초 안에 끝나야 한다). 항목끼리도 `ctest -j4` 로 돈다(76 실행 64 초). 스레드 병렬은 쓰지 않는다 — 창 · 장치 · 전역 변수 · 씬이 프로세스에 하나라서.
+- **병렬**: CTest 항목은 시나리오마다 하나이고, 그 App 이 `-scenario-backends=all` 로 백엔드마다 자식 App 을 동시에 띄워 모은다(`AutomationBackendMatrix` — Gauntlet 컨트롤러 자리, 자식은 `kProcessKillSeconds` 180 초 안에 끝나야 한다). 항목은 자식 수만큼 슬롯을 선언한다(`PROCESSORS` = 백엔드 수) — `ctest -j4` 면 항목 하나(자식 넷)만 돈다. 예전에는 `-j4` 가 자식 열여섯을 겹쳐 띄웠다(문서 규칙 "`-j` 는 코어의 1/4" 뿐이었다). 스레드 병렬은 쓰지 않는다 — 창 · 장치 · 전역 변수 · 씬이 프로세스에 하나라서.
 - **로그**: `-log-file=<경로>` 가 그 파일 하나에 쓴다(ctest 는 `<빌드>/Testing/Logs/<항목>[.<백엔드>].log`). 명령줄이 로거보다 먼저 서고, 싱크가 서기 전의 줄은 `Logger` 가 고정 배열 64 줄로 쌓았다가 넘긴다(언리얼 backlog).
 - **종료 코드**: 이 PC 에서 못 도는 백엔드(77)는 행렬이 그 백엔드만 건너뜀으로 센다.
+- **다음 묶음 — 백엔드당 프로세스 하나**: 지금은 시나리오마다 프로세스를 새로 띄운다(23 항목 × 백엔드 4). 체인(`-scenario=a,b,c`)은 이미 있고 행렬이 자식에 넘긴다. 막는 것은 둘이다 —
+  (1) 단계 사이 상태 초기화가 없다(에디터 58 개 체인에서 31 개가 앞 상태로 졌다, df275ea2e): 실행기가 단계 시작에 전역 변수를 찍어 두고 끝에 되돌리며, 단계마다 씬을 새로 연다(언리얼 Automation 이 테스트마다 맵을 열고 CVar 를 되돌리는 것과 같다).
+  (2) `<Launch>` 의 대부분이 `gv_firstScene` 이다(23 중 18): 첫 씬은 시나리오의 씬 열기 단계로 옮기고, 정말 기동 뒤 못 바꾸는 값(렌더 파이프라인 · 스트레스 씬 · 화질)만 남긴다. CTest 는 `<Launch>` 묶음이 같은 시나리오를 체인 하나(`-scenario-keep-going`)로 묶는다 — 무리 6–7 개.
+  격리가 꼭 필요한 시나리오(모듈 리로드)는 따로 둔다(언리얼 Gauntlet 자리).
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 
 ## 4. 남은 일
@@ -150,7 +154,7 @@
 | 4 | 등록 해제를 주석 규칙에 맡김(`CompressionCodecRegistry::unregisterCodec`, `CrashContext::setCrashExtraTextWriter`, `ServerServiceManager::stopAll`, `AssetManager` 종료 경고) | 모두 `Subscription` 을 돌려주고 3 의 ModuleScope 가 소유 | 6–8 |
 | 5 | 개발 명령 · 디버그 HUD · 개발 콘솔이 Engine/Core 안에서 `#if SW_DEV_COMMANDS_ENABLED` 로 파일째 감싸짐(~28 파일) · 엔진 루프가 개발 도구를 이름으로 부른다(`Engine.cpp` `#if` 13 곳) | `DevTools` 단위(I 절)로 옮기고 `IEngineFrameObserver` · 서브시스템 등록으로 붙는다 | ~40 |
 | 6 | 쿠커(PackCooker · SceneCooker · ShaderCooker …)가 Engine.dll 에 있고 런타임 읽기마다 `CookJob::admitRead`, `HeadlessSubsystem` 의 하드코딩 분기 | 쿠킹 단위로 분리, 헤드리스 작업은 이름 등록 commandlet, `AssetIO` 에는 읽기 관찰자 자리 하나 | ~25 |
-| 7 | "쿠킹본만 읽기" 를 `#if SW_SHIPPING` 으로 파일마다(SceneDocument · PrefabAsset · ShaderCache · ConfigManager …) | 호스트 조립 때 고르는 읽기 정책 하나(`ContentSource`), 소스 XML 리더는 쿠킹 단위로 | 8–10 |
+| 7 ✓ | "쿠킹본만 읽기" 를 `#if SW_SHIPPING` 으로 파일마다(SceneDocument · PrefabAsset · ShaderCache · ConfigManager …) | 호스트 조립 때 고르는 읽기 정책 하나(`ContentSource`), 소스 XML 리더는 쿠킹 단위로 | 8–10 |
 | 8 | 리플렉션 메타데이터의 에디터 칸(category · tooltip · `_bCallInEditor` …)이 `#if !SW_SHIPPING` | 생성기가 에디터 메타를 사이드 테이블(`*.editor.gen.cpp`)로 내고 편집기가 짓는다 | 생성기 + 6 |
 | 9 | 회선 에뮬레이션 데코레이터를 `GameNetSession` 이 `#if` 로 붙임 | 세션에 transport 데코레이터 등록 자리, `DevTools` 가 등록 | 3 |
 | 10 | `RHIBackendRegistry` 가 백엔드 헤더 넷을 include 하고 DLL 로드까지 | 백엔드가 스스로 등록, DLL 로드는 ModuleManager | 4 |
@@ -160,7 +164,10 @@
 | 14 | UI 데모 · 스트레스 화면이 Engine.dll | Games/Empty 또는 DevTools | 4 |
 | 15 | 그 밖: 의사 현지화 `#if`(쿠킹이 뺀다), AbilityComponent 의 vtable 훑기(타입 id 로 다시 만들기), 린트 include 규칙 1(pch 강제 포함과 중복), 롤백 결정성 · 리플렉션 후보 CMake 게이트(타깃 종류 · 생성 대상으로), 순서 규칙 주석(API 모양으로) | | 각 1–3 |
 
-**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 9 · 10(배포는 정적 자기 등록. 개발의 DLL 로드는 동적 모듈 스위치 `SW_WITH_DYNAMIC_MODULES` 한 곳 안에 두었다 — 언리얼 `FModuleManager::LoadModule` 도 Core 다) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기.
+**끝남(2026-10-29)**: 1 · 2 · 3 · 4 · 5(남은 것은 I 절 1) · 9 · 10(배포는 정적 자기 등록. 개발의 DLL 로드는 동적 모듈 스위치 `SW_WITH_DYNAMIC_MODULES` 한 곳 안에 두었다 — 언리얼 `FModuleManager::LoadModule` 도 Core 다) · 11 · 12 · 13 · 14 · 15 의 어빌리티 vtable 훑기 · 7.
+7: 콘텐츠 정책은 팩 매니저의 값 하나 `ContentSource`(`Cooked` 배포 · `-cooked-content` / `Source` 개발 실행 · 쿠킹)이고 읽는 곳은 `AssetIO::getContentSource` · `readsSource` 를 묻는다(씬 · 프리팹 · 셰이더 · 셰이더 리플렉션 · `.meta`).
+"쿠킹본이 있으면 쿠킹본, 없으면 소스" 는 두지 않는다 — 개발 씬이 소스와 어긋난 `.bin` 을 모르고 읽던 폴백이 그것이었다. 셰이더 쿠킹본은 소스 내용 해시로 확인하는 캐시라 소스 실행도 쓴다(언리얼 DDC).
+남은 것: 설정의 베이크 JSON(`ShippingGameDefaults.h` — 배포 구성만 생성하는 산출물이라 정책이 아니라 빌드 산출물), 개발 전용 점검(`EngineDefaultAssets` · `PackEngineSettings`), 소스 리더를 쿠킹 단위로(J6).
 12 는 층 문제(엔진에 편집기 이름 · 뜻)만 풀었다(`setRenderHidden`) — 편집기 뷰에서만 숨기기는 층이 아니라 기능이고, 렌더러에 뷰 마스크가 없어(GPU 인스턴스 예비 칸 · 컬링 셰이더 · 그림자 · CPU 경로)
 필요해질 때 기능으로 더한다(편집기 플레이는 씬 사본이 아니라 제자리라 플레이 중에도 숨긴 채다).
 13: 패킷 사진은 우편함의 "다음 패킷에 찍기" 칸(`ScreenshotRequestQueue::putForNextPacket`), 창 제목은 자동화 세션이 든다 — 관찰자 인터페이스에 자동화 칸이 없다.
