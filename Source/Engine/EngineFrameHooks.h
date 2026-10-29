@@ -40,9 +40,9 @@ namespace sw
 
     /**
      * @struct EngineFrameHooks
-     * @brief `Engine::registerFrameHooks` 로 붙이는 훅 묶음입니다. 쓰지 않는 칸은 비워 둔다. 게임 스레드에서만 불립니다.
+     * @brief `EngineFrameHookList::add`(엔진의 `getFrameHooks`)로 붙이는 훅 묶음입니다. 쓰지 않는 칸은 비워 둔다. 게임 스레드에서만 불립니다.
      * @details 루프는 붙인 순서대로 칸을 부르고, 종료 코드 칸은 처음으로 `kEngineFrameRunning` 이 아닌 값을 낸 것의 코드로 끝냅니다.
-     *          훅이 가리키는 객체의 수명은 붙인 쪽이 쥐며, 없애기 전에 `registerFrameHooks` 가 돌려준 구독을 놓습니다.
+     *          훅이 가리키는 객체의 수명은 붙인 쪽이 쥐며, 없애기 전에 `add` 가 돌려준 구독을 놓습니다.
      */
     struct EngineFrameHooks
     {

@@ -309,7 +309,7 @@ namespace sw
         {
             EngineFrameHooks telemetryHooks{};
             telemetryHooks._onAfterSceneTick = SW_DELEGATE_METHOD( EngineFrameDelegate, &TelemetryService::onAfterSceneTick, &telemetryService );
-            _telemetryFrameSubscription      = registerFrameHooks( telemetryHooks );
+            _telemetryFrameSubscription      = _frameHooks.add( telemetryHooks );
         }
         if ( bDedicatedServer )
         {
@@ -377,7 +377,7 @@ namespace sw
 #endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
-        _frameHooks = FrameHookList{}; // 남은 구독을 무효화하고 저장소를 놓는다
+        _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
@@ -457,36 +457,6 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
-    Subscription Engine::registerFrameHooks( const EngineFrameHooks& hooks )
-    {
-        const bool bAnyBound = hooks._onFrameBegin.isBound() || hooks._onAfterSceneTick.isBound() || hooks._onFrameEnd.isBound() || hooks._onWindowClosed.isBound();
-        if ( bAnyBound == false )
-        {
-            SW_LOG_ERROR( "Frame hooks are all empty - nothing is registered" );
-            return {};
-        }
-        // 묶음 하나를 항목 하나로 올린다 — 시점마다 맞는 칸을 부르고, 빈 칸 · 종료 코드가 없는 시점은 `kEngineFrameRunning` 이다.
-        return _frameHooks.add( FrameHookDelegate::create( [hooks]( FramePoint point, const EngineFrameContext& context ) -> int32
-        {
-            switch ( point )
-            {
-                case FramePoint::FrameBegin:
-                    if ( hooks._onFrameBegin.isBound() )
-                        hooks._onFrameBegin( context );
-                    return kEngineFrameRunning;
-                case FramePoint::AfterSceneTick:
-                    if ( hooks._onAfterSceneTick.isBound() )
-                        hooks._onAfterSceneTick( context );
-                    return kEngineFrameRunning;
-                case FramePoint::FrameEnd:
-                    return hooks._onFrameEnd.isBound() ? hooks._onFrameEnd( context ) : kEngineFrameRunning;
-                case FramePoint::WindowClosed:
-                    return hooks._onWindowClosed.isBound() ? hooks._onWindowClosed( context ) : kEngineFrameRunning;
-            }
-            return kEngineFrameRunning;
-        } ) );
-    }
-
     EngineFrameContext Engine::makeFrameContext() const
     {
         EngineFrameContext context;
@@ -503,14 +473,11 @@ namespace sw
         if ( _frameHooks.isBound() == false )
             return;
         // 처음으로 코드를 낸 관찰자에서 멈춘다. 관찰자의 결과가 앞선 종료 요청(프로파일 세션)의 코드보다 이긴다.
-        (void)_frameHooks.broadcastUntil( [this]( int32 observerExitCode )
-        {
-            if ( observerExitCode == kEngineFrameRunning )
-                return false;
-            _exitCode       = observerExitCode;
-            _bQuitRequested = true;
-            return true;
-        }, FramePoint::WindowClosed, makeFrameContext() );
+        const int32 observerExitCode = _frameHooks.notifyWindowClosed( makeFrameContext() );
+        if ( observerExitCode == kEngineFrameRunning )
+            return;
+        _exitCode       = observerExitCode;
+        _bQuitRequested = true;
     }
 
     void Engine::beginFrame( float32 deltaSeconds, float32 unscaledDeltaSeconds )
@@ -520,7 +487,7 @@ namespace sw
         engine::getSubsystem<GameTimeScale>().setUnscaledDeltaTime( unscaledDeltaSeconds );
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
         if ( _frameHooks.isBound() )
-            _frameHooks.broadcast( FramePoint::FrameBegin, makeFrameContext() );
+            _frameHooks.notifyFrameBegin( makeFrameContext() );
         if ( _pInputManager != nullptr )
             _pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
@@ -720,7 +687,7 @@ namespace sw
             SceneDebugDraw::update( _pSceneManager->getActiveScene(), engine::getSubsystem<DebugDrawQueue>() );
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
         if ( _frameHooks.isBound() )
-            _frameHooks.broadcast( FramePoint::AfterSceneTick, makeFrameContext() );
+            _frameHooks.notifyAfterSceneTick( makeFrameContext() );
 
         // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). UI 단위 크기 · 배율 · 안전 영역은
         // 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
@@ -756,12 +723,9 @@ namespace sw
         // 모든 관찰자를 부른다(멈추지 않는다). 여럿이 코드를 내면 처음 것의 코드다(`requestQuit` 은 처음 요청만 받는다).
         if ( _frameHooks.isBound() )
         {
-            (void)_frameHooks.broadcastUntil( [this]( int32 observerExitCode )
-            {
-                if ( observerExitCode != kEngineFrameRunning )
-                    requestQuit( observerExitCode );
-                return false;
-            }, FramePoint::FrameEnd, makeFrameContext() );
+            const int32 observerExitCode = _frameHooks.notifyFrameEnd( makeFrameContext() );
+            if ( observerExitCode != kEngineFrameRunning )
+                requestQuit( observerExitCode );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
 #if defined( SW_WITH_CLIENT_CODE )

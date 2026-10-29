@@ -55,7 +55,7 @@ namespace sw
         void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts );
         /** @brief 엔진 초기화에 넘길 기동 확장입니다(`Engine::setStartupExtension`). */
         EngineStartupExtensionDelegate makeStartupExtension();
-        /** @brief 엔진이 선 뒤 붙일 프레임 훅(프레임 앞 · 씬 틱 뒤 · 프레임 끝)입니다(`Engine::registerFrameHooks`). */
+        /** @brief 엔진이 선 뒤 붙일 프레임 훅(프레임 앞 · 씬 틱 뒤 · 프레임 끝)입니다(`EngineFrameHookList::add`). */
         EngineFrameHooks makeFrameHooks();
 
     private:

@@ -169,7 +169,7 @@ namespace sw
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
 #if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
+        _devToolsFrameSubscription = _engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
 #endif
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
@@ -502,7 +502,7 @@ namespace sw
         if ( bStarted && pRenderThread != nullptr )
             pRenderThread->setScenarioCaptureEnabled( true );
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
-        _automationFrameSubscription = _engine.registerFrameHooks( _pAutomationSession->makeFrameHooks() );
+        _automationFrameSubscription = _engine.getFrameHooks().add( _pAutomationSession->makeFrameHooks() );
         // 재생기는 호스트 범위에 인터페이스로 건다 — `ScenarioPlayback` 이 범위에서 찾는다(정적 칸을 두지 않는다).
         const bool bPlayerBound = _host.bind<IScenarioPlayer>( _pAutomationSession );
         SW_ASSERT( bPlayerBound );

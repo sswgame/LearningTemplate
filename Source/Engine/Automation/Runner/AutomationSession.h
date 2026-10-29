@@ -25,7 +25,7 @@ namespace sw
      * @class AutomationSession
      * @brief 엔진 루프에 프레임 훅(`EngineFrameHooks`, `makeFrameHooks`)으로 붙는 시나리오 구동기입니다. 루프는 관찰자 목록만 알고, 세션 · 실행기 · 체인 · 단계 전환은 모릅니다.
      * @details 호스트 범위의 서브시스템입니다(App 이 엔진을 세우기 전에 걸고, 전용 서버는 시나리오를 쓰지 않아 걸지 않는다). 서브시스템으로서의 초기화는 하는 일이 없고,
-     *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::registerFrameHooks( makeFrameHooks() )` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
+     *          `-scenario` 를 읽은 런처가 엔진이 선 뒤에 `begin` 으로 시작해 `Engine::getFrameHooks().add( makeFrameHooks() )` 로 붙입니다. 실행기는 엔진 서비스(로그 리스너 · 입력)를 빌려 쓰므로
      *          엔진이 내려가기 전에 `shutdownSubsystem` 이 비웁니다 — 호스트 범위는 엔진보다 오래 살기 때문에 런처가 엔진 종료 앞에서 이 서브시스템만 먼저 내립니다
      *          (모듈 라이브러리 창구의 뒤에 서는 서브시스템이라 `shutdownDependentsOf` 로 닿는다). 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
@@ -82,7 +82,7 @@ namespace sw
         /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
         bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
 
-        /** @brief 이 세션의 네 훅을 묶습니다(`Engine::registerFrameHooks` 에 넘긴다). */
+        /** @brief 이 세션의 네 훅을 묶습니다(`EngineFrameHookList::add` 에 넘긴다). */
         EngineFrameHooks makeFrameHooks();
         /** @brief 프레임 시작(입력 `beginFrame` 전)입니다. 지금 단계의 시작 조건 · 가상 입력 붙이기 · 입력 전 단계를 돌립니다. 입력이 없으면 아무것도 하지 않습니다. */
         void onFrameBegin( const EngineFrameContext& context );

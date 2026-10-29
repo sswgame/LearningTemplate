@@ -12,6 +12,8 @@ Compression = 0
 "pch.cpp" = 0
 "EngineMinimal.h" = 0
 "EngineFrameHooks.h" = 0
+"EngineFrameHookList.h" = 0            # 프레임 훅 목록(엔진 루프가 값으로 든다 — Core 델리게이트만 쓴다)
+"EngineFrameHookList.cpp" = 0
 "EngineStartupExtension.h" = 0        # 호스트가 기동 단계에 서브시스템을 더하는 확장점(형만 앞으로 선언한다)
 # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 콘텐츠 파일 시스템 · 관측
 Reflection = 1

@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -12,7 +11,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineFrameHookList.h"
 #include "Engine/EngineStartupExtension.h"
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -124,11 +123,10 @@ namespace sw
         // 도우미
         // ----------------------------------------------------------------------
         /**
-         * @brief 프레임 훅 묶음(`EngineFrameHooks`)을 붙입니다. 붙인 순서대로 부릅니다. 돌려받은 구독이 사라지면 떨어집니다.
-         * @details 루프는 훅이 무엇인지 모릅니다(자동화 시나리오 · 텔레메트리 · 개발 도구). 훅의 대상과 구독은 붙인 쪽이 쥐고, 구독을 대상보다 먼저 놓습니다.
-         *          칸이 모두 비었으면 오류를 남기고 빈 구독을 돌려줍니다. 구독 하나가 등록 하나라 같은 묶음을 두 번 붙이면 두 번 불립니다. `shutdown` 은 남은 구독을 모두 끊습니다.
+         * @brief 프레임 훅 목록입니다 — 붙이는 쪽(App · 서버 · 개발 도구)이 `add` 로 훅 묶음을 붙인다. 루프는 훅이 무엇인지 모른다(자동화 시나리오 · 텔레메트리 · 개발 도구).
+         * @details 기동이 어디서 멈췄든(크래시 보고 프로세스 포함) 엔진과 수명이 같다. `shutdown` 은 남은 구독을 모두 끊는다.
          */
-        [[nodiscard]] Subscription registerFrameHooks( const EngineFrameHooks& hooks );
+        EngineFrameHookList& getFrameHooks() { return _frameHooks; }
         /** @brief 기동 확장을 겁니다(`initialize` 전에 — 기동 단계 범위를 채운 뒤 · 초기화 전에 한 번 부른다). 대상의 수명은 건 쪽이 엔진 종료까지 쥔다. */
         void setStartupExtension( const EngineStartupExtensionDelegate& extension ) { _startupExtension = extension; }
 
@@ -222,22 +220,11 @@ namespace sw
         vector<Subscription> _listCodecSubscription;
         /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
         DebugKeyActions* _pDebugKeyActions;
-        /** @brief 훅 묶음의 칸 하나(프레임 시점)입니다. 묶음 하나가 멀티캐스트 항목 하나라 구독 하나로 떨어진다. */
-        enum class FramePoint : uint8
-        {
-            FrameBegin,
-            AfterSceneTick,
-            FrameEnd,
-            WindowClosed,
-        };
-        /** @brief 훅 묶음 목록입니다 — 공용 멀티캐스트라 훅이 순회 중에 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다(언리얼 `FCoreDelegates::OnBeginFrame` 과 같은 자리). */
-        using FrameHookDelegate = Delegate<int32( FramePoint, const EngineFrameContext& )>;
-        using FrameHookList     = MulticastDelegate<int32( FramePoint, const EngineFrameContext& )>;
         /**
-         * @brief 프레임 관찰자 목록입니다(대상은 소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
+         * @brief 프레임 관찰자 목록입니다(대상은 소유하지 않는다). 부르는 시점은 루프가 정한다(`beginFrame` · `update` · `endFrame` · `onWindowClosed`) —
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
-        FrameHookList                  _frameHooks;
+        EngineFrameHookList            _frameHooks;
         EngineStartupExtensionDelegate _startupExtension; ///< 호스트가 건 기동 확장(`setStartupExtension`, 없으면 비었다)
         /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
         Subscription _telemetryFrameSubscription;

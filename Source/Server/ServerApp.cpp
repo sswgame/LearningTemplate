@@ -247,7 +247,7 @@ namespace sw
         }
 #if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devToolsFrameSubscription = _engine.registerFrameHooks( _pDevTools->makeFrameHooks() );
+        _devToolsFrameSubscription = _engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
 #endif
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )

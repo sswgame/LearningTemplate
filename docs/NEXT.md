@@ -120,7 +120,7 @@
 | 단위 | 담는 것 | 짓는 빌드 |
 |---|---|---|
 | `Core` · `Engine` | 런타임, 읽기 API, 읽기 · 쓰기 짝 직렬화, 확장점(이벤트 · 등록표 · 감쌀 수 있는 인터페이스) | 모두 |
-| `DevTools`(`Source/DevTools`, 공유 라이브러리 `SW_DEVTOOLS_API`) | 개발 전용 — 설정 · 셰이더 리로드, 파일 감시 분배기, 개발 콘솔(UI 오버레이) · 디버그 HUD, 서버 포즈 고스트, 프레임 지연. 호스트가 `Engine::setStartupExtension` 으로 기동 단계에 서브시스템을 더하고 `Engine::registerFrameHooks` 로 프레임 시점에 붙는다(상속 없음) | 개발 App · Server · 에디터 · GameFramework |
+| `DevTools`(`Source/DevTools`, 공유 라이브러리 `SW_DEVTOOLS_API`) | 개발 전용 — 설정 · 셰이더 리로드, 파일 감시 분배기, 개발 콘솔(UI 오버레이) · 디버그 HUD, 서버 포즈 고스트, 프레임 지연. 호스트가 `Engine::setStartupExtension` 으로 기동 단계에 서브시스템을 더하고 `Engine::getFrameHooks().add` 로 프레임 시점에 붙는다(상속 없음) | 개발 App · Server · 에디터 · GameFramework |
 | `EditorModule` · 편집기 확장 | 편집 기능 전부(저장 · 프리팹 작업 · 굽기 · 패널). 데이터 사본을 고쳐 엔진 직렬화로 쓰고 런타임이 다시 읽는다 | 개발 App |
 
 **끝남**: 현지화 수집 · 번역 메모리, 의상 아틀라스, 리타깃 점검 · 기준 포즈 덮어쓰기, 문자열 변경 구간, 편집 조건식, 리그 되쓰기, 지형 저장, 프리팹 인스턴스 되돌리기 · 갱신, 에셋 파일 지우기를 편집기로. 리타깃 `*ForEdit` → 일반 설정자.
