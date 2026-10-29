@@ -420,10 +420,16 @@ namespace sw::editor
         void setParamValue( uint32 paramIndex, const MeshModifierParamValue& value );
 
         /** @brief 레지스트리 id 입니다(`SW_MESH_MODIFIER` 의 둘째 인자 — 레지스트리가 만들 때 채웁니다). */
-        const string&            getTypeID() const { return _typeID; }
-        void                     setTypeID( string_view typeID ) { _typeID = string( typeID ); }
-        const string&            getName() const { return _name; }
-        void                     setName( string_view name ) { _name = string( name ); }
+        const string& getTypeID() const { return _typeID; }
+        void          setTypeID( string_view typeID ) { _typeID = string( typeID ); }
+        const string& getName() const { return _name; }
+        void          setName( string_view name ) { _name = string( name ); }
+        /**
+         * @brief 이 인스턴스의 번호입니다. 만들 때 정하고 프로세스 안에서 다시 쓰지 않는다(0 은 "없음").
+         * @details 되돌리기 · 다시 읽기는 스택을 새 인스턴스로 다시 짓고 지운 자리는 같은 주소에 새 모디파이어가 올 수 있다 — 프레임을 넘어 "그 모디파이어" 를
+         *          기억하는 쪽(패널의 곡선 팝업 · 하위 스택 경로)은 주소가 아니라 이 번호로 비교한다.
+         */
+        uint64                   getInstanceID() const { return _instanceID; }
         bool                     isEnabled() const { return _bEnabled; }
         void                     setEnabled( bool bEnabled ) { _bEnabled = bEnabled; }
         MeshModifierGizmo&       getGizmo() { return _gizmo; }
@@ -447,6 +453,7 @@ namespace sw::editor
         string                         _name;
         string                         _spaceReference; ///< 월드 공간일 때 기준 오브젝트 이름(비면 월드 원점)
         MeshModifierGizmo              _gizmo;
+        uint64                         _instanceID; ///< `getInstanceID`. 만들 때 정한다
         bool                           _bEnabled;
         bool                           _bWorldSpace;
     };

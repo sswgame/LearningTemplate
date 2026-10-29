@@ -28,7 +28,6 @@
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/LatticeModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/WorldWarpModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierParamEdit.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
@@ -246,17 +245,8 @@ namespace sw::editor
 {
     MeshModifiersPanel::MeshModifiersPanel()
         : IEditorPanel( false )
+        , _model{}
         , _curveState{}
-        , _pCurveModifier{ nullptr }
-        , _curveParamIndex{ 0 }
-        , _curveItemIndex{ -1 }
-        , _descriptionID{}
-        , _description{}
-        , _pNestedRoot{ nullptr }
-        , _listNestedPath{}
-        , _nestedSelectedIndex{ -1 }
-        , _warpExportPath{}
-        , _bEditing{ false }
     {
     }
 
@@ -418,94 +408,60 @@ namespace sw::editor
     void MeshModifiersPanel::drawNestedStack( MeshModifierSession& session, DeformableModifier& root )
     {
         ImGui::SeparatorText( SW_LOCKEY( "EdMeshModifiers", "NestedStack" ) );
-        if ( _pNestedRoot != &root )
-        {
-            // 다른 묶음을 골랐다 - 하위 스택의 고른 자리를 처음으로 되돌린다(포인터는 비교만 한다)
-            _pNestedRoot = &root;
-            _listNestedPath.clear();
-            _nestedSelectedIndex = -1;
-        }
-        // 보여 줄 스택 = 경로가 가리키는 묶음의 하위 스택(빈 경로면 고른 묶음 자신의 하위 스택). 되돌리기로 경로가 무효가 되면 처음으로
-        MeshModifierStack* pShown = &root.getStack();
-        if ( _listNestedPath.empty() == false )
-        {
-            MeshModifier*       pOwner = DeformableModifier::findByPath( root.getStack(), _listNestedPath );
-            DeformableModifier* pGroup = pOwner != nullptr ? DeformableModifier::findFrom( *pOwner ) : nullptr;
-            if ( pGroup != nullptr )
-                pShown = &pGroup->getStack();
-            else
-            {
-                _listNestedPath.clear();
-                _nestedSelectedIndex = -1;
-            }
-        }
+        // 보여 줄 스택은 모델이 정한다(다른 묶음 · 무효 경로면 처음으로). 들어가기 · 나오기는 이 스택을 다 그린 뒤 적용한다.
+        MeshModifierStack& shown = _model.resolveNestedStack( root );
 
         ImGui::PushID( "##NestedStack" );
-        ImGui::PushID( static_cast<int32>( _listNestedPath.size() ) );
-        if ( _listNestedPath.empty() == false )
+        ImGui::PushID( static_cast<int32>( _model.getNestedDepth() ) );
+        if ( _model.canLeaveNested() )
         {
             const bool bUp = ImGui::SmallButton( SW_LOCKEY( "EdMeshModifiers", "NestedUp" ) );
             EditorSelfTestMarks::note( "meshmodifiers.nested.up" );
             if ( bUp )
-            {
-                _nestedSelectedIndex = _listNestedPath.back();
-                _listNestedPath.pop_back();
-            }
+                _model.requestLeaveNested();
             ImGui::SameLine();
         }
-        ImGui::TextDisabled( "%s %u", SW_LOCKEY( "EdMeshModifiers", "NestedDepth" ), static_cast<uint32>( _listNestedPath.size() + 1 ) );
-        const int32 added = drawAddMenu( session, *pShown, "meshmodifiers.nested" );
+        ImGui::TextDisabled( "%s %u", SW_LOCKEY( "EdMeshModifiers", "NestedDepth" ), _model.getNestedDepth() );
+        const int32 added = drawAddMenu( session, shown, "meshmodifiers.nested" );
         if ( added >= 0 )
-            _nestedSelectedIndex = added;
-        int32 enterIndex     = -1;
-        _nestedSelectedIndex = drawStackRows( session, *pShown, _nestedSelectedIndex, "meshmodifiers.nested.row", &enterIndex );
-        if ( pShown->getModifierCount() == 0 )
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "NestedEmpty" ) );
-        drawWarpExport( *pShown );
+            _model.setNestedSelectedIndex( added );
+        int32 enterIndex = -1;
+        _model.setNestedSelectedIndex( drawStackRows( session, shown, _model.getNestedSelectedIndex(), "meshmodifiers.nested.row", &enterIndex ) );
         if ( enterIndex >= 0 )
+            _model.requestEnterNested( enterIndex );
+        if ( shown.getModifierCount() == 0 )
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdMeshModifiers", "NestedEmpty" ) );
+        drawWarpExport( shown );
+        MeshModifier* pSelected = _model.hasNestedRequest() ? nullptr : shown.findModifier( _model.getNestedSelectedIndex() );
+        if ( pSelected != nullptr )
         {
-            _listNestedPath.push_back( enterIndex );
-            _nestedSelectedIndex = -1;
-        }
-        else
-        {
-            MeshModifier* pSelected = pShown->findModifier( _nestedSelectedIndex );
-            if ( pSelected != nullptr )
-            {
-                // 하위 모디파이어의 기즈모 · 매개변수 - 묶음의 기즈모 공간 기준이다. 편집은 바깥 스택 문서(extra.stack)째 되돌리기에 들어간다
-                ImGui::SeparatorText( pSelected->getName().c_str() );
-                ImGui::PushID( pSelected );
-                drawGizmo( session, *pSelected );
-                drawParams( session, *pSelected );
-                LatticeModifier* pLattice = LatticeModifier::findFrom( *pSelected );
-                if ( pLattice != nullptr )
-                    drawLatticePoints( session, *pLattice );
-                ImGui::PopID();
-            }
+            // 하위 모디파이어의 기즈모 · 매개변수 - 묶음의 기즈모 공간 기준이다. 편집은 바깥 스택 문서(extra.stack)째 되돌리기에 들어간다
+            ImGui::SeparatorText( pSelected->getName().c_str() );
+            ImGui::PushID( pSelected );
+            drawGizmo( session, *pSelected );
+            drawParams( session, *pSelected );
+            LatticeModifier* pLattice = LatticeModifier::findFrom( *pSelected );
+            if ( pLattice != nullptr )
+                drawLatticePoints( session, *pLattice );
+            ImGui::PopID();
         }
         ImGui::PopID();
         ImGui::PopID();
+        _model.applyNestedRequest();
     }
 
     void MeshModifiersPanel::drawWarpExport( const MeshModifierStack& shown )
     {
         // 보이는 하위 스택을 워프 정의 파일로 쓴다 — World Warp 모디파이어가 그 파일을 가리키면 여러 메시가 한 워프를 함께 받는다.
-        // 경로는 사용자가 정한다(확장자가 `.mfwarp` 가 아니면 단추를 끈다 — 에셋 슬롯 필터가 그 확장자만 고른다).
-        (void)MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "WarpExportPath" ), _warpExportPath, _warpExportPath );
+        string& warpExportPath = _model.editWarpExportPath();
+        (void)MeshModifiersPanelInternal::drawTextInput( SW_LOCKEY( "EdMeshModifiers", "WarpExportPath" ), warpExportPath, warpExportPath );
         EditorSelfTestMarks::note( "meshmodifiers.nested.warppath" );
-        const string_view extension     = WorldWarpModifier::kFileExtension;
-        const bool        bWarpFilePath = _warpExportPath.size() > extension.size() &&
-                                   string_view( _warpExportPath ).substr( _warpExportPath.size() - extension.size() ) == extension;
-        ImGui::BeginDisabled( bWarpFilePath == false || shown.getModifierCount() == 0 );
+        ImGui::BeginDisabled( _model.canExportWarp( shown ) == false );
         const bool bExport = ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ExportWarp" ) );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "meshmodifiers.nested.exportwarp" );
-        if ( bExport == false )
-            return;
-        if ( WorldWarpModifier::writeWarpFile( shown, _warpExportPath ) )
-            SW_LOG_INFO( "Exported %# modifiers as the world warp '%#'", shown.getModifierCount(), _warpExportPath.c_str() );
-        else
-            SW_LOG_ERROR( "Could not write the world warp '%#'", _warpExportPath.c_str() );
+        if ( bExport )
+            _model.exportWarp( shown );
     }
 
     int32 MeshModifiersPanel::drawAddMenu( MeshModifierSession& session, MeshModifierStack& stack, const utf8* pMarkPrefix )
@@ -806,9 +762,7 @@ namespace sw::editor
         {
             _curveState          = EditorCurveEditorState{};
             _curveState._working = curve;
-            _pCurveModifier      = &modifier;
-            _curveParamIndex     = paramIndex;
-            _curveItemIndex      = itemIndex;
+            _model.openCurvePopup( modifier, paramIndex, itemIndex );
             EditorInputGUI::openPopup( "##CurveEditor" );
         }
         MeshModifiersPanelInternal::drawItemTooltip( SW_LOCKEY( "EdMeshModifiers", "CurveEditHint" ) );
@@ -816,8 +770,7 @@ namespace sw::editor
         EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 17.0f ), false );
         if ( ImGui::BeginPopup( "##CurveEditor", ImGuiWindowFlags_NoScrollbar ) == false )
             return;
-        const bool bSameParam = _pCurveModifier == &modifier && _curveParamIndex == paramIndex;
-        if ( bSameParam && _curveItemIndex == itemIndex )
+        if ( _model.isCurvePopupFor( modifier, paramIndex, itemIndex ) )
         {
             ImGui::TextUnformatted( def._pName );
             // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(되돌리기 · 다른 곳의 편집이 편집기에 보인다)
@@ -888,7 +841,7 @@ namespace sw::editor
         }
         if ( MeshModifierParamEdit::applyListAction( action, value._listCurve, limit ) )
         {
-            _pCurveModifier = nullptr; // 항목 번호가 바뀌었으니 열린 곡선 팝업은 닫는다
+            _model.closeCurvePopup(); // 항목 번호가 바뀌었으니 열린 곡선 팝업은 닫는다
             session.recordUndo();
             modifier.setParamValue( paramIndex, value );
             modifier.onParamsChanged();
@@ -1095,15 +1048,9 @@ namespace sw::editor
     {
         if ( ImGui::IsItemHovered() == false )
             return;
-        if ( string_view( _descriptionID ) != string_view( registration._pID ) )
-        {
-            // 설명은 인스턴스의 가상 함수라 하나 만들어 묻는다 — 마우스가 새 항목에 올 때 한 번뿐이다
-            _descriptionID                           = string( registration._pID );
-            const unique_ptr<MeshModifier> pModifier = registration._pCreateFn();
-            _description                             = pModifier != nullptr ? string( pModifier->getDescription() ) : string();
-        }
-        if ( _description.empty() == false )
-            ImGui::SetTooltip( "%s", _description.c_str() );
+        const string& description = _model.findDescription( registration );
+        if ( description.empty() == false )
+            ImGui::SetTooltip( "%s", description.c_str() );
     }
 
     void MeshModifiersPanel::drawLatticePoints( MeshModifierSession& session, LatticeModifier& lattice )
@@ -1217,16 +1164,13 @@ namespace sw::editor
 
     void MeshModifiersPanel::noteEdit( MeshModifierSession& session )
     {
-        if ( _bEditing == false )
-            session.recordUndo();
-        _bEditing = ImGui::IsItemActive();
-        session.markDirty();
+        _model.noteEdit( session, ImGui::IsItemActive() );
     }
 
     void MeshModifiersPanel::finishItem()
     {
         if ( ImGui::IsItemDeactivated() )
-            _bEditing = false;
+            _model.finishEdit();
     }
 
     SW_EDITOR_PANEL( MeshModifiersPanel, MeshModifiersPanel::kPanelID, EditorPanelCategory::Custom, 9010 );

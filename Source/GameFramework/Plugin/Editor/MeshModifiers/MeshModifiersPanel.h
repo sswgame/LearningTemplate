@@ -5,6 +5,7 @@
  *          선언의 선택 칸이 모양을 정한다 — 구역(`_pGroup`) · 툴팁 · 단위, NumberList 열 선언(행 × 열 표), 참조의 컴포넌트 걸러 보기, 경로의 확장자.
  *          곡선은 엔진 공용 곡선 편집기(`EditorCurveEditor`)를 `MeshModifierParamEdit` 의 선형 키 어댑터로 쓴다.
  *          격자(Lattice) 모디파이어만 제어점 목록 입력칸을 더 그린다.
+ *          하위 스택 경로 · 곡선 팝업을 연 자리 · 설명 캐시 · 워프 내보내기 경로 · 편집 묶기는 `MeshModifiersPanelModel`(Model/, ImGui 없음)이 든다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -13,6 +14,8 @@
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
+
+#include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.h"
 
 namespace sw::editor
 {
@@ -67,7 +70,7 @@ namespace sw::editor
          */
         int32 drawStackRows( MeshModifierSession& session, MeshModifierStack& stack, int32 selectedIndex, const utf8* pMarkPrefix, int32* pOutEnterIndex );
         /**
-         * @brief 묶음 모디파이어의 하위 스택 편집 — 경로(`_listNestedPath`)로 들어간 단계의 목록 · 추가 · 고른 하위 모디파이어의 기즈모와 매개변수.
+         * @brief 묶음 모디파이어의 하위 스택 편집 — 경로(`MeshModifiersPanelModel::resolveNestedStack`)로 들어간 단계의 목록 · 추가 · 고른 하위 모디파이어의 기즈모와 매개변수.
          * @details 번호 경로 모델은 `DeformableModifier::findByPath` 다. 되돌리기는 바깥 스택 문서째(하위 스택은 `extra.stack`) 기록되므로 따로 두지 않는다.
          */
         void drawNestedStack( MeshModifierSession& session, DeformableModifier& root );
@@ -104,16 +107,7 @@ namespace sw::editor
         /** @brief 입력칸을 그린 뒤 부릅니다. 끌기가 끝났으면 다음 편집이 새 기록을 남기게 합니다. */
         void finishItem();
 
-        EditorCurveEditorState _curveState;          ///< 열린 곡선 편집기 팝업 하나의 상태
-        const MeshModifier*    _pCurveModifier;      ///< 곡선 팝업을 연 모디파이어(그 프레임 안에서 비교만 한다 — 역참조하지 않는다)
-        uint32                 _curveParamIndex;     ///< 곡선 팝업을 연 매개변수 번호
-        int32                  _curveItemIndex;      ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
-        string                 _descriptionID;       ///< 설명을 만들어 둔 등록 id
-        string                 _description;         ///< `_descriptionID` 모디파이어의 설명
-        const MeshModifier*    _pNestedRoot;         ///< 하위 스택 편집을 연 묶음(비교만 한다 — 역참조하지 않는다)
-        vector<int32>          _listNestedPath;      ///< 묶음의 하위 스택에서 들어간 묶음들의 번호 경로(비면 고른 묶음 자신의 하위 스택)
-        int32                  _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
-        string                 _warpExportPath;      ///< 보이는 하위 스택을 내보낼 워프 정의 파일 경로(`.mfwarp`, `WorldWarpModifier::writeWarpFile`)
-        bool                   _bEditing;
+        MeshModifiersPanelModel _model;
+        EditorCurveEditorState  _curveState; ///< 열린 곡선 편집기 팝업 하나의 화면 상태(보기 · 끌기 · 작업 사본). 연 자리는 `_model` 이 든다
     };
 } // namespace sw::editor
