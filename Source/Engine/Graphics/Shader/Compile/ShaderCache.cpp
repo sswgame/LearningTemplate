@@ -24,8 +24,9 @@ namespace sw
      * @details 기본(최적화 코드젠)은 쿠킹과 같은 바이트라, 그림이 셰이더를 어디서 얻었느냐(캐시 · 컴파일 · 쿠킹본)나 빌드 구성에 달리지 않는다 — 골든 비교가 그것에 기댄다.
      *          예전에는 Debug 구성이면 늘 디버그 코드젠이라 캐시가 빗나간 Debug 실행만 다른 그림을 냈다. 언리얼도 기본은 최적화이고 `r.Shaders.Optimize=0` 으로 켠다.
      *          엔진 기동 때 컴파일한 셰이더도 이 값을 따르므로 명령줄로 준다(실행 중에 바꾸면 이미 컴파일한 것은 그대로다).
+     *          디버깅 스위치라 배포 구성에는 등록하지 않는다(`SW_TEST_GLOBAL_VARIABLE`).
      */
-    SW_GLOBAL_VARIABLE( bool, gv_shaderDebugCodegen, false, "실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩) — 기본은 쿠킹과 같은 최적화 코드젠" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_shaderDebugCodegen, false, "실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩) — 기본은 쿠킹과 같은 최적화 코드젠" );
 
     namespace
     {
