@@ -1,5 +1,5 @@
 /**
- * @file FrameRendererNanCheck.cpp
+ * @file FramePassExecutorNanCheck.cpp
  * @brief 패스 출력의 NaN · Inf 감시(`-gv_nanCheck`)를 기록하는 쪽입니다 — 그래프가 끝난 뒤 주 시점의 부동소수 컬러 출력마다 컴퓨트를 한 번 돌립니다(`GPUNanCheck`).
  * @details 그래프의 패스는 병렬로 기록될 수 있어 패스 안에서 컴퓨트를 끼우면 한 버퍼를 여러 리스트가 만진다. 그래서 감시는 그래프가 끝난 뒤 한 스레드에서 자기 리스트에 기록한다.
  *          그만큼 본 값은 패스 직후가 아니라 그래프 끝 시점의 내용이다(같은 프레임에서 첨부를 다시 쓰는 패스가 있으면 마지막 쓴 패스의 출력).
@@ -12,14 +12,16 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FramePassExecutor" );
 
-    void FrameRenderer::scanPassOutputsForNan( IRHIDevice* pDevice )
+    void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
             return;

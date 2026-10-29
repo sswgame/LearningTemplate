@@ -1,7 +1,7 @@
 /**
  * @file OcclusionTileSnapshot.h
  * @brief 렌더러의 가림 타일(지난 프레임 장면 깊이의 타일 최대 깊이)을 CPU 로 되읽은 사본과, 게임 스레드가 그 사본으로 구를 가림 판정하는 함수입니다.
- * @details 카메라의 "보이는가"(`RenderViewCollector`)가 가려짐까지 보게 하는 길이다. GPU 컬링은 가림 타일(`FrameRendererOcclusion.cpp`)로 가려진 인스턴스를 거르는데,
+ * @details 카메라의 "보이는가"(`RenderViewCollector`)가 가려짐까지 보게 하는 길이다. GPU 컬링은 가림 타일(`FramePassExecutorOcclusion.cpp`)로 가려진 인스턴스를 거르는데,
  *          게임 스레드는 그 결과를 모른다. 렌더러가 타일을 몇 프레임 늦게 되읽어(`AsyncBufferReadback`) 여기 `OcclusionTileMailbox` 에 올리고,
  *          수집기가 모니터(보임 오브젝트)의 경계 구를 `OcclusionTileQuery::isSphereOccluded` 로 같은 식에 넣는다 — 언리얼 `WasRecentlyRendered` 의 역할이다.
  *          판정 식은 gpucull.hlsl 의 `isOccluded` 와 같다(바꾸면 두 곳을 함께 고친다).

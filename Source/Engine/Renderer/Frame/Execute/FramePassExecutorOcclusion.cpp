@@ -1,5 +1,5 @@
 /**
- * @file FrameRendererOcclusion.cpp
+ * @file FramePassExecutorOcclusion.cpp
  * @brief GPU 컬링의 가림 판정입니다 — 지난 프레임 장면 깊이(깊이 히스토리)를 타일마다 최대 깊이로 줄여(가림 타일) 컬링이 경계 구를 그 뒤에서 거릅니다.
  * @details 흐름: 프레임 처음 컴퓨트 프리패스에서 깊이 히스토리를 옮긴 직후 뷰마다 가림 타일을 짓고(`recordOcclusionTiles`, occlusiontiles.hlsl), 컬링(gpucull.hlsl)이
  *          절두체를 통과한 인스턴스의 경계 구를 감싼 상자를 그 깊이를 그린 프레임의 뷰-투영으로 옮겨, 덮는 타일의 최대 깊이보다 모두 멀면 그리지 않는다.
@@ -17,12 +17,13 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FramePassExecutor" );
 
     /**
      * @brief `-gv_occlusionCulling=1`: GPU 컬링이 지난 프레임 장면 깊이로 가려진 인스턴스를 거릅니다(가림 타일). 컬링이 없는 백엔드(DX11)는 보지 않습니다.
@@ -32,7 +33,7 @@ namespace sw
 
     namespace
     {
-        struct FrameRendererOcclusionInternal
+        struct FramePassExecutorOcclusionInternal
         {
             /// occlusiontiles.hlsl 의 루트 상수입니다 — `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
@@ -51,9 +52,9 @@ namespace sw
         };
     } // namespace
 
-    void FrameRenderer::recordOcclusionTiles( FrameViewTarget& target )
+    void FramePassExecutor::recordOcclusionTiles( FrameViewTarget& target )
     {
-        using Internal                       = FrameRendererOcclusionInternal;
+        using Internal                       = FramePassExecutorOcclusionInternal;
         target._bOcclusionTilesThisFrame     = SW_FALSE;
         const RHIPipelineStateHandle pso     = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
         const bool                   bBuilds = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && canCopyDepthHistory( target );
@@ -83,7 +84,7 @@ namespace sw
         target._bOcclusionTilesThisFrame = SW_TRUE;
     }
 
-    void FrameRenderer::requestOcclusionReadback( const FrameViewTarget& view )
+    void FramePassExecutor::requestOcclusionReadback( const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
         const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && _pDevice != nullptr && _pCmd != nullptr;
@@ -153,7 +154,7 @@ namespace sw
             _occlusionReadbackSerial = next;
     }
 
-    void FrameRenderer::fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const
+    void FramePassExecutor::fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const
     {
         const bool bOccludes             = view._bOcclusionTilesThisFrame == SW_TRUE && view._bHistoryReset == SW_FALSE;
         inoutParams._arrOcclusionGrid[3] = bOccludes ? 1u : 0u;

@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -46,11 +47,8 @@ namespace sw
                 SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
         }
 
-        // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
-        if ( _gpuAssert.initialize( _pDevice ) == false )
-            SW_FATAL( "gv_gpuAssert is on but the GPU assert ring could not be created - see the log above" );
-        if ( _nanCheck.initialize( _pDevice ) == false )
-            SW_FATAL( "gv_nanCheck is on but the NaN check counters could not be created - see the log above" );
+        // 패스 실행의 상주 자원(assert 링 · NaN 감시 · 컬링 자리표)을 PSO 보다 먼저 만든다 — assert 변형 PSO 는 assert 링 없이는 돌릴 수 없다.
+        _passExecutor.ensureResources();
 
         // 엔진 패스 PSO · 출력 포맷 변형 · 머티리얼 폴백 버퍼(셋업에서만 만든다 — 패스는 병렬로 기록된다).
         _psoManager.createPassPSOS();
@@ -60,14 +58,6 @@ namespace sw
         const RHICapabilities caps = _pDevice->getCapabilities();
         if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "This backend does not support indirect draws - scene meshes cannot be drawn." );
-        // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
-        constexpr uint32 kZeroRank = 0;
-        if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
-            SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
-        // 컬링 디스패치의 t2 자리표 — 가림을 보지 않는 슬롯도 빈 슬롯으로 디스패치하지 않는다(위와 같은 이유). 깊이 1 은 아무것도 가리지 않는다.
-        constexpr float32 kFarDepth = 1.0f;
-        if ( _occlusionTilesPlaceholder.ensureCapacity( _pDevice, sizeof( float32 ), 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, &kFarDepth ) == false )
-            SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
 
         _bPassResourcesReady = SW_TRUE;
         SW_LOG_INFO( "Pass PSOS/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
@@ -136,13 +126,7 @@ namespace sw
             cascadeInput._cullCb.release( _pDevice );
         }
         _state._cascadeCullCount = 0;
-        _transparentRankPlaceholder.release( _pDevice );
-        _occlusionTilesPlaceholder.release( _pDevice );
-        _occlusionReadback.shutdown();
-        _occlusionMailbox.clear();
-        _gpuAssert.shutdown();
-        _nanCheckCommandList.reset();
-        _nanCheck.shutdown();
+        _passExecutor.releaseResources();
         _state._deform._meshMorphPool.release( _pDevice );
         _state._deform._vertexAnimationPool.release( _pDevice );
         _state._lightBuffer.release( _pDevice );
@@ -158,20 +142,11 @@ namespace sw
         _state._passCbRing.getSeedSlot( _state._frameContext._passCb, _state._frameContext._passCbIndex );
     }
 
-    bool FrameRenderer::acquirePassCb( FramePassContext& context )
-    {
-        // 슬롯 하나를 잡는다. 패스 진입 때 한 번 부르고, 한 패스 안에서 상수가 바뀌는 반복(그림자 타일)은 반복마다 다시 부른다.
-        // 못 잡으면(링 고갈) false — 부르는 쪽은 그 패스 · 타일을 그리지 않는다. 앞 슬롯으로 그리면 상수가 섞인다(링이 이유를 남겼다).
-        return _state._passCbRing.acquire( context._passCb, context._passCbIndex );
-        // 값은 드로우 직전 ShaderParameterBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
-        // (context._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
-    }
-
     void FrameRenderer::ensurePassCbCapacityForFrame()
     {
         const uint32 batchCount = static_cast<uint32>( _state._gpuScene.getOpaqueBatches().size() + _state._gpuScene.getTransparentBatches().size() );
         // 그림자 패스는 타일(캐스케이드 · 점광 · 스폿 면)마다 씬을 한 번씩 그린다 — 어림값의 그림자 한 번을 타일 수로 바꾼다.
-        const uint32 shadowTileCount = MathUtil::max( computeShadowTileCountPerView(), 1u );
+        const uint32 shadowTileCount = MathUtil::max( _passExecutor.computeShadowTileCountPerView(), 1u );
         // 모듈 프록시의 요소는 요소마다 슬롯을 하나씩 쓴다(`drawExtensionElements`) — 그리는 패스 · 뷰 수를 모르므로 넉넉히 네 배로 어림한다(모자라면 링이 알리고 다음 프레임이 키운다).
         const uint32 moduleElementCount = static_cast<uint32>( _extensionHost.getDrawElements().size() ) * 4u;
         const uint32 estimate           = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount + moduleElementCount;
@@ -186,5 +161,31 @@ namespace sw
     bool FrameRenderer::findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const
     {
         return _psoManager.findDesc( pso, outDesc );
+    }
+
+    void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
+    {
+        if ( result._bSuccess == false || _pDevice == nullptr )
+            return;
+
+        _psoManager.onShaderRecompiled( shaderPath );
+
+        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
+        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
+        //
+        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
+        // (그래야 새 바이트코드를 집는다) Engine 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
+        // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
+        releasePassResources();
+        ensurePassResources();
+        ensureTransientResources();
+        _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
+
+        // 미리보기 씬 렌더러는 주 렌더러의 PSO 캐시를 함께 쓴다. 주 렌더러가 캐시를 다시 채운 **뒤에** 자기 몫(레이아웃을 가리키는 폴백 버퍼 표,
+        // 바인딩 캐시, 패스 콜백)을 다시 만들어야 새 PSO 를 집는다.
+        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
+        {
+            preview._renderer->onShaderRecompiled( shaderPath, result );
+        }
     }
 } // namespace sw

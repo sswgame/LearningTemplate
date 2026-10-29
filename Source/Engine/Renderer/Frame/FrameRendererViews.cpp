@@ -266,39 +266,6 @@ namespace sw
         view._bUsesViewSlotStream = SW_FALSE;
     }
 
-    void FrameRenderer::renderExtraView( IRHIDevice* pDevice, FrameViewTarget& view )
-    {
-        if ( view._commandList == nullptr )
-            view._commandList = pDevice->createCommandList();
-        IRHICommandList* pCmd = view._commandList.get();
-        if ( pCmd == nullptr )
-            return;
-
-        // 주 시점의 시드에서 출발해 이 뷰의 것(뷰-투영 · 풀 크기 · 플래그 · 컬링 칸 · 방향광 그림자)만 덮어쓴다. 라이트 목록과 점광 · 스폿 그림자는 프레임 공통이다.
-        _pActiveView         = &view;
-        _state._frameContext = _state._mainSeedScratch;
-        applyViewProjection( _state._frameContext, view._cullInput._viewProj );
-        applyViewPassConstants( _state._frameContext );
-        applyViewShadowConstants( _state._frameContext, view._shadow );
-        _state._frameContext._cullViewIndex = view._cullSlot;
-        _state._frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
-        resetClearedAttachments();
-        _bHasExecutedDepthPrepass.store( 0 );
-
-        pCmd->beginCommandList();
-        if ( _state._graph.execute( _graphContext, pCmd ) == false )
-            SW_LOG_ERROR_ONCE( "Render graph could not run for an extra view (cycle or compile failure)" );
-        // 렌더 텍스처는 이어서 주 시점의 머티리얼이, 호스트 타깃은 에디터 UI 가 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
-        if ( view._outputKind == RenderViewOutputKind::RenderTexture && view._pOutputTexture != nullptr )
-            pCmd->prepareTextureForShaderRead( view._pOutputTexture->getHandle() );
-        else if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget != 0 )
-            pCmd->prepareTextureForShaderRead( view._hostTarget );
-        pCmd->endCommandList();
-        pDevice->executeCommandList( pCmd );
-
-        _pActiveView = &_state._mainView;
-    }
-
     uint32 FrameRenderer::collectFrameViewModeMask() const
     {
         // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 보기 모드는 뷰마다의 설정이라 이번 프레임에 그리는 뷰들의 모드를 모은다.
@@ -316,18 +283,6 @@ namespace sw
                 viewModeMask |= viewModeBits( pView->_settings._viewMode );
         }
         return viewModeMask;
-    }
-
-    bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
-    {
-        // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
-        if ( batch._bDeformRefused != SW_FALSE )
-            return false;
-        if ( FrameRendererUtil::filtersBatchesByMaterial( passType ) == false )
-            return true;
-        const GPUShaderPermutation* pPermutation =
-            ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
-        return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
     bool FrameRenderer::supportsViewMode( RenderViewMode viewMode ) const

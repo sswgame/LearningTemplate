@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/string.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 
@@ -13,12 +14,12 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FramePassExecutor" );
 
     namespace
     {
@@ -80,15 +81,15 @@ namespace sw
 
     bool ExtensionPassContext::drawFullscreen( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawModuleFullscreen( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const ExtensionFramePass*>( _pPass ), constants );
+        return _pExecutor->drawModuleFullscreen( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const ExtensionFramePass*>( _pPass ), constants );
     }
 
     bool ExtensionPassContext::drawProxyElements( vector_reference<const ExtensionConstant> constants )
     {
-        return _pRenderer->drawExtensionElements( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const ExtensionFramePass*>( _pPass ), constants );
+        return _pExecutor->drawExtensionElements( *static_cast<FramePassContext*>( _pPassContext ), *static_cast<const ExtensionFramePass*>( _pPass ), constants );
     }
 
-    void FrameRenderer::executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass )
+    void FramePassExecutor::executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass )
     {
         if ( context._pCmd == nullptr )
             return;
@@ -106,7 +107,7 @@ namespace sw
         context._pCmd->endEventMarker();
     }
 
-    bool FrameRenderer::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
+    bool FramePassExecutor::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {
@@ -135,7 +136,7 @@ namespace sw
         return true;
     }
 
-    bool FrameRenderer::drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
+    bool FramePassExecutor::drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )
     {
         if ( pass._pso == 0 || context._pCmd == nullptr )
         {

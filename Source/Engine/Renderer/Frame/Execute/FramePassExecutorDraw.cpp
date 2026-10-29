@@ -21,40 +21,15 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 
 namespace sw
 {
-    void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
-    {
-        if ( result._bSuccess == false || _pDevice == nullptr )
-            return;
-
-        _psoManager.onShaderRecompiled( shaderPath );
-
-        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
-        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
-        //
-        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
-        // (그래야 새 바이트코드를 집는다) Engine 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
-        // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
-        releasePassResources();
-        ensurePassResources();
-        ensureTransientResources();
-        bindPassCallbacks();
-
-        // 미리보기 씬 렌더러는 주 렌더러의 PSO 캐시를 함께 쓴다. 주 렌더러가 캐시를 다시 채운 **뒤에** 자기 몫(레이아웃을 가리키는 폴백 버퍼 표,
-        // 바인딩 캐시, 패스 콜백)을 다시 만들어야 새 PSO 를 집는다.
-        for ( ScenePreviewRenderer& preview : _listScenePreviewRenderer )
-        {
-            preview._renderer->onShaderRecompiled( shaderPath, result );
-        }
-    }
-
-    void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
+    void FramePassExecutor::registerInstanceBuffer( FramePassContext& context )
     {
         if ( _state._gpuScene.getInstanceBuffer() == 0 || _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex )
             return;
@@ -109,7 +84,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::registerLightBuffer( FramePassContext& context )
+    void FramePassExecutor::registerLightBuffer( FramePassContext& context )
     {
         // 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 빛이 있는 프레임에만 역할 텍스처로 건다(셰이더는 g_Light2DCookieAtlasIndex 로 걸렸는지 본다).
         const Texture2D* pCookieAtlas = _state._cookieAtlas.hasCookies() ? _state._cookieAtlas.findAtlas() : nullptr;
@@ -135,7 +110,7 @@ namespace sw
             context._resourceRegistry.registerBuffer( passConstantNames()._swLightProbes, pProbeBuffer->_buffer, pProbeBuffer->_srv );
     }
 
-    void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
+    void FramePassExecutor::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t5).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
@@ -168,8 +143,8 @@ namespace sw
         context._drawMaterialCount = batch._materialCount;
     }
 
-    void FrameRenderer::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
-                                     const RHIDescriptorIndex* pMaterialTexSRV )
+    void FramePassExecutor::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+                                         const RHIDescriptorIndex* pMaterialTexSRV )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -219,7 +194,7 @@ namespace sw
         context._lastCbRegistryVersion = registryVersion;
     }
 
-    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
+    void FramePassExecutor::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -242,7 +217,7 @@ namespace sw
         commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso )
+    void FramePassExecutor::drawTransparentQueue( FramePassContext& context, RHIPipelineStateHandle pso )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -257,14 +232,14 @@ namespace sw
         (void)drawParticleSlots( context, vector_reference<const GPUTransparentParticleSlot>( listParticleSlot ) );
     }
 
-    const vector<GPUTransparentParticleSlot>& FrameRenderer::findActiveParticleSlots() const
+    const vector<GPUTransparentParticleSlot>& FramePassExecutor::findActiveParticleSlots() const
     {
         if ( isRenderingExtraView() && _pActiveView->_bHasParticleOrder == SW_TRUE )
             return _pActiveView->_listParticleSlot;
         return _state._gpuScene.getParticleSlots();
     }
 
-    uint32 FrameRenderer::countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const
+    uint32 FramePassExecutor::countDrawGroup( const BatchDrawState& state, RenderViewMode drawMode, uint32 orderIndex, bool bDrawsParticles ) const
     {
         const uint32 batchCount = static_cast<uint32>( state._batches.size() );
         const uint32 batchIndex = ( state._pOrder != nullptr ) ? ( *state._pOrder )[orderIndex] : orderIndex;
@@ -286,7 +261,7 @@ namespace sw
         return groupCount;
     }
 
-    void FrameRenderer::drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles )
+    void FramePassExecutor::drawBatchRound( FramePassContext& context, BatchDrawState& inoutState, RenderViewMode drawMode, bool bDrawsParticles )
     {
         const uint32 batchCount = static_cast<uint32>( inoutState._batches.size() );
         uint32       orderIndex{ 0 };
@@ -315,8 +290,8 @@ namespace sw
         }
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass,
-                                        const vector<GPUTransparentParticleSlot>* pParticleSlot )
+    void FramePassExecutor::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass,
+                                            const vector<GPUTransparentParticleSlot>* pParticleSlot )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
@@ -386,7 +361,7 @@ namespace sw
         _indirectDrawCallCount.fetch_add( state._drawCallCount, std::memory_order_relaxed );
     }
 
-    bool FrameRenderer::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
+    bool FramePassExecutor::layoutBindsMaterialCb( RHIPipelineStateHandle batchPSO ) const
     {
         // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
         const ShaderBindingLayout* pLayout = _psoManager.findLayout( batchPSO );
@@ -401,8 +376,8 @@ namespace sw
         return false;
     }
 
-    bool FrameRenderer::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                         const GPUMeshBatch& other ) const
+    bool FramePassExecutor::isSameDrawGroup( RHIPipelineStateHandle pso, RenderPassType passType, RenderViewMode drawMode, const GPUMeshBatch& head,
+                                             const GPUMeshBatch& other ) const
     {
         const bool bOtherBatchNotDrawable = other._vertexBuffer == 0 || other.hasDrawSlots() == false || drawsBatchInPass( passType, other ) == false;
         if ( bOtherBatchNotDrawable )
@@ -414,9 +389,9 @@ namespace sw
         return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( _psoManager.psoForBatch( pso, head, drawMode ) ) );
     }
 
-    bool FrameRenderer::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head,
-                                        RHIPipelineStateHandle& ioBoundPSO,
-                                        RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
+    bool FramePassExecutor::drawBatchGroup( FramePassContext& context, RHIPipelineStateHandle pso, RenderViewMode drawMode, const GPUMeshBatch& head,
+                                            RHIPipelineStateHandle& ioBoundPSO,
+                                            RHIBufferHandle& ioBoundVertexBuffer, RHIBufferHandle argsBuffer, uint32 argIndex, uint32 groupCount )
     {
         // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
         if ( head._vertexBuffer != ioBoundVertexBuffer )
@@ -450,8 +425,8 @@ namespace sw
         return true;
     }
 
-    bool FrameRenderer::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
-                                         RHIBufferHandle slotStream )
+    bool FramePassExecutor::drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position,
+                                             RHIBufferHandle slotStream )
     {
         uint32 slotEnd = inOutCursor;
         while ( slotEnd < listSlot.size() && listSlot[slotEnd]._drawPosition <= position )
@@ -471,7 +446,7 @@ namespace sw
         return true;
     }
 
-    bool FrameRenderer::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
+    bool FramePassExecutor::drawParticleSlots( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot )
     {
         const vector<GPUParticleBatch>& listBatch   = _state._gpuScene.getParticleBatches();
         const RHIPipelineStateHandle    pso         = _psoManager.findParticlePSO();
@@ -489,7 +464,7 @@ namespace sw
         return true;
     }
 
-    void FrameRenderer::drawLight2DCookieAtlas()
+    void FramePassExecutor::drawLight2DCookieAtlas()
     {
         const vector<Light2DCookieAtlas::CellDraw>& listDraw       = _state._cookieAtlas.getPendingDraws();
         const Texture2D*                            pAtlas         = _state._cookieAtlas.findAtlas();
@@ -552,7 +527,7 @@ namespace sw
         _state._cookieAtlas.clearPendingDraws();
     }
 
-    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
+    void FramePassExecutor::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )
     {
         // PSO 가 없으면 그리지 않는다 — 앞서 묶인 파이프라인이나 백엔드 기본 파이프라인으로 대신 그리지 않는다(없는 이유는 셋업이 알렸다).
         if ( context._pCmd == nullptr || pso == 0 )

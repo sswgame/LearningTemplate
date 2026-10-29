@@ -104,16 +104,6 @@ namespace sw
         return FrameViewResources::getShadowMapResolution();
     }
 
-    bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
-    {
-        return activePool().markCleared( key );
-    }
-
-    void FrameRenderer::resetClearedAttachments()
-    {
-        activePool().resetCleared();
-    }
-
     bool FrameRenderer::tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const
     {
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
@@ -125,25 +115,6 @@ namespace sw
             }
         }
         return false;
-    }
-
-    float4 FrameRenderer::getTargetClearColor( string_view attachmentName ) const
-    {
-        // 첨부의 클리어 색은 파이프라인 XML 의 선언 하나가 원본이다(풀이 할당할 때 선언 값을 든다). 패스마다 코드가 따로 적던
-        // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
-        // 백버퍼의 클리어 색은 렌더러의 클리어 색(SceneColor 선언에서 온다) 하나다.
-        const TransientAttachmentPool::Attachment attachment = activePool().find( attachmentName );
-        return attachment._texture != 0 ? attachment._clearColor : _state._clearColor;
-    }
-
-    TransientAttachmentPool::Attachment FrameRenderer::findTransientAttachment( string_view name ) const
-    {
-        return activePool().find( name );
-    }
-
-    RHITextureHandle FrameRenderer::findTransient( string_view name ) const
-    {
-        return activePool().findTexture( name );
     }
 
     void FrameRenderer::publishRenderTargets() const
@@ -194,19 +165,4 @@ namespace sw
         return string_view{};
     }
 
-    string_view FrameRenderer::resolvePresentSource() const
-    {
-        // Present 의 SourceColor 입력이 원본이다(계약의 필수 입력 — 로드가 선언을 요구한다). 이름 후보로 "가장 나중 컬러" 를 짐작하지 않는다.
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            if ( pass._resolvedType != RenderPassType::Present )
-                continue;
-            for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
-            {
-                if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment.view() ) != 0 )
-                    return input._attachment.view();
-            }
-        }
-        return string_view{};
-    }
 } // namespace sw

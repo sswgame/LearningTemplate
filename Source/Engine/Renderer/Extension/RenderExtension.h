@@ -33,7 +33,7 @@
 
 namespace sw
 {
-    class FrameRenderer;
+    class FramePassExecutor;
 
     /** @brief 패스가 끼는 자리입니다. 파이프라인 XML 패스 목록에서 정해진 첫 자리 앞에 들어갑니다. */
     enum class ExtensionHookStage : uint8
@@ -236,19 +236,19 @@ namespace sw
         [[nodiscard]] bool drawProxyElements( vector_reference<const ExtensionConstant> constants );
 
     private:
-        friend class FrameRenderer;
+        friend class FramePassExecutor;
         /// @brief 엔진 내부 상태입니다(`FramePassContext` · `ExtensionFramePass`). 형식을 헤더에 드러내지 않으려 불투명 포인터로 둔다.
-        ExtensionPassContext( FrameRenderer& renderer, void* pPassContext, const void* pPass, const ExtensionViewInfo& view )
-            : _pRenderer{ &renderer }
+        ExtensionPassContext( FramePassExecutor& executor, void* pPassContext, const void* pPass, const ExtensionViewInfo& view )
+            : _pExecutor{ &executor }
             , _pPassContext{ pPassContext }
             , _pPass{ pPass }
             , _view{ view }
         {
         }
 
-        FrameRenderer*    _pRenderer;
-        void*             _pPassContext;
-        const void*       _pPass;
-        ExtensionViewInfo _view;
+        FramePassExecutor* _pExecutor;
+        void*              _pPassContext;
+        const void*        _pPass;
+        ExtensionViewInfo  _view;
     };
 } // namespace sw

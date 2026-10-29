@@ -2,6 +2,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/array.h"
+#include "Core/Container/string.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 
@@ -15,13 +16,17 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/Capture/FrameCapture.h"
+#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FrameRenderer" );
+    SW_LOG_CALLER( "FramePassExecutor" );
 
     /**
      * @brief `-gv_dumpRenderGraph=1` 이면 파이프라인을 연결할 때마다(시작, 파이프라인 교체) 컴파일된 레벨 순서를 로그로 남깁니다.
@@ -29,7 +34,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
 
-    void FrameRenderer::bindPassCallbacks()
+    bool FramePassExecutor::bindPassCallbacks()
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         _state._graph.clear();
@@ -82,7 +87,7 @@ namespace sw
                 }
                 _mapExtensionPassIndex[modulePass._graphName] = moduleIndex;
                 _state._graph.addPass( modulePass._graphName, std::move( listExtensionInput ), std::move( listExtensionOutput ),
-                                       SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this ) );
+                                       SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this ) );
             }
         };
         auto addModulePassesAt = [&]( size_t index )
@@ -123,7 +128,7 @@ namespace sw
                 listOutput.push_back( pass._resolvedDepthAttachment );
 
             RenderGraphPassExecuteFn execute =
-                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this );
+                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onGraphPassExecute, this );
 
             _state._graph.addPass( nameHash, std::move( listInput ), std::move( listOutput ), std::move( execute ) );
         }
@@ -131,21 +136,19 @@ namespace sw
         addModulePassesAt( listPass.size() ); // 자리를 못 찾은 단계(출력 패스가 없는 파이프라인)는 끝에 붙는다
         _extensionHost.markBound();
 
-        _state._graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FrameRenderer::onGraphLevelPrologue, this ) );
+        _state._graph.setLevelPrologue( SW_DELEGATE_METHOD( RenderGraphLevelPrologueFn, &FramePassExecutor::onGraphLevelPrologue, this ) );
 
         if ( _state._graph.compile() == false )
         {
             SW_LOG_ERROR( "Callback bind compile failed" );
+            return false;
         }
-        else
-        {
-            _bCallbacksBound = SW_TRUE;
-            if ( gv_dumpRenderGraph )
-                SW_LOG_INFO( "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
-        }
+        if ( gv_dumpRenderGraph )
+            SW_LOG_INFO( "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
+        return true;
     }
 
-    void FrameRenderer::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
+    void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
     {
         if ( _pDevice == nullptr || levelContext._pCmdList == nullptr )
             return;
@@ -180,7 +183,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::onGraphPassExecute( const RenderGraphPassContext& graphContext )
+    void FramePassExecutor::onGraphPassExecute( const RenderGraphPassContext& graphContext )
     {
         if ( _pDevice == nullptr )
             return;
@@ -255,7 +258,7 @@ namespace sw
 #endif
     }
 
-    void FrameRenderer::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )
+    void FramePassExecutor::setInputRoleEnabled( RenderPassInputRole role, bool bEnabled )
     {
         const uint32 bit = 1u << static_cast<uint32>( role );
         if ( bEnabled )
@@ -264,7 +267,7 @@ namespace sw
             _disabledInputRoleMask |= bit;
     }
 
-    const hashed_string& FrameRenderer::inputRoleName( RenderPassInputRole role ) const
+    const hashed_string& FramePassExecutor::inputRoleName( RenderPassInputRole role ) const
     {
         const AttachmentNames& names = attachmentNames();
         switch ( role )
@@ -295,7 +298,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc )
+    void FramePassExecutor::registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc )
     {
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )
         {
@@ -311,7 +314,7 @@ namespace sw
 
     namespace
     {
-        struct FrameRendererPassExecuteInternal
+        struct FramePassExecutorPassesInternal
         {
             /**
              * @brief 선언한 컬러 출력에서 역할로 고르고, 그 역할을 받은 출력이 없으면 선언 순서(@p orderIndex)로 고릅니다.
@@ -345,7 +348,7 @@ namespace sw
 
     // 일반 풀스크린 패스는 테이블의 플래그로 고르고, 전용 실행 코드가 있는 패스만 아래 switch 의 case 를 가진다(짧은 디스패처라 나누지 않는다).
     // 열거자를 추가하고 case 를 빠뜨리면 -Wswitch-enum 이 이 함수를 알려 준다.
-    void FrameRenderer::executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc )
+    void FramePassExecutor::executePass( FramePassContext& context, const RenderGraphPassDesc& passDesc )
     {
         SW_PROFILE_SCOPE( "RT.Pass.execute" );
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와 PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
@@ -521,14 +524,14 @@ namespace sw
         context._pCmd->endEventMarker();
     }
 
-    RHIRenderPassLoadOp FrameRenderer::colorLoadFor( const hashed_string& name )
+    RHIRenderPassLoadOp FramePassExecutor::colorLoadFor( const hashed_string& name )
     {
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
         return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
     }
 
-    void FrameRenderer::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
+    void FramePassExecutor::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
     {
         if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName ), RHIRenderPassLoadOp::Load ) == false )
             return;
@@ -536,7 +539,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeGenericFullscreenPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeGenericFullscreenPass( const PassExecuteInput& input )
     {
         // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
         // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 첫 컬러 출력이다. 계약(RenderPassInputSignature)이
@@ -559,13 +562,13 @@ namespace sw
         executeFullscreenInto( context, pso, *pTarget, targetClear );
     }
 
-    void FrameRenderer::executeForwardOpaquePass( const PassExecuteInput& input )
+    void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )
     {
         // ForwardOnlyOpaque 는 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY — 툰)만 조명 패스가 쓴 색과 장면 깊이 위에 그린다(거르기는 drawsBatchInPass).
         // 첨부는 앞 패스가 이미 썼으므로 colorLoadFor 가 Load 를 고른다.
         // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언하지 않은 파이프라인(2D)은 그림자를 바인딩하지 않는다
         // — 옛 코드는 이름 ShadowMap 으로 찾았고, 그 첨부가 없는 파이프라인에서는 어차피 빈 바인딩이었다.
-        using Internal                                              = FrameRendererPassExecuteInternal;
+        using Internal                                              = FramePassExecutorPassesInternal;
         FramePassContext&                              context      = input._context;
         const hashed_string&                           passDepth    = input._passDepth;
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
@@ -582,11 +585,11 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeGBufferPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeGBufferPass( const PassExecuteInput& input )
     {
         // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
         // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
-        using Internal                       = FrameRendererPassExecuteInternal;
+        using Internal                       = FramePassExecutorPassesInternal;
         FramePassContext&    context         = input._context;
         const hashed_string& passDepth       = input._passDepth;
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
@@ -607,7 +610,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeTransparentPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeTransparentPass( const PassExecuteInput& input )
     {
         // 타깃은 선언한 컬러 출력이다. 원본 색 입력(SourceColor 역할)을 다른 첨부로 선언했으면 그 위에 섞도록 먼저 복사한다
         // — 옛 코드는 타깃 이름이 TransparentColor 일 때 LitColor · SceneColor 이름으로 원본을 짐작했다.
@@ -629,7 +632,7 @@ namespace sw
         }
 
         // 장면 색 사본(SceneColorCopy 패스가 반투명 앞에 떠 둔 것)을 선언했으면 역할로 건다 — 물의 굴절이 읽는다. 선언하지 않은 파이프라인은 걸지 않고 셰이더는 kInvalidIndex 로 안다.
-        using Internal                   = FrameRendererPassExecuteInternal;
+        using Internal                   = FramePassExecutorPassesInternal;
         const auto* pSceneColorCopyInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SceneColorCopy );
         if ( pSceneColorCopyInput != nullptr )
             registerPassTexture( context, attachmentNames()._sceneColorCopy, pSceneColorCopyInput->_attachment.view() );
@@ -646,11 +649,11 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeSceneColorCopyPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeSceneColorCopyPass( const PassExecuteInput& input )
     {
         // 원본 색(SourceColor 역할 입력)을 선언한 컬러 출력으로 그대로 복사한다 — 셰이더도 PSO 도 없다. 반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다(물의 굴절).
         // 둘은 같은 크기 · 형식이어야 한다(파이프라인이 같은 형식으로 선언한다). 계약(`RenderPassTypeInfo`)이 SourceColor 를 필수로 검사했다.
-        using Internal                                              = FrameRendererPassExecuteInternal;
+        using Internal                                              = FramePassExecutorPassesInternal;
         const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
         SW_ASSERT( pSourceInput != nullptr );
         if ( pSourceInput == nullptr )
@@ -664,7 +667,7 @@ namespace sw
         (void)markAttachmentCleared( copyTarget );
     }
 
-    void FrameRenderer::executeMeshOutlinePass( const PassExecuteInput& input )
+    void FramePassExecutor::executeMeshOutlinePass( const PassExecuteInput& input )
     {
         // 인버티드 헐(inverted hull) 외곽선이다. 불투명 패스가 그린 색과 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
         // 와이어프레임과 표면 값 보기(Normals, Depth, Overdraw)에서는 빠진다(껍질이 선과 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
@@ -681,7 +684,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeHighlightPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeHighlightPass( const PassExecuteInput& input )
     {
         // 인스턴스 강조 외곽선이다(highlightoutline.hlsl). 불투명 배치를 모두 그리되 이 패스의 강조 방식인 인스턴스만 정점이 남는다 —
         // 배치를 CPU 에서 거르지 않으므로 강조를 켜고 꺼도 배치가 다시 나뉘지 않는다. 와이어프레임과 표면 값 보기에서는 빠진다(메시 외곽선과 같다).
@@ -703,7 +706,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeSkyPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeSkyPass( const PassExecuteInput& input )
     {
         // 하늘이다. 깊이 1 의 풀스크린 삼각형을 깊이 테스트(LessEqual, 쓰기 없음)로 그려 아무것도 그리지 않은 곳만 칠한다(sky.hlsl).
         // 씬에 하늘이 없으면 그리지 않는다 — 배경은 컬러 첨부의 클리어 색이다. 와이어프레임과 표면 값 보기에서도 빠진다(값 위를 덮는다).
@@ -724,7 +727,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeFogPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeFogPass( const PassExecuteInput& input )
     {
         // 안개다. 장면 깊이로 광학 두께를 구해 선언한 컬러 출력(앞 패스가 칠한 색) 위에 프리멀티플라이 블렌드한다(fog.hlsl).
         // 씬에 안개가 없거나 표면 값 보기(Normals, Depth, Overdraw)와 와이어프레임에서는 그리지 않는다 — 값 위를 덮는다. 후처리를 끈 뷰(CCTV)도 안개는 그린다(장면의 일이다).
@@ -761,7 +764,7 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
-    void FrameRenderer::executeTAAPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeTAAPass( const PassExecuteInput& input )
     {
         // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. ensureTAAHistory).
         FramePassContext&      context   = input._context;
@@ -802,7 +805,7 @@ namespace sw
             context._pCmd->blitTexture( taaOut, activeView._taaHistory );
     }
 
-    void FrameRenderer::executePresentPass( const PassExecuteInput& input )
+    void FramePassExecutor::executePresentPass( const PassExecuteInput& input )
     {
         FramePassContext&          context  = input._context;
         const RenderGraphPassDesc& passDesc = input._passDesc;
@@ -897,7 +900,7 @@ namespace sw
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
     }
 
-    void FrameRenderer::executeCanvasPass( const PassExecuteInput& input )
+    void FramePassExecutor::executeCanvasPass( const PassExecuteInput& input )
     {
         // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
         // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
@@ -927,8 +930,8 @@ namespace sw
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
     }
 
-    bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
-                                        RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
+    bool FramePassExecutor::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
+                                            RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
     {
         const string_view         arrName[]  = { colorName };
         const float4              arrClear[] = { clearColor };
@@ -936,8 +939,8 @@ namespace sw
         return beginColorPassMrt( context, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
     }
 
-    bool FrameRenderer::beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
-                                           uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
+    bool FramePassExecutor::beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
+                                               uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
     {
         const bool bInvalidPassTargets = _pDevice == nullptr || context._pCmd == nullptr || pColorNames == nullptr || colorCount == 0;
         if ( bInvalidPassTargets )
@@ -978,7 +981,7 @@ namespace sw
         return true;
     }
 
-    void FrameRenderer::beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad )
+    void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad )
     {
         if ( context._pCmd == nullptr )
             return;
@@ -994,12 +997,12 @@ namespace sw
         context._pCmd->beginRenderPass( beginInfo );
     }
 
-    uint32 FrameRenderer::computeShadowTileCountPerView() const
+    uint32 FramePassExecutor::computeShadowTileCountPerView() const
     {
         return _state._frameShadow._layout.getCascadeCount() + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
     }
 
-    void FrameRenderer::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
+    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
@@ -1044,7 +1047,7 @@ namespace sw
         context._cullViewIndex = viewCull;
     }
 
-    void FrameRenderer::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName )
+    void FramePassExecutor::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName )
     {
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
         if ( attachment._texture != 0 && context._pCmd != nullptr )
@@ -1060,7 +1063,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::commitBindlessTextureBindings( FramePassContext& context )
+    void FramePassExecutor::commitBindlessTextureBindings( FramePassContext& context )
     {
         if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
@@ -1093,7 +1096,7 @@ namespace sw
         }
     }
 
-    FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const
+    FramePassExecutor::PresentTarget FramePassExecutor::resolvePresentTarget() const
     {
         // 렌더 텍스처와 호스트 타깃 뷰는 자기 출력 전체, 주 시점과 화면 사각형 뷰는 주 출력(백버퍼, 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처
         // 텍스처에 그린다. 백버퍼는 핸들이 없어 읽을 수 없고, 후처리와 UI 가 끝난 최종 화면을 볼 방법이 그것뿐이다. 캡처는 주 출력만 받는다.
@@ -1126,12 +1129,12 @@ namespace sw
         return target;
     }
 
-    bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const
+    bool FramePassExecutor::isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const
     {
         return _pLastSwapchainWriter == nullptr || &passDesc == _pLastSwapchainWriter;
     }
 
-    const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const
+    const RenderGraphPassDesc* FramePassExecutor::findPassDescByType( RenderPassType passType ) const
     {
         // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )

@@ -50,12 +50,6 @@ namespace sw
     SW_GLOBAL_VARIABLE( sw::string, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferredShading · 팩 설정 · 기본 포워드)" );
 
     /**
-     * @brief `-gv_drawMerge=0` 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
-     * @details 묶은 이미지와 묶지 않은 이미지가 같아야 한다. 다르면 배치 테이블(g_SwBatches)이나 드로우 ID 가 틀린 것이다. 기본은 묶는 것이다.
-     */
-    SW_GLOBAL_VARIABLE( bool, gv_drawMerge, true, "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)" );
-
-    /**
      * @brief `-gv_vertexPool=0` 이면 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
      * @details 풀을 켠 이미지와 끈 이미지는 같아야 한다. 다르면 간접 인자의 startVertex 나 SV_VertexID 의 API 차이를 잘못 다룬 것이다.
      */
@@ -82,9 +76,6 @@ namespace sw
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
         , _state{}
-        , _pCmdOwnerDevice{ nullptr }
-        , _frameCmd{ nullptr }
-        , _pCmd{ nullptr }
         , _sceneBuilder{}
         , _pipelineResource{}
         , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene }
@@ -92,34 +83,16 @@ namespace sw
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _postProcess }
         , _pipelinePath{}
-        , _pActiveView{ &_state._mainView }
         , _directViewScheduler{}
         , _listDirectViewScratch{}
-#if !defined( SW_SHIPPING )
-#endif
-        , _indirectDrawCallCount{ 0 }
         , _lastIndirectDrawCallCount{ 0 }
-        , _disabledInputRoleMask{ 0 }
-        , _transparentRankPlaceholder{}
-        , _occlusionTilesPlaceholder{}
-        , _arrOcclusionReadbackMeta{}
-        , _occlusionReadbackSerial{ 0 }
-        , _gpuAssert{}
-        , _nanCheck{}
-        , _nanCheckCommandList{}
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
-        , _pLastSwapchainWriter{ nullptr }
-        , _pMainOutputCanvasView{ nullptr }
+        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _postProcess, _extensionHost, _capture }
         , _listScenePreviewRenderer{}
         , _statusMessage{}
-        , _graphContext{}
-        , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
         , _scenePreviewRendererCount{ 0 }
-        , _bGPUCullingActive{ SW_FALSE }
-        , _lodFadeStep{ 0 }
-        , _lodFadePreviousNanoseconds{ 0 }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
         , _bPassResourcesReady{ SW_FALSE }
@@ -127,9 +100,6 @@ namespace sw
         , _bLightGridPSOMissingLogged{ SW_FALSE }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bMaterialFallbackMissingLogged{ 0 }
-        , _bMissingColorTargetLogged{ 0 }
-        , _bHasExecutedDepthPrepass{ 0 }
     {
     }
 
@@ -177,7 +147,7 @@ namespace sw
             return false;
         }
 
-        if ( isMeshMorphDiagValid() == false )
+        if ( FramePassExecutor::isMeshMorphDiagValid() == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
@@ -284,18 +254,14 @@ namespace sw
         releaseTransientResources();
         releasePassResources();
         _state._graph.clear();
-        // 리소스 상태 추적은 이름에서 상태를 찾는 구조라 디바이스가 바뀌어도 살아남는다. 새 디바이스의 텍스처는 다시 Undefined 다.
-        // 지우지 않으면 첫 프레임이 "이미 렌더 타깃 상태" 로 믿고 배리어를 건너뛴다.
-        _graphContext.reset();
-        _frameCmd.reset();
+        // 패스 실행의 그래프 실행 상태(이름별 리소스 상태)와 프레임 리스트도 이 디바이스의 것이다.
+        _passExecutor.forgetDevice();
         // 패스와 파이프라인 에셋은 위의 패스 자원과 그래프를 해제한 **뒤에** 비운다. 그쪽이 이 캐시의 포인터를 가지고 있다.
         if ( _renderPipelineAssetCache != nullptr )
         {
             _renderPipelineAssetCache->shutdown();
             _renderPipelineAssetCache.reset();
         }
-        _pCmdOwnerDevice           = nullptr;
-        _pCmd                      = nullptr;
         _state._frameContext._pCmd = nullptr;
         _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
@@ -361,7 +327,7 @@ namespace sw
         releasePassResources();
         ensurePassResources();
         ensureTransientResources();
-        bindPassCallbacks();
+        _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
 
         SW_LOG_INFO( "Built graph '%#' (%# passes, callbacks bound once)",
                      _pipelineResource.getDesc()._name, listPass.size() );
@@ -372,179 +338,9 @@ namespace sw
     // 공통 헬퍼: commandList 준비
     // ---------------------------------------------------------------------------
 
-    bool FrameRenderer::prepareCommandList( IRHIDevice* pDevice, [[maybe_unused]] const utf8* pCallerName )
-    {
-        if ( _frameCmd && _pCmdOwnerDevice != pDevice )
-        {
-            // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
-            _frameCmd.reset();
-            _state._mainView._commandList.reset();
-            for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
-            {
-                pView->_commandList.reset();
-            }
-        }
-
-        if ( _frameCmd == nullptr )
-            _frameCmd = pDevice->createCommandList();
-
-        _pCmdOwnerDevice = pDevice;
-        _pCmd            = _frameCmd.get();
-        // 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이것을 쓴다).
-        _state._frameContext._pCmd = _pCmd;
-
-        if ( _pCmd == nullptr )
-        {
-            SW_LOG_ERROR_ONCE( "%#: createCommandList returned null", pCallerName );
-            return false;
-        }
-
-        return true;
-    }
-
     // ---------------------------------------------------------------------------
     // 공통 헬퍼: graph 실행과 commandList 제출
     // ---------------------------------------------------------------------------
-
-    bool FrameRenderer::isDrawMergeEnabled() const
-    {
-        return gv_drawMerge;
-    }
-
-    bool FrameRenderer::submitGraph( IRHIDevice* pDevice )
-    {
-        // 패스 컨텍스트 슬롯은 병렬 기록 **전에** 맞춘다. 기록 중에 늘리면 워커끼리 경합한다.
-        const size_t passCount = _pipelineResource.getGraphPass().size() + 1 + _extensionHost.getPasses().size(); // XML 패스 + 공용 슬롯 + 모듈 확장 패스
-        if ( _listPassContext.size() < passCount )
-            _listPassContext.resize( passCount );
-
-        _pCmd->beginCommandList();
-        _bGPUCullingActive = SW_FALSE;
-        _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
-        _state._deform._animationTimer.updateTimer();
-
-#if SW_PROFILE_COMPILED
-        // 프레임의 첫 GPU 명령 위치다. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
-        // 프리패스, 업로드, 배리어)이다. 게이트는 패스 타임스탬프와 같다(FrameRendererPassExecute).
-        const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
-        const bool                   bWriteGPUTime = pTimestamps != nullptr && _state._gpuPassTimeline.isRecording() &&
-                                   FrameRendererUtil::kGPUTimestampSlotFrameBegin < pTimestamps->getTimestampSlotCount();
-        if ( bWriteGPUTime )
-        {
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameBegin );
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeBegin );
-        }
-#endif
-
-        // GPU 드리븐 프리패스다. **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
-        // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 슬롯을 돈다.
-        // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
-        // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
-        _gpuAssert.poll();
-        _nanCheck.poll();
-        recordDepthHistories();
-        // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
-        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
-        _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
-        const uint32 animationInstanceCount = static_cast<uint32>( _state._gpuScene.getInstances().size() );
-        dispatchInstanceAnimation( animationInstanceCount );
-        dispatchMeshMorph();
-        dispatchMeshSkin();
-        dispatchCullAndSort( animationInstanceCount );
-        // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
-        dispatchLightGrid();
-        // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
-        _postProcess.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
-        // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
-        dispatchRealtimeProbes();
-        // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
-                                                       _gpuAssert, _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
-        // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
-        _gpuAssert.requestReadback( *_pCmd );
-        // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
-        _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
-        // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
-        drawLight2DCookieAtlas();
-
-#if SW_PROFILE_COMPILED
-        if ( bWriteGPUTime )
-            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeEnd );
-#endif
-
-        // 프리패스 리스트를 먼저 닫아 큐에 낸다. 뷰마다의 리스트와 병렬 패스 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나게 하려는 것이다
-        // (같은 큐의 ExecuteCommandLists 호출 순서가 곧 실행 순서다).
-        _pCmd->endCommandList();
-        pDevice->executeCommandList( _pCmd );
-        _pCmd = nullptr;
-
-        // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 보존해 둔다.
-        _state._mainSeedScratch   = _state._frameContext;
-        uint32 renderedExtraCount = renderExtraViewsOfKind( pDevice, RenderViewOutputKind::RenderTexture );
-        // 주 시점의 시드와 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
-        _state._frameContext = _state._mainSeedScratch;
-        _bHasExecutedDepthPrepass.store( 0 );
-
-        // 주 출력의 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다. 화면 사각형 뷰는 주 시점 뒤에 겹치므로, 주 시점이 그리면 그 뷰가 UI 를 덮는다.
-        _pMainOutputCanvasView = &_state._mainView;
-        for ( const unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_TRUE && pView->_outputKind == RenderViewOutputKind::ScreenRect )
-                _pMainOutputCanvasView = pView.get();
-        }
-
-        const bool bOk = executeMainGraph( pDevice );
-        // 그래프가 끝난 주 시점의 패스 출력을 NaN · Inf 감시 컴퓨트로 훑는다(`-gv_nanCheck` 일 때만).
-        scanPassOutputsForNan( pDevice );
-
-        // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
-        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::ScreenRect );
-        // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다. 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있도록 마지막에 그린다.
-        renderedExtraCount += renderExtraViewsOfKind( pDevice, RenderViewOutputKind::HostTarget );
-        _state._frameContext        = _state._mainSeedScratch;
-        _lastRenderedExtraViewCount = renderedExtraCount;
-        // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
-        rememberDepthHistoryViews();
-        return bOk;
-    }
-
-    uint32 FrameRenderer::renderExtraViewsOfKind( IRHIDevice* pDevice, RenderViewOutputKind outputKind )
-    {
-        uint32 renderedCount = 0;
-        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
-        {
-            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != outputKind )
-                continue;
-            renderExtraView( pDevice, *pView );
-            ++renderedCount;
-        }
-        return renderedCount;
-    }
-
-    bool FrameRenderer::executeMainGraph( IRHIDevice* pDevice )
-    {
-        // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
-        // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.
-        const bool bCanRunParallel = _state._pTaskManager != nullptr &&
-                                     pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
-                                     _state._graph.getExecutionOrder().size() > 1;
-        if ( bCanRunParallel )
-            return _state._graph.executeParallel( _graphContext, _state._pTaskManager, pDevice );
-
-        // 직렬 경로도 그래프가 추론한 배리어를 쓴다. 패스가 기록하는 리스트와 **같은 것**을 넘긴다.
-        if ( _state._mainView._commandList == nullptr )
-            _state._mainView._commandList = pDevice->createCommandList();
-        IRHICommandList* pMainCmd = _state._mainView._commandList.get();
-        if ( pMainCmd == nullptr )
-            return false;
-        // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다). 그래서 시드를 이 리스트로 돌린다.
-        _state._frameContext._pCmd = pMainCmd;
-        pMainCmd->beginCommandList();
-        const bool bOk = _state._graph.execute( _graphContext, pMainCmd );
-        pMainCmd->endCommandList();
-        pDevice->executeCommandList( pMainCmd );
-        return bOk;
-    }
 
     // ---------------------------------------------------------------------------
 
@@ -610,16 +406,15 @@ namespace sw
         _state._listFrameRealtimeProbe = _listScratchRealtimeProbe;
         _state._lightBuffer.populate( _listScratchLight, _state._frameShadow._listTileElement, _listScratchLightProbe, _state._listFrameRealtimeProbe.empty() == false );
         resetPassCbRing();
-        setIdentityWorld( _state._frameContext );
+        _passExecutor.setIdentityWorld( _state._frameContext );
         updatePassConstants( _state._frameContext, mainCameraViewProj );
-        resetClearedAttachments();
-        _bHasExecutedDepthPrepass.store( 0 );
+        _passExecutor.resetViewRecordState();
 
         const float3 cameraPos                        = pMainCamera->getCameraPosition();
         _state.view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다.
         // 추가 뷰(캡처 카메라, 화면 사각형)는 패킷 경로(Engine)와 같은 수집기와 스케줄러로 고른다. 시각은 렌더러 시계를 쓴다(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
-        const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _occlusionMailbox.getLatest();
+        const shared_ptr<const OcclusionTileSnapshot> occlusionSnapshot = _passExecutor.getOcclusionSnapshot();
         if ( scene.getObjectManager() != nullptr )
         {
             RenderViewCollector::collectExtraViews( *scene.getObjectManager(), pMainCamera, _state.view( RenderViewType::Main )._viewProj, cameraPos, _state._outputWidth, _state._outputHeight, RenderViewCollector::kDirectPathAutoScale,
@@ -721,7 +516,7 @@ namespace sw
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
-        setIdentityWorld( _state._frameContext );
+        _passExecutor.setIdentityWorld( _state._frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
         updatePassConstants( _state._frameContext, packet._viewProj );
@@ -729,8 +524,7 @@ namespace sw
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
-        resetClearedAttachments();
-        _bHasExecutedDepthPrepass.store( 0 );
+        _passExecutor.resetViewRecordState();
 
         return uploadSceneAndSubmit( pDevice, "executePacket" );
     }
@@ -816,9 +610,9 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _state._gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
+        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
-        prepareMeshMorphPool();
+        _passExecutor.prepareMeshMorphPool();
         bool bVertexPool = gv_vertexPool;
         _state._gpuScene.setVertexPoolEnabled( bVertexPool );
         _state._gpuScene.upload( pDevice );
@@ -836,7 +630,7 @@ namespace sw
         }
 
         if ( _bCallbacksBound == SW_FALSE )
-            bindPassCallbacks();
+            _bCallbacksBound = _passExecutor.bindPassCallbacks() ? SW_TRUE : SW_FALSE;
 
         // 상수 버퍼 슬롯은 드로우마다 하나씩 나가므로 배치 수에 맞춰 **기록 시작 전에** 늘려 둔다.
         ensurePassCbCapacityForFrame();
@@ -856,13 +650,13 @@ namespace sw
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
-        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), makeVFXSimulationInput() );
+        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.makeVFXSimulationInput() );
 
-        if ( prepareCommandList( pDevice, pCallerName ) == false )
+        if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;
 
-        const bool bOk             = submitGraph( pDevice );
-        _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
+        const bool bOk             = _passExecutor.submitGraph( pDevice );
+        _lastIndirectDrawCallCount = _passExecutor.getIndirectDrawCallCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         if ( _bScenePreview == SW_FALSE )
             _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
