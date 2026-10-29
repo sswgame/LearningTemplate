@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 
 namespace sw
 {

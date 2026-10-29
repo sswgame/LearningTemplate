@@ -19,6 +19,7 @@
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Screen/UILayer.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
@@ -31,14 +32,6 @@ namespace sw
     class UIThemeController;
     class UIViewModel;
     class Widget;
-
-    /** @brief 화면을 가리키는 번호입니다. 다시 쓰지 않습니다(0 이면 없음). */
-    using UIScreenHandle = uint32;
-    /** @brief 화면이 없음을 뜻하는 번호입니다. */
-    inline constexpr UIScreenHandle kInvalidUIScreenHandle = 0;
-
-    /** @brief 위젯이 낸 명령(버튼의 `_command`)을 받는 함수입니다(`UIScreen::registerCommand`). */
-    using UICommandDelegate = Delegate<void( const hashed_string&, Widget& )>;
 } // namespace sw
 
 namespace sw

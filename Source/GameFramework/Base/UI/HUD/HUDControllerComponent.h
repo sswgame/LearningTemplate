@@ -13,12 +13,13 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Binding/UIViewModel.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    class UIScreen;
     class UISystem;
     class Widget;
 

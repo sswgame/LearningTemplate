@@ -9,13 +9,14 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/UIBrush.h"
 
 namespace sw
 {
     struct AudioSubtitleCue;
 
+    class UIScreen;
     class UISystem;
 
     /** @brief 자막 한 줄입니다. */

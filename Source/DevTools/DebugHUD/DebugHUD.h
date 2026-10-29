@@ -14,7 +14,7 @@
 #include "DevTools/DevToolsAPI.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );               ///< 디버그 HUD 표시(사용자 설정 debug.hud).
 SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).

@@ -11,7 +11,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 
 namespace sw

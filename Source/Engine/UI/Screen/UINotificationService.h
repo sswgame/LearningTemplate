@@ -10,8 +10,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
+
+namespace sw
+{
+    class UIScreen;
+} // namespace sw
 
 namespace sw
 {

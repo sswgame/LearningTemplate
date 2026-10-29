@@ -18,7 +18,7 @@
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
 #include "Engine/UI/WidgetTree/UIPointerState.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
@@ -30,6 +30,7 @@ namespace sw
 
     class IRHIDevice;
     class LocalizationManager;
+    class UIScreen;
     class UISystem;
 } // namespace sw
 

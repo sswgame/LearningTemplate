@@ -12,7 +12,7 @@
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameInstanceSubsystem.h"
@@ -24,6 +24,7 @@
 namespace sw
 {
     class ScreenFade;
+    class UIScreen;
     class UISystem;
 
     /** @brief 로딩 화면의 겉모습과 시간 설정입니다. `GameInstance` 가 gamesettings 로 채웁니다. */
