@@ -32,15 +32,6 @@ namespace sw
     SW_API string to_string( float32 value );
     /** @brief float64 를 십진 문자열로 바꿉니다. */
     SW_API string to_string( float64 value );
-
-    /** @brief 두 문자열의 공통 접두 · 접미를 뺀 변경 구간입니다(텍스트 Undo · 패치용). */
-    struct StringChangeSpan
-    {
-        string _removed;
-        string _added;
-        uint32 _prefixLength{ 0 };
-        uint32 _suffixLength{ 0 };
-    };
 } // namespace sw
 
 namespace sw
@@ -163,13 +154,6 @@ namespace sw
          * @details 열거자 이름에서 지표 라벨 · 셰이더 define 을 만들 때 씁니다. @p bUpper 이면 `NOT_SIGNED_IN` 입니다.
          */
         static string toSnakeCase( string_view pascalName, bool bUpper );
-
-        /** @brief 편집 전후 텍스트의 공통 접두 · 접미를 빼고 바뀐 가운데 부분만 남깁니다. */
-        static StringChangeSpan makeChangeSpan( string_view before, string_view after );
-        /** @brief 편집 후 텍스트와 변경 구간으로 편집 전 본문을 만듭니다. */
-        static string reconstructBefore( const StringChangeSpan& span, string_view afterText );
-        /** @brief 편집 전 텍스트와 변경 구간으로 편집 후 본문을 만듭니다. */
-        static string reconstructAfter( const StringChangeSpan& span, string_view beforeText );
 
         /** @brief 문자열 안의 특정 문자를 다른 문자로 바꿉니다. */
         static void replaceChar( string& inoutStr, utf8 fromChar, utf8 toChar );

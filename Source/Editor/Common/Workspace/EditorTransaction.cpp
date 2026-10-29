@@ -23,6 +23,82 @@ namespace sw::editor
     {
         struct EditorTransactionInternal
         {
+            /** @brief 두 문자열의 공통 접두 · 접미를 뺀 변경 구간입니다(텍스트 Undo). */
+            struct StringChangeSpan
+            {
+                string _removed;
+                string _added;
+                uint32 _prefixLength{ 0 };
+                uint32 _suffixLength{ 0 };
+            };
+
+            /** @brief 편집 전후 텍스트의 공통 접두 · 접미를 빼고 바뀐 가운데 부분만 남깁니다. */
+            static StringChangeSpan makeChangeSpan( string_view before, string_view after )
+            {
+                StringChangeSpan span{};
+                const size_t     beforeSize = before.size();
+                const size_t     afterSize  = after.size();
+                const size_t     minSize    = ( beforeSize < afterSize ) ? beforeSize : afterSize;
+                size_t           prefix     = 0;
+                while ( prefix < minSize && before[prefix] == after[prefix] )
+                {
+                    ++prefix;
+                }
+
+                size_t suffix = 0;
+                while ( true )
+                {
+                    const bool bSuffixMatches = suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
+                                                before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix];
+                    if ( bSuffixMatches == false )
+                        break;
+                    ++suffix;
+                }
+
+                span._prefixLength = static_cast<uint32>( prefix );
+                span._suffixLength = static_cast<uint32>( suffix );
+                span._removed      = string{ before.substr( prefix, beforeSize - prefix - suffix ) };
+                span._added        = string{ after.substr( prefix, afterSize - prefix - suffix ) };
+                return span;
+            }
+
+            /** @brief 편집 후 텍스트와 변경 구간으로 편집 전 본문을 만듭니다. */
+            static string reconstructBefore( const StringChangeSpan& span, string_view afterText )
+            {
+                const size_t prefixLength = static_cast<size_t>( span._prefixLength );
+                const size_t suffixLength = static_cast<size_t>( span._suffixLength );
+                if ( afterText.size() < prefixLength + suffixLength )
+                    return string{ afterText };
+                string result;
+                result.reserve( prefixLength + span._removed.size() + suffixLength );
+                // `data()` 를 넘기지만 **길이도 함께** 넘기므로, 널 종료를 기대하는 호출이 아니다.
+                // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 알아보지 못한다.
+                // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+                result.append( afterText.data(), prefixLength );
+                result.append( span._removed );
+                if ( suffixLength > 0 )
+                    result.append( afterText.data() + ( afterText.size() - suffixLength ), suffixLength );
+                return result;
+            }
+
+            /** @brief 편집 전 텍스트와 변경 구간으로 편집 후 본문을 만듭니다. */
+            static string reconstructAfter( const StringChangeSpan& span, string_view beforeText )
+            {
+                const size_t prefixLength = static_cast<size_t>( span._prefixLength );
+                const size_t suffixLength = static_cast<size_t>( span._suffixLength );
+                if ( beforeText.size() < prefixLength + suffixLength )
+                    return string{ beforeText };
+                string result;
+                result.reserve( prefixLength + span._added.size() + suffixLength );
+                // 위와 같다. 길이를 함께 넘긴다.
+                // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+                result.append( beforeText.data(), prefixLength );
+                result.append( span._added );
+                if ( suffixLength > 0 )
+                    result.append( beforeText.data() + ( beforeText.size() - suffixLength ), suffixLength );
+                return result;
+            }
+
             /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 테스트)에는 nullptr 이라 부르는 쪽이 확인합니다. */
             static CommandStack* getCommandStack()
             {
@@ -263,16 +339,16 @@ namespace sw::editor
         if ( beforeText == afterText || restore.isBound() == false )
             return;
 
-        const StringChangeSpan span = StringUtil::makeChangeSpan( beforeText, afterText );
+        const EditorTransactionInternal::StringChangeSpan span = EditorTransactionInternal::makeChangeSpan( beforeText, afterText );
         if ( capture.isBound() )
         {
             push( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
-                restore( StringUtil::reconstructBefore( span, capture() ) );
+                restore( EditorTransactionInternal::reconstructBefore( span, capture() ) );
             } ),
                   SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
-                restore( StringUtil::reconstructAfter( span, capture() ) );
+                restore( EditorTransactionInternal::reconstructAfter( span, capture() ) );
             } ),
                   label, coalesceKey );
             return;
