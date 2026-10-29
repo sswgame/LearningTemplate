@@ -76,44 +76,24 @@ namespace sw
         const uint32 count = static_cast<uint32>( _listPendingMesh.size() );
         SW_PROFILE_COUNT( "GT.GPUUpload.meshCount", count );
 
-        IRHIDevice*                     pDevice   = _pDevice;
-        const vector<shared_ptr<Mesh>>& listMesh  = _listPendingMesh;
-        auto                            uploadOne = [pDevice, &listMesh]( uint32 index )
+        IRHIDevice*                     pDevice     = _pDevice;
+        const vector<shared_ptr<Mesh>>& listMesh    = _listPendingMesh;
+        auto                            uploadBlock = [pDevice, &listMesh]( uint32 start, uint32 end )
         {
-            const shared_ptr<Mesh>& mesh = listMesh[index];
-            if ( mesh != nullptr )
-                (void)mesh->initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
+            for ( uint32 index = start; index < end; ++index )
+            {
+                const shared_ptr<Mesh>& mesh = listMesh[index];
+                if ( mesh != nullptr )
+                    (void)mesh->initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
+            }
         };
 
-        const bool bParallelUploadPossible = _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr;
-        if ( bParallelUploadPossible )
-        {
-            // 워커가 나눠 만들고 여기서 기다린다. 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다.
-            TaskStageHandle stage  = _pTaskManager->createStage( "GPUUploadMesh" );
-            TaskHandle      handle = _pTaskManager->emplaceParallel( "GPUUploadMesh", count,
-                                                                     SW_DELEGATE_LAMBDA( ParallelTaskDelegate, uploadOne ) );
-            if ( handle.isValid() )
-            {
-                stage.addTask( handle );
-                handle.submit();
-                _pTaskManager->waitStage( stage );
-            }
-            else
-            {
-                // 태스크를 만들지 못했으면 여기서 직접 만든다. 조용히 업로드하지 않는 것보다 낫다.
-                for ( uint32 index = 0; index < count; ++index )
-                {
-                    uploadOne( index );
-                }
-            }
-        }
+        // 워커가 나눠 만들고 부른 스레드도 함께 만든다(포크-조인 `runParallel` — 스테이지를 따로 만들고 기다리지 않는다, 언리얼 ParallelFor 와 같다).
+        // 기다리는 것이 목적이 아니라 **RT 가 만들지 않는 것**이 목적이다. 워커에서 만들 수 없는 백엔드는 여기서 직렬로 만든다.
+        if ( _bParallel == SW_TRUE && _pTaskManager != nullptr )
+            _pTaskManager->runParallel( count, 2, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, uploadBlock ) );
         else
-        {
-            for ( uint32 index = 0; index < count; ++index )
-            {
-                uploadOne( index );
-            }
-        }
+            uploadBlock( 0, count );
 
         _listPendingMesh.clear();
         return count;
