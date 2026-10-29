@@ -44,6 +44,8 @@ namespace sw
         constexpr float32 kMillimetersPerMeter = 1000.0f;
     } // namespace
 
+    FramePassExecutor::~FramePassExecutor() = default;
+
     FramePassExecutor::FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                                           FramePostProcess& postProcess, FrameExtensionHost& extensionHost, FrameCapture& capture )
         : _pDevice{ pDevice }

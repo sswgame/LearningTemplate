@@ -54,6 +54,7 @@ namespace sw
     public:
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                            FramePostProcess& postProcess, FrameExtensionHost& extensionHost, FrameCapture& capture );
+        ~FramePassExecutor(); ///< 밖에 둔다 — 내보내는 클래스의 소멸자는 쓰는 곳마다 만들어져 앞선 선언만 본 `unique_ptr<IRHICommandList>` 을 지우지 못한다
         FramePassExecutor( const FramePassExecutor& )            = delete;
         FramePassExecutor& operator=( const FramePassExecutor& ) = delete;
 
