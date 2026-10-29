@@ -117,13 +117,14 @@ namespace sw
             vector<uint8> _rgbaBytes;
             bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게)
         };
-        unordered_map<string, Entry> _mapEntry         SW_GUARDED_BY( _mutex );
-        vector<RegionUpdate>                           _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
-        vector<RegionUpdate>                           _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
-        mutex                                          _regionMutex;
-        unordered_map<string, RenderTargetSize>        _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
-        shared_mutex                                   _mutex;
-        std::condition_variable_any                    _cvLoaded;              ///< 항목의 `_bLoading` 이 내려갈 때 깨운다
+        unordered_map<string, Entry> _mapEntry  SW_GUARDED_BY( _mutex );
+        vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
+        vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
+        mutex                                   _regionMutex;
+        unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
+        shared_mutex                            _mutex;
+        /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
+        std::condition_variable_any                    _cvLoaded;
         atomic<uint32>                                 _reloadGeneration{ 0 }; ///< SRV 가 바뀌었을 수 있는 횟수 — 머티리얼이 SRV 인덱스를 다시 받을 때를 안다
         mutex                                          _awaitingMutex;
         vector<shared_ptr<TextureLoadBlock>>           _listAwaitingUpload; ///< 워커가 읽기를 마치고 업로드를 기다리는 로드(`completePendingLoads` 가 비운다, `_awaitingMutex`)

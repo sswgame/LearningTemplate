@@ -62,6 +62,7 @@ namespace sw
      * @brief 로드 하나의 공유 상태입니다. 핸들 · 캐시 · 워커 태스크가 `shared_ptr` 로 나눠 가집니다. 종류별 캐시가 이것을 상속해 단계 본문을 채웁니다.
      * @details 단계 상태는 원자 워드 하나(`_phase`)이고, 기다리는 쪽은 그 워드에서 잠듭니다(`Futex`). 상태와 오류 문자열은 단계를 `Done` 으로 바꾸기 **전에** 쓰므로
      *          `getState()` 가 `Ready` · `Failed` 를 본 스레드는 결과와 오류를 읽을 수 있습니다(release · acquire).
+     *          TaskManager 스테이지로 바꾸지 않는다 — 단계 워드는 "아직 아무도 집지 않은 단계를 기다리는 쪽이 집는다"와 정해진 스레드의 완료 단계를 함께 담는다(스테이지는 남은 수만 센다, 언리얼 FAsyncPackage 의 단계 상태와 같은 자리).
      */
     class SW_API AssetLoadBlock
     {

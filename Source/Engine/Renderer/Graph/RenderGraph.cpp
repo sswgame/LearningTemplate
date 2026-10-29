@@ -501,6 +501,7 @@ namespace sw
         // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
         pDevice->setParallelRecording( true );
 
+        // `runParallel` 로 바꾸지 않는다 — 그 티켓은 Normal 큐로 가는데 렌더 스레드가 곧바로 기다리는 기록은 High 레인이어야 한다(아래). 스테이지는 이미 TaskManager 의 것이다.
         TaskStageHandle stage = pTaskManager->createStage( "RenderGraphLevel" );
         for ( ParallelPassEntry& entry : listPassEntry )
         {
