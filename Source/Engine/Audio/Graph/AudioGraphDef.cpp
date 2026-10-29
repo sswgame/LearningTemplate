@@ -8,6 +8,7 @@
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -168,7 +169,7 @@ namespace sw
             SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", assetPath );
             return false;
         }
-        const string filePath = AssetPaths::getWritePath( assetPath );
+        const string filePath = engine::getSubsystem<AssetPaths>().getWritePath( assetPath );
         if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
         {
             SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", assetPath, filePath );

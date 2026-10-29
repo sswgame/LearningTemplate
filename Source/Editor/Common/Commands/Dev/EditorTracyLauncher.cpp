@@ -8,7 +8,9 @@
 #include "Core/Process/Process.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 
 namespace sw::editor
@@ -67,7 +69,7 @@ namespace sw::editor
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         string viewerPath;
-        if ( findViewerPath( gv_tracyViewerPath, EditorPaths::getProjectRootPath(), viewerPath ) == false )
+        if ( findViewerPath( gv_tracyViewerPath, EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ), viewerPath ) == false )
         {
             SW_LOG_WARNING( "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
                             string( gv_tracyViewerPath ).c_str(), getViewerFileName() );

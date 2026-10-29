@@ -20,13 +20,13 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorPaths" );
 
-    string EditorPaths::getProjectRootPath()
+    string EditorPaths::getProjectRootPath( const AssetPaths& assetPaths )
     {
-        const string& projectRoot = AssetPaths::getProjectFolderPath();
+        const string& projectRoot = assetPaths.getProjectFolderPath();
         if ( projectRoot.empty() == false )
             return projectRoot;
 
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = assetPaths.getRootFolderPath();
         if ( resourceRoot.empty() )
             return {};
 

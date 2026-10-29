@@ -63,7 +63,7 @@ namespace sw
              */
             [[nodiscard]] static bool cookSceneStage( const string& cookedDir, const CookStore& cookStore, const AnimationCrowdSettings& crowdSettings, bool bCrowdSettingsLoaded )
             {
-                const string& resourceRoot     = AssetPaths::getRootFolderPath();
+                const string& resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 uint32        sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
                 const SceneEngineServices&    sceneServices              = engine::getSubsystem<SceneManager>().getEngineServices();
@@ -108,7 +108,7 @@ namespace sw
             static bool verifyShaderFolder( string_view cookedDir, string_view shaderFolder )
             {
                 vector<string> listProblem;
-                ShaderCooker::verifyCookedShaders( AssetPaths::getRootFolderPath(), cookedDir, shaderFolder, listProblem );
+                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>().getRootFolderPath(), cookedDir, shaderFolder, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR( "[%#] %#", shaderFolder, problem );
@@ -151,7 +151,7 @@ namespace sw
                 const string shaderFolder = resolveShaderFolder( commandLine );
 
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
@@ -159,7 +159,7 @@ namespace sw
                 }
 
                 PackCookParams params;
-                params._resourceRoot = AssetPaths::getRootFolderPath();
+                params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 params._cookedDir    = cookedDir;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
                 params._shaderFolder = shaderFolder;
@@ -218,7 +218,7 @@ namespace sw
                     }
                 }
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
@@ -502,7 +502,7 @@ namespace sw
                 uint32                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( lipSyncSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() } ) )
-                    lipSyncCount = LipSyncImport::importAll( AssetPaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                    lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
                 SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );

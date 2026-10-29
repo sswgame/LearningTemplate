@@ -73,7 +73,7 @@ namespace sw::editor
             /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
-                probe._folderAbs = FileUtil::joinPath( AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get() ).getDiskPath(), kProbeFolderName );
+                probe._folderAbs = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get() ).getDiskPath(), kProbeFolderName );
                 if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                     return false;
                 if ( FileUtil::ensureDirectoryExists( probe._folderAbs ) == false )
@@ -346,7 +346,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
 
                 vector<string> listPackFolder;
-                (void)FileUtil::collectFolders( AssetPaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // 없으면 아래 기대가 실패한다
+                (void)FileUtil::collectFolders( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // 없으면 아래 기대가 실패한다
                 (void)context.expect( listPackFolder.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackFolder.size() ),
                                       "All packs does not list every game pack" );
                 pPanel->setShowAllPacks( context.getTestState<ActivePackProbe>()._bWasShowingAllPacks );

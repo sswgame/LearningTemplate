@@ -8,6 +8,8 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "NetSecurity" );
@@ -35,7 +37,7 @@ namespace sw
 {
     string NetSecurity::makeProjectPath( string_view path )
     {
-        const string& projectFolder = AssetPaths::getProjectFolderPath();
+        const string& projectFolder = game::getSubsystem<AssetPaths>().getProjectFolderPath();
         const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
         if ( bKeepPathAsIs )
             return string( path );
@@ -51,7 +53,7 @@ namespace sw
         outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
         return false;
 #else
-        const string& projectFolder = AssetPaths::getProjectFolderPath();
+        const string& projectFolder = game::getSubsystem<AssetPaths>().getProjectFolderPath();
         const string  rootFolder    = projectFolder.empty() ? FileUtil::getCurrentPath() : projectFolder;
         const string  folder        = FileUtil::joinPath( FileUtil::joinPath( rootFolder, path::kSavedFolder ), kDevCertificateFolder );
         outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateBundleFile );

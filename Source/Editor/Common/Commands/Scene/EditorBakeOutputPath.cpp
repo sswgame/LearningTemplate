@@ -4,6 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/Scene.h"
@@ -22,7 +24,7 @@ namespace sw::editor
     string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension )
     {
         const string& sourcePath = scene.getSourcePath();
-        string        assetID    = AssetPaths::toAssetID( sourcePath );
+        string        assetID    = editor::getSubsystem<AssetPaths>().toAssetID( sourcePath );
         if ( assetID.empty() )
             assetID = sourcePath;
         if ( assetID.empty() )

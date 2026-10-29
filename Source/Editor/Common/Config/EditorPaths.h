@@ -6,6 +6,11 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+namespace sw
+{
+    class AssetPaths;
+} // namespace sw
+
 namespace sw::editor
 {
     class EditorPaths
@@ -39,9 +44,10 @@ namespace sw::editor
 
         /**
          * @brief 프로젝트 루트(<Project>, Resource 의 부모)를 반환합니다.
+         * @param assetPaths 경로 상태 — 워커(임포트 잡)에서도 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          * @return 정하지 못하면 빈 문자열입니다.
          */
-        static string getProjectRootPath();
+        static string getProjectRootPath( const AssetPaths& assetPaths );
 
         /**
          * @brief 에디터가 쓰는 상태 폴더 <Project>/Saved/Editor 를 반환합니다. 없으면 만듭니다. `-gv_editorStateDir=<폴더>` 를 주면 그 폴더를 씁니다.

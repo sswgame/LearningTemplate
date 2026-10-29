@@ -15,6 +15,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
@@ -305,7 +307,7 @@ namespace sw::editor
         if ( settings._bRecordTraces )
         {
             _traceDirectory = settings._traceDirectory.empty()
-                                ? FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Saved/Traces" ),
+                                ? FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" ),
                                                       formatToString( "netplay_%#", WallClock::nowUnixMilliseconds().count() ) )
                                 : settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )

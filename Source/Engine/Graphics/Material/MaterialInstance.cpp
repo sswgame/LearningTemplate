@@ -203,7 +203,7 @@ namespace sw
 
     bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
     {
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         syncDescOverrides();
 

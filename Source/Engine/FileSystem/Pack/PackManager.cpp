@@ -14,6 +14,7 @@
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/Pack/PackPatch.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -291,7 +292,7 @@ namespace sw
 
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
-            effectivePriority = PackManagerInternal::computePackDefaultPriority( packFilePath, AssetPaths::getSearchPriority() );
+            effectivePriority = PackManagerInternal::computePackDefaultPriority( packFilePath, engine::getSubsystem<AssetPaths>().getSearchPriority() );
 
         shared_ptr<PackReader> pReader = sw::make_shared<PackReader>();
         if ( pReader->open( normalizedPath ) == false )

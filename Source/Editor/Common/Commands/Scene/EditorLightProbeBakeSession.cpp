@@ -225,7 +225,7 @@ namespace sw::editor
             reportFailure( "the scene has never been saved - save it before baking light probes" );
             return;
         }
-        if ( grid.saveToFile( AssetPaths::getWritePath( assetPath ) ) == false )
+        if ( grid.saveToFile( editor::getSubsystem<AssetPaths>().getWritePath( assetPath ) ) == false )
         {
             reportFailure( "could not write " + assetPath );
             return;

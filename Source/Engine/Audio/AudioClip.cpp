@@ -224,7 +224,7 @@ namespace sw
         }
 
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 디코드 작업을 띄우지 않고 없는 것으로 친다(경고 없음, AssetPaths::setHostTarget).
-        if ( AssetPaths::isExcludedForHost( path.view() ) )
+        if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( path.view() ) )
         {
             storeResult( path, nullptr );
             return;
@@ -274,7 +274,7 @@ namespace sw
     {
         const string_view pathView = path.view();
         const AssetID     assetID{ pathView }; // 캐시 키(클립 리소스 id)를 로더 id 로 바꾸는 한 곳
-        if ( AssetPaths::isExcludedForHost( pathView ) )
+        if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( pathView ) )
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
         if ( StringUtil::endsWith( pathView, AudioGraphDef::kExtension, true ) )
             return decodeGraph( path );

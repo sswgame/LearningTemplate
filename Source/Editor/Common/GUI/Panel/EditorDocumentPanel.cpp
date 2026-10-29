@@ -11,10 +11,12 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -50,7 +52,7 @@ namespace sw::editor
         {
             // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
             vector<EditorAssetIndexEntry> listEntry;
-            EditorAssetIndex::collectEntries( listEntry );
+            EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), listEntry );
             _listOpenCandidate.clear();
             for ( const EditorAssetIndexEntry& entry : listEntry )
             {

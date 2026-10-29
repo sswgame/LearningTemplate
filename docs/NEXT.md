@@ -177,7 +177,7 @@
 엔진 밖 모듈의 화면 · 어빌리티 · 세트 · 실행 계산 클래스는 `REFLECT( Abstract )` 와 `getTypeInfo` 재정의가 필요하다(카탈로그 등록 템플릿이 `HasOwnReflectBody` 로 멈춘다 — 재정의는 위젯과 같은 규칙).
 
 **전역 상태 → 서브시스템**(조사 2026-10-29): 정적 등록표(모듈이 정적 초기화 때 채우는 표 — `AssetTypeRegistry` · `AutomationStepRegistry` · `UndoStepRegistry` …)는 범위보다 먼저 채워지므로 정적이 맞다. 바꿀 것은 **프로세스 상태를 정적 칸에 둔 곳**이다 —
-`ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · AssetPaths 해석 캐시 · SystemFontLocator · GameDataCache …), `AutomationSceneSteps` 의 대기 목록(실행기 상태로, I 절 4 와 함께).
+`ScopeOwned` 전역 캐시 ~25 곳(MeshCache · SceneTransformStorage · ShaderReflectionLibrary · PhysicsMeshShapeCache · StringTable · ContentHash · SystemFontLocator · GameDataCache …), `AutomationSceneSteps` 의 대기 목록(실행기 상태로, I 절 4 와 함께).
 `GameTimeScale` 의 정지 요청 · 프레임 시간은 서비스 서브시스템이 됐다. `MeshCache` 무효화 훅 목록은 엔진 범위의 `IMeshDerivedCache`(물리 셰이프 표 서브시스템 `PhysicsMeshShapeTable`)로, `TickBatchRegistry` 는 서비스 범위 서브시스템 + E1 사슬의 등록자(`ModuleObjectRegistrar`)로 옮겼다 — 정적 초기화 때는 링크 때 목록에만 달고 모듈을 올리는 길이 붙인다.
 편집기의 포커스 스택 · 선택은 에디터 서브시스템 `EditorFocus`, 뷰포트 입력 오버레이 설정은 `ViewportInputOverlaySettings` 로 옮겼다. `ScenarioPlayback::s_pPlayer` 는 호스트 범위의 `IScenarioPlayer` 로 바꿨다. **두는 것**(이유): `ProfilerBackend::s_pActive`(계측 지점마다 읽는 뜨거운 경로 · 엔진 뒤에 닫히는 구간도 부른다 — 수명은 `ProfilerBackendSubsystem`), Jolt `s_pFactory` · RenderDoc API(바깥 라이브러리가 프로세스 전역을 요구한다). 되돌리기 스택의 전역 둘(`s_pExecuting` · 살아 있는 스택 목록)은 지웠다 — 처리기는 실행 문맥(`UndoStepContext`, 필요한 처리기만 첫 인자로 받는다)을, 스택은 코드 단계를 받은 주인의 사라짐을 구독한다. 에디터 쪽 `Tests/` 는 에디터 자체 테스트 `editor.unitTests` 가 돌린다(`App --test` 는 에디터 모듈이 오르기 전이다). 서브시스템이면 소유자 · 수명 · 의존 순서가 드러나고 테스트가 범위마다 새로 세운다.
 
@@ -199,7 +199,7 @@
 **남은 것**
 | 일 | 내용 |
 |---|---|
-| AssetPaths | 경로 표 · 검색 우선순위 · 디스크 도메인 · 해석 캐시가 모두 한 파일의 프로세스 정적이고, 서비스가 서기 전(`ContentRootSubsystem` · `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구가 부른다 — 캐시만 옮기면 상태 하나가 두 주인으로 갈린다. `AssetPaths` 전체를 `ContentRootSubsystem` 객체로(약 105 파일) |
+| AssetPaths 빌드 확인 | 상태(경로 표 · 검색 우선순위 · 디스크 도메인 · 해석 캐시)는 객체 하나가 되었고 주인은 `ContentRootSubsystem`(코어 범위에 `AssetPaths` 로 건다, 서비스 표 행). 엔진은 `engine::getSubsystem<AssetPaths>()`, 모듈은 `editor::` · `game::` 창구, 워커(임포트 잡 · 색인 · 폴더 목록 · 모디파이어 표본기)는 부른 스레드가 찾아 넘긴다. 통합에서 Debug · Release · Linux 빌드와 임포트 · 핫 리로드 시나리오로 확인 |
 | STL 나머지 | `std::atomic` · `std::pair` · `VectorUtil` 관용구 · C 문자열 |
 | 같은 모양의 작은 창 | 900 줄 밑의 편집기 패널(`StreamingCellsPanel` · `PrefabPanel` · `GameViewPanel` 등)이 상태를 패널 멤버에 든다. 호스트 클래스(`ServerApp` · App)의 중계 함수 |
 | 측정 | `castTo` 의 파생 확인이 줄 밖 함수가 됐다 — 뜨거운 경로(~4 ns) 측정 |

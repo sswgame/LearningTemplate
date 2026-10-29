@@ -70,7 +70,7 @@ namespace sw
             if ( relativePath.empty() || rejectsOSPath( relativePath ) )
                 return false;
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
-            if ( AssetPaths::isExcludedForHost( relativePath ) )
+            if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) )
                 return false;
             if ( AssetPaths::hasParentDirectoryComponent( relativePath ) )
             {
@@ -80,10 +80,10 @@ namespace sw
 
             // 1. 낱개 경로는 **여기서 한 번만** 푼다.
             const PackManager* pPackManager = findPackManager();
-            const bool         bDiskDomain  = AssetPaths::isMountedDiskDomainID( relativePath );
+            const bool         bDiskDomain  = engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( relativePath );
             if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
             {
-                const string loosePath = AssetPaths::findLooseFile( relativePath ).getDiskPath();
+                const string loosePath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath ).getDiskPath();
                 if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -211,15 +211,15 @@ namespace sw
         // 찾는 규칙은 읽기(`readResourceCommon`)와 같다 — OS 경로는 오류, 붙인 디스크 도메인은 디스크만, 나머지는 낱개 파일(허용될 때) · 팩.
         if ( relativePath.empty() || rejectsOSPath( relativePath ) )
             return false;
-        const bool bUnreadableHere = AssetPaths::isExcludedForHost( relativePath ) || AssetPaths::hasParentDirectoryComponent( relativePath );
+        const bool bUnreadableHere = engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) || AssetPaths::hasParentDirectoryComponent( relativePath );
         if ( bUnreadableHere )
             return false;
 
         const PackManager* pPackManager = findPackManager();
-        const bool         bDiskDomain  = AssetPaths::isMountedDiskDomainID( relativePath );
+        const bool         bDiskDomain  = engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( relativePath );
         if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
         {
-            const string absPath = AssetPaths::findLooseFile( relativePath ).getDiskPath();
+            const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath ).getDiskPath();
             if ( absPath.empty() == false && FileUtil::exists( absPath ) )
                 return true;
         }
@@ -246,9 +246,9 @@ namespace sw
         vector<string>     listCandidate;
         bool               bFolderFound = false;
         const PackManager* pPackManager = findPackManager();
-        if ( isLooseFileAllowed( pPackManager ) || AssetPaths::isMountedDiskDomainID( folder ) )
+        if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
-            const string diskFolder = AssetPaths::findLooseFile( folder ).getDiskPath();
+            const string diskFolder = engine::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
             if ( diskFolder.empty() == false && FileUtil::isDirectory( diskFolder ) )
             {
                 vector<string> listDiskFile;
@@ -276,7 +276,7 @@ namespace sw
         listKeyed.reserve( listCandidate.size() );
         for ( string& path : listCandidate )
         {
-            const bool bSkip = ( extension.empty() == false && StringUtil::endsWith( path, extension, true ) == false ) || AssetPaths::isExcludedForHost( path );
+            const bool bSkip = ( extension.empty() == false && StringUtil::endsWith( path, extension, true ) == false ) || engine::getSubsystem<AssetPaths>().isExcludedForHost( path );
             if ( bSkip == false )
                 listKeyed.emplace_back( StringUtil::toLower( path.c_str() ), std::move( path ) );
         }

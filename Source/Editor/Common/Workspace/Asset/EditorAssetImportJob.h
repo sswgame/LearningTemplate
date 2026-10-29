@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     class TaskArgs;
 } // namespace sw
 
@@ -22,7 +23,7 @@ namespace sw::editor
     struct EditorAssetImportItem
     {
         string _relativePath; ///< 리소스 루트 기준 원본 경로
-        bool ( *_pfnImport )( string_view relativePath ){ nullptr };
+        bool ( *_pfnImport )( const AssetPaths& assetPaths, string_view relativePath ){ nullptr };
     };
 } // namespace sw::editor
 
@@ -32,6 +33,7 @@ namespace sw::editor
     struct EditorAssetImportInput
     {
         vector<EditorAssetImportItem> _listItem;
+        const AssetPaths*             _pAssetPaths{ nullptr }; ///< 임포터에 넘길 경로 상태(엔진 수명 — 잡보다 오래 산다). 워커는 찾지 않고 요청한 스레드가 넣는다
     };
 } // namespace sw::editor
 
@@ -71,8 +73,8 @@ namespace sw::editor
     public:
         EditorAssetImportJob();
 
-        /** @brief 워커에 임포트를 요청합니다. 앞 잡이 아직 돌면 아무것도 하지 않고 false 입니다. */
-        [[nodiscard]] bool request( vector<EditorAssetImportItem> listItem );
+        /** @brief 워커에 임포트를 요청합니다. @p assetPaths 는 임포터마다 넘긴다(에디터 스레드가 찾는다). 앞 잡이 아직 돌면 아무것도 하지 않고 false 입니다. */
+        [[nodiscard]] bool request( vector<EditorAssetImportItem> listItem, const AssetPaths& assetPaths );
 
         /** @brief 도는 잡이 다음 원본을 임포트하기 전에 멈추게 합니다(이미 끝났으면 아무 일도 없다). 건너뛴 원본은 결과에 `_bRan == false` 로 남는다. */
         void cancel();

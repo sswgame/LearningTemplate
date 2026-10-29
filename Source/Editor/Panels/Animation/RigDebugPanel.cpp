@@ -128,14 +128,14 @@ namespace sw::editor
             static string saveRig( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
             {
                 const string_view rigPath  = modifier.getRigPath();
-                const string      readPath = AssetPaths::findLooseFile( rigPath ).getDiskPath();
+                const string      readPath = editor::getSubsystem<AssetPaths>().findLooseFile( rigPath ).getDiskPath();
                 string            text;
                 if ( readPath.empty() || FileUtil::readTextFile( readPath, text ) == false )
                     return string( "The rig file could not be read" );
                 string rewritten;
                 if ( RigFileRewrite::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
-                const string writePath = AssetPaths::getWritePath( rigPath );
+                const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( rigPath );
                 if ( writePath.empty() || FileUtil::writeTextFile( writePath, rewritten ) == false )
                     return string( "The rig file could not be written" );
                 if ( pUndoLabel != nullptr )

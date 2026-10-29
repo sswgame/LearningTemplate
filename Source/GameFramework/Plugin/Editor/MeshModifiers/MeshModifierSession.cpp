@@ -248,7 +248,7 @@ namespace sw::editor
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
-        , _textureSampler{}
+        , _textureSampler{ editor::getSubsystem<AssetPaths>() } // 표본은 작업 스레드에서 돈다 — 경로 상태는 만드는 여기(에디터 스레드)서 찾아 넘긴다
         , _previewTime{ 0.0f }
         , _selectedIndex{ -1 }
         , _inputBounds{}
@@ -601,7 +601,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = AssetPaths::getWritePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        const string path = editor::getSubsystem<AssetPaths>().getWritePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( _stack.saveFile( path ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
@@ -616,7 +616,7 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = AssetPaths::findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
+        const string path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
         if ( path.empty() )
             return false;
         if ( _stack.loadFile( path ) == false )
@@ -651,7 +651,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
         const string assetID = MeshModifierStack::makeBakedMeshPath( _meshPath );
-        const string path    = AssetPaths::getWritePath( assetID );
+        const string path    = editor::getSubsystem<AssetPaths>().getWritePath( assetID );
         if ( MeshAssetFormat::saveToFile( path, baked ) == false )
         {
             SW_LOG_ERROR( "Failed to write baked mesh %#", path.c_str() );

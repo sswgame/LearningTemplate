@@ -12,6 +12,7 @@
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
@@ -76,7 +77,7 @@ namespace sw
         // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
         // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
         const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      absPath    = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
+        const string      absPath    = engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
         const uint64      sourceHash = absPath.empty() ? 0u : ShaderCooker::computeSourceFingerprint( absPath, vector<string>{} );
 
         StringBuilder<constant::kMaxBuffer64> sb;
@@ -259,7 +260,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Shader );
         string       cacheKey = inCacheKey;
-        const string absPath  = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
+        const string absPath  = engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
 
         // 0) 인메모리 캐시 조회 — 항목을 만든 컴파일이 연 헤더까지 포함한 지문이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
         if ( absPath.empty() == false )

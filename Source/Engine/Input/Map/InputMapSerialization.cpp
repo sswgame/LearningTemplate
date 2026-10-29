@@ -3,6 +3,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -1108,7 +1109,7 @@ namespace sw
         if ( bAllWritten == false )
             return false;
 
-        const string absPath = AssetPaths::getWritePath( relativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( relativePath );
         if ( doc.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Could not write InputMap %#", absPath );

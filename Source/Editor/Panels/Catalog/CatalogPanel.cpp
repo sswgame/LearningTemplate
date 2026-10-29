@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Asset/AssetDataKind.h"
@@ -327,7 +328,7 @@ namespace sw::editor
 
     void CatalogPanel::openFile( const string& assetID )
     {
-        const string absolutePath = AssetPaths::findLooseFile( assetID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
+        const string absolutePath = editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
         string       text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -362,7 +363,7 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const string absolutePath = AssetPaths::resolveWritePath( _selectedID );
+        const string absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _document.getText() ) == false )
         {
             SW_LOG_ERROR( "Could not write catalog file '%#'", absolutePath.c_str() );
@@ -422,7 +423,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const string absolutePath = AssetPaths::resolveWritePath( _selectedID );
+        const string absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _previousFileText ) == false )
         {
             SW_LOG_ERROR( "Could not restore catalog file '%#'", absolutePath.c_str() );

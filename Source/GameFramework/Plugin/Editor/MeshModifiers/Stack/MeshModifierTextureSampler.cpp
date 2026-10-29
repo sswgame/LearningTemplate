@@ -54,21 +54,21 @@ namespace sw::editor
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::kMicrosecondsPerMillisecond; }
 
             /** @brief 절대 경로 · 작업 폴더 상대 경로가 있으면 그대로, 아니면 리소스 id 로 해석합니다. 못 찾으면 빈 문자열입니다. */
-            static string resolvePath( string_view assetPath )
+            static string resolvePath( const AssetPaths& assetPaths, string_view assetPath )
             {
                 string resolved;
                 if ( FileUtil::exists( assetPath ) )
                     resolved = string( assetPath );
                 else
-                    resolved = AssetPaths::findLooseFile( assetPath ).getDiskPath();
+                    resolved = assetPaths.findLooseFile( assetPath ).getDiskPath();
                 return resolved;
             }
 
             /** @brief 파일을 읽어 float4 텍셀로 디코드합니다. 실패해도 경로 · 시각이 든 (무효) 항목을 돌려줘 같은 실패를 정점마다 되풀이하지 않습니다. */
-            static std::shared_ptr<DecodedTexture> decodeFile( string_view assetPath )
+            static std::shared_ptr<DecodedTexture> decodeFile( const AssetPaths& assetPaths, string_view assetPath )
             {
                 std::shared_ptr<DecodedTexture> pTexture = std::make_shared<DecodedTexture>();
-                pTexture->_resolvedPath                  = resolvePath( assetPath );
+                pTexture->_resolvedPath                  = resolvePath( assetPaths, assetPath );
                 pTexture->_lastCheckMilliseconds.store( getNowMilliseconds(), std::memory_order_relaxed );
 
                 vector<uint8> bytes;
@@ -105,7 +105,7 @@ namespace sw::editor
             }
 
             /** @brief 캐시에서 찾고, 없거나 낡았으면 단일 잠금 아래에서 한 번만 디코드합니다. */
-            static std::shared_ptr<DecodedTexture> acquire( shared_mutex& mutex, TextureCache& cache, string_view assetPath )
+            static std::shared_ptr<DecodedTexture> acquire( const AssetPaths& assetPaths, shared_mutex& mutex, TextureCache& cache, string_view assetPath )
             {
                 std::shared_ptr<DecodedTexture> pTexture;
                 {
@@ -130,7 +130,7 @@ namespace sw::editor
                     }
                     else
                     {
-                        pTexture                   = decodeFile( assetPath );
+                        pTexture                   = decodeFile( assetPaths, assetPath );
                         cache[string( assetPath )] = pTexture;
                         evictOverBudget( cache, *pTexture );
                     }
@@ -226,12 +226,20 @@ namespace sw::editor
     /** @brief 표본기가 소유하는 캐시와 그 잠금입니다. 여러 작업 스레드가 같이 부르므로 잠금이 캐시를 지킨다. */
     struct MeshModifierTextureSampler::State
     {
+        explicit State( const AssetPaths& assetPaths )
+            : _assetPaths{ assetPaths }
+            , _mutex{}
+            , _cache{}
+        {
+        }
+
+        const AssetPaths&                                _assetPaths; ///< 리소스 id 를 푸는 경로 상태(만든 쪽이 넘겼다 — 표본기보다 오래 산다)
         shared_mutex                                     _mutex;
         MeshModifierTextureSamplerInternal::TextureCache _cache;
     };
 
-    MeshModifierTextureSampler::MeshModifierTextureSampler()
-        : _pState{ make_unique<State>() }
+    MeshModifierTextureSampler::MeshModifierTextureSampler( const AssetPaths& assetPaths )
+        : _pState{ make_unique<State>( assetPaths ) }
     {
     }
 
@@ -242,7 +250,7 @@ namespace sw::editor
         bool bSampled = false;
         if ( assetPath.empty() == false )
         {
-            const std::shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( _pState->_mutex, _pState->_cache, assetPath );
+            const std::shared_ptr<DecodedTexture> pTexture = MeshModifierTextureSamplerInternal::acquire( _pState->_assetPaths, _pState->_mutex, _pState->_cache, assetPath );
             if ( pTexture != nullptr && pTexture->isValid() )
             {
                 outRGBA  = MeshModifierTextureSamplerInternal::sampleBilinear( *pTexture, uv );

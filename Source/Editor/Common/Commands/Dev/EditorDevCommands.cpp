@@ -142,7 +142,7 @@ namespace sw::editor
                     return true;
                 }
                 // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다. 그래서 시나리오가 작업 폴더를 몰라도 된다.
-                const string assetPath = AssetPaths::findLooseFile( path ).getDiskPath();
+                const string assetPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
                 if ( FileUtil::exists( assetPath ) )
                 {
                     outAbsolutePath = assetPath;
@@ -216,7 +216,7 @@ namespace sw::editor
                     outReply = "temp assets must be under Saved/Automation/: '" + absolutePath + "'";
                     return false;
                 }
-                const string& resourceRoot = AssetPaths::getRootFolderPath();
+                const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 if ( resourceRoot.empty() == false && isUnderFolder( normalized, FileUtil::normalizePath( resourceRoot ) ) )
                 {
                     outReply = "temp assets must not be in the resource tree: '" + absolutePath + "'";
@@ -262,7 +262,7 @@ namespace sw::editor
                     outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                const string absolutePath = AssetPaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
+                const string absolutePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
                 if ( absolutePath.empty() || FileUtil::exists( absolutePath ) == false )
                 {
                     outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
@@ -319,7 +319,7 @@ namespace sw::editor
             [[nodiscard]] static bool resolveImportFolder( const string& folderID, string& outAbsolutePath, string& outReply )
             {
                 const string  normalized       = FileUtil::normalizePath( folderID );
-                const string& resourceRoot     = AssetPaths::getRootFolderPath();
+                const string& resourceRoot     = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 const bool    bOutsideTempArea = isUnderFolder( normalized, kImportTempFolder ) == false || normalized.find( ".." ) != string::npos;
                 if ( bOutsideTempArea || resourceRoot.empty() )
                 {
@@ -451,7 +451,7 @@ namespace sw::editor
                     return false;
                 }
                 // 캐시 · 놓인 프리팹 표는 리소스 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
-                const string prefabID = AssetPaths::toAssetID( absolutePath );
+                const string prefabID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( prefabID.empty() )
                 {
                     outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";
@@ -480,7 +480,7 @@ namespace sw::editor
                     string absolutePath;
                     if ( resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
                         return false;
-                    path = AssetPaths::toAssetID( absolutePath ); // 시나리오가 붙인 `saved` 도메인의 id
+                    path = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath ); // 시나리오가 붙인 `saved` 도메인의 id
                     if ( path.empty() )
                     {
                         outReply = "'" + absolutePath + "' is not under a mounted disk domain - run it from a scenario";

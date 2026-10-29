@@ -214,7 +214,7 @@ namespace sw::editor
         }
         if ( FileUtil::writeTextFile( outAssetAbs, text ) )
         {
-            SW_LOG_INFO( "Created '%#'", AssetPaths::toAssetID( outAssetAbs ) );
+            SW_LOG_INFO( "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
         SW_LOG_ERROR( "Could not write the new asset '%#'", outAssetAbs );
@@ -235,8 +235,8 @@ namespace sw::editor
         outFixedFileCount             = 0;
         const string source           = FileUtil::normalizeSeparators( sourceAbs );
         const string destination      = FileUtil::normalizeSeparators( destinationAbs );
-        const string oldID            = AssetPaths::toAssetID( source );
-        const string newID            = AssetPaths::toAssetID( destination );
+        const string oldID            = editor::getSubsystem<AssetPaths>().toAssetID( source );
+        const string newID            = editor::getSubsystem<AssetPaths>().toAssetID( destination );
         const bool   bInvalidAssetIDs = oldID.empty() || newID.empty() || oldID == newID;
         if ( bInvalidAssetIDs )
             return false;
@@ -274,7 +274,7 @@ namespace sw::editor
             }
         }
 
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
         inoutIndex.refreshFile( resourceRoot, oldID );
         inoutIndex.refreshFile( resourceRoot, newID );
 
@@ -318,7 +318,7 @@ namespace sw::editor
             listPath.push_back( metaPath );
         if ( FileUtil::moveToRecycleBin( listPath ) )
         {
-            SW_LOG_INFO( "Moved '%#' to the recycle bin", AssetPaths::toAssetID( assetPath ) );
+            SW_LOG_INFO( "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
         }
         SW_LOG_ERROR( "Could not move '%#' to the recycle bin - it is kept", assetPath );
@@ -362,7 +362,7 @@ namespace sw::editor
 
             const string fileName = FileUtil::getFileNamePart( sourcePath );
 
-            if ( FileUtil::pathsEqualNormalized( sourcePath, AssetPaths::makeSavePath( destFolderAbs, fileName ) ) )
+            if ( FileUtil::pathsEqualNormalized( sourcePath, editor::getSubsystem<AssetPaths>().makeSavePath( destFolderAbs, fileName ) ) )
             {
                 SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
                 continue;
@@ -372,7 +372,7 @@ namespace sw::editor
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
             // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 다른 파일인데 이름만 같은
             // 경우다.
-            const string destPath = AssetPaths::makeUniqueSavePath( destFolderAbs, fileName );
+            const string destPath = editor::getSubsystem<AssetPaths>().makeUniqueSavePath( destFolderAbs, fileName );
 
             if ( FileUtil::ensureParentDirectoryExists( destPath ) == false || FileUtil::copyFile( sourcePath, destPath ) == false )
             {

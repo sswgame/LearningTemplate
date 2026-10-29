@@ -53,7 +53,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const string editorRoot = AssetPaths::findLooseDomainFolder( path::kEditorPack ).getDiskPath();
+                const string editorRoot = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kEditorPack ).getDiskPath();
                 if ( editorRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorPaths::kFontsFolderName ), pFileName );
@@ -61,7 +61,7 @@ namespace sw::editor
                         return candidate;
                 }
 
-                const string& resourceRoot = AssetPaths::getRootFolderPath();
+                const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
                 if ( resourceRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath(

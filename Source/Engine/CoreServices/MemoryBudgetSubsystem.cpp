@@ -7,6 +7,7 @@
 #include "Engine/CoreServices/ContentRootSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -30,7 +31,7 @@ namespace sw
         {
             _bBudgetFileRead = true;
             if ( _crashHandler.isCrashReporterRun() == false )
-                (void)_monitor.loadBudgetFile( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
+                (void)_monitor.loadBudgetFile( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
         }
         _monitor.onFrameEnd();
     }

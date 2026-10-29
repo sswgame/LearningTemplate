@@ -10,12 +10,12 @@
 
 namespace sw::editor
 {
-    bool EditorAssetIndex::classifyFile( string_view filePath, EditorAssetIndexEntry& outEntry )
+    bool EditorAssetIndex::classifyFile( const AssetPaths& assetPaths, string_view filePath, EditorAssetIndexEntry& outEntry )
     {
         const EditorAssetTypeRegistration* pInfo = EditorAssetTypeRegistry::findKindInfoForPath( filePath );
         if ( pInfo == nullptr )
             return false;
-        const string assetID = AssetPaths::toAssetID( filePath );
+        const string assetID = assetPaths.toAssetID( filePath );
         if ( assetID.empty() )
             return false;
 
@@ -27,11 +27,11 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetIndex::collectEntries( vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
+    void EditorAssetIndex::collectEntries( const AssetPaths& assetPaths, vector<EditorAssetIndexEntry>& outList, const StopToken& stopToken )
     {
         outList.clear();
 
-        const string& resourceFolder = AssetPaths::getRootFolderPath();
+        const string& resourceFolder = assetPaths.getRootFolderPath();
         if ( resourceFolder.empty() )
             return;
 
@@ -45,7 +45,7 @@ namespace sw::editor
             if ( stopToken.isStopRequested() )
                 return;
             EditorAssetIndexEntry entry{};
-            if ( classifyFile( file, entry ) )
+            if ( classifyFile( assetPaths, file, entry ) )
                 outList.push_back( std::move( entry ) );
         }
     }
@@ -74,10 +74,10 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::collectCatalogCounts( EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
+    void EditorAssetIndex::collectCatalogCounts( const AssetPaths& assetPaths, EditorResourceCatalogCounts& outCounts, const StopToken& stopToken )
     {
         vector<string> listAllFile;
-        const string&  resourceRootPath = AssetPaths::getRootFolderPath();
+        const string&  resourceRootPath = assetPaths.getRootFolderPath();
         // 리소스 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
         if ( resourceRootPath.empty() == false )
             (void)FileUtil::collectFiles( resourceRootPath, "", listAllFile, true, stopToken ); // 표시용 개수 — 도중에 멈춘 것은 collectFiles 가 알리고 모은 데까지 센다

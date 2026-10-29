@@ -214,16 +214,16 @@ namespace sw::editor
         return listMeshSection;
     }
 
-    bool ModelImportUtil::writeCharacterPrefab( const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
+    bool ModelImportUtil::writeCharacterPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._listSection.empty() || result._bSkinned == SW_FALSE )
             return true;
         auto resourceOf = [&]( string_view extension )
-        { return AssetPaths::toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
+        { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
         auto materialOf = [&]( const ModelImportSection& section )
-        { return AssetPaths::toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
-        const string meshID       = AssetPaths::toAssetID( meshPath );
+        { return assetPaths.toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
+        const string meshID       = assetPaths.toAssetID( meshPath );
         const string skeletonPath = resourceOf( Skeleton::kExtension );
 
         // 문서 트리로 만들어 엔진 XML 서식으로 저장한다(이스케이프는 문서가 한다) — 저장소의 엔진 형식 파일은 바이트 그대로 왕복해야 한다(XMLAssetMerge).
@@ -258,7 +258,7 @@ namespace sw::editor
             Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
 
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && writeImportedMeta( prefabPath );
+        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && writeImportedMeta( assetPaths, prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );

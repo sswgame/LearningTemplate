@@ -285,7 +285,7 @@ namespace sw::editor
         return makeImportedHeightfieldPath( path ).empty() == false;
     }
 
-    bool HeightfieldImporter::importChangedSourceHeightfield( string_view relativePath )
+    bool HeightfieldImporter::importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath )
     {
         if ( isRawHeightfieldPath( relativePath ) == false )
             return false;
@@ -293,7 +293,7 @@ namespace sw::editor
         const HeightfieldRawImporter importer;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않고 직렬로 돈다(워커는 에디터 서비스 범위를 읽지 않는다).
         const AssetImportSummary summary =
-            AssetImportStampUtil::importSources( AssetPaths::getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
+            AssetImportStampUtil::importSources( assetPaths.getRootFolderPath(), importer, HeightfieldImporterInternal::findAffectedSources( relativePath ), nullptr );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );

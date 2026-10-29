@@ -4,6 +4,10 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/FileSystem/AssetPaths.h"
+
 namespace sw::editor
 {
     // ======================================================================
@@ -115,9 +119,11 @@ namespace sw::editor
     void EditorAssetIndexJob::request()
     {
         const uint32 generation = beginRequest( {} );
+        // 경로 상태는 여기(에디터 스레드)서 찾아 넘긴다 — 워커는 에디터 서비스 범위를 읽지 않는다.
+        const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>();
         submitEditorBackgroundJob( "EditorAssetIndex",
                                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorAssetIndexJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorAssetIndexJob::runJob( const TaskArgs& args )
@@ -131,7 +137,7 @@ namespace sw::editor
 
         vector<EditorAssetIndexEntry> listEntry;
         const StopToken               stopToken = readStopSignal( pState );
-        EditorAssetIndex::collectEntries( listEntry, stopToken );
+        EditorAssetIndex::collectEntries( *args.get<const AssetPaths*>( 2 ), listEntry, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 
@@ -148,10 +154,11 @@ namespace sw::editor
         input._folder     = string{ folderAbs };
         input._bRecursive = bRecursive;
 
-        const uint32 generation = beginRequest( std::move( input ) );
+        const uint32            generation  = beginRequest( std::move( input ) );
+        const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>(); // 워커는 서비스를 찾지 않는다 — 여기서 넘긴다
         submitEditorBackgroundJob( "EditorFolderListing",
                                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorFolderListingJob::runJob( const TaskArgs& args )
@@ -165,7 +172,7 @@ namespace sw::editor
 
         vector<EditorFolderListingEntry> listEntry;
         const StopToken                  stopToken = readStopSignal( pState );
-        EditorFolderListing::collectFolderListing( input._folder, listEntry, input._bRecursive, stopToken );
+        EditorFolderListing::collectFolderListing( *args.get<const AssetPaths*>( 2 ), input._folder, listEntry, input._bRecursive, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 
@@ -209,10 +216,11 @@ namespace sw::editor
 
     void EditorResourceCatalogJob::request()
     {
-        const uint32 generation = beginRequest( {} );
+        const uint32            generation  = beginRequest( {} );
+        const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>(); // 워커는 서비스를 찾지 않는다 — 여기서 넘긴다
         submitEditorBackgroundJob( "EditorResourceCatalog",
                                    SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
-                                   MakeTaskArgs( _pState, generation ) );
+                                   MakeTaskArgs( _pState, generation, pAssetPaths ) );
     }
 
     void EditorResourceCatalogJob::runJob( const TaskArgs& args )
@@ -226,7 +234,7 @@ namespace sw::editor
 
         EditorResourceCatalogCounts counts{};
         const StopToken             stopToken = readStopSignal( pState );
-        EditorAssetIndex::collectCatalogCounts( counts, stopToken );
+        EditorAssetIndex::collectCatalogCounts( *args.get<const AssetPaths*>( 2 ), counts, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 

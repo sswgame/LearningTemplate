@@ -13,6 +13,11 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+namespace sw
+{
+    class AssetPaths;
+} // namespace sw
+
 namespace sw::editor
 {
     /**
@@ -23,7 +28,8 @@ namespace sw::editor
     class MeshModifierTextureSampler
     {
     public:
-        MeshModifierTextureSampler();
+        /** @brief @p assetPaths 는 리소스 id 를 디스크 파일로 풀 경로 상태다 — 표본은 작업 스레드에서 돌아 서비스를 찾지 않고, 만드는 쪽(에디터 스레드)이 넘긴다. 표본기보다 오래 산다. */
+        explicit MeshModifierTextureSampler( const AssetPaths& assetPaths );
         ~MeshModifierTextureSampler();
         MeshModifierTextureSampler( const MeshModifierTextureSampler& )            = delete;
         MeshModifierTextureSampler& operator=( const MeshModifierTextureSampler& ) = delete;

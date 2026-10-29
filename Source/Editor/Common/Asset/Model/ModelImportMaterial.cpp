@@ -266,7 +266,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::writeMaterialSections( const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    bool ModelImportUtil::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
     {
         if ( result._listSection.empty() )
             return true;
@@ -288,7 +288,7 @@ namespace sw::editor
                     return false;
                 }
             }
-            listTexturePath[textureIndex] = AssetPaths::toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
+            listTexturePath[textureIndex] = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
         }
 
         // 툰 머티리얼 견본의 경로는 엔진 기본 에셋 표에 있다. 이 함수는 워커에서도 도므로 서비스를 찾지 않고 데이터에서 표를 읽는다.
@@ -316,7 +316,7 @@ namespace sw::editor
             }
             // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
             // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-            if ( writeImportedMeta( materialPath ) == false )
+            if ( writeImportedMeta( assetPaths, materialPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                 return false;
@@ -335,9 +335,9 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::writeImportedMeta( const string& assetPath )
+    bool ModelImportUtil::writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath )
     {
-        const string assetID = AssetPaths::toAssetID( assetPath );
+        const string assetID = assetPaths.toAssetID( assetPath );
         AssetMeta    meta;
         meta._guid       = makeImportedGUID( assetID );
         meta._sourcePath = assetID;

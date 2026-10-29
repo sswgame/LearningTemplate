@@ -814,7 +814,7 @@ namespace sw
 
     bool PrefabAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
             SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file - '%#' is left as it was", _name,
@@ -868,7 +868,7 @@ namespace sw
 
     bool PrefabAsset::saveToJSONFile( string_view assetRelativePath ) const
     {
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
             SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath );
@@ -922,7 +922,7 @@ namespace sw
 
     bool PrefabAsset::saveToBinaryFile( string_view assetRelativePath ) const
     {
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         Archive arch;
         arch << PrefabAssetInternal::kBinMagic;

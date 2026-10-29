@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
@@ -86,7 +87,7 @@ namespace sw
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
-        const string rootPath = watchRootPath.empty() ? AssetPaths::getRootFolderPath() : string( watchRootPath );
+        const string rootPath = watchRootPath.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( watchRootPath );
         // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
         if ( rootPath.empty() )
@@ -154,7 +155,7 @@ namespace sw
 
         // 감시 트리의 파일이 바뀌었다 — 바깥 도구(git, 바깥 편집기, 기다리지 않은 쿠커 자식)가 만들거나 지운 파일은 이 프로세스의 `FileUtil` 이 몰라 경로 캐시의
         // "없음" · "있음" 이 낡았을 수 있다. 받는 쪽이 새 경로를 묻기 전에 한 번 비운다(사건마다가 아니라 한 번 비울 때 몇 건이든 같다).
-        AssetPaths::clearPathCache();
+        engine::getSubsystem<AssetPaths>().clearPathCache();
         dispatchEvents( listEvent );
     }
 

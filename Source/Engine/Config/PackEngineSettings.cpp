@@ -7,6 +7,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -58,7 +59,7 @@ namespace sw
                 continue;
             const DataPath* pValue    = prop.getValuePtr<DataPath>( this );
             const bool      bNotSet   = pValue == nullptr || pValue->isSet() == false;
-            const bool      bSkipHost = bNotSet || AssetPaths::isExcludedForHost( pValue->get() );
+            const bool      bSkipHost = bNotSet || engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() );
             if ( bSkipHost || AssetIO::hasAsset( AssetID{ pValue->get() } ) )
                 continue;
             SW_LOG_ERROR( "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );

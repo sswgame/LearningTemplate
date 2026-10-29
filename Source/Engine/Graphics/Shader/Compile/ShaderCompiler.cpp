@@ -13,6 +13,7 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -47,11 +48,11 @@ namespace sw
 
                 // 쿠킹 스탬프도 같은 도메인의 헤더를 본다(`ShaderCooker::collectIncludeRootDomains`). 도메인 종류는 우선순위 설정에서 온다.
                 vector<string> listDomain;
-                if ( ShaderCooker::collectIncludeRootDomains( AssetPaths::getSearchPriority(), listDomain ) == false )
+                if ( ShaderCooker::collectIncludeRootDomains( engine::getSubsystem<AssetPaths>().getSearchPriority(), listDomain ) == false )
                     return false;
                 for ( const string& domain : listDomain )
                 {
-                    const string domainShaders = AssetPaths::findLooseDomainFolder( domain, "shaders" ).getDiskPath();
+                    const string domainShaders = engine::getSubsystem<AssetPaths>().findLooseDomainFolder( domain, "shaders" ).getDiskPath();
                     if ( domainShaders.empty() == false )
                         outListDir.push_back( domainShaders );
                 }
@@ -777,7 +778,7 @@ namespace sw
         if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
-            absPathStr = AssetPaths::findLooseFile( desc._filePath ).getDiskPath();
+            absPathStr = engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
 
         if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {
@@ -788,7 +789,7 @@ namespace sw
 
         // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
         vector<string> listShadowed;
-        if ( ShaderCooker::findShadowedHeaders( AssetPaths::getRootFolderPath(), AssetPaths::getSearchPriority(), absPathStr, listShadowed ) == false )
+        if ( ShaderCooker::findShadowedHeaders( engine::getSubsystem<AssetPaths>().getRootFolderPath(), engine::getSubsystem<AssetPaths>().getSearchPriority(), absPathStr, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {

@@ -29,7 +29,7 @@ namespace sw
         if ( pFolderWatch == nullptr )
             return false; // 감시 창구가 없는 빌드(배포)다 — 데이터는 팩에 들어 있다
         // 감시할 디스크 폴더는 필수 파일(slots.xml)의 낱개 파일 자리로 찾는다 — 팩에 든 데이터면 낱개 파일이 없다.
-        const LooseFilePath looseSlots = AssetPaths::findLooseFile( FileUtil::joinPath( folder, "slots.xml" ) );
+        const LooseFilePath looseSlots = game::getSubsystem<AssetPaths>().findLooseFile( FileUtil::joinPath( folder, "slots.xml" ) );
         if ( looseSlots.isEmpty() )
         {
             SW_LOG_INFO( "Appearance hot reload is off - '%#' is not on disk as loose files (packed data)", string( folder ).c_str() );

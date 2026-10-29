@@ -155,7 +155,7 @@ namespace sw
         {
             const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
             // 쿠킹 폴더가 비었으면 메시 곁(리소스 id 를 디스크 자리로 푼 곳)에 쓴다 — id 를 그대로 디스크 경로로 쓰면 작업 폴더 아래에 생긴다.
-            const string outputPath = cookedDir.empty() ? AssetPaths::resolveWritePath( cookedPath ) : FileUtil::joinPath( cookedDir, cookedPath );
+            const string outputPath = cookedDir.empty() ? engine::getSubsystem<AssetPaths>().resolveWritePath( cookedPath ) : FileUtil::joinPath( cookedDir, cookedPath );
             if ( outputPath.empty() )
             {
                 SW_LOG_ERROR( "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );

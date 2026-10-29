@@ -216,7 +216,7 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const string writePath = AssetPaths::getWritePath( string_view( getLoadedAssetPath() ) );
+        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( getLoadedAssetPath() ) );
         if ( writePath.empty() || FileUtil::writeTextFile( writePath, _profile.toXML() ) == false )
         {
             _status = writePath.empty() ? string( "No write path for this asset" ) : string( "The profile could not be written" );

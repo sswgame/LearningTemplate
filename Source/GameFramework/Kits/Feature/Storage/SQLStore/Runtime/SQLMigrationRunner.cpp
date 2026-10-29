@@ -13,6 +13,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 
@@ -142,7 +143,7 @@ namespace sw
              */
             [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
             {
-                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : AssetPaths::findLooseFile( folder ).getDiskPath();
+                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : game::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
                 if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
                     return true;
                 vector<string> listFilePath;
@@ -224,7 +225,7 @@ namespace sw
 
     bool SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError )
     {
-        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : AssetPaths::findLooseFile( folder ).getDiskPath();
+        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : game::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
         if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
             return true;
         vector<string> listFilePath;

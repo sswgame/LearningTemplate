@@ -55,7 +55,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorFolderListing::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive, const StopToken& stopToken )
+    void EditorFolderListing::collectFolderListing( const AssetPaths& assetPaths, string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive,
+                                                    const StopToken& stopToken )
     {
         outList.clear();
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
@@ -67,7 +68,7 @@ namespace sw::editor
         (void)FileUtil::collectFolders( folderAbs, listFolder, false );                 // 표시용 — 모은 데까지 보인다
         (void)FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive, stopToken ); // 표시용 — 모은 데까지 보인다
 
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = assetPaths.getRootFolderPath(); // 워커(`EditorFolderListingJob`)에서 돈다 — 부른 쪽이 넘긴 경로 상태다
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )

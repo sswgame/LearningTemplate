@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     struct EngineDefaultAssets;
 
     class DataPath;
@@ -85,8 +86,11 @@ namespace sw::editor
         static constexpr const utf8* kData   = "Data";   ///< 카탈로그 데이터(`.xml` · `.json`)와 전용 종류가 없는 데이터 문서. 전용 창이 접미사로 고르는 문서(`acceptsDocumentPath`)가 여기 든다
     };
 
-    /** @brief 소스 파일을 임포트하는 임포터입니다. 처리했으면 true 를 반환하며, 임포트했거나 임포트하지 않는다고 알린 경우가 모두 해당합니다. 이때는 그 파일의 캐시 리로드를 하지 않습니다. */
-    using AssetSourceImporterFunc = bool ( * )( string_view relativePath );
+    /**
+     * @brief 소스 파일을 임포트하는 임포터입니다. 처리했으면 true 를 반환하며, 임포트했거나 임포트하지 않는다고 알린 경우가 모두 해당합니다. 이때는 그 파일의 캐시 리로드를 하지 않습니다.
+     * @details 경로 상태 @p assetPaths 는 부른 쪽(에디터 스레드)이 찾아 넘긴다 — 워커 임포터는 에디터 서비스 범위를 읽지 않는다.
+     */
+    using AssetSourceImporterFunc = bool ( * )( const AssetPaths& assetPaths, string_view relativePath );
 
     /**
      * @enum AssetImportThread

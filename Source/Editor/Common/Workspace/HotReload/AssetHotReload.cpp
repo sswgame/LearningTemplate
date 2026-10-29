@@ -75,7 +75,7 @@ namespace sw::editor
             static string makeFenceFileName() { return AutomationScratch::makeInstanceID( kFenceFileStem ) + ".tmp"; }
 
             /** @brief 울타리 표지 파일의 절대 경로입니다. */
-            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
+            static string makeFenceMarkerPath() { return FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain ), makeFenceFileName() ); }
 
             /**
              * @brief 감시 사건이 울타리 표지 파일(이 에디터 것이든 같은 체크아웃의 다른 에디터 것이든)의 것인지 봅니다. 맞으면 @p outbOwn 이 이 에디터의 표지인지입니다.
@@ -91,7 +91,7 @@ namespace sw::editor
                 if ( StringUtil::startsWith( leafName, kFenceFileStem ) == false )
                     return false; // 값싼 이름 검사로 대부분의 사건을 거른다
                 const string eventPath   = FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
-                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( AssetPaths::getRootFolderPath(), AutomationScratch::kScratchDomain ) );
+                const string scratchRoot = FileUtil::normalizePath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), AutomationScratch::kScratchDomain ) );
                 if ( FileUtil::normalizePath( FileUtil::getDirectoryPart( eventPath ) ) != scratchRoot )
                     return false;
                 outbOwn = eventPath == FileUtil::normalizePath( makeFenceMarkerPath() );
@@ -192,10 +192,10 @@ namespace sw::editor
         FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
-        _resourceWatch = _pFileWatchDispatcher->registerWatch( AssetPaths::getRootFolderPath(), listExtension, fileWatchDelegate );
+        _resourceWatch = _pFileWatchDispatcher->registerWatch( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listExtension, fileWatchDelegate );
         // 디스크 목록을 가진 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
-        _contentWatch = _pFileWatchDispatcher->registerWatch( AssetPaths::getRootFolderPath(), {}, treeWatchDelegate );
+        _contentWatch = _pFileWatchDispatcher->registerWatch( editor::getSubsystem<AssetPaths>().getRootFolderPath(), {}, treeWatchDelegate );
         return _resourceWatch.isActive();
     }
 
@@ -256,7 +256,7 @@ namespace sw::editor
                 _bChangedPathsUnknown = true;
             return;
         }
-        const string assetID = StringUtil::toLower( AssetPaths::toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
+        const string assetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
         if ( assetID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
         {
             _bChangedPathsUnknown = true;
@@ -340,7 +340,7 @@ namespace sw::editor
             return;
 
         string relPath{};
-        if ( FileUtil::makeRelativePath( AssetPaths::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
+        if ( FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
             return;
 
         if ( relPath.empty() )
@@ -416,7 +416,7 @@ namespace sw::editor
             listItem.push_back( EditorAssetImportItem{ request._relativePath, request._pfnImport } );
         }
         const size_t sourceCount = listItem.size();
-        if ( _pImportJob->request( std::move( listItem ) ) == false )
+        if ( _pImportJob->request( std::move( listItem ), editor::getSubsystem<AssetPaths>() ) == false ) // 경로 상태는 여기(에디터 스레드)서 찾아 워커에 넘긴다
         {
             SW_LOG_ERROR( "Asset import job is still running - %# source(s) wait for the next frame", sourceCount );
             return;
@@ -481,7 +481,7 @@ namespace sw::editor
             if ( route._importThread == AssetImportThread::Worker )
                 return ReloadOutcome::NotTracked;
             // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
-            if ( route._pfnImportSource( relativePath ) )
+            if ( route._pfnImportSource( editor::getSubsystem<AssetPaths>(), relativePath ) )
                 return ReloadOutcome::Reloaded;
         }
         return reloadCaches( route, assetID );

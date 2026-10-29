@@ -354,7 +354,7 @@ namespace sw
             }
         }
 
-        const string absPath = AssetPaths::getWritePath( path );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -488,7 +488,7 @@ namespace sw
             SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 
-        const string absPath = AssetPaths::getWritePath( path );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );

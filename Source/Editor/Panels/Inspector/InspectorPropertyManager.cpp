@@ -22,6 +22,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
@@ -153,7 +154,7 @@ namespace sw::editor
                     AssetPickerState& picker = getAssetPickerState();
                     picker._listEntry.clear();
                     picker._search.clear();
-                    EditorAssetIndex::collectEntries( picker._listEntry );
+                    EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), picker._listEntry );
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
@@ -216,7 +217,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
-                const string fileAbs = AssetPaths::findLooseFile( FileUtil::normalizePath( assetPath ) ).getDiskPath();
+                const string fileAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetPath ) ).getDiskPath();
                 if ( fileAbs.empty() )
                     return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs ) );

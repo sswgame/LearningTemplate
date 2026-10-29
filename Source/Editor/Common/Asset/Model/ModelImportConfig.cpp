@@ -475,9 +475,9 @@ namespace sw::editor
         return true;
     }
 
-    string ModelImportConfig::makeDefaultConfigPath()
+    string ModelImportConfig::makeDefaultConfigPath( const AssetPaths& assetPaths )
     {
-        const string projectRoot = EditorPaths::getProjectRootPath();
+        const string projectRoot = EditorPaths::getProjectRootPath( assetPaths );
         if ( projectRoot.empty() )
             return {};
         return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );

@@ -9,6 +9,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -621,7 +622,7 @@ namespace sw
             SW_LOG_ERROR( "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );
             return false;
         }
-        return AssetPaths::mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
+        return engine::getSubsystem<AssetPaths>().mountDiskDomain( kSavedDomain, savedFolder ); // 거절하면 이유를 로그로 남긴다
     }
 
     string ScenarioRecorder::makeReplayID( string_view outputPath )

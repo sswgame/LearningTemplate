@@ -120,7 +120,7 @@ namespace sw
         /** @brief 기본 저장 경로 `<프로젝트>/Saved/Traces/<접두어>_<유닉스 밀리초>.trace.json` 입니다. */
         string makeDefaultTracePath( string_view prefix, int64 wallUnixMilliseconds )
         {
-            return FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Saved/Traces" ),
+            return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" ),
                                        string( prefix ) + "_" + to_string( wallUnixMilliseconds ) + ProfilerTraceExport::kFileExtension );
         }
 
@@ -729,7 +729,7 @@ namespace sw
     string ProfilerTraceExport::findLatestTraceFile()
     {
         vector<string> listFile;
-        const string   folder = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Saved/Traces" );
+        const string   folder = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" );
         if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
             return {};
         string latest;

@@ -154,7 +154,7 @@ namespace sw::editor
         _selectedID     = -1;
         _bLayoutPending = true;
         _nodeGraph.requestContentFit();
-        string diskPath = AssetPaths::findLooseFile( path ).getDiskPath();
+        string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
         if ( diskPath.empty() )
             diskPath = path;
         string text;
@@ -181,7 +181,7 @@ namespace sw::editor
         const string& path = getLoadedAssetPath();
         if ( path.empty() )
             return false;
-        string diskPath = AssetPaths::findLooseFile( path ).getDiskPath();
+        string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
         if ( diskPath.empty() )
             diskPath = path;
         _model.collectIssues( _listIssue );

@@ -10,6 +10,7 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -165,7 +166,7 @@ namespace sw
 
     string DerivedDataCache::makeLocalRootPath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( AssetPaths::getProjectFolderPath(), path::kSavedFolder ), "DDC" );
+        return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), path::kSavedFolder ), "DDC" );
     }
 
     string DerivedDataCache::makePath( uint64 key ) const

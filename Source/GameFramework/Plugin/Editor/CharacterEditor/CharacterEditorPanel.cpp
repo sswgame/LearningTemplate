@@ -331,7 +331,7 @@ namespace sw::editor
         const CharacterEditorPaths& paths = _document.getPaths();
         if ( paths._socketPath.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( AssetPaths::findLooseFile( string_view( paths._socketPath.c_str() ) ).getDiskPath().empty() )
+        if ( editor::getSubsystem<AssetPaths>().findLooseFile( string_view( paths._socketPath.c_str() ) ).getDiskPath().empty() )
             return ToolAssetLoadResult::Missing; // 새 소켓 파일 — 저장하면 만든다
         return _document.loadSocketFile() ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
@@ -1242,7 +1242,7 @@ namespace sw::editor
         string thumbnailID;
         if ( _document.makeThumbnailID( thumbnailID ) == false )
             return; // 까닭은 상태 줄에 남았다
-        const string imagePath = AssetPaths::getWritePath( thumbnailID );
+        const string imagePath = editor::getSubsystem<AssetPaths>().getWritePath( thumbnailID );
         if ( imagePath.empty() || getPreviewViewport().requestImageFile( imagePath ) == false )
         {
             _document.setStatus( "The thumbnail needs a write path and the Preview tab drawn at least once" );

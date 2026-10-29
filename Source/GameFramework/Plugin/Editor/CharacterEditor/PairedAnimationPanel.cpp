@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -99,7 +100,7 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const string writePath = AssetPaths::getWritePath( string_view( getLoadedAssetPath() ) );
+        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( getLoadedAssetPath() ) );
         string       error;
         if ( writePath.empty() || _model.saveToFile( writePath, error ) == false )
         {
@@ -127,7 +128,7 @@ namespace sw::editor
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
 
-        const string readPath = AssetPaths::findLooseFile( string_view( path ) ).getDiskPath();
+        const string readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( path ) ).getDiskPath();
         if ( readPath.empty() )
         {
             _status = "The paired animation '" + path + "' has no file on disk to read";

@@ -15,10 +15,12 @@
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -124,7 +126,7 @@ namespace sw::editor
         _listGame.clear();
         _gameIndex = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::joinPath( EditorPaths::getProjectRootPath(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
+        (void)FileUtil::collectFiles( FileUtil::joinPath( EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         for ( const string& filePath : listFile )
         {
@@ -142,7 +144,7 @@ namespace sw::editor
     ProcessCommand PackagingPanel::makeCommand() const
     {
         using Internal               = PackagingPanelInternal;
-        const string    projectRoot  = EditorPaths::getProjectRootPath();
+        const string    projectRoot  = EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() );
         ProcessCommand  command      = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, Internal::kScriptRelativePath ) );
         vector<string>& listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--target", Internal::kArrTarget[_targetIndex] } );
@@ -164,7 +166,7 @@ namespace sw::editor
 
     bool PackagingPanel::startPackaging()
     {
-        if ( _pJob->request( makeCommand(), EditorPaths::getProjectRootPath() ) == false )
+        if ( _pJob->request( makeCommand(), EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ) ) == false )
             return false;
         _listLine.clear();
         _progress        = PackagingProgress{};

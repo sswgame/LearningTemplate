@@ -10,6 +10,7 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
+#include "Engine/Foundation/EngineServices.h"
 
 #include <algorithm>
 
@@ -27,7 +28,7 @@ namespace sw
             /** @brief 입력의 id 입니다. 리소스 루트 안이면 리소스 id, 밖이면 받은 경로(구분자만 맞춘다)입니다. */
             static string makeInputID( string_view path )
             {
-                string id = AssetPaths::toAssetID( path );
+                string id = engine::getSubsystem<AssetPaths>().toAssetID( path );
                 return id.empty() ? FileUtil::normalizeSeparators( path ) : id;
             }
         };
@@ -71,7 +72,7 @@ namespace sw
 
     uint64 CookInput::computeCurrentHash() const
     {
-        const string absPath = AssetPaths::findLooseFile( _assetID ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
+        const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _assetID ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
         if ( _kind == CookInputKind::Listing )
             return CookJob::computeListingHash( absPath, _extension );
         return absPath.empty() ? 0 : ContentHash::computeFile( absPath );

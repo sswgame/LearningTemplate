@@ -67,7 +67,7 @@ namespace sw::editor
             {
                 if ( path.empty() )
                     return {};
-                string absPath = AssetPaths::findLooseFile( path ).getDiskPath();
+                string absPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
                 if ( absPath.empty() )
                     absPath = string{ path };
                 return absPath;

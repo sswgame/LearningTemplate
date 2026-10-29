@@ -22,6 +22,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -908,7 +909,7 @@ namespace sw
 
     void ShaderCooker::verifyCookedShaders( string_view resourceRoot, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem )
     {
-        verifyCookedShaders( resourceRoot, AssetPaths::getSearchPriority(), cookedDir, shaderFolder, outListProblem );
+        verifyCookedShaders( resourceRoot, engine::getSubsystem<AssetPaths>().getSearchPriority(), cookedDir, shaderFolder, outListProblem );
     }
 
     void ShaderCooker::verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem )

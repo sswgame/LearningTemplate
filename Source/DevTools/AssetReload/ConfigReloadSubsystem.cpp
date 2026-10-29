@@ -9,6 +9,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -31,7 +32,7 @@ namespace sw
 
     SubsystemInitResult ConfigReloadSubsystem::initializeSubsystem()
     {
-        const string configFolder = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), config::kDirConfig );
+        const string configFolder = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO( "Config reload is off - no config folder at %#", configFolder.c_str() );

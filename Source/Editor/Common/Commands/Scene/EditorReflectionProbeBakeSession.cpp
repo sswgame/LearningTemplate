@@ -71,7 +71,7 @@ namespace sw::editor
                     outError = "the scene has never been saved - save it before baking reflection probes";
                     return false;
                 }
-                if ( data.saveToFile( AssetPaths::getWritePath( assetPath ) ) == false )
+                if ( data.saveToFile( editor::getSubsystem<AssetPaths>().getWritePath( assetPath ) ) == false )
                 {
                     utf8 arrMessage[constant::kMaxBuffer512];
                     formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", assetPath.c_str() );

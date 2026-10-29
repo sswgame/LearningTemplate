@@ -4,6 +4,7 @@
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
@@ -72,7 +73,7 @@ namespace sw
         }
 
         // 쓰기 경로는 `getWritePath` 하나가 정한다(아직 없는 파일도 도메인 루트 아래로 — 작업 디렉터리에 떨어지지 않게).
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
         {

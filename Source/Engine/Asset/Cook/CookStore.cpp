@@ -24,7 +24,7 @@ namespace sw
 
     CookStore CookStore::makeLocal()
     {
-        const string savedPath = FileUtil::joinPath( AssetPaths::getProjectFolderPath(), path::kSavedFolder );
+        const string savedPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), path::kSavedFolder );
         return CookStore{ FileUtil::joinPath( savedPath, "CookRecord" ), DerivedDataCache::makeLocalRootPath() };
     }
 

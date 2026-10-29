@@ -10,6 +10,7 @@
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Character/CharacterDataReader.h"
@@ -34,7 +35,7 @@ namespace sw::editor
             static constexpr const utf8* kArrSourceAttribute[] = { "part", "texture" };
 
             /** @brief 리소스 루트 기준 경로를 디스크 경로로 풉니다. */
-            static string toDiskPath( string_view assetPath ) { return FileUtil::normalizeSeparators( FileUtil::joinPath( AssetPaths::getRootFolderPath(), assetPath ) ); }
+            static string toDiskPath( string_view assetPath ) { return FileUtil::normalizeSeparators( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetPath ) ); }
 
             static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
             {

@@ -106,13 +106,13 @@ namespace sw::editor
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetType{ SceneDocument::kAssetType }, params._listFilterExtension );
 
                 const string activePack = editor::getSubsystem<const GameConfig>()._packRoot.get();
-                const string mapsDir    = AssetPaths::findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
+                const string mapsDir    = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
                 if ( FileUtil::isDirectory( mapsDir ) )
                     params._initialDirectory = mapsDir;
-                else if ( AssetPaths::findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = AssetPaths::findLooseDomainFolder( activePack ).getDiskPath();
-                else if ( AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = AssetPaths::findLooseDomainFolder( path::kGamePack ).getDiskPath();
+                else if ( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack ).getDiskPath();
+                else if ( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
+                    params._initialDirectory = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kGamePack ).getDiskPath();
 
                 FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }

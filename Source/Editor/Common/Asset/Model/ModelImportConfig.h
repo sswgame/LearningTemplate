@@ -16,6 +16,8 @@ namespace sw
 {
     enum class ConfigReadResult : uint8;
 
+    class AssetPaths;
+
     class JSONValue;
 } // namespace sw
 
@@ -148,8 +150,8 @@ namespace sw::editor
         /** @brief `recenter` 값 이름을 읽습니다. "none", "xz", "bottom-center" 중 하나이며, 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool parseRecenter( string_view text, ModelRecenter& outRecenter );
 
-        /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)를 반환합니다. */
-        static string makeDefaultConfigPath();
+        /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)를 반환합니다. 워커에서도 불려 경로 상태는 부른 쪽이 넘긴다. */
+        static string makeDefaultConfigPath( const AssetPaths& assetPaths );
 
     private:
         /** @brief `fracture` 의 정수 키(pieces · seed · max_hull_points, 1 이상)와 실수 키(0 이상)를 읽습니다. */

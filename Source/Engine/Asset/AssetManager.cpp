@@ -122,7 +122,7 @@ namespace sw
         // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
         if ( listSearchPriority.empty() == false )
-            AssetPaths::setSearchPriority( listSearchPriority );
+            engine::getSubsystem<AssetPaths>().setSearchPriority( listSearchPriority );
 
         // 소스를 읽는 실행(개발 · 쿠킹)은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이라 소스와 섞어 읽으면 어긋난 쿠킹본을 모르고 읽는다. GUID 표는 `.meta` 를 훑는다.
         _pPackManager->setContentSource( source );
@@ -154,13 +154,13 @@ namespace sw
         const string exeDir         = FileUtil::getBinaryDirectory();
         const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
                                         "Packs",
-                                        FileUtil::joinPath( AssetPaths::getProjectFolderPath(), "Packs" ),
+                                        FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Packs" ),
                                         "Bin/Packs" };
         for ( const string& packsDir : arrCandidate )
         {
             if ( packsDir.empty() )
                 continue;
-            if ( _pPackManager->scanAndMountPacks( packsDir, AssetPaths::getSearchPriority() ) )
+            if ( _pPackManager->scanAndMountPacks( packsDir, engine::getSubsystem<AssetPaths>().getSearchPriority() ) )
                 return true;
         }
         return false;
@@ -191,13 +191,13 @@ namespace sw
             // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
             SW_LOG_INFO( "Asset registry: 0 entries (no assetregistry.txt in the pack - content without .meta)" );
         }
-        else if ( AssetPaths::getRootFolderPath().empty() == false )
+        else if ( engine::getSubsystem<AssetPaths>().getRootFolderPath().empty() == false )
         {
             // 쿠킹한 팩과 같은 도메인만 훑는다 — 다른 게임 팩의 .meta 는 이 게임이 닿지 않는다(느린 디스크에서 파일 하나가 읽기 한 번이다).
             for ( const string& domain : arrDomain )
             {
                 if ( domain.empty() == false )
-                    registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( AssetPaths::getRootFolderPath(), domain ) );
+                    registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), domain ) );
             }
             SW_LOG_INFO( "Asset registry: %# entries (.meta scan)", registered );
         }

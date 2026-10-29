@@ -139,12 +139,12 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
+        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ).getDiskPath();
+        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ).getDiskPath();
     }
 
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
@@ -154,7 +154,7 @@ namespace sw::editor
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
             SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
-        const string enginePath = pDefaultAssets != nullptr ? AssetPaths::findLooseFile( pDefaultAssets->_localizationProject.get() ).getDiskPath() : string{};
+        const string enginePath = pDefaultAssets != nullptr ? editor::getSubsystem<AssetPaths>().findLooseFile( pDefaultAssets->_localizationProject.get() ).getDiskPath() : string{};
         if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
             outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
 

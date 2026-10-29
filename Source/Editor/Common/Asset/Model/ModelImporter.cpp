@@ -582,7 +582,7 @@ namespace sw::editor
             }
 
             /** @brief 부착 메시를 옆 폴더에 쓰고 스켈레톤에 부착으로 올립니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool writeAttachments( ModelImportResult& inoutResult, const string& sideFolder )
+            [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, ModelImportResult& inoutResult, const string& sideFolder )
             {
                 for ( const ModelImportAttachment& attachment : inoutResult._listAttachment )
                 {
@@ -594,7 +594,7 @@ namespace sw::editor
                     }
                     SkeletonAttachment entry{};
                     entry._name           = attachment._name;
-                    entry._meshPath       = AssetPaths::toAssetID( partPath );
+                    entry._meshPath       = assetPaths.toAssetID( partPath );
                     entry._parentBone     = attachment._parentBone;
                     entry._localTransform = attachment._localTransform;
                     inoutResult._skeleton.addAttachment( entry );
@@ -630,8 +630,10 @@ namespace sw::editor
         class ModelRawImporter final : public IRawAssetImporter
         {
         public:
-            explicit ModelRawImporter( const ModelImportConfig& config )
-                : _config{ config }
+            /** @brief @p assetPaths 는 부른 스레드가 찾아 넘긴 경로 상태다 — `importSource` 가 워커에서 돌아 서비스를 찾지 않는다. */
+            ModelRawImporter( const AssetPaths& assetPaths, const ModelImportConfig& config )
+                : _assetPaths{ assetPaths }
+                , _config{ config }
             {
             }
 
@@ -664,7 +666,7 @@ namespace sw::editor
                 ModelImportRule rule;
                 if ( findRule( assetPath, rule ) == false )
                     return false;
-                return ModelImporter::importModel( sourcePath, rule, importedPath );
+                return ModelImporter::importModel( _assetPaths, sourcePath, rule, importedPath );
             }
 
         private:
@@ -681,6 +683,7 @@ namespace sw::editor
                 return true;
             }
 
+            const AssetPaths&        _assetPaths;
             const ModelImportConfig& _config;
         };
     } // namespace
@@ -743,7 +746,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
+    bool ModelImporter::importModel( const AssetPaths& assetPaths, string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
     {
         using Internal = ModelImporterInternal;
         ModelImportResult result{};
@@ -765,7 +768,7 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
             return false;
         }
-        if ( Internal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
+        if ( Internal::writeMaterialSections( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
         if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;
@@ -775,7 +778,7 @@ namespace sw::editor
             return true;
         }
 
-        if ( Internal::writeAttachments( result, sideFolder ) == false )
+        if ( Internal::writeAttachments( assetPaths, result, sideFolder ) == false )
             return false;
         const string stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
         const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
@@ -786,7 +789,7 @@ namespace sw::editor
         }
         if ( Internal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
             return false;
-        if ( Internal::writeCharacterPrefab( result, outputPath, sideFolder, stem ) == false )
+        if ( Internal::writeCharacterPrefab( assetPaths, result, outputPath, sideFolder, stem ) == false )
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;
@@ -798,12 +801,12 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImporter::importChangedSourceModel( string_view relativePath )
+    bool ModelImporter::importChangedSourceModel( const AssetPaths& assetPaths, string_view relativePath )
     {
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
             return false;
 
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = assetPaths.getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {
@@ -814,10 +817,10 @@ namespace sw::editor
         // 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
         // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         ModelImportConfig config{};
-        if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( ModelImportConfig::makeDefaultConfigPath( assetPaths ) ) == ConfigReadResult::Invalid )
             return true;
         // 바뀐 원본만 임포트한다(루트 전체를 훑지 않는다). 스탬프를 쓰는 길은 `importAllModels` 와 같은 `AssetImportStampUtil` 한 곳이다.
-        const ModelRawImporter importer{ config };
+        const ModelRawImporter importer{ assetPaths, config };
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 원본 하나라 직렬과 같다.
         const AssetImportSummary summary = AssetImportStampUtil::importSources( resourceRoot, importer, vector<string>{ string( relativePath ) }, nullptr );
         for ( const string& problem : summary._listProblem )
@@ -828,9 +831,9 @@ namespace sw::editor
         return true;
     }
 
-    AssetImportSummary ModelImporter::importAllModels( string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
+    AssetImportSummary ModelImporter::importAllModels( const AssetPaths& assetPaths, string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
-        const ModelRawImporter importer{ config };
+        const ModelRawImporter importer{ assetPaths, config };
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
     }
 

@@ -62,7 +62,7 @@ namespace sw::editor
 
     bool ContentBrowserReferenceSearch::tryRefreshChangedFiles( const vector<string>& listChangedPath )
     {
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
         for ( const string& assetID : listChangedPath )
         {
             const bool bExists = FileUtil::exists( FileUtil::joinPath( resourceRoot, assetID ) );
@@ -99,12 +99,12 @@ namespace sw::editor
         if ( _pChangeSource != nullptr )
             _pChangeSource->discardChangedPaths();
         // 워커는 에디터 범위를 찾지 않는다 — 여기서 찾아 넘긴다. 작업 관리자는 엔진 기동이 늘 올리므로 없으면 버그다.
-        _job.request( AssetPaths::getRootFolderPath(), &editor::getSubsystem<TaskManager>() );
+        _job.request( editor::getSubsystem<AssetPaths>().getRootFolderPath(), &editor::getSubsystem<TaskManager>() );
     }
 
     void ContentBrowserReferenceSearch::query( string_view absolutePath, bool bDependencies )
     {
-        _queryID          = AssetPaths::toAssetID( absolutePath );
+        _queryID          = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
         _bDependencyQuery = bDependencies ? SW_TRUE : SW_FALSE;
         if ( bDependencies )
             _index.findDependencies( _queryID, _listResult );

@@ -15,6 +15,7 @@
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
@@ -119,11 +120,11 @@ namespace sw::editor
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
-            addRoot( packRoot, AssetPaths::findLooseDomainFolder( packRoot ).getDiskPath() );
+            addRoot( packRoot, editor::getSubsystem<AssetPaths>().findLooseDomainFolder( packRoot ).getDiskPath() );
         if ( _bShowAllPacks || packRoot.empty() )
         {
             vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( AssetPaths::findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
+            (void)FileUtil::collectFolders( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "game" ).getDiskPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
             std::sort( listPackFolder.begin(), listPackFolder.end() );
             for ( const string& packFolder : listPackFolder )
             {
@@ -132,9 +133,9 @@ namespace sw::editor
                     addRoot( packName, packFolder );
             }
         }
-        addRoot( "engine", AssetPaths::findLooseDomainFolder( "engine" ).getDiskPath() );
-        addRoot( "common", AssetPaths::findLooseDomainFolder( "common" ).getDiskPath() );
-        addRoot( "editor", AssetPaths::findLooseDomainFolder( "editor" ).getDiskPath() );
+        addRoot( "engine", editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "engine" ).getDiskPath() );
+        addRoot( "common", editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "common" ).getDiskPath() );
+        addRoot( "editor", editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "editor" ).getDiskPath() );
 
         // 지금 폴더가 숨긴 팩 안에 있으면 첫 루트로 이동한다.
         const bool bSelectedIsUnderRoot = VectorUtil::containsIf( _listRoot, [&]( const ContentBrowserRoot& root )

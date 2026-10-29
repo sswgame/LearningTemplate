@@ -393,7 +393,7 @@ namespace sw::editor
             SW_LOG_ERROR( "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
             return false;
         }
-        const string path = AssetPaths::getWritePath( _openedDocument );
+        const string path = editor::getSubsystem<AssetPaths>().getWritePath( _openedDocument );
         if ( path.empty() || FileUtil::writeTextFile( path, text ) == false )
         {
             SW_LOG_ERROR( "UI Preview: '%#' could not be written to '%#'", _openedDocument.c_str(), path.c_str() );

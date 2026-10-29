@@ -24,6 +24,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -136,7 +137,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const string folderAbs = AssetPaths::findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
+                const string folderAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -227,7 +228,7 @@ namespace sw::editor
 
             static void showInExplorer( const EditorCommandTarget& target ) { EditorAssetFileCommands::showInFileExplorer( findTargetPath( target ) ); }
 
-            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( AssetPaths::toAssetID( findTargetPath( target ) ).c_str() ); }
+            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( editor::getSubsystem<AssetPaths>().toAssetID( findTargetPath( target ) ).c_str() ); }
 
             static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
 
@@ -514,7 +515,7 @@ namespace sw::editor
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
         {
-            const uint32 referrerCount = referenceIndex.countReferrerFiles( AssetPaths::toAssetID( pendingDeleteAbs ) );
+            const uint32 referrerCount = referenceIndex.countReferrerFiles( editor::getSubsystem<AssetPaths>().toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
                 ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
             else
@@ -575,7 +576,7 @@ namespace sw::editor
     {
         string assetID;
         if ( EditorWidgets::acceptAssetDrop( assetID ) )
-            (void)_model.moveAssetToFolder( AssetPaths::findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
+            (void)_model.moveAssetToFolder( editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )
@@ -871,8 +872,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? AssetPaths::findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
-                                         : AssetPaths::findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
+                                         ? editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
+                                         : editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
@@ -923,7 +924,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", AssetPaths::toAssetID( absPath ) );
+            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", editor::getSubsystem<AssetPaths>().toAssetID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )

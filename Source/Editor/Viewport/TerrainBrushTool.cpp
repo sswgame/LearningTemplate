@@ -484,7 +484,7 @@ namespace sw::editor
                 if ( pTerrain == nullptr )
                     return;
                 bool         bSaved          = true;
-                const string heightfieldPath = AssetPaths::findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
+                const string heightfieldPath = editor::getSubsystem<AssetPaths>().findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
                 if ( heightfieldPath.empty() || saveHeightfield( *pTerrain, heightfieldPath ) == false )
                 {
                     SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
@@ -492,7 +492,7 @@ namespace sw::editor
                 }
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const string splatPath = AssetPaths::findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
+                    const string splatPath = editor::getSubsystem<AssetPaths>().findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
                     if ( splatPath.empty() || saveSplat( *pTerrain, splatPath ) == false )
                     {
                         SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );

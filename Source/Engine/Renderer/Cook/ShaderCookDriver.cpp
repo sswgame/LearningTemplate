@@ -28,6 +28,7 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
@@ -184,7 +185,7 @@ namespace sw
              */
             static void planRequest( const ShaderCookRequest& request, const vector<ShaderTargetFormat>& listTargetFormat, CookState& ioState, vector<FormatTask>& outListTask )
             {
-                const string absPath = FileUtil::exists( request._shaderPath ) ? request._shaderPath : AssetPaths::findLooseFile( request._shaderPath ).getDiskPath();
+                const string absPath = FileUtil::exists( request._shaderPath ) ? request._shaderPath : engine::getSubsystem<AssetPaths>().findLooseFile( request._shaderPath ).getDiskPath();
                 if ( FileUtil::exists( absPath ) == false )
                 {
                     ++ioState._summary._failedCount;
@@ -375,7 +376,7 @@ namespace sw
                                                         bool               bForceAll )
     {
         // 루트를 주지 않으면 찾아 둔 리소스 루트다. 그것도 없으면 쿠킹하지 못한다(작업 폴더 기준 "Resource" 로 짐작하지 않는다).
-        const string rootDir = resourceRoot.empty() ? AssetPaths::getRootFolderPath() : string( resourceRoot );
+        const string rootDir = resourceRoot.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( resourceRoot );
         if ( rootDir.empty() || FileUtil::isDirectory( rootDir ) == false )
         {
             SW_LOG_ERROR( "Content root directory does not exist: '%#'", rootDir.c_str() );
@@ -403,7 +404,7 @@ namespace sw
             nothingCooked._failedCount = 1; // 아무것도 쿠킹하지 않은 채 성공으로 끝나지 않는다
             return nothingCooked;
         }
-        return cookRequests( rootDir, AssetPaths::getSearchPriority(), cookedDir, listRequest, targetFormat, bForceAll );
+        return cookRequests( rootDir, engine::getSubsystem<AssetPaths>().getSearchPriority(), cookedDir, listRequest, targetFormat, bForceAll );
     }
 
     ShaderCookSummary ShaderCookDriver::cookRequests( string_view                      resourceRoot,

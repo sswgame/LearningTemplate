@@ -14,14 +14,15 @@ namespace sw::editor
     {
     }
 
-    bool EditorAssetImportJob::request( vector<EditorAssetImportItem> listItem )
+    bool EditorAssetImportJob::request( vector<EditorAssetImportItem> listItem, const AssetPaths& assetPaths )
     {
         if ( isPending() )
             return false;
 
         EditorAssetImportInput input;
-        input._listItem = std::move( listItem );
-        _pCancel        = sw::make_shared<atomic<bool>>( false );
+        input._listItem    = std::move( listItem );
+        input._pAssetPaths = &assetPaths;
+        _pCancel           = sw::make_shared<atomic<bool>>( false );
 
         const uint32 generation = beginRequest( std::move( input ) );
         submitEditorBackgroundJob( "EditorAssetImport",
@@ -59,7 +60,7 @@ namespace sw::editor
                 continue;
             }
             itemResult._bRan     = true;
-            itemResult._bHandled = item._pfnImport( item._relativePath );
+            itemResult._bHandled = item._pfnImport( *input._pAssetPaths, item._relativePath );
         }
 
         publish( pState, generation, std::move( result ) );

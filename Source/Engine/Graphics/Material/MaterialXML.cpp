@@ -404,7 +404,7 @@ namespace sw
 
     bool Material::saveToFile( string_view assetRelativePath ) const
     {
-        const string absPath = AssetPaths::getWritePath( assetRelativePath );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )

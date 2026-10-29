@@ -122,7 +122,7 @@ namespace sw::editor
             pPackPage->_entry._typeName     = pPackPage->_entry._page;
             pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
             pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
-            pPackPage->_absolutePath        = FileUtil::joinPath( AssetPaths::findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
+            pPackPage->_absolutePath        = FileUtil::joinPath( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( packRoot.get() ).getDiskPath(), PackEngineSettings::kPackRelativePath );
             pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
             _listPage.push_back( std::move( pPackPage ) );
         }
@@ -134,7 +134,7 @@ namespace sw::editor
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
-        ProjectSettingsCatalog::collectLoaded( *pConfigManager, EditorPaths::getProjectRootPath(), listEntry );
+        ProjectSettingsCatalog::collectLoaded( *pConfigManager, EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ), listEntry );
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();

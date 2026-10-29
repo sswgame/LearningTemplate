@@ -378,7 +378,7 @@ namespace sw::editor
          *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 `<x>/textures/<y>/<이미지>.dds` 를 가리킨다.
          *          원본은 텍스처 임포트의 스탬프가 지킨다.
          */
-        [[nodiscard]] static bool writeMaterialSections( const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
+        [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
 
         /** @brief 리소스 경로에서 UUID 문자열을 만듭니다. 버전 4와 변형 비트를 맞춘 FNV-1a 두 개로 만들며, 같은 경로는 어디서 임포트해도 같은 GUID 가 나옵니다. */
         static string makeImportedGUID( string_view assetID );
@@ -387,7 +387,7 @@ namespace sw::editor
          * @details 글로 짓지 않고 `AssetMeta` 로 쓴다(형식은 그 타입 하나가 정한다 — 손으로 지은 키=값 글은 형식이 XML 로 바뀐 뒤 읽히지 않았다).
          *          캐시가 잡을 때 `.meta` 를 지어 붙이면 실행마다 GUID 가 달라 임포트 결과 해시가 어긋나므로 임포터가 미리 쓴다.
          */
-        [[nodiscard]] static bool writeImportedMeta( const string& assetPath );
+        [[nodiscard]] static bool writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath );
 
         /**
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.
@@ -417,7 +417,7 @@ namespace sw::editor
          * @details 런타임은 이 프리팹을 스폰하면 VRM 의 표정 · 스프링 본 · 1인칭 숨김(구간 가시성)을 쓴다. 적은 칸만 쓰고 나머지는 컴포넌트의 기본값이다.
          *          `.meta` 는 경로에서 정해지는 GUID 로 함께 쓴다(머티리얼과 같은 규칙 — 다시 임포트해도 같다).
          */
-        [[nodiscard]] static bool writeCharacterPrefab( const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem );
+        [[nodiscard]] static bool writeCharacterPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem );
         /** @brief 임포트 구간 표를 메시 구간(`MeshSection`)으로 바꿉니다. */
         static vector<MeshSection> makeMeshSections( const vector<ModelImportSection>& listSection );
 

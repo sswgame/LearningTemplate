@@ -11,6 +11,7 @@
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -180,7 +181,7 @@ namespace sw
     {
         const string_view relativePath = assetID.view();
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 없는 것으로 치고 오류를 남기지 않는다(AssetPaths::setHostTarget).
-        if ( AssetPaths::isExcludedForHost( relativePath ) )
+        if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( relativePath ) )
             return false;
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || bytes.empty() )

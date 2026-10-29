@@ -7,6 +7,7 @@
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -631,7 +632,7 @@ namespace sw
 
     bool TileMapXMLData::save( string_view path ) const
     {
-        const string absPath = AssetPaths::getWritePath( path );
+        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
 
         const string xml = toXML();
         if ( xml.empty() )

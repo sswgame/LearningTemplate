@@ -14,6 +14,7 @@
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
@@ -22,7 +23,7 @@ namespace sw
     string AssetDatabase::toRelativePath( string_view absolutePath )
     {
         const string  absNorm      = FileUtil::normalizeSeparators( absolutePath );
-        const string& resourceRoot = AssetPaths::getRootFolderPath();
+        const string& resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
         if ( resourceRoot.empty() )
             return {};
 
@@ -103,7 +104,7 @@ namespace sw
                 // 쿠킹본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
                 // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 // 소스 정책도 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Content/ 에 고아 `.meta` 가 생긴다.
-                if ( AssetIO::getContentSource() == ContentSource::Cooked || AssetPaths::findLooseFile( path ).getDiskPath().empty() )
+                if ( AssetIO::getContentSource() == ContentSource::Cooked || engine::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath().empty() )
                     return result;
                 result = UUID::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )
@@ -397,7 +398,7 @@ namespace sw
     bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        const string absMeta = AssetPaths::resolveWritePath( metaRel ); // 쓸 자리다 — .meta 는 아직 없을 수 있다
+        const string absMeta = engine::getSubsystem<AssetPaths>().resolveWritePath( metaRel ); // 쓸 자리다 — .meta 는 아직 없을 수 있다
         if ( absMeta.empty() )
         {
             SW_LOG_WARNING( "Cannot resolve meta path for %#", relativePath );

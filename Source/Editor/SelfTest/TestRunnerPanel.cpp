@@ -222,7 +222,7 @@ namespace sw::editor
         {
             _bScenarioListDirty = SW_FALSE;
             _listScenarioPath.clear();
-            const string&  root = AssetPaths::getRootFolderPath();
+            const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
             if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) )
             {

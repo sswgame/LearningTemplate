@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     struct HeightfieldAsset;
     struct LayerWeightsAsset;
 } // namespace sw
@@ -59,6 +60,6 @@ namespace sw::editor
          *          루트 전체의 대조는 `importAllHeightfields` 가 한다. 워커에서 불린다(`AssetHotReload` 의 임포트 잡).
          * @return 처리했으면 true(임포트했거나 바뀐 것이 없었다). 높이장 원본 경로가 아니면 false 입니다.
          */
-        [[nodiscard]] static bool importChangedSourceHeightfield( string_view relativePath );
+        [[nodiscard]] static bool importChangedSourceHeightfield( const AssetPaths& assetPaths, string_view relativePath );
     };
 } // namespace sw::editor

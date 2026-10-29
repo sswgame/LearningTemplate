@@ -6,6 +6,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     class TaskManager;
 } // namespace sw
 
@@ -88,7 +89,7 @@ namespace sw::editor
          *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다.
          * @return 소스 이미지였으면 true 입니다. 임포트했든 경고만 했든 같으며, 호출하는 쪽은 캐시를 다시 읽지 않습니다. `.dds` 이면 false 입니다.
          */
-        [[nodiscard]] static bool importChangedSourceImage( string_view relativePath );
+        [[nodiscard]] static bool importChangedSourceImage( const AssetPaths& assetPaths, string_view relativePath );
 
         /**
          * @brief 리소스 루트 아래 모든 `textures_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
@@ -115,7 +116,8 @@ namespace sw::editor
         /**
          * @brief 에디터 설정을 거치지 않은 기본 임포트 설정 경로(`<프로젝트>/Config/Editor/TextureImportConfig.json`)를 반환합니다.
          * @details 헤드리스 임포트와 테스트가 쓴다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 쓴다(`importChangedSourceImage`).
+         *          워커에서도 불려 경로 상태 @p assetPaths 는 부른 쪽이 넘긴다.
          */
-        static string makeDefaultImportConfigPath();
+        static string makeDefaultImportConfigPath( const AssetPaths& assetPaths );
     };
 } // namespace sw::editor

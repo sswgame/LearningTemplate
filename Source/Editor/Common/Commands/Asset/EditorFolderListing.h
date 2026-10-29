@@ -9,6 +9,11 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+namespace sw
+{
+    class AssetPaths;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief Content Browser 폴더의 항목 하나입니다. */
@@ -32,7 +37,8 @@ namespace sw::editor
     struct EditorFolderListing
     {
         /** @brief 폴더의 직속 하위 폴더와 파일을 채웁니다. .meta 는 제외합니다. @p bRecursive 이면 파일은 하위 폴더 전부에서 모으고 폴더는 직속만 모읍니다. */
-        static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false, const StopToken& stopToken = {} );
+        static void collectFolderListing( const AssetPaths& assetPaths, string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false,
+                                          const StopToken& stopToken = {} );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
         /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. 에디터 범위의 누계이며, 자체 테스트가 "그릴 때마다 디스크를 읽지 않는다" 를 확인할 때 씁니다. */

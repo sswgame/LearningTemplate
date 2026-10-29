@@ -33,8 +33,10 @@ namespace sw::editor
             static int32 importAssets( EditorImportKind kind, bool bCheckOnly )
             {
                 const AssetImportMode mode = bCheckOnly ? AssetImportMode::CheckOnly : AssetImportMode::ImportStale;
-                AssetImportSummary    summary;
-                const utf8*           pKindLabel = nullptr;
+                // 경로 상태는 이 호출이 묶은 호스트 서비스에서 한 번 찾아 넘긴다 — 임포트는 워커에서 돌아 서비스를 찾지 않는다.
+                const AssetPaths&  assetPaths = editor::getSubsystem<AssetPaths>();
+                AssetImportSummary summary;
+                const utf8*        pKindLabel = nullptr;
                 switch ( kind )
                 {
                     case EditorImportKind::Texture:
@@ -43,33 +45,33 @@ namespace sw::editor
                         if ( bCheckOnly == false )
                             SW_LOG_WARNING( "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
 #endif
-                        const string        configPath = TextureImporter::makeDefaultImportConfigPath();
+                        const string        configPath = TextureImporter::makeDefaultImportConfigPath( assetPaths );
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
                             SW_LOG_ERROR( "Cannot import textures without the import config: %#", configPath.c_str() );
                             return -1;
                         }
-                        summary    = TextureImporter::importAllTextures( AssetPaths::getRootFolderPath(), config, mode );
+                        summary    = TextureImporter::importAllTextures( assetPaths.getRootFolderPath(), config, mode );
                         pKindLabel = "Texture";
                         break;
                     }
                     case EditorImportKind::Model:
                     {
-                        const string      configPath = ModelImportConfig::makeDefaultConfigPath();
+                        const string      configPath = ModelImportConfig::makeDefaultConfigPath( assetPaths );
                         ModelImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
                             SW_LOG_ERROR( "Cannot import models without the import config: %#", configPath.c_str() );
                             return -1;
                         }
-                        summary    = ModelImporter::importAllModels( AssetPaths::getRootFolderPath(), config, mode );
+                        summary    = ModelImporter::importAllModels( assetPaths, assetPaths.getRootFolderPath(), config, mode );
                         pKindLabel = "Model";
                         break;
                     }
                     case EditorImportKind::Heightfield:
                     {
-                        summary    = HeightfieldImporter::importAllHeightfields( AssetPaths::getRootFolderPath(), mode );
+                        summary    = HeightfieldImporter::importAllHeightfields( assetPaths.getRootFolderPath(), mode );
                         pKindLabel = "Heightfield";
                         break;
                     }
