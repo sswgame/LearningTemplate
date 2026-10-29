@@ -192,6 +192,7 @@
 - 서브시스템 확장: E1 사전 등록 사슬(`SW_MODULE_SUBSYSTEM`, 모듈 객체 등록자), E2 공개 칸(`SubsystemScope::publish` — `IRenderTargetDeclarationSink` · `IMeshDerivedCache` 처럼 위 층이 구현을 타입으로 낸다), E3 서브시스템이 가진 상태, E4 프로세스 범위, E5 모듈 자식 범위. 옮긴 것: NetSecurity, PackManager 바인딩, 키트 DLL 정적(넷 시뮬 세션 · 계정 티켓 · 저장소 드라이버), ScheduleSystemRegistry, GameDataCache, 일괄 틱 표, 메시 무효화 훅, 프로파일러 트레이스 세션, GPU 흔적, 입력 플랫폼 정적, 차림 베이크 표, 자동화 씬 단계, UISystem 의 서비스 열둘(클립보드 · 전역 명령 · 바인딩 변환 · 알림 · 자막 · 툴팁 · 문서 · 스타일 시트 · 테마 · 오프스크린 · World 위젯 · 접근성). UISystem 에 남은 것은 입력 라우터 · 페인트 상태 · 레이어 숨김(화면 스택 자체).
 - 클래스 분해: FrameRenderer → `FramePSOManager` · `FramePostProcess` · `FrameExtensionHost` · `FrameViewResources` · `FramePassExecutor` · `FrameRenderState`(헤더 1015 → 494 줄), InputMap → `InputGlyphResolver` · `InputRemapSerializer` · `InputAccessibilitySettings`, AudioEngine → `AudioSnapshotMixer` · `AudioMusicPlayer`, 편집기 패널 넷 모델/뷰, `EditorAssetType` 닫힌 열거형 → 엔진 종류 정의 열쇠 + `SW_EDITOR_ASSET_TYPE` 등록, PhysicsSystem 백엔드 팩토리, Widget 자식 목록 가상화, UI 캡처 GL 분기 → 렌더러 물음.
 - 정적 API 캐시: 에셋 캐시는 모두 `AssetManager` 가 만들고 소유(공유 캐시 길 삭제, `SW_BUILT_IN_ASSET_CACHE_WITHOUT_RELOAD`), 리플렉션 매니페스트는 `ShaderCache` 멤버, 쿠킹 스탬프는 쿠킹 상태가 들고 넘긴다, `ContentHashCache` · `SceneTransformStorage` 서비스 범위 서브시스템, `LocalizedTextArena` 는 `LocalizationManager`, `SystemFontLocator` 는 쓰는 쪽이 값으로.
+- 큰 클래스 둘 더: CanvasRenderer → 글리프 아틀라스 · 텍스처 대여 · 사각형 버퍼 · 마커 투영, RenderPacketBuilder → 씬 수집 · 뷰 설정 · 씬 미리보기 · 캔버스 수집, Engine → `DebugKeyActions` 서비스 · `EngineFrameHookList`(위임 함수 삭제 — 남긴 `getRHI` 등은 서비스 표 없는 크래시 리포터 · 헤드리스의 창구), GameInstance → `GameStateSnapshot` · `GameSceneFlow`(순서는 GameInstance 가 정한다). 편집기 패널 셋 더(타일맵 · 입력 맵 · 계층) 모델/뷰.
 - 유틸 · STL: `HashUtil::mix32` · `mix64`, `HexUtil`, `reserveUniquePath`, `OnceKeySet`, `VarIntUtil`, `StringUtil::toBytes`, `ThreadUtil`(sleep · yield), `MathUtil`(min · max · clamp), `formatToString` + 이어 붙이기 252 줄, 실수 글 규칙 하나(`%#` = 가장 짧은 왕복 표기, printf 실수 서식은 여섯 자리).
 - 작은 파일 · include: 게임 헤더 13 · 데이터 종류 18 · 리로드 캐시 · 호스트 창구 · 자기 .cpp 전용 헤더 · 계정 포트 합치기, 안 쓰는 파일 여섯 삭제, `RHITypes.h` 쪼개기, `ReflectionCast.h` · `Component.h` 가 `ReflectionTypes.h` 를 끌지 않는다, ImGui · imgui-node-editor 가 프로젝트 헤더로 새지 않는다, 전방 선언 다수.
 
@@ -200,7 +201,7 @@
 |---|---|
 | AssetPaths | 경로 표 · 검색 우선순위 · 디스크 도메인 · 해석 캐시가 모두 한 파일의 프로세스 정적이고, 서비스가 서기 전(`ContentRootSubsystem` · `setHostTarget` · `AssetManager::initialize`)과 엔진 없는 도구가 부른다 — 캐시만 옮기면 상태 하나가 두 주인으로 갈린다. `AssetPaths` 전체를 `ContentRootSubsystem` 객체로(약 105 파일) |
 | STL 나머지 | `std::atomic` · `std::pair` · `VectorUtil` 관용구 · C 문자열 |
-| 같은 모양의 큰 클래스 | `CanvasRenderer` · `RenderPacketBuilder` · `GameInstance` · `Engine`(서비스를 값으로 들고 중계), 1000 줄 넘는 다른 편집기 패널(모델/뷰) |
+| 같은 모양의 작은 창 | 900 줄 밑의 편집기 패널(`StreamingCellsPanel` · `PrefabPanel` · `GameViewPanel` 등)이 상태를 패널 멤버에 든다. 호스트 클래스(`ServerApp` · App)의 중계 함수 |
 | 측정 | `castTo` 의 파생 확인이 줄 밖 함수가 됐다 — 뜨거운 경로(~4 ns) 측정 |
 | 남긴 것(이유 있음) | Core 아래 층의 `ScopeOwned`(TagID · LogOnce), OS 가 요구하는 프로세스 전역(신호 처리 · 서비스 콜백 · RenderDoc · CRT 누수 기준), 프로세스 유일 번호 카운터, 진단 카운터, SQL 드라이버 표(링크 시점 목록) |
 
