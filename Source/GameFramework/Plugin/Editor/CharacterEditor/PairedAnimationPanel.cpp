@@ -100,7 +100,7 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( getLoadedAssetPath() );
+        const std::optional<AbsolutePath> writePath = getDocumentDiskPath(); // 읽은 그 자리
         string                            error;
         if ( writePath.has_value() == false || _model.saveToFile( *writePath, error ) == false )
         {
@@ -128,7 +128,7 @@ namespace sw::editor
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
 
-        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( path ) );
+        const std::optional<AbsolutePath> readPath = getDocumentDiskPath();
         if ( readPath.has_value() == false )
         {
             _status = "The paired animation '" + path + "' has no file on disk to read";

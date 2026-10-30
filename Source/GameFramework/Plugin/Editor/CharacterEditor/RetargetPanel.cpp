@@ -216,7 +216,7 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( getLoadedAssetPath() );
+        const std::optional<AbsolutePath> writePath = getDocumentDiskPath(); // 읽은 그 자리
         if ( writePath.has_value() == false || FileUtil::writeTextFile( writePath->str(), _profile.toXML() ) == false )
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written" );

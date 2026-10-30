@@ -5,8 +5,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+
+#include "Engine/FileSystem/AssetPaths.h"
 
 SW_LOG_CALLER( "EditorDocumentPanelCore" );
 namespace sw::editor
@@ -34,6 +37,13 @@ namespace sw::editor
     EditorDocumentPanel::~EditorDocumentPanel()
     {
         *_pUndoTarget = nullptr;
+    }
+
+    std::optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
+    {
+        if ( _loadedAssetPath.empty() )
+            return std::nullopt;
+        return editor::getSubsystem<AssetPaths>().toDiskPath( _loadedAssetPath );
     }
 
     bool EditorDocumentPanel::hasNewFocusedDocument() const
