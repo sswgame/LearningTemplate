@@ -234,13 +234,9 @@ namespace sw::editor
 
     ToolAssetLoadResult RetargetPanel::loadDocument()
     {
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( getLoadedAssetPath().empty() )
-            acceptFocusedDocument();
         if ( AssetIO::hasAsset( AssetID{ path } ) == false )
         {
             // 없는 경로는 새 프로필이다 — 빈 문서로 시작하고 저장하면 파일을 만든다(스켈레톤 · 뿌리와 골반이 묶이기 전에는 저장되지 않는다).

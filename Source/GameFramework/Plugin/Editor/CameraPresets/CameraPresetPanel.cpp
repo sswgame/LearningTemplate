@@ -135,13 +135,9 @@ namespace sw::editor
 
     ToolAssetLoadResult CameraPresetPanel::loadDocument()
     {
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( getLoadedAssetPath().empty() )
-            acceptFocusedDocument();
         return _model.loadAsset( path );
     }
 

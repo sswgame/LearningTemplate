@@ -167,13 +167,9 @@ namespace sw::editor
 
     ToolAssetLoadResult AnimationClipPreviewPanel::loadDocument()
     {
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( getLoadedAssetPath().empty() )
-            acceptFocusedDocument();
         _model.resetForDocument();
         return ToolAssetLoadResult::Loaded;
     }

@@ -102,13 +102,9 @@ namespace sw::editor
 
     ToolAssetLoadResult PrefabEditorPanel::loadDocument()
     {
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( getLoadedAssetPath().empty() )
-            acceptFocusedDocument();
         _model.requestRebuild(); // 다시 읽으면 루트도 다시 스폰한다(`syncDocumentRoot`)
         return ToolAssetLoadResult::Loaded;
     }

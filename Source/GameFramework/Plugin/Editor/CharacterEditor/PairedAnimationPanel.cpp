@@ -120,13 +120,9 @@ namespace sw::editor
 
     ToolAssetLoadResult PairedAnimationPanel::loadDocument()
     {
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
-        if ( getLoadedAssetPath().empty() )
-            acceptFocusedDocument();
 
         const std::optional<AbsolutePath> readPath = getDocumentDiskPath();
         if ( readPath.has_value() == false )

@@ -574,9 +574,7 @@ namespace sw::editor
     {
         if ( _sequence == nullptr )
             return ToolAssetLoadResult::Missing;
-        string path = getLoadedAssetPath();
-        if ( path.empty() )
-            path = string{ getMatchingFocusedPath() };
+        const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
 

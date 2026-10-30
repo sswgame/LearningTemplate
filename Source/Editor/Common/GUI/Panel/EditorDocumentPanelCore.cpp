@@ -65,6 +65,13 @@ namespace sw::editor
         return EditorAssetTypeRegistry::getPanelTitle( _kind );
     }
 
+    string EditorDocumentPanel::acceptDocumentToLoad()
+    {
+        if ( _loadedAssetPath.empty() )
+            acceptFocusedDocument();
+        return _loadedAssetPath;
+    }
+
     void EditorDocumentPanel::acceptFocusedDocument()
     {
         const string_view focused = _pendingFocusPath.empty() ? getMatchingFocusedPath() : string_view{ _pendingFocusPath };

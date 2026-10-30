@@ -60,6 +60,12 @@ namespace sw::editor
         /** @brief 포커스 경로를 로드 경로로 확정하고 로드가 필요함을 표시합니다. */
         void acceptFocusedDocument();
         /**
+         * @brief `loadDocument` 가 읽을 문서 경로입니다 - 열린 문서가 없으면 포커스 문서를 받아들인 뒤(`acceptFocusedDocument`) 그 경로다. 둘 다 없으면 빈 글(새 문서 없음)입니다.
+         * @details 예전에는 패널 11 곳이 같은 여섯 줄을 따로 들었다. 읽을 경로는 `getMatchingFocusedPath` 로, 받아들이기는 대기 경로를 먼저 보는 `acceptFocusedDocument` 로 따로 정해
+         *          둘이 다른 문서를 가리킬 수 있었고, 시퀀서는 받아들이기를 빠뜨려 연 문서가 열린 문서로 남지 않았다.
+         */
+        [[nodiscard]] string acceptDocumentToLoad();
+        /**
          * @brief 문서를 엽니다. 워크스페이스 포커스로 넘기며, 문서 교체와 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 한다.
          * @details 없는 경로를 넘기면 `loadDocument` 가 `ToolAssetLoadResult::Missing` 으로 빈 문서를 열 수 있다 — "새 문서" 단추가 이 길을 쓴다.
          */
