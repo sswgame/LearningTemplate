@@ -2,11 +2,14 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 2 단계**(입력 경계 형식 + Saved 생산자를 `ProcessRoots` 로). 2026-10-31 에 0 · 1 단계가 끝났다:
-> - 형식: `Core/Path/AbsolutePath.h`(티어 4) · `Core/Process/ProcessRoots.h`(아직 설치하는 곳 없음) · `Engine/FileSystem/ResourcePath.h`(`ResourcePath` · `DomainTable`, 아직 쓰는 곳 없음).
-> - OS 경계: 파일 시스템은 `Core/File/PlatformFileSystem.h`(`FileUtil` 구현만 include 하는 내부 헤더) → `File/Windows/WindowsFileSystem.cpp` · `File/Linux/LinuxFileSystem.cpp`, `std::filesystem` 0. `FileUtil.cpp` 에 `#if` 0(읽기는 네이티브 핸들 하나). 크래시 쓰기는 `FileUtil::writeCrashFile`(할당 없음). 라이브러리는 `ModuleLibraryUtil::loadLibraryAt(AbsolutePath)` · `loadSystemLibrary` · `findLoadedLibrary`, 실행 파일은 `ProcessCommand::at` · `fromSearchPath`. 크기 · 시각은 `tryGetFileSize` · `tryGetFileTimestamp`.
-> - 둔 것(이유): 파일 감시기의 디렉터리 핸들(`ReadDirectoryChangesW` 전용 - 그 백엔드가 경계, `AsyncFileIO` 백엔드와 같다), 크래시 처리기의 모듈 이름 조회(할당 없는 경로), `ModuleBuildID` 의 PE 머리 읽기.
-> - **Linux 는 WSL 에서 바뀐 파일의 문법 검사만 했다 — 실제 빌드 · 테스트는 아직**(WSL 클론 `~/LT-linux` 에 받아 짓는다).
+> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 8 단계 나머지**(아래 목록), 그다음 9 · 10 단계, 그다음 SOLID · 프로젝트 구성 점검 리팩토링(사용자 요청 2026-10-31). 0 ~ 7 단계는 2026-10-31 에 끝났다(매 묶음 전체 ctest 통과, 캐시를 비운 실행 포함):
+> - 형식 · 루트: `Core/Path/AbsolutePath.h`(`tryMake` · `tryResolve` - 사람이 적은 경로의 해석 규칙 하나), `Core/File/ProcessRoots.h`(실행 파일 위치로 한 번: `_binary` · `_project` · `_content` · `_packs` · `_saved`(실행 산출물) · `_derivedData`(구성이 함께 쓰는 DDC · 쿠킹 기록 · 개발 인증서) - 패키지는 `Content` 없이 `Packs` 만이라 바이너리 폴더가 프로젝트 루트), `Engine/FileSystem/ResourcePath.h`(`ResourcePath` · `DomainTable`, 아직 쓰는 곳 없음).
+> - OS 경계(R1 · R2): 파일 시스템은 `Core/File/PlatformFileSystem.h`(`FileUtil` 구현만 include) → Win32 · POSIX, `std::filesystem` 0. **상대 경로가 OS 경계에 닿으면 `File.RelativePath` 오류로 실패한다**(`PlatformFileUtil::acceptsPathInput`). 라이브러리 `ModuleLibraryUtil::loadLibraryAt` · `loadSystemLibrary`, 실행 파일 `ProcessCommand::at` · `fromSearchPath`.
+> - 입력 경계(R5): 명령줄 경로 인자 `CommandLineDiskPath`(틀린 인자는 기동 오류), 전역 변수 `GlobalDiskPath`, 개발 명령 `DevCommandRegistry::readDiskPathArgument`(절대만), 설정 파일은 프로젝트 루트 한 곳, 세이브는 사용자 데이터 폴더(`UserDataPath::resolve`), 실행마다 다른 폴더는 `reserveUniquePath`(프로세스 id 재사용 결함).
+> - 쿠킹 입력 종류 셋(`CookInputKind` Resource · DiskFile · Listing, 기록 `SWCOOKREC 3`), 셰이더 소스 경로 추측 제거, 없을 수 있는 파일은 `FileUtil::readOptionalTextFile`.
+> - 둔 것(이유): 파일 감시기의 디렉터리 핸들 · 크래시 처리기의 모듈 이름 조회(할당 없는 경로) · `ModuleBuildID`, 시나리오 단계 속성의 경로 종류 선언(`{out}` 은 명령 글 안에서도 쓴다 - 명령이 형식을 검사).
+> - **Linux 는 WSL 에서 바뀐 파일의 문법 검사만 했다 — 실제 빌드 · 테스트는 아직**(WSL 클론 `~/LT-linux`).
+> - 8 단계(T2) 끝난 것: 팩 VFS 도메인 없는 키의 패치 교체 · 지움, dlc 팩 찾기, `hasAsset` 폴더, 인텐트 트랙 리소스 읽기, 현지화 리로드 비교, `AssetDatabase::toRootAssetID`. **남은 것**: `AssetPaths` API 넷으로 줄이기 · 팩 머리에 마운트 도메인(형식 버전 올림 - 전체 재베이크), `collectAssets` 소스 · 팩 의미 맞추기, 씬 데이터의 `string _…Path` 약 60 개를 리소스 참조 형식으로, `AudioClipCache` → `IAssetCache`, `TextureCache` 의 가상 도메인 · 미선언 렌더 타깃 오류.
 > 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
