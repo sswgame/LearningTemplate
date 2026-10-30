@@ -42,7 +42,7 @@ namespace sw
 
         /**
          * @brief 백엔드마다(@p options 의 `_listBackend` 순서) 돌릴 `-scenario` 목록입니다. 나누지 않으면 모두 같은 목록입니다.
-         * @details 나누면 그린 화소를 판정하는 단계(`<ExpectImage>` · `<CaptureEditorUI>`)가 있는 시나리오는 모두에게, 나머지는 순서대로 돌아가며 하나에게 준다 — 체인의 순서는 그대로다.
+         * @details 나누면 그린 화소를 판정하는 단계(`<ExpectImage>` · 마젠타 문턱이 있는 `<CaptureEditorUI>`)가 있는 시나리오는 모두에게, 나머지는 순서대로 돌아가며 하나에게 준다 — 체인의 순서는 그대로다.
          *          읽지 못하는 시나리오도 모두에게 준다 — 자식마다 읽기 오류를 낸다.
          */
         static vector<string> assignScenarios( const AutomationBackendMatrixOptions& options );

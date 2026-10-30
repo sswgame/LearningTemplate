@@ -64,7 +64,7 @@ endif()
 # 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`)로 돌린다. 하위 폴더 `statedir/`
 # (두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍)는 아래에서 쌍마다 항목 하나로 돈다. 게임 체인처럼 백엔드마다 자식 App 하나가
 # 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다.
-# 그림을 견주지 않는 시나리오(UI 로직)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다. 모듈 리로드(이름 `*modulereload`)는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭 — 코드 이미지를 갈아 끼운 것이 다른 단계에 닿지 않게).
+# 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다. 모듈 리로드(이름 `*modulereload`)는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭 — 코드 이미지를 갈아 끼운 것이 다른 단계에 닿지 않게).
 if(TARGET EditorModule)
 	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
 	list(SORT listEditorScenario)

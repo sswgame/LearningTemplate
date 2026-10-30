@@ -39,8 +39,23 @@ namespace sw
 #undef SW_MATRIX_BACKEND_NAME_ROW
             };
 
-            /** @brief 그린 화소를 판정하는 단계 — 이것이 있는 시나리오는 백엔드마다 결과가 다를 수 있어 나눌 때도 모든 백엔드에서 돈다(골든 비교 · 편집기 UI 의 마젠타 검사). */
-            static constexpr string_view kArrPixelJudgingStep[] = { "ExpectImage", "CaptureEditorUI" };
+            /** @brief 그린 화소를 판정하는 단계(종류 · 그 판정을 켜는 속성, 비면 늘) — 이것이 있는 시나리오는 백엔드마다 결과가 다를 수 있어 나눌 때도 모든 백엔드에서 돈다. */
+            struct PixelJudgingStep
+            {
+                string_view _kind;
+                string_view _attribute;
+            };
+            // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
+            static constexpr PixelJudgingStep kArrPixelJudgingStep[] = {
+                {    "ExpectImage",                   {}},
+                {"CaptureEditorUI", "maxMagentaFraction"}
+            };
+
+            static bool judgesPixels( const AutomationStep& step )
+            {
+                return std::any_of( std::begin( kArrPixelJudgingStep ), std::end( kArrPixelJudgingStep ), [&step]( const PixelJudgingStep& judging )
+                { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
+            }
 
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */
             struct Child
@@ -165,8 +180,7 @@ namespace sw
             AutomationScenario scenario;
             string             error;
             const bool         bLoaded       = scenario.loadFromPath( AssetID{ path }, error );
-            const bool         bJudgesPixels = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), []( const AutomationStep& step )
-                    { return std::find( std::begin( Internal::kArrPixelJudgingStep ), std::end( Internal::kArrPixelJudgingStep ), step._kind ) != std::end( Internal::kArrPixelJudgingStep ); } );
+            const bool         bJudgesPixels = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPixels );
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
                 const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bJudgesPixels || i == nextBackend % listScenarioList.size();
