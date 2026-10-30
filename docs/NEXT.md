@@ -50,7 +50,8 @@
 - **지금**: CTest `Scenario.editor`(체인 103 단계 — 통과 99 · 건너뜀 4) + `Scenario.editor.<줄기>`(isolated 15, 저마다 새 프로세스) + `EditorTests`. 건너뜀 넷(admintool · extensionpanel · modules · netsim)은 `requiresModule` 의 키트가 Empty 에 없어서다 — 그 키트를 쓰는 게임(또는 Release 전체)에서 돈다. 골든 24 장(dx12)은 그림을 보고 커밋했다. 한 시나리오는 `App -EnableEditor "-scenario=engine/automation/editor/<이름>.scenario.xml" -unattended`(PowerShell 은 인자에 따옴표).
 - **고친 결함(근본 원인)**: 시나리오 실행이 사용자의 `Saved/Editor` 에 썼다(→ 프로세스마다 `Saved/Automation/EditorState/editor_p<pid>`), 기본 배치로 되돌리기가 닫힌 핵심 패널을 열지 않았다, 체인 단계 사이에 편집기 상태(팝업 · 초점 · 패널 · 배치 · 창 크기)가 남았다(→ `SW_AUTOMATION_STAGE_RESET` 등록과 세션의 창 크기 되돌리기), 편집기가 DevTools 서브시스템(DebugHUD · ConfigReload)을 못 찾았다, 멈춘 편집기에서 미리보기 씬이 멈췄다(게임 시간 배율로 틱), 활성 씬 없는 프레임의 패킷에 앞 씬 스냅샷이 남았다, `profile.trace` 가 정의 전 `#if` 로 통째로 빠졌다(→ `-Werror=undef`), 옛 `<WorldSettings>` 씬(→ `ContentScenesTest`), 편집기 골든 폴더를 쓰기 문이 막았다(→ `kAutomationGoldenFolder`).
 - **새 틀**: 시나리오 루트 `requiresModule="A,B"`(모듈이 꺼진 빌드는 건너뜀 — 실행기와 정적 검사가 같은 판정, `IModuleLoader::isModuleActive`), `isolated="true"` 는 CMake 가 체인에서 뺀다, 모듈 상태 되돌리기 등록 `SW_AUTOMATION_STAGE_RESET`.
-- **남은 것**: Linux(WSL 클론)에서 `-Werror=undef` 빌드 확인(플랫폼 매크로를 `#if` 로 읽던 여섯 곳은 `defined()` 로 고쳤다). 편집기 시나리오의 다른 백엔드(vk · dx11 · gl) 골든은 아직 없다 — 편집기 체인은 기본 백엔드 하나만 돈다. 기동 기본 창 크기에서는 상단 툴바 오른쪽(RenderDoc 단추)이 잘린다 — 툴바 넘침 처리(접기 · 줄바꿈)는 아직 없다(renderdocbutton 은 1920x1080 으로 키워 돈다).
+- **확인**: Linux(WSL `~/LT-linux`, `build/Linux-Debug`) 전체 빌드가 `-Werror=undef` 로 오류 0(플랫폼 매크로를 `#if` 로 읽던 여섯 곳은 `defined()` 로 고쳤다).
+- **남은 것**: 편집기 시나리오의 다른 백엔드(vk · dx11 · gl) 골든은 아직 없다 — 편집기 체인은 기본 백엔드 하나만 돈다. 기동 기본 창 크기에서는 상단 툴바 오른쪽(RenderDoc 단추)이 잘린다 — 툴바 넘침 처리(접기 · 줄바꿈)는 아직 없다(renderdocbutton 은 1920x1080 으로 키워 돈다).
 
 | 일 | 내용 |
 |---|---|
