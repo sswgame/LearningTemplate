@@ -38,3 +38,20 @@ SW_TEST_CASE( CollectContentFilesTest, DomainlessFolderListsEveryDomain )
     SW_EXPECT_TRUE( bEngine );
     SW_EXPECT_TRUE( bCommon );
 }
+
+SW_TEST_CASE( CollectContentFilesTest, GamePackDomainsAreListedByName )
+{
+    // 게임 팩 나열 하나 — 이름 순 `game/<팩>`, game/ 이 없으면 빈 목록(실패가 아니다).
+    const string root = test::makeScratchPath( "Content" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "game/zeta" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( FileUtil::joinPath( root, "game/alpha" ) ) );
+    vector<string> listDomain;
+    SW_REQUIRE_TRUE( AssetPaths::collectGamePackDomains( root, listDomain ) );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listDomain.size() );
+    SW_EXPECT_EQUAL( string( "game/alpha" ), listDomain[0] );
+    SW_EXPECT_EQUAL( string( "game/zeta" ), listDomain[1] );
+
+    vector<string> listNone;
+    SW_EXPECT_TRUE( AssetPaths::collectGamePackDomains( FileUtil::joinPath( root, "game/alpha" ), listNone ) );
+    SW_EXPECT_TRUE( listNone.empty() );
+}

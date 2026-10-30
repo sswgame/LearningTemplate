@@ -453,14 +453,11 @@ namespace sw
         vector<string> listGameFolder;
         if ( bAllGames )
         {
-            vector<string> listPack;
-            if ( FileUtil::collectFolders( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), "game" ), listPack, false ) )
+            vector<string> listPackDomain;
+            (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 다 읽지 못하면 이유를 남겼다
+            for ( const string& packDomain : listPackDomain )
             {
-                VectorUtil::sort( listPack );
-                for ( const string& packFolder : listPack )
-                {
-                    listGameFolder.push_back( FileUtil::joinPath( packFolder, localizationFolder ) );
-                }
+                listGameFolder.push_back( editor::EditorPaths::findContentFolder( FileUtil::joinPath( packDomain, localizationFolder ) ) );
             }
         }
         else

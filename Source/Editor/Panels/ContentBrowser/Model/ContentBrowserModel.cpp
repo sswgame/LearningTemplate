@@ -124,14 +124,13 @@ namespace sw::editor
             addRoot( packRoot, EditorPaths::findContentFolder( packRoot ) );
         if ( _bShowAllPacks || packRoot.empty() )
         {
-            vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( EditorPaths::getGamePacksFolderPath(), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
-            VectorUtil::sort( listPackFolder );
-            for ( const string& packFolder : listPackFolder )
+            vector<string> listPackDomain;
+            (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // game/ 이 없으면 팩 루트가 없다
+            for ( const string& packDomain : listPackDomain )
             {
-                const string packName = string( ContentBrowserModelInternal::kGameDomainPrefix ) + FileUtil::normalizePath( FileUtil::getFileNamePart( packFolder ) );
+                const string packName = FileUtil::normalizePath( packDomain );
                 if ( packName != FileUtil::normalizePath( packRoot ) )
-                    addRoot( packName, packFolder );
+                    addRoot( packName, EditorPaths::findContentFolder( packDomain ) );
             }
         }
         addRoot( path::kEnginePack, EditorPaths::findContentFolder( path::kEnginePack ) );

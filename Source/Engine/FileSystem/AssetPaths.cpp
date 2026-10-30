@@ -190,14 +190,13 @@ namespace sw
                         if ( activePack.empty() == false && FileUtil::isDirectory( activePack ) )
                             appendFolder( FileUtil::normalizeSeparators( activePack ) );
                         const string gameDir = findDomainFolderUnder( root, path::kGamePack, {} );
-                        if ( gameDir.empty() == false && FileUtil::isDirectory( gameDir ) )
+                        if ( gameDir.empty() == false )
                         {
-                            vector<string> listPackFolder;
-                            if ( FileUtil::collectFolders( gameDir, listPackFolder, false ) == false )
-                                SW_LOG_ERROR( "Pack folders under '%#' could not all be listed - the packs left out are not searched", gameDir );
-                            for ( const string& packFolder : listPackFolder )
+                            vector<string> listPackDomain;
+                            (void)AssetPaths::collectGamePackDomains( root, listPackDomain ); // 다 읽지 못하면 이유를 남겼다 - 읽은 팩만 찾는다
+                            for ( const string& packDomain : listPackDomain )
                             {
-                                appendFolder( FileUtil::normalizeSeparators( packFolder ) );
+                                appendFolder( FileUtil::normalizeSeparators( FileUtil::joinPath( root, packDomain ) ) );
                             }
                             appendFolder( gameDir );
                         }
@@ -851,6 +850,25 @@ namespace sw
         SW_TARGET_EXCLUDED_GROUP_TABLE( SW_MATCH_TARGET_EXCLUDED_GROUP )
 #undef SW_MATCH_TARGET_EXCLUDED_GROUP
         return false;
+    }
+
+    bool AssetPaths::collectGamePackDomains( string_view contentRoot, vector<string>& outListDomain )
+    {
+        const string gameRoot = FileUtil::joinPath( contentRoot, path::kGamePack );
+        if ( FileUtil::isDirectory( gameRoot ) == false )
+            return true;
+        vector<string> listPackFolder;
+        if ( FileUtil::collectFolders( gameRoot, listPackFolder, false ) == false )
+        {
+            SW_LOG_ERROR( "Game pack folders under '%#' could not all be listed - the packs left out are not seen", gameRoot );
+            return false;
+        }
+        VectorUtil::sort( listPackFolder );
+        for ( const string& packFolder : listPackFolder )
+        {
+            outListDomain.push_back( FileUtil::joinPath( path::kGamePack, FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( packFolder ) ) ) );
+        }
+        return true;
     }
 
     bool AssetPaths::collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile )

@@ -683,14 +683,11 @@ namespace sw
             }
             // 게임 도메인은 이름을 코드가 알지 않고 game/ 아래 폴더를 훑어 찾는다. 폴더가 없으면 게임 도메인이 없을 뿐이다.
             // 도중에 멈춘 목록이면 빠진 게임 도메인을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
-            vector<string> listGameFolder;
-            const string   gameRoot = FileUtil::joinPath( resourceRoot, path::kGamePack );
-            if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
+            vector<string> listGameDomain;
+            if ( AssetPaths::collectGamePackDomains( resourceRoot, listGameDomain ) == false )
                 return false;
-            VectorUtil::sort( listGameFolder );
-            for ( const string& gameFolder : listGameFolder )
+            for ( string& domain : listGameDomain )
             {
-                string domain = string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) );
                 if ( VectorUtil::contains( outListDomain, domain ) == false )
                     outListDomain.push_back( std::move( domain ) );
             }

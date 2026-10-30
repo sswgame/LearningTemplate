@@ -113,16 +113,8 @@ namespace sw
                     outListDomain.push_back( string( path::kGamePack ) + "/" + params._gamePackFolder );
                     return true;
                 }
-                vector<string> listGameFolder;
-                // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
-                if ( FileUtil::isDirectory( gameRoot ) && FileUtil::collectFolders( gameRoot, listGameFolder, false ) == false )
-                    return false;
-                VectorUtil::sort( listGameFolder );
-                for ( const string& gameFolder : listGameFolder )
-                {
-                    outListDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );
-                }
-                return true;
+                // 게임 폴더가 없으면 공용 팩만 베이크한다. 도중에 멈춘 목록이면 빠진 게임 팩을 모른 채 넘어가므로 실패다.
+                return AssetPaths::collectGamePackDomains( params._resourceRoot, outListDomain );
             }
 
             /** @brief 작업 키의 설정 해시입니다 — 담는 규칙과 팩 바이트를 정하는 값 모두(설정 전체 · 셰이더 폴더 · 빌드 타깃). */

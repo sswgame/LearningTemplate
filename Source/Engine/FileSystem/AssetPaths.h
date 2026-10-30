@@ -46,6 +46,12 @@ namespace sw
          * @details 콘텐츠 전체를 훑는 쿠커 · 임포터는 `FileUtil::collectFiles` 대신 이것을 쓴다. 실패하면(목록을 끝까지 못 읽음) 이유를 남기고 false 입니다.
          */
         [[nodiscard]] static bool collectContentFiles( string_view contentRoot, string_view extension, vector<string>& outListFile );
+        /**
+         * @brief 콘텐츠 뿌리 @p contentRoot 아래 게임 팩의 도메인 id(`game/<팩>`, 이름 순)를 @p outListDomain 에 더합니다. `game/` 이 없으면 더할 것이 없고 true 입니다.
+         * @details 게임 도메인은 이름을 코드가 알지 않고 폴더를 훑어 찾는다 - 쿠커 · 셰이더 스탬프 · 에셋 DB · 검색 순서 · 에디터가 함께 쓰는 나열 하나다(예전에는 일곱 곳이 따로 훑었다).
+         *          목록을 끝까지 읽지 못하면(빠진 팩을 모른 채 넘어간다) 이유를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool collectGamePackDomains( string_view contentRoot, vector<string>& outListDomain );
 
         /**
          * @brief 리소스 id 에 `..` 성분이 있으면 true 입니다. 리소스 루트 밖으로 나가는 id 입니다.

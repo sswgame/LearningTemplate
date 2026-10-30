@@ -346,9 +346,9 @@ namespace sw::editor
                 if ( stepIndex < kSettleStepCount * 2 )
                     return EditorSelfTestStep::Continue;
 
-                vector<string> listPackFolder;
-                (void)FileUtil::collectFolders( EditorPaths::getGamePacksFolderPath(), listPackFolder, false ); // 없으면 아래 기대가 실패한다
-                (void)context.expect( listPackFolder.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackFolder.size() ),
+                vector<string> listPackDomain;
+                (void)AssetPaths::collectGamePackDomains( editor::getSubsystem<AssetPaths>().getRootFolderPath(), listPackDomain ); // 없으면 아래 기대가 실패한다
+                (void)context.expect( listPackDomain.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackDomain.size() ),
                                       "All packs does not list every game pack" );
                 pPanel->setShowAllPacks( context.getTestState<ActivePackProbe>()._bWasShowingAllPacks );
                 return EditorSelfTestStep::Done;

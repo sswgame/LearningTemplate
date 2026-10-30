@@ -311,13 +311,7 @@ namespace sw
                 listDomain.push_back( name );
                 continue;
             }
-            vector<string> listGameFolder;
-            (void)FileUtil::collectFolders( topFolder, listGameFolder, false ); // 방금 찾은 폴더다
-            VectorUtil::sort( listGameFolder );
-            for ( const string& gameFolder : listGameFolder )
-            {
-                listDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );
-            }
+            (void)AssetPaths::collectGamePackDomains( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( topFolder ) ), listDomain ); // 다 읽지 못하면 이유를 남겼다
         }
 
         const CookJobDesc desc = makeCookJobDesc();

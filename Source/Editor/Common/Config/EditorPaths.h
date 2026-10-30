@@ -42,8 +42,6 @@ namespace sw::editor
          * @details 해석은 `AssetPaths::toDiskPath` 하나다 - 예전에는 `AssetPaths::findLooseDomainFolder` 가 `Content/<도메인>` 을 따로 이어 붙였다(붙인 디스크 도메인을 몰랐다).
          */
         static string findContentFolder( string_view folderID );
-        /** @brief 게임 팩들이 있는 디스크 폴더(`Content/game`)입니다. 팩 목록을 훑는 콘텐츠 브라우저 · 셀프 테스트가 쓴다. */
-        static string getGamePacksFolderPath();
         /** @brief 씬 파일 대화상자가 처음 여는 폴더(활성 게임 팩의 `maps`)입니다. 없으면 빈 문자열이고 대화상자가 정한다. */
         static string getSceneDialogFolderPath();
 

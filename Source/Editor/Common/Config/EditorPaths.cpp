@@ -54,11 +54,6 @@ namespace sw::editor
         return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder->str() : string{};
     }
 
-    string EditorPaths::getGamePacksFolderPath()
-    {
-        return FileUtil::joinPath( ProcessRoots::get()._content.str(), path::kGamePack );
-    }
-
     string EditorPaths::getSceneDialogFolderPath()
     {
         return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ) );
