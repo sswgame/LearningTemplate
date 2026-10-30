@@ -36,6 +36,13 @@ if(TARGET EditorModule)
 		COMMAND $<TARGET_FILE:App> -EnableEditor -gv_editorSelfTest=* -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/EditorTests.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(EditorTests PROPERTIES LABELS hostgpu TIMEOUT 900 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+
+	# 헤드리스 도구 명령 하나 — 현지화 표가 코드 · 데이터와 맞는지 보고, 도구 실행의 기동 · 종료 길을 지난다(모듈이 내려갈 때 서비스를 찾다 죽던 결함이
+	# 모든 도구 명령에 있었는데 위 항목들은 도구 명령을 돌리지 않아 숨었다). 임포트 검사는 산출물을 커밋하지 않아 새 체크아웃에서 늘 지므로 이것을 고른다.
+	add_test(NAME ToolCheckText
+		COMMAND $<TARGET_FILE:App> --check-text -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheckText.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(ToolCheckText PROPERTIES LABELS nogpu TIMEOUT 300)
 endif()
 
 add_subdirectory(Scenario)

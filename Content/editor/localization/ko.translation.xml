@@ -295,6 +295,9 @@
 		<entry key="EdCommon.ThemeWindowRounding"
 		       text="에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)"
 		       sourceHash="4061346b602e4e7a" />
+		<entry key="EdCommon.ToolbarOverflow"
+		       text="창 폭에 들지 않는 나머지 툴바 단추"
+		       sourceHash="76163247d4b795bc" />
 		<entry key="EdCommon.UnknownPin" text="알 수 없는 핀" sourceHash="8c88f0a533c2f8d2" />
 		<entry key="EdCommon.Vec3AxisDrag"
 		       text="마우스 드래그 또는 더블 클릭으로 값 수정"
@@ -1128,6 +1131,9 @@
 		       text="받은 바이트 / 초 (최근 1 초, 모든 연결)"
 		       sourceHash="90f3f291bab2fdbf" />
 		<entry key="EditorMultiplayer.ProfilerReceivedPackets" text="받은 패킷 / 초" sourceHash="87737fc2254e7748" />
+		<entry key="EditorMultiplayer.ProfilerRecordHidden"
+		       text="다른 탭을 보는 동안에도 프로세스에 net.stats 를 계속 묻습니다(기본은 꺼짐 — 자식 프로세스마다 2 Hz 로 로그를 한 줄씩 남깁니다)"
+		       sourceHash="2b52a73e1bc1febe" />
 		<entry key="EditorMultiplayer.ProfilerReplicas" text="이름별 복제 (초당)" sourceHash="cca5a9d9064c9a27" />
 		<entry key="EditorMultiplayer.ProfilerReplicasHelp"
 		       text="복제 키트가 센 갱신 수와 바이트를 마지막 두 net.stats 보고의 차로 초당 값으로 보입니다. 비율은 표에 나온 바이트에 대한 몫입니다"
@@ -1164,6 +1170,9 @@
 		<entry key="EditorMultiplayer.Stop"
 		       text="모든 프로세스를 멈추고 기록한 트레이스를 합칩니다"
 		       sourceHash="8e237706f24580c3" />
+		<entry key="EditorMultiplayer.SyncChannel"
+		       text="단추가 읽을 상태 해시 줄: 씬(변환) 또는 키트의 줄 — 파괴 · 롤백(프로세스가 등록한 것은 state.hashnames 가 보여 줍니다)"
+		       sourceHash="96812ac23d3caabd" />
 		<entry key="EditorMultiplayer.SyncClient"
 		       text="이 클라이언트의 상태 해시 기록을 읽습니다(서버 틱 번호로 기록한 최근 틱)"
 		       sourceHash="aaeb3b9d38bc496e" />

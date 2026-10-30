@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 4 절 L 의 ③** — 편집기 고르기 자리가 상대 키를 내고(④ 데이터 일괄 변환, ⑤ 브라우저 가림 · 덮음 표시가 뒤따른다). 그 뒤 큰 묶음: 테스트 전수(TestCoverage.py 표 순서), 7 절의 남은 설계. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: **바로 다음은 4 절 "그 밖의 남은 일" 의 테스트 전수**(TestCoverage.py 표, 위험순 — GameFramework 일정 · 전투 · 인벤토리 · 저장/불러오기 · 온라인). L(상대 키)은 ①②(게임 사이 참조 0 · 쓰기는 `DomainAssetID` 로만)에서 멈췄다 — 상용 엔진도 참조는 전체 경로이고 덮어쓰기는 팩 우선순위다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -45,13 +45,13 @@
 
 ## 4. 남은 일
 
-### L. 리소스 참조를 상대 키로 (바로 다음 — ③ 부터)
+### L. 리소스 참조를 상대 키로 — 멈춤(2026-10-31, ③~⑤ 하지 않는다)
+
+- **결정**: 데이터 참조는 전역 id 그대로 둔다. 언리얼(`/Game/…` · 플러그인 경로)과 Godot(`res://`)의 참조는 늘 전체 경로이고, 덮어쓰기는 같은 전체 경로를 더 높은 우선순위의 pak · PCK 가 덮는 방식이다 — 게임이 엔진 에셋을 상대 키로 가리는 장치는 둘 다 없다. 여기도 같은 장치(`PackManager` 우선순위 · `mountPatchPack`)가 있다. 상대 키 데이터는 참조 색인 · 이름 바꾸기 참조 고치기(`EditorReferenceIndex` · `replaceReference` — 전역 접두어로 찾는다)와 쿠커가 게임마다 다른 검색 순서로 풀어야 해 비용이 크고, 얻는 것(게임이 엔진 · 공통 에셋을 가리기)은 상용 엔진도 주지 않는다. 남긴 것: 게임 사이 참조 0(캐릭터 키트는 `common/`), 쓰기는 `DomainAssetID` 로만(`AssetPaths::toWriteID`). 아래는 조사 기록이다.
 
 - **질문**: 검색 순서(`_listResourcePriority` = game · common · engine · editor, `dlc/<이름>` 토큰 가능)로 겹쳐 찾는 장치(`AssetPaths::findLooseFile` 의 팩 상대 키, `PackManager` 우선순위 · `mountPatchPack`)는 있는데 아무도 쓰지 않는다. 게임 · DLC · 패치가 같은 상대 경로로 엔진 · 공통 에셋을 덮지 못한다.
 - **실측**(`scratchpad` 스크립트 — 다시 뽑을 때는 아래 4 의 검사로): 콘텐츠 데이터 458 파일의 참조 2,007 개가 모두 도메인 고정(`game/` 1,473 · `engine/` 510 · `common/` 24), 상대 키 0. 상대 키로 바꿔도 해석 대상이 바뀌는 참조 **0**. 같은 상대 키가 여러 도메인에 있는 것 43 — 게임끼리 36(한 번에 하나만 올라가 무해), 엔진 · 공통과 게임 4(`credits.md` · `textures_raw/import.stamp` 는 참조되지 않음, `materials/grass.material` engine↔themepark · `materials/water.material` engine↔voxelcraft 는 덮어쓰기인지 정한다). 깨진 참조 2(`game/empty/models/testhead.facial.xml` — 임포트 산출물인지, `game/empty/prefabs/old/testprop.prefab.xml` — GUID 로 찾는 옛 경로 시험인지 확인).
 - **모양**: 데이터 `mesh="models/testhead.mesh"`(상대 키 — 이긴 파일), 일부러 고정할 때만 `material="engine/materials/grass.material"`(데이터 검사가 고정 참조로 목록에 올림). 코드 `AssetKey`(읽기 — `AssetManager::load` · 검색 순서) / `DomainAssetID{ "common", "textures/rock.dds" }`(쓰기 — 저장 · 임포트 · 이름 바꾸기 · 지우기는 이것만 받는다, 상대 키로 쓰면 컴파일 오류). 편집기: 콘텐츠 브라우저는 도메인 폴더 그대로 보이되 `[가려짐 ← game/x]` · `[덮음 → common]` 표시, 인스펙터가 고른 에셋은 상대 키로 저장(가려진 파일을 고르면 "실행에는 game 것 — 고정할까" 확인). 상용 엔진: Godot `res://` + PCK 겹치기, 언리얼 pak 우선순위(읽기는 겹쳐 찾고 쓰기는 마운트 지점을 붙인다).
-- **단계**: ③ 편집기의 참조 저장(`AssetPaths::toAssetID` 를 부르는 고르기 자리 20 파일 40 곳)이 상대 키를 낸다 ④ 데이터 참조 일괄 변환(스크립트 — 바뀌는 해석 0 을 다시 확인하고) + 데이터 검사 단위 테스트(겹친 키 · 고정 참조 · 게임 사이 참조 · 깨진 참조) ⑤ 브라우저 가림 · 덮음 표시. 시나리오의 `engine/automation/…` 처럼 도메인을 다루는 도구 경로는 전역 id 그대로.
-- **이미 된 것**: 게임 사이 참조 0(캐릭터 키트는 `common/`). 쓰기는 `DomainAssetID` 로만 푼다(`AssetPaths::toWriteID` — 상대 키는 읽기가 고른 파일, 아직 없는 상대 키는 오류). 저장 함수 시그니처까지 `DomainAssetID` 를 올리는 일은 ③ 에서 고르기 자리가 형식을 쥘 때 함께.
 
 ### 그 밖의 남은 일
 
@@ -104,7 +104,7 @@
 
 ## 5. 근본 원인이 남았을 곳
 
-- 모듈 언로드 훅(`onDetaching`)에서 서비스를 찾는 일 — 도구 명령 종료 크래시(2026-10-31)의 모양이다. 지금 남은 곳은 없다. ctest 는 도구 명령을 돌리지 않아 숨었다 — 도구 명령 하나(`--check-models`)를 CTest 로 두면 막힌다.
+- 모듈 언로드 훅(`onDetaching`)에서 서비스를 찾는 일 — 도구 명령 종료 크래시(2026-10-31)의 모양이다. 지금 남은 곳은 없다. 도구 실행의 종료 길은 CTest `ToolCheckText`(`App --check-text`)가 지난다.
 - Linux 전용 .cpp(X11 · Wayland · ALSA · epoll)는 Windows 가 짓지 않는다 — Linux 빌드를 정기적으로 도는 것 말고는 길이 없다(CI 후보).
 - 전용 서버 종료 때 태그별 증가 진단(Game 약 0.5 KB · Unknown · EngineMisc 각 32 B)이 Windows · Linux 에 함께 나온다. CRT 검사는 누수 없음 — 종료 직전까지 사는 할당이다. 어디서 오는지는 보지 않았다.
 - Core 는 티어 표만 있고 층 껍데기(`#error`)가 없다 — Engine 과 같은 빌드 형식을 Core 에 넣을 후보.

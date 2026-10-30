@@ -715,42 +715,42 @@ msgstr "효과음 음량"
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode"
 msgid "Speaker Setup"
-msgstr ""
+msgstr "스피커 구성"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.auto"
 msgid "Automatic"
-msgstr ""
+msgstr "자동"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.headphones"
 msgid "Headphones (3D)"
-msgstr ""
+msgstr "헤드폰 (3D)"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.stereo"
 msgid "Stereo"
-msgstr ""
+msgstr "스테레오"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.surround51"
 msgid "5.1 Surround"
-msgstr ""
+msgstr "5.1 서라운드"
 
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
 msgctxt "settings.audio.speakerMode.surround71"
 msgid "7.1 Surround"
-msgstr ""
+msgstr "7.1 서라운드"
 
 #. Context: Options menu label
 #. Max length: 32

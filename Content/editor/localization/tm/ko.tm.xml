@@ -386,6 +386,8 @@
 		       text="고른 데이터 레이어에 칠할 정수입니다." />
 		<entry source="Isolated the prefab in the current scene" text="현재 씬에서 프리팹을 격리했습니다" />
 		<entry source="Keep Simulation Changes" text="시뮬레이션 변경 유지" />
+		<entry source="Keep asking the processes for net.stats while another tab is shown (off by default - every child process logs a line at 2 Hz)"
+		       text="다른 탭을 보는 동안에도 프로세스에 net.stats 를 계속 묻습니다(기본은 꺼짐 — 자식 프로세스마다 2 Hz 로 로그를 한 줄씩 남깁니다)" />
 		<entry source="Keep recording but stop updating the view"
 		       text="기록은 계속하고 화면 갱신만 멈춥니다" />
 		<entry source="Keep scrolling to the newest log line" text="가장 최근 로그 줄을 따라 스크롤합니다" />
@@ -455,6 +457,8 @@
 		       text="현재 백그라운드에서 모듈을 빌드하고 있습니다" />
 		<entry source="More options for this component, including removing it."
 		       text="컴포넌트 추가 옵션 및 삭제" />
+		<entry source="More toolbar buttons that do not fit in the window width."
+		       text="창 폭에 들지 않는 나머지 툴바 단추" />
 		<entry source="Move the preview to the next node without waiting."
 		       text="기다리지 않고 미리보기를 다음 노드로 넘깁니다." />
 		<entry source="Move the selected layer up or down. Order changes the result: later layers are applied on top."
@@ -492,6 +496,7 @@
 		<entry source="No bug reports yet. Collect Now saves one under Saved/BugReports."
 		       text="아직 버그 리포트가 없습니다. Collect Now 가 Saved/BugReports 아래에 하나 모읍니다." />
 		<entry source="No components in the active scene." text="활성 씬에 컴포넌트가 없습니다." />
+		<entry source="No content roots found." text="리소스 루트를 찾지 못했습니다." />
 		<entry source="No event library loaded" text="로드된 이벤트 라이브러리가 없습니다" />
 		<entry source="No game camera - the load and unload column needs one."
 		       text="게임 카메라가 없습니다 - 올림 · 내림 열은 게임 카메라가 있어야 합니다." />
@@ -520,7 +525,6 @@
 		       text="프로세스가 없습니다 - Net Mode 를 고르고 Play 를 누르세요(툴바 또는 여기)." />
 		<entry source="No recent documents" text="최근에 연 문서가 없습니다" />
 		<entry source="No registered component types." text="등록된 컴포넌트 타입이 없습니다." />
-		<entry source="No content roots found." text="리소스 루트를 찾지 못했습니다." />
 		<entry source="No saved layouts." text="저장된 레이아웃이 없습니다." />
 		<entry source="No section matches the search." text="검색어에 맞는 섹션이 없습니다." />
 		<entry source="No selection. Select an object in the Hierarchy."
@@ -1152,6 +1156,8 @@
 		       text="이 상태의 클립을 반복할지 정합니다. Default 는 클립 자체의 루프 설정을 따릅니다." />
 		<entry source="Which screen corner the Debug HUD is anchored to."
 		       text="디버그 HUD 를 붙여 둘 화면 모서리입니다." />
+		<entry source="Which state hash line the buttons read: scene (transforms), or a kit's line - destruction, rollback (state.hashnames lists what the process registered)"
+		       text="단추가 읽을 상태 해시 줄: 씬(변환) 또는 키트의 줄 — 파괴 · 롤백(프로세스가 등록한 것은 state.hashnames 가 보여 줍니다)" />
 		<entry source="Width Override" text="너비 덮어쓰기" />
 		<entry source="Windows per row before the next row starts"
 		       text="다음 줄로 넘어가기 전에 한 줄에 놓는 창 수" />
