@@ -8,6 +8,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Log/Logger.h"
@@ -20,11 +21,6 @@
 #include <chrono>
 #include <cstdio>
 #include <thread>
-
-#if !defined( SW_PLATFORM_WINDOWS )
-    #include <fcntl.h>
-    #include <unistd.h>
-#endif
 
 SW_LOG_CALLER( "CrashHandler" );
 namespace sw
@@ -168,50 +164,6 @@ namespace sw
             formatstring( pBuffer + inOutLength, capacity - inOutLength, format, std::forward<Args>( args )... );
             inOutLength += static_cast<uint32>( StringUtil::strlen( pBuffer + inOutLength ) );
         }
-
-        /**
-         * @brief 파일 하나를 통째로 씁니다. **stdio 를 쓰지 않습니다.**
-         * @details fopen/fprintf 는 스트림 락을 잡고 내부 버퍼를 할당합니다. 크래시 지점에서 힙이 깨져 있으면 거기서 다시
-         *          죽습니다. OS 원시 호출에는 그런 것이 없습니다(POSIX 에서는 async-signal-safe 이기도 합니다). 할당 없이 먼저
-         *          쓰겠다는 이 경로의 취지가 바로 이것입니다.
-         *
-         * @note **FileUtil::writeFile 을 쓰면 안 됩니다.** normalizeSeparators 가 sw::string 을 만들어 힙을 쓰고, 내부도
-         *       fopen/fwrite 입니다. 크래시 경로에서 피해야 할 두 가지를 모두 합니다. FileUtil 은 부팅 때(로그 폴더 준비 등)
-         *       쓰는 것이 맞고, 여기서는 아닙니다.
-         */
-        void writeWholeFile( const utf8* pPath, const utf8* pText, uint32 length )
-        {
-            const bool bNothingToWrite = pPath == nullptr || pText == nullptr || length == 0;
-            if ( bNothingToWrite )
-                return;
-#if defined( SW_PLATFORM_WINDOWS )
-            // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다(StringUtil::utf8ToUTF16 은 할당한다).
-            utf16 arrWidePath[constant::kMaxBuffer1024]{};
-            if ( MultiByteToWideChar( CP_UTF8, 0, pPath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
-                return;
-            const HANDLE hFile = CreateFileW( arrWidePath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
-            if ( hFile == INVALID_HANDLE_VALUE )
-                return;
-            DWORD written{ 0 };
-            WriteFile( hFile, pText, static_cast<DWORD>( length ), &written, nullptr );
-            CloseHandle( hFile );
-#else
-            const int32 fileDesc = ::open( pPath, O_WRONLY | O_CREAT | O_TRUNC, 0644 );
-            if ( fileDesc < 0 )
-                return;
-            ssize_t     remaining = static_cast<ssize_t>( length );
-            const utf8* pCursor   = pText;
-            while ( remaining > 0 )
-            {
-                const ssize_t written = ::write( fileDesc, pCursor, static_cast<size_t>( remaining ) );
-                if ( written <= 0 )
-                    break;
-                pCursor += written;
-                remaining -= written;
-            }
-            ::close( fileDesc );
-#endif
-        }
     } // namespace
 
     CrashContextStore& CrashContextStore::get()
@@ -344,7 +296,7 @@ namespace sw
             length += extraLength < constant::kMaxBuffer8192 - length ? extraLength : 0;
         }
 
-        writeWholeFile( arrPath, arrReport, length );
+        (void)FileUtil::writeCrashFile( arrPath, arrReport, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
         // 빵부스러기도 할당 없는 단계에서 쓴다 — 컨텍스트 파일과 같은 단계(심볼 변환 · 스택 보고보다 먼저).
         writeCrashBreadcrumbFile();
     }
@@ -357,12 +309,12 @@ namespace sw
             return;
         utf8 arrPath[constant::kMaxBuffer1024]{};
         makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "breadcrumbs.txt" );
-        writeWholeFile( arrPath, arrText, length );
+        (void)FileUtil::writeCrashFile( arrPath, arrText, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
     }
 
     void writeFileWithoutAllocation( const utf8* pPath, const utf8* pText, uint32 length )
     {
-        writeWholeFile( pPath, pText, length );
+        (void)FileUtil::writeCrashFile( pPath, pText, length ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
     }
 
     void writeCrashStackFile( const utf8* pStackText )
@@ -371,7 +323,7 @@ namespace sw
             return;
         utf8 arrPath[constant::kMaxBuffer1024]{};
         makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
-        writeWholeFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) );
+        (void)FileUtil::writeCrashFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) ); // 크래시 경로 - 못 써도 다음 보고를 이어 간다
     }
 
     void writeCrashReport( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, bool bMiniDumpWritten, void* pPlatformThread )

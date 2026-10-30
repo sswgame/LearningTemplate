@@ -259,7 +259,6 @@ namespace sw
     {
         if ( pFilePath == nullptr || pFilePath[0] == '\0' )
             return kInvalidNativeFileHandle;
-        noteFileOpenedForRead( pFilePath, 0 );
 #if defined( SW_PLATFORM_WINDOWS )
         const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
         const HANDLE  hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
@@ -284,6 +283,56 @@ namespace sw
         }
         return static_cast<NativeFileHandle>( fileDescriptor );
 #endif
+    }
+
+    NativeFileHandle PlatformFileUtil::createNativeFileForWrite( const utf8* pFilePath )
+    {
+        if ( pFilePath == nullptr || pFilePath[0] == ' ' )
+            return kInvalidNativeFileHandle;
+#if defined( SW_PLATFORM_WINDOWS )
+        // 힙 없이 스택에서 UTF-16 으로 바꾼다(StringUtil::utf8ToUTF16 은 할당한다).
+        utf16 arrWidePath[constant::kMaxBuffer1024]{};
+        if ( MultiByteToWideChar( CP_UTF8, 0, pFilePath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
+            return kInvalidNativeFileHandle;
+        const HANDLE hFile = CreateFileW( arrWidePath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
+        if ( hFile == INVALID_HANDLE_VALUE )
+            return kInvalidNativeFileHandle;
+        return static_cast<NativeFileHandle>( reinterpret_cast<intptr_t>( hFile ) );
+#else
+        int32 fileDescriptor{ -1 };
+        do
+        {
+            fileDescriptor = ::open( pFilePath, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644 );
+        } while ( fileDescriptor < 0 && errno == EINTR );
+        if ( fileDescriptor < 0 )
+            return kInvalidNativeFileHandle;
+        return static_cast<NativeFileHandle>( fileDescriptor );
+#endif
+    }
+
+    bool PlatformFileUtil::writeNativeFile( NativeFileHandle handle, const void* pData, size_t size )
+    {
+        if ( handle == kInvalidNativeFileHandle || ( pData == nullptr && size > 0 ) )
+            return false;
+        const uint8* pCursor = static_cast<const uint8*>( pData );
+        while ( size > 0 )
+        {
+            const size_t chunkBytes = size < constant::kMaxFileReadChunkBytes ? size : constant::kMaxFileReadChunkBytes;
+#if defined( SW_PLATFORM_WINDOWS )
+            DWORD written{ 0 };
+            if ( WriteFile( reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) ), pCursor, static_cast<DWORD>( chunkBytes ), &written, nullptr ) == FALSE || written == 0 )
+                return false;
+#else
+            const ssize_t written = ::write( static_cast<int32>( handle ), pCursor, chunkBytes );
+            if ( written < 0 && errno == EINTR )
+                continue;
+            if ( written <= 0 )
+                return false;
+#endif
+            pCursor += written;
+            size -= static_cast<size_t>( written );
+        }
+        return true;
     }
 
     void PlatformFileUtil::closeNativeFile( NativeFileHandle handle )

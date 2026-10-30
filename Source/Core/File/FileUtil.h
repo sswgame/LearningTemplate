@@ -23,7 +23,7 @@ namespace sw
     struct FileStamp
     {
         uint64 _sizeBytes{ 0 }; ///< 바이트 수
-        uint64 _writeTime{ 0 }; ///< 마지막 쓰기 시각(플랫폼 고유 단위 — Windows 100 ns, 리눅스 ns. 같은지만 비교한다)
+        uint64 _writeTime{ 0 }; ///< 마지막 쓰기 시각(1601 기원 100 ns 눈금 - 플랫폼이 같다. 같은지만 비교한다)
 
         /** @brief 크기와 시각이 모두 같은지 확인합니다. */
         bool operator==( const FileStamp& other ) const { return _sizeBytes == other._sizeBytes && _writeTime == other._writeTime; }
@@ -274,6 +274,11 @@ namespace sw
         [[nodiscard]] static bool readStreamTextFile( string_view fileName, string& outText, uint64 maxBytes );
         /** @brief UTF-8 텍스트를 파일로 씁니다. `writeFile` 과 같이 원자적이고, 쓰기 · 닫기 결과를 확인합니다. */
         [[nodiscard]] static bool writeTextFile( string_view fileName, string_view text );
+        /**
+         * @brief 크래시 보고 파일(@p pPath)을 통째로 씁니다. **할당 · 로그 · stdio · 쓰기 문이 없습니다** - 힙이 깨진 크래시 지점(시그널 처리기 포함)에서도 부를 수 있다.
+         * @details 원자적이지 않다(임시 파일이 없다). 크래시 경로 밖에서는 `writeFile` 을 쓴다.
+         */
+        [[nodiscard]] static bool writeCrashFile( const utf8* pPath, const void* pData, size_t size );
         /** @brief UTF-8 텍스트를 파일 끝에 덧붙입니다(없으면 만듭니다). 쓰기 · 닫기 결과를 확인합니다. 원자적이지 않아(덧붙이다 끊기면 마지막 줄이 잘릴 수 있다) 스풀 · 기록 파일에만 씁니다. */
         [[nodiscard]] static bool appendTextFile( string_view fileName, string_view text );
         /** @brief 문자열이 UTF-8 BOM(0xEF, 0xBB, 0xBF)으로 시작하면 그것을 건너뛴 string_view 를 반환합니다. */

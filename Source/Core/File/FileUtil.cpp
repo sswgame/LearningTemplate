@@ -4,10 +4,11 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
-#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/string_splitter.h"
 
@@ -74,11 +75,7 @@ namespace sw
                 const string filePath = FileUtil::normalizeSeparators( fileName );
                 if ( FileUtil::isWriteAllowed( filePath ) == false )
                     return false;
-#if defined( SW_PLATFORM_WINDOWS )
-                const uint64 processID = static_cast<uint64>( GetCurrentProcessId() );
-#else
-                const uint64 processID = static_cast<uint64>( ::getpid() );
-#endif
+                const uint64 processID = static_cast<uint64>( Process::getCurrentProcessID() );
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
                 StringBuilder<constant::kMaxPathSize> tempPathBuilder;
                 tempPathBuilder.append( filePath.c_str() )
@@ -122,142 +119,54 @@ namespace sw
                 return false;
             }
 
-#if !defined( SW_PLATFORM_WINDOWS )
-            /**
-             * @brief 읽기용으로 열고 크기를 측정합니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
-             * @details `readFile` · `readTextFile` 이 함께 씁니다(크기를 측정하지 못했을 때 둘 다 같은 로그를 남깁니다).
-             */
-            static FILE* openForReading( string_view fileName, int64& outFileSize )
-            {
-                const string filePath = FileUtil::normalizeSeparators( fileName );
-                FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
-                if ( pFile == nullptr )
-                {
-                    SW_LOG_ERROR( "File not found: %#", fileName );
-                    return nullptr;
-                }
-
-                outFileSize = PlatformFileUtil::getOpenFileSizeAndRewind( pFile );
-                if ( outFileSize < 0 )
-                {
-                    std::fclose( pFile );
-                    SW_LOG_ERROR( "Failed to query size of: %#", fileName );
-                    return nullptr;
-                }
-                return pFile;
-            }
-#endif
-
             /**
              * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼입니다). 실패하면 로그를 남기고 false 입니다.
-             * @details `readFile` · `readTextFile` 의 본체입니다. **Windows 에서는 Win32 API 로 바로 읽습니다.** 열기 · 크기 · 읽기 · 닫기의
-             *          시스템 호출 네 번입니다. stdio 경로(`fopen_s` → 끝으로 이동 → 위치 질의 → 처음으로 되감기 → `fread`)는 크기를
-             *          측정하려고 파일 위치를 세 번 옮기고, UCRT 의 잠금과 버퍼 준비를 거칩니다. 게다가 `fopen_s` 는 좁은 문자 경로를
-             *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨집니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
-             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에서 큰 비중을 차지합니다(셰이더 쿠킹 스탬프가 소스를 읽어 해시합니다).
-             *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허용하므로, 에디터가 쓰고 있는 파일도 열립니다.
+             * @details `readFile` · `readTextFile` 의 본체입니다. OS 핸들로 열기 · 크기 · 위치 지정 읽기 · 닫기다(`PlatformFileUtil` 의 네이티브 핸들 - 비동기 IO 와 같은 입구).
+             *          stdio(`fopen` → 끝으로 이동 → 위치 질의 → 되감기 → `fread`)보다 시스템 호출이 적고, Windows 는 UTF-16 으로 연다(좁은 문자 `fopen` 은 ANSI 코드 페이지로 읽는다).
+             *          공유는 읽기 · 쓰기 · 지우기를 막지 않는다 - 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있다.
              */
             template <typename BufferType>
             [[nodiscard]] static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
             {
-#if defined( SW_PLATFORM_WINDOWS )
-                const string  filePath = FileUtil::normalizeSeparators( fileName );
-                const wstring widePath = StringUtil::utf8ToUTF16( filePath.c_str() );
-                // FILE_SHARE_DELETE: 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있게 한다. 없으면 에디터가
-                // 파일을 읽는 순간 겹친 저장이 실패한다(POSIX 의 rename 은 원래 막히지 않는다).
-                HANDLE hFile = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,
-                                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, nullptr );
-                if ( hFile == INVALID_HANDLE_VALUE )
+                const string           filePath = FileUtil::normalizeSeparators( fileName );
+                const NativeFileHandle handle   = PlatformFileUtil::openNativeFileForRead( filePath.c_str() );
+                if ( handle == kInvalidNativeFileHandle )
                 {
                     SW_LOG_ERROR( "File not found: %#", fileName );
                     return false;
                 }
 
-                LARGE_INTEGER fileSize{};
-                if ( GetFileSizeEx( hFile, &fileSize ) == FALSE || fileSize.QuadPart < 0 )
+                const int64 fileSize = PlatformFileUtil::getNativeFileSize( handle );
+                if ( fileSize < 0 )
                 {
-                    CloseHandle( hFile );
+                    PlatformFileUtil::closeNativeFile( handle );
                     SW_LOG_ERROR( "Failed to query size of: %#", fileName );
                     return false;
                 }
-                const uint64 uFileSize = static_cast<uint64>( fileSize.QuadPart );
-                if ( offset > uFileSize )
-                {
-                    CloseHandle( hFile );
-                    SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
-                    return false;
-                }
-
-                const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
-                outBuffer.resize( static_cast<size_t>( dataSize ) );
-                // 읽을 위치는 OVERLAPPED 의 오프셋으로 준다(동기 핸들이면 위치를 옮기는 호출이 따로 필요 없다). ReadFile 은 한 번에 4 GB 미만만 읽는다.
-                uint64 readTotal = 0;
-                while ( readTotal < dataSize )
-                {
-                    constexpr uint64 kMaxChunk = 1ull << 30;
-                    const DWORD      chunkSize = static_cast<DWORD>( MathUtil::min( dataSize - readTotal, kMaxChunk ) );
-                    const uint64     position  = offset + readTotal;
-                    OVERLAPPED       overlapped{};
-                    overlapped.Offset     = static_cast<DWORD>( position & 0xFFFFFFFFull );
-                    overlapped.OffsetHigh = static_cast<DWORD>( position >> 32 );
-                    DWORD readNow         = 0;
-                    if ( ReadFile( hFile, reinterpret_cast<uint8*>( outBuffer.data() ) + readTotal, chunkSize, &readNow, &overlapped ) == FALSE || readNow == 0 )
-                        break;
-                    readTotal += readNow;
-                }
-                CloseHandle( hFile );
-                // 측정한 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 버퍼를 줄이고
-                // true 를 돌려주면 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 되고, 체크섬이 없는 호출부는 알 길이 없다.
-                if ( readTotal != dataSize )
-                {
-                    outBuffer.clear();
-                    SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readTotal, dataSize, fileName );
-                    return false;
-                }
-                return true;
-#else
-                int64 fileSize{ 0 };
-                FILE* pFile = openForReading( fileName, fileSize );
-                if ( pFile == nullptr )
-                    return false;
-
                 const uint64 uFileSize = static_cast<uint64>( fileSize );
                 if ( offset > uFileSize )
                 {
-                    std::fclose( pFile );
+                    PlatformFileUtil::closeNativeFile( handle );
                     SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
                     return false;
                 }
 
                 const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
-                if ( PlatformFileUtil::seekTo( pFile, static_cast<int64>( offset ), SEEK_SET ) == false )
-                {
-                    std::fclose( pFile );
-                    SW_LOG_ERROR( "Failed to seek to %# in: %#", offset, fileName );
-                    return false;
-                }
                 outBuffer.resize( static_cast<size_t>( dataSize ) );
-                size_t readBytes = 0;
-                if ( dataSize > 0 )
-                    readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
-                std::fclose( pFile );
-                // Windows 분기와 같은 규칙: 측정한 크기만큼 읽지 못했으면 실패다.
-                if ( readBytes != static_cast<size_t>( dataSize ) )
+                size_t     readBytes = 0;
+                const bool bRead     = PlatformFileUtil::readNativeFileAt( handle, offset, outBuffer.data(), static_cast<size_t>( dataSize ), readBytes );
+                PlatformFileUtil::closeNativeFile( handle );
+                // 측정한 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 버퍼를 줄이고
+                // true 를 돌려주면 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 되고, 체크섬이 없는 호출부는 알 길이 없다.
+                if ( bRead == false || readBytes != static_cast<size_t>( dataSize ) )
                 {
                     outBuffer.clear();
                     SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
                     return false;
                 }
                 return true;
-#endif
             }
         };
-
-#if defined( SW_PLATFORM_WINDOWS )
-        /** @brief 윈도우 경로 길이의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
-        constexpr size_t kMaxWindowsPathSize = 32768;
-#endif
-
     } // namespace
 
     void FileUtil::splitPath( string_view fullPath, string_view& outDirectoryPath, string_view& outFileName )
@@ -482,11 +391,7 @@ namespace sw
     string FileUtil::toNativeSeparators( string_view path )
     {
         string outResult{ path };
-#if defined( SW_PLATFORM_WINDOWS )
-        StringUtil::replaceChar( outResult, '/', '\\' );
-#else
-        StringUtil::replaceChar( outResult, '\\', '/' );
-#endif
+        StringUtil::replaceChar( outResult, PlatformFileSystem::kNativeSeparator == '/' ? '\\' : '/', PlatformFileSystem::kNativeSeparator );
         return outResult;
     }
 
@@ -601,62 +506,21 @@ namespace sw
 
     string FileUtil::getExecutablePath()
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 이를
-        // 확인하지 않으면 260자를 넘는 경로에 설치된 순간 exe 위치가 조용히 틀어지고, 그 위치를 기준으로 찾는 모듈 DLL ·
-        // RHI 백엔드 · 셰이더 · 리소스가 **모두** "없다" 가 된다. 원인은 어디에도 남지 않는다. 그래서 다 담길 때까지
-        // 버퍼를 키운다.
-        vector<utf16> listPathBuffer( constant::kMaxPathSize );
-        for ( ;; )
-        {
-            const DWORD writtenCount = GetModuleFileNameW( nullptr, listPathBuffer.data(), static_cast<DWORD>( listPathBuffer.size() ) );
-            if ( writtenCount == 0 )
-                return string{};
-
-            // 반환값이 버퍼 크기와 같으면 잘린 것이다(작으면 다 담긴 것이다).
-            if ( writtenCount < listPathBuffer.size() )
-                return StringUtil::utf16ToUTF8( listPathBuffer.data() );
-
-            // 윈도우 경로 상한(32767자)을 넘으면 더 키워 봐야 소용없다.
-            if ( listPathBuffer.size() >= kMaxWindowsPathSize )
-                return string{};
-
-            listPathBuffer.resize( listPathBuffer.size() * 2 );
-        }
-#else
-        // `/proc/self/exe` 는 실행 파일을 가리키는 링크다 — 풀어 둔 실제 경로가 답이다.
         string executablePath;
-        if ( makeCanonicalPath( "/proc/self/exe", executablePath ) )
-            return executablePath;
-        return string{};
-#endif
+        if ( PlatformFileSystem::getExecutablePath( executablePath ) == false )
+            return string{};
+        return executablePath;
     }
 
     bool FileUtil::getFileStamp( string_view fileName, FileStamp& outStamp )
     {
-        if ( fileName.empty() )
+        // 크기와 시각을 한 번의 조회로 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라). 폴더는 false 다.
+        PlatformFileSystem::FileStatus status;
+        if ( PlatformFileSystem::queryStatus( fileName, status ) == false || status._kind != PlatformFileSystem::FileKind::File )
             return false;
-        const string filePath = normalizeSeparators( fileName );
-#if defined( SW_PLATFORM_WINDOWS )
-        // 크기와 시각을 한 번에 얻는다(`getFileSize` · `getFileWriteTime` 두 번이 아니라).
-        const wstring             widePath = StringUtil::utf8ToUTF16( filePath.c_str() );
-        WIN32_FILE_ATTRIBUTE_DATA attribute{};
-        if ( GetFileAttributesExW( widePath.c_str(), GetFileExInfoStandard, &attribute ) == FALSE )
-            return false;
-        if ( ( attribute.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
-            return false;
-        outStamp._sizeBytes = ( static_cast<uint64>( attribute.nFileSizeHigh ) << 32 ) | attribute.nFileSizeLow;
-        outStamp._writeTime = ( static_cast<uint64>( attribute.ftLastWriteTime.dwHighDateTime ) << 32 ) | attribute.ftLastWriteTime.dwLowDateTime;
+        outStamp._sizeBytes = status._size;
+        outStamp._writeTime = static_cast<uint64>( status._writeTicks );
         return true;
-#else
-        // 시스템 호출 하나 — Windows 분기와 같은 "한 번의 조회". 디렉터리는 false(Windows 분기와 같다).
-        struct stat fileStat{};
-        if ( ::stat( filePath.c_str(), &fileStat ) != 0 || S_ISREG( fileStat.st_mode ) == 0 )
-            return false;
-        outStamp._sizeBytes = static_cast<uint64>( fileStat.st_size );
-        outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * static_cast<uint64>( constant::kNanosecondsPerSecond ) + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
-        return true;
-#endif
     }
 
     uint64 FileUtil::getCreationEpoch()
@@ -708,8 +572,7 @@ namespace sw
     {
         if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes ) == false )
             return false;
-        PlatformFileUtil::noteFileOpenedForRead( fileName, outBytes.size() );
-        PlatformFileUtil::emulateReadDelay( outBytes.size() );
+        PlatformFileUtil::noteFileOpenedForRead( fileName, outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
         return true;
     }
 
@@ -751,8 +614,7 @@ namespace sw
     {
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
-        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() );
-        PlatformFileUtil::emulateReadDelay( outText.size() );
+        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
 
         // BOM 판정의 기준은 아래 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
         // 질의 경로가 서로 다른 답을 준다.
@@ -761,6 +623,16 @@ namespace sw
             outText.erase( 0, outText.size() - withoutBom.size() );
 
         return true;
+    }
+
+    bool FileUtil::writeCrashFile( const utf8* pPath, const void* pData, size_t size )
+    {
+        const NativeFileHandle handle = PlatformFileUtil::createNativeFileForWrite( pPath );
+        if ( handle == kInvalidNativeFileHandle )
+            return false;
+        const bool bWritten = PlatformFileUtil::writeNativeFile( handle, pData, size );
+        PlatformFileUtil::closeNativeFile( handle );
+        return bWritten;
     }
 
     bool FileUtil::writeTextFile( string_view fileName, string_view text )

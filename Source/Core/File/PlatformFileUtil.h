@@ -89,7 +89,15 @@ namespace sw
          * @return 열지 못했으면(없음 · 권한 · 디렉터리) `kInvalidNativeFileHandle` 입니다.
          */
         static NativeFileHandle openNativeFileForRead( const utf8* pFilePath );
-        /** @brief `openNativeFileForRead` 로 연 핸들을 닫습니다. 잘못된 핸들이면 아무 일도 하지 않습니다. */
+        /**
+         * @brief 쓰기 전용으로 만들거나 비우고 OS 핸들을 엽니다(다른 프로세스와 공유하지 않는다). **할당하지 않고** 로그를 쓰지 않습니다 - 크래시 경로(시그널 처리기 포함)가 씁니다.
+         * @details 경로 변환은 스택에서 한다(`kMaxBuffer1024` 글자까지). 보통 쓰기는 `FileUtil::writeFile`(원자적 · 쓰기 문 · 로그)이다.
+         * @return 열지 못했으면 `kInvalidNativeFileHandle` 입니다.
+         */
+        static NativeFileHandle createNativeFileForWrite( const utf8* pFilePath );
+        /** @brief 열린 핸들에 @p size 바이트를 다 씁니다(끊긴 쓰기는 이어 쓴다). **할당하지 않습니다.** 다 쓰지 못하면 false 입니다. */
+        [[nodiscard]] static bool writeNativeFile( NativeFileHandle handle, const void* pData, size_t size );
+        /** @brief `openNativeFileForRead` · `createNativeFileForWrite` 로 연 핸들을 닫습니다. 잘못된 핸들이면 아무 일도 하지 않습니다. */
         static void closeNativeFile( NativeFileHandle handle );
         /** @brief 열린 핸들의 파일 크기입니다. 실패하면 `kInvalidOffset` 입니다. */
         static int64 getNativeFileSize( NativeFileHandle handle );
@@ -112,7 +120,7 @@ namespace sw
         static void emulateReadDelay( size_t byteCount );
 
         /**
-         * @brief 파일 하나를 읽으려고 열 때 부릅니다(`FileUtil::readFile` · `readTextFile` · `openNativeFileForRead`). 연 횟수를 세고,
+         * @brief 파일 하나를 읽으려고 열 때 부릅니다(`FileUtil::readFile` · `readTextFile` · `readStreamTextFile`, 비동기 IO 의 `AsyncFileHandle::open`). 연 횟수를 세고,
          *        `-gv_ioLogReads=1` 이면 경로 · 바이트 · 스레드를 로그로 남깁니다(언리얼 `-FileOpenLog` 와 같은 진단).
          * @param byteCount 읽은 바이트. 핸들만 연 경우(뒤에 위치 지정 읽기가 온다)는 0 입니다.
          */

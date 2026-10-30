@@ -3,6 +3,7 @@
 #include "Server/Windows/WindowsServiceHost.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Core/File/FileUtil.h"
     #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Process/ShutdownSignal.h"
 
@@ -66,19 +67,10 @@ namespace sw
             /** @brief 작업 폴더를 실행 파일 폴더로 옮깁니다. */
             static void enterExecutableDirectory()
             {
-                utf16       arrPath[MAX_PATH]{};
-                const DWORD length = GetModuleFileNameW( nullptr, arrPath, MAX_PATH );
-                if ( length == 0 || length >= MAX_PATH )
+                const string executablePath = FileUtil::getExecutablePath();
+                if ( executablePath.empty() )
                     return;
-                for ( DWORD index = length; index > 0; --index )
-                {
-                    if ( arrPath[index - 1] == L'\\' || arrPath[index - 1] == L'/' )
-                    {
-                        arrPath[index - 1] = L'\0';
-                        break;
-                    }
-                }
-                (void)SetCurrentDirectoryW( arrPath );
+                (void)FileUtil::setCurrentPath( FileUtil::getDirectoryPart( executablePath ) ); // 실패는 setCurrentPath 가 로그로 남긴다
             }
         };
     } // namespace

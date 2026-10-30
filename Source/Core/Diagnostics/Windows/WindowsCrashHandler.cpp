@@ -5,6 +5,7 @@
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
@@ -138,13 +139,11 @@ namespace sw
             utf8 arrPath[constant::kMaxBuffer1024]{};
             makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
 
-            // 경로는 UTF-8 이다. 힙 없이 스택에서 UTF-16 으로 바꿔 W 버전 함수에 넘긴다.
-            utf16 arrWidePath[constant::kMaxBuffer1024]{};
-            if ( MultiByteToWideChar( CP_UTF8, 0, arrPath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
+            // 할당 없이 연다(경로 변환도 스택에서). 덤프 함수는 OS 핸들을 받는다.
+            const NativeFileHandle fileHandle = PlatformFileUtil::createNativeFileForWrite( arrPath );
+            if ( fileHandle == kInvalidNativeFileHandle )
                 return false;
-            const HANDLE hFile = CreateFileW( arrWidePath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
-            if ( hFile == INVALID_HANDLE_VALUE )
-                return false;
+            const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( fileHandle ) );
 
             MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
             exceptionInfo.ThreadId          = faultThreadID;
@@ -170,7 +169,7 @@ namespace sw
                 bWritten = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, nullptr );
             }
             const DWORD dumpError = ( bWritten != FALSE ) ? ERROR_SUCCESS : GetLastError();
-            CloseHandle( hFile );
+            PlatformFileUtil::closeNativeFile( fileHandle );
             if ( bWritten == FALSE )
             {
                 // 실패 원인을 크래시 출력에 남긴다(stdio 를 거치지 않는다 — reportCrash 의 시한 메시지와 같은 이유).

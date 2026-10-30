@@ -177,22 +177,20 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             if ( _bEnableValidationLayers == SW_TRUE )
             {
-                string execDir = FileUtil::getBinaryDirectory();
+                string execDir       = FileUtil::getBinaryDirectory();
+                bool   bLayerPathSet = true;
                 if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
-                    const wstring wideExecDir = StringUtil::utf8ToUTF16( execDir.c_str() );
-                    SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", wideExecDir.c_str() );
-                    SetEnvironmentVariableW( L"VK_LAYER_PATH", wideExecDir.c_str() );
+                    bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", execDir ) && ProcessEnvironment::trySet( "VK_LAYER_PATH", execDir );
                 }
                 else
                 {
                     string vulkanSdkEnv;
                     if ( ProcessEnvironment::tryReadNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
-                    {
-                        string sdkBinPath = FileUtil::joinPath( vulkanSdkEnv, "Bin" );
-                        SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUTF16( sdkBinPath.c_str() ).c_str() );
-                    }
+                        bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", FileUtil::joinPath( vulkanSdkEnv, "Bin" ) );
                 }
+                if ( bLayerPathSet == false )
+                    SW_LOG_WARNING( "Could not point the Vulkan loader at the validation layer - the layer check below decides" );
             }
 #endif
 

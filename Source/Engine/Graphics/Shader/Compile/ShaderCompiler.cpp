@@ -365,7 +365,8 @@ namespace sw
             };
 
             /**
-             * @brief DXC 기본 include 처리기를 감싸 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
+             * @brief include 파일을 `FileUtil` 로 읽어 DXC 에 넘기고 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
+             * @details DXC 기본 처리기(`CreateDefaultIncludeHandler`)는 자기 파일 API 로 디스크를 읽는다 - 엔진 파일 입구(경로 · 진단 · 디스크 흉내)를 건너뛰므로 쓰지 않는다.
              * @details 컴파일 호출마다 하나를 만든다. 기록은 이 객체 안이고 전역 · static 이 아니라서 컴파일을 병렬로 돌려도 섞이지 않는다.
              *          전이 include 도 DXC 가 이 처리기를 거쳐 읽으므로 모두 잡힌다. 참조 수로 사는 COM 객체다 — `make_unique(...).release()` 로 만들어
              *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다.
@@ -373,8 +374,8 @@ namespace sw
             class RecordingDXCInclude final : public IDxcIncludeHandler
             {
             public:
-                explicit RecordingDXCInclude( DxcComPtr<IDxcIncludeHandler> pInner )
-                    : _pInner{ std::move( pInner ) }
+                explicit RecordingDXCInclude( DxcComPtr<IDxcUtils> pUtils )
+                    : _pUtils{ std::move( pUtils ) }
                     , _listIncludedFile{}
                     , _refCount{ 1 }
                 {
@@ -388,14 +389,24 @@ namespace sw
 
                 HRESULT STDMETHODCALLTYPE LoadSource( LPCWSTR pFilename, IDxcBlob** ppIncludeSource ) override
                 {
-                    const bool bInvalidArguments = pFilename == nullptr || ppIncludeSource == nullptr || _pInner == nullptr;
+                    const bool bInvalidArguments = pFilename == nullptr || ppIncludeSource == nullptr || _pUtils == nullptr;
                     if ( bInvalidArguments )
                         return E_FAIL;
-                    const HRESULT hr      = _pInner->LoadSource( pFilename, ppIncludeSource );
-                    const bool    bLoaded = SUCCEEDED( hr ) && *ppIncludeSource != nullptr;
-                    if ( bLoaded )
-                        _listIncludedFile.push_back( FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) ) ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
-                    return hr;
+                    *ppIncludeSource = nullptr;
+                    // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
+                    const string path = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
+                    if ( FileUtil::isRegularFile( path ) == false )
+                        return E_FAIL;
+                    vector<uint8> bytes;
+                    if ( FileUtil::readFile( path, bytes ) == false )
+                        return E_FAIL;
+                    DxcComPtr<IDxcBlobEncoding> blob;
+                    const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, dxcAddressOf( blob ) );
+                    if ( FAILED( hr ) )
+                        return hr;
+                    *ppIncludeSource = blob.Detach();
+                    _listIncludedFile.push_back( path ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
+                    return S_OK;
                 }
 
                 ULONG STDMETHODCALLTYPE AddRef() override { return static_cast<ULONG>( ++_refCount ); }
@@ -422,9 +433,9 @@ namespace sw
                 }
 
             private:
-                DxcComPtr<IDxcIncludeHandler> _pInner;
-                vector<string>                _listIncludedFile;
-                atomic<uint32>                _refCount;
+                DxcComPtr<IDxcUtils> _pUtils;
+                vector<string>       _listIncludedFile;
+                atomic<uint32>       _refCount;
             };
 
             /**
@@ -572,27 +583,16 @@ namespace sw
                 if ( utils == nullptr || compiler == nullptr )
                     return DxcOutcome::NoOutput;
 
-                // 기본 처리기를 연 파일을 적는 처리기로 감싼다. 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
-                // 기본 처리기가 없으면 #include 가 모두 실패해 원인이 엉뚱한 "파일 없음" 으로 보인다 — 여기서 이유를 남기고 멈춘다.
-                DxcComPtr<IDxcIncludeHandler> defaultIncludeHandler;
-                const HRESULT                 hrInclude = utils->CreateDefaultIncludeHandler( dxcAddressOf( defaultIncludeHandler ) );
-                if ( FAILED( hrInclude ) || defaultIncludeHandler == nullptr )
-                {
-                    SW_LOG_ERROR( "DXC CreateDefaultIncludeHandler failed: 0x%#", hrInclude );
-                    return DxcOutcome::NoOutput;
-                }
-                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( std::move( defaultIncludeHandler ) ).release();
+                // 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
+                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( utils ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
                 includeHandler.Attach( pIncludeRecorder );
 
-                wstring                     wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
-                DxcComPtr<IDxcBlobEncoding> sourceBlob;
-                HRESULT                     hrLoad = utils->LoadFile( wPath.c_str(), nullptr, dxcAddressOf( sourceBlob ) );
-                if ( FAILED( hrLoad ) )
-                {
-                    SW_LOG_ERROR( "DXC LoadFile failed: 0x%# (%#)", hrLoad, absPathStr.c_str() );
+                // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
+                const wstring wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
+                vector<uint8> sourceBytes;
+                if ( FileUtil::readFile( absPathStr, sourceBytes ) == false )
                     return DxcOutcome::NoOutput;
-                }
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
                 wstring wProfile    = StringUtil::utf8ToUTF16( profile.c_str() );
@@ -646,8 +646,8 @@ namespace sw
                 }
 
                 DxcBuffer sourceBuffer{};
-                sourceBuffer.Ptr      = sourceBlob->GetBufferPointer();
-                sourceBuffer.Size     = sourceBlob->GetBufferSize();
+                sourceBuffer.Ptr      = sourceBytes.data();
+                sourceBuffer.Size     = sourceBytes.size();
                 sourceBuffer.Encoding = DXC_CP_UTF8;
 
                 DxcComPtr<IDxcResult> compileResult;

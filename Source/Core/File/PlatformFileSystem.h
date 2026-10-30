@@ -47,6 +47,13 @@ namespace sw
 #else
             false;
 #endif
+        /** @brief 이 플랫폼의 경로 구분자입니다(Windows `\`, POSIX `/`). */
+        static constexpr utf8 kNativeSeparator =
+#if defined( SW_PLATFORM_WINDOWS )
+            '\\';
+#else
+            '/';
+#endif
 
         /** @brief @p path 가 가리키는 것을 묻습니다(링크는 따라간다). 없거나 못 읽으면 false 입니다. */
         [[nodiscard]] static bool queryStatus( string_view path, FileStatus& outStatus );
@@ -70,6 +77,8 @@ namespace sw
         [[nodiscard]] static bool getCurrentDirectory( string& outResult );
         /** @brief 작업 폴더를 바꿉니다. */
         [[nodiscard]] static bool setCurrentDirectory( string_view path );
+        /** @brief 이 프로세스의 실행 파일 경로입니다(구분자 `/`, 링크는 푼다). 경로가 길어도 자르지 않는다 - 다 담지 못하면 false 입니다. */
+        [[nodiscard]] static bool getExecutablePath( string& outResult );
         /** @brief 임시 폴더입니다(구분자 `/`, 끝에 구분자 없음). */
         [[nodiscard]] static bool getTempDirectory( string& outResult );
         /**

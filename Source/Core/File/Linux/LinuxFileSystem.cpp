@@ -244,6 +244,12 @@ namespace sw
         return path.empty() == false && chdir( LinuxFileSystemInternal::toNative( path ).c_str() ) == 0;
     }
 
+    bool PlatformFileSystem::getExecutablePath( string& outResult )
+    {
+        // `/proc/self/exe` 는 실행 파일을 가리키는 링크다 - 풀어 둔 실제 경로가 답이다.
+        return makeCanonical( "/proc/self/exe", outResult );
+    }
+
     bool PlatformFileSystem::getTempDirectory( string& outResult )
     {
         // 표준 라이브러리 `temp_directory_path` 와 같은 순서로 찾고, 모두 없으면 `/tmp` 다.

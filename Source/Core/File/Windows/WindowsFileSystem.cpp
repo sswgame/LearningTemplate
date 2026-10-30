@@ -21,6 +21,8 @@ namespace sw
         struct WindowsFileSystemInternal
         {
             static constexpr DWORD kShareAll = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+            /** @brief 윈도우 경로 길이의 절대 상한(유니코드 확장 경로, 문자 수)입니다. */
+            static constexpr size_t kMaxWindowsPathSize = 32768;
 
             /** @brief UTF-8 경로를 넓은 문자 경로로 바꿉니다(구분자는 `\`). 빈 경로는 빈 글입니다. */
             static wstring toWide( string_view path )
@@ -220,6 +222,27 @@ namespace sw
     {
         const wstring wide = WindowsFileSystemInternal::toWide( path );
         return wide.empty() == false && SetCurrentDirectoryW( wide.c_str() ) != FALSE;
+    }
+
+    bool PlatformFileSystem::getExecutablePath( string& outResult )
+    {
+        // `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고, 그 사실을 반환값(= 버퍼 크기)으로만 알린다. 잘린 경로를 쓰면 exe 위치를 기준으로 찾는
+        // 모듈 DLL · RHI 백엔드 · 셰이더가 모두 "없다" 가 되고 원인은 남지 않는다. 그래서 다 담길 때까지 버퍼를 키운다(윈도우 경로 상한 32767 자까지).
+        wstring buffer( constant::kMaxPathSize, L'\0' );
+        while ( buffer.size() <= WindowsFileSystemInternal::kMaxWindowsPathSize )
+        {
+            const DWORD written = GetModuleFileNameW( nullptr, buffer.data(), static_cast<DWORD>( buffer.size() ) );
+            if ( written == 0 )
+                return false;
+            if ( written < buffer.size() ) // 같으면 잘린 것이다
+            {
+                buffer.resize( written );
+                outResult = WindowsFileSystemInternal::toUTF8( buffer.c_str() );
+                return true;
+            }
+            buffer.resize( buffer.size() * 2 );
+        }
+        return false;
     }
 
     bool PlatformFileSystem::getTempDirectory( string& outResult )

@@ -96,6 +96,7 @@ namespace sw
         const NativeFileHandle nativeHandle = PlatformFileUtil::openNativeFileForRead( pathText.c_str() );
         if ( nativeHandle == kInvalidNativeFileHandle )
             return handle;
+        PlatformFileUtil::noteFileOpenedForRead( pathText, 0 ); // 핸들만 연다 - 바이트는 뒤의 위치 지정 읽기가 읽는다
 
         const int64 size = PlatformFileUtil::getNativeFileSize( nativeHandle );
         if ( size < 0 )
