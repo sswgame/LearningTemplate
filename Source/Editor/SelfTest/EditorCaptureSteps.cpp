@@ -2,7 +2,10 @@
  * @file EditorCaptureSteps.cpp
  * @brief 자동화 시나리오 단계 `CaptureEditorUI` 를 구현합니다. 에디터 UI 전체(패널 + 플로팅 창)를 PNG 로 찍고 튼튼한 지표를 단언합니다.
  * @details `<CaptureEditorUI file="ui/hierarchy.png" maxMagentaFraction="0" maxClippedWindows="0"/>`. 경로는 시나리오 출력 폴더 기준이다(`<Screenshot>` 과 같다).
- *          단계는 차례가 오면 캡처를 요청하고 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 지표는 둘이다.
+ *          단계는 차례가 오면 **레이아웃이 자리 잡을 때까지**(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
+ *          캡처를 요청하고, 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 그래서 시나리오가 패널을 연 뒤 고정 프레임을 기다리지 않는다 —
+ *          예전에는 패널마다 `<Wait frames="20"/>` 를 두어 uiaudit 하나가 Debug 에서 2 분을 넘겼다(언리얼 Automation Driver · Playwright 의 자동 대기와 같은 자리).
+ *          지표는 둘이다.
  *          - `maxMagentaFraction`: 마젠타 픽셀 비율 상한(적지 않으면 0). 빠진 텍스처 · 디버그 색이 UI 에 섞이면 오른다. 적은 캡처는 백엔드 분할에서도 모든 백엔드가 돈다.
  *          - `maxClippedWindows`: 내용이 창보다 큰데 스크롤바가 없어 잘린 창 수 상한. 어느 창인지는 실패 줄에 이름으로 남는다.
  *          이미지 자체(골든)는 비교하지 않는다. 글꼴 래스터와 DPI 가 기계마다 달라 같은 기계 · 같은 설정에서만 의미가 있다. 결과 파일로 사람이나 `ux-reviewer` 가 본다.
@@ -10,6 +13,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
@@ -21,21 +25,56 @@
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 
+#include <imgui_internal.h>
+
 namespace sw::editor
 {
     namespace
     {
         struct EditorCaptureStepsInternal
         {
-            /** @brief 캡처가 써질 때까지 붙잡는 최대 프레임입니다. 렌더 큐 깊이와 GPU 읽기보다 넉넉하다. */
+            /** @brief 레이아웃이 자리 잡을 때까지와 캡처가 써질 때까지 붙잡는 최대 프레임입니다. 렌더 큐 깊이와 GPU 읽기보다 넉넉하다. */
             static constexpr uint32 kCaptureWaitFrames = 120;
+            /** @brief 이 프레임 수만큼 레이아웃 지문이 바뀌지 않으면 자리 잡은 것으로 본다(ImGui 는 새 창 · 자동 크기를 한두 프레임에 걸쳐 맞춘다). */
+            static constexpr uint32 kLayoutStableFrames = 2;
 
-            /** @brief 차례가 온 단계가 낸 요청 번호입니다. UI 스레드 전용이고, 단계가 돌면 지운다. */
+            /** @brief 차례가 온 단계의 상태입니다. UI 스레드 전용이고, 단계가 돌면 지운다. */
             struct PendingCapture
             {
                 const AutomationStep* _pStep{ nullptr };
+                uint64                _layoutHash{ 0 };       ///< 지난 프레임의 레이아웃 지문
+                uint32                _stableFrameCount{ 0 }; ///< 지문이 그대로인 연속 프레임 수
+                bool                  _bRequested{ false };   ///< 캡처를 요청했다(그 뒤로는 결과만 기다린다)
                 uint32                _ticket{ 0 };
             };
+
+            /** @brief 직전 프레임에 그린 창들의 위치 · 크기 · 내용 크기 · 스크롤 지문입니다. 잘린 창 세기(`EditorUICapture`)와 같은 창을 본다. */
+            static uint64 computeLayoutHash()
+            {
+                const ImGuiContext* pContext = ImGui::GetCurrentContext();
+                uint64              hash     = HashUtil::kFNVOffset64;
+                if ( pContext == nullptr )
+                    return hash;
+                for ( const ImGuiWindow* pWindow : pContext->Windows )
+                {
+                    const bool bDrawn = pWindow != nullptr && pWindow->WasActive && pWindow->Hidden == false && pWindow->Collapsed == false;
+                    if ( bDrawn == false )
+                        continue;
+                    const float arrValue[] = { pWindow->Pos.x, pWindow->Pos.y, pWindow->Size.x, pWindow->Size.y,
+                                               pWindow->ContentSize.x, pWindow->ContentSize.y, pWindow->Scroll.x, pWindow->Scroll.y };
+                    const auto* pBytes     = reinterpret_cast<const uint8*>( &pWindow->ID );
+                    for ( size_t index = 0; index < sizeof( pWindow->ID ); ++index )
+                    {
+                        hash = HashUtil::fnvStep64( hash, pBytes[index] );
+                    }
+                    pBytes = reinterpret_cast<const uint8*>( arrValue );
+                    for ( size_t index = 0; index < sizeof( arrValue ); ++index )
+                    {
+                        hash = HashUtil::fnvStep64( hash, pBytes[index] );
+                    }
+                }
+                return hash;
+            }
 
             /**
              * @struct Session
@@ -79,8 +118,19 @@ namespace sw::editor
                 PendingCapture* pPending = findPending( step );
                 if ( pPending == nullptr )
                 {
-                    pSession->_listPending.push_back( PendingCapture{ &step, pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) ) } );
+                    pSession->_listPending.push_back( PendingCapture{ ._pStep = &step } );
                     pPending = &pSession->_listPending.back();
+                }
+                if ( pPending->_bRequested == false )
+                {
+                    const uint64 layoutHash     = computeLayoutHash();
+                    pPending->_stableFrameCount = layoutHash == pPending->_layoutHash ? pPending->_stableFrameCount + 1 : 0;
+                    pPending->_layoutHash       = layoutHash;
+                    // 자리 잡지 못한 채 기다림이 다하면 단계가 돌며 "never completed" 실패를 적는다(아래 `holdUntilReady` 가 같은 상한을 센다).
+                    if ( pPending->_stableFrameCount < kLayoutStableFrames )
+                        return runner.holdUntilReady( step, input, false, kCaptureWaitFrames );
+                    pPending->_ticket     = pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) );
+                    pPending->_bRequested = true;
                 }
                 EditorUICaptureResult result{};
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
@@ -120,7 +170,7 @@ namespace sw::editor
                 EditorUICapture* const pCapture = findSubsystem<EditorUICapture>();
                 PendingCapture* const  pPending = findPending( step );
                 EditorUICaptureResult  result{};
-                const bool             bHasResult = pCapture != nullptr && pPending != nullptr && pCapture->findResult( pPending->_ticket, result );
+                const bool             bHasResult = pCapture != nullptr && pPending != nullptr && pPending->_bRequested && pCapture->findResult( pPending->_ticket, result );
                 if ( pPending != nullptr )
                 {
                     vector<PendingCapture>& listPending = findSession()->_listPending; // 항목을 찾았으므로 세션이 있다

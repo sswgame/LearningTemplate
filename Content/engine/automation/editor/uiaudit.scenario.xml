@@ -12,223 +12,186 @@
 	<CaptureEditorUI file="audit/00_default.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus hierarchy"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/01_hierarchy.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close hierarchy"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus inspector"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/02_inspector.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close inspector"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus content_browser"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/03_content_browser.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close content_browser"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus console"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/04_console.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close console"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus scene_view"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/05_scene_view.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close scene_view"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/06_game_view.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close game_view"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus profiler"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/07_profiler.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close profiler"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus preferences"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/08_preferences.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close preferences"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus shortcuts"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/09_shortcuts.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close shortcuts"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus global_variables"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/10_global_variables.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close global_variables"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus history"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/11_history.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close history"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus modules"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/12_modules.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close modules"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus input_map"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/13_input_map.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close input_map"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus material"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/14_material.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close material"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus prefab_editor"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/15_prefab_editor.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/16_animation_graph.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close animation_graph"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/17_dialogue_graph.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close dialogue_graph"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus gimmick_graph"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/18_gimmick_graph.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close gimmick_graph"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus sequencer"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/19_sequencer.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close sequencer"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus sprite_clip"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/20_sprite_clip.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close sprite_clip"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus tile_map"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/21_tile_map.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close tile_map"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus ui_preview"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/22_ui_preview.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close ui_preview"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus data_table"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/23_data_table.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close data_table"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus catalog_editor"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/24_catalog_editor.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close catalog_editor"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus render_targets"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/25_render_targets.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close render_targets"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus audiomixer"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/26_audiomixer.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close audiomixer"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus audioevents"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/27_audioevents.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close audioevents"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus projectsettings"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/28_projectsettings.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close projectsettings"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus user_settings"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/29_user_settings.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close user_settings"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus test_runner"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/30_test_runner.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close test_runner"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus multiplayer"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/31_multiplayer.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close multiplayer"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus ability_debugger"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/32_ability_debugger.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close ability_debugger"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus animation_rewind"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/33_animation_rewind.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close animation_rewind"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus rig_debug"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/34_rig_debug.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close rig_debug"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus npc_schedule"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/35_npc_schedule.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close npc_schedule"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus charactereditor.main"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/36_charactereditor_main.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close charactereditor.main"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<Wait frames="20"/>
 	<CaptureEditorUI file="audit/37_meshmodifiers_stack.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.close meshmodifiers.stack"/>
