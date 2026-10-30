@@ -495,8 +495,17 @@ namespace sw::test
             return false;
         }
 
-        const uint32 baseSeed    = Internal::pickSeed( options._seed );
-        const string scratchRoot = FileUtil::joinPath( options._scratchRoot.empty() ? string( "Saved/Test" ) : options._scratchRoot, to_string( Process::getCurrentProcessID() ) );
+        const uint32 baseSeed = Internal::pickSeed( options._seed );
+        // 쓰기 폴더는 절대 경로로 준다 — 작업 폴더 기준 상대 경로는 리소스 id 를 받는 입구(`AssetPaths::toAssetID` 등)에서 id 로 읽혀 다른 파일이 된다.
+        string scratchRoot;
+        if ( FileUtil::makeAbsolutePath( FileUtil::joinPath( options._scratchRoot.empty() ? string( "Saved/Test" ) : options._scratchRoot,
+                                                             to_string( Process::getCurrentProcessID() ) ),
+                                         scratchRoot ) == false )
+        {
+            Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
+            return false;
+        }
+        scratchRoot              = FileUtil::normalizeSeparators( scratchRoot );
         Subscription logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread       watchThread;
         if ( Process::isDebuggerPresent() == false )

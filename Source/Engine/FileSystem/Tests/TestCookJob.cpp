@@ -14,7 +14,8 @@ using namespace sw;
  */
 SW_TEST_CASE( CookJobTest, RecordsRelativeDiskReadsAsAbsolutePaths )
 {
-    const string folder   = test::makeScratchPath( "Source" );
+    string folder; // 작업 폴더 기준 상대 경로(케이스 폴더는 절대 경로로 오므로 일부러 줄인다)
+    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( FileUtil::getCurrentPath(), test::makeScratchPath( "Source" ), folder ) );
     const string filePath = FileUtil::joinPath( folder, "a.txt" );
     SW_REQUIRE_FALSE( FileUtil::isAbsolutePath( filePath ) );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( filePath, "one" ) );

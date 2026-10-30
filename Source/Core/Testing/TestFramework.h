@@ -101,7 +101,7 @@ namespace sw::test
     /** @brief 이 케이스가 일부러 내는 로그 id 를 적습니다. 그 id 의 Warning · Error 는 실패로 세지 않고, 끝까지 한 번도 안 나오면 실패입니다. */
     SW_API void expectLog( const utf8* pLogID, const utf8* pFile, int32 line );
     /**
-     * @brief 이 케이스만 쓰는 빈 폴더 아래의 경로입니다(`<작업 폴더>/Saved/Test/<프로세스>/<케이스>/<회차>/<name>`).
+     * @brief 이 케이스만 쓰는 빈 폴더 아래의 절대 경로입니다(`<작업 폴더>/Saved/Test/<프로세스>/<케이스>/<회차>/<name>`).
      * @details 폴더는 처음 부를 때 만든다. 테스트는 이 밖(Bin · 소스 트리 · 고정 이름 임시 경로)에 쓰지 않는다 — 나란히 도는 프로세스 · 반복 회차가 부딪치지 않게.
      */
     SW_API string makeScratchPath( string_view name );
