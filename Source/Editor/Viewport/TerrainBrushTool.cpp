@@ -485,17 +485,17 @@ namespace sw::editor
                 TerrainComponent* pTerrain = findTerrain( state._lastEdited );
                 if ( pTerrain == nullptr )
                     return;
-                bool         bSaved          = true;
-                const string heightfieldPath = editor::getSubsystem<AssetPaths>().findLooseFile( pTerrain->getHeightfieldPath() ).getDiskPath();
-                if ( heightfieldPath.empty() || saveHeightfield( *pTerrain, heightfieldPath ) == false )
+                bool                              bSaved          = true;
+                const std::optional<AbsolutePath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
+                if ( heightfieldPath.has_value() == false || saveHeightfield( *pTerrain, heightfieldPath->str() ) == false )
                 {
                     SW_LOG_ERROR( "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
                     bSaved = false;
                 }
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const string splatPath = editor::getSubsystem<AssetPaths>().findLooseFile( pTerrain->getLayerWeightsPath() ).getDiskPath();
-                    if ( splatPath.empty() || saveSplat( *pTerrain, splatPath ) == false )
+                    const std::optional<AbsolutePath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
+                    if ( splatPath.has_value() == false || saveSplat( *pTerrain, splatPath->str() ) == false )
                     {
                         SW_LOG_ERROR( "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
                         bSaved = false;

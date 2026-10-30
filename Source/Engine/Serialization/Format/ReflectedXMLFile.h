@@ -1,6 +1,6 @@
 /**
  * @file ReflectedXMLFile.h
- * @brief 리플렉션 desc 하나를 XML 파일로 읽고(리소스 id) 씁니다(디스크 경로 - `AssetPaths::resolveWritePath` 로 푼 것). 렌더 패스 · 파이프라인 리소스가 씁니다.
+ * @brief 리플렉션 desc 하나를 XML 파일로 읽고(리소스 id) 씁니다(디스크 경로 - `AssetPaths::toDiskPath` 로 푼 것). 렌더 패스 · 파이프라인 리소스가 씁니다.
  *
  * [왜 있는가]
  * 렌더 리소스 둘(`RenderPassAsset` · `RenderPipelineAsset`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
@@ -56,7 +56,7 @@ namespace sw
 
         /**
          * @brief 리플렉션 desc 를 XML 로 씁니다.
-         * @param absPath 쓸 디스크 경로(리소스 id 를 디스크 자리로 푸는 일은 부르는 쪽 - `AssetPaths::resolveWritePath`)
+         * @param absPath 쓸 디스크 경로(리소스 id 를 디스크 자리로 푸는 일은 부르는 쪽 - `AssetPaths::toDiskPath`)
          * @return 성공 여부.
          */
         template <typename DescType>

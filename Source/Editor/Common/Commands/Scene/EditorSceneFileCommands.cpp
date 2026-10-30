@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
@@ -243,7 +244,7 @@ namespace sw::editor
         const Scene*  pScene       = sceneManager.getActiveScene();
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
-        const std::optional<AbsolutePath> targetPath = sourceID.empty() ? std::nullopt : editor::getSubsystem<AssetPaths>().resolveWritePath( sourceID );
+        const std::optional<AbsolutePath> targetPath = sourceID.empty() ? std::nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         if ( targetPath.has_value() && reportReadOnlyTarget( *targetPath ) )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
@@ -295,9 +296,7 @@ namespace sw::editor
         params._bEnableMultiselect = false;
         // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType{ SceneDocument::kAssetType }, params._listFilterExtension );
-        const string mapsDir = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ).getDiskPath();
-        if ( FileUtil::isDirectory( mapsDir ) )
-            params._initialDirectory = mapsDir;
+        params._initialDirectory = EditorPaths::getSceneDialogFolderPath();
         FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorSceneFileCommandsInternal::onSaveSceneDialogResult ) );
     }
 } // namespace sw::editor

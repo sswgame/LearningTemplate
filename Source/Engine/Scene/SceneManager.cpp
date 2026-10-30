@@ -451,7 +451,7 @@ namespace sw
         const string sourceID = AssetCookPath::toSourcePath( pScene->getSourcePath(), SceneDocument::kAssetType );
         if ( sourceID != pScene->getSourcePath() )
             SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
-        const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().resolveWritePath( sourceID );
+        const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         return absPath.has_value() && writeActiveScene( *absPath, sourceID );
     }
 

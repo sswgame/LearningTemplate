@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -75,7 +76,7 @@ namespace sw::editor
 {
     string EditorThemeTokens::getFolderPath()
     {
-        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kEditorPack, kFolderName ).getDiskPath();
+        return EditorPaths::findContentFolder( FileUtil::joinPath( path::kEditorPack, kFolderName ) );
     }
 
     void EditorThemeTokens::listThemeNames( vector<string>& outListName )
@@ -104,10 +105,11 @@ namespace sw::editor
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id )
     {
-        const string&     assetID = id.str();
-        EditorThemeConfig config{};
-        string            error;
-        if ( loadThemeFile( editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).getDiskPath(), config, error ) )
+        const string&                     assetID = id.str();
+        EditorThemeConfig                 config{};
+        string                            error;
+        const std::optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
+        if ( themeFile.has_value() && loadThemeFile( themeFile->str(), config, error ) )
             return true;
         SW_LOG_ERROR( "Theme tokens were not loaded: %#", error.c_str() );
         return false;

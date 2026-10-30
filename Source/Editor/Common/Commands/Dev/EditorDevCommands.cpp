@@ -140,13 +140,13 @@ namespace sw::editor
             {
                 if ( AbsolutePath::isStrictAbsolute( argument ) )
                     return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
-                const string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument ).getDiskPath();
-                if ( FileUtil::isRegularFile( diskPath ) == false )
+                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
+                if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
                 {
                     outReply = "no resource '" + argument + "'";
                     return false;
                 }
-                outAbsolutePath = diskPath;
+                outAbsolutePath = diskPath->str();
                 return true;
             }
 
@@ -264,8 +264,9 @@ namespace sw::editor
                     outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                const string absolutePath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
-                if ( absolutePath.empty() || FileUtil::exists( absolutePath ) == false )
+                const std::optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const string                      absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
+                if ( absolutePath.empty() )
                 {
                     outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
                     return false;

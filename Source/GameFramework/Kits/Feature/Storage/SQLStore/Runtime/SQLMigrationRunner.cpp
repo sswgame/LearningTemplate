@@ -10,7 +10,6 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -138,23 +137,28 @@ namespace sw
             }
 
             /**
-             * @brief 원본 폴더가 디스크에 있으면 그 안의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다.
-             * @details 팩에는 폴더가 없어 대조할 것이 없다 — 팩은 이 폴더에서 만들어지므로 개발 · 테스트 · CI 에서 맞춰 두면 된다.
+             * @brief 폴더(리소스 id)의 `.sql` 을 읽기와 같은 규칙(`AssetIO::collectAssets` - 낱개 파일 · 팩)으로 나열합니다. 폴더가 없으면 빈 목록이고 true 입니다.
+             * @details 예전에는 글이 디스크 폴더인지 먼저 보고(`isDirectory`) 아니면 낱개 파일 자리로 풀었다 - 팩 구성에서는 대조할 것이 없었다.
              */
-            [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
+            [[nodiscard]] static bool collectMigrationFiles( string_view folder, vector<AssetID>& outListFile, string& outError )
             {
-                const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : game::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
-                if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
-                    return true;
-                vector<string> listFilePath;
-                if ( FileUtil::collectFiles( diskFolder, ".sql", listFilePath, false ) == false )
+                if ( AssetIO::collectAssets( AssetID{ folder }, ".sql", outListFile ) == AssetFolderListing::Failed )
                 {
-                    outError = formatText( "cannot read the migration folder '%#'", diskFolder );
+                    outError = formatText( "cannot read the migration folder '%#'", folder );
                     return false;
                 }
-                for ( const string& filePath : listFilePath )
+                return true;
+            }
+
+            /** @brief 폴더의 `.sql` 이 모두 목록의 마이그레이션(공통이나 방언 분기)인지 대조합니다. */
+            [[nodiscard]] static bool checkFolderMatchesList( string_view folder, const vector<string>& listStem, string& outError )
+            {
+                vector<AssetID> listFilePath;
+                if ( collectMigrationFiles( folder, listFilePath, outError ) == false )
+                    return false;
+                for ( const AssetID& filePath : listFilePath )
                 {
-                    const string  fileName = FileUtil::getFileNamePart( filePath );
+                    const string  fileName = FileUtil::getFileNamePart( filePath.view() );
                     MigrationFile file;
                     if ( parseFileName( fileName, file ) == false )
                     {
@@ -165,7 +169,7 @@ namespace sw
                     const bool   bListed = VectorUtil::contains( listStem, stem );
                     if ( bListed == false )
                     {
-                        outError = formatText( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, diskFolder );
+                        outError = formatText( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, folder );
                         return false;
                     }
                 }
@@ -225,19 +229,13 @@ namespace sw
 
     bool SQLMigrationRunner::collectDialectDriverNames( string_view folder, vector<string>& inoutListName, string& outError )
     {
-        const string diskFolder = FileUtil::isDirectory( folder ) ? string( folder ) : game::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
-        if ( diskFolder.empty() || FileUtil::isDirectory( diskFolder ) == false )
-            return true;
-        vector<string> listFilePath;
-        if ( FileUtil::collectFiles( diskFolder, ".sql", listFilePath, false ) == false )
-        {
-            outError = SQLMigrationRunnerInternal::formatText( "cannot read the migration folder '%#'", diskFolder );
+        vector<AssetID> listFilePath;
+        if ( SQLMigrationRunnerInternal::collectMigrationFiles( folder, listFilePath, outError ) == false )
             return false;
-        }
-        for ( const string& filePath : listFilePath )
+        for ( const AssetID& filePath : listFilePath )
         {
             SQLMigrationRunnerInternal::MigrationFile file;
-            if ( SQLMigrationRunnerInternal::parseFileName( FileUtil::getFileNamePart( filePath ), file ) == false || file._driverName.empty() )
+            if ( SQLMigrationRunnerInternal::parseFileName( FileUtil::getFileNamePart( filePath.view() ), file ) == false || file._driverName.empty() )
                 continue; // 이름이 틀린 파일은 `loadMigrations` 가 오류로 멈춘다
             if ( VectorUtil::contains( inoutListName, file._driverName ) == false )
                 inoutListName.push_back( file._driverName );

@@ -134,9 +134,9 @@ namespace sw::editor
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.
-        const std::optional<AbsolutePath> filePath = editor::getSubsystem<AssetPaths>().resolveWritePath( prefabPath );
+        const std::optional<AbsolutePath> filePath = editor::getSubsystem<AssetPaths>().toDiskPath( prefabPath );
         if ( filePath.has_value() == false )
-            return false; // 이유는 resolveWritePath 가 남겼다
+            return false; // 이유는 toDiskPath 가 남겼다
         string                              oldFileText;
         string                              oldBaseState;
         const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath->str(), oldFileText ) == OptionalFileRead::Read;

@@ -84,7 +84,8 @@ namespace sw
             const bool         bDiskDomain  = engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( relativePath );
             if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
             {
-                const string loosePath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath ).getDiskPath();
+                const std::optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+                const string                      loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -221,8 +222,8 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
         {
             // 읽기와 같은 판정이다(R7) - 읽기는 파일만 읽으므로 폴더는 "있음" 이 아니다(예전에는 `exists` 라 폴더에도 true 였다).
-            const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath ).getDiskPath();
-            if ( absPath.empty() == false && FileUtil::isRegularFile( absPath ) )
+            const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+            if ( absPath.has_value() && FileUtil::isRegularFile( absPath->str() ) )
                 return true;
         }
         if ( bDiskDomain )

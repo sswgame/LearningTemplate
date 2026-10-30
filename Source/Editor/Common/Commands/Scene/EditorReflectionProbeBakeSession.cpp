@@ -71,7 +71,7 @@ namespace sw::editor
                     outError = "the scene has never been saved - save it before baking reflection probes";
                     return false;
                 }
-                const std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().resolveWritePath( assetPath );
+                const std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
                 if ( dataPath.has_value() == false || data.saveToFile( *dataPath ) == false )
                 {
                     utf8 arrMessage[constant::kMaxBuffer512];

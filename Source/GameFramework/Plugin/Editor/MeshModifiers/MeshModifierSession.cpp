@@ -602,9 +602,9 @@ namespace sw::editor
         if ( hasTarget() == false )
             return false;
         // 곁 파일은 아직 없을 수 있다 — 메시 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
-        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _meshPath );
+        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
-            return false; // 이유는 resolveWritePath 가 남겼다
+            return false; // 이유는 toDiskPath 가 남겼다
         const string                      path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
         const std::optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
         if ( stackFile.has_value() == false || _stack.saveFile( *stackFile ) == false )
@@ -621,12 +621,12 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) ).getDiskPath();
-        if ( path.empty() )
+        const std::optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        if ( path.has_value() == false )
             return false;
-        if ( _stack.loadFile( path ) == false )
+        if ( _stack.loadFile( path->str() ) == false )
         {
-            SW_LOG_WARNING( "Mesh modifier stack %# could not be read", path.c_str() );
+            SW_LOG_WARNING( "Mesh modifier stack %# could not be read", path->c_str() );
             return false;
         }
         _savedStackText = _stack.makeJSONText( -1 );
@@ -656,7 +656,7 @@ namespace sw::editor
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
         // 구운 메시도 원본 메시 파일 곁이다
-        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _meshPath );
+        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         const std::optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : std::nullopt;
         if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
         {

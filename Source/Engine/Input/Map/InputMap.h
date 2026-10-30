@@ -354,7 +354,7 @@ namespace sw
         [[nodiscard]] bool appendFromAsset( const AssetID& assetID );
         /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromAsset` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
-         * @param absPath 쓸 디스크 경로입니다(리소스 id 는 부르는 쪽이 `AssetPaths::resolveWritePath` 로 푼다).
+         * @param absPath 쓸 디스크 경로입니다(리소스 id 는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다).
          * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */

@@ -45,7 +45,8 @@ namespace sw
             {
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::normalizeSeparators( path );
-                return FileUtil::normalizeSeparators( editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath() );
+                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
+                return diskPath.has_value() ? diskPath->str() : string{};
             }
 
             /** @brief 글자 수를 UTF-8 코드 포인트 단위로 셉니다. */
@@ -463,7 +464,7 @@ namespace sw
             }
         }
         else
-            listGameFolder.push_back( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), localizationFolder ).getDiskPath() );
+            listGameFolder.push_back( editor::EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), localizationFolder ) ) );
 
         for ( const string& gameFolder : listGameFolder )
         {

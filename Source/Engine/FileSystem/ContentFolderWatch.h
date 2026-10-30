@@ -22,10 +22,12 @@ namespace sw
         using ChangedDelegate = Delegate<void()>;
 
         /**
-         * @brief 디스크 폴더 @p absoluteFolder 아래 확장자 @p listExtension 의 파일이 바뀌면 @p onChanged 를 부르게 합니다. 구독이 사라지면 멈춘다.
-         * @return 감시를 시작하지 못하면(폴더 없음 · 이 플랫폼에 감시자 없음) 빈 구독입니다(이유는 로그).
+         * @brief 리소스 폴더 @p folderID 아래 확장자 @p listExtension 의 파일이 바뀌면 @p onChanged 를 부르게 합니다. 구독이 사라지면 멈춘다.
+         * @details 디스크 폴더는 나열과 같은 규칙으로 푼다(`AssetPaths::collectLooseFolders` - 도메인 없는 폴더는 검색 순서의 모든 도메인). 예전에는 부르는 쪽이 필수 파일의
+         *          낱개 자리에서 폴더를 거꾸로 찾아 디스크 경로로 넘겼다.
+         * @return 낱개 폴더가 없거나(팩 데이터) 감시를 시작하지 못하면(이 플랫폼에 감시자 없음) 빈 구독입니다(이유는 로그).
          */
-        [[nodiscard]] virtual Subscription watchDiskFolder( string_view absoluteFolder, const vector<string>& listExtension, const ChangedDelegate& onChanged ) = 0;
+        [[nodiscard]] virtual Subscription watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged ) = 0;
 
     protected:
         ~IContentFolderWatch() = default;

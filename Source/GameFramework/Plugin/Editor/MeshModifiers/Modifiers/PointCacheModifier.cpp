@@ -10,9 +10,10 @@
  */
 #include "pch.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+
+#include "Engine/FileSystem/AssetIO.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
@@ -39,12 +40,13 @@ namespace sw::editor
             static constexpr size_t kHeaderSize = 12;
 
             // 파일 확장자는 .mfpc(mesh-modifier point cache)다. 이 모디파이어가 정한 형식이며, 에셋 슬롯 필터도 이 확장자만 받는다.
+            // 경로는 에셋 슬롯이 고른 리소스 id 다 - 런타임 읽기 입구(`AssetIO`)로 읽는다(예전에는 `FileUtil` 이 받아 작업 폴더 기준으로 열었다).
             [[nodiscard]] static bool load( string_view path, PointCacheData& outData )
             {
                 outData       = PointCacheData{};
                 outData._path = string( path );
                 vector<uint8> bytes;
-                if ( FileUtil::readFile( path, bytes ) == false || bytes.size() < kHeaderSize )
+                if ( AssetIO::readBinaryAsset( AssetID{ path }, bytes ) == false || bytes.size() < kHeaderSize )
                     return false;
                 uint32  vertexCount = 0;
                 uint32  frameCount  = 0;

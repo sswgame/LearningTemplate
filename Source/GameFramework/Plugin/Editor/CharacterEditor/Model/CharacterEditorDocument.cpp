@@ -155,15 +155,15 @@ namespace sw::editor
     bool CharacterEditorDocument::loadSocketFile()
     {
         ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
-        const string readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) ).getDiskPath();
-        if ( readPath.empty() )
+        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
+        if ( readPath.has_value() == false )
         {
             _status = "Socket file '" + string{ _paths._socketPath.c_str() } + "' has no file on disk to load";
             return false;
         }
-        if ( _sockets.loadFromFile( readPath ) == false )
+        if ( _sockets.loadFromFile( readPath->str() ) == false )
         {
-            _status = "Socket file '" + readPath + "' could not be loaded (see log)";
+            _status = "Socket file '" + readPath->str() + "' could not be loaded (see log)";
             return false;
         }
         _status.clear();
@@ -190,7 +190,7 @@ namespace sw::editor
         bool bSaved = true;
         if ( _sockets.isDirty() )
         {
-            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._socketPath.c_str() ) );
+            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._socketPath.c_str() ) );
             if ( writePath.has_value() == false || _sockets.saveToFile( *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
@@ -204,7 +204,7 @@ namespace sw::editor
         }
         if ( _pose.isDirty() )
         {
-            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._refPosePath.c_str() ) );
+            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._refPosePath.c_str() ) );
             if ( writePath.has_value() == false || _pose.saveToFile( *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
@@ -237,10 +237,10 @@ namespace sw::editor
 
     void CharacterEditorDocument::loadReferencePose()
     {
-        const string readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) ).getDiskPath();
-        if ( readPath.empty() )
+        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) );
+        if ( readPath.has_value() == false )
             _status = "Reference pose file was not found - edit bones and Save to create it";
-        else if ( _pose.loadFromFile( readPath ) == false )
+        else if ( _pose.loadFromFile( readPath->str() ) == false )
             _status = "Reference pose file could not be loaded (see log)";
         else
             _status.clear();
@@ -323,8 +323,8 @@ namespace sw::editor
 
     void CharacterEditorDocument::loadPresets()
     {
-        const string readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._presetPath.c_str() ) ).getDiskPath();
-        if ( readPath.empty() || AppearanceEditModel::loadPresetFile( _presetStore, readPath ) == false )
+        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._presetPath.c_str() ) );
+        if ( readPath.has_value() == false || AppearanceEditModel::loadPresetFile( _presetStore, readPath->str() ) == false )
             _status = "Preset file could not be loaded (needs appearance data; see log)";
         else
             _status.clear();
@@ -332,7 +332,7 @@ namespace sw::editor
 
     void CharacterEditorDocument::savePreset()
     {
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._presetPath.c_str() ) );
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._presetPath.c_str() ) );
         if ( writePath.has_value() == false || _appearance.saveToPresetFile( _presetStore, string_view( _paths._presetName.c_str() ), *writePath ) == false )
             _status = "Preset could not be saved (needs a name and appearance data)";
         else
@@ -360,7 +360,7 @@ namespace sw::editor
     bool CharacterEditorDocument::attachThumbnail( const string& thumbnailID )
     {
         const string                      name{ _paths._presetName.c_str() };
-        const std::optional<AbsolutePath> presetFile = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._presetPath.c_str() ) );
+        const std::optional<AbsolutePath> presetFile = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._presetPath.c_str() ) );
         const bool                        bAttached  = presetFile.has_value() && _presetStore.setThumbnailPath( name, thumbnailID );
         if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, *presetFile ) == false )
         {
@@ -385,7 +385,7 @@ namespace sw::editor
             return false;
         }
         const string                      assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( assetID );
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
         const bool                        bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveFile( writePath->str() );
         if ( bWritten == false )
         {
@@ -481,15 +481,14 @@ namespace sw::editor
         _bClipNamesLoaded = true;
         if ( _paths._clipFolder.empty() )
             return;
-        // 클립 목록은 디스크의 폴더를 훑어 얻는다 — 에디터는 원본 트리에서 도는 도구다(배포 팩에는 폴더 목록이 없어 목록이 빈다).
-        const string   diskFolder = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._clipFolder.c_str() ) ).getDiskPath();
-        vector<string> listFile;
-        if ( diskFolder.empty() || FileUtil::collectFiles( diskFolder, string( AnimationClip::kExtension ), listFile, false ) == false )
+        // 클립 목록은 나열 규칙 하나로 얻는다(`AssetIO::collectAssets` - 도메인 없는 폴더는 모든 도메인의 합집합). 예전에는 이긴 도메인 폴더 하나만 디스크에서 훑었다.
+        vector<AssetID> listFile;
+        if ( AssetIO::collectAssets( AssetID{ string_view( _paths._clipFolder.c_str() ) }, AnimationClip::kExtension, listFile ) != AssetFolderListing::Listed )
             return;
         const size_t extensionLength = AnimationClip::kExtension.size();
-        for ( const string& filePath : listFile )
+        for ( const AssetID& filePath : listFile )
         {
-            const string fileName = FileUtil::getFileNamePart( filePath );
+            const string fileName = FileUtil::getFileNamePart( filePath.view() );
             if ( fileName.size() > extensionLength )
                 _listClipName.push_back( hashed_string( string_view( fileName ).substr( 0, fileName.size() - extensionLength ) ) );
         }

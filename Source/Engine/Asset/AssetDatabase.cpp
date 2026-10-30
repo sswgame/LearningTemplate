@@ -91,7 +91,7 @@ namespace sw
                 // 쿠킹본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
                 // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 // 소스 정책도 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Content/ 에 고아 `.meta` 가 생긴다.
-                if ( AssetIO::getContentSource() == ContentSource::Cooked || engine::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath().empty() )
+                if ( AssetIO::getContentSource() == ContentSource::Cooked || engine::getSubsystem<AssetPaths>().findLooseFile( path ).has_value() == false )
                     return result;
                 result = UUID::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )
@@ -385,9 +385,9 @@ namespace sw
     bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
     {
         // .meta 는 아직 없을 수 있다 — 에셋 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다. 에셋의 쓸 자리가 곧 그 도메인이다.
-        const std::optional<AbsolutePath> assetPath = engine::getSubsystem<AssetPaths>().resolveWritePath( relativePath );
+        const std::optional<AbsolutePath> assetPath = engine::getSubsystem<AssetPaths>().toDiskPath( relativePath );
         if ( assetPath.has_value() == false )
-            return false; // 이유는 resolveWritePath 가 남겼다
+            return false; // 이유는 toDiskPath 가 남겼다
         const string absMeta = metaPathFor( assetPath->str() );
 
         AssetMeta meta;

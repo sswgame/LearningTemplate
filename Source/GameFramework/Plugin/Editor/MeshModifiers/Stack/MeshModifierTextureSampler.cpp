@@ -53,15 +53,14 @@ namespace sw::editor
 
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::kMicrosecondsPerMillisecond; }
 
-            /** @brief 절대 경로 · 작업 폴더 상대 경로가 있으면 그대로, 아니면 리소스 id 로 해석합니다. 못 찾으면 빈 문자열입니다. */
+            /**
+             * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 시각을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
+             * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 봤다(같은 글이 작업 폴더에 따라 다른 파일).
+             */
             static string resolvePath( const AssetPaths& assetPaths, string_view assetPath )
             {
-                string resolved;
-                if ( FileUtil::exists( assetPath ) )
-                    resolved = string( assetPath );
-                else
-                    resolved = assetPaths.findLooseFile( assetPath ).getDiskPath();
-                return resolved;
+                const std::optional<AbsolutePath> found = assetPaths.findLooseFile( assetPath );
+                return found.has_value() ? found->str() : string{};
             }
 
             /** @brief 파일을 읽어 float4 텍셀로 디코드합니다. 실패해도 경로 · 시각이 든 (무효) 항목을 돌려줘 같은 실패를 정점마다 되풀이하지 않습니다. */

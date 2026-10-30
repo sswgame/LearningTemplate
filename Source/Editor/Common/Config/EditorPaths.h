@@ -38,6 +38,16 @@ namespace sw::editor
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
 
         /**
+         * @brief 리소스 폴더 id(`game/empty/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.
+         * @details 해석은 `AssetPaths::toDiskPath` 하나다 - 예전에는 `AssetPaths::findLooseDomainFolder` 가 `Content/<도메인>` 을 따로 이어 붙였다(붙인 디스크 도메인을 몰랐다).
+         */
+        static string findContentFolder( string_view folderID );
+        /** @brief 게임 팩들이 있는 디스크 폴더(`Content/game`)입니다. 팩 목록을 훑는 콘텐츠 브라우저 · 셀프 테스트가 쓴다. */
+        static string getGamePacksFolderPath();
+        /** @brief 씬 파일 대화상자가 처음 여는 폴더(활성 게임 팩의 `maps`)입니다. 없으면 빈 문자열이고 대화상자가 정한다. */
+        static string getSceneDialogFolderPath();
+
+        /**
          * @brief 에디터가 쓰는 상태 폴더 <Project>/Saved/Editor 를 반환합니다. 없으면 만듭니다. `-gv_editorStateDir=<폴더>` 를 주면 그 폴더를 씁니다.
          * @details 도킹(`imgui.ini`, `windows.json`), 이름 붙인 레이아웃, 노드 캔버스, 경로가 없는 도구 문서, 환경설정(테마 포함 `EditorPreferences.json`), gv 프리셋이
          *          여기에 있다. 사람이 고쳐서 커밋하는 `Config/` 와 나눈다. 언리얼의 `Saved/`, 유니티의 `UserSettings/` 와 같다.

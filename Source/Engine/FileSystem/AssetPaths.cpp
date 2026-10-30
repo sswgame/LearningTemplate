@@ -151,7 +151,7 @@ namespace sw
                        left._listHostExcludedGroup == right._listHostExcludedGroup;
             }
 
-            /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(`findLooseDomainFolder` 의 본체 — 새 표를 짓는 동안 그 표의 루트로 푼다). */
+            /** @brief @p root 아래 도메인(과 하위 폴더)의 디스크 폴더입니다. 없으면 빈 글입니다(새 표를 짓는 동안 그 표의 루트로 푼다). */
             static string findDomainFolderUnder( const string& root, string_view domainName, string_view subFolder )
             {
                 if ( root.empty() || domainName.empty() )
@@ -268,7 +268,7 @@ namespace sw
 
             /**
              * @brief 이 플랫폼의 파일 시스템이 대소문자를 구분하는지입니다. Linux 만 구분합니다 — Windows 는 소문자로 이어도 같은 폴더라 새 경로를 디스크 표기에 맞출 일이 없습니다.
-             * @details `findLooseFile` 의 `SW_PLATFORM_LINUX` 재시도와 같은 기준입니다. 쓰기 쪽(`resolveWritePath`)은 이 값으로 분기해 Windows 에서도 같은 코드가 컴파일됩니다.
+             * @details `findLooseFile` 의 `SW_PLATFORM_LINUX` 재시도와 같은 기준입니다. `toDiskPath` 는 이 값으로 분기해 Windows 에서도 같은 코드가 컴파일됩니다.
              */
 #if defined( SW_PLATFORM_LINUX )
             static constexpr bool kCaseSensitiveFileSystem = true;
@@ -520,29 +520,16 @@ namespace sw
         return _pState->_bInitialized;
     }
 
-    LooseFilePath AssetPaths::findLooseFile( string_view filePath, string_view folderName ) const
+    std::optional<AbsolutePath> AssetPaths::findLooseFile( string_view resourceID ) const
     {
-        if ( filePath.empty() )
-            return {};
-
-        if ( FileUtil::isAbsolutePath( filePath ) )
-        {
-            if ( FileUtil::exists( filePath ) )
-                return LooseFilePath( FileUtil::normalizeSeparators( filePath ) );
-            return {};
-        }
+        // 리소스 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
-        if ( hasParentDirectoryComponent( filePath ) )
-            return {};
+        if ( resourceID.empty() || FileUtil::isAbsolutePath( resourceID ) || hasParentDirectoryComponent( resourceID ) )
+            return std::nullopt;
 
         State& state = *_pState;
-        // 원문 키다 — 해시만 비교하면 충돌한 다른 파일의 경로를 조용히 돌려준다. `\n` 은 파일 id 에 들어갈 수 없어 둘을 가르는 구분자다.
-        string cacheKey( filePath );
-        if ( folderName.empty() == false )
-        {
-            cacheKey += '\n';
-            cacheKey += folderName;
-        }
+        // 원문 키다 — 해시만 비교하면 충돌한 다른 파일의 경로를 조용히 돌려준다.
+        string cacheKey( resourceID );
 
         // 세대는 찾기 전에 잡는다 — 찾는 동안 검색 목록이 바뀌었거나 파일이 만들어졌으면 이 결과는 낡은 채로 저장되지 못하거나(목록) 다음 조회에서 버려진다(음성).
         const PathCacheStamp stamp = AssetPathsInternal::captureStamp( state );
@@ -553,30 +540,27 @@ namespace sw
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
                     AssetPathsInternal::getMissingStats().recordHit();
-                return LooseFilePath( std::move( cached ) );
+                return cached.empty() ? std::nullopt : AbsolutePath::tryMake( cached );
             }
         }
         AssetPathsInternal::getPathStats().recordMiss();
 
-        const string lowerFile   = FileUtil::normalizePath( filePath );
-        const string lowerFolder = folderName.empty() ? string{} : FileUtil::normalizePath( folderName );
+        const string lowerFile = FileUtil::normalizePath( resourceID );
 
         string found;
         string domainRoot;
         string keyUnderRoot;
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFile, domainRoot, keyUnderRoot ) )
         {
-            found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, lowerFolder );
+            found = AssetPathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, {} );
 #if defined( SW_PLATFORM_LINUX )
             // 대소문자를 가리는 파일시스템: 소문자 키로 못 찾았으면 원래 표기로 다시 찾는다.
-            if ( found.empty() && lowerFile != filePath )
+            if ( found.empty() && lowerFile != resourceID )
             {
-                const string raw    = string{ filePath };
-                string       rawKey = keyUnderRoot;
-                const size_t slash  = FileUtil::normalizeSeparators( raw ).find( '/' );
-                if ( slash != string::npos )
-                    rawKey = FileUtil::normalizeSeparators( raw ).substr( slash + 1 );
-                found = AssetPathsInternal::tryUnderRoot( domainRoot, rawKey, folderName );
+                const string raw    = FileUtil::normalizeSeparators( resourceID );
+                const size_t slash  = raw.find( '/' );
+                const string rawKey = slash != string::npos ? raw.substr( slash + 1 ) : keyUnderRoot;
+                found               = AssetPathsInternal::tryUnderRoot( domainRoot, rawKey, {} );
             }
             // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있고, 기록해 둔 id(쿠킹 입력 등)는 소문자뿐이라 원래 표기가 없다 — 폴더를 훑어 소문자가 같은 항목으로 푼다.
             // 리소스 트리의 도메인은 소문자 규칙이라 훑지 않는다(없는 파일을 묻는 호출이 훑기를 부르지 않게).
@@ -584,8 +568,7 @@ namespace sw
             string mountedKey;
             if ( found.empty() && AssetPathsInternal::findMountedDiskDomain( state, lowerFile, mountedRoot, mountedKey ) )
             {
-                const string lowerKey = lowerFolder.empty() ? mountedKey : FileUtil::joinPath( lowerFolder, mountedKey );
-                const string hit      = FileUtil::findPathIgnoringCase( mountedRoot, lowerKey );
+                const string hit = FileUtil::findPathIgnoringCase( mountedRoot, mountedKey );
                 if ( hit.empty() == false && FileUtil::exists( hit ) )
                     found = FileUtil::normalizeSeparators( hit );
             }
@@ -594,10 +577,10 @@ namespace sw
         else
         {
             const vector<string>& listAssetFolder = AssetPathsInternal::getTable( state )._listResourceFolder; // 표 하나를 잡아 그 안에서 읽는다
-            found                                 = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile, lowerFolder );
+            found                                 = AssetPathsInternal::tryResolveAmong( listAssetFolder, lowerFile, {} );
 #if defined( SW_PLATFORM_LINUX )
-            if ( found.empty() && ( lowerFile != filePath || ( folderName.empty() == false && lowerFolder != folderName ) ) )
-                found = AssetPathsInternal::tryResolveAmong( listAssetFolder, filePath, folderName );
+            if ( found.empty() && lowerFile != resourceID )
+                found = AssetPathsInternal::tryResolveAmong( listAssetFolder, resourceID, {} );
 #endif
         }
 
@@ -605,8 +588,7 @@ namespace sw
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
         AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
-
-        return LooseFilePath( std::move( found ) );
+        return found.empty() ? std::nullopt : AbsolutePath::tryMake( found );
     }
 
     void AssetPaths::collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const
@@ -621,9 +603,9 @@ namespace sw
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
-            const string found = findLooseFile( folderID ).getDiskPath();
-            if ( found.empty() == false && FileUtil::isDirectory( found ) )
-                outListFolder.push_back( found );
+            const std::optional<AbsolutePath> found = findLooseFile( folderID );
+            if ( found.has_value() && FileUtil::isDirectory( found->str() ) )
+                outListFolder.push_back( found->str() );
             return;
         }
         const string rawFolder = FileUtil::normalizeSeparators( folderID );
@@ -671,7 +653,7 @@ namespace sw
         return id;
     }
 
-    std::optional<AbsolutePath> AssetPaths::resolveWritePath( string_view resourceID ) const
+    std::optional<AbsolutePath> AssetPaths::toDiskPath( string_view resourceID ) const
     {
         const string id = normalizeAssetID( resourceID );
         if ( id.empty() )
@@ -680,10 +662,11 @@ namespace sw
             return std::nullopt;
         }
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
-        string     result = findLooseFile( id ).getDiskPath();
-        string     domainRoot;
-        string     keyUnderRoot;
-        const bool bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
+        const std::optional<AbsolutePath> existing = findLooseFile( id );
+        string                            result   = existing.has_value() ? existing->str() : string{};
+        string                            domainRoot;
+        string                            keyUnderRoot;
+        const bool                        bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
         if ( result.empty() && bGlobalID == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", resourceID, id );
@@ -702,14 +685,6 @@ namespace sw
         if ( absPath.has_value() == false )
             SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' resolved to '%#', which is not an absolute disk path", resourceID, result );
         return absPath;
-    }
-
-    LooseFilePath AssetPaths::findLooseDomainFolder( string_view domainName, string_view subFolder ) const
-    {
-        string folder = AssetPathsInternal::findDomainFolderUnder( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath, domainName, subFolder );
-        if ( folder.empty() )
-            return {};
-        return LooseFilePath( std::move( folder ) );
     }
 
     bool AssetPaths::mountDiskDomain( string_view domainName, string_view diskFolder )

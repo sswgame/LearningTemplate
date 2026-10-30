@@ -3,6 +3,8 @@
  * @brief 씬의 워프 오브젝트 하나에 묶인 공유 모디파이어 스택(월드 공간 워프)을 이 메시에 거는 모디파이어입니다(MegaFiers World Space Warp, 블렌더 변형자의 기준 오브젝트).
  */
 #pragma once
+#include "Core/Path/AbsolutePath.h"
+
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierStack.h"
 
@@ -25,10 +27,10 @@ namespace sw::editor
 
         WorldWarpModifier();
 
-        /** @brief 스택 @p stack 을 워프 정의 파일 @p path 로 씁니다(스택 저장 문서 글). 묶음(`DeformableModifier`)의 하위 스택을 워프로 내보낼 때 씁니다. */
-        [[nodiscard]] static bool writeWarpFile( const MeshModifierStack& stack, string_view path );
-        /** @brief 워프 정의 파일 @p path 를 @p outStack 으로 읽습니다. 못 읽거나 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool readWarpFile( string_view path, MeshModifierStack& outStack );
+        /** @brief 스택 @p stack 을 워프 정의 파일 @p absPath 로 씁니다(스택 저장 문서 글). 묶음(`DeformableModifier`)의 하위 스택을 워프로 내보낼 때 씁니다. */
+        [[nodiscard]] static bool writeWarpFile( const MeshModifierStack& stack, const AbsolutePath& absPath );
+        /** @brief 워프 정의 리소스 @p assetID 를 @p outStack 으로 읽습니다(`AssetIO`). 못 읽거나 형식이 틀리면 false 입니다. */
+        [[nodiscard]] static bool readWarpFile( string_view assetID, MeshModifierStack& outStack );
 
         const utf8* getDescription() const override { return "Applies a shared warp definition file in the space of a scene object, so many meshes bend together."; }
         void        applyToMesh( MeshModifierMesh& inoutMesh, const MeshModifierContext& context ) const override;

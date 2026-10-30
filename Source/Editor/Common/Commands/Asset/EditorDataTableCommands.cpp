@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -141,12 +142,12 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) ).getDiskPath();
+        return EditorPaths::findContentFolder( FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ), path::kLocalizationFolder ) );
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ).getDiskPath();
+        return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ) );
     }
 
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
@@ -156,9 +157,9 @@ namespace sw::editor
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets == nullptr )
             SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
-        const string enginePath = pDefaultAssets != nullptr ? editor::getSubsystem<AssetPaths>().findLooseFile( pDefaultAssets->_localizationProject.get() ).getDiskPath() : string{};
-        if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
-            outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
+        const std::optional<AbsolutePath> enginePath = pDefaultAssets != nullptr ? editor::getSubsystem<AssetPaths>().findLooseFile( pDefaultAssets->_localizationProject.get() ) : std::nullopt;
+        if ( enginePath.has_value() )
+            outListProjectPath.push_back( enginePath->str() );
 
         const string   gameFolder = getLocalizationFolderPath();
         vector<string> listFile;

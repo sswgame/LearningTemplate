@@ -330,12 +330,12 @@ namespace sw::editor
 
     void CatalogPanel::openFile( const string& assetID )
     {
-        const string absolutePath = editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).getDiskPath(); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다(없으면 빈 문자열)
-        string       text;
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().findLooseFile( assetID ); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다
+        string                            text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {
-            SW_LOG_ERROR( "Could not read catalog file '%#'", absolutePath.c_str() );
+            SW_LOG_ERROR( "Could not read catalog file '%#'", assetID.c_str() );
             _statusText = "Could not read the file";
             return;
         }
@@ -365,7 +365,7 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
         if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _document.getText() ) == false )
         {
             SW_LOG_ERROR( "Could not write catalog file '%#'", _selectedID.c_str() );
@@ -425,7 +425,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
         if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _previousFileText ) == false )
         {
             SW_LOG_ERROR( "Could not restore catalog file '%#'", _selectedID.c_str() );

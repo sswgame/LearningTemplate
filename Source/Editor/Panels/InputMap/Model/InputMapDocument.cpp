@@ -101,7 +101,7 @@ namespace sw::editor
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
-        const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _inputMapPath.c_str() );
+        const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
@@ -191,7 +191,7 @@ namespace sw::editor
 
     void InputMapDocument::saveReplay() const
     {
-        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _replayFilePath.get() );
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
         if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
             SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
@@ -200,10 +200,10 @@ namespace sw::editor
     {
         if ( input.getVirtualInput() == &_replay )
             input.detachVirtualInput();
-        const string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() ).getDiskPath();
-        if ( diskPath.empty() )
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
+        if ( diskPath.has_value() == false )
             SW_LOG_ERROR( "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
-        else if ( _replay.loadFromFile( diskPath ) == false )
-            SW_LOG_ERROR( "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath.c_str() );
+        else if ( _replay.loadFromFile( diskPath->str() ) == false )
+            SW_LOG_ERROR( "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
     }
 } // namespace sw::editor

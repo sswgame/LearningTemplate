@@ -18,6 +18,7 @@
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Input/EditorInputActions.h"
@@ -105,14 +106,7 @@ namespace sw::editor
                 // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetType{ SceneDocument::kAssetType }, params._listFilterExtension );
 
-                const string activePack = editor::getSubsystem<const GameConfig>()._packRoot.get();
-                const string mapsDir    = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack, path::kMapsFolder ).getDiskPath();
-                if ( FileUtil::isDirectory( mapsDir ) )
-                    params._initialDirectory = mapsDir;
-                else if ( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( activePack ).getDiskPath();
-                else if ( editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kGamePack ).getDiskPath().empty() == false )
-                    params._initialDirectory = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kGamePack ).getDiskPath();
+                params._initialDirectory = EditorPaths::getSceneDialogFolderPath(); // 저장 대화상자와 같은 폴더(없으면 대화상자가 정한다)
 
                 FileDialog::open( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }

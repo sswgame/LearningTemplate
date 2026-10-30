@@ -46,7 +46,7 @@ namespace sw::editor
     void AudioGraphModel::save()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다).
-        const std::optional<AbsolutePath> graphFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _editPath.view() );
+        const std::optional<AbsolutePath> graphFile = editor::getSubsystem<AssetPaths>().toDiskPath( _editPath.view() );
         if ( graphFile.has_value() == false || _editGraph.saveToAsset( *graphFile ) )
             _bEditDirty = false;
     }

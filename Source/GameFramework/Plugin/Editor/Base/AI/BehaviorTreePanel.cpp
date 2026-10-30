@@ -154,14 +154,12 @@ namespace sw::editor
         _selectedID     = -1;
         _bLayoutPending = true;
         _nodeGraph.requestContentFit();
-        string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-        if ( diskPath.empty() )
-            diskPath = path;
-        string text;
-        if ( FileUtil::readTextFile( diskPath, text ) == false )
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
+        string                            text;
+        if ( diskPath.has_value() == false || FileUtil::readTextFile( diskPath->str(), text ) == false )
         {
             _statusText = "The file could not be read";
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be read", diskPath.c_str() );
+            SW_LOG_ERROR( "Behavior tree file '%#' could not be read", path.c_str() );
             return ToolAssetLoadResult::Malformed;
         }
         string error;
@@ -169,7 +167,7 @@ namespace sw::editor
         {
             // 읽지 못한 파일은 덮어쓰지 않도록 저장을 막는다(Malformed).
             _statusText = error;
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be opened: %#", diskPath.c_str(), error.c_str() );
+            SW_LOG_ERROR( "Behavior tree file '%#' could not be opened: %#", path.c_str(), error.c_str() );
             return ToolAssetLoadResult::Malformed;
         }
         _statusText = "Loaded";
@@ -181,16 +179,16 @@ namespace sw::editor
         const string& path = getLoadedAssetPath();
         if ( path.empty() )
             return false;
-        string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-        if ( diskPath.empty() )
-            diskPath = path;
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+        if ( diskPath.has_value() == false )
+            return false; // 이유는 toDiskPath 가 남겼다
         _model.collectIssues( _listIssue );
         if ( _listIssue.empty() == false )
             SW_LOG_WARNING( "Saving behavior tree '%#' with %# problems - the game will not load it until they are fixed", path.c_str(), _listIssue.size() );
-        if ( FileUtil::writeTextFile( diskPath, _model.write() ) == false )
+        if ( FileUtil::writeTextFile( diskPath->str(), _model.write() ) == false )
         {
             _statusText = "The file could not be written";
-            SW_LOG_ERROR( "Behavior tree file '%#' could not be written", diskPath.c_str() );
+            SW_LOG_ERROR( "Behavior tree file '%#' could not be written", diskPath->c_str() );
             return false;
         }
         clearDocumentDirty();

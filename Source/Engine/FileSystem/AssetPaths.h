@@ -23,8 +23,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Engine/FileSystem/LooseFilePath.h"
-
 #include <optional>
 
 namespace sw
@@ -84,14 +82,13 @@ namespace sw
         bool isInitialized() const;
 
         /**
-         * @brief 상대 리소스 경로를 **디스크의 낱개 파일**로 풉니다(파일이 있을 때만). 팩은 보지 않습니다.
-         * @param filePath 팩 상대 키 또는 `engine/`/`common/`/`game/<pack>/`/`editor/` 전역 ID
-         * @param folderName 검색 루트마다 이 하위 폴더로 범위를 좁힙니다(비우면 루트 바로 아래부터)
-         * @return 디스크 경로입니다. 못 찾으면 `isEmpty()` 입니다. 런타임 리소스 읽기 · 나열은 이 결과가 아니라 `AssetIO` 를 씁니다 —
-         *         결과 형식(`LooseFilePath`)이 `string` 으로 저절로 바뀌지 않는 까닭입니다.
+         * @brief 리소스 id 를 **디스크에 있는 낱개 파일 · 폴더**로 풉니다(있을 때만). 팩은 보지 않습니다.
+         * @param resourceID 팩 상대 키(검색 순서로 이긴 것) 또는 `engine/`/`common/`/`game/<pack>/`/`editor/` 전역 ID. 디스크 경로는 받지 않는다(빈 값).
+         * @return 있으면 디스크 경로, 없으면 빈 값입니다. 런타임 리소스 읽기 · 나열은 이 결과가 아니라 팩까지 보는 `AssetIO` 를 씁니다.
+         *         없는 파일의 자리(만들 곳)는 `toDiskPath` 다.
          * @note 소문자 키로 먼저 찾고, 못 찾으면 원래 표기로 한 번 더 찾습니다(대소문자를 가리는 파일시스템).
          */
-        LooseFilePath findLooseFile( string_view filePath, string_view folderName = "" ) const;
+        [[nodiscard]] std::optional<AbsolutePath> findLooseFile( string_view resourceID ) const;
 
         /**
          * @brief 리소스 폴더 id 에 맞는 **디스크 폴더 전부**를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
@@ -101,7 +98,8 @@ namespace sw
         void collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const;
 
         /**
-         * @brief 리소스 id 의 파일을 **쓸 자리**의 디스크 경로로 풉니다 — 쓰기 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
+         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
+         *        에디터 · 쿠커 · 도구가 디스크 자리를 알 때 쓴다. 런타임 내용 읽기는 팩까지 보는 `AssetIO` 다.
          * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
          *        상대 키는 검색 순서로 이긴 **있는** 파일이다(읽은 그 파일에 쓴다).
          * @return 디스크 경로입니다. 디스크 경로(절대) · `..` · 아직 없는 상대 키(어느 도메인에 만들지 모른다)는 이유를 오류로 남기고 빈 값입니다 — 작업 폴더로 물러나지 않는다.
@@ -109,7 +107,7 @@ namespace sw
          *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
          *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
-        [[nodiscard]] std::optional<AbsolutePath> resolveWritePath( string_view resourceID ) const;
+        [[nodiscard]] std::optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
 
         /**
          * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
@@ -136,14 +134,6 @@ namespace sw
         void setHostTarget( string_view buildTargetName );
         /** @brief @p assetPath(리소스 id, 팩 상대 키, 절대 경로)가 이 호스트가 읽지 않는 에셋 종류면 true 입니다(`setHostTarget`). */
         bool isExcludedForHost( string_view assetPath ) const;
-
-        /**
-         * @brief 도메인의 하위 폴더 절대 경로를 반환합니다(`Content/<domainName>/<subFolder>`).
-         * @param domainName 예: "engine", "common", "game/empty", "editor", "dlc/winter"
-         * @param subFolder  예: "shaders", "textures", "prefabs"(비우면 도메인 루트)
-         * @return 디스크에 디렉터리가 있으면 정규화한 절대 경로, 없으면 `isEmpty()`. 팩은 보지 않습니다(에디터 · 쿠커 · 도구용).
-         */
-        LooseFilePath findLooseDomainFolder( string_view domainName, string_view subFolder = {} ) const;
 
         /**
          * @brief 리소스 루트 **밖**의 디스크 폴더 하나를 도메인 이름으로 붙입니다. 그 도메인의 id(`<domainName>/<key>`)는 그 폴더의 파일로 풀립니다.

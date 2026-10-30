@@ -63,14 +63,18 @@ namespace sw::editor
 
         struct EditorToolAssetInternal
         {
+            /**
+             * @brief 도구 문서 경로를 디스크 경로로 풉니다 - 절대 경로면 그대로, 아니면 리소스 id 의 자리(`AssetPaths::toDiskPath` - 아직 없는 전역 id 도 만들 자리)입니다.
+             * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다).
+             */
             static string resolveExistingOrRelativePath( string_view path )
             {
                 if ( path.empty() )
                     return {};
-                string absPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-                if ( absPath.empty() )
-                    absPath = string{ path };
-                return absPath;
+                if ( AbsolutePath::isStrictAbsolute( path ) )
+                    return FileUtil::normalizeSeparators( path );
+                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+                return diskPath.has_value() ? diskPath->str() : string{};
             }
 
             /**

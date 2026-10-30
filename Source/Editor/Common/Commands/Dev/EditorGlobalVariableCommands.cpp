@@ -27,10 +27,7 @@ namespace sw::editor
 
     string EditorGlobalVariableCommands::getComponentPresetFolderPath()
     {
-        return editor::getSubsystem<AssetPaths>().findLooseDomainFolder(
-                                                     editor::getSubsystem<const GameConfig>()._packRoot.get(),
-                                                     FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) )
-            .getDiskPath();
+        return EditorPaths::findContentFolder( FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ), path::kPresetsFolder ) );
     }
 
     bool EditorGlobalVariableCommands::savePreset( const string& filePath, const string& presetName )

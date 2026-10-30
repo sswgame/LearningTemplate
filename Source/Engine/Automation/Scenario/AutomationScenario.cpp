@@ -34,8 +34,9 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const string loosePath = engine::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-                const bool   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
+                const std::optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
+                const string                      loosePath = looseFile.has_value() ? looseFile->str() : string{};
+                const bool                        bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 return "[read] not found (content root '" + engine::getSubsystem<AssetPaths>().getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
                        ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
                        ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );

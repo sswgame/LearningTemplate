@@ -100,7 +100,7 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( getLoadedAssetPath() );
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( getLoadedAssetPath() );
         string                            error;
         if ( writePath.has_value() == false || _model.saveToFile( *writePath, error ) == false )
         {
@@ -128,15 +128,15 @@ namespace sw::editor
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
 
-        const string readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( path ) ).getDiskPath();
-        if ( readPath.empty() )
+        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( path ) );
+        if ( readPath.has_value() == false )
         {
             _status = "The paired animation '" + path + "' has no file on disk to read";
             return ToolAssetLoadResult::Malformed;
         }
-        if ( _model.loadFromFile( readPath ) == false )
+        if ( _model.loadFromFile( readPath->str() ) == false )
         {
-            _status = "The paired animation '" + readPath + "' could not be read - see the log";
+            _status = "The paired animation '" + readPath->str() + "' could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
         // 역할 수가 바뀌었을 수 있다 — 미리보기 오브젝트를 새로 놓는다(프리팹 경로는 같은 인덱스면 남긴다).

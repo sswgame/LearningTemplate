@@ -112,7 +112,7 @@ namespace sw::editor
     bool AudioEventBrowserPanel::saveDocument()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
-        const std::optional<AbsolutePath> libraryFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _editLibraryName.view() );
+        const std::optional<AbsolutePath> libraryFile = editor::getSubsystem<AssetPaths>().toDiskPath( _editLibraryName.view() );
         if ( libraryFile.has_value() == false || _bEditDirty == false || _editLibrary.saveToAsset( *libraryFile ) == false )
             return false;
         _bEditDirty = false;

@@ -9,6 +9,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/FileSystem/AssetIO.h"
+
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -26,16 +28,16 @@ namespace sw::editor
         setWorldSpace( true );
     }
 
-    bool WorldWarpModifier::writeWarpFile( const MeshModifierStack& stack, string_view path )
+    bool WorldWarpModifier::writeWarpFile( const MeshModifierStack& stack, const AbsolutePath& absPath )
     {
-        return FileUtil::writeTextFile( path, stack.makeJSONText() );
+        return FileUtil::writeTextFile( absPath.str(), stack.makeJSONText() );
     }
 
-    bool WorldWarpModifier::readWarpFile( string_view path, MeshModifierStack& outStack )
+    bool WorldWarpModifier::readWarpFile( string_view assetID, MeshModifierStack& outStack )
     {
         outStack.clear();
         string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
+        if ( AssetIO::readTextAsset( AssetID{ assetID }, text ) == false )
             return false;
         return outStack.readJSONText( text );
     }

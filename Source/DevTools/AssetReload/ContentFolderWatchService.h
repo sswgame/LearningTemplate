@@ -29,7 +29,7 @@ namespace sw
         ContentFolderWatchService( const ContentFolderWatchService& )            = delete;
         ContentFolderWatchService& operator=( const ContentFolderWatchService& ) = delete;
 
-        [[nodiscard]] Subscription watchDiskFolder( string_view absoluteFolder, const vector<string>& listExtension, const ChangedDelegate& onChanged ) override;
+        [[nodiscard]] Subscription watchAssetFolder( string_view folderID, const vector<string>& listExtension, const ChangedDelegate& onChanged ) override;
         /** @brief 감시마다 OS 변경을 꺼내고, 바뀐 감시의 알림을 부릅니다(게임 스레드, 프레임 끝). */
         void update();
 

@@ -128,8 +128,8 @@ namespace sw
         {
             case CookInputKind::Resource:
             {
-                const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _source ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
-                return absPath.empty() ? 0 : ContentHash::computeFile( absPath );
+                const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _source ); // 읽기다 — 없는 입력은 해시 0
+                return absPath.has_value() ? ContentHash::computeFile( absPath->str() ) : 0;
             }
             case CookInputKind::DiskFile:
                 return FileUtil::isRegularFile( _source ) ? ContentHash::computeFile( _source ) : 0;

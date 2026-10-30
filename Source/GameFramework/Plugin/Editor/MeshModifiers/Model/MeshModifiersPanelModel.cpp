@@ -2,6 +2,10 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
+#include "Engine/FileSystem/AssetPaths.h"
+
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/WorldWarpModifier.h"
@@ -103,7 +107,9 @@ namespace sw::editor
 
     void MeshModifiersPanelModel::exportWarp( const MeshModifierStack& shown ) const
     {
-        if ( WorldWarpModifier::writeWarpFile( shown, _warpExportPath ) )
+        // 내보낼 자리는 에셋 슬롯이 고른 리소스 id 다 - 쓸 자리로 푼다.
+        const std::optional<AbsolutePath> warpFile = editor::getSubsystem<AssetPaths>().toDiskPath( _warpExportPath );
+        if ( warpFile.has_value() && WorldWarpModifier::writeWarpFile( shown, *warpFile ) )
             SW_LOG_INFO( "Exported %# modifiers as the world warp '%#'", shown.getModifierCount(), _warpExportPath.c_str() );
         else
             SW_LOG_ERROR( "Could not write the world warp '%#'", _warpExportPath.c_str() );

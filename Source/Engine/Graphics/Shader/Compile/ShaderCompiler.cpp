@@ -54,9 +54,9 @@ namespace sw
                     return false;
                 for ( const string& domain : listDomain )
                 {
-                    const string domainShaders = engine::getSubsystem<AssetPaths>().findLooseDomainFolder( domain, "shaders" ).getDiskPath();
-                    if ( domainShaders.empty() == false )
-                        outListDir.push_back( domainShaders );
+                    const std::optional<AbsolutePath> domainShaders = engine::getSubsystem<AssetPaths>().toDiskPath( FileUtil::joinPath( domain, "shaders" ) );
+                    if ( domainShaders.has_value() && FileUtil::isDirectory( domainShaders->str() ) )
+                        outListDir.push_back( domainShaders->str() );
                 }
                 return true;
             }
@@ -751,6 +751,13 @@ namespace sw
         }
     }
 
+    std::optional<AbsolutePath> ShaderCompiler::findSourceFile( string_view shaderPath )
+    {
+        // 절대 경로(쿠커)이거나 리소스 id(런타임)다 - 글의 모양으로 가른다. 작업 폴더에 같은 이름 파일이 있는지로 먼저 추측하지 않는다(그 파일을 컴파일할 수 있었다).
+        const std::optional<AbsolutePath> found = AbsolutePath::isStrictAbsolute( shaderPath ) ? AbsolutePath::tryMake( shaderPath ) : engine::getSubsystem<AssetPaths>().findLooseFile( shaderPath );
+        return found.has_value() && FileUtil::isRegularFile( found->str() ) ? found : std::nullopt;
+    }
+
     void* ShaderCompiler::findDXCCreateInstance()
     {
 #if defined( SW_HAS_DXC_API )
@@ -771,11 +778,9 @@ namespace sw
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
-        // 소스는 절대 경로(쿠커)이거나 리소스 id(런타임)다 - 글의 모양으로 가른다. 작업 폴더에 같은 이름 파일이 있는지로 먼저 추측하지 않는다(그 파일을 컴파일할 수 있었다).
-        const string absPathStr = AbsolutePath::isStrictAbsolute( desc._filePath ) ? FileUtil::normalizeSeparators( desc._filePath )
-                                                                                   : engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
-
-        if ( absPathStr.empty() || FileUtil::isRegularFile( absPathStr ) == false )
+        const std::optional<AbsolutePath> sourceFile = findSourceFile( desc._filePath );
+        const string                      absPathStr = sourceFile.has_value() ? sourceFile->str() : string{};
+        if ( absPathStr.empty() )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.

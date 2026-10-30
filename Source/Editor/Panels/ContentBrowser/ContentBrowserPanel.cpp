@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -137,7 +138,8 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const string folderAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) ).getDiskPath();
+                const std::optional<AbsolutePath> folderPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const string                      folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -575,8 +577,11 @@ namespace sw::editor
     void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
     {
         string assetID;
-        if ( EditorWidgets::acceptAssetDrop( assetID ) )
-            (void)_model.moveAssetToFolder( editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).getDiskPath(), folderAbs ); // 실패는 moveAsset 이 알린다
+        if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
+            return;
+        const std::optional<AbsolutePath> assetPath = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
+        if ( assetPath.has_value() )
+            (void)_model.moveAssetToFolder( assetPath->str(), folderAbs ); // 실패는 moveAsset 이 알린다
     }
 
     void ContentBrowserPanel::drawRenameField( float32 width )
@@ -872,8 +877,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? editor::getSubsystem<AssetPaths>().findLooseDomainFolder( "engine", kArrFavorites[favIdx]._pRelPath ).getDiskPath()
-                                         : editor::getSubsystem<AssetPaths>().findLooseDomainFolder( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ).getDiskPath();
+                                         ? EditorPaths::findContentFolder( FileUtil::joinPath( path::kEnginePack, kArrFavorites[favIdx]._pRelPath ) )
+                                         : EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), kArrFavorites[favIdx]._pRelPath ) );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _model.getSelectedFolderPath() );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )

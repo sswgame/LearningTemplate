@@ -12,6 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -46,6 +47,22 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "EditorPaths" );
+
+    string EditorPaths::findContentFolder( string_view folderID )
+    {
+        const std::optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
+        return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder->str() : string{};
+    }
+
+    string EditorPaths::getGamePacksFolderPath()
+    {
+        return FileUtil::joinPath( ProcessRoots::get()._content.str(), path::kGamePack );
+    }
+
+    string EditorPaths::getSceneDialogFolderPath()
+    {
+        return findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kMapsFolder ) );
+    }
 
     void EditorPaths::prepareAutomationStateDirectory()
     {

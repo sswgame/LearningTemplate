@@ -53,19 +53,11 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const string editorRoot = editor::getSubsystem<AssetPaths>().findLooseDomainFolder( path::kEditorPack ).getDiskPath();
-                if ( editorRoot.empty() == false )
+                // 에디터 팩의 글꼴 폴더가 먼저다(예전에는 같은 폴더를 두 길 - 도메인 폴더 · 리소스 루트 + 도메인 - 로 두 번 봤다).
+                const string fontsFolder = editor::EditorPaths::findContentFolder( FileUtil::joinPath( path::kEditorPack, editor::EditorPaths::kFontsFolderName ) );
+                if ( fontsFolder.empty() == false )
                 {
-                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorPaths::kFontsFolderName ), pFileName );
-                    if ( FileUtil::isRegularFile( candidate ) )
-                        return candidate;
-                }
-
-                const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
-                if ( resourceRoot.empty() == false )
-                {
-                    const string candidate = FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kEditorPack ), editor::EditorPaths::kFontsFolderName ), pFileName );
+                    const string candidate = FileUtil::joinPath( fontsFolder, pFileName );
                     if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }

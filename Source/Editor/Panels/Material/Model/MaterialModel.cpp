@@ -58,7 +58,7 @@ namespace sw::editor
             return false;
         commitName();
         _material->setShaderPath( _shaderPath.c_str() );
-        const std::optional<AbsolutePath> materialFile = editor::getSubsystem<AssetPaths>().resolveWritePath( path );
+        const std::optional<AbsolutePath> materialFile = editor::getSubsystem<AssetPaths>().toDiskPath( path );
         if ( materialFile.has_value() == false || _material->saveToFile( *materialFile ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );

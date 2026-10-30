@@ -426,7 +426,7 @@ namespace sw::editor
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
             // 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석으로 묻는다 — 입력란은 리소스 경로와 디스크 경로를 모두 받는다.
-            if ( editor::getSubsystem<AssetPaths>().findLooseFile( path.c_str() ).isEmpty() == false )
+            if ( editor::getSubsystem<AssetPaths>().findLooseFile( path.c_str() ).has_value() )
                 reloadDocument();
             else
                 SW_LOG_WARNING( "No tile map at '%#'", path.c_str() );

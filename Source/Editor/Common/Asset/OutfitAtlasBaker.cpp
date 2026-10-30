@@ -34,9 +34,6 @@ namespace sw::editor
             static constexpr const utf8* kArrMapAttribute[]    = { "name", "output" };
             static constexpr const utf8* kArrSourceAttribute[] = { "part", "texture" };
 
-            /** @brief 리소스 루트 기준 경로를 디스크 경로로 풉니다. */
-            static string toDiskPath( string_view assetPath ) { return FileUtil::normalizeSeparators( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetPath ) ); }
-
             static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
             {
                 reader.reportUnknownAttributes( node, kArrMapAttribute );
@@ -143,9 +140,10 @@ namespace sw::editor
                 outListImage.clear();
                 for ( const OutfitAtlasPartSpec& part : spec._listPart )
                 {
-                    const string& texture = findTexture( map, part._name );
-                    RawImageData  image;
-                    if ( ImageUtil::loadImage( toDiskPath( texture ), image ) == false || image.isValid() == false )
+                    const string&                     texture = findTexture( map, part._name );
+                    RawImageData                      image;
+                    const std::optional<AbsolutePath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
+                    if ( textureFile.has_value() == false || ImageUtil::loadImage( textureFile->str(), image ) == false || image.isValid() == false )
                     {
                         SW_LOG_ERROR( "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
                         return false;
@@ -268,19 +266,18 @@ namespace sw::editor
             {
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
-                    const string diskPath = toDiskPath( spec._listMap[mapIndex]._output );
-                    if ( ImageFileWriter::writePNGRGBA8( diskPath, listAtlas[mapIndex], atlasSize, atlasSize ) == false )
+                    const std::optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
+                    if ( imageFile.has_value() == false || ImageFileWriter::writePNGRGBA8( imageFile->str(), listAtlas[mapIndex], atlasSize, atlasSize ) == false )
                     {
-                        SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", diskPath.c_str() );
+                        SW_LOG_ERROR( "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;
                     }
                     outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
                 }
-                const string                      meshDiskPath = toDiskPath( spec._outputMesh );
-                const std::optional<AbsolutePath> meshFile     = FileUtil::requireAbsolutePath( meshDiskPath );
+                const std::optional<AbsolutePath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
                 if ( meshFile.has_value() == false || MeshAssetFormat::saveToFile( *meshFile, makeAssetData( *merged._mesh ) ) == false )
                 {
-                    SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", meshDiskPath.c_str() );
+                    SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
                     return false;
                 }
                 return true;
