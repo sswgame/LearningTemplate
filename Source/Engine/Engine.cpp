@@ -587,7 +587,9 @@ namespace sw
                     if ( request._target.isValid() )
                         arrDrawnSceneKey[drawnSceneCount++] = request._sceneKey;
                 }
-                _pSceneManager->updatePreviewScenes( deltaTime, vector_reference<const uint32>( arrDrawnSceneKey, drawnSceneCount ) );
+                // 시간은 실제 경과다 — 게임 시간 배율 · 정지(멈춘 편집기에서는 게임의 로딩 화면이 정지를 쥐어 0)를 곱하면 미리보기가 멈췄다(VFX 미리보기의 입자 0).
+                // 미리보기마다의 배율은 정책(`ScenePreviewPolicy::_timeScale`)이 곱한다.
+                _pSceneManager->updatePreviewScenes( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), vector_reference<const uint32>( arrDrawnSceneKey, drawnSceneCount ) );
             }
         }
     }
