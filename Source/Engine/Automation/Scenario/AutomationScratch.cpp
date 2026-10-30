@@ -217,6 +217,12 @@ namespace sw
         return string( name ) + string( AutomationScratchInternal::kInstanceMark ) + to_string( Process::getCurrentProcessID() );
     }
 
+    void AutomationScratch::resetInstanceFolder( const string& instanceDir )
+    {
+        AutomationScratchInternal::removeDeadInstances( instanceDir );
+        (void)FileUtil::removeDirectory( instanceDir ); // 못 지우면 FileUtil 이 경고를 남긴다 — 남은 상태로 시작한다
+    }
+
     bool AutomationScratch::prepare( const AutomationScratchFolder& folder, string& outError )
     {
         if ( isValidFolder( folder, outError ) == false )

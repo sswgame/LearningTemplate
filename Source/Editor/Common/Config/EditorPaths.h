@@ -58,6 +58,12 @@ namespace sw::editor
         static string getEditorStateDirectory();
 
         /**
+         * @brief 시나리오 실행(`-scenario`)이고 `-gv_editorStateDir` 를 주지 않았으면 이 프로세스의 상태 폴더(`Saved/Automation/EditorState/editor_p<pid>`)를 비웁니다(끝난 실행의 폴더도 거둔다).
+         * @details 에디터 기동의 첫 단계가 부른다 — 그 뒤 상태 파일은 모두 이 폴더를 읽고 쓴다(`getEditorStateDirectory`).
+         */
+        static void prepareAutomationStateDirectory();
+
+        /**
          * @brief Saved/Editor 아래 상태 파일의 절대 경로를 반환합니다.
          * @return 정하지 못하면 빈 문자열입니다.
          */

@@ -17,6 +17,7 @@
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -509,6 +510,7 @@ namespace sw::editor
 
     SubsystemInitResult ImGuiEditor::initializeEditorData()
     {
+        EditorPaths::prepareAutomationStateDirectory(); // 상태 파일을 읽는 어떤 일보다 먼저
         // 사용자 환경설정은 사용자 파일이다 — 처음 실행이면 없고, 깨졌으면 옆으로 치우고 새로 쓴다(`EditorPreferencesStore::loadAll`).
         if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == EditorUserFileResult::Missing )
             SW_LOG_INFO( "Editor preferences: first run - nothing changed from the defaults yet" );

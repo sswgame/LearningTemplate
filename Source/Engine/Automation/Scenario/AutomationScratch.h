@@ -41,6 +41,11 @@ namespace sw
          */
         static string makeInstanceID( string_view name );
         /**
+         * @brief 프로세스 꼬리를 가진 폴더(`…/<이름>_p<pid>` — `makeInstanceID`)를 비우고, 같은 이름의 다른 폴더 가운데 끝난 프로세스의 것을 지웁니다.
+         * @details 사본 말고도 프로세스마다 따로 두는 폴더(시나리오 실행의 에디터 상태)가 같은 거두기를 쓴다. 못 지운 것은 `FileUtil` 이 경고를 남긴다.
+         */
+        static void resetInstanceFolder( const string& instanceDir );
+        /**
          * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꾸고 `.meta` 의 guid 는 새로 만듭니다.
          * @details 사본 id 가 프로세스 꼬리(`makeInstanceID`)를 가졌으면, 같은 이름의 다른 사본 가운데 끝난 프로세스의 것을 먼저 지운다(죽은 실행의 사본이 쌓이지 않게).
          * @return 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 false 와 이유입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).

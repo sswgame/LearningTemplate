@@ -18,7 +18,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugReport.h"
@@ -253,20 +252,13 @@ namespace sw::editor
         {
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
             const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
-            // 상태 폴더는 이 에디터 프로세스의 것이고 띄울 때마다 비운다 — 고정 이름이면 같은 Bin 의 다른 에디터 · 지난 실행의 레이아웃 · 설정을 읽는다.
-            const string stateDir = FileUtil::joinPath( TestRunnerPanelInternal::getBinDirectory(),
-                                                        string( kAutomationOutputFolder ) + "/" + AutomationScratch::makeInstanceID( "TestRunnerEditorState" ) );
-            if ( bEditor )
-                (void)FileUtil::removeDirectory( stateDir ); // 못 비우면 FileUtil 이 경고를 남기고 남은 상태로 띄운다 — 사람이 보는 손 실행이다
+            // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
             ProcessCommand command{ FileUtil::getExecutablePath(), {} };
             const string   backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백을 뗀 글이 인자 하나다
             if ( backendArgument.empty() == false )
                 command._listArgument.push_back( backendArgument.substr( 1 ) );
             if ( bEditor )
-            {
                 command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) ) );
-                command._listArgument.push_back( string( "-" ) + kAutomationEditorStateVariable + "=" + stateDir );
-            }
             command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ) ) + "=" + scenarioPath );
             command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
