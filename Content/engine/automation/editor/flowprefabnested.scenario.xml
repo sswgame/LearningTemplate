@@ -31,7 +31,7 @@
 	<Wait frames="15"/>
 	<DevCommand line="component.add PointLightComponent"/>
 	<Wait frames="15"/>
-	<DevCommand line="prefab.create Saved/Automation/editor.flowprefabnested/lamp.prefab.xml"/>
+	<DevCommand line="prefab.create {out}/lamp.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent" selected="1"/>
 	<Remember watch="Object.Property" target="Lamp" key="PointLightComponent._radius" as="templateRadius"/>
@@ -52,12 +52,12 @@
 	<EditorClick mark="hierarchy.row.Post"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.SelectedNames" is="Post"/>
-	<DevCommand line="prefab.create Saved/Automation/editor.flowprefabnested/post.prefab.xml"/>
+	<DevCommand line="prefab.create {out}/post.prefab.xml"/>
 	<Wait frames="10"/>
 	<ExpectLog contains="took 1 child prefab instance(s) as nested prefabs" count="1"/>
 	<!-- ③ 둘째 lamp 를 고쳐 프리팹에 쓴다 -->
 	<Wait frames="10"/>
-	<DevCommand line="prefab.spawn Saved/Automation/editor.flowprefabnested/lamp.prefab.xml"/>
+	<DevCommand line="prefab.spawn {out}/lamp.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
 	<Wait frames="10"/>
@@ -95,13 +95,13 @@
 	<Expect watch="Object.Property" target="Lamp" key="PointLightComponent._radius" equals="7"/>
 	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.flowprefabnested/flowprefabnested.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/flowprefabnested.scene.xml"/>
 	<Wait frames="15"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" count="0"/>
 	<Wait frames="5"/>
-	<DevCommand line="scene.open Saved/Automation/editor.flowprefabnested/flowprefabnested.scene.xml"/>
+	<DevCommand line="scene.open {out}/flowprefabnested.scene.xml"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
 	<Wait frames="24"/>

@@ -9,7 +9,7 @@
 	<Wait frames="30"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.windowtitle/windowtitle.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/windowtitle.scene.xml"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.WindowTitleDirty" equals="0"/>
 	<Wait frames="5"/>

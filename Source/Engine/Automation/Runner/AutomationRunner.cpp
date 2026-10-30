@@ -220,6 +220,7 @@ namespace sw
     {
         // 사본 이름에 이 프로세스의 꼬리를 붙인다 — 저장소의 `Content/scratch/` 는 동시에 도는 App 이 나눠 쓴다.
         _scenario.bindScratchInstances();
+        _scenario.bindOutputDirectory( _outputDirectory ); // `{out}` — 산출물 폴더도 프로세스마다다(두 시작 길 모두 여기를 지난다)
         for ( const AutomationScratchFolder& folder : _scenario.getTestOptions()._listScratchFolder )
         {
             string error;

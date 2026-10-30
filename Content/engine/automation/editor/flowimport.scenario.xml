@@ -28,13 +28,13 @@
 	<Expect watch="Object.Property" target="FlickerLight" key="PointLightComponent._radius" equals="6"/>
 	<!-- ③ 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.flowimport/flowimport.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/flowimport.scene.xml"/>
 	<Wait frames="15"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="FlickerLight" count="0"/>
 	<Wait frames="5"/>
-	<DevCommand line="scene.open Saved/Automation/editor.flowimport/flowimport.scene.xml"/>
+	<DevCommand line="scene.open {out}/flowimport.scene.xml"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
 	<Wait frames="24"/>

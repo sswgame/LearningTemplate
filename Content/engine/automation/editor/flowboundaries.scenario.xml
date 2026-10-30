@@ -116,7 +116,7 @@
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<!-- 경계를 넘은 뒤에도 씬을 저장할 수 있다(모듈 리로드가 게임을 내린 채 저장을 막지 않는다) -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.flowboundaries/flowboundaries.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/flowboundaries.scene.xml"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<ExpectLog contains="Scene save refused" count="0"/>

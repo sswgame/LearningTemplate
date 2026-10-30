@@ -20,6 +20,12 @@ namespace sw
     // `Core/Predefined/ArgumentList.xxx` 가 정본이다(`getCommandLineArgumentSpelling`).
     /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행과 CTest 모두 `Bin`). 시나리오의 산출물은 그 아래 `<시나리오 name>/<프로세스>/` 에 쌓인다 — 병렬 실행이 겹치지 않는다. */
     inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";
+    /**
+     * @brief 단계 값 안에서 이 실행의 산출물 폴더(`Saved/Automation/<시나리오>/<프로세스>`)를 가리키는 자리 표시입니다(`{out}/temp.animgraph.xml`).
+     * @details 실행기가 시작할 때 펼친다(`AutomationScenario::bindOutputDirectory`). 산출물 폴더를 글로 적으면 프로세스 꼬리가 빠져 나란히 도는 실행(백엔드 넷)이
+     *          같은 파일을 덮어썼다 — 읽기(`parse`)가 단계 값 안의 `Saved/Automation/` 직접 표기를 오류로 만든다.
+     */
+    inline constexpr const utf8* kAutomationOutputToken = "{out}";
     /** @brief `kAutomationOutputFolder` 아래에서 에디터 상태 폴더들을 모으는 폴더 이름 — 사용자의 `Saved/Editor` 대신 시나리오마다 비운 폴더를 쓴다. */
     inline constexpr const utf8* kAutomationEditorStateFolder = "EditorState";
     /** @brief 골든 그림 폴더 이름 — 시나리오 파일 옆 `<시나리오 폴더>/golden/` 이다. 판정(`AutomationJudge`)이 읽고 쓰는 자리와 쓰기 문(`AutomationScratch`)이 여는 자리가 이 하나를 본다. */
@@ -175,6 +181,8 @@ namespace sw
          *          사본 id 를 기동 값에 쓰지 않는다.
          */
         void bindScratchInstances();
+        /** @brief 단계 속성 글 안의 `{out}`(`kAutomationOutputToken`)을 이 실행의 산출물 폴더 @p outputDirectory 로 바꿉니다. 실행기가 시작할 때 한 번 부른다. */
+        void bindOutputDirectory( string_view outputDirectory );
 
     private:
         /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */

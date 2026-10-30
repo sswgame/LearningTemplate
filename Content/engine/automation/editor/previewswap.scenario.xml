@@ -9,7 +9,7 @@
   타깃을 after1 에 저장한다. ④ 창이 열린 채 시작 백엔드로 돌아와 같은 확인을 한 번 더 한다(after2).
   "렌더러가 새 디바이스에 섰다" 는 로그 줄 "Scene preview renderer started for scene key" 의 수(교체마다 하나씩 는다)로, "타깃이 있고 요청이 갔다" 는 "Preview viewport screenshot" 줄의 수로 본다.
   교체 뒤 살아 있는 미리보기 렌더러 수(감시 값 Editor.ScenePreviewRenderers)가 교체 앞과 같아야 한다 - 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 수가 다르다.
-  그림이 맞는지(빨간 구 + 바닥, 빈 타깃이 아님)는 저장한 PPM 을 눈으로 본다 — 평균 색의 문턱값은 GPU 로 돌려 보기 전에는 맞출 수 없어 자동 단언을 두지 않았다. 파일: Saved/Automation/previewswap_<before|after1|after2>.ppm.
+  그림이 맞는지(빨간 구 + 바닥, 빈 타깃이 아님)는 저장한 PPM 을 눈으로 본다 — 평균 색의 문턱값은 GPU 로 돌려 보기 전에는 맞출 수 없어 자동 단언을 두지 않았다. 파일: {out}/previewswap_<before|after1|after2>.ppm.
   어느 백엔드로 시작해도 된다(other 는 DX12 가 아니면 DX12, DX12 면 DX11). 백엔드 교체가 없는 환경에서는 SwapBackend 가 준비 단계에서 거절해 진다.
   실행: App -EnableEditor -scenario=engine/automation/editor/previewswap.scenario.xml -unattended (백엔드 vk · gl 로 시작해도 같다)
 -->
@@ -39,7 +39,7 @@
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" atLeast="40" timeoutFrames="600"/>
 	<Wait frames="9"/>
-	<Variable name="gv_editorPreviewScreenshot" value="Saved/Automation/previewswap_before.ppm"/>
+	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_before.ppm"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<ExpectLog contains="Scene preview renderer started for scene key" atLeast="1"/>
@@ -70,7 +70,7 @@
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<Wait frames="48"/>
-	<Variable name="gv_editorPreviewScreenshot" value="Saved/Automation/previewswap_after1.ppm"/>
+	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_after1.ppm"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Expect watch="Editor.MaterialPreviewSceneFrames" atLeast="30"/>
@@ -101,7 +101,7 @@
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.MaterialPreviewSceneFrames" differsFrom="frames" timeoutFrames="300"/>
 	<Wait frames="48"/>
-	<Variable name="gv_editorPreviewScreenshot" value="Saved/Automation/previewswap_after2.ppm"/>
+	<Variable name="gv_editorPreviewScreenshot" value="{out}/previewswap_after2.ppm"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Expect watch="Editor.MaterialPreviewSceneFrames" atLeast="30"/>

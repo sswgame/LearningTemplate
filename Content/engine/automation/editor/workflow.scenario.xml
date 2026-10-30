@@ -54,14 +54,14 @@
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<!-- 5) 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.workflow/workflow.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/workflow.scene.xml"/>
 	<Wait frames="10"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" count="0"/>
 	<Wait frames="5"/>
-	<DevCommand line="scene.open Saved/Automation/editor.workflow/workflow.scene.xml"/>
+	<DevCommand line="scene.open {out}/workflow.scene.xml"/>
 	<Wait frames="60"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

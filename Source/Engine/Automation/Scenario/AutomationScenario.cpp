@@ -252,6 +252,15 @@ namespace sw
         }
     }
 
+    void AutomationScenario::bindOutputDirectory( string_view outputDirectory )
+    {
+        for ( AutomationStep& step : _listStep )
+        {
+            for ( AutomationAttribute& attribute : step._listAttribute )
+                attribute._value = StringUtil::replace( attribute._value, kAutomationOutputToken, outputDirectory );
+        }
+    }
+
     bool AutomationScenario::loadFromPath( const AssetID& assetID, string& outError )
     {
         const string_view path = assetID.view();
@@ -518,8 +527,18 @@ namespace sw
             return lhs._frameIndex < rhs._frameIndex;
         } );
         // 부하 시나리오는 측정 창이 끝낸다 — `<Pass/>` 가 있으면 창이 닫히기 전에 프로세스가 끝나 보고가 없다.
+        const string outputFolderText = string( kAutomationOutputFolder ) + "/";
         for ( const AutomationStep& step : _listStep )
         {
+            for ( const AutomationAttribute& attribute : step._listAttribute )
+            {
+                if ( attribute._value.find( outputFolderText ) != string::npos )
+                {
+                    outError = _sourcePath + ": " + step.describe() + ": write the run's output folder as " + kAutomationOutputToken + " instead of '" + outputFolderText +
+                               "...' - a literal path has no process suffix, so runs side by side (one per backend) overwrite each other's files";
+                    return false;
+                }
+            }
             if ( _testOptions._load._bDeclared && step._kind == "Pass" )
             {
                 outError = _sourcePath + ": " + step.describe() + ": a scenario with <Load> ends when its measurement window closes - remove <Pass/>";

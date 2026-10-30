@@ -4,7 +4,7 @@
   월드 셋(서버 · 클라이언트 1 · 클라이언트 2)이 각자 씬에 아바타를 그리는지 본다. 입력은 초점이 있는 월드 하나만 받는다 — 클라이언트 1 에 초점을 두고 D 를 누르면
   아바타 1(먼저 붙은 클라이언트의 연결 id 0 + 1)만 서버에서 오른쪽으로 가고, 두 클라이언트 월드가 같은 위치를 보인다. 클라이언트 2 의 뷰포트를 눌러 초점을 옮기고 W 를 누르면 아바타 2 가 앞으로 간다.
   위치는 감시 값 `Editor.NetSimObjectX` · `Editor.NetSimObjectZ`(target = 월드 번호, key = 오브젝트 이름 `Avatar<엔티티 id>`)로, 월드 · 틱 수는 `Editor.NetSim*` 로 본다. 서버와 클라이언트의 위치는 멈춘 뒤 `sameAs` 로 같은지 견준다
-  (멈추면 받은 위치로 붙어 값이 정확히 같다). 모양(월드마다 상자, 바닥, 하늘)은 `CaptureEditorUI` 가 `Saved/Automation/editor.netsim/` 에 남기는 이미지를 눈으로 본다.
+  (멈추면 받은 위치로 붙어 값이 정확히 같다). 모양(월드마다 상자, 바닥, 하늘)은 `CaptureEditorUI` 가 `{out}/` 에 남기는 이미지를 눈으로 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netsim.scenario.xml -unattended
 -->
 <Scenario name="editor.netsim" requiresModule="GF_EditorPlugin_NetSimulation" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">

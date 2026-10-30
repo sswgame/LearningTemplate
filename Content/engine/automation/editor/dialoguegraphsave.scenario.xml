@@ -3,8 +3,8 @@
   에디터 시나리오 — 대화 그래프 패널 ↔ 저장 배선(D3-5): 임시 에셋을 새 문서로 열고(asset.open), 툴바 "+ Dialogue" 로 고쳐 더러워진 것을
   (감시 값 Editor.DirtyDocumentCount) 툴바 Save 와 저장 커맨드(asset.save — Ctrl+S 와 같은 길) 두 길로 저장한다. 저장하면 파일이 생기고
   (Editor.TempAssetExists) 더러움이 걷힌다.
-  문서: Saved/Automation/editor.dialoguegraphsave/temp.dialogue.xml — 작업 폴더 아래 임시 경로라 저장소 리소스를 바꾸지 않는다
-  (asset.open 은 Saved/Automation/ 밖과 리소스 트리를 거절한다). 끝에서 asset.removeTemp 로 지운다.
+  문서: {out}/temp.dialogue.xml — 작업 폴더 아래 임시 경로라 저장소 리소스를 바꾸지 않는다
+  (asset.open 은 {out}/ 밖과 리소스 트리를 거절한다). 끝에서 asset.removeTemp 로 지운다.
   실행: App -EnableEditor -scenario=engine/automation/editor/dialoguegraphsave.scenario.xml -unattended
 -->
 <Scenario name="editor.dialoguegraphsave" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
@@ -14,7 +14,7 @@
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
 	<Wait frames="15"/>
-	<DevCommand line="asset.open Saved/Automation/editor.dialoguegraphsave/temp.dialogue.xml"/>
+	<DevCommand line="asset.open {out}/temp.dialogue.xml"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus dialogue_graph"/>
 	<Wait frames="35"/>
@@ -30,7 +30,7 @@
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
-	<DevCommand line="asset.removeTemp Saved/Automation/editor.dialoguegraphsave/temp.dialogue.xml"/>
+	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Wait frames="5"/>
@@ -45,7 +45,7 @@
 	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
-	<DevCommand line="asset.removeTemp Saved/Automation/editor.dialoguegraphsave/temp.dialogue.xml"/>
+	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Wait frames="5"/>

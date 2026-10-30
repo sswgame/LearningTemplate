@@ -20,9 +20,9 @@
 	<Wait frames="40"/>
 	<ExpectLog contains="Screenshot saved: " count="2"/>
 	<Wait frames="5"/>
-	<DevCommand line="screenshot Saved/Automation/editor.screenshotbutton/devcommand.png"/>
+	<DevCommand line="screenshot {out}/devcommand.png"/>
 	<Wait frames="40"/>
-	<ExpectLog contains="Screenshot saved: Saved/Automation/editor.screenshotbutton/devcommand.png" count="1"/>
+	<ExpectLog contains="Screenshot saved: {out}/devcommand.png" count="1"/>
 	<ExpectLog contains="Screenshot was not written" count="0"/>
 	<Pass/>
 </Scenario>

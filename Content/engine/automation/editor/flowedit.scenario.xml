@@ -73,7 +73,7 @@
 	<Expect watch="Editor.SelectedNames" is="PlacedCrate"/>
 	<!-- ④ 저장 -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.flowedit/flowedit.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/flowedit.scene.xml"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Remember watch="Editor.SceneHash" as="saved"/>
@@ -114,7 +114,7 @@
 	<Wait frames="14"/>
 	<EditorExpectObject name="PlacedCrate" count="0"/>
 	<Wait frames="5"/>
-	<DevCommand line="scene.open Saved/Automation/editor.flowedit/flowedit.scene.xml"/>
+	<DevCommand line="scene.open {out}/flowedit.scene.xml"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
 	<Wait frames="29"/>

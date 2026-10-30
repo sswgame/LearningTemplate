@@ -31,13 +31,13 @@
 	<Wait frames="15"/>
 	<DevCommand line="component.add PointLightComponent"/>
 	<Wait frames="15"/>
-	<DevCommand line="prefab.create Saved/Automation/editor.flowprefab/lantern.prefab.xml"/>
+	<DevCommand line="prefab.create {out}/lantern.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lantern" component="PointLightComponent" selected="1"/>
 	<Remember watch="Object.Property" target="Lantern" key="PointLightComponent._radius" as="templateRadius"/>
 	<!-- ② 둘째 인스턴스 — 이름을 바꾸고 세기를 덮어쓴다 -->
 	<Wait frames="10"/>
-	<DevCommand line="prefab.spawn Saved/Automation/editor.flowprefab/lantern.prefab.xml"/>
+	<DevCommand line="prefab.spawn {out}/lantern.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
 	<Wait frames="10"/>
@@ -93,13 +93,13 @@
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
 	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
-	<DevCommand line="scene.saveAs Saved/Automation/editor.flowprefab/flowprefab.scene.xml"/>
+	<DevCommand line="scene.saveAs {out}/flowprefab.scene.xml"/>
 	<Wait frames="15"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="LanternB" count="0"/>
 	<Wait frames="5"/>
-	<DevCommand line="scene.open Saved/Automation/editor.flowprefab/flowprefab.scene.xml"/>
+	<DevCommand line="scene.open {out}/flowprefab.scene.xml"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
 	<Wait frames="24"/>
