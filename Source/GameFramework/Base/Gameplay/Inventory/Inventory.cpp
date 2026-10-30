@@ -27,7 +27,7 @@ namespace sw
     {
         if ( slotCount < 0 || maxWeight < 0.0f )
         {
-            SW_LOG_ERROR( "Inventory: refused %# slots and max weight %# - neither may be negative", slotCount, maxWeight );
+            SW_LOG_ERROR_ID( "Inventory.NegativeLimit", "Inventory: refused %# slots and max weight %# - neither may be negative", slotCount, maxWeight );
             return false;
         }
         _pCatalog = pCatalog;
@@ -69,7 +69,7 @@ namespace sw
     {
         if ( maxWeight < 0.0f )
         {
-            SW_LOG_ERROR( "Inventory: refused max weight %# - it must not be negative", maxWeight );
+            SW_LOG_ERROR_ID( "Inventory.NegativeLimit", "Inventory: refused max weight %# - it must not be negative", maxWeight );
             return false;
         }
         _maxWeight = maxWeight;
