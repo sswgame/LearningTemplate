@@ -45,3 +45,12 @@ SW_TEST_CASE( WriteIDTest, DiskPathIsNotAResourceID )
     SW_EXPECT_FALSE( engine::getSubsystem<AssetPaths>().toDiskPath( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine/x.txt" ) ).has_value() );
     SW_EXPECT_TRUE( AssetPaths::normalizeAssetID( ProcessRoots::get()._content.str() ).empty() );
 }
+
+SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
+{
+    // 도메인 이름만인 id 는 그 도메인 루트다(에디터의 도메인 폴더 - 콘텐츠 브라우저 루트). `game` 은 팩 이름까지가 도메인이다.
+    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
+    SW_REQUIRE_TRUE( path.has_value() );
+    SW_EXPECT_TRUE( FileUtil::isDirectory( path->str() ) );
+    SW_EXPECT_EQUAL( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine" ), path->str() );
+}

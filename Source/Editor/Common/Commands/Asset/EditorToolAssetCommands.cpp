@@ -63,17 +63,26 @@ namespace sw::editor
 
         struct EditorToolAssetInternal
         {
+            /** @brief 도구 문서 경로가 어느 자리를 쓰는지입니다 - 읽기는 있는 파일, 쓰기는 쓸 자리(없는 전역 id 도)다. 둘은 있는 파일에서 같은 자리다(R7). */
+            enum class DocumentUse : uint8
+            {
+                Read,
+                Write,
+            };
+
             /**
-             * @brief 도구 문서 경로를 디스크 경로로 풉니다 - 절대 경로면 그대로, 아니면 리소스 id 의 자리(`AssetPaths::toDiskPath` - 아직 없는 전역 id 도 만들 자리)입니다.
-             * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다).
+             * @brief 도구 문서 경로를 디스크 경로로 풉니다 - 절대 경로면 그대로, 아니면 리소스 id 다(읽기는 `findLooseFile` - 없으면 빈 글, 쓰기는 `toDiskPath`).
+             * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다). 읽기에 쓰기 해석을 쓰면
+             *          아직 없는 문서(새 문서)를 열 때마다 "만들 도메인을 모른다" 오류가 남았다.
              */
-            static string resolveExistingOrRelativePath( string_view path )
+            static string resolveToolDocumentPath( string_view path, const DocumentUse use )
             {
                 if ( path.empty() )
                     return {};
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::normalizeSeparators( path );
-                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+                const AssetPaths&                 paths    = editor::getSubsystem<AssetPaths>();
+                const std::optional<AbsolutePath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
                 return diskPath.has_value() ? diskPath->str() : string{};
             }
 
@@ -82,10 +91,10 @@ namespace sw::editor
              * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
-            static string resolveDocumentPath( const ToolDocumentDesc& desc, string_view path )
+            static string resolveDocumentPath( const ToolDocumentDesc& desc, string_view path, const DocumentUse use )
             {
                 if ( path.empty() == false )
-                    return resolveExistingOrRelativePath( path );
+                    return resolveToolDocumentPath( path, use );
                 if ( desc._pDefaultFileName == nullptr )
                     return {};
                 return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
@@ -122,7 +131,7 @@ namespace sw::editor
             template <typename TAsset>
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
-                const string resolved = resolveDocumentPath( desc, path );
+                const string resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
                 if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
@@ -145,7 +154,7 @@ namespace sw::editor
             template <typename TAsset>
             [[nodiscard]] static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
             {
-                const string resolved = resolveDocumentPath( desc, path );
+                const string resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
                 if ( resolved.empty() )
                 {
                     SW_LOG_ERROR( "Failed to save the %# - no file path and no default file", desc._pLabel );
@@ -202,6 +211,12 @@ namespace sw::editor
     bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXMLData& data )
     {
         return EditorToolAssetInternal::saveToolDocument( kTileMapDocument, data, assetRelativePath );
+    }
+
+    bool EditorToolAssetCommands::hasToolDocument( string_view path )
+    {
+        const string resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
+        return resolved.empty() == false && FileUtil::isRegularFile( resolved );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path )

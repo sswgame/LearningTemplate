@@ -384,7 +384,15 @@ namespace sw
                     return FileUtil::isDirectory( outRoot );
                 }
 
-                // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등)
+                // 2. 그 밖의 도메인(<domain>/<key>)을 이름으로 푼다(engine, common, editor, dlc, mods 등). 도메인 이름만이면(`engine`) 그 도메인 루트다(빈 키) -
+                //    `game` 은 팩 이름까지가 도메인이라 이름만으로는 도메인이 아니다.
+                const bool bBareDomain = lowerRel.find( '/' ) == string_view::npos && lowerRel.find( ':' ) == string_view::npos && lowerRel != path::kGamePack;
+                if ( bBareDomain && FileUtil::isDirectory( FileUtil::joinPath( resourceRoot, lowerRel ) ) )
+                {
+                    outRoot         = FileUtil::joinPath( resourceRoot, lowerRel );
+                    outKeyUnderRoot = {};
+                    return true;
+                }
                 const size_t firstSlash = lowerRel.find( '/' );
                 if ( firstSlash != string::npos && firstSlash > 0 )
                 {

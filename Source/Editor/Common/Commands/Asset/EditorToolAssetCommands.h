@@ -62,6 +62,8 @@ namespace sw::editor
         static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXMLData& outData, string& outStatus );
         /** @brief Resource 상대 경로로 TileMap XML 을 씁니다. */
         [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXMLData& data );
+        /** @brief 도구 문서 경로(리소스 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
+        [[nodiscard]] static bool hasToolDocument( string_view path );
         /**
          * @brief SpriteClip JSON 을 읽습니다. path 가 비어 있으면 에디터 설정의 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 가지입니다.
          *        클립 문서가 아닌 이미지 경로는 문서로 읽지 않고, 그 이미지를 아틀라스로 삼아 `Loaded` 를 반환합니다.
