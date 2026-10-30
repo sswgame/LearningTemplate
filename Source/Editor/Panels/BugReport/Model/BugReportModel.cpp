@@ -29,7 +29,7 @@ namespace sw::editor
             /** @brief BugReport 폴더들의 루트입니다(`BugReport::makeInputs` 가 쓰는 경로와 같다). */
             static string makeRoot()
             {
-                return FileUtil::joinPath( path::kSavedFolder, BugReport::kFolderName );
+                return FileUtil::joinPath( FileUtil::getSavedFolderPath(), BugReport::kFolderName );
             }
         };
     } // namespace

@@ -83,7 +83,7 @@ namespace sw
             /** @brief BugReport 폴더들의 기본 루트(`Saved/BugReports`)입니다. */
             static string makeDefaultRoot()
             {
-                return FileUtil::joinPath( path::kSavedFolder, BugReport::kFolderName );
+                return FileUtil::joinPath( FileUtil::getSavedFolderPath(), BugReport::kFolderName );
             }
         };
     } // namespace

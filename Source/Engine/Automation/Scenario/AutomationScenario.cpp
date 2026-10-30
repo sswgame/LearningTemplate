@@ -156,6 +156,11 @@ namespace sw
 
 namespace sw
 {
+    string makeAutomationOutputFolderPath()
+    {
+        return FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::getCurrentPath(), kAutomationOutputFolder ) );
+    }
+
     const string* AutomationStep::findAttribute( string_view name ) const
     {
         for ( const AutomationAttribute& attribute : _listAttribute )
@@ -527,7 +532,7 @@ namespace sw
             return lhs._frameIndex < rhs._frameIndex;
         } );
         // 부하 시나리오는 측정 창이 끝낸다 — `<Pass/>` 가 있으면 창이 닫히기 전에 프로세스가 끝나 보고가 없다.
-        const string outputFolderText = string( kAutomationOutputFolder ) + "/";
+        const string outputFolderText = string( kAutomationOutputFolder ) + "/"; // 시나리오 글 안의 직접 표기를 찾는다(디스크 경로가 아니다)
         for ( const AutomationStep& step : _listStep )
         {
             for ( const AutomationAttribute& attribute : step._listAttribute )

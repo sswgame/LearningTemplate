@@ -6,7 +6,7 @@
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
 
 /**
- * @brief [ScreenshotPathUtilTest] 기본 경로는 `Saved/Screenshots/<yyyyMMdd-HHmmss>.png` 다 — 자리마다 0 을 채운다
+ * @brief [ScreenshotPathUtilTest] 기본 경로는 `<작업 폴더>/Saved/Screenshots/<yyyyMMdd-HHmmss>.png`(절대 경로)다 — 자리마다 0 을 채운다
  */
 SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
 {
@@ -17,7 +17,7 @@ SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
     localTime._hour   = 9;
     localTime._minute = 5;
     localTime._second = 1;
-    SW_EXPECT_EQUAL( sw::ScreenshotPathUtil::makeDefaultPath( localTime ), sw::FileUtil::normalizeSeparators( "Saved/Screenshots/20260307-090501.png" ) );
+    SW_EXPECT_EQUAL( sw::ScreenshotPathUtil::makeDefaultPath( localTime ), sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/20260307-090501.png" ) );
 }
 
 /**
@@ -26,8 +26,8 @@ SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
 SW_TEST_CASE( ScreenshotPathUtilTest, NowPathHasTheSameShape )
 {
     const sw::string path     = sw::ScreenshotPathUtil::makeDefaultPathNow();
-    const sw::string expected = sw::FileUtil::normalizeSeparators( "Saved/Screenshots/20260307-090501.png" );
+    const sw::string expected = sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/20260307-090501.png" );
     SW_EXPECT_EQUAL( path.size(), expected.size() );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( path, ".png", false ) );
-    SW_EXPECT_TRUE( sw::StringUtil::startsWith( path, sw::FileUtil::normalizeSeparators( "Saved/Screenshots/" ), false ) );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( path, sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/" ), false ) );
 }

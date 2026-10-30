@@ -203,7 +203,7 @@ namespace sw
     {
         using Internal             = AutomationBackendMatrixInternal;
         const string scenarioStem  = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
-        const string defaultFolder = formatToString( "%#/%#/matrix-%#", string( kAutomationOutputFolder ), scenarioStem, Process::getCurrentProcessID() );
+        const string defaultFolder = formatToString( "%#/%#/matrix-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&

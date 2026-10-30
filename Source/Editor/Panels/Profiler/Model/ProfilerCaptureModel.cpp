@@ -78,7 +78,7 @@ namespace sw::editor
 
     string ProfilerCaptureModel::getCaptureFilePath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( path::kSavedFolder, "Profiler" ), "ProfilerCapture.txt" );
+        return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getSavedFolderPath(), "Profiler" ), "ProfilerCapture.txt" );
     }
 
     void ProfilerCaptureModel::setSort( ProfilerSortColumn column, bool bDescending )

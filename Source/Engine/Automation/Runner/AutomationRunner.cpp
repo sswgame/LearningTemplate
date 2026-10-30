@@ -55,7 +55,7 @@ namespace sw
              */
             static string makeOutputDirectory( string_view scenarioName )
             {
-                return formatToString( "%#/%#/%#", string( kAutomationOutputFolder ), string( scenarioName ), Process::getCurrentProcessID() );
+                return formatToString( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
             }
 
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */

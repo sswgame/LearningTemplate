@@ -166,6 +166,12 @@ namespace sw
         [[nodiscard]] static bool setWritable( string_view path, bool bWritable );
         /** @brief 현재 작업 디렉터리를 반환합니다. */
         static string getCurrentPath();
+        /**
+         * @brief 작업 디렉터리 아래 저장 폴더(`path::kSavedFolder`)의 **절대** 경로입니다(구분자 `/`).
+         * @details 저장 폴더 아래 파일 경로는 이것에서 만든다. `path::kSavedFolder` 를 그대로 이은 작업 폴더 기준 상대 경로는 리소스 id 를 받는 입구
+         *          (`AssetPaths::toAssetID` · `toWriteID`)에서 id 로 읽혀 다른 파일이 되거나 쓰기가 실패했다(버그 리포트 씬 사본, 2026-10-31).
+         */
+        static string getSavedFolderPath();
         /** @brief 현재 작업 디렉터리를 바꿉니다. 바꾸지 못하면 false 입니다(경고를 남긴다). 프로세스 전체에 걸리므로 시나리오 체인처럼 "처음 폴더로 되돌린다" 가 필요한 곳에서만 씁니다. */
         [[nodiscard]] static bool setCurrentPath( string_view path );
         /** @brief 실행 파일의 경로를 반환합니다. */
