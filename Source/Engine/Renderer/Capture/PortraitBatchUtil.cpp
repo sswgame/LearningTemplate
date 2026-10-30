@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/string_splitter.h"
 
@@ -31,7 +32,7 @@ namespace sw
             SW_LOG_ERROR( "Portrait: could not bind the graphics context" );
             return false;
         }
-        const string directory = outputDirectory.empty() ? string( "Saved/Portraits" ) : string( outputDirectory );
+        const string directory = outputDirectory.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Portraits" ) : string( outputDirectory );
         (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
 
         PortraitRenderer      portrait;

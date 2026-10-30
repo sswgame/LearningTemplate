@@ -17,6 +17,23 @@ if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
 		COMMAND $<TARGET_FILE:App> --test -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/UnitTests.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(UnitTests PROPERTIES LABELS nogpu TIMEOUT 600)
+
+	# 작업 폴더에 기대지 않는다(R5) — 루트는 실행 파일 위치로 정하고(`ProcessRoots`), 상대 경로 인자는 기동 때의 작업 폴더로 한 번 절대화한다.
+	# 그래서 `Bin` 이 아닌 폴더에서 상대 `-log-file` 로 띄워도 같은 테스트가 돈다(예전에는 작업 폴더에서 위로 `Content` 를 찾았다).
+	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")
+	add_test(NAME UnitTests.OtherWorkingFolder
+		COMMAND $<TARGET_FILE:App> --test -unattended --test-filter=FileSystemTest.*,AbsolutePathTest.* -log-file=Logs/UnitTests.OtherWorkingFolder.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Testing")
+	set_tests_properties(UnitTests.OtherWorkingFolder PROPERTIES LABELS nogpu TIMEOUT 300)
+
+	# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
+	foreach(swBadArgument IN ITEMS "--no-such-argument" "-W=abc" "-log-file=")
+		string(MAKE_C_IDENTIFIER "${swBadArgument}" swBadArgumentName)
+		add_test(NAME CommandLine.Rejects${swBadArgumentName}
+			COMMAND $<TARGET_FILE:App> --test -unattended ${swBadArgument}
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(CommandLine.Rejects${swBadArgumentName} PROPERTIES LABELS nogpu TIMEOUT 120 WILL_FAIL TRUE)
+	endforeach()
 else()
 	math(EXPR swLastShard "${SW_UNIT_TEST_SHARDS} - 1")
 	foreach(shardIndex RANGE ${swLastShard})

@@ -310,11 +310,6 @@ namespace sw
         return true;
     }
 
-    string FileUtil::getSavedFolderPath()
-    {
-        return normalizeSeparators( joinPath( getCurrentPath(), path::kSavedFolder ) );
-    }
-
     string FileUtil::getCurrentPath()
     {
         string current;

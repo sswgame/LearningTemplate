@@ -153,7 +153,7 @@ namespace sw
             _reproduceInput._listOriginalArgument = commandLine.getOriginalArguments();
         }
         // 녹화(`Saved/Automation/…`)를 id(`saved/…`)로 다시 돌릴 수 있게 붙인다. 못 붙이면 오류가 남고 그 id 를 읽는 단계만 읽기 오류로 진다.
-        (void)ScenarioRecorder::mountSavedDomain( _workingFolder );
+        (void)ScenarioRecorder::mountSavedDomain();
         _listStartVariable.clear();
         vector<GlobalVariableInfo*> listVariable;
         engine::getSubsystem<GlobalVariableManager>().collectVariables( listVariable );

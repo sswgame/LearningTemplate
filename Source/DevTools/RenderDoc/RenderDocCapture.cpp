@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -19,8 +20,8 @@ namespace sw
     {
         struct RenderDocCaptureInternal
         {
-            /** @brief 캡처 파일 경로 템플릿입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙입니다). 작업 폴더 기준입니다. */
-            static constexpr const utf8* kCaptureFilePathTemplate = "Saved/RenderDoc/capture";
+            /** @brief 캡처 파일 경로 템플릿입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙입니다). 실행 산출물 루트(`ProcessRoots::_saved`) 아래다. */
+            static string makeCaptureFilePathTemplate() { return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "RenderDoc/capture" ); }
 
             inline static RENDERDOC_API_1_6_0* _s_pAPI = nullptr;
             inline static atomic<bool>         _s_bTried{ false };
@@ -107,10 +108,11 @@ namespace sw
             return;
         }
         RenderDocCaptureInternal::_s_pAPI = static_cast<RENDERDOC_API_1_6_0*>( pAPI );
-        RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( RenderDocCaptureInternal::kCaptureFilePathTemplate );
+        const string captureTemplate      = RenderDocCaptureInternal::makeCaptureFilePathTemplate();
+        RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( captureTemplate.c_str() );
         // 화면 글자를 끈다. 캡처하지 않는 프레임의 스크린샷과 픽셀 테스트가 흔들리지 않게 하기 위해서다.
         RenderDocCaptureInternal::_s_pAPI->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
-        SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", RenderDocCaptureInternal::kCaptureFilePathTemplate );
+        SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", captureTemplate );
     }
 
     bool RenderDocCapture::isAvailable()

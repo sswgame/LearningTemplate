@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
@@ -17,7 +18,7 @@ SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
     localTime._hour   = 9;
     localTime._minute = 5;
     localTime._second = 1;
-    SW_EXPECT_EQUAL( sw::ScreenshotPathUtil::makeDefaultPath( localTime ), sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/20260307-090501.png" ) );
+    SW_EXPECT_EQUAL( sw::ScreenshotPathUtil::makeDefaultPath( localTime ), sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(), "Screenshots/20260307-090501.png" ) );
 }
 
 /**
@@ -26,8 +27,8 @@ SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
 SW_TEST_CASE( ScreenshotPathUtilTest, NowPathHasTheSameShape )
 {
     const sw::string path     = sw::ScreenshotPathUtil::makeDefaultPathNow();
-    const sw::string expected = sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/20260307-090501.png" );
+    const sw::string expected = sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(), "Screenshots/20260307-090501.png" );
     SW_EXPECT_EQUAL( path.size(), expected.size() );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( path, ".png", false ) );
-    SW_EXPECT_TRUE( sw::StringUtil::startsWith( path, sw::FileUtil::joinPath( sw::FileUtil::getSavedFolderPath(), "Screenshots/" ), false ) );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( path, sw::FileUtil::joinPath( sw::ProcessRoots::get()._saved.str(), "Screenshots/" ), false ) );
 }

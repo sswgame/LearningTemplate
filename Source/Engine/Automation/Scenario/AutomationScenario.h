@@ -20,7 +20,7 @@ namespace sw
     // `Core/Predefined/ArgumentList.xxx` 가 정본이다(`getCommandLineArgumentSpelling`).
     /** @brief 자동화 산출물(시나리오 보고 · 로그 · 사진 · 녹화)을 쓰는 폴더 — 작업 폴더 기준입니다(손 실행과 CTest 모두 `Bin`). 시나리오의 산출물은 그 아래 `<시나리오 name>/<프로세스>/` 에 쌓인다 — 병렬 실행이 겹치지 않는다. */
     inline constexpr const utf8* kAutomationOutputFolder = "Saved/Automation";
-    /** @brief `kAutomationOutputFolder` 의 절대 경로입니다(지금 작업 폴더 기준). 디스크에 쓰는 경로는 이것에서 만든다 — 상대 경로는 리소스 id 입구에서 id 로 읽힌다(`FileUtil::getSavedFolderPath`). */
+    /** @brief `kAutomationOutputFolder` 의 절대 경로입니다(`ProcessRoots` 의 실행 산출물 루트 기준 - 작업 폴더를 보지 않는다). 디스크에 쓰는 경로는 이것에서 만든다 — 상대 경로는 리소스 id 입구에서 id 로 읽힌다(`FileUtil::getSavedFolderPath`). */
     SW_API string makeAutomationOutputFolderPath();
     /**
      * @brief 단계 값 안에서 이 실행의 산출물 폴더(`Saved/Automation/<시나리오>/<프로세스>`)를 가리키는 자리 표시입니다(`{out}/temp.animgraph.xml`).

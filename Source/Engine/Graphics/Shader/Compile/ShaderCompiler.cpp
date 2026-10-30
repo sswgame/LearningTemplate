@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -225,7 +226,7 @@ namespace sw
              */
             static string getShaderCacheDirectory()
             {
-                return FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), "Saved/ShaderCompileCache" ) );
+                return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCompileCache" ) );
             }
 
             static string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )

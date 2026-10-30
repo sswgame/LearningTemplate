@@ -9,6 +9,7 @@
 
     #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
+    #include "Core/File/ProcessRoots.h"
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Memory/Memory.h"
     #include "Core/Process/Process.h"
@@ -118,10 +119,10 @@ namespace sw
             return listSlotName;
         }
 
-        /** @brief 기본 저장 경로 `<프로젝트>/Saved/Traces/<접두어>_<유닉스 밀리초>.trace.json` 입니다. */
+        /** @brief 기본 저장 경로 `<실행 산출물>/Traces/<접두어>_<유닉스 밀리초>.trace.json` 입니다(`ProcessRoots::_saved`). */
         string makeDefaultTracePath( string_view prefix, int64 wallUnixMilliseconds )
         {
-            return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" ),
+            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ),
                                        string( prefix ) + "_" + to_string( wallUnixMilliseconds ) + ProfilerTraceExport::kFileExtension );
         }
 
@@ -729,7 +730,7 @@ namespace sw
     string ProfilerTraceExport::findLatestTraceFile()
     {
         vector<string> listFile;
-        const string   folder = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" );
+        const string   folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" );
         if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
             return {};
         string latest;

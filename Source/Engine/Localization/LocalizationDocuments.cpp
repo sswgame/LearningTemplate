@@ -135,7 +135,7 @@ namespace sw
             {
                 // 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
                 string     existing;
-                const bool bContentUnchanged = FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text;
+                const bool bContentUnchanged = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read && existing == text;
                 if ( bContentUnchanged )
                     return true;
                 return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );

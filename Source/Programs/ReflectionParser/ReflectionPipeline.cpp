@@ -505,7 +505,7 @@ namespace sw
         //
         // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         string existingCpp;
-        if ( FileUtil::exists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
+        if ( FileUtil::readOptionalTextFile( paths._cppPath, existingCpp ) == OptionalFileRead::Read )
         {
             const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
@@ -619,7 +619,7 @@ namespace sw
         {
             const string genHeader = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitHeaderExtension );
             string       genText;
-            if ( FileUtil::exists( genHeader ) == false || FileUtil::readTextFile( genHeader, genText ) == false )
+            if ( FileUtil::readOptionalTextFile( genHeader, genText ) != OptionalFileRead::Read )
                 continue;
             if ( genText.find( config._emitFlagOpsMarker ) == string::npos )
                 continue;

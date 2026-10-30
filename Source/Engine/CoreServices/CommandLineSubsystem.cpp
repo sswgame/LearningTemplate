@@ -3,6 +3,7 @@
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/CoreServices/NamePoolSubsystem.h"
@@ -30,11 +31,27 @@ namespace sw
         _globalVariables->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
         GlobalVariableRegistrar::getHead() = nullptr;
         _globalVariables->registerToCommandLine( _commandLine.get() );
-        _commandLine->parse( _argc, _ppArgv );
-        _globalVariables->updateFromCommandLine( _commandLine.get() );
+        // 경로 인자의 상대 경로 기준은 기동 때 이 프로세스가 받은 작업 폴더다(그 셸에서 적은 상대 경로의 뜻) - 여기서 한 번 읽고 다시 읽지 않는다.
+        const std::optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+        if ( baseDirectory.has_value() == false )
+        {
+            SW_LOW_LEVEL_ERROR( "Cannot read the startup directory - command-line paths cannot be resolved" ); // 로거는 명령줄 다음에 선다 - stderr 로 바로 쓴다
+            return SubsystemInitResult::Failed;
+        }
+        _commandLine->parse( _argc, _ppArgv, *baseDirectory );
         // 인자는 부른 쪽의 것이다(테스트 하네스는 지역 목록을 넘긴다) — 초기화 뒤로는 들지 않는다.
         _argc   = 0;
         _ppArgv = nullptr;
+        if ( _commandLine->getParseErrors().empty() == false )
+        {
+            // 틀린 인자로 다른 일을 하지 않는다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다).
+            for ( const string& error : _commandLine->getParseErrors() )
+            {
+                SW_LOW_LEVEL_ERROR( "Invalid command-line argument: %s", error.c_str() ); // 로거는 명령줄 다음에 선다 - stderr 로 바로 쓴다
+            }
+            return SubsystemInitResult::Failed;
+        }
+        _globalVariables->updateFromCommandLine( _commandLine.get() );
         return SubsystemInitResult::Succeeded;
     }
 

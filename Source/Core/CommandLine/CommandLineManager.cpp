@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Defines.h"
+#include "Core/String/StringBuilder.h"
 
 SW_LOG_CALLER( "CommandLineManager" );
 
@@ -27,6 +28,7 @@ namespace sw
         _listArgument.clear();
         _mapArgument.clear();
         _listOriginalArgument.clear();
+        _listParseError.clear();
         _listArgument.reserve( static_cast<size_t>( CommandLineArgument::Count ) );
 
 // 줄마다 단언을 펼치지 않고 함수 하나(`checkRegistrationOrder`)를 부른다 — 단언은 서식 버퍼를 지역에 두고, 최적화하지 않는 Debug 는 펼친 줄마다 따로 자리를 잡아
@@ -65,6 +67,8 @@ namespace sw
             pValueShape = "=<number>";
         else if ( std::holds_alternative<string>( argument._defaultValue ) )
             pValueShape = "=<text>";
+        else if ( std::holds_alternative<CommandLineDiskPath>( argument._defaultValue ) )
+            pValueShape = "=<path>";
         inoutText += " ";
         for ( const string_view alias : listAlias )
         {
@@ -81,7 +85,7 @@ namespace sw
     // 인자들을 커다란 문자열 하나로 합쳤다가 다시 나누지 않고, argv 원소마다 바로 string_view 로 잘라 파싱하므로
     // 할당이 없다.
     // ============================================================================
-    void CommandLineManager::parse( const int32 argc, utf8* pPpArgv[] )
+    void CommandLineManager::parse( const int32 argc, utf8* pPpArgv[], const AbsolutePath& baseDirectory )
     {
         if ( argc < 2 || pPpArgv == nullptr )
             return;
@@ -91,7 +95,7 @@ namespace sw
             if ( pPpArgv[argIndex] != nullptr && pPpArgv[argIndex][0] != '\0' )
             {
                 _listOriginalArgument.push_back( string{ pPpArgv[argIndex] } );
-                parseArgumentLine( string_view{ pPpArgv[argIndex] } );
+                parseArgumentLine( string_view{ pPpArgv[argIndex] }, baseDirectory );
             }
         }
     }
@@ -100,7 +104,7 @@ namespace sw
     // parse (UTF-16, Windows)
     // Windows(WinMain · wmain)의 UTF-16 argv 를 UTF-8 로 바꾼 뒤 파싱한다.
     // ============================================================================
-    void CommandLineManager::parse( const int32 argc, utf16* pPpArgv[] )
+    void CommandLineManager::parse( const int32 argc, utf16* pPpArgv[], const AbsolutePath& baseDirectory )
     {
         if ( argc < 2 || pPpArgv == nullptr )
             return;
@@ -111,7 +115,7 @@ namespace sw
             {
                 const string utf8Line = StringUtil::utf16ToUTF8( pPpArgv[argIndex] );
                 _listOriginalArgument.push_back( utf8Line );
-                parseArgumentLine( string_view{ utf8Line } );
+                parseArgumentLine( string_view{ utf8Line }, baseDirectory );
             }
         }
     }
@@ -127,7 +131,7 @@ namespace sw
     // 4. 이종 조회로 _mapArgument 에서 인자 인덱스를 O(1) 로 찾는다
     // 5. 찾은 ArgumentInfo 에 타입에 맞게 값을 넣는다
     // ============================================================================
-    void CommandLineManager::parseArgumentLine( string_view argumentLine )
+    void CommandLineManager::parseArgumentLine( string_view argumentLine, const AbsolutePath& baseDirectory )
     {
         // 1단계: 앞뒤 공백 자르기
         const string_view line = StringUtil::trim( argumentLine );
@@ -166,7 +170,7 @@ namespace sw
                 return;
             }
 
-            SW_LOG_WARNING( "No Argument matches %#. Ignored", string( rawKey ).c_str() );
+            _listParseError.push_back( formatToString( "No argument matches %# (see -help)", rawKey ) );
             return;
         }
 
@@ -177,15 +181,24 @@ namespace sw
         // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
-            SW_LOG_WARNING( "No value was given for %#. Ignored", string( rawKey ).c_str() );
+            _listParseError.push_back( formatToString( "No value was given for %#", rawKey ) );
             return;
         }
 
         // 5단계: 타입별로 값을 넣는다. 값 없이 적은 것은 플래그이므로 true 로 켠다.
         if ( bHasValue )
-            setValue( argument, cleanKey, valueStr );
+        {
+            string error;
+            if ( trySetValue( argument, cleanKey, valueStr, baseDirectory, error ) == false )
+            {
+                _listParseError.push_back( std::move( error ) );
+                return;
+            }
+        }
         else
+        {
             argument._value = true;
+        }
 
         argument._bParsed = SW_TRUE;
     }
@@ -260,30 +273,70 @@ namespace sw
      * StringUtil::parse* 로 임시 문자열을 할당하지 않고 바로 변환합니다. 변환에 실패하면 0 이 조용히 들어가지 않도록
      * 경고를 남깁니다. `-W=abc` 가 아무 말 없이 폭 0 이 되면 창이 왜 뜨지 않는지 알 길이 없기 때문입니다.
      */
-    void CommandLineManager::setValue( ArgumentInfo& argument, string_view key, string_view newValue )
+    bool CommandLineManager::trySetValue( ArgumentInfo& argument, string_view key, string_view newValue, const AbsolutePath& baseDirectory, string& outError )
     {
         if ( std::holds_alternative<bool>( argument._defaultValue ) )
         {
             bool bParsed = false;
             if ( StringUtil::tryParseBool( newValue, bParsed ) == false )
-                SW_LOG_WARNING( "%#: not a boolean (%#). Using false", string( key ).c_str(), string( newValue ).c_str() );
+            {
+                outError = formatToString( "%#: not a boolean (%#)", key, newValue );
+                return false;
+            }
             argument._value = bParsed;
+            return true;
         }
-        else if ( std::holds_alternative<int32>( argument._defaultValue ) )
+        if ( std::holds_alternative<int32>( argument._defaultValue ) )
         {
             int32 parsedValue{ 0 };
             if ( StringUtil::parseInt( newValue, parsedValue ) == false )
-                SW_LOG_WARNING( "%#: not an integer (%#). Using 0", string( key ).c_str(), string( newValue ).c_str() );
+            {
+                outError = formatToString( "%#: not an integer (%#)", key, newValue );
+                return false;
+            }
             argument._value = parsedValue;
+            return true;
         }
-        else if ( std::holds_alternative<float32>( argument._defaultValue ) )
+        if ( std::holds_alternative<float32>( argument._defaultValue ) )
         {
             float32 parsedValue{ 0.0f };
             if ( StringUtil::parseFloat( newValue, parsedValue ) == false )
-                SW_LOG_WARNING( "%#: not a real number (%#). Using 0", string( key ).c_str(), string( newValue ).c_str() );
+            {
+                outError = formatToString( "%#: not a real number (%#)", key, newValue );
+                return false;
+            }
             argument._value = parsedValue;
+            return true;
         }
-        else
-            argument._value = string( newValue );
+        if ( std::holds_alternative<CommandLineDiskPath>( argument._defaultValue ) )
+        {
+            if ( newValue.empty() )
+            {
+                outError = formatToString( "%#: the path is empty", key );
+                return false;
+            }
+            // 받는 자리에서 한 번 절대화한다(R5) - 기준은 기동 때 넘긴 폴더다. 드라이브 상대(`C:foo`) · 드라이브 없는 루트(`\foo`)는 경로가 아니다.
+            CommandLineDiskPath diskPath;
+            if ( AbsolutePath::isStrictAbsolute( newValue ) )
+            {
+                diskPath._path = string{ newValue };
+            }
+            else if ( newValue.size() >= 2 && ( newValue[1] == ':' || newValue[0] == '\\' || newValue[0] == '/' ) )
+            {
+                outError = formatToString( "%#: '%#' is neither absolute nor relative (drive-relative or rootless)", key, newValue );
+                return false;
+            }
+            else
+            {
+                diskPath._path = baseDirectory.str();
+                diskPath._path.push_back( '/' );
+                diskPath._path.append( newValue );
+            }
+            StringUtil::replaceChar( diskPath._path, '\\', '/' );
+            argument._value = std::move( diskPath );
+            return true;
+        }
+        argument._value = string( newValue );
+        return true;
     }
 } // namespace sw

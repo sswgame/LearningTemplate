@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/ProcessRoots.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -37,7 +38,7 @@ namespace sw
          */
         string getVulkanPipelineCachePath()
         {
-            return FileUtil::joinPath( FileUtil::getBinaryDirectory(), "Saved/ShaderCache/vk_pipeline_cache.bin" );
+            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache/vk_pipeline_cache.bin" );
         }
     } // namespace
 

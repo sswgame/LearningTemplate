@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/String/StringBuilder.h"
@@ -158,7 +159,7 @@ namespace sw
 {
     string makeAutomationOutputFolderPath()
     {
-        return FileUtil::normalizeSeparators( FileUtil::joinPath( FileUtil::getCurrentPath(), kAutomationOutputFolder ) );
+        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Automation" ); // `kAutomationOutputFolder` 의 디스크 자리 - 작업 폴더가 아니라 실행 산출물 루트다
     }
 
     const string* AutomationStep::findAttribute( string_view name ) const

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/String/StringBuilder.h"
 
@@ -75,10 +76,11 @@ namespace sw
     bool CookRecord::read( string_view absPath, CookRecord& outRecord )
     {
         outRecord = CookRecord{};
-        if ( FileUtil::exists( absPath ) == false )
+        string                 text;
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( absPath, text );
+        if ( read == OptionalFileRead::Missing )
             return false;
-        string text;
-        if ( FileUtil::readTextFile( absPath, text ) == false )
+        if ( read == OptionalFileRead::Failed )
         {
             SW_LOG_WARNING( "Cook record '%#' cannot be read - the job is cooked again", absPath );
             return false;
@@ -166,7 +168,7 @@ namespace sw
 
     string DerivedDataCache::makeLocalRootPath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), path::kSavedFolder ), "DDC" );
+        return FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "DDC" );
     }
 
     string DerivedDataCache::makePath( uint64 key ) const

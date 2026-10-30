@@ -86,7 +86,7 @@ namespace sw::editor
     {
         outPanelVisibility._mapOpen.clear();
         const string imguiPath = makeImguiINIPath( folder, name );
-        if ( FileUtil::exists( imguiPath ) == false || FileUtil::readTextFile( imguiPath, outImguiINIText ) == false )
+        if ( FileUtil::readOptionalTextFile( imguiPath, outImguiINIText ) != OptionalFileRead::Read )
             return false;
         const string visibilityPath = makeVisibilityPath( folder, name );
         if ( outPanelVisibility.loadFile( visibilityPath ) == ConfigReadResult::Invalid )

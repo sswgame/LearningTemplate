@@ -70,7 +70,7 @@ namespace sw::editor
             {
                 outMapEntry.clear();
                 string text;
-                if ( FileUtil::exists( stampPath ) == false || FileUtil::readTextFile( stampPath, text ) == false )
+                if ( FileUtil::readOptionalTextFile( stampPath, text ) != OptionalFileRead::Read )
                     return;
 
                 bool bHeaderSeen = false;

@@ -34,8 +34,6 @@ namespace sw
         // 주므로 `inline` 이 하는 일이 없어지고, TU 마다 사본이 하나씩 생긴다. 바로 위 `constant`
         // 블록도 `inline constexpr` 로 적는다. 한 파일에 두 철자를 두지 않는다.
 
-        /** @brief 리소스 루트 폴더 이름입니다. */
-        inline constexpr const utf8* kContentFolder = "Content";
         /** @brief 엔진 기본 제공 에셋 팩입니다. */
         inline constexpr const utf8* kEnginePack = "engine";
         /** @brief 게임 공용 에셋 팩입니다. */

@@ -263,15 +263,12 @@ namespace sw::editor
 
         // 짝 .meta 는 GUID 가 이어지게 같이 옮기고, 안의 sourcePath 도 새 id 로 고친다.
         const string sourceMeta = AssetDatabase::metaPathFor( source );
-        if ( FileUtil::exists( sourceMeta ) )
+        string       metaText;
+        if ( FileUtil::readOptionalTextFile( sourceMeta, metaText ) == OptionalFileRead::Read ) // .meta 가 없는 파일도 있다
         {
-            string metaText;
-            if ( FileUtil::readTextFile( sourceMeta, metaText ) )
-            {
-                (void)replaceReference( metaText, oldID, newID ); // 경로를 적지 않은 .meta 는 그대로 옮긴다
-                if ( FileUtil::writeTextFile( AssetDatabase::metaPathFor( destination ), metaText ) == false || FileUtil::removeFile( sourceMeta ) == false )
-                    SW_LOG_WARNING( "Moved '%#' but its .meta could not follow", newID );
-            }
+            (void)replaceReference( metaText, oldID, newID ); // 경로를 적지 않은 .meta 는 그대로 옮긴다
+            if ( FileUtil::writeTextFile( AssetDatabase::metaPathFor( destination ), metaText ) == false || FileUtil::removeFile( sourceMeta ) == false )
+                SW_LOG_WARNING( "Moved '%#' but its .meta could not follow", newID );
         }
 
         const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();

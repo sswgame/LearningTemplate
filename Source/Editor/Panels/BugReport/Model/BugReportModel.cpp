@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
 
@@ -29,7 +30,7 @@ namespace sw::editor
             /** @brief BugReport 폴더들의 루트입니다(`BugReport::makeInputs` 가 쓰는 경로와 같다). */
             static string makeRoot()
             {
-                return FileUtil::joinPath( FileUtil::getSavedFolderPath(), BugReport::kFolderName );
+                return FileUtil::joinPath( ProcessRoots::get()._saved.str(), BugReport::kFolderName );
             }
         };
     } // namespace

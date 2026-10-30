@@ -3,6 +3,7 @@
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -78,7 +79,7 @@ namespace sw::editor
 
     string ProfilerCaptureModel::getCaptureFilePath()
     {
-        return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getSavedFolderPath(), "Profiler" ), "ProfilerCapture.txt" );
+        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Profiler" ), "ProfilerCapture.txt" );
     }
 
     void ProfilerCaptureModel::setSort( ProfilerSortColumn column, bool bDescending )

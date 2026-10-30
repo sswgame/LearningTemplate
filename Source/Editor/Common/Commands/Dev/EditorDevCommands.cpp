@@ -201,10 +201,9 @@ namespace sw::editor
              */
             [[nodiscard]] static bool resolveTempAssetPath( const string& path, string& outAbsolutePath, string& outReply )
             {
-                string     absolutePath;
-                string     automationFolder;
-                const bool bUnresolvedPaths = path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false ||
-                                              FileUtil::makeAbsolutePath( kAutomationOutputFolder, automationFolder ) == false;
+                string       absolutePath;
+                const string automationFolder = makeAutomationOutputFolderPath();
+                const bool   bUnresolvedPaths = path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false;
                 if ( bUnresolvedPaths )
                 {
                     outReply = "could not resolve '" + path + "'";

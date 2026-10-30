@@ -555,7 +555,7 @@ namespace sw
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
         const string newText = gatherTable.toXMLText();
         string       diskText;
-        const bool   bSameOnDisk = FileUtil::exists( outResult._gatherTablePath ) && FileUtil::readTextFile( outResult._gatherTablePath, diskText ) && diskText == newText;
+        const bool   bSameOnDisk = FileUtil::readOptionalTextFile( outResult._gatherTablePath, diskText ) == OptionalFileRead::Read && diskText == newText;
         if ( bSameOnDisk == false )
         {
             if ( bWrite )
@@ -719,7 +719,7 @@ namespace sw
             const PortableObjectFile file = LocalizationToolsInternal::makePortableObject( project, culture, mapSource, translation, memory, result );
             const string             text = file.toText();
             string                   existing;
-            const bool               bSame = FileUtil::exists( result._path ) && FileUtil::readTextFile( result._path, existing ) && existing == text;
+            const bool               bSame = FileUtil::readOptionalTextFile( result._path, existing ) == OptionalFileRead::Read && existing == text;
             if ( bSame == false && ( FileUtil::ensureParentDirectoryExists( result._path ) == false || FileUtil::writeTextFile( result._path, text ) == false ) )
             {
                 SW_LOG_ERROR( "[ExportPo] '%#' could not be written", result._path.c_str() );

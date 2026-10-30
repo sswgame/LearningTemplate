@@ -82,7 +82,7 @@ namespace sw::editor
                 // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
                 const string filePath = FileUtil::joinPath( resourceRoot, assetID );
                 string       text;
-                if ( FileUtil::exists( filePath ) == false || FileUtil::readTextFile( filePath, text ) == false )
+                if ( FileUtil::readOptionalTextFile( filePath, text ) != OptionalFileRead::Read )
                     return false;
                 EditorReferenceIndex::extractReferences( assetID, text, listSortedKnownID, outListReference );
                 return true;

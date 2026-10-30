@@ -135,13 +135,11 @@ namespace sw
 
     bool GeneratedFileUtil::writeIfChanged( const string& path, const string_view content )
     {
-        if ( FileUtil::exists( path ) )
-        {
-            string     existingContent;
-            const bool bContentUnchanged = FileUtil::readTextFile( path, existingContent ) && existingContent.empty() == false && string_view( existingContent ) == content;
-            if ( bContentUnchanged )
-                return true;
-        }
+        string     existingContent;
+        const bool bContentUnchanged =
+            FileUtil::readOptionalTextFile( path, existingContent ) == OptionalFileRead::Read && existingContent.empty() == false && string_view( existingContent ) == content;
+        if ( bContentUnchanged )
+            return true;
 
         if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, content ) == false )
         {

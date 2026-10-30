@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Log/Logger.h"
@@ -83,7 +84,7 @@ namespace sw
             /** @brief BugReport 폴더들의 기본 루트(`Saved/BugReports`)입니다. */
             static string makeDefaultRoot()
             {
-                return FileUtil::joinPath( FileUtil::getSavedFolderPath(), BugReport::kFolderName );
+                return FileUtil::joinPath( ProcessRoots::get()._saved.str(), BugReport::kFolderName );
             }
         };
     } // namespace

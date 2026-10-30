@@ -137,7 +137,7 @@ namespace sw::editor
         const string                        filePath = editor::getSubsystem<AssetPaths>().getWritePath( prefabPath );
         string                              oldFileText;
         string                              oldBaseState;
-        const bool                          bHadFile   = FileUtil::exists( filePath ) && FileUtil::readTextFile( filePath, oldFileText );
+        const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath, oldFileText ) == OptionalFileRead::Read;
         const shared_ptr<const PrefabAsset> pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();

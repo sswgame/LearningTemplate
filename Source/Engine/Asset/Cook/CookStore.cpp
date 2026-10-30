@@ -3,6 +3,7 @@
 #include "Engine/Asset/Cook/CookStore.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -24,8 +25,7 @@ namespace sw
 
     CookStore CookStore::makeLocal()
     {
-        const string savedPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), path::kSavedFolder );
-        return CookStore{ FileUtil::joinPath( savedPath, "CookRecord" ), DerivedDataCache::makeLocalRootPath() };
+        return CookStore{ FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), "CookRecord" ), DerivedDataCache::makeLocalRootPath() };
     }
 
     string CookStore::makeRecordPath( string_view outputID ) const

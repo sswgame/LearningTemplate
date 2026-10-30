@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
@@ -37,11 +38,10 @@ namespace sw
 {
     string NetSecurity::makeProjectPath( string_view path )
     {
-        const string& projectFolder = game::getSubsystem<AssetPaths>().getProjectFolderPath();
-        const bool    bKeepPathAsIs = path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path );
+        const bool bKeepPathAsIs = path.empty() || FileUtil::isAbsolutePath( path );
         if ( bKeepPathAsIs )
             return string( path );
-        return FileUtil::joinPath( projectFolder, path );
+        return FileUtil::joinPath( ProcessRoots::get()._project.str(), path ); // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다)
     }
 
     bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
@@ -53,11 +53,9 @@ namespace sw
         outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
         return false;
 #else
-        const string& projectFolder = game::getSubsystem<AssetPaths>().getProjectFolderPath();
-        const string  rootFolder    = projectFolder.empty() ? FileUtil::getCurrentPath() : projectFolder;
-        const string  folder        = FileUtil::joinPath( FileUtil::joinPath( rootFolder, path::kSavedFolder ), kDevCertificateFolder );
-        outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateBundleFile );
-        outPrivateKeyFile           = outCertificateFile;
+        const string folder = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), kDevCertificateFolder ); // 서버 · 클라이언트(다른 빌드 구성도)가 같은 인증서를 본다
+        outCertificateFile  = FileUtil::joinPath( folder, kDevCertificateBundleFile );
+        outPrivateKeyFile   = outCertificateFile;
         if ( FileUtil::isRegularFile( outCertificateFile ) )
             return true;
         string     certificatePem;

@@ -133,10 +133,11 @@ namespace sw::editor
     ConfigReadResult ModelImportConfig::loadFromFile( string_view configPath )
     {
         _listRule.clear();
-        if ( FileUtil::exists( configPath ) == false )
+        string                 text;
+        const OptionalFileRead read = FileUtil::readOptionalTextFile( configPath, text );
+        if ( read == OptionalFileRead::Missing )
             return ConfigReadResult::Missing;
-        string text;
-        if ( FileUtil::readTextFile( configPath, text ) == false || text.empty() )
+        if ( read == OptionalFileRead::Failed || text.empty() )
         {
             SW_LOG_ERROR( "Failed to read ModelImportConfig file: %#", configPath );
             return ConfigReadResult::Invalid;

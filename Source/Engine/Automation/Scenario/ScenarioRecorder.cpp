@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -614,9 +615,9 @@ namespace sw
         return true;
     }
 
-    bool ScenarioRecorder::mountSavedDomain( string_view workingFolder )
+    bool ScenarioRecorder::mountSavedDomain()
     {
-        const string savedFolder = FileUtil::joinPath( workingFolder, path::kSavedFolder );
+        const string& savedFolder = ProcessRoots::get()._saved.str();
         if ( FileUtil::ensureDirectoryExists( savedFolder ) == false )
         {
             SW_LOG_ERROR( "[Scenario] could not create '%#' for the '%#' domain", savedFolder.c_str(), kSavedDomain );

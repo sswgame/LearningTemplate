@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -317,7 +318,7 @@ namespace sw::editor
         if ( settings._bRecordTraces )
         {
             _traceDirectory = settings._traceDirectory.empty()
-                                ? FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getProjectFolderPath(), "Saved/Traces" ),
+                                ? FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ),
                                                       formatToString( "netplay_%#", WallClock::nowUnixMilliseconds().count() ) )
                                 : settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
@@ -552,7 +553,7 @@ namespace sw::editor
         {
             ProfilerTraceMergeInput input;
             input._label          = pChild->_label;
-            const bool bTraceRead = pChild->_tracePath.empty() == false && FileUtil::exists( pChild->_tracePath ) && FileUtil::readTextFile( pChild->_tracePath, input._json ); // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
+            const bool bTraceRead = pChild->_tracePath.empty() == false && FileUtil::readOptionalTextFile( pChild->_tracePath, input._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
             if ( bTraceRead )
                 listInput.push_back( std::move( input ) );
             else

@@ -98,7 +98,7 @@ namespace sw
          */
         static constexpr string_view kSavedDomain = "saved";
         /** @brief @p workingFolder 아래 `Saved` 를 `kSavedDomain` 으로 붙입니다(없으면 만든다). 못 붙이면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool mountSavedDomain( string_view workingFolder );
+        [[nodiscard]] static bool mountSavedDomain();
         /** @brief 녹화 경로(`isAllowedOutputPath`)를 다시 돌릴 때의 리소스 id 로 바꿉니다. 허락되지 않은 경로면 빈 문자열입니다. */
         static string makeReplayID( string_view outputPath );
         /**

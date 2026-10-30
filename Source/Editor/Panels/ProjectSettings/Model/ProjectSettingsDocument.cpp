@@ -432,7 +432,7 @@ namespace sw::editor
     {
         // 요소는 남의 파일(팩 gamesettings.xml) 안에 산다 — 파일을 만들지 않는다.
         string fileText;
-        if ( FileUtil::isRegularFile( _path ) == false || FileUtil::readTextFile( _path, fileText ) == false )
+        if ( FileUtil::readOptionalTextFile( _path, fileText ) != OptionalFileRead::Read )
         {
             SW_LOG_WARNING( "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
             return false;

@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/fixed_string.h"
 
@@ -42,13 +43,11 @@ namespace sw
         string fixedAbsPath; // 열 때 절대 경로로 굳힌다 — 기동 중에 작업 폴더가 바뀌어도 같은 파일이다
         if ( _fixedFilePath.empty() )
         {
-            const string execPath = FileUtil::getExecutablePath();
-            const string baseDir  = execPath.empty() ? FileUtil::getCurrentPath() : FileUtil::getDirectoryPart( execPath );
-            logFolderPath         = FileUtil::joinPath( FileUtil::joinPath( baseDir, path::kSavedFolder ), path::kLogsFolder );
+            logFolderPath = FileUtil::joinPath( ProcessRoots::get()._saved.str(), path::kLogsFolder );
         }
         else
         {
-            fixedAbsPath  = FileUtil::isAbsolutePath( _fixedFilePath ) ? _fixedFilePath : FileUtil::joinPath( FileUtil::getCurrentPath(), _fixedFilePath );
+            fixedAbsPath  = _fixedFilePath; // `-log-file` 은 명령줄이 받을 때 절대화했다(CommandLineDiskPath)
             logFolderPath = FileUtil::getDirectoryPart( fixedAbsPath );
         }
         const bool bFolderReady = FileUtil::ensureDirectoryExists( logFolderPath );

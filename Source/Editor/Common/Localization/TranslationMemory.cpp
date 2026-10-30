@@ -107,7 +107,7 @@ namespace sw
     {
         const string text = toXMLText();
         string       existing;
-        const bool   bFileContentUnchanged = FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text;
+        const bool   bFileContentUnchanged = FileUtil::readOptionalTextFile( absolutePath, existing ) == OptionalFileRead::Read && existing == text;
         if ( bFileContentUnchanged )
             return true;
         return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );

@@ -9,6 +9,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -503,30 +504,11 @@ namespace sw
             return true;
         clearPathCache();
 
-        string currentPath = FileUtil::getCurrentPath();
-        string rootPath;
-        while ( currentPath.empty() == false )
-        {
-            const string folderPath = FileUtil::joinPath( currentPath, path::kContentFolder );
-            if ( FileUtil::isDirectory( folderPath ) )
-            {
-                rootPath = currentPath;
-                break;
-            }
-            const string parent = FileUtil::getDirectoryPart( currentPath );
-            if ( parent.empty() || parent == currentPath )
-                break;
-            currentPath = parent;
-        }
-
-        SW_LOG_ASSERT( rootPath.empty() == false, "RootFolder not found" );
-        if ( rootPath.empty() )
-            return false; // 플래그를 켜지 않는다.
+        // 루트는 실행 파일 위치로 한 번 정한 것이다(`ProcessRoots`) - 작업 폴더에서 위로 찾지 않는다(작업 폴더를 바꾸고 띄우면 다른 저장소를 열었다).
+        const string& rootPath = ProcessRoots::get()._project.str();
         SW_LOG_INFO( "RootFolder : %#", rootPath );
-
-        const string resourceRoot = FileUtil::joinPath( rootPath, path::kContentFolder );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
-        const string resourceRootFolderPath = FileUtil::isDirectory( resourceRoot ) ? FileUtil::normalizeSeparators( resourceRoot ) : string{};
+        const string& resourceRootFolderPath = ProcessRoots::get()._content.str();
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
         if ( listSearchPriority.empty() )

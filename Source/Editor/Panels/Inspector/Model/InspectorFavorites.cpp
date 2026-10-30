@@ -126,14 +126,11 @@ namespace sw::editor
     bool InspectorFavorites::loadFile( string_view filePath )
     {
         _listKey.clear();
-        if ( filePath.empty() || FileUtil::isRegularFile( filePath ) == false )
+        if ( filePath.empty() )
             return false;
         string text;
-        if ( FileUtil::readTextFile( filePath, text ) == false )
-        {
-            SW_LOG_WARNING( "Inspector favorites could not be read from %#", string( filePath ).c_str() );
-            return false;
-        }
+        if ( FileUtil::readOptionalTextFile( filePath, text ) != OptionalFileRead::Read )
+            return false; // 없으면 처음이다, 못 읽었으면 readOptionalTextFile 이 오류로 남겼다
         fromText( FileUtil::skipUTF8Bom( text ) );
         return true;
     }

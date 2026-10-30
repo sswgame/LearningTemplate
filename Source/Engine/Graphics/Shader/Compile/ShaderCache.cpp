@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -85,7 +86,7 @@ namespace sw
         sb.append( desc._bDebugCodegen != SW_FALSE ? "-dbg" : "-opt" ); // 같은 소스라도 코드젠이 다르면 다른 파일이다
 
         // 작업 폴더가 아니라 실행 파일 폴더(`Bin`) 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
-        const string rhiDir    = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), "Saved/ShaderCache" ), rhiFolder );
+        const string rhiDir    = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache" ), rhiFolder );
         const string sourceDir = FileUtil::joinPath( rhiDir, string( sb.c_str(), sb.size() ) );
         return FileUtil::joinPath( sourceDir, makeBinaryFileName( desc ) );
     }

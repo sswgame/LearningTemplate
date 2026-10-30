@@ -36,10 +36,7 @@ namespace sw::editor
             {
                 if ( gv_editorStateDir.empty() == false || editor::getSubsystem<CommandLineManager>().isArgumentProvided( CommandLineArgument::SCENARIO ) == false )
                     return {};
-                string absoluteFolder;
-                if ( FileUtil::makeAbsolutePath( string( kAutomationOutputFolder ) + "/" + kAutomationEditorStateFolder, absoluteFolder ) == false )
-                    return {};
-                return FileUtil::joinPath( absoluteFolder, AutomationScratch::makeInstanceID( "editor" ) );
+                return FileUtil::joinPath( FileUtil::joinPath( makeAutomationOutputFolderPath(), kAutomationEditorStateFolder ), AutomationScratch::makeInstanceID( "editor" ) );
             }
         };
     } // namespace

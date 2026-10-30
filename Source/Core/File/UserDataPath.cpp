@@ -7,6 +7,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 namespace sw
@@ -15,8 +16,6 @@ namespace sw
     {
         struct UserDataPathInternal
         {
-            static constexpr utf8 kFallbackFolder[] = "Saved";
-
             static string makeFolderName( string_view gameName ) { return gameName.empty() ? string( "default" ) : StringUtil::toLower( string( gameName ).c_str() ); }
 
             /** @brief @p pRootEnvironment 가 있으면 그 아래, 없으면 `$HOME/<homeRelative>` 아래 `<vendor>/<game>` 입니다. 둘 다 없으면 빈 글. */
@@ -34,7 +33,11 @@ namespace sw
                 return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, pHomeRelative ), pVendor ), makeFolderName( gameName ) );
             }
 
-            static string makeFallback( string_view gameName ) { return FileUtil::joinPath( kFallbackFolder, makeFolderName( gameName ) ); }
+            /** @brief OS 사용자 폴더를 모를 때 멈춥니다 - 작업 폴더의 `Saved` 로 대신하면(옛 폴백) 세이브 · 설정이 띄운 자리마다 갈렸다. */
+            [[noreturn]] static void failUnknownUserFolder()
+            {
+                SW_FATAL( "The user data folder is unknown (no LOCALAPPDATA / XDG_*_HOME / HOME) - set %# to choose it", kUserDataRootVariable );
+            }
 
             /** @brief 환경 변수 `kUserDataRootVariable` 이 값을 가지면 그 아래 `<game>` 폴더, 아니면 빈 글입니다(그때는 OS 의 사용자 폴더 규칙을 따른다). */
             static string makeUnderRootOverride( string_view gameName )
@@ -62,7 +65,9 @@ namespace sw
 #else
         const string directory;
 #endif
-        return directory.empty() ? Internal::makeFallback( gameName ) : directory;
+        if ( directory.empty() )
+            Internal::failUnknownUserFolder();
+        return directory;
     }
 
     string UserDataPath::getConfigDirectory( string_view gameName )
@@ -77,7 +82,9 @@ namespace sw
 #else
         const string directory;
 #endif
-        return directory.empty() ? Internal::makeFallback( gameName ) : directory;
+        if ( directory.empty() )
+            Internal::failUnknownUserFolder();
+        return directory;
     }
 
     string UserDataPath::resolve( string_view gameName, string_view relativeOrAbsolutePath )

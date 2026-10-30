@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
@@ -15,7 +16,7 @@ namespace sw
         StringBuilder<constant::kMaxBuffer32> fileName;
         fileName.appendFormat( "%04d%02d%02d-%02d%02d%02d.png", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
                                localTime._second );
-        return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getSavedFolderPath(), kScreenshotFolderName ), fileName.c_str() );
+        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), kScreenshotFolderName ), fileName.c_str() );
     }
 
     string ScreenshotPathUtil::makeDefaultPathNow()

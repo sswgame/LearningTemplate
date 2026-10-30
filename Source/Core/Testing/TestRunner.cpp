@@ -10,6 +10,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -316,7 +317,7 @@ namespace sw::test
         string       normalized( actual );
         normalized.erase( std::remove( normalized.begin(), normalized.end(), '\r' ), normalized.end() );
         string     expected;
-        const bool bHasSnapshot = FileUtil::exists( path ) && FileUtil::readTextFile( path, expected );
+        const bool bHasSnapshot = FileUtil::readOptionalTextFile( path, expected ) == OptionalFileRead::Read;
         expected.erase( std::remove( expected.begin(), expected.end(), '\r' ), expected.end() );
         if ( bHasSnapshot && expected == normalized )
             return true;
@@ -498,7 +499,7 @@ namespace sw::test
         const uint32 baseSeed = Internal::pickSeed( options._seed );
         // 쓰기 폴더는 절대 경로로 준다 — 작업 폴더 기준 상대 경로는 리소스 id 를 받는 입구(`AssetPaths::toAssetID` 등)에서 id 로 읽혀 다른 파일이 된다.
         string scratchRoot;
-        if ( FileUtil::makeAbsolutePath( FileUtil::joinPath( options._scratchRoot.empty() ? string( "Saved/Test" ) : options._scratchRoot,
+        if ( FileUtil::makeAbsolutePath( FileUtil::joinPath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot,
                                                              to_string( Process::getCurrentProcessID() ) ),
                                          scratchRoot ) == false )
         {

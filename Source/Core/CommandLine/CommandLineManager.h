@@ -9,12 +9,26 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include <variant>
 
 namespace sw
 {
+    /**
+     * @struct CommandLineDiskPath
+     * @brief 디스크 경로 인자의 저장 형식입니다. `ArgumentList.xxx` 에서 기본값을 `CommandLineDiskPath{}` 로 적은 줄이 이 형식이다.
+     * @details `parse` 가 받을 때 한 번 절대화한다 - 상대 경로는 **기동 때 넘긴 기준 폴더**(그 셸의 작업 폴더) 기준이다(R5). 읽는 쪽은 `string` 으로 꺼내며
+     *          늘 절대 경로다. 예전에는 받은 글을 그대로 두어, 읽는 쪽마다 실행 중 작업 폴더로 다시 풀었다(작업 폴더를 바꾸면 산출물 위치가 바뀌었다).
+     */
+    struct CommandLineDiskPath
+    {
+        string _path;
+    };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 1) CommandLineArgument — ArgumentList.xxx 에서 만드는 표준 키
     // ------------------------------------------------------------------------------
@@ -64,7 +78,7 @@ namespace sw
         /** @brief 인자 하나의 현재 값 · 기본값 · 파싱 여부입니다. */
         struct ArgumentInfo
         {
-            using Value = std::variant<int32, bool, float32, string>;
+            using Value = std::variant<int32, bool, float32, string, CommandLineDiskPath>;
 
             Value                  _value;
             Value                  _defaultValue;
@@ -123,15 +137,16 @@ namespace sw
          * @brief main 함수가 받은 UTF-8 인자 목록을 파싱합니다(Linux 또는 표준 C++).
          * @param argc 인자 개수
          * @param pPpArgv 문자열 포인터 배열(UTF-8)
+         * @param baseDirectory 디스크 경로 인자(`CommandLineDiskPath`)의 상대 경로 기준 - 기동 때 한 번 정한 폴더다.
+         * @details 틀린 인자(모르는 이름 · 빠진 값 · 정수 아닌 정수 · 빈 경로)는 값을 추측해 넣지 않고 `getParseErrors` 에 모은다 - 호스트가 기동을 멈춘다.
          */
-        void parse( int32 argc, utf8* pPpArgv[] );
+        void parse( int32 argc, utf8* pPpArgv[], const AbsolutePath& baseDirectory );
 
-        /**
-         * @brief main 함수가 받은 UTF-16 인자 목록을 파싱합니다(Windows).
-         * @param argc 인자 개수
-         * @param pPpArgv 와이드 문자열 포인터 배열(UTF-16)
-         */
-        void parse( int32 argc, utf16* pPpArgv[] );
+        /** @brief main 함수가 받은 UTF-16 인자 목록을 파싱합니다(Windows). 나머지는 UTF-8 판과 같습니다. */
+        void parse( int32 argc, utf16* pPpArgv[], const AbsolutePath& baseDirectory );
+
+        /** @brief `parse` 가 거절한 인자의 이유(한 줄씩)입니다. 비어 있지 않으면 기동을 멈춘다(`CommandLineSubsystem`). */
+        [[nodiscard]] const vector<string>& getParseErrors() const { return _listParseError; }
 
         /**
          * @brief 문자열 키로 파싱된 인자 값을 찾습니다.
@@ -206,8 +221,8 @@ namespace sw
         const vector<string>& getOriginalArguments() const { return _listOriginalArgument; }
 
     private:
-        /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. */
-        void parseArgumentLine( string_view argumentLine );
+        /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. 거절하면 `_listParseError` 에 이유를 더합니다. */
+        void parseArgumentLine( string_view argumentLine, const AbsolutePath& baseDirectory );
 
         /** @brief 등록된 명령줄 철자로 인자를 찾습니다. 없으면 nullptr 입니다. */
         const ArgumentInfo* findArgument( string_view key ) const;
@@ -215,8 +230,8 @@ namespace sw
         /** @brief 열거값을 `_listArgument` 인덱스로 바로 씁니다(initialize 가 그 일치를 보장합니다). */
         const ArgumentInfo* findArgument( CommandLineArgument argument ) const;
 
-        /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. */
-        static void setValue( ArgumentInfo& argument, string_view key, string_view newValue );
+        /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. 변환하지 못하면 이유를 @p outError 에 담고 false 입니다(값을 바꾸지 않는다). */
+        [[nodiscard]] static bool trySetValue( ArgumentInfo& argument, string_view key, string_view newValue, const AbsolutePath& baseDirectory, string& outError );
 
         /** @brief 도움말 한 줄(철자들과 값 모양)을 @p inoutText 에 붙입니다. */
         static void appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument );
@@ -239,6 +254,8 @@ namespace sw
         unordered_map<string, string> _mapPendingGlobal;
         /** @brief `parse` 가 받은 원본 인자입니다(`getOriginalArguments`). `initialize` 가 비웁니다. */
         vector<string> _listOriginalArgument;
+        /** @brief `parse` 가 거절한 인자의 이유입니다(`getParseErrors`). `initialize` 가 비웁니다. */
+        vector<string> _listParseError;
     };
 
     template <typename T>
@@ -259,6 +276,17 @@ namespace sw
         using StoredType = std::conditional_t<std::is_same_v<T, bool>, bool,
                                               std::conditional_t<std::is_integral_v<T>, int32,
                                                                  std::conditional_t<std::is_floating_point_v<T>, float32, string>>>;
+
+        // 경로 인자는 절대 경로 글로 꺼낸다(저장 형식만 다르다).
+        if constexpr ( std::is_same_v<StoredType, string> )
+        {
+            const CommandLineDiskPath* pDiskPath = std::get_if<CommandLineDiskPath>( pTargetValue );
+            if ( pDiskPath != nullptr )
+            {
+                outValue = T{ pDiskPath->_path };
+                return true;
+            }
+        }
 
         const StoredType* pStoredValue = std::get_if<StoredType>( pTargetValue );
         if ( pStoredValue == nullptr )
