@@ -179,20 +179,31 @@ namespace sw::editor
 
     uint32 EditorPanelManager::resetOptionalPanels( IRHIDevice* pRHIDevice )
     {
+        return resetPanels( pRHIDevice, false );
+    }
+
+    uint32 EditorPanelManager::resetAllPanels( IRHIDevice* pRHIDevice )
+    {
+        return resetPanels( pRHIDevice, true );
+    }
+
+    uint32 EditorPanelManager::resetPanels( IRHIDevice* pRHIDevice, bool bIncludeCore )
+    {
         uint32 resetCount{ 0 };
         for ( EditorPanelEntry& entry : _listPanel )
         {
-            if ( entry._category == EditorPanelCategory::Core || entry._pInstance == nullptr )
+            if ( entry._pInstance == nullptr || ( entry._category == EditorPanelCategory::Core && bIncludeCore == false ) )
                 continue;
+            const bool bOpenAfterReset = entry._category == EditorPanelCategory::Core && entry._bOpenByDefault;
             if ( entry._pRegistration == nullptr )
             {
-                entry._pInstance->setOpen( false );
+                entry._pInstance->setOpen( bOpenAfterReset );
                 continue;
             }
             entry._pInstance->shutdown( pRHIDevice );
             entry._pInstance = entry._pRegistration->_pCreate();
             if ( entry._pInstance != nullptr )
-                entry._pInstance->setOpen( false );
+                entry._pInstance->setOpen( bOpenAfterReset );
             ++resetCount;
         }
         return resetCount;

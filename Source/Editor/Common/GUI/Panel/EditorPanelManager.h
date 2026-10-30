@@ -133,6 +133,11 @@ namespace sw::editor
          */
         uint32 resetOptionalPanels( IRHIDevice* pRHIDevice );
         /**
+         * @brief 핵심 패널까지 모두 등록 줄로 새 인스턴스를 만들고 만든 직후의 가시성으로 둡니다 — 새 에디터 프로세스와 같은 패널 상태입니다. 바꾼 수를 반환합니다.
+         * @details 체인의 다음 단계 앞(`EditorAutomationStageReset`)에서 쓴다. 핵심 패널이 쥔 상태(검색 칸 · 필터 · 뷰포트 토글)도 앞 단계의 것이 남지 않는다.
+         */
+        uint32 resetAllPanels( IRHIDevice* pRHIDevice );
+        /**
          * @brief 핵심(Core) 패널의 가시성을 만든 직후의 값으로 되돌립니다(기본 배치로 되돌리기 — 언리얼 Reset Layout 이 기본 탭을 되살리는 것과 같다).
          * @details 도구 · 커스텀 패널은 그대로 둔다 — 열려 있으면 기본 배치의 제자리에 붙는다. 도크 트리만 되돌리면 닫힌 Hierarchy · Inspector 가 닫힌 채 남았다.
          */
@@ -149,6 +154,9 @@ namespace sw::editor
         void discardAllDirtyDocuments();
 
     private:
+        /** @brief `resetOptionalPanels` · `resetAllPanels` 의 몸통입니다. @p bIncludeCore 면 핵심 패널도 다시 만든다. */
+        uint32 resetPanels( IRHIDevice* pRHIDevice, bool bIncludeCore );
+
         /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그에 남깁니다(`EditorPanelTime|<id>|avg … us|max … us`). */
         void reportPanelTimes();
 

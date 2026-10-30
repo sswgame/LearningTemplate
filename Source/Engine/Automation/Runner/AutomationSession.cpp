@@ -10,6 +10,7 @@
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
+#include "Engine/Automation/Runner/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -183,6 +184,8 @@ namespace sw
             // (2D 쿠키 빛을 3D 파이프라인이 그리면 DX11 · GL 의 흉내 슬롯이 겹친다). 빈 씬은 어느 설정으로 그려도 된다.
             (void)engine::getSubsystem<SceneManager>().createEmptyActiveScene( kStageResetSceneName );
             restoreStartVariables();
+            // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
+            (void)AutomationStageResetRegistry::resetAll();
         }
 
         _pRunner = make_unique<AutomationRunner>();
