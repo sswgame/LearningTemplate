@@ -24,7 +24,8 @@
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.ThumbnailCacheCount" atLeast="1" timeoutFrames="800"/>
 	<Wait frames="1"/>
-	<CaptureEditorUI file="textures.png"/>
+	<!-- engine/textures 에는 빠진 텍스처 그림 자체(missing.dds — 마젠타 체크무늬)가 있어 그 썸네일 한 칸(약 0.07 %)만 허용한다 -->
+	<CaptureEditorUI file="textures.png" maxMagentaFraction="0.001"/>
 	<Wait frames="3"/>
 	<DevCommand line="content.open engine/data"/>
 	<Wait frames="1"/>

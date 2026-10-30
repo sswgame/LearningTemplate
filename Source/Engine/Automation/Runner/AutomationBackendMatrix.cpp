@@ -10,6 +10,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
@@ -154,7 +155,7 @@ namespace sw
     vector<string> AutomationBackendMatrix::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
         using Internal                                   = AutomationBackendMatrixInternal;
-        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_REPORT,
+        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, CommandLineArgument::SCENARIO_REPORT,
                                                              CommandLineArgument::LOG_FILE };
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
@@ -174,7 +175,7 @@ namespace sw
     {
         using Internal = AutomationBackendMatrixInternal;
         vector<string> listScenarioList( options._listBackend.size() );
-        size_t         nextBackend = 0;
+        size_t         nextBackend = static_cast<size_t>( MathUtil::max<int32>( 0, options._splitOffset ) );
         for ( const string& path : AutomationScenarioChain::splitList( options._scenarioPath ) )
         {
             AutomationScenario scenario;
@@ -208,7 +209,16 @@ namespace sw
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
                                   std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
         { return Internal::getArgumentKey( argument ) == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ); } );
-        const vector<string>                listScenarioList = assignScenarios( options );
+        // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
+        AutomationBackendMatrixOptions assignOptions = options;
+        if ( options._bSplitScenarios && assignOptions._splitOffset < 0 )
+        {
+            constexpr int64 kSecondsPerDay = 24 * 60 * 60;
+            assignOptions._splitOffset     = static_cast<int32>( ( WallClock::nowUnixMilliseconds().toSeconds() / kSecondsPerDay ) % static_cast<int64>( MathUtil::max<size_t>( 1, options._listBackend.size() ) ) );
+        }
+        if ( options._bSplitScenarios )
+            SW_LOG_INFO( "[Scenario] matrix: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
+        const vector<string>                listScenarioList = assignScenarios( assignOptions );
         vector<unique_ptr<Internal::Child>> listChild;
         for ( const string& backend : options._listBackend )
         {

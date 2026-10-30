@@ -3,7 +3,7 @@
  * @brief 자동화 시나리오 단계 `CaptureEditorUI` 를 구현합니다. 에디터 UI 전체(패널 + 플로팅 창)를 PNG 로 찍고 튼튼한 지표를 단언합니다.
  * @details `<CaptureEditorUI file="ui/hierarchy.png" maxMagentaFraction="0" maxClippedWindows="0"/>`. 경로는 시나리오 출력 폴더 기준이다(`<Screenshot>` 과 같다).
  *          단계는 차례가 오면 캡처를 요청하고 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 지표는 둘이다.
- *          - `maxMagentaFraction`: 마젠타 픽셀 비율 상한. 빠진 텍스처 · 디버그 색이 UI 에 섞이면 오른다.
+ *          - `maxMagentaFraction`: 마젠타 픽셀 비율 상한(적지 않으면 0). 빠진 텍스처 · 디버그 색이 UI 에 섞이면 오른다. 적은 캡처는 백엔드 분할에서도 모든 백엔드가 돈다.
  *          - `maxClippedWindows`: 내용이 창보다 큰데 스크롤바가 없어 잘린 창 수 상한. 어느 창인지는 실패 줄에 이름으로 남는다.
  *          이미지 자체(골든)는 비교하지 않는다. 글꼴 래스터와 DPI 가 기계마다 달라 같은 기계 · 같은 설정에서만 의미가 있다. 결과 파일로 사람이나 `ux-reviewer` 가 본다.
  */
@@ -86,11 +86,15 @@ namespace sw::editor
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
             }
 
-            static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail )
+            /** @brief 속성 @p attributeName 의 상한을 넘으면 실패를 남깁니다. 속성이 없으면 @p defaultLimit(비면 보지 않음)입니다. */
+            static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail,
+                                      string_view defaultLimit = {} )
             {
-                const string* pLimit = step.findAttribute( attributeName );
+                const string* pAttribute = step.findAttribute( attributeName );
+                const string  limitText  = pAttribute != nullptr ? *pAttribute : string( defaultLimit );
+                const string* pLimit     = &limitText;
                 float32       limit{ 0.0f };
-                if ( pLimit == nullptr || StringUtil::parseFloat( *pLimit, limit ) == false )
+                if ( limitText.empty() || StringUtil::parseFloat( limitText, limit ) == false )
                     return;
                 if ( value <= static_cast<float64>( limit ) )
                     return;
@@ -128,7 +132,8 @@ namespace sw::editor
                     runner.recordFailure( step, bHasResult ? "the editor UI capture could not be read or written" : "the editor UI capture never completed (is the editor on?)" );
                     return true;
                 }
-                expectAtMost( runner, step, "maxMagentaFraction", result._magentaFraction, {} );
+                // 마젠타(빠진 텍스처 · 디버그 색)는 어느 화면에서든 결함이라 문턱을 적지 않으면 0 이다 — 일부러 빠진 텍스처를 보이는 캡처만 문턱을 적어 푼다.
+                expectAtMost( runner, step, "maxMagentaFraction", result._magentaFraction, {}, "0" );
                 expectAtMost( runner, step, "maxClippedWindows", static_cast<float64>( result._job._clippedWindowCount ), result._job._clippedWindowNames );
                 return true;
             }

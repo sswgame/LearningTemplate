@@ -28,6 +28,7 @@ namespace sw
         string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
         uint32         _windowWidth{ 0 };          ///< 자식 창의 클라이언트 크기(`EngineConfig._window`) — 자식 창을 바둑판으로 놓는 간격이다. 0 이면 놓지 않는다(플랫폼이 놓는다)
         uint32         _windowHeight{ 0 };
+        int32          _splitOffset{ -1 };        ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
         bool           _bSplitScenarios{ false }; ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
     };
 
