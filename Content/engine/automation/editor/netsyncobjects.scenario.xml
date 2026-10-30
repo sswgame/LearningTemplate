@@ -6,7 +6,7 @@
   같은 서버를 두 번 읽은 서버 칸은 다른 오브젝트가 없어야 한다. 클라이언트 칸은 클라이언트만 가진 오브젝트가 있을 수 있어 비교가 끝까지 갔는지(목록이 떴는지)만 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netsyncobjects.scenario.xml -unattended
 -->
-<Scenario name="editor.netsyncobjects" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.netsyncobjects" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<Expect watch="Editor.NetPlaySyncObjectsCompared" equals="0"/>
 	<DevCommand line="netplay.start dedicated 1"/>

@@ -5,7 +5,7 @@
   결과 그림은 `ux-reviewer` 에이전트가 docs/plans/EditorUX.md 체크리스트로 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/uiaudit.scenario.xml -unattended
 -->
-<Scenario name="editor.uiaudit" isolated="true" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.uiaudit" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<ResizeWindow width="1600" height="900"/>
 	<Wait frames="30"/>

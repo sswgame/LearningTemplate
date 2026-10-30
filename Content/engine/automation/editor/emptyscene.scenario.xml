@@ -4,7 +4,7 @@
   Vulkan 에서 UNDEFINED 백버퍼를 Load 로 열었던 결함(RenderThread::executeFrameBody)을 드러낸 적이 있어, 씬이 비는 상태를 AppScenarioTest 가 백엔드마다 지킨다.
   실행: App -EnableEditor -scenario=engine/automation/editor/emptyscene.scenario.xml -unattended
 -->
-<Scenario name="editor.emptyscene" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.emptyscene" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<Wait frames="10"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="50"/>

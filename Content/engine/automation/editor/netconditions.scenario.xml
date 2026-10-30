@@ -7,7 +7,7 @@
   흉내가 버린 패킷(Editor.NetPlayEmulationDroppedPackets)과 연결이 다시 보낸 신뢰 메시지(Editor.NetPlayResentMessages)를 보고한다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netconditions.scenario.xml -unattended
 -->
-<Scenario name="editor.netconditions" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.netconditions" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<DevCommand line="netplay.start dedicated 1"/>

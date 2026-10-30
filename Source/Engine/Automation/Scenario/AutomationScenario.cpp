@@ -315,8 +315,6 @@ namespace sw
             }
             return true;
         }
-        if ( name == "isolated" )
-            return Internal::readBool( "isolated", pText, _testOptions._bIsolated, outReason );
         if ( name == "requireForeground" )
             return Internal::readBool( "requireForeground", pText, _testOptions._bRequiresForeground, outReason );
         if ( name == "editor" )

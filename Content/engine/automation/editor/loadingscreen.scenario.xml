@@ -4,7 +4,7 @@
   로딩 화면은 게임 update 가 닫는데, 멈춘 에디터는 그 update 를 부르지 않는다 — 그 동안은 화면 UI 를 그리지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/loadingscreen.scenario.xml -unattended
 -->
-<Scenario name="editor.loadingscreen" isolated="true" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.loadingscreen" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<Wait frames="90"/>
 	<Screenshot file="stopped.ppm"/>
 	<Wait frames="1"/>

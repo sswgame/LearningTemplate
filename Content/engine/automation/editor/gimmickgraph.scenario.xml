@@ -5,7 +5,7 @@
   편집은 컴포넌트에 쓰이고 회로가 다시 지어지므로 로그 줄 "Gimmick graph <편집 이름>" 로 센다. 씬은 저장하지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/gimmickgraph.scenario.xml -unattended
 -->
-<Scenario name="editor.gimmickgraph" isolated="true" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.gimmickgraph" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>

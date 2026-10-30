@@ -6,7 +6,7 @@
   한 프로세스가 보인 가장 큰 초당 보낸 바이트(Editor.NetPlayProfilerPeakSentBytesPerSecond)를 보고한다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netprofiler.scenario.xml -unattended
 -->
-<Scenario name="editor.netprofiler" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.netprofiler" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<Expect watch="Editor.NetPlayProfilerSamples" equals="0"/>

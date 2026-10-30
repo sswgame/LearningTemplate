@@ -104,7 +104,7 @@ namespace sw
     /**
      * @struct AutomationTestOptions
      * @brief 시나리오 파일이 실행기 · 테스트에게 하는 선언 묶음입니다. 단계 형식(시작 조건 · 시간 · 단계)과 달리 시나리오를 돌리는 쪽만 읽습니다.
-     * @details Scratch · Launch · Load · isolated · editor · requireForeground · requiresModule 이 여기 든다. 이 묶음이 테스트 Automation 폴더로 가는 경계다 — 형식(`AutomationScenario`)은
+     * @details Scratch · Launch · Load · editor · requireForeground · requiresModule 이 여기 든다. 이 묶음이 테스트 Automation 폴더로 가는 경계다 — 형식(`AutomationScenario`)은
      *          이 구조를 통째로 들고만 있으므로 폴더를 가를 때 이 구조만 옮기면 된다(`AutomationSplit` 3절).
      */
     struct SW_API AutomationTestOptions
@@ -114,8 +114,6 @@ namespace sw
         vector<AutomationAttribute>     _listLaunchVariable{}; ///< 루트 아래 `<Launch variable value>`(여럿 가능). 첫 씬 · 렌더 파이프라인처럼 시작한 뒤에는 바꿀 수 없는 기동 때 값
         vector<string>                  _listRequiredModule{}; ///< 루트 `requiresModule="A,B"` — 이 모듈이 모두 켜진 빌드에서만 돈다. 하나라도 없으면 건너뜀이다(언리얼에서 끈 플러그인의 테스트가 없는 것과 같다)
         AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며 `timeoutFrames` 를 보지 않는다
-        /** @brief 새 프로세스에서만 도는 시나리오입니다(루트 `isolated="true"`). 시작 상태를 전제하거나 환경(창 크기 · 테마 · 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣지 않는다. 테스트가 고른다. */
-        bool _bIsolated{ false };
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
         bool _bRequiresEditor{ false };
         /**

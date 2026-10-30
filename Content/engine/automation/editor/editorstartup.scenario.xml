@@ -4,7 +4,7 @@
   등록 목록이 DLL 마다 갈라지면 그 이미지의 패널이 빠져 이 시나리오가 진다. 패널 수를 숫자로 박으면 패널을 더할 때마다 손으로 고쳐야 하므로, 패널을 등록하는 이미지(EditorModule · 에디터 확장 모듈 갈래)마다 대표 패널 하나를 id 로 묻는다(`Editor.HasPanel`). 패널을 더하거나 빼도 이 파일은 그대로고, 대표 패널을 지울 때만 고친다. 기본 게임(Empty)이 쓰지 않는 키트의 확장 패널(ThemePark · GM 도구)은 오르지 않는다 — 그 확장은 저마다의 시나리오가 requiresModule 로 본다. 뒤의 C 단계 시나리오가 이 파일을 바탕으로 쓴다.
   실행: App -EnableEditor -scenario=engine/automation/editor/editorstartup.scenario.xml -unattended
 -->
-<Scenario name="editor.editorstartup" isolated="true" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.editorstartup" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<Expect watch="Editor.HasPanel" key="hierarchy" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="inspector" equals="1"/>

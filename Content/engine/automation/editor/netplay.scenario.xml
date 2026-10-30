@@ -6,7 +6,7 @@
   netplay.wait 는 기동이 끝날 때까지 그 프레임을 붙잡는다 — 시나리오는 프레임 단위라 자식 프로세스의 기동 시간을 모른다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netplay.scenario.xml -unattended
 -->
-<Scenario name="editor.netplay" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.netplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<DevCommand line="netplay.start dedicated 1"/>
