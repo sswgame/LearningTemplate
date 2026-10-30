@@ -49,6 +49,11 @@ namespace sw::editor
 
         /** @brief 만들어 둔 값의 수입니다(테스트 확인용). */
         uint32 getStateCount() const;
+        /**
+         * @brief 만들어 둔 값을 모두 처음(`TState{}`)으로 되돌립니다. 주소는 그대로라 `get` 이 준 참조는 계속 유효합니다.
+         * @details 자동화 체인이 다음 단계 앞에서 편집기를 새 프로세스처럼 두는 데 쓴다 — 상태마다 되돌리기를 따로 적으면 빠진 것(테마 대화상자)이 다음 단계의 클릭을 삼켰다.
+         */
+        void resetAll();
 
     private:
         /** @brief 값 하나를 담는 상자의 바탕입니다. 소멸자로 값을 지운다. */
@@ -57,6 +62,8 @@ namespace sw::editor
             virtual ~HolderBase() = default;
             /** @brief 담은 값의 주소입니다. */
             virtual void* getValue() = 0;
+            /** @brief 담은 값을 같은 자리에서 새로 만든다. */
+            virtual void reset() = 0;
         };
 
         template <typename TState>
@@ -64,6 +71,11 @@ namespace sw::editor
         {
             TState _value{};
             void*  getValue() override { return &_value; }
+            void   reset() override
+            {
+                _value.~TState();
+                new ( &_value ) TState{};
+            }
         };
 
         template <typename TState>

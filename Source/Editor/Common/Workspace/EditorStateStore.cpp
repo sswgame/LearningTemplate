@@ -34,4 +34,11 @@ namespace sw::editor
         ScopedLock<mutex> lock{ _mutex };
         return static_cast<uint32>( _listEntry.size() );
     }
+
+    void EditorStateStore::resetAll()
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        for ( Entry& entry : _listEntry )
+            entry._pHolder->reset();
+    }
 } // namespace sw::editor
