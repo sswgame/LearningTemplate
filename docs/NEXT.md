@@ -2,14 +2,14 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 9 단계 나머지**(아래 목록), 그다음 10 단계, 그다음 SOLID · 프로젝트 구성 점검 리팩토링(사용자 요청 2026-10-31). 0 ~ 8 단계는 2026-10-31 에 끝났다(매 묶음 전체 ctest 통과, 캐시를 비운 실행 포함):
+> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 10 단계**(T5 나머지 · T6 · T7 · T8 · T9 · T10), 그다음 SOLID · 프로젝트 구성 점검 리팩토링(사용자 요청 2026-10-31). 0 ~ 9 단계는 2026-10-31 에 끝났다(매 묶음 전체 ctest 통과, 로그의 오류 · 경고는 모두 테스트가 선언한 것):
 > - 형식 · 루트: `Core/Path/AbsolutePath.h`(`tryMake` · `tryResolve` - 사람이 적은 경로의 해석 규칙 하나), `Core/File/ProcessRoots.h`(실행 파일 위치로 한 번: `_binary` · `_project` · `_content` · `_packs` · `_saved`(실행 산출물) · `_derivedData`(구성이 함께 쓰는 DDC · 쿠킹 기록 · 개발 인증서) - 패키지는 `Content` 없이 `Packs` 만이라 바이너리 폴더가 프로젝트 루트), `Engine/FileSystem/ResourcePath.h`(`ResourcePath` · `DomainTable`, 아직 쓰는 곳 없음).
 > - OS 경계(R1 · R2): 파일 시스템은 `Core/File/PlatformFileSystem.h`(`FileUtil` 구현만 include) → Win32 · POSIX, `std::filesystem` 0. **상대 경로가 OS 경계에 닿으면 `File.RelativePath` 오류로 실패한다**(`PlatformFileUtil::acceptsPathInput`). 라이브러리 `ModuleLibraryUtil::loadLibraryAt` · `loadSystemLibrary`, 실행 파일 `ProcessCommand::at` · `fromSearchPath`.
 > - 입력 경계(R5): 명령줄 경로 인자 `CommandLineDiskPath`(틀린 인자는 기동 오류), 전역 변수 `GlobalDiskPath`, 개발 명령 `DevCommandRegistry::readDiskPathArgument`(절대만), 설정 파일은 프로젝트 루트 한 곳, 세이브는 사용자 데이터 폴더(`UserDataPath::resolve`), 실행마다 다른 폴더는 `reserveUniquePath`(프로세스 id 재사용 결함).
 > - 쿠킹 입력 종류 셋(`CookInputKind` Resource · DiskFile · Listing, 기록 `SWCOOKREC 3`), 셰이더 소스 경로 추측 제거, 없을 수 있는 파일은 `FileUtil::readOptionalTextFile`.
 > - 둔 것(이유): 파일 감시기의 디렉터리 핸들 · 크래시 처리기의 모듈 이름 조회(할당 없는 경로) · `ModuleBuildID`, 시나리오 단계 속성의 경로 종류 선언(`{out}` 은 명령 글 안에서도 쓴다 - 명령이 형식을 검사).
 > - **Linux 는 WSL 에서 바뀐 파일의 문법 검사만 했다 — 실제 빌드 · 테스트는 아직**(WSL 클론 `~/LT-linux`).
-> - 8 단계(T2) 끝: 팩 VFS 도메인 없는 키의 패치 교체 · 지움, dlc 팩, 팩 형식 2(마운트 도메인을 팩 안에), `collectAssets` 합집합, `hasAsset` 폴더, 오디오 디코드를 에셋 로드 단계로. 9 단계(T3) 끝난 것: 저장 입구 `save*(AbsolutePath)`, `AssetPaths::toDiskPath` · `findLooseFile`(`optional<AbsolutePath>`) 두 해석, 씬 소스는 늘 리소스 id(`saveActiveSceneAs`), 셰이더 소스 규칙 하나(`ShaderCompiler::findSourceFile`), 런타임 읽기 `AssetIO`(SQL · 외형 감시 `watchAssetFolder` · 모디파이어 파일). **남은 것**: `EditorSourceFile{ResourcePath, AbsolutePath}` 와 편집 문서 읽기 · 쓰기 넷을 하나로(포커스 블록 복사 11 벌 · 자체 저장 패널 8 개를 기반으로, `TileMapPanel` 의 두 종류 입력란), 도구 문서 경로(`EditorToolAssetCommands::resolveExistingOrRelativePath` 의 모양 규칙)를 그 형식으로, `isMountedDiskDomainID` 제거, Localization 문서 읽기 `AssetIO`.
+> - 8 단계(T2) 끝: 팩 VFS 도메인 없는 키의 패치 교체 · 지움, dlc 팩, 팩 형식 2(마운트 도메인을 팩 안에), `collectAssets` 합집합, `hasAsset` 폴더, 오디오 디코드를 에셋 로드 단계로. 9 단계(T3) 끝난 것: 저장 입구 `save*(AbsolutePath)`, `AssetPaths::toDiskPath` · `findLooseFile`(`optional<AbsolutePath>`) 두 해석, 씬 소스는 늘 리소스 id(`saveActiveSceneAs`), 셰이더 소스 규칙 하나(`ShaderCompiler::findSourceFile`), 런타임 읽기 `AssetIO`(SQL · 외형 감시 `watchAssetFolder` · 모디파이어 파일). 문서 패널의 읽을 문서 정하기 11 벌 → `acceptDocumentToLoad`. 검증 규칙: 테스트마다 로그의 Error · Warning 을 모두 분류한다(통과만 보지 않는다).
 > 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)

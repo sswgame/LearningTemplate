@@ -108,7 +108,7 @@
 | 6 | **끝(2026-10-31)** 작업 폴더 상대 경로 사용처 정리: GameInstance · Autosave · ControlIntentHistory · Chat · NetSecurity · WorldWarp · PointCache · ShooterDirector · 녹화 쓰기 · `EditorScenarioRecordCommands` · `resolveScenePath` 작업 폴더 갈래 · `PortraitBatchUtil` · 콘솔 `screenshot` | 7 단계에서 바로 깨진다 |
 | 7 | **끝(2026-10-31)** R2 를 오류로(OS 경계 한 곳) | |
 | 8 | **끝(2026-10-31)** T2 리소스 경로 · 팩(팩 형식 2 - 마운트 도메인, 쿠커 설정 해시에 형식 버전) | |
-| 9 | **진행 중** T3 읽기 · 쓰기 분리 + `EditorSourceFile` + 패널 이전 + `AssetPaths` 쓰기 입구 제거 — 끝난 것: 저장 입구 `save*(AbsolutePath)` 44 개, `toDiskPath` · `findLooseFile`(→ `optional<AbsolutePath>`) 둘로, `getWritePath` · `toWriteID` · `DomainAssetID` · `toAssetIDFromPathOrID` · `LooseFilePath` · `findLooseDomainFolder` · `makeSave*` 제거, 씬 소스는 늘 리소스 id, 런타임 읽기(SQL · 외형 감시 · 모디파이어) `AssetIO` | 8 의 형식 위에서 |
+| 9 | **끝(2026-10-31)** T3 읽기 · 쓰기 분리 — 저장 입구 `save*(AbsolutePath)` 44 개, `AssetPaths` 해석 `toDiskPath` · `findLooseFile`(`optional<AbsolutePath>`), 씬 소스는 늘 리소스 id, 문서 패널의 읽을 문서 · 디스크 자리 하나(`acceptDocumentToLoad` · `getDocumentDiskPath`), 런타임 읽기 `AssetIO`. 남긴 것(이유는 아래 결정): `isMountedDiskDomainID`(붙인 디스크 도메인은 팩을 보지 않는다), 자체 저장 패널 8 개 | 8 의 형식 위에서 |
 | 10 | T5 나머지 · T6 · T7 · T8 · T9 · T10 | 서로 독립 — 병렬 작업자 가능(커밋하고 멈춤, 통합이 검증) |
 
 ## 5. 검증
