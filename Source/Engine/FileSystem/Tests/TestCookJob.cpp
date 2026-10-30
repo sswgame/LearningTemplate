@@ -29,7 +29,8 @@ SW_TEST_CASE( CookJobTest, RecordsRelativeDiskReadsAsAbsolutePaths )
     SW_REQUIRE_EQUAL( size_t( 2 ), job.getInputs().size() );
     for ( const CookInput& input : job.getInputs() )
     {
-        SW_EXPECT_TRUE( FileUtil::isAbsolutePath( input._assetID ) );
+        SW_EXPECT_TRUE( FileUtil::isAbsolutePath( input._source ) );
+        SW_EXPECT_TRUE( input._kind == CookInputKind::DiskFile || input._kind == CookInputKind::Listing ); // 리소스 루트 밖이라 리소스로 기록되지 않는다
         SW_EXPECT_NOT_EQUAL( uint64( 0 ), input._contentHash );
         SW_EXPECT_EQUAL( input._contentHash, input.computeCurrentHash() );
     }

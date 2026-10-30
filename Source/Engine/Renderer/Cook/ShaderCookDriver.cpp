@@ -24,6 +24,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
@@ -185,8 +186,10 @@ namespace sw
              */
             static void planRequest( const ShaderCookRequest& request, const vector<ShaderTargetFormat>& listTargetFormat, CookState& ioState, vector<FormatTask>& outListTask )
             {
-                const string absPath = FileUtil::exists( request._shaderPath ) ? request._shaderPath : engine::getSubsystem<AssetPaths>().findLooseFile( request._shaderPath ).getDiskPath();
-                if ( FileUtil::exists( absPath ) == false )
+                // 컴파일러와 같은 규칙이다 - 절대 경로면 그 파일, 아니면 리소스 id(작업 폴더의 같은 이름 파일로 추측하지 않는다).
+                const string absPath = AbsolutePath::isStrictAbsolute( request._shaderPath ) ? FileUtil::normalizeSeparators( request._shaderPath )
+                                                                                             : engine::getSubsystem<AssetPaths>().findLooseFile( request._shaderPath ).getDiskPath();
+                if ( absPath.empty() || FileUtil::isRegularFile( absPath ) == false )
                 {
                     ++ioState._summary._failedCount;
                     SW_LOG_ERROR( "Shader cook request has no source file: '%#' (%#)", request._shaderPath, request._entryPoint );

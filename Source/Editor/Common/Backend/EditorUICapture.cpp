@@ -28,7 +28,7 @@ namespace sw::editor
      * @brief `-gv_screenshotEditor=<경로>.png` 입니다. 에디터 UI 전체(패널 + 플로팅 창)를 한 장 찍습니다. 게임 뷰만 찍는 `-gv_screenshot` 의 에디터판입니다.
      * @details `-gv_screenshotEditorFrame=N`(기본 60) 번째 에디터 UI 프레임에 찍는다. 도킹 배치와 글꼴 아틀라스가 자리 잡을 때까지 기다리는 값이다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotEditor, "", "에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_screenshotEditor, "", "에디터 UI 전체(ImGui 패널 + 플로팅 창)를 이 경로(.png)에 한 장 찍는다 (비면 사용 안 함)" );
     SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotEditorFrame, 60, "-gv_screenshotEditor 를 찍을 에디터 UI 프레임 번호 (기본 60)" );
 } // namespace sw::editor
 

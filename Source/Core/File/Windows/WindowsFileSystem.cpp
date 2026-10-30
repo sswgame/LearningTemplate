@@ -13,6 +13,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Container/StringUtil.h"
     #include "Core/File/PlatformFileSystem.h"
+    #include "Core/File/PlatformFileUtil.h"
 
 namespace sw
 {
@@ -27,6 +28,7 @@ namespace sw
             /** @brief UTF-8 경로를 넓은 문자 경로로 바꿉니다(구분자는 `\`). 빈 경로는 빈 글입니다. */
             static wstring toWide( string_view path )
             {
+                PlatformFileUtil::auditPathInput( path ); // 파일 시스템 연산이 모두 지나는 길목이다
                 string separated{ path };
                 StringUtil::replaceChar( separated, '/', '\\' );
                 return StringUtil::utf8ToUTF16( separated.c_str() );

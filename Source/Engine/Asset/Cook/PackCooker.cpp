@@ -11,6 +11,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
 #include "Engine/FileSystem/Pack/PackConfig.h"
@@ -33,9 +34,8 @@ namespace sw
             /** @brief 팩 쿠킹 전체의 단계별 시간입니다(요약 로그). 팩 여럿이 더해 가고, 단계는 한 스레드에서 차례로 돌므로 합이 곧 그 단계에 쓴 시간이다. */
             struct PackCookTiming
             {
-                PackWriteStats _write;               ///< 압축 · 배치 · 파일 쓰기(`PackWriter`)
-                int64          _readNanos{ 0 };      ///< 원본 · 스테이징 파일 읽기
-                int64          _inputHashNanos{ 0 }; ///< 입력 내용 해시(`addFile`) — 출력 해시는 `CookStore::getOutputHashNanos`
+                PackWriteStats _write;          ///< 압축 · 배치 · 파일 쓰기(`PackWriter`)
+                int64          _readNanos{ 0 }; ///< 원본 · 스테이징 파일 읽기
             };
 
             /** @brief 쿠킹 표의 셰이더 바이너리 폴더(백엔드마다 하나)입니다. 담을 폴더가 아닌 것은 팩에서 뺀다. */
@@ -137,29 +137,20 @@ namespace sw
             }
 
             /**
-             * @brief 파일 하나를 읽어 팩에 담고 그 내용을 작업의 입력으로 기록합니다.
-             * @details 쿠커는 `AssetIO` 가 아니라 디스크를 읽는다(스테이징은 리소스 루트 밖이고, 팩은 마운트된 팩이 아니라 느슨한 트리에서 베이크한다) —
-             *          그래서 입력을 손으로 기록한다. 기록하지 않으면 그 파일이 바뀌어도 팩을 다시 베이크하지 않는다.
+             * @brief 파일 하나를 읽어 팩에 담습니다. 디스크 읽기 입구(`AssetIO::readBinaryFile`)가 읽기와 작업 입력 기록(`CookJob::admitDiskRead`)을 함께 한다.
+             * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(리소스 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
+             *          읽기 시간에는 입력 해시가 들어 있다.
              */
             static bool addFile( PackWriter& writer, string_view relativePath, const string& absPath, PackCookTiming& ioTiming )
             {
                 vector<uint8>   bytes;
                 const Stopwatch readWatch;
-                const bool      bRead = FileUtil::readFile( absPath, bytes );
+                const bool      bRead = AssetIO::readBinaryFile( absPath, bytes );
                 ioTiming._readNanos += readWatch.getElapsedNanoseconds();
                 if ( bRead == false )
                 {
                     SW_LOG_ERROR( "Pack cook: could not read '%#'", absPath );
                     return false;
-                }
-                CookJob* pJob = CookJob::findCurrent();
-                if ( pJob != nullptr )
-                {
-                    const Stopwatch hashWatch;
-                    const uint64    hash = ContentHash::computeBytes( bytes );
-                    ioTiming._inputHashNanos += hashWatch.getElapsedNanoseconds();
-                    if ( pJob->recordDiskInput( absPath, hash ) == false )
-                        return false;
                 }
                 writer.addBytes( relativePath, std::move( bytes ) );
                 return true;
@@ -374,7 +365,7 @@ namespace sw
                 ++outPackCount;
         }
         PackCookerInternal::logSummary( outPackCount, failedCount, desc._target, totalWatch.getElapsedNanoseconds(),
-                                        timing._inputHashNanos + store.getOutputHashNanos() - outputHashStart, timing );
+                                        store.getOutputHashNanos() - outputHashStart, timing );
         return failedCount == 0;
     }
 } // namespace sw

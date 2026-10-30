@@ -86,11 +86,6 @@ namespace sw
     struct SW_API DDSLoader
     {
         /**
-         * @brief 디스크의 실제 파일 경로에서 DDS 텍스처를 로드합니다. 팩을 보지 않으므로 런타임 에셋은 `loadFromAsset` 로 읽습니다(도구 · 테스트용).
-         */
-        [[nodiscard]] static bool loadFromDiskFile( string_view filePath, DDSImageData& outImage );
-
-        /**
          * @brief VFS 리소스 상대 경로(예: "textures/splash.dds")에서 DDS 텍스처를 로드합니다(.pack 아카이브와 낱개 파일 모두 같은 방식으로).
          */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, DDSImageData& outImage );

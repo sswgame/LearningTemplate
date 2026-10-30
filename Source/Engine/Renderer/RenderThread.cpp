@@ -63,7 +63,7 @@ namespace sw
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
      * @note 세 변수 모두 이 파일이 유일한 소비자라 여기서 정의한다. 다른 파일에서 `extern` 으로 가져다 쓰면 타입이 어긋나도 링커까지 가야 걸린다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::GlobalDiskPath, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 저장합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );

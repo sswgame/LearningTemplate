@@ -12,6 +12,7 @@
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Container/StringUtil.h"
     #include "Core/File/PlatformFileSystem.h"
+    #include "Core/File/PlatformFileUtil.h"
     #include "Core/Process/ProcessEnvironment.h"
 
     #include <cerrno>
@@ -37,6 +38,7 @@ namespace sw
             /** @brief 구분자를 `/` 로 맞춘 경로입니다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다). */
             static string toNative( string_view path )
             {
+                PlatformFileUtil::auditPathInput( path ); // 파일 시스템 연산이 모두 지나는 길목이다
                 string separated{ path };
                 StringUtil::replaceChar( separated, '\\', '/' );
                 return separated;

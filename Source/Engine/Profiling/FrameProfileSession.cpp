@@ -43,7 +43,7 @@ namespace sw
      * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다.
      *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 측정하는 판에는 켜지 않습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
 #endif
 
     bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )

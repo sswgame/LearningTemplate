@@ -28,7 +28,7 @@ namespace sw::editor
      * @brief `-gv_editorPreviewScreenshot=<경로>`: 처음 열린 미리보기 뷰포트가 충분히 그린 뒤 자기 렌더 타깃을 이 경로에 한 번 찍습니다(PPM · PNG).
      * @details 시나리오의 `<Screenshot>` 은 주 출력만 찍는다 — 미리보기 씬이 그려지는지, 메인 씬과 섞이지 않는지는 이 그림으로 본다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorPreviewScreenshot, "", "미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_editorPreviewScreenshot, "", "미리보기 씬 뷰포트의 렌더 타깃을 이 경로에 한 번 찍는다 (시나리오 눈 확인용, 비우면 안 함)" );
 } // namespace sw::editor
 
 namespace sw::editor

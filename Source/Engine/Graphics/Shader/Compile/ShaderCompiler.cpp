@@ -280,7 +280,7 @@ namespace sw
                 if ( bDiskCacheWritable == false )
                     return;
                 const string recordPath = cachePath + ShaderCooker::kIncludeRecordSuffix;
-                if ( FileUtil::exists( recordPath ) && FileUtil::removeFile( recordPath ) == false )
+                if ( FileUtil::removeFile( recordPath ) == false ) // 없으면 성공이다 - 묻고 지우기를 따로 하지 않는다
                 {
                     SW_LOG_WARNING( "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
                     return;
@@ -771,13 +771,11 @@ namespace sw
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
-        string absPathStr;
-        if ( FileUtil::exists( desc._filePath ) )
-            absPathStr = desc._filePath;
-        else
-            absPathStr = engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
+        // 소스는 절대 경로(쿠커)이거나 리소스 id(런타임)다 - 글의 모양으로 가른다. 작업 폴더에 같은 이름 파일이 있는지로 먼저 추측하지 않는다(그 파일을 컴파일할 수 있었다).
+        const string absPathStr = AbsolutePath::isStrictAbsolute( desc._filePath ) ? FileUtil::normalizeSeparators( desc._filePath )
+                                                                                   : engine::getSubsystem<AssetPaths>().findLooseFile( desc._filePath ).getDiskPath();
 
-        if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
+        if ( absPathStr.empty() || FileUtil::isRegularFile( absPathStr ) == false )
         {
             result._errorMessage = "Shader source file not found: " + desc._filePath;
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
@@ -799,7 +797,7 @@ namespace sw
         }
 
         const string cachePath = Internal::computeCachePath( desc, absPathStr );
-        if ( cachePath.empty() == false && FileUtil::exists( cachePath ) )
+        if ( cachePath.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
         {
             // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
             vector<string> listIncludedFile;

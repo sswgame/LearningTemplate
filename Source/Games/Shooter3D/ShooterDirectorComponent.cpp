@@ -74,7 +74,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_shooterAutoPlay, "Shooter3D", "Aim, shoot and move by AI" );
     /** @brief `-gv_shooterMotionTrace=<경로>`: 프레임마다 플레이어 몸, 본, 카메라, 적의 그려진 위치를 CSV 로 남깁니다(튐 진단용이며 끝날 때 씁니다). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_shooterMotionTrace, "", "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_shooterMotionTrace, "", "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
 } // namespace sw
 
 namespace sw

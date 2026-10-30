@@ -42,7 +42,7 @@ namespace sw
         {
             const CookInput* pChanged = record.findChangedInput();
             SW_LOG_INFO( "Cook: '%#' is cooked again - %#%#", outputID, pChanged != nullptr ? "input changed: " : "cooker version or settings changed",
-                         pChanged != nullptr ? pChanged->_assetID : string{} );
+                         pChanged != nullptr ? pChanged->_source : string{} );
             return false;
         }
         // 출력 파일이 이미 기록의 바이트면 다시 쓰지 않는다 — 무변경 재쿠킹이 파일(큰 팩)을 건드리지 않는다.

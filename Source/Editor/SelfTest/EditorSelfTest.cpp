@@ -133,7 +133,7 @@ namespace sw::editor
     /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 테스트를 돌리고 앱을 닫습니다(`*` 와 쉼표). */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 테스트를 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
     /** @brief `-gv_editorSelfTestReport=<파일>`: 에디터 자체 테스트의 결과 줄을 이 파일에 씁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTestReport, "", "에디터 자체 테스트 결과를 쓸 파일 (비우면 로그에만)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_editorSelfTestReport, "", "에디터 자체 테스트 결과를 쓸 파일 (비우면 로그에만)" );
 
     EditorSelfTestContext::EditorSelfTestContext()
         : _failure{}

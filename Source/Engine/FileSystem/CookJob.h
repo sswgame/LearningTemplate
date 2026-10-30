@@ -7,9 +7,12 @@
  *            그래서 쿠킹 중의 에셋 로드는 워커로 넘기지 않고 요청한 스레드에서 읽는다(`requiresCallingThreadRead` — `AssetLoadBlock::startLoad` 가 본다).
  *          - 쿠킹 세션(`CookSession`)이 열려 있는 동안 범위 밖에서 일어난 읽기는 오류다(읽기가 실패한다). 전역 캐시가 미리 읽어 둔 것을 쓰면 기록이 빠지기 때문이다.
  *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
- *          - 입력은 둘이다. 파일(읽은 내용의 해시 — 없는 파일을 찾은 것도 해시 0 으로 남는다)과 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
+ *          - 입력은 셋이다(`CookInputKind`) — 리소스(리소스 id 의 내용 해시), 디스크 파일(리소스 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
+ *            없는 것을 찾은 것도 해시 0 으로 남는다. 종류는 기록할 때 정하고 다시 풀 때 그 종류의 규칙으로만 푼다 — 예전에는 한 칸(`_source`)에 다섯 종류를 담고 다시 풀 때
+ *            `findLooseFile` 이 글 모양으로 추측했다(절대 경로 갈래를 지우면 디스크 · 목록 입력이 조용히 0 이 되어 늘 다시 구웠다).
  *            폴더를 훑어 정한 출력(레지스트리)은 파일이 하나 더 생겨도 읽은 파일이 바뀌지 않으므로 목록이 입력이어야 한다.
- *          - 리소스 id 는 `AssetPaths::toAssetID` 로 맞춘다(리소스 루트 밖의 파일은 절대 경로). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
+ *          - 디스크 읽기가 리소스 루트 · 붙인 도메인 아래면 리소스 입력으로 기록한다(`AssetPaths::toAssetID`). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
+ *            루트 밖으로 나가는 리소스 id(`..`)는 입력이 될 수 없어 그 읽기가 실패한다(받은 글 그대로 기록하던 폴백을 없앴다).
  *          - 리소스 읽기(`AssetID`)와 디스크 읽기(경로 글)는 입구가 다르다. 디스크 경로는 작업 폴더 기준이어도 절대 경로로 바꿔 기록한다 — 상대 글을 그대로 두면
  *            다시 풀 때(`CookInput::computeCurrentHash`) 리소스 id 로 읽혀 다른 파일이나 없음이 되고, 기록이 늘 낡거나 엉뚱한 파일과 비교된다.
  */
@@ -27,38 +30,53 @@ namespace sw
     /** @brief 입력의 종류입니다. */
     enum class CookInputKind : uint8
     {
-        File,    ///< 파일 하나의 내용. 없으면 해시 0
-        Listing, ///< 폴더(`_assetID`) 아래(하위 폴더 포함) 확장자(`_extension`)가 같은 파일의 상대 경로 목록
+        Resource, ///< 리소스 하나의 내용(`_source` 는 리소스 id - 다시 풀 때 검색 순서로 이긴 파일). 없으면 해시 0
+        DiskFile, ///< 리소스 루트 밖 디스크 파일 하나의 내용(`_source` 는 절대 경로). 없으면 해시 0
+        Listing,  ///< 폴더(`_source`, 절대 경로) 아래(하위 폴더 포함) 확장자(`_extension`)가 같은 파일의 상대 경로 목록
     };
 
-    /** @struct CookInput @brief 작업이 읽은 입력 하나(리소스 id 와 그때의 내용 해시)입니다. */
+    /** @struct CookInput @brief 작업이 읽은 입력 하나(종류 · 출처와 그때의 내용 해시)입니다. */
     struct CookInput
     {
-        CookInputKind _kind{ CookInputKind::File };
-        string        _assetID;
+        CookInputKind _kind{ CookInputKind::Resource };
+        string        _source;    ///< 리소스 id(`Resource`) 또는 절대 경로(`DiskFile` · `Listing`) - 종류가 정한다
         string        _extension; ///< 목록일 때만 쓴다(예: ".meta")
         uint64        _contentHash{ 0 };
 
         bool operator==( const CookInput& other ) const
         {
-            return _kind == other._kind && _contentHash == other._contentHash && _assetID == other._assetID && _extension == other._extension;
+            return _kind == other._kind && _contentHash == other._contentHash && _source == other._source && _extension == other._extension;
         }
         /** @brief 같은 입력(종류 · id · 확장자)이면 true 입니다(해시는 보지 않는다). */
-        bool isSameSource( const CookInput& other ) const { return _kind == other._kind && _assetID == other._assetID && _extension == other._extension; }
+        bool isSameSource( const CookInput& other ) const { return _kind == other._kind && _source == other._source && _extension == other._extension; }
         /** @brief `isSameSource` 와 같은 동치를 문자열 하나로 만든 키입니다(종류 · id · 확장자를 탭으로 구분 — id 에는 탭이 없다). 해시 집합의 키로 쓴다. */
         string makeSourceKey() const
         {
             string key;
-            key.reserve( _assetID.size() + _extension.size() + 3 );
-            key.push_back( _kind == CookInputKind::Listing ? 'L' : 'F' );
+            key.reserve( _source.size() + _extension.size() + 3 );
+            key.push_back( _kind == CookInputKind::Listing ? 'L' : ( _kind == CookInputKind::DiskFile ? 'D' : 'R' ) );
             key.push_back( '\t' );
-            key.append( _assetID );
+            key.append( _source );
             key.push_back( '\t' );
             key.append( _extension );
             return key;
         }
-        /** @brief 이 입력의 지금 해시입니다. 파일은 내용 해시(없으면 0), 목록은 지금 목록의 해시입니다. 기록이 새것인지 이 값으로 본다. */
+        /** @brief 이 입력의 지금 해시입니다. 리소스 · 디스크 파일은 내용 해시(없으면 0), 목록은 지금 목록의 해시입니다. 종류의 규칙으로만 푼다. 기록이 새것인지 이 값으로 본다. */
         SW_API uint64 computeCurrentHash() const;
+        /** @brief 종류의 글 이름입니다(`resource` · `disk` · `listing`). 작업 키 · 쿠킹 기록이 같은 이름을 쓴다. */
+        static const utf8* getKindName( CookInputKind kind )
+        {
+            switch ( kind )
+            {
+                case CookInputKind::Resource:
+                    return "resource";
+                case CookInputKind::DiskFile:
+                    return "disk";
+                case CookInputKind::Listing:
+                    return "listing";
+            }
+            return "resource";
+        }
     };
 } // namespace sw
 

@@ -152,8 +152,8 @@ SW_TEST_CASE( CookRecordTest, RoundTripsAndRejectsBrokenRecords )
     CookRecord   record;
     record._key        = 0x0123456789abcdefull;
     record._outputHash = 0xfedcba9876543210ull;
-    record._listInput.push_back( CookInput{ ._kind = CookInputKind::File, ._assetID = "game/a b/x.xml", ._extension = {}, ._contentHash = 7 } );
-    record._listInput.push_back( CookInput{ ._kind = CookInputKind::Listing, ._assetID = "game/folder", ._extension = ".meta", ._contentHash = 9 } );
+    record._listInput.push_back( CookInput{ ._kind = CookInputKind::Resource, ._source = "game/a b/x.xml", ._extension = {}, ._contentHash = 7 } );
+    record._listInput.push_back( CookInput{ ._kind = CookInputKind::Listing, ._source = "game/folder", ._extension = ".meta", ._contentHash = 9 } );
     const string path = FileUtil::joinPath( root, "x.cookrec" );
     SW_REQUIRE_TRUE( record.write( path ) );
 

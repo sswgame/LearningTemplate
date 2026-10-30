@@ -165,18 +165,6 @@ namespace sw
 
     SW_LOG_CALLER( "DDSLoader" );
 
-    bool DDSLoader::loadFromDiskFile( string_view filePath, DDSImageData& outImage )
-    {
-        vector<uint8> bytes;
-        if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
-        {
-            SW_LOG_ERROR( "Failed to read DDS file: %#", filePath );
-            return false;
-        }
-
-        return loadFromMemory( bytes.data(), bytes.size(), outImage );
-    }
-
     bool DDSLoader::loadFromAsset( const AssetID& assetID, DDSImageData& outImage )
     {
         const string_view relativePath = assetID.view();

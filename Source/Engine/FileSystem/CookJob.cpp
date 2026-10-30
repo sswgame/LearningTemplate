@@ -26,11 +26,14 @@ namespace sw
             inline static thread_local CookJob* _t_pCurrent{ nullptr };
             inline static atomic<int32>         _s_sessionCount{ 0 };
 
-            /** @brief 리소스 읽기 입력의 id 입니다(`normalizeAssetID` 로 맞춘다 — 루트 밖으로 나가는 id 는 받은 글 그대로). */
-            static string makeInputID( const AssetID& id )
+            /** @brief 리소스 읽기 입력의 id 입니다(`normalizeAssetID` 로 맞춘다). 루트 밖으로 나가는 id(`..`)는 입력이 될 수 없어 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool makeInputID( const AssetID& id, string& outID )
             {
-                string inputID = AssetPaths::normalizeAssetID( id.view() );
-                return inputID.empty() ? FileUtil::normalizeSeparators( id.view() ) : inputID;
+                outID = AssetPaths::normalizeAssetID( id.view() );
+                if ( outID.empty() == false )
+                    return true;
+                SW_LOG_ERROR( "Cook input '%#' leaves the resource tree - it cannot be recorded, so the read fails", id.view() );
+                return false;
             }
 
             /** @brief 디스크 경로의 절대 경로(구분자 `/`)입니다. 만들지 못하면 오류를 남기고 false 입니다(상대 글을 기록하면 리소스 id 로 다시 풀린다 — 파일 머리말). */
@@ -45,23 +48,28 @@ namespace sw
                 return true;
             }
 
-            /** @brief 디스크 읽기 입력의 id 입니다. 붙인 도메인 · 리소스 루트 아래면 리소스 id, 밖이면 절대 경로입니다. */
-            [[nodiscard]] static bool makeDiskInputID( string_view diskPath, string& outID )
+            /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 리소스 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
+            [[nodiscard]] static bool makeDiskInput( string_view diskPath, CookInputKind& outKind, string& outSource )
             {
                 string absPath;
                 if ( makeAbsoluteDiskPath( diskPath, absPath ) == false )
                     return false;
-                outID = engine::getSubsystem<AssetPaths>().toAssetID( absPath );
-                if ( outID.empty() )
-                    outID = std::move( absPath );
+                outSource = engine::getSubsystem<AssetPaths>().toAssetID( absPath );
+                outKind   = CookInputKind::Resource;
+                if ( outSource.empty() )
+                {
+                    outSource = std::move( absPath );
+                    outKind   = CookInputKind::DiskFile;
+                }
                 return true;
             }
 
-            /** @brief 작업에 파일 입력 하나를 기록합니다. */
-            static void recordFileInput( CookJob& job, string inputID, uint64 contentHash )
+            /** @brief 작업에 내용 입력(리소스 · 디스크 파일) 하나를 기록합니다. */
+            static void recordContentInput( CookJob& job, CookInputKind kind, string source, uint64 contentHash )
             {
                 CookInput input;
-                input._assetID     = std::move( inputID );
+                input._kind        = kind;
+                input._source      = std::move( source );
                 input._contentHash = contentHash;
                 job.recordInput( input );
             }
@@ -116,10 +124,19 @@ namespace sw
 
     uint64 CookInput::computeCurrentHash() const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _assetID ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
-        if ( _kind == CookInputKind::Listing )
-            return CookJob::computeListingHash( absPath, _extension );
-        return absPath.empty() ? 0 : ContentHash::computeFile( absPath );
+        switch ( _kind )
+        {
+            case CookInputKind::Resource:
+            {
+                const string absPath = engine::getSubsystem<AssetPaths>().findLooseFile( _source ).getDiskPath(); // 읽기다 — 없는 입력은 빈 경로(해시 0)
+                return absPath.empty() ? 0 : ContentHash::computeFile( absPath );
+            }
+            case CookInputKind::DiskFile:
+                return FileUtil::isRegularFile( _source ) ? ContentHash::computeFile( _source ) : 0;
+            case CookInputKind::Listing:
+                return CookJob::computeListingHash( _source, _extension );
+        }
+        return 0;
     }
 
     bool CookJob::admitRead( const AssetID& id, const uint8* pData, size_t size )
@@ -127,7 +144,10 @@ namespace sw
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob == nullptr )
             return CookJobInternal::admitReadOutsideJob( id.view() );
-        CookJobInternal::recordFileInput( *pJob, CookJobInternal::makeInputID( id ), ContentHash::computeBytes( pData, size ) );
+        string inputID;
+        if ( CookJobInternal::makeInputID( id, inputID ) == false )
+            return false;
+        CookJobInternal::recordContentInput( *pJob, CookInputKind::Resource, std::move( inputID ), ContentHash::computeBytes( pData, size ) );
         return true;
     }
 
@@ -155,8 +175,9 @@ namespace sw
     void CookJob::admitMissingRead( const AssetID& id )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
-        if ( pJob != nullptr )
-            CookJobInternal::recordFileInput( *pJob, CookJobInternal::makeInputID( id ), 0 );
+        string   inputID;
+        if ( pJob != nullptr && CookJobInternal::makeInputID( id, inputID ) ) // 루트 밖 id 는 오류 로그로 남는다 — 읽기는 이미 실패다
+            CookJobInternal::recordContentInput( *pJob, CookInputKind::Resource, std::move( inputID ), 0 );
     }
 
     void CookJob::admitMissingDiskRead( string_view diskPath )
@@ -179,7 +200,7 @@ namespace sw
         CookInput input;
         input._kind = CookInputKind::Listing;
         // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
-        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath, input._assetID ) == false )
+        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath, input._source ) == false )
             return false;
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
@@ -216,10 +237,11 @@ namespace sw
 
     bool CookJob::recordDiskInput( string_view diskPath, uint64 contentHash )
     {
-        string inputID;
-        if ( CookJobInternal::makeDiskInputID( diskPath, inputID ) == false )
+        CookInputKind kind = CookInputKind::DiskFile;
+        string        source;
+        if ( CookJobInternal::makeDiskInput( diskPath, kind, source ) == false )
             return false;
-        CookJobInternal::recordFileInput( *this, std::move( inputID ), contentHash );
+        CookJobInternal::recordContentInput( *this, kind, std::move( source ), contentHash );
         return true;
     }
 
@@ -244,8 +266,8 @@ namespace sw
         {
             if ( pLeft->_kind != pRight->_kind )
                 return pLeft->_kind < pRight->_kind;
-            if ( pLeft->_assetID != pRight->_assetID )
-                return pLeft->_assetID < pRight->_assetID;
+            if ( pLeft->_source != pRight->_source )
+                return pLeft->_source < pRight->_source;
             return pLeft->_extension < pRight->_extension;
         } );
 
@@ -255,7 +277,7 @@ namespace sw
         canonical.append( "\ntarget=" ).append( desc._target ).append( "\nsettings=" ).append( sw::to_string( desc._settingsHash ) ).append( "\n" );
         for ( const CookInput* pInput : listSorted )
         {
-            canonical.append( pInput->_kind == CookInputKind::Listing ? "listing\t" : "file\t" ).append( pInput->_assetID ).append( "\t" );
+            canonical.append( CookInput::getKindName( pInput->_kind ) ).append( "\t" ).append( pInput->_source ).append( "\t" );
             canonical.append( pInput->_extension ).append( "\t" ).append( sw::to_string( pInput->_contentHash ) ).append( "\n" );
         }
         return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );

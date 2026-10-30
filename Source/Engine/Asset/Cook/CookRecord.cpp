@@ -61,13 +61,10 @@ namespace sw
         text.append( "\noutput " ).append( CookRecordInternal::toHex( _outputHash ) );
         for ( const CookInput& input : _listInput )
         {
+            text.append( "\n" ).append( CookInput::getKindName( input._kind ) ).append( " " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " );
             if ( input._kind == CookInputKind::Listing )
-            {
-                text.append( "\nlisting " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " ).append( input._extension ).append( " " );
-                text.append( input._assetID );
-                continue;
-            }
-            text.append( "\ninput " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " ).append( input._assetID );
+                text.append( input._extension ).append( " " );
+            text.append( input._source );
         }
         text.append( "\n" );
         return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text );
@@ -118,19 +115,20 @@ namespace sw
                 bParsed = bHasKey = CookRecordInternal::parseHex( rest, outRecord._key );
             else if ( field == "output" )
                 bParsed = bHasOutput = CookRecordInternal::parseHex( rest, outRecord._outputHash );
-            else if ( field == "input" && bHashed )
+            else if ( ( field == CookInput::getKindName( CookInputKind::Resource ) || field == CookInput::getKindName( CookInputKind::DiskFile ) ) && bHashed )
             {
                 CookInput input;
-                input._assetID = string( afterHash );
-                bParsed        = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
+                input._kind   = field == CookInput::getKindName( CookInputKind::DiskFile ) ? CookInputKind::DiskFile : CookInputKind::Resource;
+                input._source = string( afterHash );
+                bParsed       = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
                 outRecord._listInput.push_back( std::move( input ) );
             }
-            else if ( field == "listing" && bHasFolder )
+            else if ( field == CookInput::getKindName( CookInputKind::Listing ) && bHasFolder )
             {
                 CookInput input;
                 input._kind      = CookInputKind::Listing;
                 input._extension = string( afterHash.substr( 0, extensionEnd ) );
-                input._assetID   = string( afterHash.substr( extensionEnd + 1 ) );
+                input._source    = string( afterHash.substr( extensionEnd + 1 ) );
                 bParsed          = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
                 outRecord._listInput.push_back( std::move( input ) );
             }
