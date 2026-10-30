@@ -266,8 +266,9 @@ namespace sw
 
     void UINotificationService::refreshEntry( const Entry& entry )
     {
-        using Internal    = UINotificationServiceInternal;
-        UIScreen* pScreen = _pUI->findScreen( _screen );
+        using Internal = UINotificationServiceInternal;
+        // 연 화면이 없으면 고칠 위젯도 없다 — 기동 전(`_pUI` 가 아직 없다)에 같은 글이 다시 와 합치기만 한 경우다(`announceVisible` 과 같은 기준).
+        UIScreen* pScreen = _screen != kInvalidUIScreenHandle ? _pUI->findScreen( _screen ) : nullptr;
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중이다
