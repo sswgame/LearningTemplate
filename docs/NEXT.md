@@ -57,7 +57,7 @@
 
 | 일 | 내용 |
 |---|---|
-| 테스트 전수 | 정본은 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/TestCoverage.py [--uncovered] [접두어]` 의 표다(2026-10-30: 기능 폴더 517 중 테스트 없음 325 · cpp 1117 — GameFramework 184 중 165, Engine 170 중 87, Editor 90 중 45). 시작: GameFramework 첫 단위 테스트(ScheduleCondition). 순서는 위험순 — 일정(ScheduleSystem 계획 · 저장, 하루를 도는 게임 시나리오는 `gv_timeScale` 16 배로) · 전투 · 인벤토리 · 저장/불러오기 · 온라인, 그다음 Engine 의 Asset · Reflection · Net · Localization. 기능마다 단위 테스트 + 그 기능을 쓰는 게임의 시나리오. 손 확인 도구 `destruction-net` · `net-pair` 도 CTest 로 |
+| 테스트 전수 | 정본은 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/TestCoverage.py [--uncovered] [접두어]` 의 표다(2026-10-30: 기능 폴더 517 중 테스트 없음 325 · cpp 1117 — GameFramework 184 중 165, Engine 170 중 87, Editor 90 중 45). 된 것: 일정(조건 · 저장 복원 · 결정성), 인벤토리(겹침 · 무게 · 모두 있을 때만 빼기 · 상태 왕복). 다음은 위험순으로 전투(`Base/Character/Combat` — Damage · Weapon) · 저장/불러오기 · 온라인 · 일정의 하루를 도는 게임 시나리오(`gv_timeScale` 16 배), 그다음 Engine 의 Asset · Reflection · Net · Localization. 기능마다 단위 테스트 + 그 기능을 쓰는 게임의 시나리오. 손 확인 도구 `destruction-net` · `net-pair` 도 CTest 로 |
 | 테스트 늘리기 | 옛 `Test/`(3f70e665f^ 에 약 950 파일)에서 옮길 것을 기능 옆 `Tests/` 로 — 매크로 이름이 같아 순수 함수 테스트는 include 와 위치만 바꾸면 된다. 엔진 서비스가 이미 서 있으므로 옛 하네스는 필요 없다 |
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
