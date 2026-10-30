@@ -3,6 +3,9 @@
 #include "Engine/Asset/AssetFormat.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
+
+#include "Engine/Foundation/EngineDefines.h"
 
 namespace sw
 {
@@ -62,6 +65,13 @@ namespace sw
             if ( type._pSuffix[index]._role == AssetSuffixRole::CookSource )
                 outListSuffix.push_back( type._pSuffix[index]._text );
         }
+    }
+
+    bool AssetCookPath::isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
+    {
+        if ( activePackRoot.empty() || FileUtil::startsWithPathComponent( relativePath, path::kGamePack ) == false )
+            return false;
+        return FileUtil::startsWithPathComponent( relativePath, activePackRoot ) == false;
     }
 
     string AssetCookPath::toSourcePath( string_view path, const AssetTypeDef& type )

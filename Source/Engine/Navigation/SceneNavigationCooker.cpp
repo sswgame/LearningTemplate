@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetIO.h"
@@ -29,14 +30,6 @@ namespace sw
         {
             static constexpr string_view kSceneSuffix   = ".scene.xml";
             static constexpr string_view kSurfaceMarker = "NavMeshSurfaceComponent";
-
-            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
-            {
-                if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
-                    return false;
-                const string activePrefix = string( activePackRoot ) + "/";
-                return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
-            }
         };
     } // namespace
 } // namespace sw
@@ -118,7 +111,7 @@ namespace sw
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
-            if ( Internal::isInInactiveGamePack( relativePath, activePackRoot ) )
+            if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             const string      outputID   = NavMeshAsset::makeCookedPath( relativePath );
             const string      cookedPath = FileUtil::joinPath( cookedDir, outputID );

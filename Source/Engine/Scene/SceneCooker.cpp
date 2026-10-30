@@ -88,15 +88,6 @@ namespace sw
                 return missingCount;
             }
 
-            /** @brief @p relativePath(리소스 기준)가 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)에 있으면 true 입니다. 활성 팩을 모르면 false 입니다. */
-            static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
-            {
-                if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
-                    return false;
-                const string activePrefix = string( activePackRoot ) + "/";
-                return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
-            }
-
             /**
              * @brief @p relativePath(리소스 기준)가 에디터만 여는 씬이면 true 입니다 — 에디터 팩(`editor/`)과 에디터 시나리오 픽스처(`…/automation/editor/`).
              * @details 에디터는 Dev 에만 있고 Dev 런타임은 쿠킹 폴더를 마운트하지 않으므로 쓰일 곳이 없다(언리얼 `DirectoriesToNeverCook`).
@@ -339,7 +330,7 @@ namespace sw
                 }
                 // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
                 // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
-                if ( isInInactiveGamePack( relativeScene, activePackRoot ) && usesUnregisteredComponentTypes( registry, doc ) )
+                if ( AssetCookPath::isInInactiveGamePack( relativeScene, activePackRoot ) && usesUnregisteredComponentTypes( registry, doc ) )
                 {
                     SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
                     return CookStep::Skipped;

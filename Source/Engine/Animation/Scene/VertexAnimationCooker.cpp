@@ -13,6 +13,7 @@
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetIO.h"
@@ -28,17 +29,6 @@ namespace sw
 {
     SW_LOG_CALLER( "VertexAnimationCooker" );
 
-    namespace
-    {
-        /** @brief 상대 경로가 활성 게임이 아닌 게임 팩 아래인지입니다(SceneCooker 와 같은 규칙). */
-        bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot )
-        {
-            if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
-                return false;
-            const string activePrefix = string( activePackRoot ) + "/";
-            return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
-        }
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -209,7 +199,7 @@ namespace sw
                 continue;
             const string normalizedFile = FileUtil::normalizeSeparators( filePath );
             const string relativePath   = normalizedFile.substr( MathUtil::min( normalizedRoot.size() + 1, normalizedFile.size() ) );
-            if ( isInInactiveGamePack( relativePath, activePackRoot ) )
+            if ( AssetCookPath::isInInactiveGamePack( relativePath, activePackRoot ) )
                 continue;
             // 목록은 무엇을 구울지 정하려고 먼저 읽는다. 이 읽기는 기록하지 않는다 — 클립 작업마다 목록을 다시 읽어 그 작업의 입력으로 남긴다.
             VertexAnimationCookList list;

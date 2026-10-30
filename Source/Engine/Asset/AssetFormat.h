@@ -50,6 +50,11 @@ namespace sw
          *          저장해도 쿠커가 쿠킹하는 이름이 된다.
          */
         static string toSourcePath( string_view path, const AssetTypeDef& type );
+        /**
+         * @brief 리소스 id @p relativePath 가 활성 게임(@p activePackRoot, `game/<팩>`)이 아닌 게임 팩 아래면 true 입니다. 활성 게임이 비면(모든 게임) false 입니다.
+         * @details 다른 게임의 팩은 그 게임 모듈의 컴포넌트를 쓴다 - 쿠커(씬 · 내비 · VAT)가 같은 규칙으로 건너뛴다(예전에는 쿠커마다 사본이 있었다).
+         */
+        static bool isInInactiveGamePack( string_view relativePath, string_view activePackRoot );
     };
 } // namespace sw
 
