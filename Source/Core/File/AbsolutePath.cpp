@@ -8,6 +8,9 @@ namespace sw
 {
     namespace
     {
+        // 설치는 기동 스레드 하나에서만 한다(그 뒤 읽기만이라 락이 없다).
+        std::optional<ProcessRoots> s_roots;
+
         bool isSeparator( utf8 ch )
         {
             return ch == '/' || ch == '\\';
@@ -44,23 +47,17 @@ namespace sw
         return AbsolutePath{ std::move( normalized ) };
     }
 
-    namespace
-    {
-        // 설치는 기동 스레드 하나에서만 한다(그 뒤 읽기만이라 락이 없다).
-        std::optional<ProcessRoots> g_roots;
-    } // namespace
-
     void ProcessRoots::install( ProcessRoots roots )
     {
-        if ( g_roots.has_value() )
+        if ( s_roots.has_value() )
             SW_FATAL( "ProcessRoots::install called twice" );
-        g_roots = std::move( roots );
+        s_roots = std::move( roots );
     }
 
     const ProcessRoots& ProcessRoots::get()
     {
-        if ( g_roots.has_value() == false )
+        if ( s_roots.has_value() == false )
             SW_FATAL( "ProcessRoots::get before install - the process roots are set once at startup" );
-        return *g_roots;
+        return *s_roots;
     }
 } // namespace sw

@@ -4,8 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include <algorithm>
-
 namespace sw
 {
     namespace
@@ -66,7 +64,7 @@ namespace sw
     {
         for ( const DomainTable::Entry& entry : _listEntry )
         {
-            if ( entry.name == name )
+            if ( entry._name == name )
                 return &entry;
         }
         return nullptr;
@@ -75,10 +73,13 @@ namespace sw
     vector<const DomainTable::Entry*> DomainTable::listByPriority() const
     {
         vector<const DomainTable::Entry*> result;
-        for ( const DomainTable::Entry& entry : _listEntry )
-            result.push_back( &entry );
-        std::stable_sort( result.begin(), result.end(), []( const DomainTable::Entry* left, const DomainTable::Entry* right )
-        { return left->priority < right->priority; } );
+        for ( const Entry& entry : _listEntry )
+        {
+            size_t position = result.size();
+            while ( position > 0 && entry._priority < result[position - 1]->_priority ) // 같은 우선순위는 등록 순서를 지킨다
+                --position;
+            result.insert( result.begin() + position, &entry );
+        }
         return result;
     }
 
@@ -93,13 +94,13 @@ namespace sw
         const DomainTable::Entry* pBest = nullptr;
         for ( const DomainTable::Entry& entry : _listEntry )
         {
-            const bool bPrefix = text.size() > entry.name.size() && text[entry.name.size()] == '/' && text.compare( 0, entry.name.size(), entry.name ) == 0;
-            if ( bPrefix && ( pBest == nullptr || entry.name.size() > pBest->name.size() ) )
+            const bool bPrefix = text.size() > entry._name.size() && text[entry._name.size()] == '/' && text.compare( 0, entry._name.size(), entry._name ) == 0;
+            if ( bPrefix && ( pBest == nullptr || entry._name.size() > pBest->_name.size() ) )
                 pBest = &entry;
         }
 
         if ( pBest == nullptr )
             return whole;
-        return ResourcePath::tryMake( pBest->name, string_view{ text }.substr( pBest->name.size() + 1 ) );
+        return ResourcePath::tryMake( pBest->_name, string_view{ text }.substr( pBest->_name.size() + 1 ) );
     }
 } // namespace sw

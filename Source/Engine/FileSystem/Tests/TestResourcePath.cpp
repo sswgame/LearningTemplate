@@ -44,5 +44,5 @@ SW_TEST_CASE( DomainTableTest, SplitUsesLongestRegisteredDomain )
     SW_REQUIRE_TRUE( none.has_value() );
     SW_EXPECT_FALSE( none->hasDomain() );
 
-    SW_EXPECT_EQUAL( string( "game/empty" ), table.listByPriority().front()->name );
+    SW_EXPECT_EQUAL( string( "game/empty" ), table.listByPriority().front()->_name );
 }

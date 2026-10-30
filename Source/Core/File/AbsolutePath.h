@@ -49,15 +49,15 @@ namespace sw
      */
     struct SW_API ProcessRoots
     {
-        AbsolutePath binary;   ///< 실행 파일 폴더
-        AbsolutePath project;  ///< 프로젝트(저장소) 루트 - `-project=`
-        AbsolutePath content;  ///< 리소스 도메인 루트(`Content`)
-        AbsolutePath saved;    ///< 개발 파생물(셰이더 캐시 · 임시)
-        AbsolutePath logs;     ///< 로그
-        AbsolutePath crash;    ///< 크래시 덤프
-        AbsolutePath userData; ///< 사용자 설정 · 세이브
-        AbsolutePath packs;    ///< 팩(`.pack`)
-        AbsolutePath ddc;      ///< 파생 데이터 캐시
+        AbsolutePath _binary;   ///< 실행 파일 폴더
+        AbsolutePath _project;  ///< 프로젝트(저장소) 루트 - `-project=`
+        AbsolutePath _content;  ///< 리소스 도메인 루트(`Content`)
+        AbsolutePath _saved;    ///< 개발 파생물(셰이더 캐시 · 임시)
+        AbsolutePath _logs;     ///< 로그
+        AbsolutePath _crash;    ///< 크래시 덤프
+        AbsolutePath _userData; ///< 사용자 설정 · 세이브
+        AbsolutePath _packs;    ///< 팩(`.pack`)
+        AbsolutePath _ddc;      ///< 파생 데이터 캐시
 
         /** @brief 루트를 설치합니다. 두 번 부르면 멈춥니다(기동 한 번). */
         static void install( ProcessRoots roots );

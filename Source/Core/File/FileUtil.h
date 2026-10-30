@@ -86,7 +86,7 @@ namespace sw
         [[nodiscard]] static bool makeRelativePath( string_view rootDir, string_view path, string& outResult );
         /**
          * @brief @p path 가 @p root 아래(경로 구간 경계 기준)에 있으면 그 아래 부분을 `/` 구분자로 돌려주고 true 입니다. 루트 자신이거나 밖이면 false 입니다.
-         * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). `makeRelativePath` 는 `std::filesystem::relative` 라 루트 밖이면 `../` 를 만듭니다.
+         * @details 글로만 비교합니다(파일 시스템을 보지 않고 `..` 를 만들지 않습니다). `makeRelativePath` 는 절대화한 두 경로를 구간별로 맞대어 루트 밖이면 `../` 를 만듭니다.
          */
         [[nodiscard]] static bool tryMakePathUnderRoot( string_view root, string_view path, string& outRelative, bool bIgnoreCase = false );
         /** @brief 절대 경로를 만듭니다. */

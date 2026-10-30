@@ -35,7 +35,10 @@ namespace sw
         {
             if ( _domain.empty() )
                 return _relative;
-            return _domain + "/" + _relative;
+            string line{ _domain };
+            line.push_back( '/' );
+            line.append( _relative );
+            return line;
         }
 
         [[nodiscard]] bool operator==( const ResourcePath& other ) const { return _domain == other._domain && _relative == other._relative; }
@@ -62,9 +65,9 @@ namespace sw
         /** @brief 도메인 하나의 표 줄입니다. */
         struct Entry
         {
-            string name;     ///< 소문자 이름(`common` · `game/empty` · `dlc/winter`)
-            int32  priority; ///< 작을수록 먼저 찾는다
-            bool   bCooked;  ///< 쿠킹 대상이면 true(scratch · 임시는 false)
+            string _name;     ///< 소문자 이름(`common` · `game/empty` · `dlc/winter`)
+            int32  _priority; ///< 작을수록 먼저 찾는다
+            bool   _bCooked;  ///< 쿠킹 대상이면 true(scratch · 임시는 false)
         };
 
         /** @brief 도메인을 등록합니다. 이름이 비었거나 이미 있거나 `..` · 절대 · 드라이브 표기를 품으면 false 입니다. */
