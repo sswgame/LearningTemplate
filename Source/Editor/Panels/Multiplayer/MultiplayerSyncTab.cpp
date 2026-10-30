@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
@@ -184,17 +185,20 @@ namespace sw::editor
                 const bool bCompare = listArgument.size() == 2 && listArgument[0] == "compare";
                 if ( bSave == false && bCompare == false )
                     return false;
+                string filePath;
+                if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], filePath, outReply ) == false )
+                    return true;
                 EditorStateHashCompare& compare = getCompare();
                 if ( loadSessionServer( 0, outReply ) == false )
                     return true;
                 if ( bSave )
                 {
-                    const bool bSaved = compare.saveToFile( 0, listArgument[1] );
-                    outReply          = bSaved ? "netplay sync saved " + to_string( compare.getSource( 0 )._listSample.size() ) + " tick(s) to " + listArgument[1]
-                                               : "netplay sync could not write " + listArgument[1];
+                    const bool bSaved = compare.saveToFile( 0, filePath );
+                    outReply          = bSaved ? "netplay sync saved " + to_string( compare.getSource( 0 )._listSample.size() ) + " tick(s) to " + filePath
+                                               : "netplay sync could not write " + filePath;
                     return true;
                 }
-                if ( compare.loadFromFile( 1, listArgument[1] ) == false || compare.compare() == false )
+                if ( compare.loadFromFile( 1, filePath ) == false || compare.compare() == false )
                 {
                     outReply = compare.getLastError();
                     return true;
@@ -489,13 +493,16 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncReadServer" ) );
 
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * MultiplayerSyncTabInternal::kPathWidthInFonts );
-        ImGui::InputTextWithHint( "##SyncPath", "Saved/StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
+        ImGui::InputTextWithHint( "##SyncPath", "StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
+        // 사람이 친 상대 경로는 이 실행의 산출물 폴더(`ProcessRoots::_saved`) 아래다 - 작업 폴더가 아니다. 경로가 아니면(드라이브 상대) 빈 값이라 읽기 · 쓰기가 실패로 알린다.
+        const std::optional<AbsolutePath> typedPath = AbsolutePath::tryResolve( _arrPath[sourceIndex].c_str(), ProcessRoots::get()._saved );
+        const string                      filePath  = typedPath.has_value() ? typedPath->str() : string{};
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load file" ) );
-        if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, _arrPath[sourceIndex].c_str() ) == false )
+        if ( ImGui::Button( "Load file" ) && compare.loadFromFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING( "Sync could not load %#: %#", _arrPath[sourceIndex].c_str(), compare.getLastError() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Save" ) );
         ImGui::BeginDisabled( source._listSample.empty() );
-        if ( ImGui::Button( "Save" ) && compare.saveToFile( sourceIndex, _arrPath[sourceIndex].c_str() ) == false )
+        if ( ImGui::Button( "Save" ) && compare.saveToFile( sourceIndex, filePath ) == false )
             SW_LOG_WARNING( "Sync could not write %#", _arrPath[sourceIndex].c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Clear" ) );
         if ( ImGui::Button( "Clear" ) )

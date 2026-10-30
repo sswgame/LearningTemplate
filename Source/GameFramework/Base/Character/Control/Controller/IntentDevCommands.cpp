@@ -74,8 +74,10 @@ namespace sw
                     outReply = "intent: no control system in the active scene (nothing recorded)";
                     return true;
                 }
+                string path;
+                if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
+                    return true;
                 pControl->setRecording( false );
-                const string& path = listArgument[0];
                 if ( pControl->getHistory().saveToFile( string_view( path.c_str(), path.size() ) ) == false )
                 {
                     outReply = makeReply( "intent: could not write '%#'", path.c_str() );
@@ -95,9 +97,11 @@ namespace sw
                     outReply = "intent: no active scene";
                     return true;
                 }
-                const string& path = listArgument[0];
-                string        error;
-                uint32        startedCount = 0;
+                string path;
+                if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
+                    return true;
+                string error;
+                uint32 startedCount = 0;
                 if ( IntentPlayback::startFromFile( *pManager, string_view( path.c_str(), path.size() ), true, error, &startedCount ) == false )
                 {
                     outReply = makeReply( "intent: could not read '%#': %#", path.c_str(), error.c_str() );

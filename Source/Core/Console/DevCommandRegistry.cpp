@@ -3,6 +3,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Path/AbsolutePath.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 
@@ -17,6 +18,20 @@ namespace sw
     {
         static DevCommandRegistry s_registry;
         return s_registry;
+    }
+
+    bool DevCommandRegistry::readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply )
+    {
+        const std::optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
+        if ( absolutePath.has_value() == false )
+        {
+            outReply = "needs an absolute path (use {out}/...): '";
+            outReply.append( argument.data(), argument.size() );
+            outReply.push_back( '\'' );
+            return false;
+        }
+        outAbsolutePath = absolutePath->str();
+        return true;
     }
 
     void DevCommandRegistry::tokenize( string_view line, vector<string>& outListToken )

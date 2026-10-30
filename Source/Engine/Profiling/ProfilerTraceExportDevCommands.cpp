@@ -36,8 +36,19 @@ namespace sw
                     outReply = "usage: profile.trace merge <out> <in1> <in2> [...]";
                     return false;
                 }
-                const vector<string> listInputPath( listArgument.begin() + 2, listArgument.end() );
-                return ProfilerTraceExport::mergeTraceFiles( listInputPath, listArgument[1], outReply );
+                // 파일 인자는 모두 절대 경로다(`DevCommandRegistry::readDiskPathArgument` - 작업 폴더 상대 경로를 받지 않는다).
+                vector<string> listInputPath;
+                string         outputPath;
+                if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], outputPath, outReply ) == false )
+                    return false;
+                for ( size_t index = 2; index < listArgument.size(); ++index )
+                {
+                    string inputPath;
+                    if ( DevCommandRegistry::readDiskPathArgument( listArgument[index], inputPath, outReply ) == false )
+                        return false;
+                    listInputPath.push_back( std::move( inputPath ) );
+                }
+                return ProfilerTraceExport::mergeTraceFiles( listInputPath, outputPath, outReply );
             }
             if ( word == ProfilerTraceExport::CommandWord::Switch )
             {
@@ -67,8 +78,8 @@ namespace sw
                     int32         number{ 0 };
                     if ( argument.find_first_not_of( "0123456789" ) == string::npos && StringUtil::parseInt( argument, number ) )
                         budget = static_cast<uint32>( number );
-                    else
-                        recordPath = argument;
+                    else if ( DevCommandRegistry::readDiskPathArgument( argument, recordPath, outReply ) == false )
+                        return false;
                 }
                 float64 seconds{ 0.0 };
                 if ( StringUtil::parseDouble( listArgument[1], seconds ) == false || seconds <= 0.0 )
@@ -86,8 +97,8 @@ namespace sw
                 int32         number{ 0 };
                 if ( argument.find_first_not_of( "0123456789" ) == string::npos && StringUtil::parseInt( argument, number ) )
                     frameCount = static_cast<uint32>( number );
-                else
-                    path = argument;
+                else if ( DevCommandRegistry::readDiskPathArgument( argument, path, outReply ) == false )
+                    return false;
             }
             string savedPath;
             return ProfilerTraceExport::saveRecentFrames( engine::getSubsystem<FrameProfiler>(), frameCount, path, "Game", savedPath, outReply );

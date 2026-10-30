@@ -92,10 +92,13 @@ namespace sw
         {
             if ( listArgument.size() != 1 )
                 return false;
+            string filePath;
+            if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], filePath, outReply ) == false )
+                return true;
             VisualLogger* pLogger = findLogger( outReply );
             if ( pLogger == nullptr )
                 return true;
-            outReply = pLogger->saveToFile( string_view( listArgument[0].c_str(), listArgument[0].size() ) ) ? "vlog: saved" : "vlog: could not write the file";
+            outReply = pLogger->saveToFile( filePath ) ? "vlog: saved" : "vlog: could not write the file";
             return true;
         }
 

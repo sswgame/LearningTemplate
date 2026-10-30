@@ -7,6 +7,7 @@
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/MarkupTagScanner.h"
 #include "Core/String/StringBuilder.h"
 
@@ -35,16 +36,16 @@ namespace sw
         {
             static constexpr const utf8* kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
 
-            /** @brief 리소스 경로 또는 절대 경로를 디스크의 절대 경로로 변환합니다. */
+            /**
+             * @brief 리소스 id(파일 · 폴더) 또는 절대 경로를 디스크의 절대 경로로 바꿉니다. 둘 중 무엇인지는 글의 모양이 정한다(엄격한 절대 경로인지). 못 풀면 빈 글이다.
+             * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 보고, 리소스로 찾아보고, 그래도 없으면 받은 글을 그대로 돌려줬다(작업 폴더 상대 경로로 읽혔다).
+             *          전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
+             */
             static string resolveAbsolutePath( string_view path )
             {
-                if ( FileUtil::exists( path ) || FileUtil::isDirectory( path ) )
+                if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::normalizeSeparators( path );
-                // 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다 — 붙인 도메인도 같은 입구로 푼다.
-                const string resolved = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-                if ( resolved.empty() == false && ( FileUtil::exists( resolved ) || FileUtil::isDirectory( resolved ) ) )
-                    return FileUtil::normalizeSeparators( resolved );
-                return string( path );
+                return FileUtil::normalizeSeparators( editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath() );
             }
 
             /** @brief 글자 수를 UTF-8 코드 포인트 단위로 셉니다. */

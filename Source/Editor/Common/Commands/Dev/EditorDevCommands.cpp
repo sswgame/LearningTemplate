@@ -133,28 +133,13 @@ namespace sw::editor
             }
 
             /**
-             * @brief 쓸 자리 인자를 읽습니다 - 절대 경로(`{out}/…`)만 받는다. 작업 폴더 상대 경로는 받지 않는다(R5 - 작업 폴더를 바꾸면 다른 곳에 썼다).
-             * @return 절대 경로가 아니면 이유를 @p outReply 에 담고 false 입니다.
-             */
-            [[nodiscard]] static bool readDiskPathArgument( const string& argument, string& outAbsolutePath, string& outReply )
-            {
-                if ( AbsolutePath::isStrictAbsolute( argument ) == false )
-                {
-                    outReply = "needs an absolute path (use {out}/...): '" + argument + "'";
-                    return false;
-                }
-                outAbsolutePath = FileUtil::normalizeSeparators( argument );
-                return true;
-            }
-
-            /**
              * @brief 열 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
              * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일).
              */
             [[nodiscard]] static bool readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
             {
                 if ( AbsolutePath::isStrictAbsolute( argument ) )
-                    return readDiskPathArgument( argument, outAbsolutePath, outReply );
+                    return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
                 const string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument ).getDiskPath();
                 if ( FileUtil::isRegularFile( diskPath ) == false )
                 {
@@ -168,7 +153,7 @@ namespace sw::editor
             static bool runSaveSceneAs( const vector<string>& listArgument, string& outReply )
             {
                 string absolutePath;
-                if ( listArgument.size() != 1 || readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
+                if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorSceneFileCommands::saveActiveScene( absolutePath ) == false )
@@ -216,7 +201,7 @@ namespace sw::editor
             [[nodiscard]] static bool resolveTempAssetPath( const string& path, string& outAbsolutePath, string& outReply )
             {
                 string absolutePath;
-                if ( readDiskPathArgument( path, absolutePath, outReply ) == false )
+                if ( DevCommandRegistry::readDiskPathArgument( path, absolutePath, outReply ) == false )
                     return false;
                 const string automationFolder = makeAutomationOutputFolderPath();
                 const string normalized       = FileUtil::normalizePath( absolutePath );
@@ -548,7 +533,7 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runSimulate );
     SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorDevCommandsInternal::runPause );
     SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorDevCommandsInternal::runStop );
-    SW_DEV_COMMAND( SaveSceneAs, "scene.saveAs", "scene.saveAs <path>", "Save the active scene to a file (relative paths start at the working folder)",
+    SW_DEV_COMMAND( SaveSceneAs, "scene.saveAs", "scene.saveAs <absolute path>", "Save the active scene to a file (an absolute path - scenarios use {out}/...)",
                     &EditorDevCommandsInternal::runSaveSceneAs );
     SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
                     "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",

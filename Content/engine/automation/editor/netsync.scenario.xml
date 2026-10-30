@@ -12,10 +12,10 @@
 	<Wait frames="1"/>
 	<DevCommand line="netplay.wait 1 120"/>
 	<Wait frames="1"/>
-	<DevCommand line="netplay.sync save Saved/StateHashes/netsync.txt"/>
+	<DevCommand line="netplay.sync save {out}/netsync.txt"/>
 	<Wait frames="1"/>
 	<ExpectLog contains="netplay sync saved" atLeast="1"/>
-	<DevCommand line="netplay.sync compare Saved/StateHashes/netsync.txt"/>
+	<DevCommand line="netplay.sync compare {out}/netsync.txt"/>
 	<Wait frames="1"/>
 	<ExpectLog contains="netplay sync no divergence over" atLeast="1"/>
 	<Expect watch="Editor.NetPlaySyncCommonTicks" atLeast="1"/>

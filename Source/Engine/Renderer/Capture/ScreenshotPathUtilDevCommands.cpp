@@ -18,7 +18,11 @@ namespace sw
         {
             if ( listArgument.size() > 1 )
                 return false;
-            const string path = listArgument.empty() ? ScreenshotPathUtil::makeDefaultPathNow() : listArgument[0];
+            string path;
+            if ( listArgument.empty() )
+                path = ScreenshotPathUtil::makeDefaultPathNow();
+            else if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
+                return true;
             if ( path.empty() )
             {
                 outReply = "screenshot: could not reserve a file name (see the log)";
