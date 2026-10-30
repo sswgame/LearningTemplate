@@ -2,7 +2,12 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 1 단계 나머지**. 2026-10-31: 0 단계 형식(`AbsolutePath` · `ProcessRoots` 는 `Core/File/AbsolutePath.h`, `ResourcePath` · `DomainTable` 은 `Engine/FileSystem/ResourcePath.h` — 아직 아무도 쓰지 않는다)과 1 단계의 `std::filesystem` 제거가 들어갔다(`Core/File/PlatformFileSystem.h` — `FileUtil` 구현만 include 하는 내부 헤더, Win32 `File/Windows/WindowsFileSystem.cpp` · POSIX `File/Linux/LinuxFileSystem.cpp`, 조립은 `FileUtilFileSystem.cpp`). **Linux 갈래는 아직 한 번도 짓지 않았다 — WSL 빌드부터.** 1 단계 남은 것: T1 의 다른 우회 지점(`readRange` 의 `CreateFileW` · `getFileStamp` · `writeAtomically` 의 pid `#if` · 크래시 쓰기 두 벌 · `WindowsFileWatcher` · `WindowsServiceHost` · Vulkan 환경 변수 · DXC `LoadFile`), 라이브러리 입구 둘, 오류 모델(`getFileSize` · `getFileTimestamp` 의 0 반환 → `[[nodiscard]] bool` + 출력), 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 2 단계**(입력 경계 형식 + Saved 생산자를 `ProcessRoots` 로). 2026-10-31 에 0 · 1 단계가 끝났다:
+> - 형식: `Core/Path/AbsolutePath.h`(티어 4) · `Core/Process/ProcessRoots.h`(아직 설치하는 곳 없음) · `Engine/FileSystem/ResourcePath.h`(`ResourcePath` · `DomainTable`, 아직 쓰는 곳 없음).
+> - OS 경계: 파일 시스템은 `Core/File/PlatformFileSystem.h`(`FileUtil` 구현만 include 하는 내부 헤더) → `File/Windows/WindowsFileSystem.cpp` · `File/Linux/LinuxFileSystem.cpp`, `std::filesystem` 0. `FileUtil.cpp` 에 `#if` 0(읽기는 네이티브 핸들 하나). 크래시 쓰기는 `FileUtil::writeCrashFile`(할당 없음). 라이브러리는 `ModuleLibraryUtil::loadLibraryAt(AbsolutePath)` · `loadSystemLibrary` · `findLoadedLibrary`, 실행 파일은 `ProcessCommand::at` · `fromSearchPath`. 크기 · 시각은 `tryGetFileSize` · `tryGetFileTimestamp`.
+> - 둔 것(이유): 파일 감시기의 디렉터리 핸들(`ReadDirectoryChangesW` 전용 - 그 백엔드가 경계, `AsyncFileIO` 백엔드와 같다), 크래시 처리기의 모듈 이름 조회(할당 없는 경로), `ModuleBuildID` 의 PE 머리 읽기.
+> - **Linux 는 WSL 에서 바뀐 파일의 문법 검사만 했다 — 실제 빌드 · 테스트는 아직**(WSL 클론 `~/LT-linux` 에 받아 짓는다).
+> 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
