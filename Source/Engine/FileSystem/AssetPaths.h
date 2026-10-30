@@ -94,6 +94,13 @@ namespace sw
         LooseFilePath findLooseFile( string_view filePath, string_view folderName = "" ) const;
 
         /**
+         * @brief 리소스 폴더 id 에 맞는 **디스크 폴더 전부**를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
+         * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 리소스 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
+         *          `findLooseFile` 은 이긴 하나만 돌려줘, 나열에 쓰면 소스 구성에서만 다른 도메인의 파일이 빠졌다.
+         */
+        void collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const;
+
+        /**
          * @brief 쓸 파일을 도메인이 정해진 id 로 바꿉니다. 쓰기 입구(`resolveWritePath`)는 이 결과만 받는다.
          * @param pathOrID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인), 리소스 트리 안의 절대 경로, 이미 있는 파일의 상대 키 중 무엇이든 받습니다.
          * @return 도메인 id 입니다. 상대 키는 검색 순서로 이긴 파일의 도메인이다(읽은 그 파일에 쓴다). 아직 없는 파일의 상대 키(어느 도메인에 만들지 모른다),

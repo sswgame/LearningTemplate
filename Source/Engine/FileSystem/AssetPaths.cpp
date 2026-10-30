@@ -631,6 +631,35 @@ namespace sw
         return LooseFilePath( std::move( found ) );
     }
 
+    void AssetPaths::collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const
+    {
+        outListFolder.clear();
+        if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
+            return;
+        State&       state       = *_pState;
+        const string lowerFolder = FileUtil::normalizePath( folderID );
+        string       domainRoot;
+        string       keyUnderRoot;
+        if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
+        {
+            // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
+            const string found = findLooseFile( folderID ).getDiskPath();
+            if ( found.empty() == false && FileUtil::isDirectory( found ) )
+                outListFolder.push_back( found );
+            return;
+        }
+        const string rawFolder = FileUtil::normalizeSeparators( folderID );
+        for ( const string& root : AssetPathsInternal::getTable( state )._listResourceFolder )
+        {
+            // 리소스 트리는 소문자 규칙이다. 원래 표기는 대소문자를 가리는 파일시스템에서 소문자로 못 찾았을 때만 본다.
+            string found = AssetPathsInternal::tryUnderRoot( root, lowerFolder, {} );
+            if ( found.empty() && rawFolder != lowerFolder )
+                found = AssetPathsInternal::tryUnderRoot( root, rawFolder, {} );
+            if ( found.empty() == false && FileUtil::isDirectory( found ) )
+                outListFolder.push_back( std::move( found ) );
+        }
+    }
+
     std::optional<DomainAssetID> AssetPaths::toWriteID( string_view pathOrID ) const
     {
         // 절대 경로 · `Content/…` 는 리소스 id 로 바꾼다(붙인 디스크 도메인 아래면 그 도메인 id). 트리 밖이거나 `..` 로 올라가면 비어 있다.

@@ -250,8 +250,10 @@ namespace sw
         const PackManager* pPackManager = findPackManager();
         if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
-            const string diskFolder = engine::getSubsystem<AssetPaths>().findLooseFile( folder ).getDiskPath();
-            if ( diskFolder.empty() == false && FileUtil::isDirectory( diskFolder ) )
+            // 검색 순서의 모든 도메인 폴더를 합친다 — 팩 나열과 같은 합집합(같은 이름은 아래 정렬에서 앞선 표기가 남는다).
+            vector<string> listDiskFolder;
+            engine::getSubsystem<AssetPaths>().collectLooseFolders( folder, listDiskFolder );
+            for ( const string& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
                 if ( FileUtil::collectFiles( diskFolder, {}, listDiskFile, false ) == false )
