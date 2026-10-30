@@ -67,8 +67,6 @@ namespace sw
          */
         static const utf8* getImageMarker();
 
-        /** @brief 명령 줄을 낱말로 나눕니다. 큰따옴표로 묶은 것은 공백이 있어도 한 낱말입니다(콘솔 · 시나리오 `<Command>` 단계가 같은 규칙을 쓴다). */
-        static void tokenize( string_view line, vector<string>& outListToken );
         /**
          * @brief 쓸 자리 · 읽을 디스크 파일 인자를 읽습니다 - 절대 경로(시나리오의 `{out}/…`)만 받는다. 작업 폴더 상대 경로는 받지 않는다(R5 - 작업 폴더를 바꾸면 다른 곳을 썼다).
          * @return 절대 경로면 구분자를 `/` 로 맞춰 @p outAbsolutePath 에 담고 true, 아니면 이유를 @p outReply 에 담고 false 입니다. 명령이 모두 같은 입구로 읽는다.

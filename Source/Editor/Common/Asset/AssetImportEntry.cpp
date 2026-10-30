@@ -45,7 +45,7 @@ namespace sw::editor
                         if ( bCheckOnly == false )
                             SW_LOG_WARNING( "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
 #endif
-                        const string        configPath = TextureImporter::makeDefaultImportConfigPath( assetPaths );
+                        const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {
@@ -58,7 +58,7 @@ namespace sw::editor
                     }
                     case EditorImportKind::Model:
                     {
-                        const string      configPath = ModelImportConfig::makeDefaultConfigPath( assetPaths );
+                        const string      configPath = ModelImportConfig::makeDefaultConfigPath();
                         ModelImportConfig config;
                         if ( config.loadFromFile( configPath ) != ConfigReadResult::Loaded )
                         {

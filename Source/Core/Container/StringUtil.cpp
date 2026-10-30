@@ -1092,6 +1092,37 @@ namespace sw
         return listToken;
     }
 
+    vector<string> StringUtil::splitQuotedTokens( string_view line )
+    {
+        vector<string> listToken;
+        string         current;
+        bool           bInQuotes = false;
+        bool           bHasToken = false; // `""` 도 빈 낱말 하나다
+        for ( const utf8 character : line )
+        {
+            if ( character == '"' )
+            {
+                bInQuotes = bInQuotes == false;
+                bHasToken = true;
+                continue;
+            }
+            const bool bSeparator = bInQuotes == false && ( character == ' ' || character == '\t' || character == '\r' || character == '\n' );
+            if ( bSeparator )
+            {
+                if ( bHasToken )
+                    listToken.push_back( std::move( current ) );
+                current.clear();
+                bHasToken = false;
+                continue;
+            }
+            current += character;
+            bHasToken = true;
+        }
+        if ( bHasToken )
+            listToken.push_back( std::move( current ) );
+        return listToken;
+    }
+
     bool StringUtil::parseExactFloats( string_view text, string_view separators, float32* pOutValue, uint32 count )
     {
         if ( pOutValue == nullptr || count == 0 )

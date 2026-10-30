@@ -133,7 +133,7 @@ namespace sw
     {
         outReply.clear();
         vector<string> listToken;
-        DevCommandRegistry::tokenize( line, listToken );
+        listToken = StringUtil::splitQuotedTokens( line );
         if ( listToken.empty() )
             return DevConsoleResult::Empty;
 
@@ -249,7 +249,7 @@ namespace sw
     {
         outListCandidate.clear();
         vector<string> listToken;
-        DevCommandRegistry::tokenize( line, listToken );
+        listToken            = StringUtil::splitQuotedTokens( line );
         const bool bNewToken = line.empty() == false && ( line.back() == ' ' || line.back() == '\t' );
         if ( bNewToken )
             listToken.emplace_back();
@@ -297,7 +297,7 @@ namespace sw
             return false;
 
         vector<string> listToken;
-        DevCommandRegistry::tokenize( inoutLine, listToken );
+        listToken            = StringUtil::splitQuotedTokens( inoutLine );
         const bool bNewToken = inoutLine.empty() == false && ( inoutLine.back() == ' ' || inoutLine.back() == '\t' );
         if ( bNewToken || listToken.empty() )
             listToken.emplace_back();

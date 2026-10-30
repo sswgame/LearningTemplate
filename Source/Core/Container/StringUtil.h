@@ -296,6 +296,11 @@ namespace sw
          *          (빈 토큰을 늘 버린다), 줄은 `forEachLine` 입니다. 빈 글은 `_bDropEmpty` 가 아니면 빈 토큰 하나입니다(파이썬 `str.split( sep )` 과 같다).
          */
         [[nodiscard]] static vector<string_view> split( string_view text, string_view separators, StringSplitOptions options = {} );
+        /**
+         * @brief 사람이 적은 명령 · 인자 줄을 낱말로 나눕니다. 공백(스페이스 · 탭 · 줄바꿈)이 가르고, 큰따옴표 사이는 공백이 있어도 한 낱말이다(따옴표는 뺀다 — `-a="x y"` 는 `-a=x y`, `""` 는 빈 낱말 하나).
+         * @details 역슬래시 이스케이프는 없고 셸이 아니다(`$` `;` `&` 는 글자 그대로). 콘솔 · 시나리오 명령 줄과 프로세스 인자 줄이 함께 쓴다 — 예전에는 둘이 따로 들었다.
+         */
+        [[nodiscard]] static vector<string> splitQuotedTokens( string_view line );
 
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
         static uint32 strlen( const utf8* pStr );

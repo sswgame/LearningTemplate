@@ -32,7 +32,7 @@ namespace sw
                     return false;
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                DevCommandRegistry::tokenize( *step.findAttribute( "line" ), listToken );
+                listToken = StringUtil::splitQuotedTokens( *step.findAttribute( "line" ) );
                 if ( listToken.empty() )
                 {
                     outError = step.describe() + ": line is empty";
@@ -55,7 +55,7 @@ namespace sw
             {
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                DevCommandRegistry::tokenize( *step.findAttribute( "line" ), listToken );
+                listToken                              = StringUtil::splitQuotedTokens( *step.findAttribute( "line" ) );
                 const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : DevCommandRegistry::get().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {

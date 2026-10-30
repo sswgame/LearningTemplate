@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
@@ -166,7 +167,7 @@ namespace sw::editor
         if ( executable.has_value() == false )
             return {}; // 빈 명령 - 띄우기가 실패로 알린다
         ProcessCommand       command           = ProcessCommand::at( *executable, { "-gv_firstScene=" + string( scenePath ) } );
-        const vector<string> listExtraArgument = ProcessCommand::splitArgumentLine( extraArguments );
+        const vector<string> listExtraArgument = StringUtil::splitQuotedTokens( extraArguments );
         command._listArgument.insert( command._listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
         return command;
     }

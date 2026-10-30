@@ -45,7 +45,7 @@ namespace sw::editor
         [[nodiscard]] static bool findLogEntryLocation( string_view message, string_view entryFile, int32 entryLine, EditorSourceLocation& outLocation );
         /**
          * @brief IDE 명령 템플릿(`code -g {file}:{line}`)을 인자로 나눈 **뒤에** 자리 표시자를 채웁니다. 템플릿이나 파일이 비어 있으면 실행 파일이 빈 명령입니다.
-         * @details 나누기를 먼저 하므로 파일 경로의 공백 · 따옴표가 인자를 늘리거나 명령을 바꾸지 못한다(`ProcessCommand::splitArgumentLine`).
+         * @details 나누기를 먼저 하므로 파일 경로의 공백 · 따옴표가 인자를 늘리거나 명령을 바꾸지 못한다(`StringUtil::splitQuotedTokens`).
          */
         static ProcessCommand makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location );
         /**

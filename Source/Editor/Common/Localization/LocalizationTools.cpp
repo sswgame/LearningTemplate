@@ -262,7 +262,7 @@ namespace sw
                 }
                 const bool                        bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
                 const std::optional<AbsolutePath> translationFile  = FileUtil::requireAbsolutePath( path );
-                if ( translationFile.has_value() == false || bHasTranslations && translation.saveToFile( *translationFile ) == false )
+                if ( bHasTranslations && ( translationFile.has_value() == false || translation.saveToFile( *translationFile ) == false ) )
                     inoutResult._report._listIssue.push_back( { path, "translation table could not be written", true } );
                 if ( bMemoryChanged && memory.saveToFile( memoryPath ) == false )
                     inoutResult._report._listIssue.push_back( { memoryPath, "translation memory could not be written", true } );

@@ -514,7 +514,7 @@ namespace sw::editor
         // 에디터에서 임포트한 것과 `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
         // 설정 파일이 없으면 기본 규칙을 쓴다. 깨졌으면 기본 규칙으로 임포트하지 않는다(결과가 말없이 바뀐다) — 로드가 오류를 남겼다.
         TextureImportConfig config{};
-        if ( config.loadFromFile( makeDefaultImportConfigPath( assetPaths ) ) == ConfigReadResult::Invalid )
+        if ( config.loadFromFile( makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
             return true;
         // 핫 리로드의 임포트 잡이 워커에서 부르므로 작업 시스템을 찾지 않는다(워커는 에디터 서비스 범위를 읽지 않는다) — 밴드 압축도 이 워커가 차례로 한다.
         const TextureRawImporter importer{ config, nullptr };
@@ -564,11 +564,8 @@ namespace sw::editor
         return HashUtil::computeStringHash64( ruleText.c_str(), ruleText.size(), false, contentHash );
     }
 
-    string TextureImporter::makeDefaultImportConfigPath( const AssetPaths& assetPaths )
+    string TextureImporter::makeDefaultImportConfigPath()
     {
-        const string projectRoot = ProcessRoots::get()._project.str();
-        if ( projectRoot.empty() )
-            return {};
-        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kTextureImportConfigFileName );
+        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfigEditor ), EditorPaths::kTextureImportConfigFileName );
     }
 } // namespace sw::editor

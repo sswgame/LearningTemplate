@@ -78,36 +78,6 @@ namespace sw
         return line;
     }
 
-    vector<string> ProcessCommand::splitArgumentLine( string_view line )
-    {
-        vector<string> listArgument;
-        string         current;
-        bool           bInQuotes = false;
-        bool           bHasToken = false; // `""` 도 빈 인자 하나다
-        for ( const utf8 character : line )
-        {
-            if ( character == '"' )
-            {
-                bInQuotes = bInQuotes == false;
-                bHasToken = true;
-                continue;
-            }
-            const bool bSeparator = bInQuotes == false && ( character == ' ' || character == '\t' || character == '\r' || character == '\n' );
-            if ( bSeparator )
-            {
-                if ( bHasToken )
-                    listArgument.push_back( std::move( current ) );
-                current.clear();
-                bHasToken = false;
-                continue;
-            }
-            current += character;
-            bHasToken = true;
-        }
-        if ( bHasToken )
-            listArgument.push_back( std::move( current ) );
-        return listArgument;
-    }
 } // namespace sw
 
 namespace sw

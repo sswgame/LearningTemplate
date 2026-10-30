@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -333,7 +334,7 @@ namespace sw::editor
         const string clientPath = settings._clientExecutablePath.empty() ? makeDefaultExecutablePath( "App" ) : settings._clientExecutablePath;
         const string port       = to_string( _port );
         // 사용자가 적은 추가 인자(백엔드 스위치)는 공백으로 나눈다 — 셸이 아니므로 그 글이 명령을 늘리지 못한다.
-        const vector<string> listUserClientArgument = ProcessCommand::splitArgumentLine( settings._clientArguments );
+        const vector<string> listUserClientArgument = StringUtil::splitQuotedTokens( settings._clientArguments );
         // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7). 포커스는 한 창만 가지므로 나머지 클라이언트가 배경 상한에 걸리지 않게 전속을 명시로 고른다
         // (`FramePacingState::FullSpeed`). 리슨 호스트는 넷 역할로 이미 전속(`Server`)이다.
         vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",

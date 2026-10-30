@@ -39,13 +39,6 @@ namespace sw
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;
-
-        /**
-         * @brief 사람이 적은 인자 줄(설정의 추가 인자 · 명령 템플릿)을 인자 목록으로 나눕니다.
-         * @details 공백이 인자를 가르고, 큰따옴표 사이는 공백이 있어도 한 인자다(따옴표 자체는 뺀다 — `-a="x y"` 는 `-a=x y`). 역슬래시 이스케이프는 없다.
-         *          셸이 아니다 — `$` `;` `&` 는 글자 그대로다. 프로그램이 만든 값은 이 함수를 거치지 말고 `_listArgument` 에 바로 넣는다.
-         */
-        [[nodiscard]] static vector<string> splitArgumentLine( string_view line );
     };
 } // namespace sw
 

@@ -127,7 +127,7 @@ namespace sw::editor
 
     ProcessCommand EditorLogCommands::makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location )
     {
-        vector<string> listToken = ProcessCommand::splitArgumentLine( commandTemplate );
+        vector<string> listToken = StringUtil::splitQuotedTokens( commandTemplate );
         if ( listToken.empty() || location._file.empty() )
             return {};
         const string line = to_string( location._line );

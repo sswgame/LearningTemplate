@@ -34,35 +34,6 @@ namespace sw
         return true;
     }
 
-    void DevCommandRegistry::tokenize( string_view line, vector<string>& outListToken )
-    {
-        outListToken.clear();
-        string current;
-        bool   bInQuote{ false };
-        bool   bHasToken{ false };
-        for ( const utf8 ch : line )
-        {
-            if ( ch == '"' )
-            {
-                bInQuote  = bInQuote == false;
-                bHasToken = true;
-                continue;
-            }
-            if ( ( ch == ' ' || ch == '\t' ) && bInQuote == false )
-            {
-                if ( bHasToken )
-                    outListToken.push_back( std::move( current ) );
-                current.clear();
-                bHasToken = false;
-                continue;
-            }
-            current += ch;
-            bHasToken = true;
-        }
-        if ( bHasToken )
-            outListToken.push_back( std::move( current ) );
-    }
-
     DevCommandRegistry::DevCommandRegistry()
         : _mutex{}
         , _registration{ "DevCommandRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }

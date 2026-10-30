@@ -116,8 +116,8 @@ namespace sw::editor
         /**
          * @brief 에디터 설정을 거치지 않은 기본 임포트 설정 경로(`<프로젝트>/Config/Editor/TextureImportConfig.json`)를 반환합니다.
          * @details 헤드리스 임포트와 테스트가 쓴다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 쓴다(`importChangedSourceImage`).
-         *          워커에서도 불려 경로 상태 @p assetPaths 는 부른 쪽이 넘긴다.
+         *          프로젝트 루트(`ProcessRoots`)는 기동 때 정한 값이라 워커에서 불러도 된다.
          */
-        static string makeDefaultImportConfigPath( const AssetPaths& assetPaths );
+        static string makeDefaultImportConfigPath();
     };
 } // namespace sw::editor

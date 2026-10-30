@@ -477,11 +477,8 @@ namespace sw::editor
         return true;
     }
 
-    string ModelImportConfig::makeDefaultConfigPath( const AssetPaths& assetPaths )
+    string ModelImportConfig::makeDefaultConfigPath()
     {
-        const string projectRoot = ProcessRoots::get()._project.str();
-        if ( projectRoot.empty() )
-            return {};
-        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );
+        return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );
     }
 } // namespace sw::editor
