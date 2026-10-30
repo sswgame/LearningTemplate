@@ -84,7 +84,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Frontier] the city cannot start - no SessionStateComponent in front of it on this object" );
+            SW_LOG_ERROR( "[Frontier] the city cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
@@ -98,7 +98,7 @@ namespace sw
         }
         if ( initializeCity( _city, *pState ) == false )
         {
-            SW_LOG_WARNING( "[Frontier] the city cannot start - the city catalog is not loaded" );
+            SW_LOG_ERROR( "[Frontier] the city cannot start - the city catalog is not loaded" );
             return false;
         }
         _bLaidOut    = SW_FALSE;

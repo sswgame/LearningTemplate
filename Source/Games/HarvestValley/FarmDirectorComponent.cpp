@@ -417,18 +417,18 @@ namespace sw
         _cropCatalog.setKnownSeasons( FarmDirectorComponentInternal::makeSeasons() );
         if ( _cropCatalog.loadFromAsset( AssetID{ _cropDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
+            SW_LOG_ERROR( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
         if ( _cropCatalog.getCrops().empty() )
         {
-            SW_LOG_WARNING( "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
+            SW_LOG_ERROR( "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
+            SW_LOG_ERROR( "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
             return false;
         }
         // 출하함과 가게는 씬에 놓인 오브젝트다(필수 참조). 에디터에서 옮기면 농부가 서는 위치가 따라온다.

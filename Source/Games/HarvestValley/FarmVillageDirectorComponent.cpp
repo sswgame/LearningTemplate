@@ -94,7 +94,7 @@ namespace sw
         const bool bNoGrid = _navWidth <= 0 || _navHeight <= 0 || _navCellSize <= 0.0f;
         if ( bNoGrid )
         {
-            SW_LOG_WARNING( "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
+            SW_LOG_ERROR( "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
             return false;
         }
         if ( _navGrid.initialize( _navWidth, _navHeight, _navCellSize, _navOrigin ) == false )
@@ -140,18 +140,18 @@ namespace sw
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr || pState->isInitialized() == false )
         {
-            SW_LOG_WARNING( "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
+            SW_LOG_ERROR( "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
             return false;
         }
         _catalog.clear();
         if ( _catalog.loadFromAsset( AssetID{ _scheduleDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR( "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( _catalog.getNPCs().empty() )
         {
-            SW_LOG_WARNING( "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR( "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( rebuildNavGrid() == false )

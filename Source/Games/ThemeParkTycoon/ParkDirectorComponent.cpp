@@ -197,12 +197,12 @@ namespace sw
         ParkLayout layout;
         if ( _layoutCatalog.loadFromAsset( AssetID{ _coasterDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
+            SW_LOG_ERROR( "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
             return false;
         }
         if ( layout.loadFromAsset( AssetID{ _parkDataPath }, _layoutCatalog ) == false )
         {
-            SW_LOG_WARNING( "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR( "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _settings._gatePosition = layout.getGatePosition();
@@ -224,7 +224,7 @@ namespace sw
         }
         if ( _listPlacement.empty() )
         {
-            SW_LOG_WARNING( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR( "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _wallet.clear();

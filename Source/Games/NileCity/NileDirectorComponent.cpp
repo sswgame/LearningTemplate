@@ -281,7 +281,7 @@ namespace sw
     {
         if ( _catalog.loadFromAsset( AssetID{ _cityDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
+            SW_LOG_ERROR( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
         if ( _clock.initialize( makeClockSettings() ) == false )

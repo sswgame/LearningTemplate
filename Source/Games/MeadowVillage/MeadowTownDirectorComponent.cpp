@@ -62,7 +62,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
+            SW_LOG_ERROR( "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
@@ -173,7 +173,7 @@ namespace sw
         const CreatureLifeCatalog* pCatalog = game::findSubsystem<CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "[Meadow] the town cannot start - the creature catalog is not loaded" );
+            SW_LOG_ERROR( "[Meadow] the town cannot start - the creature catalog is not loaded" );
             return false;
         }
         return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );

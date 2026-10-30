@@ -75,7 +75,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Frontier] the skirmish cannot start - no SessionStateComponent in front of it on this object" );
+            SW_LOG_ERROR( "[Frontier] the skirmish cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
@@ -83,7 +83,7 @@ namespace sw
             return false;
         if ( initializeWorld( _world, *pState ) == false )
         {
-            SW_LOG_WARNING( "[Frontier] the skirmish cannot start - the RTS unit catalog is not loaded" );
+            SW_LOG_ERROR( "[Frontier] the skirmish cannot start - the RTS unit catalog is not loaded" );
             return false;
         }
         // 유닛 id 는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 카탈로그에 없으면 조용히 건너뛰지 않고 판을 열지 않는다.

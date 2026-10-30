@@ -176,7 +176,7 @@ namespace sw
         const AbilityCatalog* pCatalog = game::findSubsystem<AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
-            SW_LOG_WARNING( "[Arena] the ability catalog is not loaded - the arena cannot start" );
+            SW_LOG_ERROR( "[Arena] the ability catalog is not loaded - the arena cannot start" );
             return false;
         }
         bool bSetsKnown = true;

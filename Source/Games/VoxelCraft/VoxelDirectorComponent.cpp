@@ -201,7 +201,7 @@ namespace sw
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog == nullptr || pCatalog->getBlocks().empty() )
         {
-            SW_LOG_WARNING( "[Voxel] the block catalog is not loaded - the world cannot start" );
+            SW_LOG_ERROR( "[Voxel] the block catalog is not loaded - the world cannot start" );
             return false;
         }
         bool bBlocksKnown = true;

@@ -369,7 +369,7 @@ namespace sw
     {
         if ( _catalog.loadFromAsset( AssetID{ _unitDataPath } ) == false )
         {
-            SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
+            SW_LOG_ERROR( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
         _unitModelCatalog.clear();
