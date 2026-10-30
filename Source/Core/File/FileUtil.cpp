@@ -126,14 +126,17 @@ namespace sw
              *          공유는 읽기 · 쓰기 · 지우기를 막지 않는다 - 읽는 동안에도 저장(`writeAtomically`)이 이 파일을 새 파일로 바꿔 끼울 수 있다.
              */
             template <typename BufferType>
-            [[nodiscard]] static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
+            [[nodiscard]] static OptionalFileRead readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer, bool bMissingIsError )
             {
                 const string           filePath = FileUtil::normalizeSeparators( fileName );
                 const NativeFileHandle handle   = PlatformFileUtil::openNativeFileForRead( filePath.c_str() );
                 if ( handle == kInvalidNativeFileHandle )
                 {
+                    // 열지 못한 뒤 없으면 "없음" 이다(그 사이 지워진 것도 없음이다). 있는데 못 열었으면(권한 · 잠금) 늘 오류다.
+                    if ( bMissingIsError == false && FileUtil::exists( filePath ) == false )
+                        return OptionalFileRead::Missing;
                     SW_LOG_ERROR( "File not found: %#", fileName );
-                    return false;
+                    return OptionalFileRead::Failed;
                 }
 
                 const int64 fileSize = PlatformFileUtil::getNativeFileSize( handle );
@@ -141,14 +144,14 @@ namespace sw
                 {
                     PlatformFileUtil::closeNativeFile( handle );
                     SW_LOG_ERROR( "Failed to query size of: %#", fileName );
-                    return false;
+                    return OptionalFileRead::Failed;
                 }
                 const uint64 uFileSize = static_cast<uint64>( fileSize );
                 if ( offset > uFileSize )
                 {
                     PlatformFileUtil::closeNativeFile( handle );
                     SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
-                    return false;
+                    return OptionalFileRead::Failed;
                 }
 
                 const uint64 dataSize = MathUtil::min( uFileSize - offset, maxReadCount );
@@ -162,9 +165,24 @@ namespace sw
                 {
                     outBuffer.clear();
                     SW_LOG_ERROR( "Short read (%# of %# bytes) from: %#", readBytes, dataSize, fileName );
-                    return false;
+                    return OptionalFileRead::Failed;
                 }
-                return true;
+                return OptionalFileRead::Read;
+            }
+
+            /** @brief `readTextFile` · `readOptionalTextFile` 의 본체입니다 - 읽고, 연 횟수를 세고, UTF-8 BOM 을 뗀다. @p bMissingIsError 만 다르다. */
+            [[nodiscard]] static OptionalFileRead readText( string_view fileName, string& outText, bool bMissingIsError )
+            {
+                const OptionalFileRead result = readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText, bMissingIsError );
+                if ( result != OptionalFileRead::Read )
+                    return result;
+                PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+
+                // BOM 판정의 기준은 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와 질의 경로가 서로 다른 답을 준다.
+                const string_view withoutBom = FileUtil::skipUTF8Bom( outText );
+                if ( withoutBom.size() != outText.size() )
+                    outText.erase( 0, outText.size() - withoutBom.size() );
+                return OptionalFileRead::Read;
             }
         };
     } // namespace
@@ -570,7 +588,7 @@ namespace sw
 
     bool FileUtil::readFile( string_view fileName, vector<uint8>& outBytes, const uint64 offset, const uint64 maxReadCount )
     {
-        if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes ) == false )
+        if ( FileUtilInternal::readRange( fileName, offset, maxReadCount, outBytes, true ) != OptionalFileRead::Read )
             return false;
         PlatformFileUtil::noteFileOpenedForRead( fileName, outBytes.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
         return true;
@@ -612,17 +630,12 @@ namespace sw
 
     bool FileUtil::readTextFile( string_view fileName, string& outText )
     {
-        if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
-            return false;
-        PlatformFileUtil::noteFileOpenedForRead( fileName, outText.size() ); // 디스크 흉내 지연은 위치 지정 읽기가 이미 냈다
+        return FileUtilInternal::readText( fileName, outText, true ) == OptionalFileRead::Read;
+    }
 
-        // BOM 판정의 기준은 아래 skipUTF8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
-        // 질의 경로가 서로 다른 답을 준다.
-        const string_view withoutBom = skipUTF8Bom( outText );
-        if ( withoutBom.size() != outText.size() )
-            outText.erase( 0, outText.size() - withoutBom.size() );
-
-        return true;
+    OptionalFileRead FileUtil::readOptionalTextFile( string_view fileName, string& outText )
+    {
+        return FileUtilInternal::readText( fileName, outText, false );
     }
 
     bool FileUtil::writeCrashFile( const utf8* pPath, const void* pData, size_t size )

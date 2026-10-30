@@ -79,3 +79,13 @@ SW_TEST_CASE( FileSystemTest, RelativePathIsTextual )
     SW_EXPECT_EQUAL( string( "." ), relative );
     SW_EXPECT_FALSE( FileUtil::makeRelativePath( root, "x/y.txt", relative ) ); // 상대 경로는 받지 않는다
 }
+
+SW_TEST_CASE( FileSystemTest, OptionalReadTellsMissingFromFailed )
+{
+    const string file = test::makeScratchPath( "record.txt" );
+    string       text;
+    SW_EXPECT_TRUE( FileUtil::readOptionalTextFile( file, text ) == OptionalFileRead::Missing ); // 로그 없음 - 오류 로그가 나면 케이스가 진다
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( file, "abc" ) );
+    SW_REQUIRE_TRUE( FileUtil::readOptionalTextFile( file, text ) == OptionalFileRead::Read );
+    SW_EXPECT_EQUAL( string( "abc" ), text );
+}

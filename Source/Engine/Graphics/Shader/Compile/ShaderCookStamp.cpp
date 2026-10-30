@@ -812,7 +812,8 @@ namespace sw
     {
         outListIncludedFile.clear();
         string text;
-        if ( FileUtil::readTextFile( recordPath, text ) == false || StringUtil::startsWith( text, ShaderCookStampInternal::kIncludeRecordHeader ) == false )
+        // 기록이 없는 것은 정상 상태다 - 쓰는 쪽은 바이트코드를 쓰기 전에 옛 기록을 지우고 다 쓴 뒤 새 기록을 둔다. 그 사이에 읽으면 "없음" 으로 다시 컴파일한다.
+        if ( FileUtil::readOptionalTextFile( recordPath, text ) != OptionalFileRead::Read || StringUtil::startsWith( text, ShaderCookStampInternal::kIncludeRecordHeader ) == false )
             return false;
 
         vector<string> listHeader;

@@ -43,6 +43,14 @@ namespace sw
         bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준)
     };
 
+    /** @brief `FileUtil::readOptionalTextFile` 의 결과입니다. */
+    enum class OptionalFileRead : uint8
+    {
+        Read,    ///< 읽었다
+        Missing, ///< 파일이 없다(로그 없음)
+        Failed,  ///< 있는데 읽지 못했다(로그를 남겼다)
+    };
+
     /** @brief 디렉터리 순회 콜백입니다. false 를 돌려주면 순회를 멈춥니다. */
     using DirectoryEntryVisitFn = bool ( * )( void* pContext, const DirectoryEntry& entry );
 } // namespace sw
@@ -264,8 +272,13 @@ namespace sw
          * @details 측정한 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
          */
         [[nodiscard]] static bool readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
-        /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. */
+        /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. 없는 파일은 오류 로그를 남긴다 - 없을 수 있는 파일은 `readOptionalTextFile`. */
         [[nodiscard]] static bool readTextFile( string_view fileName, string& outText );
+        /**
+         * @brief 없을 수 있는 파일(캐시 옆 기록 · 지난 실행의 산출물)을 UTF-8 텍스트로 읽습니다. 없으면 `Missing` 이고 로그를 남기지 않습니다. 있는데 못 읽으면 `Failed`(로그)입니다.
+         * @details "있는지 묻고 읽기" 는 둘 사이에 지워지면(다시 쓰기 전에 지우는 캐시) 오류 로그가 난다 - 읽기 한 번이 답한다(R7 확인과 실행은 같은 해석).
+         */
+        [[nodiscard]] static OptionalFileRead readOptionalTextFile( string_view fileName, string& outText );
         /**
          * @brief 크기를 알리지 않는 파일(리눅스 `/proc` · `/sys` 의 의사 파일)을 끝까지 읽습니다. @p maxBytes 를 넘으면 false 입니다.
          * @details `readTextFile` 은 먼저 잰 크기만큼 읽으므로 크기를 0 으로 알리는 의사 파일은 빈 글이 됩니다. 의사 파일은 이것으로 읽고 `fopen` 을 직접 부르지 않습니다.
