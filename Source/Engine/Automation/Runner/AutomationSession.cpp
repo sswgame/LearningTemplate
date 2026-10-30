@@ -433,11 +433,9 @@ namespace sw
         if ( _pChain->isChain() )
         {
             const string line = _pChain->describeStageEnd( stageIndex, result, stageName );
-            // 건너뜀(이 빌드에 없는 모듈 · 장치)은 실패가 아니다 - 오류로 남기면 실패 로그를 훑는 쪽이 진짜 실패와 섞어 본다.
-            if ( result == AutomationOutcome::Passed )
+            // 건너뜀은 실패가 아니다 - 까닭과 등급(빌드 구성이면 Info, 환경 탓이면 Warning)은 실행기의 SKIP 줄이 이미 남겼다.
+            if ( result == AutomationOutcome::Passed || result == AutomationOutcome::Skipped )
                 SW_LOG_INFO( "[Scenario] %#", line.c_str() );
-            else if ( result == AutomationOutcome::Skipped )
-                SW_LOG_WARNING( "[Scenario] %#", line.c_str() );
             else
                 SW_LOG_ERROR( "[Scenario] %#", line.c_str() );
         }

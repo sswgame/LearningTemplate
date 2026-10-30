@@ -229,15 +229,16 @@ namespace sw
         AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         string                   _outputDirectory;
         string                   _finishReason;
-        string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
-        AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
-        AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
-        AutomationHangWatchdog   _hangWatchdog;           ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
-        GameObjectManager*       _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        InputManager*            _pInputManager;          ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
-        int64                    _startedUnixMs;          ///< 시작 시각의 유닉스 밀리초(보고용)
-        string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
-        TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
+        bool                     _bSkippedByBuild{ false }; ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
+        string                   _startedAt;                ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
+        AutomationReproduceInput _reproduceInput;           ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
+        AutomationHangPayload    _hangPayload;              ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
+        AutomationHangWatchdog   _hangWatchdog;             ///< 프레임이 멈춘 행을 잡는 감시 스레드(`armHangWatchdog` 로 켠 실행만)
+        GameObjectManager*       _pObjectManagerOverride;   ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        InputManager*            _pInputManager;            ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
+        int64                    _startedUnixMs;            ///< 시작 시각의 유닉스 밀리초(보고용)
+        string                   _startScenePath;           ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
+        TaskFuture<Scene*>       _startSceneLoad;           ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;
         uint8                    _bStarted        : 1;
         uint8                    _bEnded          : 1;

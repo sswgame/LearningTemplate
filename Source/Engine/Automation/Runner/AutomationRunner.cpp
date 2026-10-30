@@ -245,12 +245,14 @@ namespace sw
         {
             if ( pModuleLoader != nullptr && pModuleLoader->isModuleActive( moduleName ) )
                 continue;
+            _bSkippedByBuild = true;
             finish( AutomationOutcome::Skipped, "requiresModule: " + moduleName + " is not loaded in this build" );
             return true;
         }
         const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
         if ( pMissingStep == nullptr )
             return false;
+        _bSkippedByBuild = true;
         finish( AutomationOutcome::Skipped, pMissingStep->describe() + ": dev commands are compiled out of this build" );
         return true;
     }
@@ -790,6 +792,11 @@ namespace sw
         if ( _result == AutomationOutcome::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _run._frameIndex );
+        }
+        else if ( _result == AutomationOutcome::Skipped && _bSkippedByBuild )
+        {
+            // 시나리오가 선언한 조건(이 빌드에 없는 모듈 · 빠진 개발 명령)이다 - 결함이 아니라 빌드 구성이다(언리얼 자동화의 조건부 제외와 같다).
+            SW_LOG_INFO( "[Scenario] SKIP %#: %#", _scenario.getName().c_str(), _finishReason.c_str() );
         }
         else if ( _result == AutomationOutcome::Skipped )
         {
