@@ -43,6 +43,9 @@
 - 리소스 참조 형식: 장면 데이터의 `string _…Path` 속성 약 60 개를 리소스 참조 형식으로(`FileUtil` 이 받을 수 없게). `IntentTrackControllerComponent::_trackFile` 은 지금 `FileUtil` 로 작업 폴더 기준 읽기(런타임 결함).
 - 캐시: `AudioClipCache` 를 `IAssetCache` + `AssetLoadBlock` 으로(지금은 `finishPendingAssetWork` 가 오디오 디코드를 기다리지 않는다, 리로드도 DevTools 별도 길). `TextureCache` 의 `rendertarget/` · `cpu/` 는 가상 도메인, 선언하지 않은 렌더 타깃은 256×256 으로 만들지 않고 오류. `AssetDatabase::toRelativePath` 는 `toAssetID` 로 합친다.
 
+- **결정(2026-10-31)**: `TextureCache` 의 렌더 타깃 기본 크기(256)는 그대로 둔다 — 카메라가 나중에 크기를 알리면 `resizeRenderTarget` 이 다시 만들어 맞추므로 폴백이 아니라 자리 표시 값이다(언리얼 렌더 타깃 에셋의 기본 크기와 같다). 씬 데이터의 `string _…Path` 칸(컴포넌트 44 개)을 참조 형식으로 바꾸는 일은 하지 않는다 — 그 값이 디스크 입구(`FileUtil`)로 가는 곳은 0 이고(조사), 7 단계부터 상대 경로가 OS 경계에 닿으면 오류라 남은 위험도 드러난다. 리플렉션 · 세 직렬화기 · 에디터 위젯을 바꾸는 비용에 견줘 얻는 것이 작다(새 결함이 이 모양으로 나오면 그때 형식으로).
+- `AudioClipCache` 의 디코드는 에셋 로드 단계(`AssetManager::addLoadTask`)에 넣는다(끝, 2026-10-31) — 프레임 경계 대기가 오디오도 기다린다.
+
 ### T3. 읽기 · 쓰기 분리 (R4 · R7)
 - 엔진 저장 입구: 모든 `save*` 는 `save*(AbsolutePath)`. 지금 같은 이름 `saveToFile(string_view)` 가 형식마다 리소스 id(Material · MaterialInstance · Prefab · TileMap · `getWritePath` 경유)이거나 디스크 경로(Skeleton · AnimationClip · AnimationGraph · Heightfield · Sequence · Dialogue · Fracture · NavMesh — 상대 경로면 작업 폴더에 쓴다)다. `InputMap.h:356` 은 "id 또는 절대".
 - 원본 위치 칸: `Scene::_sourcePath` · `SceneDocument` · `TileMapXMLData` 의 원본 경로는 지금 불러오면 id, 다른 이름 저장 뒤엔 절대 경로다 → `ResourcePath`. 다른 이름 저장 경계에서 절대 → 리소스 경로, 마운트 밖이면 거절. `SceneObjectReference` 비교가 이 칸에 기댄다.

@@ -173,6 +173,8 @@ namespace sw
         [[nodiscard]] static bool isFinishingAssetWorkEachFrame();
         /** @brief 워커에서 도는 에셋 로드 태스크를 로드 단계에 넣습니다. **제출 전에** 부른다(`AssetLoadBlock::startLoad`) — 프레임 경계의 대기가 놓치지 않는다. */
         void addLoadTask( const TaskHandle& task );
+        /** @brief 로드 단계의 태스크만 끝날 때까지 기다립니다(@p pOwner 는 오래 걸릴 때의 로그 이름). 로드 태스크를 낸 캐시가 지워지기 전에 부른다. */
+        void waitLoadTasks( const utf8* pOwner );
         /**
          * @brief 걸린 에셋 일 — 로드 태스크 · 스트리밍 큐 태스크 · 비동기 IO — 이 한꺼번에 빌 때까지 기다립니다(게임 스레드, 프레임 경계, 결정적 실행만).
          * @details 셋은 서로를 낳는다(로드가 다른 로드를, IO 완료가 해제 태스크를) — 그래서 셋이 함께 빌 때까지 되풀이한다. 기한은 없다(오래 걸리면

@@ -60,6 +60,17 @@ namespace sw
         engine::getSubsystem<TaskManager>().addToStage( _loadStage, task, "AssetLoad" );
     }
 
+    void AssetManager::waitLoadTasks( const utf8* pOwner )
+    {
+        TaskStageHandle loadStage;
+        {
+            ScopedLock<mutex> lock{ _loadStageMutex };
+            loadStage = _loadStage;
+        }
+        if ( loadStage.isValid() )
+            engine::getSubsystem<TaskManager>().waitStage( loadStage, pOwner );
+    }
+
     void AssetManager::finishPendingAssetWork()
     {
         constexpr string_view kOwner      = "AssetManager::finishPendingAssetWork";

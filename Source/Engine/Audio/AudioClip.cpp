@@ -7,6 +7,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
@@ -151,32 +152,28 @@ namespace sw
         , _pFallbackDecoder{ nullptr }
         , _streamMinSeconds{ kDefaultStreamMinSeconds }
         , _mutex{}
-        , _decodeStage{}
+        , _bSubmittedDecode{ false }
     {
     }
 
     AudioClipCache::~AudioClipCache()
     {
-        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 낸 태스크의 핸들만 기다린다(엔진 전체 대기는 남의 영구 태스크까지 기다린다).
-        // 태스크는 엔진 서비스가 묶여 있을 때만 띄우므로, 묶여 있지 않으면 끝낼 일꾼이 없다.
-        TaskStageHandle decodeStage;
+        // 띄운 디코드 태스크가 끝나기 전에 지워지면 태스크가 해제된 맵 · 뮤텍스에 쓴다. 디코드는 에셋 로드 단계에 들어 있으므로(프레임 경계 대기 `finishPendingAssetWork` 도 본다)
+        // 그 단계를 기다린다. 태스크는 엔진 서비스가 묶여 있을 때만 띄우므로, 묶여 있지 않으면 띄운 적이 없다.
+        bool bSubmittedDecode = false;
         {
             ScopedLock<mutex> lock{ _mutex };
-            decodeStage = _decodeStage;
+            bSubmittedDecode = _bSubmittedDecode;
         }
-        if ( decodeStage.isValid() == false )
-            return; // 띄운 적이 없다
-        if ( engine::areEngineServicesBound() == false )
+        if ( bSubmittedDecode == false )
+            return;
+        AssetManager* const pAssetManager = engine::findSubsystem<AssetManager>();
+        if ( pAssetManager == nullptr )
         {
-            SW_LOG_ERROR( "AudioClipCache destroyed with its decode stage alive and no task manager to wait on" );
+            SW_LOG_ERROR( "AudioClipCache destroyed after the asset manager - its decode tasks cannot be waited on" );
             return;
         }
-        TaskManager& taskManager  = engine::getSubsystem<TaskManager>();
-        const uint32 pendingCount = taskManager.getStagePendingCount( decodeStage );
-        if ( pendingCount == 0 )
-            return;
-        // 낸 태스크는 반드시 끝나므로 끝날 때까지 기다린다(오래 걸리면 남은 태스크를 주기적으로 오류로 남긴다). 태스크가 이 캐시를 건드린 채 캐시를 지울 수는 없다.
-        taskManager.waitStage( decodeStage, "AudioClipCache::~AudioClipCache" );
+        pAssetManager->waitLoadTasks( "AudioClipCache::~AudioClipCache" );
     }
 
     shared_ptr<const AudioClipData> AudioClipCache::findClip( const hashed_string& path ) const
@@ -236,9 +233,12 @@ namespace sw
         }
         TaskManager& taskManager = engine::getSubsystem<TaskManager>();
         TaskHandle   handle      = taskManager.emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ), MakeTaskArgs( string( path.view() ) ) );
+        // 에셋 로드 단계에 넣는다(제출 전) — 프레임 경계의 에셋 대기(`finishPendingAssetWork`)가 오디오 디코드도 기다리고, 소멸자도 같은 단계를 기다린다.
+        // 예전에는 자기 단계를 따로 써서 결정적 실행에서 소리 도착이 디스크 · 워커 속도에 달렸다.
+        engine::getSubsystem<AssetManager>().addLoadTask( handle );
         {
             ScopedLock<mutex> lock{ _mutex };
-            taskManager.addToStage( _decodeStage, handle, "AudioClipDecode" ); // 제출 전에 넣는다 — 소멸자가 제출된 태스크를 놓치지 않는다
+            _bSubmittedDecode = true;
         }
         handle.submit();
     }

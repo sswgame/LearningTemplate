@@ -165,6 +165,6 @@ namespace sw
         AudioFallbackDecodeFunction                                                  _pFallbackDecoder;       /**< 대체 디코더입니다(없으면 nullptr). */
         float32                                                                      _streamMinSeconds;       /**< 이보다 긴 소리는 스트리밍합니다. */
         mutable mutex                                                                _mutex;                  /**< `_mapPathToEntry` 를 지킵니다. */
-        TaskStageHandle _decodeStage                                                 SW_GUARDED_BY( _mutex ); /**< 띄운 워커 디코드 태스크의 스테이지입니다(처음 띄울 때 만든다 — 소멸자가 이것만 기다린다). */
+        bool _bSubmittedDecode                                                       SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
     };
 } // namespace sw
