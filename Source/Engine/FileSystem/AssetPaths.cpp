@@ -651,7 +651,7 @@ namespace sw
     std::optional<DomainAssetID> AssetPaths::toWriteID( string_view pathOrID ) const
     {
         // 절대 경로 · `Content/…` 는 리소스 id 로 바꾼다(붙인 디스크 도메인 아래면 그 도메인 id). 트리 밖이거나 `..` 로 올라가면 비어 있다.
-        const string id = toAssetID( pathOrID );
+        const string id = toAssetIDFromPathOrID( pathOrID );
         if ( id.empty() )
         {
             SW_LOG_ERROR_ID( "AssetPaths.WriteOutsideTree", "'%#' is outside the resource tree and mounted disk domains - nothing is written there", pathOrID );
@@ -682,32 +682,31 @@ namespace sw
         return writeID.has_value() ? resolveWritePath( *writeID ) : string{};
     }
 
-    string AssetPaths::toAssetID( string_view path ) const
+    string AssetPaths::toAssetID( string_view diskPath ) const
     {
-        string id;
-        if ( path.empty() )
-            return id;
-        string relative = FileUtil::normalizeSeparators( path );
+        string absolutePath;
+        if ( diskPath.empty() || FileUtil::makeAbsolutePath( diskPath, absolutePath ) == false )
+            return {};
+        absolutePath = FileUtil::normalizeSeparators( absolutePath );
         string domainID;
-        if ( FileUtil::isAbsolutePath( relative ) && AssetPathsInternal::findDiskDomainID( *_pState, relative, domainID ) )
-        {
-            // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
-            relative = std::move( domainID );
-        }
-        else if ( FileUtil::isAbsolutePath( relative ) )
-        {
-            const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
-            string       underRoot;
-            if ( root.empty() || FileUtil::makeRelativePath( root, relative, underRoot ) == false )
-                return id;
-            relative = std::move( underRoot );
-        }
-        else if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kContentFolder ) ) )
-        {
-            relative = FileUtil::suffixAfterPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kContentFolder ) );
-        }
+        // 붙인 디스크 도메인(시나리오의 `Saved/` 등) 아래면 그 도메인의 id 다 — 리소스 입구는 OS 경로를 받지 않는다.
+        if ( AssetPathsInternal::findDiskDomainID( *_pState, absolutePath, domainID ) )
+            return normalizeAssetID( domainID );
+        const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
+        string       underRoot;
+        if ( root.empty() || FileUtil::makeRelativePath( root, absolutePath, underRoot ) == false )
+            return {};
+        return normalizeAssetID( underRoot );
+    }
 
-        id = FileUtil::normalizePath( relative );
+    string AssetPaths::toAssetIDFromPathOrID( string_view pathOrID ) const
+    {
+        return FileUtil::isAbsolutePath( pathOrID ) ? toAssetID( pathOrID ) : normalizeAssetID( pathOrID );
+    }
+
+    string AssetPaths::normalizeAssetID( string_view text )
+    {
+        string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) );
         while ( StringUtil::startsWith( id, "./" ) )
         {
             id.erase( 0, 2 );

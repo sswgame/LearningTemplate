@@ -90,8 +90,8 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::loadScene( string_view path )
     {
-        // 리소스 id 로 연다. 절대 경로, 프로젝트 기준 경로, id 모두 받는다(붙인 디스크 도메인 아래면 그 도메인의 id). 그 밖의 OS 경로는 열 수 없다.
-        const string loadPath = editor::getSubsystem<AssetPaths>().toAssetID( path );
+        // 리소스 id 로 연다. 절대 경로와 id 를 받는다(붙인 디스크 도메인 아래면 그 도메인의 id). 그 밖의 OS 경로는 열 수 없다.
+        const string loadPath = editor::getSubsystem<AssetPaths>().toAssetIDFromPathOrID( path );
         if ( loadPath.empty() )
         {
             SW_LOG_ERROR( "Open Scene: '%#' is outside the content root and every mounted disk domain", path );

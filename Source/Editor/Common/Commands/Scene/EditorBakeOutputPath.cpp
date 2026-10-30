@@ -24,7 +24,7 @@ namespace sw::editor
     string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension )
     {
         const string& sourcePath = scene.getSourcePath();
-        string        assetID    = editor::getSubsystem<AssetPaths>().toAssetID( sourcePath );
+        string        assetID    = editor::getSubsystem<AssetPaths>().toAssetIDFromPathOrID( sourcePath ); // 불러온 씬은 id, 저장한 씬은 디스크 경로
         if ( assetID.empty() )
             assetID = sourcePath;
         if ( assetID.empty() )

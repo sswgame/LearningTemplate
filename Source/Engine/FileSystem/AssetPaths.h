@@ -120,13 +120,24 @@ namespace sw
         string getWritePath( string_view pathOrID ) const;
 
         /**
-         * @brief 편집기와 도구가 가진 경로를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
-         * @param path 절대 경로, 프로젝트 기준 경로(`Content/…`), 이미 리소스 id 인 경로 중 무엇이든 받습니다.
-         * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래의 절대 경로면 `<도메인>/…` 입니다. 리소스 루트 밖이거나 `..` 로 올라가면 빈 문자열입니다.
-         * @details 편집기는 변환을 곳곳에서 따로 하지 않고 이 함수를 쓴다. 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 적용하면
-         *          경로가 깨진다(텍스처를 끌어다 놓은 스프라이트가 흰 사각형이 된다).
+         * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
+         * @param diskPath OS 경로입니다. 상대 경로는 작업 폴더 기준이다(`FileUtil` 과 같은 뜻 — 리소스 id 로 읽지 않는다).
+         * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
+         * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
+         *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID`, 둘 다 받는 입구는
+         *          `toAssetIDFromPathOrID` 다(언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
          */
-        string toAssetID( string_view path ) const;
+        string toAssetID( string_view diskPath ) const;
+        /**
+         * @brief 리소스 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
+         * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가면 빈 문자열입니다.
+         */
+        static string normalizeAssetID( string_view id );
+        /**
+         * @brief 디스크 경로와 리소스 id 를 모두 받는 입구(편집기 명령 인자 · 끌어 놓은 에셋 · 씬 원본 경로) 전용입니다. 절대 경로면 `toAssetID`, 아니면 `normalizeAssetID` 입니다.
+         * @details 상대 글은 늘 리소스 id 다 — 작업 폴더 기준 디스크 경로를 넘기려면 절대 경로로 만들어 넘긴다(`FileUtil::getSavedFolderPath`).
+         */
+        string toAssetIDFromPathOrID( string_view pathOrID ) const;
 
         /**
          * @brief 이 객체를 쓰는 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 묶음

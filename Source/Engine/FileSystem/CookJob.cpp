@@ -26,10 +26,10 @@ namespace sw
             inline static thread_local CookJob* _t_pCurrent{ nullptr };
             inline static atomic<int32>         _s_sessionCount{ 0 };
 
-            /** @brief 리소스 읽기 입력의 id 입니다(`toAssetID` 로 맞춘다 — 루트 밖으로 나가는 id 는 받은 글 그대로). */
+            /** @brief 리소스 읽기 입력의 id 입니다(`normalizeAssetID` 로 맞춘다 — 루트 밖으로 나가는 id 는 받은 글 그대로). */
             static string makeInputID( const AssetID& id )
             {
-                string inputID = engine::getSubsystem<AssetPaths>().toAssetID( id.view() );
+                string inputID = AssetPaths::normalizeAssetID( id.view() );
                 return inputID.empty() ? FileUtil::normalizeSeparators( id.view() ) : inputID;
             }
 
