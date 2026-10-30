@@ -4,6 +4,7 @@
 
 #if !defined( SW_SHIPPING )
     #include "Core/File/FileUtil.h"
+    #include "Core/Path/AbsolutePath.h"
     #include "Core/Module/ModuleLibraryUtil.h"
 
     #include "Engine/Foundation/EngineServices.h"
@@ -33,8 +34,9 @@ namespace sw
             template <typename TEntryFn, typename TCall>
             [[nodiscard]] static bool callEditorModuleEntry( const ModuleAPISymbols& symbols, const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
             {
-                const string modulePath     = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-                void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadDynamicLibrary( modulePath ) : nullptr;
+                const string                      modulePath     = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+                const std::optional<AbsolutePath> libraryPath    = AbsolutePath::tryMake( modulePath );
+                void* const                       pLibraryModule = libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
                 if ( pLibraryModule == nullptr )
                 {
                     SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );

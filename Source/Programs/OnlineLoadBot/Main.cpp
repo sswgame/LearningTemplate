@@ -18,6 +18,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
@@ -106,7 +107,8 @@ namespace sw
                     return true;
                 for ( const utf8* pModule : kArrServerKitModule )
                 {
-                    if ( ModuleLibraryUtil::loadDynamicLibrary( ModuleLibraryUtil::findModuleLibraryPath( pModule ) ) == nullptr )
+                    const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( ModuleLibraryUtil::findModuleLibraryPath( pModule ) );
+                    if ( libraryPath.has_value() == false || ModuleLibraryUtil::loadLibraryAt( *libraryPath ) == nullptr )
                     {
                         SW_LOG_ERROR( "OnlineLoadBot: cannot load the server kit module %#", pModule );
                         return false;

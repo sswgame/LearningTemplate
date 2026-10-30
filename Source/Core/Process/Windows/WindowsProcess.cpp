@@ -19,6 +19,14 @@ namespace sw
     {
         struct WindowsProcessInternal
         {
+            /** @brief 절대 경로 실행 파일을 `CreateProcessW` 의 응용 프로그램 이름(UTF-16, 구분자 `\`)으로 바꿉니다. */
+            static wstring toApplicationName( const string& executable )
+            {
+                string nativePath{ executable };
+                StringUtil::replaceChar( nativePath, '/', '\\' );
+                return StringUtil::utf8ToUTF16( nativePath.c_str() );
+            }
+
             /**
              * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 분리하고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
              * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 부릅니다.
@@ -297,8 +305,10 @@ namespace sw
                                     ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 ) | ( listEnvironmentBlock.empty() ? 0 : CREATE_UNICODE_ENVIRONMENT );
 
         PROCESS_INFORMATION pi{};
-        const BOOL          bCreated = CreateProcessW(
-            nullptr,
+        // 경로 명령은 실행 파일을 따로 넘겨 검색을 끈다(명령줄만 주면 작업 폴더 · PATH 까지 뒤진다). 이름 명령만 검색한다.
+        const wstring wsApplication = command._bSearchPath ? wstring{} : WindowsProcessInternal::toApplicationName( command._executable );
+        const BOOL    bCreated      = CreateProcessW(
+            command._bSearchPath ? nullptr : wsApplication.c_str(),
             wsCmdLine.data(),
             nullptr,
             nullptr,
@@ -349,8 +359,9 @@ namespace sw
 
         // 핸들을 하나도 물려주지 않는다(bInheritHandles = FALSE) — 띄운 프로그램이 이 프로세스의 파이프 · 파일을 붙들지 않는다.
         PROCESS_INFORMATION pi{};
-        const BOOL          bCreated = CreateProcessW( nullptr, wsCmdLine.data(), nullptr, nullptr, FALSE, options._bCreateWindow ? 0 : CREATE_NO_WINDOW,
-                                                       nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
+        const wstring       wsApplication = command._bSearchPath ? wstring{} : WindowsProcessInternal::toApplicationName( command._executable );
+        const BOOL          bCreated      = CreateProcessW( command._bSearchPath ? nullptr : wsApplication.c_str(), wsCmdLine.data(), nullptr, nullptr, FALSE, options._bCreateWindow ? 0 : CREATE_NO_WINDOW,
+                                              nullptr, options._workingDirectory.empty() ? nullptr : wsDirectory.c_str(), &startupInfo, &pi );
         if ( bCreated == FALSE )
         {
             SW_LOG_ERROR( "Failed to launch detached command: %#", cmdStr.c_str() );

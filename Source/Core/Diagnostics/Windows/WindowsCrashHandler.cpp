@@ -7,6 +7,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 
@@ -392,9 +393,9 @@ namespace sw
         ThreadCrashStack::initializeCurrentThread();
 
         // 덤프 구현을 지금 로드한다(s_pfnMiniDumpWriteDump 설명). dbgcore 가 없는 옛 Windows 는 dbghelp 의 것을 쓴다.
-        s_hDumpModule = LoadLibraryW( L"dbgcore.dll" );
+        s_hDumpModule = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "dbgcore.dll" ) );
         if ( s_hDumpModule != nullptr )
-            s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( GetProcAddress( s_hDumpModule, "MiniDumpWriteDump" ) );
+            s_pfnMiniDumpWriteDump = reinterpret_cast<PfnMiniDumpWriteDump>( ModuleLibraryUtil::getDynamicSymbol( s_hDumpModule, "MiniDumpWriteDump" ) );
 
         // 보고 스레드는 **크래시 전에** 시작해 둔다. 크래시 순간에 스레드를 만들면 로더 락과 힙을 그 자리에서 쓰게 된다.
         s_bStopReportThread.store( false );

@@ -9,6 +9,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -19,20 +20,22 @@ namespace sw
      *          인용한 줄을 `CreateProcessW` 에 줍니다. 그래서 인자 안의 공백 · 따옴표 · 역슬래시 · `;` `&` `$` 는 그 인자의 글자일 뿐입니다.
      *          예전에는 부르는 쪽이 따옴표를 손으로 붙였고(이스케이프가 빠진 자리가 여럿이었다), POSIX 는 그 글을 `sh -c` 에 넘겼다.
      *          셸 문법(파이프 · 리디렉션 · `&&`)이 필요하면 셸을 실행 파일로 적는다(`/bin/sh` + `-c`, `cmd.exe` + `/c`) — 그때 셸 문법은 부르는 쪽 몫이다.
-     *          `_executable` 은 경로이거나 PATH 에서 찾을 이름(`cmake` · `git`)이다. Core 라 Engine 의 `DataPath` 를 쓸 수 없고, PATH 이름은 경로가 아니다.
+     *          실행 파일은 **만드는 함수가 종류를 정한다** - 절대 경로(`at`)이거나 검색 경로에서 찾을 이름(`fromSearchPath` - `cmake` · `git`)이다.
+     *          예전에는 글에 `/` 가 있는지로 경로인지 이름인지 추측했고(POSIX), Windows 는 `CreateProcessW` 가 작업 폴더까지 뒤졌다 - 상대 경로가 작업 폴더에 따라 달리 풀렸다.
      */
     struct SW_API ProcessCommand
     {
+        /** @brief 빈 명령입니다(띄우면 실패한다). */
         ProcessCommand() = default;
-        /** @brief 인자 목록을 반드시 함께 받는다 — 글 하나에서 바뀌는 생성자를 두지 않아 `launch( "a b c" )` 가 컴파일되지 않게. */
-        ProcessCommand( string executable, vector<string> listArgument )
-            : _executable{ std::move( executable ) }
-            , _listArgument{ std::move( listArgument ) }
-        {
-        }
+
+        /** @brief 절대 경로 @p executable 을 그대로 띄우는 명령입니다(검색하지 않는다). 인자 목록을 반드시 함께 받는다 - `launch( "a b c" )` 가 컴파일되지 않게. */
+        [[nodiscard]] static ProcessCommand at( const AbsolutePath& executable, vector<string> listArgument );
+        /** @brief 이름 @p executableName(`git` · `py`)을 검색 경로(PATH)에서 찾아 띄우는 명령입니다. 이름에 구분자가 있으면 띄울 때 실패한다(경로는 `at`). */
+        [[nodiscard]] static ProcessCommand fromSearchPath( string_view executableName, vector<string> listArgument );
 
         string         _executable{};
         vector<string> _listArgument{};
+        bool           _bSearchPath{ false }; ///< true 면 `_executable` 은 검색 경로에서 찾을 이름, false 면 절대 경로다
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;

@@ -4,14 +4,12 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Process/ProcessEnvironment.h"
 
 #include <renderdoc_app.h>
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Foundation/PlatformOSHeaders.h"
-#elif defined( SW_PLATFORM_LINUX )
-    #include <dlfcn.h>
-#endif
 
 namespace sw
 {
@@ -27,35 +25,31 @@ namespace sw
             inline static RENDERDOC_API_1_6_0* _s_pAPI = nullptr;
             inline static atomic<bool>         _s_bTried{ false };
 
+            /** @brief 설치된 RenderDoc 라이브러리를 로드합니다. Windows 는 설치 폴더(`%ProgramFiles%/RenderDoc`), Linux 는 동적 링커 검색 경로입니다. 없으면 nullptr 입니다. */
+            static void* loadInstalledLibrary( const string& libraryName )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                string programFiles;
+                if ( ProcessEnvironment::tryReadNonEmpty( "ProgramFiles", programFiles ) == false )
+                    return nullptr;
+                const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::joinPath( programFiles, "RenderDoc" ), libraryName ) );
+                if ( libraryPath.has_value() == false || FileUtil::isRegularFile( libraryPath->str() ) == false )
+                    return nullptr; // 설치하지 않았다 - 로드 실패 경고를 내지 않는다
+                return ModuleLibraryUtil::loadLibraryAt( *libraryPath );
+#else
+                return ModuleLibraryUtil::loadSystemLibrary( libraryName );
+#endif
+            }
+
             /** @brief 이미 로드된(또는 @p bLoadIfMissing 이면 설치 경로에서 로드한) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr 입니다. */
             static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
-#if defined( SW_PLATFORM_WINDOWS )
-                // 주입된 RenderDoc 은 참조 없이 빌리지 않는다 — 고정(PIN)해 API 포인터(`_s_pAPI`)가 사는 동안 내려가지 않게 한다.
-                HMODULE hModule = nullptr;
-                if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, L"renderdoc.dll", &hModule ) == FALSE )
-                    hModule = nullptr;
-                if ( hModule == nullptr && bLoadIfMissing )
-                {
-                    utf16       arrPath[constant::kMaxPathSize]{};
-                    const DWORD length = ExpandEnvironmentStringsW( L"%ProgramFiles%\\RenderDoc\\renderdoc.dll", arrPath, DWORD{ constant::kMaxPathSize } );
-                    if ( 0 < length && length <= DWORD{ constant::kMaxPathSize } )
-                        hModule = LoadLibraryW( arrPath );
-                }
-                if ( hModule == nullptr )
-                    return nullptr;
-                return reinterpret_cast<pRENDERDOC_GetAPI>( reinterpret_cast<void*>( GetProcAddress( hModule, "RENDERDOC_GetAPI" ) ) );
-#elif defined( SW_PLATFORM_LINUX )
-                void* pModule = dlopen( "librenderdoc.so", RTLD_NOW | RTLD_NOLOAD );
+                // 주입된 RenderDoc 은 참조 없이 빌리지 않는다 - 고정해 API 포인터(`_s_pAPI`)가 사는 동안 내려가지 않게 한다.
+                const string libraryName = ModuleLibraryUtil::formatSharedLibraryName( "renderdoc" );
+                void*        pModule     = ModuleLibraryUtil::findLoadedLibrary( libraryName );
                 if ( pModule == nullptr && bLoadIfMissing )
-                    pModule = dlopen( "librenderdoc.so", RTLD_NOW );
-                if ( pModule == nullptr )
-                    return nullptr;
-                return reinterpret_cast<pRENDERDOC_GetAPI>( dlsym( pModule, "RENDERDOC_GetAPI" ) );
-#else
-                (void)bLoadIfMissing;
-                return nullptr;
-#endif
+                    pModule = loadInstalledLibrary( libraryName );
+                return reinterpret_cast<pRENDERDOC_GetAPI>( ModuleLibraryUtil::getDynamicSymbol( pModule, "RENDERDOC_GetAPI" ) ); // 모듈이 없으면 nullptr
             }
 
             static bool runCapture( const vector<string>& listArgument, string& outReply )

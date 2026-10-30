@@ -208,10 +208,7 @@ namespace sw
         const string targetDisplayName = targetName.empty() ? "all" : targetName;
         SW_LOG_INFO( "Starting compilation for target '%#' (Build dir: %#)...", targetDisplayName.c_str(), buildDir.c_str() );
 
-        ProcessCommand command{
-            "cmake",
-            { "--build", buildDir }
-        };
+        ProcessCommand command = ProcessCommand::fromSearchPath( "cmake", { "--build", buildDir } );
         if ( targetName.empty() == false )
         {
             command._listArgument.push_back( "--target" );

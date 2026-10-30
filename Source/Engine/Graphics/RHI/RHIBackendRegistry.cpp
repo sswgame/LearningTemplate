@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -152,7 +153,8 @@ namespace sw
 #if SW_WITH_DYNAMIC_MODULES
     bool RHIBackendRegistry::tryLoadModule( RHIBackend backend, string_view modulePath )
     {
-        void* pModuleHandle = ModuleLibraryUtil::loadDynamicLibrary( modulePath );
+        const std::optional<AbsolutePath> libraryPath   = AbsolutePath::tryMake( modulePath );
+        void*                             pModuleHandle = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
         if ( pModuleHandle == nullptr )
             return false;
 

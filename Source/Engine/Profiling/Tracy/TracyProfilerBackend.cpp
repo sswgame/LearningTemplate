@@ -9,7 +9,10 @@
 #include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
 
 #if defined( SW_PROFILER_TRACY )
@@ -106,13 +109,13 @@ namespace sw
     #if defined( SW_PLATFORM_WINDOWS )
             /** @brief TracyClient.dll 에서 @p pSymbol 을 찾아 @p outFunction 에 넣습니다. */
             template <typename TFunction>
-            static void findClientFunction( HMODULE hClient, const utf8* pSymbol, TFunction& outFunction )
+            static void findClientFunction( void* pClient, const utf8* pSymbol, TFunction& outFunction )
             {
-                outFunction = reinterpret_cast<TFunction>( reinterpret_cast<void*>( GetProcAddress( hClient, pSymbol ) ) );
+                outFunction = reinterpret_cast<TFunction>( ModuleLibraryUtil::getDynamicSymbol( pClient, pSymbol ) );
             }
     #endif
 
-            /** @brief 함수 표를 채웁니다. Windows 는 TracyClient.dll 을 실행 파일 폴더 · 검색 경로에서 올립니다(없으면 빈 표). */
+            /** @brief 함수 표를 채웁니다. Windows 는 `Bin` 의 TracyClient.dll 을 올립니다(없으면 빈 표). */
             static TracyClientAPI loadClientAPI()
             {
                 TracyClientAPI api{};
@@ -122,7 +125,12 @@ namespace sw
                 string tracyOnlyLocalhost;
                 if ( ProcessEnvironment::tryRead( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
                     (void)ProcessEnvironment::trySet( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
-                const HMODULE hClient = LoadLibraryExW( L"TracyClient.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
+                // 엔진 DLL 과 같은 폴더(`Bin`)에 빌드가 둔다. 없으면(Tracy 를 끈 배포) 빈 표다 - 선택 구성 요소라 로드 실패 경고를 내지 않게 먼저 묻는다.
+                const string                      clientText = FileUtil::joinPath( FileUtil::getBinaryDirectory(), "TracyClient.dll" );
+                const std::optional<AbsolutePath> clientPath = AbsolutePath::tryMake( clientText );
+                if ( clientPath.has_value() == false || FileUtil::isRegularFile( clientText ) == false )
+                    return api;
+                void* const hClient = ModuleLibraryUtil::loadLibraryAt( *clientPath );
                 if ( hClient == nullptr )
                     return api;
                 findClientFunction( hClient, "___tracy_connected", api._pfnConnected );

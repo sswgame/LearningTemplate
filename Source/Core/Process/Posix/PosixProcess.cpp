@@ -134,7 +134,7 @@ namespace sw
         /**
          * @brief @p command 를 exec 재료로 바꿉니다. 실행 파일이 비었거나 PATH 에서 찾지 못하면 오류를 남기고 false 입니다.
          * @details 셸을 거치지 않으므로 PATH 검색도 여기서 한다(`execvp` 는 async-signal-safe 목록에 없어 fork 뒤에 부르지 않는다).
-         *          `/` 가 든 이름은 경로 그대로 쓴다 — 상대 경로는 자식이 작업 폴더로 옮긴 뒤 풀린다. PATH 가 없으면 찾지 않고 진다(기본 PATH 로 대신하지 않는다).
+         *          경로 명령(`ProcessCommand::at`)은 그대로 쓰고, 이름 명령(`fromSearchPath`)만 PATH 에서 찾는다. PATH 가 없으면 찾지 않고 진다(기본 PATH 로 대신하지 않는다).
          */
         [[nodiscard]] bool preparePosixExec( const ProcessCommand& command, PosixExecImage& outImage )
         {
@@ -145,9 +145,14 @@ namespace sw
                 return false;
             }
             outImage._path.clear();
-            if ( command._executable.find( '/' ) != string::npos )
+            if ( command._bSearchPath == false )
             {
                 outImage._path = command._executable;
+            }
+            else if ( command._executable.find( '/' ) != string::npos )
+            {
+                SW_LOG_ERROR( "Search-path command '%#' holds a path - use ProcessCommand::at", command._executable );
+                return false;
             }
             else
             {
@@ -421,7 +426,7 @@ namespace sw
 
     bool Process::launchURL( string_view url )
     {
-        return launchDetached( ProcessCommand{ "xdg-open", { string( url ) } } );
+        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { string( url ) } ) );
     }
 
     bool Process::showInFileManager( string_view filePath )
@@ -429,7 +434,7 @@ namespace sw
         // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다 — 그 폴더를 연다. Process 는 File 보다 아래 층이라 FileUtil 을 쓰지 않는다.
         const size_t separatorIndex = filePath.find_last_of( '/' );
         const string directory      = separatorIndex == string_view::npos ? string( "." ) : string( filePath.substr( 0, separatorIndex == 0 ? 1 : separatorIndex ) );
-        return launchDetached( ProcessCommand{ "xdg-open", { directory } } );
+        return launchDetached( ProcessCommand::fromSearchPath( "xdg-open", { directory } ) );
     }
 
     bool Process::readOutputLine( string& outLine )

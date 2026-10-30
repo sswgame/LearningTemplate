@@ -13,6 +13,7 @@ Math = 1
 Memory = 2          # 할당기 · 메모리 태그 · 할당 기록기 인터페이스
 Container = 3       # 컨테이너 · 문자열 타입과 StringUtil · formatString · 동시 큐
 Delegate = 4
+Path = 4            # 경로 값 형식(AbsolutePath) — 로그 · 파일을 쓰지 않는다. 프로세스(ProcessCommand) · 파일 · 모듈이 함께 쓴다
 UUID = 4
 Serialization = 4   # 바이트 · 비트 직렬화(ByteReader · ByteWriter · BitStream) — 파일 형식과 네트워크가 함께 쓴다
 Subsystem = 4       # 서브시스템 계약(ISubsystem)과 의존 순서 목록(SubsystemCollection) — 로그를 남기지 않아 Log 아래에 선다

@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
@@ -57,10 +58,10 @@ namespace sw::editor
     ProcessCommand EditorTracyLauncher::makeViewerCommand( string_view viewerPath, uint16 port )
     {
         // `-a <주소>` 는 뜨자마자 그 주소에 붙는다(Tracy 뷰어 명령줄). 같은 PC 라 localhost 다.
-        return ProcessCommand{
-            FileUtil::toNativeSeparators( viewerPath ),
-            { "-a", "127.0.0.1", "-p", to_string( static_cast<uint32>( port ) ) }
-        };
+        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( viewerPath );
+        if ( executable.has_value() == false )
+            return {}; // 빈 명령 - 띄우기가 실패로 알린다(뷰어 경로는 찾은 파일의 절대 경로다)
+        return ProcessCommand::at( *executable, { "-a", "127.0.0.1", "-p", to_string( static_cast<uint32>( port ) ) } );
     }
 
     EditorTracyLaunchResult EditorTracyLauncher::openViewer()

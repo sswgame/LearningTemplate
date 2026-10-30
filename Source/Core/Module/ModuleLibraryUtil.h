@@ -13,6 +13,7 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -71,11 +72,21 @@ namespace sw
         // 2) 로드, 심볼, 언로드(OS 로더). 등록을 해제하지 않는다. 엔진 코드를 가리킬 수 있는 모듈은 4)의 함수로 언로드한다.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 동적 라이브러리를 로드합니다.
-         * @details **연 쪽이 핸들을 소유하고 내린다**(`LiveReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈 · ALSA 백엔드). 프로세스 끝까지 두는 곳은 그 자리에
+         * @brief 절대 경로 @p libraryPath 의 라이브러리를 로드합니다. **검색하지 않고 한 번만** 시도한다(경로인지 이름인지 추측하지 않는다).
+         * @details 의존 라이브러리는 그 라이브러리 폴더 · 응용 프로그램 폴더 · `Bin` · `Bin/Modules` · 시스템 폴더에서 찾는다(Windows `AddDllDirectory`, Linux 는 RPATH).
+         *          **연 쪽이 핸들을 소유하고 내린다**(`LiveReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈). 프로세스 끝까지 두는 곳은 그 자리에
          *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleLibrary` 가 고정하는 의존 라이브러리도 같은 규칙의 예외다.
+         * @return 실패하면 이유(OS 오류)를 경고로 남기고 nullptr 입니다.
          */
-        static void* loadDynamicLibrary( string_view libraryName );
+        static void* loadLibraryAt( const AbsolutePath& libraryPath );
+        /**
+         * @brief OS 가 가진 라이브러리를 이름 @p libraryName(`xinput1_4.dll` · `libasound.so.2`)으로 로드합니다. Windows 는 System32 에서만, Linux 는 동적 링커 검색 경로에서 찾는다.
+         * @details 응용 프로그램 폴더를 보지 않는다(같은 이름의 DLL 을 옆에 두어 바꿔치기하는 것을 막는다). 엔진이 함께 내놓는 라이브러리는 `loadLibraryAt` 이다.
+         * @return 실패하면 nullptr 입니다. 없을 수 있는 선택 라이브러리가 많아(XInput 판 · ALSA) 로그는 부르는 쪽이 남긴다.
+         */
+        static void* loadSystemLibrary( string_view libraryName );
+        /** @brief 이미 로드된 라이브러리 @p libraryName 을 찾아 프로세스 끝까지 내려가지 않게 고정합니다(주입된 RenderDoc 같은 남의 라이브러리를 빌릴 때). 없으면 nullptr 입니다. */
+        static void* findLoadedLibrary( string_view libraryName );
         /** @brief 동적 라이브러리에서 심볼 주소를 찾습니다. */
         static void* getDynamicSymbol( void* pHandle, string_view symbolName );
         /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
@@ -104,7 +115,7 @@ namespace sw
         // 4) 언로드.
         // ------------------------------------------------------------------------------
         /**
-         * @brief `loadDynamicLibrary` 로 로드한 모듈 라이브러리 @p pHandle 을 언로드합니다.
+         * @brief `loadLibraryAt` 으로 로드한 모듈 라이브러리 @p pHandle 을 언로드합니다.
          * @details 그 라이브러리를 가리키는 등록은 부르는 쪽(모듈 경로)이 먼저 뗐다 — 구독은 소유자가, 모듈 등록자 · 타입은 `engine::unregisterModuleTypes` 가.
          *          그 라이브러리가 끌어온 의존 라이브러리(GameFramework 같은 공유 모듈)는 **언로드하지 않는다**. 의존 라이브러리가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
          *          Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 붙잡으므로 원래 그렇다. 리눅스는 `DT_NEEDED` 참조가 함께 풀려 언로드되므로 여기서 고정한다(`pinDynamicLibraryDependencies`).

@@ -3,6 +3,7 @@
 #include "Engine/Audio/Windows/XAudio2AudioBackend.h"
 
 #include "Core/Concurrency/StopToken.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
@@ -74,19 +75,17 @@ namespace sw
             template <typename TFunction>
             static TFunction findSystemFunction( HMODULE hModule, const utf8* pSymbol )
             {
-                if ( hModule == nullptr )
-                    return nullptr;
-                return reinterpret_cast<TFunction>( reinterpret_cast<void*>( GetProcAddress( hModule, pSymbol ) ) );
+                return reinterpret_cast<TFunction>( ModuleLibraryUtil::getDynamicSymbol( hModule, pSymbol ) ); // 모듈이 없으면 nullptr
             }
 
             /** @brief System32 의 DLL 마다 참조를 하나씩 잡고 함수 표를 채웁니다. 없는 DLL · 함수는 nullptr 로 남깁니다. */
             static SystemAudioAPI loadSystemAudioAPI()
             {
                 SystemAudioAPI api{};
-                api._hMfPlat              = LoadLibraryExW( L"mfplat.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
-                api._hMfReadWrite         = LoadLibraryExW( L"mfreadwrite.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
-                api._hShlwapi             = LoadLibraryExW( L"shlwapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
-                api._hXAudio2             = LoadLibraryExW( L"xaudio2_9.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                api._hMfPlat              = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "mfplat.dll" ) );
+                api._hMfReadWrite         = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "mfreadwrite.dll" ) );
+                api._hShlwapi             = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "shlwapi.dll" ) );
+                api._hXAudio2             = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "xaudio2_9.dll" ) );
                 api._pfnMFStartup         = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( api._hMfPlat, "MFStartup" );
                 api._pfnMFShutdown        = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( api._hMfPlat, "MFShutdown" );
                 api._pfnMFCreateMediaType = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( api._hMfPlat, "MFCreateMediaType" );

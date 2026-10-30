@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/File/AbsolutePath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 // 엄격한 절대 경로 판정 — 드라이브 상대 · 드라이브 없는 루트 · 상대 경로는 거절한다.

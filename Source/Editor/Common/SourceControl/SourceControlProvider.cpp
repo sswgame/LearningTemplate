@@ -8,18 +8,12 @@ namespace sw::editor
 {
     ProcessCommand GitLfsSourceControlProvider::makeProbeCommand()
     {
-        return ProcessCommand{
-            "git",
-            { "lfs", "version" }
-        };
+        return ProcessCommand::fromSearchPath( "git", { "lfs", "version" } );
     }
 
     ProcessCommand GitLfsSourceControlProvider::makeRefreshCommand() const
     {
-        return ProcessCommand{
-            "git",
-            { "lfs", "locks", "--json" }
-        };
+        return ProcessCommand::fromSearchPath( "git", { "lfs", "locks", "--json" } );
     }
 
     bool GitLfsSourceControlProvider::parseRefreshOutput( const vector<string>& listLine, vector<SourceControlLock>& outListLock ) const
@@ -62,17 +56,11 @@ namespace sw::editor
 
     ProcessCommand GitLfsSourceControlProvider::makeLockCommand( string_view repositoryPath ) const
     {
-        return ProcessCommand{
-            "git",
-            { "lfs", "lock", string( repositoryPath ) }
-        };
+        return ProcessCommand::fromSearchPath( "git", { "lfs", "lock", string( repositoryPath ) } );
     }
 
     ProcessCommand GitLfsSourceControlProvider::makeUnlockCommand( string_view repositoryPath ) const
     {
-        return ProcessCommand{
-            "git",
-            { "lfs", "unlock", string( repositoryPath ) }
-        };
+        return ProcessCommand::fromSearchPath( "git", { "lfs", "unlock", string( repositoryPath ) } );
     }
 } // namespace sw::editor

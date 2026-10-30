@@ -287,7 +287,7 @@ namespace sw
 
     NativeFileHandle PlatformFileUtil::createNativeFileForWrite( const utf8* pFilePath )
     {
-        if ( pFilePath == nullptr || pFilePath[0] == ' ' )
+        if ( pFilePath == nullptr || pFilePath[0] == '\0' )
             return kInvalidNativeFileHandle;
 #if defined( SW_PLATFORM_WINDOWS )
         // 힙 없이 스택에서 UTF-16 으로 바꾼다(StringUtil::utf8ToUTF16 은 할당한다).

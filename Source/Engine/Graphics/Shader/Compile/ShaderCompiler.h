@@ -203,5 +203,12 @@ namespace sw
          *          옛 칸 번호의 바이트를 새것으로 돌려준 결함(DX11 · GL 검정 화면)이 있었다.
          */
         static void appendEngineDefines( vector<ShaderMacroDefine>& inoutList );
+
+        /**
+         * @brief DXC 의 `DxcCreateInstance` 주소입니다(`DxcCreateInstanceProc` 로 바꿔 쓴다). 라이브러리는 처음 부를 때 실행 파일 옆에서 한 번 로드한다. 없으면 nullptr 입니다.
+         * @details 컴파일과 DXIL 리플렉션이 함께 쓰는 한 입구다. 핸들은 일부러 내리지 않는다 - 만든 DXC 객체(COM)가 프로세스 끝까지 쓰일 수 있고
+         *          함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
+         */
+        [[nodiscard]] static void* findDXCCreateInstance();
     };
 } // namespace sw

@@ -485,8 +485,9 @@ namespace sw
     {
         if ( _reporterExecutable.empty() || countPendingUploads() == 0 )
             return false;
-        const ProcessCommand command{ _reporterExecutable, { string( kReporterArgument ) + "=" + _reportsFolder } };
-        const bool           bLaunched = Process::launchDetached( command );
+        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _reporterExecutable );
+        const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, { string( kReporterArgument ) + "=" + _reportsFolder } ) : ProcessCommand{};
+        const bool                        bLaunched  = Process::launchDetached( command );
         SW_LOG_INFO( "Crash report: %# the reporter process for '%#'", bLaunched ? "launched" : "could not launch", _reportsFolder.c_str() );
         return bLaunched;
     }

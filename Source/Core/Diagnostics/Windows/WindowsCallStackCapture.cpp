@@ -29,23 +29,20 @@ namespace sw
          */
         void appendExecutableFolderToSymbolPath( HANDLE process )
         {
-            utf16       arrModulePath[constant::kMaxPathSize]{};
-            const DWORD length = GetModuleFileNameW( nullptr, arrModulePath, constant::kMaxPathSize );
-            if ( length == 0 || length >= constant::kMaxPathSize )
+            const string executablePath = FileUtil::getExecutablePath();
+            if ( executablePath.empty() )
                 return;
-            utf16* pSlash = wcsrchr( arrModulePath, L'\\' );
-            if ( pSlash == nullptr )
-                return;
-            *pSlash = L'\0';
-            utf16 arrSearchPath[constant::kMaxBuffer4096]{};
+            const wstring executableFolder  = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( FileUtil::getDirectoryPart( executablePath ) ).c_str() );
+            const utf16*  pExecutableFolder = executableFolder.c_str();
+            utf16         arrSearchPath[constant::kMaxBuffer4096]{};
             if ( SymGetSearchPathW( process, arrSearchPath, constant::kMaxBuffer4096 ) == FALSE )
                 arrSearchPath[0] = L'\0';
             const size_t used = wcslen( arrSearchPath );
-            if ( used + 1 + wcslen( arrModulePath ) + 1 > constant::kMaxBuffer4096 )
+            if ( used + 1 + wcslen( pExecutableFolder ) + 1 > constant::kMaxBuffer4096 )
                 return;
             if ( used > 0 )
                 wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
-            wcscat_s( arrSearchPath, constant::kMaxBuffer4096, arrModulePath );
+            wcscat_s( arrSearchPath, constant::kMaxBuffer4096, pExecutableFolder );
             // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 추가한다.
             const wstring symbolFolder = StringUtil::utf8ToUTF16(
                 FileUtil::toNativeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), ModuleLibraryUtil::kSymbolFolder ) ).c_str() );

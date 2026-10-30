@@ -47,6 +47,24 @@ namespace sw
 
 namespace sw
 {
+    ProcessCommand ProcessCommand::at( const AbsolutePath& executable, vector<string> listArgument )
+    {
+        ProcessCommand command;
+        command._executable   = executable.str();
+        command._listArgument = std::move( listArgument );
+        command._bSearchPath  = false;
+        return command;
+    }
+
+    ProcessCommand ProcessCommand::fromSearchPath( string_view executableName, vector<string> listArgument )
+    {
+        ProcessCommand command;
+        command._executable   = string{ executableName };
+        command._listArgument = std::move( listArgument );
+        command._bSearchPath  = true;
+        return command;
+    }
+
     string ProcessCommand::toCommandLine() const
     {
         // 첫 토큰(실행 파일)은 CommandLineToArgvW 가 역슬래시를 풀지 않고 따옴표만 본다 — Windows 경로에는 따옴표가 없으므로 같은 함수로 감싸도 같다.

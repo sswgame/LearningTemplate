@@ -21,12 +21,9 @@ namespace sw::editor
         static ProcessCommand makePythonScriptCommand( string scriptPath )
         {
 #if defined( SW_PLATFORM_WINDOWS )
-            return ProcessCommand{
-                "py",
-                { "-3", std::move( scriptPath ) }
-            };
+            return ProcessCommand::fromSearchPath( "py", { "-3", std::move( scriptPath ) } );
 #else
-            return ProcessCommand{ "python3", { std::move( scriptPath ) } };
+            return ProcessCommand::fromSearchPath( "python3", { std::move( scriptPath ) } );
 #endif
         }
 

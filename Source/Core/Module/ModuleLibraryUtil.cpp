@@ -77,7 +77,7 @@ namespace sw
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
                         if ( FileUtil::isDirectory( directory ) )
-                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 아래 옛 검색 순서가 찾는다
+                            (void)AddDllDirectory( StringUtil::utf8ToUTF16( directory.c_str() ).c_str() ); // 실패하면 그 폴더의 의존 DLL 로드가 실패로 알린다
                     }
                     return true;
                 }();
@@ -188,72 +188,52 @@ namespace sw
         return modulePath;
     }
 
-    void* ModuleLibraryUtil::loadDynamicLibrary( string_view libraryName )
+    void* ModuleLibraryUtil::loadLibraryAt( const AbsolutePath& libraryPath )
     {
-        if ( libraryName.empty() )
-            return nullptr;
-
 #if defined( SW_PLATFORM_WINDOWS )
-        string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
-        {
-            // Windows 커널 로더(LOAD_WITH_ALTERED_SEARCH_PATH)는 '\'(백슬래시)를 기준으로 디렉터리를 잘라 DLL 검색 경로의
-            // 첫 순위로 넣는다. '/' 경로를 넘기면 디렉터리 해석에 실패해 의존 DLL(Engine.dll 등)을 찾지 못하고
-            // ERROR_MOD_NOT_FOUND(126) 오류가 나므로, 네이티브 구분자('\')로 바꾼다.
-            const string nativePath = FileUtil::toNativeSeparators( absPath );
-
-            // 경로는 UTF-8 이다. W 버전 함수에 UTF-16 으로 넘긴다(A 버전은 ANSI 코드 페이지로 읽어, 매니페스트가 UTF-8 로 바꿔 두지 않은 호스트에서 한글 경로가 깨진다).
-            const wstring widePath = StringUtil::utf8ToUTF16( nativePath.c_str() );
-            const wstring wideDir  = StringUtil::utf8ToUTF16( FileUtil::getDirectoryPart( nativePath ).c_str() );
-            utf16         arrPreviousDLLDir[constant::kMaxPathSize]{};
-            const DWORD   previousDLLDirLen = GetDllDirectoryW( static_cast<DWORD>( constant::kMaxPathSize ), arrPreviousDLLDir );
-            if ( wideDir.empty() == false )
-                SetDllDirectoryW( wideDir.c_str() );
-
-            // 0) 모듈은 `Bin/Modules` 에 있고 그 의존(서드파티, GameFramework DLL)은 `Bin` 에 있다. 실행 파일이 `TestBin` 이면 `Bin` 은 응용 프로그램
-            //    폴더도 아니다. 그래서 두 폴더를 사용자 검색 폴더에 한 번 더 추가하고, DLL 폴더와 기본 폴더(응용 프로그램, System32, 사용자 폴더)로 찾는다.
-            ModuleLibraryUtilInternal::addBinarySearchDirectories();
-            HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
-            // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
-            if ( hModule == nullptr )
-                hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
-            // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryW 로 다시 시도한다
-            if ( hModule == nullptr )
-                hModule = LoadLibraryW( widePath.c_str() );
-
-            if ( previousDLLDirLen > 0 && previousDLLDirLen < constant::kMaxPathSize )
-                SetDllDirectoryW( arrPreviousDLLDir );
-            else
-                SetDllDirectoryW( nullptr );
-
-            if ( hModule != nullptr )
-                return hModule;
-        }
-        const string  nativeName = FileUtil::toNativeSeparators( libraryName );
-        const HMODULE hModule    = LoadLibraryW( StringUtil::utf8ToUTF16( nativeName.c_str() ).c_str() );
+        // `LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR` 은 경로의 폴더를 `\` 로 자른다 - `/` 경로면 그 폴더를 못 찾아 의존 DLL 이 ERROR_MOD_NOT_FOUND(126) 가 된다.
+        // 경로는 UTF-8 이라 W 판에 넘긴다(A 판은 ANSI 코드 페이지로 읽어 한글 경로가 깨진다).
+        ModuleLibraryUtilInternal::addBinarySearchDirectories();
+        const wstring widePath = StringUtil::utf8ToUTF16( FileUtil::toNativeSeparators( libraryPath.str() ).c_str() );
+        const HMODULE hModule  = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
         if ( hModule == nullptr )
-        {
-            // 실패 이유는 GetLastError 하나뿐이다. 남기지 않으면 부르는 쪽은 "로드 실패"밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).
-            const DWORD errorCode = GetLastError();
-            SW_LOG_WARNING( "LoadLibrary failed for %# (Win32 error %#)", nativeName.c_str(), static_cast<uint32>( errorCode ) );
-        }
+            SW_LOG_WARNING( "LoadLibrary failed for %# (Win32 error %#)", libraryPath.c_str(), static_cast<uint32>( GetLastError() ) ); // 126 의존 DLL 없음, 1114 DllMain 실패 등
         return hModule;
 #else
-        string absPath;
-        if ( FileUtil::makeAbsolutePath( libraryName, absPath ) && FileUtil::exists( absPath ) )
-        {
-            void* pHandle = dlopen( absPath.c_str(), RTLD_NOW | RTLD_LOCAL );
-            if ( pHandle != nullptr )
-                return pHandle;
-        }
-        const string libraryNameNt( libraryName );
-        void*        pHandle = dlopen( libraryNameNt.c_str(), RTLD_NOW | RTLD_LOCAL );
+        void* const pHandle = dlopen( libraryPath.c_str(), RTLD_NOW | RTLD_LOCAL );
         if ( pHandle == nullptr )
         {
             const utf8* pReason = dlerror(); // 실패 이유는 이것 하나뿐이다
-            SW_LOG_WARNING( "dlopen failed for %#: %#", libraryNameNt.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
+            SW_LOG_WARNING( "dlopen failed for %#: %#", libraryPath.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
         }
         return pHandle;
+#endif
+    }
+
+    void* ModuleLibraryUtil::loadSystemLibrary( string_view libraryName )
+    {
+        if ( libraryName.empty() )
+            return nullptr;
+        const string name{ libraryName };
+#if defined( SW_PLATFORM_WINDOWS )
+        return LoadLibraryExW( StringUtil::utf8ToUTF16( name.c_str() ).c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+#else
+        return dlopen( name.c_str(), RTLD_NOW | RTLD_LOCAL );
+#endif
+    }
+
+    void* ModuleLibraryUtil::findLoadedLibrary( string_view libraryName )
+    {
+        if ( libraryName.empty() )
+            return nullptr;
+        const string name{ libraryName };
+#if defined( SW_PLATFORM_WINDOWS )
+        HMODULE hModule = nullptr;
+        if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, StringUtil::utf8ToUTF16( name.c_str() ).c_str(), &hModule ) == FALSE )
+            return nullptr;
+        return hModule;
+#else
+        return dlopen( name.c_str(), RTLD_NOW | RTLD_NOLOAD | RTLD_NODELETE );
 #endif
     }
 

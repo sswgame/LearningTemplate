@@ -3,6 +3,7 @@
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
 
@@ -21,28 +22,29 @@ namespace sw
             using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
 
             /** @brief XInput 라이브러리를 불러옵니다. 못 찾으면 nullptr 입니다(라이브러리는 프로세스 끝까지 쥔다). */
-            static HMODULE loadXInputModule()
+            static void* loadXInputModule()
             {
-                HMODULE hModule = LoadLibraryW( L"XINPUT1_4.dll" );
-                if ( hModule == nullptr )
-                    hModule = LoadLibraryW( L"xinput1_3.dll" );
-                if ( hModule == nullptr )
-                    hModule = LoadLibraryW( L"xinput9_1_0.dll" );
-                return hModule;
+                // 판은 OS 마다 다르다(1_4 는 Windows 8+, 1_3 은 재배포 런타임, 9_1_0 은 Vista 의 기본) - 새것부터 묻는다.
+                for ( const utf8* pName : { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" } )
+                {
+                    void* const pModule = ModuleLibraryUtil::loadSystemLibrary( pName );
+                    if ( pModule != nullptr )
+                        return pModule;
+                }
+                return nullptr;
             }
 
             /** @brief 처음 부를 때 한 번만 불러온 XInput 라이브러리입니다. 함수 안 정적 변수의 초기화는 스레드 안전합니다. */
-            static HMODULE getXInputModule()
+            static void* getXInputModule()
             {
-                static const HMODULE s_hModule = loadXInputModule();
-                return s_hModule;
+                static void* const s_pModule = loadXInputModule();
+                return s_pModule;
             }
 
             /** @brief 라이브러리에서 함수를 찾습니다. 라이브러리나 함수가 없으면 nullptr 입니다. */
-            static FARPROC findXInputProc( const utf8* pName )
+            static void* findXInputProc( const utf8* pName )
             {
-                const HMODULE hModule = getXInputModule();
-                return hModule != nullptr ? GetProcAddress( hModule, pName ) : nullptr;
+                return ModuleLibraryUtil::getDynamicSymbol( getXInputModule(), pName ); // 모듈이 없으면 nullptr
             }
 
             static PFN_XInputGetState resolveXInputGetState()

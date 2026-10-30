@@ -134,7 +134,7 @@ namespace sw
     bool AlsaAudioBackend::openDevice( AudioOutputDevice& outDevice )
     {
         using Internal   = AlsaAudioBackendInternal;
-        _impl->_pLibrary = ModuleLibraryUtil::loadDynamicLibrary( "libasound.so.2" );
+        _impl->_pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libasound.so.2" );
         if ( _impl->_pLibrary == nullptr )
         {
             SW_LOG_INFO( "ALSA (libasound.so.2) is not available. Rendering offline." );

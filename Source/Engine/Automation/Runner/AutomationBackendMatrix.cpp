@@ -245,8 +245,9 @@ namespace sw
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
-            const ProcessCommand command{ options._executablePath, std::move( listArgument ) };
-            pChild->_bLaunched = pChild->_process.launch( command );
+            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
+            const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+            pChild->_bLaunched                           = pChild->_process.launch( command );
             if ( pChild->_bLaunched == false )
                 SW_LOG_ERROR( "[Scenario] matrix: could not launch %#", command.toCommandLine().c_str() );
             else

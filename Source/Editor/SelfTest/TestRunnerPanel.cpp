@@ -253,8 +253,9 @@ namespace sw::editor
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
             const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
-            ProcessCommand command{ FileUtil::getExecutablePath(), {} };
-            const string   backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백을 뗀 글이 인자 하나다
+            const std::optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+            ProcessCommand                    command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
+            const string                      backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백을 뗀 글이 인자 하나다
             if ( backendArgument.empty() == false )
                 command._listArgument.push_back( backendArgument.substr( 1 ) );
             if ( bEditor )
@@ -320,7 +321,8 @@ namespace sw::editor
                 _selectedExecutableIndex = index;
                 _listUnitTestName.clear();
                 _uniqueSelectedUnitTest.clear();
-                if ( _pJob->request( ProcessCommand{ _listTestExecutablePath[index], { "--test_list" } }, binDirectory ) )
+                const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _listTestExecutablePath[index] );
+                if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, { "--test_list" } ), binDirectory ) )
                 {
                     _externalRunKind = ExternalRunKind::UnitTestList;
                     _externalTitle   = fileName + " --test_list";
@@ -343,7 +345,8 @@ namespace sw::editor
             }
             const string filter = EditorTestOutputParser::makeFilter( listCase );
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            if ( _pJob->request( ProcessCommand{ _listTestExecutablePath[_selectedExecutableIndex], { "--test_filter=" + filter } }, binDirectory ) )
+            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _listTestExecutablePath[_selectedExecutableIndex] );
+            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, { "--test_filter=" + filter } ), binDirectory ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
                 _externalTitle   = FileUtil::getFileNamePart( _listTestExecutablePath[_selectedExecutableIndex] ) + " --test_filter=" + filter;

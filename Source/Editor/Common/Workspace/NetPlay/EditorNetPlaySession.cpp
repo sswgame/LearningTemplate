@@ -247,8 +247,9 @@ namespace sw::editor
         pChild->_tracePath              = tracePath;
         if ( tracePath.empty() == false )
             listArgument.push_back( "-gv_traceSaveOnExit=" + tracePath );
-        const ProcessCommand command{ executablePath, std::move( listArgument ) };
-        ProcessOptions       options;
+        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
+        const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+        ProcessOptions                    options;
         options._bPipeStandardInput = true; // `quit` 과 `pause` 를 보내는 채널
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {

@@ -353,31 +353,10 @@ namespace sw
             }
 
     #if defined( SW_HAS_DXC_API )
-            /** @brief `dxcompiler.dll` 을 불러 생성 함수를 찾습니다. 못 찾으면 nullptr 입니다(라이브러리는 프로세스 끝까지 쥔다). */
-            static DxcCreateInstanceProc findDXCCreateInstance()
-            {
-                HMODULE hDll = LoadLibraryW( L"dxcompiler.dll" );
-                if ( hDll == nullptr )
-                    return nullptr; // 호출한 `reflectDXIL` 이 "찾을 수 없다" 경고를 남긴다
-                DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( GetProcAddress( hDll, "DxcCreateInstance" ) );
-                if ( fnDXCCreateInstance == nullptr )
-                    SW_LOG_WARNING( "dxcompiler.dll loaded but DxcCreateInstance not found." );
-                return fnDXCCreateInstance;
-            }
-
-            /**
-             * @brief 처음 부를 때 한 번만 찾은 생성 함수입니다. 함수 안 정적 변수의 초기화는 스레드 안전해서, 병렬 쿠킹의 첫 DXIL 리플렉션들이 동시에 불러도 한 번만 찾는다.
-             * @details 예전에는 `s_bTried` 같은 맨 플래그로 한 번만 찾았다 — 두 스레드가 동시에 처음 부르면 하나가 아직 채워지지 않은 nullptr 을 받아 그 셰이더의 리플렉션이 빈 채로 매니페스트에 들어갔다.
-             */
-            static DxcCreateInstanceProc loadDXCCreateInstance()
-            {
-                static const DxcCreateInstanceProc s_fnDXCCreateInstance = findDXCCreateInstance();
-                return s_fnDXCCreateInstance;
-            }
-
             static ShaderReflectionData reflectDXIL( const vector<uint8>& bytecode )
             {
-                DxcCreateInstanceProc createInstance = loadDXCCreateInstance();
+                // 컴파일과 같은 한 입구다(한 번만 로드 - 함수 정적이라 병렬 쿠킹의 첫 리플렉션들이 동시에 불러도 안전하다).
+                DxcCreateInstanceProc createInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( createInstance == nullptr )
                 {
                     SW_LOG_WARNING( "DXIL reflection unavailable: dxcompiler.dll not found or DxcCreateInstance failed." );

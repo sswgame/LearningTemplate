@@ -1,16 +1,11 @@
 #include "pch.h"
 
-#include "Core/File/AbsolutePath.h"
-
-#include "Core/Log/Logger.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
     namespace
     {
-        // 설치는 기동 스레드 하나에서만 한다(그 뒤 읽기만이라 락이 없다).
-        std::optional<ProcessRoots> s_roots;
-
 #if !defined( SW_PLATFORM_LINUX )
         bool isSeparator( utf8 ch )
         {
@@ -50,19 +45,5 @@ namespace sw
                 ch = '/';
         }
         return AbsolutePath{ std::move( normalized ) };
-    }
-
-    void ProcessRoots::install( ProcessRoots roots )
-    {
-        if ( s_roots.has_value() )
-            SW_FATAL( "ProcessRoots::install called twice" );
-        s_roots = std::move( roots );
-    }
-
-    const ProcessRoots& ProcessRoots::get()
-    {
-        if ( s_roots.has_value() == false )
-            SW_FATAL( "ProcessRoots::get before install - the process roots are set once at startup" );
-        return *s_roots;
     }
 } // namespace sw

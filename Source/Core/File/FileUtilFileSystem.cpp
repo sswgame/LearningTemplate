@@ -7,10 +7,10 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/File/AbsolutePath.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {

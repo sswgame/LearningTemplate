@@ -9,6 +9,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
@@ -438,38 +439,23 @@ namespace sw
                 atomic<uint32>       _refCount;
             };
 
-            /**
-             * @brief DXC 의 생성 함수입니다. 라이브러리는 처음 부를 때 한 번 찾습니다(실행 파일 옆 → Bin → 이름만). 못 찾으면 nullptr 입니다.
-             * @details 핸들은 일부러 내리지 않는다 — 만든 DXC 객체(COM)가 프로세스 끝까지 쓰일 수 있고 함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
-             */
-            static DxcCreateInstanceProc findDXCCreateInstance()
+            /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
+            static void* loadDXCCreateInstance()
             {
-                static auto s_getDxCompilerHandle = []() -> void*
+                const string                      libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
+                const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
+                if ( libraryPath.has_value() == false )
                 {
-                    string libName = ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" );
-                    // 실행 파일 옆(배포 구성의 테스트는 TestBin 에 DXC 를 둔다) → Bin → 이름만.
-                    const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                    vector<string> listCandidate = {
-                        execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
-                        FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ),
-                        libName };
-                    for ( const string& candidatePath : listCandidate )
-                    {
-                        if ( FileUtil::isRegularFile( candidatePath ) )
-                        {
-                            void* pLibrary = ModuleLibraryUtil::loadDynamicLibrary( candidatePath );
-                            if ( pLibrary != nullptr )
-                                return pLibrary;
-                            SW_LOG_ERROR( "Failed to load %#", candidatePath.c_str() );
-                        }
-                    }
-                    return ModuleLibraryUtil::loadDynamicLibrary( libName );
-                };
-                static void*                 s_pDxCompiler         = s_getDxCompilerHandle();
-                static DxcCreateInstanceProc s_fnDXCCreateInstance = ( s_pDxCompiler != nullptr )
-                                                                       ? reinterpret_cast<DxcCreateInstanceProc>( ModuleLibraryUtil::getDynamicSymbol( s_pDxCompiler, "DxcCreateInstance" ) )
-                                                                       : nullptr;
-                return s_fnDXCCreateInstance;
+                    SW_LOG_ERROR( "DXC path is not absolute: %#", libraryText.c_str() );
+                    return nullptr;
+                }
+                void* const pLibrary = ModuleLibraryUtil::loadLibraryAt( *libraryPath );
+                if ( pLibrary == nullptr )
+                    return nullptr;
+                void* const pCreateInstance = ModuleLibraryUtil::getDynamicSymbol( pLibrary, "DxcCreateInstance" );
+                if ( pCreateInstance == nullptr )
+                    SW_LOG_WARNING( "%# loaded but DxcCreateInstance not found", libraryText.c_str() );
+                return pCreateInstance;
             }
 
             /** @brief 타깃(SPIR-V 레이아웃 · 레지스터 시프트, 타깃 매크로)과 스테이지에 따른 DXC 인자를 더합니다. 넣는 글은 모두 정적 수명입니다. */
@@ -555,7 +541,7 @@ namespace sw
              */
             static DxcOutcome compileDXC( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
             {
-                DxcCreateInstanceProc fnDXCCreateInstance = findDXCCreateInstance();
+                DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( fnDXCCreateInstance == nullptr )
                 {
                     SW_LOG_ERROR( "DxcCreateInstance unavailable (libdxcompiler not loaded)" );
@@ -762,6 +748,16 @@ namespace sw
             define._value = to_string( ordinal );
             inoutList.push_back( std::move( define ) );
         }
+    }
+
+    void* ShaderCompiler::findDXCCreateInstance()
+    {
+#if defined( SW_HAS_DXC_API )
+        static void* const s_pCreateInstance = ShaderCompilerInternal::loadDXCCreateInstance();
+        return s_pCreateInstance;
+#else
+        return nullptr;
+#endif
     }
 
     ShaderCompileResult ShaderCompiler::compileHLSL( const ShaderCompileDesc& requestDesc )
