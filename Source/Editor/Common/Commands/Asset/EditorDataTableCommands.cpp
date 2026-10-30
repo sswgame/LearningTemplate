@@ -140,37 +140,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorDataTableCommands" );
 
-    string EditorDataTableCommands::getLocalizationFolderPath()
-    {
-        return EditorPaths::findContentFolder( FileUtil::joinPath( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ), path::kLocalizationFolder ) );
-    }
-
     string EditorDataTableCommands::getGameDataFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), path::kDataFolder ) );
-    }
-
-    void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
-    {
-        outListProjectPath.clear();
-        // 엔진 문자열 프로젝트 경로의 원본은 데이터에서 읽은 엔진 기본 에셋 테이블이다. 테이블이 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
-        const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-        if ( pDefaultAssets == nullptr )
-            SW_LOG_ERROR( "Engine default assets are not loaded - the engine localization project is left out" );
-        const std::optional<AbsolutePath> enginePath = pDefaultAssets != nullptr ? editor::getSubsystem<AssetPaths>().findLooseFile( pDefaultAssets->_localizationProject.get() ) : std::nullopt;
-        if ( enginePath.has_value() )
-            outListProjectPath.push_back( enginePath->str() );
-
-        const string   gameFolder = getLocalizationFolderPath();
-        vector<string> listFile;
-        if ( gameFolder.empty() == false && FileUtil::collectFiles( gameFolder, ".xml", listFile, false ) )
-        {
-            for ( const string& filePath : listFile )
-            {
-                if ( StringUtil::endsWith( filePath, LocalizationProject::kExtension, true ) )
-                    outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath ) );
-            }
-        }
     }
 
     bool EditorDataTableCommands::loadLocalizationProject( string_view projectPathView, LocalizationSheet& outSheet )

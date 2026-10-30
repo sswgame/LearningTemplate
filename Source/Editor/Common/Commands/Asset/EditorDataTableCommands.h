@@ -59,8 +59,6 @@ namespace sw::editor
     class EditorDataTableCommands
     {
     public:
-        /** @brief 편집할 수 있는 로컬라이제이션 프로젝트의 절대 경로입니다. 엔진과 활성 게임 팩의 `data/localization` 에 있는 프로젝트 파일입니다. */
-        static void collectLocalizationProjects( vector<string>& outListProjectPath );
         /**
          * @brief 프로젝트 하나를 테이블로 읽습니다. 번역 테이블이 없으면 그 문화권은 빈 항목이고, 있는데 못 읽으면 읽은 데까지 채운 뒤 경고하고 false 입니다.
          */
@@ -75,8 +73,6 @@ namespace sw::editor
         /** @brief @p dataFolder(`getGameDataFolderPath`)의 XML 파일 목록을 채웁니다. 에디터 상태를 읽지 않아 워커에서 불러도 된다. 폴더가 없거나 목록이 도중에 멈췄으면 false 입니다(`FileUtil::collectFiles` 와 같다). */
         [[nodiscard]] static bool collectGameDataFiles( string_view dataFolder, vector<GameDataFileEntry>& outList );
 
-        /** @brief 활성 게임의 Content/.../data/localization 폴더 절대 경로를 반환합니다. */
-        static string getLocalizationFolderPath();
         /** @brief Content/.../data 폴더 절대 경로를 반환합니다. */
         static string getGameDataFolderPath();
     };

@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Localization/LocalizationTools.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 SW_LOG_CALLER( "DataTablePanel" );
@@ -43,7 +44,7 @@ namespace sw::editor
         }
         else if ( _bLocalizationLoaded == false && localizationPoll == EditorTaskPoll::Idle )
         {
-            EditorDataTableCommands::collectLocalizationProjects( _listLocalizationProject );
+            LocalizationTools::collectProjectPaths( _listLocalizationProject ); // 현지화 도구와 같은 목록(엔진 · 에디터 UI · 활성 게임)
             if ( _listLocalizationProject.empty() )
                 _bLocalizationLoaded = true; // 프로젝트가 없다 — 빈 안내를 보인다
             else
