@@ -158,7 +158,8 @@ namespace sw
                     const Stopwatch hashWatch;
                     const uint64    hash = ContentHash::computeBytes( bytes );
                     ioTiming._inputHashNanos += hashWatch.getElapsedNanoseconds();
-                    pJob->recordInput( absPath, hash );
+                    if ( pJob->recordDiskInput( absPath, hash ) == false )
+                        return false;
                 }
                 writer.addBytes( relativePath, std::move( bytes ) );
                 return true;

@@ -65,7 +65,7 @@ namespace sw
         /**
          * @brief 디스크 경로(절대 경로 또는 작업 폴더 기준)의 파일을 텍스트로 읽습니다. 리소스 id 로 풀지 않습니다.
          * @details 경로로 읽는 문서 로더(`XMLDocument::loadFile` · `JSONDocument::loadFile`)가 쓴다. 쿠킹 작업 안이면 그 작업의 입력으로 기록하고,
-         *          쿠킹 세션 안인데 작업 밖이면 실패한다(`CookJob::admitRead`) — `FileUtil` 로 바로 읽으면 기록에서 빠진다.
+         *          쿠킹 세션 안인데 작업 밖이면 실패한다(`CookJob::admitDiskRead`) — `FileUtil` 로 바로 읽으면 기록에서 빠진다.
          */
         [[nodiscard]] static bool readTextFile( string_view filePath, string& outText );
         /** @brief 디스크 경로의 파일을 바이트로 읽습니다. 리소스 id 로 풀지 않습니다. 쿠킹 기록 규칙은 `readTextFile` 과 같습니다. */

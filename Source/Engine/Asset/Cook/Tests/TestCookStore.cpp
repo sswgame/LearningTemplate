@@ -5,26 +5,19 @@
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Asset/Cook/CookStore.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/CookJob.h"
 
 // CookStoreTest — 쿠킹 출력 하나를 기록(.cookrec)과 DDC 로 만드는 저장소: 입력이 그대로면 굽지 않고 다시 쓰고, 입력 · 쿠커 버전이 바뀌면 다시 굽고,
-// 입력을 기록하지 않은 작업은 실패, 요청에서 빠진 옛 출력만 지운다. 쿠커는 가짜다 — 입력 파일을 AssetIO 처럼 읽어(`admitRead`) 접두어를 붙여 쓴다(nogpu).
+// 입력을 기록하지 않은 작업은 실패, 요청에서 빠진 옛 출력만 지운다. 쿠커는 가짜다 — 입력 파일을 디스크 입구(`AssetIO::readBinaryFile`)로 읽어 접두어를 붙여 쓴다(nogpu).
 
 using namespace sw;
 
 namespace
 {
-    /** @brief 케이스 폴더의 절대 경로입니다 — 쿠커는 리소스 id 나 절대 경로를 넘긴다. 작업 폴더 상대 경로는 리소스 id 로 읽혀 다시 찾지 못한다. */
-    string makeAbsoluteScratchPath( string_view name )
-    {
-        string absolute;
-        (void)FileUtil::makeAbsolutePath( test::makeScratchPath( name ), absolute );
-        return absolute;
-    }
-
     struct CookFixture
     {
-        string    _root{ makeAbsoluteScratchPath( "Cook" ) };
+        string    _root{ test::makeScratchPath( "Cook" ) }; ///< 작업 폴더 기준 상대 경로 — 디스크 읽기는 이것도 절대 경로로 기록해야 한다
         string    _inputPath{ FileUtil::joinPath( _root, "Source/a.txt" ) };
         string    _cookedDir{ FileUtil::joinPath( _root, "Cooked" ) };
         CookStore _store{ FileUtil::joinPath( _root, "Record" ), FileUtil::joinPath( _root, "DDC" ) };
@@ -43,7 +36,7 @@ namespace
             {
                 ++_bakeCount;
                 vector<uint8> bytes;
-                if ( FileUtil::readFile( _inputPath, bytes ) == false || CookJob::admitRead( _inputPath, bytes.data(), bytes.size() ) == false )
+                if ( AssetIO::readBinaryFile( _inputPath, bytes ) == false )
                     return CookStep::Failed;
                 const string text = "baked:" + string( reinterpret_cast<const char*>( bytes.data() ), bytes.size() );
                 return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, text ) ? CookStep::Written : CookStep::Failed;

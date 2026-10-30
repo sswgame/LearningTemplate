@@ -26,11 +26,54 @@ namespace sw
             inline static thread_local CookJob* _t_pCurrent{ nullptr };
             inline static atomic<int32>         _s_sessionCount{ 0 };
 
-            /** @brief 입력의 id 입니다. 리소스 루트 안이면 리소스 id, 밖이면 받은 경로(구분자만 맞춘다)입니다. */
-            static string makeInputID( string_view path )
+            /** @brief 리소스 읽기 입력의 id 입니다(`toAssetID` 로 맞춘다 — 루트 밖으로 나가는 id 는 받은 글 그대로). */
+            static string makeInputID( const AssetID& id )
             {
-                string id = engine::getSubsystem<AssetPaths>().toAssetID( path );
-                return id.empty() ? FileUtil::normalizeSeparators( path ) : id;
+                string inputID = engine::getSubsystem<AssetPaths>().toAssetID( id.view() );
+                return inputID.empty() ? FileUtil::normalizeSeparators( id.view() ) : inputID;
+            }
+
+            /** @brief 디스크 경로의 절대 경로(구분자 `/`)입니다. 만들지 못하면 오류를 남기고 false 입니다(상대 글을 기록하면 리소스 id 로 다시 풀린다 — 파일 머리말). */
+            [[nodiscard]] static bool makeAbsoluteDiskPath( string_view diskPath, string& outAbsPath )
+            {
+                if ( FileUtil::makeAbsolutePath( diskPath, outAbsPath ) == false )
+                {
+                    SW_LOG_ERROR( "Cook input '%#' cannot be made absolute - it is not recorded, so the read fails", diskPath );
+                    return false;
+                }
+                outAbsPath = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( outAbsPath ) );
+                return true;
+            }
+
+            /** @brief 디스크 읽기 입력의 id 입니다. 붙인 도메인 · 리소스 루트 아래면 리소스 id, 밖이면 절대 경로입니다. */
+            [[nodiscard]] static bool makeDiskInputID( string_view diskPath, string& outID )
+            {
+                string absPath;
+                if ( makeAbsoluteDiskPath( diskPath, absPath ) == false )
+                    return false;
+                outID = engine::getSubsystem<AssetPaths>().toAssetID( absPath );
+                if ( outID.empty() )
+                    outID = std::move( absPath );
+                return true;
+            }
+
+            /** @brief 작업에 파일 입력 하나를 기록합니다. */
+            static void recordFileInput( CookJob& job, string inputID, uint64 contentHash )
+            {
+                CookInput input;
+                input._assetID     = std::move( inputID );
+                input._contentHash = contentHash;
+                job.recordInput( input );
+            }
+
+            /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::admitRead` 참고). */
+            [[nodiscard]] static bool admitReadOutsideJob( string_view source )
+            {
+                if ( CookSession::isActive() == false )
+                    return true;
+                SW_LOG_ERROR( "'%#' was read during cooking outside a cook job - the read is not recorded as an input, so it fails (open a CookJob around the cooker)",
+                              source );
+                return false;
             }
         };
     } // namespace
@@ -79,19 +122,21 @@ namespace sw
         return absPath.empty() ? 0 : ContentHash::computeFile( absPath );
     }
 
-    bool CookJob::admitRead( string_view assetID, const uint8* pData, size_t size )
+    bool CookJob::admitRead( const AssetID& id, const uint8* pData, size_t size )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
-        if ( pJob != nullptr )
-        {
-            pJob->recordInput( assetID, ContentHash::computeBytes( pData, size ) );
-            return true;
-        }
-        if ( CookSession::isActive() == false )
-            return true;
-        SW_LOG_ERROR( "'%#' was read during cooking outside a cook job - the read is not recorded as an input, so it fails (open a CookJob around the cooker)",
-                      assetID );
-        return false;
+        if ( pJob == nullptr )
+            return CookJobInternal::admitReadOutsideJob( id.view() );
+        CookJobInternal::recordFileInput( *pJob, CookJobInternal::makeInputID( id ), ContentHash::computeBytes( pData, size ) );
+        return true;
+    }
+
+    bool CookJob::admitDiskRead( string_view diskPath, const uint8* pData, size_t size )
+    {
+        CookJob* pJob = CookJobInternal::_t_pCurrent;
+        if ( pJob == nullptr )
+            return CookJobInternal::admitReadOutsideJob( diskPath );
+        return pJob->recordDiskInput( diskPath, ContentHash::computeBytes( pData, size ) );
     }
 
     bool CookJob::requiresCallingThreadRead()
@@ -99,19 +144,26 @@ namespace sw
         return CookJobInternal::_t_pCurrent != nullptr || CookSession::isActive();
     }
 
-    bool CookJob::admitAsyncRead( string_view assetID )
+    bool CookJob::admitAsyncRead( const AssetID& id )
     {
         if ( requiresCallingThreadRead() == false )
             return true;
-        SW_LOG_ERROR( "'%#' was read asynchronously during cooking - its completion is not recorded as an input; cookers read synchronously", assetID );
+        SW_LOG_ERROR( "'%#' was read asynchronously during cooking - its completion is not recorded as an input; cookers read synchronously", id.view() );
         return false;
     }
 
-    void CookJob::admitMissingRead( string_view assetID )
+    void CookJob::admitMissingRead( const AssetID& id )
     {
         CookJob* pJob = CookJobInternal::_t_pCurrent;
         if ( pJob != nullptr )
-            pJob->recordInput( assetID, 0 );
+            CookJobInternal::recordFileInput( *pJob, CookJobInternal::makeInputID( id ), 0 );
+    }
+
+    void CookJob::admitMissingDiskRead( string_view diskPath )
+    {
+        CookJob* pJob = CookJobInternal::_t_pCurrent;
+        if ( pJob != nullptr )
+            (void)pJob->recordDiskInput( diskPath, 0 ); // 실패는 오류 로그로 남는다 — 읽기는 이미 실패라 돌려줄 것이 없다
     }
 
     bool CookJob::collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile )
@@ -126,8 +178,9 @@ namespace sw
             return true;
         CookInput input;
         input._kind = CookInputKind::Listing;
-        // 폴더는 받은 경로 그대로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
-        input._assetID     = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( folderPath ) );
+        // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
+        if ( CookJobInternal::makeAbsoluteDiskPath( folderPath, input._assetID ) == false )
+            return false;
         input._extension   = string( extension );
         input._contentHash = computeListingHash( folderPath, extension );
         pJob->recordInput( input );
@@ -161,12 +214,13 @@ namespace sw
         return HashUtil::computeStringHash64( canonical.c_str(), canonical.size(), false );
     }
 
-    void CookJob::recordInput( string_view assetID, uint64 contentHash )
+    bool CookJob::recordDiskInput( string_view diskPath, uint64 contentHash )
     {
-        CookInput input;
-        input._assetID     = CookJobInternal::makeInputID( assetID );
-        input._contentHash = contentHash;
-        recordInput( input );
+        string inputID;
+        if ( CookJobInternal::makeDiskInputID( diskPath, inputID ) == false )
+            return false;
+        CookJobInternal::recordFileInput( *this, std::move( inputID ), contentHash );
+        return true;
     }
 
     void CookJob::recordInput( const CookInput& input )

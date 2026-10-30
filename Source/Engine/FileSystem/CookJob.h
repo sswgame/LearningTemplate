@@ -9,7 +9,9 @@
  *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
  *          - 입력은 둘이다. 파일(읽은 내용의 해시 — 없는 파일을 찾은 것도 해시 0 으로 남는다)과 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
  *            폴더를 훑어 정한 출력(레지스트리)은 파일이 하나 더 생겨도 읽은 파일이 바뀌지 않으므로 목록이 입력이어야 한다.
- *          - 리소스 id 는 `AssetPaths::toAssetID` 로 맞춘다(리소스 루트 밖의 파일은 받은 경로 그대로). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
+ *          - 리소스 id 는 `AssetPaths::toAssetID` 로 맞춘다(리소스 루트 밖의 파일은 절대 경로). 같은 파일을 절대 경로와 id 로 읽어도 입력 하나다.
+ *          - 리소스 읽기(`AssetID`)와 디스크 읽기(경로 글)는 입구가 다르다. 디스크 경로는 작업 폴더 기준이어도 절대 경로로 바꿔 기록한다 — 상대 글을 그대로 두면
+ *            다시 풀 때(`CookInput::computeCurrentHash`) 리소스 id 로 읽혀 다른 파일이나 없음이 되고, 기록이 늘 낡거나 엉뚱한 파일과 비교된다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,6 +19,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/FileSystem/AssetID.h"
 
 namespace sw
 {
@@ -110,7 +114,12 @@ namespace sw
          * @brief 리소스 읽기 하나를 받아들입니다(`AssetIO` 가 읽은 바이트와 함께 부른다).
          * @return 이 스레드에 작업이 있으면 입력으로 기록하고 true, 작업이 없고 세션도 없으면 true, 세션 안인데 작업 밖이면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool admitRead( string_view assetID, const uint8* pData, size_t size );
+        [[nodiscard]] static bool admitRead( const AssetID& id, const uint8* pData, size_t size );
+        /**
+         * @brief 디스크 경로(절대 또는 작업 폴더 기준) 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `admitRead` 와 같고,
+         *        절대 경로를 만들지 못하면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool admitDiskRead( string_view diskPath, const uint8* pData, size_t size );
         /**
          * @brief 리소스를 요청한 스레드에서 읽어야 하면 true 입니다. 이 스레드에 작업이 있거나 쿠킹 세션이 열려 있을 때입니다.
          * @details 작업 범위는 스레드 지역 값이라 워커에서 읽으면 그 읽기가 입력에서 빠진다. 에셋 로드(`AssetLoadBlock::startLoad`)는 이때 `Async` 요청도
@@ -121,25 +130,27 @@ namespace sw
          * @brief 요청한 스레드에서 읽어야 하면(`requiresCallingThreadRead`) 비동기 읽기를 거절합니다(완료가 다른 스레드에서 와서 기록이 빠진다). 쿠커는 동기로 읽는다.
          * @return 거절했으면 false 입니다(오류를 남긴다).
          */
-        [[nodiscard]] static bool admitAsyncRead( string_view assetID );
+        [[nodiscard]] static bool admitAsyncRead( const AssetID& id );
         /**
          * @brief 찾지 못한 리소스 읽기를 받아들입니다. 이 스레드에 작업이 있으면 해시 0 으로 기록합니다.
          * @details 없는 파일을 찾은 결과로 출력이 정해질 수 있다 — 그 파일이 생기면 다시 베이크해야 한다.
          */
-        static void admitMissingRead( string_view assetID );
+        static void admitMissingRead( const AssetID& id );
+        /** @brief 찾지 못한 디스크 경로 읽기를 받아들입니다(`admitMissingRead` 와 같고, 경로는 `admitDiskRead` 처럼 절대 경로로 기록한다). */
+        static void admitMissingDiskRead( string_view diskPath );
 
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
          * @details 폴더를 훑어 출력을 정하는 쿠커는 `FileUtil::collectFiles` 대신 이것을 쓴다 — 파일이 생기거나 사라지면 다시 베이크한다.
-         *          목록 입력의 id 는 받은 폴더 경로 그대로다(리소스 id 로 줄이지 않는다). 쿠커는 절대 경로를 넘긴다.
+         *          목록 입력의 id 는 폴더의 절대 경로다(리소스 id 로 줄이지 않는다 — 도메인 폴더는 id 로 줄이면 같은 폴더로 돌아오지 않는다).
          * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(부분 목록 — 구울 것을 빠뜨린다) false 입니다.
          */
         [[nodiscard]] static bool collectFiles( string_view folderPath, string_view extension, vector<string>& outListFile );
         /** @brief 목록 입력의 해시입니다. 폴더 기준 상대 경로를 정렬해 해시합니다. 폴더가 없거나 순회가 도중에 멈췄으면 0 입니다. */
         static uint64 computeListingHash( string_view folderPath, string_view extension );
 
-        /** @brief 파일 입력 하나를 기록합니다. 같은 리소스를 다시 읽으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
-        void recordInput( string_view assetID, uint64 contentHash );
+        /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `admitDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
+        [[nodiscard]] bool recordDiskInput( string_view diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );
 
