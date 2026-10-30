@@ -86,7 +86,7 @@ namespace sw
         // 입력이 없는 기록은 무엇이 바뀌어도 새것이다 — 쿠커가 `AssetIO` 를 거치지 않고 읽었다는 뜻이므로 실패로 멈춘다.
         if ( job.getInputs().empty() )
         {
-            SW_LOG_ERROR( "Cook: '%#' recorded no input - its cooker read its sources around AssetIO, so a change would not cook it again", outputID );
+            SW_LOG_ERROR_ID( "Cook.NoInputRecorded", "Cook: '%#' recorded no input - its cooker read its sources around AssetIO, so a change would not cook it again", outputID );
             return CookOutcome::Failed;
         }
         vector<uint8> bytes;

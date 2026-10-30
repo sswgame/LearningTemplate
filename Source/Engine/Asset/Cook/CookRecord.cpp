@@ -94,7 +94,7 @@ namespace sw
         }
         if ( listLine.empty() || StringUtil::trim( listLine[0] ) != kHeader )
         {
-            SW_LOG_WARNING( "Cook record '%#' is not '%#' - the job is cooked again", absPath, kHeader );
+            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' is not '%#' - the job is cooked again", absPath, kHeader );
             return false;
         }
         bool bHasKey    = false;
@@ -134,14 +134,14 @@ namespace sw
             }
             if ( bParsed == false )
             {
-                SW_LOG_WARNING( "Cook record '%#' line %# is malformed - the job is cooked again", absPath, lineIndex + 1 );
+                SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' line %# is malformed - the job is cooked again", absPath, lineIndex + 1 );
                 outRecord = CookRecord{};
                 return false;
             }
         }
         if ( bHasKey == false || bHasOutput == false )
         {
-            SW_LOG_WARNING( "Cook record '%#' has no key or output line - the job is cooked again", absPath );
+            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' has no key or output line - the job is cooked again", absPath );
             outRecord = CookRecord{};
             return false;
         }
