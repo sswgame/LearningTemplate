@@ -461,7 +461,8 @@ namespace sw::editor
                     return false;
                 HeightfieldAsset data;
                 heightfield.makeHeightfieldAsset( terrain.getHeightMin(), terrain.getHeightMax(), data );
-                return data.saveToFile( filePath );
+                const std::optional<AbsolutePath> heightfieldFile = FileUtil::requireAbsolutePath( filePath );
+                return heightfieldFile.has_value() && data.saveToFile( *heightfieldFile );
             }
 
             /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
@@ -471,10 +472,11 @@ namespace sw::editor
                 if ( heightfield.getSplatWidth() == 0 )
                     return false;
                 LayerWeightsAsset data;
-                data._width  = heightfield.getSplatWidth();
-                data._height = heightfield.getSplatHeight();
-                data._bytes  = heightfield.getSplatBytes();
-                return data.saveToFile( filePath );
+                data._width                                 = heightfield.getSplatWidth();
+                data._height                                = heightfield.getSplatHeight();
+                data._bytes                                 = heightfield.getSplatBytes();
+                const std::optional<AbsolutePath> splatFile = FileUtil::requireAbsolutePath( filePath );
+                return splatFile.has_value() && data.saveToFile( *splatFile );
             }
 
             /** @brief 마지막으로 고친 지형의 높이장과 스플랫을 원래 에셋 경로에 씁니다. */

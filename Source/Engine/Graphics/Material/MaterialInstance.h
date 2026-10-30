@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -62,7 +63,7 @@ namespace sw
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief 인스턴스 XML 을 저장합니다. */
-        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /**
          * @brief CPU 버퍼(부모 기본값에 오버라이드를 더한 것)를 만들고 인스턴스 CB 를 만들거나 갱신합니다.
          * @return 인스턴스 CB 와 bindless 인덱스가 준비되었으면 true 입니다. 부모가 없거나 부모 버퍼가 비어 있거나 버퍼를 만들지 못하면 false 입니다.

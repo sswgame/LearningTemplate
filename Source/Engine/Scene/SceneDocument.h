@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -93,12 +94,12 @@ namespace sw
          *          게임 런타임 코드는 쓰지 않습니다.
          */
         [[nodiscard]] SW_API bool loadXMLFromDiskFile( string_view diskPath );
-        /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
-        [[nodiscard]] SW_API bool saveXML( string_view path ) const;
+        /** @brief XML 을 디스크 경로에 저장합니다. 셀로 나눈 문서(쿠킹본, `_listStreamingCell`)는 쓰지 않고 false 입니다 — 셀의 엔티티를 잃는다. */
+        [[nodiscard]] SW_API bool saveXML( const AbsolutePath& absPath ) const;
         /** @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정과 셀까지 읽습니다. */
         [[nodiscard]] SW_API bool loadBinary( const AssetID& assetID );
-        /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. 월드 설정과 셀까지 씁니다. */
-        [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
+        /** @brief 바이너리(SCN1)를 디스크 경로에 저장합니다. 월드 설정과 셀까지 씁니다. */
+        [[nodiscard]] SW_API bool saveBinary( const AbsolutePath& absPath ) const;
         /** @brief 셀까지 모든 엔티티 수입니다. */
         SW_API size_t computeTotalEntityCount() const;
 

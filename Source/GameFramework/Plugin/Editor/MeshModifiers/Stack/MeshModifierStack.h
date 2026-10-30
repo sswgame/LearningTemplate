@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 
@@ -67,7 +68,7 @@ namespace sw::editor
         /** @brief 저장 문서를 읽습니다. 문서가 틀리면 false 이고 스택은 비웁니다. 모르는 종류는 경고하고 건너뜁니다. */
         [[nodiscard]] bool readJSONText( string_view jsonText );
         /** @brief 절대 경로에 저장합니다. */
-        [[nodiscard]] bool saveFile( string_view absolutePath ) const;
+        [[nodiscard]] bool saveFile( const AbsolutePath& absPath ) const;
         /** @brief 절대 경로에서 읽습니다. */
         [[nodiscard]] bool loadFile( string_view absolutePath );
 

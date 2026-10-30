@@ -276,8 +276,9 @@ namespace sw::editor
                     }
                     outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
                 }
-                const string meshDiskPath = toDiskPath( spec._outputMesh );
-                if ( MeshAssetFormat::saveToFile( meshDiskPath, makeAssetData( *merged._mesh ) ) == false )
+                const string                      meshDiskPath = toDiskPath( spec._outputMesh );
+                const std::optional<AbsolutePath> meshFile     = FileUtil::requireAbsolutePath( meshDiskPath );
+                if ( meshFile.has_value() == false || MeshAssetFormat::saveToFile( *meshFile, makeAssetData( *merged._mesh ) ) == false )
                 {
                     SW_LOG_ERROR( "Outfit atlas mesh '%#' could not be written", meshDiskPath.c_str() );
                     return false;

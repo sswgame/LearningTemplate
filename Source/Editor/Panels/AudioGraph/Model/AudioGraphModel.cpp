@@ -5,9 +5,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/FileSystem/AssetPaths.h"
 
 namespace sw::editor
 {
@@ -44,7 +46,8 @@ namespace sw::editor
     void AudioGraphModel::save()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다).
-        if ( _editGraph.saveToAsset( _editPath.view() ) )
+        const std::optional<AbsolutePath> graphFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _editPath.view() );
+        if ( graphFile.has_value() == false || _editGraph.saveToAsset( *graphFile ) )
             _bEditDirty = false;
     }
 

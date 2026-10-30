@@ -86,11 +86,11 @@ namespace sw
         return parseRoot( doc.getRoot( "AnimationGraphAsset" ), diskPath );
     }
 
-    bool AnimationGraphAsset::saveToFile( string_view path ) const
+    bool AnimationGraphAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( path.empty() )
+        if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
     bool AnimationGraphAsset::parseXML( string_view xmlView )

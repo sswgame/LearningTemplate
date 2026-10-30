@@ -71,11 +71,11 @@ namespace sw
         return readText( text, diskPath );
     }
 
-    bool DialogueGraphAsset::saveToFile( string_view path ) const
+    bool DialogueGraphAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( path.empty() )
+        if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
     bool DialogueGraphAsset::parseXML( string_view xmlView )

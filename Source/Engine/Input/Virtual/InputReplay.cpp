@@ -130,7 +130,7 @@ namespace sw
         _startFrameIndex = endIndex;
     }
 
-    bool InputReplay::saveToFile( string_view filePath ) const
+    bool InputReplay::saveToFile( const AbsolutePath& absPath ) const
     {
         vector<uint8> bytes;
         ReplayHeader  header{};
@@ -155,7 +155,7 @@ namespace sw
             }
         }
 
-        return FileUtil::ensureParentDirectoryExists( filePath ) && FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
     bool InputReplay::loadFromFile( string_view filePath )

@@ -271,9 +271,9 @@ namespace sw
         return document.saveToString();
     }
 
-    bool SourceStringTable::saveToFile( string_view absolutePath ) const
+    bool SourceStringTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), toXMLText() );
     }
 
     const SourceTextEntry* SourceStringTable::findEntry( string_view key ) const
@@ -384,9 +384,9 @@ namespace sw
         return document.saveToString();
     }
 
-    bool TranslationTable::saveToFile( string_view absolutePath ) const
+    bool TranslationTable::saveToFile( const AbsolutePath& absPath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toXMLText() );
+        return LocalizationDocumentsInternal::writeTextFile( absPath.str(), toXMLText() );
     }
 
     const TranslationEntry* TranslationTable::findEntry( string_view key ) const

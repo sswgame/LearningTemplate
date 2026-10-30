@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
@@ -62,7 +63,7 @@ namespace sw
         void seekTo( InputManager& input, uint32 frameIndex );
 
         /** @brief 바이너리 파일(.swreplay)로 저장합니다. */
-        [[nodiscard]] bool saveToFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 바이너리 파일(.swreplay)에서 읽습니다. 버전이 다르거나 잘렸으면 false 를 반환하고 기존 상태는 그대로 둡니다. */
         [[nodiscard]] bool loadFromFile( string_view filePath );
 

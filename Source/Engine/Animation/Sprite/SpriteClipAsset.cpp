@@ -73,11 +73,11 @@ namespace sw
         return false;
     }
 
-    bool SpriteClipAsset::saveToFile( string_view path ) const
+    bool SpriteClipAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( path.empty() )
+        if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
     bool SpriteClipAsset::parseXML( string_view xml )

@@ -92,11 +92,11 @@ namespace sw
         return readText( text, diskPath );
     }
 
-    bool SequenceAsset::saveToFile( string_view path ) const
+    bool SequenceAsset::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( path.empty() )
+        if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
     bool SequenceAsset::parseXML( string_view xmlView )

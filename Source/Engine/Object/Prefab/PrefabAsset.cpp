@@ -812,13 +812,12 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::saveToXMLFile( string_view assetRelativePath ) const
+    bool PrefabAsset::saveToXMLFile( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
             SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file - '%#' is left as it was", _name,
-                          assetRelativePath );
+                          absPath.str() );
             return false;
         }
 
@@ -835,7 +834,7 @@ namespace sw
             XMLNode     bodyRoot    = bBodyParsed ? bodyDoc.getRoot() : XMLNode{};
             if ( bodyRoot.isValid() == false )
             {
-                SW_LOG_ERROR( "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, assetRelativePath );
+                SW_LOG_ERROR( "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, absPath.str() );
                 return false;
             }
             root.appendClone( bodyRoot );
@@ -843,35 +842,34 @@ namespace sw
         else if ( _stateData.empty() == false )
         {
             // 상태가 있는데 XML 로 옮기지 못했다(타입이 빠진 JSON 본문 등). 빈 `<Prefab>` 을 쓰면 파일의 내용이 사라지므로 실패로 돌려준다.
-            SW_LOG_ERROR( "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, assetRelativePath );
+            SW_LOG_ERROR( "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
         if ( PrefabAssetInternal::writeNodesToXML( root, _listNestedInstance, -1 ) == false )
         {
-            SW_LOG_ERROR( "Prefab '%#' has nested instances that cannot be written - '%#' is left as it was", _name, assetRelativePath );
+            SW_LOG_ERROR( "Prefab '%#' has nested instances that cannot be written - '%#' is left as it was", _name, absPath.str() );
             return false;
         }
 
         // 상위 폴더를 만들지 못하면 쓰지 않는다(폴더 쪽 이유는 ensure 가 남긴다). 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) && xmlDoc.saveFile( absPath );
+        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && xmlDoc.saveFile( absPath.str() );
         if ( writeOk == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab XML: %#", absPath );
+            SW_LOG_ERROR( "Failed to write prefab XML: %#", absPath.str() );
             return false;
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( assetRelativePath );
-        SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
+            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
+        SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath.str() );
         return true;
     }
 
-    bool PrefabAsset::saveToJSONFile( string_view assetRelativePath ) const
+    bool PrefabAsset::saveToJSONFile( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
         if ( hasResolvedNestedInstances() )
         {
-            SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath );
+            SW_LOG_ERROR( "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath.str() );
             return false;
         }
 
@@ -879,7 +877,7 @@ namespace sw
         if ( jsonStr.empty() )
         {
             // 상태를 읽지 못했다(타입이 빠진 본문 등). 로더가 읽을 수 없는 파일을 쓰지 않는다 — XML 로는 그대로 저장할 수 있다.
-            SW_LOG_ERROR( "Prefab '%#' state could not be converted to JSON; nothing written: %#", _name, absPath );
+            SW_LOG_ERROR( "Prefab '%#' state could not be converted to JSON; nothing written: %#", _name, absPath.str() );
             return false;
         }
         if ( _listNestedInstance.empty() == false )
@@ -887,42 +885,41 @@ namespace sw
             JSONDocument doc;
             if ( doc.parse( jsonStr ) == false || doc.getRoot().isObject() == false )
             {
-                SW_LOG_ERROR( "Prefab '%#' state is not a JSON object; nothing written: %#", _name, absPath );
+                SW_LOG_ERROR( "Prefab '%#' state is not a JSON object; nothing written: %#", _name, absPath.str() );
                 return false;
             }
             PrefabAssetInternal::writeNodesToJSON( doc.getRoot(), _listNestedInstance, -1 );
             jsonStr = doc.dump( 0 );
         }
 
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) &&
-                             FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
+        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) &&
+                             FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
         if ( writeOk == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab JSON: %#", absPath );
+            SW_LOG_ERROR( "Failed to write prefab JSON: %#", absPath.str() );
             return false;
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( assetRelativePath );
-        SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
+            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
+        SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath.str() );
         return true;
     }
 
-    bool PrefabAsset::saveToFile( string_view assetRelativePath ) const
+    bool PrefabAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
         // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
-        if ( StringUtil::endsWith( assetRelativePath, ".prefab.json", true ) )
-            return saveToJSONFile( assetRelativePath );
-        if ( StringUtil::endsWith( assetRelativePath, ".prefab.xml", true ) )
-            return saveToXMLFile( assetRelativePath );
-        SW_LOG_ERROR( "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", assetRelativePath );
+        if ( StringUtil::endsWith( absPath.str(), ".prefab.json", true ) )
+            return saveToJSONFile( absPath );
+        if ( StringUtil::endsWith( absPath.str(), ".prefab.xml", true ) )
+            return saveToXMLFile( absPath );
+        SW_LOG_ERROR( "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", absPath.str() );
         return false;
     }
 
-    bool PrefabAsset::saveToBinaryFile( string_view assetRelativePath ) const
+    bool PrefabAsset::saveToBinaryFile( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         Archive arch;
         arch << PrefabAssetInternal::kBinMagic;
@@ -935,9 +932,9 @@ namespace sw
             arch << node._name << node._prefabPath << node._prefabGUID << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveFile( absPath ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Failed to write prefab binary: %#", absPath );
+            SW_LOG_ERROR( "Failed to write prefab binary: %#", absPath.str() );
             return false;
         }
         return true;
@@ -1666,9 +1663,10 @@ namespace sw
                 PrefabCache nestedPrefabs;
                 PrefabAsset asset;
                 // 디스크로 훑은 원본이다 — 디스크 입구로 읽는다(리소스 id 입구는 팩 전용 구성에서 리소스 루트 안 절대 경로를 거절한다).
-                const bool bLoaded    = asset.loadFromDiskFile( normalized );
-                const bool bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
-                if ( bFlattened == false || asset.saveToBinaryFile( outputPath ) == false )
+                const bool                        bLoaded    = asset.loadFromDiskFile( normalized );
+                const bool                        bFlattened = bLoaded && asset.isValid() && nestedPrefabs.flattenNestedInstances( asset );
+                const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+                if ( outputFile.has_value() == false || bFlattened == false || asset.saveToBinaryFile( *outputFile ) == false )
                 {
                     SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );
                     return CookStep::Failed;

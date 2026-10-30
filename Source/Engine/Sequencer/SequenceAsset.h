@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/FileSystem/AssetID.h"
@@ -223,7 +224,7 @@ namespace sw
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief XML 파일을 씁니다. */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /**
          * @brief XML 본문을 파싱합니다.
          * @details **실패하면 빈 에셋이 남는다.** 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전

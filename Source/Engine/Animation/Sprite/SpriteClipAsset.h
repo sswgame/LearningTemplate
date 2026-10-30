@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/FileSystem/AssetID.h"
@@ -131,7 +132,7 @@ namespace sw
         /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromFile` 과 같습니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 읽습니다. 구문이 틀렸거나, 모르는 속성 · 자식 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
         [[nodiscard]] bool parseXML( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */

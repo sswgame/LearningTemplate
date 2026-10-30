@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -173,7 +174,7 @@ namespace sw
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief XML 파일을 씁니다. */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 읽습니다. 틀린 글이면 false 이고 그래프는 비어 있습니다. */
         [[nodiscard]] bool parseXML( string_view xml );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */

@@ -68,12 +68,12 @@ namespace sw::editor
         _history.clear();
     }
 
-    bool SocketEditModel::saveToFile( string_view absolutePath )
+    bool SocketEditModel::saveToFile( const AbsolutePath& absPath )
     {
         const string text = _sockets.saveToXMLText();
-        if ( FileUtil::writeTextFile( absolutePath, text ) == false )
+        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
         {
-            SW_LOG_ERROR( "Socket file could not be written: %#", string( absolutePath ).c_str() );
+            SW_LOG_ERROR( "Socket file could not be written: %#", string( absPath.str() ).c_str() );
             return false;
         }
         _savedText = text;

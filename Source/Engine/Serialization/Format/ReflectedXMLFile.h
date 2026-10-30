@@ -1,6 +1,6 @@
 /**
  * @file ReflectedXMLFile.h
- * @brief 리플렉션 desc 하나를 리소스 상대 경로의 XML 파일로 읽고 씁니다(렌더 패스 · 파이프라인 리소스가 씁니다).
+ * @brief 리플렉션 desc 하나를 XML 파일로 읽고(리소스 id) 씁니다(디스크 경로 - `AssetPaths::resolveWritePath` 로 푼 것). 렌더 패스 · 파이프라인 리소스가 씁니다.
  *
  * [왜 있는가]
  * 렌더 리소스 둘(`RenderPassAsset` · `RenderPipelineAsset`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Reflection/Reflection.h"
@@ -22,7 +23,7 @@ namespace sw
 {
     /**
      * @struct ReflectedXMLFile
-     * @brief 리플렉션 desc 를 리소스 상대 경로의 XML 로 읽고 씁니다.
+     * @brief 리플렉션 desc 를 XML 로 읽고(리소스 id) 씁니다(디스크 경로).
      */
     struct SW_API ReflectedXMLFile
     {
@@ -55,13 +56,13 @@ namespace sw
 
         /**
          * @brief 리플렉션 desc 를 XML 로 씁니다.
-         * @param assetRelativePath 리소스 상대 경로. 아직 없는 파일이면 경로를 그대로 씁니다.
+         * @param absPath 쓸 디스크 경로(리소스 id 를 디스크 자리로 푸는 일은 부르는 쪽 - `AssetPaths::resolveWritePath`)
          * @return 성공 여부.
          */
         template <typename DescType>
-        [[nodiscard]] static bool saveDesc( string_view assetRelativePath, const DescType& desc )
+        [[nodiscard]] static bool saveDesc( const AbsolutePath& absPath, const DescType& desc )
         {
-            return saveDescInternal( assetRelativePath, &desc, DescType::StaticType() );
+            return saveDescInternal( absPath, &desc, DescType::StaticType() );
         }
 
     private:
@@ -75,6 +76,6 @@ namespace sw
         /** @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다. */
         [[nodiscard]] static bool parseDesc( string_view sourceName, const string& text, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. */
-        [[nodiscard]] static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const TypeInfo* pTypeInfo );
     };
 } // namespace sw

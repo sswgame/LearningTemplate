@@ -119,7 +119,7 @@ namespace sw
         return _clipFolder.empty() ? fileName : FileUtil::joinPath( _clipFolder, fileName );
     }
 
-    bool VertexAnimationCooker::cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const string& outputPath, float32 framesPerSecond )
+    bool VertexAnimationCooker::cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const AbsolutePath& outputPath, float32 framesPerSecond )
     {
         MeshAssetData meshData;
         Skeleton      skeleton;
@@ -152,24 +152,23 @@ namespace sw
     uint32 VertexAnimationCooker::cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount )
     {
         uint32 writtenCount = 0;
-        // 쿠킹 폴더가 비었으면 메시 곁에 쓴다 — 상대 키인 메시는 읽기가 검색 순서로 고른 그 파일의 도메인 곁이다.
-        const AssetPaths&                  paths  = engine::getSubsystem<AssetPaths>();
-        const std::optional<DomainAssetID> meshID = cookedDir.empty() ? paths.toWriteID( list._meshPath ) : std::nullopt;
+        // 쿠킹 폴더가 비었으면 메시 파일 곁에 쓴다 — 상대 키인 메시는 읽기가 검색 순서로 고른 그 파일이다.
+        const std::optional<AbsolutePath> meshPath = cookedDir.empty() ? engine::getSubsystem<AssetPaths>().resolveWritePath( list._meshPath ) : std::nullopt;
         for ( const hashed_string& clipName : list._listClip )
         {
-            const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-            string       outputPath;
+            const string                cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+            std::optional<AbsolutePath> outputPath;
             if ( cookedDir.empty() == false )
-                outputPath = FileUtil::joinPath( cookedDir, cookedPath );
-            else if ( meshID.has_value() )
-                outputPath = paths.getWritePath( MeshVertexAnimation::makeCookedPath( meshID->str(), clipName ) );
-            if ( outputPath.empty() )
+                outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, cookedPath ) );
+            else if ( meshPath.has_value() )
+                outputPath = FileUtil::requireAbsolutePath( MeshVertexAnimation::makeCookedPath( meshPath->str(), clipName ) );
+            if ( outputPath.has_value() == false )
             {
                 SW_LOG_ERROR( "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );
                 ++outFailedCount;
                 continue;
             }
-            if ( cookClip( list, clipName, outputPath, framesPerSecond ) == false )
+            if ( cookClip( list, clipName, *outputPath, framesPerSecond ) == false )
             {
                 ++outFailedCount;
                 continue;
@@ -229,9 +228,9 @@ namespace sw
                 const string      outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
                 const CookOutcome outcome  = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir, outputID ), [&]()
                  {
-                    VertexAnimationCookList jobList;
-                    const bool              bCooked =
-                        jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, FileUtil::joinPath( cookedDir, outputID ), framesPerSecond );
+                    VertexAnimationCookList           jobList;
+                    const std::optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, outputID ) );
+                    const bool                        bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += outcome == CookOutcome::Failed ? 1u : 0u;

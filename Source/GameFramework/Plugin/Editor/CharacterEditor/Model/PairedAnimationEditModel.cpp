@@ -64,7 +64,7 @@ namespace sw::editor
         return loadFromXMLText( text, absolutePath );
     }
 
-    bool PairedAnimationEditModel::saveToFile( string_view absolutePath, string& outError )
+    bool PairedAnimationEditModel::saveToFile( const AbsolutePath& absPath, string& outError )
     {
         if ( isValid() == false )
         {
@@ -72,7 +72,7 @@ namespace sw::editor
             return false;
         }
         const string text = saveToXMLText();
-        if ( FileUtil::writeTextFile( absolutePath, text ) == false )
+        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
         {
             outError = "The file could not be written";
             return false;

@@ -1242,7 +1242,8 @@ namespace sw::editor
         string thumbnailID;
         if ( _document.makeThumbnailID( thumbnailID ) == false )
             return; // 까닭은 상태 줄에 남았다
-        const string imagePath = editor::getSubsystem<AssetPaths>().getWritePath( thumbnailID );
+        const std::optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().resolveWritePath( thumbnailID );
+        const string                      imagePath = imageFile.has_value() ? imageFile->str() : string{};
         if ( imagePath.empty() || getPreviewViewport().requestImageFile( imagePath ) == false )
         {
             _document.setStatus( "The thumbnail needs a write path and the Preview tab drawn at least once" );

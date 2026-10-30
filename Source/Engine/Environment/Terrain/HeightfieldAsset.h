@@ -17,6 +17,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -60,6 +61,6 @@ namespace sw
         /** @brief 형식대로 바이트를 만듭니다. */
         void saveToMemory( vector<uint8>& outBytes ) const;
         /** @brief 절대 경로에 씁니다(임포터와 테스트용). */
-        [[nodiscard]] bool saveToFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
     };
 } // namespace sw

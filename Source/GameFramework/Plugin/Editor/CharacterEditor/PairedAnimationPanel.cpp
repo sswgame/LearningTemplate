@@ -100,14 +100,14 @@ namespace sw::editor
 
     bool PairedAnimationPanel::saveDocument()
     {
-        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( getLoadedAssetPath() ) );
-        string       error;
-        if ( writePath.empty() || _model.saveToFile( writePath, error ) == false )
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( getLoadedAssetPath() );
+        string                            error;
+        if ( writePath.has_value() == false || _model.saveToFile( *writePath, error ) == false )
         {
-            _status = writePath.empty() ? string( "No write path for this asset" ) : error;
+            _status = writePath.has_value() == false ? string( "No write path for this asset" ) : error;
             return false;
         }
-        SW_LOG_INFO( "Paired animation saved to %#", writePath.c_str() );
+        SW_LOG_INFO( "Paired animation saved to %#", writePath->c_str() );
         _status = "Saved";
         acknowledgePreviewEdits();
         return true;

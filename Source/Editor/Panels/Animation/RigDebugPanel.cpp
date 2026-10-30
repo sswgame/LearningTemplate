@@ -135,8 +135,11 @@ namespace sw::editor
                 string rewritten;
                 if ( RigFileRewrite::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
-                const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( rigPath );
-                if ( writePath.empty() || FileUtil::writeTextFile( writePath, rewritten ) == false )
+                const std::optional<AbsolutePath> rigFile = editor::getSubsystem<AssetPaths>().resolveWritePath( rigPath );
+                if ( rigFile.has_value() == false )
+                    return string( "The rig file could not be written" );
+                const string& writePath = rigFile->str();
+                if ( FileUtil::writeTextFile( writePath, rewritten ) == false )
                     return string( "The rig file could not be written" );
                 if ( pUndoLabel != nullptr )
                 {

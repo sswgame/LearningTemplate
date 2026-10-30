@@ -134,10 +134,12 @@ namespace sw::editor
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.
-        const string                        filePath = editor::getSubsystem<AssetPaths>().getWritePath( prefabPath );
+        const std::optional<AbsolutePath> filePath = editor::getSubsystem<AssetPaths>().resolveWritePath( prefabPath );
+        if ( filePath.has_value() == false )
+            return false; // 이유는 resolveWritePath 가 남겼다
         string                              oldFileText;
         string                              oldBaseState;
-        const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath, oldFileText ) == OptionalFileRead::Read;
+        const bool                          bHadFile   = FileUtil::readOptionalTextFile( filePath->str(), oldFileText ) == OptionalFileRead::Read;
         const shared_ptr<const PrefabAsset> pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
         if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
             oldBaseState.clear();
@@ -145,13 +147,13 @@ namespace sw::editor
         // 형식은 경로가 정한다(`.prefab.json` 에는 JSON). 프리팹 경로가 아니면 쓰지 않는다.
         PrefabAsset asset;
         asset.setFromGameObject( pObj );
-        if ( asset.saveToFile( prefabPath ) == false )
+        if ( asset.saveToFile( *filePath ) == false )
         {
             SW_LOG_ERROR( "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;
         }
         string newFileText;
-        (void)FileUtil::readTextFile( filePath, newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
+        (void)FileUtil::readTextFile( filePath->str(), newFileText ); // 방금 쓴 파일이다. 못 읽어도 다시 실행이 파일을 쓰지 않을 뿐이다
 
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         if ( pPrefabCache == nullptr || pContext == nullptr )
@@ -182,8 +184,8 @@ namespace sw::editor
         if ( bHadFile )
         {
             const string savedPath{ prefabPath };
-            EditorTransaction::push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, string{ filePath }, string{ oldFileText } ),
-                                     SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, string{ filePath }, string{ newFileText } ),
+            EditorTransaction::push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ oldFileText } ),
+                                     SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ newFileText } ),
                                      "Write Prefab" );
         }
         uint32 updatedCount = 0;

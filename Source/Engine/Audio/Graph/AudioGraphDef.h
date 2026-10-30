@@ -34,6 +34,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
@@ -149,7 +150,7 @@ namespace sw
          * @brief 검사를 통과한 그래프를 리소스 경로의 파일에 씁니다. 에디터의 소리 그래프 창이 저장하는 길이고, 저장한 파일은 핫 리로드가 클립 캐시에 다시 굳힌다.
          * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다(읽을 수 없는 파일을 남기지 않는다).
          */
-        [[nodiscard]] bool saveToAsset( string_view assetPath ) const;
+        [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
         /**
          * @brief 처리 순서(입력이 먼저)를 노드 번호로 만듭니다. 입력을 간선으로 본 위상 정렬입니다.
          * @return 없는 노드를 가리키거나 고리가 있으면 false 입니다.

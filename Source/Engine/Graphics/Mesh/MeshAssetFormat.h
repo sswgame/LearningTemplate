@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -88,9 +89,9 @@ namespace sw
         [[nodiscard]] static bool readFromBytes( const uint8* pData, size_t size, vector<RHIVertex>& outListVertex, float32* pOutBoundingRadius = nullptr );
 
         /** @brief 내용을 @p path 에 씁니다(부모 폴더를 만듭니다). */
-        [[nodiscard]] static bool saveToFile( string_view path, const MeshAssetData& data );
+        [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const MeshAssetData& data );
         /** @brief 스킨 없는 정점 배열을 @p path 에 씁니다. */
-        [[nodiscard]] static bool saveToFile( string_view path, const vector<RHIVertex>& listVertex );
+        [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const vector<RHIVertex>& listVertex );
         /** @brief 리소스 경로(또는 OS 절대 경로)의 `.mesh` 를 읽습니다. 팩 파일과 느슨한 파일 모두 `AssetPaths` 로 읽습니다. */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, MeshAssetData& outData );
         /** @brief 정점만 읽습니다(스킨은 버립니다). */

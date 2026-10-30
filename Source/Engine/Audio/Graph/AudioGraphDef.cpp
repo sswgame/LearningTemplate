@@ -162,17 +162,16 @@ namespace sw
         return XMLSerializer::serialize( this, *StaticType() );
     }
 
-    bool AudioGraphDef::saveToAsset( string_view assetPath ) const
+    bool AudioGraphDef::saveToAsset( const AbsolutePath& absPath ) const
     {
-        if ( validate( assetPath ) == false )
+        if ( validate( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", assetPath );
+            SW_LOG_ERROR( "%#: audio graph not saved - it does not pass validation", absPath.str() );
             return false;
         }
-        const string filePath = engine::getSubsystem<AssetPaths>().getWritePath( assetPath );
-        if ( FileUtil::writeTextFile( filePath, toXMLText() ) == false )
+        if ( FileUtil::writeTextFile( absPath.str(), toXMLText() ) == false )
         {
-            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", assetPath, filePath );
+            SW_LOG_ERROR( "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;
         }
         return true;

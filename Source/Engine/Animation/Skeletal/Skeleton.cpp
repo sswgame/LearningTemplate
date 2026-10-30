@@ -124,11 +124,11 @@ namespace sw
         return XMLSerializer::serialize( this, *StaticType() );
     }
 
-    bool Skeleton::saveToFile( string_view path ) const
+    bool Skeleton::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 } // namespace sw
 

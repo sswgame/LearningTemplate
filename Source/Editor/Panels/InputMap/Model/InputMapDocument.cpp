@@ -101,7 +101,8 @@ namespace sw::editor
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
-        if ( _inputMap.saveToAsset( _inputMapPath.c_str() ) == false )
+        const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _inputMapPath.c_str() );
+        if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
@@ -190,8 +191,8 @@ namespace sw::editor
 
     void InputMapDocument::saveReplay() const
     {
-        const string diskPath = editor::getSubsystem<AssetPaths>().getWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
-        if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _replayFilePath.get() );
+        if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
             SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 

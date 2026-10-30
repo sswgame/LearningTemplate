@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
@@ -87,7 +88,7 @@ namespace sw::editor
          * @brief 지금 선택을 프리셋 저장소에 넣고 저장소 전체를 @p absolutePath 에 씁니다(`UserAppearancePresetStore::saveToText`). 쓰기에 실패하면 false 이고 저장 상태는 그대로입니다.
          * @details 저장소는 프리셋 내용을 공유 코드로 싣기 때문에 `setDatabase` 로 외형 데이터를 먼저 정해 둬야 한다(없으면 코드가 비어 다시 읽을 수 없다).
          */
-        [[nodiscard]] bool saveToPresetFile( UserAppearancePresetStore& store, string_view name, string_view absolutePath );
+        [[nodiscard]] bool saveToPresetFile( UserAppearancePresetStore& store, string_view name, const AbsolutePath& absPath );
         /** @brief 파일에서 저장소를 읽습니다. 파일이 없거나 형식이 틀리면 false 이고 저장소는 그대로입니다. */
         [[nodiscard]] static bool loadPresetFile( UserAppearancePresetStore& store, string_view absolutePath );
         /** @brief 저장소의 프리셋 하나를 열어 선택을 바꿉니다(기록을 지우고 "저장된 상태" 로 맞춥니다). 이름이 없으면 false 입니다. */

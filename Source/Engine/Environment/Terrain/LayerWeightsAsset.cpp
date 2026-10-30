@@ -91,16 +91,16 @@ namespace sw
         outBytes.insert( outBytes.end(), _bytes.begin(), _bytes.end() );
     }
 
-    bool LayerWeightsAsset::saveToFile( string_view filePath ) const
+    bool LayerWeightsAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         if ( isValid() == false )
         {
-            SW_LOG_ERROR( "Layer weight map for '%#' is malformed (%#x%#, %# bytes) - not written", filePath, _width, _height, static_cast<uint64>( _bytes.size() ) );
+            SW_LOG_ERROR( "Layer weight map for '%#' is malformed (%#x%#, %# bytes) - not written", absPath.str(), _width, _height, static_cast<uint64>( _bytes.size() ) );
             return false;
         }
         vector<uint8> bytes;
         saveToMemory( bytes );
-        return FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 } // namespace sw
 

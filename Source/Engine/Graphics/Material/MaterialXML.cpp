@@ -402,14 +402,13 @@ namespace sw
             SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
     }
 
-    bool Material::saveToFile( string_view assetRelativePath ) const
+    bool Material::saveToFile( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )
             return false;
-        return doc.saveFile( absPath );
+        return doc.saveFile( absPath.str() );
     }
 
     string Material::saveToString() const

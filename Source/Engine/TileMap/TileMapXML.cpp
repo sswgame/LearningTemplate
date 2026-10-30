@@ -630,16 +630,15 @@ namespace sw
         return true;
     }
 
-    bool TileMapXMLData::save( string_view path ) const
+    bool TileMapXMLData::save( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
 
         const string xml = toXML();
         if ( xml.empty() )
             return false;
-        const bool bOk = FileUtil::writeTextFile( absPath, xml );
+        const bool bOk = FileUtil::writeTextFile( absPath.str(), xml );
         if ( bOk )
-            SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
+            SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath.str() );
         return bOk;
     }
 

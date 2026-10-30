@@ -199,6 +199,18 @@ namespace sw
         return true;
     }
 
+    std::optional<AbsolutePath> FileUtil::requireAbsolutePath( string_view path )
+    {
+        // 빈 글도 절대가 아니다 - `acceptsPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
+        if ( path.empty() || PlatformFileUtil::acceptsPathInput( path ) == false )
+        {
+            if ( path.empty() )
+                SW_LOG_ERROR_ID( "File.RelativePath", "An empty path was given where an absolute disk path is required" );
+            return std::nullopt;
+        }
+        return AbsolutePath::tryMake( path );
+    }
+
     bool FileUtil::makeAbsolutePath( string_view path, string& outResult )
     {
         return PlatformFileSystem::makeAbsolute( path, outResult );

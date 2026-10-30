@@ -159,12 +159,12 @@ namespace sw
         return true;
     }
 
-    bool ControlIntentHistory::saveToFile( string_view path ) const
+    bool ControlIntentHistory::saveToFile( const AbsolutePath& absPath ) const
     {
         BitWriter writer;
         if ( write( writer ) == false )
             return false;
-        return FileUtil::writeFile( path, writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
+        return FileUtil::writeFile( absPath.str(), writer.getBytes().data(), static_cast<uint64>( writer.getByteCount() ) );
     }
 
     bool ControlIntentHistory::loadFromFile( string_view path, string& outError )

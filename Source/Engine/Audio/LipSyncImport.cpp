@@ -56,8 +56,9 @@ namespace sw
             clip.copyMonoSamples( listSample );
             VisemeTrack track;
             LipSyncAnalyzer::analyze( listSample, clip._sampleRate, settings, track );
-            const string trackPath = VisemeTrack::makePathForAudio( normalized );
-            if ( track.saveToFile( trackPath ) == false )
+            const string                      trackPath = VisemeTrack::makePathForAudio( normalized );
+            const std::optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
+            if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )
             {
                 SW_LOG_ERROR( "Lip sync import could not write '%#'", trackPath.c_str() );
                 ++outFailedCount;

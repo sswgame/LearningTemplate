@@ -371,7 +371,8 @@ namespace sw
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
                 if ( SceneCooker::splitStreamingCells( services, doc, scenePath ) == false )
                     return CookStep::Failed;
-                if ( doc.saveBinary( outputPath ) == false )
+                const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+                if ( outputFile.has_value() == false || doc.saveBinary( *outputFile ) == false )
                 {
                     SW_LOG_ERROR( "Scene cook failed to write '%#'.", outputPath );
                     return CookStep::Failed;

@@ -8,6 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskFuture.h"
@@ -131,16 +132,18 @@ namespace sw
          *          스트리밍 큐가 미리 읽는다. 로드가 끝난 뒤에도 잠시(`gv_scenePreloadHoldFrames`) 붙들어 씬이 에셋을 잡을 때까지 캐시가 비지 않게 한다. 로딩 화면 진행률이 이것을 읽는다.
          */
         [[nodiscard]] bool tryGetLoadProgress( float32& outProgress ) const;
+        /** @brief 활성 씬을 그 씬이 온 리소스(소스 id)에 저장합니다. 소스가 없으면(새 씬) 쓰지 않고 false 입니다 — `saveActiveSceneAs` 로 자리를 정한다. */
+        [[nodiscard]] bool saveActiveScene();
         /**
-         * @brief 활성 씬의 루트를 씬 XML 로 저장합니다.
-         * @param path 리소스 상대 또는 절대 경로. 비어 있으면 씬 소스 경로를 씁니다.
+         * @brief 활성 씬을 디스크 경로 @p absPath 에 저장하고 그 자리를 씬의 소스로 삼습니다(다른 이름 저장).
+         * @details 소스는 늘 리소스 id 다 — 리소스 트리 · 붙인 디스크 도메인 밖의 자리는 다시 열 수 없으므로 거절한다(예전에는 다른 이름 저장 뒤 소스가 디스크 경로가 됐다).
          */
-        [[nodiscard]] bool saveActiveScene( string_view path = {} );
+        [[nodiscard]] bool saveActiveSceneAs( const AbsolutePath& absPath );
         /**
          * @brief 활성 씬의 사본을 @p path 에 저장합니다. 씬 소스 경로는 바꾸지 않습니다(다음 저장은 원래 자리로 간다 — BugReport 의 씬 사본).
          * @details 저장이 막혀 있으면(`setSaveBlockReason`) 쓰지 않고 false 입니다.
          */
-        [[nodiscard]] bool saveActiveSceneCopy( string_view path );
+        [[nodiscard]] bool saveActiveSceneCopy( const AbsolutePath& absPath );
         /**
          * @brief 씬 저장을 막거나(사유) 풉니다(빈 문자열).
          * @details 호스트가 모듈 컴포넌트를 씬에서 걷어 낸 채 아직 되돌리지 못한 동안 세웁니다(게임 모듈 리로드 · 그 실패). 그 사이에 저장하면
@@ -269,6 +272,9 @@ namespace sw
         SceneLoadRequestedDelegate& onSceneLoadRequested() { return _onSceneLoadRequested; }
 
     private:
+        /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
+        [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
+
         // 프레임 틱은 엔진 루프만 부른다(`Engine::updateScenes`) — 게임 모듈이 한 프레임에 두 번 틱하는 길이 없다.
         friend class Engine;
         /** @brief 활성 씬만 틱합니다. */

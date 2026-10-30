@@ -21,8 +21,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
-#include "Engine/FileSystem/DomainAssetID.h"
 #include "Engine/FileSystem/LooseFilePath.h"
 
 #include <optional>
@@ -101,50 +101,30 @@ namespace sw
         void collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const;
 
         /**
-         * @brief 쓸 파일을 도메인이 정해진 id 로 바꿉니다. 쓰기 입구(`resolveWritePath`)는 이 결과만 받는다.
-         * @param pathOrID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인), 리소스 트리 안의 절대 경로, 이미 있는 파일의 상대 키 중 무엇이든 받습니다.
-         * @return 도메인 id 입니다. 상대 키는 검색 순서로 이긴 파일의 도메인이다(읽은 그 파일에 쓴다). 아직 없는 파일의 상대 키(어느 도메인에 만들지 모른다),
-         *         리소스 트리 · 붙인 디스크 도메인 밖의 절대 경로, `..` 로 올라가는 id 는 이유를 오류로 남기고 비웁니다 — 작업 폴더로 물러나지 않는다.
-         */
-        [[nodiscard]] std::optional<DomainAssetID> toWriteID( string_view pathOrID ) const;
-
-        /**
-         * @brief 도메인 id 의 파일을 **쓸 자리**의 절대 경로를 정합니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다). 읽기용은 `findLooseFile` 입니다.
-         * @return 이미 있는 파일이면 그 디스크 경로, 없으면 도메인 루트 아래에 이은 경로입니다. 그 사이 도메인 폴더가 사라졌으면 빈 문자열입니다.
-         * @details 저장과 .meta 생성이 모두 이것을 쓴다. 상대 키를 받지 않는 것은 형식이 막는다(`DomainAssetID`).
+         * @brief 리소스 id 의 파일을 **쓸 자리**의 디스크 경로로 풉니다 — 쓰기 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
+         * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
+         *        상대 키는 검색 순서로 이긴 **있는** 파일이다(읽은 그 파일에 쓴다).
+         * @return 디스크 경로입니다. 디스크 경로(절대) · `..` · 아직 없는 상대 키(어느 도메인에 만들지 모른다)는 이유를 오류로 남기고 빈 값입니다 — 작업 폴더로 물러나지 않는다.
+         * @details 예전에는 문자열 하나가 리소스 id 이거나 디스크 경로였고(`getWritePath`), 저장 함수마다 어느 쪽을 받는지가 달랐다(같은 이름 `saveToFile`).
          *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
-         *          성분은 디스크 표기를 쓰고(`Saved/Automation` 이 있으면 `saved/automation/x` 도 그 안에 쓴다), 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은
-         *          소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다. 읽기용 `findLooseFile` 이 붙인 디스크 도메인에서 푸는 규칙과 짝입니다.
+         *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
-        string resolveWritePath( const DomainAssetID& assetID ) const;
-
-        /**
-         * @brief 문자열을 바로 쓸 자리로 풉니다 — 절대 경로는 그대로(부르는 쪽이 고른 디스크 자리), 나머지는 `toWriteID` 다음 `resolveWritePath` 입니다.
-         *        못 풀면(아직 없는 상대 키 · `..`) 오류를 남기고 빈 문자열입니다.
-         * @details 예전에는 못 푼 인자를 그대로 돌려줘 상대 경로로 쓴 파일이 실행 파일의 작업 폴더에 떨어졌다(`PrefabAsset` 의 에셋은 Bin 아래, `.meta` 는 `Content/` 아래).
-         *          이제 물러남이 없다 — 부르는 쪽은 빈 문자열을 실패로 다룬다.
-         */
-        string getWritePath( string_view pathOrID ) const;
+        [[nodiscard]] std::optional<AbsolutePath> resolveWritePath( string_view resourceID ) const;
 
         /**
          * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
-         * @param diskPath OS 경로입니다. 상대 경로는 작업 폴더 기준이다(`FileUtil` 과 같은 뜻 — 리소스 id 로 읽지 않는다).
+         * @param diskPath 절대 디스크 경로입니다(상대 경로는 OS 경계가 거절한다 - `File.RelativePath`).
          * @return 리소스 id 입니다. 붙인 디스크 도메인(`mountDiskDomain`) 폴더 아래면 `<도메인>/…`, 리소스 루트 아래면 루트 기준입니다. 그 밖이면 빈 문자열입니다.
          * @details 예전에는 한 함수가 디스크 경로 · 프로젝트 기준 경로(`Content/…`) · 리소스 id 를 모두 받고 상대 글이 무엇인지 추측했다 — 작업 폴더 기준 디스크
-         *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID`, 둘 다 받는 입구는
-         *          `toAssetIDFromPathOrID` 다(언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
+         *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID` 이고, 둘 다 받는 입구는 없다
+         *          (언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
          */
         string toAssetID( string_view diskPath ) const;
         /**
          * @brief 리소스 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
-         * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가면 빈 문자열입니다.
+         * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가거나 디스크 경로(절대)면 빈 문자열입니다.
          */
         static string normalizeAssetID( string_view id );
-        /**
-         * @brief 디스크 경로와 리소스 id 를 모두 받는 입구(편집기 명령 인자 · 끌어 놓은 에셋 · 씬 원본 경로) 전용입니다. 절대 경로면 `toAssetID`, 아니면 `normalizeAssetID` 입니다.
-         * @details 상대 글은 늘 리소스 id 다 — 작업 폴더 기준 디스크 경로를 넘기려면 절대 경로로 만들어 넘긴다(`FileUtil::getSavedFolderPath`).
-         */
-        string toAssetIDFromPathOrID( string_view pathOrID ) const;
 
         /**
          * @brief 이 객체를 쓰는 호스트의 빌드 타깃(`"Client"`, `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 묶음

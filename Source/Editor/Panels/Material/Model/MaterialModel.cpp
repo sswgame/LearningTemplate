@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Localization/LocText.h"
@@ -57,7 +58,8 @@ namespace sw::editor
             return false;
         commitName();
         _material->setShaderPath( _shaderPath.c_str() );
-        if ( _material->saveToFile( path ) == false )
+        const std::optional<AbsolutePath> materialFile = editor::getSubsystem<AssetPaths>().resolveWritePath( path );
+        if ( materialFile.has_value() == false || _material->saveToFile( *materialFile ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;

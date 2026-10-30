@@ -23,10 +23,7 @@ namespace sw::editor
 
     string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension )
     {
-        const string& sourcePath = scene.getSourcePath();
-        string        assetID    = editor::getSubsystem<AssetPaths>().toAssetIDFromPathOrID( sourcePath ); // 불러온 씬은 id, 저장한 씬은 디스크 경로
-        if ( assetID.empty() )
-            assetID = sourcePath;
+        const string& assetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
         if ( assetID.empty() )
             return {};
         const size_t suffix = assetID.rfind( EditorBakeOutputPathInternal::kSceneSuffix );

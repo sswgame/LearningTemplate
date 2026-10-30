@@ -311,7 +311,7 @@ namespace sw
         return static_cast<uint32>( listEntry.size() );
     }
 
-    bool VisualLogger::saveToFile( string_view diskPath ) const
+    bool VisualLogger::saveToFile( const AbsolutePath& absPath ) const
     {
         JSONDocument document;
         JSONValue    root = document.makeObject();
@@ -344,7 +344,7 @@ namespace sw
             writeFloats( node, "b", arrB, 3 );
             writeFloats( node, "color", arrColor, 4 );
         }
-        return document.saveFile( diskPath, 1 );
+        return document.saveFile( absPath.str(), 1 );
     }
 
     bool VisualLogger::loadFromFile( string_view diskPath )

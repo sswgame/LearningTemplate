@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -189,7 +190,7 @@ namespace sw
         /** @brief XML 본문에서 타일맵을 읽습니다. */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
-        [[nodiscard]] SW_API bool save( string_view path ) const;
+        [[nodiscard]] SW_API bool save( const AbsolutePath& absPath ) const;
         /**
          * @brief 타일맵 XML 본문을 만듭니다.
          * @details `<t>` 는 항상 `_width × _height` 개를 적는다. 타일 배열이 그보다 짧으면

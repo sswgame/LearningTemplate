@@ -280,7 +280,7 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::saveXML( string_view path ) const
+    bool SceneDocument::saveXML( const AbsolutePath& absPath ) const
     {
         // 셀로 나눈 문서는 쿠킹본이다. XML 에는 셀이 없으므로 쓰면 셀의 엔티티가 사라진다.
         if ( _listStreamingCell.empty() == false )
@@ -354,19 +354,13 @@ namespace sw
             }
         }
 
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
-        if ( absPath.empty() )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Cannot resolve save path: %#", path );
-            return false;
-        }
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveFile( absPath ) == false )
-        {
-            SW_LOG_ERROR( "Failed to write: %#", absPath );
+            SW_LOG_ERROR( "Failed to write: %#", absPath.str() );
             return false;
         }
         SW_LOG_INFO( "Saved '%#' (%# entities) -> %#",
-                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
+                     _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath.str() );
         return true;
     }
 
@@ -460,7 +454,7 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::saveBinary( string_view path ) const
+    bool SceneDocument::saveBinary( const AbsolutePath& absPath ) const
     {
         // 읽는 쪽이 받지 않는 월드 설정 · 셀은 쓰지 않는다.
         if ( _sceneSettings.validate( _name ) == false )
@@ -488,16 +482,10 @@ namespace sw
             SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( path );
-        if ( absPath.empty() )
-        {
-            SW_LOG_ERROR( "Cannot resolve save path: %#", path );
-            return false;
-        }
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && arch.saveFile( absPath );
+        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath.str() ) && arch.saveFile( absPath.str() );
         if ( bOk )
             SW_LOG_INFO( "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
-                         static_cast<uint32>( _listStreamingCell.size() ), absPath );
+                         static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );
         return bOk;
     }
 

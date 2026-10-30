@@ -240,7 +240,7 @@ namespace sw::editor
         return true;
     }
 
-    bool AppearanceEditModel::saveToPresetFile( UserAppearancePresetStore& store, string_view name, string_view absolutePath )
+    bool AppearanceEditModel::saveToPresetFile( UserAppearancePresetStore& store, string_view name, const AbsolutePath& absPath )
     {
         if ( name.empty() )
             return false;
@@ -250,7 +250,7 @@ namespace sw::editor
         const UserAppearancePreset  previous      = bHadPreset ? *pExisting : UserAppearancePreset{};
         if ( saveToPresetStore( store, name ) == false )
             return false;
-        if ( FileUtil::writeTextFile( absolutePath, store.saveToText() ) )
+        if ( FileUtil::writeTextFile( absPath.str(), store.saveToText() ) )
             return true;
         // 파일을 못 썼으면 메모리 저장소와 "저장된 상태" 를 되돌려 둔다 — 저장된 줄 알고 넘어가지 않게.
         if ( bHadPreset )
@@ -258,7 +258,7 @@ namespace sw::editor
         else
             (void)store.removePreset( name ); // 방금 넣은 이름이라 있다
         _saved = previousSaved;
-        SW_LOG_ERROR( "Appearance preset file could not be written: %#", string( absolutePath ).c_str() );
+        SW_LOG_ERROR( "Appearance preset file could not be written: %#", string( absPath.str() ).c_str() );
         return false;
     }
 

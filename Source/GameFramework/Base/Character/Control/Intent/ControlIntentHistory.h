@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -78,7 +79,7 @@ namespace sw
         /** @brief `write` 의 바이트를 읽어 이 기록을 바꿉니다. 표식, 버전, 상한이 틀리거나 바이트가 모자라면 false 와 이유를 반환하고 기록은 비워집니다. */
         [[nodiscard]] bool read( BitReader& reader, string& outError );
         /** @brief @p path 에 원자적으로 씁니다. */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 디스크 파일 @p path(절대 경로 - 녹화 · 개발 명령)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
         [[nodiscard]] bool loadFromFile( string_view path, string& outError );
         /** @brief 리소스 @p assetID(씬 데이터의 트랙 칸 - 낱개 파일 또는 팩)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */

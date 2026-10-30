@@ -17,6 +17,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -353,11 +354,11 @@ namespace sw
         [[nodiscard]] bool appendFromAsset( const AssetID& assetID );
         /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromAsset` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
-         * @param relativePath 리소스 id 또는 절대 경로입니다. 쓸 위치는 `AssetPaths::getWritePath` 가 정하며, 작업 폴더 기준이 아닙니다.
+         * @param absPath 쓸 디스크 경로입니다(리소스 id 는 부르는 쪽이 `AssetPaths::resolveWritePath` 로 푼다).
          * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */
-        [[nodiscard]] bool saveToAsset( string_view relativePath ) const;
+        [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 

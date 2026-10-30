@@ -687,20 +687,20 @@ namespace sw
         return bRead;
     }
 
-    bool MeshAssetFormat::saveToFile( string_view path, const MeshAssetData& data )
+    bool MeshAssetFormat::saveToFile( const AbsolutePath& absPath, const MeshAssetData& data )
     {
         vector<uint8> bytes;
         makeBytes( data, bytes );
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
-    bool MeshAssetFormat::saveToFile( string_view path, const vector<RHIVertex>& listVertex )
+    bool MeshAssetFormat::saveToFile( const AbsolutePath& absPath, const vector<RHIVertex>& listVertex )
     {
         MeshAssetData data{};
         data._listVertex = listVertex;
-        return saveToFile( path, data );
+        return saveToFile( absPath, data );
     }
 
     bool MeshAssetFormat::loadFromAsset( const AssetID& assetID, MeshAssetData& outData )

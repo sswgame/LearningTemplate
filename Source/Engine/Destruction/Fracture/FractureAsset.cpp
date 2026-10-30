@@ -320,13 +320,13 @@ namespace sw
         return true;
     }
 
-    bool FractureAsset::saveToFile( string_view path ) const
+    bool FractureAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         vector<uint8> bytes;
         makeBytes( bytes );
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
     bool FractureAsset::loadFromAsset( const AssetID& assetID )

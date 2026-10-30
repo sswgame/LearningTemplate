@@ -190,8 +190,8 @@ namespace sw::editor
         bool bSaved = true;
         if ( _sockets.isDirty() )
         {
-            const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( _paths._socketPath.c_str() ) );
-            if ( writePath.empty() || _sockets.saveToFile( writePath ) == false )
+            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._socketPath.c_str() ) );
+            if ( writePath.has_value() == false || _sockets.saveToFile( *writePath ) == false )
             {
                 _status = "Socket file could not be saved";
                 bSaved  = false;
@@ -199,19 +199,19 @@ namespace sw::editor
             else
             {
                 _reloadGuard.onSaved( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
-                SW_LOG_INFO( "Socket file saved to %#", writePath.c_str() );
+                SW_LOG_INFO( "Socket file saved to %#", writePath->c_str() );
             }
         }
         if ( _pose.isDirty() )
         {
-            const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( _paths._refPosePath.c_str() ) );
-            if ( writePath.empty() || _pose.saveToFile( writePath ) == false )
+            const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._refPosePath.c_str() ) );
+            if ( writePath.has_value() == false || _pose.saveToFile( *writePath ) == false )
             {
                 _status = "Reference pose file could not be saved";
                 bSaved  = false;
             }
             else
-                SW_LOG_INFO( "Reference pose file saved to %#", writePath.c_str() );
+                SW_LOG_INFO( "Reference pose file saved to %#", writePath->c_str() );
         }
         if ( bSaved )
             _status.clear();
@@ -332,8 +332,8 @@ namespace sw::editor
 
     void CharacterEditorDocument::savePreset()
     {
-        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( _paths._presetPath.c_str() ) );
-        if ( writePath.empty() || _appearance.saveToPresetFile( _presetStore, string_view( _paths._presetName.c_str() ), writePath ) == false )
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._presetPath.c_str() ) );
+        if ( writePath.has_value() == false || _appearance.saveToPresetFile( _presetStore, string_view( _paths._presetName.c_str() ), *writePath ) == false )
             _status = "Preset could not be saved (needs a name and appearance data)";
         else
             _status.clear();
@@ -359,10 +359,10 @@ namespace sw::editor
 
     bool CharacterEditorDocument::attachThumbnail( const string& thumbnailID )
     {
-        const string name{ _paths._presetName.c_str() };
-        const string presetFile = editor::getSubsystem<AssetPaths>().getWritePath( string_view( _paths._presetPath.c_str() ) );
-        const bool   bAttached  = presetFile.empty() == false && _presetStore.setThumbnailPath( name, thumbnailID );
-        if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, presetFile ) == false )
+        const string                      name{ _paths._presetName.c_str() };
+        const std::optional<AbsolutePath> presetFile = editor::getSubsystem<AssetPaths>().resolveWritePath( string_view( _paths._presetPath.c_str() ) );
+        const bool                        bAttached  = presetFile.has_value() && _presetStore.setThumbnailPath( name, thumbnailID );
+        if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, *presetFile ) == false )
         {
             _status = "The thumbnail was requested but the preset file could not be updated";
             return false;
@@ -384,9 +384,9 @@ namespace sw::editor
             _status = "Data preset could not be made - " + reason;
             return false;
         }
-        const string assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
-        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( assetID );
-        const bool   bWritten  = writePath.empty() == false && FileUtil::ensureParentDirectoryExists( writePath ) && doc.saveFile( writePath );
+        const string                      assetID   = FileUtil::joinPath( string_view( _paths._exportFolder.c_str() ), string( presetID.c_str() ) + AppearanceDatabase::kPresetExtension );
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( assetID );
+        const bool                        bWritten  = writePath.has_value() && FileUtil::ensureParentDirectoryExists( writePath->str() ) && doc.saveFile( writePath->str() );
         if ( bWritten == false )
         {
             _status = "Data preset could not be written to " + assetID;

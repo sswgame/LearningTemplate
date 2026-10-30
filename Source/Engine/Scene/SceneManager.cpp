@@ -18,6 +18,7 @@
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PreloadSet.h"
 #include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -438,10 +439,42 @@ namespace sw
         }
     }
 
-    /**
-     * @brief 활성 씬의 루트 오브젝트 상태를 XML 씬 파일로 저장합니다.
-     */
-    bool SceneManager::saveActiveScene( string_view path )
+    bool SceneManager::saveActiveScene()
+    {
+        const Scene* pScene = getActiveScene();
+        if ( pScene == nullptr || pScene->getSourcePath().empty() )
+        {
+            SW_LOG_ERROR( "saveActiveScene: the active scene has no source - give it a place with saveActiveSceneAs; nothing is saved" );
+            return false;
+        }
+        // 쓰는 이름은 쿠커가 쿠킹하는 씬 이름이다(`AssetCookPath::toSourcePath` - 쿠킹본에서 연 씬은 원본 이름으로 쓴다).
+        const string sourceID = AssetCookPath::toSourcePath( pScene->getSourcePath(), SceneDocument::kAssetType );
+        if ( sourceID != pScene->getSourcePath() )
+            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
+        const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().resolveWritePath( sourceID );
+        return absPath.has_value() && writeActiveScene( *absPath, sourceID );
+    }
+
+    bool SceneManager::saveActiveSceneAs( const AbsolutePath& absPath )
+    {
+        const std::optional<AbsolutePath> outPath  = AbsolutePath::tryMake( AssetCookPath::toSourcePath( absPath.str(), SceneDocument::kAssetType ) );
+        const string                      sourceID = outPath.has_value() ? engine::getSubsystem<AssetPaths>().toAssetID( outPath->str() ) : string{};
+        if ( sourceID.empty() )
+        {
+            SW_LOG_ERROR( "Save Scene As: '%#' is outside the content root and every mounted disk domain - a scene saved there cannot be opened again", absPath.str() );
+            return false;
+        }
+        if ( *outPath != absPath )
+            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", absPath.str(), outPath->str() );
+        return writeActiveScene( *outPath, sourceID );
+    }
+
+    bool SceneManager::saveActiveSceneCopy( const AbsolutePath& absPath )
+    {
+        return writeActiveScene( absPath, {} );
+    }
+
+    bool SceneManager::writeActiveScene( const AbsolutePath& absPath, const string& sourceID )
     {
         if ( _saveBlockReason.empty() == false )
         {
@@ -451,50 +484,18 @@ namespace sw
         Scene* pScene = getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            SW_LOG_WARNING( "saveActiveScene: no active scene" );
+            SW_LOG_WARNING( "Scene save: no active scene" );
             return false;
         }
-
-        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다(경로를 지어내지 않는다). 쓰는 이름은 쿠커가 쿠킹하는 씬 이름이다
-        // (`AssetCookPath::toSourcePath`).
-        const string_view requestedPath = path.empty() ? string_view( pScene->getSourcePath() ) : path;
-        if ( requestedPath.empty() )
-        {
-            SW_LOG_ERROR( "saveActiveScene: no path was given and the scene has no source path - nothing is saved" );
-            return false;
-        }
-        const string outPath = AssetCookPath::toSourcePath( requestedPath, SceneDocument::kAssetType );
-        if ( outPath != requestedPath )
-            SW_LOG_WARNING( "Scene path '%#' is not a name the cooker cooks - saving as '%#'", requestedPath, outPath.c_str() );
-
         SceneDocument doc{};
         if ( pScene->serializeToDocument( doc ) == false )
             return false;
-        doc._sourcePath = outPath;
-
-        if ( doc.saveXML( outPath ) == false )
+        doc._sourcePath = sourceID.empty() ? pScene->getSourcePath() : sourceID;
+        if ( doc.saveXML( absPath ) == false )
             return false;
-
-        pScene->setSourcePath( outPath );
+        if ( sourceID.empty() == false )
+            pScene->setSourcePath( sourceID );
         return true;
-    }
-
-    bool SceneManager::saveActiveSceneCopy( string_view path )
-    {
-        if ( _saveBlockReason.empty() == false )
-        {
-            SW_LOG_WARNING( "Scene copy refused — %#", _saveBlockReason );
-            return false;
-        }
-        Scene*     pScene      = getActiveScene();
-        const bool bCannotSave = pScene == nullptr || pScene->getObjectManager() == nullptr || path.empty();
-        if ( bCannotSave )
-            return false;
-        SceneDocument doc{};
-        if ( pScene->serializeToDocument( doc ) == false )
-            return false;
-        doc._sourcePath = string( path );
-        return doc.saveXML( path );
     }
 
     /**

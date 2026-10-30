@@ -1061,9 +1061,9 @@ namespace sw
         return true;
     }
 
-    bool InputMap::saveToAsset( string_view relativePath ) const
+    bool InputMap::saveToAsset( const AbsolutePath& absPath ) const
     {
-        if ( relativePath.empty() )
+        if ( absPath.str().empty() )
             return false;
 
         using InputMapXML = InputMapSerializationInternal::InputMapXML;
@@ -1108,11 +1108,9 @@ namespace sw
         }
         if ( bAllWritten == false )
             return false;
-
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( relativePath );
-        if ( doc.saveFile( absPath ) == false )
+        if ( doc.saveFile( absPath.str() ) == false )
         {
-            SW_LOG_ERROR( "Could not write InputMap %#", absPath );
+            SW_LOG_ERROR( "Could not write InputMap %#", absPath.str() );
             return false;
         }
         return true;

@@ -64,20 +64,17 @@ namespace sw
         return result == SoftReadResult::Read && listOrphan.empty();
     }
 
-    bool ReflectedXMLFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", assetRelativePath );
+            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", absPath.str() );
             return false;
         }
 
-        // 쓰기 경로는 `getWritePath` 하나가 정한다(아직 없는 파일도 도메인 루트 아래로 — 작업 디렉터리에 떨어지지 않게).
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
-
-        if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
+        if ( XMLSerializer::saveFile( absPath.str(), pDesc, *pTypeInfo ) == false )
         {
-            SW_LOG_ERROR( "XML write failed: %# (%#)", absPath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR( "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
             return false;
         }
         return true;

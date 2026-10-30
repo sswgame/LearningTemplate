@@ -365,10 +365,10 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const string absolutePath = editor::getSubsystem<AssetPaths>().getWritePath( _selectedID );
-        if ( FileUtil::writeTextFile( absolutePath, _document.getText() ) == false )
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _document.getText() ) == false )
         {
-            SW_LOG_ERROR( "Could not write catalog file '%#'", absolutePath.c_str() );
+            SW_LOG_ERROR( "Could not write catalog file '%#'", _selectedID.c_str() );
             _statusText = "Could not write the file";
             return false;
         }
@@ -425,10 +425,10 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const string absolutePath = editor::getSubsystem<AssetPaths>().getWritePath( _selectedID );
-        if ( FileUtil::writeTextFile( absolutePath, _previousFileText ) == false )
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _previousFileText ) == false )
         {
-            SW_LOG_ERROR( "Could not restore catalog file '%#'", absolutePath.c_str() );
+            SW_LOG_ERROR( "Could not restore catalog file '%#'", _selectedID.c_str() );
             _statusText = "Could not restore the file";
             return;
         }

@@ -263,8 +263,12 @@ namespace sw
                 SW_LOG_INFO( "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
-        if ( inputs._pSceneManager != nullptr && inputs._pSceneManager->saveActiveSceneCopy( FileUtil::joinPath( directory, kSceneFileName ) ) == false )
-            SW_LOG_WARNING( "bugreport: the scene copy could not be saved" );
+        if ( inputs._pSceneManager != nullptr )
+        {
+            const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
+            if ( scenePath.has_value() == false || inputs._pSceneManager->saveActiveSceneCopy( *scenePath ) == false )
+                SW_LOG_WARNING( "bugreport: the scene copy could not be saved" );
+        }
 
         const utf8* pBackendFlag = findBackendFlag( report._rhiBackend );
         string      repro        = "App.exe";

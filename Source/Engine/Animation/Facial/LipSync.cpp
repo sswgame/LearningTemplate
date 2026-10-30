@@ -406,11 +406,11 @@ namespace sw
         return document.saveToString();
     }
 
-    bool VisemeTrack::saveToFile( string_view path ) const
+    bool VisemeTrack::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toXML() );
+        return FileUtil::writeTextFile( absPath.str(), toXML() );
     }
 
     string VisemeTrack::makePathForAudio( string_view audioPath )

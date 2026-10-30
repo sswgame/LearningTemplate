@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -119,7 +120,7 @@ namespace sw
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
     private:
         /** @brief 읽은 본과 부착을 검증하며 다시 쌓습니다(부모가 앞에 있는지, 부착 본이 있는지). `_listParentIndex` 도 여기서 채웁니다. */

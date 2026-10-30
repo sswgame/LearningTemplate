@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -83,7 +84,7 @@ namespace sw
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 파이프라인 XML 을 저장합니다. */
-        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
         /** @brief 파이프라인 XML 을 비동기로 로드합니다. */
         TaskHandle loadFromXMLFileAsync( string_view assetRelativePath );
 

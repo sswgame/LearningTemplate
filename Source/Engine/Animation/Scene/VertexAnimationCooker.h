@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -76,7 +77,7 @@ namespace sw
         /** @brief 목록 하나를 베이크합니다. 쓴 수를 돌려줍니다. @p cookedDir 가 비었으면 메시 경로 곁에 씁니다(테스트). */
         static uint32 cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount );
         /** @brief 목록의 클립 하나를 @p outputPath 에 베이크합니다. 메시 · 스켈레톤 · 클립을 읽습니다. 실패하면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const string& outputPath, float32 framesPerSecond );
+        [[nodiscard]] static bool cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const AbsolutePath& outputPath, float32 framesPerSecond );
         /** @brief VAT 쿠킹 작업의 키 값입니다. 설정 해시는 프레임율입니다. */
         static CookJobDesc makeCookJobDesc( float32 framesPerSecond );
     };

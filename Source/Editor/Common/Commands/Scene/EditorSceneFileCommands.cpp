@@ -39,8 +39,9 @@ namespace sw::editor
                     return;
 
                 // 필수: 대화상자 결과는 에디터 메인 스레드가 돌릴 때만 온다(종료 때는 `cancelFileDialogResults` 가 비운다).
-                EditorNotificationManager& notifications = editor::getSubsystem<EditorNotificationManager>();
-                if ( EditorSceneFileCommands::saveActiveScene( listPath[0] ) == false )
+                EditorNotificationManager&        notifications = editor::getSubsystem<EditorNotificationManager>();
+                const std::optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( listPath[0] ); // 대화상자는 절대 경로를 돌려준다
+                if ( absPath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *absPath ) == false )
                 {
                     notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                     return;
@@ -90,11 +91,11 @@ namespace sw::editor
 
     bool EditorSceneFileCommands::loadScene( string_view path )
     {
-        // 리소스 id 로 연다. 절대 경로와 id 를 받는다(붙인 디스크 도메인 아래면 그 도메인의 id). 그 밖의 OS 경로는 열 수 없다.
-        const string loadPath = editor::getSubsystem<AssetPaths>().toAssetIDFromPathOrID( path );
+        // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
+        const string loadPath = AssetPaths::normalizeAssetID( path );
         if ( loadPath.empty() )
         {
-            SW_LOG_ERROR( "Open Scene: '%#' is outside the content root and every mounted disk domain", path );
+            SW_LOG_ERROR( "Open Scene: '%#' is not a scene resource id", path );
             return false;
         }
 
@@ -179,7 +180,7 @@ namespace sw::editor
                 Scene* pScene = editor::getActiveScene();
                 if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
                 {
-                    if ( saveActiveScene( {} ) == false )
+                    if ( saveActiveScene() == false )
                     {
                         notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                         return;
@@ -236,25 +237,39 @@ namespace sw::editor
             (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }
 
-    bool EditorSceneFileCommands::saveActiveScene( string_view path )
+    bool EditorSceneFileCommands::saveActiveScene()
     {
-        SceneManager* pSceneManager = &editor::getSubsystem<SceneManager>(); // 필수
-
-        // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable, 잠그기 전)에는 쓰지 않고 이유를 알린다. 쓰기 실패 로그만으로는 "잠가야 한다" 는 사실이 드러나지 않는다.
-        Scene*       pScene     = pSceneManager->getActiveScene();
-        const string targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
-        const string targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : editor::getSubsystem<AssetPaths>().findLooseFile( targetPath ).getDiskPath();
-        if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
-        {
-            editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ),
-                                                                    NotificationType::Warning );
-            SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", targetAbs.c_str() );
+        SceneManager& sceneManager = editor::getSubsystem<SceneManager>();
+        const Scene*  pScene       = sceneManager.getActiveScene();
+        const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
+        // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
+        const std::optional<AbsolutePath> targetPath = sourceID.empty() ? std::nullopt : editor::getSubsystem<AssetPaths>().resolveWritePath( sourceID );
+        if ( targetPath.has_value() && reportReadOnlyTarget( *targetPath ) )
             return false;
-        }
+        return finishSave( sceneManager.saveActiveScene(), sourceID );
+    }
 
-        if ( pSceneManager->saveActiveScene( path ) == false )
+    bool EditorSceneFileCommands::saveActiveSceneAs( const AbsolutePath& absPath )
+    {
+        if ( reportReadOnlyTarget( absPath ) )
+            return false;
+        return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
+    }
+
+    bool EditorSceneFileCommands::reportReadOnlyTarget( const AbsolutePath& absPath )
+    {
+        if ( FileUtil::isReadOnlyFile( absPath.str() ) == false )
+            return false;
+        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ), NotificationType::Warning );
+        SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", absPath.str() );
+        return true;
+    }
+
+    bool EditorSceneFileCommands::finishSave( const bool bSaved, string_view target )
+    {
+        if ( bSaved == false )
         {
-            SW_LOG_ERROR( "Save Scene: SceneManager could not save '%#'", targetPath.c_str() );
+            SW_LOG_ERROR( "Save Scene: SceneManager could not save '%#'", target );
             return false;
         }
         editor::getSubsystem<EditorWorkspace>().clearSceneDirty();
@@ -266,7 +281,7 @@ namespace sw::editor
         Scene* pScene = editor::getActiveScene();
         if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
         {
-            if ( saveActiveScene( {} ) )
+            if ( saveActiveScene() )
                 editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
             else
                 editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );

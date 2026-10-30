@@ -155,8 +155,9 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                if ( EditorSceneFileCommands::saveActiveScene( absolutePath ) == false )
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );         // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
+                if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
                 {
                     outReply = "could not save the active scene to '" + absolutePath + "'";
                     return false;
@@ -170,8 +171,15 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
+                // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
+                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
+                if ( sceneID.empty() )
+                {
+                    outReply = "'" + absolutePath + "' is outside the content root and every mounted disk domain";
+                    return false;
+                }
                 // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
-                if ( EditorSceneFileCommands::loadScene( absolutePath ) == false )
+                if ( EditorSceneFileCommands::loadScene( sceneID ) == false )
                 {
                     outReply = "could not open '" + absolutePath + "'";
                     return false;
@@ -434,7 +442,8 @@ namespace sw::editor
                 }
                 PrefabAsset asset;
                 asset.setFromGameObject( pObject );
-                if ( asset.saveToFile( absolutePath ) == false )
+                const std::optional<AbsolutePath> assetFile = FileUtil::requireAbsolutePath( absolutePath );
+                if ( assetFile.has_value() == false || asset.saveToFile( *assetFile ) == false )
                 {
                     outReply = "could not write the prefab '" + absolutePath + "'";
                     return false;

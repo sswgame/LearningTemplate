@@ -159,14 +159,14 @@ namespace sw
         return readBytes( bytes.data(), bytes.size(), assetPath );
     }
 
-    bool NavMeshAsset::saveToFile( string_view absolutePath ) const
+    bool NavMeshAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         vector<uint8> bytes;
         writeBytes( bytes );
-        const string directory = FileUtil::getDirectoryPart( absolutePath );
+        const string directory = FileUtil::getDirectoryPart( absPath.str() );
         if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
             return false;
-        return FileUtil::writeFile( absolutePath, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
     const NavMeshAssetEntry* NavMeshAsset::findEntry( const hashed_string& agentType ) const

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -391,7 +392,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
 
         /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
-        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
 
         /** @brief XML 로드를 비동기 작업으로 예약합니다. */
         TaskHandle loadFromXMLFileAsync( string_view assetRelativePath );

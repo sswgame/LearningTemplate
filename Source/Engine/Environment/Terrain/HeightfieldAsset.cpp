@@ -114,16 +114,16 @@ namespace sw
         outBytes.insert( outBytes.end(), _listHoleCell.begin(), _listHoleCell.end() );
     }
 
-    bool HeightfieldAsset::saveToFile( string_view filePath ) const
+    bool HeightfieldAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         if ( isValid() == false )
         {
-            SW_LOG_ERROR( "Heightfield for '%#' is malformed (resolution %#) - not written", filePath, _resolution );
+            SW_LOG_ERROR( "Heightfield for '%#' is malformed (resolution %#) - not written", absPath.str(), _resolution );
             return false;
         }
         vector<uint8> bytes;
         saveToMemory( bytes );
-        return FileUtil::writeFile( filePath, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 } // namespace sw
 

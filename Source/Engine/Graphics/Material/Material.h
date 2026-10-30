@@ -10,6 +10,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -118,7 +119,7 @@ namespace sw
         /** @brief 파일을 비동기로 로드합니다. */
         TaskHandle loadFromFileAsync( string_view assetRelativePath );
         /** @brief 파일로 저장합니다. */
-        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */
         string saveToString() const;
         /** @brief XML 텍스트에서 머티리얼을 로드합니다. */

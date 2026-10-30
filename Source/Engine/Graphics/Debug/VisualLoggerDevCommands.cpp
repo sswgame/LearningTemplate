@@ -98,7 +98,8 @@ namespace sw
             VisualLogger* pLogger = findLogger( outReply );
             if ( pLogger == nullptr )
                 return true;
-            outReply = pLogger->saveToFile( filePath ) ? "vlog: saved" : "vlog: could not write the file";
+            const std::optional<AbsolutePath> logFile = FileUtil::requireAbsolutePath( filePath ); // readDiskPathArgument 가 절대만 받았다
+            outReply                                  = logFile.has_value() && pLogger->saveToFile( *logFile ) ? "vlog: saved" : "vlog: could not write the file";
             return true;
         }
 

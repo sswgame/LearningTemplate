@@ -201,9 +201,8 @@ namespace sw
         return loadFromXML( doc.saveToString() );
     }
 
-    bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
+    bool MaterialInstance::saveToFile( const AbsolutePath& absPath ) const
     {
-        const string absPath = engine::getSubsystem<AssetPaths>().getWritePath( assetRelativePath );
 
         syncDescOverrides();
 
@@ -247,7 +246,7 @@ namespace sw
             }
         }
 
-        return doc.saveFile( absPath );
+        return doc.saveFile( absPath.str() );
     }
 
     bool MaterialInstance::updateRHI( IRHIDevice* pRHI )

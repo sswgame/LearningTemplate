@@ -269,11 +269,11 @@ namespace sw
         return true;
     }
 
-    bool PlayerStats::saveToFile( string_view path ) const
+    bool PlayerStats::saveToFile( const AbsolutePath& absPath ) const
     {
         Archive archive;
         writeState( archive );
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, archive.getData(), archive.getSize() );
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeFile( absPath.str(), archive.getData(), archive.getSize() );
     }
 
     bool PlayerStats::loadFromFile( string_view path )

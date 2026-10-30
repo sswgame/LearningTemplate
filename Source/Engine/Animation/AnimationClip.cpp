@@ -398,13 +398,13 @@ namespace sw
         return true;
     }
 
-    bool AnimationClip::saveToFile( string_view path ) const
+    bool AnimationClip::saveToFile( const AbsolutePath& absPath ) const
     {
         vector<uint8> bytes;
         makeBytes( bytes );
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false )
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false )
             return false;
-        return FileUtil::writeFile( path, bytes.data(), bytes.size() );
+        return FileUtil::writeFile( absPath.str(), bytes.data(), bytes.size() );
     }
 
     bool AnimationClip::loadFromAsset( const AssetID& assetID )

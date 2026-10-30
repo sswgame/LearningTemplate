@@ -11,6 +11,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -136,7 +137,7 @@ namespace sw
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         string             toXML() const;
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.xml`). */
         static string makePathForAudio( string_view audioPath );
     };

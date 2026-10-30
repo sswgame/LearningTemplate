@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
@@ -60,7 +61,7 @@ namespace sw::editor
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
         string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content ); }
         /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 false 이고 이유를 @p outError 에 담습니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveToFile( string_view absolutePath, string& outError );
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, string& outError );
 
         // --- 조회 ----------------------------------------------------------------------------------------------------
 

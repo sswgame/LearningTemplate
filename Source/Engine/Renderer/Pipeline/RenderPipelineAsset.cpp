@@ -632,12 +632,12 @@ namespace sw
         return issueCount;
     }
 
-    bool RenderPipelineAsset::saveToXMLFile( string_view assetRelativePath ) const
+    bool RenderPipelineAsset::saveToXMLFile( const AbsolutePath& absPath ) const
     {
-        if ( ReflectedXMLFile::saveDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::saveDesc( absPath, _desc ) == false )
             return false;
 
-        SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, assetRelativePath );
+        SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, absPath.str() );
         return true;
     }
 

@@ -212,12 +212,12 @@ namespace sw::editor
         _history.clear();
     }
 
-    bool BonePoseEditModel::saveToFile( string_view absolutePath )
+    bool BonePoseEditModel::saveToFile( const AbsolutePath& absPath )
     {
         const string text = _override.saveToXMLText();
-        if ( FileUtil::writeTextFile( absolutePath, text ) == false )
+        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
         {
-            SW_LOG_ERROR( "Reference pose file could not be written: %#", string( absolutePath ).c_str() );
+            SW_LOG_ERROR( "Reference pose file could not be written: %#", string( absPath.str() ).c_str() );
             return false;
         }
         _savedText = text;

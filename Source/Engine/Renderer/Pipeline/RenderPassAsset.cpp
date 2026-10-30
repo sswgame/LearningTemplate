@@ -26,12 +26,12 @@ namespace sw
         return true;
     }
 
-    bool RenderPassAsset::saveToXMLFile( string_view assetRelativePath ) const
+    bool RenderPassAsset::saveToXMLFile( const AbsolutePath& absPath ) const
     {
-        if ( ReflectedXMLFile::saveDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::saveDesc( absPath, _desc ) == false )
             return false;
 
-        SW_LOG_INFO( "Saved RenderPass '%#' to: %#", _desc._name, assetRelativePath );
+        SW_LOG_INFO( "Saved RenderPass '%#' to: %#", _desc._name, absPath.str() );
         return true;
     }
 

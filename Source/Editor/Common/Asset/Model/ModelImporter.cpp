@@ -571,7 +571,8 @@ namespace sw::editor
                     SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
                     return false;
                 }
-                if ( fracture.saveToFile( fracturePath ) == false )
+                const std::optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
+                if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
                 {
                     SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
                     return false;
@@ -586,8 +587,9 @@ namespace sw::editor
             {
                 for ( const ModelImportAttachment& attachment : inoutResult._listAttachment )
                 {
-                    const string partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
-                    if ( MeshAssetFormat::saveToFile( partPath, attachment._mesh ) == false )
+                    const string                      partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
+                    const std::optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
+                    if ( partFile.has_value() == false || MeshAssetFormat::saveToFile( *partFile, attachment._mesh ) == false )
                     {
                         SW_LOG_ERROR( "Failed to write attachment mesh %#", partPath.c_str() );
                         return false;
@@ -607,8 +609,9 @@ namespace sw::editor
             {
                 for ( const ModelImportClip& imported : result._listClip )
                 {
-                    const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
-                    if ( imported._clip.saveToFile( clipPath ) == false )
+                    const string                      clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
+                    const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( clipPath );
+                    if ( clipFile.has_value() == false || imported._clip.saveToFile( *clipFile ) == false )
                     {
                         SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
                         return false;
@@ -763,7 +766,8 @@ namespace sw::editor
             SW_LOG_ERROR( "Failed to clear the imported model folder %#", sideFolder.c_str() );
             return false;
         }
-        if ( MeshAssetFormat::saveToFile( outputPath, result._mesh ) == false )
+        const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+        if ( outputFile.has_value() == false || MeshAssetFormat::saveToFile( *outputFile, result._mesh ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh asset %#", outputPath );
             return false;
@@ -780,9 +784,10 @@ namespace sw::editor
 
         if ( Internal::writeAttachments( assetPaths, result, sideFolder ) == false )
             return false;
-        const string stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
-        const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
-        if ( result._skeleton.saveToFile( skeletonPath ) == false )
+        const string                      stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
+        const string                      skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
+        const std::optional<AbsolutePath> skeletonFile = FileUtil::requireAbsolutePath( skeletonPath );
+        if ( skeletonFile.has_value() == false || result._skeleton.saveToFile( *skeletonFile ) == false )
         {
             SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;

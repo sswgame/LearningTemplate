@@ -15,6 +15,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/FileSystem/AssetID.h"
@@ -67,7 +68,7 @@ namespace sw
         /** @brief 리소스 경로의 쿠킹본을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 절대 경로에 씁니다(폴더가 없으면 만듭니다). */
-        [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
 
         /** @brief 종류 이름의 항목입니다. 없으면 nullptr 입니다. */
         const NavMeshAssetEntry* findEntry( const hashed_string& agentType ) const;

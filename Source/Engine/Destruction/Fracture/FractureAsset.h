@@ -14,6 +14,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/FileSystem/AssetID.h"
@@ -88,7 +89,7 @@ namespace sw
         /** @brief 바이트를 읽습니다. 매직, 버전, 길이, 구조가 틀리면 false 를 반환하고 내용을 비웁니다. */
         [[nodiscard]] bool readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
-        [[nodiscard]] bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시 경로 옆의 파쇄 경로입니다(`a/b.mesh` → `a/b.fracture`). */

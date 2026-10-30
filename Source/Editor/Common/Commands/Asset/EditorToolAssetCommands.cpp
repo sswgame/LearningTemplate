@@ -97,10 +97,15 @@ namespace sw::editor
             template <typename TAsset>
             [[nodiscard]] static bool writeDocument( const TAsset& data, const string& resolved )
             {
-                return data.saveToFile( resolved );
+                const std::optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
+                return documentFile.has_value() && data.saveToFile( *documentFile );
             }
 
-            [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved ) { return data.save( resolved ); }
+            [[nodiscard]] static bool writeDocument( const TileMapXMLData& data, const string& resolved )
+            {
+                const std::optional<AbsolutePath> documentFile = FileUtil::requireAbsolutePath( resolved );
+                return documentFile.has_value() && data.save( *documentFile );
+            }
 
             /** @brief 상태 문구에 보일 경로입니다. 받은 경로(리소스 id)가 있으면 그것이고, 없으면 해석한 경로입니다. */
             static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }

@@ -638,40 +638,6 @@ namespace sw
         }
     }
 
-    std::optional<DomainAssetID> AssetPaths::toWriteID( string_view pathOrID ) const
-    {
-        // 절대 경로 · `Content/…` 는 리소스 id 로 바꾼다(붙인 디스크 도메인 아래면 그 도메인 id). 트리 밖이거나 `..` 로 올라가면 비어 있다.
-        const string id = toAssetIDFromPathOrID( pathOrID );
-        if ( id.empty() )
-        {
-            SW_LOG_ERROR_ID( "AssetPaths.WriteOutsideTree", "'%#' is outside the resource tree and mounted disk domains - nothing is written there", pathOrID );
-            return std::nullopt;
-        }
-        string domainRoot;
-        string keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot ) )
-            return DomainAssetID( id );
-
-        // 상대 키 — 읽기가 검색 순서로 고른 그 파일에 쓴다. 아직 없으면 어느 도메인에 만들지 정할 수 없다.
-        const LooseFilePath found   = findLooseFile( id );
-        const string        foundID = found.isEmpty() ? string{} : toAssetID( found.getDiskPath() );
-        if ( foundID.empty() )
-        {
-            SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", pathOrID, id );
-            return std::nullopt;
-        }
-        return DomainAssetID( foundID );
-    }
-
-    string AssetPaths::getWritePath( string_view pathOrID ) const
-    {
-        // 절대 경로는 부르는 쪽이 고른 디스크 자리다(테스트 · 도구의 작업 폴더) — 도메인을 고를 일이 없다.
-        if ( FileUtil::isAbsolutePath( pathOrID ) )
-            return FileUtil::normalizeSeparators( pathOrID );
-        const std::optional<DomainAssetID> writeID = toWriteID( pathOrID );
-        return writeID.has_value() ? resolveWritePath( *writeID ) : string{};
-    }
-
     string AssetPaths::toAssetID( string_view diskPath ) const
     {
         string absolutePath;
@@ -689,13 +655,10 @@ namespace sw
         return normalizeAssetID( underRoot );
     }
 
-    string AssetPaths::toAssetIDFromPathOrID( string_view pathOrID ) const
-    {
-        return FileUtil::isAbsolutePath( pathOrID ) ? toAssetID( pathOrID ) : normalizeAssetID( pathOrID );
-    }
-
     string AssetPaths::normalizeAssetID( string_view text )
     {
+        if ( FileUtil::isAbsolutePath( text ) )
+            return {}; // 디스크 경로는 id 가 아니다 - 바꾸는 길은 `toAssetID` 하나다
         string id = FileUtil::normalizePath( FileUtil::normalizeSeparators( text ) );
         while ( StringUtil::startsWith( id, "./" ) )
         {
@@ -708,25 +671,37 @@ namespace sw
         return id;
     }
 
-    string AssetPaths::resolveWritePath( const DomainAssetID& assetID ) const
+    std::optional<AbsolutePath> AssetPaths::resolveWritePath( string_view resourceID ) const
     {
-        // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리).
-        string result = findLooseFile( assetID.str() ).getDiskPath();
-        if ( result.empty() == false )
-            return result;
-
-        string domainRoot;
-        string keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, assetID.str(), domainRoot, keyUnderRoot ) == false )
-            return result;
-
-        // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
-        // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
-        string mountedRoot;
-        string mountedKey;
-        if ( AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, assetID.str(), mountedRoot, mountedKey ) )
-            return FileUtil::makePathIgnoringCase( mountedRoot, assetID.str().substr( assetID.str().find( '/' ) + 1 ) );
-        return FileUtil::joinPath( domainRoot, keyUnderRoot );
+        const string id = normalizeAssetID( resourceID );
+        if ( id.empty() )
+        {
+            SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' is not a resource id (a disk path, empty or leaving the tree with '..') - nothing is written there", resourceID );
+            return std::nullopt;
+        }
+        // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
+        string     result = findLooseFile( id ).getDiskPath();
+        string     domainRoot;
+        string     keyUnderRoot;
+        const bool bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
+        if ( result.empty() && bGlobalID == false )
+        {
+            SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", resourceID, id );
+            return std::nullopt;
+        }
+        if ( result.empty() )
+        {
+            // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
+            // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
+            string     mountedRoot;
+            string     mountedKey;
+            const bool bMixedCaseDomain = AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, id, mountedRoot, mountedKey );
+            result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( mountedRoot, id.substr( id.find( '/' ) + 1 ) ) : FileUtil::joinPath( domainRoot, keyUnderRoot );
+        }
+        std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
+        if ( absPath.has_value() == false )
+            SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' resolved to '%#', which is not an absolute disk path", resourceID, result );
+        return absPath;
     }
 
     LooseFilePath AssetPaths::findLooseDomainFolder( string_view domainName, string_view subFolder ) const

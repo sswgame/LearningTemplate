@@ -601,11 +601,13 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        // 곁 파일은 아직 없을 수 있다 — 메시의 도메인(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
-        const AssetPaths&                  paths  = editor::getSubsystem<AssetPaths>();
-        const std::optional<DomainAssetID> meshID = paths.toWriteID( _meshPath );
-        const string                       path   = meshID.has_value() ? paths.getWritePath( MeshModifierStack::makeSidecarPath( meshID->str() ) ) : string{};
-        if ( _stack.saveFile( path ) == false )
+        // 곁 파일은 아직 없을 수 있다 — 메시 파일(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
+        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _meshPath );
+        if ( meshPath.has_value() == false )
+            return false; // 이유는 resolveWritePath 가 남겼다
+        const string                      path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
+        const std::optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
+        if ( stackFile.has_value() == false || _stack.saveFile( *stackFile ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
             return false;
@@ -653,18 +655,17 @@ namespace sw::editor
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
-        const AssetPaths&                  paths   = editor::getSubsystem<AssetPaths>();
-        const std::optional<DomainAssetID> meshID  = paths.toWriteID( _meshPath ); // 구운 메시도 원본 메시의 도메인 곁이다
-        const string                       assetID = meshID.has_value() ? MeshModifierStack::makeBakedMeshPath( meshID->str() ) : string{};
-        const string                       path    = assetID.empty() ? string{} : paths.getWritePath( assetID );
-        if ( MeshAssetFormat::saveToFile( path, baked ) == false )
+        // 구운 메시도 원본 메시 파일 곁이다
+        const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _meshPath );
+        const std::optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : std::nullopt;
+        if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
         {
-            SW_LOG_ERROR( "Failed to write baked mesh %#", path.c_str() );
+            SW_LOG_ERROR( "Failed to write the baked mesh of '%#'", _meshPath.c_str() );
             return false;
         }
-        SW_LOG_INFO( "Baked mesh written to %#", path.c_str() );
+        SW_LOG_INFO( "Baked mesh written to %#", path->c_str() );
         if ( pOutPath != nullptr )
-            *pOutPath = assetID;
+            *pOutPath = editor::getSubsystem<AssetPaths>().toAssetID( path->str() );
         return true;
     }
 

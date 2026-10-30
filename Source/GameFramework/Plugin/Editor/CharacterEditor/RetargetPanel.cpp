@@ -216,13 +216,13 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const string writePath = editor::getSubsystem<AssetPaths>().getWritePath( string_view( getLoadedAssetPath() ) );
-        if ( writePath.empty() || FileUtil::writeTextFile( writePath, _profile.toXML() ) == false )
+        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().resolveWritePath( getLoadedAssetPath() );
+        if ( writePath.has_value() == false || FileUtil::writeTextFile( writePath->str(), _profile.toXML() ) == false )
         {
-            _status = writePath.empty() ? string( "No write path for this asset" ) : string( "The profile could not be written" );
+            _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written" );
             return false;
         }
-        SW_LOG_INFO( "Retarget profile saved to %#", writePath.c_str() );
+        SW_LOG_INFO( "Retarget profile saved to %#", writePath->c_str() );
         _status = "Saved";
         return true;
     }

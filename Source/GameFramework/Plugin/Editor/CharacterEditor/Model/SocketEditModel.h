@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/Socket/SocketSet.h"
@@ -51,7 +52,7 @@ namespace sw::editor
         /** @brief 현재 내용을 XML 텍스트로 씁니다. */
         string saveToXMLText() const { return _sockets.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다(되돌리기 기록은 유지). */
-        [[nodiscard]] bool saveToFile( string_view absolutePath );
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath );
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
         [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _savedText ), "(saved socket state)" ); }
 

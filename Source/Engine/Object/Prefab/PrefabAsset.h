@@ -12,6 +12,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/Cache/IAssetCache.h"
@@ -98,16 +99,16 @@ namespace sw
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */
         [[nodiscard]] bool loadFromBinaryFile( const AssetID& assetID );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다. */
-        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
         /** @brief JSON 으로 저장합니다(GameObject 상태 JSON + `_listPrefabInstance`). 상태를 JSON 으로 옮기지 못하거나 쿠킹본 형식이면 쓰지 않고 오류를 알리며 false 입니다. */
-        [[nodiscard]] bool saveToJSONFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToJSONFile( const AbsolutePath& absPath ) const;
         /**
          * @brief 경로의 확장자로 형식을 골라 저장합니다(`.prefab.xml`, `.prefab.json`). 프리팹 경로가 아니면 쓰지 않고 false 입니다.
          * @details 에디터가 프리팹을 쓰는 경로(Apply to Prefab, 격리 편집 저장)는 이 함수만 쓴다. 로더와 쿠커와 같은 규칙이다.
          */
-        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief Shipping 쿠킹용 PFB2 바이너리로 저장합니다(magic + version + name + 상태 데이터 + 중첩 인스턴스 노드). */
-        [[nodiscard]] bool saveToBinaryFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToBinaryFile( const AbsolutePath& absPath ) const;
         /**
          * @brief GameObject 상태에서 프리팹을 채웁니다. 그 오브젝트가 스폰한 중첩 프리팹 부품(`PrefabInstanceRegistry`)은 중첩 인스턴스 노드가 됩니다.
          * @details 부품마다 원본 프리팹과 다른 점을 오버라이드로 적는다(에디터의 Apply to Prefab 이 부품의 수정을 바깥 프리팹에 쓰는 경로). 부품이 아닌

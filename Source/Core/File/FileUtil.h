@@ -12,6 +12,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -102,6 +103,11 @@ namespace sw
         [[nodiscard]] static bool makeCanonicalPath( string_view path, string& outResult );
         /** @brief 경로가 절대 경로인지 확인합니다. */
         static bool isAbsolutePath( string_view path );
+        /**
+         * @brief 이미 절대여야 하는 경로 글을 형식(`AbsolutePath`)으로 올립니다. 아니면 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 값입니다.
+         * @details 사람이 적은 상대 경로를 푸는 일(`AbsolutePath::tryResolve`)이 아니다 — 앞에서 절대로 정한 글(설정 · 명령줄 · 루트 아래로 이은 경로)을 `save*(AbsolutePath)` 로 넘길 때 쓴다.
+         */
+        [[nodiscard]] static std::optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
          * @brief 비교 · 맵 키용으로 경로를 정규화합니다(`\` 를 `/` 로 바꾸고 소문자로).
          * @note Linux 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.

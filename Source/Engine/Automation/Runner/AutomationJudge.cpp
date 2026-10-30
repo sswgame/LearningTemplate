@@ -387,8 +387,8 @@ namespace sw
             // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
             vector<uint8> listEncoded;
             AutomationImageMetric::encodePpm( reduced, listEncoded );
-            const string path = engine::getSubsystem<AssetPaths>().getWritePath( goldenID );
-            if ( path.empty() || FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) ) == false || FileUtil::writeFile( path, listEncoded.data(), listEncoded.size() ) == false )
+            const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().resolveWritePath( goldenID );
+            if ( path.has_value() == false || FileUtil::ensureParentDirectoryExists( path->str() ) == false || FileUtil::writeFile( path->str(), listEncoded.data(), listEncoded.size() ) == false )
             {
                 context.recordFailure( step, "could not write the golden " + goldenID );
                 return;

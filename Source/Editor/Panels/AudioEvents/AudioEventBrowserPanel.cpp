@@ -22,6 +22,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -111,7 +112,8 @@ namespace sw::editor
     bool AudioEventBrowserPanel::saveDocument()
     {
         // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
-        if ( _bEditDirty == false || _editLibrary.saveToAsset( _editLibraryName.view() ) == false )
+        const std::optional<AbsolutePath> libraryFile = editor::getSubsystem<AssetPaths>().resolveWritePath( _editLibraryName.view() );
+        if ( libraryFile.has_value() == false || _bEditDirty == false || _editLibrary.saveToAsset( *libraryFile ) == false )
             return false;
         _bEditDirty = false;
         return true;

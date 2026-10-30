@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
@@ -217,7 +218,7 @@ namespace sw
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
          * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool saveToAsset( string_view assetPath ) const;
+        [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */
         const AudioEventDesc* findEvent( const hashed_string& name ) const;

@@ -78,7 +78,8 @@ namespace sw
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
                 pControl->setRecording( false );
-                if ( pControl->getHistory().saveToFile( string_view( path.c_str(), path.size() ) ) == false )
+                const std::optional<AbsolutePath> historyFile = FileUtil::requireAbsolutePath( path ); // readDiskPathArgument 가 절대만 받았다
+                if ( historyFile.has_value() == false || pControl->getHistory().saveToFile( *historyFile ) == false )
                 {
                     outReply = makeReply( "intent: could not write '%#'", path.c_str() );
                     return true;
