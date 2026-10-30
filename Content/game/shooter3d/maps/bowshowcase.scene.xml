@@ -87,8 +87,8 @@
 					                       _bAnimateWhenOffscreen="false" />
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
-					                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.xml"
-					                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
+					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="common/models/kaykit/knight/clips"
 					                           _initialState="Idle"
 					                           _currentState=""
 					                           _stateTime="0"
@@ -104,7 +104,7 @@
 					                              _seed="0" />
 					<PairedAnimationComponent _componentName="PairedAnimationComponent"
 					                          _bActive="true"
-					                          _pairedAnimationPath="game/shooter3d/data/anim/bow_shoot.pairedanim.xml"
+					                          _pairedAnimationPath="common/data/anim/bow_shoot.pairedanim.xml"
 					                          _role="Archer"
 					                          _bStartOnPlay="true" />
 				</_listComponent>

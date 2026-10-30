@@ -1,0 +1,5 @@
+<!-- 활(prefabs/props/bow.prefab.xml)의 알림 표. ReleaseArrow 는 페어드 애니메이션 에셋(data/anim/bow_shoot.pairedanim.xml)의 공유 알림이고
+     세션이 Bow 역할 오브젝트의 AnimationNotifyComponent 로 보낸다. 시위 본(string) 자리에 투사체 프리팹을 스폰한다. -->
+<AnimationNotifies>
+    <Notify name="ReleaseArrow" handler="SpawnPrefab" prefab="common/prefabs/props/arrow_projectile.prefab.xml" socket="string"/>
+</AnimationNotifies>

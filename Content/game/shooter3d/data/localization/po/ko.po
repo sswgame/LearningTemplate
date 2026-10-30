@@ -9,70 +9,70 @@ msgstr ""
 "X-Generator: SWEngine LocalizationTools\n"
 
 #. Context: Weapon name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Assault Rifle"
 msgid "Assault Rifle"
 msgstr "돌격 소총"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Bone Axe"
 msgid "Bone Axe"
 msgstr "뼈 도끼"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Bone Shield"
 msgid "Bone Shield"
 msgstr "뼈 방패"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Knight Helmet"
 msgid "Knight Helmet"
 msgstr "기사 투구"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Notched Blade"
 msgid "Notched Blade"
 msgstr "이 빠진 칼"
 
 #. Context: Weapon name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Pistol"
 msgid "Pistol"
 msgstr "권총"
 
 #. Context: Weapon name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 #: game/shooter3d/data/weapons.xml
 msgctxt "Pump Shotgun"
 msgid "Pump Shotgun"
 msgstr "펌프 산탄총"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Round Shield"
 msgid "Round Shield"
 msgstr "둥근 방패"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Rusted Helm"
 msgid "Rusted Helm"
 msgstr "녹슨 투구"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Tattered Cape"
 msgid "Tattered Cape"
 msgstr "해진 망토"
 
 #. Context: Item name
-#: game/shooter3d/data/items.xml
+#: common/data/items.xml
 msgctxt "Travel Cape"
 msgid "Travel Cape"
 msgstr "여행 망토"

@@ -7,62 +7,77 @@
 		</entry>
 		<entry key="Assault Rifle" source="Assault Rifle" context="Weapon name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Bone Axe" source="Bone Axe" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Bone Shield" source="Bone Shield" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Knight Helmet" source="Knight Helmet" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Helmet (Merged)" source="Knight Helmet (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Knight Sword (Merged)" source="Knight Sword (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Longbow" source="Longbow" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Notched Blade" source="Notched Blade" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pistol" source="Pistol" context="Weapon name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Pump Shotgun" source="Pump Shotgun" context="Weapon name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Round Shield" source="Round Shield" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
+			</origins>
+		</entry>
+		<entry key="Round Shield (Merged)" source="Round Shield (Merged)" context="Item name">
+			<origins>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Rusted Helm" source="Rusted Helm" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Tattered Cape" source="Tattered Cape" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="Travel Cape" source="Travel Cape" context="Item name">
 			<origins>
-				<item>game/shooter3d/data/items.xml</item>
+				<item>common/data/items.xml</item>
 			</origins>
 		</entry>
 		<entry key="settings.gameplay.difficulty" source="Difficulty" context="Options menu label" maxLength="32">

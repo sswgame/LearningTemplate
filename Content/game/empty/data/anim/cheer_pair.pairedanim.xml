@@ -1,7 +1,7 @@
 <!--
   두 프로세스 복제 확인용 페어드 애니메이션(`maps/pairedanimnet.scene.xml`, `Scripts/dev/RunPairedAnimationNetPair.py`). 기사(KayKit) 둘이 마주 서서 한쪽(Lead)이 환호하고 다른 쪽(Partner)이 상호작용 동작을 한다.
   타임라인 길이(1.6666666 초)는 앵커 클립 Cheer 의 길이다(시작 때 다르면 거절한다). Partner 의 Interact(1.3 초)는 타임라인 안에서 끝나 나간다.
-  클립은 두 오브젝트의 클립 폴더(game/shooter3d/models/kaykit/knight/clips)에서 이름으로 찾는다.
+  클립은 두 오브젝트의 클립 폴더(common/models/kaykit/knight/clips)에서 이름으로 찾는다.
 -->
 <PairedAnimation duration="1.6666666">
   <Role name="Lead" anchor="true" required="true" clip="Cheer" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>

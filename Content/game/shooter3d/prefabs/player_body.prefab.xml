@@ -21,8 +21,8 @@
 			                       _bAnimateWhenOffscreen="false" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="game/shooter3d/data/anim/adventurer.animgraph.xml"
-			                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
+			                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
+			                           _clipFolder="common/models/kaykit/knight/clips"
 			                           _initialState="Idle"
 			                           _currentState=""
 			                           _stateTime="0"
@@ -34,7 +34,7 @@
 			                           _bPlayOnBegin="true" />
 			<PoseModifierComponent _componentName="PoseModifierComponent"
 			                       _bActive="true"
-			                       _rigPath="game/shooter3d/rigs/player_body.rig.xml"
+			                       _rigPath="common/rigs/player_body.rig.xml"
 			                       _socketSetPath=""
 			                       _physicsAssetPath=""
 			                       _bRigEnabled="true" />

@@ -22,8 +22,8 @@
 			                       _bShareCrowdPose="true" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animationGraphPath="game/shooter3d/data/anim/skeleton.animgraph.xml"
-			                           _clipFolder="game/shooter3d/models/kaykit/skeleton_minion/clips"
+			                           _animationGraphPath="common/data/anim/skeleton.animgraph.xml"
+			                           _clipFolder="common/models/kaykit/skeleton_minion/clips"
 			                           _initialState="Spawn_Ground_Skeletons"
 			                           _currentState=""
 			                           _stateTime="0"
@@ -35,10 +35,10 @@
 			                           _bPlayOnBegin="true" />
 			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
 			                          _bActive="true"
-			                          _notifyTablePath="game/shooter3d/characters/skeleton_minion/skeleton_minion.notifies.xml" />
+			                          _notifyTablePath="common/characters/skeleton_minion/skeleton_minion.notifies.xml" />
 			<RagdollComponent _componentName="RagdollComponent"
 			                  _bActive="true"
-			                  _physicsAssetPath="game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml"
+			                  _physicsAssetPath="common/characters/skeleton_warrior/skeleton_warrior.physics.xml"
 			                  _bRagdollOnFatalHit="false"
 			                  _bAutoGetUp="false" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"

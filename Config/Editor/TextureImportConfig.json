@@ -84,7 +84,7 @@
     {
       "name": "Character_Atlases",
       "inherits": "Base_Default",
-      "include_patterns": ["*/shooter3d/textures_raw/kaykit_*"],
+      "include_patterns": ["*/common/textures_raw/kaykit_*", "*/shooter3d/textures_raw/kaykit_dungeon.*"],
       "format": "BC1_UNORM"
     },
     {

@@ -97,7 +97,7 @@ namespace sw
         /**
          * @brief 리소스 폴더 바로 아래 파일(하위 폴더 안은 빼고)의 리소스 id 를 모읍니다. 런타임 코드가 리소스 폴더를 훑는 길은 이것 하나입니다 —
          *        `FileUtil::collectFiles` 는 디스크만 보므로 팩으로 쿠킹한 빌드에서 폴더가 비어 보입니다.
-         * @param folderID 리소스 폴더 id(예: "game/shooter3d/data/appearance/presets"). OS 절대 경로와 `..` 는 받지 않습니다.
+         * @param folderID 리소스 폴더 id(예: "common/data/appearance/presets"). OS 절대 경로와 `..` 는 받지 않습니다.
          * @param extension 이름 끝 거르기(대소문자 무시, 예: ".appearance.xml"). 빈 값이면 모두입니다.
          * @param outListID 찾은 리소스 id. 마운트된 모든 팩과, 낱개 파일을 허용하면 디스크 폴더의 합집합입니다. 대소문자를 무시해 중복을 없애고
          *                    (디스크 · 높은 우선순위 팩의 표기가 남는다) 소문자 기준 이름순으로 정렬합니다 — 실행마다 같습니다.

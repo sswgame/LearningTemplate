@@ -1,0 +1,208 @@
+<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" x="40.0" y="40.0" loop="true" />
+		<node id="2" name="Walking_A" x="260.0" y="40.0" loop="true" />
+		<node id="3" name="Running_A" x="480.0" y="40.0" loop="true" />
+		<node id="4" name="Walking_Backwards" x="700.0" y="40.0" loop="true" />
+		<node id="5" name="Running_Strafe_Left" x="40.0" y="200.0" loop="true" />
+		<node id="6" name="Running_Strafe_Right" x="260.0" y="200.0" loop="true" />
+		<node id="7" name="Jump_Idle" x="480.0" y="200.0" loop="true" />
+		<node id="8" name="Hit_A" x="700.0" y="200.0" loop="false" />
+		<node id="9" name="Death_A" x="40.0" y="360.0" loop="false" />
+	</nodes>
+	<links>
+		<link id="1" from="1" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="2" from="2" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="3" from="3" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="4" from="4" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="5" from="5" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="6" from="6" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="7" from="7" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="8" from="8" to="9" blend="0.15">
+			<condition param="Dead" op=">=" value="0.5" />
+		</link>
+		<link id="9" from="9" to="1" blend="0.3">
+			<condition param="Dead" op="&lt;" value="0.5" />
+		</link>
+		<link id="10" from="1" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="11" from="2" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="12" from="3" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="13" from="4" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="14" from="5" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="15" from="6" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="16" from="7" to="8" blend="0.08">
+			<condition param="Hit" op="trigger" value="1.0" />
+		</link>
+		<link id="17" from="8" to="1" blend="0.2" />
+		<link id="18" from="1" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="19" from="1" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="20" from="1" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="21" from="1" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="22" from="1" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+		<link id="23" from="1" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="24" from="2" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="25" from="2" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="26" from="2" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="27" from="2" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="28" from="2" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+		<link id="29" from="2" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="30" from="3" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="31" from="3" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="32" from="3" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="33" from="3" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="34" from="3" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+		<link id="35" from="3" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="36" from="4" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="37" from="4" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="38" from="4" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="39" from="4" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="40" from="4" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+		<link id="41" from="4" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="42" from="5" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="43" from="5" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="44" from="5" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="45" from="5" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="46" from="5" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+		<link id="47" from="5" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="48" from="6" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="49" from="6" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="50" from="6" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="51" from="6" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="52" from="6" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="53" from="6" to="7" blend="0.2">
+			<condition param="Move" op="==" value="6.0" />
+		</link>
+		<link id="54" from="7" to="1" blend="0.2">
+			<condition param="Move" op="==" value="0.0" />
+		</link>
+		<link id="55" from="7" to="2" blend="0.2">
+			<condition param="Move" op="==" value="1.0" />
+		</link>
+		<link id="56" from="7" to="3" blend="0.2">
+			<condition param="Move" op="==" value="2.0" />
+		</link>
+		<link id="57" from="7" to="4" blend="0.2">
+			<condition param="Move" op="==" value="3.0" />
+		</link>
+		<link id="58" from="7" to="5" blend="0.2">
+			<condition param="Move" op="==" value="4.0" />
+		</link>
+		<link id="59" from="7" to="6" blend="0.2">
+			<condition param="Move" op="==" value="5.0" />
+		</link>
+	</links>
+	<bone_masks>
+		<bone_mask name="UpperBody" file="common/data/anim/masks/upper_body.bonemask.xml" />
+	</bone_masks>
+	<layers>
+		<layer name="Aim"
+		       clip="1H_Ranged_Aiming"
+		       mask="UpperBody"
+		       weight="0.0"
+		       blend="Override"
+		       loop="false"
+		       weight_param="AimWeight" />
+		<layer name="Shoot"
+		       clip="1H_Ranged_Shooting"
+		       mask="UpperBody"
+		       weight="0.0"
+		       blend="Override"
+		       weight_param="ShootWeight" />
+	</layers>
+</AnimationGraphAsset>

@@ -13,6 +13,7 @@
 	</codeRoots>
 	<assetRoots>
 		<item>game/shooter3d</item>
+		<item>common/data</item> <!-- 아이템 이름(items.xml)은 캐릭터 키트와 함께 common 에 있다 -->
 	</assetRoots>
 	<assetRules>
 		<rule files="items.xml" attribute="name" kind="text" context="Item name">
