@@ -1,6 +1,6 @@
 <Scene formatVersion="2" name="RealtimeGISparse">
 	<!-- 프로브 수 스윕(RealtimeProbeUpdateSweep)의 측정 씬 — realtimegi 와 같은 무대이고 프로브 간격만 2 m 다(8x3x8 상자에 5x2x5 = 50 개, 기준은 1 m 간격 324 개). 시나리오는 없다(측정 전용).
-	     perf-compare --cases realtimeProbeSparse 가 RT.Probe.Update 를 기준 씬(realtimegi)과 견준다. 광선 수 · 갱신 주기는 -gv_realtimeProbeRayCount · -gv_realtimeProbeUpdatePeriod 로 바꾼다. -->
+	     성능 비교 사례 realtimeProbeSparse 가 RT.Probe.Update 를 기준 씬(realtimegi)과 견준다. 광선 수 · 갱신 주기는 -gv_realtimeProbeRayCount · -gv_realtimeProbeUpdatePeriod 로 바꾼다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
