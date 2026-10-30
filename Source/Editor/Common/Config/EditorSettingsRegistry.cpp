@@ -63,6 +63,13 @@ namespace sw::editor
 
             static void markLoaded( const EditorSettingsRegistration& registration ) { registration._bFileValueApplied = SW_TRUE; }
 
+            /** @brief `open` 과 `close` 사이인지입니다. 소멸자 없는 값이라 모듈이 내려가는 정적 해제 중에 읽어도 된다. 메인 스레드만 씁니다. */
+            static bool& isStoreOpen()
+            {
+                static bool s_bOpen = false;
+                return s_bOpen;
+            }
+
             /** @brief 섹션 하나에 파일 루트의 값을 입히고 `_pfnOnChanged` 를 부릅니다. */
             static void applySection( const JSONValue& root, const string& sectionID, const EditorSettingsRegistration& registration )
             {
@@ -211,7 +218,7 @@ namespace sw::editor
     void EditorSettingsRegistration::onDetaching( const EditorSettingsRegistration& registration )
     {
         if ( registration._pfnGetType() != nullptr )
-            (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
+            (void)EditorPreferencesStore::saveOpened(); // 실패는 saveAll 이 경고로 알린다
     }
 
     string EditorPreferencesStore::makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault )
@@ -273,6 +280,25 @@ namespace sw::editor
         return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
+    EditorUserFileResult EditorPreferencesStore::open()
+    {
+        EditorSettingsRegistryInternal::isStoreOpen() = true;
+        return loadAll( getDefaultFilePath() );
+    }
+
+    void EditorPreferencesStore::close()
+    {
+        (void)saveOpened(); // 실패는 saveAll 이 경고로 알린다
+        EditorSettingsRegistryInternal::isStoreOpen() = false;
+    }
+
+    bool EditorPreferencesStore::saveOpened()
+    {
+        if ( EditorSettingsRegistryInternal::isStoreOpen() == false )
+            return true;
+        return saveAll( getDefaultFilePath() );
+    }
+
     const EditorSettingsRegistration& getSettingsRegistration( const TypeInfo* pType )
     {
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
@@ -291,6 +317,6 @@ namespace sw::editor
 {
     void EditorConfig::saveToPreferences()
     {
-        (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
+        (void)EditorPreferencesStore::saveOpened(); // 실패는 saveAll 이 경고로 알린다
     }
 } // namespace sw::editor

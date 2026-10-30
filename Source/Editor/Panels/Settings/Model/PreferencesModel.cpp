@@ -108,7 +108,7 @@ namespace sw::editor
         if ( bForce == false && MonotonicClock::nowNanoseconds() - _pendingSaveNanoseconds < kSaveDelayNanoseconds )
             return;
         _pendingSaveNanoseconds = 0;
-        (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
+        (void)EditorPreferencesStore::saveOpened(); // 실패는 saveAll 이 경고로 알린다
     }
 
     void PreferencesModel::requestSave()

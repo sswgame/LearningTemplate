@@ -135,6 +135,16 @@ namespace sw::editor
         static uint32 countSavedKeys( string_view filePath );
         /** @brief 저장 파일 경로를 반환합니다. 에디터 상태 폴더의 `EditorPreferences.json` 입니다. */
         static string getDefaultFilePath();
+        /**
+         * @brief 에디터의 환경설정 파일(`getDefaultFilePath`)을 엽니다 — 읽어 입히고(`loadAll`), 닫을 때까지 `saveOpened` 가 그 파일에 씁니다. 에디터 기동이 한 번 부릅니다.
+         * @details 열지 않은 실행(헤드리스 도구 · 테스트)은 환경설정을 쓰지 않는다. 예전에는 모듈이 내려갈 때마다 저장해, 도구 실행이 끝날 때 이미 내린 서비스에서
+         *          상태 폴더를 찾다 죽었다(`--check-models` 등 모든 도구 명령).
+         */
+        [[nodiscard]] static EditorUserFileResult open();
+        /** @brief 마지막으로 쓰고 닫습니다. 그 뒤로 `saveOpened`(모듈이 내려갈 때 등)는 아무것도 쓰지 않는다. 에디터 종료가 서비스가 서 있는 동안 부릅니다. */
+        static void close();
+        /** @brief 열려 있으면 그 파일에 모두 씁니다(`saveAll`). 열려 있지 않으면 쓰지 않고 true 입니다. 실패는 경고로 알리고 false 입니다. */
+        static bool saveOpened();
         /** @brief 저장 파일 이름입니다. */
         static constexpr const utf8* kFileName = "EditorPreferences.json";
     };
