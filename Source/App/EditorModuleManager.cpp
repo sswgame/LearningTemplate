@@ -4,6 +4,12 @@
 
 #include "Core/Memory/Memory.h"
 
+#if !defined( SW_SHIPPING )
+    #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+    #include "DevTools/DebugHUD/DebugHUD.h"
+#endif
+
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -395,6 +401,11 @@ namespace sw
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
         fillModuleServiceScope( *editorServices, false );
+#if !defined( SW_SHIPPING )
+        // 개발 도구는 엔진의 기동 확장(`DevToolsHost`)이 세워 서비스 목록의 행이 아니다 — 에디터가 찾는 것(HUD 조작 · 설정 리로드 창)을 빌려 건다(없는 호스트면 걸지 않는다).
+        (void)editorServices->bind( engine::findSubsystem<DebugHUD>() );
+        (void)editorServices->bind( engine::findSubsystem<ConfigReloadSubsystem>() );
+#endif
         _editorAPI.bindService( editorServices.get() );
         _editorServices = std::move( editorServices );
     }
