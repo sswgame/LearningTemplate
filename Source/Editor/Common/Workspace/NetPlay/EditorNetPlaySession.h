@@ -175,6 +175,12 @@ namespace sw::editor
          * @details 멈추는 길이 셋(툴바 · Session 탭 · `netplay.stop`)이라 여는 일을 각 길에 두지 않는다 — Profiler 창의 프레임 단계가 프레임마다 이것을 묻고 연다.
          */
         [[nodiscard]] string takeUnopenedMergedTrace();
+        /**
+         * @brief 새로 띄운 에디터와 같은 자리로 되돌립니다 — 돌던 세션을 멈추고, 다음 Play 구성을 기본값으로 두고, 아직 열지 않은 합친 트레이스를 버립니다.
+         * @details 자동화 체인의 단계 되돌리기가 부른다. 필드를 밖에서 하나씩 되돌리면 빠지는 것이 생겼다(열지 않은 트레이스가 다음 단계의 Profiler 를 Timeline 으로 열었다).
+         *          자동화의 편집기 상태 폴더는 프로세스마다 비어 있어 새 프로세스도 프리셋 없는 기본 구성이다.
+         */
+        void resetToFreshEditor();
         /** @brief 사용자 프리셋입니다. 패널이 저장 · 고르기 · 지우기를 하고, 고른 구성을 `getSettings` 에 복사합니다. */
         EditorNetPlayPresetStore& getPresetStore() { return _presetStore; }
 

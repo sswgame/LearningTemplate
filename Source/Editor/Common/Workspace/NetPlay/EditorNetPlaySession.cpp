@@ -155,6 +155,15 @@ namespace sw::editor
         return SubsystemInitResult::Succeeded;
     }
 
+    void EditorNetPlaySession::resetToFreshEditor()
+    {
+        if ( isRunning() )
+            (void)stop(); // 합친 트레이스는 아래에서 버린다
+        _pendingSettings      = EditorNetPlaySettings{};
+        _bMergedTraceUnopened = false;
+        _mergedTracePath.clear();
+    }
+
     string EditorNetPlaySession::takeUnopenedMergedTrace()
     {
         if ( _bMergedTraceUnopened == false )
