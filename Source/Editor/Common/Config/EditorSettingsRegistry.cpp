@@ -168,6 +168,23 @@ namespace sw::editor
         const JSONValue         root = document.makeObject();
         [[maybe_unused]] uint32 keyCount{ 0 }; // Shipping 은 SW_LOG_INFO 가 빠져 쓰는 곳이 없다
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
+        // 지금 등록되지 않은 섹션(먼저 내려간 모듈 — 모듈이 내려갈 때마다 저장한다)은 파일에 있던 그대로 둔다. 등록된 섹션만으로 새로 쓰면
+        // 종료 중 앞서 내려간 모듈의 값이 지워져 다시 켜면 기본값이었다(테마 액센트 — statedir/savedstate).
+        JSONDocument previous;
+        if ( FileUtil::isRegularFile( filePath ) && previous.loadFile( filePath ) && previous.getRoot().isObject() )
+        {
+            for ( const string& sectionID : previous.getRoot().getMemberNames() )
+            {
+                bool bRegistered = false;
+                for ( uint32 index = 0; index < SettingsRegistry::getCount() && bRegistered == false; ++index )
+                {
+                    const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+                    bRegistered                                    = registration._pfnGetType() != nullptr && sectionID == registration._pID;
+                }
+                if ( bRegistered == false )
+                    root.set( sectionID ).assignFrom( previous.getRoot().get( sectionID ) );
+            }
+        }
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
             const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
