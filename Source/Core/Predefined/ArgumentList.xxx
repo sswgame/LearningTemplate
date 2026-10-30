@@ -168,6 +168,9 @@ SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
 // `-scenario` 를 이 백엔드들(`all` 또는 `dx11,vk` — 쿠킹 표의 명령줄 이름)마다 자식 App 으로 동시에 돌리고 결과를 모은다(`AutomationBackendMatrix`).
 // 이 프로세스는 창 · GPU 없이 기다리기만 한다. 종료 코드는 첫 실패 백엔드의 것, 모두 건너뛰면 13.
 SW_REGISTER_ARGUMENT( SCENARIO_BACKENDS, "", false, "scenario-backends" )
+// `-scenario-backends` 와 함께: 그린 화소를 판정하는 시나리오(`<ExpectImage>` · `<CaptureEditorUI>`)만 모든 백엔드에서 돌고, 나머지는 백엔드를 돌아가며 하나씩 맡는다 — 백엔드와 무관한 로직을
+// 네 번 돌지 않는다(언리얼 편집기 테스트가 RHI 하나로 도는 것과 같다). 편집기 체인이 쓴다.
+SW_REGISTER_ARGUMENT( SCENARIO_BACKEND_SPLIT, false, false, "scenario-backend-split" )
 // 로그를 이 파일 하나에 쓴다(있으면 덮어쓴다 · 시간별로 나누지 않는다 · 상대 경로는 작업 폴더 기준). 비면 `Saved/Logs/LOG_<날짜>_<세션>.txt` 다.
 // 병렬 실행(ctest -j)이 실행마다 제 로그를 갖게 한다 — 언리얼의 `-abslog=`. 명령줄은 로거보다 먼저 서고(그 사이의 줄은 로거가 쌓았다가 싱크에 넘긴다), 로거가 이 값으로 파일 장치를 연다.
 SW_REGISTER_ARGUMENT( LOG_FILE, "", false, "log-file" )

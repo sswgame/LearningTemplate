@@ -39,6 +39,9 @@ namespace sw
 #undef SW_MATRIX_BACKEND_NAME_ROW
             };
 
+            /** @brief 그린 화소를 판정하는 단계 — 이것이 있는 시나리오는 백엔드마다 결과가 다를 수 있어 나눌 때도 모든 백엔드에서 돈다(골든 비교 · 편집기 UI 의 마젠타 검사). */
+            static constexpr string_view kArrPixelJudgingStep[] = { "ExpectImage", "CaptureEditorUI" };
+
             /** @brief 자식 하나의 상태입니다. 출력 파이프는 스레드 하나가 끝까지 비운다 — 비우지 않으면 파이프가 찬 자식이 멈춘다. */
             struct Child
             {
@@ -136,7 +139,7 @@ namespace sw
     vector<string> AutomationBackendMatrix::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
         using Internal                                   = AutomationBackendMatrixInternal;
-        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_REPORT,
+        static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_REPORT,
                                                              CommandLineArgument::LOG_FILE };
         vector<string>                       listArgument;
         for ( const string& argument : listOriginalArgument )
@@ -150,6 +153,30 @@ namespace sw
                 listArgument.push_back( argument );
         }
         return listArgument;
+    }
+
+    vector<string> AutomationBackendMatrix::assignScenarios( const AutomationBackendMatrixOptions& options )
+    {
+        using Internal = AutomationBackendMatrixInternal;
+        vector<string> listScenarioList( options._listBackend.size() );
+        size_t         nextBackend = 0;
+        for ( const string& path : AutomationScenarioChain::splitList( options._scenarioPath ) )
+        {
+            AutomationScenario scenario;
+            string             error;
+            const bool         bLoaded       = scenario.loadFromPath( AssetID{ path }, error );
+            const bool         bJudgesPixels = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), []( const AutomationStep& step )
+                    { return std::find( std::begin( Internal::kArrPixelJudgingStep ), std::end( Internal::kArrPixelJudgingStep ), step._kind ) != std::end( Internal::kArrPixelJudgingStep ); } );
+            for ( size_t i = 0; i < listScenarioList.size(); ++i )
+            {
+                const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bJudgesPixels || i == nextBackend % listScenarioList.size();
+                if ( bThisBackend )
+                    listScenarioList[i] += ( listScenarioList[i].empty() ? "" : "," ) + path;
+            }
+            if ( options._bSplitScenarios && bLoaded && bJudgesPixels == false )
+                ++nextBackend;
+        }
+        return listScenarioList;
     }
 
     string AutomationBackendMatrix::insertBackendSuffix( string_view path, string_view backend )
@@ -167,15 +194,23 @@ namespace sw
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
                                   std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
         { return Internal::getArgumentKey( argument ) == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ); } );
+        const vector<string>                listScenarioList = assignScenarios( options );
         vector<unique_ptr<Internal::Child>> listChild;
         for ( const string& backend : options._listBackend )
         {
             unique_ptr<Internal::Child> pChild = make_unique<Internal::Child>();
             pChild->_backend                   = backend;
-            pChild->_logPath                   = options._logFilePath.empty() ? defaultFolder + "/" + backend + ".log" : insertBackendSuffix( options._logFilePath, backend );
-            pChild->_reportPath                = options._reportPath.empty() ? string{} : insertBackendSuffix( options._reportPath, backend );
+            const string& scenarioList         = listScenarioList[listChild.size()];
+            if ( scenarioList.empty() )
+            {
+                pChild->_exitCode = getAutomationExitCode( AutomationOutcome::Skipped ); // 나눈 목록이 백엔드 수보다 짧다 — 맡은 시나리오가 없다
+                listChild.push_back( std::move( pChild ) );
+                continue;
+            }
+            pChild->_logPath    = options._logFilePath.empty() ? defaultFolder + "/" + backend + ".log" : insertBackendSuffix( options._logFilePath, backend );
+            pChild->_reportPath = options._reportPath.empty() ? string{} : insertBackendSuffix( options._reportPath, backend );
 
-            vector<string> listArgument{ "-scenario=" + options._scenarioPath, "-" + backend, "-log-file=" + pChild->_logPath };
+            vector<string> listArgument{ "-scenario=" + scenarioList, "-" + backend, "-log-file=" + pChild->_logPath };
             if ( pChild->_reportPath.empty() == false )
                 listArgument.push_back( "-scenario-report=" + pChild->_reportPath );
             if ( bTileWindows )

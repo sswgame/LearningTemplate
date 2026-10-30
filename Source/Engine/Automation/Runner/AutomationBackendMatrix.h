@@ -28,6 +28,7 @@ namespace sw
         string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
         uint32         _windowWidth{ 0 };          ///< 자식 창의 클라이언트 크기(`EngineConfig._window`) — 자식 창을 바둑판으로 놓는 간격이다. 0 이면 놓지 않는다(플랫폼이 놓는다)
         uint32         _windowHeight{ 0 };
+        bool           _bSplitScenarios{ false }; ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
     };
 
     /** @class AutomationBackendMatrix @brief 백엔드 행렬 실행입니다. 게임 스레드가 아닌 헤드리스 작업에서 부릅니다. */
@@ -38,6 +39,13 @@ namespace sw
          * @brief `all` 이나 `dx11,vk` 를 쿠킹 표 순서의 명령줄 이름 목록으로 바꿉니다. 모르는 이름 · 빈 목록 · 겹친 이름이면 false 이고 @p outError 에 까닭.
          */
         [[nodiscard]] static bool parseBackendList( string_view text, vector<string>& outListBackend, string& outError );
+
+        /**
+         * @brief 백엔드마다(@p options 의 `_listBackend` 순서) 돌릴 `-scenario` 목록입니다. 나누지 않으면 모두 같은 목록입니다.
+         * @details 나누면 그린 화소를 판정하는 단계(`<ExpectImage>` · `<CaptureEditorUI>`)가 있는 시나리오는 모두에게, 나머지는 순서대로 돌아가며 하나에게 준다 — 체인의 순서는 그대로다.
+         *          읽지 못하는 시나리오도 모두에게 준다 — 자식마다 읽기 오류를 낸다.
+         */
+        static vector<string> assignScenarios( const AutomationBackendMatrixOptions& options );
 
         /** @brief 원본 인자에서 행렬이 자식마다 다시 정하는 인자(행렬 · 로그 파일 · 보고 · 백엔드 선택)를 뺀 목록입니다. */
         static vector<string> filterPassThroughArguments( const vector<string>& listOriginalArgument );

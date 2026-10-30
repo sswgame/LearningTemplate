@@ -336,6 +336,7 @@ namespace sw
                 options._listPassThroughArgument = AutomationBackendMatrix::filterPassThroughArguments( commandLine.getOriginalArguments() );
                 options._windowWidth             = engine::getSubsystem<EngineConfig>()._window._width;
                 options._windowHeight            = engine::getSubsystem<EngineConfig>()._window._height;
+                (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
                 if ( options._scenarioPath.empty() || AutomationBackendMatrix::parseBackendList( backends, options._listBackend, error ) == false )
                 {
                     SW_LOG_ERROR( "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );

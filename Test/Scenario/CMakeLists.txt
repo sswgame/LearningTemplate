@@ -61,26 +61,38 @@ if(listScenario)
 	message(STATUS "[Scenario] ${testName}: ${stageCount} scenario(s)")
 endif()
 
-# 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`)로 돌린다. 하위 폴더는 줍지 않는다
-# (`chain/` — 체인 사이에 끼우는 리로드, `statedir/` — 두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍). 게임 체인처럼 백엔드마다 자식 App 하나가
-# 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다. 편집기 모듈 리로드는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭).
+# 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`)로 돌린다. 하위 폴더 `statedir/`
+# (두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍)는 아래에서 쌍마다 항목 하나로 돈다. 게임 체인처럼 백엔드마다 자식 App 하나가
+# 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다.
+# 그림을 견주지 않는 시나리오(UI 로직)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다. 모듈 리로드(이름 `*modulereload`)는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭 — 코드 이미지를 갈아 끼운 것이 다른 단계에 닿지 않게).
 if(TARGET EditorModule)
 	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
 	list(SORT listEditorScenario)
-	set(swLastEditorScenario "engine/automation/editor/editormodulereload.scenario.xml")
-	if(swLastEditorScenario IN_LIST listEditorScenario)
-		list(REMOVE_ITEM listEditorScenario "${swLastEditorScenario}")
-		list(APPEND listEditorScenario "${swLastEditorScenario}")
-	endif()
+	set(listEditorReloadScenario "${listEditorScenario}")
+	list(FILTER listEditorReloadScenario INCLUDE REGEX "modulereload\\.scenario\\.xml$")
+	list(FILTER listEditorScenario EXCLUDE REGEX "modulereload\\.scenario\\.xml$")
+	list(APPEND listEditorScenario ${listEditorReloadScenario})
 	if(listEditorScenario)
 		list(LENGTH listEditorScenario editorStageCount)
 		list(JOIN listEditorScenario "," editorScenarioList)
 		math(EXPR editorChainTimeout "120 * ${editorStageCount}")
 		add_test(NAME Scenario.editor
-			COMMAND $<TARGET_FILE:App> -EnableEditor -scenario=${editorScenarioList} -scenario-keep-going -scenario-backends=all -unattended
+			COMMAND $<TARGET_FILE:App> -EnableEditor -scenario=${editorScenarioList} -scenario-keep-going -scenario-backends=all -scenario-backend-split -unattended
 				-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Scenario.editor.log
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Scenario.editor PROPERTIES LABELS hostgpu TIMEOUT ${editorChainTimeout} SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped} PROCESSORS ${swScenarioBackendCount})
 		message(STATUS "[Scenario] Scenario.editor: ${editorStageCount} scenario(s)")
 	endif()
+	# 저장된 상태 쌍(`statedir/<묶음>.1` · `.2`) — 끄고 다시 켜면 상태가 돌아오는지가 검사 대상이라 프로세스를 다시 띄우는 것 자체가 필요하다.
+	# 빈 상태 폴더로 .1 을, 같은 폴더로 .2 를 잇는다(언리얼이 설정 저장을 에디터 재시작으로 보는 것과 같다). 상태 폴더를 같이 쓰므로 기본 백엔드 하나다.
+	file(GLOB listStateDirFirst RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/statedir/*.1.scenario.xml")
+	foreach(firstPath IN LISTS listStateDirFirst)
+		string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pairPath "${firstPath}")
+		get_filename_component(pairName "${pairPath}" NAME)
+		add_test(NAME Scenario.editor.statedir.${pairName}
+			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pairPath} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}
+				-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
+			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+		set_tests_properties(Scenario.editor.statedir.${pairName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+	endforeach()
 endif()

@@ -13,6 +13,5 @@ SW_TEST_CASE( EditorScenarioFilesTest, AllEditorScenariosParseResolveAndValidate
 {
     const IModuleLoader* const pModuleLoader = editor::findSubsystem<IModuleLoader>(); // 선택: 호스트 없는 하니스에는 없다 — 모듈을 요구하는 시나리오는 이름 검사를 건너뛴다
     SW_EXPECT_TRUE( test::checkScenarioFolder( "engine/automation/editor", pModuleLoader ) );
-    SW_EXPECT_TRUE( test::checkScenarioFolder( "engine/automation/editor/chain", pModuleLoader ) );    // 체인 사이에 끼우는 리로드
     SW_EXPECT_TRUE( test::checkScenarioFolder( "engine/automation/editor/statedir", pModuleLoader ) ); // 두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍
 }
