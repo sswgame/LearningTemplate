@@ -42,9 +42,9 @@ namespace sw
             if ( isExtensionAllowed == false )
                 return;
 
-            const uint64 mtime = FileUtil::getFileTimestamp( filePath );
-            if ( mtime == 0 )
-                return;
+            uint64 mtime = 0;
+            if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false )
+                return; // 그 사이 지워졌다
 
             const string                                  normalized = FileUtil::normalizePath( filePath );
             const unordered_map<string, uint64>::iterator it         = mapPollMtime.find( normalized );
@@ -296,8 +296,9 @@ namespace sw
             {
                 if ( isExtensionAllowed( entry, filePath ) == false )
                     continue;
-                if ( FileUtil::getFileTimestamp( filePath ) < sinceTimestamp )
-                    continue;
+                uint64 mtime = 0;
+                if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false || mtime < sinceTimestamp )
+                    continue; // 그 사이 지워졌거나 그 뒤로 바뀌지 않았다
 
                 const string normalized = FileUtil::normalizePath( filePath );
                 if ( uniqueSetEmittedPath.insert( normalized ).second == false )

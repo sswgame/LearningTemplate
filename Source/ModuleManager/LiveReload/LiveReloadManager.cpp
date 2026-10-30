@@ -321,7 +321,8 @@ namespace sw
         ModuleRecord& context = iter->second;
         SW_LOG_INFO( "Manual Live Reload queued for %# (debounce %#ms)...",
                      moduleName, kMtimeDebounceMs );
-        context._debounceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
+        context._debounceMtime = 0;
+        (void)FileUtil::tryGetFileTimestamp( context._originalModulePath, context._debounceMtime ); // 빌드 도중이라 없으면 0 - 다음 확인에서 시각이 달라 다시 기다린다
         context._debounceTimer.resetTimer();
         context._debounceTimer.startTimer();
         context._bMtimeDebouncing = true;
@@ -406,8 +407,9 @@ namespace sw
             _bBuildStampPending = SW_FALSE;
             for ( auto& [name, context] : _mapModule )
             {
-                if ( FileUtil::getFileTimestamp( context._originalModulePath ) <= context._loadedSourceMtime )
-                    continue;
+                uint64 sourceMtime = 0;
+                if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime ) == false || sourceMtime <= context._loadedSourceMtime )
+                    continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
                 SW_LOG_TRACE( "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
@@ -422,8 +424,9 @@ namespace sw
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::kMillisecondsPerSecond )
                 continue;
 
-            const uint64 sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
-            if ( sourceMtime != context._debounceMtime )
+            uint64     sourceMtime = 0;
+            const bool bReadable   = FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime );
+            if ( bReadable == false || sourceMtime != context._debounceMtime ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
                 context._debounceMtime = sourceMtime;
                 context._debounceTimer.resetTimer();
@@ -684,7 +687,9 @@ namespace sw
             }
         }
 
-        outShadow._sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
+        outShadow._sourceMtime = 0;
+        if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, outShadow._sourceMtime ) == false )
+            SW_LOG_WARNING( "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
         {

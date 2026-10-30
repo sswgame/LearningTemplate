@@ -60,8 +60,11 @@ namespace sw
             {
                 bool operator()( const string& lhs, const string& rhs ) const
                 {
-                    const uint64 lhsTime = FileUtil::getFileTimestamp( lhs );
-                    const uint64 rhsTime = FileUtil::getFileTimestamp( rhs );
+                    // 그 사이 지워진 파일은 시각 0 으로 맨 앞에 선다 - 다음 정리가 목록에서 뺀다.
+                    uint64 lhsTime = 0;
+                    uint64 rhsTime = 0;
+                    (void)FileUtil::tryGetFileTimestamp( lhs, lhsTime );
+                    (void)FileUtil::tryGetFileTimestamp( rhs, rhsTime );
                     if ( lhsTime != rhsTime )
                         return lhsTime < rhsTime;
                     return lhs < rhs;
@@ -708,7 +711,9 @@ namespace sw
         uint64                         totalBytes = _currentFileBytes;
         for ( const string& path : _listClosedFile )
         {
-            totalBytes += FileUtil::getFileSize( path );
+            uint64 byteCount = 0;
+            (void)FileUtil::tryGetFileSize( path, byteCount ); // 그 사이 지워진 파일은 차지하는 바이트가 없다
+            totalBytes += byteCount;
         }
         // 지금 파일은 지우지 않는다 — 상한을 넘는 만큼 가장 오래된 닫힌 파일부터(보내지 못한 채) 버린다.
         while ( _listClosedFile.empty() == false )
@@ -717,8 +722,10 @@ namespace sw
             const bool   bOver     = fileCount > settings._maxFiles || totalBytes > settings._maxTotalBytes;
             if ( bOver == false )
                 break;
-            const string oldest = _listClosedFile.front();
-            totalBytes -= MathUtil::min( totalBytes, FileUtil::getFileSize( oldest ) );
+            const string oldest      = _listClosedFile.front();
+            uint64       oldestBytes = 0;
+            (void)FileUtil::tryGetFileSize( oldest, oldestBytes ); // 그 사이 지워졌으면 뺄 것이 없다
+            totalBytes -= MathUtil::min( totalBytes, oldestBytes );
             (void)FileUtil::removeFile( oldest ); // 실패는 removeFile 이 경고로 남긴다
             _listClosedFile.erase( _listClosedFile.begin() );
             ++_stats._droppedFiles;

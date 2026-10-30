@@ -43,8 +43,11 @@ SW_TEST_CASE( FileSystemTest, CreatesWalksAndRemovesATree )
     SW_EXPECT_TRUE( FileUtil::forEachDirectoryEntry( root, true, TestFileSystemInternal::stopAtFirst, &visitCount ) ); // 콜백이 멈춘 것은 실패가 아니다
     SW_EXPECT_EQUAL( 1u, visitCount );
 
-    SW_EXPECT_EQUAL( uint64{ 2 }, FileUtil::getFileSize( FileUtil::joinPath( root, "a/b/c/two.txt" ) ) );
-    SW_EXPECT_EQUAL( uint64{ 0 }, FileUtil::getFileSize( FileUtil::joinPath( root, "a" ) ) ); // 폴더는 크기가 없다
+    uint64 size = 0;
+    SW_REQUIRE_TRUE( FileUtil::tryGetFileSize( FileUtil::joinPath( root, "a/b/c/two.txt" ), size ) );
+    SW_EXPECT_EQUAL( uint64{ 2 }, size );
+    SW_EXPECT_FALSE( FileUtil::tryGetFileSize( FileUtil::joinPath( root, "a" ), size ) );       // 폴더는 크기가 없다
+    SW_EXPECT_FALSE( FileUtil::tryGetFileSize( FileUtil::joinPath( root, "missing" ), size ) ); // 없는 파일은 0 이 아니라 실패다
 
     // 읽기 전용 파일이 있어도 폴더째 지운다.
     SW_REQUIRE_TRUE( FileUtil::setWritable( FileUtil::joinPath( root, "a/one.txt" ), false ) );

@@ -305,7 +305,10 @@ namespace sw
         const JSONValue root = manifest.makeObject();
         root.set( "schema" ).setInt( 1 );
         root.set( "session" ).setString( sessionID );
-        root.set( "crashTime" ).setUint( FileUtil::getFileTimestamp( contextPath ) );
+        uint64 crashTime = 0;
+        if ( FileUtil::tryGetFileTimestamp( contextPath, crashTime ) == false )
+            SW_LOG_WARNING( "Crash report: cannot read the time of %# - the bundle carries crashTime 0", contextPath );
+        root.set( "crashTime" ).setUint( crashTime );
         root.set( "bundledBy" ).setString( _currentSessionID );
         const string    contextText = Internal::readText( contextPath );
         const JSONValue context     = root.set( "context" );
@@ -354,7 +357,10 @@ namespace sw
             const JSONValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( kind._pBundleName );
-            entry.set( "bytes" ).setUint( FileUtil::getFileSize( target ) );
+            uint64 byteCount = 0;
+            if ( FileUtil::tryGetFileSize( target, byteCount ) == false )
+                SW_LOG_WARNING( "Crash report: cannot read the size of %#", target );
+            entry.set( "bytes" ).setUint( byteCount );
         }
         const string log = Internal::collectSessionLog( _crashFolder, sessionID, fixedLogPath, kMaxLogBytes );
         if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::joinPath( bundleFolder, "last.log" ), log ) )

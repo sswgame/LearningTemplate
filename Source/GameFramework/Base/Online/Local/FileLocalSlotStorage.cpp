@@ -76,8 +76,10 @@ namespace sw
                 return true;
             LocalSlotInfo& slotInfo = listSlotInfo.emplace_back();
             slotInfo._slot          = string( slot );
-            slotInfo._byteCount     = static_cast<int64>( FileUtil::getFileSize( entry._path ) );
-            int64 ticks             = 0;
+            uint64 byteCount        = 0;
+            if ( FileUtil::tryGetFileSize( entry._path, byteCount ) )
+                slotInfo._byteCount = static_cast<int64>( byteCount );
+            int64 ticks = 0;
             if ( FileUtil::getFileWriteTime( entry._path, ticks ) )
                 slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / constant::kMillisecondsPerSecond );
             return true;

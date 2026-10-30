@@ -336,13 +336,14 @@ namespace sw
         return true;
     }
 
-    uint64 FileUtil::getFileTimestamp( string_view fileName )
+    bool FileUtil::tryGetFileTimestamp( string_view fileName, uint64& outSeconds )
     {
-        // 있는지 따로 묻지 않는다 - 묻고 나서 읽는 사이에 지워지면(파일 감시 · 핫 리로드) 어긋난다. 한 번 물어 없으면 0 이다.
+        // 있는지 따로 묻지 않는다 - 묻고 나서 읽는 사이에 지워지면(파일 감시 · 핫 리로드) 어긋난다. 한 번 묻는다.
         PlatformFileSystem::FileStatus status;
         if ( PlatformFileSystem::queryStatus( fileName, status ) == false )
-            return 0;
-        return static_cast<uint64>( status._writeTicks / kFileTimeTicksPerSecond );
+            return false;
+        outSeconds = static_cast<uint64>( status._writeTicks / kFileTimeTicksPerSecond );
+        return true;
     }
 
     uint64 FileUtil::getCurrentFileTimestamp()
@@ -375,13 +376,14 @@ namespace sw
         return PlatformFileSystem::getNowTicks();
     }
 
-    uint64 FileUtil::getFileSize( string_view fileName )
+    bool FileUtil::tryGetFileSize( string_view fileName, uint64& outSize )
     {
-        // 크기만 알면 되므로 파일을 열지 않는다. 파일이 아니거나(폴더) 없으면 0 이다.
+        // 크기만 알면 되므로 파일을 열지 않는다.
         PlatformFileSystem::FileStatus status;
         if ( PlatformFileSystem::queryStatus( fileName, status ) == false || status._kind != PlatformFileSystem::FileKind::File )
-            return 0;
-        return status._size;
+            return false;
+        outSize = status._size;
+        return true;
     }
 
     bool FileUtil::copyFile( string_view source, string_view destination )

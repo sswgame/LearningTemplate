@@ -17,8 +17,7 @@ namespace sw
 {
     /**
      * @brief 파일 하나의 크기와 마지막 쓰기 시각입니다. "지난번에 본 그 파일 그대로인가" 를 파일을 열지 않고 확인할 때 씁니다.
-     * @details 시각은 플랫폼 고유의 단위 그대로입니다(Windows 는 100 ns, 리눅스는 `stat` 의 ns). 같은 기계 ·
-     *          같은 실행 안에서 **같은지만** 비교합니다. `getFileTimestamp` 는 초 단위라 1초 안에 일어난 편집을 놓칩니다.
+     * @details 시각은 1601 기원 100 ns 눈금입니다(플랫폼이 같다). **같은지만** 비교합니다. `tryGetFileTimestamp` 는 초 단위라 1초 안에 일어난 편집을 놓칩니다.
      */
     struct FileStamp
     {
@@ -183,10 +182,10 @@ namespace sw
          */
         static string getBinaryDirectory();
 
-        /** @brief 파일의 수정 시각을 초 단위로 반환합니다. */
-        static uint64 getFileTimestamp( string_view fileName );
+        /** @brief 파일의 수정 시각(초 - `getCurrentFileTimestamp` 와 같은 시계)을 @p outSeconds 에 담습니다. 없거나 읽을 수 없으면 false 입니다(0 을 시각으로 돌려주지 않는다). */
+        [[nodiscard]] static bool tryGetFileTimestamp( string_view fileName, uint64& outSeconds );
         /**
-         * @brief 지금 시각을 `getFileTimestamp` 와 **같은 시계 · 같은 단위**로 반환합니다.
+         * @brief 지금 시각을 `tryGetFileTimestamp` 와 **같은 시계 · 같은 단위**로 반환합니다.
          * @details 파일 시각은 파일 시계(Windows 1601 년 기준)로 나옵니다. `system_clock` 과 기준점이 다를 수 있어 그쪽의 `now()`
          *          와 비교하면 틀립니다. "이 시각 이후 바뀐 파일" 을 고를 때는 이 함수를 쓰십시오.
          */
@@ -199,8 +198,8 @@ namespace sw
         [[nodiscard]] static bool setFileWriteTime( string_view path, int64 ticks );
         /** @brief 지금 시각을 `getFileWriteTime` 과 같은 시계 · 눈금으로 반환합니다. */
         static int64 getCurrentFileWriteTime();
-        /** @brief 파일 크기를 반환합니다. */
-        static uint64 getFileSize( string_view fileName );
+        /** @brief 파일 크기를 @p outSize 에 담습니다. 없거나 파일이 아니면(폴더) false 입니다(0 을 크기로 돌려주지 않는다 - 빈 파일과 구별된다). */
+        [[nodiscard]] static bool tryGetFileSize( string_view fileName, uint64& outSize );
         /**
          * @brief 파일의 크기와 마지막 쓰기 시각을 **한 번의 조회**로 얻습니다. 파일이 없거나 읽을 수 없으면 false 입니다.
          * @details 파일 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 확인할 때 씁니다. 파일을 여는 것보다
