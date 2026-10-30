@@ -47,6 +47,8 @@ namespace sw
         , _recordPath{}
         , _reportPath{}
         , _workingFolder{}
+        , _startWindowWidth{ 0 }
+        , _startWindowHeight{ 0 }
         , _listStartVariable{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
@@ -133,6 +135,11 @@ namespace sw
     {
         _reportPath    = string( reportPath );
         _workingFolder = FileUtil::getCurrentPath();
+        if ( const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
+        {
+            _startWindowWidth  = pWindowHost->getWindow()->getWidth();
+            _startWindowHeight = pWindowHost->getWindow()->getHeight();
+        }
         // 재현 명령의 재료 — 이 실행을 같은 게임 · 백엔드 · 에디터 · 시나리오 목록으로 다시 띄우는 데 필요한 것을 지금(엔진이 선 뒤) 모은다.
         _reproduceInput                   = AutomationReproduceInput{};
         _reproduceInput._game             = GameSelection::getName();
@@ -184,6 +191,8 @@ namespace sw
             // (2D 쿠키 빛을 3D 파이프라인이 그리면 DX11 · GL 의 흉내 슬롯이 겹친다). 빈 씬은 어느 설정으로 그려도 된다.
             (void)engine::getSubsystem<SceneManager>().createEmptyActiveScene( kStageResetSceneName );
             restoreStartVariables();
+            // 창 크기도 시작 때로 — 앞 단계가 바꾼 크기에서 편집기의 기본 배치를 세우면 도크 칸이 새 프로세스와 화소 몇 개 달라 골든이 어긋났다(씬 뷰 160x64 대 62).
+            restoreStartWindowSize();
             // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
             (void)AutomationStageResetRegistry::resetAll();
         }
@@ -244,6 +253,16 @@ namespace sw
             if ( startName == name )
                 startValue = string( value );
         }
+    }
+
+    void AutomationSession::restoreStartWindowSize()
+    {
+        MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); // 선택: 창 없는 하니스에는 없다
+        IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindow == nullptr || _startWindowWidth == 0 || ( pWindow->getWidth() == _startWindowWidth && pWindow->getHeight() == _startWindowHeight ) )
+            return;
+        if ( pWindow->setDisplayMode( WindowDisplayMode::Windowed, _startWindowWidth, _startWindowHeight ) == false )
+            SW_LOG_WARNING( "[Scenario] the window could not return to its start size %#x%# for the next stage", _startWindowWidth, _startWindowHeight );
     }
 
     void AutomationSession::restoreStartVariables()

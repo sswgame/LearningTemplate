@@ -5,7 +5,10 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/renderdocbutton.scenario.xml -unattended
 -->
 <Scenario name="editor.renderdocbutton" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="30"/>
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="10"/>
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
@@ -14,5 +17,6 @@
 	<Wait frames="40"/>
 	<ExpectLog contains="RenderDoc capture requested" count="0"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>
