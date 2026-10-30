@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/MarkupTagScanner.h"
@@ -432,11 +433,6 @@ namespace sw
 
 namespace sw
 {
-    string LocalizationTools::findRepositoryRoot()
-    {
-        return FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( editor::getSubsystem<AssetPaths>().getRootFolderPath() ) );
-    }
-
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
     {
         outListProjectPath.clear();
@@ -665,7 +661,7 @@ namespace sw
             return false;
         }
 
-        const string repositoryRoot = findRepositoryRoot();
+        const string repositoryRoot = ProcessRoots::get()._project.str();
         bool         bSucceeded{ true };
         for ( const string& projectPath : listProjectPath )
         {

@@ -77,8 +77,6 @@ namespace sw
      */
     struct LocalizationTools
     {
-        /** @brief 저장소 루트를 반환합니다. 리소스 루트의 부모입니다. */
-        static string findRepositoryRoot();
         /** @brief `-loc-project=all` 은 모든 팩을 고르는 프로젝트 인자입니다. */
         static constexpr const utf8* kAllProjects = "all";
 

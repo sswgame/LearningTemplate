@@ -281,12 +281,13 @@ namespace sw::editor
         {
             if ( pPreviousReferrer != nullptr && *pPreviousReferrer == reference._referrerPath )
                 continue;
-            pPreviousReferrer        = &reference._referrerPath;
-            const string referrerID  = reference._referrerPath == oldID ? newID : reference._referrerPath;
-            const string referrerAbs = FileUtil::joinPath( resourceRoot, referrerID );
-            string       referrerText;
-            if ( FileUtil::readTextFile( referrerAbs, referrerText ) == false )
+            pPreviousReferrer                              = &reference._referrerPath;
+            const string                      referrerID   = reference._referrerPath == oldID ? newID : reference._referrerPath;
+            const std::optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
+            string                            referrerText;
+            if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), referrerText ) == false )
                 continue;
+            const string& referrerAbs = referrerFile->str();
             if ( replaceReference( referrerText, oldID, newID ) == 0 )
                 continue;
             if ( FileUtil::writeTextFile( referrerAbs, referrerText ) == false )
