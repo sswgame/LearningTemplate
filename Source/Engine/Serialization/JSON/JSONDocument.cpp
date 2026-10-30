@@ -203,9 +203,9 @@ namespace sw
                 if ( parse( *pMember, outValue ) )
                     return 0;
                 if ( key.empty() )
-                    SW_LOG_ERROR( "JSON value is not a %#: %#", getTypeLabel( outValue ), member.dump() );
+                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON value is not a %#: %#", getTypeLabel( outValue ), member.dump() );
                 else
-                    SW_LOG_ERROR( "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
+                    SW_LOG_ERROR_ID( "JSON.WrongType", "JSON member '%#' is not a %#: %#", key, getTypeLabel( outValue ), member.dump() );
                 return 2;
             }
         };
@@ -275,7 +275,7 @@ namespace sw
 
     void JSONValue::reportMissing( string_view key ) const
     {
-        SW_LOG_ERROR( "JSON object has no required member '%#'", key );
+        SW_LOG_ERROR_ID( "JSON.MissingMember", "JSON object has no required member '%#'", key );
     }
 
     size_t JSONValue::size() const
