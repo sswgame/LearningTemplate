@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: K 절(일원화 감사 2026-10-30)의 항목이 거의 끝났다 — 태스크 · 정지 신호 · 등록부 · 서브시스템 확장(E1–E5) · 정적 상태 → 서브시스템 · 큰 클래스 분해(FrameRenderer · CanvasRenderer · RenderPacketBuilder · Engine · GameInstance · UISystem · InputMap · AudioEngine) · 편집기 패널 모델/뷰 · 유틸 · STL · include. K 절 "남은 것" 표도 끝났다(2026-10-30 — Linux 빌드 · `castTo` 핫패스화 · 패널 · 호스트). Windows Debug · Release, Linux Debug 빌드와 ctest 통과. **바로 다음**: 편집기 테스트 복원 마무리(4 절 첫 표 — 옮긴 편집기 시나리오 56 실패의 갈래별 정리), 그다음 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: K 절(일원화 감사 2026-10-30)의 항목이 거의 끝났다 — 태스크 · 정지 신호 · 등록부 · 서브시스템 확장(E1–E5) · 정적 상태 → 서브시스템 · 큰 클래스 분해(FrameRenderer · CanvasRenderer · RenderPacketBuilder · Engine · GameInstance · UISystem · InputMap · AudioEngine) · 편집기 패널 모델/뷰 · 유틸 · STL · include. K 절 "남은 것" 표도 끝났다(2026-10-30 — Linux 빌드 · `castTo` 핫패스화 · 패널 · 호스트). Windows Debug · Release, Linux Debug 빌드와 ctest 통과. **바로 다음**(편집기 테스트 복원은 끝났다 — 4 절): 큰 묶음 넷 — I 절 4(테스트 · 자동화 실행기를 Engine.dll 밖으로), J6(쿠커 단위), J8(리플렉션 에디터 메타 사이드 테이블). 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -45,19 +45,12 @@
 
 ## 4. 남은 일
 
-### 편집기 테스트 복원 (2026-10-30, 바로 다음)
+### 편집기 테스트 복원 (2026-10-30 — 끝남)
 
-- **끝남**: 편집기 자체 테스트 46(+ 편집기 단위 테스트) → CTest `EditorTests`. 옛 편집기 시나리오 121 을 지금 형식으로 옮겨 `Content/engine/automation/editor/` 에 두고 CTest `Scenario.editor`(편집기 체인, 기본 백엔드)로 올렸다. 정적 검사 `EditorScenarioFilesTest`(편집기 단위 테스트).
-  고친 결함: 자체 테스트가 실패해도 종료 코드 0(→ 서비스 `QuitRequest`), 플러그인 DLL 의 ImGui 사본에 컨텍스트가 안 걸리던 순서(→ 등록 형식의 `onAttached`), 멈춘 편집기에서 실효 배율을 보던 테스트(→ `GameTimeScale::getSetting`).
-- **지금 빨갛다**(옮긴 그대로의 상태): 첫 체인 117 — 통과 61 · 실패 36 · 읽기 오류 13 · 시간 초과 7. 체인 로그 `build/Ninja-Debug/Testing/Logs/Scenario.editor.log`, 한 시나리오는 `App -EnableEditor "-scenario=engine/automation/editor/<이름>.scenario.xml" -unattended`(PowerShell 은 인자에 따옴표 — 없으면 `.` 에서 끊는다).
-- **갈래별 남은 것**:
-  - 이미지 골든 9 시나리오(emptyscene · flowterrain · loadingscreen · meshmodifiers · sceneviewgameview · screen · screenrectview · terrainbrush · viewmodes): 옛 지표를 골든으로 바꿨다 — `-scenario-update-golden` 으로 뜨고 그림을 보고 커밋한다(옛 상대 비교 "다르다/같다" 는 골든 그림이 대신한다).
-  - 없는 감시 값 · 명령(정적 검사가 짚는다): netsim(`Editor.NetSim*`), vfxpreview(`Editor.VfxPreview*`), profilertimeline(`profile.trace` — 트레이스 빌드에만 있는지), sceneviewgameview(`Input.OsDeviceInputBlocked`). 기능이 없어졌으면 시나리오를 지우고, 이름만 바뀌었으면 맞춘다.
-  - 바뀐 UI 표식 · 패널 id: `hierarchy.filter` · `hierarchy.create` · `hierarchy.row.GameCamera` · `inputMap.filter` · `modules.toggle.GF_ThemePark` · `panel.focus <panelID>`(uiaudit) · `edit.undo`(uipreviewdesigner) · `retarget.section.Chains`(스크롤 밖). 편집기 코드의 `EditorSelfTestMarks::note` 를 찾아 맞춘다.
-  - 값이 다른 확인(결함인지 시나리오가 낡았는지 판정): billboardpick · visualizertoggle(`Editor.VisualizerOn` 기본 1), colliderhandle(핸들 0), commandpalette(자체 테스트 등록 명령 로그), contentbrowser(게임 루트 1), curveedit, debughudcontrols · extensionpanel · uipreview · preview*(감시 대상 없음 — 패널 · 문서가 안 열렸다), dialoguegraphsave · windowtitle(dirty 1), editorstartup(`admin.tool` 패널 없음), hidelock, mapcheck · workflow(오브젝트 0), outputlog(보이는 줄 2048), physicsnavview, playedit, preferences(저장 키 1), sequencerkeys, tilemapdatalayers · tilemaptools(63/64), viewporthover, viewportnavigation(궤도 거리 8).
-  - 시간 초과 7: admintool · charactereditor · inspectorhandle · lightprobebakecancel · prefabwindow · scenereference · toolbaricons.
-- 옮긴 변환기는 저장소에 두지 않았다(일회용) — 규칙: `<At frame>` 은 시각 순 정렬 뒤 차이만큼 `<Wait>`, `<At after>` 는 `<Wait frames>`.
-
+- **지금**: CTest `Scenario.editor`(체인 103 단계 — 통과 99 · 건너뜀 4) + `Scenario.editor.<줄기>`(isolated 15, 저마다 새 프로세스) + `EditorTests`. 건너뜀 넷(admintool · extensionpanel · modules · netsim)은 `requiresModule` 의 키트가 Empty 에 없어서다 — 그 키트를 쓰는 게임(또는 Release 전체)에서 돈다. 골든 24 장(dx12)은 그림을 보고 커밋했다. 한 시나리오는 `App -EnableEditor "-scenario=engine/automation/editor/<이름>.scenario.xml" -unattended`(PowerShell 은 인자에 따옴표).
+- **고친 결함(근본 원인)**: 시나리오 실행이 사용자의 `Saved/Editor` 에 썼다(→ 프로세스마다 `Saved/Automation/EditorState/editor_p<pid>`), 기본 배치로 되돌리기가 닫힌 핵심 패널을 열지 않았다, 체인 단계 사이에 편집기 상태(팝업 · 초점 · 패널 · 배치 · 창 크기)가 남았다(→ `SW_AUTOMATION_STAGE_RESET` 등록과 세션의 창 크기 되돌리기), 편집기가 DevTools 서브시스템(DebugHUD · ConfigReload)을 못 찾았다, 멈춘 편집기에서 미리보기 씬이 멈췄다(게임 시간 배율로 틱), 활성 씬 없는 프레임의 패킷에 앞 씬 스냅샷이 남았다, `profile.trace` 가 정의 전 `#if` 로 통째로 빠졌다(→ `-Werror=undef`), 옛 `<WorldSettings>` 씬(→ `ContentScenesTest`), 편집기 골든 폴더를 쓰기 문이 막았다(→ `kAutomationGoldenFolder`).
+- **새 틀**: 시나리오 루트 `requiresModule="A,B"`(모듈이 꺼진 빌드는 건너뜀 — 실행기와 정적 검사가 같은 판정, `IModuleLoader::isModuleActive`), `isolated="true"` 는 CMake 가 체인에서 뺀다, 모듈 상태 되돌리기 등록 `SW_AUTOMATION_STAGE_RESET`.
+- **남은 것**: Linux(WSL 클론)에서 `-Werror=undef` 빌드 확인(플랫폼 매크로를 `#if` 로 읽던 여섯 곳은 `defined()` 로 고쳤다). 편집기 시나리오의 다른 백엔드(vk · dx11 · gl) 골든은 아직 없다 — 편집기 체인은 기본 백엔드 하나만 돈다. 기동 기본 창 크기에서는 상단 툴바 오른쪽(RenderDoc 단추)이 잘린다 — 툴바 넘침 처리(접기 · 줄바꿈)는 아직 없다(renderdocbutton 은 1920x1080 으로 키워 돈다).
 
 | 일 | 내용 |
 |---|---|
