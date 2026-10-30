@@ -147,11 +147,13 @@ namespace sw
     /** @brief 호스트 설정입니다. 저장소, 캐시, 버스, 원격 설정은 빌려 쓰므로 호스트보다 오래 살아야 합니다. */
     struct OnlineServiceHostConfig
     {
+        static constexpr uint16 kDefaultPort = 7100; ///< 온라인 서비스의 기본 리슨 포트(서버 · 부하 봇이 함께 쓴다)
+
         StreamTransportConfig _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 테스트)
         StreamEndpointConfig  _endpointSettings{};
-        NetAddress            _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
-        NetAddress            _adminListenAddress{ NetAddress::makeLoopback( 0 ) };   ///< `_pAdminTransport` 가 받을 주소. 포트 0 = 아무 포트(`getAdminListenPort`)
-        IStreamTransport*     _pAdminTransport{ nullptr };                            ///< 빌려 쓴다. 있으면 GM 리슨을 따로 열고 서비스의 노출(`getExposure`)대로 리슨을 가른다
+        NetAddress            _listenAddress{ NetAddress::makeAnyInterface( kDefaultPort ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
+        NetAddress            _adminListenAddress{ NetAddress::makeLoopback( 0 ) };           ///< `_pAdminTransport` 가 받을 주소. 포트 0 = 아무 포트(`getAdminListenPort`)
+        IStreamTransport*     _pAdminTransport{ nullptr };                                    ///< 빌려 쓴다. 있으면 GM 리슨을 따로 열고 서비스의 노출(`getExposure`)대로 리슨을 가른다
         IServiceStore*        _pServiceStore{ nullptr };
         IEphemeralStore*      _pEphemeralStore{ nullptr };     ///< 없으면 서버 한 대(라우터 없음)
         IServerBusTransport*  _pServerBusTransport{ nullptr }; ///< 없으면 서버 한 대. 키트에는 호스트가 만든 앞(`getServerBus`)만 간다

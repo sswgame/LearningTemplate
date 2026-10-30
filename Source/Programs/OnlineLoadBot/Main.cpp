@@ -148,7 +148,7 @@ namespace sw
             static constexpr int32    kExitErrorRate        = 1;
             static constexpr int32    kExitUsage            = 2;
             static constexpr int32    kExitStartup          = 3;
-            static constexpr uint16   kDefaultServerPort    = 7100;
+            static constexpr uint16   kDefaultServerPort    = OnlineServiceHostConfig::kDefaultPort;
             static constexpr int32    kMaxPort              = 65535;
             static constexpr int64    kIdleSleepNs          = 200000; ///< 틱 사이 — 전송을 I/O 스레드 없이 돌리므로 짧게
             static constexpr int32    kPercentScale         = 100;

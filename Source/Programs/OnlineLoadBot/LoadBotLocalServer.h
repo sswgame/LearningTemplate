@@ -14,6 +14,8 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
+#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+
 namespace sw
 {
     class IStreamTransport;
@@ -30,7 +32,7 @@ namespace sw
         uint64           _serverID{ 1 };          ///< 버스 · 접속 상태 · 디렉터리의 서버 id
         int32            _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
         int32            _gameServerCapacity{ 100000 };
-        uint16           _port{ 7100 };
+        uint16           _port{ OnlineServiceHostConfig::kDefaultPort };
         uint8            _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
     };
 } // namespace sw

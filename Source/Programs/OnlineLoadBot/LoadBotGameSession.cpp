@@ -8,7 +8,7 @@ namespace sw
     {
         stop();
         // 서버가 루프백이면 루프백 소켓, 아니면 모든 인터페이스(`GameNetSession::createShard` 와 같은 규칙).
-        const bool bLoopbackOnly = serverAddress == NetAddress::makeLoopback( serverAddress._port );
+        const bool bLoopbackOnly = serverAddress.isLoopback();
         if ( _transport.open( 0, bLoopbackOnly ) == false )
             return false;
         _bOpen = true;

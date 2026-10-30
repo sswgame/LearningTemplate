@@ -484,7 +484,7 @@ namespace sw::editor
         if ( ImGui::Button( "Read server" ) )
         {
             NetAddress remote;
-            const bool bLoopback = NetAddress::parse( _arrAddress[sourceIndex].c_str(), 0, remote ) && remote.isValid() && remote == NetAddress::makeLoopback( remote._port );
+            const bool bLoopback = NetAddress::parse( _arrAddress[sourceIndex].c_str(), 0, remote ) && remote.isValid() && remote.isLoopback();
             if ( bLoopback == false )
                 SW_LOG_WARNING( "Sync reads only 127.0.0.1:<port> - '%#' is not one", _arrAddress[sourceIndex].c_str() );
             else if ( compare.loadFromChannel( sourceIndex, remote, _arrToken[sourceIndex].c_str() ) == false )

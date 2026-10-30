@@ -171,6 +171,8 @@ namespace sw
 
         string toString() const;
         bool   isValid() const { return _port != 0; }
+        /** @brief 이 기계의 루프백(127.0.0.1)이면 true 입니다(포트는 보지 않는다). 루프백에만 묶인 채널 · 세션이 받는 주소를 가린다. */
+        constexpr bool isLoopback() const { return _ipv4 == makeLoopback( 0 )._ipv4; }
 
         constexpr bool operator==( const NetAddress& other ) const { return _ipv4 == other._ipv4 && _port == other._port; }
         constexpr bool operator!=( const NetAddress& other ) const { return ( *this == other ) == false; }

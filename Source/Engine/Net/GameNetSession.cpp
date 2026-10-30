@@ -197,7 +197,7 @@ namespace sw
             return false;
         }
         // UDP 전송은 루프백 · 모든 인터페이스 두 가지로만 묶는다. 다른 주소를 조용히 모든 인터페이스로 바꾸지 않는다.
-        const bool bLoopbackOnly = listenAddress._ipv4 == NetAddress::makeLoopback( 0 )._ipv4;
+        const bool bLoopbackOnly = listenAddress.isLoopback();
         const bool bAnyInterface = listenAddress._ipv4 == NetAddress::makeAnyInterface( 0 )._ipv4;
         if ( bLoopbackOnly == false && bAnyInterface == false )
         {
@@ -277,7 +277,7 @@ namespace sw
         shard->_transport       = make_unique<UDPNetTransport>();
         // 클라이언트는 서버 주소가 정한다 — 다른 기계의 서버면 그 답을 받아야 하므로 루프백에만 묶을 수 없다.
         const bool           bServer       = params._role == GameNetRole::Server;
-        const bool           bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress == NetAddress::makeLoopback( params._serverAddress._port );
+        const bool           bLoopbackOnly = bServer ? params._bLoopbackOnly : params._serverAddress.isLoopback();
         const UDPPortSharing sharing       = params._bShardsSharePort ? UDPPortSharing::ReusePort : UDPPortSharing::Exclusive;
         if ( shard->_transport->open( transportPort, bLoopbackOnly, sharing ) == false )
         {
