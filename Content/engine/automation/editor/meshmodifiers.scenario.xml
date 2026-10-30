@@ -83,7 +83,7 @@
 	<!-- 휘기는 X 이동에 모양이 그대로다(옆 방향은 Z) - 그림은 남기기만 한다 -->
 	<Wait frames="5"/>
 	<Screenshot file="gpubendmoved.ppm"/>
-	<!-- ③ 곡선 목록: 항목 둘 → 둘째 항목 곡선 편집기에서 키 하나 더하기. CPU 전용이라 GPU 미리보기는 내려간다 -->
+	<!-- ③ 곡선 목록: 항목 둘 → 둘째 항목 곡선 편집기에서 키 하나 더하기. 곡선 층도 GPU 변형 프로그램이 그려(MeshModifierGPUProgram 의 curvesculptlayered) GPU 미리보기가 그대로다 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
 	<Wait frames="15"/>
@@ -95,7 +95,7 @@
 	<Wait frames="15"/>
 	<Expect watch="MeshModifiers.ModifierCount" equals="2"/>
 	<Expect watch="MeshModifiers.CurveListItemCount" equals="0"/>
-	<Expect watch="MeshModifiers.GPUPreviewActive" equals="0"/>
+	<Expect watch="MeshModifiers.GPUPreviewActive" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.curveList.add"/>
 	<Wait frames="15"/>
@@ -113,7 +113,7 @@
 	<Expect watch="MeshModifiers.CurveListKeyCount" equals="5"/>
 	<Wait frames="5"/>
 	<EditorKey key="Escape"/>
-	<!-- CPU 로 내려가도 셰이딩 미리보기는 남는다: 빈 곡선 층은 항등이라 그림이 GPU 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
+	<!-- 빈 곡선 층은 항등이라 그림이 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
 	<Wait frames="8"/>
 	<Screenshot file="cpubend.ppm"/>
 	<Wait frames="2"/>
