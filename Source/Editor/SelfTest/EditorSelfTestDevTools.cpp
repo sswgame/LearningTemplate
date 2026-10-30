@@ -199,10 +199,10 @@ namespace sw::editor
                     probe._pRegistrar           = make_unique<GameAutoplayRegistrar>( &probe._registration );
                     return EditorSelfTestStep::Continue;
                 }
-                const bool bDrawn = EditorPlayToolbar::wasAutoplayButtonDrawn();
+                const bool bDrawn = EditorPlayToolbar::wasAutoplayButtonOffered();
                 if ( bDrawn == false && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
-                (void)context.expect( bDrawn, "the editor toolbar never drew the autoplay button for a registered game" );
+                (void)context.expect( bDrawn, "the editor toolbar never offered the autoplay button for a registered game" );
                 (void)context.expect( GameAutoplay::setOn( true ) && probe._value == 1, "the autoplay switch did not turn the game's variable on" );
                 probe._pRegistrar.reset();
                 probe._value = 0;

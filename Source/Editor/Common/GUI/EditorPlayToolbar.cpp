@@ -61,7 +61,7 @@ namespace sw::editor
                 PendingSession _pendingSession{ PendingSession::Play };
                 bool           _bConfirmUnsavedPlay{ false };
                 bool           _bStartAtCamera{ false };                                  ///< Play 를 에디터 카메라 위치에서 시작한다
-                bool           _bAutoplayDrawn{ false };                                  ///< 마지막 프레임에 자동 플레이 단추를 그렸다
+                bool           _bAutoplayOffered{ false };                                ///< 마지막 프레임에 자동 플레이 단추를 내놓았다(줄에 그렸거나 ">>" 펼침 안에 있다)
                 float32        _arrSectionWidth[static_cast<size_t>( Section::Count )]{}; ///< 묶음마다 마지막으로 그린 폭(넘침 판정)
             };
 
@@ -248,7 +248,7 @@ namespace sw::editor
                     (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
                 const string tooltip = SW_LOCKEYFORMAT( "EdCommon", "AutoplayToggle", TextArgumentList().addText( "game", pActive->_pGameName ).addText( "description", pActive->_pDescription ).addText( "variable", pActive->_pVariableName ) );
                 EditorWidgets::drawTooltip( tooltip.c_str() );
-                getState()._bAutoplayDrawn = true;
+                getState()._bAutoplayOffered = true;
             }
 
             /**
@@ -293,7 +293,7 @@ namespace sw::editor
              */
             static void drawTrailingSections()
             {
-                getState()._bAutoplayDrawn       = false; // 묶음이 접힌 펼침에 들면 이번 프레임에는 그리지 않는다
+                getState()._bAutoplayOffered     = false;
                 constexpr size_t  kSectionCount  = static_cast<size_t>( Section::Count );
                 const ImGuiStyle& style          = ImGui::GetStyle();
                 const float32     separatorWidth = style.ItemSpacing.x * 2.0f + ImGui::CalcTextSize( "|" ).x;
@@ -322,6 +322,9 @@ namespace sw::editor
                 if ( ImGui::Button( ">>" ) )
                     EditorInputGUI::openPopup( kOverflowPopupID );
                 EditorSelfTestMarks::note( "toolbar.overflow" );
+                // 접힌 펼침 안의 단추도 내놓은 것이다 — 기본 배율(모니터 DPI)이 크면 세션 옵션이 펼침에 들어 자체 테스트가 "단추 없음" 으로 졌다.
+                if ( firstOverflow <= static_cast<size_t>( Section::SessionOptions ) )
+                    getState()._bAutoplayOffered = GameAutoplay::findActive() != nullptr;
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ToolbarOverflow" ) );
                 if ( ImGui::BeginPopup( kOverflowPopupID ) == false )
                     return;
@@ -377,8 +380,8 @@ namespace sw::editor
         EditorPlayToolbarInternal::drawUnsavedPlayPopup();
     }
 
-    bool EditorPlayToolbar::wasAutoplayButtonDrawn()
+    bool EditorPlayToolbar::wasAutoplayButtonOffered()
     {
-        return EditorPlayToolbarInternal::getState()._bAutoplayDrawn;
+        return EditorPlayToolbarInternal::getState()._bAutoplayOffered;
     }
 } // namespace sw::editor
