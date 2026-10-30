@@ -89,3 +89,10 @@ SW_TEST_CASE( FileSystemTest, OptionalReadTellsMissingFromFailed )
     SW_REQUIRE_TRUE( FileUtil::readOptionalTextFile( file, text ) == OptionalFileRead::Read );
     SW_EXPECT_EQUAL( string( "abc" ), text );
 }
+
+SW_TEST_CASE( FileSystemTest, RelativePathsDoNotReachTheOS )
+{
+    // R2 - 디스크 I/O 는 절대 경로만 받는다. 작업 폴더로 풀지 않고 오류로 알린다(입구가 받을 때 절대화했어야 한다).
+    SW_EXPECT_LOG( "File.RelativePath" );
+    SW_EXPECT_FALSE( FileUtil::exists( "Config/Engine/EngineConfig.json" ) ); // 작업 폴더가 저장소 루트여도 없다
+}

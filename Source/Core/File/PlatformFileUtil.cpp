@@ -34,9 +34,6 @@ namespace sw
         {
             /** @brief 읽으려고 연 파일 수입니다(`noteFileOpenedForRead`). */
             inline static atomic<uint64> s_fileOpenCount{ 0 };
-            /** @brief `auditPathInput` 이 이미 알린 상대 경로입니다(경로마다 한 번). 잠금은 넣기에만 쓴다 - 로그는 잠금 밖에서. */
-            inline static mutex                 s_auditMutex;
-            inline static unordered_set<string> s_uniqueAuditedPath;
             /** @brief 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다. */
             inline static atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
 
@@ -108,16 +105,12 @@ namespace sw
         SW_LOG_INFO( "[IO] open %# bytes=%# thread=%#", filePath, byteCount, static_cast<const utf8*>( arrThreadName ) );
     }
 
-    void PlatformFileUtil::auditPathInput( string_view path )
+    bool PlatformFileUtil::acceptsPathInput( string_view path )
     {
         if ( path.empty() || AbsolutePath::isStrictAbsolute( path ) )
-            return;
-        {
-            ScopedLock<mutex> lock{ PlatformFileUtilInternal::s_auditMutex };
-            if ( PlatformFileUtilInternal::s_uniqueAuditedPath.insert( string{ path } ).second == false )
-                return;
-        }
-        SW_LOG_INFO( "[PathAudit] relative path reached the OS boundary: '%#'", path );
+            return true;
+        SW_LOG_ERROR_ID( "File.RelativePath", "A relative path reached the OS boundary: '%#' - resolve it where it enters (AbsolutePath::tryResolve, ProcessRoots)", path );
+        return false;
     }
 
     uint64 PlatformFileUtil::getFileOpenCount()
@@ -130,7 +123,8 @@ namespace sw
         if ( pFilePath == nullptr || pMode == nullptr )
             return nullptr;
 
-        auditPathInput( pFilePath );
+        if ( acceptsPathInput( pFilePath ) == false )
+            return nullptr;
         FILE* pFile{ nullptr };
 #if defined( SW_PLATFORM_WINDOWS )
         // 모드는 ASCII 몇 글자다("rb" · "wb" · "a+" ...). 그대로 넓힌다.
@@ -155,8 +149,8 @@ namespace sw
     {
         if ( pSourcePath == nullptr || pTargetPath == nullptr )
             return false;
-        auditPathInput( pSourcePath );
-        auditPathInput( pTargetPath );
+        if ( acceptsPathInput( pSourcePath ) == false || acceptsPathInput( pTargetPath ) == false )
+            return false;
 
 #if defined( SW_PLATFORM_WINDOWS )
         const wstring wideSource = StringUtil::utf8ToUTF16( pSourcePath );
@@ -281,7 +275,8 @@ namespace sw
     {
         if ( pFilePath == nullptr || pFilePath[0] == '\0' )
             return kInvalidNativeFileHandle;
-        auditPathInput( pFilePath );
+        if ( acceptsPathInput( pFilePath ) == false )
+            return kInvalidNativeFileHandle;
 #if defined( SW_PLATFORM_WINDOWS )
         const wstring widePath = StringUtil::utf8ToUTF16( pFilePath );
         const HANDLE  hFile    = CreateFileW( widePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING,

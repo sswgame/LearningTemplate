@@ -38,7 +38,9 @@ namespace sw
             /** @brief 구분자를 `/` 로 맞춘 경로입니다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다). */
             static string toNative( string_view path )
             {
-                PlatformFileUtil::auditPathInput( path ); // 파일 시스템 연산이 모두 지나는 길목이다
+                // 파일 시스템 연산이 모두 지나는 길목이다 - 상대 경로는 빈 글로 돌려 그 연산을 실패시킨다(R2).
+                if ( PlatformFileUtil::acceptsPathInput( path ) == false )
+                    return {};
                 string separated{ path };
                 StringUtil::replaceChar( separated, '\\', '/' );
                 return separated;
@@ -185,6 +187,8 @@ namespace sw
         if ( path.empty() )
             return false;
         string native = LinuxFileSystemInternal::toNative( path );
+        if ( native.empty() )
+            return false; // 상대 경로는 거절됐다(R2) - 실행 중 작업 폴더로 풀지 않는다
         if ( native[0] != '/' )
         {
             string current;

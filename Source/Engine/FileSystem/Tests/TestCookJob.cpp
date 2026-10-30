@@ -9,15 +9,13 @@
 using namespace sw;
 
 /**
- * @brief [CookJobTest] 작업 폴더 기준 디스크 경로로 읽은 파일 · 목록은 절대 경로로 기록되어, 기록 뒤에 다시 풀어도 같은 파일 · 폴더의 해시가 나온다
- * @details 예전에는 상대 글이 그대로 리소스 id 가 되어 다시 풀 때 리소스 폴더에서 찾았다 — 기록이 늘 낡았다(없음) 또는 같은 이름의 다른 리소스와 비교됐다.
+ * @brief [CookJobTest] 리소스 루트 밖 디스크 파일 · 목록은 절대 경로의 디스크 입력으로 기록되어, 기록 뒤에 다시 풀어도 같은 파일 · 폴더의 해시가 나온다
+ * @details 예전에는 입력 한 칸에 리소스 id 와 디스크 경로를 함께 담고 다시 풀 때 모양으로 추측했다 — 종류를 기록에 남긴다(`CookInputKind`).
  */
-SW_TEST_CASE( CookJobTest, RecordsRelativeDiskReadsAsAbsolutePaths )
+SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
 {
-    string folder; // 작업 폴더 기준 상대 경로(케이스 폴더는 절대 경로로 오므로 일부러 줄인다)
-    SW_REQUIRE_TRUE( FileUtil::makeRelativePath( FileUtil::getCurrentPath(), test::makeScratchPath( "Source" ), folder ) );
+    const string folder   = test::makeScratchPath( "Source" );
     const string filePath = FileUtil::joinPath( folder, "a.txt" );
-    SW_REQUIRE_FALSE( FileUtil::isAbsolutePath( filePath ) );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( filePath, "one" ) );
 
     CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._cookerVersion = 1, ._target = "Test", ._settingsHash = 0 } );

@@ -127,11 +127,12 @@ namespace sw
         static void noteFileOpenedForRead( string_view filePath, size_t byteCount );
 
         /**
-         * @brief OS 경계에 들어온 경로가 절대 경로인지 조사합니다(구조 개편 3 단계 - R2 를 오류로 켜기 전의 목록 모으기). 상대 경로면 경로마다 한 번 `[PathAudit]` Info 줄을 남긴다.
-         * @details 경고가 아니라 Info 다 - 시나리오 로그 게이트가 테스트를 멈추지 않게 하고, 전체 ctest 로그에서 목록을 뽑는다. 파일 시스템 연산(`PlatformFileSystem` 의 경로 변환 길목)과
-         *          이 구조체의 여는 함수가 부른다. 할당하므로 크래시 경로(`createNativeFileForWrite`)는 부르지 않는다.
+         * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.
+         * @details 상대 경로는 실행 중 작업 폴더로 풀려 띄운 자리마다 다른 파일이 됐다. 경로를 받는 입구(명령줄 · 전역 변수 · 개발 명령 · 설정 · 루트)가 모두 받을 때 절대화하므로
+         *          여기에 닿는 상대 경로는 결함이다. 파일 시스템 연산(`PlatformFileSystem` 의 경로 변환 길목)과 이 구조체의 여는 함수가 부른다.
+         *          할당하므로 크래시 경로(`createNativeFileForWrite`)는 부르지 않는다. 빈 경로는 여기서 거절하지 않는다(부르는 쪽이 이미 실패로 다룬다).
          */
-        static void auditPathInput( string_view path );
+        [[nodiscard]] static bool acceptsPathInput( string_view path );
 
         /** @brief 프로세스 시작부터 `noteFileOpenedForRead` 가 센 열기 횟수입니다(기동 보고 `startup … ms, … file opens`). */
         [[nodiscard]] static uint64 getFileOpenCount();
