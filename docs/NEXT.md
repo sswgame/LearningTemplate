@@ -60,7 +60,6 @@
 | 테스트 전수 | 정본은 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/TestCoverage.py [--uncovered] [접두어]` 의 표다(2026-10-30: 기능 폴더 517 중 테스트 없음 325 · cpp 1117 — GameFramework 184 중 165, Engine 170 중 87, Editor 90 중 45). 2026-10-31 기준 폴더 517 중 테스트 없음 311(처음 325), 단위 케이스 514. 된 것: GameFramework 일정 · 인벤토리 · 전투 · 자동 저장, 온라인 원장 · JWT · HTTP/1.1 파서 · HPACK · HTTP/2 프레임 · 서비스 저장소(조건 · 원자성 · 멱등) · 우편 · 제재, Engine JSON · XML · 현지화 서식 · PO · 객체 델타 · 공유 에셋 표 · 쿠킹 저장소(기록 · DDC). 테스트가 드러낸 결함 셋(알림 합치기의 null 화면, HTTP 머리 크기 상한 · 서로 다른 Content-Length)은 고쳤다. 다음: Engine 의 Asset/Image(DDS) · `PackCooker` · Serialization/Serializer · Reflection · Net(`GameNetSession` 은 단위가 아니라 `net-pair` CTest 로), GameFramework 의 나머지 온라인(Bus · Cache · Directory · Server · Service), Kits. 일정의 하루를 도는 게임 시나리오(`gv_timeScale` 16 배)는 아직 |
 | 테스트 늘리기 | 옛 `Test/`(3f70e665f^ 에 약 950 파일)에서 옮길 것을 기능 옆 `Tests/` 로 — 매크로 이름이 같아 순수 함수 테스트는 include 와 위치만 바꾸면 된다. 엔진 서비스가 이미 서 있으므로 옛 하네스는 필요 없다 |
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
-| 헤드리스 씬 쿠킹 실패 | `App --cook-scenes` 가 Empty 의 `destructionnet` · `pairedanimnet` 씬에서 멈춘다(종료 127) — 그 씬의 넷 컴포넌트(`DestructionNetSessionComponent` · `PairedAnimationNet*`)를 등록하는 모듈이 헤드리스 쿠킹에서 올라오지 않는다. 2026-10-31 쿠킹 입력 변경 전 코드에서도 같다 |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
 
 ## 7. 다음 설계
