@@ -51,7 +51,7 @@ namespace sw
                 request._serverID     = listArgument[3];
                 request._gameBuild    = listArgument.size() >= 6 ? listArgument[5] : "1.0.0";
                 request._tlsTrustFile = listArgument.size() == 7 ? listArgument[6] : "";
-#if SW_PLATFORM_WINDOWS
+#if defined( SW_PLATFORM_WINDOWS )
                 request._platform = "windows";
 #else
                 request._platform = "linux";

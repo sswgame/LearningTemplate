@@ -4,13 +4,12 @@
  */
 #include "pch.h"
 
-#if SW_PROFILER_TRACE_ENABLED
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 
-    #include "Engine/Profiling/ProfilerTraceExport.h"
-    #include "Core/Container/StringUtil.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Core/Console/DevCommandRegistry.h"
-    #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 
 namespace sw
 {
@@ -100,5 +99,3 @@ namespace sw
                     "Save the profiler timeline as a Chrome trace (.trace.json), or merge traces of several processes into one",
                     &runTrace );
 } // namespace sw
-
-#endif

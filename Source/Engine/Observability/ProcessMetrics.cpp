@@ -6,9 +6,9 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#if SW_PLATFORM_WINDOWS
+#if defined( SW_PLATFORM_WINDOWS )
     #include <Psapi.h>
-#elif SW_PLATFORM_LINUX
+#elif defined( SW_PLATFORM_LINUX )
     #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
 
@@ -52,7 +52,7 @@ namespace sw
     {
         outResidentBytes     = 0;
         outPeakResidentBytes = 0;
-#if SW_PLATFORM_WINDOWS
+#if defined( SW_PLATFORM_WINDOWS )
         PROCESS_MEMORY_COUNTERS counters{};
         counters.cb = sizeof( counters );
         if ( GetProcessMemoryInfo( GetCurrentProcess(), &counters, sizeof( counters ) ) == FALSE )
@@ -60,7 +60,7 @@ namespace sw
         outResidentBytes     = static_cast<uint64>( counters.WorkingSetSize );
         outPeakResidentBytes = static_cast<uint64>( counters.PeakWorkingSetSize );
         return true;
-#elif SW_PLATFORM_LINUX
+#elif defined( SW_PLATFORM_LINUX )
         // statm 의 둘째 값이 상주 페이지 수다. 최대값은 getrusage 의 ru_maxrss(KiB)다.
         string statmText;
         if ( FileUtil::readStreamTextFile( "/proc/self/statm", statmText, constant::kMaxBuffer256 ) == false )

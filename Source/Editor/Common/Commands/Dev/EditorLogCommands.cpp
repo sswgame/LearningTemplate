@@ -144,7 +144,7 @@ namespace sw::editor
         const string& configured = getPreferences<EditorGeneralPreferences>()._ideOpenCommand;
         if ( configured.empty() == false )
             return configured;
-#if SW_PLATFORM_WINDOWS
+#if defined( SW_PLATFORM_WINDOWS )
         return "cmd /c code -g \"{file}:{line}\"";
 #else
         return "code -g \"{file}:{line}\"";
