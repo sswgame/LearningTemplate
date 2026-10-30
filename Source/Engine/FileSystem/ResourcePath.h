@@ -54,7 +54,10 @@ namespace sw
         string _domain;
         string _relative;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class DomainTable
      * @brief 도메인 표입니다. 기동 때 채우고 이후 읽기만 한다.

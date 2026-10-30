@@ -158,7 +158,10 @@ namespace sw
             }
         };
     } // namespace
+} // namespace sw
 
+namespace sw
+{
     bool FileUtil::makeRelativePath( string_view rootDir, string_view path, string& outResult )
     {
         if ( rootDir.empty() || path.empty() || AbsolutePath::isStrictAbsolute( path ) == false )

@@ -61,7 +61,10 @@ namespace sw
             }
         };
     } // namespace
+} // namespace sw
 
+namespace sw
+{
     bool PlatformFileSystem::queryStatus( string_view path, FileStatus& outStatus )
     {
         if ( path.empty() )

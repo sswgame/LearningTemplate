@@ -11,12 +11,17 @@ namespace sw
         // 설치는 기동 스레드 하나에서만 한다(그 뒤 읽기만이라 락이 없다).
         std::optional<ProcessRoots> s_roots;
 
+#if !defined( SW_PLATFORM_LINUX )
         bool isSeparator( utf8 ch )
         {
             return ch == '/' || ch == '\\';
         }
+#endif
     } // namespace
+} // namespace sw
 
+namespace sw
+{
     bool AbsolutePath::isStrictAbsolute( string_view path )
     {
         if ( path.empty() || path.find( '\0' ) != string_view::npos )

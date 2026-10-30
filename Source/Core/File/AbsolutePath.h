@@ -40,7 +40,10 @@ namespace sw
 
         string _path;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ProcessRoots
      * @brief 프로세스가 기동 때 한 번 정하는 루트 폴더 모음입니다(R5). 상대 경로는 실행 중 작업 폴더가 아니라 이 루트 기준으로 입력 경계에서 한 번 절대화한다.

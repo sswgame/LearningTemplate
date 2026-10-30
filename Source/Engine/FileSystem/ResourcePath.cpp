@@ -34,7 +34,10 @@ namespace sw
             return true;
         }
     } // namespace
+} // namespace sw
 
+namespace sw
+{
     std::optional<ResourcePath> ResourcePath::tryMake( string_view domain, string_view relative )
     {
         // 절대 경로(`/x` · `\x` · `C:/x`)는 리소스 경로가 아니다 - 앞 구분자를 지워 상대로 바꾸지 않고 거절한다.

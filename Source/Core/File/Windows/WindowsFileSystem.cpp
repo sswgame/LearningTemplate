@@ -55,7 +55,10 @@ namespace sw
             static bool fits( const DWORD written, const uint32 capacity ) { return written != 0 && written < capacity; }
         };
     } // namespace
+} // namespace sw
 
+namespace sw
+{
     bool PlatformFileSystem::queryStatus( string_view path, FileStatus& outStatus )
     {
         const wstring wide = WindowsFileSystemInternal::toWide( path );
