@@ -1053,8 +1053,10 @@ namespace sw
         const bool                bAutomatedRun = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO );
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 무인 실행은 그 PC 사용자의 파일을 읽지도 쓰지도 않는다 — 실행마다 빈 파일 자리(프로세스별)를 쓴다.
         // 예전에는 띄우는 쪽이 `-gv_userSettingsFile` 을 빠뜨리면 사람의 설정이 그림을 바꾸고, 시나리오가 바꾼 값이 사람의 파일에 남았다.
-        const string gameName      = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
-        const string automatedPath = formatToString( "%#/Automation/UserSettings/%#.json", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() );
+        const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
+        // 실행마다 새 폴더의 빈 자리다(`reserveUniquePath`) - 프로세스 id 파일을 그대로 쓰면 Windows 가 다시 쓴 id 의 옛 실행 설정을 읽었다.
+        const string automatedFolder = bAutomatedRun ? FileUtil::reserveUniquePath( formatToString( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() ), {}, true ) : string{};
+        const string automatedPath   = FileUtil::joinPath( automatedFolder, UserSettingsFile::kFileName );
         setUserFilePath( gv_userSettingsFile.empty() == false ? gv_userSettingsFile : bAutomatedRun ? automatedPath
                                                                                                     : makeDefaultUserFilePath( gameName ) );
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )

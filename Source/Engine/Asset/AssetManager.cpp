@@ -7,6 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
@@ -149,22 +150,8 @@ namespace sw
                 return false;
         }
 
-        // 팩 폴더는 **실행 파일 기준**으로 찾는다. 작업 디렉터리 기준 상대 경로("Bin/Packs")면 Engine 을 거치지 않고
-        // AssetManager 만 직접 세우는 쪽(테스트 · 툴)이 아무것도 마운트하지 못하고, Shipping 은 느슨한 Content/ 가
-        // 없으니 그대로 모든 리소스 로드 실패가 된다.
-        const string exeDir         = FileUtil::getBinaryDirectory();
-        const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
-                                        "Packs",
-                                        FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), "Packs" ),
-                                        "Bin/Packs" };
-        for ( const string& packsDir : arrCandidate )
-        {
-            if ( packsDir.empty() )
-                continue;
-            if ( _pPackManager->scanAndMountPacks( packsDir, engine::getSubsystem<AssetPaths>().getSearchPriority() ) )
-                return true;
-        }
-        return false;
+        // 팩 폴더는 한 곳이다(`ProcessRoots::_packs` - 실행 파일 기준). 예전에는 실행 파일 · 작업 폴더 · 프로젝트 · "Bin/Packs" 를 차례로 찾았다(띄운 자리에 따라 다른 팩).
+        return _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str(), engine::getSubsystem<AssetPaths>().getSearchPriority() );
     }
 
     uint32 AssetManager::loadAssetRegistries()

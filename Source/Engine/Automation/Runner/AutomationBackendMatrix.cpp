@@ -201,9 +201,10 @@ namespace sw
 
     int32 AutomationBackendMatrix::run( const AutomationBackendMatrixOptions& options )
     {
-        using Internal             = AutomationBackendMatrixInternal;
-        const string scenarioStem  = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
-        const string defaultFolder = formatToString( "%#/%#/matrix-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
+        using Internal            = AutomationBackendMatrixInternal;
+        const string scenarioStem = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
+        // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
+        const string defaultFolder = FileUtil::reserveUniquePath( formatToString( "%#/%#/matrix-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() ), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&

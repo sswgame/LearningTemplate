@@ -497,16 +497,20 @@ namespace sw::test
         }
 
         const uint32 baseSeed = Internal::pickSeed( options._seed );
-        // 쓰기 폴더는 절대 경로로 준다 — 작업 폴더 기준 상대 경로는 리소스 id 를 받는 입구(`AssetPaths::toAssetID` 등)에서 id 로 읽혀 다른 파일이 된다.
-        string scratchRoot;
-        if ( FileUtil::makeAbsolutePath( FileUtil::joinPath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot,
-                                                             to_string( Process::getCurrentProcessID() ) ),
-                                         scratchRoot ) == false )
+        // 쓰기 폴더는 이 실행만의 새 폴더다 - 만들기가 곧 자리 잡기(`reserveUniquePath`)라 겹치지 않는다. 예전에는 `<프로세스 id>` 폴더를 그대로 썼는데,
+        // Windows 가 프로세스 id 를 다시 쓰므로 옛 실행이 남긴 같은 번호 폴더(옛 형식 쿠킹 기록)를 이어 써 케이스가 순서에 따라 졌다.
+        string baseRoot;
+        if ( FileUtil::makeAbsolutePath( options._scratchRoot.empty() ? FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test" ) : options._scratchRoot, baseRoot ) == false )
         {
             Internal::writeLine( "[  ERROR   ] the scratch folder cannot be made absolute - no case runs" );
             return false;
         }
-        scratchRoot              = FileUtil::normalizeSeparators( scratchRoot );
+        const string scratchRoot = FileUtil::reserveUniquePath( FileUtil::joinPath( baseRoot, to_string( Process::getCurrentProcessID() ) ), {}, true );
+        if ( scratchRoot.empty() )
+        {
+            Internal::writeLine( "[  ERROR   ] the scratch folder cannot be reserved - no case runs" );
+            return false;
+        }
         Subscription logListener = Logger::registerGlobalListener( SW_DELEGATE_FUNCTION( LogWrittenDelegate, &Internal::onLogWritten ) );
         thread       watchThread;
         if ( Process::isDebuggerPresent() == false )

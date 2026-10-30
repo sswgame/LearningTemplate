@@ -51,11 +51,12 @@ namespace sw
         {
             /**
              * @brief 이 실행의 산출물 폴더(`Saved/Automation/<시나리오>/<프로세스>`)입니다 — 사진 · 녹화가 여기 쌓인다.
-             * @details 프로세스마다 다르다. 예전에는 시나리오 이름만이라 다음 실행 · 나란히 도는 실행(백엔드 넷)이 같은 사진을 덮어써 판정이 다른 실행의 그림을 읽었다.
+             * @details 실행마다 새 폴더다 - 만들기가 곧 자리 잡기(`reserveUniquePath`)다. 예전에는 시나리오 이름만이라 나란히 도는 실행(백엔드 넷)이 같은 사진을 덮어썼고,
+             *          그다음엔 프로세스 id 폴더를 그대로 써 Windows 가 다시 쓴 id 의 옛 산출물 위에 이어 썼다.
              */
             static string makeOutputDirectory( string_view scenarioName )
             {
-                return formatToString( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
+                return FileUtil::reserveUniquePath( formatToString( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() ), {}, true );
             }
 
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */

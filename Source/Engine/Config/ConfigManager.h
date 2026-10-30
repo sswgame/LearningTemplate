@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/DevOnly.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
@@ -109,28 +110,23 @@ namespace sw
          *          기본값으로 조용히 대체된다(창 크기, VSync, 리소스 우선순위, 게임 키트 모듈 목록이 모두 무시된다).
          *          `Content/` 처럼 거슬러 올라가 찾은 루트(`AssetPaths`)를 여기에 넣어 준다.
          */
-        void setRootDirectory( string_view rootDirectory ) { _rootDirectory = string( rootDirectory ); }
-
         /**
          * @brief 설정 하나를 파일에서 읽어 등록합니다. 테이블에 이미 같은 타입이 있으면 덮어씁니다.
          * @return 없으면 `Missing`(로그 없음, 부르는 쪽이 기본값을 쓴다), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다)
-         * @note 없는 파일을 곧바로 `readTextFile` 로 읽으면 FileUtil 이 [Error] 를 남겨 정상 기동의 진짜 오류를 가린다. 존재부터 확인한다.
+         * @note 없는 파일은 정상 상태라 `readOptionalTextFile` 한 번으로 읽는다(있는지 묻고 읽지 않는다 - R7).
          */
         template <typename T>
         [[nodiscard]] ConfigReadResult loadConfigFile( const string& filePath )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            string resolvedPath;
-            if ( resolveConfigPath( filePath, resolvedPath ) == false )
+            const string           resolvedPath = resolveConfigPath( filePath );
+            string                 jsonStr;
+            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
+            if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
-
-            string jsonStr;
-            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
-            {
-                SW_LOG_ERROR( "Cannot read config file %#", resolvedPath.c_str() );
-                return ConfigReadResult::Invalid;
-            }
+            if ( read == OptionalFileRead::Failed )
+                return ConfigReadResult::Invalid; // 이유는 읽기가 오류로 남겼다
             if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
             _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, T::StaticType()->_name, SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
@@ -262,16 +258,13 @@ namespace sw
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
-            string resolvedPath;
-            if ( resolveConfigPath( filePath, resolvedPath ) == false )
+            const string           resolvedPath = resolveConfigPath( filePath );
+            string                 jsonStr;
+            const OptionalFileRead read = FileUtil::readOptionalTextFile( resolvedPath, jsonStr );
+            if ( read == OptionalFileRead::Missing )
                 return ConfigReadResult::Missing;
-
-            string jsonStr;
-            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
-            {
-                SW_LOG_ERROR( "Cannot read config file %#", resolvedPath.c_str() );
-                return ConfigReadResult::Invalid;
-            }
+            if ( read == OptionalFileRead::Failed )
+                return ConfigReadResult::Invalid; // 이유는 읽기가 오류로 남겼다
             if ( readConfigJSON( outConfig, jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
             SW_LOG_INFO( "Config loaded successfully from %#", resolvedPath.c_str() );
@@ -379,50 +372,14 @@ namespace sw
         }
 
         /**
-         * @brief 설정 파일의 실제 위치를 찾습니다.
-         * @details 절대 경로 → 현재 작업 디렉터리 → 루트 디렉터리(프로젝트 루트) → 실행 파일 디렉터리
-         *          순으로 **존재 여부만** 확인한다. 읽기 전에 존재를 확인하므로, 없을 때 FileUtil 이
-         *          [Error] 를 남기지 않는다.
-         * @return 찾으면 true 이고 @p outResolvedPath 에 실제 경로가 담깁니다.
+         * @brief 설정 파일의 경로입니다. 절대 경로면 그대로, 상대 경로면 프로젝트 루트(`ProcessRoots::_project`) 아래다 - 한 곳이다.
+         * @details 예전에는 작업 폴더 → 프로젝트 → 실행 파일 폴더를 차례로 찾았다(띄운 자리에 따라 다른 설정 파일을 읽었다). 있는지는 묻지 않는다 - 읽기가 답한다.
          */
-        [[nodiscard]] bool resolveConfigPath( const string& filePath, string& outResolvedPath ) const
+        [[nodiscard]] static string resolveConfigPath( const string& filePath )
         {
-            if ( filePath.empty() )
-                return false;
-
             if ( FileUtil::isAbsolutePath( filePath ) )
-            {
-                outResolvedPath = filePath;
-                return FileUtil::isRegularFile( outResolvedPath );
-            }
-
-            if ( FileUtil::isRegularFile( filePath ) )
-            {
-                outResolvedPath = filePath;
-                return true;
-            }
-
-            if ( _rootDirectory.empty() == false )
-            {
-                string candidate = FileUtil::joinPath( _rootDirectory, filePath );
-                if ( FileUtil::isRegularFile( candidate ) )
-                {
-                    outResolvedPath = std::move( candidate );
-                    return true;
-                }
-            }
-
-            const string exeDir = FileUtil::getBinaryDirectory();
-            if ( exeDir.empty() == false )
-            {
-                string candidate = FileUtil::joinPath( exeDir, filePath );
-                if ( FileUtil::isRegularFile( candidate ) )
-                {
-                    outResolvedPath = std::move( candidate );
-                    return true;
-                }
-            }
-            return false;
+                return filePath;
+            return FileUtil::joinPath( ProcessRoots::get()._project.str(), filePath );
         }
 
         /**
@@ -438,8 +395,6 @@ namespace sw
         GameConfig*                                _pHostGameConfig;   ///< `_pGameSlot` 의 객체 주소
         unordered_map<uint32, ReloadSource>        _mapSource;         ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
         ConfigReloadedDelegate                     _onConfigReloaded;
-        /// @brief 상대 Config 경로의 기준 디렉터리입니다. 비어 있으면 작업 디렉터리와 실행 파일 위치만 봅니다.
-        string _rootDirectory;
     };
 
 } // namespace sw

@@ -508,7 +508,8 @@ namespace sw
         const string& rootPath = ProcessRoots::get()._project.str();
         SW_LOG_INFO( "RootFolder : %#", rootPath );
         // Content/ 최상위 루트. 모든 도메인은 이 아래에서 이름으로 푼다.
-        const string& resourceRootFolderPath = ProcessRoots::get()._content.str();
+        // 패키지에는 `Content` 가 없다(팩만) - 그때 느슨한 리소스 루트는 비어 있다.
+        const string resourceRootFolderPath = FileUtil::isDirectory( ProcessRoots::get()._content.str() ) ? ProcessRoots::get()._content.str() : string{};
 
         vector<string> listSearchPriority = AssetPathsInternal::getTable( *_pState )._listSearchPriority;
         if ( listSearchPriority.empty() )

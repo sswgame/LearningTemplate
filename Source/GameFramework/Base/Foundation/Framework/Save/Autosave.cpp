@@ -6,9 +6,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Config/GameSelection.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -76,14 +78,8 @@ namespace sw
 
     string AutosaveSettings::makeSlotPath( int32 slot ) const
     {
-        string     path            = _directory;
-        const bool bNeedsSeparator = path.empty() == false && path.back() != '/' && path.back() != '\\';
-        if ( bNeedsSeparator )
-            path += '/';
-        path += _prefix;
-        path += to_string( slot );
-        path += ".sav";
-        return path;
+        // 슬롯 폴더의 상대 경로는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소 · `GameInstance` 세이브와 같은 규칙 - 작업 폴더가 아니다).
+        return FileUtil::joinPath( UserDataPath::resolve( GameSelection::getName(), _directory ), formatToString( "%#%#.sav", _prefix, slot ) );
     }
 
     // ------------------------------------------------------------------------------

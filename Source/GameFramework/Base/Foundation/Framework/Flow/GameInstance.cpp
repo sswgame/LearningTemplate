@@ -3,10 +3,12 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -298,9 +300,10 @@ namespace sw
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved" );
             return false;
         }
-        const string_view path = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
-        vector<uint8>     snapshotBytes;
-        const bool        bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+        // 상대 경로는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소와 같은 규칙 - 작업 폴더가 아니다).
+        const string  path = UserDataPath::resolve( GameSelection::getName(), filePath.empty() ? string_view( defaultSavePath.get() ) : filePath );
+        vector<uint8> snapshotBytes;
+        const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
         SaveGameSavedEvent event{};
         event._savePath = string( path );
@@ -317,9 +320,9 @@ namespace sw
             SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is loaded" );
             return false;
         }
-        const string_view path = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
-        vector<uint8>     snapshotBytes;
-        const bool        bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
+        const string  path = UserDataPath::resolve( GameSelection::getName(), filePath.empty() ? string_view( defaultSavePath.get() ) : filePath );
+        vector<uint8> snapshotBytes;
+        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
 
         SaveGameLoadedEvent event{};
         event._savePath = string( path );

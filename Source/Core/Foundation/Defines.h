@@ -89,6 +89,8 @@ namespace sw
         inline constexpr const utf8* kLogsFolder = "Logs";
         /** @brief 리소스 루트 폴더 이름입니다(프로젝트 루트 아래). `ProcessRoots` 가 프로젝트 루트를 이 폴더로 알아본다. */
         inline constexpr const utf8* kContentFolder = "Content";
+        /** @brief 구운 팩 폴더 이름입니다(바이너리 폴더 아래 - `ProcessRoots::_packs`). 패키지에는 `Content` 없이 이것만 있다. */
+        inline constexpr const utf8* kPacksFolder = "Packs";
 
     } // namespace path
 

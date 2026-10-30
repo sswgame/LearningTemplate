@@ -41,14 +41,18 @@ namespace sw
                 const string binary = FileUtil::getBinaryDirectory();
                 if ( binary.empty() )
                     SW_FATAL( "ProcessRoots: the executable path is unknown" );
-                const string project = findProjectRoot( binary );
+                string project = findProjectRoot( binary );
+                // 패키지(배포 스테이징)는 `Content` 없이 실행 파일 옆에 `Packs` 만 둔다 - 그때 프로젝트 루트는 바이너리 폴더다. 둘 다 없으면 리소스를 찾을 곳이 없다.
+                if ( project.empty() && FileUtil::isDirectory( FileUtil::joinPath( binary, path::kPacksFolder ) ) )
+                    project = binary;
                 if ( project.empty() )
-                    SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#'", path::kContentFolder, binary );
+                    SW_FATAL( "ProcessRoots: no '%#' folder above the binaries '%#' and no '%#' beside them", path::kContentFolder, binary, path::kPacksFolder );
 
                 ProcessRoots roots{
                     requireAbsolute( binary, "binary" ),
                     requireAbsolute( project, "project" ),
                     requireAbsolute( FileUtil::joinPath( project, path::kContentFolder ), "content" ),
+                    requireAbsolute( FileUtil::joinPath( binary, path::kPacksFolder ), "packs" ),
                     requireAbsolute( FileUtil::joinPath( binary, path::kSavedFolder ), "saved" ),
                     requireAbsolute( FileUtil::joinPath( project, path::kSavedFolder ), "derived data" ),
                 };

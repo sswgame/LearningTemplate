@@ -230,7 +230,6 @@ namespace sw
 {
     SubsystemInitResult ConfigManager::initializeSubsystem()
     {
-        setRootDirectory( engine::getSubsystem<AssetPaths>().getProjectFolderPath() );
 #if defined( SW_SHIPPING )
         EngineConfig probe;
         if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
