@@ -167,8 +167,8 @@ namespace sw
         /** @brief 엔진 단계(`AutomationRunnerSteps.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 판정 · 진행 상태(스크린샷 대기열 · 종료 시한)를 직접 만진다. */
         friend struct AutomationRunnerEngineSteps;
 
-        /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
-        bool skipIfStepsAreMissingFromThisBuild();
+        /** @brief 이 빌드에서 돌 수 없으면(`requiresModule` 의 모듈이 꺼짐, Shipping 의 `DevCommand`) 건너뜀(13)으로 끝내고 true 입니다. */
+        bool skipIfThisBuildCannotRun();
         /** @brief 시나리오가 선언한 사본 폴더(`<Scratch>`)를 새로 만듭니다. 하나라도 실패하면 읽기 오류(LoadError)로 끝내고 false 입니다 — 원본에 쓰며 돌지 않는다. */
         [[nodiscard]] bool prepareScratchFolders();
         /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */

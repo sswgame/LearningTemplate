@@ -89,6 +89,8 @@ App --test --test-run-disabled              # 꺼 둔 케이스도(고친 뒤 �
 - 벤치마크: `<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>` 사이의 벽시계 프레임 시간을 요약해 산출물 폴더에 쓴다(평균 · p95 · p99 · fps). 예: `game.empty.benchmark`.
 - **재생**(테스트가 아니라 게임 · 콘솔에서): `ScenarioPlayback::play( 경로, 선택 )` 또는 콘솔 `scenario.play <경로> [loop] [demo] [fixed]` · `scenario.stop`. 판정이 끝나도 프로세스를 끝내지 않고, 반복(어트랙트) · 사람이 손대면 멈춤(데모) · 고정 프레임 시간(벤치마크)을 고른다. 끝은 델리게이트로 알린다.
 - 하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 ctest 가 줍지 않는다.
+- 키트 · 에디터 확장에 기대는 시나리오는 루트에 `requiresModule="GF_EditorPlugin_Admin"`(쉼표로 여럿)을 적는다 — 그 모듈이 꺼진 빌드(그 키트를 쓰지 않는 활성 게임)에서는 건너뜀이고, 정적 검사도 이름을 보지 않는다. 언리얼에서 끈 플러그인의 테스트가 없는 것과 같다.
+- 편집기 시나리오 실행(`-EnableEditor -scenario=…`)은 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다 — 프로세스마다 `Saved/Automation/EditorState/editor_p<pid>` 를 비우고 쓴다(`-gv_editorStateDir` 로 바꾼다).
 
 종료 코드: 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀 · 15 처리하지 않은 로그.
 

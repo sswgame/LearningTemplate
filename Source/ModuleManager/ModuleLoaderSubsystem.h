@@ -12,6 +12,7 @@
 
 #include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Module/HostServices.h"
+#include "Engine/Module/ModuleCatalog.h"
 
 namespace sw
 {
@@ -47,8 +48,12 @@ namespace sw
         /** @brief 씬이 사라진 뒤 불릴 훅(모듈 DLL 내리기)을 겁니다. 엔진 범위가 종료하기 전에 겁니다. 주인은 하나다(이미 걸려 있으면 단언). */
         [[nodiscard]] Subscription bindScenesReleasedHook( Delegate<void()> hook );
 
+        /** @brief 호스트가 해석한 모듈 목록을 받습니다(`ModuleCatalogLoader::loadAndResolve` 뒤). `isModuleActive` 가 이것을 본다. */
+        void setResolution( const ModuleResolution& resolution ) { _resolution = resolution; }
+
         [[nodiscard]] bool loadTypeProviders() override;
         void               onScenesReleased() override;
+        [[nodiscard]] bool isModuleActive( string_view name ) const override { return _resolution.isActive( name ); }
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
@@ -57,5 +62,6 @@ namespace sw
     private:
         ModuleTypeLoaderDelegate       _moduleTypeLoader;
         DelegateSlot<Delegate<void()>> _scenesReleasedHook;
+        ModuleResolution               _resolution;
     };
 } // namespace sw

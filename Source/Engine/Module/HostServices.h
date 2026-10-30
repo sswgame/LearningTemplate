@@ -6,6 +6,7 @@
  *          언리얼이 `IModuleInterface` · `FModuleManager` 를 엔진 쪽 창구 하나로 두는 것과 같은 자리다 — 호스트 창구를 파일마다 흩지 않는다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
@@ -31,6 +32,11 @@ namespace sw
          *          사라진 코드를 가리키고, 더 늦으면 언로드가 쓰는 서비스와 로거가 이미 없습니다.
          */
         virtual void onScenesReleased() = 0;
+        /**
+         * @brief 이 호스트가 해석한 모듈 목록에서 @p name 이 켜졌으면 true 입니다(`ModuleResolution::isActive`).
+         * @details 키트 · 에디터 확장에 기대는 시나리오가 그 모듈 없는 빌드에서 건너뛰는 데 쓴다(`requiresModule`). 해석 전과 배포 구성(매니페스트가 없다)은 false 다.
+         */
+        [[nodiscard]] virtual bool isModuleActive( string_view name ) const = 0;
     };
 } // namespace sw
 

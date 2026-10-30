@@ -10,6 +10,7 @@ namespace sw
     ModuleLoaderSubsystem::ModuleLoaderSubsystem( ModuleTypeLoaderDelegate moduleTypeLoader )
         : _moduleTypeLoader{ std::move( moduleTypeLoader ) }
         , _scenesReleasedHook{}
+        , _resolution{}
     {
     }
 

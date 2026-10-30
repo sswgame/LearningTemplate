@@ -227,6 +227,7 @@ namespace sw
         // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다.
         if ( ModuleCatalogLoader::loadAndResolve( static_cast<uint8>( ModuleTarget::Server ), _moduleCatalog, _moduleResolution ) == false )
             return false;
+        _pModuleImageHost->setResolution( _moduleResolution );
         // 리로드 구동기(App 과 같은 것)가 매니저를 만들고 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다.
         _moduleReload.initialize( _host, *_pModuleImageHost );
 #endif

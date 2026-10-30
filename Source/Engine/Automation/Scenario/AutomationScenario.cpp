@@ -321,6 +321,20 @@ namespace sw
             return Internal::readBool( "requireForeground", pText, _testOptions._bRequiresForeground, outReason );
         if ( name == "editor" )
             return Internal::readBool( "editor", pText, _testOptions._bRequiresEditor, outReason );
+        if ( name == "requiresModule" )
+        {
+            _testOptions._listRequiredModule.clear();
+            for ( const string_view moduleName : StringUtil::split( pText, ",", StringSplitOptions{ true, true } ) )
+            {
+                _testOptions._listRequiredModule.emplace_back( moduleName );
+            }
+            if ( _testOptions._listRequiredModule.empty() )
+            {
+                outReason = "requiresModule needs at least one module name (comma separated)";
+                return false;
+            }
+            return true;
+        }
         if ( name == "input" )
         {
             const string_view value = pText;

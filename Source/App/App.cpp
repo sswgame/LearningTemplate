@@ -341,6 +341,7 @@ namespace sw
         // Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
         if ( ModuleCatalogLoader::loadAndResolve( ModuleCatalog::getBuildTargetMask(), _moduleCatalog, _moduleResolution ) == false )
             return false;
+        _pModuleImageHost->setResolution( _moduleResolution );
 
         // 모듈 감시자는 모듈을 로드하는 GameModuleManager 보다 먼저 있어야 한다. GameModuleManager 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
         // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 감시 값 `Module.*` 가 찾는다).

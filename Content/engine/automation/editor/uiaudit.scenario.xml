@@ -233,11 +233,5 @@
 	<Wait frames="2"/>
 	<DevCommand line="panel.close meshmodifiers.stack"/>
 	<Wait frames="2"/>
-	<DevCommand line="panel.focus admin.tool"/>
-	<Wait frames="20"/>
-	<CaptureEditorUI file="audit/38_admin_tool.png" maxMagentaFraction="0"/>
-	<Wait frames="2"/>
-	<DevCommand line="panel.close admin.tool"/>
-	<Wait frames="2"/>
 	<Pass/>
 </Scenario>

@@ -5,7 +5,7 @@
   잔액보다 큰 회수는 거절되고(InsufficientFunds), 제재와 감사 열람은 성공한다. 명령 결과는 패널이 남기는 로그 줄 "Admin command <명령>: <결과>" 로 센다.
   실행: App -EnableEditor -scenario=engine/automation/editor/admintool.scenario.xml -unattended
 -->
-<Scenario name="editor.admintool" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.admintool" requiresModule="GF_EditorPlugin_Admin" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>

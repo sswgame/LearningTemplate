@@ -31,6 +31,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Module/HostServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -146,7 +147,7 @@ namespace sw
             return;
         }
         _outputDirectory = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
-        if ( skipIfStepsAreMissingFromThisBuild() || prepareScratchFolders() == false )
+        if ( skipIfThisBuildCannotRun() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
                      static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
@@ -209,7 +210,7 @@ namespace sw
             return false;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
-        const bool bReady = skipIfStepsAreMissingFromThisBuild() == false && prepareScratchFolders();
+        const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
         if ( bReady )
             startHangWatchdog();
         return bReady;
@@ -234,8 +235,17 @@ namespace sw
         return true;
     }
 
-    bool AutomationRunner::skipIfStepsAreMissingFromThisBuild()
+    bool AutomationRunner::skipIfThisBuildCannotRun()
     {
+        // 키트 · 에디터 확장에 기대는 시나리오는 그 모듈이 없는 빌드(그 키트를 쓰지 않는 활성 게임)에서 건너뛴다 — 단계 검사가 "없는 감시 값" 으로 읽기 오류를 내기 전에 본다.
+        const IModuleLoader* const pModuleLoader = engine::findSubsystem<IModuleLoader>(); // 선택: 호스트 없는 하니스(단위 테스트)에는 없다 — 그때는 모듈 선언을 건너뜀으로 본다
+        for ( const string& moduleName : _scenario.getTestOptions()._listRequiredModule )
+        {
+            if ( pModuleLoader != nullptr && pModuleLoader->isModuleActive( moduleName ) )
+                continue;
+            finish( AutomationOutcome::Skipped, "requiresModule: " + moduleName + " is not loaded in this build" );
+            return true;
+        }
         const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
         if ( pMissingStep == nullptr )
             return false;
