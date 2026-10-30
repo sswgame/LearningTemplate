@@ -19,14 +19,14 @@
 		<entry key="EdAbilityDebug.ColumnTag" text="태그" sourceHash="6ce0cb19e201b153" />
 		<entry key="EdAbilityDebug.HintNoTarget"
 		       text="AbilityComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
-		       sourceHash="937bde747e495279" />
+		       sourceHash="ec7db3b86d2e4de6" />
 		<entry key="EdAbilityDebug.HintPlayOnly"
 		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
 		       sourceHash="7adebb387e539a62" />
 		<entry key="EdAbilityDebug.Infinite" text="무한" sourceHash="0c024c0024360a2d" />
 		<entry key="EdAbilityDebug.NoComponentsInScene"
 		       text="활성 씬에 AbilityComponent 가 없습니다"
-		       sourceHash="f9aceb1e918e73da" />
+		       sourceHash="94fabdb6d46085e9" />
 		<entry key="EdAbilityDebug.PickTarget" text="어빌리티 시스템 고르기..." sourceHash="0f5befa1ba0a7140" />
 		<entry key="EdAbilityDebug.SectionAbilities" text="부여된 어빌리티" sourceHash="59c749c8cdb544fa" />
 		<entry key="EdAbilityDebug.SectionAttributes" text="어트리뷰트" sourceHash="16b9446e3a70e1f4" />

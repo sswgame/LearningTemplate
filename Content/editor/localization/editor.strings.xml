@@ -285,19 +285,19 @@
 		<entry key="EdCommon.NotifyBugReportFailed" source="The bug report could not be saved (see the log)">
 			<origins>
 				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
-				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportSaved" source="Bug report saved">
 			<origins>
 				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
-				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyBugReportTitle" source="Bug report">
 			<origins>
 				<item>Source/Editor/Common/Commands/Dev/EditorBugReportCommands.cpp</item>
-				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
+				<item>Source/Editor/Panels/BugReport/Model/BugReportModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NotifyClipboardEmpty" source="Clipboard is empty">
@@ -2263,12 +2263,12 @@
 		</entry>
 		<entry key="EditorMaterial.LoadFailedStatus" source="Load failed - saving is disabled so the file is not overwritten">
 			<origins>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.LoadedStatus" source="Loaded">
 			<origins>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.NameTip" source="Display name stored in the material file.">
@@ -2295,7 +2295,7 @@
 		</entry>
 		<entry key="EditorMaterial.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.SaveTip" source="Write the material file and reload it in the running scene.">
@@ -2305,7 +2305,7 @@
 		</entry>
 		<entry key="EditorMaterial.SavedStatus" source="Saved">
 			<origins>
-				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
+				<item>Source/Editor/Panels/Material/Model/MaterialModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorMaterial.ShaderTip"
@@ -3527,7 +3527,7 @@
 		</entry>
 		<entry key="EditorSpriteClip.SavedStatus" source="Saved {path}">
 			<origins>
-				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.SliceColumnsTip" source="Number of grid columns the atlas is cut into, 1 to 64.">
@@ -3538,6 +3538,62 @@
 		<entry key="EditorSpriteClip.SliceRowsTip" source="Number of grid rows the atlas is cut into, 1 to 64.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.AlwaysLoadedTip"
+		       source="Select the entities the cook keeps in the base list (always loaded, or without a position).">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.CookedScene"
+		       source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.NoGameCamera" source="No game camera - the load and unload column needs one.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.NoPreview"
+		       source="Press Preview Split to split the scene into cells as the cook would.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.NotStreaming"
+		       source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.PreviewTip"
+		       source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.SplitFailed" source="The scene could not be split - see the log.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.ViolationHeader" source="Cross-cell references that fail the cook:">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorStreamingCells.ViolationTip"
+		       source="Selects both objects. Mark the target always loaded or move it into the same cell.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.AddDataLayerTip"
@@ -3581,7 +3637,7 @@
 		</entry>
 		<entry key="EditorTileMap.DataLayerRejectedStatus" source="Data layer not added: the name is empty or already used">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.DataValueTip" source="Integer to paint on the selected data layer.">
@@ -3686,12 +3742,12 @@
 		</entry>
 		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.TileSetReadFailed" source="Tile set could not be read: {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.TileSetTip"
@@ -3731,13 +3787,13 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTip.CameraFar" source="Farthest distance the camera draws. Geometry beyond this is clipped.">
+		<entry key="EditorTip.CameraFOV"
+		       source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorTip.CameraFOV"
-		       source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.">
+		<entry key="EditorTip.CameraFar" source="Farthest distance the camera draws. Geometry beyond this is clipped.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/CameraComponentInspector.cpp</item>
 			</origins>
@@ -3861,7 +3917,7 @@
 		</entry>
 		<entry key="EditorUIPreview.BuildFailed" source="Could not build the document (see the log).">
 			<origins>
-				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/Model/UIPreviewModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorUIPreview.DocumentPathTip"
@@ -4073,61 +4129,6 @@
 		       source="Waiting for the render thread to create the preview texture...">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.AlwaysLoadedTip"
-		       source="Select the entities the cook keeps in the base list (always loaded, or without a position).">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.CookedScene"
-		       source="This scene was built from a cooked file and is already split into cells. Open the scene file to preview the split.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.NoActiveScene" source="No active scene.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.NoGameCamera" source="No game camera - the load and unload column needs one.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.NoPreview" source="Press Preview Split to split the scene into cells as the cook would.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.NotStreaming"
-		       source="The active scene does not stream. Turn on streaming in its World Settings to split it into cells.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.PreviewTip"
-		       source="Split the scene into cells exactly as the scene cook does, and list the cells or the references that would fail the cook. Same as 'world.cells'.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.SplitFailed" source="The scene could not be split - see the log.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.ViolationHeader" source="Cross-cell references that fail the cook:">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorStreamingCells.ViolationTip"
-		       source="Selects both objects. Mark the target always loaded or move it into the same cell.">
-			<origins>
-				<item>Source/Editor/Panels/Scene/StreamingCellsPanel.cpp</item>
 			</origins>
 		</entry>
 	</entries>
