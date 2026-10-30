@@ -22,6 +22,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
+#include "Core/Time/ExponentialBackoff.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -137,8 +138,8 @@ namespace sw
         OnceInit<unique_ptr<ITLSContext>>      _tlsContext;
         int64 _nextCommandConnectNanoseconds   SW_GUARDED_BY( _mutex );
         int64 _nextSubscribeConnectNanoseconds SW_GUARDED_BY( _mutex );
-        int64 _commandBackoffMs                SW_GUARDED_BY( _mutex );
-        int64 _subscribeBackoffMs              SW_GUARDED_BY( _mutex );
+        ExponentialBackoff _commandBackoff     SW_GUARDED_BY( _mutex );
+        ExponentialBackoff _subscribeBackoff   SW_GUARDED_BY( _mutex );
         IDAllocator<uint64>                    _requestIDAllocator;
         ThreadRole                             _ownerThread;                  ///< 소유 스레드 역할 — 구독 확인 수는 저장소를 부르는 스레드(펌프 · 구독)만 만진다(잠금이 아니라 분석용 능력)
         uint64 _subscriptionAckCount           SW_GUARDED_BY( _ownerThread ); ///< 구독 연결이 받은 subscribe 와 unsubscribe 확인 수

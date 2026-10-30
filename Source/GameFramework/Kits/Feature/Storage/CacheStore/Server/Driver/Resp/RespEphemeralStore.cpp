@@ -15,7 +15,7 @@ namespace sw
     {
         struct RespEphemeralStoreInternal
         {
-            static constexpr int64 kFirstBackoffMs = 100;
+            static constexpr int64 kFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
 
             // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
             static constexpr uint32 kStepFirst          = 0;
@@ -28,13 +28,6 @@ namespace sw
             static constexpr uint32 kStepCompareExec    = 5;
 
             static bool isWrongType( const RespValue& value ) { return value.isError() && value.getText().substr( 0, 9 ) == "WRONGTYPE"; }
-
-            static int64 makeNextBackoffMs( int64 backoffMs, int64 maxBackoffMs )
-            {
-                if ( backoffMs <= 0 )
-                    return kFirstBackoffMs;
-                return MathUtil::min( backoffMs * 2, maxBackoffMs );
-            }
 
             static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::kNanosecondsPerMillisecond ); }
         };
@@ -59,8 +52,8 @@ namespace sw
         , _tlsContext{}
         , _nextCommandConnectNanoseconds{ 0 }
         , _nextSubscribeConnectNanoseconds{ 0 }
-        , _commandBackoffMs{ 0 }
-        , _subscribeBackoffMs{ 0 }
+        , _commandBackoff{ RespEphemeralStoreInternal::kFirstBackoffMs }
+        , _subscribeBackoff{ RespEphemeralStoreInternal::kFirstBackoffMs }
         , _requestIDAllocator{}
         , _subscriptionAckCount{ 0 }
         , _subscriptionSentCount{ 0 }
@@ -274,11 +267,11 @@ namespace sw
         ScopedLock<mutex> lock{ _mutex };
         if ( _commandConnection.handleOpened( *_transport.get(), handle ) )
         {
-            _commandBackoffMs = 0;
+            _commandBackoff.reset();
             return;
         }
         if ( _subscribeConnection.handleOpened( *_transport.get(), handle ) )
-            _subscribeBackoffMs = 0;
+            _subscribeBackoff.reset();
     }
 
     void RespEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
@@ -296,15 +289,13 @@ namespace sw
         const int64       nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleClosed( handle, reason ) )
         {
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
             return;
         }
         if ( _subscribeConnection.handleClosed( handle, reason ) )
         {
             _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
-            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
-            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings->_maxBackoffMs );
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
         }
     }
 
@@ -681,8 +672,7 @@ namespace sw
         const bool        bAuth       = _settings->_password.empty() == false;
         if ( _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) )
             return true;
-        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-        _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
+        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
         return false;
     }
 
@@ -696,8 +686,7 @@ namespace sw
         const bool        bAuth       = _settings->_password.empty() == false;
         if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) == false )
         {
-            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoffMs * constant::kNanosecondsPerMillisecond;
-            _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings->_maxBackoffMs );
+            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
             return false;
         }
         // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
@@ -731,8 +720,7 @@ namespace sw
             _commandConnection.abort( *_transport.get(), "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
             // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
-            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * constant::kNanosecondsPerMillisecond;
-            _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings->_maxBackoffMs );
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::kNanosecondsPerMillisecond;
         }
         for ( const RespReplyRecord& record : listRecord )
         {

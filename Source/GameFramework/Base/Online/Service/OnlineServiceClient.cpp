@@ -40,7 +40,7 @@ namespace sw
         , _connection{}
         , _nowMs{ 0 }
         , _nextConnectMs{ 0 }
-        , _backoffMs{ 0 }
+        , _backoff{ OnlineServiceClientInternal::kFirstBackoffMs }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
         , _schemaHash{ 0 }
@@ -324,8 +324,7 @@ namespace sw
             return; // 다시 연결하지 않는다
         notifyServices( &IOnlineClientService::onClientDisconnected );
         _state         = OnlineClientState::Disconnected;
-        _nextConnectMs = _nowMs + _backoffMs;
-        _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : MathUtil::min( _backoffMs * 2, _settings._maxBackoffMs );
+        _nextConnectMs = _nowMs + _backoff.takeDelayMs( _settings._maxBackoffMs );
     }
 
     void OnlineServiceClient::sendHello()
@@ -400,7 +399,7 @@ namespace sw
         _connection = _pEndpoint->connect( _settings._serverAddress );
         _state      = _connection.isValid() ? OnlineClientState::Connecting : OnlineClientState::Disconnected;
         if ( _connection.isValid() == false )
-            _nextConnectMs = _nowMs + MathUtil::max( _backoffMs, OnlineServiceClientInternal::kFirstBackoffMs );
+            _nextConnectMs = _nowMs + MathUtil::max( _backoff.getNextDelayMs(), _backoff.getFirstDelayMs() );
     }
 
     void OnlineServiceClient::onHelloResponse( const NetResponse& response )
@@ -416,8 +415,8 @@ namespace sw
                 stopAfterHello( OnlineClientState::HandshakeFailed, OnlineError::kInvalidRequest );
                 return;
             }
-            _state     = OnlineClientState::Ready;
-            _backoffMs = 0;
+            _state = OnlineClientState::Ready;
+            _backoff.reset();
             notifyServices( &IOnlineClientService::onClientReady ); // 재접속 요청이 모은 요청보다 먼저 나간다
             flushQueuedCalls();
             return;

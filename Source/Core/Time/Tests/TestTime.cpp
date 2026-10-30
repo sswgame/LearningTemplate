@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/GameTimer.h"
 
 // ------------------------------------------------------------------------------
@@ -104,4 +105,16 @@ SW_TEST_CASE( TimeTest, ContinuousFrameTicksAndTotalTime )
 
     SW_EXPECT_NEAR( accumulatedDelta, timer.getTotalTime(), 2e-2f );
     timer.stopTimer();
+}
+
+SW_TEST_CASE( ExponentialBackoffTest, FirstRetryIsImmediateThenDoublesUpToTheCap )
+{
+    sw::ExponentialBackoff backoff( 100 );
+    SW_EXPECT_EQUAL( int64( 0 ), backoff.takeDelayMs( 350 ) );   // 첫 실패는 바로 다시
+    SW_EXPECT_EQUAL( int64( 100 ), backoff.takeDelayMs( 350 ) ); // 첫 지연
+    SW_EXPECT_EQUAL( int64( 200 ), backoff.takeDelayMs( 350 ) );
+    SW_EXPECT_EQUAL( int64( 350 ), backoff.takeDelayMs( 350 ) ); // 상한
+    SW_EXPECT_EQUAL( int64( 350 ), backoff.takeDelayMs( 350 ) );
+    backoff.reset();
+    SW_EXPECT_EQUAL( int64( 0 ), backoff.takeDelayMs( 350 ) ); // 성공 뒤에는 처음부터
 }

@@ -29,6 +29,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
@@ -279,7 +280,7 @@ namespace sw
         StreamConnectionHandle             _connection;
         MonotonicMilliseconds              _nowMs;
         MonotonicMilliseconds              _nextConnectMs;
-        int64                              _backoffMs;
+        ExponentialBackoff                 _backoff;
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;
         uint64                             _schemaHash; ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
