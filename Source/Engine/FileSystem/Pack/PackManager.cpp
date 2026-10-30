@@ -535,7 +535,7 @@ namespace sw
         return _listMountedPack.size();
     }
 
-    bool PackManager::scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority )
+    bool PackManager::scanAndMountPacks( string_view packsDirectory )
     {
         if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
             return false;
@@ -563,8 +563,7 @@ namespace sw
             if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false || PackManagerInternal::isPatchPackFile( packPath, listManifest ) )
                 continue;
 
-            const int32 priority = PackManagerInternal::computePackDefaultPriority( packPath, listPriority );
-            if ( mountPack( packPath, priority ) )
+            if ( mountPack( packPath ) ) // 우선순위는 팩의 마운트 도메인으로 정한다(`mountReader`)
             {
                 bAnyMounted = true;
                 listMountedPath.push_back( packPath );

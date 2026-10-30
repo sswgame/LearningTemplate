@@ -162,7 +162,7 @@ namespace sw
         }
 
         // 팩 폴더는 한 곳이다(`ProcessRoots::_packs` - 실행 파일 기준). 예전에는 실행 파일 · 작업 폴더 · 프로젝트 · "Bin/Packs" 를 차례로 찾았다(띄운 자리에 따라 다른 팩).
-        return _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str(), engine::getSubsystem<AssetPaths>().getSearchPriority() );
+        return _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str() );
     }
 
     uint32 AssetManager::loadAssetRegistries()

@@ -55,7 +55,7 @@ namespace sw
         /**
          * @brief .pack 파일을 VFS 에 마운트합니다.
          * @param packFilePath .pack 파일의 실제 경로
-         * @param priority 우선순위 가중치(높을수록 먼저 찾습니다. 기본 0)
+         * @param priority 우선순위 가중치(높을수록 먼저 찾습니다). 0 이하면 팩의 마운트 도메인과 검색 우선순위(`AssetPaths::getSearchPriority`)로 정합니다
          * @return 마운트에 성공하면 true 입니다(DLC 를 소유하지 않았으면 false).
          */
         [[nodiscard]] bool mountPack( string_view packFilePath, int32 priority = 0 );
@@ -131,13 +131,12 @@ namespace sw
         /**
          * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트하고, 패치 목록(`*.packpatch.xml`)이 있으면 그 패치를 사슬 순서로 적용합니다.
          * @param packsDirectory .pack 파일들이 있는 디렉터리(예: "Bin/Packs")
-         * @param listPriority EngineConfig._listResourcePriority 우선순위 토큰 목록
          * @return 팩을 하나 이상 마운트하면 true 입니다.
          * @details 패치 목록이 가리키는 팩은 기본 팩으로 마운트하지 않는다. 설치된 빌드는 같은 폴더의 `PackPatchUtil::kBuildRecordFileName` 이 밝히고, 거기서 이어지는 패치를
          *          모두 적용한다(`mountPatchChain`). 목록을 못 읽거나 · 빌드 기록이 없거나 · 사슬이 끊기거나 갈리거나 · 패치 팩이 없으면 이 호출이 마운트한 팩을 모두 해제하고 false 다 —
          *          패치가 덜 적용된 채 돌지 않는다.
          */
-        bool scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority );
+        bool scanAndMountPacks( string_view packsDirectory );
 
         /**
          * @brief 패치 목록의 서명을 마운트 전에 확인하게 합니다. `scanAndMountPacks` 보다 먼저, 기동 스레드에서 한 번 부릅니다.
