@@ -190,7 +190,7 @@ namespace sw::editor
 
     void InputMapDocument::saveReplay() const
     {
-        const string diskPath = editor::getSubsystem<AssetPaths>().resolveWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
+        const string diskPath = editor::getSubsystem<AssetPaths>().getWritePath( _replayFilePath.get() ); // 파일은 디스크 경로로만 열린다 — 리소스 id 를 작업 디렉터리 상대로 쓰지 않는다
         if ( diskPath.empty() || _replay.saveToFile( diskPath ) == false )
             SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
     }

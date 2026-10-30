@@ -152,11 +152,17 @@ namespace sw
     uint32 VertexAnimationCooker::cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount )
     {
         uint32 writtenCount = 0;
+        // 쿠킹 폴더가 비었으면 메시 곁에 쓴다 — 상대 키인 메시는 읽기가 검색 순서로 고른 그 파일의 도메인 곁이다.
+        const AssetPaths&                  paths  = engine::getSubsystem<AssetPaths>();
+        const std::optional<DomainAssetID> meshID = cookedDir.empty() ? paths.toWriteID( list._meshPath ) : std::nullopt;
         for ( const hashed_string& clipName : list._listClip )
         {
             const string cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-            // 쿠킹 폴더가 비었으면 메시 곁(리소스 id 를 디스크 자리로 푼 곳)에 쓴다 — id 를 그대로 디스크 경로로 쓰면 작업 폴더 아래에 생긴다.
-            const string outputPath = cookedDir.empty() ? engine::getSubsystem<AssetPaths>().resolveWritePath( cookedPath ) : FileUtil::joinPath( cookedDir, cookedPath );
+            string       outputPath;
+            if ( cookedDir.empty() == false )
+                outputPath = FileUtil::joinPath( cookedDir, cookedPath );
+            else if ( meshID.has_value() )
+                outputPath = paths.getWritePath( MeshVertexAnimation::makeCookedPath( meshID->str(), clipName ) );
             if ( outputPath.empty() )
             {
                 SW_LOG_ERROR( "VAT '%#' has no disk folder beside its mesh to be written to", cookedPath.c_str() );

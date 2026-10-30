@@ -601,7 +601,10 @@ namespace sw::editor
     {
         if ( hasTarget() == false )
             return false;
-        const string path = editor::getSubsystem<AssetPaths>().getWritePath( MeshModifierStack::makeSidecarPath( _meshPath ) );
+        // 곁 파일은 아직 없을 수 있다 — 메시의 도메인(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
+        const AssetPaths&                  paths  = editor::getSubsystem<AssetPaths>();
+        const std::optional<DomainAssetID> meshID = paths.toWriteID( _meshPath );
+        const string                       path   = meshID.has_value() ? paths.getWritePath( MeshModifierStack::makeSidecarPath( meshID->str() ) ) : string{};
         if ( _stack.saveFile( path ) == false )
         {
             SW_LOG_ERROR( "Failed to write mesh modifier stack %#", path.c_str() );
@@ -650,8 +653,10 @@ namespace sw::editor
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING( "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
-        const string assetID = MeshModifierStack::makeBakedMeshPath( _meshPath );
-        const string path    = editor::getSubsystem<AssetPaths>().getWritePath( assetID );
+        const AssetPaths&                  paths   = editor::getSubsystem<AssetPaths>();
+        const std::optional<DomainAssetID> meshID  = paths.toWriteID( _meshPath ); // 구운 메시도 원본 메시의 도메인 곁이다
+        const string                       assetID = meshID.has_value() ? MeshModifierStack::makeBakedMeshPath( meshID->str() ) : string{};
+        const string                       path    = assetID.empty() ? string{} : paths.getWritePath( assetID );
         if ( MeshAssetFormat::saveToFile( path, baked ) == false )
         {
             SW_LOG_ERROR( "Failed to write baked mesh %#", path.c_str() );

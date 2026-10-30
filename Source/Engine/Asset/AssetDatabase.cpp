@@ -398,8 +398,10 @@ namespace sw
 
     bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
     {
-        const string metaRel = metaPathFor( relativePath );
-        const string absMeta = engine::getSubsystem<AssetPaths>().resolveWritePath( metaRel ); // 쓸 자리다 — .meta 는 아직 없을 수 있다
+        // .meta 는 아직 없을 수 있다 — 에셋의 도메인(상대 키면 읽기가 고른 그 파일) 곁에 쓴다.
+        const AssetPaths&                  paths   = engine::getSubsystem<AssetPaths>();
+        const std::optional<DomainAssetID> assetID = paths.toWriteID( relativePath );
+        const string                       absMeta = assetID.has_value() ? paths.getWritePath( metaPathFor( assetID->str() ) ) : string{};
         if ( absMeta.empty() )
         {
             SW_LOG_WARNING( "Cannot resolve meta path for %#", relativePath );

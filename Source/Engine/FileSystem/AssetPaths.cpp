@@ -648,23 +648,38 @@ namespace sw
         return LooseFilePath( std::move( found ) );
     }
 
-    string AssetPaths::getWritePath( string_view path ) const
+    std::optional<DomainAssetID> AssetPaths::toWriteID( string_view pathOrID ) const
     {
-        if ( FileUtil::isAbsolutePath( path ) )
-            return FileUtil::normalizeSeparators( path );
-
-        // 상대 경로가 `..` 로 올라가면 리소스 루트 밖에 쓴다(데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있다). 쓰지 않는다.
-        if ( toAssetID( path ).empty() )
+        // 절대 경로 · `Content/…` 는 리소스 id 로 바꾼다(붙인 디스크 도메인 아래면 그 도메인 id). 트리 밖이거나 `..` 로 올라가면 비어 있다.
+        const string id = toAssetID( pathOrID );
+        if ( id.empty() )
         {
-            SW_LOG_ERROR( "'%#' leaves the resource tree - nothing is written there", path );
-            return {};
+            SW_LOG_ERROR_ID( "AssetPaths.WriteOutsideTree", "'%#' is outside the resource tree and mounted disk domains - nothing is written there", pathOrID );
+            return std::nullopt;
         }
+        string domainRoot;
+        string keyUnderRoot;
+        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot ) )
+            return DomainAssetID( id );
 
-        // NRVO 가 걸리도록 이름 있는 값 하나로 모아 한 번만 반환한다.
-        string result = resolveWritePath( path );
-        if ( result.empty() )
-            result = string{ path };
-        return result;
+        // 상대 키 — 읽기가 검색 순서로 고른 그 파일에 쓴다. 아직 없으면 어느 도메인에 만들지 정할 수 없다.
+        const LooseFilePath found   = findLooseFile( id );
+        const string        foundID = found.isEmpty() ? string{} : toAssetID( found.getDiskPath() );
+        if ( foundID.empty() )
+        {
+            SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", pathOrID, id );
+            return std::nullopt;
+        }
+        return DomainAssetID( foundID );
+    }
+
+    string AssetPaths::getWritePath( string_view pathOrID ) const
+    {
+        // 절대 경로는 부르는 쪽이 고른 디스크 자리다(테스트 · 도구의 작업 폴더) — 도메인을 고를 일이 없다.
+        if ( FileUtil::isAbsolutePath( pathOrID ) )
+            return FileUtil::normalizeSeparators( pathOrID );
+        const std::optional<DomainAssetID> writeID = toWriteID( pathOrID );
+        return writeID.has_value() ? resolveWritePath( *writeID ) : string{};
     }
 
     string AssetPaths::toAssetID( string_view path ) const
@@ -704,38 +719,24 @@ namespace sw
         return id;
     }
 
-    string AssetPaths::resolveWritePath( string_view assetID ) const
+    string AssetPaths::resolveWritePath( const DomainAssetID& assetID ) const
     {
-        if ( assetID.empty() )
-            return {};
-
-        if ( FileUtil::isAbsolutePath( assetID ) )
-            return FileUtil::normalizeSeparators( assetID );
-
-        // 루트 밖으로 나가는 id 는 풀지 않는다(`findLooseFile` 과 같은 규칙).
-        if ( hasParentDirectoryComponent( assetID ) )
-            return {};
-
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리).
-        string result = findLooseFile( assetID ).getDiskPath();
+        string result = findLooseFile( assetID.str() ).getDiskPath();
         if ( result.empty() == false )
             return result;
 
-        const string lowerID = FileUtil::normalizePath( assetID );
-        string       domainRoot;
-        string       keyUnderRoot;
-        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, lowerID, domainRoot, keyUnderRoot ) == false )
+        string domainRoot;
+        string keyUnderRoot;
+        if ( AssetPathsInternal::mapGlobalIDToRoot( *_pState, assetID.str(), domainRoot, keyUnderRoot ) == false )
             return result;
 
         // 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템에서 소문자 키를 그대로 이으면 이미 있는 폴더 옆에 대소문자만 다른 새 폴더가 생기므로,
         // 있는 성분은 디스크 표기를 쓰고 없는 성분부터는 id 의 표기를 쓴다. 리소스 트리의 도메인은 소문자 규칙이라 훑지 않고 새 성분도 소문자다(Windows 도 그대로 소문자로 잇는다).
         string mountedRoot;
         string mountedKey;
-        if ( AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, lowerID, mountedRoot, mountedKey ) )
-        {
-            const string normalizedID = FileUtil::normalizeSeparators( assetID );
-            return FileUtil::makePathIgnoringCase( mountedRoot, normalizedID.substr( normalizedID.find( '/' ) + 1 ) );
-        }
+        if ( AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, assetID.str(), mountedRoot, mountedKey ) )
+            return FileUtil::makePathIgnoringCase( mountedRoot, assetID.str().substr( assetID.str().find( '/' ) + 1 ) );
         return FileUtil::joinPath( domainRoot, keyUnderRoot );
     }
 

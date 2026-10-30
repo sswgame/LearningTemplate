@@ -365,7 +365,7 @@ namespace sw::editor
             _statusText = "Fix the XML before saving";
             return false;
         }
-        const string absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        const string absolutePath = editor::getSubsystem<AssetPaths>().getWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _document.getText() ) == false )
         {
             SW_LOG_ERROR( "Could not write catalog file '%#'", absolutePath.c_str() );
@@ -425,7 +425,7 @@ namespace sw::editor
     {
         if ( _selectedID.empty() )
             return;
-        const string absolutePath = editor::getSubsystem<AssetPaths>().resolveWritePath( _selectedID );
+        const string absolutePath = editor::getSubsystem<AssetPaths>().getWritePath( _selectedID );
         if ( FileUtil::writeTextFile( absolutePath, _previousFileText ) == false )
         {
             SW_LOG_ERROR( "Could not restore catalog file '%#'", absolutePath.c_str() );

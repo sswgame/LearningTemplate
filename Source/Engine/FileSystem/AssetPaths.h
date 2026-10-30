@@ -22,7 +22,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/FileSystem/DomainAssetID.h"
 #include "Engine/FileSystem/LooseFilePath.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -91,28 +94,30 @@ namespace sw
         LooseFilePath findLooseFile( string_view filePath, string_view folderName = "" ) const;
 
         /**
-         * @brief 리소스 id 의 파일을 **쓸 자리**의 절대 경로를 정합니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다). 읽기용은 `findLooseFile` 입니다.
-         * @param assetID 절대 경로, 전역 ID, 이미 있는 팩 상대 키 중 무엇이든 받습니다(절대 경로는 구분자만 맞춥니다).
-         * @return 이미 있는 파일이면 그 디스크 경로입니다. 없으면 도메인 루트 아래에 이은 경로이고, 전역 ID 도 붙인 도메인 id 도 아니거나 `..` 로 올라가면 빈 문자열입니다.
-         * @details 저장과 .meta 생성에 씁니다. 전역 ID(`engine/`/`common/`/`game/<pack>/`/`editor/`…)와 붙인 디스크 도메인(`mountDiskDomain`)만 파일이 없어도 경로를 정할 수 있습니다.
-         *          팩 상대 키는 이미 있는 경우에만 `findLooseFile` 결과를 반환합니다.
+         * @brief 쓸 파일을 도메인이 정해진 id 로 바꿉니다. 쓰기 입구(`resolveWritePath`)는 이 결과만 받는다.
+         * @param pathOrID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인), 리소스 트리 안의 절대 경로, 이미 있는 파일의 상대 키 중 무엇이든 받습니다.
+         * @return 도메인 id 입니다. 상대 키는 검색 순서로 이긴 파일의 도메인이다(읽은 그 파일에 쓴다). 아직 없는 파일의 상대 키(어느 도메인에 만들지 모른다),
+         *         리소스 트리 · 붙인 디스크 도메인 밖의 절대 경로, `..` 로 올라가는 id 는 이유를 오류로 남기고 비웁니다 — 작업 폴더로 물러나지 않는다.
+         */
+        [[nodiscard]] std::optional<DomainAssetID> toWriteID( string_view pathOrID ) const;
+
+        /**
+         * @brief 도메인 id 의 파일을 **쓸 자리**의 절대 경로를 정합니다(파일이 아직 없어도 도메인 루트 기준으로 조합합니다). 읽기용은 `findLooseFile` 입니다.
+         * @return 이미 있는 파일이면 그 디스크 경로, 없으면 도메인 루트 아래에 이은 경로입니다. 그 사이 도메인 폴더가 사라졌으면 빈 문자열입니다.
+         * @details 저장과 .meta 생성이 모두 이것을 쓴다. 상대 키를 받지 않는 것은 형식이 막는다(`DomainAssetID`).
          *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
          *          성분은 디스크 표기를 쓰고(`Saved/Automation` 이 있으면 `saved/automation/x` 도 그 안에 쓴다), 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은
          *          소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다. 읽기용 `findLooseFile` 이 붙인 디스크 도메인에서 푸는 규칙과 짝입니다.
          */
-        string resolveWritePath( string_view assetID ) const;
+        string resolveWritePath( const DomainAssetID& assetID ) const;
 
         /**
-         * @brief 아직 없는 파일을 **쓰기 위한** 절대 경로를 정합니다.
-         * @param path 절대 경로, 전역 ID, 이미 있는 팩 상대 키 중 무엇이든 받습니다.
-         * @return 쓰기에 쓸 절대 경로입니다. 아무것도 해석되지 않으면 인자를 그대로 반환합니다.
-         * @details 저장하는 쪽은 `findLooseFile` 만으로는 안 된다. 그 함수는 **이미 있는** 파일만
-         *          찾으므로 새 파일에는 빈 문자열을 반환하고, 그러면 부르는 쪽이 상대 경로로 파일을 써서
-         *          `Content/` 가 아니라 **실행 파일의 작업 디렉터리**에 떨어진다. 예를 들어 `PrefabAsset` 이 이 방식으로 저장하면
-         *          에셋은 Bin 아래로, `.meta` 는 `Content/` 아래로 갈라진다.
-         *          해석 순서를 여기 한 번만 적어 두고 모든 세이버가 같이 쓴다(`resolveWritePath` 에 리소스 트리 밖으로 나가는 경로의 거절과 마지막 물러남을 더한 것이다).
+         * @brief 문자열을 바로 쓸 자리로 풉니다 — 절대 경로는 그대로(부르는 쪽이 고른 디스크 자리), 나머지는 `toWriteID` 다음 `resolveWritePath` 입니다.
+         *        못 풀면(아직 없는 상대 키 · `..`) 오류를 남기고 빈 문자열입니다.
+         * @details 예전에는 못 푼 인자를 그대로 돌려줘 상대 경로로 쓴 파일이 실행 파일의 작업 폴더에 떨어졌다(`PrefabAsset` 의 에셋은 Bin 아래, `.meta` 는 `Content/` 아래).
+         *          이제 물러남이 없다 — 부르는 쪽은 빈 문자열을 실패로 다룬다.
          */
-        string getWritePath( string_view path ) const;
+        string getWritePath( string_view pathOrID ) const;
 
         /**
          * @brief 편집기와 도구가 가진 경로를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.
