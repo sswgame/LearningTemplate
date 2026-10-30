@@ -460,12 +460,17 @@ namespace sw::editor
 
     void EditorDockLayout::applyDefaultDockLayout( uint32 dockspaceID )
     {
-        const ImGuiID        id        = dockspaceID;
-        const ImGuiViewport* pViewport = ImGui::GetMainViewport();
+        const ImGuiID id = dockspaceID;
+        // 작업 영역(`WorkSize`)은 앞 프레임의 사이드 바로 정해진다 — 첫 프레임은 메뉴 · 툴바가 없는 창 전체다. 그 크기로 나눈 뒤 다음 프레임에 비율로 늘리면
+        // 칸이 앞 프레임에 무엇이 그려졌느냐에 따라 화소 하나씩 달랐다(체인에서 넷 플레이 단계 뒤 screen 골든). 이번 프레임에 이미 그린 메뉴 · 툴바까지 뺀
+        // 크기(`GetBuildWorkRect` — 둘은 도크스페이스보다 먼저 그린다)로 한 번에 나누고, 크기 맞춤의 기준도 그 크기로 둔다.
+        const ImVec2 workSize = static_cast<ImGuiViewportP*>( ImGui::GetMainViewport() )->GetBuildWorkRect().GetSize();
+        _lastDockspaceWidth   = workSize.x;
+        _lastDockspaceHeight  = workSize.y;
 
         ImGui::DockBuilderRemoveNode( id );
         ImGui::DockBuilderAddNode( id, ImGuiDockNodeFlags_DockSpace );
-        ImGui::DockBuilderSetNodeSize( id, pViewport->WorkSize );
+        ImGui::DockBuilderSetNodeSize( id, workSize );
 
         ImGuiID dockMain = id;
         ImGuiID dockLeft{ 0 };
@@ -476,7 +481,7 @@ namespace sw::editor
         // 좌우 도크 폭은 넓은 창에서는 비율을 따르고, 좁은 창에서는 글자 너비의 배수 아래로 내려가지 않는다(Hierarchy · Inspector 가 말줄임으로 뭉개진다).
         // 두 도크의 합이 작업 영역 폭의 절반을 넘으면 같은 비율로 줄여 가운데 영역을 남긴다. `Editor.PanelContentColumns`(defaultlayout 시나리오)가 지킨다.
         const float32 columnWidth = ImGui::CalcTextSize( "0" ).x;
-        const float32 workWidth   = pViewport->WorkSize.x;
+        const float32 workWidth   = workSize.x;
         float32       leftWidth   = MathUtil::max( EditorDockLayoutInternal::kLeftDockMinColumns * columnWidth, workWidth * EditorDockLayoutInternal::kLeftDockRatio );
         float32       rightWidth  = MathUtil::max( EditorDockLayoutInternal::kRightDockMinColumns * columnWidth, workWidth * EditorDockLayoutInternal::kRightDockRatio );
         const float32 sideLimit   = workWidth * EditorDockLayoutInternal::kMaxSideDockRatio;
@@ -493,7 +498,7 @@ namespace sw::editor
         // 배수에는 탭 줄 · 로그 툴바 · 명령 입력 줄이 든다. 남는 로그 줄은 `Editor.PanelContentLines`(defaultlayout 시나리오)가 지킨다.
         // 창이 너무 낮으면 가운데 영역이 사라지지 않게 절반에서 멈춘다.
         const float32 bottomHeight = EditorDockLayoutInternal::kBottomDockTextLines * ImGui::GetTextLineHeightWithSpacing();
-        const float32 bottomRatio  = MathUtil::min( bottomHeight / pViewport->WorkSize.y, EditorDockLayoutInternal::kMaxBottomDockRatio );
+        const float32 bottomRatio  = MathUtil::min( bottomHeight / workSize.y, EditorDockLayoutInternal::kMaxBottomDockRatio );
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, bottomRatio, &dockBottom, &dockMain );
         (void)dockTop;
 
