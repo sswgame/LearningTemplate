@@ -357,21 +357,19 @@ namespace sw::editor
                 continue;
             }
 
-            const string fileName = FileUtil::getFileNamePart( sourcePath );
-
-            if ( FileUtil::pathsEqualNormalized( sourcePath, editor::getSubsystem<AssetPaths>().makeSavePath( destFolderAbs, fileName ) ) )
+            // 리소스 id 는 소문자 규칙이라 파일 이름을 소문자로 담는다.
+            const string fileName  = FileUtil::normalizePath( FileUtil::getFileNamePart( sourcePath ) );
+            const string plainPath = FileUtil::joinPath( destFolderAbs, fileName );
+            if ( FileUtil::pathsEqualNormalized( sourcePath, plainPath ) )
             {
                 SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
                 continue;
             }
 
             // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
-            // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
-            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 다른 파일인데 이름만 같은
-            // 경우다.
-            const string destPath = editor::getSubsystem<AssetPaths>().makeUniqueSavePath( destFolderAbs, fileName );
-
-            if ( FileUtil::ensureParentDirectoryExists( destPath ) == false || FileUtil::copyFile( sourcePath, destPath ) == false )
+            // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다. 빈 이름은 원자적으로 잡는다(`reserveUniquePath` - 고유 이름의 입구 하나).
+            const string destPath = FileUtil::reserveUniquePath( FileUtil::removeExtension( plainPath ), FileUtil::getExtension( plainPath ), false, 10000, "_" );
+            if ( destPath.empty() || FileUtil::copyFile( sourcePath, destPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to import: %#", sourcePath.c_str() );
                 continue;

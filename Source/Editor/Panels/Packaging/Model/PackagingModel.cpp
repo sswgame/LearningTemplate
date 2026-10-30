@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
@@ -99,7 +100,7 @@ namespace sw::editor
         _listGame.clear();
         _gameIndex = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::joinPath( EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
+        (void)FileUtil::collectFiles( FileUtil::joinPath( ProcessRoots::get()._project.str(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         for ( const string& filePath : listFile )
         {
@@ -116,7 +117,7 @@ namespace sw::editor
 
     ProcessCommand PackagingModel::makeCommand() const
     {
-        const string    projectRoot  = EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() );
+        const string    projectRoot  = ProcessRoots::get()._project.str();
         ProcessCommand  command      = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, kScriptRelativePath ) );
         vector<string>& listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--target", kArrTarget[_targetIndex] } );
@@ -139,7 +140,7 @@ namespace sw::editor
     bool PackagingModel::startPackaging()
     {
         const ProcessCommand command = makeCommand();
-        if ( _pJob->request( command, EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ) ) == false )
+        if ( _pJob->request( command, ProcessRoots::get()._project.str() ) == false )
             return false;
         _listLine.clear();
         _progress        = PackagingProgress{};

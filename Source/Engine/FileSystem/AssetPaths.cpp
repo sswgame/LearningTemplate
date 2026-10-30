@@ -35,7 +35,6 @@ namespace sw
          */
         struct AssetPathTable
         {
-            string         _projectFolderPath{};      ///< 프로젝트 루트
             string         _resourceRootFolderPath{}; ///< Content/ 최상위 루트(유일한 기준점)
             vector<string> _listSearchPriority{};     ///< 검색 우선순위 토큰 목록
             vector<string> _listResourceFolder{};     ///< findLooseFile 의 검색 루트 목록
@@ -147,7 +146,7 @@ namespace sw
             /** @brief 두 표의 내용이 같으면 true 입니다(`publishTable` 이 같은 표를 다시 쓴다). */
             static bool isSameTable( const AssetPathTable& left, const AssetPathTable& right )
             {
-                return left._projectFolderPath == right._projectFolderPath && left._resourceRootFolderPath == right._resourceRootFolderPath &&
+                return left._resourceRootFolderPath == right._resourceRootFolderPath &&
                        left._listSearchPriority == right._listSearchPriority && left._listResourceFolder == right._listResourceFolder &&
                        left._listHostExcludedGroup == right._listHostExcludedGroup;
             }
@@ -441,26 +440,6 @@ namespace sw
                 }
                 return {};
             }
-
-            /**
-             * @brief 저장 대상 폴더가 지정한 루트 아래인지 보고, 더 긴(구체적인) 일치를 남깁니다.
-             */
-            static void updateLongestSaveRoot( string_view folderNorm, string_view candidateRoot, string& outPhysicalRoot, string& outRootNorm )
-            {
-                if ( candidateRoot.empty() )
-                    return;
-                const string norm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( candidateRoot ) );
-                if ( norm.empty() )
-                    return;
-                if ( FileUtil::startsWithPathComponent( folderNorm, norm ) )
-                {
-                    if ( norm.size() > outRootNorm.size() )
-                    {
-                        outRootNorm     = norm;
-                        outPhysicalRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ candidateRoot } ) );
-                    }
-                }
-            }
         };
     } // namespace
 } // namespace sw
@@ -525,7 +504,6 @@ namespace sw
         vector<string> listAssetFolder = AssetPathsInternal::buildResourceFolders( resourceRootFolderPath, listSearchPriority );
         (void)AssetPathsInternal::publishTable( *_pState, [&]( AssetPathTable& table )
         {
-            table._projectFolderPath      = FileUtil::normalizeSeparators( FileUtil::trimTrailingSlashes( rootPath ) );
             table._resourceRootFolderPath = resourceRootFolderPath;
             table._listSearchPriority     = std::move( listSearchPriority );
             table._listResourceFolder     = std::move( listAssetFolder );
@@ -822,11 +800,6 @@ namespace sw
         return AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath; // 표는 놓지 않으므로 참조가 유효하다
     }
 
-    const string& AssetPaths::getProjectFolderPath() const
-    {
-        return AssetPathsInternal::getTable( *_pState )._projectFolderPath;
-    }
-
     bool AssetPaths::setSearchPriority( const vector<string>& listPriority )
     {
         if ( listPriority.empty() )
@@ -873,82 +846,6 @@ namespace sw
         AssetPathsInternal::getPathStats().addItemCount( -static_cast<int64>( state._mapResolvedPath.size() ) );
         AssetPathsInternal::getPathStats().recordClear();
         state._mapResolvedPath = unordered_map<string, ResolvedEntry>{};
-    }
-
-    string AssetPaths::makeSaveFolderPath( string_view absoluteFolder ) const
-    {
-        const string folderNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( absoluteFolder ) );
-
-        string physicalRoot;
-        string rootNorm;
-
-        for ( const string& root : AssetPathsInternal::getTable( *_pState )._listResourceFolder )
-        {
-            AssetPathsInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
-        }
-        AssetPathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kGamePack ).getDiskPath(), physicalRoot, rootNorm );
-        AssetPathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kEnginePack ).getDiskPath(), physicalRoot, rootNorm );
-        AssetPathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kCommonPack ).getDiskPath(), physicalRoot, rootNorm );
-        AssetPathsInternal::updateLongestSaveRoot( folderNorm, findLooseDomainFolder( path::kEditorPack ).getDiskPath(), physicalRoot, rootNorm );
-
-        if ( physicalRoot.empty() )
-            return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ absoluteFolder } ) );
-
-        string result = physicalRoot;
-        if ( folderNorm.size() > rootNorm.size() )
-        {
-            string rel = folderNorm.substr( rootNorm.size() );
-            while ( rel.empty() == false && rel.front() == '/' )
-            {
-                rel.erase( rel.begin() );
-            }
-            if ( rel.empty() == false )
-                result = FileUtil::joinPath( result, rel );
-        }
-        return result;
-    }
-
-    string AssetPaths::makeSavePath( string_view absoluteFolder, string_view fileName ) const
-    {
-        string result = makeSaveFolderPath( absoluteFolder );
-        if ( fileName.empty() == false )
-        {
-            const string lowerName = FileUtil::normalizePath( fileName );
-            if ( result.empty() )
-                result = lowerName;
-            else
-                result = FileUtil::joinPath( result, lowerName );
-        }
-        return result;
-    }
-
-    string AssetPaths::makeUniqueSavePath( string_view absoluteFolder, string_view fileName ) const
-    {
-        // 반환은 `savePath` 하나로만 한다. 분기마다 다른 변수를 반환하면 NRVO 가 막힌다(-Wnrvo).
-        // 그래서 `const` 도 붙이지 않는다(반환할 때 자동 이동이 막힌다).
-        string savePath = makeSavePath( absoluteFolder, fileName );
-        if ( savePath.empty() || FileUtil::exists( savePath ) == false )
-            return savePath;
-
-        const string stem      = FileUtil::removeExtension( savePath );
-        const string extension = FileUtil::getExtension( savePath );
-
-        // 오브젝트 이름과 같은 규약으로 센다. 2 부터 세고, 넉넉한 곳에서 멈춘다.
-        StringBuilder<constant::kMaxBuffer512> sb;
-        for ( uint32 nameSuffix = 2; nameSuffix < 10000; ++nameSuffix )
-        {
-            sb.clear();
-            sb.append( stem ).append( '_' ).append( nameSuffix ).append( extension );
-            if ( FileUtil::exists( sb.view() ) == false )
-            {
-                SW_LOG_WARNING( "Name already taken '%#' — using '%#'", savePath, sb.view() );
-                savePath.assign( sb.view() );
-                return savePath;
-            }
-        }
-
-        SW_LOG_WARNING( "Could not find a free name near '%#' — overwriting.", savePath );
-        return savePath;
     }
 
     void AssetPaths::setHostTarget( string_view buildTargetName )

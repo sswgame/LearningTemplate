@@ -3,6 +3,7 @@
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
@@ -478,7 +479,7 @@ namespace sw::editor
 
     string ModelImportConfig::makeDefaultConfigPath( const AssetPaths& assetPaths )
     {
-        const string projectRoot = EditorPaths::getProjectRootPath( assetPaths );
+        const string projectRoot = ProcessRoots::get()._project.str();
         if ( projectRoot.empty() )
             return {};
         return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );

@@ -211,7 +211,7 @@ namespace sw::editor
         if ( bRecordHistory )
             _history.record( normalizedPath, listCrumb );
 
-        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 AssetPaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
+        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(리소스 id 규칙).
         _selectedFolderAbs = normalizedPath;
         _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();

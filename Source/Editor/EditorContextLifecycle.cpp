@@ -10,6 +10,7 @@
  */
 #include "pch.h"
 
+#include "Core/File/ProcessRoots.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorUICapture.h"
@@ -91,7 +92,7 @@ namespace sw::editor
         _scope.addSubsystem( make_unique<EditorPopupManager>() );
         _scope.addSubsystem( make_unique<AssetHotReload>() );
         _scope.addSubsystem( make_unique<EditorToolDefaultsReload>() ); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
-        _scope.addSubsystem( sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ) ) );
+        _scope.addSubsystem( sw::make_unique<EditorSourceControl>( ProcessRoots::get()._project.str() ) );
         _scope.addSubsystem( make_unique<InspectorComponentManager>() );
         _scope.addSubsystem( make_unique<InspectorPropertyManager>() );
         _scope.addSubsystem( make_unique<EditorDefaultObjects>() );

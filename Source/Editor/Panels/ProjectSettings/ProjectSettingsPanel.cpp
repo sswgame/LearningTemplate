@@ -3,6 +3,7 @@
 #include "Editor/Panels/ProjectSettings/ProjectSettingsPanel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 
@@ -134,7 +135,7 @@ namespace sw::editor
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
-        ProjectSettingsCatalog::collectLoaded( *pConfigManager, EditorPaths::getProjectRootPath( editor::getSubsystem<AssetPaths>() ), listEntry );
+        ProjectSettingsCatalog::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();

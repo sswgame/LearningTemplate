@@ -180,8 +180,6 @@ namespace sw
 
         /** @brief `Content/` 폴더의 절대 경로입니다. 표시와 감시용 최상위이며 검색 루트는 아닙니다. 참조는 이 객체가 사는 동안 유효합니다. */
         const string& getRootFolderPath() const;
-        /** @brief 프로젝트 루트의 절대 경로입니다(`Content/` 와 `Config/` 의 부모). */
-        const string& getProjectFolderPath() const;
 
         /**
          * @brief 리소스 검색 루트 우선순위를 설정합니다(예: EngineConfig._listResourcePriority).
@@ -202,33 +200,6 @@ namespace sw
          *          부르지 않아도 된다 — 캐시 칸이 `FileUtil::getCreationEpoch` · `getRemovalEpoch` 로 스스로 낡음을 안다. 바깥 프로세스가 바꾼 파일만 이 호출이 필요하다.
          */
         void clearPathCache();
-
-        /**
-         * @brief 저장용 폴더 절대 경로를 만듭니다.
-         * @param absoluteFolder 검색 루트나 도메인 루트 아래의 절대 폴더
-         * @return 루트는 파일시스템 대소문자를 그대로 두고, 루트 아래 상대 구간만 소문자로 바꾼 경로
-         */
-        string makeSaveFolderPath( string_view absoluteFolder ) const;
-
-        /**
-         * @brief 저장과 임포트에 쓸 절대 파일 경로를 만듭니다.
-         * @param absoluteFolder 저장 대상 폴더(절대)
-         * @param fileName 파일 이름. 소문자로 바꿉니다
-         * @details absoluteFolder 가 속한 검색 루트는 파일시스템 대소문자를 그대로 두고,
-         *          루트 아래 상대 폴더와 fileName 은 소문자로 바꿉니다.
-         */
-        string makeSavePath( string_view absoluteFolder, string_view fileName ) const;
-
-        /**
-         * @brief 저장과 임포트에 쓸 절대 파일 경로를 만들되, **이미 있는 파일을 가리키지 않게** 합니다.
-         * @details 경로 규칙은 `makeSavePath` 와 같고, 그 위치에 파일이 이미 있으면 확장자 앞에
-         *          `_2`, `_3` 등을 붙여 비어 있는 이름을 찾는다. 게임 오브젝트 이름을 고를 때
-         *          쓰는 `GameObjectManager::makeUniqueNameUnlocked` 와 같은 규약이다.
-         * @note 이름을 고르는 것과 파일을 만드는 것 사이에는 틈이 있다. 그 사이에 다른 프로세스가
-         *       같은 이름을 만들면 겹칠 수 있다. 에디터의 임포트는 한 스레드에서 돌므로 이것으로 충분하다.
-         * @return 비어 있는 절대 경로입니다. 후보를 다 써도 찾지 못하면 `makeSavePath` 와 같은 경로입니다.
-         */
-        string makeUniqueSavePath( string_view absoluteFolder, string_view fileName ) const;
 
         /**
          * @brief 상태 전부(불변 경로 표 · 붙인 디스크 도메인 · 해석 캐시)입니다. 정의는 .cpp 에 둔다 — 잠금 · 해시 맵이 헤더로 새지 않게.

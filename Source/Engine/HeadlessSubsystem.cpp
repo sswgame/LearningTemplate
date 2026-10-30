@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Process/StandardOutput.h"
@@ -151,7 +152,7 @@ namespace sw
                 const string shaderFolder = resolveShaderFolder( commandLine );
 
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );
@@ -218,7 +219,7 @@ namespace sw
                     }
                 }
                 PackConfig   packConfig;
-                const string packConfigPath = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), PackConfig::kConfigPath );
+                const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
                 if ( ConfigManager::readConfigFile( packConfig, packConfigPath ) != ConfigReadResult::Loaded )
                 {
                     SW_LOG_ERROR( "Pack config '%#' is missing or invalid", packConfigPath );

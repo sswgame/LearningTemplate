@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -46,19 +47,6 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorPaths" );
 
-    string EditorPaths::getProjectRootPath( const AssetPaths& assetPaths )
-    {
-        const string& projectRoot = assetPaths.getProjectFolderPath();
-        if ( projectRoot.empty() == false )
-            return projectRoot;
-
-        const string& resourceRoot = assetPaths.getRootFolderPath();
-        if ( resourceRoot.empty() )
-            return {};
-
-        return FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( resourceRoot ) );
-    }
-
     void EditorPaths::prepareAutomationStateDirectory()
     {
         const string stateDir = EditorPathsInternal::getAutomationStateDirectory();
@@ -75,10 +63,7 @@ namespace sw::editor
         string stateDir = gv_editorStateDir.empty() ? EditorPathsInternal::getAutomationStateDirectory() : resolveProjectRelativePath( gv_editorStateDir );
         if ( stateDir.empty() )
         {
-            const string projectRoot = getProjectRootPath( editor::getSubsystem<AssetPaths>() );
-            if ( projectRoot.empty() )
-                return stateDir;
-            stateDir = FileUtil::joinPath( projectRoot, config::kDirSavedEditor );
+            stateDir = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor );
         }
         // 경로를 묻는 함수라 폴더를 못 만들어도 경로는 돌려준다 — 이유는 ensure 가 남기고, 이 폴더에 쓰는 쪽이 쓰기 실패로 다시 알린다.
         (void)FileUtil::ensureDirectoryExists( stateDir );
@@ -102,11 +87,7 @@ namespace sw::editor
         // 반환 지점을 하나로 둔다. 어떤 경로는 지역 변수를, 어떤 경로는 다른 식을 반환하면 NRVO 가 적용되지 않는다.
         string path = FileUtil::normalizeSeparators( hostRelativePath );
         if ( FileUtil::isAbsolutePath( path ) == false )
-        {
-            const string projectRoot = getProjectRootPath( editor::getSubsystem<AssetPaths>() );
-            if ( projectRoot.empty() == false )
-                path = FileUtil::joinPath( projectRoot, path );
-        }
+            path = FileUtil::joinPath( ProcessRoots::get()._project.str(), path );
         return path;
     }
 } // namespace sw::editor

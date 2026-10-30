@@ -3,6 +3,7 @@
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
@@ -32,7 +33,7 @@ namespace sw
 
     SubsystemInitResult ConfigReloadSubsystem::initializeSubsystem()
     {
-        const string configFolder = FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getProjectFolderPath(), config::kDirConfig );
+        const string configFolder = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO( "Config reload is off - no config folder at %#", configFolder.c_str() );

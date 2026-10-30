@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -565,7 +566,7 @@ namespace sw::editor
 
     string TextureImporter::makeDefaultImportConfigPath( const AssetPaths& assetPaths )
     {
-        const string projectRoot = EditorPaths::getProjectRootPath( assetPaths );
+        const string projectRoot = ProcessRoots::get()._project.str();
         if ( projectRoot.empty() )
             return {};
         return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kTextureImportConfigFileName );
