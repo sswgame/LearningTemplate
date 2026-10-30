@@ -375,12 +375,15 @@ namespace sw
                 break;
             }
         }
-        if ( headEnd == string::npos )
+        // 머리 끝이 한 번에 들어와도 상한을 본다 — 끝을 아직 못 찾은 경우만 보면 큰 머리 하나를 통째로 보낸 상대가 지나간다.
+        const size_t headSize = headEnd == string::npos ? _buffer.size() : headEnd;
+        if ( headSize > static_cast<size_t>( HTTPConstant::kMaxHeaderBytes ) )
         {
-            if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
-                fail( "header is too large" );
+            fail( "header is too large" );
             return false;
         }
+        if ( headEnd == string::npos )
+            return false;
         const string_view head( reinterpret_cast<const utf8*>( _buffer.data() ), headEnd );
         if ( parseHead( head ) == false )
         {
@@ -405,6 +408,15 @@ namespace sw
             {
                 fail( "malformed Content-Length" );
                 return false;
+            }
+            // 값이 다른 Content-Length 가 둘이면 앞단과 길이를 다르게 고를 수 있다(요청 밀반입, RFC 9112 6.3) — 같은 값의 반복만 받는다.
+            for ( const HTTPHeader& header : _listHeader )
+            {
+                if ( HTTPUtil::isEqualIgnoreCase( header._name, "Content-Length" ) && header._value != pLength->_value )
+                {
+                    fail( "conflicting Content-Length" );
+                    return false;
+                }
             }
             if ( _remainingBytes > _maxBodyBytes )
             {
