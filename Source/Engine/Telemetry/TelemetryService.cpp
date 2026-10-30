@@ -642,7 +642,6 @@ namespace sw
 
     void TelemetryService::flushLocked()
     {
-        using Internal = TelemetryServiceInternal;
         if ( _bInitialized == SW_FALSE || _bConsent == SW_FALSE )
             return;
         if ( _listPendingLine.empty() == false && FileUtil::ensureDirectoryExists( _spoolFolder.get() ) == false )

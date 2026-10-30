@@ -41,12 +41,12 @@ namespace sw
         void clearBusy() { _bBusy = false; }
 
     private:
-        wl_buffer* _pBuffer{ nullptr };
-        uint32*    _pPixels{ nullptr };
-        size_t     _byteSize{ 0 };
-        uint32     _width{ 0 };
-        uint32     _height{ 0 };
-        bool       _bBusy{ false };
+        wl_buffer*              _pBuffer{ nullptr };
+        uint32*                 _pPixels{ nullptr };
+        [[maybe_unused]] size_t _byteSize{ 0 }; ///< munmap 크기 — Wayland 가 없는 빌드의 빈 구현은 읽지 않는다
+        uint32                  _width{ 0 };
+        uint32                  _height{ 0 };
+        bool                    _bBusy{ false };
     };
 } // namespace sw
 

@@ -104,9 +104,9 @@ namespace sw
 
     ServerApp::ServerApp()
         : _host{}
+        , _pModuleImageHost{ nullptr }
         , _pDevTools{ nullptr }
         , _devToolsFrameSubscription{}
-        , _pModuleImageHost{ nullptr }
         , _engine{}
         , _gameModuleManager{ nullptr }
         , _moduleReload{}
