@@ -28,7 +28,7 @@
 | 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다: 팩 매니저(엔진 범위에 건 `PackManager`), 메시 무효화(엔진 범위의 `IMeshDerivedCache`), 서브시스템 순서(위 층의 의존 칸) | 언리얼 FPlatformFileManager · 모듈 등록 |
 | 키트 하나의 에디터 확장은 그 키트 폴더의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 에는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인의 <X>Editor 모듈 |
 | 폴더 · 파일 이름은 내용으로: `Engine/FileSystem`(층 1 콘텐츠 파일 시스템) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/2D`(층 6, 언리얼 Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
-| 게임 콘텐츠(`Content/game/<팩>` 씬 · 프리팹)가 쓰는 형식의 모듈은 그 게임 매니페스트 의존이다 — configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`, 씬을 고친 뒤에는 다음 configure 가 본다) | 언리얼 .uproject Plugins |
+| 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진 것이다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`, 씬을 고친 뒤에는 다음 configure 가 본다) | 언리얼 .uproject Plugins |
 | 둔 것: `Editor*` · `Automation*` 접두어(타입 이름은 전역 유일), App 폴더(실행 파일 호스트 부품 — 언리얼 Launch), `*Info` 정적 사실 표(언리얼 FPixelFormatInfo), `Core/Container` 등 폴더 이름과 같은 접두어 묶음(언리얼 Containers 처럼 평평하게), `IWindowTitleTarget`(창 제목을 거는 길을 하나로 막는 이음매 — `MainWindowSubsystem` 이 비공개 상속, 테스트가 가짜를 넣는다) | |
 
 ## 3. 테스트 · 시나리오
@@ -63,7 +63,6 @@
 | 게임 시나리오 | Empty 외 게임의 옛 시나리오(27b17ee91^)를 옮긴다 — 변환은 `<At>` → 순차(`<Wait>`), `probe` → `watch`, 지표 문턱 → 골든, 씬 `WorldSettings` → `SceneSettings`. 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 골든을 뜬다. 에디터 시나리오도 같다(에디터 실행) |
 | 경로 · id 형식 가르기 | `AssetPaths::toAssetID(string_view)` · `toWriteID` · `getWritePath` 는 "절대 경로 · `Content/…` · 리소스 id" 를 한 글로 받는다. 작업 폴더 기준 상대 경로(`Saved/…`)가 들어오면 조용히 id 로 읽혀 다른 파일이 된다 — 쿠킹 입력(`CookJob`)과 테스트 쓰기 폴더는 2026-10-31 에 막았다. 남은 것: 호출 약 25 곳(대부분 에디터 — 임포트 · 콘텐츠 브라우저 · 씬 열기 · 굽기 출력)을 `AssetID` / 디스크 경로 입구로 나누고, 상대 경로를 만드는 자동화 산출물 경로(`Saved/Automation/…`)를 절대 경로로. `AssetIO` 가 `AssetID` 로 한 것과 같은 방식 |
 | `Scenario.editor` 속도 | 2026-10-31 전체 ctest 651 초 중 529 초. `editor.uiaudit`(131 초 — 패널 39 개마다 `<Wait frames="20"/>` + 캡처, Debug 에디터 넷이 함께 돌아 프레임당 약 140 ms) · `editor.flowterrain`(73 초) · `prefabwindow` · `meshmodifiers` · `terrainbrush`(각 30 초 안팎)가 크다. 고정 프레임 기다림을 "레이아웃이 섰다" 조건(`<WaitUntil>`)으로 바꾸는 것부터 |
-| 콘텐츠 모듈 검사의 빈칸 | `ContentModules.py` 는 게임 팩만 본다 — `common/` 콘텐츠(여러 게임이 같이 씀)가 키트 형식을 쓰면 잡지 못한다. 쓰는 게임마다 의존이 있어야 하므로 참조 색인(누가 common 에셋을 가리키는지)과 묶어야 한다 |
 | `GameFramework/Base` · `Plugin/Editor/Base` | 이름이 모호하다(GameFramework 의 기반 라이브러리 · 그 에디터 확장). 바꾸면 모듈 이름(`GF_EditorPlugin_Base`) · 매니페스트가 따라간다 |
 
 ## 7. 다음 설계

@@ -3,7 +3,8 @@
 """
 Scripts/generate/ContentModules.py
 
-게임 콘텐츠(`Content/game/<팩>` 의 씬 · 프리팹)가 쓰는 리플렉션 형식의 모듈이 그 게임 매니페스트의 의존(따라 닿는 것 포함)에 있는지 configure 가 본다.
+콘텐츠(씬 · 프리팹)가 쓰는 리플렉션 형식의 모듈을 그 도메인이 가질 수 있는지 configure 가 본다 — `game/<팩>` 은 그 게임 매니페스트의 의존(따라 닿는 것
+포함), `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만.
 
 **왜 configure 인가.** 키트는 게임 매니페스트의 의존으로만 링크된다(`sw_addGameModule`). 의존에 없는 키트의 컴포넌트를 쓰는 씬은 그 게임의 어떤 실행 ·
 쿠킹 · 배포에서도 서지 못하는데, 예전에는 헤드리스 쿠킹이 "등록하는 모듈 없음" 으로 멈출 때야 드러났다(Empty 의 넷 씬 둘, 2026-10-31). 씬은 데이터라
@@ -146,13 +147,33 @@ def collectContentTypes(packFolder: Path) -> dict[str, list[str]]:
     return mapUse
 
 
+def findProblems(packRoot: str, packFolder: Path, setModule: set[str], mapOwner: dict[str, set[str | None]], fix: str) -> list[str]:
+    """팩 하나가 `setModule` 밖 모듈의 형식을 쓰는 자리. 엔진 형식(주인 None)은 늘 된다."""
+    listProblem: list[str] = []
+    for typeName, listFile in sorted(collectContentTypes(packFolder).items()):
+        setOwner = mapOwner.get(typeName)
+        if setOwner is None or None in setOwner or setOwner & setModule:
+            continue
+        listOwner = ", ".join(sorted(owner.removeprefix("game:") + " 게임" if owner.startswith("game:") else owner for owner in setOwner))
+        listProblem.append(f"{packRoot}/{listFile[0]}{' 외 ' + str(len(listFile) - 1) + ' 파일' if len(listFile) > 1 else ''} 이 쓰는 {typeName}({listOwner})")
+    if listProblem:
+        listProblem.append(f"  → {fix}")
+    return listProblem
+
+
 def checkContentModules(projectRoot: Path) -> int:
-    """어긋남이 있으면 `GeneratorError`. 본 팩 수를 돌려줍니다."""
+    """어긋남이 있으면 `GeneratorError`. 본 팩 수를 돌려줍니다.
+
+    도메인마다 쓸 수 있는 모듈: `game/<팩>` 은 그 게임이 가진 것, `common/` 은 모든 게임이 가진 것(어느 게임이 쓸지 정적으로 알 수 없다 — 기믹 프리팹은
+    코드가 이름으로 찾는다), `editor/` 는 엔진과 `EditorModule`, `engine/` 은 엔진만(모든 호스트 — 서버 · 도구도 읽는다).
+    """
     sourceRoot = projectRoot / "Source"
+    contentRoot = projectRoot / "Content"
     mapFolder, mapManifestByName = collectManifests(sourceRoot)
     mapOwner = collectTypeOwners(sourceRoot, mapFolder)
 
     listProblem: list[str] = []
+    setEveryGame: set[str] | None = None
     listGameFolder = sorted(path.parent for path in (sourceRoot / "Games").glob("*/SWGame.module.json"))
     for gameFolder in listGameFolder:
         presetPath = projectRoot / kDirRuntimeGamePreset / f"{gameFolder.name}.json"
@@ -160,27 +181,27 @@ def checkContentModules(projectRoot: Path) -> int:
             packRoot = json.loads(presetPath.read_text(encoding="utf-8"))["_packRoot"]
         except (OSError, ValueError, KeyError) as exception:
             raise GeneratorError(f"{presetPath}: 게임 {gameFolder.name} 의 _packRoot 를 읽지 못했다 ({exception!r})") from exception
-        packFolder = projectRoot / "Content" / packRoot
+        packFolder = contentRoot / packRoot
         if not packFolder.is_dir():
             raise GeneratorError(f"{presetPath}: _packRoot '{packRoot}' 폴더가 없다")
         setModule = collectGameModules(gameFolder, readManifest(gameFolder / "SWGame.module.json"), mapManifestByName)
-        for typeName, listFile in sorted(collectContentTypes(packFolder).items()):
-            setOwner = mapOwner.get(typeName)
-            if setOwner is None or None in setOwner or setOwner & setModule:
-                continue
-            listOwner = ", ".join(sorted(owner.removeprefix("game:") + " 게임" if owner.startswith("game:") else owner for owner in setOwner))
-            listProblem.append(f"{packRoot}/{listFile[0]}{' 외 ' + str(len(listFile) - 1) + ' 파일' if len(listFile) > 1 else ''} 이 쓰는 {typeName}({listOwner})")
-        if listProblem and listProblem[-1].startswith(packRoot):
-            listProblem.append(f"  → Source/Games/{gameFolder.name}/SWGame.module.json 의 _listDependency 에 그 모듈을 더하거나 콘텐츠에서 빼세요")
+        setShared = setModule - {f"game:{gameFolder.name}"}
+        setEveryGame = setShared if setEveryGame is None else setEveryGame & setShared
+        listProblem += findProblems(packRoot, packFolder, setModule, mapOwner,
+                                    f"Source/Games/{gameFolder.name}/SWGame.module.json 의 _listDependency 에 그 모듈을 더하거나 콘텐츠에서 빼세요")
+    listProblem += findProblems("common", contentRoot / "common", setEveryGame or set(), mapOwner,
+                                "common/ 은 모든 게임이 가진 모듈(" + ", ".join(sorted(setEveryGame or set())) + ")의 형식만 쓴다 — 그 게임의 팩으로 옮기세요")
+    listProblem += findProblems("editor", contentRoot / "editor", {"EditorModule"}, mapOwner, "editor/ 는 엔진 · EditorModule 형식만 쓴다")
+    listProblem += findProblems("engine", contentRoot / "engine", set(), mapOwner, "engine/ 은 엔진 형식만 쓴다(모든 호스트가 읽는다)")
     if listProblem:
-        raise GeneratorError("게임 매니페스트에 없는 모듈의 형식을 콘텐츠가 쓴다:\n  " + "\n  ".join(listProblem))
+        raise GeneratorError("콘텐츠가 그 도메인이 가질 수 없는 모듈의 형식을 쓴다:\n  " + "\n  ".join(listProblem))
     return len(listGameFolder)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     def generate(_args) -> None:
         packCount = checkContentModules(getProjectRoot())
-        print(f"[{kTag}] {packCount} game packs: content uses only modules their manifests list")
+        print(f"[{kTag}] {packCount} game packs · common · editor · engine: content uses only modules its domain has")
     return runGenerator(argv, tag=kTag, description="게임 콘텐츠가 쓰는 형식의 모듈 ⊂ 게임 매니페스트 의존", addArguments=lambda parser: None,
                         generate=generate)
 
