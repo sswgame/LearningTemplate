@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/FileSystem/DomainTable.h"
+#include "Engine/FileSystem/ResourcePath.h"
 
 // 리소스 경로 정규화와 도메인 표의 최장 일치 가르기.
 

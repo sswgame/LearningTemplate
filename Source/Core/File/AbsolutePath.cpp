@@ -2,6 +2,8 @@
 
 #include "Core/File/AbsolutePath.h"
 
+#include "Core/Log/Logger.h"
+
 namespace sw
 {
     namespace
@@ -40,5 +42,25 @@ namespace sw
                 ch = '/';
         }
         return AbsolutePath{ std::move( normalized ) };
+    }
+
+    namespace
+    {
+        // 설치는 기동 스레드 하나에서만 한다(그 뒤 읽기만이라 락이 없다).
+        std::optional<ProcessRoots> g_roots;
+    } // namespace
+
+    void ProcessRoots::install( ProcessRoots roots )
+    {
+        if ( g_roots.has_value() )
+            SW_FATAL( "ProcessRoots::install called twice" );
+        g_roots = std::move( roots );
+    }
+
+    const ProcessRoots& ProcessRoots::get()
+    {
+        if ( g_roots.has_value() == false )
+            SW_FATAL( "ProcessRoots::get before install - the process roots are set once at startup" );
+        return *g_roots;
     }
 } // namespace sw

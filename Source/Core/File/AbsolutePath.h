@@ -1,6 +1,6 @@
 /**
  * @file AbsolutePath.h
- * @brief 엄격하게 확인한 절대 디스크 경로 형식입니다. 디스크 I/O(R2)가 받을 형식이며, 0 단계에서는 아직 아무도 쓰지 않습니다.
+ * @brief 엄격하게 확인한 절대 디스크 경로 형식(`AbsolutePath`)과 기동 때 한 번 정하는 루트 폴더 모음(`ProcessRoots`)입니다. 디스크 I/O(R2)가 받을 형식이며, 0 단계에서는 아직 아무도 쓰지 않습니다.
  * @details `FileUtil::isAbsolutePath` 는 `C:foo`(드라이브 상대) · `\foo`(드라이브 없는 루트)도 절대로 본다. 이 형식은 그것들을 거절한다 —
  *          Windows 는 `X:/` · `X:\` · UNC(`//서버/공유`), POSIX 는 `/` 로 시작해야 한다. 만드는 길은 `tryMake` 하나이고 구분자는 `/` 로 맞춘다(대소문자는 그대로).
  *          언리얼 `FPaths::IsRelative` 의 반대가 아니라, 만들 때 한 번 검증한 값을 들고 다니는 형식이다.
@@ -39,5 +39,29 @@ namespace sw
         }
 
         string _path;
+    };
+
+    /**
+     * @struct ProcessRoots
+     * @brief 프로세스가 기동 때 한 번 정하는 루트 폴더 모음입니다(R5). 상대 경로는 실행 중 작업 폴더가 아니라 이 루트 기준으로 입력 경계에서 한 번 절대화한다.
+     * @details 0 단계에서는 형식만 있고 아직 아무도 설치하지 않는다. 2 단계가 App · Server · 테스트 하네스 기동에서 `install` 하고, 지금 Saved 를 따로 구하는 일곱 곳을 `get()` 으로 바꾼다.
+     *          못 정했으면 `get()` 이 멈춘다(폴백 없음 - 언리얼 `FPaths::ProjectSavedDir` 도 기동 때 정해진다).
+     */
+    struct SW_API ProcessRoots
+    {
+        AbsolutePath binary;   ///< 실행 파일 폴더
+        AbsolutePath project;  ///< 프로젝트(저장소) 루트 - `-project=`
+        AbsolutePath content;  ///< 리소스 도메인 루트(`Content`)
+        AbsolutePath saved;    ///< 개발 파생물(셰이더 캐시 · 임시)
+        AbsolutePath logs;     ///< 로그
+        AbsolutePath crash;    ///< 크래시 덤프
+        AbsolutePath userData; ///< 사용자 설정 · 세이브
+        AbsolutePath packs;    ///< 팩(`.pack`)
+        AbsolutePath ddc;      ///< 파생 데이터 캐시
+
+        /** @brief 루트를 설치합니다. 두 번 부르면 멈춥니다(기동 한 번). */
+        static void install( ProcessRoots roots );
+        /** @brief 설치된 루트입니다. 설치 전이면 멈춥니다. */
+        [[nodiscard]] static const ProcessRoots& get();
     };
 } // namespace sw
