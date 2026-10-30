@@ -6,16 +6,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct WeaponMathInternal
-        {
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     float3 WeaponMath::applySpread( const float3& direction, float32 coneHalfAngle, GameRandom& random )
     {
         if ( coneHalfAngle <= 0.0f )
