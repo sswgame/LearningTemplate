@@ -81,7 +81,14 @@
 	<Wait frames="40"/>
 	<CaptureEditorUI file="charactereditor/clip.png"/>
 	<!-- 꾸미기 슬라이더(스키마가 있는 프리셋이면 뷰포트 아래에 나온다): 눌러 값을 바꾸고 놓으면 몸이 다시 입혀진다 — 눈으로 본다 -->
+	<!-- 슬라이더 칸은 창 아래로 넘친다 — 창 위쪽(클립 고르기)에 커서를 두고 휠로 창을 내린다 -->
 	<Wait frames="10"/>
+	<EditorHover mark="charactereditor.clip" anchor="0.5,0.5"/>
+	<Wait frames="2"/>
+	<EditorWheel dy="-10"/>
+	<Wait frames="5"/>
+	<EditorHover release="true"/>
+	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.slider.first"/>
 	<Wait frames="60"/>
 	<CaptureEditorUI file="charactereditor/slider.png"/>
