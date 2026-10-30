@@ -31,6 +31,7 @@ namespace sw
         int32                  _priority{ 0 };         ///< 높을수록 우선 탐색
         shared_ptr<PackReader> _pReader;               ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
         vector<uint64>         _listRemovedPathHash{}; ///< 패치 팩이 지운 전체 경로의 해시(정렬). 이 팩보다 낮은 우선순위의 같은 경로를 가린다(`mountPatchPack`)
+        bool                   _bPatch{ false };       ///< 패치 팩이면 true - 항목이 전체 경로라 도메인 팩이 아니다(도메인 없는 키를 풀 도메인 목록에서 뺀다)
     };
 } // namespace sw
 
@@ -159,14 +160,14 @@ namespace sw
          */
         [[nodiscard]] bool mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath );
         /** @brief 팩을 열어 지움 목록 해시(@p listRemovedPathHash, 정렬됨)와 함께 마운트합니다. `mountPack` 과 `mountPatchPack` 의 본문입니다. */
-        [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash );
+        [[nodiscard]] bool mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, bool bPatch );
         /**
          * @brief 경로를 가진 팩의 리더를 잠금 안에서 찾아 사본을 돌려줍니다. 읽기는 부르는 쪽이 잠금 밖에서 합니다 — 한 팩의 읽기가 다른 팩
          *        · 다른 스레드의 읽기를 줄 세우지 않는다.
          * @param outPathHash 그 팩 안에서 찾은 해시(전체 경로 또는 도메인을 뗀 경로)
-         * @param outPathInPack 그 팩 안의 경로(@p relativePath 를 가리킨다)
+         * @param outPathInPack 그 팩 안의 경로(사본 - 도메인 없는 키는 찾는 동안 만든 전체 키에서 나온다)
          */
-        shared_ptr<PackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const;
+        shared_ptr<PackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string& outPathInPack ) const;
 
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );

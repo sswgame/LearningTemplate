@@ -37,7 +37,7 @@ namespace sw
         const hashed_string  trackName   = _trackName.empty() == false ? _trackName : ( pPawnObject != nullptr ? pPawnObject->getName() : hashed_string{} );
         ControlIntentHistory history;
         string               error;
-        if ( history.loadFromFile( _trackFile, error ) == false )
+        if ( history.loadFromAsset( AssetID{ _trackFile }, error ) == false ) // 씬 데이터의 칸은 리소스다(작업 폴더 기준 디스크 경로가 아니다)
         {
             SW_LOG_ERROR( "Intent track controller could not load %#", error.c_str() );
             return;

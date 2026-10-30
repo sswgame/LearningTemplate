@@ -14,6 +14,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/FileSystem/AssetID.h"
+
 #include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -77,8 +79,10 @@ namespace sw
         [[nodiscard]] bool read( BitReader& reader, string& outError );
         /** @brief @p path 에 원자적으로 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
-        /** @brief @p path 를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
+        /** @brief 디스크 파일 @p path(절대 경로 - 녹화 · 개발 명령)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
         [[nodiscard]] bool loadFromFile( string_view path, string& outError );
+        /** @brief 리소스 @p assetID(씬 데이터의 트랙 칸 - 낱개 파일 또는 팩)를 읽습니다. 못 읽으면 false 와 이유를 반환합니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, string& outError );
 
         int32 getTrackCount() const { return static_cast<int32>( _listTrack.size() ); }
         /** @brief 트랙 하나를 반환합니다. @p trackIndex 는 0 부터 `getTrackCount` 미만입니다. */
@@ -92,6 +96,9 @@ namespace sw
         int32              getCapacityTicks() const { return _capacityTicks; }
 
     private:
+        /** @brief 읽은 바이트를 기록으로 옮깁니다(두 읽기 입구가 함께 쓴다). @p label 은 오류 글의 출처입니다. */
+        [[nodiscard]] bool loadFromBytes( const vector<uint8>& bytes, string_view label, string& outError );
+
         /** @brief 고리에 남아 있는 가장 이른 틱을 반환합니다. */
         static uint32 computeOldestTick( const ControlIntentTrack& track );
 

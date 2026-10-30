@@ -21,28 +21,14 @@ namespace sw
 {
     SW_LOG_CALLER( "AssetDatabase" );
 
-    string AssetDatabase::toRelativePath( string_view absolutePath )
+    string AssetDatabase::toRootAssetID( string_view absolutePath )
     {
-        const string  absNorm      = FileUtil::normalizeSeparators( absolutePath );
-        const string& resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-        if ( resourceRoot.empty() )
+        // 리소스 id 로 바꾸는 계산은 `AssetPaths::toAssetID` 하나다. 붙인 디스크 도메인(시나리오의 `saved`)은 리소스 루트 밖이라 `.meta` · GUID 를 주지 않는다.
+        const AssetPaths& paths   = engine::getSubsystem<AssetPaths>();
+        const string      assetID = paths.toAssetID( absolutePath );
+        if ( assetID.empty() || paths.isMountedDiskDomainID( assetID ) )
             return {};
-
-        string rootNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-
-        string rel;
-        if ( FileUtil::makeRelativePath( rootNorm, absNorm, rel ) == false )
-        {
-            rel.clear();
-            return rel;
-        }
-        rel = FileUtil::normalizePath( rel );
-        // 리소스 루트 밖의 경로는 상대 경로가 ".." 로 시작한다 — 리소스 id 가 아니므로 빈 문자열이다.
-        const bool bOutsideRoot = rel == ".." || StringUtil::startsWith( rel, "../" );
-        const bool bNoAsset     = rel.empty() || rel == "." || bOutsideRoot;
-        if ( bNoAsset )
-            rel.clear();
-        return rel;
+        return assetID;
     }
 
     string AssetDatabase::metaPathFor( string_view relativePath )
@@ -69,7 +55,7 @@ namespace sw
         // `Assets/` 밖에는 .meta 를 만들지 않는다). 판정은 정규화 **전** 경로로 한다 — 루트와 대소문자를 비교해야 한다.
         if ( FileUtil::isAbsolutePath( relativePath ) )
         {
-            string rootRelative = toRelativePath( relativePath );
+            string rootRelative = toRootAssetID( relativePath );
             if ( rootRelative.empty() || StringUtil::startsWith( rootRelative, ".." ) )
                 return result;
             // 루트 안이면 키는 그 전역 id 다. 절대 경로를 키로 쓰면 같은 에셋이 id 키와 절대 경로 키를 따로 갖고 GUID → 경로가
@@ -203,7 +189,7 @@ namespace sw
                     continue;
 
                 const string abs = FileUtil::normalizeSeparators( filePath );
-                rel              = toRelativePath( abs );
+                rel              = toRootAssetID( abs );
             }
 
             if ( rel.empty() )
@@ -230,8 +216,8 @@ namespace sw
 
         // 절대 경로는 대소문자를 **보존**해서 받아야 한다(refreshFolder 와 같은 규칙). normalizePath 는
         // 경로 전체를 소문자로 내리는데, 그러면 실제 디렉터리 이름이 섞여 있는 구간(예: .../LearningTemplate/Content)
-        // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRelativePath 의 루트 비교가 어긋난다.
-        // 소문자화는 상대 경로가 된 뒤 toRelativePath 안에서 한 번만 한다.
+        // 까지 소문자가 되어 대소문자를 가리는 파일시스템에서 toRootAssetID 의 루트 비교가 어긋난다.
+        // 소문자화는 상대 경로가 된 뒤 toRootAssetID 안에서 한 번만 한다.
         vector<string> listMeta;
         // 더하기만 하는 등록이라 모은 데까지 등록한다(`refreshFolder` 와 같다) — 도중에 멈춘 것은 collectFiles 가 경로와 함께 알린다.
         (void)FileUtil::collectFiles( absoluteRoot, path::kMetaExtension, listMeta, true );
@@ -239,7 +225,7 @@ namespace sw
         uint32 count{ 0 };
         for ( const string& metaAbs : listMeta )
         {
-            const string metaRel = toRelativePath( metaAbs );
+            const string metaRel = toRootAssetID( metaAbs );
             if ( metaRel.size() <= string_view( path::kMetaExtension ).size() )
                 continue;
             const string assetRel = metaRel.substr( 0, metaRel.size() - string_view( path::kMetaExtension ).size() );

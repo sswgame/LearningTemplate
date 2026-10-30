@@ -18,18 +18,12 @@ namespace sw
     {
         struct LocalizationManagerInternal
         {
-            /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
+            /** @brief 두 리소스 id 가 같은 파일인지 확인합니다(구분자 · 대소문자 무시). */
             static bool isSamePath( string_view lhs, string_view rhs )
             {
-                const string left  = FileUtil::normalizeSeparators( lhs );
-                const string right = FileUtil::normalizeSeparators( rhs );
-                if ( left.empty() || right.empty() )
-                    return false;
-                if ( StringUtil::equals( left, right, true ) )
-                    return true;
-                const string& longer  = left.size() > right.size() ? left : right;
-                const string& shorter = left.size() > right.size() ? right : left;
-                return StringUtil::endsWith( longer, "/" + shorter, true );
+                // 둘 다 리소스 id 다(파일 감시 · 데이터 표 편집 · 이 매니저) - 정규화한 id 가 같은지만 본다. 예전에는 꼬리 글자로도 같다고 봐(`a/x` 와 `b/a/x`)
+                // 다른 폴더의 같은 이름 파일 저장이 엉뚱한 프로젝트를 다시 읽게 했다.
+                return lhs.empty() == false && FileUtil::normalizePath( lhs ) == FileUtil::normalizePath( rhs );
             }
         };
     } // namespace

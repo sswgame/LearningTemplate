@@ -106,8 +106,8 @@ namespace sw
                     return false;
 
                 const string_view firstPart = relativePath.substr( 0, firstSlash );
-                // game/<pack>/... 인 경우
-                if ( StringUtil::equals( firstPart, "game", true ) )
+                // game/<pack>/... · dlc/<이름>/... 는 두 칸이 도메인이다(팩 파일 `game_<pack>` · `dlc_<이름>`). 예전에는 game 만 보아 dlc 팩에서 찾지 못했다.
+                if ( StringUtil::equals( firstPart, "game", true ) || StringUtil::equals( firstPart, "dlc", true ) )
                 {
                     const size_t secondSlash = relativePath.find( '/', firstSlash + 1 );
                     if ( secondSlash != string_view::npos )
@@ -200,7 +200,7 @@ namespace sw
              * @return 방문자가 true 를 반환한 적이 있으면 true 입니다.
              */
             template <typename VisitFn>
-            static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
+            static bool visitPacksWithFullKey( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
             {
                 const uint64 pathHash  = HashUtil::computeStringHash64( relativePath );
                 const size_t packLimit = findRemovingPackIndex( listMountedPack, pathHash );
@@ -224,6 +224,60 @@ namespace sw
                     if ( mounted._pReader == nullptr || matchPackDomain( mounted._domainName, queryDomain ) == false )
                         continue;
                     if ( mounted._pReader->hasFile( subHash ) && visit( mounted, subHash, subPath ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 마운트된 팩 도메인 이름(`game_empty` · `dlc_winter`)을 질의 도메인(`game/empty` · `dlc/winter`)으로 바꿉니다. 팩 파일 이름이 `/` 를 담지 못해 `_` 로 적는다. */
+            static string toQueryDomain( string_view packDomain )
+            {
+                for ( const string_view prefix : { string_view{ "game_" }, string_view{ "dlc_" } } )
+                {
+                    if ( StringUtil::startsWith( packDomain, prefix, true ) )
+                    {
+                        string domain{ packDomain };
+                        domain[prefix.size() - 1] = '/';
+                        return domain;
+                    }
+                }
+                return string{ packDomain };
+            }
+
+            /**
+             * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다. 잠금은 부르는 쪽이 쥡니다.
+             * @details 도메인이 붙은 키(`engine/…` · `game/empty/…`)는 그대로 찾는다(`visitPacksWithFullKey`). 도메인 없는 키(`textures/x.dds`)는 도메인 팩의 우선순위 순서로
+             *          `<도메인>/<키>` 전체 키를 만들어 같은 규칙으로 찾는다 - 그래야 패치 팩(전체 경로로 담는다)의 교체와 지움 목록이 도메인 없는 읽기에도 보인다.
+             *          예전에는 도메인 없는 키가 도메인 팩의 도메인을 뗀 항목에 바로 맞아, 패치가 바꾸거나 지운 파일을 옛 것으로 읽었다.
+             *          방문자가 받는 `pathInPack` 은 이 호출 안에서만 유효하다(만든 키를 가리킬 수 있다).
+             */
+            template <typename VisitFn>
+            static bool visitPacksWithFile( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
+            {
+                string_view queryDomain;
+                string_view subPath;
+                if ( trySplitDomainPrefix( relativePath, queryDomain, subPath ) )
+                {
+                    for ( const MountedPack& mounted : listMountedPack )
+                    {
+                        if ( mounted._bPatch == false && matchPackDomain( mounted._domainName, queryDomain ) )
+                            return visitPacksWithFullKey( listMountedPack, relativePath, visit );
+                    }
+                }
+                // 도메인 없는 키 - 도메인 팩마다(우선순위 순, 한 도메인 한 번) 전체 키로 찾는다.
+                vector<string> listTriedDomain;
+                for ( const MountedPack& mounted : listMountedPack )
+                {
+                    if ( mounted._bPatch || mounted._pReader == nullptr )
+                        continue;
+                    string domain = toQueryDomain( mounted._domainName );
+                    if ( std::find( listTriedDomain.begin(), listTriedDomain.end(), domain ) != listTriedDomain.end() )
+                        continue;
+                    string fullKey = domain;
+                    fullKey.push_back( '/' );
+                    fullKey.append( relativePath.data(), relativePath.size() );
+                    listTriedDomain.push_back( std::move( domain ) );
+                    if ( visitPacksWithFullKey( listMountedPack, fullKey, visit ) )
                         return true;
                 }
                 return false;
@@ -269,7 +323,7 @@ namespace sw
 
     bool PackManager::mountPack( string_view packFilePath, int32 priority )
     {
-        return mountReader( packFilePath, priority, vector<uint64>{} );
+        return mountReader( packFilePath, priority, vector<uint64>{}, false );
     }
 
     bool PackManager::mountPatchPack( string_view packFilePath, int32 priority, const vector<string>& listRemovedPath )
@@ -281,10 +335,10 @@ namespace sw
             listRemovedPathHash.push_back( HashUtil::computeStringHash64( removedPath ) );
         }
         VectorUtil::sort( listRemovedPathHash );
-        return mountReader( packFilePath, priority, std::move( listRemovedPathHash ) );
+        return mountReader( packFilePath, priority, std::move( listRemovedPathHash ), true );
     }
 
-    bool PackManager::mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash )
+    bool PackManager::mountReader( string_view packFilePath, int32 priority, vector<uint64> listRemovedPathHash, const bool bPatch )
     {
         if ( packFilePath.empty() )
             return false;
@@ -336,6 +390,7 @@ namespace sw
             mounted._priority            = effectivePriority;
             mounted._pReader             = std::move( pReader );
             mounted._listRemovedPathHash = std::move( listRemovedPathHash );
+            mounted._bPatch              = bPatch;
 
             _listMountedPack.push_back( std::move( mounted ) );
 
@@ -437,7 +492,7 @@ namespace sw
         }
     }
 
-    shared_ptr<PackReader> PackManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
+    shared_ptr<PackReader> PackManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string& outPathInPack ) const
     {
         shared_ptr<PackReader> pFound;
         ScopedLock<mutex>      lock{ _vfsMutex };
@@ -446,7 +501,7 @@ namespace sw
         {
             pFound        = mounted._pReader;
             outPathHash   = pathHash;
-            outPathInPack = pathInPack;
+            outPathInPack = string{ pathInPack }; // 만든 전체 키를 가리킬 수 있다 - 사본을 든다
             return true;
         } );
         return pFound;
@@ -458,7 +513,7 @@ namespace sw
             return false;
 
         uint64                       pathHash{ 0 };
-        string_view                  pathInPack;
+        string                       pathInPack;
         const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         return pReader != nullptr && pReader->readFile( pathHash, outBytes );
     }
@@ -469,7 +524,7 @@ namespace sw
             return false;
 
         uint64                       pathHash{ 0 };
-        string_view                  pathInPack;
+        string                       pathInPack;
         const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         if ( pReader == nullptr || pReader->readTextFile( pathInPack, outText ) == false )
             return false;
@@ -484,7 +539,7 @@ namespace sw
             return AsyncReadHandle{};
 
         uint64                       pathHash{ 0 };
-        string_view                  pathInPack;
+        string                       pathInPack;
         const shared_ptr<PackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         if ( pReader == nullptr )
             return AsyncReadHandle{};

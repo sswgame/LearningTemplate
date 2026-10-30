@@ -378,7 +378,7 @@ namespace sw::editor
             }
 
             ++copied;
-            const string rel = AssetDatabase::toRelativePath( destPath );
+            const string rel = AssetDatabase::toRootAssetID( destPath );
             if ( rel.empty() == false )
                 editor::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( rel, true );
             SW_LOG_TRACE( "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );

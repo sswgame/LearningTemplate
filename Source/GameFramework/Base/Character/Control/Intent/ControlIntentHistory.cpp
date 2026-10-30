@@ -6,6 +6,8 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/FileSystem/AssetIO.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "ControlIntentHistory" );
@@ -174,10 +176,27 @@ namespace sw
             reset();
             return false;
         }
+        return loadFromBytes( bytes, path, outError );
+    }
+
+    bool ControlIntentHistory::loadFromAsset( const AssetID& assetID, string& outError )
+    {
+        vector<uint8> bytes;
+        if ( AssetIO::readBinaryAsset( assetID, bytes ) == false )
+        {
+            outError = assetID.str() + ": could not read";
+            reset();
+            return false;
+        }
+        return loadFromBytes( bytes, assetID.view(), outError );
+    }
+
+    bool ControlIntentHistory::loadFromBytes( const vector<uint8>& bytes, string_view label, string& outError )
+    {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( read( reader, outError ) )
             return true;
-        outError = string( path ) + ": " + outError;
+        outError = string( label ) + ": " + outError;
         return false;
     }
 
