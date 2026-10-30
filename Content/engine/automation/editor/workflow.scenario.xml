@@ -3,7 +3,7 @@
   에디터 시나리오 ① 기본 작업 흐름 — 새 씬 → Hierarchy "+ Create" → 오른쪽 클릭 메뉴로 컴포넌트 붙이기 → 인스펙터에서 이름 고치기 → 되돌리기 · 다시 실행 →
   다른 이름으로 저장 → 새 씬 → 다시 열어 값 확인 → 에디터 안 플레이 시작 · 정지(편집 씬이 그대로).
   패널 입력은 ImGui 사건(EditorClick · EditorText · EditorKey), 메뉴 · 대화상자가 필요한 명령은 개발 명령(DevCommand — 저장 대화상자 대신 scene.saveAs).
-  실행: App -EnableEditor -scenario=engine/automation/editor/workflow.scenario.xml -unattended   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+  실행: App -EnableEditor -scenario=engine/automation/editor/workflow.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.workflow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 에디터가 첫 씬을 다 열고 패널을 한 번씩 그릴 때까지 기다린 뒤 빈 씬에서 시작한다 -->

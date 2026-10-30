@@ -5,7 +5,7 @@
   ③ Play 중에도 씬 뷰는 에디터 카메라 그대로이고 그 카메라로 둘러볼 수 있다 — 게임 뷰만 게임 카메라를 따른다. ④ Stop 뒤 정지로 돌아온다.
   ⑤ 게임 뷰 패널을 닫으면 게임 뷰 RT 요청이 0 이다.
   스크린샷은 주 출력이다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰(격자 · 기즈모는 ImGui 오버레이라 어느 쪽 그림에도 없다).
-  실행: App -EnableEditor -scenario=engine/automation/editor/sceneviewgameview.scenario.xml -unattended   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+  실행: App -EnableEditor -scenario=engine/automation/editor/sceneviewgameview.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.sceneviewgameview" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->

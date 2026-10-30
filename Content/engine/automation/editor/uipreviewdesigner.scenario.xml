@@ -7,15 +7,14 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/uipreviewdesigner.scenario.xml -unattended
 -->
 <Scenario name="editor.uipreviewdesigner" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<AllowLog id="UIPreview.UnsavedEditsDiscarded" reason="체인에서는 앞 시나리오(uipreview)가 고친 채 둔 문서를 이 시나리오가 다른 문서를 열며 버린다 — 그 경고는 체인에서만 난다"/>
 	<Scratch from="engine/automation/editor/uipreview" as="scratch/uipreviewdesigner"/>
 	<Wait frames="20"/>
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<!-- 체인에서는 앞 시나리오(uipreview)가 고친 채 둔 문서를 이 시나리오가 다른 문서를 열며 버린다 — 그 경고는 체인에서만 난다 -->
 	<Wait frames="1"/>
-	<ExpectLog id="UIPreview.UnsavedEditsDiscarded" atLeast="0"/>
 	<!-- 1) 슬롯 손잡이 -->
 	<Wait frames="34"/>
 	<EditorKey key="Ctrl+P"/>

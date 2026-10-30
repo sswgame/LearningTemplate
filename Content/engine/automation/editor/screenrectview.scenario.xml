@@ -3,7 +3,7 @@
   에디터 시나리오 — 화면 사각형 뷰(PiP)가 에디터 게임 뷰(ImGui 이미지로 보이는 게임 뷰 RT) 안의 자기 사각형에 그려진다.
   테스트 씬(engine/automation/editor/screenrectview/screenrectview.scene.xml): 주 카메라는 빈 곳을 보고, PiP 카메라(사각형 0.55,0.55,0.4,0.4)는 30 m 옆의 큐브를 본다.
   게임 뷰를 앞으로 내고 주 출력(게임 뷰 RT)을 찍어, PiP 사각형 안만 큐브로 밝고 왼쪽 위는 배경 그대로인지 본다. 씬 뷰가 주 출력이면 PiP 는 빠진다(RenderPacketBuilder).
-  실행: App -EnableEditor -scenario=engine/automation/editor/screenrectview.scenario.xml -unattended   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
+  실행: App -EnableEditor -scenario=engine/automation/editor/screenrectview.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.screenrectview" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Wait frames="5"/>
