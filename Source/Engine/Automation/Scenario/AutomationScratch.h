@@ -41,6 +41,11 @@ namespace sw
          */
         static string makeInstanceID( string_view name );
         /**
+         * @brief 리소스 id @p assetID 가 다른 프로세스의 사본(`scratch/<이름>_p<다른 pid>/…` — `makeInstanceID`)이면 true 입니다. 꼬리가 없거나 이 프로세스의 사본이면 false.
+         * @details 나란히 도는 시나리오 실행(백엔드마다 하나)은 같은 `Content/scratch/` 에 저마다 사본을 만든다 — 에디터의 파일 감시는 남의 사본 쓰기를 무시해야 한다.
+         */
+        [[nodiscard]] static bool isOtherProcessInstance( string_view assetID );
+        /**
          * @brief 프로세스 꼬리를 가진 폴더(`…/<이름>_p<pid>` — `makeInstanceID`)를 비우고, 같은 이름의 다른 폴더 가운데 끝난 프로세스의 것을 지웁니다.
          * @details 사본 말고도 프로세스마다 따로 두는 폴더(시나리오 실행의 에디터 상태)가 같은 거두기를 쓴다. 못 지운 것은 `FileUtil` 이 경고를 남긴다.
          */

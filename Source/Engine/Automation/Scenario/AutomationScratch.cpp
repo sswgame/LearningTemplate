@@ -220,6 +220,20 @@ namespace sw
         return string( name ) + string( AutomationScratchInternal::kInstanceMark ) + to_string( Process::getCurrentProcessID() );
     }
 
+    bool AutomationScratch::isOtherProcessInstance( string_view assetID )
+    {
+        const string_view domain = kScratchDomain;
+        if ( StringUtil::startsWith( assetID, domain ) == false || assetID.size() <= domain.size() || assetID[domain.size()] != '/' )
+            return false;
+        const string_view rest   = assetID.substr( domain.size() + 1 );
+        const string_view folder = rest.substr( 0, rest.find( '/' ) );
+        const size_t      markAt = folder.rfind( AutomationScratchInternal::kInstanceMark );
+        int32             ownerID{ 0 };
+        if ( markAt == string_view::npos || AutomationScratchInternal::parseProcessID( folder.substr( markAt + AutomationScratchInternal::kInstanceMark.size() ), ownerID ) == false )
+            return false;
+        return ownerID != static_cast<int32>( Process::getCurrentProcessID() );
+    }
+
     void AutomationScratch::resetInstanceFolder( const string& instanceDir )
     {
         AutomationScratchInternal::removeDeadInstances( instanceDir );

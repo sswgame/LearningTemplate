@@ -239,6 +239,10 @@ namespace sw::editor
 
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
     {
+        // 다른 프로세스(나란히 도는 시나리오 실행)의 스크래치 사본은 이 에디터의 콘텐츠가 아니다 — 그 쓰기마다 참조 색인을 처음부터 다시 읽어 단언이 낡은 색인을 봤다(assetmanage).
+        const string eventAssetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
+        if ( AutomationScratch::isOtherProcessInstance( eventAssetID ) )
+            return;
         ++_contentChangeSerial;
         bool bOwnFence = false;
         if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent, bOwnFence ) )
@@ -257,7 +261,7 @@ namespace sw::editor
                 _bChangedPathsUnknown = true;
             return;
         }
-        const string assetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
+        const string& assetID = eventAssetID;
         if ( assetID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
         {
             _bChangedPathsUnknown = true;
