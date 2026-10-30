@@ -657,6 +657,11 @@ msgctxt "EdCommon.ThemeWindowRounding"
 msgid "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)."
 msgstr "에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)"
 
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.ToolbarOverflow"
+msgid "More toolbar buttons that do not fit in the window width."
+msgstr "창 폭에 들지 않는 나머지 툴바 단추"
+
 #: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
 msgctxt "EdCommon.UnknownPin"
 msgid "Unknown pin"

@@ -43,7 +43,16 @@ namespace sw::editor
                 Simulate
             };
 
-            static constexpr const utf8* kUnsavedPopupID = "##UnsavedScenePlay";
+            /** @brief 재생 단추 뒤의 묶음입니다. 줄에 들지 않는 묶음부터 끝까지 넘침 펼침으로 옮긴다. */
+            enum class Section : uint8
+            {
+                SessionOptions = 0, ///< 카메라에서 시작 · 시간 배율 · 자동 플레이
+                RenderDoc,
+                Count
+            };
+
+            static constexpr const utf8* kUnsavedPopupID  = "##UnsavedScenePlay";
+            static constexpr const utf8* kOverflowPopupID = "##EditorPlayToolbarOverflow";
 
             /** @brief 도구줄이 프레임 사이에 기억하는 값입니다. 에디터 범위의 상태 저장소가 소유한다. */
             struct State
@@ -51,8 +60,9 @@ namespace sw::editor
                 int32          _stepFrameCount{ 10 }; ///< "Step N" 이 진행할 프레임 수
                 PendingSession _pendingSession{ PendingSession::Play };
                 bool           _bConfirmUnsavedPlay{ false };
-                bool           _bStartAtCamera{ false }; ///< Play 를 에디터 카메라 위치에서 시작한다
-                bool           _bAutoplayDrawn{ false }; ///< 마지막 프레임에 자동 플레이 단추를 그렸다
+                bool           _bStartAtCamera{ false };                                  ///< Play 를 에디터 카메라 위치에서 시작한다
+                bool           _bAutoplayDrawn{ false };                                  ///< 마지막 프레임에 자동 플레이 단추를 그렸다
+                float32        _arrSectionWidth[static_cast<size_t>( Section::Count )]{}; ///< 묶음마다 마지막으로 그린 폭(넘침 판정)
             };
 
             static State& getState() { return getEditorState<State>(); }
@@ -229,7 +239,6 @@ namespace sw::editor
             /** @brief 게임이 자동 플레이를 등록했으면(`SW_GAME_AUTOPLAY`) 켜고 끄는 단추를 그립니다. */
             static void drawAutoplayButton()
             {
-                getState()._bAutoplayDrawn              = false;
                 const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
                 if ( pActive == nullptr )
                     return;
@@ -261,6 +270,64 @@ namespace sw::editor
                         pTooltip = SW_LOCKEY( "EdCommon", "RenderDocUnavailable" );
                     ImGui::SetTooltip( "%s", pTooltip );
                 }
+            }
+
+            /** @brief 묶음 하나를 그리고 그 폭을 다음 프레임의 넘침 판정에 남깁니다. */
+            static void drawSection( Section section )
+            {
+                ImGui::BeginGroup();
+                if ( section == Section::SessionOptions )
+                {
+                    drawSessionOptions();
+                    drawAutoplayButton();
+                }
+                else
+                    drawRenderDocButton();
+                ImGui::EndGroup();
+                getState()._arrSectionWidth[static_cast<size_t>( section )] = ImGui::GetItemRectSize().x;
+            }
+
+            /**
+             * @brief 재생 단추 뒤의 묶음을 그립니다. 줄에 들지 않는 묶음부터는 "»" 단추의 펼침에 넣는다.
+             * @details 툴바는 한 줄 높이라 넘친 단추는 잘려 눌리지 않는다 — 언리얼 SToolBar 의 넘침 펼침과 같다. 폭은 앞 프레임에 잰 값이다(처음 한 프레임은 모두 줄에 둔다).
+             */
+            static void drawTrailingSections()
+            {
+                getState()._bAutoplayDrawn       = false; // 묶음이 접힌 펼침에 들면 이번 프레임에는 그리지 않는다
+                constexpr size_t  kSectionCount  = static_cast<size_t>( Section::Count );
+                const ImGuiStyle& style          = ImGui::GetStyle();
+                const float32     separatorWidth = style.ItemSpacing.x * 2.0f + ImGui::CalcTextSize( "|" ).x;
+                const float32     overflowWidth  = style.ItemSpacing.x + ImGui::CalcTextSize( ">>" ).x + style.FramePadding.x * 2.0f;
+                const float32     rightX         = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+                float32           endX           = ImGui::GetItemRectMax().x;
+                float32           allEndX        = endX;
+                for ( const float32 width : getState()._arrSectionWidth )
+                    allEndX += separatorWidth + width;
+                size_t firstOverflow = kSectionCount;
+                if ( allEndX > rightX )
+                {
+                    // 넘치면 "»" 단추 자리를 남기고 든 데까지만 줄에 둔다.
+                    firstOverflow = 0;
+                    while ( firstOverflow < kSectionCount && endX + separatorWidth + getState()._arrSectionWidth[firstOverflow] + overflowWidth <= rightX )
+                        endX += separatorWidth + getState()._arrSectionWidth[firstOverflow++];
+                }
+                for ( size_t i = 0; i < firstOverflow; ++i )
+                {
+                    EditorWidgets::drawToolbarSeparator();
+                    drawSection( static_cast<Section>( i ) );
+                }
+                if ( firstOverflow == kSectionCount )
+                    return;
+                ImGui::SameLine();
+                if ( ImGui::Button( ">>" ) )
+                    EditorInputGUI::openPopup( kOverflowPopupID );
+                EditorSelfTestMarks::note( "toolbar.overflow" );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ToolbarOverflow" ) );
+                if ( ImGui::BeginPopup( kOverflowPopupID ) == false )
+                    return;
+                for ( size_t i = firstOverflow; i < kSectionCount; ++i )
+                    drawSection( static_cast<Section>( i ) );
+                ImGui::EndPopup();
             }
 
             /** @brief 미저장 씬에서 Play 를 눌렀을 때의 확인 모달입니다. */
@@ -304,11 +371,7 @@ namespace sw::editor
         if ( ImGui::BeginViewportSideBar( "##EditorPlayToolbar", pViewport, ImGuiDir_Up, height, kFlags ) )
         {
             EditorPlayToolbarInternal::drawTransportControls();
-            EditorWidgets::drawToolbarSeparator();
-            EditorPlayToolbarInternal::drawSessionOptions();
-            EditorPlayToolbarInternal::drawAutoplayButton();
-            EditorWidgets::drawToolbarSeparator();
-            EditorPlayToolbarInternal::drawRenderDocButton();
+            EditorPlayToolbarInternal::drawTrailingSections();
         }
         ImGui::End();
         EditorPlayToolbarInternal::drawUnsavedPlayPopup();

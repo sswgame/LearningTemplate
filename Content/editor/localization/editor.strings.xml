@@ -676,6 +676,11 @@
 				<item>Source/Editor/Common/GUI/Theme/EditorThemeUtil.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdCommon.ToolbarOverflow" source="More toolbar buttons that do not fit in the window width.">
+			<origins>
+				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdCommon.UnknownPin" source="Unknown pin">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorNodeGraph.cpp</item>

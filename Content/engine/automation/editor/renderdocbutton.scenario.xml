@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — RenderDoc 단추(EditorPlus G3): -renderdoc 없이 띄우면 RenderDoc 이 붙지 않고, 상단 툴바의 회색 단추를 눌러도 아무 일이 없다.
+  기동 기본 창 크기에서는 단추가 툴바 줄에 들지 않아 "»" 넘침 펼침에 있다 — 펼침을 열고 누른다(넘침이 없으면 표식이 없어 진다).
   실제 캡처는 RenderDoc 이 설치된 기계에서만 되므로 시나리오에 넣지 않는다(App.exe -dx12 -renderdoc -EnableEditor → 단추 → Saved/RenderDoc/*.rdc).
   실행: App -EnableEditor -scenario=engine/automation/editor/renderdocbutton.scenario.xml -unattended
 -->
 <Scenario name="editor.renderdocbutton" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
-	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="10"/>
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
+	<Wait frames="10"/>
+	<EditorClick mark="toolbar.overflow"/>
 	<Wait frames="10"/>
 	<EditorClick mark="toolbar.renderDoc"/>
 	<Wait frames="40"/>
