@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 4 절 "리소스 참조를 상대 키로"(L)** — 읽기는 도메인 없는 상대 키를 검색 순서(dlc → game → common → engine → editor)로, 쓰기는 도메인을 품은 id 만. 실측: 데이터 참조 2,007 개가 모두 도메인 고정이고 상대 키로 바꿔도 해석 대상이 바뀌는 참조 0 개, 게임 사이 참조 29 개(Empty → Shooter3D KayKit). 편집기 테스트는 끝났다(체인 120 단계 백엔드 분할 472 초, statedir 쌍 CTest). 그 뒤 큰 묶음: GameFramework 테스트(TestCoverage.py 표 순서), I 절 4, J6, J8. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: **바로 다음은 4 절 "리소스 참조를 상대 키로"(L) 의 ③** — ①(게임 사이 참조 0) · ②(쓰기는 `DomainAssetID` 로만)는 끝났다. 남은 것: 편집기 고르기 자리가 상대 키를 내고, 데이터 참조를 일괄 변환하고, 브라우저에 가림 · 덮음을 보인다. 편집기 테스트는 끝났다(체인 120 단계 백엔드 분할 472 초, statedir 쌍 CTest). 그 뒤 큰 묶음: GameFramework 테스트(TestCoverage.py 표 순서), I 절 4, J6, J8. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
@@ -50,7 +50,8 @@
 - **질문**: 검색 순서(`_listResourcePriority` = game · common · engine · editor, `dlc/<이름>` 토큰 가능)로 겹쳐 찾는 장치(`AssetPaths::findLooseFile` 의 팩 상대 키, `PackManager` 우선순위 · `mountPatchPack`)는 있는데 아무도 쓰지 않는다. 게임 · DLC · 패치가 같은 상대 경로로 엔진 · 공통 에셋을 덮지 못한다.
 - **실측**(`scratchpad` 스크립트 — 다시 뽑을 때는 아래 4 의 검사로): 콘텐츠 데이터 458 파일의 참조 2,007 개가 모두 도메인 고정(`game/` 1,473 · `engine/` 510 · `common/` 24), 상대 키 0. 상대 키로 바꿔도 해석 대상이 바뀌는 참조 **0**. 같은 상대 키가 여러 도메인에 있는 것 43 — 게임끼리 36(한 번에 하나만 올라가 무해), 엔진 · 공통과 게임 4(`credits.md` · `textures_raw/import.stamp` 는 참조되지 않음, `materials/grass.material` engine↔themepark · `materials/water.material` engine↔voxelcraft 는 덮어쓰기인지 정한다). 게임 사이 참조 29(game/empty → game/shooter3d: KayKit 기사 · 도적 · 스켈레톤 전사의 메시 · 스켈레톤 · 클립 · 리그 · 소켓 · 애니메이션 그래프 · items · appearance, 연쇄 36 항목 — 메시 · 텍스처는 커밋하지 않는 임포트 산출물이라 원본 `models_raw` · `textures_raw` 와 임포트 설정째 옮기고 다시 임포트). 깨진 참조 2(`game/empty/models/testhead.facial.xml` — 임포트 산출물인지, `game/empty/prefabs/old/testprop.prefab.xml` — GUID 로 찾는 옛 경로 시험인지 확인).
 - **모양**: 데이터 `mesh="models/testhead.mesh"`(상대 키 — 이긴 파일), 일부러 고정할 때만 `material="engine/materials/grass.material"`(데이터 검사가 고정 참조로 목록에 올림). 코드 `AssetKey`(읽기 — `AssetManager::load` · 검색 순서) / `DomainAssetID{ "common", "textures/rock.dds" }`(쓰기 — 저장 · 임포트 · 이름 바꾸기 · 지우기는 이것만 받는다, 상대 키로 쓰면 컴파일 오류). 편집기: 콘텐츠 브라우저는 도메인 폴더 그대로 보이되 `[가려짐 ← game/x]` · `[덮음 → common]` 표시, 인스펙터가 고른 에셋은 상대 키로 저장(가려진 파일을 고르면 "실행에는 game 것 — 고정할까" 확인). 상용 엔진: Godot `res://` + PCK 겹치기, 언리얼 pak 우선순위(읽기는 겹쳐 찾고 쓰기는 마운트 지점을 붙인다).
-- **단계**: ① Empty 가 빌려 쓰는 KayKit 에셋을 `common/` 으로(게임 사이 참조 0 으로) ② `AssetKey` · `DomainAssetID` 와 쓰기 API ③ 편집기의 참조 저장(`AssetPaths::toAssetID` 를 부르는 고르기 자리)이 상대 키를 낸다 ④ 데이터 참조 일괄 변환(스크립트 — 바뀌는 해석 0 을 다시 확인하고) + 데이터 검사 단위 테스트(겹친 키 · 고정 참조 · 게임 사이 참조 · 깨진 참조) ⑤ 브라우저 가림 · 덮음 표시. 시나리오의 `engine/automation/…` 처럼 도메인을 다루는 도구 경로는 전역 id 그대로.
+- **단계**: ③ 편집기의 참조 저장(`AssetPaths::toAssetID` 를 부르는 고르기 자리 20 파일 40 곳)이 상대 키를 낸다 ④ 데이터 참조 일괄 변환(스크립트 — 바뀌는 해석 0 을 다시 확인하고) + 데이터 검사 단위 테스트(겹친 키 · 고정 참조 · 게임 사이 참조 · 깨진 참조) ⑤ 브라우저 가림 · 덮음 표시. 시나리오의 `engine/automation/…` 처럼 도메인을 다루는 도구 경로는 전역 id 그대로.
+- **끝난 것(2026-10-31)**: ① Shooter3D 의 캐릭터 키트(KayKit 캐릭터 · 블래스터 · 활 소품 원본, 머티리얼, rigs · characters · prefabs, `data/{anim,sockets,appearance,items.xml}`)를 같은 상대 경로로 `common/` 에 — 게임 사이 참조 0(frontiertown 의 둘은 주석). `palette.material` 은 세 게임과 키가 겹쳐 `blaster_palette.material`. Shooter3D 현지화 프로젝트가 `common/data` 도 모은다(아이템 이름). 임포트 산출물은 옮긴 뒤 Release 로 다시 임포트했다(스켈레톤 XML 이 제 도메인 경로를 품는다 — 옮기면 `--check-models` 가 "손으로 바꿨다" 로 본다). ② `DomainAssetID` · `AssetPaths::toWriteID` — 쓰기는 도메인 id 로만 풀고(상대 키는 읽기가 고른 파일, 없는 상대 키는 오류), `getWritePath` 의 "못 풀면 인자 그대로" 물러남을 지웠다. 곁 파일(.meta · 메시 수정자 · 구운 메시 · VAT)은 원본의 도메인 id 에서. 읽기용 `AssetKey` 형식은 두지 않았다(읽기는 두 종류를 다 받는 것이 뜻 — 형식이 막을 것이 없다). 저장 함수 시그니처(`SceneDocument::save` 등)까지 `DomainAssetID` 를 올리는 일은 ③ 에서 고르기 자리가 형식을 쥐게 될 때 함께.
 
 ### 편집기 테스트 복원 (2026-10-30 — 끝남)
 
@@ -183,6 +184,8 @@
 둔 것(공용어 · 실제 이름): `Cook*`(언리얼 · 프로스트바이트 · id 가 함께 쓰는 업계 말이고 대안 "Build" 는 빌드와 겹친다 — 2 절 규칙에 적는다), `Pawn` · `Possess`(게임 프레임워크의 일반 말로 굳었고 82 파일 — 대안이 더 모호하다), `Breadcrumbs`(Aftermath · 언리얼 공용), `EditorChrome`(UI 업계 말), `Tracy` · `LiveLinkFace`(실제 라이브러리 · 앱 프로토콜), `cheat.god` · `GM`(게이머 · 운영 공용어), `KartGhost`(레이싱 장르 표준), `DrainGate`.
 
 ## 5. 이번 세션의 근본 원인 (같은 결함이 남았을 곳)
+
+- (2026-10-31) 모든 도구 명령(`--check-models` · `--import-*` · `--gather-text`)이 끝날 때 죽었다 — 모듈이 내려갈 때 환경설정을 저장했고 경로를 이미 내린 서비스에서 찾았다. 환경설정 저장소가 열고 닫는다(`EditorPreferencesStore::open` · `close`, 열지 않은 실행은 쓰지 않는다). 같은 모양: 모듈 언로드 훅(`onDetaching`)에서 서비스를 찾는 일 — 지금은 이것 하나. ctest 는 도구 명령을 돌리지 않아 숨었다 — 도구 명령 하나(`--check-models`)를 CTest 로 두면 막힌다(아직 아님).
 
 - Linux 에서만 서는 결함(대소문자 · 템플릿 이름 찾기)은 Windows 빌드가 느슨해서 숨었다 → 컴파일러 오류 · 린트로 Windows 에서 잡는다(4 절 표 "Linux 빌드"). 남은 틈: Linux 전용 .cpp(X11 · Wayland · ALSA · epoll)는 Windows 가 짓지 않는다 — Linux 빌드를 정기적으로 도는 것 말고는 길이 없다(CI 후보).
 - 전용 서버 종료 때 태그별 증가 진단(Game 약 0.5 KB · Unknown · EngineMisc 각 32 B)이 Windows · Linux 에 함께 나온다. CRT 검사는 누수 없음 — 종료 직전까지 사는 할당이다. 어디서 오는지는 보지 않았다.
