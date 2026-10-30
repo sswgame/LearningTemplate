@@ -64,10 +64,12 @@ function(sw_executePythonScript SCRIPT_REL)
 		set(workDir "${SW_PY_WORKING_DIRECTORY}")
 	endif()
 
-	set(cmd "${Python3_EXECUTABLE}" "${script}" ${SW_PY_ARGS})
+	# 출력은 UTF-8 로 쓰고(파이썬 UTF-8 모드) UTF-8 로 읽는다 — Windows 의 execute_process 는 기본이 ANSI 코드 페이지(cp949)라 생성기의 한글 오류가 깨져 찍혔다.
+	set(cmd "${Python3_EXECUTABLE}" -X utf8 "${script}" ${SW_PY_ARGS})
 	execute_process(
 		COMMAND ${cmd}
 		WORKING_DIRECTORY "${workDir}"
+		ENCODING UTF-8
 		RESULT_VARIABLE res
 		OUTPUT_VARIABLE out
 		ERROR_VARIABLE err
