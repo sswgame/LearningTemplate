@@ -100,6 +100,9 @@ namespace sw
         /** @brief 연 .pack 파일의 실제 경로의 사본입니다(잠금 아래에서 복사한다). */
         string getPackPath() const;
 
+        /** @brief 팩이 적은 마운트 도메인의 사본입니다(`engine` · `game/empty` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로). */
+        string getMountDomain() const;
+
     private:
         /** @brief 항목 하나를 읽고 풀 때 필요한 것 — 잠금 안에서 찍어 두고 잠금 밖에서 씁니다. */
         struct PackReadPlan
@@ -161,6 +164,7 @@ namespace sw
         unordered_map<uint64, PackFileEntry> _mapEntry SW_GUARDED_BY( _fileMutex );
         /// 폴더(아스키 소문자, 끝 '/' 없음, 팩 맨 위는 빈 문자열) → 그 폴더 바로 아래 항목의 경로 해시. `populateFolderIndex` 가 짓고 읽기만 한다
         unordered_map<string, vector<uint64>> _mapFolderEntry SW_GUARDED_BY( _fileMutex );
+        string _mountDomain                                   SW_GUARDED_BY( _fileMutex ); ///< 스트링 풀 맨 앞의 마운트 도메인
         vector<utf8>                                          _stringPoolBytes;
     };
 

@@ -45,6 +45,7 @@ namespace sw
         , _header{}
         , _mapEntry{}
         , _mapFolderEntry{}
+        , _mountDomain{}
         , _stringPoolBytes{}
     {
     }
@@ -61,6 +62,7 @@ namespace sw
         , _header{}
         , _mapEntry{}
         , _mapFolderEntry{}
+        , _mountDomain{}
         , _stringPoolBytes{}
     {
         // 새 객체의 잠금도 잡는다 — 아직 아무도 보지 않지만, 그래야 넘겨받는 칸이 `_fileMutex` 아래라는 선언과 맞는다.
@@ -86,6 +88,7 @@ namespace sw
         _header          = other._header;
         _mapEntry        = std::move( other._mapEntry );
         _mapFolderEntry  = std::move( other._mapFolderEntry );
+        _mountDomain     = std::move( other._mountDomain );
         _stringPoolBytes = std::move( other._stringPoolBytes );
         other._file.close();
     }
@@ -196,6 +199,7 @@ namespace sw
         _header = PackHeader{};
         _mapEntry.clear();
         _mapFolderEntry.clear();
+        _mountDomain.clear();
         _stringPoolBytes.clear();
     }
 
@@ -415,9 +419,16 @@ namespace sw
         return _packFilePath;
     }
 
+    string PackReader::getMountDomain() const
+    {
+        ScopedLock<mutex> lock{ _fileMutex };
+        return _mountDomain;
+    }
+
     bool PackReader::loadIndexTable()
     {
-        if ( _file.isValid() == false || _header._fileCount == 0 )
+        // 항목이 없는 팩도 풀(마운트 도메인)은 읽는다.
+        if ( _file.isValid() == false )
             return true;
 
         uint64 fileSize{ 0 };
@@ -438,6 +449,16 @@ namespace sw
             SW_LOG_ERROR( "Failed to read string pool from pack: %#", _packFilePath );
             return false;
         }
+        const string_view pool{ reinterpret_cast<const utf8*>( _stringPoolBytes.data() ), _stringPoolBytes.size() };
+        const size_t      domainEnd = pool.find( '\0' );
+        if ( domainEnd == string_view::npos )
+        {
+            SW_LOG_ERROR( "Pack has no mount domain at the start of its string pool: %#", _packFilePath );
+            return false;
+        }
+        _mountDomain.assign( pool.substr( 0, domainEnd ) );
+        if ( _header._fileCount == 0 )
+            return true;
 
         // FAT 인덱스 테이블(32B x FileCount)을 읽는다
         vector<PackFileEntryOnDisk> listDiskEntry;
@@ -472,8 +493,7 @@ namespace sw
 
             // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 **밖까지** 훑는다. 종결자가 풀 안에 없거나
             // (끊긴 다운로드 · 손상) 경로의 해시가 항목과 다르면 이 팩의 나열이 읽을 수 없는 이름을 내놓으므로 팩을 거절한다.
-            const string_view pool{ reinterpret_cast<const utf8*>( _stringPoolBytes.data() ), _stringPoolBytes.size() };
-            const size_t      terminator = diskEntry._stringPoolOffset < pool.size() ? pool.find( '\0', diskEntry._stringPoolOffset ) : string_view::npos;
+            const size_t terminator = diskEntry._stringPoolOffset < pool.size() ? pool.find( '\0', diskEntry._stringPoolOffset ) : string_view::npos;
             if ( terminator == string_view::npos || terminator == diskEntry._stringPoolOffset )
             {
                 SW_LOG_ERROR( "Pack entry path lies outside the string pool or is empty (offset %#): %#", static_cast<uint32>( diskEntry._stringPoolOffset ), _packFilePath );

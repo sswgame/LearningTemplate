@@ -302,6 +302,9 @@ namespace sw
         uint64&        dataEndOffset    = outLayout._dataEndOffset;
         int64&         compressCPUNanos = outLayout._compressCPUNanos;
         dataEndOffset                   = outLayout._dataStartOffset;
+        // 풀의 맨 앞은 마운트 도메인이다(`kPackFormatVersion` 2) - 항목이 없어도 담아 풀은 늘 있다.
+        stringPoolBytes.assign( _desc._mountDomain.begin(), _desc._mountDomain.end() );
+        stringPoolBytes.push_back( 0 );
         vector<uint64> listPayloadSize;
         listPayloadSize.reserve( listSorted.size() );
         for ( size_t index = 0; index < listSorted.size(); ++index )
@@ -355,9 +358,8 @@ namespace sw
         // FAT 이 페이로드 앞(`Sorted`)이면 스트링 풀은 페이로드 뒤이고, 뒤(`Slot`)면 FAT 뒤다.
         const uint64 indexEndOffset = outLayout._indexOffset + outLayout._indexSize;
         const uint64 afterPayload   = bSlotLayout ? indexEndOffset : dataEndOffset;
-        outLayout._stringPoolOffset = stringPoolBytes.empty() ? 0 : PackWriterInternal::alignToPackSector( afterPayload );
-        const uint64 coveredEnd     = dataEndOffset > indexEndOffset ? dataEndOffset : indexEndOffset;
-        outLayout._fileSize         = stringPoolBytes.empty() ? coveredEnd : outLayout._stringPoolOffset + stringPoolBytes.size();
+        outLayout._stringPoolOffset = PackWriterInternal::alignToPackSector( afterPayload );
+        outLayout._fileSize         = outLayout._stringPoolOffset + stringPoolBytes.size();
         return true;
     }
 
@@ -458,8 +460,7 @@ namespace sw
             }
             slot._listPayload = vector<uint8>{};
         }
-        if ( stringPoolBytes.empty() == false )
-            Memory::copy( outBytes.data() + stringPoolOffset, stringPoolBytes.data(), stringPoolBytes.size() );
+        Memory::copy( outBytes.data() + stringPoolOffset, stringPoolBytes.data(), stringPoolBytes.size() );
     }
 
     bool PackWriter::makePackBytes( vector<uint8>& outBytes, PackWriteStats* pOutStats ) const

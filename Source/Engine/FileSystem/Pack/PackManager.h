@@ -27,11 +27,10 @@ namespace sw
      */
     struct MountedPack
     {
-        string                 _domainName{};          ///< 팩 도메인 식별자(예: "engine", "common", "game_empty")
+        string                 _domainName{};          ///< 팩이 적은 마운트 도메인(`engine` · `game/empty` · `dlc/winter`). 패치 팩은 빈 글이다(항목이 전체 경로)
         int32                  _priority{ 0 };         ///< 높을수록 우선 탐색
         shared_ptr<PackReader> _pReader;               ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
         vector<uint64>         _listRemovedPathHash{}; ///< 패치 팩이 지운 전체 경로의 해시(정렬). 이 팩보다 낮은 우선순위의 같은 경로를 가린다(`mountPatchPack`)
-        bool                   _bPatch{ false };       ///< 패치 팩이면 true - 항목이 전체 경로라 도메인 팩이 아니다(도메인 없는 키를 풀 도메인 목록에서 뺀다)
     };
 } // namespace sw
 

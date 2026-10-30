@@ -22,7 +22,6 @@ namespace sw
         {
             static constexpr string_view kPatchPackPrefix = "patch_";
             static constexpr string_view kPackExtension   = ".pack";
-            static constexpr string_view kGamePackPrefix  = "game_"; ///< `PackCooker::makePackFileName` 이 `game/<팩>` 을 `game_<팩>` 으로 만든다
 
             /** @brief 팩 하나와 그 안의 파일 하나가 전체 가상 경로로 무엇인지입니다. */
             struct Source
@@ -32,19 +31,6 @@ namespace sw
                 size_t _packIndex{ 0 };
                 string _pathInPack{};
             };
-
-            /** @brief 팩 파일 이름의 도메인입니다(`engine.pack` → `engine`, `game_empty.pack` → `game/empty`). */
-            static string computeDomain( string_view packPath )
-            {
-                string_view fileName;
-                FileUtil::getFileNamePart( packPath, fileName );
-                string_view stem;
-                FileUtil::removeExtension( fileName, stem );
-                string domain( stem );
-                if ( StringUtil::startsWith( domain, kGamePackPrefix, true ) )
-                    domain[kGamePackPrefix.size() - 1] = '/';
-                return domain;
-            }
 
             /** @brief 폴더의 기본 팩을 모두 열어 파일마다 전체 경로 · 내용 해시 · 있는 팩을 모읍니다. 패치 목록이 있는 폴더는 거절합니다. */
             [[nodiscard]] static bool scanPacks( string_view packsDirectory, vector<string>& outListPackPath, vector<Source>& outListSource )
@@ -82,7 +68,13 @@ namespace sw
                         SW_LOG_ERROR( "Pack '%#' could not be opened", outListPackPath[packIndex] );
                         return false;
                     }
-                    const string   domain = computeDomain( outListPackPath[packIndex] );
+                    // 도메인은 팩이 적은 마운트 도메인이다(예전에는 파일 이름 `game_<팩>` 에서 추측했다 - 런타임 마운트와 같은 사실을 따로 셈했다).
+                    const string domain = reader.getMountDomain();
+                    if ( domain.empty() )
+                    {
+                        SW_LOG_ERROR( "Pack '%#' has no mount domain - it is a patch pack, give the base packs of the build", outListPackPath[packIndex] );
+                        return false;
+                    }
                     vector<string> listPathInPack;
                     reader.collectAllEntryPaths( listPathInPack );
                     for ( const string& pathInPack : listPathInPack )

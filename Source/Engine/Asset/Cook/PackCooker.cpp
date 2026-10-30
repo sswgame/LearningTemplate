@@ -15,6 +15,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
 #include "Engine/FileSystem/Pack/PackConfig.h"
+#include "Engine/FileSystem/Pack/PackTypes.h"
 #include "Engine/FileSystem/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -129,6 +130,10 @@ namespace sw
             {
                 string canonical = JSONSerializer::serialize( &config, *PackConfig::StaticType() );
                 canonical.append( "\nshader=" ).append( params._shaderFolder ).append( "\ntarget=" ).append( params._buildTarget );
+                // 팩 형식 버전도 설정이다 - 형식을 올리면 옛 형식의 산출물을 재사용하지 않는다(리더가 거절할 팩을 남기지 않게).
+                utf8 arrFormat[constant::kMaxBuffer32];
+                formatstring( arrFormat, constant::kMaxBuffer32, "\nformat=%#", kPackFormatVersion );
+                canonical.append( arrFormat );
                 for ( const string& excludedPath : params._listExcludedSourceFile )
                 {
                     canonical.append( "\nexclude=" ).append( excludedPath );
@@ -184,6 +189,7 @@ namespace sw
                 writerDesc._layoutMode       = config._layout._mode;
                 writerDesc._maxHolePercent   = static_cast<uint32>( config._layout._maxHolePercent );
                 writerDesc._previousPackPath = outputPath; // 덮어쓸 팩이 앞 빌드다(`Slot` 이 안 바뀐 항목의 자리를 지킨다). 없으면 첫 배치다
+                writerDesc._mountDomain      = domain;
                 PackWriter writer( writerDesc );
 
                 // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).

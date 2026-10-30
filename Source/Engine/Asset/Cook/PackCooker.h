@@ -55,7 +55,7 @@ namespace sw
         /** @brief 쿠커 버전 — 담는 규칙이나 팩 바이트를 바꾸면 올립니다(모든 팩의 기록이 낡는다). 쿠커 소스 옆에서 사람이 올리는 상수다. */
         static constexpr uint32 kCookerVersion = 1;
 
-        /** @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름(`engine.pack` · `game_empty.pack`)입니다. 리더(`PackManager`)는 `_` 를 `/` 로 되읽는다. */
+        /** @brief 도메인(`engine` · `common` · `game/empty`)의 팩 파일 이름(`engine.pack` · `game_empty.pack`)입니다. 도메인은 이름이 아니라 팩 안(마운트 도메인)에 적는다. */
         static string makePackFileName( string_view domain );
 
         /**

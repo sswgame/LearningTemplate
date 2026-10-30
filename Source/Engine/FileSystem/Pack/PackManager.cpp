@@ -30,7 +30,7 @@ namespace sw
 
             /**
              * @brief 팩 파일 이름이 우선순위 토큰과 맞는지 대소문자를 무시하고 판별합니다(할당 없음).
-             * @param stem 팩 파일 이름(확장자 제외. 예: "game", "game_patch", "dlc_expansion")
+             * @param stem 마운트 도메인(예: "engine", "game/empty", "dlc/winter") 또는 패치 팩 파일 이름(확장자 제외. 예: "patch_game")
              * @param token 검색 우선순위 토큰(예: "game", "dlc", "engine")
              */
             static bool matchesTokenCaseInsensitive( string_view stem, string_view token )
@@ -45,7 +45,7 @@ namespace sw
                 if ( stem.size() > token.size() && StringUtil::startsWith( stem, token, true ) )
                 {
                     const utf8 delimiter = stem[token.size()];
-                    if ( delimiter == '_' || delimiter == '.' )
+                    if ( delimiter == '_' || delimiter == '.' || delimiter == '/' )
                         return true;
                 }
 
@@ -55,12 +55,16 @@ namespace sw
             /**
              * @brief EngineConfig 의 리소스 우선순위 목록(listPriority)으로 팩의 기본 마운트 우선순위를 계산합니다(할당 없음).
              */
-            static int32 computePackDefaultPriority( string_view packFileName, const vector<string>& listPriority )
+            static int32 computePackDefaultPriority( string_view packFileName, string_view mountDomain, const vector<string>& listPriority )
             {
-                string_view fileName;
-                FileUtil::getFileNamePart( packFileName, fileName );
-                string_view stem;
-                FileUtil::removeExtension( fileName, stem );
+                // 도메인 팩은 마운트 도메인으로, 패치 팩(도메인 없음)은 파일 이름(`patch_<대상>`)으로 정한다.
+                string_view stem = mountDomain;
+                if ( stem.empty() )
+                {
+                    string_view fileName;
+                    FileUtil::getFileNamePart( packFileName, fileName );
+                    FileUtil::removeExtension( fileName, stem );
+                }
                 if ( stem.empty() )
                     return 0;
 
@@ -106,7 +110,7 @@ namespace sw
                     return false;
 
                 const string_view firstPart = relativePath.substr( 0, firstSlash );
-                // game/<pack>/... · dlc/<이름>/... 는 두 칸이 도메인이다(팩 파일 `game_<pack>` · `dlc_<이름>`). 예전에는 game 만 보아 dlc 팩에서 찾지 못했다.
+                // game/<pack>/... · dlc/<이름>/... 는 두 칸이 도메인이다. 예전에는 game 만 보아 dlc 팩에서 찾지 못했다.
                 if ( StringUtil::equals( firstPart, "game", true ) || StringUtil::equals( firstPart, "dlc", true ) )
                 {
                     const size_t secondSlash = relativePath.find( '/', firstSlash + 1 );
@@ -121,26 +125,6 @@ namespace sw
                 outDomain  = firstPart; // 예: "engine", "common", "editor", "dlc"
                 outSubPath = relativePath.substr( firstSlash + 1 );
                 return outSubPath.empty() == false;
-            }
-
-            /**
-             * @brief 마운트된 팩 도메인("engine", "common", "game_empty")과 질의 도메인("engine", "game/empty")을 대소문자를 무시하고 맞춰 봅니다.
-             */
-            static bool matchPackDomain( string_view packDomain, string_view queryDomain )
-            {
-                if ( StringUtil::equals( packDomain, queryDomain, true ) )
-                    return true;
-
-                // "game_empty" 와 "game/empty" 를 같은 것으로 본다
-                if ( queryDomain.find( '/' ) != string_view::npos )
-                {
-                    string converted{ queryDomain };
-                    StringUtil::replaceChar( converted, '/', '_' );
-                    if ( StringUtil::equals( packDomain, converted, true ) )
-                        return true;
-                }
-
-                return false;
             }
 
             /** @brief 후보 파일 가운데 패치 목록(`*.packpatch.xml`)을 모두 읽습니다. 하나라도 읽지 못하면 이유를 남기고 false 입니다. */
@@ -221,27 +205,12 @@ namespace sw
                 for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
                 {
                     const MountedPack& mounted = listMountedPack[packIndex];
-                    if ( mounted._pReader == nullptr || matchPackDomain( mounted._domainName, queryDomain ) == false )
+                    if ( mounted._pReader == nullptr || StringUtil::equals( mounted._domainName, queryDomain, true ) == false )
                         continue;
                     if ( mounted._pReader->hasFile( subHash ) && visit( mounted, subHash, subPath ) )
                         return true;
                 }
                 return false;
-            }
-
-            /** @brief 마운트된 팩 도메인 이름(`game_empty` · `dlc_winter`)을 질의 도메인(`game/empty` · `dlc/winter`)으로 바꿉니다. 팩 파일 이름이 `/` 를 담지 못해 `_` 로 적는다. */
-            static string toQueryDomain( string_view packDomain )
-            {
-                for ( const string_view prefix : { string_view{ "game_" }, string_view{ "dlc_" } } )
-                {
-                    if ( StringUtil::startsWith( packDomain, prefix, true ) )
-                    {
-                        string domain{ packDomain };
-                        domain[prefix.size() - 1] = '/';
-                        return domain;
-                    }
-                }
-                return string{ packDomain };
             }
 
             /**
@@ -260,7 +229,7 @@ namespace sw
                 {
                     for ( const MountedPack& mounted : listMountedPack )
                     {
-                        if ( mounted._bPatch == false && matchPackDomain( mounted._domainName, queryDomain ) )
+                        if ( StringUtil::equals( mounted._domainName, queryDomain, true ) )
                             return visitPacksWithFullKey( listMountedPack, relativePath, visit );
                     }
                 }
@@ -268,15 +237,11 @@ namespace sw
                 vector<string> listTriedDomain;
                 for ( const MountedPack& mounted : listMountedPack )
                 {
-                    if ( mounted._bPatch || mounted._pReader == nullptr )
-                        continue;
-                    string domain = toQueryDomain( mounted._domainName );
-                    if ( std::find( listTriedDomain.begin(), listTriedDomain.end(), domain ) != listTriedDomain.end() )
-                        continue;
-                    string fullKey = domain;
-                    fullKey.push_back( '/' );
-                    fullKey.append( relativePath.data(), relativePath.size() );
-                    listTriedDomain.push_back( std::move( domain ) );
+                    const string& domain = mounted._domainName;
+                    if ( domain.empty() || mounted._pReader == nullptr || VectorUtil::contains( listTriedDomain, domain ) )
+                        continue; // 패치 팩(도메인 없음)은 전체 키 찾기에서 본다
+                    string fullKey = FileUtil::joinPath( domain, relativePath );
+                    listTriedDomain.push_back( domain );
                     if ( visitPacksWithFullKey( listMountedPack, fullKey, visit ) )
                         return true;
                 }
@@ -345,16 +310,24 @@ namespace sw
 
         const string normalizedPath = FileUtil::normalizeSeparators( packFilePath );
 
-        int32 effectivePriority = priority;
-        if ( effectivePriority <= 0 )
-            effectivePriority = PackManagerInternal::computePackDefaultPriority( packFilePath, engine::getSubsystem<AssetPaths>().getSearchPriority() );
-
         shared_ptr<PackReader> pReader = sw::make_shared<PackReader>();
         if ( pReader->open( normalizedPath ) == false )
         {
             SW_LOG_ERROR( "Failed to open and mount pack: %#", packFilePath );
             return false;
         }
+        // 도메인은 팩이 적은 것이다(파일 이름 추측 아님). 도메인 팩은 도메인이, 패치 팩은 없어야 한다 - 항목 경로의 뜻이 다르다.
+        string mountDomain = pReader->getMountDomain();
+        if ( mountDomain.empty() != bPatch )
+        {
+            SW_LOG_ERROR_ID( "Pack.MountDomainMismatch", "Pack %# has mount domain '%#' but is mounted as a %# pack - domain packs name their domain, patch packs have none", packFilePath, mountDomain,
+                             bPatch ? "patch" : "domain" );
+            return false;
+        }
+
+        int32 effectivePriority = priority;
+        if ( effectivePriority <= 0 )
+            effectivePriority = PackManagerInternal::computePackDefaultPriority( packFilePath, mountDomain, engine::getSubsystem<AssetPaths>().getSearchPriority() );
 
         // DLC 소유권을 확인한다
         const uint32 dlcAppID = pReader->getDLCAppID();
@@ -380,17 +353,11 @@ namespace sw
                 }
             }
 
-            string_view fileNamePart;
-            FileUtil::getFileNamePart( normalizedPath, fileNamePart );
-            string_view stem;
-            FileUtil::removeExtension( fileNamePart, stem );
-
             MountedPack mounted{};
-            mounted._domainName          = string( stem );
+            mounted._domainName          = std::move( mountDomain );
             mounted._priority            = effectivePriority;
             mounted._pReader             = std::move( pReader );
             mounted._listRemovedPathHash = std::move( listRemovedPathHash );
-            mounted._bPatch              = bPatch;
 
             _listMountedPack.push_back( std::move( mounted ) );
 
@@ -479,7 +446,7 @@ namespace sw
         for ( size_t packIndex = 0; packIndex < _listMountedPack.size(); ++packIndex )
         {
             const MountedPack& mounted = _listMountedPack[packIndex];
-            if ( mounted._pReader == nullptr || PackManagerInternal::matchPackDomain( mounted._domainName, queryDomain ) == false )
+            if ( mounted._pReader == nullptr || StringUtil::equals( mounted._domainName, queryDomain, true ) == false )
                 continue;
             listPathInPack.clear();
             mounted._pReader->collectFolderEntries( subFolder, listPathInPack );

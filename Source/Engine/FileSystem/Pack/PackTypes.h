@@ -81,8 +81,12 @@ namespace sw
     /** @brief 'SWPK' 매직 넘버(리틀엔디언)입니다. */
     inline constexpr uint32 kPackMagic = 0x4B505753;
 
-    /** @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전입니다. 레이아웃을 바꾸면 올립니다. */
-    inline constexpr uint32 kPackFormatVersion = 1;
+    /**
+     * @brief 현재 지원하는 리소스 팩 바이너리 포맷 버전입니다. 레이아웃을 바꾸면 올립니다.
+     * @details 2: 스트링 풀의 맨 앞(오프셋 0)이 마운트 도메인(NUL 종료, 언리얼 pak mount point)이다 — `engine` · `game/empty` · `dlc/winter`, 패치 팩은 빈 글(항목이 전체 경로).
+     *          예전에는 팩 파일 이름(`game_empty.pack`)에서 도메인을 추측했다.
+     */
+    inline constexpr uint32 kPackFormatVersion = 2;
 
     /** @brief DirectStorage 및 NVMe DMA 친화적 섹터 정렬 경계입니다. */
     inline constexpr uint16 kPackSectorAlignment = 4096;
