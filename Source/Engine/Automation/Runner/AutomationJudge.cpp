@@ -21,6 +21,7 @@
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
@@ -475,7 +476,7 @@ namespace sw
         prepareWatches( scenario );
         _listRemembered.clear();
         _listUpdatedGolden.clear();
-        _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/golden";
+        _goldenFolderID = FileUtil::getDirectoryPart( scenario.getSourcePath() ) + "/" + kAutomationGoldenFolder;
         _goldenPrefix   = scenario.getName();
         _bUpdateGolden  = false;
         if ( engine::areEngineServicesBound() )

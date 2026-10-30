@@ -13,6 +13,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Asset/AssetMeta.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
@@ -81,11 +82,13 @@ namespace sw
                 const bool bScratch = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
                 if ( StringUtil::startsWith( target, root ) == false || bScratch )
                     return true;
-                // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/` 에 쓴다 — 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다.
+                // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
+                // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden = false;
                 if ( engine::areEngineServicesBound() )
                     (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
-                if ( bUpdateGolden && target.find( "/automation/golden/" ) != string::npos )
+                const bool bGoldenFolder = FileUtil::getFileNamePart( FileUtil::getDirectoryPart( target ) ) == kAutomationGoldenFolder;
+                if ( bUpdateGolden && bGoldenFolder && target.find( "/automation/" ) != string::npos )
                     return true;
                 outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
                 return false;
