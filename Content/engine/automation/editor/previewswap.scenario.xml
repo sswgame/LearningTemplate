@@ -5,10 +5,10 @@
   이 시나리오는 같은 길을 단계 `SwapBackend` 로 창이 열린 프레임에 요청한다.
   ① 머티리얼 창에 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한다(렌더러 시작 줄 하나, 미리보기 타깃을 gv_editorPreviewScreenshot 으로 before 에 저장).
   ② 창이 열린 채 다른 백엔드로 건넌다(SwapBackend other). 교체가 실패하지 않았고(RHI.SwapFailedCount) 모듈이 묶여 있어야 한다.
-  ③ 교체 뒤 같은 문서를 다시 연다 — 에디터 인스턴스가 다시 서서 창이 닫혀 있거나 문서가 없어도, 그대로여도 같은 단계가 통과한다(Quick Open 은 이미 연 문서를 다시 열어도 같다). 프레임 수 탐침이 다시 오르고, 새 디바이스 위에 새 렌더러가 선다.
+  ③ 교체 뒤 같은 문서를 다시 연다 — 에디터 인스턴스가 다시 서서 창이 닫혀 있거나 문서가 없어도, 그대로여도 같은 단계가 통과한다(Quick Open 은 이미 연 문서를 다시 열어도 같다). 프레임 수 감시 값이 다시 오르고, 새 디바이스 위에 새 렌더러가 선다.
   타깃을 after1 에 저장한다. ④ 창이 열린 채 시작 백엔드로 돌아와 같은 확인을 한 번 더 한다(after2).
   "렌더러가 새 디바이스에 섰다" 는 로그 줄 "Scene preview renderer started for scene key" 의 수(교체마다 하나씩 는다)로, "타깃이 있고 요청이 갔다" 는 "Preview viewport screenshot" 줄의 수로 본다.
-  교체 뒤 살아 있는 미리보기 렌더러 수(탐침 Editor.ScenePreviewRenderers)가 교체 앞과 같아야 한다 - 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 수가 다르다.
+  교체 뒤 살아 있는 미리보기 렌더러 수(감시 값 Editor.ScenePreviewRenderers)가 교체 앞과 같아야 한다 - 옛 디바이스의 렌더러가 남거나 창 하나에 둘이 서면 수가 다르다.
   그림이 맞는지(빨간 구 + 바닥, 빈 타깃이 아님)는 저장한 PPM 을 눈으로 본다 — 평균 색의 문턱값은 GPU 로 돌려 보기 전에는 맞출 수 없어 자동 단언을 두지 않았다. 파일: Saved/Automation/previewswap_<before|after1|after2>.ppm.
   어느 백엔드로 시작해도 된다(other 는 DX12 가 아니면 DX12, DX12 면 DX11). 백엔드 교체가 없는 환경에서는 SwapBackend 가 준비 단계에서 거절해 진다.
   실행: App -EnableEditor -scenario=engine/automation/editor/previewswap.scenario.xml -unattended (백엔드 vk · gl 로 시작해도 같다)
@@ -33,7 +33,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -62,7 +62,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -93,7 +93,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>

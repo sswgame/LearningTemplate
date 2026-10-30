@@ -54,10 +54,10 @@ namespace sw::editor
             }
 
             /** @brief 창이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다. */
-            [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readDocumentIsWatchAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VFXPreviewPanel* pPanel = findOpenPanel();
-                return pPanel != nullptr && pPanel->readDocumentIsProbeAsset( outValue );
+                return pPanel != nullptr && pPanel->readDocumentIsWatchAsset( outValue );
             }
 
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -79,8 +79,8 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorVFXPreviewParticleCount, "Editor.VFXPreviewParticleCount",
                          "Particles the effect in the VFX Preview panel spawned this run, CPU and GPU emitters alike (fails while the panel is closed or has no preview scene)",
                          &VFXPreviewPanelInternal::readParticleCount );
-    SW_AUTOMATION_WATCH( editorVFXPreviewDocumentIsProbeAsset, "Editor.VFXPreviewDocumentIsProbeAsset",
-                         "1 when the effect open in the VFX Preview panel is gv_editorWatchAsset and it loaded", &VFXPreviewPanelInternal::readDocumentIsProbeAsset );
+    SW_AUTOMATION_WATCH( editorVFXPreviewDocumentIsWatchAsset, "Editor.VFXPreviewDocumentIsWatchAsset",
+                         "1 when the effect open in the VFX Preview panel is gv_editorWatchAsset and it loaded", &VFXPreviewPanelInternal::readDocumentIsWatchAsset );
     SW_AUTOMATION_WATCH( editorVFXPreviewSceneFrames, "Editor.VFXPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
                          &VFXPreviewPanelInternal::readPreviewSceneFrames );
 

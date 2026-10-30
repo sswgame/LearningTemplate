@@ -34,7 +34,7 @@
 	<EditorText value="pause.ui.xml"/>
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
-	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 탐침만 기다리면 앞 문서의 글로 지나가 버린다 -->
+	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 감시 값만 기다리면 앞 문서의 글로 지나가 버린다 -->
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="12" timeoutFrames="900"/>
 	<Wait frames="5"/>

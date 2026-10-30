@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 플레이 옵션(N6).
-  1) 플레이 중 인스펙터로 GameCamera 의 _priority 를 7 로 바꾸면 바로 들어가고(탐침 Editor.SelectedProperty), Stop 이 0 으로 되돌린다.
+  1) 플레이 중 인스펙터로 GameCamera 의 _priority 를 7 로 바꾸면 바로 들어가고(감시 값 Editor.SelectedProperty), Stop 이 0 으로 되돌린다.
   2) (3 · 4 뒤에) 다시 플레이해 7 로 바꾸고 Play > Keep Simulation Changes 를 쓰면 Stop 뒤에도 7 이고, 그 남김은 되돌리기 하나다(Ctrl+Z 로 0).
   3) F8 은 조종을 놓고(Simulate, 씬 뷰) 다시 F8 이 조종으로 돌아온다(Editor.PlaySimulating).
   4) 게임 뷰 툴바의 Max(Maximize On Play)를 켜고 플레이하면 인스펙터가 닫히고(Editor.PanelOpen), Stop 하면 배치가 돌아온다.

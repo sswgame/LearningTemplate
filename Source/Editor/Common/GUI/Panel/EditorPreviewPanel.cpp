@@ -117,7 +117,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorPreviewPanel::readDocumentIsProbeAsset( float64& outValue ) const
+    bool EditorPreviewPanel::readDocumentIsWatchAsset( float64& outValue ) const
     {
         const GlobalVariableInfo* pInfo = editor::getSubsystem<GlobalVariableManager>().findVariable( "gv_editorWatchAsset" );
         if ( pInfo == nullptr )

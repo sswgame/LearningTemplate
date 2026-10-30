@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 서버 검사기(서버 디버깅 S3). 전용 서버 + App 클라이언트 1 을 띄우면 세션이 서버에 디버그 채널 포트 · 토큰을 준다.
   netplay.inspect 는 Multiplayer 창 Inspector 탭이 Connect 에서 하는 일(채널에 붙어 help 로 이름을 받고 scene.tree 로 하이어라키 읽기)을 한다.
-  탐침 Editor.NetPlayInspectorObjects 가 읽은 오브젝트 수를 보고하고, 같은 채널로 보낸 pause 의 답(paused tick N)이 멈춘 서버도 답하는지 본다.
+  감시 값 Editor.NetPlayInspectorObjects 가 읽은 오브젝트 수를 보고하고, 같은 채널로 보낸 pause 의 답(paused tick N)이 멈춘 서버도 답하는지 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netinspector.scenario.xml -unattended
 -->
 <Scenario name="editor.netinspector" isolated="true" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">

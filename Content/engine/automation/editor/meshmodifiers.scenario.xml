@@ -5,7 +5,7 @@
   ② 뷰포트의 이동 화살표(시각화 meshmodifiers.preview)를 끌면 기즈모 중심이 움직이고 **선택은 그대로다** — 손잡이를 집는 첫 클릭이 뷰포트 클릭 선택으로 새지 않는다.
   ③ 곡선 목록(Curve Sculpt Layered "Layer Curves") 항목 추가 · 항목마다 곡선 편집기 팝업에서 키 추가, ④ 참조 목록(Conform Multi "Targets") 항목 추가 · 선택 사용,
   ⑤ 묶음(Deformable) 하위 스택에 모디파이어 추가. CPU 전용 모디파이어가 들어오면 GPU 미리보기는 내려가고 CPU 결과 정점으로 셰이딩한다(그림은 GPU 결과와 같다).
-  스크린샷은 렌더 출력(씬 뷰)만 담는다 — 패널 · 기즈모는 ImGui 오버레이라 그림에 없어 이름표 클릭과 탐침으로 보고, 눈으로 볼 그림은 CaptureEditorUI(meshmodifiers/*.png)로 남긴다.
+  스크린샷은 렌더 출력(씬 뷰)만 담는다 — 패널 · 기즈모는 ImGui 오버레이라 그림에 없어 이름표 클릭과 감시 값으로 보고, 눈으로 볼 그림은 CaptureEditorUI(meshmodifiers/*.png)로 남긴다.
   실행: App -EnableEditor -scenario=engine/automation/editor/meshmodifiers.scenario.xml -unattended
 -->
 <Scenario name="editor.meshmodifiers" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">

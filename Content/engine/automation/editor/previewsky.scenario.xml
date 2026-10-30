@@ -28,7 +28,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>
@@ -49,7 +49,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>

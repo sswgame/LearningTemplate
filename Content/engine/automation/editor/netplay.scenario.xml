@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 멀티 프로세스 재생(서버 디버깅 S1). Net Mode 를 전용 서버 + 클라이언트 1 로 두고 Play 하면 에디터가 Server 와 App 클라이언트를
-  자식 프로세스로 띄워 붙인다. 접속은 탐침 Editor.NetPlayConnectedClients(클라이언트가 남긴 "Net session connected to" 줄)로, Stop 뒤에 프로세스가
+  자식 프로세스로 띄워 붙인다. 접속은 감시 값 Editor.NetPlayConnectedClients(클라이언트가 남긴 "Net session connected to" 줄)로, Stop 뒤에 프로세스가
   남지 않는 것은 Editor.NetPlayProcessCount 로, 프로세스마다의 트레이스가 한 파일로 합쳐졌는지는 로그 줄로 본다.
   netplay.wait 는 기동이 끝날 때까지 그 프레임을 붙잡는다 — 시나리오는 프레임 단위라 자식 프로세스의 기동 시간을 모른다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netplay.scenario.xml -unattended

@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 리타깃 프로필 창(결정 기록 5-6 A4): 새 프로필(없는 경로의 빈 문서) · 기존 프로필 열기 · 3D 미리보기(두 스켈레톤 겹침) · 리타깃 포즈 줄 더하기.
   새 프로필: 경로 칸에 없는 리소스 id 를 적고 New 를 누르면 빈 문서로 열린다(사슬 0). 저장은 스켈레톤 · 뿌리와 골반이 묶이기 전에는 막힌다(저장하지 않고 닫는다).
-  기존 프로필: knight_to_minion 을 열면 사슬이 채워지고, 미리보기가 두 스켈레톤을 선으로 긋는다(탐침 Editor.RetargetPreviewSegments). 대상 본 upperarm.l 을 더하면 리타깃 포즈 줄이 하나가 되고
+  기존 프로필: knight_to_minion 을 열면 사슬이 채워지고, 미리보기가 두 스켈레톤을 선으로 긋는다(감시 값 Editor.RetargetPreviewSegments). 대상 본 upperarm.l 을 더하면 리타깃 포즈 줄이 하나가 되고
   미리보기의 대상(주황)과 레퍼런스(회색)가 갈린다 — 눈으로 볼 사진을 찍는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/retarget.scenario.xml -unattended
 -->

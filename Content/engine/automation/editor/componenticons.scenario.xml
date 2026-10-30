@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 컴포넌트 · 오브젝트 아이콘(R3): 테스트 씬(editortest)의 빛 오브젝트 줄은 방향광 아이콘, 카메라 줄은 카메라 아이콘,
-  메시만 있는 줄은 오브젝트 아이콘이다(탐침 Editor.HierarchyRowIcon = 코드 포인트). Hierarchy 화면을 찍어 둔다.
-  씬 뷰의 카메라 빌보드가 실제로 그린 글리프도 카메라 아이콘 한 글자여야 한다(탐침 Editor.BillboardIcon — 무효 메모리를 읽으면 쓰레기 문자열이라 0).
+  메시만 있는 줄은 오브젝트 아이콘이다(감시 값 Editor.HierarchyRowIcon = 코드 포인트). Hierarchy 화면을 찍어 둔다.
+  씬 뷰의 카메라 빌보드가 실제로 그린 글리프도 카메라 아이콘 한 글자여야 한다(감시 값 Editor.BillboardIcon — 무효 메모리를 읽으면 쓰레기 문자열이라 0).
   실행: App -EnableEditor -scenario=engine/automation/editor/componenticons.scenario.xml -unattended
 -->
 <Scenario name="editor.componenticons" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">

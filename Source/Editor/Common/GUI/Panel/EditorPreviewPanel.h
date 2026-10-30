@@ -71,7 +71,7 @@ namespace sw::editor
          * @brief 감시 값 본문 — 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 @p outValue 를 1, 아니면 0 으로 하고 true 를 돌려줍니다.
          *        전역 변수 관리자나 그 변수가 없으면 값을 만들 수 없어 false 입니다(관리자가 없으면 오류를 남긴다).
          */
-        [[nodiscard]] bool readDocumentIsProbeAsset( float64& outValue ) const;
+        [[nodiscard]] bool readDocumentIsWatchAsset( float64& outValue ) const;
 
     protected:
         EditorPreviewPanel( const EditorAssetType& kind, bool bLoadOnOpen );

@@ -222,10 +222,10 @@ namespace sw::editor
             }
 
             /** @brief 패널이 지금 연 문서가 `gv_editorWatchAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
-            [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readDocumentIsWatchAsset( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const MaterialPanel* pPanel = findOpenPanel();
-                return pPanel != nullptr && pPanel->readDocumentIsProbeAsset( outValue );
+                return pPanel != nullptr && pPanel->readDocumentIsWatchAsset( outValue );
             }
 
             [[nodiscard]] static bool readSwitchPending( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -255,9 +255,9 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
                          "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
                          &MaterialPanelInternal::readPreviewRedMinusBlue );
-    SW_AUTOMATION_WATCH( editorMaterialDocumentIsProbeAsset, "Editor.MaterialDocumentIsProbeAsset",
+    SW_AUTOMATION_WATCH( editorMaterialDocumentIsWatchAsset, "Editor.MaterialDocumentIsWatchAsset",
                          "1 when the document open in the Material panel is gv_editorWatchAsset (tells a document switch that did not happen from a preview that did not follow)",
-                         &MaterialPanelInternal::readDocumentIsProbeAsset );
+                         &MaterialPanelInternal::readDocumentIsWatchAsset );
     SW_AUTOMATION_WATCH( editorMaterialSwitchPending, "Editor.MaterialSwitchPending",
                          "1 while the Material panel waits for the 'unsaved changes, switch anyway?' answer - the new document is not opened until then",
                          &MaterialPanelInternal::readSwitchPending );

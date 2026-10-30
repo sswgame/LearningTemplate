@@ -4,7 +4,7 @@
   에디터가 다시 그릴 까닭(EditorRedrawReason: 입력 · 잡은 항목 · 플레이 · 알림 · 패널의 연속 프레임 요청)이 없는 프레임이 이어지면 앱 루프는 창 메시지까지 잔다.
   까닭 하나를 빠뜨리면 그 화면이 멈추므로, 유휴에 든 뒤의 ① 키 입력 ② 마우스 이동이 바로 반영되고 ③ 알림 토스트가 떠 있는 동안 깨어 있다가 시간이 지나 사라지는지 본다.
   시나리오 실행은 보통 전속(Automation = 3)이라 유휴에 들지 않는다 — gv_framePacing=WindowState 로 자동화 중에도 창 · 에디터 상태를 따르게 한다(끝에서 Auto 로 되돌린다).
-  탐침: Engine.FramePacingState(앱 루프 상태 번호), Editor.NotificationCount(떠 있는 알림 수). 개발 명령 notify.push <초> <글> 이 토스트를 띄운다.
+  감시 값: Engine.FramePacingState(앱 루프 상태 번호), Editor.NotificationCount(떠 있는 알림 수). 개발 명령 notify.push <초> <글> 이 토스트를 띄운다.
   실행: App -EnableEditor -scenario=engine/automation/editor/idle.scenario.xml -unattended
 -->
 <Scenario name="editor.idle" fixedDelta="0.0166667" timeoutFrames="60000" startAfter="Immediately" input="exclusive">
@@ -38,7 +38,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<!-- 미리보기 창은 틱하는 씬을 그려 연속 프레임을 청한다 — 닫으면 다시 조용해진다 -->
 	<Wait frames="5"/>
 	<DevCommand line="panel.close material"/>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 패널 ↔ 저장 배선(D3-5): 임시 에셋을 새 문서로 열고(asset.open), 툴바 "Add Attack" 으로 고쳐 더러워진 것을
-  (탐침 Editor.DirtyDocumentCount) 툴바 Save 와 저장 커맨드(asset.save — Ctrl+S 와 같은 길) 두 길로 저장한다. 저장하면 파일이 생기고
+  (감시 값 Editor.DirtyDocumentCount) 툴바 Save 와 저장 커맨드(asset.save — Ctrl+S 와 같은 길) 두 길로 저장한다. 저장하면 파일이 생기고
   (Editor.TempAssetExists) 더러움이 걷힌다. 대화 그래프 판(dialoguegraphsave)과 같은 모양이다.
   문서: Saved/Automation/editor.animgraphsave/temp.animgraph.xml — 접미사 .animgraph.xml 이 애니메이션 그래프 패널을 고른다
   (EditorAssetTypeRegistry::findPanelKindForPath 는 가장 긴 접미사가 이긴다). 없는 파일이라 기본 문서(노드 Idle · Walk)로 열리고, 여는 길은

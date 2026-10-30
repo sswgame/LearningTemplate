@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 기믹 회로 그래프 편집 창(GF_EditorPlugIn_Base): 기믹 쇼케이스 씬을 열고 회로가 있는 오브젝트들을 고르면 Gimmick Graph 창이 그 회로를 노드 그래프로 그린다(탐침 Editor.GraphNodeCount).
+  에디터 시나리오 — 기믹 회로 그래프 편집 창(GF_EditorPlugIn_Base): 기믹 쇼케이스 씬을 열고 회로가 있는 오브젝트들을 고르면 Gimmick Graph 창이 그 회로를 노드 그래프로 그린다(감시 값 Editor.GraphNodeCount).
   도구 모음으로 Signal · Not 노드를 더하고, 옆 패널의 폼으로 signal_1.Active -> not_1.In 배선을 이으면 편집마다 Undo 에 한 줄씩 오른다(Editor.UndoCount).
   편집은 컴포넌트에 쓰이고 회로가 다시 지어지므로 로그 줄 "Gimmick graph <편집 이름>" 로 센다. 씬은 저장하지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/gimmickgraph.scenario.xml -unattended

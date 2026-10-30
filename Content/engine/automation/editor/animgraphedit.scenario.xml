@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 애니메이션 그래프 전이 편집(N8): 노드를 하나 찾아 넣고, Walk 를 누른 뒤 Ctrl 로 Attack 을 골라 Link Selected 로 잇는다
-  (탐침 Editor.AnimationGraphLinkCount). 오른쪽 인스펙터에서 그 전이를 골라 조건(파라미터 Speed · 비교 >)을 적으면 조건 있는 전이가 하나가 되고
+  (감시 값 Editor.AnimationGraphLinkCount). 오른쪽 인스펙터에서 그 전이를 골라 조건(파라미터 Speed · 비교 >)을 적으면 조건 있는 전이가 하나가 되고
   (Editor.AnimationGraphConditionCount), 저장한 뒤 조건을 지워도 Load 가 저장한 조건을 되읽는다.
   문서: 테스트 그래프(animgraphedit/animgraphedit.animgraph.xml — 노드 Idle · Walk, 전이 둘)의 실행마다 새 사본(scratch/animgraphedit — <Scratch>)을
   `asset.openScratch` 로 열어 거기에 저장한다. 추적 중인 원본에 쓰면 백엔드별 체인이 병렬 조각에서 같은 파일을 동시에 고쳐, 한 프로세스의 Save 와 Load 사이에

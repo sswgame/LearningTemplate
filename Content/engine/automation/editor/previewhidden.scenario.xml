@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 숨은 미리보기 창은 씬을 틱하지 않는다(감사 SB E5)와, 자동화 실행은 포커스와 상관없이 전속이다(P1).
   미리보기 씬의 틱 여부는 "이번 프레임에 그려지는가"(호스트의 미리보기 뷰 요청, ScenePreviewTick::WhenDrawn)다. 창을 닫으면 뷰 요청이 사라지고 씬은 남는다(previewreopen 과 같은 길).
-  탐침 Editor.PreviewTickCount 는 씬 매니저가 미리보기 씬들을 틱한 횟수의 합이다 — 닫아 둔 동안 그대로(sameAs)이고 다시 열면 오른다(differsFrom).
+  감시 값 Editor.PreviewTickCount 는 씬 매니저가 미리보기 씬들을 틱한 횟수의 합이다 — 닫아 둔 동안 그대로(sameAs)이고 다시 열면 오른다(differsFrom).
   Engine.FramePacingState 는 앱 루프의 페이싱 상태 번호다 — 시나리오 실행은 3(Automation)이라 창이 포커스를 잃어도 배경 상한 · 최소화 대기에 걸리지 않는다.
   실행: App -EnableEditor -scenario=engine/automation/editor/previewhidden.scenario.xml -unattended
 -->
@@ -28,7 +28,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>

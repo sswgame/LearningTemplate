@@ -3,11 +3,11 @@
   에디터 시나리오 — 미리보기 창을 연 채 여닫기를 반복한다(다중 월드 6절 5번: 미리보기 렌더러 내리기의 GPU 안전).
   창이 닫히면 메인 패킷에서 그 씬의 뷰 요청이 사라지고, 렌더 스레드의 FrameRenderer::retireScenePreviews 가 그 씬의 렌더러를 FrameRenderer::shutdown 으로 바로 내린다.
   디바이스 해제 큐가 GPU 완료 뒤로 미루는 것에 기대는 경로라서, 이미 낸 프레임이 쓰는 자원을 지금 파괴하면 여기서 터진다(DX12 장치 제거 · Vulkan 장치 손실 · 검증 레이어 오류).
-  창을 다시 열면 같은 씬 키로 새 렌더러가 선다("Scene preview renderer started for scene key" 줄). 렌더러 수는 탐침 Editor.ScenePreviewRenderers 가 렌더 스레드의 값을 읽는다 -
+  창을 다시 열면 같은 씬 키로 새 렌더러가 선다("Scene preview renderer started for scene key" 줄). 렌더러 수는 감시 값 Editor.ScenePreviewRenderers 가 렌더 스레드의 값을 읽는다 -
   닫을 때마다 그 수가 줄고(differsFrom) 다시 열면 닫기 전 수로 돌아오며(sameAs), 끝에서 시작 전 수(baseline)로 돌아온다. 시작 줄의 수(ExpectLog atLeast)도 함께 센다.
   PSO 는 주 렌더러의 캐시를 함께 쓰므로(FrameRenderer::_pPSOCache) 미리보기 렌더러를 내려도 PSO 는 남는다 - 다시 열 때 PSO 를 다시 만들지 않는다.
-  ① 머티리얼 창(id material): 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한 뒤(프레임 수 탐침이 오른다) 닫기 8 번, 닫아 둔 지 20 프레임 뒤 다시 열고 프레임이 다시 오르는 것을 기다린 뒤 닫는다.
-  ② 프리팹 창(id prefab_window): 콘텐츠 브라우저 더블클릭으로 연 뒤 같은 식으로 8 번. 이 창에는 프레임 수 탐침이 없어 열림 탐침(Editor.PanelOpen)과 고정 프레임으로 기다린다.
+  ① 머티리얼 창(id material): 빨간 테스트 머티리얼을 열어 구 미리보기가 그려지게 한 뒤(프레임 수 감시 값이 오른다) 닫기 8 번, 닫아 둔 지 20 프레임 뒤 다시 열고 프레임이 다시 오르는 것을 기다린 뒤 닫는다.
+  ② 프리팹 창(id prefab_window): 콘텐츠 브라우저 더블클릭으로 연 뒤 같은 식으로 8 번. 이 창에는 프레임 수 감시 값이 없어 열림 감시 값(Editor.PanelOpen)과 고정 프레임으로 기다린다.
   머티리얼 창 1/8 은 포커스를 쥔 채 닫아, 초점 씬 · Undo 스택이 메인 씬으로 돌아오는지(Editor.ToolFocusIsMain)도 본다.
   Quick Open 의 파일 목록은 일 스레드가 벽시계로 모으는데, 목록이 오는 동안 자동화 시계를 잡는다(QuickLauncherPopup 의 SW_AUTOMATION_CLOCK_HOLDER) — 프레임이 빠른 DX11 에서도 Enter 가 문서를 같은 프레임에 연다.
   ③ 마지막에 에디터가 정상이다 — 계층 패널이 그려져 그 검색 칸(hierarchy.filter)을 누를 수 있고, 로그 게이트가 [Warning] · [Error] 가 없음을 본다.
@@ -39,7 +39,7 @@
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
-	<WaitUntil watch="Editor.MaterialDocumentIsProbeAsset" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus material"/>
 	<Wait frames="1"/>

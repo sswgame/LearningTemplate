@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 인스펙터의 열거형 콤보를 직접 고른다. GameCamera 의 CameraComponent._role(열거형)을 콤보를 열어 Custom 으로 고르면 값이 바뀌고(탐침 Editor.SelectedEnumValue) 되돌리기 하나가 쌓이며,
+  에디터 시나리오 — 인스펙터의 열거형 콤보를 직접 고른다. GameCamera 의 CameraComponent._role(열거형)을 콤보를 열어 Custom 으로 고르면 값이 바뀌고(감시 값 Editor.SelectedEnumValue) 되돌리기 하나가 쌓이며,
   Undo 로 Game 으로 돌아온다. 항목은 `inspector.enum.<프로퍼티>.<열거자>` 이름표로 누른다(콤보를 연 프레임에만 그려진다).
   열거형의 크기가 uint8 이라 뒤 필드를 덮어쓰던 결함(EditorPropertyGrid::drawEnumProperty)이 되살아나면 이웃 필드 단언(_bOrthographic)이 진다.
   실행: App -EnableEditor -scenario=engine/automation/editor/inspectorcombo.scenario.xml -unattended

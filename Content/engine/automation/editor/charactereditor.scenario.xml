@@ -65,7 +65,7 @@
 	<EditorClick mark="charactereditor.tab.preview" state="up"/>
 	<Wait frames="59"/>
 	<Expect watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1"/>
-	<!-- 스켈레톤 탭에서 고른 본(root)에 기즈모 표식이 놓인다 — 뷰포트에서 끌면 포즈 편집이 된다(눈으로 본다). 관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(탐침 Editor.CharacterEditorPenetrationMarks) -->
+	<!-- 스켈레톤 탭에서 고른 본(root)에 기즈모 표식이 놓인다 — 뷰포트에서 끌면 포즈 편집이 된다(눈으로 본다). 관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(감시 값 Editor.CharacterEditorPenetrationMarks) -->
 	<Wait frames="5"/>
 	<Expect watch="Editor.CharacterEditorBoneGizmoPlaced" atLeast="1"/>
 	<Wait frames="15"/>
