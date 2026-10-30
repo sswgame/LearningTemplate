@@ -2,7 +2,7 @@
 
 > 질문: 지금 어디까지 왔고, 다음 세션은 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 1 단계부터**(0 단계 형식 `AbsolutePath` · `ProcessRoots` · `ResourcePath` · `DomainTable` 은 2026-10-31 들어갔고 아직 아무도 쓰지 않는다 — 순서표대로), 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
+> 결론: **바로 다음은 [StructureRefactor](StructureRefactor.md) 의 1 단계부터**(범위 확인: `Core/File/Std/FileUtilStdFileSystem.cpp` 488 줄 · std::filesystem 45 곳이 네이티브로 가야 하고 Linux 갈래는 WSL 로만 짓는다 — 새 세션에서 Windows 네이티브 → Linux 순으로 한 묶음)(0 단계 형식 `AbsolutePath` · `ProcessRoots` · `ResourcePath` · `DomainTable` 은 2026-10-31 들어갔고 아직 아무도 쓰지 않는다 — 순서표대로), 그다음 4 절의 테스트 전수. L(상대 키)은 그 문서의 `ResourcePath` 로 대체됐다. 원칙: 게이트는 최후의 수단, `#if` 구역 대신 빌드 단위 · 확장점 · 개발 전용 이름 규칙.
 
 ## 1. 지금 상태 (2026-10-29)
 
