@@ -275,7 +275,7 @@ namespace sw
         if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro ) == false )
             SW_LOG_WARNING( "bugreport: could not write the repro command" );
 
-        SW_LOG_INFO( "BugReport report saved to %# (note: %#)", directory, report._note );
+        SW_LOG_INFO( "Bug report saved to %# (note: %#)", directory, report._note );
         outDirectory = directory;
         return true;
     }
@@ -311,7 +311,7 @@ namespace sw
         }
         pCamera->setWorldPosition( report._cameraPosition );
         pCamera->lookAt( report._cameraPosition + computeForward( report._cameraRotationDegrees ) );
-        SW_LOG_INFO( "BugReportGoto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder );
+        SW_LOG_INFO( "bugreport.goto moved the view camera to %# from %#", BugReportInternal::formatFloat3( report._cameraPosition ), folder );
         outReply = "bugreport.goto -> " + folder + " (camera " + BugReportInternal::formatFloat3( report._cameraPosition ) + ")";
         return true;
     }
