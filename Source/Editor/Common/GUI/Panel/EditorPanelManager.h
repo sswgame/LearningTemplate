@@ -39,6 +39,7 @@ namespace sw::editor
         EditorPanelCategory            _category{ EditorPanelCategory::Core };
         unique_ptr<IEditorPanel>       _pInstance;
         const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 항목. 직접 registerPanel 한 것은 nullptr 이다
+        bool                           _bOpenByDefault{ false };  ///< 만든 직후의 가시성(`windows.json` 복원 전) — 기본 배치로 되돌릴 때 핵심 패널을 이 값으로 둔다
         uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간의 합(ns)
         uint64                         _drawNanosMax{ 0 };        ///< 그중 가장 긴 한 프레임의 시간(ns)
     };
@@ -131,8 +132,13 @@ namespace sw::editor
          *          저장하지 않은 편집은 버린다. 등록 줄 없이 직접 넣은 패널(`registerPanel`)은 만들 함수가 없어 닫기만 한다.
          */
         uint32 resetOptionalPanels( IRHIDevice* pRHIDevice );
-        void   drawOpenPanels();
-        void   shutdownAllPanels( IRHIDevice* pRHIDevice );
+        /**
+         * @brief 핵심(Core) 패널의 가시성을 만든 직후의 값으로 되돌립니다(기본 배치로 되돌리기 — 언리얼 Reset Layout 이 기본 탭을 되살리는 것과 같다).
+         * @details 도구 · 커스텀 패널은 그대로 둔다 — 열려 있으면 기본 배치의 제자리에 붙는다. 도크 트리만 되돌리면 닫힌 Hierarchy · Inspector 가 닫힌 채 남았다.
+         */
+        void restoreCorePanelVisibility();
+        void drawOpenPanels();
+        void shutdownAllPanels( IRHIDevice* pRHIDevice );
         /** @brief 포커스된 도구 문서가 dirty 이면 저장하고 true 를 반환합니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
         /** @brief 모든 dirty 도구 문서를 저장합니다. 하나라도 실패하면 false 입니다. */

@@ -62,10 +62,11 @@ namespace sw::editor
 
         const utf8*      pTitle = pPanel->getPanelTitle();
         EditorPanelEntry entry{};
-        entry._id        = panelID.empty() == false ? string{ panelID } : ( pTitle != nullptr ? pTitle : "" );
-        entry._title     = pTitle != nullptr ? pTitle : "";
-        entry._category  = category;
-        entry._pInstance = std::move( pPanel );
+        entry._id             = panelID.empty() == false ? string{ panelID } : ( pTitle != nullptr ? pTitle : "" );
+        entry._title          = pTitle != nullptr ? pTitle : "";
+        entry._category       = category;
+        entry._bOpenByDefault = pPanel->isOpen();
+        entry._pInstance      = std::move( pPanel );
 
         _listPanel.push_back( std::move( entry ) );
     }
@@ -157,11 +158,12 @@ namespace sw::editor
                 continue;
             const utf8*      pTitle = pPanel->getPanelTitle();
             EditorPanelEntry entry{};
-            entry._id            = registration._pID;
-            entry._title         = pTitle != nullptr ? pTitle : "";
-            entry._category      = registration._category;
-            entry._pRegistration = &registration;
-            entry._pInstance     = std::move( pPanel );
+            entry._id             = registration._pID;
+            entry._title          = pTitle != nullptr ? pTitle : "";
+            entry._category       = registration._category;
+            entry._pRegistration  = &registration;
+            entry._bOpenByDefault = pPanel->isOpen();
+            entry._pInstance      = std::move( pPanel );
             if ( EditorPanelManagerInternal::takeRemembered( _listRememberedOpenID, entry._id ) )
                 entry._pInstance->setOpen( true );
             listSorted.push_back( std::move( entry ) );
@@ -194,6 +196,15 @@ namespace sw::editor
             ++resetCount;
         }
         return resetCount;
+    }
+
+    void EditorPanelManager::restoreCorePanelVisibility()
+    {
+        for ( const EditorPanelEntry& entry : _listPanel )
+        {
+            if ( entry._category == EditorPanelCategory::Core && entry._pInstance != nullptr )
+                entry._pInstance->setOpen( entry._bOpenByDefault );
+        }
     }
 
     void EditorPanelManager::drawOpenPanels()

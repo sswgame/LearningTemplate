@@ -396,6 +396,8 @@ namespace sw::editor
     void EditorDockLayout::requestResetDefault()
     {
         // 저장된 배치가 있으면 도크 트리가 비어 있지 않다. 빈 트리일 때만 만드는 첫 적용과 달리, 덮어쓰라고 따로 지정한다.
+        // 핵심 패널도 기본 가시성으로 — 닫힌 패널은 도크 트리를 되돌려도 그려지지 않는다.
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().restoreCorePanelVisibility();
         _bApplied      = SW_FALSE;
         _bResetDefault = SW_TRUE;
     }
