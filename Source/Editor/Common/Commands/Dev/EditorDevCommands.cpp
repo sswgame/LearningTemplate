@@ -475,7 +475,8 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pManager == nullptr )
                     return false;
                 string path = listArgument[0];
-                if ( StringUtil::startsWith( path, "Saved/", true ) )
+                // 인자는 리소스 경로이거나 절대 디스크 경로다 — 글자(`Saved/`)로 추측하지 않는다. 디스크 경로는 이 경계에서 한 번 리소스 경로로 바꾼다.
+                if ( FileUtil::isAbsolutePath( path ) )
                 {
                     string absolutePath;
                     if ( resolveTempAssetPath( listArgument[0], absolutePath, outReply ) == false )
