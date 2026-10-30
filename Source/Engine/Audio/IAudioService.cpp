@@ -57,7 +57,7 @@ namespace sw
     } // namespace
 
     /** @brief `-gv_audioDumpPath=<파일>.wav`: 장치 없는 오프라인 렌더를 서비스를 내릴 때(또는 레이아웃을 바꿀 때) 이 WAV(채널 마스크 포함, 최대 60 초)로 남깁니다. */
-    SW_TEST_GLOBAL_VARIABLE( string, gv_audioDumpPath, "", "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_audioDumpPath, "", "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)" );
 } // namespace sw
 
 namespace sw

@@ -11,6 +11,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
@@ -131,30 +132,43 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 명령 인자 경로를 절대 경로로 바꿉니다. 상대 경로면 시나리오 산출물과 같은 작업 폴더(`Saved/`)를 기준으로 합니다. */
-            [[nodiscard]] static bool resolveScenePath( const string& path, string& outAbsolutePath )
+            /**
+             * @brief 쓸 자리 인자를 읽습니다 - 절대 경로(`{out}/…`)만 받는다. 작업 폴더 상대 경로는 받지 않는다(R5 - 작업 폴더를 바꾸면 다른 곳에 썼다).
+             * @return 절대 경로가 아니면 이유를 @p outReply 에 담고 false 입니다.
+             */
+            [[nodiscard]] static bool readDiskPathArgument( const string& argument, string& outAbsolutePath, string& outReply )
             {
-                if ( path.empty() )
+                if ( AbsolutePath::isStrictAbsolute( argument ) == false )
+                {
+                    outReply = "needs an absolute path (use {out}/...): '" + argument + "'";
                     return false;
-                if ( FileUtil::isAbsolutePath( path ) )
-                {
-                    outAbsolutePath = path;
-                    return true;
                 }
-                // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다. 그래서 시나리오가 작업 폴더를 몰라도 된다.
-                const string assetPath = editor::getSubsystem<AssetPaths>().findLooseFile( path ).getDiskPath();
-                if ( FileUtil::exists( assetPath ) )
+                outAbsolutePath = FileUtil::normalizeSeparators( argument );
+                return true;
+            }
+
+            /**
+             * @brief 열 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
+             * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일).
+             */
+            [[nodiscard]] static bool readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
+            {
+                if ( AbsolutePath::isStrictAbsolute( argument ) )
+                    return readDiskPathArgument( argument, outAbsolutePath, outReply );
+                const string diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument ).getDiskPath();
+                if ( FileUtil::isRegularFile( diskPath ) == false )
                 {
-                    outAbsolutePath = assetPath;
-                    return true;
+                    outReply = "no resource '" + argument + "'";
+                    return false;
                 }
-                return FileUtil::makeAbsolutePath( path, outAbsolutePath );
+                outAbsolutePath = diskPath;
+                return true;
             }
 
             static bool runSaveSceneAs( const vector<string>& listArgument, string& outReply )
             {
                 string absolutePath;
-                if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
+                if ( listArgument.size() != 1 || readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
                 (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorSceneFileCommands::saveActiveScene( absolutePath ) == false )
@@ -169,7 +183,7 @@ namespace sw::editor
             static bool runOpenScene( const vector<string>& listArgument, string& outReply )
             {
                 string absolutePath;
-                if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
+                if ( listArgument.size() != 1 || readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
                 // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
                 if ( EditorSceneFileCommands::loadScene( absolutePath ) == false )
@@ -196,20 +210,16 @@ namespace sw::editor
             }
 
             /**
-             * @brief 임시 에셋 인자를 절대 경로로 바꿉니다. 작업 폴더의 `Saved/Automation/` 아래이고 리소스 트리 밖일 때만 true 입니다.
-             * @details 시나리오가 저장 단계를 밟아도 저장소 리소스가 바뀌지 않게 하는 문지기다. 상대 경로는 작업 폴더 기준이다(`scene.saveAs` 와 같다).
+             * @brief 임시 에셋 인자를 읽습니다. 자동화 산출물 폴더(`makeAutomationOutputFolderPath`) 아래이고 리소스 트리 밖인 절대 경로일 때만 true 입니다.
+             * @details 시나리오가 저장 단계를 밟아도 저장소 리소스가 바뀌지 않게 하는 문지기다. 절대 경로만 받는다(`scene.saveAs` 와 같다).
              */
             [[nodiscard]] static bool resolveTempAssetPath( const string& path, string& outAbsolutePath, string& outReply )
             {
-                string       absolutePath;
-                const string automationFolder = makeAutomationOutputFolderPath();
-                const bool   bUnresolvedPaths = path.empty() || FileUtil::makeAbsolutePath( path, absolutePath ) == false;
-                if ( bUnresolvedPaths )
-                {
-                    outReply = "could not resolve '" + path + "'";
+                string absolutePath;
+                if ( readDiskPathArgument( path, absolutePath, outReply ) == false )
                     return false;
-                }
-                const string normalized = FileUtil::normalizePath( absolutePath );
+                const string automationFolder = makeAutomationOutputFolderPath();
+                const string normalized       = FileUtil::normalizePath( absolutePath );
                 if ( isUnderFolder( normalized, FileUtil::normalizePath( automationFolder ) ) == false )
                 {
                     outReply = "temp assets must be under Saved/Automation/: '" + absolutePath + "'";
@@ -332,21 +342,16 @@ namespace sw::editor
             /**
              * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`, `.meta` 생성)이고
              *        OS 파일 대화상자만 건너뜁니다.
-             * @details 원본은 작업 폴더 기준 경로나 리소스 id 다. 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
+             * @details 원본은 절대 경로나 리소스 id 다(`readSourceFileArgument`). 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
              */
             static bool runImportAsset( const vector<string>& listArgument, string& outReply )
             {
                 string     sourcePath;
                 string     folderPath;
-                const bool bInvalidArguments = listArgument.size() != 2 || resolveScenePath( listArgument[0], sourcePath ) == false ||
+                const bool bInvalidArguments = listArgument.size() != 2 || readSourceFileArgument( listArgument[0], sourcePath, outReply ) == false ||
                                                resolveImportFolder( listArgument[1], folderPath, outReply ) == false;
                 if ( bInvalidArguments )
-                    return false;
-                if ( FileUtil::exists( sourcePath ) == false )
-                {
-                    outReply = "no source file '" + sourcePath + "'";
-                    return false;
-                }
+                    return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
                 if ( EditorAssetFileCommands::importFiles( folderPath, { sourcePath } ) != 1 )
                 {
                     outReply = "could not import '" + sourcePath + "' into '" + listArgument[1] + "'";

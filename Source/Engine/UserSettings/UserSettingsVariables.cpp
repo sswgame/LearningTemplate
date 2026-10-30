@@ -27,4 +27,4 @@ SW_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity, 0.5f, "자막 배경 
 
 // 개발 도구: 스키마는 `engine/settings/debughud.settings.xml` 이며 Dev 만 읽는다.
 
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
+SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );

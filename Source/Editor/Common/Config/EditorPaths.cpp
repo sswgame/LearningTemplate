@@ -17,7 +17,7 @@
 
 namespace sw::editor
 {
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorStateDir, "",
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_editorStateDir, "",
                              "에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor)" );
 } // namespace sw::editor
 

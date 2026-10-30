@@ -40,6 +40,8 @@ namespace sw
             }
 
             static inline shared_mutex s_stringVarMutex;
+            /** @brief 디스크 경로 변수의 상대 경로 기준입니다(`setPathBaseDirectory` - 기동 때 한 번, 그 뒤 읽기만). */
+            static inline std::optional<AbsolutePath> s_pathBaseDirectory;
         };
 
         /**
@@ -167,6 +169,44 @@ namespace sw
         };
 
         /**
+         * @brief 디스크 경로 변수의 처리입니다. 저장 · 읽기는 글(`GlobalVariableStringOps`)과 같고, 받을 때 절대화한다(빈 글은 "끔" 이라 그대로).
+         * @details 명령줄은 `CommandLineDiskPath` 로 등록해 명령줄이 받을 때 절대화하고, 콘솔 · 에디터 · 보류 값은 `parseValue` 가 같은 `AbsolutePath::tryResolve` 로 푼다.
+         */
+        struct GlobalVariableDiskPathOps
+        {
+            static string formatValue( const GlobalVariableInfo& info ) { return GlobalVariableStringOps::formatValue( info ); }
+
+            [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
+            {
+                if ( text.empty() )
+                    return GlobalVariableStringOps::parseValue( info, text );
+                if ( GlobalVariableInternal::s_pathBaseDirectory.has_value() == false )
+                {
+                    if ( AbsolutePath::isStrictAbsolute( text ) == false )
+                        return false; // 기준을 정하기 전에는 상대 경로를 풀 곳이 없다
+                    return GlobalVariableStringOps::parseValue( info, AbsolutePath::tryMake( text )->str() );
+                }
+                const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( text, *GlobalVariableInternal::s_pathBaseDirectory );
+                if ( resolved.has_value() == false )
+                    return false;
+                return GlobalVariableStringOps::parseValue( info, resolved->str() );
+            }
+
+            static void writeDefault( GlobalVariableInfo& info ) { GlobalVariableStringOps::writeDefault( info ); }
+
+            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            {
+                // 명령줄이 받을 때 절대화한다 - 같은 규칙(CommandLineDiskPath · AbsolutePath::tryResolve)이다. 기본값은 빈 글(끔)만 둔다.
+                commandLine.addArgument<CommandLineDiskPath>( { info._name }, CommandLineDiskPath{}, false );
+            }
+
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            {
+                return GlobalVariableStringOps::readCommandLineArgument( commandLine, info, outPendingText );
+            }
+        };
+
+        /**
          * @brief enum 변수의 처리입니다. int32 로 읽고 쓰며 실제 크기(`_typeSize`)만큼만 씁니다.
          * @details 글은 열거자 이름(`Vulkan`)이다. 숫자(`2`)는 에디터 · 프리셋 · 사용자 설정이 값을 주고받는 안쪽 글(`formatValue` 도 숫자)이라
          *          `parseValue` 가 받지만, 사람이 치는 명령줄은 받지 않는다(`GlobalVariableInfo::setValueFromCommandLine`).
@@ -242,6 +282,7 @@ namespace sw
                 makeGlobalVariableTypeRow<GlobalVariableScalarOps<float32>>( GlobalVariableType::Float, "Float" ),
                 makeGlobalVariableTypeRow<GlobalVariableStringOps>( GlobalVariableType::String, "String" ),
                 makeGlobalVariableTypeRow<GlobalVariableEnumOps>( GlobalVariableType::Enum, "Enum" ),
+                makeGlobalVariableTypeRow<GlobalVariableDiskPathOps>( GlobalVariableType::DiskPath, "DiskPath" ),
             };
 
             static constexpr bool isInTypeOrder()
@@ -325,7 +366,7 @@ namespace sw
     {
         if ( _pData == nullptr )
             return "";
-        if ( _type == GlobalVariableType::String )
+        if ( isTextType() )
             return std::holds_alternative<string>( _defaultValue ) ? std::get<string>( _defaultValue ) : string{};
         // 값 칸이 아니라 빈 칸에 기본값을 써서 같은 형식기로 글을 만든다(bool · 정수 · 실수 · enum 은 8 바이트 안이다).
         int64              storage       = 0;
@@ -398,13 +439,11 @@ namespace sw
      */
     bool GlobalVariableInfo::setValueAsString( string_view val )
     {
-        if ( _pData == nullptr || _type != GlobalVariableType::String )
+        if ( _pData == nullptr || isTextType() == false )
             return false;
-
-        {
-            UniqueLock<shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-            *static_cast<string*>( _pData ) = string{ val };
-        }
+        // 경로 변수는 받을 때 절대화한다 - 처리 표의 같은 함수로 쓴다(글을 그대로 넣는 갈래를 두지 않는다).
+        if ( GlobalVariableTypeTable::getRow( _type )._parseValue( *this, val ) == false )
+            return false;
         if ( _onValueChanged.isBound() )
             _onValueChanged( this );
         return true;
@@ -425,6 +464,11 @@ namespace sw
         if ( _onValueChanged.isBound() )
             _onValueChanged( this );
         return true;
+    }
+
+    void GlobalVariableManager::setPathBaseDirectory( const AbsolutePath& baseDirectory )
+    {
+        GlobalVariableInternal::s_pathBaseDirectory = baseDirectory;
     }
 
     bool GlobalVariableInfo::setValueFromCommandLine( string_view strValue, string& outError )

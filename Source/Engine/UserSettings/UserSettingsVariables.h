@@ -33,4 +33,4 @@ SW_EXTERN_GLOBAL_VARIABLE( int32, gv_subtitleSize );                ///< 자막 
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity ); ///< 자막 배경 불투명도 0~1.
 
 // 기동
-SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_userSettingsFile ); ///< 사용자 설정 파일 경로 덮어쓰기입니다(자동화용이며 사용자 폴더를 건드리지 않습니다).
+SW_EXTERN_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile ); ///< 사용자 설정 파일 경로 덮어쓰기입니다(자동화용이며 사용자 폴더를 건드리지 않습니다).

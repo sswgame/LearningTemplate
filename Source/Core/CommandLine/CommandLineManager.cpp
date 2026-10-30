@@ -100,6 +100,29 @@ namespace sw
         }
     }
 
+    bool CommandLineManager::isFlagGivenBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
+    {
+        const string_view spelling = getCommandLineArgumentSpelling( argument );
+        for ( int32 argIndex = 1; argIndex < argc && pPpArgv != nullptr; ++argIndex )
+        {
+            if ( pPpArgv[argIndex] == nullptr )
+                continue;
+            const string_view line = StringUtil::trim( string_view{ pPpArgv[argIndex] } );
+            string_view       key  = line;
+            string_view       value;
+            const bool        bHasValue = StringUtil::trySplitKeyValue( line, key, value );
+            while ( key.empty() == false && key.front() == '-' )
+            {
+                key.remove_prefix( 1 );
+            }
+            if ( key != spelling )
+                continue;
+            bool bValue = true;
+            return bHasValue == false || ( StringUtil::tryParseBool( value, bValue ) && bValue );
+        }
+        return false;
+    }
+
     // ============================================================================
     // parse (UTF-16, Windows)
     // Windows(WinMain · wmain)의 UTF-16 argv 를 UTF-8 로 바꾼 뒤 파싱한다.
@@ -315,24 +338,15 @@ namespace sw
                 outError = formatToString( "%#: the path is empty", key );
                 return false;
             }
-            // 받는 자리에서 한 번 절대화한다(R5) - 기준은 기동 때 넘긴 폴더다. 드라이브 상대(`C:foo`) · 드라이브 없는 루트(`\foo`)는 경로가 아니다.
-            CommandLineDiskPath diskPath;
-            if ( AbsolutePath::isStrictAbsolute( newValue ) )
-            {
-                diskPath._path = string{ newValue };
-            }
-            else if ( newValue.size() >= 2 && ( newValue[1] == ':' || newValue[0] == '\\' || newValue[0] == '/' ) )
+            // 받는 자리에서 한 번 절대화한다(R5) - 기준은 기동 때 넘긴 폴더다.
+            const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( newValue, baseDirectory );
+            if ( resolved.has_value() == false )
             {
                 outError = formatToString( "%#: '%#' is neither absolute nor relative (drive-relative or rootless)", key, newValue );
                 return false;
             }
-            else
-            {
-                diskPath._path = baseDirectory.str();
-                diskPath._path.push_back( '/' );
-                diskPath._path.append( newValue );
-            }
-            StringUtil::replaceChar( diskPath._path, '\\', '/' );
+            CommandLineDiskPath diskPath;
+            diskPath._path  = resolved->str();
             argument._value = std::move( diskPath );
             return true;
         }

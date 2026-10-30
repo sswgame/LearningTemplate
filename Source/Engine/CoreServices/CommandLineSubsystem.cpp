@@ -38,6 +38,7 @@ namespace sw
             SW_LOW_LEVEL_ERROR( "Cannot read the startup directory - command-line paths cannot be resolved" ); // 로거는 명령줄 다음에 선다 - stderr 로 바로 쓴다
             return SubsystemInitResult::Failed;
         }
+        GlobalVariableManager::setPathBaseDirectory( *baseDirectory ); // 경로 전역 변수(콘솔 · 에디터 · 보류 값)도 같은 기준으로 푼다
         _commandLine->parse( _argc, _ppArgv, *baseDirectory );
         // 인자는 부른 쪽의 것이다(테스트 하네스는 지역 목록을 넘긴다) — 초기화 뒤로는 들지 않는다.
         _argc   = 0;

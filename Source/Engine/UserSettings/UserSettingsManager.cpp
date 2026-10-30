@@ -870,7 +870,7 @@ namespace sw
 
                 // 열거형은 선택지의 `targetValue`, 없으면 선택지 순번을 넘긴다. 문자열 변수면 선택지 이름 그대로다.
                 const uint32 optionIndex = findOptionIndex( def, value );
-                if ( pVariable->_type == GlobalVariableType::String || optionIndex == invalid_index::kUint32 )
+                if ( pVariable->isTextType() || optionIndex == invalid_index::kUint32 )
                     return pVariable->setValueFromString( value );
                 const UserSettingOption& option = def._listOption[optionIndex];
                 if ( option._targetValue.empty() == false )

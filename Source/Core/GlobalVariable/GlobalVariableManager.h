@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include <variant>
 
@@ -42,6 +43,7 @@ namespace sw
         Float,
         String,
         Enum,
+        DiskPath, ///< 디스크 경로(`GlobalDiskPath`) - 글을 받을 때 기동 기준 폴더로 한 번 절대화한다(R5). 저장은 `sw::string`
         /** @brief 열거자 수입니다. 변수의 타입이 아니며 `registerVariable` 이 거절합니다. */
         Count
     };
@@ -86,6 +88,26 @@ namespace sw
     {
         using StorageType                             = string;
         static constexpr GlobalVariableType kType     = GlobalVariableType::String;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
+    /**
+     * @brief 디스크 경로 전역 변수의 C++ 형식입니다(`SW_TEST_GLOBAL_VARIABLE( GlobalDiskPath, gv_x, "", "…" )`). 읽는 쪽은 `sw::string` 처럼 쓴다.
+     * @details 명령줄 · 콘솔 · 에디터 · 보류 값 모두 받을 때 `AbsolutePath::tryResolve` 로 기동 기준 폴더(`GlobalVariableManager::setPathBaseDirectory`)에서 절대화한다.
+     *          그래서 값은 늘 비었거나 절대 경로다 - 예전 `sw::string` 경로 변수는 쓰는 순간의 작업 폴더로 풀렸다. 멤버를 더하지 않는다(저장 칸이 `sw::string` 그대로다).
+     */
+    struct GlobalDiskPath : public string
+    {
+        using string::string;
+        GlobalDiskPath() = default;
+    };
+
+    /** @brief 디스크 경로 변수입니다. 저장은 `sw::string` 이다. */
+    template <>
+    struct GlobalVariableTraits<GlobalDiskPath>
+    {
+        using StorageType                             = string;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::DiskPath;
         static constexpr uint32             kTypeSize = 4u;
     };
 
@@ -148,6 +170,8 @@ namespace sw
         bool setValueAsFloat( float32 val );
         /** @brief *_pData 에 String 값을 쓰고 콜백을 부릅니다. */
         bool setValueAsString( string_view val );
+        /** @brief 글로 다루는 형식(`String` · `DiskPath`)이면 true 입니다. 값 비교 · 위젯 · 설정이 이것으로 가른다. */
+        [[nodiscard]] bool isTextType() const { return _type == GlobalVariableType::String || _type == GlobalVariableType::DiskPath; }
 
         /** @brief 문자열을 파싱해 *_pData 에 쓰고 콜백을 부릅니다. */
         bool setValueFromString( string_view strValue );
@@ -222,6 +246,11 @@ namespace sw
 
         /** @brief 문자열을 파싱해 변수 값을 설정합니다. */
         bool setValueFromString( string_view name, string_view strValue );
+        /**
+         * @brief 디스크 경로 변수(`GlobalDiskPath`)의 상대 경로 기준을 정합니다. 기동 때 한 번 - 명령줄을 읽는 쪽(`CommandLineSubsystem`)이 그 셸의 작업 폴더로 부른다.
+         * @details 정하기 전에는 상대 경로 값을 거절한다(절대 경로 · 빈 값은 받는다).
+         */
+        static void setPathBaseDirectory( const AbsolutePath& baseDirectory );
 
         /** @brief 특정 변수를 기본값으로 되돌립니다. */
         bool resetToDefault( string_view name );

@@ -161,6 +161,7 @@ namespace sw
                 return true;
             }
             case GlobalVariableType::String:
+            case GlobalVariableType::DiskPath:
             {
                 outMatched = string_view{ info.getValueAsString() } == expected;
                 return true;

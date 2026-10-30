@@ -36,3 +36,21 @@ SW_TEST_CASE( AbsolutePathTest, PosixShapes )
     SW_EXPECT_FALSE( AbsolutePath::isStrictAbsolute( "C:/a" ) );
 }
 #endif
+
+SW_TEST_CASE( AbsolutePathTest, ResolveJoinsRelativeToTheGivenBase )
+{
+#if defined( SW_PLATFORM_LINUX )
+    const std::optional<AbsolutePath> base     = AbsolutePath::tryMake( "/work" );
+    const string                      expected = "/work/out/a.log";
+#else
+    const std::optional<AbsolutePath> base     = AbsolutePath::tryMake( "C:/work" );
+    const string                      expected = "C:/work/out/a.log";
+#endif
+    SW_REQUIRE_TRUE( base.has_value() );
+    const std::optional<AbsolutePath> relative = AbsolutePath::tryResolve( "out/a.log", *base );
+    SW_REQUIRE_TRUE( relative.has_value() );
+    SW_EXPECT_EQUAL( expected, relative->str() );
+    SW_EXPECT_TRUE( AbsolutePath::tryResolve( base->str(), *base ) == base ); // 절대면 그대로
+    SW_EXPECT_FALSE( AbsolutePath::tryResolve( "", *base ).has_value() );
+    SW_EXPECT_FALSE( AbsolutePath::tryResolve( "C:foo", *base ).has_value() ); // 드라이브 상대
+}

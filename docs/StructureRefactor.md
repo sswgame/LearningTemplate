@@ -95,7 +95,7 @@
 |---|---|---|
 | 0 | **끝(2026-10-31)** `AbsolutePath`(`Core/Path`) + 엄격한 판정, `ProcessRoots`(`Core/Process`), `ResourcePath` · `DomainTable` 형식만(아직 안 씀) | 나머지 모두의 기준 |
 | 1 | **끝(2026-10-31, Linux 는 문법 검사만)** T1 OS 경계 하나(네이티브 · 우회 지점 · 라이브러리 입구 · 오류 모델) | R2 검사를 한 곳에 둘 자리 |
-| 2 | 입력 경계 형식(명령줄 `DiskPath` · 개발 명령 인자 · 시나리오 경로 칸 · `gv_`) + Saved 생산자를 `ProcessRoots` 로 | 상대 경로가 들어오는 문을 닫는다 |
+| 2 | **끝(2026-10-31)** 입력 경계 형식(명령줄 `CommandLineDiskPath` + 틀린 인자는 기동 오류 · 개발 명령 `readDiskPathArgument` · `readSourceFileArgument` · `gv_` 는 `GlobalDiskPath` — 셋 모두 `AbsolutePath::tryResolve` 하나) + Saved 생산자를 `ProcessRoots`(`_saved` · `_derivedData`) 로. **결정**: 시나리오 단계 속성마다 경로 종류를 선언하지 않는다 — `{out}` 은 명령 글 안에서도 쓰여 속성 형식으로 막을 수 없고, 경로를 받는 명령이 형식을 검사한다(언리얼 자동화 스펙도 속성에 형식이 없다) | 상대 경로가 들어오는 문을 닫는다 |
 | 3 | 조사 로그: OS 경계에서 상대 경로 입력을 기록 → 전체 ctest + **작업 폴더를 바꾸고 상대 경로 인자로 띄우는 CTest**(러너는 절대 경로만 넘겨 이 경우를 못 모은다) | 위반 지점 목록 |
 | 4 | T4 쿠킹 입력 종류 | `findLooseFile` 절대 분기를 지우면 조용히 늘 재베이크 |
 | 5 | T5 의 추측 제거(컴파일 입력 형식 · `exists` 추측 두 곳) | 7 단계에서 셰이더 컴파일마다 위반 → 기동 정지 |

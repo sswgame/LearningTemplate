@@ -36,7 +36,7 @@ namespace sw
      * @brief `-gv_traceSaveOnExit=<경로>`: 기동부터 타임라인 링 버퍼를 켜 두고, 종료할 때 최근 프레임을 그 경로에 트레이스로 저장합니다(비면 끄기).
      * @details 에디터의 멀티 프로세스 재생이 서버 · 클라이언트마다 경로를 주고 Stop 뒤에 합친다(`EditorNetPlaySession`).
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_traceSaveOnExit, "", "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_traceSaveOnExit, "", "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)" );
 
     namespace
     {

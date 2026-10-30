@@ -32,8 +32,8 @@ namespace sw
                     const GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pName );
                     if ( pVariable == nullptr )
                         continue;
-                    const bool bSet = pVariable->_type == GlobalVariableType::String ? pVariable->getValueAsString().empty() == false
-                                                                                     : pVariable->getValueAsFloat() != 0.0f;
+                    const bool bSet = pVariable->isTextType() ? pVariable->getValueAsString().empty() == false
+                                                              : pVariable->getValueAsFloat() != 0.0f;
                     if ( bSet )
                         return true;
                 }

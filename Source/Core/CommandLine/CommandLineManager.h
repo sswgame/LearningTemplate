@@ -145,6 +145,12 @@ namespace sw
         /** @brief main 함수가 받은 UTF-16 인자 목록을 파싱합니다(Windows). 나머지는 UTF-8 판과 같습니다. */
         void parse( int32 argc, utf16* pPpArgv[], const AbsolutePath& baseDirectory );
 
+        /**
+         * @brief 엔진이 서기 전(명령줄 표가 없을 때) 플래그 인자 @p argument 가 켜져 적혔는지 봅니다 - `parse` 와 같은 규칙(앞 하이픈 떼기 · `=값` · 철자는 `ArgumentList.xxx`)이다.
+         * @details 서비스 호스트처럼 기동 전에 갈라야 하는 쪽이 글자를 따로 비교하지 않게 한다(`"--service"` 한 철자만 받던 결함).
+         */
+        [[nodiscard]] static bool isFlagGivenBeforeParse( int32 argc, utf8* pPpArgv[], CommandLineArgument argument );
+
         /** @brief `parse` 가 거절한 인자의 이유(한 줄씩)입니다. 비어 있지 않으면 기동을 멈춘다(`CommandLineSubsystem`). */
         [[nodiscard]] const vector<string>& getParseErrors() const { return _listParseError; }
 

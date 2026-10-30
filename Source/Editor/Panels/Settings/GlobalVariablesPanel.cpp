@@ -138,11 +138,12 @@ namespace sw::editor
              * @details Core 는 에디터를 모르므로 위젯은 에디터가 자기 테이블로 가집니다(Core 의 처리 테이블과 같은 열거자로 고른다).
              */
             static constexpr WidgetRow kArrWidgetRow[] = {
-                {GlobalVariableType::Boolean, &drawBooleanWidget},
-                {  GlobalVariableType::Int32,   &drawInt32Widget},
-                {  GlobalVariableType::Float,   &drawFloatWidget},
-                { GlobalVariableType::String,  &drawStringWidget},
-                {   GlobalVariableType::Enum,    &drawEnumWidget},
+                { GlobalVariableType::Boolean, &drawBooleanWidget},
+                {   GlobalVariableType::Int32,   &drawInt32Widget},
+                {   GlobalVariableType::Float,   &drawFloatWidget},
+                {  GlobalVariableType::String,  &drawStringWidget},
+                {    GlobalVariableType::Enum,    &drawEnumWidget},
+                {GlobalVariableType::DiskPath,  &drawStringWidget}, // 글 칸이다 - 받을 때 절대화는 `setValueAsString` 이 한다
             };
 
             static constexpr bool isWidgetTableInTypeOrder()
