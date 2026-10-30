@@ -45,6 +45,8 @@
 
 - **결정(2026-10-31)**: `TextureCache` 의 렌더 타깃 기본 크기(256)는 그대로 둔다 — 카메라가 나중에 크기를 알리면 `resizeRenderTarget` 이 다시 만들어 맞추므로 폴백이 아니라 자리 표시 값이다(언리얼 렌더 타깃 에셋의 기본 크기와 같다). 씬 데이터의 `string _…Path` 칸(컴포넌트 44 개)을 참조 형식으로 바꾸는 일은 하지 않는다 — 그 값이 디스크 입구(`FileUtil`)로 가는 곳은 0 이고(조사), 7 단계부터 상대 경로가 OS 경계에 닿으면 오류라 남은 위험도 드러난다. 리플렉션 · 세 직렬화기 · 에디터 위젯을 바꾸는 비용에 견줘 얻는 것이 작다(새 결함이 이 모양으로 나오면 그때 형식으로).
 - `AudioClipCache` 의 디코드는 에셋 로드 단계(`AssetManager::addLoadTask`)에 넣는다(끝, 2026-10-31) — 프레임 경계 대기가 오디오도 기다린다.
+- **결정(2026-10-31)**: `collectAssets` 는 소스 · 팩 구성 모두 합집합이다(같은 이름은 앞선 도메인 · 높은 팩) — 언리얼 `IterateDirectory` 가 pak 과 낱개를 합쳐 훑는 것과 같다. 팩의 도메인은 팩 안(스트링 풀 맨 앞, 형식 2)에 적고 파일 이름으로 추측하지 않는다(언리얼 pak mount point).
+- **결정(2026-10-31)**: `AssetPaths` 의 공개 해석은 `toDiskPath`(리소스 id → 자리) · `findLooseFile`(있는 낱개 → 자리) · `toAssetID`(자리 → id) · `collectLooseFolders`(나열) 와 설정(`setSearchPriority` · `mountDiskDomain`). 개발 명령의 디스크 경로 인자(`readDiskPathArgument`)는 글로 둔다 — 받는 쪽 대부분이 글을 받고, 저장 함수로 갈 때만 `FileUtil::requireAbsolutePath` 로 형식에 올린다. 문서 · 직렬화기의 `saveFile`(XML · JSON · Archive)은 `FileUtil` 과 같은 층의 원시 연산이라 글을 받는다(OS 경계가 상대 경로를 거절한다).
 
 ### T3. 읽기 · 쓰기 분리 (R4 · R7)
 - 엔진 저장 입구: 모든 `save*` 는 `save*(AbsolutePath)`. 지금 같은 이름 `saveToFile(string_view)` 가 형식마다 리소스 id(Material · MaterialInstance · Prefab · TileMap · `getWritePath` 경유)이거나 디스크 경로(Skeleton · AnimationClip · AnimationGraph · Heightfield · Sequence · Dialogue · Fracture · NavMesh — 상대 경로면 작업 폴더에 쓴다)다. `InputMap.h:356` 은 "id 또는 절대".
@@ -99,13 +101,13 @@
 | 0 | **끝(2026-10-31)** `AbsolutePath`(`Core/Path`) + 엄격한 판정, `ProcessRoots`(`Core/Process`), `ResourcePath` · `DomainTable` 형식만(아직 안 씀) | 나머지 모두의 기준 |
 | 1 | **끝(2026-10-31, Linux 는 문법 검사만)** T1 OS 경계 하나(네이티브 · 우회 지점 · 라이브러리 입구 · 오류 모델) | R2 검사를 한 곳에 둘 자리 |
 | 2 | **끝(2026-10-31)** 입력 경계 형식(명령줄 `CommandLineDiskPath` + 틀린 인자는 기동 오류 · 개발 명령 `readDiskPathArgument` · `readSourceFileArgument` · `gv_` 는 `GlobalDiskPath` — 셋 모두 `AbsolutePath::tryResolve` 하나) + Saved 생산자를 `ProcessRoots`(`_saved` · `_derivedData`) 로. **결정**: 시나리오 단계 속성마다 경로 종류를 선언하지 않는다 — `{out}` 은 명령 글 안에서도 쓰여 속성 형식으로 막을 수 없고, 경로를 받는 명령이 형식을 검사한다(언리얼 자동화 스펙도 속성에 형식이 없다) | 상대 경로가 들어오는 문을 닫는다 |
-| 3 | 조사 로그: OS 경계에서 상대 경로 입력을 기록 → 전체 ctest + **작업 폴더를 바꾸고 상대 경로 인자로 띄우는 CTest**(러너는 절대 경로만 넘겨 이 경우를 못 모은다) | 위반 지점 목록 |
-| 4 | T4 쿠킹 입력 종류 | `findLooseFile` 절대 분기를 지우면 조용히 늘 재베이크 |
-| 5 | T5 의 추측 제거(컴파일 입력 형식 · `exists` 추측 두 곳) | 7 단계에서 셰이더 컴파일마다 위반 → 기동 정지 |
-| 6 | 작업 폴더 상대 경로 사용처 정리: GameInstance · Autosave · ControlIntentHistory · Chat · NetSecurity · WorldWarp · PointCache · ShooterDirector · 녹화 쓰기 · `EditorScenarioRecordCommands` · `resolveScenePath` 작업 폴더 갈래 · `PortraitBatchUtil` · 콘솔 `screenshot` | 7 단계에서 바로 깨진다 |
-| 7 | R2 를 오류로(OS 경계 한 곳) | |
-| 8 | T2 리소스 경로 · 팩(팩 형식 · 쿠킹 기록 버전 올림 → 전체 재베이크 한 번) | |
-| 9 | T3 읽기 · 쓰기 분리 + `EditorSourceFile` + 패널 이전 + `AssetPaths` 쓰기 입구 제거 | 8 의 형식 위에서 |
+| 3 | **끝(2026-10-31)** 조사 로그: OS 경계에서 상대 경로 입력을 기록 → 전체 ctest + **작업 폴더를 바꾸고 상대 경로 인자로 띄우는 CTest**(러너는 절대 경로만 넘겨 이 경우를 못 모은다) | 위반 지점 목록 |
+| 4 | **끝(2026-10-31)** T4 쿠킹 입력 종류 | `findLooseFile` 절대 분기를 지우면 조용히 늘 재베이크 |
+| 5 | **끝(2026-10-31)** T5 의 추측 제거(컴파일 입력 형식 · `exists` 추측 두 곳) | 7 단계에서 셰이더 컴파일마다 위반 → 기동 정지 |
+| 6 | **끝(2026-10-31)** 작업 폴더 상대 경로 사용처 정리: GameInstance · Autosave · ControlIntentHistory · Chat · NetSecurity · WorldWarp · PointCache · ShooterDirector · 녹화 쓰기 · `EditorScenarioRecordCommands` · `resolveScenePath` 작업 폴더 갈래 · `PortraitBatchUtil` · 콘솔 `screenshot` | 7 단계에서 바로 깨진다 |
+| 7 | **끝(2026-10-31)** R2 를 오류로(OS 경계 한 곳) | |
+| 8 | **끝(2026-10-31)** T2 리소스 경로 · 팩(팩 형식 2 - 마운트 도메인, 쿠커 설정 해시에 형식 버전) | |
+| 9 | **진행 중** T3 읽기 · 쓰기 분리 + `EditorSourceFile` + 패널 이전 + `AssetPaths` 쓰기 입구 제거 — 끝난 것: 저장 입구 `save*(AbsolutePath)` 44 개, `toDiskPath` · `findLooseFile`(→ `optional<AbsolutePath>`) 둘로, `getWritePath` · `toWriteID` · `DomainAssetID` · `toAssetIDFromPathOrID` · `LooseFilePath` · `findLooseDomainFolder` · `makeSave*` 제거, 씬 소스는 늘 리소스 id, 런타임 읽기(SQL · 외형 감시 · 모디파이어) `AssetIO` | 8 의 형식 위에서 |
 | 10 | T5 나머지 · T6 · T7 · T8 · T9 · T10 | 서로 독립 — 병렬 작업자 가능(커밋하고 멈춤, 통합이 검증) |
 
 ## 5. 검증
