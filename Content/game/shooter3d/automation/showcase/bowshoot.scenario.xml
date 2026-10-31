@@ -3,7 +3,7 @@
   활 쇼케이스 — 궁수(앵커) · 활 · 메긴 화살이 페어드 애니메이션 하나(common/data/anim/bow_shoot.pairedanim.xml)로 돈다.
   궁수의 PairedAnimationComponent(_bStartOnPlay)가 플레이 첫 틱 뒤에 세션을 시작하고, 활 · 화살 역할은 외형 부품(아이템 bow_long)의 프리팹이 데이터로 든다.
   0.6 초의 공유 알림 ReleaseArrow 가 활의 알림 표에서 투사체 프리팹(common/prefabs/props/arrow_projectile.prefab.xml)을 시위 본 자리에 스폰한다.
-  하위 폴더라 게임 체인이 줍지 않는다. 사진 둘은 애니메이션의 정해진 시각에 찍으므로 고정 대기다.
+  하위 폴더라 게임 체인이 아니라 쇼케이스 체인(Scenario.shooter3d.showcase)이 돈다. 사진 둘은 애니메이션의 정해진 시각에 찍으므로 고정 대기다.
   실행: App -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml -unattended -gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml
 -->
 <Scenario name="game.shooter3d.bowshoot" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">

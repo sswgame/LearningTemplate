@@ -6,7 +6,7 @@
      게임 데이터 폴더(game/shooter3d/data/appearance/presets/)는 건드리지 않는다. 내보내기는 실행 중인 게임의 외형 데이터에도 올린다.
   ③ 오브젝트에 스켈레탈 메시 · 외형 컴포넌트를 달고 인스펙터로 프리셋을 EditorKnight 로 적는다.
   ④ 플레이하면 그 프리셋으로 조립한다 — 머리 칸에 세트의 투구(helmet_knight)가 있다(기준 프리셋에는 없다).
-  편집기 단계라 게임 체인이 아니라 편집기 체인(Scenario.editor — 활성 게임의 automation/editor/ 도 줍는다)이 돈다. 화소를 판정하지 않아 백엔드 하나에서만 돌고(-scenario-backend-split),
+  편집기 단계라 게임 체인이 아니라 이 게임의 편집기 체인(Scenario.shooter3d.editor)이 돈다. 화소를 판정하지 않아 백엔드 하나에서만 돌고(-scenario-backend-split),
   그래서 고정 이름의 내보내기 폴더가 다른 프로세스와 겹치지 않는다. UI 클릭 사이의 고정 대기는 다른 편집기 시나리오처럼 창이 그려질 프레임이다.
   실행: App -EnableEditor -scenario=game/shooter3d/automation/editor/charactereditorscene.scenario.xml -unattended
 -->
