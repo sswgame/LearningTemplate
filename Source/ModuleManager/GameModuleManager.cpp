@@ -429,8 +429,12 @@ namespace sw
         // 호스트 범위 자체를 부모로 두면 게임 모듈이 호스트 전용 서비스까지 본다.
         const ModuleRegistrationHost* const pRegistrationHost = engine::findSubsystem<ModuleRegistrationHost>();
         outScope.setParentScope( pRegistrationHost != nullptr ? &pRegistrationHost->getMountedLocator() : nullptr );
-        // 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 호스트 칸 — 게임 · 에디터 모듈 모두 쓴다(호스트 범위에서 찾아 건다, 없는 호스트면 걸지 않는다).
-        if ( IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>() )
+        // 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 호스트 칸 — 게임 · 에디터 모듈 모두 쓴다. 호스트 범위를 세우는 곳(`ModuleLoaderSubsystem::initializeHostScope`)이
+        // App · Server 모두 건다 — 없으면 호스트 결함이다.
+        IModuleStateStore* const pStateStore = engine::findSubsystem<IModuleStateStore>();
+        if ( pStateStore == nullptr )
+            SW_LOG_ERROR( "The host scope has no IModuleStateStore - module state is not carried across reloads" );
+        else
             (void)outScope.bind( pStateStore );
         // 호스트 전용 서비스 — 에디터 모듈만 찾는다(게임 모듈의 범위에는 걸지 않는다).
         if ( bGameModule == false )

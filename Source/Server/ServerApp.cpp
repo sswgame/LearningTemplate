@@ -38,6 +38,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "ModuleManager/GameModuleManager.h"
+#include "ModuleManager/HostServiceUtil.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -178,13 +179,11 @@ namespace sw
         _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
         // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
-        if ( startHostServices( _hostServices, kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
-                                SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ) ) == false )
-        {
-            SW_LOG_ERROR( "Host services failed to start: %#", _hostServices.getError().c_str() );
+        const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
+        if ( pCommandLine == nullptr ||
+             HostServiceUtil::startAll( _hostServices, kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
+                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ), *pCommandLine ) == false )
             return false;
-        }
-        SW_LOG_INFO( "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
         // 서버 서비스는 호스트 서비스가 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
         // `shutdown` 이 호스트 서비스보다 먼저 멈춘다.
         if ( startServerServices() == false )

@@ -26,7 +26,6 @@
 #include "Engine/Module/ModuleCatalog.h"
 
 #include "ModuleManager/HostDevLayer.h"
-#include "ModuleManager/ModuleStateStore.h"
 
 namespace sw
 {
@@ -88,12 +87,6 @@ namespace sw
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
         void stopHostService( HostServiceID id );
-        /**
-         * @brief 모듈이 모두 로드된 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
-         * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류한다(모듈이 선언하는 변수는 파싱 시점에 아직 없다). 그래서 오타가
-         *          바로 드러나지 않으므로 여기서 대신 알린다.
-         */
-        void warnUnknownGlobalOverrides() const;
         /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 서비스이 선 뒤). */
         void bindHostCallbacks();
 
@@ -113,8 +106,6 @@ namespace sw
          *          개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
          */
         SubsystemScope _host;
-        /** @brief 모듈이 리로드 사이에 맡기는 칸입니다. 호스트 범위에 `IModuleStateStore` 로 건다(`initializeHostScope`). 범위보다 먼저 선언해 나중에 사라진다. */
-        ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
         /**

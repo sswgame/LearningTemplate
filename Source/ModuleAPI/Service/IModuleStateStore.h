@@ -3,7 +3,7 @@
  * @brief 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡겼다 되찾는 호스트 칸입니다(유니티 `SessionState` 자리).
  * @details 모듈 안의 정적 상태와 인스턴스는 라이브러리를 내리면 사라진다. 넘겨야 할 것(편집기의 되돌리기 기록 · 선택 · 복사 버퍼, 키트의 실행 상태)은
  *          **바이트로** 맡긴다 — 코드(델리게이트 · vtable)는 옛 이미지와 함께 사라지므로 맡길 수 없고, 형의 모양은 새 빌드에서 바뀔 수 있어 형식의 판을 함께 쓴다.
- *          호스트(App)가 구현해 호스트 범위에 이 인터페이스 형으로 건다. 모듈은 `findSubsystem<IModuleStateStore>()` 로 찾는다(없으면 넘기지 않는다).
+ *          호스트(App · Server — `ModuleLoaderSubsystem::initializeHostScope`)가 구현해 호스트 범위에 이 인터페이스 형으로 건다. 모듈은 `findSubsystem<IModuleStateStore>()` 로 찾는다(없으면 넘기지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"

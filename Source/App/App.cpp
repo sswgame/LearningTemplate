@@ -39,8 +39,8 @@
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
 
+#include "ModuleManager/HostServiceUtil.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
-#include "ModuleManager/ModuleStateStore.h"
 
 namespace sw
 {
@@ -201,17 +201,13 @@ namespace sw
 
         // 3. 호스트 서비스(게임 · 에디터 인스턴스, 교체기, 사용자 설정, 런타임 UI 훅, 개발 콘솔)을 의존 순서로 세운다. 내리는 것은 `shutdown` 의 역순 한 줄이다.
         splash.updateStatus( "Loading Modules & Compiling Shaders...", 0.75f );
-        if ( startHostServices( _hostServices, kArrClientHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &App::startHostService, this ),
-                                SW_DELEGATE_METHOD( HostServiceStopDelegate, &App::stopHostService, this ) ) == false )
+        if ( HostServiceUtil::startAll( _hostServices, kArrClientHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &App::startHostService, this ),
+                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &App::stopHostService, this ), *pCommandLineManager ) == false )
         {
-            SW_LOG_ERROR( "Host services failed to start: %#", _hostServices.getError().c_str() );
             splash.dismiss();
             return false;
         }
-        SW_LOG_INFO( "Host services up: %#", describeHostServiceOrder( _hostServices ).c_str() );
         [[maybe_unused]] const int64 modulesEndMicro = MonotonicClock::nowMicroseconds();
-
-        warnUnknownGlobalOverrides();
 
         // 초상화 베이크(`--render-portraits=a.prefab.xml,b.prefab.xml`)는 게임 컴포넌트 타입이 로드된 지금 그리고 끝낸다(창은 띄우지 않는다).
         string portraitList;
@@ -256,16 +252,12 @@ namespace sw
 
     bool App::initializeHostScope()
     {
-        // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
-        // 개발 도구(엔진 기동 확장 · 콘텐츠 폴더 감시 — 배포 구현은 비어 있다).
+        // 개발 도구(엔진 기동 확장 · 콘텐츠 폴더 감시). 모듈 맡김 칸(`IModuleStateStore`)은 범위를 세우는 쪽(`ModuleLoaderSubsystem::initializeHostScope`)이 건다 — Server 와 같다.
         if constexpr ( build::kShipping == false ) // 개발 계층은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
         {
             _pDevLayer = makeHostDevLayer();
             _pDevLayer->addToHostScope( _host, _engine );
         }
-        const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
-        SW_ASSERT( bStateStoreBound );
-        (void)bStateStoreBound;
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleLibrarys, this ), "App" );
         return _pModuleImageHost != nullptr;
     }
@@ -436,23 +428,6 @@ namespace sw
             {
                 return;
             }
-        }
-    }
-
-    void App::warnUnknownGlobalOverrides() const
-    {
-        const CommandLineManager* pCommandLineManager = _engine.getCommandLineManager();
-        if ( pCommandLineManager == nullptr )
-            return;
-
-        // 모르는 `-gv_*` 키는 파서가 버리지 않고 보류 테이블에 남긴다. 모듈이 선언하는 변수는 파싱 시점에 아직 없기 때문이다.
-        // 모듈이 모두 로드된 지금까지도 가져간 곳이 없으면 오타다. 테이블은 비우지 않는다. 핫 리로드로 나중에 로드되는 모듈이
-        // 여전히 가져갈 수 있기 때문이다.
-        const vector<string> listPendingName = pCommandLineManager->collectPendingGlobalNames();
-        for ( const string& pendingName : listPendingName )
-        {
-            if ( engine::getSubsystem<GlobalVariableManager>().findVariable( pendingName ) == nullptr )
-                SW_LOG_WARNING( "%#: no such global variable. Ignored", pendingName.c_str() );
         }
     }
 
