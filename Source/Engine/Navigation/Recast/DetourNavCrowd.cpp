@@ -235,7 +235,6 @@ namespace sw
 
     void DetourNavCrowd::update( float32 deltaTime )
     {
-        using Internal = DetourNavCrowdInternal;
         if ( _pCrowd == nullptr || deltaTime <= 0.0f )
             return;
         // 갱신이 에이전트를 링크 위로 옮기면 모퉁이를 지운다 — 어느 링크인지는 갱신 전의 마지막 모퉁이로만 알 수 있다.
@@ -296,7 +295,6 @@ namespace sw
         outState = NavCrowdAgentState{};
         if ( isActiveAgent( agentID ) == false )
             return false;
-        using Internal             = DetourNavCrowdInternal;
         const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
         outState._position         = float3( pAgent->npos );
         outState._velocity         = float3( pAgent->vel );
@@ -384,7 +382,6 @@ namespace sw
 
     void DetourNavCrowd::drawDebug( IPhysicsDebugRenderer& renderer, bool bPath, bool bVelocity ) const
     {
-        using Internal = DetourNavCrowdInternal;
         const float3 lift{ 0.0f, 0.15f, 0.0f };
         const float4 pathColor{ 1.0f, 0.8f, 0.1f, 1.0f };
         const float4 velocityColor{ 0.1f, 1.0f, 0.3f, 1.0f };

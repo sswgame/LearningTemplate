@@ -80,7 +80,7 @@ namespace sw
         _gpuAssert.shutdown();
     }
 
-    void FramePrepass::record( IRHIDevice& device, IRHICommandList& cmd )
+    void FramePrepass::record( IRHICommandList& cmd )
     {
         _pCmd              = &cmd;
         _bGPUCullingActive = 0;

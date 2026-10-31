@@ -51,7 +51,11 @@ namespace sw::editor
                 uint32 _navID{ 0 };
                 uint32 _popupCount{ 0 };
 
-                bool operator==( const KeyboardTarget& ) const = default;
+                bool operator==( const KeyboardTarget& other ) const
+                {
+                    return _pos == other._pos && _size == other._size && _windowID == other._windowID && _activeID == other._activeID && _navID == other._navID &&
+                           _popupCount == other._popupCount;
+                }
             };
 
             /** @brief 테스트가 돈다(레이블을 적는다)는 표시와 큐 · 레이블입니다. */

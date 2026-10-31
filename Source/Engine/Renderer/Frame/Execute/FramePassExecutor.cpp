@@ -288,7 +288,7 @@ namespace sw
         // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
         // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _nanCheck.poll();
-        _prepass.record( *pDevice, *_pCmd );
+        _prepass.record( *_pCmd );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.

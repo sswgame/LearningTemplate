@@ -398,7 +398,7 @@ namespace sw
                             pDescription != nullptr ? pDescription : "" );
     }
 
-    void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
+    void D3D12RHIDevice::flushDebugMessages( [[maybe_unused]] const utf8* pStage )
     {
         if ( build::kShipping )
             return; // 배포본 — 디버그 레이어 메시지도 DRED 도 켜지 않았다

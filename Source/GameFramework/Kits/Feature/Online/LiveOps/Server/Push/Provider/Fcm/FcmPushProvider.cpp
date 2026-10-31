@@ -57,7 +57,6 @@ namespace sw
 
     string FcmPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
-        using Internal            = FcmPushProviderInternal;
         const int32 argumentCount = PushPayloadUtil::countArguments( message );
         const bool  bHasAlert     = message._titleKey.empty() == false || message._bodyKey.empty() == false;
         const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;

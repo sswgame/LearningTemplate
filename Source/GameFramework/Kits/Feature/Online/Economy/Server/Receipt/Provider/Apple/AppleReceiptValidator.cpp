@@ -142,7 +142,6 @@ namespace sw
 
     void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now )
     {
-        using Internal = AppleReceiptValidatorInternal;
         HTTPClientRequest request;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( now ) } );

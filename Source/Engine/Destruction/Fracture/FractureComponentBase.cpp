@@ -135,11 +135,12 @@ namespace sw
         struct FractureComponentBaseInternal
         {
             /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
+            static bool isGroupBefore( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs ) { return lhs._groupID < rhs._groupID; }
+
             template <class TList>
             static auto* findSortedRuntime( TList& list, uint32 groupID )
             {
-                SW_ASSERT( std::is_sorted( list.begin(), list.end(), []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
-                { return lhs._groupID < rhs._groupID; } ) );
+                SW_ASSERT( std::is_sorted( list.begin(), list.end(), &isGroupBefore ) );
                 const auto it = std::lower_bound( list.begin(), list.end(), groupID, []( const FractureGroupRuntime& runtime, uint32 id )
                 { return runtime._groupID < id; } );
                 using Runtime = std::remove_reference_t<decltype( *it )>;

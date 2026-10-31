@@ -108,8 +108,15 @@ namespace sw::internal
             }                                                                                                                 \
         } while ( false )
 #else
-    /** @brief Debug 가 아니면 어서션을 없앱니다(식도 평가하지 않습니다). */
-    #define SW_ASSERT( expr )
+    /**
+     * @brief Debug 가 아니면 어서션을 없앱니다(식도 평가하지 않습니다).
+     * @details 식은 평가되지 않는 `sizeof` 안에 남긴다 — 단언에만 쓰는 지역 값이 배포 · Release 에서 "쓰지 않은 변수" 경고가 되지 않고, 식의 이름 오류도 모든 구성에서 잡힌다.
+     */
+    #define SW_ASSERT( expr )          \
+        do                             \
+        {                              \
+            (void)sizeof( !( expr ) ); \
+        } while ( false )
 #endif
 
 // ------------------------------------------------------------------------------

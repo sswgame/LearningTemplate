@@ -47,7 +47,7 @@ namespace sw
          * @brief 프리패스를 @p cmd 에 순서대로 기록합니다(리스트는 부르는 쪽이 열고 닫는다). 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 냅니다.
          * @details 기록이 끝나면 assert 링 되읽기를 요청한다. 월드 UI 렌더 텍스처 · 2D 빛 쿠키 아틀라스는 그리기 경로라 실행기가 이 뒤에 같은 리스트에 기록한다.
          */
-        void record( IRHIDevice& device, IRHICommandList& cmd );
+        void record( IRHICommandList& cmd );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
         /** @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다 — 드로우가 가시 목록을 바인딩할지 정한다(돌지 않았는데 묶으면 갱신되지 않은 목록을 읽는다). */
