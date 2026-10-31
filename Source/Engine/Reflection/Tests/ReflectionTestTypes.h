@@ -74,6 +74,32 @@ namespace sw
         Zero     = 0,
         Positive = 1,
     };
+
+    /** @brief uint8 폭 enum 입니다 — 역직렬화가 실제 크기만큼만 써야 인접 필드가 깨지지 않는다. */
+    ENUM()
+    enum class NarrowEnum : uint8
+    {
+        Zero = 0,
+        One  = 1,
+        Two  = 2,
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `NarrowEnum` 뒤에 반사하지 않는 1 바이트 필드를 두어 enum 읽기의 초과 기록을 잡는다. */
+    REFLECT()
+    struct NarrowEnumHost
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        NarrowEnum _mode{ NarrowEnum::Zero };
+
+        uint8 _guard{ 0xAB };
+        uint8 _guard2{ 0xCD };
+        uint8 _guard3{ 0xEF };
+    };
 } // namespace sw
 
 namespace sw

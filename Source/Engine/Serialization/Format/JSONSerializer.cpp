@@ -380,7 +380,8 @@ namespace sw
                         pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
                         return FieldReadResult::Read;
                     }
-                    SW_LOG_WARNING( "'%#' is not a value of enum %# - the field keeps its current value", text, pEnumInfo->_fullyQualifiedName.c_str() );
+                    SW_LOG_WARNING_ID( "Serialization.UnknownEnumerator", "'%#' is not a value of enum %# - the field keeps its current value", text,
+                                       pEnumInfo->_fullyQualifiedName.c_str() );
                     return FieldReadResult::FieldFailed;
                 }
 
