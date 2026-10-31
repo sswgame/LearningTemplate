@@ -202,7 +202,7 @@ namespace sw
         if ( bInvalidMessage )
         {
             // 부른 쪽의 실수다. 판정이 나지 않는 메시지를 받아 두면 기다리는 쪽이 영영 모른다.
-            SW_LOG_ERROR( "NetConnection: a notified message must be 1..%# bytes (got %#) - not sent", kMaxSingleMessageSize, size );
+            SW_LOG_ERROR_ID( "Net.NotifiedMessageSize", "NetConnection: a notified message must be 1..%# bytes (got %#) - not sent", kMaxSingleMessageSize, size );
             return false;
         }
         QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
@@ -701,7 +701,7 @@ namespace sw
             // 신뢰 순서 없음은 받을 때 이미 넘겼으므로 커서만 지나간다. 순서 메시지의 조각 사이에 끼어들었다면 상대가 규약을 어긴 것이다(보내는 쪽은 조각을 연속으로 둔다).
             if ( _listReliableAssembly.empty() == false && _bDiscardingAssembly == SW_FALSE )
             {
-                SW_LOG_ERROR( "NetConnection: an unordered reliable message sits between the fragments of an ordered one - the peer breaks the protocol, dropping the ordered message" );
+                SW_LOG_ERROR_ID( "Net.UnorderedInsideFragments", "NetConnection: an unordered reliable message sits between the fragments of an ordered one - the peer breaks the protocol, dropping the ordered message" );
                 _listReliableAssembly.clear();
                 _bDiscardingAssembly = SW_TRUE;
             }
@@ -720,8 +720,8 @@ namespace sw
             if ( _listReliableAssembly.size() + incoming._buffer.size() > static_cast<size_t>( kMaxReliableMessageSize ) )
             {
                 // 보내는 쪽은 상한을 넘겨 나누지 않으므로, 상한을 넘으면 상대가 규약을 어긴 것이다. 이 메시지는 마지막 조각까지 버려 받는 쪽 메모리를 지킨다.
-                SW_LOG_ERROR( "NetConnection: a reliable message grew past %# bytes while reassembling - the peer breaks the protocol, dropping the message",
-                              kMaxReliableMessageSize );
+                SW_LOG_ERROR_ID( "Net.ReassemblyTooLarge", "NetConnection: a reliable message grew past %# bytes while reassembling - the peer breaks the protocol, dropping the message",
+                                 kMaxReliableMessageSize );
                 _listReliableAssembly.clear();
                 _bDiscardingAssembly = SW_TRUE;
             }

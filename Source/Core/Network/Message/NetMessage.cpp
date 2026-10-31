@@ -69,7 +69,7 @@ namespace sw
     {
         if ( pHandler == nullptr )
         {
-            SW_LOG_ERROR( "NetMessageRouter: registerHandler got a null handler" );
+            SW_LOG_ERROR_ID( "Net.RouterNullHandler", "NetMessageRouter: registerHandler got a null handler" );
             return Subscription{};
         }
         // 이미 단 처리기를 다시 달면 자기가 맡은 종류와 겹쳐 아래에서 거절된다. 종류를 맡지 않는(사건만 받는) 처리기는 등록마다 항목 하나 · 구독 하나다.
@@ -82,13 +82,13 @@ namespace sw
             const bool  bClaimed = ( ( kindMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrKindHandler[kind] != nullptr;
             if ( bClaimed )
             {
-                SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
+                SW_LOG_ERROR_ID( "Net.RouterKindClaimed", "NetMessageRouter: message kind 0x%02x is already claimed - the new handler is refused (give it its own range or a disjoint kind mask)", kind );
                 return Subscription{};
             }
             const bool bNoticeClaimed = ( ( noticedMask >> offset ) & 1u ) != 0 && kind < kKindCount && _arrNoticeHandler[kind] != nullptr;
             if ( bNoticeClaimed )
             {
-                SW_LOG_ERROR( "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
+                SW_LOG_ERROR_ID( "Net.RouterNoticeKindClaimed", "NetMessageRouter: delivery notices of message kind 0x%02x are already claimed - the new handler is refused", kind );
                 return Subscription{};
             }
         }
@@ -127,7 +127,7 @@ namespace sw
                     continue;
                 if ( _arrKindHandler[kind] != nullptr )
                 {
-                    SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is claimed by two handlers - the first one keeps it", kind );
+                    SW_LOG_ERROR_ID( "Net.RouterKindClaimedTwice", "NetMessageRouter: message kind 0x%02x is claimed by two handlers - the first one keeps it", kind );
                     continue;
                 }
                 _arrKindHandler[kind] = pHandler;
@@ -144,8 +144,8 @@ namespace sw
             return;
         }
         if ( _unclaimedNoticeCount == 0 )
-            SW_LOG_ERROR( "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
-                          static_cast<int32>( notice._kind ) );
+            SW_LOG_ERROR_ID( "Net.RouterUnclaimedNotice", "NetMessageRouter: a delivery notice of message kind 0x%02x has no handler - the sender did not register (getNotifiedKindMask); further ones are only counted",
+                             static_cast<int32>( notice._kind ) );
         ++_unclaimedNoticeCount;
     }
 
