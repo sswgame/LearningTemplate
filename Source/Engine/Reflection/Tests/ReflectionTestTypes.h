@@ -27,6 +27,53 @@ namespace sw
         Moving,
         Attacking,
     };
+
+    /** @brief 이름 표 조회 샘플입니다(`ReflectionEnumInfoTest`). 옛 테스트는 손으로 등록했다 — 지금은 코드젠이 등록한다. */
+    ENUM()
+    enum class DummyType : int64
+    {
+        None  = 0,
+        TypeA = 1,
+        TypeB = 2,
+    };
+
+    /** @brief 넓은(int64) 비트플래그 샘플입니다(`ReflectionEnumBitFlagTest`). */
+    ENUM( Flags )
+    enum class DummyBitFlag : int64
+    {
+        None    = 0,
+        OptionA = 1,
+        OptionB = 2,
+        OptionC = 4,
+    };
+
+    /** @brief 좁은(uint8) 비트플래그 샘플입니다 — 코드젠 연산자와 `EnumUtil` 이 함께 도는지 본다(`ReflectionEnumFlagTest`). */
+    ENUM( Flags )
+    enum class TestFlag : uint8
+    {
+        None    = 0,
+        Read    = 1,
+        Write   = 2,
+        Execute = 4,
+    };
+
+    /** @brief 부호 없는 1 바이트의 높은 비트입니다. 코드젠이 부호 있게 적으면 0x80 이 -128 이 된다. */
+    ENUM()
+    enum class TestHighBitEnum : uint8
+    {
+        Low  = 1,
+        High = 0x80,
+        Max  = 0xFF,
+    };
+
+    /** @brief 부호 있는 1 바이트의 음수입니다. 읽기가 0 확장하면 -1 이 255 가 된다. */
+    ENUM()
+    enum class TestSignedNarrowEnum : int8
+    {
+        Negative = -1,
+        Zero     = 0,
+        Positive = 1,
+    };
 } // namespace sw
 
 namespace sw
