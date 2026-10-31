@@ -35,11 +35,12 @@ namespace sw
             static RegistrationList<const AutomationBlocker>& getBlockers() { return getRegistries()._blocker; }
 
             /** @brief 범위가 @p minimumScope 이상인 조건 중 지금 참인 첫 조건의 이름입니다. 없으면 nullptr 입니다. */
+            /** @brief @p minimumScope 이상(넓은 범위가 좁은 범위를 포함)인 조건 가운데 지금 막는 것입니다. `Finish` 는 어느 범위에도 들지 않는다. */
             static const utf8* findBlocking( AutomationBlockScope minimumScope )
             {
                 for ( const AutomationBlocker* pBlocker : getBlockers().getItems() )
                 {
-                    if ( pBlocker->_scope >= minimumScope && pBlocker->_pIsBlocking() )
+                    if ( pBlocker->_scope != AutomationBlockScope::Finish && pBlocker->_scope >= minimumScope && pBlocker->_pIsBlocking() )
                         return pBlocker->_pName;
                 }
                 return nullptr;
@@ -112,6 +113,16 @@ namespace sw
     const utf8* AutomationStepRegistry::findClockHolder()
     {
         return AutomationStepRegistryInternal::findBlocking( AutomationBlockScope::Clock );
+    }
+
+    const utf8* AutomationStepRegistry::findFinishBlocker()
+    {
+        for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
+        {
+            if ( pBlocker->_scope == AutomationBlockScope::Finish && pBlocker->_pIsBlocking() )
+                return pBlocker->_pName;
+        }
+        return nullptr;
     }
 
     AutomationStepRegistrar::AutomationStepRegistrar( const AutomationStepRegistration* pRegistration )

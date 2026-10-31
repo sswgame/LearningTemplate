@@ -177,9 +177,9 @@ namespace sw::editor
                     listPending.erase( listPending.begin() + ( pPending - listPending.data() ) );
                 }
 
-                if ( bHasResult == false || result._bWritten == SW_FALSE )
+                if ( bHasResult == false || result._bCaptured == SW_FALSE )
                 {
-                    runner.recordFailure( step, bHasResult ? "the editor UI capture could not be read or written" : "the editor UI capture never completed (is the editor on?)" );
+                    runner.recordFailure( step, bHasResult ? "the editor UI capture could not be read" : "the editor UI capture never completed (is the editor on?)" );
                     return true;
                 }
                 // 마젠타(빠진 텍스처 · 디버그 색)는 어느 화면에서든 결함이라 문턱을 적지 않으면 0 이다 — 일부러 빠진 텍스처를 보이는 캡처만 문턱을 적어 푼다.
@@ -190,6 +190,21 @@ namespace sw::editor
         };
     } // namespace
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 캡처의 파일 쓰기(워커)가 남았으면 시나리오 끝을 미룬다 - 단계 사이에는 막지 않는다. 다음 단계가 파일을 지우거나 쓰기 실패 로그가 다음 시나리오에 떨어지지 않게 한다. */
+    static bool isWritingCaptureFiles()
+    {
+        const EditorUICapture* pCapture = findSubsystem<EditorUICapture>(); // 선택: 편집기를 켜지 않은 실행에는 없다
+        return pCapture != nullptr && pCapture->isWritingFiles();
+    }
+} // namespace sw::editor
+
+namespace sw
+{
+    SW_AUTOMATION_FINISH_BLOCKER( editorUICaptureWrites, "EditorUICaptureWrites", &editor::isWritingCaptureFiles );
+} // namespace sw
 
 namespace sw::editor
 {

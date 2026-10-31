@@ -8,6 +8,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -124,6 +125,22 @@ namespace sw::editor
                 }
                 return static_cast<float64>( magentaCount ) / static_cast<float64>( pixelCount );
             }
+
+            /** @brief 캡처 한 장을 파일로 씁니다. 실패는 쓰는 쪽(`RenderTargetImageFile`)이 경로와 함께 Error 로 남긴다. */
+            static bool writeFile( const EditorUICaptureWrite& write )
+            {
+                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
+                return RenderTargetImageFile::writeRGBA8File( write._rgbaBytes, write._width, write._height, write._path );
+            }
+
+            /** @brief 워커 잡 본문입니다(`dispatchWrites`). 끝나면 쓰는 중인 수를 내린다. */
+            static void runWriteJob( const TaskArgs& args )
+            {
+                const shared_ptr<EditorUICaptureWrite> pWrite    = args.get<shared_ptr<EditorUICaptureWrite>>( 0 );
+                const shared_ptr<atomic<uint32>>       pInFlight = args.get<shared_ptr<atomic<uint32>>>( 1 );
+                (void)writeFile( *pWrite );
+                --*pInFlight;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -139,8 +156,30 @@ namespace sw::editor
         return _listQueued.back()._ticket;
     }
 
+    bool EditorUICapture::isWritingFiles() const
+    {
+        const ScopedLock<mutex> lock{ _resultMutex };
+        return _listWriteReady.empty() == false || _pWritesInFlight->load() > 0;
+    }
+
+    void EditorUICapture::dispatchWrites()
+    {
+        vector<EditorUICaptureWrite> listWrite;
+        {
+            const ScopedLock<mutex> lock{ _resultMutex };
+            listWrite.swap( _listWriteReady );
+            (void)_pWritesInFlight->fetch_add( static_cast<uint32>( listWrite.size() ) ); // 목록에서 빼는 것과 같은 잠금 안에서 세어 `isWritingFiles` 가 사이를 놓치지 않는다
+        }
+        for ( EditorUICaptureWrite& write : listWrite )
+        {
+            submitEditorBackgroundJob( "EditorUICaptureWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorUICaptureInternal::runWriteJob ),
+                                       MakeTaskArgs( make_shared<EditorUICaptureWrite>( std::move( write ) ), _pWritesInFlight ) );
+        }
+    }
+
     bool EditorUICapture::takeJob( EditorUICaptureJob& outJob )
     {
+        dispatchWrites();
         ++_uiFrameCount;
         if ( _uiFrameCount == 1u && gv_screenshotEditor.empty() == false )
             RenderThread::expectCapture( RenderThread::CaptureKind::EditorUI ); // 첫 사진(기본 60 프레임 뒤)보다 앞서 알린다
@@ -240,17 +279,24 @@ namespace sw::editor
                 EditorUICaptureInternal::flipRows( rgbaBytes, layout._width, layout._height );
             result._magentaFraction = EditorUICaptureInternal::computeMagentaFraction( rgbaBytes );
 
-            (void)FileUtil::ensureParentDirectoryExists( result._job._path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
-            result._bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, layout._width, layout._height, result._job._path ) ? SW_TRUE : SW_FALSE;
+            EditorUICaptureWrite write{ ._path = result._job._path, ._rgbaBytes = std::move( rgbaBytes ), ._width = layout._width, ._height = layout._height };
+            if ( result._job._bFromStartupArgument )
+                result._bCaptured = EditorUICaptureInternal::writeFile( write ) ? SW_TRUE : SW_FALSE;
+            else
+            {
+                result._bCaptured = SW_TRUE;
+                const ScopedLock<mutex> lock{ _resultMutex };
+                _listWriteReady.push_back( std::move( write ) );
+            }
         }
-        if ( result._bWritten == SW_TRUE )
+        if ( result._bCaptured == SW_TRUE )
         {
             SW_LOG_INFO( "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", result._job._path.c_str(), result._width, result._height,
                          result._job._windowCount, result._job._clippedWindowCount, result._job._clippedWindowNames.c_str(), result._magentaFraction );
         }
         else
         {
-            SW_LOG_WARNING( "Editor UI capture was not written: %#", result._job._path.c_str() );
+            SW_LOG_WARNING( "Editor UI capture was not read or written: %#", result._job._path.c_str() );
         }
         addResult( result );
     }
@@ -297,7 +343,7 @@ namespace sw::editor
     {
         // 성공이든 실패든 결과가 나온 순간이 끝이다 — `-gv_screenshotQuit` 이 이 결과로 앱을 끝낸다(렌더 스레드 안에서 부른다).
         if ( result._job._bFromStartupArgument )
-            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, result._bWritten == SW_TRUE );
+            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, result._bCaptured == SW_TRUE );
         const ScopedLock<mutex> lock{ _resultMutex };
         if ( _listResult.size() >= EditorUICaptureInternal::kMaxResultCount )
             _listResult.erase( _listResult.begin() );

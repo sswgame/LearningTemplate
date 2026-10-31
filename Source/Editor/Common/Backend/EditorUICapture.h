@@ -8,10 +8,15 @@
  *
  *          흐름: 시나리오 단계(`CaptureEditorUI`)나 `-gv_screenshotEditor` 가 `request` → UI 스레드가 ImGui 를 닫은 뒤 `takeJob`(창 잘림 지표를 이때 측정한다) →
  *          스냅샷이 합본을 복사 → 렌더 스레드 `renderJob`(present 훅) → `finishJob`(postPresent, GPU 를 기다려 읽는다) → `findResult`.
+ *          파일 쓰기(PNG 인코딩)는 그 프레임에서 빼 워커가 한다 - 그 장의 화면은 그 프레임에만 있어 읽기는 그 자리에서 하지만, 판정(마젠타 비율)은 읽은 픽셀만 본다.
+ *          `finishJob` 이 쓸 목록에 넣고 다음 UI 프레임의 `takeJob` 이 워커에 넘긴다(워커 제출은 에디터 서비스 범위가 있는 UI 스레드에서만 된다). 시나리오는 끝(`<Pass/>`)에서만
+ *          쓰기를 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 장마다 프레임 안에서 써 캡처 38 장 시나리오의 대부분이 쓰기였다.
+ *          `-gv_screenshotEditor` 는 결과가 나오자마자 앱을 끝낼 수 있어(`-gv_screenshotQuit`) 그 프레임에서 쓴다.
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
  *          주의: 렌더러가 0 행을 아래쪽에 그리면(`IImGuiRendererBackend::rendersTargetRowsBottomUp`, OpenGL) 읽은 뒤 뒤집는다 — 백엔드 이름으로 가르지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -54,7 +59,19 @@ namespace sw::editor
         float64            _magentaFraction{ 0.0 }; ///< 마젠타(R≥230, B≥230, G≤40) 픽셀 비율. 빠진 텍스처 · 디버그 색이 UI 에 섞였는지 본다
         uint32             _width{ 0 };
         uint32             _height{ 0 };
-        uint8              _bWritten{ SW_FALSE }; ///< 읽고 파일로 썼으면 SW_TRUE
+        uint8              _bCaptured{ SW_FALSE }; ///< 읽었으면 SW_TRUE(시작 인자 캡처는 파일까지 썼다). 워커의 파일 쓰기 실패는 Error 로그로 남는다
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @struct EditorUICaptureWrite @brief 읽은 캡처 한 장의 파일 쓰기입니다(렌더 스레드가 만들고 워커가 쓴다). */
+    struct EditorUICaptureWrite
+    {
+        string        _path{};
+        vector<uint8> _rgbaBytes{}; ///< 빈틈없는 RGBA8(위 행부터)
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
     };
 } // namespace sw::editor
 
@@ -82,6 +99,8 @@ namespace sw::editor
         bool takeJob( EditorUICaptureJob& outJob );
         /** @brief @p ticket 의 결과가 나왔으면 true 와 결과입니다. */
         [[nodiscard]] bool findResult( uint32 ticket, EditorUICaptureResult& outResult ) const;
+        /** @brief 읽은 캡처의 파일 쓰기가 남았거나 도는 중이면 true 입니다(시나리오 끝이 기다린다). */
+        [[nodiscard]] bool isWritingFiles() const;
 
         // ------------------------------------------------------------------------------
         // 렌더 스레드
@@ -96,19 +115,23 @@ namespace sw::editor
     private:
         void ensureTexture( IRHIDevice& device, uint32 width, uint32 height );
         void addResult( const EditorUICaptureResult& result );
+        /** @brief 렌더 스레드가 쌓은 파일 쓰기를 워커에 넘깁니다(UI 스레드, `takeJob` 이 프레임마다 부른다). */
+        void dispatchWrites();
 
     private:
-        vector<EditorUICaptureJob>                _listQueued; ///< UI 스레드 전용
-        mutable mutex                             _resultMutex;
-        vector<EditorUICaptureResult> _listResult SW_GUARDED_BY( _resultMutex ); ///< `_resultMutex` 로 지킨다
-        EditorUICaptureJob                        _renderedJob{};                ///< 렌더 스레드 전용 — 이번 프레임에 그린 것
-        uint64                                    _texture{ 0 };                 ///< 렌더 스레드 전용 — RHITextureHandle
-        uint32                                    _textureWidth{ 0 };
-        uint32                                    _textureHeight{ 0 };
-        uint32                                    _nextTicket{ 1 };
-        uint32                                    _uiFrameCount{ 0 };                 ///< `-gv_screenshotEditor` 대기 프레임 수
-        uint8                                     _bRendered{ SW_FALSE };             ///< 렌더 스레드 전용
-        uint8                                     _bRenderedRowsBottomUp{ SW_FALSE }; ///< 렌더 스레드 전용 — 그린 렌더러가 0 행을 아래쪽에 두었다(`rendersTargetRowsBottomUp`)
-        uint8                                     _bGlobalRequested{ SW_FALSE };
+        vector<EditorUICaptureJob>                   _listQueued; ///< UI 스레드 전용
+        mutable mutex                                _resultMutex;
+        vector<EditorUICaptureResult> _listResult    SW_GUARDED_BY( _resultMutex );                         ///< `_resultMutex` 로 지킨다
+        vector<EditorUICaptureWrite> _listWriteReady SW_GUARDED_BY( _resultMutex );                         ///< 렌더 스레드가 넣고 UI 스레드가 워커에 넘긴다
+        shared_ptr<atomic<uint32>>                   _pWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }; ///< 워커가 쓰는 중인 수(잡이 같이 들어 서브시스템보다 오래 살 수 있다)
+        EditorUICaptureJob                           _renderedJob{};                                        ///< 렌더 스레드 전용 — 이번 프레임에 그린 것
+        uint64                                       _texture{ 0 };                                         ///< 렌더 스레드 전용 — RHITextureHandle
+        uint32                                       _textureWidth{ 0 };
+        uint32                                       _textureHeight{ 0 };
+        uint32                                       _nextTicket{ 1 };
+        uint32                                       _uiFrameCount{ 0 };                 ///< `-gv_screenshotEditor` 대기 프레임 수
+        uint8                                        _bRendered{ SW_FALSE };             ///< 렌더 스레드 전용
+        uint8                                        _bRenderedRowsBottomUp{ SW_FALSE }; ///< 렌더 스레드 전용 — 그린 렌더러가 0 행을 아래쪽에 두었다(`rendersTargetRowsBottomUp`)
+        uint8                                        _bGlobalRequested{ SW_FALSE };
     };
 } // namespace sw::editor

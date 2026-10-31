@@ -76,6 +76,7 @@ namespace sw
     /** @brief 차단 조건이 무엇을 미루는지입니다. 넓은 쪽이 좁은 쪽을 포함한다 — 시작을 미루는 조건은 캡처도 미룬다. */
     enum class AutomationBlockScope : uint8
     {
+        Finish,  ///< `<Pass/>` 만 미룹니다 - 단계는 막지 않는 뒤의 일(편집기 UI 캡처의 파일 쓰기)이 시나리오 끝 전에 마치게 한다. 넓은 범위에 들지 않는다(같은 범위만 본다).
         Capture, ///< 화면 캡처만 미룹니다(화면 페이드 — 입력은 막지 않으므로 시작은 미루지 않는다).
         Start,   ///< `ScenePlaying` 시작과 캡처를 미룹니다(로딩 화면).
         Clock,   ///< 시작 · 캡처를 미루고 도는 시나리오의 시계도 멈춥니다(`SW_AUTOMATION_CLOCK_HOLDER`).
@@ -128,6 +129,8 @@ namespace sw
         static const utf8* findCaptureBlocker();
         /** @brief 지금 시계를 잡고 있는 조건(`Clock`)의 이름입니다. 없으면 nullptr 입니다. */
         static const utf8* findClockHolder();
+        /** @brief 지금 시나리오 끝(`<Pass/>`)을 미루는 조건(`Finish` 만)의 이름입니다. 없으면 nullptr 입니다. */
+        static const utf8* findFinishBlocker();
     };
 } // namespace sw
 
@@ -200,6 +203,14 @@ namespace sw
     static const ::sw::AutomationBlockerRegistrar sw_automationClockHolderRegistrar_##id                                                 \
     {                                                                                                                                    \
         &sw_automationClockHolder_##id                                                                                                   \
+    }
+
+/** @brief 시나리오 끝(`<Pass/>`)만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계 사이에는 돌게 두고 끝나기 전에만 기다릴 뒤의 일이 씁니다(`AutomationBlockScope::Finish`). */
+#define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pIsBlocking )                                                                               \
+    static const ::sw::AutomationBlocker          sw_automationFinishBlocker_##id{ pName, pIsBlocking, ::sw::AutomationBlockScope::Finish }; \
+    static const ::sw::AutomationBlockerRegistrar sw_automationFinishBlockerRegistrar_##id                                                   \
+    {                                                                                                                                        \
+        &sw_automationFinishBlocker_##id                                                                                                     \
     }
 
 /** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */

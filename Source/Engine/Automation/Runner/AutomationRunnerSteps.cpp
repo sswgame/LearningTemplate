@@ -621,6 +621,17 @@ namespace sw
             return true;
         }
 
+        /** @brief 뒤의 일(`AutomationStepRegistry::findFinishBlocker`)이 끝날 때까지 `<Pass/>` 를 붙잡습니다. 상한을 넘기면 실패로 적고 끝낸다. */
+        static AutomationStepHold holdPass( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
+        {
+            AutomationRunner&        runner   = asRunner( context );
+            const utf8*              pBlocker = AutomationStepRegistry::findFinishBlocker();
+            const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames );
+            if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
+                runner.recordFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")" );
+            return hold;
+        }
+
         static bool runFail( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner  = asRunner( context );
@@ -723,7 +734,8 @@ namespace sw
     SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationRunnerStepsInternal::validateCloseWindow, false );
     SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationRunnerStepsInternal::validateExpectExitWithin,
                         false );
-    SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationRunnerStepsInternal::validatePass, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationRunnerStepsInternal::validatePass, nullptr,
+                                   &AutomationRunnerEngineSteps::holdPass, false );
     SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationRunnerStepsInternal::validateFailOrSkip, false );
     SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationRunnerStepsInternal::validateFailOrSkip, false );
 } // namespace sw

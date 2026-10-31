@@ -36,6 +36,8 @@ namespace sw
          * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.
          */
         static constexpr uint32 kMaxAssetSettleFrames = 600;
+        /** @brief `<Pass/>` 가 뒤의 일(`SW_AUTOMATION_FINISH_BLOCKER`)을 기다리는 최대 프레임 수입니다. 60 Hz 에서 10 초 - 캡처 수십 장의 파일 쓰기가 워커에 줄을 서도 넉넉하다. */
+        static constexpr uint32 kMaxFinishWaitFrames = 600;
         /** @brief 체인(`-scenario=a,b,c`)의 단계 하나가 프로세스 시한에 더하는 몫(초)입니다. 에디터 체인(125 단계, Debug)은 혼자 돌아도 2 분 남짓이다. */
         static constexpr uint32 kChainStageSeconds = 5;
 
