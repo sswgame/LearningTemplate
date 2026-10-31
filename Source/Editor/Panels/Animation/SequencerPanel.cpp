@@ -578,7 +578,7 @@ namespace sw::editor
             _curveState._working = channel;
         if ( ImGui::BeginChild( "##sequencerCurve", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, SequencerPanelInternal::kCurveAreaLines ) ), ImGuiChildFlags_Borders ) )
         {
-            if ( EditorCurveEditor::drawEditor( _curveState ) )
+            if ( EditorCurveEditor::drawEditor( _curveState, "sequencer.curve" ) )
             {
                 channel = _curveState._working;
                 notifyDocumentEdited( "Edit Sequence Curve" );

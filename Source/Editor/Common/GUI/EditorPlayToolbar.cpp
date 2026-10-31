@@ -103,7 +103,7 @@ namespace sw::editor
             static bool drawNetPlayControls( EditorContext& context )
             {
                 EditorNetPlaySession& session = context.getSubsystem<EditorNetPlaySession>();
-                (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
+                (void)EditorNetModeCombo::draw( session, "toolbar.netMode" ); // 바뀐 구성은 다음 Play 에 쓰인다
                 // 툴바는 한 줄 높이다 — 뒤 단추(Standalone 이면 에디터 안 Play)가 다음 줄로 내려가면 잘려 눌리지 않는다.
                 ImGui::SameLine();
                 if ( session.getSettings()._mode == EditorNetMode::Standalone && session.isRunning() == false )

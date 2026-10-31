@@ -81,8 +81,9 @@ namespace sw::editor
         }
     }
 
-    bool EditorNodeGraph::beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName )
+    bool EditorNodeGraph::beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope )
     {
+        _markScope = pMarkScope;
         ensureContext( pSettingsFileName );
         if ( _pEditor == nullptr )
             return false;
@@ -110,7 +111,7 @@ namespace sw::editor
     void EditorNodeGraph::endCanvas()
     {
         ed::End();
-        EditorSelfTestMarks::note( "graph.canvas" ); // 마지막 항목은 캔버스 자식 창이다
+        EditorSelfTestMarks::note( ( _markScope + ".canvas" ).c_str() ); // 마지막 항목은 캔버스 자식 창이다
         ed::SetCurrentEditor( nullptr );
     }
 
@@ -133,7 +134,7 @@ namespace sw::editor
             EditorChrome::setNextItemWidthColumns( 29.0f );
             const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", SW_LOCKEY( "EdCommon", "SearchNodesHint" ), _addNodeFilter.data(), _addNodeFilter.capacity(),
                                                           ImGuiInputTextFlags_EnterReturnsTrue );
-            EditorSelfTestMarks::note( "graph.addNode.search" );
+            EditorSelfTestMarks::note( ( _markScope + ".addNode.search" ).c_str() );
             vector<uint32> listIndex;
             EditorNodeGraphRules::filterNodeKinds( listKind, _addNodeFilter.c_str(), listIndex );
             const utf8* pLastCategory = nullptr;

@@ -102,9 +102,9 @@
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.curve.1"/>
 	<Wait frames="20"/>
-	<EditorClick mark="curve.canvas" button="1"/>
+	<EditorClick mark="meshmodifiers.curveEditor.canvas" button="1"/>
 	<Wait frames="15"/>
-	<EditorClick mark="curve.menu.addKey"/>
+	<EditorClick mark="meshmodifiers.curveEditor.menu.addKey"/>
 	<WaitUntil watch="MeshModifiers.CurveListKeyCount" equals="5" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Escape"/>

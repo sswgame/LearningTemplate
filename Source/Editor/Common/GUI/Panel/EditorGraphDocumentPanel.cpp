@@ -26,9 +26,9 @@ namespace sw::editor
         SW_ASSERT( _bindModuleCopy != nullptr );
     }
 
-    bool EditorGraphDocumentPanelBase::beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName )
+    bool EditorGraphDocumentPanelBase::beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope )
     {
-        if ( _nodeGraph.beginCanvas( pCanvasID, pSettingsFileName ) == false )
+        if ( _nodeGraph.beginCanvas( pCanvasID, pSettingsFileName, pMarkScope ) == false )
             return false;
         // `beginCanvas` 는 EditorModule 의 사본에 편집기를 걸었다. 패널 모듈의 사본에도 같은 편집기를 건다.
         _bindModuleCopy( _nodeGraph.getContext() );

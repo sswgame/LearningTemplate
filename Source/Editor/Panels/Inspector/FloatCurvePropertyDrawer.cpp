@@ -66,7 +66,7 @@ namespace sw::editor
                 // 끄는 중 · 필드 입력 중이 아니면 값에서 다시 뜬다(Undo · 다른 곳의 편집이 편집기에 보인다).
                 if ( _state._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
                     _state._working = *pCurve;
-                if ( EditorCurveEditor::drawEditor( _state ) )
+                if ( EditorCurveEditor::drawEditor( _state, "inspector.curveEditor" ) )
                 {
                     const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, prop._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     grid.applyPropertyTextAsEdit( instance, prop, text, "Edit Curve" );

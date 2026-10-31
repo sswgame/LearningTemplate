@@ -236,7 +236,7 @@ namespace sw::editor
     void EditorViewportToolbar::drawTransformBar( ViewportToolbarSettings& settings, bool bVertical, bool bEnabled )
     {
         ImGui::BeginDisabled( bEnabled == false );
-        EditorWidgets::drawGizmoOperationControls( bVertical );
+        EditorWidgets::drawGizmoOperationControls( "gizmo", bVertical );
 
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };

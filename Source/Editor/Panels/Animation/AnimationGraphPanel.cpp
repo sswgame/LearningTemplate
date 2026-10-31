@@ -225,7 +225,7 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawAnimationCanvas()
     {
-        if ( beginGraphCanvas( "AnimationGraphCanvas", EditorPaths::kAnimationGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "AnimationGraphCanvas", EditorPaths::kAnimationGraphCanvasFileName, "animGraph" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( SW_LOCKEY( "EditorAnimationGraph", "ContextCreateFailed" ) );

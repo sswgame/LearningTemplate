@@ -27,7 +27,7 @@
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>
 	<Wait frames="5"/>
-	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
+	<EditorClick mark="animGraph.canvas" button="1" anchor="0.06,0.9"/>
 	<Wait frames="20"/>
 	<EditorText value="att"/>
 	<Wait frames="10"/>

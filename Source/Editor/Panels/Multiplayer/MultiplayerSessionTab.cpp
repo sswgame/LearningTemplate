@@ -156,7 +156,7 @@ namespace sw::editor
     void MultiplayerSessionTab::drawControls( EditorNetPlaySession& session )
     {
         EditorNetPlaySettings& settings = session.getSettings();
-        (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
+        (void)EditorNetModeCombo::draw( session, "multiplayer.netMode" ); // 바뀐 구성은 다음 Play 에 쓰인다
         EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( "Record traces" ) );
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::Checkbox( "Record traces", &settings._bRecordTraces );

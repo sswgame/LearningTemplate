@@ -280,7 +280,7 @@ namespace sw::editor
         EditorChrome::beginSection( canvasDesc );
 
         // 확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하므로, 캔버스를 연 뒤 이 사본에도 지금 편집기를 건다(`EditorGraphDocumentPanel::beginGraphCanvas` 와 같다).
-        if ( _nodeGraph.beginCanvas( GimmickGraphPanelInternal::kCanvasID, GimmickGraphPanelInternal::kCanvasSettingsFile ) == false )
+        if ( _nodeGraph.beginCanvas( GimmickGraphPanelInternal::kCanvasID, GimmickGraphPanelInternal::kCanvasSettingsFile, "gimmickGraph" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "The node editor could not be created" );

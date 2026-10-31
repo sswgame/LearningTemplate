@@ -200,7 +200,7 @@ namespace sw::editor
         ImGui::Separator();
     }
 
-    void EditorWidgets::drawGizmoOperationControls( bool bVertical )
+    void EditorWidgets::drawGizmoOperationControls( const utf8* pMarkScope, bool bVertical )
     {
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
 
@@ -210,12 +210,12 @@ namespace sw::editor
         {
             const utf8* _pID;
             const utf8* _pIcon;
-            const utf8* _pMark;
+            const utf8* _pMarkSuffix;
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
-            {"##gizmoTranslate", editoricon::kTranslate, "gizmo.translate"},
-            {   "##gizmoRotate",    editoricon::kRotate,    "gizmo.rotate"},
-            {    "##gizmoScale",     editoricon::kScale,     "gizmo.scale"},
+            {"##gizmoTranslate", editoricon::kTranslate, ".translate"},
+            {   "##gizmoRotate",    editoricon::kRotate,    ".rotate"},
+            {    "##gizmoScale",     editoricon::kScale,     ".scale"},
         };
         // 툴팁은 지금 문화권의 글이라 상수 테이블에 넣지 않고 그릴 때 찾는다.
         const utf8* const arrTooltip[] = {
@@ -229,7 +229,7 @@ namespace sw::editor
             const GizmoButton& button = kArrGizmoButton[index];
             if ( drawIconToggle( button._pID, button._pIcon, operation == index, arrTooltip[index] ) )
                 editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
-            EditorSelfTestMarks::note( button._pMark );
+            EditorSelfTestMarks::note( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
             if ( bVertical == false )
                 ImGui::SameLine();
         }
@@ -239,7 +239,7 @@ namespace sw::editor
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
             editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
-        EditorSelfTestMarks::note( "gizmo.space" );
+        EditorSelfTestMarks::note( ( string( pMarkScope ) + ".space" ).c_str() );
     }
 
     void EditorWidgets::drawToolbarSeparator()

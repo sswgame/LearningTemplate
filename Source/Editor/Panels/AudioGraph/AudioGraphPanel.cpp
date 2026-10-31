@@ -166,7 +166,7 @@ namespace sw::editor
     void AudioGraphPanel::drawCanvas( float32 canvasWidth )
     {
         ImGui::BeginChild( "##AudioGraphCanvasRegion", ImVec2{ canvasWidth, 0.0f }, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse );
-        if ( _nodeGraph.beginCanvas( "AudioGraphCanvas", EditorPaths::kAudioGraphCanvasFileName ) == false )
+        if ( _nodeGraph.beginCanvas( "AudioGraphCanvas", EditorPaths::kAudioGraphCanvasFileName, "audioGraph" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( SW_LOCKEY( "EditorAudioGraph", "CanvasFailed" ) );

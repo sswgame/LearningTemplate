@@ -54,8 +54,10 @@ namespace sw::editor
          * @brief 기즈모 조작 모드(이동, 회전, 크기)와 로컬 공간 토글을 한 줄로 그립니다.
          * @details 뷰포트 툴바와 인스펙터가 함께 쓴다. 각자 그리면 한쪽만 고쳤을 때 두 화면이 서로 다른 모드를 가리킨다.
          *          값은 워크스페이스가 보관하므로(`getGizmoOperation`) 여기에는 그리는 방법만 모은다.
+         * @param pMarkScope 단추 레이블(`<scope>.translate` · `.rotate` · `.scale` · `.space`)의 앞부분입니다. 그리는 자리마다 다르다 — 한 프레임에 같은 레이블이
+         *                   두 자리에 남으면 자체 테스트가 어느 쪽인지 모르고 자리 잡기를 끝내 못 본다.
          */
-        static void drawGizmoOperationControls( bool bVertical = false );
+        static void drawGizmoOperationControls( const utf8* pMarkScope, bool bVertical = false );
 
         /**
          * @brief 활성과 비활성에 따라 색이 바뀌는 토글 및 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.

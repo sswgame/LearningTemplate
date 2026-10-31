@@ -46,8 +46,9 @@ namespace sw::editor
          * @brief 컨텍스트를 준비하고 캔버스를 엽니다. false 이면 endCanvas 를 호출하지 마세요.
          * @details 남은 영역이 거의 없으면 캔버스를 열지 않고 false 를 반환한다. 도킹 직후의 첫 프레임은 높이가 음수일 수 있다. 컨텍스트가 없어서 false 인지는
          *          `hasContext` 로 구분한다. 캔버스가 창의 첫 그리기여도 배경과 노드가 잘리지 않도록 같은 색의 배경을 먼저 그린다(구현 주석).
+         * @param pMarkScope 레이블(`<scope>.canvas` · `<scope>.addNode.search`) 앞부분입니다. 패널마다 다르다 — 그래프 패널 둘이 나란히 보이면 같은 레이블이 두 자리에 남는다.
          */
-        bool beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName );
+        bool beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope );
         /** @brief 노드 편집기 컨텍스트가 있는지 확인합니다. `beginCanvas` 가 false 일 때 실패인지, 아직 그릴 영역이 없는 것인지 구분하는 데 씁니다. */
         bool hasContext() const { return _pEditor != nullptr; }
         /** @brief beginCanvas() 와 짝입니다. */
@@ -65,7 +66,7 @@ namespace sw::editor
 
         /**
          * @brief 빈 곳을 오른쪽 클릭하면 노드 검색 팝업을 엽니다. 캔버스 안(`beginCanvas` 에서 `endCanvas` 사이)에서 프레임마다 호출합니다.
-         * @details 팝업은 검색 입력란(열 때 포커스를 받는다)과 그룹별 목록으로 이루어진다. Enter 는 첫 항목을 고른다. 레이블은 캔버스가 `graph.canvas`(endCanvas), 검색 입력란이 `graph.addNode.search` 이다.
+         * @details 팝업은 검색 입력란(열 때 포커스를 받는다)과 그룹별 목록으로 이루어진다. Enter 는 첫 항목을 고른다. 레이블은 캔버스가 `<scope>.canvas`(endCanvas), 검색 입력란이 `<scope>.addNode.search` 이다(`beginCanvas` 의 범위).
          * @return 골랐으면 true 이며, 고른 종류와 오른쪽 클릭한 위치의 캔버스 좌표를 반환합니다.
          */
         bool drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition );
@@ -120,6 +121,7 @@ namespace sw::editor
 
         ax::NodeEditor::EditorContext*       _pEditor;
         string                               _settingsPath;
+        string                               _markScope;          ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)
         float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
         float2                               _canvasSize;         ///< 이번 프레임의 캔버스 크기
         vector<Color>                        _listPinTypeColor;   ///< 핀 타입 번호에 대응하는 색

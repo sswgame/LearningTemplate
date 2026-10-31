@@ -20,7 +20,10 @@ namespace sw::editor
         /** @brief 플레이어 수 입력의 상한입니다. */
         static constexpr int32 kMaxPlayerCount = 8;
 
-        /** @brief 구성을 고르는 위젯을 그립니다. 세션이 도는 동안은 잠깁니다. 바꿨으면 true 입니다(바뀐 구성은 다음 Play 에 쓰인다). */
-        static bool draw( EditorNetPlaySession& session );
+        /**
+         * @brief 구성을 고르는 위젯을 그립니다. 세션이 도는 동안은 잠깁니다. 바꿨으면 true 입니다(바뀐 구성은 다음 Play 에 쓰인다).
+         * @param pMark 드롭다운의 레이블입니다. 툴바와 Multiplayer 창이 함께 보이면 같은 레이블이 두 자리에 남으므로 자리마다 다르다.
+         */
+        static bool draw( EditorNetPlaySession& session, const utf8* pMark );
     };
 } // namespace sw::editor

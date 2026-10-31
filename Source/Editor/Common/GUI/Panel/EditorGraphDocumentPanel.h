@@ -62,7 +62,7 @@ namespace sw::editor
          * @brief 캔버스를 열고 패널 모듈의 imgui-node-editor 사본에도 현재 편집기를 바인딩합니다. false 이면 `endGraphCanvas` 를 호출하지 않습니다.
          * @details 바인딩하지 않으면 캔버스 안에서 패널이 직접 부르는 `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다(머리말의 사본 설명).
          */
-        bool beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName );
+        bool beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName, const utf8* pMarkScope );
         /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수 @p drawnNodeCount 를 프로브(`Editor.GraphNodeCount`)에 기록합니다. */
         void finishGraphCanvas( uint32 drawnNodeCount );
 

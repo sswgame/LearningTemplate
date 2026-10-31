@@ -14,7 +14,7 @@
 
 namespace sw::editor
 {
-    bool EditorNetModeCombo::draw( EditorNetPlaySession& session )
+    bool EditorNetModeCombo::draw( EditorNetPlaySession& session, const utf8* pMark )
     {
         EditorNetPlaySettings& settings = session.getSettings();
         bool                   bChanged = false;
@@ -33,7 +33,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorSelfTestMarks::note( "toolbar.netMode" );
+        EditorSelfTestMarks::note( pMark );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetMode" ) );
         if ( settings._mode != EditorNetMode::Standalone )
         {

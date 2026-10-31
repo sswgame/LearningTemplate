@@ -31,7 +31,7 @@ namespace sw::editor
 
                 ImGui::SeparatorText( "Transform" );
 
-                EditorWidgets::drawGizmoOperationControls();
+                EditorWidgets::drawGizmoOperationControls( "inspector.gizmo" );
 
                 float3 pos = pSceneComp->getLocalPosition();
                 // 회전은 라디안으로 저장하고 도로 보이고 고친다(언리얼 FRotator · 유니티 localEulerAngles).

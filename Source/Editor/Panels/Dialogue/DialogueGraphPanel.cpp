@@ -178,7 +178,7 @@ namespace sw::editor
         canvasDesc._flags     = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
         EditorChrome::beginSection( canvasDesc );
 
-        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorPaths::kDialogueGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorPaths::kDialogueGraphCanvasFileName, "dialogueGraph" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( SW_LOCKEY( "EditorDialogueGraph", "ContextCreateFailed" ) );

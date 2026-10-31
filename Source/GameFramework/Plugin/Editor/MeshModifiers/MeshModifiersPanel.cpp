@@ -776,7 +776,7 @@ namespace sw::editor
             // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(되돌리기 · 다른 곳의 편집이 편집기에 보인다)
             if ( _curveState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
                 _curveState._working = curve;
-            if ( EditorCurveEditor::drawEditor( _curveState ) )
+            if ( EditorCurveEditor::drawEditor( _curveState, "meshmodifiers.curveEditor" ) )
             {
                 // 편집기는 작업 사본만 고친다 - 마칠 때 한 번 기록하고 넣으니 끌기 한 번이 되돌리기 한 줄이다
                 MeshModifierParamValue value = modifier.getParamValue( paramIndex );

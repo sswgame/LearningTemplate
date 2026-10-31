@@ -14,7 +14,7 @@
 	<DevCommand line="panel.focus dialogue_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="150"/>
 	<Wait frames="5"/>
-	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
+	<EditorClick mark="dialogueGraph.canvas" button="1" anchor="0.06,0.9"/>
 	<Wait frames="20"/>
 	<EditorText value="choi"/>
 	<Wait frames="10"/>
@@ -24,7 +24,7 @@
 	<DevCommand line="panel.focus animation_graph"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="150"/>
 	<Wait frames="5"/>
-	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
+	<EditorClick mark="animGraph.canvas" button="1" anchor="0.06,0.9"/>
 	<Wait frames="20"/>
 	<EditorText value="att"/>
 	<Wait frames="10"/>

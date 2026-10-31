@@ -313,7 +313,7 @@ namespace sw::editor
             ImGui::TextDisabled( "Live: %s", liveRunnerName.c_str() );
 
         // 확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하므로, 캔버스를 연 뒤 이 사본에도 지금 편집기를 건다(`EditorGraphDocumentPanel::beginGraphCanvas` 와 같다).
-        if ( _nodeGraph.beginCanvas( BehaviorTreePanelInternal::kCanvasID, BehaviorTreePanelInternal::kCanvasSettingsFile ) == false )
+        if ( _nodeGraph.beginCanvas( BehaviorTreePanelInternal::kCanvasID, BehaviorTreePanelInternal::kCanvasSettingsFile, "behaviorTree" ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "The node editor could not be created" );

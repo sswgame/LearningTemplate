@@ -56,8 +56,9 @@ namespace sw::editor
          * @brief 편집기 본문을 그립니다. 위쪽 행의 숫자 입력란과 남은 영역 전체의 캔버스로 이루어집니다.
          * @return 작업 복사본의 편집을 마쳤으면 true 입니다. 드래그를 놓았거나, 메뉴 동작을 했거나, 숫자 입력을 마친 경우입니다. 호출하는 쪽이 `_working` 을 값에 적용합니다.
          * @details 조작은 다음과 같다. 왼쪽 드래그는 키를 옮기며(Shift 는 시간만, Ctrl 은 값만) 접선 핸들도 옮긴다(Cubic 키이며 자동 접선이 꺼진다).
-         *          오른쪽 클릭은 키 추가, 삭제, 보간 메뉴다. F 는 전체 보기, 휠은 확대, 가운데 드래그는 이동이다. 레이블은 `curve.canvas`, `curve.key.<n>`, `curve.menu.addKey` 다.
+         *          오른쪽 클릭은 키 추가, 삭제, 보간 메뉴다. F 는 전체 보기, 휠은 확대, 가운데 드래그는 이동이다. 레이블은 `<scope>.canvas`, `<scope>.key.<n>`, `<scope>.menu.addKey` 다.
+         * @param pMarkScope 레이블 앞부분입니다. 그리는 자리마다 다르다 — 시퀀서 곡선 탭과 인스펙터 곡선 팝업이 한 프레임에 함께 보이면 같은 레이블이 두 자리에 남는다.
          */
-        static bool drawEditor( EditorCurveEditorState& state );
+        static bool drawEditor( EditorCurveEditorState& state, const utf8* pMarkScope );
     };
 } // namespace sw::editor

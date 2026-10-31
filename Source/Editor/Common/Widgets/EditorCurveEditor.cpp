@@ -163,7 +163,7 @@ namespace sw::editor
             }
 
             /** @brief 오른쪽 클릭 메뉴입니다. 동작을 골랐으면 true 입니다. */
-            static bool drawContextMenu( EditorCurveEditorState& state )
+            static bool drawContextMenu( EditorCurveEditorState& state, const utf8* pMarkScope )
             {
                 if ( ImGui::BeginPopup( "CurveMenu" ) == false )
                     return false;
@@ -201,7 +201,7 @@ namespace sw::editor
                         state._selectedKey = curve.addKey( state._menuTime, state._menuValue );
                         bEdited            = true;
                     }
-                    EditorSelfTestMarks::note( "curve.menu.addKey" );
+                    EditorSelfTestMarks::note( ( string( pMarkScope ) + ".menu.addKey" ).c_str() );
                     if ( ImGui::MenuItem( "Fit View", "F" ) )
                         state._bFitPending = true;
                 }
@@ -321,14 +321,14 @@ namespace sw::editor
         return bClicked;
     }
 
-    bool EditorCurveEditor::drawEditor( EditorCurveEditorState& state )
+    bool EditorCurveEditor::drawEditor( EditorCurveEditorState& state, const utf8* pMarkScope )
     {
         bool bFinished = EditorCurveEditorInternal::drawSelectedKeyFields( state );
 
         const ImVec2 available = ImGui::GetContentRegionAvail();
         const ImVec2 size{ MathUtil::max( available.x, 64.0f ), MathUtil::max( available.y, 64.0f ) };
         ImGui::InvisibleButton( "##curveCanvas", size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle );
-        EditorSelfTestMarks::note( "curve.canvas" );
+        EditorSelfTestMarks::note( ( string( pMarkScope ) + ".canvas" ).c_str() );
         const bool   bHovered = ImGui::IsItemHovered();
         const bool   bActive  = ImGui::IsItemActive();
         const ImVec2 minPoint = ImGui::GetItemRectMin();
@@ -343,7 +343,7 @@ namespace sw::editor
         }
 
         bFinished = EditorCurveEditorInternal::handleCanvasInput( state, bHovered, bActive ) || bFinished;
-        bFinished = EditorCurveEditorInternal::drawContextMenu( state ) || bFinished;
+        bFinished = EditorCurveEditorInternal::drawContextMenu( state, pMarkScope ) || bFinished;
 
         ImDrawList& drawList = *ImGui::GetWindowDrawList();
         drawList.PushClipRect( minPoint, ImVec2{ minPoint.x + size.x, minPoint.y + size.y }, true );
@@ -372,7 +372,7 @@ namespace sw::editor
                 }
             }
             drawList.AddCircleFilled( EditorCurveEditorInternal::toImVec2( center ), keyRadius, bSelected ? selectColor : keyColor );
-            formatstring( keyMark.data(), keyMark.capacity(), "curve.key.%#", static_cast<uint32>( index ) );
+            formatstring( keyMark.data(), keyMark.capacity(), "%#.key.%#", pMarkScope, static_cast<uint32>( index ) );
             EditorCurveEditorInternal::noteRectMark( keyMark.c_str(), center, keyRadius );
         }
         drawList.PopClipRect();
