@@ -1,9 +1,8 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
-#include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Network/Message/Tests/StreamEndpointPair.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
@@ -39,75 +38,13 @@ namespace
             _listClosedReason.push_back( reason );
         }
     };
-
-    /**
-     * @brief 루프백 스트림 망 위의 서버 · 클라이언트 엔드포인트 한 쌍입니다 — 서버는 `listen` 하고 클라이언트는 `_clientHandle` 로 연결을 겁니다.
-     * @details 전송은 I/O 스레드 없이(`_ioThreadCount = 0`) 돌고 `step` 이 두 전송의 `pollIO` 와 두 엔드포인트의 `pump` 를 차례로 부른다 — 한 스레드라 결정적이다.
-     */
-    class StreamEndpointPair
-    {
-    public:
-        StreamEndpointPair( IStreamEndpointListener& serverListener, IStreamEndpointListener& clientListener, const StreamEndpointConfig& endpointSettings,
-                            const LoopbackStreamConditions& conditions )
-            : _network{ 11u }
-            , _serverTransport{ _network.createTransport() }
-            , _clientTransport{ _network.createTransport() }
-            , _server{}
-            , _client{}
-            , _clientHandle{}
-            , _pServerListener{ &serverListener }
-            , _pClientListener{ &clientListener }
-        {
-            _network.setConditions( conditions );
-            StreamTransportConfig transportSettings;
-            transportSettings._ioThreadCount = 0;
-            _bReady                          = _server.initialize( _serverTransport.get(), endpointSettings ) && _client.initialize( _clientTransport.get(), endpointSettings ) &&
-                      _serverTransport->initialize( &_server, transportSettings ) && _clientTransport->initialize( &_client, transportSettings ) &&
-                      _serverTransport->listen( NetAddress::makeLoopback( 0 ) );
-            _clientHandle = _client.connect( NetAddress::makeLoopback( _serverTransport->getListenPort() ) );
-        }
-
-        ~StreamEndpointPair()
-        {
-            _clientTransport->shutdown();
-            _serverTransport->shutdown();
-            step( 1 );
-        }
-
-        StreamEndpointPair( const StreamEndpointPair& )            = delete;
-        StreamEndpointPair& operator=( const StreamEndpointPair& ) = delete;
-
-        /** @brief 두 전송을 돌고 두 엔드포인트를 pump 하기를 @p count 번 합니다. */
-        void step( int32 count )
-        {
-            for ( int32 index = 0; index < count; ++index )
-            {
-                (void)_serverTransport->pollIO( 0 );
-                (void)_clientTransport->pollIO( 0 );
-                (void)_server.pump( *_pServerListener );
-                (void)_client.pump( *_pClientListener );
-            }
-        }
-
-        LoopbackStreamNetwork        _network;
-        unique_ptr<IStreamTransport> _serverTransport;
-        unique_ptr<IStreamTransport> _clientTransport;
-        StreamMessageEndpoint        _server;
-        StreamMessageEndpoint        _client;
-        StreamConnectionHandle       _clientHandle;
-        bool                         _bReady{ false }; ///< 준비(초기화 · listen)가 모두 됐다 — 케이스가 처음에 `SW_REQUIRE_TRUE` 로 본다
-
-    private:
-        IStreamEndpointListener* _pServerListener;
-        IStreamEndpointListener* _pClientListener;
-    };
 } // namespace
 
 SW_TEST_CASE( StreamEndpointTest, MessagesKeepBoundariesAndOrderAcrossChunks )
 {
-    EndpointRecord     serverRecord;
-    EndpointRecord     clientRecord;
-    StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{ 5, 0 } ); // 1..5 바이트 조각
+    EndpointRecord           serverRecord;
+    EndpointRecord           clientRecord;
+    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{ 5, 0 } ); // 1..5 바이트 조각
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
     SW_REQUIRE_EQUAL( 1, static_cast<int32>( serverRecord._listOpened.size() ) );
@@ -129,9 +66,9 @@ SW_TEST_CASE( StreamEndpointTest, MessagesKeepBoundariesAndOrderAcrossChunks )
 
 SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
 {
-    EndpointRecord     serverRecord;
-    EndpointRecord     clientRecord;
-    StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{} );
+    EndpointRecord           serverRecord;
+    EndpointRecord           clientRecord;
+    test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{} );
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
     // 엔드포인트를 거치지 않고 전송에 직접 깨진 머리를 쓴다(모르는 종류 0x7F).
@@ -152,9 +89,9 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
 {
     StreamEndpointConfig settings;
     settings._maxPendingReceiveBytes = 4096;
-    EndpointRecord     serverRecord;
-    EndpointRecord     clientRecord;
-    StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{ 0, 2048 } ); // 한 pollIO 가 2 KB 씩 — 멈춤이 걸릴 틈을 준다
+    EndpointRecord           serverRecord;
+    EndpointRecord           clientRecord;
+    test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{ 0, 2048 } ); // 한 pollIO 가 2 KB 씩 — 멈춤이 걸릴 틈을 준다
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
     const vector<uint8> body( 1000, 0x42 );
@@ -178,9 +115,9 @@ SW_TEST_CASE( StreamEndpointTest, PingMeasuresRoundTripAndFailedConnectStillClos
 {
     StreamEndpointConfig settings;
     settings._pingIntervalSeconds = 0.001;
-    EndpointRecord     serverRecord;
-    EndpointRecord     clientRecord;
-    StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{} );
+    EndpointRecord           serverRecord;
+    EndpointRecord           clientRecord;
+    test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{} );
     SW_REQUIRE_TRUE( pair._bReady );
     const Deadline deadline = Deadline::afterMilliseconds( 2000 );
     while ( pair._client.getRoundTripSeconds( pair._clientHandle ) < 0.0 && deadline.isExpired() == false )
