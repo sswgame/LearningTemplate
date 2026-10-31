@@ -60,6 +60,7 @@ namespace sw::test
             if ( bParsed == false )
                 continue;
             SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateDesktopSteps( scenario, error ), path, error ) );
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateScreenshotFiles( scenario, error ), path, error ) );
             if ( areRequiredModulesActive( scenario, pModuleLoader ) == false )
                 continue; // 그 모듈이 없는 빌드 — 이름은 그 모듈이 등록한다(실행기는 건너뜀으로 끝낸다)
             for ( const AutomationStep& step : scenario.getSteps() )

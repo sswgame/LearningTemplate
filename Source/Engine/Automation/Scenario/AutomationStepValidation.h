@@ -67,6 +67,11 @@ namespace sw
          *          (그 판단은 `findUnresolvedDependency`).
          */
         [[nodiscard]] static bool validateDesktopSteps( const AutomationScenario& scenario, string& outError );
+        /**
+         * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationJudge::deferExpectImage`)
+         *        앞 사진을 덮으면 앞 단언이 뒤 그림을 본다.
+         */
+        [[nodiscard]] static bool validateScreenshotFiles( const AutomationScenario& scenario, string& outError );
 
         /** @brief 못 본 까닭의 종류 이름입니다(보고에 적는다). */
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );

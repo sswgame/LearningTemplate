@@ -370,7 +370,6 @@ namespace sw
                                                                                                                                : AutomationStepHold::Run;
                 if ( hold == AutomationStepHold::Hold )
                     break;
-                _run._imageWaitFrameCount = 0;
                 ++_run._nextStepIndex;
                 _wallProfile.closeWait( step._kind, step._orderInFile, _run._frameIndex ); // 앞서 쌓인 고정 대기 · 조건 대기를 이 단계 앞의 대기로 닫는다
                 if ( hold == AutomationStepHold::Skip )
@@ -668,7 +667,7 @@ namespace sw
                 return false;
             }
         }
-        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false )
+        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false || AutomationStepValidation::validateScreenshotFiles( _scenario, outError ) == false )
             return false;
         for ( const AutomationStep& step : _scenario.getSteps() )
         {

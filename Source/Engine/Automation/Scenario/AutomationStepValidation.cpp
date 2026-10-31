@@ -12,6 +12,8 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 
+#include <algorithm>
+
 namespace sw
 {
     AutomationValidatorLookup AutomationStepValidation::findValidator( string_view kind, AutomationStepValidateFunction& outValidate )
@@ -102,6 +104,24 @@ namespace sw
             outError = step.describe() + ": this step reads or writes desktop-global state (OS cursor clip / foreground / screen), so the scenario must declare input=\"mixed\" " +
                        "and run alone in the Desktop suite";
             return false;
+        }
+        return true;
+    }
+
+    bool AutomationStepValidation::validateScreenshotFiles( const AutomationScenario& scenario, string& outError )
+    {
+        vector<string_view> listFile;
+        for ( const AutomationStep& step : scenario.getSteps() )
+        {
+            const string* pFile = step._kind == "Screenshot" ? step.findAttribute( "file" ) : nullptr;
+            if ( pFile == nullptr )
+                continue;
+            if ( std::find( listFile.begin(), listFile.end(), string_view{ *pFile } ) != listFile.end() )
+            {
+                outError = step.describe() + ": '" + *pFile + "' was already taken by an earlier <Screenshot> - <ExpectImage> is judged at the end, so give each shot its own file";
+                return false;
+            }
+            listFile.push_back( *pFile );
         }
         return true;
     }

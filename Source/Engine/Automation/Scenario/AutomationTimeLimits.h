@@ -29,8 +29,6 @@ namespace sw
         static constexpr float64 kLoadDeadlineSlackSeconds = 120.0;
         /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
         static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
-        /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
-        static constexpr uint32 kMaxImageWaitFrames = 30;
         /**
          * @brief 스크린샷이 에셋 일(읽는 중 · 나타나는 중인 메시, 올리기를 기다리는 텍스처)을 기다리는 최대 프레임 수입니다. 넘기면 실패로 적고 그대로 찍는다.
          * @details 고정 프레임 시간(60 Hz)에서 10 초다 — 첫 프레임에 큰 씬의 텍스처 수백 장이 워커에 줄을 서도 넉넉하다.

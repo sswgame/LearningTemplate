@@ -54,7 +54,6 @@ namespace sw
         uint32                           _waitFrameCount;        ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
-        uint32                           _imageWaitFrameCount;     ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
         bool                             _bFinishWaiting{ false }; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
         uint32                           _assetSettledFrameCount;  ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
         unique_ptr<IAutomationStepState> _pHeldStepState;          ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다

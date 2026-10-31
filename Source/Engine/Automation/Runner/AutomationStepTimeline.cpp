@@ -21,7 +21,6 @@ namespace sw
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
-        , _imageWaitFrameCount{ 0 }
         , _assetSettledFrameCount{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }

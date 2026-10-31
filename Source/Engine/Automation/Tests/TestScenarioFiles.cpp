@@ -18,3 +18,14 @@ SW_TEST_CASE( ScenarioFilesTest, AllScenariosParseResolveAndValidate )
     (void)test::checkScenarioFolder( "engine/automation/rhiswap", pModuleLoader ); // 조건이 붙은 시나리오(네 백엔드) — 없어도 된다
     (void)test::checkScenarioFolder( gameFolder, pModuleLoader );                  // 시나리오가 없는 게임도 있다
 }
+
+// `<ExpectImage>` 는 시나리오 끝에서 판정한다 - 같은 파일을 두 번 찍으면 앞 단언이 뒤 그림을 보므로 읽을 때 거절한다.
+SW_TEST_CASE( ScenarioFilesTest, ScreenshotFileTakenTwiceIsRejected )
+{
+    const string       kText = "<Scenario name=\"test.screenshots\"><Screenshot file=\"a.ppm\"/><Screenshot file=\"b.ppm\"/><Screenshot file=\"a.ppm\"/><Pass/></Scenario>";
+    AutomationScenario scenario;
+    string             error;
+    SW_REQUIRE_TRUE( scenario.parse( kText, "test.scenario.xml", error ) );
+    SW_EXPECT_FALSE( AutomationStepValidation::validateScreenshotFiles( scenario, error ) );
+    SW_EXPECT_TRUE( error.find( "a.ppm" ) != string::npos );
+}

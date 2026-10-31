@@ -583,7 +583,7 @@ namespace sw
         static bool runExpectImage( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
-            runner._judge.runExpectImage( runner, step );
+            runner._judge.deferExpectImage( runner, step );
             return true;
         }
 
@@ -616,16 +616,20 @@ namespace sw
         static bool runPass( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
+            runner._judge.judgeDeferredImages( runner ); // 스크린샷은 `holdPass` 가 다 써진 뒤에 놓는다
             (void)step;
             runner.finish( AutomationOutcome::Passed, "<Pass/>" );
             return true;
         }
 
-        /** @brief 뒤의 일(`AutomationStepRegistry::findFinishBlocker`)이 끝날 때까지 `<Pass/>` 를 붙잡습니다. 상한을 넘기면 실패로 적고 끝낸다. */
+        /**
+         * @brief 뒤의 일 - 요청한 스크린샷의 쓰기와 등록된 끝 차단 조건(`AutomationStepRegistry::findFinishBlocker`, 편집기 UI 캡처의 파일 쓰기) - 이 끝날 때까지 `<Pass/>` 를 붙잡습니다.
+         *        미룬 `<ExpectImage>` 는 그 뒤 `runPass` 가 판정한다. 상한을 넘기면 실패로 적고 끝낸다.
+         */
         static AutomationStepHold holdPass( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
         {
             AutomationRunner&        runner   = asRunner( context );
-            const utf8*              pBlocker = AutomationStepRegistry::findFinishBlocker();
+            const utf8*              pBlocker = runner._run.hasPendingScreenshot() ? "Screenshot" : AutomationStepRegistry::findFinishBlocker();
             const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames );
             runner._run._bFinishWaiting       = hold == AutomationStepHold::Hold;
             if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
@@ -688,20 +692,6 @@ namespace sw
             }
             return hold;
         }
-
-        /** @brief 요청한 스크린샷이 다 써질 때까지 기다립니다. 상한을 넘기면 실패로 적고 측정하지 않고 넘깁니다. */
-        static AutomationStepHold holdExpectImage( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
-        {
-            AutomationRunner& runner = asRunner( context );
-            (void)input;
-            const bool bPending = runner._run.hasPendingScreenshot();
-            if ( bPending == false )
-                return AutomationStepHold::Run;
-            if ( ++runner._run._imageWaitFrameCount <= AutomationTimeLimits::kMaxImageWaitFrames )
-                return AutomationStepHold::Hold;
-            runner.recordFailure( step, "the screenshot never completed (is there a renderer?)" );
-            return AutomationStepHold::Skip;
-        }
     };
 } // namespace sw
 
@@ -730,8 +720,7 @@ namespace sw
     SW_AUTOMATION_STEP( runnerExpectLog, "ExpectLog", &AutomationRunnerEngineSteps::runExpectLog, &AutomationRunnerStepsInternal::validateExpectLog, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerStepsInternal::validateScreenshot, nullptr,
                                    &AutomationRunnerEngineSteps::holdScreenshot, false );
-    SW_AUTOMATION_STEP_WITH_HOOKS( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, nullptr,
-                                   &AutomationRunnerEngineSteps::holdExpectImage, false );
+    SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, false );
     SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationRunnerStepsInternal::validateCloseWindow, false );
     SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationRunnerStepsInternal::validateExpectExitWithin,
                         false );

@@ -144,6 +144,8 @@ namespace sw
         void takeCommandLineScreenshotIfDue( const RenderFramePacket& packet );
         /** @brief 화면에 나간 이미지(Present 캡처, 없으면 Present 가 읽는 첨부)를 @p path 에 씁니다(`.png` 면 PNG, 아니면 PPM). `endFrame` 뒤에 부릅니다. */
         [[nodiscard]] bool writePresentedImage( const string& path );
+        /** @brief 화면에 나간 이미지(Present 캡처)를 빈틈없는 RGBA8 로 읽습니다. 캡처가 없으면 @p path 와 함께 오류를 남기고 false 입니다. `endFrame` 뒤에 부릅니다. */
+        [[nodiscard]] bool readPresentedImage( const string& path, vector<uint8>& outRGBABytes, uint32& outWidth, uint32& outHeight );
         /** @brief 우편함의 `requestScreenshot` 요청을 이번 프레임의 작업으로 받습니다. 프레임 본문 앞에서 부릅니다. */
         void takeScreenshotRequest();
         /** @brief 받은 `requestScreenshot` 요청을 이번 프레임에 쓸 차례면 씁니다. `endFrame` 뒤에 부릅니다. */

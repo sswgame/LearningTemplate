@@ -336,21 +336,13 @@ namespace sw
             context.recordFailure( step, formatToString( "%#%#' count >= %#, got %#", string( pTarget ), needle, args._expected, matchCount ) );
     }
 
-    void AutomationJudge::runExpectImage( AutomationStepContext& context, const AutomationStep& step )
+    void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
     {
         string                                  error;
         AutomationStepArgsUtil::ExpectImageArgs args;
         if ( AutomationStepArgsUtil::parseExpectImage( step, args, error ) == false )
         {
             context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-            return;
-        }
-        const string&   file = *step.findAttribute( "file" );
-        AutomationImage image;
-        AutomationImage reduced;
-        if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
-        {
-            context.recordFailure( step, "could not read the image: " + error );
             return;
         }
         // 골든은 백엔드마다 따로다(래스터 · 정밀도 차가 백엔드마다 다르다). 시나리오 안에서 백엔드를 바꿀 수 있어 단언하는 때의 백엔드를 쓴다.
@@ -363,9 +355,31 @@ namespace sw
             context.recordFailure( step, "the RHI backend is unknown (watch RHI.Backend) - an image assertion needs a rendering host" );
             return;
         }
-        const uint32    backendIndex = static_cast<uint32>( backendValue );
-        const utf8*     pBackendTag  = backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown";
-        const string    goldenID     = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + ".ppm";
+        const uint32 backendIndex = static_cast<uint32>( backendValue );
+        _listDeferredImage.push_back( DeferredImageCheck{ &step, backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown" } );
+    }
+
+    void AutomationJudge::judgeDeferredImages( AutomationStepContext& context )
+    {
+        for ( const DeferredImageCheck& check : _listDeferredImage )
+            judgeImage( context, *check._pStep, check._pBackendTag );
+        _listDeferredImage.clear();
+    }
+
+    void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag )
+    {
+        string                                  error;
+        AutomationStepArgsUtil::ExpectImageArgs args;
+        (void)AutomationStepArgsUtil::parseExpectImage( step, args, error ); // 미룰 때 읽혔다
+        const string&   file = *step.findAttribute( "file" );
+        AutomationImage image;
+        AutomationImage reduced;
+        if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
+        {
+            context.recordFailure( step, "could not read the image: " + error );
+            return;
+        }
+        const string    goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + ".ppm";
         vector<uint8>   listBytes;
         AutomationImage golden;
         const bool      bHasGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes ) &&
