@@ -183,7 +183,7 @@ namespace sw
             if ( _killer._carrying >= 0 )
                 dropCarried( false, 0.0f );
             stunKiller( rules._pallet._stunTime );
-            awardScore( target._score, "PalletSTUN", 1.0f );
+            awardScore( target._score, "PalletStun", 1.0f );
         }
         return true;
     }

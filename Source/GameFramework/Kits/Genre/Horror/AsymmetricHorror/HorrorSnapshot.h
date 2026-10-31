@@ -83,7 +83,7 @@ namespace sw
         PROPERTY( Step = 0.01, Min = 0, Max = 10000 )
         float32 _collapseRemaining{ 0.0f };
         PROPERTY( Step = 0.01, Min = 0, Max = 10000 )
-        float32 _killerSTUN{ 0.0f };
+        float32 _killerStun{ 0.0f };
         PROPERTY( Step = 0.01, Min = 0, Max = 10000 )
         float32 _killerCooldown{ 0.0f };
         PROPERTY()
