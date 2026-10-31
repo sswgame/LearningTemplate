@@ -315,7 +315,7 @@ namespace sw
 
         if ( bRejected )
         {
-            SW_LOG_WARNING( "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
+            SW_LOG_WARNING_ID( "Log.OutputRejected", "At most %# log outputs are allowed. Rejecting the extra one.", _s_kMaxOutput );
             return false;
         }
         return true;
