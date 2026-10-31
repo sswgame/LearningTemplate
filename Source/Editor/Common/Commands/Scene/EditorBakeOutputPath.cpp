@@ -4,12 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
-
-#include "Engine/FileSystem/AssetPaths.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Scene/Scene.h"
-
 namespace sw::editor
 {
     namespace
@@ -21,14 +15,12 @@ namespace sw::editor
         };
     } // namespace
 
-    string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension )
+    string makeSceneBakeAssetPath( string_view sceneAssetID, string_view ownerName, string_view extension )
     {
-        const string& assetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
-        if ( assetID.empty() )
+        if ( ownerName.empty() || StringUtil::endsWith( sceneAssetID, EditorBakeOutputPathInternal::kSceneSuffix ) == false )
             return {};
-        const size_t suffix = assetID.rfind( EditorBakeOutputPathInternal::kSceneSuffix );
-        string       path{ suffix == string::npos ? assetID : assetID.substr( 0, suffix ) };
-        string       name = StringUtil::toLower( owner.getName().c_str() );
+        string path{ sceneAssetID.substr( 0, sceneAssetID.size() - EditorBakeOutputPathInternal::kSceneSuffix.size() ) };
+        string name = StringUtil::toLower( string( ownerName ).c_str() );
         for ( utf8& character : name )
         {
             const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( '0' <= character && character <= '9' );

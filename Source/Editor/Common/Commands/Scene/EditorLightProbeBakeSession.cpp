@@ -219,10 +219,16 @@ namespace sw::editor
             return;
         }
         // 출력 경로 규칙(`<씬>.<오브젝트 이름>.probes`)은 반사 프로브 베이크와 같은 함수 하나다.
-        const string assetPath = pVolume->getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *pVolume->getOwner(), LightProbeGrid::kExtension ) : string{};
-        if ( assetPath.empty() )
+        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
+        if ( sceneAssetID.empty() )
         {
             reportFailure( "the scene has never been saved - save it before baking light probes" );
+            return;
+        }
+        const string assetPath = pVolume->getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, pVolume->getOwner()->getName().view(), LightProbeGrid::kExtension ) : string{};
+        if ( assetPath.empty() )
+        {
+            reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the volume needs a named owner" );
             return;
         }
         const std::optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );

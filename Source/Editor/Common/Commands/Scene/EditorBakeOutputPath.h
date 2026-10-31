@@ -5,17 +5,12 @@
 #pragma once
 #include "Core/Container/string.h"
 
-namespace sw
-{
-    class GameObject;
-    class Scene;
-} // namespace sw
-
 namespace sw::editor
 {
     /**
-     * @brief 오브젝트 하나의 베이크 결과 리소스 경로입니다 — `<씬 경로에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자><extension>`. 씬을 저장한 적이 없으면 빈 문자열입니다.
-     * @details 리소스 경로는 소문자만 받는다. 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
+     * @brief 오브젝트 하나의 베이크 결과 리소스 id 입니다 — `<씬 id 에서 .scene.xml 을 뗀 것>.<오브젝트 이름 소문자><extension>`. 디스크 자리는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다.
+     * @details 씬 id 와 이름만 보는 순수 함수다. 리소스 경로는 소문자만 받는다. 이름의 영숫자 밖 글자는 `_` 로 바꾼다.
+     * @return @p sceneAssetID 가 `.scene.xml` 로 끝나지 않거나 @p ownerName 이 비었으면 빈 문자열입니다 — 다른 글을 씬 id 로 보고 옆에 붙이지 않는다.
      */
-    string makeSceneBakeAssetPath( const Scene& scene, const GameObject& owner, string_view extension );
+    [[nodiscard]] string makeSceneBakeAssetPath( string_view sceneAssetID, string_view ownerName, string_view extension );
 } // namespace sw::editor

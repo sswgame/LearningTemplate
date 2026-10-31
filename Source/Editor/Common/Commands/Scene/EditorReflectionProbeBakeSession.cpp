@@ -65,10 +65,16 @@ namespace sw::editor
             /** @brief 베이크한 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
             static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeAsset&& data, string& outError )
             {
-                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( scene, *probe.getOwner(), ReflectionProbeAsset::kExtension ) : string{};
-                if ( assetPath.empty() )
+                const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
+                if ( sceneAssetID.empty() )
                 {
                     outError = "the scene has never been saved - save it before baking reflection probes";
+                    return false;
+                }
+                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, probe.getOwner()->getName().view(), ReflectionProbeAsset::kExtension ) : string{};
+                if ( assetPath.empty() )
+                {
+                    outError = "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the probe needs a named owner";
                     return false;
                 }
                 const std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
