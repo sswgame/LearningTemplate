@@ -34,7 +34,7 @@ namespace sw::editor
      * @class MeshModifierSession
      * @brief 대상 하나의 모디파이어 편집 상태입니다. 바깥 입력(스플라인 · 다른 메시 · 오브젝트 변환)도 이 세션이 씬에서 읽어 줍니다.
      */
-    class MeshModifierSession final : public EditorSubsystem, public IMeshModifierInputs
+    class MeshModifierSession final : public EditorSubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "MeshModifierSession";
@@ -152,14 +152,41 @@ namespace sw::editor
         uint32 getMirrorAxis() const { return _mirrorAxis; }
         void   setMirrorAxis( uint32 axisIndex ) { _mirrorAxis = axisIndex <= 2u ? axisIndex : 0u; }
 
-        // IMeshModifierInputs
-        [[nodiscard]] bool tryGetWorldMatrix( string_view reference, float4x4& outMatrix ) const override;
-        [[nodiscard]] bool tryGetCurveLength( string_view reference, float32& outLength ) const override;
-        [[nodiscard]] bool trySampleCurve( string_view reference, float32 fraction, float3& outPosition, float3& outTangent ) const override;
-        [[nodiscard]] bool tryGetMeshTriangles( string_view reference, vector<float3>& outListPosition ) const override;
-        [[nodiscard]] bool trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const override;
+        // 바깥 입력 — 모디파이어 평가에는 `getModifierInputs` 가 이 함수들로 넘긴다
+        [[nodiscard]] bool tryGetWorldMatrix( string_view reference, float4x4& outMatrix ) const;
+        [[nodiscard]] bool tryGetCurveLength( string_view reference, float32& outLength ) const;
+        [[nodiscard]] bool trySampleCurve( string_view reference, float32 fraction, float3& outPosition, float3& outTangent ) const;
+        [[nodiscard]] bool tryGetMeshTriangles( string_view reference, vector<float3>& outListPosition ) const;
+        [[nodiscard]] bool trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const;
+        /** @brief 모디파이어 평가(`MeshModifierEvaluation::_pInputs`)에 넘기는 바깥 입력 창구입니다. 이 세션과 수명이 같습니다. */
+        const IMeshModifierInputs& getModifierInputs() const { return _modifierInputs; }
 
     private:
+        /** @brief 세션의 바깥 입력 함수를 모디파이어의 입력 창구로 내보입니다. 세션이 멤버로 들어 수명이 같다. */
+        class ModifierInputs final : public IMeshModifierInputs
+        {
+        public:
+            explicit ModifierInputs( const MeshModifierSession& session )
+                : _session{ session }
+            {
+            }
+
+            [[nodiscard]] bool tryGetWorldMatrix( string_view reference, float4x4& outMatrix ) const override { return _session.tryGetWorldMatrix( reference, outMatrix ); }
+            [[nodiscard]] bool tryGetCurveLength( string_view reference, float32& outLength ) const override { return _session.tryGetCurveLength( reference, outLength ); }
+            [[nodiscard]] bool trySampleCurve( string_view reference, float32 fraction, float3& outPosition, float3& outTangent ) const override
+            {
+                return _session.trySampleCurve( reference, fraction, outPosition, outTangent );
+            }
+            [[nodiscard]] bool tryGetMeshTriangles( string_view reference, vector<float3>& outListPosition ) const override
+            {
+                return _session.tryGetMeshTriangles( reference, outListPosition );
+            }
+            [[nodiscard]] bool trySampleTexture( string_view assetPath, const float2& uv, float4& outColor ) const override { return _session.trySampleTexture( assetPath, uv, outColor ); }
+
+        private:
+            const MeshModifierSession& _session;
+        };
+
         void makeSourceMesh( MeshModifierMesh& outMesh ) const;
         /** @brief 미리보기 평가(메시 변환 · 씬 입력 · 시간 · 스택 입력 위치)를 만듭니다. */
         MeshModifierEvaluation makeEvaluation() const;
@@ -202,6 +229,7 @@ namespace sw::editor
         MeshModifierBounds         _sourceBounds;
         GameObjectHandle           _target;
         MeshModifierTextureSampler _textureSampler; ///< 텍스처 모디파이어가 읽는 이미지 캐시(`trySampleTexture`). 세션이 소유해 에디터마다 따로이고 세션과 함께 사라진다
+        ModifierInputs             _modifierInputs; ///< 모디파이어 평가에 넘기는 바깥 입력 창구(`getModifierInputs`)
         float32                    _previewTime;
         int32                      _selectedIndex;
         MeshModifierBounds         _inputBounds;       ///< 고른 모디파이어의 입력 상자 캐시(`getSelectedModifierInputBounds`, 앞부분 캐시에서 센다)

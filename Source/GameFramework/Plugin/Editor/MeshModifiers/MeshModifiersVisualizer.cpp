@@ -221,7 +221,7 @@ namespace sw::editor
             {
                 MeshModifierEvaluation evaluation{};
                 evaluation._meshToWorld          = session.computeMeshToWorld();
-                evaluation._pInputs              = &session;
+                evaluation._pInputs              = &session.getModifierInputs();
                 const float4x4 localToModifier   = modifier.computeLocalToModifier( evaluation );
                 outFrame._pModifier              = &modifier;
                 outFrame._modifierToWorld        = localToModifier.invert() * evaluation._meshToWorld;

@@ -249,6 +249,7 @@ namespace sw::editor
         , _sourceBounds{}
         , _target{}
         , _textureSampler{ editor::getSubsystem<AssetPaths>() } // 표본은 작업 스레드에서 돈다 — 경로 상태는 만드는 여기(에디터 스레드)서 찾아 넘긴다
+        , _modifierInputs{ *this }
         , _previewTime{ 0.0f }
         , _selectedIndex{ -1 }
         , _inputBounds{}
@@ -410,7 +411,7 @@ namespace sw::editor
     {
         MeshModifierEvaluation evaluation{};
         evaluation._meshToWorld  = computeMeshToWorld();
-        evaluation._pInputs      = this;
+        evaluation._pInputs      = &_modifierInputs;
         evaluation._time         = _previewTime;
         evaluation._pTaskManager = editor::findSubsystem<TaskManager>(); // 변형 적용(미리보기 · 베이크)을 병렬로 돌린다
         // 나눠 걸어도 스택 입력은 원본 위치다(`MeshModifierStack::apply` 가 복사해 넘기는 것과 같은 값)
@@ -643,7 +644,7 @@ namespace sw::editor
         makeSourceMesh( mesh );
         MeshModifierEvaluation evaluation{};
         evaluation._meshToWorld  = computeMeshToWorld();
-        evaluation._pInputs      = this;
+        evaluation._pInputs      = &_modifierInputs;
         evaluation._time         = _previewTime;
         evaluation._pTaskManager = editor::findSubsystem<TaskManager>();
         _stack.apply( mesh, evaluation );
