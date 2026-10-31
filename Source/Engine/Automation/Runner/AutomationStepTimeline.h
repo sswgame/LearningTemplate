@@ -54,14 +54,15 @@ namespace sw
         uint32                           _waitFrameCount;        ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
-        uint32                           _imageWaitFrameCount;    ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
-        uint32                           _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
-        unique_ptr<IAutomationStepState> _pHeldStepState;         ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
-        const AutomationStep*            _pHeldStateStep;         ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
-        uint32                           _holdFrameCount;         ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
-        uint32                           _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임
-        uint32                           _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
-        uint8                            _bClockHeld : 1;         ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        uint32                           _imageWaitFrameCount;     ///< `<ExpectImage>` 가 스크린샷을, `<Screenshot>` 이 에셋 일을 기다린 프레임 수입니다(단계마다 0 부터).
+        bool                             _bFinishWaiting{ false }; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint32                           _assetSettledFrameCount;  ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
+        unique_ptr<IAutomationStepState> _pHeldStepState;          ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
+        const AutomationStep*            _pHeldStateStep;          ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
+        uint32                           _holdFrameCount;          ///< 지금 단계(`<WaitUntil>` · 마크를 기다리는 에디터 입력)가 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        uint32                           _clockHoldFrameCount;     ///< 시계 잡기 조건이 이어서 붙잡은 프레임
+        uint32                           _seenFrameCount;          ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
+        uint8                            _bClockHeld : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8           _reserved   : 7;
     };
 } // namespace sw

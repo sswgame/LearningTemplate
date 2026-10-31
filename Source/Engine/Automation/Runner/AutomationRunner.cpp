@@ -401,7 +401,8 @@ namespace sw
                 finish( AutomationOutcome::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
             // 단계 시점(`_frameIndex`)은 `WaitUntil` 이 붙잡은 프레임에 서 있다(뒤 단계가 그만큼 밀린다). 시한은 붙잡힌 프레임까지 모두 센 `_elapsedFrameCount` 로 본다 —
             // 예전에는 붙잡힌 프레임을 세지 않아 조건이 끝내 서지 않는 시나리오를 프레임 시한이 잡지 못하고 벽시계 그물만 잡았다.
-            if ( _result == AutomationOutcome::Running )
+            // 시나리오 끝(`<Pass/>`)이 뒤의 일(캡처 파일 쓰기)을 기다리는 프레임은 세지 않는다 - 단계는 이미 다 돌았고 그 대기는 따로 묶인다.
+            if ( _result == AutomationOutcome::Running && _run._bFinishWaiting == false )
             {
                 ++_run._elapsedFrameCount;
                 if ( _run._holdFrameCount == 0 )
@@ -470,6 +471,8 @@ namespace sw
         }
         const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
         _wallProfile.recordFrame( kind, nowSeconds - _run._lastFrameEndSeconds );
+        if ( kind == AutomationFrameKind::StepRan )
+            _wallProfile.recordStepFrame( _run._currentStepKind, nowSeconds - _run._lastFrameEndSeconds );
         _run._lastFrameEndSeconds = nowSeconds;
     }
 
@@ -817,6 +820,7 @@ namespace sw
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).
         SW_LOG_INFO( "[Scenario] %# finished %# frames %#", _scenario.getName().c_str(), getEnumName( _result ), _run._frameIndex );
+        SW_LOG_INFO( "[Scenario] %# timeline: %#", _scenario.getName().c_str(), _wallProfile.describe().c_str() );
         AutomationReportParams report{};
         report._scenarioName       = _scenario.getName();
         report._pResultName        = getEnumName( _result );

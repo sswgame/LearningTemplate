@@ -24,14 +24,16 @@ namespace sw
             // PPM 헤더의 구분자는 아무 공백이면 된다. 공백만 써서 이스케이프 없이 적는다.
             header.appendFormat( "P6 %# %# 255 ", width, height );
             const size_t  pixelCount = static_cast<size_t>( width ) * height;
-            vector<uint8> outBytes;
-            outBytes.reserve( header.size() + pixelCount * 3 );
-            outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( header.c_str() ), reinterpret_cast<const uint8*>( header.c_str() ) + header.size() );
-            for ( size_t pixel = 0; pixel < pixelCount; ++pixel )
+            vector<uint8> outBytes( header.size() + pixelCount * 3 );
+            Memory::copy( outBytes.data(), header.c_str(), header.size() );
+            // 크기를 한 번 잡고 포인터로 쓴다 - 픽셀마다 push_back 세 번은 Debug 의 검사 반복자로 스크린샷 한 장에 수백 ms 였다(`unpackRGBA8` 과 같다).
+            uint8*       pOut = outBytes.data() + header.size();
+            const uint8* pIn  = rgbaBytes.data();
+            for ( size_t pixel = 0; pixel < pixelCount; ++pixel, pOut += 3, pIn += 4 )
             {
-                outBytes.push_back( rgbaBytes[pixel * 4 + 0] );
-                outBytes.push_back( rgbaBytes[pixel * 4 + 1] );
-                outBytes.push_back( rgbaBytes[pixel * 4 + 2] );
+                pOut[0] = pIn[0];
+                pOut[1] = pIn[1];
+                pOut[2] = pIn[2];
             }
             return FileUtil::writeFile( outFilePath, outBytes.data(), outBytes.size() );
         }

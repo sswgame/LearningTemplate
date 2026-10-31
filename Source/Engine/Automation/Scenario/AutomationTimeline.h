@@ -46,6 +46,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 단계를 돈 프레임(`StepRan`)의 벽시계를 그 프레임에 마지막으로 돈 단계 종류별로 더한 것입니다 - 무거운 단계 종류를 찾는다. */
+    struct AutomationStepKindCost
+    {
+        string  _stepKind;
+        uint32  _frameCount{ 0 };
+        float64 _seconds{ 0.0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class AutomationTimeline
      * @brief 프레임마다 걸린 벽시계를 종류별로 더하고, 단계 앞 대기 가운데 가장 긴 것을 남깁니다(`AutomationRunner` 의 값 멤버).
@@ -69,6 +80,13 @@ namespace sw
          * @param frameIndex 단계가 도는 시나리오 프레임
          */
         void closeWait( const string& stepKind, uint32 stepNumber, uint32 frameIndex );
+        /** @brief 단계를 돈 프레임 하나(@p seconds)를 그 프레임에 마지막으로 돈 단계 종류 @p stepKind 에 더합니다(`recordFrame` 의 `StepRan` 과 함께 부른다). */
+        void recordStepFrame( const string& stepKind, float64 seconds );
+        /**
+         * @brief 한 줄 요약입니다 - 프레임 종류별 ms · 프레임 수, 무거운 단계 종류 몇 개, 가장 긴 단계 앞 대기. 실행이 끝날 때 로그에 남겨
+         *        보고 파일(`-scenario-report`)을 받지 않는 실행(CTest 체인)도 어디에 시간이 쓰였는지 남긴다.
+         */
+        [[nodiscard]] string describe() const;
 
         [[nodiscard]] const AutomationTimelineSlice& getSlice( AutomationFrameKind kind ) const { return _arrSlice[static_cast<uint32>( kind )]; }
         /** @brief 단계 앞 대기, 긴 순입니다(최대 `kSlowestWaitKeep` 개). */
@@ -78,9 +96,10 @@ namespace sw
         [[nodiscard]] static const utf8* getKindKey( AutomationFrameKind kind );
 
     private:
-        AutomationTimelineSlice    _arrSlice[kFrameKindCount];
-        vector<AutomationSlowWait> _listSlowestWait;
-        uint32                     _pendingWaitFrameCount;
-        float64                    _pendingWaitSeconds;
+        AutomationTimelineSlice        _arrSlice[kFrameKindCount];
+        vector<AutomationSlowWait>     _listSlowestWait;
+        vector<AutomationStepKindCost> _listStepKindCost;
+        uint32                         _pendingWaitFrameCount;
+        float64                        _pendingWaitSeconds;
     };
 } // namespace sw

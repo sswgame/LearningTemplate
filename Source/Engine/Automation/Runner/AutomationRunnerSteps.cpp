@@ -627,6 +627,7 @@ namespace sw
             AutomationRunner&        runner   = asRunner( context );
             const utf8*              pBlocker = AutomationStepRegistry::findFinishBlocker();
             const AutomationStepHold hold     = runner.holdUntilReady( step, input, pBlocker == nullptr, AutomationTimeLimits::kMaxFinishWaitFrames );
+            runner._run._bFinishWaiting       = hold == AutomationStepHold::Hold;
             if ( hold == AutomationStepHold::Run && pBlocker != nullptr )
                 runner.recordFailure( step, string( "background work did not finish before the scenario ended (" ) + pBlocker + ")" );
             return hold;
