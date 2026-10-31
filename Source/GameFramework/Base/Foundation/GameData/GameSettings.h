@@ -27,7 +27,7 @@ namespace sw
      *          (`game/<팩>/maps/start.scene.xml`). 시작 맵만 필수이고, 나머지 경로 칸은 적지 않으면 "읽지 않음"(`isSet` false)이며 그 뜻은 칸마다 적었다.
      *          XML 자식 요소 이름은 필드 이름에서 앞의 `_` 를 뗀 것이고(`_startMap` → `<startMap>`), 읽기는 리플렉션 칸 표를 따른다(`loadRoot`).
      *          `GameInstance` 가 읽은 뒤 게임 서비스로 등록하고 다국어와 입력 맵을 적용한다.
-     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 세이브 경로는 경로 없이 부른 `saveStateToFile` 이 쓴다.
+     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 기본 세이브 슬롯은 슬롯 없이 부른 `saveGameToSlot` 이 쓴다.
      */
     REFLECT()
     struct SW_GF_API GameSettings
@@ -45,7 +45,7 @@ namespace sw
         DataPath _entranceScene; ///< 타이틀 다음 씬. 없으면 시작 맵이다
 
         PROPERTY()
-        DataPath _defaultSavePath; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstance::saveStateToFile` · `loadStateFromFile`). 없으면 경로 없는 저장은 오류다
+        string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameInstance::saveGameToSlot` · `loadGameFromSlot`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
 
         PROPERTY()
         DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음

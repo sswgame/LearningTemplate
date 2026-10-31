@@ -23,6 +23,7 @@
 
 namespace sw
 {
+    struct LocalStoreCompletion;
     struct TypeInfo;
 
     class GameObjectManager;
@@ -78,23 +79,25 @@ namespace sw
         [[nodiscard]] bool restoreSnapshot( SerializePurpose purpose, const vector<uint8>& inBytes );
 
         /**
-         * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameSettings::_defaultSavePath`)입니다.
-         * @details 경로는 사용자 데이터 폴더 아래 상대 경로다(`LocalStoreLocation::tryUnderUserData` - 절대 · 드라이브 상대 · `..` 는 오류).
-         *          경로가 정해졌으면 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다. 경로가 없거나 틀리면 알리고 아무것도 내지 않습니다.
+         * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 로컬 저장 슬롯 @p slot 에 맡깁니다(`GameLocalStore` - 게임 스레드는 디스크를 기다리지 않는다). 비우면 기본 슬롯(`GameSettings::_defaultSaveSlot`)입니다.
+         * @details 슬롯 이름은 `ILocalStore::isValidSlotName` 규칙이다(`save/slot0`). 언리얼 `UGameplayStatics::AsyncSaveGameToSlot` 자리다.
+         *          슬롯이 정해졌으면 쓰기가 끝난 뒤의 `update` 가(캡처가 실패하면 바로) 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다.
+         * @return 쓰기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false, 캡처가 실패하면 실패 이벤트를 내고 false 입니다.
          */
-        [[nodiscard]] bool saveStateToFile( string_view filePath = {} );
+        [[nodiscard]] bool saveGameToSlot( string_view slot = {} );
 
         /**
-         * @brief Shipping/Gameplay: 바이너리 파일로부터 씬과 게임 상태 전체를 복원합니다. 경로를 비우면 기본 세이브 경로입니다.
-         * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
+         * @brief Shipping/Gameplay: 로컬 저장 슬롯에서 씬과 게임 상태 전체를 불러오기를 맡깁니다. 비우면 기본 슬롯입니다.
+         * @details 읽기가 끝난 뒤의 `update` 가 복원하고 성공 · 실패와 함께 `SaveGameLoadedEvent` 를 "game" 채널에 냅니다.
+         * @return 읽기를 맡겼으면 true 입니다. 슬롯이 없거나 틀리면 알리고 이벤트 없이 false 입니다.
          */
-        [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
+        [[nodiscard]] bool loadGameFromSlot( string_view slot = {} );
 
         // --------------------------------------------------------------------------
         // 게임 인스턴스 서브시스템
         // --------------------------------------------------------------------------
         /**
-         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameSceneFlow`). 생성 뒤에는 늘 있다.
+         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameSceneFlow` · `GameLocalStore`). 생성 뒤에는 늘 있다.
          * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::findSubsystem<T>()` 로도 찾는다.
          *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 씬 흐름은 첫 씬 · 타이틀 요청과 로드 알림을 맡는다
          *          (파생의 `onInitialize` 가 `getSubsystem<GameSceneFlow>().requestFirstScene()` 으로 첫 씬을 연다).
@@ -197,8 +200,14 @@ namespace sw
         IRHIDevice*    _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
-        /** @brief 세이브 파일 경로(비면 기본 세이브 경로)를 사용자 데이터 폴더 아래 디스크 경로로 풉니다. 없거나 틀리면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool resolveSaveFilePath( string_view filePath, string& outPath ) const;
+        /** @brief 세이브 슬롯 이름(비면 기본 슬롯)을 정합니다. 없거나 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool resolveSaveSlot( string_view slot, string& outSlot ) const;
+        /** @brief 세이브 쓰기 완료입니다 - `SaveGameSavedEvent` 를 냅니다. */
+        void onSaveSlotWritten( const LocalStoreCompletion& completion );
+        /** @brief 세이브 읽기 완료입니다 - 복원하고 `SaveGameLoadedEvent` 를 냅니다. */
+        void onSaveSlotRead( const LocalStoreCompletion& completion );
+        /** @brief 끝난(꺼진) 세이브 요청 구독을 걷고 @p request 를 듭니다. */
+        void holdSlotRequest( Subscription request );
         /**
          * @brief 기동(`initialize`)이 쓰는 엔진 서비스가 있는지 아무것도 걸기 전에 확인합니다(언리얼 `InitializeDependency`). 들고 있지 않고 쓰는 자리에서 게임 창구로 찾는다.
          * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,
@@ -221,8 +230,9 @@ namespace sw
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
 
-        GameStateSnapshot _stateSnapshot;     ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
-        SubsystemScope    _gameScope;         ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        string            _loadedAudioEvents; ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        GameStateSnapshot    _stateSnapshot;     ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
+        SubsystemScope       _gameScope;         ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
+        string               _loadedAudioEvents; ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
+        vector<Subscription> _listSlotRequest;   ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
     };
 } // namespace sw
