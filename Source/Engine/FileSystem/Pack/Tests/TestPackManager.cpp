@@ -100,3 +100,20 @@ SW_TEST_CASE( PackManagerTest, RejectsPackMountedAgainstItsDomain )
     SW_EXPECT_FALSE( packs.mountPatchPack( domain, 100, {} ) );
     SW_EXPECT_FALSE( packs.mountPack( patch, 1 ) );
 }
+
+SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriority )
+{
+    // 우선순위 목록(game · common · engine · editor)에 없는 도메인은 기본 우선순위를 정할 수 없다 — 말없이 가장 낮게 붙이지 않는다.
+    using Internal    = TestPackManagerInternal;
+    const string root = test::makeScratchPath( "Packs" );
+    const string dlc  = FileUtil::joinPath( root, "seasonal.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( Internal::writePack( dlc, "dlc/winter", {
+                                                                 { "maps/snow.txt", "snow" }
+    } ) );
+
+    SW_EXPECT_LOG( "Pack.NoPriority" );
+    PackManager packs;
+    SW_EXPECT_FALSE( packs.mountPack( dlc ) );
+    SW_EXPECT_TRUE( packs.mountPack( dlc, 1 ) ); // 밝힌 우선순위로는 붙는다
+}

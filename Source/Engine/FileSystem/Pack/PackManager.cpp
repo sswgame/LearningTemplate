@@ -54,6 +54,8 @@ namespace sw
 
             /**
              * @brief EngineConfig 의 리소스 우선순위 목록(listPriority)으로 팩의 기본 마운트 우선순위를 계산합니다(할당 없음).
+             * @return 우선순위입니다. 목록이 비었거나 도메인이 목록의 어느 토큰과도 맞지 않으면 0 - 부르는 쪽이 오류로 붙이지 않는다.
+             *         예전에는 맞지 않는 팩(목록에 없는 `dlc/<이름>`)이 말없이 가장 낮은 우선순위로 붙어 무엇도 덮지 못했다(언리얼 DLC pak 도 우선순위를 밝혀 붙인다).
              */
             static int32 computePackDefaultPriority( string_view packFileName, string_view mountDomain, const vector<string>& listPriority )
             {
@@ -68,7 +70,7 @@ namespace sw
                 if ( stem.empty() )
                     return 0;
 
-                const vector<string>& listPriorityEffective = listPriority.empty() ? AssetPaths::getDefaultSearchPriority() : listPriority;
+                const vector<string>& listPriorityEffective = listPriority;
                 const size_t          priorityCount         = listPriorityEffective.size();
 
                 // 1. listPriorityEffective 순서대로 맞는 토큰을 찾는다(앞쪽 인덱스일수록 우선순위가 높다)
@@ -93,7 +95,7 @@ namespace sw
                     return static_cast<int32>( priorityCount + 1 ) * kPriorityStep;
                 }
 
-                // 3. 맞는 우선순위 토큰이 없는 일반 팩의 기본 우선순위
+                // 3. 맞는 우선순위 토큰이 없다 - 우선순위를 정할 수 없다
                 return 0;
             }
 
@@ -328,6 +330,12 @@ namespace sw
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
             effectivePriority = PackManagerInternal::computePackDefaultPriority( packFilePath, mountDomain, engine::getSubsystem<AssetPaths>().getSearchPriority() );
+        if ( effectivePriority <= 0 )
+        {
+            SW_LOG_ERROR_ID( "Pack.NoPriority", "Pack %# (domain '%#') matches no token of the resource search priority - add it to EngineConfig._listResourcePriority or mount it with a priority",
+                             packFilePath, mountDomain );
+            return false;
+        }
 
         // DLC 소유권을 확인한다
         const uint32 dlcAppID = pReader->getDLCAppID();

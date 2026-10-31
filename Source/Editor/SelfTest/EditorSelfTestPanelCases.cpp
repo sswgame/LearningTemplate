@@ -74,7 +74,11 @@ namespace sw::editor
             /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
-                probe._folderAbs = FileUtil::joinPath( EditorPaths::findContentFolder( editor::getSubsystem<const GameConfig>()._packRoot.get() ), kProbeFolderName );
+                // 활성 팩 폴더가 없으면 멈춘다 - 빈 루트에 이으면 상대 경로가 되어 지울 폴더를 정할 수 없다(예전에는 그대로 removeDirectory 에 넘겼다).
+                const string packFolder = EditorPaths::findContentFolder( editor::getSubsystem<const GameConfig>()._packRoot.get() );
+                if ( packFolder.empty() )
+                    return false;
+                probe._folderAbs = FileUtil::joinPath( packFolder, kProbeFolderName );
                 if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                     return false;
                 if ( FileUtil::ensureDirectoryExists( probe._folderAbs ) == false )

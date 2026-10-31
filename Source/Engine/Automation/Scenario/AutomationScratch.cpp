@@ -8,6 +8,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
 #include "Core/UUID/UUID.h"
@@ -51,20 +52,22 @@ namespace sw
             /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
             static bool allowWrite( string_view path, string& outReason )
             {
-                const string& rootPath = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-                if ( rootPath.empty() )
-                    return true; // 리소스 루트가 아직 없으면 지킬 원본도 없다
-                string absolutePath;
-                if ( FileUtil::isAbsolutePath( path ) )
-                    absolutePath = string( path );
-                else if ( FileUtil::makeAbsolutePath( path, absolutePath ) == false )
+                // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
+                const string& rootPath = ProcessRoots::get()._content.str();
+                if ( FileUtil::isDirectory( rootPath ) == false )
                     return true;
+                // 상대 경로는 어디를 가리키는지 정할 수 없다 - 통과시키지 않는다(예전에는 절대로 바꾸지 못하면 열어 줬다).
+                if ( AbsolutePath::isStrictAbsolute( path ) == false )
+                {
+                    outReason = "the path is not absolute - a scenario writes under {out} or a <Scratch> folder";
+                    return false;
+                }
                 const string root        = FileUtil::normalizePath( rootPath ) + "/";
                 const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
-                const string target      = FileUtil::normalizePath( absolutePath );
+                const string target      = FileUtil::normalizePath( path );
 
-                // 프로젝트 루트(Resource 의 부모)의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
-                const string projectRoot = FileUtil::normalizePath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( rootPath ) ) ) + "/";
+                // 프로젝트 루트의 추적 폴더 — 허용 목록에 든 하위 폴더만 연다.
+                const string projectRoot = FileUtil::normalizePath( ProcessRoots::get()._project.str() ) + "/";
                 for ( const string_view folder : kTrackedFolders )
                 {
                     if ( isInside( target, projectRoot, folder ) == false )
