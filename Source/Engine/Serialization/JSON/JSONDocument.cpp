@@ -489,7 +489,7 @@ namespace sw
         if ( _impl->root.is_discarded() )
         {
             _lastError = JSONDocumentInternal::describeParseError( jsonText, source );
-            SW_LOG_ERROR( "JSON parse error at %#", _lastError );
+            SW_LOG_ERROR_ID( "JSON.ParseFailed", "JSON parse error at %#", _lastError );
             clear();
             return false;
         }
