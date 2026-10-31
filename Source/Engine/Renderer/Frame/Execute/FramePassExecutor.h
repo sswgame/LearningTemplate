@@ -181,7 +181,7 @@ namespace sw
         };
 
         // ------------------------------------------------------------------------------
-        // 그래프 콜백과 패스별 실행(FramePassExecutorPasses.cpp)
+        // 그래프 콜백과 패스별 실행
         // ------------------------------------------------------------------------------
         /** @brief RenderGraph 가 패스를 실행할 때 부르는 콜백입니다. */
         void onGraphPassExecute( const RenderGraphPassContext& context );
@@ -274,7 +274,7 @@ namespace sw
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
         // ------------------------------------------------------------------------------
-        // 드로우(FramePassExecutorDraw.cpp)
+        // 드로우
         // ------------------------------------------------------------------------------
         /** @brief 드로우 직전에 리플렉션 기반으로 바인딩합니다. PassCB, MaterialCB, 텍스처, 인스턴스 버퍼가 대상입니다. */
         void bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
@@ -337,7 +337,7 @@ namespace sw
         bool isDrawMergeEnabled() const;
 
         // ------------------------------------------------------------------------------
-        // 모듈 확장 패스의 기록(FramePassExecutorExtension.cpp) — 받아들이기는 `FrameExtensionHost`
+        // 모듈 확장 패스의 기록 — 받아들이기는 `FrameExtensionHost`
         // ------------------------------------------------------------------------------
         /** @brief 모듈 확장 패스 하나를 실행합니다(그래프 노드 콜백이 부른다). 모듈의 실행 콜백에 `ExtensionPassContext` 를 넘깁니다. */
         void executeExtensionPass( FramePassContext& context, const ExtensionFramePass& pass );
