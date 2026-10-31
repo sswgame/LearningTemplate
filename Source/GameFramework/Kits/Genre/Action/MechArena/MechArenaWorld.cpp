@@ -247,21 +247,6 @@ namespace sw
                     StateArchiveUtil::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
                 }
             }
-            static constexpr float32 kTiny = 1.0e-5f;
-
-            /** @brief XZ 평면에서 길이 1로 만듭니다. 너무 짧으면 @p fallback 을 반환합니다. */
-            static float3 flattenDirection( const float3& direction, const float3& fallback )
-            {
-                const float3  flat{ direction._x, 0.0f, direction._z };
-                const float32 length = flat.getLength();
-                return length > kTiny ? flat / length : fallback;
-            }
-
-            static float3 normalizeOr( const float3& direction, const float3& fallback )
-            {
-                const float32 length = direction.getLength();
-                return length > kTiny ? direction / length : fallback;
-            }
 
             /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터여야 합니다. */
             static float3 rotateToward( const float3& direction, const float3& desired, float32 maxRadian )
