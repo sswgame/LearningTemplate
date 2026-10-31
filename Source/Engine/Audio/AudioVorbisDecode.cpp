@@ -86,7 +86,7 @@ namespace sw
                 uint32           currentPacket   = 0;
                 while ( pageOffset + kPageHeaderSize <= byteCount )
                 {
-                    if ( Memory::compare( pBytes + pageOffset, "OGGS", 4 ) != 0 )
+                    if ( Memory::compare( pBytes + pageOffset, "OggS", 4 ) != 0 )
                         return false;
                     const size_t segmentCount = pBytes[pageOffset + 26];
                     if ( pageOffset + kPageHeaderSize + segmentCount > byteCount )
@@ -161,7 +161,7 @@ namespace sw
 
             static stb_vorbis* openWithArena( const uint8* pBytes, size_t byteCount, vector<uint8>& inoutListArena )
             {
-                const bool bInvalidOGGBytes = pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OGGS", 4 ) != 0;
+                const bool bInvalidOGGBytes = pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0;
                 if ( bInvalidOGGBytes )
                     return nullptr;
                 if ( OGGCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
