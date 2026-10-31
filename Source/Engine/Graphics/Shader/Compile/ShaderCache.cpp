@@ -39,87 +39,11 @@ namespace sw
                                                         ShaderCooker::computePermutationHash( desc._listDefine ),
                                                         ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         }
-
-        /** @brief 소스의 절대 경로입니다(지문용 — 컴파일러와 같은 해석기 `ShaderSourceResolver`). 못 풀면 빈 글이며 지문이 0 이라 맞지 않는다. */
-        string findSourcePath( const ShaderSourceID& source )
-        {
-            const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
-            string                                    error;
-            const std::optional<ShaderCompileInput>   input = resolver.has_value() ? resolver->resolve( source, error ) : std::nullopt;
-            return input.has_value() ? input->_source.str() : string{};
-        }
-
-        /** @brief 디스크 파일이 있고 비어 있지 않으면 그 바이트를 읽어 true 입니다(로컬 라이브 수정 캐시). */
-        [[nodiscard]] bool readNonEmptyFile( const string& path, vector<uint8>& outBytes )
-        {
-            return FileUtil::exists( path ) && FileUtil::readFile( path, outBytes ) && outBytes.empty() == false;
-        }
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
-    {
-        // **경로에 소스 지문을 한 단계 끼운다.** "캐시 파일이 소스보다 새것인가"를 파일 시간으로 보면 안 된다 —
-        // 이 저장소는 산출물까지 커밋해서 `git pull` 이 시간 순서를 임의로 뒤집는다(ShaderCooker::computeSourceFingerprint
-        // 주석). 경로가 다르면 낡은 것은 애초에
-        // 찾히지 않으므로 시간 비교가 필요 없다. 남는 폴더는 Saved/ 안이라 버려도 그만이다.
-        // 지문은 소스만 본다. 이 셰이더가 연 헤더는 컴파일해 봐야 알아서 경로에 넣을 수 없고, 바이트코드 옆의 의존 기록이 헤더의 변경을 맡는다(readLocalCache).
-        //
-        // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
-        // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
-        const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      sourcePath = findSourcePath( desc._source );
-        const uint64      sourceHash = sourcePath.empty() == false ? ShaderCooker::computeSourceFingerprint( sourcePath, vector<string>{} ) : 0u;
-
-        StringBuilder<constant::kMaxBuffer64> sb;
-        sb.appendFormat( "%#", Fmt( sourceHash, Format( 16, Format::Padding::Zero ).hex() ) );
-        sb.append( desc._bDebugCodegen != SW_FALSE ? "-dbg" : "-opt" ); // 같은 소스라도 코드젠이 다르면 다른 파일이다
-
-        // 작업 폴더가 아니라 실행 파일 폴더(`Bin`) 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
-        const string rhiDir    = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache" ), rhiFolder );
-        const string sourceDir = FileUtil::joinPath( rhiDir, string( sb.c_str(), sb.size() ) );
-        return FileUtil::joinPath( sourceDir, makeBinaryFileName( desc ) );
-    }
-
-    bool ShaderCache::readLocalCache( const ShaderCompileDesc& liveDesc, ShaderCompileResult& outResult )
-    {
-        const string  localCachePath = makeLocalCachePath( liveDesc );
-        vector<uint8> cacheBytes;
-        if ( readNonEmptyFile( localCachePath, cacheBytes ) == false )
-            return false;
-        // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 이 바이트코드는 낡았다 — 경로(소스 지문)는 헤더를 보지 않는다.
-        vector<string> listIncludedFile;
-        if ( ShaderCooker::readIncludeRecord( localCachePath + ShaderCooker::kIncludeRecordSuffix, listIncludedFile ) == false )
-            return false;
-        outResult._bytecode         = std::move( cacheBytes );
-        outResult._listIncludedFile = std::move( listIncludedFile );
-        outResult._bSuccess         = true;
-        return true;
-    }
-
-    bool ShaderCache::storeLocalCache( const ShaderCompileDesc& liveDesc, const ShaderCompileResult& result )
-    {
-        const string localCachePath = makeLocalCachePath( liveDesc );
-
-        // **바이트가 같으면 바이트 파일은 쓰지 않는다.** 쓰면 호출자가 "갱신" 으로 세어 재컴파일 콜백이 불리고 바뀌지 않은 셰이더의 PSO 까지 다시 만든다.
-        // 의존 기록은 그래도 새로 쓴다 — 헤더만 고쳐 바이트가 그대로면 옛 기록이 남아 이 캐시가 영영 낡은 것으로 보인다.
-        vector<uint8> existingBytes;
-        const bool    bSameBytes = FileUtil::exists( localCachePath ) && FileUtil::readFile( localCachePath, existingBytes ) && existingBytes == result._bytecode;
-        if ( bSameBytes == false )
-        {
-            if ( FileUtil::ensureParentDirectoryExists( localCachePath ) == false || FileUtil::writeFile( localCachePath, result._bytecode.data(), result._bytecode.size() ) == false )
-            {
-                SW_LOG_WARNING( "Could not write the shader cache '%#' - the next run recompiles it", localCachePath );
-                return true;
-            }
-        }
-        if ( ShaderCooker::writeIncludeRecord( localCachePath + ShaderCooker::kIncludeRecordSuffix, result._listIncludedFile ) == false )
-            SW_LOG_WARNING( "Could not write the shader cache record '%#' - the next run recompiles it", localCachePath );
-        return bSameBytes == false;
-    }
-
     ShaderCompileDesc ShaderCache::makeLiveCompileDesc( const ShaderCompileDesc& desc )
     {
         ShaderCompileDesc liveDesc = desc;
@@ -252,11 +176,9 @@ namespace sw
     ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
     {
         SW_MEMORY_SCOPE( Shader );
-        string       cacheKey = inCacheKey;
-        const string absPath  = findSourcePath( desc._source );
+        string cacheKey = inCacheKey;
 
         // 0) 인메모리 캐시 조회 — 항목을 만든 컴파일이 연 헤더까지 포함한 지문이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
-        if ( absPath.empty() == false )
         {
             ShaderCacheEntry cachedEntry{};
             bool             bCached = false;
@@ -271,7 +193,7 @@ namespace sw
             }
             if ( bCached )
             {
-                const uint64 currentFingerprint = ShaderCooker::computeSourceFingerprint( absPath, cachedEntry._result._listIncludedFile );
+                const uint64 currentFingerprint = cachedEntry._result._sourceFile.empty() ? 0u : ShaderCooker::computeSourceFingerprint( cachedEntry._result._sourceFile, cachedEntry._result._listIncludedFile );
                 if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
                     return cachedEntry._result;
             }
@@ -297,7 +219,7 @@ namespace sw
                 ShaderCompileResult result{};
                 result._bytecode = std::move( precookedBytes );
                 result._bSuccess = true;
-                storeEntry( std::move( cacheKey ), desc, result, absPath );
+                storeEntry( std::move( cacheKey ), desc, result );
                 return result;
             }
             // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
@@ -308,25 +230,12 @@ namespace sw
             return failedResult;
         }
 
-        // 소스 정책(개발 실행)은 쿠킹본을 읽지 않는다 — 쿠킹본은 배포 단위라 쿠킹 스테이징(`build/<프리셋>/Cooked`)에만 있고, 개발 실행은 미리 굽지 않아도 돈다(언리얼 에디터의 DDC).
-        // 1순위: 로컬 라이브 캐시(`Bin/Saved/ShaderCache`). 경로는 **실시간 컴파일이 실제로 쓰는 요청**으로 정한다 — 아래 컴파일이 그 요청으로 여기에 쓰고, 핫 리로드도 같은 요청으로 쓴다.
-        // 경로에 이미 소스 지문이 들어 있고, 연 헤더가 그대로인지는 바이트코드 옆의 의존 기록이 본다. 찾혔다는 것이 곧 "이 소스와 이 헤더들에서 나온 것"이다.
-        const ShaderCompileDesc liveDesc = makeLiveCompileDesc( desc );
-        ShaderCompileResult     localResult{};
-        if ( readLocalCache( liveDesc, localResult ) )
-        {
-            SW_LOG_TRACE( "Loaded live shader from the local cache: %#", makeLocalCachePath( liveDesc ).c_str() );
-            storeEntry( std::move( cacheKey ), desc, localResult, absPath );
-            return localResult;
-        }
-
-        // 2순위: 실시간 컴파일. 코드젠은 `gv_shaderDebugCodegen` 이 정한다(makeLiveCompileDesc).
-        ShaderCompileResult compiledResult = ShaderCompiler::compileHLSL( liveDesc );
+        // 소스 정책(개발 실행)은 쿠킹본을 읽지 않는다 — 쿠킹본은 배포 단위라 쿠킹 스테이징(`build/<프리셋>/Cooked`)에만 있고, 개발 실행은 미리 굽지 않아도 돈다.
+        // 컴파일러가 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache`)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 `gv_shaderDebugCodegen` 이 정한다(makeLiveCompileDesc).
+        const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
+        ShaderCompileResult     compiledResult = ShaderCompiler::compileHLSL( liveDesc );
         if ( compiledResult._bSuccess )
-        {
-            (void)storeLocalCache( liveDesc, compiledResult ); // 바뀌었는지는 재컴파일(ShaderRecompiler)만 센다
-            storeEntry( std::move( cacheKey ), desc, compiledResult, absPath );
-        }
+            storeEntry( std::move( cacheKey ), desc, compiledResult );
         return compiledResult;
     }
 
@@ -349,11 +258,22 @@ namespace sw
         }
     }
 
-    void ShaderCache::storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, const string& absSourcePath )
+    bool ShaderCache::findCachedBytecode( const ShaderCompileDesc& desc, vector<uint8>& outBytecode ) const
+    {
+        outBytecode.clear();
+        ScopedLock<mutex> lock{ _mutexCache };
+        const auto        iter = _mapCache.find( makeCacheKey( desc ) );
+        if ( iter == _mapCache.end() )
+            return false;
+        outBytecode = iter->second._result._bytecode;
+        return true;
+    }
+
+    void ShaderCache::storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result )
     {
         // 지문은 파일을 읽는 계산이라 잠금 밖에서 한다.
         ShaderCacheEntry entry{};
-        entry._sourceFingerprint = absSourcePath.empty() ? 0u : ShaderCooker::computeSourceFingerprint( absSourcePath, result._listIncludedFile );
+        entry._sourceFingerprint = result._sourceFile.empty() ? 0u : ShaderCooker::computeSourceFingerprint( result._sourceFile, result._listIncludedFile );
         entry._desc              = desc;
         entry._result            = result;
 

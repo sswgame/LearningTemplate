@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @class ShaderLoadBlock
-     * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 로컬 캐시 · 실시간 컴파일(`ShaderCache::loadOrCompile`).
+     * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 컴파일 — 셰이더 DDC 를 먼저 본다(`ShaderCache::loadOrCompile`).
      * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 블록은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
      */
     class SW_API ShaderLoadBlock final : public AssetLoadBlock
@@ -113,27 +113,14 @@ namespace sw
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
-         * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`<Bin>/Saved/ShaderCache/<rhi>/<소스 지문>-<opt|dbg>/<이름>`, 절대 경로 — 작업 폴더와 무관). 이름 규칙은 위와 같습니다.
-         * @details 런타임 컴파일 결과와 ShaderRecompiler 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
-         *          있으면 처음 컴파일된 퍼뮤테이션 하나가 같은 셰이더의 다른 퍼뮤테이션 모두를 덮습니다.
-         *          경로의 지문은 소스(와 도구 지문)만 본다 — 헤더는 컴파일 뒤에야 알아서 경로에 넣을 수 없고, 바이트코드 옆의 의존 기록(`<경로>.deps`)이 맡는다(`readLocalCache`).
+         * @brief 메모리 캐시에 든 이 요청의 바이트코드를 @p outBytecode 에 담습니다. 없으면 false 입니다.
+         * @details 재컴파일(`ShaderRecompiler`)이 "바이트가 바뀌었나" 를 이것과 견준다 — 바뀌지 않은 셰이더의 PSO 를 다시 만들지 않는다.
          */
-        static string makeLocalCachePath( const ShaderCompileDesc& desc );
-        /**
-         * @brief 로컬 라이브 캐시를 읽습니다. 바이트코드가 있고 **의존 기록의 헤더가 모두 지금도 같을 때만** 담고 true 입니다.
-         * @param liveDesc `makeLiveCompileDesc` 로 정한 요청
-         * @param outResult 성공하면 바이트코드와 연 헤더 목록(`_listIncludedFile`)을 담는다
-         */
-        [[nodiscard]] static bool readLocalCache( const ShaderCompileDesc& liveDesc, ShaderCompileResult& outResult );
-        /**
-         * @brief 컴파일 결과를 로컬 라이브 캐시에 씁니다 — 바이트코드와, 헤더를 고쳤을 때 낡음을 알아볼 의존 기록입니다. ShaderCache 의 실시간 컴파일과 ShaderRecompiler 가 같이 씁니다.
-         * @return 바이트코드가 새로 생겼거나 이전과 달라졌으면 true 입니다(못 써도 true). 바이트가 같으면 바이트 파일은 다시 쓰지 않고(재컴파일 콜백이 PSO 를 다시 만들지 않게) 의존 기록만 새로 쓴다.
-         */
-        static bool storeLocalCache( const ShaderCompileDesc& liveDesc, const ShaderCompileResult& result );
+        [[nodiscard]] bool findCachedBytecode( const ShaderCompileDesc& desc, vector<uint8>& outBytecode ) const;
         /**
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. `gv_shaderDebugCodegen` 이 켜졌으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
-         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
-         *          둘이 따로 정하면 Debug 의 한 폴더에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
+         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정합니다.
+         *          둘이 따로 정하면 DDC 에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          쿠킹된 바이너리는 이 규칙을 타지 않습니다(쿠커는 늘 최적화 코드젠).
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );
@@ -148,10 +135,10 @@ namespace sw
         static string makeCacheKey( const ShaderCompileDesc& desc );
         /** @brief `request` 와 `getOrCompile` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(`AssetLoadStart`). */
         ShaderHandle requestWith( const ShaderCompileDesc& desc, AssetLoadStart start );
-        /** @brief 로드 단계 본문입니다 — 인메모리 캐시 다음, 쿠킹본 정책은 팩의 쿠킹본만, 소스 정책은 로컬 캐시 · 실시간 컴파일 순으로 찾습니다(이 스레드). */
+        /** @brief 로드 단계 본문입니다 — 인메모리 캐시 다음, 쿠킹본 정책은 팩의 쿠킹본만, 소스 정책은 컴파일(셰이더 DDC 를 먼저 본다)입니다(이 스레드). */
         ShaderCompileResult loadOrCompile( const ShaderCompileDesc& desc, const string& cacheKey );
-        /** @brief 인메모리 캐시에 넣습니다. 로컬 캐시, 쿠킹된 바이너리, 라이브 컴파일 세 경우가 같은 항목을 만듭니다. @p absSourcePath 가 비면 지문이 0 이라 다시 맞지 않는다. */
-        void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result, const string& absSourcePath );
+        /** @brief 인메모리 캐시에 넣습니다. 지문은 결과의 소스(`_sourceFile`)와 연 헤더로 셉니다. */
+        void storeEntry( string&& cacheKey, const ShaderCompileDesc& desc, const ShaderCompileResult& result );
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
 

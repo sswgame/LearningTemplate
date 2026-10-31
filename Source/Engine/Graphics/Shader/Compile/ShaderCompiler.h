@@ -175,7 +175,9 @@ namespace sw
          *          컴파일에 실패한 결과의 목록은 믿지 않는다(비어 있을 수 있다).
          */
         vector<string> _listIncludedFile;
-        bool           _bSuccess{ false }; ///< 컴파일 성공 여부
+        /** @brief 컴파일한 주 소스의 절대 경로입니다(해석기 `ShaderSourceResolver` 의 답). 메모리 캐시가 이것과 `_listIncludedFile` 로 낡음을 본다. 쿠킹본에서 읽은 결과는 비어 있다. */
+        string _sourceFile;
+        bool   _bSuccess{ false }; ///< 컴파일 성공 여부
     };
 } // namespace sw
 
@@ -189,7 +191,7 @@ namespace sw
     {
     public:
         /**
-         * @brief HLSL 셰이더를 컴파일합니다(디스크 캐시가 켜져 있으면 바이트코드 캐시를 씁니다).
+         * @brief HLSL 셰이더를 컴파일합니다. 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache` — 셰이더 디스크 캐시는 이것 하나다)에 맞으면 컴파일하지 않습니다.
          * @param desc 컴파일 디스크립터
          * @return 컴파일 결과(성공 여부와 바이트코드)
          * @details 스레드 계약: 워커에서 동시에 불린다(병렬 쿠킹). 공유 상태는 읽기 전용(`AssetPaths` 읽기)이거나 원자값이다.

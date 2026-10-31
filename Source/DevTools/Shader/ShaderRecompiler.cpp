@@ -60,15 +60,16 @@ namespace sw
             _listPendingReload.clear();
         }
 
-        uint32 changed = 0;
-        uint32 failed  = 0;
+        ShaderCache& shaderCache = engine::getSubsystem<ShaderCache>();
+        uint32       changed     = 0;
+        uint32       failed      = 0;
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
-            // 컴파일 캐시는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
-            // 타지 않는다. 캐시 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
+            // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
+            // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
             // 연 셰이더만 실제로 다시 컴파일된다.
-            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 요청 그대로(최적화) 컴파일하면 리로드한
-            // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 곳에 최적화 코드젠을 덮어쓴다.
+            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(`gv_shaderDebugCodegen`). 요청 그대로 컴파일하면 리로드한
+            // 셰이더만 디버그 정보를 잃는다.
             const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
             const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( liveDesc );
             if ( newResult._bSuccess == false )
@@ -79,13 +80,10 @@ namespace sw
                 continue;
             }
 
-            // 캐시가 읽는 이름 그대로 쓴다. 이름은 캐시(`ShaderCache::storeLocalCache`)가 정하므로 퍼뮤테이션 해시 같은 축이 한쪽에서만
-            // 빠져 재컴파일 결과가 엉뚱한 요청에 걸리거나 아무 요청에도 안 걸리는 일이 없다(실제로 둘 다 해시가 없었다).
-            // **바이트가 같으면 바이트 파일은 쓰지 않는다.** 쓰면 "갱신" 으로 세어 재컴파일 콜백이 불리고, 바뀌지 않은
-            // 셰이더의 PSO 까지 다시 만들게 된다. 연 헤더의 의존 기록은 같아도 새로 쓴다(헤더만 고쳤으면 옛 기록이 낡음으로 남는다).
-            // 경로에 지금 소스의 지문이 들어 있고 기록이 지금 헤더와 맞으므로 다음 getOrCompile 이 이 바이트코드를 집는다
-            // (ShaderCache 의 1순위가 이 로컬 라이브 캐시다).
-            const bool bBytesChanged = ShaderCache::storeLocalCache( liveDesc, newResult );
+            // **바이트가 같으면 "갱신" 으로 세지 않는다.** 세면 재컴파일 콜백이 불리고, 바뀌지 않은
+            // 셰이더의 PSO 까지 다시 만들게 된다. 견줄 바이트는 이 실행이 쓰는 메모리 캐시 항목이다.
+            vector<uint8> previousBytecode;
+            const bool    bBytesChanged = shaderCache.findCachedBytecode( desc, previousBytecode ) == false || previousBytecode != newResult._bytecode;
             if ( bBytesChanged == false )
                 continue;
 
@@ -94,11 +92,11 @@ namespace sw
                 _onAnyRecompiled.get()( desc._source.str(), newResult );
         }
 
-        if ( changed > 0 && engine::areEngineServicesBound() )
+        if ( changed > 0 )
         {
             // 인메모리 캐시는 마지막에 한 번만 비운다. 셰이더마다 비우면 같은 패스의 남은 재컴파일이
             // 방금 지운 항목을 다시 채워 넣는다.
-            engine::getSubsystem<ShaderCache>().clearCache();
+            shaderCache.clearCache();
             // 리플렉션도 비운다. 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
             // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();

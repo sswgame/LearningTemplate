@@ -194,9 +194,9 @@ namespace sw
 #endif
 
             /**
-             * @brief 컴파일 결과 캐시 폴더입니다 — 실행 파일 폴더의 `Saved/ShaderCompileCache`(이 기계의 파생 데이터, 언리얼 DerivedDataCache).
+             * @brief 셰이더 DDC 폴더입니다 — 실행 파일 폴더의 `Saved/ShaderCompileCache`(이 기계의 파생 데이터, 언리얼 DerivedDataCache). 셰이더 디스크 캐시는 이것 하나다.
              * @details 콘텐츠 트리(`Content/`)에 두지 않는다 — 올리는 단위가 아니고, 자동화 실행은 콘텐츠 아래 쓰기를 막아 캐시를 채우지 못한 채 매번 다시 컴파일했다.
-             *          재정의 캐시(`ShaderCache::makeLocalCachePath`)와 같은 바탕이다.
+             *          예전에는 실행 중 컴파일 결과를 따로 담는 둘째 캐시(`Saved/ShaderCache`)가 있어 같은 바이트를 두 번 쓰고 낡음 판정도 두 벌이었다.
              */
             static string getShaderCacheDirectory()
             {
@@ -717,6 +717,7 @@ namespace sw
             return result;
         }
 
+        result._sourceFile     = input->_source.str();
         const string cachePath = Internal::computeCachePath( desc, *input );
         if ( cachePath.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
         {
