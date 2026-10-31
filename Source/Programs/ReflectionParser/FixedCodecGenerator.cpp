@@ -1139,14 +1139,13 @@ namespace sw
         return _listPlan[typeIndex]._memberText;
     }
 
-    void FixedCodecGenerator::appendSchemaLine( CodeEmitBuffer& outBuffer, const size_t typeIndex ) const
+    string FixedCodecGenerator::makeSchemaLine( const size_t typeIndex ) const
     {
         const TypePlan& plan = _listPlan[typeIndex];
-        outBuffer.append( fixedlayout::kSchemaLineMarker );
-        outBuffer.append( _header._listType[typeIndex]._fullyQualifiedName );
-        outBuffer.append( plan._bEligible == SW_TRUE ? " | " : " | (not eligible) " );
-        outBuffer.append( plan._bEligible == SW_TRUE ? plan._canonical : plan._reason );
-        outBuffer.append( '\n' );
+        string          line = _header._listType[typeIndex]._fullyQualifiedName;
+        line += plan._bEligible == SW_TRUE ? " | " : " | (not eligible) ";
+        line += plan._bEligible == SW_TRUE ? plan._canonical : plan._reason;
+        return line;
     }
 
     string FixedCodecGenerator::makeDumpLine( const size_t typeIndex ) const

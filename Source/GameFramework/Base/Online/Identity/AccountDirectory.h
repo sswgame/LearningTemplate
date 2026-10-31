@@ -5,7 +5,7 @@
  * @details 발급은 계정 키트(GF_Account, GF_Server_Account)가 한다. 다른 키트(Trade, Economy, Mailbox, Admin)는 이 인터페이스만 보고 계정 키트를 include 하지 않는다
  *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`IEphemeralStore`)로 본다.
  *          세션 토큰 검증은 따로 인터페이스를 두지 않는다. 스트림 연결은 로그인할 때 한 번 확인되고 그 뒤로는 연결의 주체로 다니며, UDP 게임 서버는 계정 키트의 접속 테이블이 확인한다.
- *          언리얼에서 친구, 세션, 업적 인터페이스가 `IOnlineIdentity`(`FUniqueNetID`, 닉네임, 로그인 상태)를 같이 보는 것에 해당한다.
+ *          언리얼에서 친구, 세션, 업적 인터페이스가 `IOnlineIdentity`(`FUniqueNetId`, 닉네임, 로그인 상태)를 같이 보는 것에 해당한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -125,7 +125,7 @@ namespace sw
     //   왕복이 하나다. 구현은 상태가 없어(연결만 쓴다) 어느 스레드에서 불러도 된다.
     // - 이름으로 찾을 수 있는 것은 정식 계정(로그인 이름이 곧 고유한 표시 이름)뿐이다. 게스트와 외부 계정의 생성된 이름(`Guest-…`)은 고유하지 않아 색인에 없으므로 계정 id 로 찾는다.
     // - 접속해 있는 계정은 `IAccountDirectory`(이 프로세스)와 `IAccountPresence`(서버 여럿)가 저장소를 읽지 않고 답한다. 이 인터페이스는 오프라인까지 볼 때 쓴다.
-    // 언리얼 `IOnlineUser::QueryUserIDMapping`(표시 이름에서 사용자 id), PlayFab `GetAccountInfo(TitleDisplayName)` 에 해당한다.
+    // 언리얼 `IOnlineUser::QueryUserIdMapping`(표시 이름에서 사용자 id), PlayFab `GetAccountInfo(TitleDisplayName)` 에 해당한다.
     // 결과 형식(`ServiceStoreResult`)과 연결은 전방 선언만 둔다 — 부르는 쪽과 구현은 `Store/ServiceStore.h` 를 include 한다.
     /**
      * @class IAccountNameIndex

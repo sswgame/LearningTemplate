@@ -40,6 +40,14 @@ namespace sw
                 return static_cast<size_t>( found - listPoint.begin() );
             }
 
+            /** @brief `_beat` 가 @p beat 이하인 점의 수를 반환합니다(이분 탐색). 그 박에서 시작하는 구간을 고를 때 씁니다. */
+            static size_t countPointsUpToBeat( const vector<RhythmTimingPoint>& listPoint, float32 beat )
+            {
+                const auto found = std::upper_bound( listPoint.begin(), listPoint.end(), beat, []( float32 value, const RhythmTimingPoint& point )
+                { return value < point._beat; } );
+                return static_cast<size_t>( found - listPoint.begin() );
+            }
+
             /** @brief `_time` 이 @p seconds 이하인 점의 수를 반환합니다(이분 탐색). */
             static size_t countPointsUpToTime( const vector<RhythmTimingPoint>& listPoint, float32 seconds )
             {
@@ -61,9 +69,9 @@ namespace sw
                 const bool             bLane   = noteDef._lane < laneCount;
                 const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
                 if ( bLane == false )
-                    SW_LOG_ERROR( "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, laneCount - 1 );
+                    SW_LOG_ERROR_ID( "RhythmChart.InvalidNote", "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, laneCount - 1 );
                 if ( bOrder == false )
-                    SW_LOG_ERROR( "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
+                    SW_LOG_ERROR_ID( "RhythmChart.InvalidNote", "%#: note at beat %# ends at %# before it starts", sourceName, noteDef._beat, *endBeat );
                 const bool bNote = bFields && bEnd && bLane && bOrder;
                 if ( bNote == false )
                     return false;
@@ -136,7 +144,8 @@ namespace sw
 
     float32 RhythmChart::findBpmAt( float32 beat ) const
     {
-        const size_t             pointCount = RhythmChartInternal::countPointsBeforeBeat( _listTimingPoint, beat );
+        // 변화가 놓인 박은 새 BPM 이다(초 변환은 이어지므로 앞 구간을 써도 같지만 BPM 은 갈린다)
+        const size_t             pointCount = RhythmChartInternal::countPointsUpToBeat( _listTimingPoint, beat );
         const RhythmTimingPoint& point      = _listTimingPoint[pointCount == 0 ? 0 : pointCount - 1];
         return 60.0f / point._secondsPerBeat;
     }
@@ -201,7 +210,7 @@ namespace sw
                 bValid = RhythmChartInternal::readNote( node, sourceName, _laneCount, _listNote ) && bValid;
             else
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> - skipped", sourceName, name );
+                SW_LOG_ERROR_ID( "RhythmChart.UnknownElement", "%#: unknown element <%#> - skipped", sourceName, name );
                 bValid = false;
             }
         }
@@ -218,7 +227,7 @@ namespace sw
         const bool             bBaseBpm = root.readOptionalAttribute( "baseBpm", baseBpm ) && ( baseBpm.has_value() == false || *baseBpm >= 1.0f );
         if ( bBaseBpm == false )
         {
-            SW_LOG_ERROR( "%#: <Chart baseBpm=\"%#\"> needs a number of 1 or more", sourceName, root.getAttributeText( "baseBpm" ) );
+            SW_LOG_ERROR_ID( "RhythmChart.InvalidBaseBpm", "%#: <Chart baseBpm=\"%#\"> needs a number of 1 or more", sourceName, root.getAttributeText( "baseBpm" ) );
             bValid = false;
         }
         _baseBpm = baseBpm.has_value() ? *baseBpm : findBpmAt( 0.0f );
@@ -238,7 +247,7 @@ namespace sw
             float32& freeBeat = listLaneFreeBeat[static_cast<size_t>( note._lane )];
             if ( note._beat <= freeBeat )
             {
-                SW_LOG_ERROR( "%#: note at beat %# on lane %# overlaps the previous note", sourceName, note._beat, note._lane );
+                SW_LOG_ERROR_ID( "RhythmChart.NoteOverlap", "%#: note at beat %# on lane %# overlaps the previous note", sourceName, note._beat, note._lane );
                 bValid = false;
                 continue;
             }
@@ -251,7 +260,7 @@ namespace sw
         }
         _listNote.swap( listKeptNote );
         if ( _listNote.empty() )
-            SW_LOG_ERROR( "%#: chart has no playable notes", sourceName );
+            SW_LOG_ERROR_ID( "RhythmChart.NoNotes", "%#: chart has no playable notes", sourceName );
         return bValid && _listNote.empty() == false;
     }
 

@@ -27,7 +27,7 @@ namespace sw
      *          (`game/<팩>/maps/start.scene.xml`). 시작 맵만 필수이고, 나머지 경로 칸은 적지 않으면 "읽지 않음"(`isSet` false)이며 그 뜻은 칸마다 적었다.
      *          XML 자식 요소 이름은 필드 이름에서 앞의 `_` 를 뗀 것이고(`_startMap` → `<startMap>`), 읽기는 리플렉션 칸 표를 따른다(`loadRoot`).
      *          `GameInstance` 가 읽은 뒤 게임 서비스로 등록하고 다국어와 입력 맵을 적용한다.
-     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 세이브 경로는 경로 없이 부른 `saveStateToFile` 이 쓴다.
+     *          씬 필드는 `GameSceneFlow::getFirstScene` 과 `getEntranceScene` 이 쓰고, 기본 세이브 슬롯은 슬롯 없이 부른 `saveGameToSlot` 이 쓴다.
      */
     REFLECT()
     struct SW_GF_API GameSettings
@@ -45,7 +45,7 @@ namespace sw
         DataPath _entranceScene; ///< 타이틀 다음 씬. 없으면 시작 맵이다
 
         PROPERTY()
-        DataPath _defaultSavePath; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstance::saveStateToFile` · `loadStateFromFile`). 없으면 경로 없는 저장은 오류다
+        string _defaultSaveSlot; ///< 기본 세이브 슬롯 이름(`save/slot0` - 슬롯 이름 없는 `GameInstance::saveGameToSlot` · `loadGameFromSlot`). 자리는 로컬 저장소가 정한다. 없으면 슬롯 없는 저장은 오류다
 
         PROPERTY()
         DataPath _localizationProject; ///< 로컬라이제이션 프로젝트(`*.locproject.xml`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다. 없으면 게임 문자열 표 없음
@@ -67,6 +67,13 @@ namespace sw
 
         PROPERTY()
         DataPath _audioEvents; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstance` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
+
+        /**
+         * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.
+         * 자리는 어느 팩이든 등록 줄의 팩 안 규칙 하나(`GamePackDataUtil::tryMakeKindPath`)로 만든다. 적지 않은 종류는 이 게임 팩이다.
+         * 여러 게임이 함께 쓰는 캐릭터 키트 데이터(아이템 · 외형)가 공용 팩에 있어서다.
+         */
+        map<string, string> _mapRequiredDataPack{};
 
         /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );

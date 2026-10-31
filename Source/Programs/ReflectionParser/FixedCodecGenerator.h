@@ -31,8 +31,8 @@ namespace sw
         void emitRegistration( CodeEmit& emit, size_t typeIndex ) const;
         /** @brief `Registrar<T>` 안의 정적 멤버(쓰기 · 읽기 · 비교 · 해시 · 도우미) 글입니다. 적격이 아니면 비어 있습니다. */
         const string& getMemberText( size_t typeIndex ) const;
-        /** @brief `// FixedSchema: <FQN> | <정규 문자열 또는 이유>` 한 줄을 씁니다(`FixedSchemas.gen.txt` 가 모읍니다). */
-        void appendSchemaLine( CodeEmitBuffer& outBuffer, size_t typeIndex ) const;
+        /** @brief `<FQN> | <정규 문자열 또는 이유>` 한 줄(끝 줄바꿈 없음)입니다. 스탬프의 `schema` 줄로 적히고 `FixedSchemas.gen.txt` 가 그 줄을 모읍니다. */
+        [[nodiscard]] string makeSchemaLine( size_t typeIndex ) const;
         /** @brief `--dump` 의 한 줄입니다. */
         string makeDumpLine( size_t typeIndex ) const;
 

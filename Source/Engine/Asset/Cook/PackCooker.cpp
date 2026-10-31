@@ -68,10 +68,10 @@ namespace sw
                 }
             }
 
-            /** @brief 폴더 성분 가운데 @p name 이 있으면 true 입니다(대소문자 무시). */
             /** @brief @p normalized 가 @p shaderFolder 가 아닌 백엔드의 셰이더 바이너리(`shaders/bin/<다른 폴더>`)면 true 입니다 — 이 팩의 런타임이 읽지 않는다. */
             static bool isOtherBackendShaderBinary( string_view normalized, const vector<string_view>& listDirectory, string_view shaderFolder );
 
+            /** @brief 폴더 성분 가운데 @p name 이 있으면 true 입니다(대소문자 무시). */
             static bool containsDirectory( const vector<string_view>& listDirectory, string_view name )
             {
                 for ( const string_view directory : listDirectory )

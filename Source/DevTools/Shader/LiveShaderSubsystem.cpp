@@ -15,13 +15,9 @@ namespace sw
     SW_LOG_CALLER( "LiveShader" );
 
     LiveShaderSubsystem::LiveShaderSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem )
-        :
-#if !defined( SW_SHIPPING )
-        _shaderRecompiler{ nullptr }
+        : _shaderRecompiler{ nullptr }
         , _recompiledSubscription{}
-        ,
-#endif
-        _frameRendererSubsystem{ frameRendererSubsystem }
+        , _frameRendererSubsystem{ frameRendererSubsystem }
         , _renderThreadSubsystem{ renderThreadSubsystem }
         , _bReady{ false }
     {
@@ -51,15 +47,12 @@ namespace sw
 
     void LiveShaderSubsystem::shutdownSubsystem()
     {
-#if !defined( SW_SHIPPING )
         _recompiledSubscription.reset(); // 백엔드 교체로 다시 서면 다시 건다
         if ( _shaderRecompiler != nullptr )
             _shaderRecompiler->shutdown();
-#endif
         _bReady = false;
     }
 
-#if !defined( SW_SHIPPING )
     void LiveShaderSubsystem::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
     {
         RenderThread* const pRenderThread = _renderThreadSubsystem.findRenderThread();
@@ -67,7 +60,6 @@ namespace sw
             pRenderThread->waitIdle( RHIWaitIdleReason::HotReload );
         _frameRendererSubsystem.getFrameRenderer().onShaderRecompiled( shaderPath, result );
     }
-#endif
 
     span<const utf8* const> LiveShaderSubsystem::getSubsystemDependencies() const
     {

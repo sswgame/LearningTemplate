@@ -11,5 +11,5 @@
 race:JPH::Mutex::try_lock
 
 # 2026-10-12 SQLite 의 WAL 공유 메모리 헤더는 `fcntl` 파일 잠금으로 보호된다 — TSan 은 그것을 동기화로 보지 못한다(계측 안 된 서드파티). 이 함수 하나만 건다.
-race:walIndexWriteHDR
+race:walIndexWriteHdr
 

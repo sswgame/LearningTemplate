@@ -46,8 +46,14 @@ namespace sw
          */
         static RHIGraphicsShaderRequest resolveGraphics( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat );
 
-        /** @brief 매크로 목록("NAME" 또는 "NAME=VALUE")을 컴파일 요청의 define 에 붙입니다. 컴퓨트 PSO 가 씁니다(그래픽스는 `resolveGraphics` 가 같은 규칙으로 붙인다). */
+        /** @brief 매크로 목록("NAME" 또는 "NAME=VALUE")을 컴파일 요청의 define 에 붙입니다. 컴퓨트 요청(`resolveCompute`)이 씁니다(그래픽스는 `resolveGraphics` 가 같은 규칙으로 붙인다). */
         static void appendDefines( ShaderCompileDesc& inoutDesc, const vector<string>& listDefine );
+
+        /**
+         * @brief 컴퓨트 셰이더 하나의 컴파일 요청을 짓습니다(진입점이 비면 CSMain, define 은 `appendDefines`).
+         * @details 네 백엔드의 컴퓨트 PSO 생성과 셋업의 셰이더 데우기(`FramePSOManager::createPassPSOS`)가 같은 함수로 지어 셰이더 캐시 키가 같다 — 데운 것을 생성이 적중한다.
+         */
+        static ShaderCompileDesc resolveCompute( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine, ShaderTargetFormat targetFormat );
 
         /** @brief 셰이더 캐시에서 바이트코드를 얻습니다(출처는 캐시가 기동 때 고른 공급자 — 쿠킹본 또는 실행 중 컴파일). 컴파일러를 직접 부르지 않는다. */
         static ShaderCompileResult compile( const ShaderCompileDesc& desc );

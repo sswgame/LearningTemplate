@@ -72,8 +72,14 @@ namespace sw
 
         /** @brief @p source 의 @p format 바이너리 폴더입니다. 입력만으로 정해진다. @p source 에 `shaders` 폴더 칸이 없으면 빈 값입니다. */
         [[nodiscard]] static std::optional<ShaderBinaryLocation> make( const ShaderSourceID& source, ShaderTargetFormat format );
+        /** @brief 도메인 @p domain 의 `shaders` 폴더(`<domain>/shaders` — `ShaderSourceResolver::findDomainShadersFolder` 와 같은 자리) @p format 바이너리 폴더입니다. 쿠킹 판정이 도메인마다 부른다. */
+        [[nodiscard]] static ShaderBinaryLocation makeForDomain( string_view domain, ShaderTargetFormat format );
         /** @brief 폴더 안 파일 @p fileName 의 리소스 id 입니다. */
         [[nodiscard]] AssetID makeFileID( string_view fileName ) const;
+
+    private:
+        /** @brief `<shadersFolder>/bin/<rhi>` — 바이너리 자리 규칙이 사는 한 곳입니다. */
+        [[nodiscard]] static ShaderBinaryLocation makeUnderShadersFolder( string_view shadersFolder, ShaderTargetFormat format );
     };
 } // namespace sw
 

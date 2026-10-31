@@ -358,7 +358,7 @@ namespace sw
         void restoreInjured( HorrorSurvivor& survivor );
         void sacrifice( int32 survivor, bool bBledOut );
         void leaveActivity( int32 survivor );
-        void dropCarried( bool bSTUNKiller, float32 stunTime );
+        void dropCarried( bool bStunKiller, float32 stunTime );
         void stunKiller( float32 seconds );
         void startCollapse();
         void resolveEnd();

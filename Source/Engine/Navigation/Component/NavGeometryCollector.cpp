@@ -185,8 +185,8 @@ namespace sw
         return bounds;
     }
 
-    void NavGeometryCollector::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
-                                                const vector<INavGeometrySource*>& listSource, NavMeshGeometry& outGeometry )
+    uint32 NavGeometryCollector::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+                                                  const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival, NavMeshGeometry& outGeometry )
     {
         using Internal = NavGeometryCollectorInternal;
         SW_PROFILE_SCOPE( "GT.Navigation.collectGeometry" );
@@ -200,6 +200,7 @@ namespace sw
         const TypeInfo*         pBodyType    = findStaticType<RigidBodyComponent>();
         const TypeInfo*         pSkinnedType = findStaticType<SkeletalMeshComponent>();
         const TypeInfo*         pLinkType    = findStaticType<NavMeshLinkComponent>();
+        uint32                  pendingMeshCount{ 0 };
         manager.forEachGameObject( [&]( GameObject* pObject )
         {
             if ( pObject->isActiveInHierarchy() == false )
@@ -241,8 +242,17 @@ namespace sw
                     shared_ptr<Mesh> mesh = pMeshComponent->getMesh();
                     if ( mesh == nullptr && pMeshComponent->getMeshID().empty() == false )
                     {
-                        const string& meshID = pMeshComponent->getMeshID();
-                        mesh                 = StringUtil::endsWith( meshID, MeshAssetFormat::kExtension, true ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+                        const string& meshID     = pMeshComponent->getMeshID();
+                        const bool    bMeshAsset = StringUtil::endsWith( meshID, MeshAssetFormat::kExtension, true );
+                        // 런타임은 컴포넌트의 로드(워커)를 기다리지 않는다 — 센 수를 보고 부르는 쪽이 다음 갱신에 다시 모은다(언리얼 내비 생성도 레벨 스트리밍 뒤에 다시 짓는다).
+                        // 쿠킹 · 도구는 결과를 그 자리에서 쓴다(입력 해시를 같은 기하로 내야 한다) — 그 자리에서 읽는다.
+                        if ( bMeshAsset && arrival == NavMeshArrival::Defer )
+                        {
+                            if ( pMeshComponent->isMeshLoading() )
+                                ++pendingMeshCount;
+                            return; // 읽는 중이면 다음 모으기에, 읽지 못했으면(로드 실패) 그리지 않는 메시라 넣지 않는다
+                        }
+                        mesh = bMeshAsset ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
                     }
                     if ( mesh == nullptr || mesh->getVertexCount() < 3 )
                         return;
@@ -269,5 +279,6 @@ namespace sw
                 } );
             }
         } );
+        return pendingMeshCount;
     }
 } // namespace sw

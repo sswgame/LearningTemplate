@@ -278,7 +278,7 @@ namespace sw
         if ( bInvalidGrant )
             return; // 이미 무효인 토큰이다 — 더 철회할 것이 없다
         if ( response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest )
-            SW_LOG_ERROR( "Login provider '%#' rejected the revocation (status %#) - check teamID, signingKeyID and the signing key", _settings._name.c_str(), response._statusCode );
+            SW_LOG_ERROR( "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
         done._bUnavailable = SW_TRUE;
     }
 

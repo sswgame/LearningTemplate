@@ -16,6 +16,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
@@ -36,7 +37,6 @@ namespace sw
     class InputManager;
     class Material;
     class MaterialInstance;
-    class Mesh;
     class MeshComponent;
 
     /**
@@ -108,7 +108,7 @@ namespace sw
         void spawnWalkers( GameObjectManager& manager, size_t count );
         /** @brief 일꾼 종류와 서비스마다 모습 인스턴스를 만듭니다(뷰가 워커에서 고릅니다). */
         void prepareWalkerLooks( Material* pMaterial );
-        /** @brief 건물 모델을 미리 로드해 둡니다(집 단계가 바뀔 때 뷰가 워커에서 파일을 읽지 않게 합니다). */
+        /** @brief 건물 모델 로드를 미리 맡겨 둡니다(워커가 읽는다 — 집 단계가 바뀔 때 뷰가 받는 메시가 이미 읽혀 있거나 읽는 중이다). */
         void preloadModels();
 
         void updateInput( float32 deltaTime, const InputManager& input );
@@ -250,7 +250,7 @@ namespace sw
         vector<int32>                        _listPendingBuilding; ///< 다시 스폰할 건물 타일(틱이 끝난 뒤 처리).
         MaterialTintCache                    _tintCache;           ///< 땅, 건물, 일꾼 색(같은 색은 나눠 쓴다).
         vector<shared_ptr<MaterialInstance>> _listWalkerLook;      ///< 일꾼 종류 x 16 + 서비스.
-        vector<shared_ptr<Mesh>>             _listModelMesh;       ///< 건물 모델을 계속 참조한다(집 단계가 바뀔 때 뷰가 워커에서 읽지 않게 한다).
+        vector<MeshHandle>                   _listModelMesh;       ///< 건물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 집 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
         size_t                               _wantedWalkerCount;   ///< 스폰할 일꾼 풀 크기(틱이 쓴다).
         int2                                 _cursorTile;
         float32                              _timeScale;

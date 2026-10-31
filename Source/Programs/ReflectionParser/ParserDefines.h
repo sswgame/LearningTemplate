@@ -103,8 +103,6 @@ namespace sw
             {"quaternion",                                                     "_x,_y,_z,_w"},
             {  "float4x4", "_11,_12,_13,_14,_21,_22,_23,_24,_31,_32,_33,_34,_41,_42,_43,_44"},
         };
-        /** @brief `.gen.cpp` 에 타입마다 적는 정규 문자열(또는 적격이 아닌 이유) 줄의 머리입니다. `FixedSchemas.gen.txt` 가 이 줄을 모읍니다. */
-        inline constexpr const utf8* kSchemaLineMarker = "// FixedSchema: ";
         /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다. 빌드는 읽지 않습니다. */
         inline constexpr const utf8* kSchemaListFile = "FixedSchemas.gen.txt";
     } // namespace fixedlayout

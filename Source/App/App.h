@@ -26,6 +26,7 @@
 #include "Engine/HostServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 
+#include "ModuleManager/HostDevTools.h"
 #include "ModuleManager/ModuleReloadDriver.h"
 #include "ModuleManager/ModuleStateStore.h"
 
@@ -109,9 +110,9 @@ namespace sw
         ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
-        /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 매니페스트 · 리로드 단축키 · 콘솔)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`AppDevTools.h`). */
-        AppDevTools _devTools;
-        Engine      _engine;
+        /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 프레임 훅 · 콘솔 — Server 와 같은 것)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`HostDevTools.h`). */
+        HostDevTools _devTools;
+        Engine       _engine;
         /** @brief 자동화 시나리오 연결(호스트 범위의 구동기 · 엔진 프레임 관찰자)입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 뗀다). */
         AppAutomationHost _automation;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */

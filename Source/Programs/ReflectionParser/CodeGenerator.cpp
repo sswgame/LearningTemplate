@@ -292,12 +292,6 @@ namespace sw
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
-
-        // 고정 배치형 코덱의 정규 문자열(또는 적격이 아닌 이유)입니다. 대상의 `FixedSchemas.gen.txt` 가 이 줄들을 모읍니다.
-        for ( size_t typeIndex = 0; typeIndex < _header._listType.size(); ++typeIndex )
-        {
-            _fixedCodec.appendSchemaLine( buffer, typeIndex );
-        }
         return string( buffer.view() );
     }
 

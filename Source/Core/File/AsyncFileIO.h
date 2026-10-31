@@ -1,7 +1,7 @@
 /**
  * @file AsyncFileIO.h
  * @brief 비동기 파일 읽기 — 요청(파일 전체 · 구간) · 우선순위 · 취소 · 완료 콜백 / `TaskFuture` 입니다.
- * @details 상용 엔진에서 이에 해당하는 것은 언리얼 `IAsyncReadFileHandle` · `IAsyncReadRequest`(+ IOStore 의 우선순위 큐)와 유니티 `AsyncReadManager` 입니다.
+ * @details 상용 엔진에서 이에 해당하는 것은 언리얼 `IAsyncReadFileHandle` · `IAsyncReadRequest`(+ IoStore 의 우선순위 큐)와 유니티 `AsyncReadManager` 입니다.
  *          모양은 그 둘을 따릅니다.
  *          - **요청은 큐에 들어가고, 백엔드가 우선순위 순서로 꺼내 OS 에 넘깁니다.** 동시에 OS 에 걸린 요청 수에는 상한이 있어
  *            (`_maxInFlightCount`) 큐 뒤쪽의 급한 요청이 앞의 대량 요청을 기다리지 않습니다(같은 우선순위 안은 들어온 순서).

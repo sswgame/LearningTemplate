@@ -32,7 +32,7 @@ namespace sw
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
         // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 임포터는 DX10 머리를 쓰므로
-        // 이 모양은 밖에서 들여온 DDS 에만 있다(`ResourceTest.DDSLoaderReadsD3dFormatIntegerFourCc`).
+        // 이 모양은 밖에서 들여온 DDS 에만 있다(`DDSLoaderTest.LegacyHeadersMapToDXGIFormats`).
         constexpr uint32 kD3dFmt_R16F          = 111;
         constexpr uint32 kD3dFmt_G16R16F       = 112;
         constexpr uint32 kD3dFmt_A16B16G16R16F = 113;
@@ -103,7 +103,7 @@ namespace sw
 
         struct DDSLoaderInternal
         {
-            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DDSFormats.json` 이고 테스트가 이 표와 견준다. */
+            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
             static constexpr DDSLegacyFourCc kArrFourCcRow[] = {
                 {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
                 {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
@@ -135,7 +135,7 @@ namespace sw
 
             /**
              * @brief 옛 머리의 비트 수 · 채널 마스크가 가리키는 DXGI 포맷의 표입니다. 마스크는 다섯 칸이 모두 같아야 맞는다(비슷한 모양을 어림하지 않는다).
-             * @details 이름의 정본은 `Config/Editor/DDSFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
+             * @details 이름의 정본은 `Config/Editor/DdsFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
              *          R8G8B8A8 로 읽는다(알파 바이트는 그 파일이 쓴 값이다).
              */
             static constexpr DDSLegacyRGBMask kArrRGBMaskRow[] = {
@@ -174,7 +174,7 @@ namespace sw
         vector<uint8> bytes;
         if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR( "Failed to read DDS resource: %#", relativePath );
+            SW_LOG_ERROR_ID( "DDS.ReadFailed", "Failed to read DDS resource: %#", relativePath );
             return false;
         }
 
@@ -192,15 +192,15 @@ namespace sw
 
         if ( pBuffer == nullptr || bufferSize < sizeof( uint32 ) + sizeof( DDSFileHeader ) )
         {
-            SW_LOG_ERROR( "DDS buffer is null or smaller than minimum header size." );
+            SW_LOG_ERROR_ID( "DDS.Truncated", "DDS buffer is null or smaller than minimum header size." );
             return false;
         }
 
         const uint32 magic = *reinterpret_cast<const uint32*>( pBuffer );
         if ( magic != DDSFormat::kMagic )
         {
-            SW_LOG_ERROR(
-                "Invalid DDS magic: 0x%# (expected 0x%#).",
+            SW_LOG_ERROR_ID(
+                "DDS.InvalidMagic", "Invalid DDS magic: 0x%# (expected 0x%#).",
                 Fmt( magic, Format( 8, Format::Padding::Zero ).hex() ),
                 Fmt( static_cast<uint32>( DDSFormat::kMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
             return false;
@@ -209,7 +209,12 @@ namespace sw
         const DDSFileHeader* pHeader = reinterpret_cast<const DDSFileHeader*>( pBuffer + sizeof( uint32 ) );
         if ( pHeader->_size != DDSFormat::kHeaderSize || pHeader->_pixelFormat._size != sizeof( DDSPixelFormatHeader ) )
         {
-            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DDSFormat::kHeaderSize );
+            SW_LOG_ERROR_ID( "DDS.CorruptHeader", "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DDSFormat::kHeaderSize );
+            return false;
+        }
+        if ( pHeader->_width == 0 || pHeader->_height == 0 )
+        {
+            SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS header has an empty size (%# x %#).", pHeader->_width, pHeader->_height );
             return false;
         }
 
@@ -224,7 +229,7 @@ namespace sw
         {
             if ( bufferSize < dataOffset + sizeof( DDSHeaderDxt10 ) )
             {
-                SW_LOG_ERROR( "DDS buffer truncated before DX10 header." );
+                SW_LOG_ERROR_ID( "DDS.Truncated", "DDS buffer truncated before DX10 header." );
                 return false;
             }
 
@@ -255,17 +260,18 @@ namespace sw
         // "성공적으로 로드된 이미지" 로 흘러 나간다(`isValid()` 도 포맷을 본다).
         if ( image._dxgiFormat == kDxgiFormatUnknown )
         {
-            SW_LOG_ERROR(
-                "Unsupported DDS pixel format (pfFlags=0x%#, fourCC=0x%#, rgbBits=%#) — cannot determine a DXGI format.",
+            SW_LOG_ERROR_ID(
+                "DDS.UnsupportedFormat", "Unsupported DDS pixel format (pfFlags=0x%#, fourCC=0x%#, rgbBits=%#) — cannot determine a DXGI format.",
                 Fmt( pHeader->_pixelFormat._flags, Format( 8, Format::Padding::Zero ).hex() ),
                 Fmt( pHeader->_pixelFormat._fourCC, Format( 8, Format::Padding::Zero ).hex() ),
                 pHeader->_pixelFormat._rgbBitCount );
             return false;
         }
 
-        if ( bufferSize < dataOffset )
+        // 머리만 있고 픽셀이 없으면 실패다 — 성공은 곧 `isValid()` 여야 한다(빈 바이트로 텍스처를 만들지 않게).
+        if ( bufferSize <= dataOffset )
         {
-            SW_LOG_ERROR( "DDS payload offset out of bounds." );
+            SW_LOG_ERROR_ID( "DDS.Truncated", "DDS has no pixel data after its header." );
             return false;
         }
 

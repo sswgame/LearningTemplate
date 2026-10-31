@@ -2,27 +2,24 @@
 
 #include "App/EditorModuleManager.h"
 
-#if !defined( SW_SHIPPING )
-    #include "Core/File/FileUtil.h"
-    #include "Core/Path/AbsolutePath.h"
-    #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 
-    #include "ModuleManager/ModuleInstanceUtil.h"
+#include "ModuleManager/ModuleInstanceUtil.h"
 
-    #include "Core/Subsystem/SubsystemScope.h"
+#include "sw/config/ConfigConstants.h"
 
-    #include "sw/config/ConfigConstants.h"
-#endif
-
-#if !defined( SW_SHIPPING )
+// 개발 빌드의 구현이다 — 배포(에디터 모듈이 없다)는 `EditorModuleManagerHeadlessShipping.cpp` 를 CMake 가 고른다(`Source/App/CMakeLists.txt`).
 namespace sw
 {
     namespace
     {
-        /** @brief 이 TU 전용 도우미 모음입니다. 인스턴스 없이 에디터 모듈을 올려 부르는 헤드리스 경로입니다(Shipping 에는 에디터 모듈이 없다). */
+        /** @brief 이 TU 전용 도우미 모음입니다. 인스턴스 없이 에디터 모듈을 올려 부르는 헤드리스 경로입니다. */
         struct EditorModuleManagerHeadlessInternal
         {
             /**
@@ -68,7 +65,6 @@ namespace sw
         };
     } // namespace
 } // namespace sw
-#endif
 
 namespace sw
 {
@@ -76,30 +72,16 @@ namespace sw
 
     bool EditorModuleManager::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )
     {
-#if defined( SW_SHIPPING )
-        (void)kind;
-        (void)bCheckOnly;
-        SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
-        return false;
-#else
         // 인스턴스 없이 부르므로 엔진 서비스 범위를 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
         return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_ImportEditorAssets>(
             getModuleSymbols(), kImportEditorAssetsSymbol, "Asset importing", [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ISubsystemLocator& service )
         {
             return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
         } );
-#endif
     }
 
     bool EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
     {
-#if defined( SW_SHIPPING )
-        (void)task;
-        (void)poPath;
-        (void)projectArgument;
-        SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
-        return false;
-#else
         const string poPathText( poPath );
         const string projectText( projectArgument );
         return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
@@ -108,6 +90,5 @@ namespace sw
         {
             return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
         } );
-#endif
     }
 } // namespace sw

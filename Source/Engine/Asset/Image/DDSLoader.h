@@ -97,7 +97,7 @@ namespace sw
 
         /**
          * @brief 로더가 아는 옛 머리 FourCC 표입니다(읽기가 쓰는 표 그대로).
-         * @details 형식 이름의 정본은 데이터 파일 `Config/Editor/DDSFormats.json` 이고 파이썬 에셋 검증이 그것을 읽는다. 이 표가 그 파일과 같은지
+         * @details 형식 이름의 정본은 데이터 파일 `Config/Editor/DdsFormats.json` 이고 파이썬 에셋 검증이 그것을 읽는다. 이 표가 그 파일과 같은지
          *          `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 가 본다.
          */
         [[nodiscard]] static vector<DDSLegacyFourCc> getLegacyFourCcTable();

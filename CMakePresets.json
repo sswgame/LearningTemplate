@@ -67,6 +67,15 @@
       ]
     },
     {
+      "name": "Ninja-Shipping-NoAutomation",
+      "displayName": "Windows Ninja Shipping - No Automation (Clang-cl)",
+      "description": "자동화 런타임을 뺀 배포본(SW_ENABLE_AUTOMATION=OFF) — -scenario 가 기동 오류로 멈추는지 보는 구성(Scripts/dev/ShippingCheck.py)",
+      "inherits": "Ninja-Shipping",
+      "cacheVariables": {
+        "SW_ENABLE_AUTOMATION": "OFF"
+      }
+    },
+    {
       "name": "Ninja-Debug-Server",
       "displayName": "Windows Ninja Debug - Dedicated Server (Clang-cl)",
       "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Debug — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 빌드 폴더 build/Ninja-Debug-Server",
@@ -97,6 +106,10 @@
     {
       "name": "Ninja-Shipping",
       "configurePreset": "Ninja-Shipping"
+    },
+    {
+      "name": "Ninja-Shipping-NoAutomation",
+      "configurePreset": "Ninja-Shipping-NoAutomation"
     },
     {
       "name": "Ninja-Debug-Server",

@@ -1,8 +1,8 @@
 /**
  * @file PushProviderSet.h
  * @brief 설정 목록(`PushProviderConfig`)에서 실제 푸시 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다(OnlineKits G4).
- * @details - 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenURL":"…","sendURL":"…"},
- *            {"kind":"apns","keyEnvironment":"<변수>","keyId":"…","teamID":"…","topic":"<번들 id>","sendURL":"…"}]}` 이다. 자격(서비스 계정 키 · 인증 키)은 파일에 쓰지 않고
+ * @details - 설정 파일은 `{"providers":[{"kind":"fcm","serviceAccountEnvironment":"<변수>","tokenUrl":"…","sendUrl":"…"},
+ *            {"kind":"apns","keyEnvironment":"<변수>","keyId":"…","teamId":"…","topic":"<번들 id>","sendUrl":"…"}]}` 이다. 자격(서비스 계정 키 · 인증 키)은 파일에 쓰지 않고
  *            환경 변수에서 읽는다. 변수가 없거나 키가 틀리면 **서버 기동이 실패한다**(가짜로 대신 뜨지 않는다). 설정 파일이 없으면 실제 제공자를 만들지 않는다.
  *          - 종류마다 쓸 수 있는 키가 정해져 있다 — 다른 종류의 키는 철자 오류와 같이 거절한다. `tokenURL` · `sendURL` 은 비우면 제공자의 공식 주소이고,
  *            가짜 서버(테스트)나 개발 환경(`apns` 샌드박스)을 가리킬 때만 쓴다. `https://` 주소가 있는데 신뢰 파일(CA 번들 PEM)이 없으면 오류다.

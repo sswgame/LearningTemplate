@@ -1,41 +1,39 @@
 /**
- * @file RHIBackendSwitcherAutomation.cpp
+ * @file RHIBackendSwitcherDevCommands.cpp
  * @brief 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — 한 프로세스에서 네 백엔드를 차례로 건너는 시나리오가 쓰는 창구입니다.
  * @details 단계는 메뉴 · 콘솔이 가는 길(`RHIBackendSwitcher::requestSwap` → `gv_rhiBackend` 변경 콜백 → 프레임 끝의 `applyIfPending`)로 교체를 **요청만** 한다.
  *          교체기는 App 이 호스트 범위에 걸어 두고 여기서는 `engine::findSubsystem<RHIBackendSwitcher>()` 로 엔진 범위에서 올라가 찾는다(없으면 이 프로세스에 RHI 가 없다).
  *          끝났는지는 시나리오가 `<WaitUntil probe="RHI.SwapPending" equals="0"/>` 로 기다리고, 어느 백엔드인지는 `RHI.Backend`, 실패했는지는 `RHI.SwapFailedCount` 로 본다.
- *          교체 뒤의 모듈과 씬은 `Module.BindingsOk` · `Module.GraphBroken` · `Scene.ObjectCount` 가 이미 있다. Shipping 에는 단계도 감시 값도 없다.
+ *          교체 뒤의 모듈과 씬은 `Module.BindingsOk` · `Module.GraphBroken` · `Scene.ObjectCount` 가 이미 있다. 개발 명령 `rhi.removeDevice` 와 그 렌더 스레드 훅도 여기 있다.
+ *          배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS` 의 `DevCommands.cpp`) — 단계 · 감시 값 · 개발 명령이 없다.
  */
 #include "pch.h"
 
 #include "App/RHIBackendSwitcher.h"
 
-#include "Core/Console/DevCommandsEnabled.h"
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
 
-// 가드 기준은 `SW_DEV_COMMANDS_ENABLED` 한 가지다(`DevCommand` 단계와 같다) — 이 파일이 개발 명령 레지스트리를 쓰는 구성에서만 컴파일된다.
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Console/DevCommandRegistry.h"
-    #include "Core/Container/StringUtil.h"
-
-    #include "Engine/Automation/Watch/AutomationWatch.h"
-    #include "Engine/Automation/Scenario/AutomationBackendSteps.h"
-    #include "Engine/Automation/Scenario/AutomationScenario.h"
-    #include "Engine/Automation/Scenario/AutomationStepContext.h"
-    #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Config/RHIBackendType.h"
-    #include "Engine/Graphics/RHI/RHI.h"
-    #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Automation/Scenario/AutomationBackendSteps.h"
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/RHIBackendType.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Renderer/RenderThread.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "RHIBackendSwitcherAutomation" );
+    SW_LOG_CALLER( "RHIBackendSwitcher" );
 
     namespace
     {
-        struct RHIBackendSwitcherAutomationInternal
+        struct RHIBackendSwitcherDevCommandsInternal
         {
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
             [[nodiscard]] static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
@@ -157,15 +155,31 @@ namespace sw
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
                     "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang; with a wait, the render thread first blocks that long where the fence wait is",
-                    &RHIBackendSwitcherAutomationInternal::runRemoveDevice );
-    SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherAutomationInternal::runSwapBackend,
-                                   &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherAutomationInternal::prepareSwapBackend, nullptr, false );
+                    &RHIBackendSwitcherDevCommandsInternal::runRemoveDevice );
+    SW_AUTOMATION_STEP_WITH_HOOKS( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherDevCommandsInternal::runSwapBackend,
+                                   &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherDevCommandsInternal::prepareSwapBackend, nullptr, false );
     SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
-                         &RHIBackendSwitcherAutomationInternal::readCommittedBackend );
+                         &RHIBackendSwitcherDevCommandsInternal::readCommittedBackend );
     SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
-                         &RHIBackendSwitcherAutomationInternal::readSwapPending );
+                         &RHIBackendSwitcherDevCommandsInternal::readSwapPending );
     SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
-                         &RHIBackendSwitcherAutomationInternal::readFailedSwapCount );
-} // namespace sw
+                         &RHIBackendSwitcherDevCommandsInternal::readFailedSwapCount );
 
-#endif
+    void RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
+    {
+        SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
+        _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
+    }
+
+    void RHIBackendSwitcher::onBeginFrameOnRenderThread( IRHIDevice& device )
+    {
+        const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
+        if ( waitMilliseconds == 0u )
+            return;
+        SW_LOG_WARNING( "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
+                        waitMilliseconds );
+        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::kNanosecondsPerMillisecond );
+        if ( device.debugRemoveDevice() == false )
+            SW_LOG_ERROR( "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
+    }
+} // namespace sw

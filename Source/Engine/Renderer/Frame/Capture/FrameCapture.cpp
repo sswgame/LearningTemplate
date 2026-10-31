@@ -6,7 +6,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
-#include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -116,18 +115,6 @@ namespace sw
         return outLayout._width != 0 && outLayout._height != 0;
     }
 
-    bool FrameCapture::dumpPresentToFile( string_view outFilePath ) const
-    {
-        if ( outFilePath.empty() )
-            return false;
-
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        if ( readbackPresent( bytes, layout ) == false )
-            return false;
-        return RenderTargetImageFile::writeImageFile( bytes, layout, constant::kBackBufferFormat, outFilePath );
-    }
-
     bool FrameCapture::readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat ) const
     {
         if ( _pDevice == nullptr )
@@ -156,19 +143,6 @@ namespace sw
         if ( FrameRendererUtil::isDepthFormat( outFormat ) )
             outFormat = kRHIDepthReadbackFormat;
         return outLayout._width != 0 && outLayout._height != 0;
-    }
-
-    bool FrameCapture::dumpTransientToFile( string_view attachmentName, string_view outFilePath ) const
-    {
-        if ( _pDevice == nullptr || outFilePath.empty() )
-            return false;
-
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        RHIFormat         format = RHIFormat::R8G8B8A8_UNORM;
-        if ( readbackTransient( attachmentName, bytes, layout, format ) == false )
-            return false;
-        return RenderTargetImageFile::writeImageFile( bytes, layout, format, outFilePath );
     }
 
     bool FrameCapture::readbackTexture( RHITextureHandle texture, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const

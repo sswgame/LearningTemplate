@@ -135,7 +135,7 @@ namespace sw
                     // 열지 못한 뒤 없으면 "없음" 이다(그 사이 지워진 것도 없음이다). 있는데 못 열었으면(권한 · 잠금) 늘 오류다.
                     if ( bMissingIsError == false && FileUtil::exists( filePath ) == false )
                         return OptionalFileRead::Missing;
-                    SW_LOG_ERROR( "File not found: %#", fileName );
+                    SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
                     return OptionalFileRead::Failed;
                 }
 
@@ -584,7 +584,7 @@ namespace sw
         FILE*        pFile    = PlatformFileUtil::openFile( filePath.c_str(), "rb" );
         if ( pFile == nullptr )
         {
-            SW_LOG_ERROR( "File not found: %#", fileName );
+            SW_LOG_ERROR_ID( "File.NotFound", "File not found: %#", fileName );
             return false;
         }
         // 크기를 재지 않고 끝(EOF)까지 덩이로 읽는다 — 의사 파일은 크기를 0 으로 알린다.

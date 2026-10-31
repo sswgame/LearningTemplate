@@ -80,6 +80,7 @@ namespace sw
         , _tileRebaker{}
         , _debugView{}
         , _pManager{ &manager }
+        , _waitingMeshCount{ 0 }
         , _bSettingsLoaded{ false }
         , _bIgnoreCooked{ false }
     {
@@ -93,6 +94,7 @@ namespace sw
     void SceneNavigation::onSceneCleared()
     {
         NavTileRebaker::waitForAllBakes( _listRuntime );
+        _waitingMeshCount = 0; // 미룬 마련은 씬과 함께 사라진다 — 남기면 자동화 사진이 영영 기다린다
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
             pAgent->_crowdAgentID   = NavigationConstant::kInvalidAgentID;
@@ -337,7 +339,7 @@ namespace sw
         return true;
     }
 
-    NavMeshRuntime* SceneNavigation::createRuntime( const hashed_string& agentType )
+    NavMeshRuntime* SceneNavigation::createRuntime( const hashed_string& agentType, NavMeshArrival arrival )
     {
         SW_MEMORY_SCOPE( Navigation );
         SW_PROFILE_SCOPE( "GT.Navigation.createNavMesh" );
@@ -361,8 +363,14 @@ namespace sw
         const float32 reach                 = MathUtil::max( 1.0f, pType->_radius * 4.0f );
         pRuntime->_searchExtent             = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
 
-        shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
-        NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), *pGeometry );
+        shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
+        const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );
+        // 메시를 아직 읽는 중이다 — 덜 모인 기하로 굽지 않는다(쿠킹본의 입력 해시도 맞지 않는다). 실패가 아니라 다음 갱신이 다시 마련한다.
+        if ( pendingMeshCount > 0 )
+        {
+            _waitingMeshCount += pendingMeshCount;
+            return nullptr;
+        }
         // 장애물은 종류의 방식(`_obstacleMode`)대로 — 다시 베이크는 덧칠 부피로 타일에 베이크하고, 캐시는 베이크하지 않고 끼운 뒤 캐시 장애물로 넣는다.
         const bool                          bObstacleCache = pType->_obstacleMode == NavObstacleMode::TileCache;
         shared_ptr<vector<NavConvexVolume>> pVolume        = make_shared<vector<NavConvexVolume>>();
@@ -420,11 +428,16 @@ namespace sw
         return _listRuntime.back().get();
     }
 
-    INavMesh* SceneNavigation::ensureNavMesh( const hashed_string& agentType )
+    NavMeshRuntime* SceneNavigation::findOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival )
     {
         NavMeshRuntime* pRuntime = findRuntime( agentType );
-        if ( pRuntime == nullptr )
-            pRuntime = createRuntime( agentType );
+        return pRuntime != nullptr ? pRuntime : createRuntime( agentType, arrival );
+    }
+
+    INavMesh* SceneNavigation::ensureNavMesh( const hashed_string& agentType )
+    {
+        // 도구 · 테스트 · 쿠킹이 "지금" 마련하는 길이다 — 결과를 그 자리에서 쓰므로 메시를 그 자리에서 읽는다(갱신은 `Defer` 로 기다리지 않는다).
+        NavMeshRuntime* pRuntime = findOrCreateRuntime( agentType, NavMeshArrival::Wait );
         return pRuntime != nullptr ? pRuntime->_pNavMesh.get() : nullptr;
     }
 
@@ -557,6 +570,7 @@ namespace sw
     {
         const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false ||
                                _listLink.empty() == false;
+        _waitingMeshCount = 0; // 이번 갱신에 미룬 마련만 센다(사라진 표면 · 에이전트의 옛 기다림이 남지 않게)
         if ( bAnything == false || _pManager == nullptr )
             return;
         SW_MEMORY_SCOPE( Navigation );
@@ -569,20 +583,21 @@ namespace sw
                 const NavMeshSurfaceComponent* pSurface = _listSurface[surfaceIndex];
                 if ( pSurface->isActive() == false )
                     continue;
+                // 있게만 한다 — 모르는 종류 · 기하 없음은 createRuntime 이 이미 남긴다. 메시를 읽는 중이면 다음 갱신이 다시 마련한다(게임 스레드가 디스크를 기다리지 않는다).
                 if ( pSurface->getAgentTypes().empty() )
                 {
-                    (void)ensureNavMesh( hashed_string{} ); // 있게만 한다 — 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다
+                    (void)findOrCreateRuntime( hashed_string{}, NavMeshArrival::Defer );
                     continue;
                 }
                 for ( const hashed_string& agentType : pSurface->getAgentTypes() )
                 {
-                    (void)ensureNavMesh( agentType ); // 있게만 한다 — 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다
+                    (void)findOrCreateRuntime( agentType, NavMeshArrival::Defer );
                 }
             }
         }
         // 순서에 뜻이 있다 — 끝난 타일 끼우기는 질의가 없는 이 자리(컴포넌트 틱 뒤)에서만, 새 일은 끼운 뒤에 넘긴다.
         _tileRebaker.updateObstacles( _listRuntime, _listObstacle, getSettings()._obstacleMoveThreshold );
-        processDirtyAreas();
+        processDirtyAreas( NavMeshArrival::Defer );
         _tileRebaker.applyFinishedBakes( _listRuntime );
         NavTileRebaker::updateObstacleCaches( _listRuntime, deltaTime ); // 캐시 종류는 장애물 요청을 층에서 바로 짓는다(끼우기와 같은 자리)
         applyLinkStates();
@@ -590,21 +605,22 @@ namespace sw
         updateAgents( deltaTime );
     }
 
-    void SceneNavigation::processDirtyAreas()
+    void SceneNavigation::processDirtyAreas( NavMeshArrival arrival )
     {
-        _tileRebaker.processDirtyAreas( _listRuntime, _listObstacle, *_pManager, _settings, _listGeometrySource.getItems() );
+        _tileRebaker.processDirtyAreas( _listRuntime, _listObstacle, *_pManager, _settings, _listGeometrySource.getItems(), arrival );
     }
 
     void SceneNavigation::flushTileBakes()
     {
         _tileRebaker.updateObstacles( _listRuntime, _listObstacle, getSettings()._obstacleMoveThreshold );
-        processDirtyAreas();
+        // 그 자리에서 끝내는 길이다(테스트 · 쿠킹) — 메시를 기다린다. `Defer` 면 넘긴 영역이 남아 아래 반복이 끝나지 않는다.
+        processDirtyAreas( NavMeshArrival::Wait );
         while ( getPendingTileCount() > 0 )
         {
             NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
             NavTileRebaker::waitForAllBakes( _listRuntime );
             _tileRebaker.applyFinishedBakes( _listRuntime );
-            processDirtyAreas();
+            processDirtyAreas( NavMeshArrival::Wait );
         }
         // 장애물 캐시는 갱신마다 타일 하나를 짓는다(Detour 가 비용을 프레임에 나눈다) — 다 지을 때까지 돈다. 상한은 그 종류의 타일 자리 수다.
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
@@ -635,11 +651,10 @@ namespace sw
             }
             NavMeshRuntime* pRuntime = agent._crowdIndex < _listRuntime.size() ? _listRuntime[agent._crowdIndex].get() : nullptr;
             if ( pRuntime == nullptr )
-            {
-                pRuntime = findRuntime( agent._agentType );
-                if ( pRuntime == nullptr )
-                    pRuntime = createRuntime( agent._agentType );
-            }
+                pRuntime = findOrCreateRuntime( agent._agentType, NavMeshArrival::Defer );
+            // 기하의 메시를 아직 읽는 중이라 마련을 미뤘다 — 실패로 두지 않고 다음 갱신에 다시 마련한다(목적지는 그대로 기다린다).
+            if ( pRuntime == nullptr && _waitingMeshCount > 0 )
+                continue;
             if ( pRuntime == nullptr || pRuntime->_pCrowd == nullptr )
             {
                 if ( agent._bHasDestination == SW_TRUE )
@@ -683,6 +698,7 @@ namespace sw
     void SceneNavigation::collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
                                            const vector<INavGeometrySource*>& listSource, NavMeshGeometry& outGeometry )
     {
-        NavGeometryCollector::collectGeometry( manager, pSurface, settings, listSource, outGeometry );
+        // 쿠킹이 쓰는 길이다 — 런타임 베이크와 같은 기하(입력 해시)를 그 자리에서 내야 하므로 메시를 기다린다(`Wait` 는 늘 0 을 돌려준다).
+        (void)NavGeometryCollector::collectGeometry( manager, pSurface, settings, listSource, NavMeshArrival::Wait, outGeometry );
     }
 } // namespace sw

@@ -3,7 +3,7 @@
  * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트를 정의합니다.
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
- *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstance::saveStateToFile` 과 `loadStateFromFile` 이 끝날 때 낸다. 성공과 실패 모두 낸다.
+ *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstance::saveGameToSlot` 과 `loadGameFromSlot` 이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤의 `GameInstance::update` 에서 낸다. 성공과 실패 모두 낸다.
  *          - `SceneLoadRequestedEvent`: `GameSceneFlow` 가 게임 이동 씬 로드를 받아들일 때(`requestFirstScene` · `requestEntranceScene` · `requestTitleScene` 포함) 씬 로드를 요청할 때 낸다.
  *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다.
  *
@@ -35,21 +35,21 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 2) 세이브와 로드: GameInstance
     // ------------------------------------------------------------------------------
-    /** @brief 게임 상태 저장(`GameInstance::saveStateToFile`)이 끝났음을 알립니다. */
+    /** @brief 게임 상태 저장(`GameInstance::saveGameToSlot`)이 끝났음을 알립니다. */
     struct SW_GF_API SaveGameSavedEvent final : IEvent
     {
-        string _savePath;         ///< 쓴(쓰려 한) 세이브 파일 경로
-        bool   _bSuccess{ true }; ///< 파일을 끝까지 썼으면 true
+        string _slot;             ///< 쓴(쓰려 한) 로컬 저장 슬롯 이름
+        bool   _bSuccess{ true }; ///< 슬롯을 끝까지 썼으면 true
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameSavedEvent );
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 게임 상태 불러오기(`GameInstance::loadStateFromFile`)가 끝났음을 알립니다. */
+    /** @brief 게임 상태 불러오기(`GameInstance::loadGameFromSlot`)가 끝났음을 알립니다. */
     struct SW_GF_API SaveGameLoadedEvent final : IEvent
     {
-        string _savePath;         ///< 읽은(읽으려 한) 세이브 파일 경로
+        string _slot;             ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름
         bool   _bSuccess{ true }; ///< 씬과 상태를 모두 복원했으면 true
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameLoadedEvent );
     };

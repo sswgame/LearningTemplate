@@ -24,6 +24,7 @@
 namespace sw
 {
     struct ExtensionProgramDesc;
+    struct ShaderCompileDesc;
 
     class GPUScene;
     class IRHIDevice;
@@ -62,8 +63,10 @@ namespace sw
         /**
          * @brief 엔진 패스 PSO(패스 종류 표를 enum 순서로), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
          * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`SW_FATAL`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
+         *          그래픽스 · 컴퓨트 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`warmShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
+         *          처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더도 같은 데우기에 넣는다 — 그 프레임에는 드라이버 생성만 남는다.
          */
-        void createPassPSOS();
+        void createPassPSOs();
         /** @brief 소유한 저장소의 PSO · 레이아웃과 폴백 버퍼를 놓습니다. 빌린 저장소는 놓지 않습니다(소유자의 몫). 디바이스가 없으면 핸들만 잊습니다. */
         void release();
         /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더의 바인딩 레이아웃을 무효화합니다. */
@@ -91,6 +94,18 @@ namespace sw
         RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRTVFormatOverride = nullptr );
         /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
         RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
+        /** @brief 모듈 확장 패스 프로그램 PSO 하나의 요청입니다(키 = 셰이더 · 고정 상태 · 타깃 포맷 · 깊이 테스트). 프로그램은 부르는 쪽 것을 빌린다. */
+        struct ExtensionProgramRequest
+        {
+            const ExtensionProgramDesc* _pProgram{ nullptr };
+            RHIFormat                   _colorFormat{ RHIFormat::Unknown };
+            bool                        _bDepthTest{ false };
+        };
+        /**
+         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `findOrCreateExtensionProgramPSO` 가 차례로 만든다).
+         * @details `createPassPSOS` 와 같은 "셰이더 병렬 데우기 → PSO 직렬 생성" 이다 — 처음 보는 프로그램이 여럿인 프레임에 렌더 스레드가 하나씩 컴파일하지 않게.
+         */
+        void warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const;
         /**
          * @brief 모듈 확장 패스의 프로그램(`ExtensionProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
@@ -103,12 +118,12 @@ namespace sw
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
          * @param viewModeMask 이번 프레임에 그리는 뷰들의 보기 모드 비트 집합(`FrameRenderer::collectFrameViewModeMask`)
          */
-        void ensureMaterialPSOS( uint32 viewModeMask );
+        void ensureMaterialPSOs( uint32 viewModeMask );
         /**
          * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLOD P6). 주 렌더러만 부릅니다.
          * @details 아직 씬에 없는 머티리얼(다음 레벨 · 컷에 나올 것)만 이 길로 데운다 — 그 머티리얼이 씬에 들어오는 프레임에 DX12 PSO 생성 히치가 없게.
          */
-        void warmPinnedMaterialPSOS( uint32 viewModeMask );
+        void warmPinnedMaterialPSOs( uint32 viewModeMask );
         /**
          * @brief 머티리얼 변형을 빌더 스레드가 만들게 하는지 반환합니다(`-gv_psoAsync` 가 켜져 있고 백엔드가 `_bThreadSafeResourceCreation` 이면 true).
          * @details 결정적 실행(`AssetManager::isFinishingAssetWorkEachFrame`)은 빌더 스레드를 쓰지 않는다. false 이면 렌더 스레드가 같은 줄을 셋업 구간에서 직접 만든다.
@@ -146,8 +161,36 @@ namespace sw
             RHIStructuredBufferSlot _buffer;
         };
 
-        /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. 하나라도 못 만들면 멈춥니다. */
-        void createOutputPSOVariants();
+        /** @brief 셋업이 만들 그래픽스 패스 PSO 하나입니다. `_outputFormat` 이 `Unknown` 이면 엔진 패스 PSO, 아니면 그 대상 포맷의 출력 패스 변형입니다. */
+        struct PassPSOJob
+        {
+            RHIPipelineStateDesc _desc{};
+            RenderPassType       _passType{ RenderPassType::Invalid };
+            RHIFormat            _outputFormat{ RHIFormat::Unknown };
+        };
+
+        /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 @p inoutListJob 에 더합니다. desc 를 정하지 못하면 멈춥니다. */
+        void collectOutputPSOJobs( vector<PassPSOJob>& inoutListJob );
+        /**
+         * @brief 패스 종류 표와 파이프라인 XML 의 패스 서술로 패스 PSO 의 desc 를 정합니다(PSO 는 만들지 않는다). 컬러 포맷을 정할 근거가 없으면 오류를 남기고 false 입니다.
+         * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(출력 변형). nullptr 이면 표의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
+         */
+        [[nodiscard]] bool makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const;
+        /** @brief 셋업이 만들 컴퓨트 패스 PSO 하나입니다(셰이더 경로 · define 은 쿠커와 같은 `selectRenderPassShader`). */
+        struct ComputePSOJob
+        {
+            string         _shaderPath;
+            vector<string> _listDefine;
+            RenderPassType _passType{ RenderPassType::Invalid };
+        };
+
+        /** @brief 그래픽스 PSO desc 의 셰이더 요청(정점 · 있으면 픽셀)을 @p inoutListShader 에 더합니다. 백엔드 팩토리와 같은 해석이라(`RHIShaderRequest::resolveGraphics`) 캐시 키가 같다. */
+        void appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const;
+        /**
+         * @brief @p listShader 를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
+         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `findOrCreateExtensionProgramPSO`).
+         */
+        void warmShaders( const vector<ShaderCompileDesc>& listShader ) const;
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
          * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSRV` 는 bindless 레지스트리를 바꾸는데, 패스 콜백은 태스크 워커에서 병렬로 돈다.
@@ -173,10 +216,10 @@ namespace sw
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureRequestMaterialPSOS( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
-         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOS`)는 false 입니다.
+         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
@@ -190,10 +233,10 @@ namespace sw
         RenderPSOCache _cache;
         /// @brief 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_cache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`shareCacheOf`).
         RenderPSOCache* _pCache;
-        /// @brief `ensureMaterialPSOS` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
+        /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
-        /// @brief `warmPinnedMaterialPSOS` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
+        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
         vector<shared_ptr<Material>> _listPSOWarmMaterialScratch;
         vector<MaterialFallback>     _listMaterialFallback;
         /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 저장소가 소유하며 PSO 마다 하나입니다.

@@ -52,7 +52,8 @@ namespace sw
                     pState->_drawnRevision = 0;
                 continue;
             }
-            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다.
+            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다. 렌더 타깃은 읽을 파일이 없어(`TextureLoadBlock::runLoad`) 기다림이
+            // 이 스레드의 GPU 생성뿐이라 동기로 둔다 — 핸들로 미루면 같은 생성을 한 프레임 늦게 할 뿐이다(언리얼 렌더 타깃도 렌더 스레드가 그 자리에서 만든다).
             textures.declareRenderTarget( target._targetPath.view(), width, height );
             pState->_pTexture      = textures.acquire( target._targetPath.view(), &device );
             pState->_drawnRevision = 0;
@@ -60,7 +61,7 @@ namespace sw
             RHIPipelineStateHandle pso{ 0 };
             const bool             bHasPSO = pState->_pTexture != nullptr && psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
             if ( pState->_pTexture != nullptr && bHasPSO == false )
-                SW_LOG_ERROR( "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::createOutputPSOVariants)",
+                SW_LOG_ERROR( "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::collectOutputPSOJobs)",
                               target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );
         }
 
@@ -94,9 +95,10 @@ namespace sw
                 }
                 if ( bKnown )
                     continue;
+                // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._pTexture    = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().acquire( path.view(), &device );
+                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), &device, AssetLoadStart::Async );
             }
         }
     }
@@ -110,24 +112,17 @@ namespace sw
     {
         for ( const PathTexture& pathTexture : _listPathTexture )
         {
-            if ( pathTexture._path == path )
-                return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRHIValid() ? pathTexture._pTexture->getSRV() : kInvalidDescriptorIndex;
+            if ( pathTexture._path != path )
+                continue;
+            const Texture2D* pTexture = pathTexture._load.isReady() ? pathTexture._load.getBlock()->getTexture() : nullptr;
+            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
         }
         return kInvalidDescriptorIndex;
     }
 
     void CanvasTextureLeases::release( IRHIDevice* pDevice )
     {
-        if ( _listPathTexture.empty() == false && engine::areEngineServicesBound() )
-        {
-            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            for ( const PathTexture& pathTexture : _listPathTexture )
-            {
-                if ( pathTexture._pTexture != nullptr )
-                    textures.release( pathTexture._path.view(), pDevice );
-            }
-        }
-        _listPathTexture.clear();
+        _listPathTexture.clear(); // 경로 이미지의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         if ( engine::areEngineServicesBound() )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();

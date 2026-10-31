@@ -3,7 +3,8 @@
  * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`).
  * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
- *          Shipping 은 몸통이 비어 있다(명령을 받지 않고 틱을 붙잡지 않는다). `#if` 는 이 파일의 .cpp 에만 있다.
+ *          빌드마다 다른 것은 구현 파일이다 — Dev 는 `ServerDebugControl.cpp`, Shipping 은 `ServerDebugControlShipping.cpp`(몸통이 비어 있다 — 명령을 받지 않고
+ *          틱을 붙잡지 않는다)를 CMake 가 고른다(`sw_pickVariantSource`, `Source/Server/CMakeLists.txt`).
  */
 #pragma once
 #include "Core/Container/string.h"

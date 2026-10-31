@@ -2,23 +2,19 @@
 
 #include "ModuleManager/ModuleReloadDriver.h"
 
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/Container/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleCatalog.h"
+
+#include "ModuleManager/LiveReload/LiveReloadManager.h"
+#include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
-#if !defined( SW_SHIPPING )
-    #include "ModuleManager/LiveReload/LiveReloadManager.h"
-
-    #include "Core/Console/DevCommandRegistry.h"
-    #include "Core/Container/formatString.h"
-    #include "Core/Container/string.h"
-    #include "Core/Container/vector.h"
-
-    #include "Engine/Automation/Watch/AutomationWatch.h"
-    #include "Engine/Foundation/EngineServices.h"
-#endif
-
-#if !defined( SW_SHIPPING )
+// 개발 빌드의 구현이다 — 배포는 `ModuleReloadDriverShipping.cpp` 를 CMake 가 고른다(`Source/ModuleManager/CMakeLists.txt`).
 namespace sw
 {
     namespace
@@ -96,88 +92,91 @@ namespace sw
     SW_AUTOMATION_WATCH( moduleBindingsOk, "Module.BindingsOk", "1 when every loaded module is bound to the dependency images the manager holds now, else 0",
                          &ModuleReloadDriverInternal::readBindingsOk );
 } // namespace sw
-#endif
 
 namespace sw
 {
+    struct ModuleReloadDriver::State
+    {
+        unique_ptr<LiveReloadManager> _liveReloadManager;
+        /** @brief 자신을 건 호스트 범위입니다(소유하지 않는다). 씬 뒤 훅이 여기서 자신을 풉니다. */
+        SubsystemScope* _pHostScope = nullptr;
+        /** @brief `queueReload` 가 예약한 리로드가 끝났다고 볼 완료 수입니다(예약 때의 완료 수 + 1). 0 이면 예약한 적이 없다. */
+        uint32 _reloadTargetCount = 0;
+        /** @brief 모듈 라이브러리 창구에 건 "씬이 사라졌다" 훅의 구독입니다(창구가 먼저 사라지면 무효가 된다). */
+        Subscription _scenesReleasedHook;
+    };
+
     ModuleReloadDriver::ModuleReloadDriver()
-#if !defined( SW_SHIPPING )
-        : _liveReloadManager{ nullptr }
-        , _pHostScope{ nullptr }
-        , _reloadTargetCount{ 0 }
-        , _scenesReleasedHook{}
-#endif
+        : _pState{ make_unique<State>() }
     {
     }
 
     ModuleReloadDriver::~ModuleReloadDriver() = default;
 
-    void ModuleReloadDriver::initialize( [[maybe_unused]] SubsystemScope& hostScope, [[maybe_unused]] ModuleLoaderSubsystem& moduleLibraryHost )
+    bool ModuleReloadDriver::initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
+                                         ModuleResolution& outResolution )
     {
-#if !defined( SW_SHIPPING )
-        _liveReloadManager = make_unique<LiveReloadManager>();
-        _pHostScope        = &hostScope;
-        const bool bBound  = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
+        // 무엇을 로드할지는 모듈 매니페스트가 정한다(App 은 빌드가 담은 모든 대상, 전용 서버는 Server 대상).
+        if ( ModuleCatalogLoader::loadAndResolve( targetMask, outCatalog, outResolution ) == false )
+            return false;
+        moduleLibraryHost.setResolution( outResolution );
+
+        _pState->_liveReloadManager = make_unique<LiveReloadManager>();
+        _pState->_pHostScope        = &hostScope;
+        const bool bBound           = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );
         (void)bBound;
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 라이브러리 창구가 엔진 종료 안에서 그 자리를 부른다.
-        _scenesReleasedHook = moduleLibraryHost.bindScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
+        _pState->_scenesReleasedHook = moduleLibraryHost.bindScenesReleasedHook( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
-            if ( _pHostScope != nullptr )
-                _pHostScope->unbind<ModuleReloadDriver>();
-            _pHostScope = nullptr;
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->shutdown();
+            if ( _pState->_pHostScope != nullptr )
+                _pState->_pHostScope->unbind<ModuleReloadDriver>();
+            _pState->_pHostScope = nullptr;
+            if ( _pState->_liveReloadManager != nullptr )
+                _pState->_liveReloadManager->shutdown();
         } ) );
-#endif
+        return true;
     }
 
-    void ModuleReloadDriver::requestReload( [[maybe_unused]] const utf8* pModuleName )
+    Subscription ModuleReloadDriver::addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch )
     {
-#if !defined( SW_SHIPPING )
-        if ( _liveReloadManager != nullptr )
-            _liveReloadManager->triggerReload( pModuleName );
-#endif
+        if ( _pState->_liveReloadManager == nullptr )
+            return Subscription{};
+        return _pState->_liveReloadManager->addOnBeforeCommitBatch( std::move( onBeforeBatch ) );
+    }
+
+    void ModuleReloadDriver::requestReload( const utf8* pModuleName )
+    {
+        if ( _pState->_liveReloadManager != nullptr )
+            _pState->_liveReloadManager->triggerReload( pModuleName );
     }
 
     void ModuleReloadDriver::update()
     {
-#if !defined( SW_SHIPPING )
-        if ( _liveReloadManager != nullptr )
-            _liveReloadManager->update();
-#endif
+        if ( _pState->_liveReloadManager != nullptr )
+            _pState->_liveReloadManager->update();
     }
 
     LiveReloadManager* ModuleReloadDriver::getLiveReloadManager() const
     {
-#if defined( SW_SHIPPING )
-        return nullptr;
-#else
-        return _liveReloadManager.get();
-#endif
+        return _pState->_liveReloadManager.get();
     }
 
-    bool ModuleReloadDriver::queueReload( [[maybe_unused]] const utf8* pModuleName )
+    bool ModuleReloadDriver::queueReload( const utf8* pModuleName )
     {
-#if defined( SW_SHIPPING )
-        return false;
-#else
-        if ( _liveReloadManager == nullptr || _liveReloadManager->getModuleHandle( pModuleName ) == nullptr )
+        LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ) == nullptr )
             return false;
-        _reloadTargetCount = _liveReloadManager->getCompletedReloadCount() + 1;
-        _liveReloadManager->triggerReload( pModuleName );
+        _pState->_reloadTargetCount = pManager->getCompletedReloadCount() + 1;
+        pManager->triggerReload( pModuleName );
         return true;
-#endif
     }
 
     bool ModuleReloadDriver::isReloadPending() const
     {
-#if defined( SW_SHIPPING )
-        return false;
-#else
-        if ( _liveReloadManager == nullptr || _reloadTargetCount == 0 )
+        const LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        if ( pManager == nullptr || _pState->_reloadTargetCount == 0 )
             return false;
-        return _liveReloadManager->getCompletedReloadCount() < _reloadTargetCount && _liveReloadManager->isGraphBroken() == false;
-#endif
+        return pManager->getCompletedReloadCount() < _pState->_reloadTargetCount && pManager->isGraphBroken() == false;
     }
 } // namespace sw

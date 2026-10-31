@@ -600,8 +600,9 @@ namespace sw
             }
 
             /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCooker::verifyCookedShaders` 의 본체). */
-            static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, string_view shaderFolder, vector<string>& outListProblem )
+            static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, ShaderTargetFormat format, vector<string>& outListProblem )
             {
+                const string_view                 shaderFolder  = ShaderCooker::getSubfolderForFormat( format ); // 문제 글의 이름표 - 자리는 아래 `ShaderBinaryLocation` 이 정한다
                 const std::optional<AbsolutePath> shadersFolder = resolver.findDomainShadersFolder( domain );
                 if ( shadersFolder.has_value() == false )
                     return;
@@ -617,8 +618,8 @@ namespace sw
                     return;
 
                 const string label = domain + "/shaders";
-                // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징에 있다(`<쿠킹 폴더>/<domain>/shaders/bin/<폴더>` — 씬 · 프리팹 쿠킹본과 같은 자리).
-                const string binDir = FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( cookedDir, domain ), "shaders" ), "bin" ), shaderFolder );
+                // 쿠킹본은 소스 트리가 아니라 쿠킹 스테이징의 같은 상대 자리에 있다 — 쿠커 출력(`ShaderCookDriver`) · 런타임 읽기와 같은 규칙(`ShaderBinaryLocation`) 하나다.
+                const string binDir = FileUtil::joinPath( cookedDir, ShaderBinaryLocation::makeForDomain( domain, format )._binDirectory );
                 if ( FileUtil::isDirectory( binDir ) == false )
                 {
                     appendProblem( outListProblem, "%#: no '%#' binary folder (never cooked)", label, shaderFolder );
@@ -865,13 +866,12 @@ namespace sw
         return true;
     }
 
-    void ShaderCooker::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem )
+    void ShaderCooker::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, vector<string>& outListProblem )
     {
         const string& resourceRoot = assetPaths.getRootFolderPath();
-        if ( resourceRoot.empty() || cookedDir.empty() || shaderFolder.empty() )
+        if ( resourceRoot.empty() || cookedDir.empty() )
         {
-            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root, the cook staging folder and a shader folder (got '%#', '%#', '%#')",
-                                                    resourceRoot, cookedDir, shaderFolder );
+            ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root and the cook staging folder (got '%#', '%#')", resourceRoot, cookedDir );
             return;
         }
         const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
@@ -883,7 +883,7 @@ namespace sw
         }
         for ( const string& domain : listDomain )
         {
-            ShaderCookStampInternal::verifyDomain( *resolver, cookedDir, domain, shaderFolder, outListProblem );
+            ShaderCookStampInternal::verifyDomain( *resolver, cookedDir, domain, format, outListProblem );
         }
     }
 } // namespace sw

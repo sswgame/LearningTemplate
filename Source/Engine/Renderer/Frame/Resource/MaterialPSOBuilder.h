@@ -55,7 +55,7 @@ namespace sw
         /**
          * @brief 생성 작업을 줄에 넣습니다.
          * @param pDevice 만들 디바이스입니다. 줄이 비워질 때까지 살아 있어야 합니다(`shutdown` 이 그 전에 불립니다).
-         * @param bUrgent 이번 프레임 배치가 필요한 키는 true, 미리 만들기(`warmPinnedMaterialPSOS`)는 false 입니다. 급한 줄이 먼저 나갑니다.
+         * @param bUrgent 이번 프레임 배치가 필요한 키는 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다. 급한 줄이 먼저 나갑니다.
          * @param bThread true 이면 빌더 스레드가 만듭니다(처음 넣을 때 시작합니다). false 이면 `buildOnCaller` 가 만듭니다.
          */
         void submit( IRHIDevice* pDevice, Job&& job, bool bUrgent, bool bThread );

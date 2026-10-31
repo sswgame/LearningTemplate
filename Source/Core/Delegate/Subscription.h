@@ -135,6 +135,25 @@ namespace sw
         /** @brief 구독 @p id 가 풀렸습니다. 그 등록을 지웁니다. 구독은 이미 목록에서 빠졌고 목록 잠금은 풀려 있습니다. */
         virtual void releaseSubscription( uint64 id ) = 0;
 
+        /**
+         * @brief 등록 @p id 를 소유한 살아 있는 구독 하나를 무효화합니다(해제는 부르지 않는다). 없으면 아무것도 하지 않습니다.
+         * @details 한 번 쓰고 끝나는 등록(요청 하나의 완료 콜백)이 끝났을 때 출처가 부른다 - 구독은 `isActive` 가 false 가 되어 들고 있는 쪽이 끝난 요청을 가려낸다.
+         */
+        void detachSubscription( uint64 id ) noexcept
+        {
+            ScopedLock<SpinLock> lock{ _listLock };
+            for ( Subscription* pCurrent = _pHead; pCurrent != nullptr; pCurrent = pCurrent->_pNext )
+            {
+                if ( pCurrent->_id == id )
+                {
+                    unlinkLocked( *pCurrent );
+                    pCurrent->_pSource = nullptr;
+                    pCurrent->_id      = 0;
+                    return;
+                }
+            }
+        }
+
         /** @brief 살아 있는 구독을 모두 무효화합니다. 등록은 파생 클래스가 따로 지웁니다(전체 비우기 · 출처 소멸). */
         void detachAllSubscriptions() noexcept
         {

@@ -3,7 +3,7 @@
  * @brief `PROPERTY( EditCondition = "…" )` 를 풀고 값을 보고 판정합니다 — 인스펙터가 그 프로퍼티를 숨기거나 막을지 정하는 자리입니다.
  * @details 식은 넷 중 하나입니다(공백 자유). `name` — 그 프로퍼티(bool · 정수)가 참일 때, `!name` — 거짓일 때, `name == Value` ·
  *          `name != Value` — 열거형(이름 · 숫자) · 정수가 같을 때 · 다를 때. `name` 은 같은 타입의 프로퍼티(기반 포함) 이름입니다.
- *          에디터 메타데이터라 Shipping 에는 식이 없고 판정은 늘 "켜짐" 입니다.
+ *          에디터 기능이라 배포 구성은 짓지 않는다(Editor 빌드 단위).
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -73,6 +73,23 @@ namespace sw
             // 엔진 칸(창 제목 · 스키마 · UI 규칙) — 엔진의 `PackEngineSettings` 가 같은 파일에서 읽는다. 이 구조체는 읽지 않는다.
             if ( StringUtil::equals( pName, PackEngineSettings::kElementName ) )
                 continue;
+            // 팩 밖에서 읽는 필수 데이터 — 종류 하나에 팩 하나다. 자리는 읽는 쪽(`GameInstance::makeRequiredDataPath`)이 등록 줄의 규칙으로 만든다.
+            if ( StringUtil::equals( pName, "RequiredData" ) )
+            {
+                const string kind( child.getAttributeText( "kind" ) );
+                const string pack( child.getAttributeText( "pack" ) );
+                if ( kind.empty() || pack.empty() )
+                {
+                    SW_LOG_ERROR( "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, kind.c_str(), pack.c_str() );
+                    bOk = false;
+                }
+                else if ( _mapRequiredDataPack.emplace( kind, pack ).second == false )
+                {
+                    SW_LOG_ERROR( "GameSettings %#: <RequiredData kind=\"%#\"> appears twice", sourceName, kind.c_str() );
+                    bOk = false;
+                }
+                continue;
+            }
 
             const PropertyInfo* pFound = nullptr;
             for ( const PropertyInfo& prop : listProperty )

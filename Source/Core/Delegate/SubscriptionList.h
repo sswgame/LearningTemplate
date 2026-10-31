@@ -46,6 +46,8 @@ namespace sw
         [[nodiscard]] Subscription issue( const uint64 id ) noexcept { return issueSubscription( id ); }
         /** @brief @p subscription 이 이 목록이 내준 살아 있는 구독이면 그 id, 아니면 0 입니다. */
         [[nodiscard]] uint64 findIssued( const Subscription& subscription ) const noexcept { return findIssuedID( subscription ); }
+        /** @brief 등록 @p id 의 구독 하나를 무효화합니다(해제 델리게이트는 부르지 않는다 — 한 번 쓰고 끝난 등록). */
+        void detach( const uint64 id ) noexcept { detachSubscription( id ); }
         /** @brief 살아 있는 구독을 모두 무효화합니다(해제 델리게이트는 부르지 않는다 — 주인이 등록을 따로 비운다). */
         void detachAll() noexcept { detachAllSubscriptions(); }
 

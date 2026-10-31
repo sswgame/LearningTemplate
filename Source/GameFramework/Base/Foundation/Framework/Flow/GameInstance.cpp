@@ -2,13 +2,11 @@
 
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
 
-#include "Core/File/FileUtil.h"
-#include "Core/File/UserDataPath.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/GameSelection.h"
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -27,12 +25,22 @@
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Base/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "GameInstance" );
+
+    namespace
+    {
+        struct GameInstanceInternal
+        {
+            /** @brief 게임 상태 세이브 슬롯의 형식 버전입니다(봉투에 적힌다). 스냅샷 봉투(`GameStateSnapshot`)의 바이트 형식을 바꾸면 올린다. */
+            static constexpr uint32 kSaveSlotFormatVersion = 1;
+        };
+    } // namespace
 
     GameInstance::GameInstance()
         : _packConfig{}
@@ -41,12 +49,15 @@ namespace sw
         , _stateSnapshot{}
         , _gameScope{}
         , _loadedAudioEvents{}
+        , _listSlotRequest{}
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
         ScreenTransitionManager& screenTransition = _gameScope.addSubsystem( make_unique<ScreenTransitionManager>() );
         LoadingScreenController& loadingScreen    = _gameScope.addSubsystem( make_unique<LoadingScreenController>() );
         // 씬 흐름은 이 인스턴스의 gamesettings(`_packConfig` — 범위보다 먼저 선 멤버)와 두 형제를 빌려 든다.
         _gameScope.addSubsystem( make_unique<GameSceneFlow>( _packConfig._data, screenTransition, loadingScreen ) );
+        // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
+        _gameScope.addSubsystem( make_unique<GameLocalStore>() );
     }
 
     GameInstance::~GameInstance()
@@ -235,9 +246,12 @@ namespace sw
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
-        if ( GamePackDataUtil::tryMakeKindPath( _packConfig._packRoot.get(), kindLabel, outPath, error ) )
+        // 공용 팩에서 읽는 종류는 gamesettings 의 <RequiredData pack> 이 팩을 정한다 — 자리 규칙은 어느 팩이든 등록 줄 하나다.
+        const auto    itShared = _packConfig._data._mapRequiredDataPack.find( string( kindLabel ) );
+        const string& pack     = itShared != _packConfig._data._mapRequiredDataPack.end() ? itShared->second : _packConfig._packRoot.get();
+        if ( GamePackDataUtil::tryMakeKindPath( pack, kindLabel, outPath, error ) )
             return true;
-        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _packConfig._packRoot.c_str(), error.c_str() );
+        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, pack.c_str(), error.c_str() );
         return false;
     }
 
@@ -252,6 +266,7 @@ namespace sw
     {
         // 프레임 순서: 씬 흐름(페이드 · 로딩 화면 · 끝난 로드 알림) → 넷 세션 → 파생 프레임 훅.
         getSubsystem<GameSceneFlow>().update();
+        getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
         game::getSubsystem<GameNetSession>().update();
         onUpdate( deltaTime );
@@ -292,53 +307,92 @@ namespace sw
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
     }
 
-    bool GameInstance::resolveSaveFilePath( string_view filePath, string& outPath ) const
+    bool GameInstance::resolveSaveSlot( string_view slot, string& outSlot ) const
     {
-        const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
-        if ( filePath.empty() && defaultSavePath.isSet() == false )
+        const string& defaultSaveSlot = _packConfig._data._defaultSaveSlot;
+        if ( slot.empty() && defaultSaveSlot.empty() )
         {
-            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved or loaded" );
+            SW_LOG_ERROR( "No save slot was given and GameSettings has no defaultSaveSlot - nothing is saved or loaded" );
             return false;
         }
-        // 세이브는 그 게임의 사용자 데이터 폴더 아래 상대 경로다(작업 폴더도, 데이터에 적은 절대 경로도 아니다 - 자리는 `LocalStoreLocation` 이 고른다).
-        const string_view                       relativePath = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
-        const std::optional<LocalStoreLocation> location     = LocalStoreLocation::tryUnderUserData( relativePath );
-        if ( location.has_value() == false )
+        // 세이브는 로컬 저장 슬롯이다 - 자리(사용자 데이터 폴더)는 `GameLocalStore` 가 정하고 여기는 이름만 고른다(언리얼 `SaveGameToSlot` 의 슬롯 이름).
+        const string_view chosenSlot = slot.empty() ? string_view( defaultSaveSlot ) : slot;
+        if ( ILocalStore::isValidSlotName( chosenSlot ) == false )
         {
-            SW_LOG_ERROR( "Save path '%#' must be a relative path under the user data folder (no drive, no root, no '..')", relativePath );
+            SW_LOG_ERROR( "Save slot '%#' breaks the slot name rule ([0-9a-z_.-], at most one '/' group, 64 characters)", chosenSlot );
             return false;
         }
-        outPath = location->resolveDiskPath( GameSelection::getName() );
+        outSlot = string( chosenSlot );
         return true;
     }
 
-    bool GameInstance::saveStateToFile( string_view filePath )
+    void GameInstance::holdSlotRequest( Subscription request )
     {
-        string path;
-        if ( resolveSaveFilePath( filePath, path ) == false )
-            return false;
-        vector<uint8> snapshotBytes;
-        const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
-
-        SaveGameSavedEvent event{};
-        event._savePath = string( path );
-        event._bSuccess = bSaved;
-        GameEventUtil::send( event );
-        return bSaved;
+        (void)VectorUtil::removeIf( _listSlotRequest, []( const Subscription& held )
+        { return held.isActive() == false; } );
+        _listSlotRequest.push_back( std::move( request ) );
     }
 
-    bool GameInstance::loadStateFromFile( string_view filePath )
+    bool GameInstance::saveGameToSlot( string_view slot )
     {
-        string path;
-        if ( resolveSaveFilePath( filePath, path ) == false )
+        string slotName;
+        if ( resolveSaveSlot( slot, slotName ) == false )
             return false;
         vector<uint8> snapshotBytes;
-        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
+        if ( captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) == false )
+        {
+            SaveGameSavedEvent event{};
+            event._slot     = slotName;
+            event._bSuccess = false;
+            GameEventUtil::send( event );
+            return false;
+        }
+        LocalStoreWriteOptions options{};
+        options._formatVersion = GameInstanceInternal::kSaveSlotFormatVersion;
+        holdSlotRequest( getSubsystem<GameLocalStore>().submitWrite( slotName, std::move( snapshotBytes ), options,
+                                                                     GameLocalStore::CompletionFunction::create<&GameInstance::onSaveSlotWritten>( this ) ) );
+        return true;
+    }
 
+    void GameInstance::onSaveSlotWritten( const LocalStoreCompletion& completion )
+    {
+        if ( completion._result != LocalStoreResult::Ok )
+            SW_LOG_ERROR( "Save slot '%#' could not be written (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+        SaveGameSavedEvent event{};
+        event._slot     = completion._slot;
+        event._bSuccess = completion._result == LocalStoreResult::Ok;
+        GameEventUtil::send( event );
+    }
+
+    bool GameInstance::loadGameFromSlot( string_view slot )
+    {
+        string slotName;
+        if ( resolveSaveSlot( slot, slotName ) == false )
+            return false;
+        holdSlotRequest( getSubsystem<GameLocalStore>().submitRead( slotName, GameLocalStore::CompletionFunction::create<&GameInstance::onSaveSlotRead>( this ) ) );
+        return true;
+    }
+
+    void GameInstance::onSaveSlotRead( const LocalStoreCompletion& completion )
+    {
+        bool bLoaded = false;
+        if ( completion._result != LocalStoreResult::Ok )
+        {
+            SW_LOG_ERROR( "Save slot '%#' could not be read (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+        }
+        else if ( completion._formatVersion != GameInstanceInternal::kSaveSlotFormatVersion )
+        {
+            // 옛 형식 리더는 두지 않는다 - 다른 판의 세이브는 거절한다.
+            SW_LOG_ERROR( "Save slot '%#' has format version %#, this build reads %#", completion._slot.c_str(), completion._formatVersion,
+                          GameInstanceInternal::kSaveSlotFormatVersion );
+        }
+        else
+        {
+            bLoaded = restoreSnapshot( SerializePurpose::SaveGame, completion._bytes );
+        }
         SaveGameLoadedEvent event{};
-        event._savePath = string( path );
+        event._slot     = completion._slot;
         event._bSuccess = bLoaded;
         GameEventUtil::send( event );
-        return bLoaded;
     }
 } // namespace sw

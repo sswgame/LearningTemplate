@@ -9,7 +9,7 @@
  *
  * [왜 여기인가]
  * 렌더러와 무관한 일이라 직렬화에 둡니다. `Content/AssetPaths.h` 는 어느 티어에서든 쓸 수 있는 경로 헬퍼입니다(층 표의
- * 예외). 언리얼 `FJSONObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리입니다.
+ * 예외). 언리얼 `FJsonObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리입니다.
  */
 #pragma once
 #include "Core/Container/string.h"

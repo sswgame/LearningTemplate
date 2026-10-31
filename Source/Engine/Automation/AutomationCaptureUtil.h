@@ -16,7 +16,8 @@ namespace sw
     struct SW_API AutomationCaptureUtil
     {
         /**
-         * @brief 씬이 기다리는 에셋 일의 수입니다 — 읽는 중이거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시(씬 프레임 도착 단계의 대기), 읽거나 올리는 중인 텍스처.
+         * @brief 씬이 기다리는 에셋 일의 수입니다 — 읽는 중이거나 애니메이션을 기다리거나 디더로 나타나는 중인 메시(씬 프레임 도착 단계의 대기 — 메시를 기다리는 폴리지 · VFX 포함),
+         *        메시를 기다려 미룬 내비메시 마련(`SceneNavigation::getWaitingMeshCount`), 읽거나 올리는 중인 텍스처.
          * @details 감시 값 `Assets.Pending` 이 같은 셈을 쓴다. @p pManager 가 nullptr 이면 텍스처만 센다.
          */
         [[nodiscard]] static uint32 countPendingAssetWork( const GameObjectManager* pManager );

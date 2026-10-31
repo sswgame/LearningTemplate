@@ -175,7 +175,8 @@ namespace sw
     }
 
     void NavTileRebaker::processDirtyAreas( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle,
-                                            GameObjectManager& manager, const NavMeshSettings& settings, const vector<INavGeometrySource*>& listSource )
+                                            GameObjectManager& manager, const NavMeshSettings& settings, const vector<INavGeometrySource*>& listSource,
+                                            NavMeshArrival arrival )
     {
         vector<AABB> listArea;
         _dirtyLock.lock();
@@ -209,12 +210,29 @@ namespace sw
         if ( bGeometryDirty )
         {
             // 정적 기하가 바뀌었다(파괴 · 수정자) — 새 사본을 모은다. 베이크하는 중인 일은 옛 사본을 끝까지 읽는다.
+            vector<shared_ptr<NavMeshGeometry>> listGeometry;
+            listGeometry.reserve( listRuntime.size() );
+            uint32 pendingMeshCount{ 0 };
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
             {
-                shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
-                NavGeometryCollector::collectGeometry( manager, pRuntime->_pSurface, settings, listSource, *pGeometry );
-                pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
-                pRuntime->_pGeometry = std::move( pGeometry );
+                listGeometry.push_back( make_shared<NavMeshGeometry>() );
+                pendingMeshCount += NavGeometryCollector::collectGeometry( manager, pRuntime->_pSurface, settings, listSource, arrival, *listGeometry.back() );
+            }
+            if ( pendingMeshCount > 0 )
+            {
+                // 새로 놓인 메시를 아직 읽는 중이다 — 덜 모인 기하로 굽지 않는다. 옛 기하 · 타일을 그대로 두고 알린 것을 모두 다음 갱신으로 넘긴다.
+                _dirtyLock.lock();
+                _listDirtyArea.insert( _listDirtyArea.end(), listArea.begin(), listArea.end() );
+                _bGeometryDirty = true;
+                _dirtyLock.unlock();
+                _listObstacleArea.insert( _listObstacleArea.end(), listObstacleArea.begin(), listObstacleArea.end() );
+                return;
+            }
+            for ( size_t runtimeIndex = 0; runtimeIndex < listRuntime.size(); ++runtimeIndex )
+            {
+                NavMeshRuntime& runtime = *listRuntime[runtimeIndex];
+                listGeometry[runtimeIndex]->rebuildSpatialIndex( MathUtil::max( 1.0f, runtime._pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
+                runtime._pGeometry = std::move( listGeometry[runtimeIndex] );
             }
         }
         vector<int2> listTile;

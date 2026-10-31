@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -114,8 +115,13 @@ namespace sw
         void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 배치를 다시 계산하고 셀 배치를 다시 만듭니다. 등록 전이면 아무것도 하지 않습니다. */
+        /**
+         * @brief 배치를 다시 계산하고 셀 배치를 다시 만듭니다. 등록 전이면 아무것도 하지 않습니다.
+         * @details 레이어 메시를 워커가 아직 읽는 중이면 셀을 비운 채 메시 도착을 기다리고(`PrimitiveRegistry::addAssetWaiter`), 다 오면 씬 프레임의 도착 단계가 다시 짓는다.
+         */
         void rebuildFoliage();
+        /** @brief 레이어 메시가 와야 지을 수 있어 기다리는 중이면 true 입니다(그동안 셀이 없다). */
+        bool isWaitingForMeshes() const { return _bWaitingForMeshes == SW_TRUE; }
         /**
          * @brief 레이어 @p layerIndex 의 배치를 계산합니다(그리지는 않으며 테스트와 도구용입니다). 표면은 오너 아래 지형입니다.
          * @return 레이어가 없으면 false 를 반환합니다.
@@ -190,6 +196,13 @@ namespace sw
         void releaseLayerCells( uint32 layerIndex, const vector<uint8>& listKeep );
         /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
         void releaseCells();
+        /**
+         * @brief 레이어 메시 로드를 다시 요청합니다(`MeshCache::request` — 이미 쥔 메시는 곧바로 `Ready`). 아직 읽는 중인 메시가 없으면 true 입니다.
+         * @details 새 핸들을 다 받은 뒤 옛 핸들을 놓는다 — 먼저 놓으면 약한 참조 캐시의 메시가 사라져 다시 읽는다.
+         */
+        [[nodiscard]] bool requestLayerMeshes();
+        /** @brief 메시 도착을 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 다 왔으면 다시 짓고, 아직 기다리면 true 입니다. */
+        static bool updateMeshArrival( SceneComponent& component, float32 deltaSeconds );
 
     private:
         PROPERTY( Category = "Foliage", DisplayName = "Layers" )
@@ -204,6 +217,7 @@ namespace sw
         vector<Cell>                            _listCell;
         vector<unique_ptr<EnvironmentMaterial>> _listLayerMaterial;  ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
         vector<vector<PlacementCandidate>>      _listLayerCandidate; ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
+        vector<vector<MeshHandle>>              _listLayerMeshLoad;  ///< 레이어마다 메시 로드(레이어의 `_listMesh` 순서, 내장 도형은 빈 핸들). 준비된 메시를 쥐어 다음 짓기가 다시 읽지 않는다
         PlacementRegion                         _builtRegion;        ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
         PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
         float32                                 _time;
@@ -214,7 +228,8 @@ namespace sw
         uint32                                  _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
         uint32                                  _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
         uint32                                  _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
-        uint8                                   _bBuiltOnTerrain : 1;    ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
-        [[maybe_unused]] uint8                  _reserved        : 6;
+        uint8                                   _bBuiltOnTerrain   : 1;  ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
+        uint8                                   _bWaitingForMeshes : 1;  ///< 레이어 메시가 와야 짓는다(`rebuildFoliage`)
+        [[maybe_unused]] uint8                  _reserved          : 6;
     };
 } // namespace sw

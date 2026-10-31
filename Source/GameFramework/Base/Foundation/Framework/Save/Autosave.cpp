@@ -5,11 +5,9 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Config/GameSelection.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -18,8 +16,10 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Online/Local/LocalStore.h"
 
 #include <algorithm>
 
@@ -31,12 +31,11 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr uint32      kInfoTag       = FourCcUtil::make( "ASAV" );
-            static constexpr uint32      kInfoVersion   = 1;
-            static constexpr const utf8* kInfoExtension = ".info";
-            static constexpr int32       kMaxSlotCount  = 64;
-
-            static string makeInfoPath( string_view slotPath ) { return string( slotPath ) + kInfoExtension; }
+            static constexpr uint32      kInfoTag           = FourCcUtil::make( "ASAV" );
+            static constexpr uint32      kInfoVersion       = 1;
+            static constexpr uint32      kSlotFormatVersion = 1; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
+            static constexpr const utf8* kInfoExtension     = ".info";
+            static constexpr int32       kMaxSlotCount      = 64;
         };
     } // namespace
 } // namespace sw
@@ -58,20 +57,20 @@ namespace sw
 
     bool AutosaveSettings::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const utf8* pDirectory = root.findAttribute( "directory" );
-        const utf8* pPrefix    = root.findAttribute( "prefix" );
+        const utf8* pGroup  = root.findAttribute( "group" );
+        const utf8* pPrefix = root.findAttribute( "prefix" );
         // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
         bool bValid = true;
-        if ( pDirectory != nullptr )
+        if ( pGroup != nullptr )
         {
-            const std::optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( pDirectory );
-            if ( location.has_value() )
+            // 자리(폴더)는 로컬 저장소가 정한다 - 데이터는 슬롯 그룹 이름만 적는다(경로 · `..` 는 슬롯 이름 규칙에 걸린다).
+            if ( ILocalStore::isValidGroupPrefix( string( pGroup ) + "/" ) )
             {
-                _location = *location;
+                _group = pGroup;
             }
             else
             {
-                SW_LOG_ERROR( "%#: Autosave directory '%#' must be a relative path under the user data folder (no drive, no root, no '..')", sourceName, pDirectory );
+                SW_LOG_ERROR( "%#: Autosave group '%#' must be one local store slot group ([0-9a-z_.-], not starting with '.')", sourceName, pGroup );
                 bValid = false;
             }
         }
@@ -87,10 +86,14 @@ namespace sw
         return bValid;
     }
 
-    string AutosaveSettings::makeSlotPath( int32 slot ) const
+    string AutosaveSettings::makeSlotName( int32 slot ) const
     {
-        // 슬롯 폴더는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소 · `GameInstance` 세이브와 같은 자리 형식 - 작업 폴더가 아니다).
-        return FileUtil::joinPath( _location.resolveDiskPath( GameSelection::getName() ), formatToString( "%#%#.sav", _prefix, slot ) );
+        return formatToString( "%#/%#%#", _group, _prefix, slot );
+    }
+
+    string AutosaveSettings::makeInfoSlotName( int32 slot ) const
+    {
+        return makeSlotName( slot ) + AutosaveInternal::kInfoExtension;
     }
 
     // ------------------------------------------------------------------------------
@@ -100,42 +103,58 @@ namespace sw
         : _settings{}
         , _onSave{}
         , _onLoad{}
+        , _pStore{ nullptr }
         , _listSlot{}
         , _listBlockReason{}
+        , _savingSlot{}
         , _pendingLabel{}
         , _lastCheckpointID{}
+        , _restoringCheckpointID{}
         , _playTime{ 0.0 }
         , _lastSaveTime{ -1.0 }
         , _intervalTimer{ 0.0f }
         , _nextSequence{ 1 }
         , _saveCount{ 0 }
+        , _scanPendingCount{ 0 }
         , _pendingTrigger{ AutosaveTrigger::Manual }
         , _bPending{ SW_FALSE }
         , _bSaving{ SW_FALSE }
+        , _listScanRequest{}
+        , _saveRequest{}
+        , _infoRequest{}
+        , _restoreRequest{}
     {
     }
 
-    bool AutosaveManager::initialize( const AutosaveSettings& settings, const SaveDelegate& onSave, const LoadDelegate& onLoad )
+    bool AutosaveManager::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
-        const bool bSettingsValid = 1 <= settings._slotCount && settings._slotCount <= AutosaveInternal::kMaxSlotCount && 0.0f <= settings._interval && 0.0f <= settings._minimumGap;
-        if ( bSettingsValid == false )
+        const bool bRangesValid = 1 <= settings._slotCount && settings._slotCount <= AutosaveInternal::kMaxSlotCount && 0.0f <= settings._interval && 0.0f <= settings._minimumGap;
+        // 가장 긴 이름(마지막 슬롯의 기록)이 규칙을 지키면 모든 슬롯 이름이 지킨다.
+        const bool bNamesValid = bRangesValid && ILocalStore::isValidSlotName( settings.makeInfoSlotName( settings._slotCount - 1 ) );
+        if ( bNamesValid == false )
         {
-            SW_LOG_ERROR( "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more)", settings._slotCount,
-                          AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap );
+            SW_LOG_ERROR( "AutosaveManager: refused settings - slots %# (1..%#), interval %# and minimumGap %# (0 or more), slot names '%#' (local store slot name rule)",
+                          settings._slotCount, AutosaveInternal::kMaxSlotCount, settings._interval, settings._minimumGap, settings.makeInfoSlotName( 0 ).c_str() );
             return false;
         }
         _settings = settings;
+        _pStore   = &store;
         _onSave   = onSave;
         _onLoad   = onLoad;
         _listBlockReason.clear();
-        _pendingLabel     = hashed_string{};
-        _lastCheckpointID = hashed_string{};
-        _playTime         = 0.0;
-        _lastSaveTime     = -1.0;
-        _intervalTimer    = 0.0f;
-        _saveCount        = 0;
-        _bPending         = SW_FALSE;
-        _bSaving          = SW_FALSE;
+        _pendingLabel          = hashed_string{};
+        _lastCheckpointID      = hashed_string{};
+        _restoringCheckpointID = hashed_string{};
+        _playTime              = 0.0;
+        _lastSaveTime          = -1.0;
+        _intervalTimer         = 0.0f;
+        _saveCount             = 0;
+        _bPending              = SW_FALSE;
+        _bSaving               = SW_FALSE;
+        // 앞 초기화가 맡긴 요청은 잊는다(구독을 놓으면 콜백이 불리지 않는다).
+        _saveRequest    = Subscription{};
+        _infoRequest    = Subscription{};
+        _restoreRequest = Subscription{};
         scanSlots();
         return true;
     }
@@ -155,7 +174,8 @@ namespace sw
                 }
             }
         }
-        const bool bNothingToSaveNow = _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE;
+        // 슬롯 기록을 읽는 중이면 다음 슬롯을 모르고, 맡긴 저장이 끝나기 전이면 가장 새 슬롯이 아직 바뀌지 않았다 - 기다린다.
+        const bool bNothingToSaveNow = _bPending == SW_FALSE || isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving();
         if ( bNothingToSaveNow )
             return;
         // 최소 간격 — 지역을 빠르게 오가도 저장이 줄지어 서지 않는다. 체크포인트 · 보스 앞은 간격을 지키되 기다렸다 저장한다(버리지 않는다).
@@ -192,7 +212,7 @@ namespace sw
 
     bool AutosaveManager::notifyQuit()
     {
-        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE )
+        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() )
             return false;
         _bPending = SW_FALSE;
         return performSave( AutosaveTrigger::Quit, hashed_string{} );
@@ -200,7 +220,7 @@ namespace sw
 
     bool AutosaveManager::saveNow( AutosaveTrigger trigger, const hashed_string& label )
     {
-        if ( isBlocked() || _bSaving == SW_TRUE )
+        if ( isBlocked() || _bSaving == SW_TRUE || isScanning() || isSaving() )
             return false;
         _bPending = SW_FALSE;
         return performSave( trigger, label );
@@ -230,25 +250,42 @@ namespace sw
 
     bool AutosaveManager::restoreLatest()
     {
-        const AutosaveSlotInfo* pSlot = findLatestSlot();
-        if ( pSlot == nullptr || _onLoad.isBound() == false )
-            return false;
-        const string path = pSlot->_path; // 불러오기가 칸 목록을 바꿀 수 있다
-        return _onLoad( path );
+        return submitRestore( findLatestSlot(), false );
     }
 
     bool AutosaveManager::restoreCheckpoint()
     {
-        const AutosaveSlotInfo* pSlot = findLatestSlot( AutosaveTrigger::Checkpoint );
-        if ( pSlot == nullptr || _onLoad.isBound() == false )
+        return submitRestore( findLatestSlot( AutosaveTrigger::Checkpoint ), true );
+    }
+
+    bool AutosaveManager::submitRestore( const AutosaveSlotInfo* pSlot, bool bCheckpoint )
+    {
+        if ( pSlot == nullptr || _onLoad.isBound() == false || isScanning() )
             return false;
-        const string        path         = pSlot->_path;
-        const hashed_string checkpointID = pSlot->_label;
-        if ( _onLoad( path ) == false )
-            return false;
+        _restoringCheckpointID = bCheckpoint ? pSlot->_label : hashed_string{};
+        _restoreRequest        = _pStore->submitRead( pSlot->_slotName, GameLocalStore::CompletionFunction::create<&AutosaveManager::onSlotRead>( this ) );
+        return true;
+    }
+
+    void AutosaveManager::onSlotRead( const LocalStoreCompletion& completion )
+    {
+        const hashed_string checkpointID = _restoringCheckpointID;
+        _restoringCheckpointID           = hashed_string{};
+        if ( completion._result != LocalStoreResult::Ok || completion._formatVersion != AutosaveInternal::kSlotFormatVersion )
+        {
+            SW_LOG_WARNING( "Autosave slot %# could not be restored (local store result %#, format version %#, this build reads %#)", completion._slot.c_str(),
+                            static_cast<int32>( completion._result ), completion._formatVersion, AutosaveInternal::kSlotFormatVersion );
+            return;
+        }
+        if ( _onLoad( completion._bytes ) == false )
+        {
+            SW_LOG_WARNING( "Autosave slot %# was read but the game could not restore it", completion._slot.c_str() );
+            return;
+        }
+        if ( checkpointID.empty() )
+            return;
         _lastCheckpointID = checkpointID; // 되돌린 체크포인트에 다시 서도 저장하지 않는다
         _bPending         = SW_FALSE;
-        return true;
     }
 
     void AutosaveManager::collectSlots( vector<AutosaveSlotInfo>& outListSlot ) const
@@ -327,33 +364,57 @@ namespace sw
 
     bool AutosaveManager::performSave( AutosaveTrigger trigger, const hashed_string& label )
     {
-        if ( _onSave.isBound() == false || _listSlot.empty() )
+        if ( _pStore == nullptr || _onSave.isBound() == false || _listSlot.empty() )
             return false;
         // 가장 새 칸의 다음 칸 — 가장 새 칸은 건드리지 않는다(저장 도중 꺼져도 남는다).
         const AutosaveSlotInfo* pLatest = findLatestSlot();
         const int32             slot    = pLatest != nullptr ? ( pLatest->_slot + 1 ) % _settings._slotCount : 0;
         AutosaveSlotInfo        info{};
-        info._path     = _settings.makeSlotPath( slot );
+        info._slotName = _settings.makeSlotName( slot );
         info._label    = label;
         info._sequence = _nextSequence;
         info._playTime = _playTime;
         info._slot     = slot;
         info._trigger  = trigger;
 
-        _bSaving          = SW_TRUE;
-        const bool bSaved = _onSave( info._path );
-        _bSaving          = SW_FALSE;
-        if ( bSaved == false )
+        vector<uint8> stateBytes;
+        _bSaving             = SW_TRUE;
+        const bool bCaptured = _onSave( stateBytes );
+        _bSaving             = SW_FALSE;
+        vector<uint8> infoBytes;
+        if ( bCaptured == false || writeSlotInfo( info, infoBytes ) == false )
             return false;
-        // 저장이 끝난 뒤에 기록을 쓴다 — 기록이 없는(또는 옛) 칸은 목록에서 옛것으로 남을 뿐 새 저장을 가리지 않는다.
-        if ( writeSlotInfo( info ) == false )
-            SW_LOG_WARNING( "Autosave slot info for %# could not be written", info._path.c_str() );
-        _listSlot[static_cast<size_t>( slot )] = info;
-        ++_nextSequence;
+
+        LocalStoreWriteOptions stateOptions{};
+        stateOptions._formatVersion = AutosaveInternal::kSlotFormatVersion;
+        LocalStoreWriteOptions infoOptions{};
+        infoOptions._formatVersion = AutosaveInternal::kInfoVersion;
+        _savingSlot                = info;
+        // 기록은 상태 바로 뒤에 맡긴다 - 저장소는 맡은 순서로 쓰므로, 끝낼 때 맡긴 종료 저장도 기록까지 남는다(완료를 기다렸다 맡기면 저장소가 닫힌 뒤가 된다).
+        _saveRequest = _pStore->submitWrite( info._slotName, std::move( stateBytes ), stateOptions, GameLocalStore::CompletionFunction::create<&AutosaveManager::onSlotWritten>( this ) );
+        _infoRequest = _pStore->submitWrite( _settings.makeInfoSlotName( slot ), std::move( infoBytes ), infoOptions,
+                                             GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoWritten>( this ) );
+        return true;
+    }
+
+    void AutosaveManager::onSlotWritten( const LocalStoreCompletion& completion )
+    {
+        const AutosaveSlotInfo& info = _savingSlot;
+        if ( completion._result != LocalStoreResult::Ok )
+        {
+            // 상태 슬롯은 원자 쓰기라 옛 상태가 남았는데 기록은 새 순번으로 쓰였을 수 있다 - 기록을 지워 그 칸을 빈 칸으로 둔다(옛 상태를 새것으로 되돌리지 않는다).
+            SW_LOG_WARNING_ID( "Autosave.WriteFailed", "Autosave (%#) to %# failed (local store result %#) - the previous slots are kept", getEnumName( info._trigger ), completion._slot.c_str(),
+                               static_cast<int32>( completion._result ) );
+            _listSlot[static_cast<size_t>( info._slot )] = AutosaveSlotInfo{};
+            _infoRequest                                 = _pStore->submitErase( _settings.makeInfoSlotName( info._slot ), GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoWritten>( this ) );
+            return;
+        }
+        _listSlot[static_cast<size_t>( info._slot )] = info;
+        _nextSequence                                = MathUtil::max( _nextSequence, info._sequence + 1 );
         ++_saveCount;
         _lastSaveTime  = _playTime;
         _intervalTimer = 0.0f;
-        SW_LOG_INFO( "Autosaved (%#%#%#) to %#", getEnumName( trigger ), label.empty() ? "" : " ", label.c_str(), info._path.c_str() );
+        SW_LOG_INFO( "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
         if ( game::findSubsystem<UISystem>() != nullptr )
         {
@@ -362,27 +423,56 @@ namespace sw
             notice._durationSeconds = 3.0f;
             game::getSubsystem<UINotificationService>().post( notice );
         }
-        return true;
+    }
+
+    void AutosaveManager::onInfoWritten( const LocalStoreCompletion& completion )
+    {
+        // 기록이 없는(또는 옛) 칸은 다음 실행의 목록에서 빈 칸이나 옛것으로 남을 뿐 새 저장을 가리지 않는다.
+        const bool bErasedMissing = completion._operation == LocalStoreOperation::Erase && completion._result == LocalStoreResult::NotFound;
+        if ( completion._result != LocalStoreResult::Ok && bErasedMissing == false )
+            SW_LOG_WARNING( "Autosave slot info %# could not be updated (local store result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
     }
 
     void AutosaveManager::scanSlots()
     {
         _listSlot.assign( static_cast<size_t>( _settings._slotCount ), AutosaveSlotInfo{} );
         _nextSequence = 1;
+        _listScanRequest.clear();
+        _scanPendingCount = _settings._slotCount;
         for ( int32 slot = 0; slot < _settings._slotCount; ++slot )
         {
-            const string     slotPath = _settings.makeSlotPath( slot );
-            AutosaveSlotInfo info{};
-            if ( FileUtil::exists( slotPath ) == false || readSlotInfo( AutosaveInternal::makeInfoPath( slotPath ), info ) == false )
-                continue;
-            info._path                             = slotPath;
-            info._slot                             = slot;
-            _listSlot[static_cast<size_t>( slot )] = info;
-            _nextSequence                          = MathUtil::max( _nextSequence, info._sequence + 1 );
+            _listScanRequest.push_back( _pStore->submitRead( _settings.makeInfoSlotName( slot ), GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoRead>( this ) ) );
         }
     }
 
-    bool AutosaveManager::writeSlotInfo( const AutosaveSlotInfo& info )
+    void AutosaveManager::onInfoRead( const LocalStoreCompletion& completion )
+    {
+        --_scanPendingCount;
+        if ( _scanPendingCount == 0 )
+            _listScanRequest.clear();
+        if ( completion._result == LocalStoreResult::NotFound )
+            return; // 아직 쓴 적 없는 칸
+        int32 slot = 0;
+        while ( slot < _settings._slotCount && _settings.makeInfoSlotName( slot ) != completion._slot )
+        {
+            ++slot;
+        }
+        AutosaveSlotInfo info{};
+        const bool       bRead = completion._result == LocalStoreResult::Ok && completion._formatVersion == AutosaveInternal::kInfoVersion && slot < _settings._slotCount &&
+                           readSlotInfo( completion._bytes, info );
+        if ( bRead == false )
+        {
+            SW_LOG_WARNING( "Autosave slot info %# could not be read (local store result %#) - that slot is treated as empty", completion._slot.c_str(),
+                            static_cast<int32>( completion._result ) );
+            return;
+        }
+        info._slotName                         = _settings.makeSlotName( slot );
+        info._slot                             = slot;
+        _listSlot[static_cast<size_t>( slot )] = info;
+        _nextSequence                          = MathUtil::max( _nextSequence, info._sequence + 1 );
+    }
+
+    bool AutosaveManager::writeSlotInfo( const AutosaveSlotInfo& info, vector<uint8>& outBytes )
     {
         Archive archive;
         StateArchiveUtil::writeHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion );
@@ -390,14 +480,14 @@ namespace sw
         archive << info._playTime;
         archive << static_cast<uint8>( info._trigger );
         StateArchiveUtil::writeName( archive, info._label );
-        return FileUtil::writeFile( AutosaveInternal::makeInfoPath( info._path ), archive.getData(), archive.getSize() );
+        if ( archive.isError() )
+            return false;
+        outBytes.assign( archive.getData(), archive.getData() + archive.getSize() );
+        return true;
     }
 
-    bool AutosaveManager::readSlotInfo( string_view infoPath, AutosaveSlotInfo& outInfo )
+    bool AutosaveManager::readSlotInfo( const vector<uint8>& bytes, AutosaveSlotInfo& outInfo )
     {
-        vector<uint8> bytes;
-        if ( FileUtil::exists( infoPath ) == false || FileUtil::readFile( infoPath, bytes ) == false )
-            return false;
         Archive archive( bytes.data(), bytes.size() );
         if ( StateArchiveUtil::readHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion ) == false )
             return false;

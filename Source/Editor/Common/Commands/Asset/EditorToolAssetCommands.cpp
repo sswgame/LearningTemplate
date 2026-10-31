@@ -305,15 +305,10 @@ namespace sw::editor
                 if ( prop._metadata->_bTransient == SW_TRUE )
                     return;
                 PrefabOverrideItem item{};
-                item._componentName = pTypeInfo->getDisplayName();
-                item._componentKey  = key;
-                item._propertyName  = prop._name.c_str();
-#if !defined( SW_SHIPPING )
-                // 표시 이름 메타데이터는 Shipping 에서 빠진다. EditorTest 는 Shipping 에서도 이 파일을 빌드한다.
-                item._propertyLabel = EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
-#else
-                item._propertyLabel = EditorDisplayNameUtil::makeDisplayName( prop._name.c_str() );
-#endif
+                item._componentName   = pTypeInfo->getDisplayName();
+                item._componentKey    = key;
+                item._propertyName    = prop._name.c_str();
+                item._propertyLabel   = EditorDisplayNameUtil::chooseLabel( prop._metadata->_displayName, prop._name.c_str() );
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
                 item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, ObjectAddress{ pCdoComp }, ObjectAddress{ pInstanceComponent }, context ) == false );

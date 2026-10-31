@@ -112,7 +112,13 @@ namespace sw
             return false;
         };
 
-        uint64 signature{ 0 };
+        // 2-1) 선언을 검사해 받아들일 패스를 모은다. 프로그램 PSO 는 아래 2-2 가 셰이더를 한 번에 데운 뒤 2-3 이 차례로 만든다.
+        struct AcceptedPass
+        {
+            ExtensionFramePass _pass{};
+            RHIFormat          _colorFormat{ RHIFormat::Unknown };
+        };
+        vector<AcceptedPass> listAccepted;
         for ( const ExtensionPassBuilder::Entry& entry : builder.getEntries() )
         {
             const ExtensionPassParams& params = entry._params;
@@ -127,8 +133,8 @@ namespace sw
             }
             ExtensionFramePass pass;
             pass._graphName = hashed_string( ( string( "Extension." ) + params._name ).c_str() );
-            if ( VectorUtil::containsIf( _listPass, [&]( const ExtensionFramePass& existing )
-            { return existing._graphName == pass._graphName; } ) )
+            if ( VectorUtil::containsIf( listAccepted, [&]( const AcceptedPass& existing )
+            { return existing._pass._graphName == pass._graphName; } ) )
             {
                 fail( "pass name is declared twice" );
                 continue;
@@ -192,30 +198,49 @@ namespace sw
                     pass._depthTarget = hashed_string( params._depthAttachment.c_str() );
                 }
             }
-            if ( bValid && params._program._shaderPath.empty() == false )
+            if ( bValid && params._program._shaderPath.empty() == false && VectorUtil::contains( listShader, params._program._shaderPath ) == false )
             {
-                if ( VectorUtil::contains( listShader, params._program._shaderPath ) == false )
-                {
-                    fail( "pass program shader is not in the pipeline _listExtensionShader (it would not be cooked)" );
-                    bValid = false;
-                }
-                else
-                {
-                    pass._pso = _psoManager.findOrCreateExtensionProgramPSO( params._program, colorFormat, params._depthAttachment.empty() == false );
-                    if ( pass._pso == 0 )
-                    {
-                        fail( "pass program PSO could not be created" );
-                        bValid = false;
-                    }
-                }
+                fail( "pass program shader is not in the pipeline _listExtensionShader (it would not be cooked)" );
+                bValid = false;
             }
             if ( bValid == false )
                 continue;
 
-            pass._params  = params;
-            pass._execute = entry._execute;
-            signature     = HashUtil::combine( signature, pass._graphName.getHash() );
-            signature     = HashUtil::combine( signature, static_cast<uint64>( params._stage ) );
+            pass._params           = params;
+            pass._execute          = entry._execute;
+            AcceptedPass& accepted = listAccepted.emplace_back();
+            accepted._pass         = std::move( pass );
+            accepted._colorFormat  = colorFormat;
+        }
+
+        // 2-2) 처음 보는 프로그램의 셰이더를 워커가 한 번에 데운다 — 렌더 스레드가 하나씩 컴파일하지 않는다(`FramePSOManager::createPassPSOS` 와 같은 모양).
+        vector<FramePSOManager::ExtensionProgramRequest> listProgramRequest;
+        for ( const AcceptedPass& accepted : listAccepted )
+        {
+            const ExtensionPassParams& params = accepted._pass._params;
+            if ( params._program._shaderPath.empty() == false )
+                listProgramRequest.push_back( FramePSOManager::ExtensionProgramRequest{ &params._program, accepted._colorFormat, params._depthAttachment.empty() == false } );
+        }
+        _psoManager.warmExtensionPrograms( listProgramRequest );
+
+        // 2-3) 프로그램 PSO 를 차례로 만들고(드라이버 생성은 직렬이다) 받아들인다.
+        uint64 signature{ 0 };
+        for ( AcceptedPass& accepted : listAccepted )
+        {
+            ExtensionFramePass&        pass   = accepted._pass;
+            const ExtensionPassParams& params = pass._params;
+            if ( params._program._shaderPath.empty() == false )
+            {
+                pass._pso = _psoManager.findOrCreateExtensionProgramPSO( params._program, accepted._colorFormat, params._depthAttachment.empty() == false );
+                if ( pass._pso == 0 )
+                {
+                    const char* const pReason = "pass program PSO could not be created";
+                    logFailureOnce( string( "pass:" ) + params._name + ":" + pReason, pReason, params._name );
+                    continue;
+                }
+            }
+            signature = HashUtil::combine( signature, pass._graphName.getHash() );
+            signature = HashUtil::combine( signature, static_cast<uint64>( params._stage ) );
             for ( const ExtensionPassRead& read : params._listRead )
             {
                 signature = HashUtil::combine( signature, hashText( read._attachment ) );
@@ -265,10 +290,29 @@ namespace sw
         {
             pMesh = it->second;
         }
+        else if ( MeshAssetFormat::isMeshAssetPath( meshID.view() ) )
+        {
+            // 철자는 `MeshComponent::_meshID` 와 같다 — `.mesh` 경로는 워커가 읽고, 다 읽을 때까지 그 요소는 그리지 않는다(렌더 스레드가 디스크를 기다리지 않게 —
+            // 언리얼 · 유니티도 메시 스트리밍이 끝나기 전 프레임은 그 드로를 빼거나 낮은 LOD 로 둔다). 메시 캐시는 약한 참조라 렌더러가 쥔다.
+            auto loadIt = _mapMeshLoad.find( meshID );
+            if ( loadIt == _mapMeshLoad.end() )
+                loadIt = _mapMeshLoad.insert_or_assign( meshID, MeshCache::request( meshID.view() ) ).first;
+            const MeshHandle& load = loadIt->second;
+            if ( load.isLoading() )
+                return nullptr;
+            pMesh = load.get();
+            _mapMeshLoad.erase( loadIt );
+            if ( pMesh == nullptr )
+            {
+                logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
+                return nullptr;
+            }
+            _mapMesh.insert_or_assign( meshID, pMesh );
+        }
         else
         {
-            // 철자는 `MeshComponent::_meshID` 와 같다 — `.mesh` 경로면 메시 캐시, 아니면 내장 도형 이름이다. 둘 다 약한 참조 캐시라 렌더러가 쥔다.
-            pMesh = MeshAssetFormat::isMeshAssetPath( meshID.view() ) ? MeshCache::acquire( meshID.view() ) : MeshUtil::acquirePrimitive( meshID.view() );
+            // 내장 도형은 메모리에서 바로 만든다(디스크가 없다).
+            pMesh = MeshUtil::acquirePrimitive( meshID.view() );
             if ( pMesh == nullptr )
             {
                 logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );

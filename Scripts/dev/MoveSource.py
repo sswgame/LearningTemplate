@@ -11,6 +11,7 @@ move-source: 경로는 `Source/` 기준(폴더면 안의 파일 전부, 하위 �
   3. 같은 폴더 짧은 include(`#include "Y.h"`)가 옮긴 뒤 다른 폴더를 가리키게 되면 전체 경로로
   4. 고친 C++ 파일의 include 순서를 `format-includes` 규칙으로
 rename-symbol: 낱말 경계로 바꾼다(부분 일치 없음). 새 이름이 이미 쓰이고 있으면 겹친 파일을 알리고 멈춘다(`--force` 로 강행).
+  C 계열 소스(C++ · HLSL)의 문자열 리터럴 안은 기본으로 건너뛰고 그 파일을 알린다(`--include-strings` 로 함께 바꾼다).
 """
 
 from __future__ import annotations
@@ -33,6 +34,44 @@ kBareInclude = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
 # 규칙 문서는 "쓰지 말 것" 예로 옛 이름을 일부러 든다 — 이름 바꾸기가 그 예까지 바꾸면 규칙이 거꾸로 된다.
 kNeverRewrite = ("docs/agents/", "docs/04_CodingGuidelines.md")
+
+# C 계열 소스의 주석 · 문자열 · 문자 리터럴. rename-symbol 은 문자열 안을 기본으로 건너뛴다 — 문자열은 파일 매직("OggS") · JSON 키 · 내보내기
+# 기호 · 데이터 이름처럼 바깥이 정한 철자가 많아, 약어 일괄 변경(1dafbae0c9)이 그 안까지 바꿔 .ogg 디코드 · 구매 응답 · 머티리얼 깃발을 깨뜨렸다.
+kCLikeSuffix = kCppSuffix | {".c", ".hlsl", ".hlsli", ".xxx"}
+kCLiteralOrComment = re.compile(
+    r'(?P<comment>//[^\n]*|/\*.*?\*/)'
+    r'|(?:u8|[uUL])?R"(?P<delim>[^()\\\s]{0,16})\(.*?\)(?P=delim)"'
+    r'|(?:u8|[uUL])?"(?:\\.|[^"\\\n])*"'
+    r"|'(?:\\.|[^'\\\n])+'",
+    re.S,
+)
+
+
+def rewriteOutsideStrings(text: str, rewrite) -> tuple[str, int]:
+    """C 계열 글에서 문자열 · 문자 리터럴 밖(코드 · 주석)에만 @p rewrite 를 적용한다. 건너뛴 리터럴 가운데 바뀌었을 것의 수를 함께 돌려준다."""
+    listPart: list[str] = []
+    skippedCount = 0
+    position = 0
+    for match in kCLiteralOrComment.finditer(text):
+        listPart.append(rewrite(text[position:match.start()]))
+        literal = match.group(0)
+        if match.group("comment") is not None:
+            listPart.append(rewrite(literal))
+        else:
+            skippedCount += rewrite(literal) != literal
+            listPart.append(literal)
+        position = match.end()
+    listPart.append(rewrite(text[position:]))
+    return "".join(listPart), skippedCount
+
+
+def checkRewriteOutsideStrings() -> None:
+    """문자열 건너뛰기의 자체 확인 — 코드 · 주석은 바뀌고 일반 · 원시 문자열과 주석 속 따옴표는 지킨다."""
+    rename = lambda part: re.sub(r"\bOgg\b", "OGG", part)  # noqa: E731
+    text = 'Ogg a; // Ogg "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* Ogg */ Ogg b;'
+    rewritten, skippedCount = rewriteOutsideStrings(text, rename)
+    assert rewritten == 'OGG a; // OGG "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* OGG */ OGG b;', rewritten
+    assert skippedCount == 2, skippedCount
 
 
 def listTrackedText(root: Path) -> list[Path]:
@@ -182,25 +221,48 @@ def mainRename(argv: list[str]) -> int:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true", help="새 이름이 이미 쓰여도 바꾼다")
     parser.add_argument("--regex", action="store_true", help="Old 를 정규식(낱말 경계 없이)으로, New 를 치환식으로 — 이름 일부를 바꾼다. 충돌 검사는 하지 않으니 빌드로 확인한다")
+    parser.add_argument("--include-strings", action="store_true",
+                        help="C 계열 소스의 문자열 리터럴 안도 바꾼다(기본은 건너뛰고 그 자리를 알린다 — 매직 · JSON 키 · 내보내기 기호는 바깥 철자다)")
     args = parser.parse_args(argv)
+    checkRewriteOutsideStrings()
 
     root = getProjectRoot()
     listPair = [pair.partition("=")[::2] for pair in args.pair]
+    listSkipped: list[str] = []
+
+    def rewriteFile(path: Path, text: str, rewrite) -> str:
+        if args.include_strings or path.suffix.lower() not in kCLikeSuffix:
+            return rewrite(text)
+        rewritten, skippedCount = rewriteOutsideStrings(text, rewrite)
+        if skippedCount:
+            listSkipped.append(f"{path.relative_to(root).as_posix()}({skippedCount})")
+        return rewritten
+
+    def reportSkipped() -> None:
+        if listSkipped:
+            print(f"[rename-symbol] 문자열 안은 건너뛰었다 — 데이터 · 바깥 이름이면 그대로 두고, 우리 이름이면 손으로 고치거나 --include-strings: "
+                  + ", ".join(listSkipped[:20]) + (" …" if len(listSkipped) > 20 else ""))
+
     if args.regex:
         listRule = [(re.compile(old), new) for old, new in listPair]
+
+        def rewriteRegex(part: str) -> str:
+            for pattern, replacement in listRule:
+                part = pattern.sub(replacement, part)
+            return part
+
         changedCount = 0
         listChanged: list[Path] = []
         for path in listTrackedText(root):
             text = readText(path)
-            rewritten = text
-            for pattern, replacement in listRule:
-                rewritten = pattern.sub(replacement, rewritten)
+            rewritten = rewriteFile(path, text, rewriteRegex)
             if rewritten != text:
                 changedCount += 1
                 listChanged.append(path)
                 if not args.dry_run:
                     writeText(path, rewritten)
         print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
+        reportSkipped()
         return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
     listFile = [path for path in listTrackedText(root) if path.suffix.lower() in kCppSuffix | {".xxx", ".natvis", ".txt", ".cmake"}]
     mapText = {path: readText(path) for path in listFile}
@@ -214,18 +276,24 @@ def mainRename(argv: list[str]) -> int:
             print(f"[rename-symbol] '{new}' 이 이미 쓰인다: " + ", ".join(str(path.relative_to(root)) for path in listClash[:5]), file=sys.stderr)
     if bClash:
         return ExitCode.Violation
+    listWordRule = [(re.compile(rf"\b{re.escape(old)}\b"), new) for old, new in listPair]
+
+    def rewriteWords(part: str) -> str:
+        for pattern, new in listWordRule:
+            part = pattern.sub(lambda _, new=new: new, part)
+        return part
+
     changedCount = 0
     listChanged = []
     for path, text in mapText.items():
-        rewritten = text
-        for old, new in listPair:
-            rewritten = re.sub(rf"\b{re.escape(old)}\b", new, rewritten)
+        rewritten = rewriteFile(path, text, rewriteWords)
         if rewritten != text:
             changedCount += 1
             listChanged.append(path)
             if not args.dry_run:
                 writeText(path, rewritten)
     print(f"[rename-symbol] {changedCount} 파일" + (" (dry-run)" if args.dry_run else ""))
+    reportSkipped()
     return ExitCode.Passed if args.dry_run else formatChanged(root, listChanged)
 
 

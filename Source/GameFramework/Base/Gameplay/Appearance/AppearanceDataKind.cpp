@@ -26,5 +26,5 @@ namespace sw
     } // namespace
 
     /** @brief 외형 데이터(`data/appearance/` 아래 XML)의 종류입니다. */
-    SW_RESOURCE_DATA_KIND( Appearance, AppearanceDatabase::kDataKind, "game/", "/data/appearance/", ".xml", &loadAppearanceData );
+    SW_RESOURCE_DATA_KIND( Appearance, AppearanceDatabase::kDataKind, nullptr, "/data/appearance/", ".xml", &loadAppearanceData );
 } // namespace sw

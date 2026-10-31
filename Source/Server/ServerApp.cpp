@@ -2,50 +2,43 @@
 
 #include "Server/ServerApp.h"
 
-#include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/ModuleCatalogLoader.h"
-#include "ModuleManager/ModuleLoaderSubsystem.h"
-
-#if !defined( SW_SHIPPING )
-    #include "DevTools/AssetReload/ContentFolderWatchService.h"
-    #include "DevTools/DevToolsHost.h"
-    #include "ModuleManager/LiveReload/LiveReloadManager.h"
-#endif
-
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
-#include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
-#include "Core/Process/ShutdownSignal.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Log/Sink/ConsoleLogOutput.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/NetTypes.h"
+#include "Core/Process/ShutdownSignal.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/DedicatedServer/ServerServiceManager.h"
+#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/HostServices.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
-#include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Scene/SceneStateHash.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
-#include "Engine/DedicatedServer/ServerServiceManager.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
+
+#include "ModuleManager/GameModuleManager.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -105,8 +98,7 @@ namespace sw
     ServerApp::ServerApp()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _pDevTools{ nullptr }
-        , _devToolsFrameSubscription{}
+        , _devTools{}
         , _engine{}
         , _gameModuleManager{ nullptr }
         , _moduleReload{}
@@ -160,18 +152,8 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
-#if !defined( SW_SHIPPING )
-        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
-        }
-        _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
-        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
-        const bool bFolderWatchBound = _host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
-        SW_ASSERT( bFolderWatchBound );
-        (void)bFolderWatchBound;
-#endif
+        // 개발 도구 — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(배포는 빈 구현).
+        _devTools.addToHostScope( _host, _engine );
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
@@ -180,10 +162,8 @@ namespace sw
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
         }
-#if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devToolsFrameSubscription = _engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
-#endif
+        _devTools.attachFrameHooks( _engine );
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() == false;
@@ -223,24 +203,16 @@ namespace sw
     bool ServerApp::loadModuleLibrarys()
     {
         SW_MEMORY_SCOPE( EngineMisc );
-#if !defined( SW_SHIPPING )
-        // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다.
-        if ( ModuleCatalogLoader::loadAndResolve( static_cast<uint8>( ModuleTarget::Server ), _moduleCatalog, _moduleResolution ) == false )
+        // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다. 리로드 구동기(App 과 같은 것)가 매니페스트를 해석하고
+        // 매니저를 만들어 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다(배포는 정적 링크라 아무것도 하지 않는다).
+        if ( _moduleReload.initialize( static_cast<uint8>( ModuleTarget::Server ), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
             return false;
-        _pModuleImageHost->setResolution( _moduleResolution );
-        // 리로드 구동기(App 과 같은 것)가 매니저를 만들고 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다.
-        _moduleReload.initialize( _host, *_pModuleImageHost );
-#endif
         _gameModuleManager = make_unique<GameModuleManager>();
         if ( _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
-#if !defined( SW_SHIPPING )
-        // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저).
-        LiveReloadManager* pLiveReloadManager = _moduleReload.getLiveReloadManager();
-        if ( pLiveReloadManager != nullptr )
-            _reloadStopsServices = pLiveReloadManager->addOnBeforeCommitBatch(
-                SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
-#endif
+        // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
+        _reloadStopsServices = _moduleReload.addOnBeforeReloadBatch(
+            SW_DELEGATE_METHOD( ModuleReloadDriver::BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
         return true;
     }
 
@@ -472,7 +444,6 @@ namespace sw
         return countDrainBlockers() == 0;
     }
 
-#if !defined( SW_SHIPPING )
     bool ServerApp::onBeforeModuleReload( [[maybe_unused]] const vector<string>& listModuleName )
     {
         if ( _serverServices != nullptr && _serverServices->isRunning() )
@@ -483,7 +454,6 @@ namespace sw
         }
         return true; // 게임 쪽 처리는 모듈 호스트가 건 배치 콜백이 이어서 한다
     }
-#endif
 
     void ServerApp::run()
     {
@@ -542,7 +512,7 @@ namespace sw
             Logger::setClockNumber( LogClock::Tick, _tickCount );
             // 틱 지표 · 상태 박동 · 프레임 이력(O1) · 느린 틱 덤프 · 사용률 창(O5)은 관측이 든다.
             _observability.recordTick( tickTime, _tickCount, getServiceConnectionCount(), _droppedTickCount, ServerAppInternal::nowMonotonicMs() );
-#if !defined( SW_SHIPPING )
+            // 이력은 `-gv_stateHashHistory=N` 이 켤 때만 남는다(배포에는 그 인자가 없어 늘 꺼져 있다).
             StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
             {
@@ -552,7 +522,6 @@ namespace sw
                 if ( pNetSession != nullptr )
                     pNetSession->sendServerTick( _tickCount );
             }
-#endif
             _debugControl.onTickFinished();
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );
@@ -591,7 +560,6 @@ namespace sw
             _gameModuleManager->updateGame( deltaSeconds );
         }
         _moduleReload.update();
-#if !defined( SW_SHIPPING )
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
@@ -599,7 +567,6 @@ namespace sw
             if ( startServerServices() == false )
                 SW_LOG_ERROR( "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
-#endif
         const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
         _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engine.endFrame();
@@ -655,12 +622,10 @@ namespace sw
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
-#if !defined( SW_SHIPPING )
-        _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-#endif
+        _devTools.detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
-        _pDevTools        = nullptr;
+        _devTools.release();
         Logger::clearClockNumber();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();

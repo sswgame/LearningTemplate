@@ -94,7 +94,7 @@ namespace sw
         /**
          * @brief 타일, 이동 상태, 대기 중인 워프(맵과 위치), 조우 걸음 수, 대기 플래그, 입력 허용 여부를 씁니다.
          * @details 빌려 쓰는 타일맵과 설정은 싣지 않는다. 세이브도 이 바이트를 쓴다.
-         *          게임 상태는 스냅샷 봉투(`GameInstance::saveStateToFile`)로만 저장하며, 플래그는 공유 상태가 싣는다.
+         *          게임 상태는 스냅샷 봉투(`GameInstance::saveGameToSlot`)로만 저장하며, 플래그는 공유 상태가 싣는다.
          */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다. */

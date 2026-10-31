@@ -18,6 +18,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
@@ -36,7 +37,6 @@ namespace sw
     class InputManager;
     class Material;
     class MaterialInstance;
-    class Mesh;
     class PawnComponent;
 
     /**
@@ -274,7 +274,7 @@ namespace sw
         vector<hashed_string>        _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
         MaterialTintCache            _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
         vector<CropLook>             _listCropLook;
-        vector<shared_ptr<Mesh>>     _listCropMesh; ///< 작물 모델을 계속 참조한다(단계가 바뀔 때 뷰가 워커에서 읽지 않게 한다).
+        vector<MeshHandle>           _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
         shared_ptr<MaterialInstance> _arrSoilLook[3];
         shared_ptr<MaterialInstance> _plainCropLook;
         shared_ptr<MaterialInstance> _witheredCropLook;

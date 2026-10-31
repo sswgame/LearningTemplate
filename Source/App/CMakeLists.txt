@@ -21,33 +21,29 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
-# 구성마다 다른 구현 — 선언은 헤더 하나, 구현 .cpp 를 여기서 고른다(인터페이스 · 가상 함수 · 파일 안 `#if` 를 두지 않는다).
-# 조건이 참이면 `<이름><접미사>.cpp` 를, 거짓이면 `<이름>.cpp` 를 짓는다. 고르지 않은 쪽은 소스 검사 게이트에 적힌다(`sw_excludeUnbuiltSources`).
-#   AppDevTools        : 배포(SW_SHIPPING_BUILD)는 빈 구현(Shipping) — 개발 도구 · 매니페스트 · 핫 리로드가 없다
-#   AppAutomationHost  : 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 Off — 구동기가 없고 `-scenario` 는 기동 오류
-function(sw_pickAppVariant VARIANT_NAME VARIANT_SUFFIX USE_VARIANT)
-	set(defaultSource "${CMAKE_CURRENT_SOURCE_DIR}/${VARIANT_NAME}.cpp")
-	set(variantSource "${CMAKE_CURRENT_SOURCE_DIR}/${VARIANT_NAME}${VARIANT_SUFFIX}.cpp")
-	if(NOT EXISTS "${defaultSource}" OR NOT EXISTS "${variantSource}")
-		message(FATAL_ERROR "[App] ${VARIANT_NAME} needs both ${VARIANT_NAME}.cpp and ${VARIANT_NAME}${VARIANT_SUFFIX}.cpp")
-	endif()
-	set(listSource ${APP_SOURCES})
-	if(USE_VARIANT)
-		sw_excludeUnbuiltSources(listSource "/Source/App/${VARIANT_NAME}\\.cpp$")
-	else()
-		sw_excludeUnbuiltSources(listSource "/Source/App/${VARIANT_NAME}${VARIANT_SUFFIX}\\.cpp$")
-	endif()
-	set(APP_SOURCES ${listSource} PARENT_SCOPE)
-endfunction()
+# 구성마다 다른 구현 — 선언은 헤더 하나, 구현 .cpp 를 `sw_pickVariantSource` 가 고른다(cmake/Engine/UnbuiltSources.cmake).
+# 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 짓는다.
+#   AppDevTools                  : 빈 구현 — 개발 도구 · 핫 리로드 단축키 · 개발 콘솔이 없다
+#   EditorModuleManagerDevTools  : 에디터 모듈 등록 · 개발 도구 서비스가 없다 — `-EnableEditor` 는 기동 오류
+#   EditorModuleManagerHeadless  : 에디터 모듈이 없다 — 헤드리스 임포트 · 로컬라이제이션 작업은 오류
+# 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 `<이름>Off.cpp` 를 짓는다.
+#   AppAutomationHost            : 구동기가 없고 `-scenario` 는 기동 오류
+set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
+# 기능 옆 개발 전용 파일(`*DevCommands.cpp` 의 개발 명령 · 시나리오 단계)은 다른 타깃과 같은 이름 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
 if(SW_SHIPPING_BUILD)
-	sw_pickAppVariant(AppDevTools Shipping ON)
-else()
-	sw_pickAppVariant(AppDevTools Shipping OFF)
+	sw_excludeUnbuiltSources(APP_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
+foreach(swVariantName IN ITEMS AppDevTools EditorModuleManagerDevTools EditorModuleManagerHeadless)
+	if(SW_SHIPPING_BUILD)
+		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping ON)
+	else()
+		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping OFF)
+	endif()
+endforeach()
 if(SW_ENABLE_AUTOMATION)
-	sw_pickAppVariant(AppAutomationHost Off OFF)
+	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppAutomationHost Off OFF)
 else()
-	sw_pickAppVariant(AppAutomationHost Off ON)
+	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppAutomationHost Off ON)
 endif()
 
 sw_addExecutable(App ${APP_SOURCES})
@@ -77,14 +73,12 @@ sw_splitShippingDebugInfo(App)
 
 # ------------------------------------------------------------------------------
 # 2) 런타임 DLL 복사: DXC, Vulkan 검증 레이어(+mimalloc)
-#    구성마다 실제로 쓰는 것만 배포한다 — 무조건 복사하면 Shipping 산출물에
-#    셰이더 컴파일러와 검증 레이어가 따라 들어간다.
+#    구성마다 실제로 쓰는 것만 Bin 에 둔다.
 # ------------------------------------------------------------------------------
 
-# DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일과 DXIL 리플렉션에 쓰이는데, 배포 빌드는 둘 다
-# 하지 않는다. 셰이더는 미리 쿠킹하고(ShaderCache), 바인딩 리플렉션도 쿠킹할 때 쿠킹해 둔
-# 매니페스트를 읽는다(ShaderReflectionLibrary). 상용 엔진이 셰이더 컴파일러를 배포하지 않는
-# 것과 같은 구조다.
+# DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹에 쓰인다. 배포 App 은 런타임에 컴파일하지 않지만
+# (셰이더는 미리 쿠킹 — ShaderCache, 바인딩 리플렉션도 쿠킹해 둔 매니페스트 — ShaderReflectionLibrary) 빌드의 쿠커라 Bin 에는 둔다.
+# 배포 패키지에는 넣지 않는다(`Scripts/package/Pack.py` 스테이징이 뺀다) — 상용 엔진이 셰이더 컴파일러를 배포하지 않는 것과 같다.
 # Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켜므로 Debug 구성에만, Tracy 클라이언트는 개발 빌드 · Windows 에만
 # (Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다) — 고르기는 sw_deployRuntimeDependencies 가 한다.
 sw_deployRuntimeDependencies(App)

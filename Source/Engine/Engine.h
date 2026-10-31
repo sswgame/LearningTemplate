@@ -116,7 +116,7 @@ namespace sw
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. */
+        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `EngineRendering.cpp`, 전용 서버는 `EngineRenderingServer.cpp` 입니다. */
         [[nodiscard]] bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------
@@ -184,6 +184,8 @@ namespace sw
          * @details 창 · RHI · 렌더 스레드를 모두 가진 엔진의 일이다(언리얼 `FSceneViewport::ResizeFrame` · Godot RenderingServer 와 같은 자리). 호스트는 모른다.
          */
         void onMainWindowResize( uint32 width, uint32 height );
+        /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(렌더 스레드가 없으면 할 일이 없다). */
+        void drainRenderThreadPackets();
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */

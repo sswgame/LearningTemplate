@@ -144,10 +144,10 @@ namespace sw
             _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
     }
 
-    bool MeshComponent::updateArrival( ScenePrimitive& primitive, float32 deltaSeconds )
+    bool MeshComponent::updateArrival( SceneComponent& component, float32 deltaSeconds )
     {
-        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식).
-        MeshComponent& self = static_cast<MeshComponent&>( primitive );
+        // 이 함수를 거는 것은 메시 컴포넌트 자신뿐이다(`addAssetWaiter( this, &MeshComponent::updateArrival )`).
+        MeshComponent& self = static_cast<MeshComponent&>( component );
         if ( self._bTeleportAppearPending.exchange( false, std::memory_order_acq_rel ) )
             self.beginAppearance();
         if ( self._meshLoad.isLoading() )

@@ -42,6 +42,14 @@ if(NOT SW_ENABLE_AUTOMATION)
 		"/Source/Engine/Automation/Runner/.*\\.(cpp|h)$")
 	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
 endif()
+# 헤드리스 시나리오 행렬 작업(`-scenario-backends`)은 실행기를 부른다 — 실행기가 없는 구성은 기동 오류만 내는 `HeadlessScenarioMatrixOff.cpp` 다.
+if(SW_ENABLE_AUTOMATION)
+	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" HeadlessScenarioMatrix Off OFF)
+else()
+	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" HeadlessScenarioMatrix Off ON)
+	# 실행기 헤더를 include 하는 나머지(실행기 단위 테스트)도 뺀다 — 짝을 고른 뒤라 남는 것은 실행기를 시험하는 파일뿐이다.
+	sw_excludeSourcesIncludingPrefix(ENGINE_SOURCES "Engine/Automation/Runner/")
+endif()
 
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
 # .cpp 만 뺀다 — 헤더의 값 타입(뷰 요청 · 델리게이트)은 `Engine.h` 를 거쳐 서버도 읽는다. 리플렉션 헤더도 아래 8) 에서 뺀다.
@@ -54,6 +62,13 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	string(APPEND swUnbuiltFolderRegex "/Source/Engine/${swUnbuiltFolder}/")
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
 endforeach()
+
+# 엔진 루프의 렌더러 몫(렌더 스레드 · 렌더 패킷 · 백엔드 교체) — 전용 서버는 `EngineRenderingServer.cpp`, 그 밖은 `EngineRendering.cpp`(파일 안 `SW_WITH_CLIENT_CODE` 분기 대신).
+if(SW_TARGET_TYPE STREQUAL "Server")
+	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" EngineRendering Server ON)
+else()
+	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" EngineRendering Server OFF)
+endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)

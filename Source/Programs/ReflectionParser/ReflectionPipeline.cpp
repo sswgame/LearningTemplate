@@ -525,9 +525,10 @@ namespace sw
         stamp._sourcePath     = inputFile;
         stamp._inputWriteTime = inputWriteTime;
         stamp._listDependency = listDependency;
-        for ( const ParsedTypeInfo& typeInfo : parsed._listType )
+        for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
         {
-            stamp._listTypeFqn.push_back( typeInfo._fullyQualifiedName );
+            stamp._listTypeFqn.push_back( parsed._listType[typeIndex]._fullyQualifiedName );
+            stamp._listFixedSchema.push_back( fixedCodec.makeSchemaLine( typeIndex ) );
         }
         for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
         {
@@ -594,30 +595,25 @@ namespace sw
 
     /**
      * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
-     *          비교해 봅니다(`Source/Engine/Serialization/Fixed/README.md` 3.11). 이번 실행에서 최신이라 다시 쓰지 않은 입력도 `.gen.cpp` 에 줄이 남아 있습니다.
+     *          비교해 봅니다(`Source/Engine/Serialization/Fixed/README.md` 3.11). 판정 줄은 생성기가 스탬프에 적은 사실이다(이번 실행에 최신이라 다시 쓰지 않은 입력도 스탬프에 남아 있다).
      */
     bool ReflectionPipeline::writeFixedSchemaList() const
     {
-        const string_view marker = fixedlayout::kSchemaLineMarker;
-        string            text;
+        string text;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
-            const string genCpp = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, sw::config::kExtReflectionGenCpp );
-            string       genText;
-            // 입력마다 산출물이 있습니다(애노테이션이 없는 헤더도 빈 산출물을 씁니다). 없거나 못 읽으면 목록이 조용히 빠지므로 실패로 알립니다.
-            if ( FileUtil::readTextFile( genCpp, genText ) == false )
+            const string   stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
+            GeneratedStamp stamp;
+            // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
+            if ( GeneratedFileUtil::readStamp( stampPath, stamp ) == false )
             {
-                SW_LOG_ERROR( "Failed to read generated file for the fixed schema list: %#", genCpp );
+                SW_LOG_ERROR( "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath );
                 return false;
             }
-            size_t lineStart = genText.find( marker.data(), 0, marker.size() );
-            while ( lineStart != string::npos )
+            for ( const string& schemaLine : stamp._listFixedSchema )
             {
-                const size_t lineEnd = genText.find( '\n', lineStart );
-                const size_t textEnd = ( lineEnd == string::npos ) ? genText.size() : lineEnd;
-                text.append( genText, lineStart + marker.size(), textEnd - lineStart - marker.size() );
-                text.push_back( '\n' );
-                lineStart = genText.find( marker.data(), textEnd, marker.size() );
+                text += schemaLine;
+                text += '\n';
             }
         }
         return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text );

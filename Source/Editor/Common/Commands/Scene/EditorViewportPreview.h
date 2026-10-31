@@ -39,7 +39,7 @@ namespace sw::editor
         /** @brief 선택 메시/스프라이트에 머티리얼을 붙이고 캐시를 갱신합니다. */
         static void applyMaterial( sw::Material* pMaterial, string_view assetPath );
 
-        /** @brief @p type 과 기반 타입에서 `EditorPreview` 메타가 @p previewKind 인 메서드를 찾습니다. 없으면(Shipping 포함) nullptr 입니다. */
+        /** @brief @p type 과 기반 타입에서 `EditorPreview` 메타가 @p previewKind 인 메서드를 찾습니다. 없으면 nullptr 입니다. */
         static const FunctionInfo* findPreviewMethod( const TypeInfo& type, string_view previewKind );
     };
 } // namespace sw::editor

@@ -51,9 +51,10 @@ namespace sw
                 return MathUtil::max( farCorner.getLength(), 0.01f );
             }
 
-            static shared_ptr<Mesh> acquireMesh( const string& meshID )
+            /** @brief 메시 id 의 로드입니다. `.mesh` 경로는 메시 캐시가 워커에서 읽고, 내장 도형은 메모리에서 바로 만들므로 빈 핸들이다(`MeshComponent` 와 같은 규칙). */
+            static MeshHandle requestMesh( const string& meshID )
             {
-                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::request( meshID ) : MeshHandle{};
             }
 
             /** @brief 레이어 메시들의 비중(배치의 항목 비중)입니다. */
@@ -68,12 +69,17 @@ namespace sw
                 return listWeight;
             }
 
-            /** @brief 레이어의 메시를 얻어 메시마다 원점 반지름과 함께 채웁니다. 얻지 못한 메시는 nullptr 로 두고(그 인스턴스는 건너뛴다) 경고한다. */
-            static void acquireLayerMeshes( const FoliageLayer& layer, vector<shared_ptr<Mesh>>& outListMesh, vector<float32>& outListRadius )
+            /**
+             * @brief 레이어의 메시를 로드(@p listLoad — `requestLayerMeshes` 가 다 받았다)에서 얻어 메시마다 원점 반지름과 함께 채웁니다.
+             *        얻지 못한 메시는 nullptr 로 두고(그 인스턴스는 건너뛴다) 경고한다.
+             */
+            static void acquireLayerMeshes( const FoliageLayer& layer, const vector<MeshHandle>& listLoad, vector<shared_ptr<Mesh>>& outListMesh, vector<float32>& outListRadius )
             {
-                for ( const FoliageMesh& foliageMesh : layer._listMesh )
+                for ( size_t meshIndex = 0; meshIndex < layer._listMesh.size(); ++meshIndex )
                 {
-                    shared_ptr<Mesh> mesh = acquireMesh( foliageMesh._meshID );
+                    const FoliageMesh& foliageMesh = layer._listMesh[meshIndex];
+                    const bool         bHasLoad    = meshIndex < listLoad.size() && listLoad[meshIndex].isValid();
+                    shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : MeshUtil::acquirePrimitive( foliageMesh._meshID );
                     if ( mesh == nullptr )
                         SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
                     outListRadius.push_back( mesh != nullptr ? computeOriginRadius( *mesh ) : 0.0f );
@@ -138,6 +144,7 @@ namespace sw
         , _listCell{}
         , _listLayerMaterial{}
         , _listLayerCandidate{}
+        , _listLayerMeshLoad{}
         , _builtRegion{}
         , _pPrimitiveRegistry{ nullptr }
         , _time{ 0.0f }
@@ -149,6 +156,7 @@ namespace sw
         , _seenTerrainGeneration{ 0 }
         , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
+        , _bWaitingForMeshes{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -171,6 +179,10 @@ namespace sw
         releaseCells();
         _listLayerMaterial.clear();
         _listLayerCandidate.clear();
+        _listLayerMeshLoad.clear();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->removeAssetWaiter( this );
+        _bWaitingForMeshes  = SW_FALSE;
         _pPrimitiveRegistry = nullptr;
         SceneComponent::onUnregister( manager );
     }
@@ -380,6 +392,38 @@ namespace sw
         _instanceCount = 0;
     }
 
+    bool FoliageComponent::requestLayerMeshes()
+    {
+        vector<vector<MeshHandle>> listLayerLoad( _listLayer.size() );
+        bool                       bAllArrived{ true };
+        for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            for ( const FoliageMesh& foliageMesh : _listLayer[layerIndex]._listMesh )
+            {
+                listLayerLoad[layerIndex].push_back( FoliageComponentInternal::requestMesh( foliageMesh._meshID ) );
+                bAllArrived = bAllArrived && listLayerLoad[layerIndex].back().isLoading() == false;
+            }
+        }
+        _listLayerMeshLoad = std::move( listLayerLoad );
+        return bAllArrived;
+    }
+
+    bool FoliageComponent::updateMeshArrival( SceneComponent& component, float32 /*deltaSeconds*/ )
+    {
+        // 이 함수를 거는 것은 폴리지 자신뿐이다(`rebuildFoliage`).
+        FoliageComponent& self = static_cast<FoliageComponent&>( component );
+        for ( const vector<MeshHandle>& listLoad : self._listLayerMeshLoad )
+        {
+            for ( const MeshHandle& load : listLoad )
+            {
+                if ( load.isLoading() )
+                    return true;
+            }
+        }
+        self.rebuildFoliage();
+        return self._bWaitingForMeshes == SW_TRUE;
+    }
+
     void FoliageComponent::rebuildFoliage()
     {
         releaseCells();
@@ -387,6 +431,14 @@ namespace sw
         _lastRebuiltBatchCount = 0;
         if ( _pPrimitiveRegistry == nullptr )
             return;
+        // 메시는 워커가 읽는다 — 게임 스레드가 디스크를 기다리지 않게 다 올 때까지 셀 없이 두고, 씬 프레임의 도착 단계가 다시 짓는다
+        // (언리얼 폴리지 · HISM 도 메시가 스트리밍되기 전에는 그 인스턴스를 그리지 않는다). 셀의 바운드가 메시 반지름을 쓰므로 메시 없이 미리 짓지 않는다.
+        _bWaitingForMeshes = requestLayerMeshes() ? SW_FALSE : SW_TRUE;
+        if ( _bWaitingForMeshes == SW_TRUE )
+        {
+            _pPrimitiveRegistry->addAssetWaiter( this, &FoliageComponent::updateMeshArrival );
+            return;
+        }
         [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다. Shipping 은 로그가 빠진다.
         const float3                     origin   = getWorldPosition();
         GameObject*                      pOwner   = getOwner();
@@ -492,7 +544,9 @@ namespace sw
 
         vector<shared_ptr<Mesh>> listMesh;
         vector<float32>          listMeshRadius;
-        Internal::acquireLayerMeshes( _listLayer[layerIndex], listMesh, listMeshRadius );
+        // 레이어 목록이 짓기 뒤에 바뀌었으면(편집 — 그때는 `onPropertyChanged` 가 다시 짓는다) 로드가 없다. 내장 도형만 얻고 나머지는 경고로 건너뛴다.
+        const vector<MeshHandle> listNoLoad{};
+        Internal::acquireLayerMeshes( _listLayer[layerIndex], layerIndex < _listLayerMeshLoad.size() ? _listLayerMeshLoad[layerIndex] : listNoLoad, listMesh, listMeshRadius );
         const unordered_map<uint64, vector<uint32>> mapCellToInstance = Internal::groupByCell( listInstance, listMesh, MathUtil::max( _cellSize, 4.0f ) );
 
         // 이 레이어의 지금 셀을 키로 찾는다. 내용 해시가 같은 셀은 그대로 두고(레지스트리도 그대로), 다른 셀만 새 배치로 바꾼다.

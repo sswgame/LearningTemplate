@@ -2,10 +2,7 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorLayoutCache.h"
 
-// 배치는 에디터 메타데이터를 읽는다 — Shipping 에는 그 메타데이터가 없어 `InspectorPropertyLayout` 처럼 이 구현도 없다.
-#if !defined( SW_SHIPPING )
-
-    #include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
+#include "Editor/Panels/Inspector/Model/InspectorFavorites.h"
 
 namespace sw::editor
 {
@@ -62,5 +59,3 @@ namespace sw::editor
         return *iter->second;
     }
 } // namespace sw::editor
-
-#endif // !SW_SHIPPING

@@ -719,11 +719,11 @@ namespace sw
             return;
         vector<string> listModelPath;
         NileBuildingComponent::collectModelPaths( listModelPath );
+        // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).
+        // 읽지 못한 모델은 캐시가 경로마다 한 번 경고한다.
         for ( const string& path : listModelPath )
         {
-            shared_ptr<Mesh> mesh = MeshCache::acquire( path );
-            if ( mesh != nullptr )
-                _listModelMesh.push_back( std::move( mesh ) );
+            _listModelMesh.push_back( MeshCache::request( path ) );
         }
     }
 

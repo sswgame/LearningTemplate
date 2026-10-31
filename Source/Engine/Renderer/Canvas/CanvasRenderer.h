@@ -49,7 +49,7 @@ namespace sw
          *          사각형 버퍼를 갱신합니다. 주 출력 다음에 렌더 텍스처 대상들을 이어 한 버퍼에 담아(같은 프레임에 버퍼를 두 번 갱신하지 않게) 갱신하고, 대상마다 시작 위치는
          *          `getTargetQuadBase` 로 얻습니다. 프로파일 항목은 RT.Canvas.Upload 입니다.
          *          그 앞에 렌더 텍스처 대상을 `TextureCache` 에서 빌리고(위젯이 그리기 크기를 바꾸면 다시 만듭니다) 목록에서 사라진 대상은 돌려줍니다.
-         *          대상 포맷의 캔버스 PSO 가 셋업(@p psoCache, `FramePSOManager::createOutputPSOVariants`)에 없으면 그 대상은 처음 빌릴 때 오류로 거절하고 그리지 않습니다.
+         *          대상 포맷의 캔버스 PSO 가 셋업(@p psoCache, `FramePSOManager::collectOutputPSOJobs`)에 없으면 그 대상은 처음 빌릴 때 오류로 거절하고 그리지 않습니다.
          */
         void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame, const RenderPSOCache& psoCache );
         /**
