@@ -12,6 +12,7 @@
 #include "DevTools/DevToolsHost.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
