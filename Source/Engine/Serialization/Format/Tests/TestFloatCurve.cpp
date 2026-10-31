@@ -84,23 +84,6 @@ SW_TEST_CASE( FloatCurveTest, AutoTangentsAndKeyOrder )
 }
 
 /**
- * @brief [FloatCurveTest] 값 범위는 키 값에 곡선의 넘침까지 담는다
- */
-SW_TEST_CASE( FloatCurveTest, ValueRangeIncludesOvershoot )
-{
-    FloatCurve curve                = TestFloatCurveInternal::makeTwoKeys( CurveInterpolation::Cubic );
-    curve._listKey[0]._bAutoTangent = false;
-    curve._listKey[0]._leaveTangent = 20.0f; // 처음에 가파르게 올라 끝 값을 넘는다
-    float32 minValue{ 0.0f };
-    float32 maxValue{ 0.0f };
-    SW_REQUIRE_TRUE( curve.computeValueRange( minValue, maxValue ) );
-    SW_EXPECT_NEAR( 0.0f, minValue, TestFloatCurveInternal::kTolerance );
-    SW_EXPECT_TRUE( maxValue > 4.0f );
-    FloatCurve empty;
-    SW_EXPECT_FALSE( empty.computeValueRange( minValue, maxValue ) );
-}
-
-/**
  * @brief [FloatCurveTest] JSON 왕복이 키를 그대로 둔다(`_listKey` 는 JSON 배열)
  */
 SW_TEST_CASE( FloatCurveTest, JSONRoundTrip )

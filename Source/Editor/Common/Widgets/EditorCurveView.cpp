@@ -16,6 +16,8 @@ namespace sw::editor
         {
             /** @brief 범위가 0 으로 무너지지 않게 하는 가장 작은 폭입니다. */
             static constexpr float32 kMinSpan = 1e-4f;
+            /** @brief 값 범위 계산이 키 사이 곡선의 넘침을 잡는 표본 수입니다. */
+            static constexpr uint32 kRangeSampleCount = 64;
 
             static float32 getSpan( float32 minValue, float32 maxValue ) { return MathUtil::max( maxValue - minValue, kMinSpan ); }
         };
@@ -42,7 +44,7 @@ namespace sw::editor
     {
         float32 valueMin{ 0.0f };
         float32 valueMax{ 1.0f };
-        if ( curve.computeValueRange( valueMin, valueMax ) == false )
+        if ( computeValueRange( curve, valueMin, valueMax ) == false )
         {
             _timeMin  = 0.0f;
             _timeMax  = 1.0f;
@@ -155,5 +157,31 @@ namespace sw::editor
                 return power * multiplier;
         }
         return power * 10.0f;
+    }
+
+    bool EditorCurveView::computeValueRange( const FloatCurve& curve, float32& outMin, float32& outMax )
+    {
+        const vector<FloatCurveKey>& listKey = curve._listKey;
+        if ( listKey.empty() )
+            return false;
+        outMin = listKey.front()._value;
+        outMax = outMin;
+        for ( const FloatCurveKey& key : listKey )
+        {
+            outMin = MathUtil::min( outMin, key._value );
+            outMax = MathUtil::max( outMax, key._value );
+        }
+        const float32 startTime = listKey.front()._time;
+        const float32 span      = listKey.back()._time - startTime;
+        if ( span <= 0.0f )
+            return true;
+        for ( uint32 sampleIndex = 0; sampleIndex <= EditorCurveViewInternal::kRangeSampleCount; ++sampleIndex )
+        {
+            const float32 time  = startTime + span * static_cast<float32>( sampleIndex ) / static_cast<float32>( EditorCurveViewInternal::kRangeSampleCount );
+            const float32 value = *curve.evaluate( time ); // 위에서 키가 있음을 확인했다
+            outMin              = MathUtil::min( outMin, value );
+            outMax              = MathUtil::max( outMax, value );
+        }
+        return true;
     }
 } // namespace sw::editor

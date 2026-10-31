@@ -49,5 +49,10 @@ namespace sw::editor
 
         /** @brief 범위 @p span 을 @p pixels 픽셀에 그릴 때 줄 사이가 @p minPixels 이상인 1 · 2 · 5 × 10^n 간격입니다. */
         static float32 computeGridStep( float32 span, float32 pixels, float32 minPixels );
+        /**
+         * @brief @p curve 가 지나는 값의 최소 · 최대입니다(키 값에 64 개 표본을 더해 키 사이 곡선의 넘침까지 담는다). 키가 없으면 false 입니다.
+         * @details 화면 맞추기(`fitToCurve`)만 쓰는 계산이라 런타임 `FloatCurve` 가 아니라 여기 둔다(언리얼도 커브 화면 범위는 `FCurveEditor` 쪽이 센다).
+         */
+        [[nodiscard]] static bool computeValueRange( const FloatCurve& curve, float32& outMin, float32& outMax );
     };
 } // namespace sw::editor

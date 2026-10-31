@@ -67,7 +67,5 @@ namespace sw
         uint32 addKey( float32 time, float32 value, CurveInterpolation interpolation = CurveInterpolation::Cubic );
         /** @brief 키를 시각 순으로 정렬하고 `_bAutoTangent` 키의 접선을 이웃 키로 다시 셉니다(가운데 키는 이웃 기울기, 끝 키는 평평). */
         void sortAndComputeAutoTangents();
-        /** @brief 커브가 지나는 값의 최소 · 최대입니다(키 값에 64 개 표본을 더한다 — 편집기의 화면 맞추기). 키가 없으면 false 입니다. */
-        [[nodiscard]] bool computeValueRange( float32& outMin, float32& outMax ) const;
     };
 } // namespace sw
