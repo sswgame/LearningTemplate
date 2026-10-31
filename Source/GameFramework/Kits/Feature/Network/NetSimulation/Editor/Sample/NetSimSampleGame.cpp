@@ -92,8 +92,11 @@ namespace sw
             }
         };
 
-        /** @brief 서버 월드의 세션입니다 — 연결마다 아바타를 만들고, 받은 이동 입력으로 움직여 모든 클라이언트에 보냅니다. */
-        class NetSimSampleServerSession final : public INetSimSession, public INetMessageHandler
+        /**
+         * @brief 서버 월드의 세션입니다 — 연결마다 아바타를 만들고, 받은 이동 입력으로 움직여 모든 클라이언트에 보냅니다.
+         * @details 메시지 처리(`INetMessageHandler`)는 상속하지 않는다. 라우터는 처리기 포인터 하나만 빌리므로 세션이 가진 어댑터 멤버를 건다.
+         */
+        class NetSimSampleServerSession final : public INetSimSession
         {
         public:
             NetSimSampleServerSession( NetSimWorld& world, const NetSimSampleSettings& settings )
@@ -101,17 +104,18 @@ namespace sw
                 , _listAvatar{}
                 , _listPendingMove{}
                 , _stateWriter{}
+                , _messageHandler{ *this }
                 , _routerSubscription{}
             {
-                _routerSubscription = world.getRouter().registerHandler( this );
+                _routerSubscription = world.getRouter().registerHandler( &_messageHandler );
                 if ( _routerSubscription.isActive() == false )
                     SW_LOG_ERROR( "NetSimSampleGame: the server could not claim its message kinds - no input arrives" );
             }
 
-            uint8  getMessageRangeBase() const override { return NetMessageRange::kGame; }
-            uint16 getMessageKindMask() const override { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kInputKind - NetMessageRange::kGame ) ); }
+            uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }
+            uint16 getMessageKindMask() const { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kInputKind - NetMessageRange::kGame ) ); }
 
-            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
+            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
                 const uint32 clientTick = body.readVarUint32();
                 int32        x          = 0;
@@ -131,8 +135,8 @@ namespace sw
             }
 
             /** @brief 같은 슬롯에 새 연결이 오면 앞 연결의 입력을 물려받지 않는다. */
-            void onConnectionOpened( int32 connectionID ) override { erasePendingMove( connectionID ); }
-            void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override
+            void onConnectionOpened( int32 connectionID ) { erasePendingMove( connectionID ); }
+            void onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
             {
                 (void)reason; // 이유와 상관없이 그 연결의 입력은 버린다
                 erasePendingMove( connectionID );
@@ -168,6 +172,25 @@ namespace sw
             }
 
         private:
+            /** @brief 월드 라우터에 거는 메시지 처리 능력입니다. 세션의 같은 이름 함수로 넘깁니다(수명은 세션과 같다). */
+            class MessageHandler final : public INetMessageHandler
+            {
+            public:
+                explicit MessageHandler( NetSimSampleServerSession& owner )
+                    : _owner{ owner }
+                {
+                }
+
+                uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
+                uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
+                void            onConnectionOpened( int32 connectionID ) override { _owner.onConnectionOpened( connectionID ); }
+                void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override { _owner.onConnectionClosed( connectionID, reason ); }
+
+            private:
+                NetSimSampleServerSession& _owner;
+            };
+
             struct Avatar
             {
                 int32   _connectionID{ -1 };
@@ -246,11 +269,12 @@ namespace sw
             vector<Avatar>       _listAvatar;
             vector<PendingMove>  _listPendingMove;
             NetMessageWriter     _stateWriter;
+            MessageHandler       _messageHandler;     ///< 라우터에 거는 처리기. 등록(`_routerSubscription`)보다 앞에 두어 등록이 먼저 떨어진다
             Subscription         _routerSubscription; ///< 월드 라우터에 단 이 세션의 등록. 세션이 사라지면 뗀다
         };
 
         /** @brief 클라이언트 월드의 세션입니다 — 이동 입력을 보내고 받은 아바타 목록으로 자기 씬의 아바타를 옮깁니다. */
-        class NetSimSampleClientSession final : public INetSimSession, public INetMessageHandler
+        class NetSimSampleClientSession final : public INetSimSession
         {
         public:
             NetSimSampleClientSession( NetSimWorld& world, const NetSimSampleSettings& settings )
@@ -261,17 +285,18 @@ namespace sw
                 , _nextInputTick{ 0 }
                 , _lastStateTick{ 0 }
                 , _bHasState{ false }
+                , _messageHandler{ *this }
                 , _routerSubscription{}
             {
-                _routerSubscription = world.getRouter().registerHandler( this );
+                _routerSubscription = world.getRouter().registerHandler( &_messageHandler );
                 if ( _routerSubscription.isActive() == false )
                     SW_LOG_ERROR( "NetSimSampleGame: the client could not claim its message kinds - nothing is shown" );
             }
 
-            uint8  getMessageRangeBase() const override { return NetMessageRange::kGame; }
-            uint16 getMessageKindMask() const override { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kStateKind - NetMessageRange::kGame ) ); }
+            uint8  getMessageRangeBase() const { return NetMessageRange::kGame; }
+            uint16 getMessageKindMask() const { return static_cast<uint16>( 1u << ( NetSimSampleGameInternal::kStateKind - NetMessageRange::kGame ) ); }
 
-            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
+            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body )
             {
                 (void)context; // 서버(연결 0)가 보낸 것뿐이다
                 const uint32   serverTick = body.readVarUint32();
@@ -305,6 +330,23 @@ namespace sw
             }
 
         private:
+            /** @brief 월드 라우터에 거는 메시지 처리 능력입니다. 세션의 같은 이름 함수로 넘깁니다(수명은 세션과 같다). */
+            class MessageHandler final : public INetMessageHandler
+            {
+            public:
+                explicit MessageHandler( NetSimSampleClientSession& owner )
+                    : _owner{ owner }
+                {
+                }
+
+                uint8           getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
+                uint16          getMessageKindMask() const override { return _owner.getMessageKindMask(); }
+                NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
+
+            private:
+                NetSimSampleClientSession& _owner;
+            };
+
             struct Target
             {
                 uint32  _entityID{ 0 };
@@ -389,6 +431,7 @@ namespace sw
             uint32               _nextInputTick;
             uint32               _lastStateTick;
             bool                 _bHasState;
+            MessageHandler       _messageHandler;     ///< 라우터에 거는 처리기. 등록(`_routerSubscription`)보다 앞에 두어 등록이 먼저 떨어진다
             Subscription         _routerSubscription; ///< 월드 라우터에 단 이 세션의 등록. 세션이 사라지면 뗀다
         };
     } // namespace
