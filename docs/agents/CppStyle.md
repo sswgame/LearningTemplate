@@ -32,7 +32,7 @@
 - Build strings with `formatstring` and its `%#` placeholder, never by chaining `to_string` or `+`.
 - Read a boolean in text with `StringUtil::tryParseBool`, never a hand-written spelling list.
 - No wrapper function with one caller; change the existing function's shape instead.
-- Inheritance: at most one base that holds state, plus interfaces without data members (`I*`, like Unreal's `UObject` + `IInterface`). `std::enable_shared_from_this` and third-party callback bases (Jolt listeners) are the only other bases allowed. Never two stateful bases, never a diamond. To add a capability (dev-only reload, tooling), use a separate object that holds a reference to the target and is registered from its own build unit (composition). Do not bolt another interface onto the class. When the choice is fixed per build (Dev or Shipping), pick an implementation file in CMake and use no interface at all.
+- Inheritance: at most one base that holds state, plus interfaces without data members (`I*`, like Unreal's `UObject` + `IInterface`). `std::enable_shared_from_this` and empty-base-optimization helpers (`CompressedPair`) are the only other bases allowed — a third-party callback (Jolt `ContactListener`) is a member adapter too. Never two stateful bases, never a diamond. To add a capability (dev-only reload, tooling), use a separate object that holds a reference to the target and is registered from its own build unit (composition). Do not bolt another interface onto the class. When the choice is fixed per build (Dev or Shipping), pick an implementation file in CMake and use no interface at all.
 
 ### Registries and failure
 
