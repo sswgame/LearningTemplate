@@ -55,7 +55,7 @@ namespace sw
         // 늘 붙인다 — 게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작한다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
         _frameSubscription = engine.getFrameHooks().add( _pSession->makeFrameHooks() );
         // 재생기는 호스트 범위에 인터페이스로 건다 — `ScenarioPlayback` 이 범위에서 찾는다(정적 칸을 두지 않는다).
-        const bool bPlayerBound = host.bind<IScenarioPlayer>( _pSession );
+        const bool bPlayerBound = host.bind<IScenarioPlayer>( &_pSession->getScenarioPlayer() );
         SW_ASSERT( bPlayerBound );
         (void)bPlayerBound;
     }

@@ -53,6 +53,7 @@ namespace sw
         , _listStartVariable{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
+        , _scenarioPlayer{ *this }
     {
     }
 

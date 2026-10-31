@@ -33,11 +33,11 @@ namespace sw
      *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다),
      *          - 시작할 때 모은 재현 명령 재료(게임 · 백엔드 · 에디터 · `-scenario` 목록)를 단계 실행기에 넘긴다(보고의 `reproduce`).
-     *          **재생**(`IScenarioPlayer` — `ScenarioPlayback::play`)도 같은 실행기로 한다: 판정이 끝나도 프로세스를 끝내지 않고, 행 감시 · 보고 · 고정 프레임 시간(고르지 않으면)이 없다.
+     *          **재생**(`IScenarioPlayer` — `ScenarioPlayback::play`, 멤버 `getScenarioPlayer` 가 넘긴다)도 같은 실행기로 한다: 판정이 끝나도 프로세스를 끝내지 않고, 행 감시 · 보고 · 고정 프레임 시간(고르지 않으면)이 없다.
      *          끝까지 돌면 반복하거나(`_bLoop`) 끝을 알린다. 사람이 키보드 · 마우스를 건드리면 멈출 수 있다(`_bStopOnHumanInput` — 데모 · 어트랙트).
      *          게임 스레드에서만 쓴다.
      */
-    class SW_API AutomationSession : public ISubsystem, public IScenarioPlayer
+    class SW_API AutomationSession : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(같은 범위의 다른 서브시스템이 의존 칸에 적는다). */
@@ -75,10 +75,12 @@ namespace sw
          * @return 경로가 `Saved/Automation/` 아래의 `.scenario.xml` 이 아니면 false 입니다.
          */
         [[nodiscard]] bool beginRecording( string_view outputPath, string_view watchList );
-        // IScenarioPlayer — 게임 · 콘솔의 재생
-        [[nodiscard]] bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options ) override;
-        void               stopPlayback() override;
-        bool               isPlaying() const override { return _bPlayback; }
+        // 게임 · 콘솔의 재생(호스트 범위에는 `getScenarioPlayer` 를 `IScenarioPlayer` 로 건다)
+        [[nodiscard]] bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options );
+        void               stopPlayback();
+        bool               isPlaying() const { return _bPlayback; }
+        /** @brief 재생기(`IScenarioPlayer`)입니다 — 위 세 함수로 넘긴다. 수명은 이 세션과 같다. */
+        IScenarioPlayer& getScenarioPlayer() { return _scenarioPlayer; }
 
         /** @brief 시나리오나 녹화가 돌고 있으면 true 입니다(프레임 관찰자로 붙일지 런처가 본다). */
         bool isBusy() const { return _pRunner != nullptr || _recordPath.empty() == false; }
@@ -101,6 +103,27 @@ namespace sw
          * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kEngineFrameRunning` 입니다.
          */
         [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context );
+
+    private:
+        /**
+         * @class ScenarioPlayer
+         * @brief 재생기(`IScenarioPlayer`)입니다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 호스트 범위에 건다(`AppAutomationHost::start`).
+         */
+        class ScenarioPlayer final : public IScenarioPlayer
+        {
+        public:
+            explicit ScenarioPlayer( AutomationSession& owner )
+                : _owner{ owner }
+            {
+            }
+
+            [[nodiscard]] bool play( const AssetID& scenarioPath, const ScenarioPlayOptions& options ) override { return _owner.play( scenarioPath, options ); }
+            void               stopPlayback() override { _owner.stopPlayback(); }
+            bool               isPlaying() const override { return _owner.isPlaying(); }
+
+        private:
+            AutomationSession& _owner;
+        };
 
     private:
         /**
@@ -145,6 +168,7 @@ namespace sw
         vector<pair<string, string>>        _listStartVariable;         ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
         AutomationReproduceInput            _reproduceInput;            ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;        ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
+        ScenarioPlayer                      _scenarioPlayer;            ///< 재생기(`getScenarioPlayer`)
         ScenarioPlayOptions                 _playOptions{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)
         AssetID                             _playPath{};                ///< 재생하는 시나리오
         string                              _playPreviousFixedDelta{};  ///< 재생이 고정 프레임 시간을 걸기 전 값(끝나면 되돌린다)
