@@ -12,10 +12,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/Model/ModelImportJSONUtil.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -307,13 +307,13 @@ namespace sw::editor
             return false;
         }
         const JSONValue root = document.getRoot();
-        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
+        if ( ModelImportJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
             return false;
         const JSONValue clips = root.get( "clips" );
         for ( const string& clipName : clips.getMemberNames() )
         {
             const JSONValue clipValue = clips.get( clipName );
-            if ( AnimationJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
+            if ( ModelImportJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
@@ -327,7 +327,7 @@ namespace sw::editor
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
                 const JSONValue notify         = notifies.at( notifyIndex );
-                const bool      bInvalidNotify = AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
+                const bool      bInvalidNotify = ModelImportJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
                                             notify.get( "time" ).isNumber() == false;
                 if ( bInvalidNotify )
                 {
@@ -352,7 +352,7 @@ namespace sw::editor
                 for ( size_t keyIndex = 0; keys.isArray() && keyIndex < keys.size(); ++keyIndex )
                 {
                     float32 arrKey[2]{};
-                    if ( AnimationJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
+                    if ( ModelImportJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
                     {
                         SW_LOG_ERROR( "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
                         return false;

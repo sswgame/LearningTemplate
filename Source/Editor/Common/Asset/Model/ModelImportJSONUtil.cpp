@@ -1,18 +1,17 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
+#include "Editor/Common/Asset/Model/ModelImportJSONUtil.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationJSONUtil" );
+    SW_LOG_CALLER( "ModelImportJSONUtil" );
 
-    bool AnimationJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
+    bool ModelImportJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
     {
         if ( object.isObject() == false )
         {
@@ -31,7 +30,7 @@ namespace sw
         return bKnown;
     }
 
-    bool AnimationJSONUtil::readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
+    bool ModelImportJSONUtil::readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
     {
         if ( value.isArray() == false || value.size() != count )
             return false;
@@ -46,14 +45,5 @@ namespace sw
             pOutValue[index] = *number;
         }
         return true;
-    }
-
-    void AnimationJSONUtil::writeFloats( const JSONValue& value, const float32* pValue, uint32 count )
-    {
-        value.setArray();
-        for ( uint32 index = 0; index < count; ++index )
-        {
-            value.pushBack().setFloat( static_cast<float64>( pValue[index] ) );
-        }
     }
 } // namespace sw

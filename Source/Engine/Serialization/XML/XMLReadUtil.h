@@ -63,7 +63,7 @@ namespace sw
         static hashed_string readOptionalName( const XMLNode& node, const utf8* pAttribute );
         /**
          * @brief 요소의 속성과 자식 요소 이름이 모두 @p listAttribute · @p listChild 안에 있는지 봅니다(대소문자까지 맞아야 한다). 모르는 것마다 @p context 와 이름을 오류로 남기고 false 를 반환합니다.
-         * @details 데이터가 조용히 기본값이 되지 않게 한다. 철자가 틀린 속성 · 자식은 읽히지 않은 채 지나가기 때문이다(JSON 시절의 `AnimationJSONUtil::hasOnlyKnownKeys` 와 같다).
+         * @details 데이터가 조용히 기본값이 되지 않게 한다. 철자가 틀린 속성 · 자식은 읽히지 않은 채 지나가기 때문이다(JSON 을 읽는 모델 임포트의 `ModelImportJSONUtil::hasOnlyKnownKeys` 와 같다).
          */
         [[nodiscard]] static bool hasOnlyKnownNames( const XMLNode& node, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string_view context );
         /** @brief `1,2,3` 처럼 쉼표나 공백으로 가른 숫자 글을 정확히 @p count 개 읽습니다. 개수가 다르거나 숫자가 아닌 토큰이 있으면 false 이고 @p pOutValue 는 그대로입니다. */

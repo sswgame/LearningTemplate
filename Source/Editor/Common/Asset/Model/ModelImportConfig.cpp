@@ -9,9 +9,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/Model/ModelImportJSONUtil.h"
 #include "Editor/Common/Config/EditorPaths.h"
 
-#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
@@ -201,7 +201,7 @@ namespace sw::editor
             rule._filter.parse( ruleValue );
             if ( ruleValue.has( "translation" ) )
             {
-                if ( AnimationJSONUtil::readFloats( ruleValue.get( "translation" ), rule._arrTranslation, 3 ) == false )
+                if ( ModelImportJSONUtil::readFloats( ruleValue.get( "translation" ), rule._arrTranslation, 3 ) == false )
                 {
                     SW_LOG_ERROR( "ModelImportConfig rule '%#': translation must be an array of three numbers.", rule._name.c_str() );
                     _listRule.clear();
@@ -356,12 +356,12 @@ namespace sw::editor
 
     bool ModelImportConfig::parseFractureArrays( const JSONValue& fractureValue, const string& context, FractureSettings& inoutSettings )
     {
-        if ( fractureValue.has( "impact_point" ) && AnimationJSONUtil::readFloats( fractureValue.get( "impact_point" ), &inoutSettings._impactPoint._x, 3 ) == false )
+        if ( fractureValue.has( "impact_point" ) && ModelImportJSONUtil::readFloats( fractureValue.get( "impact_point" ), &inoutSettings._impactPoint._x, 3 ) == false )
         {
             SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
             return false;
         }
-        if ( fractureValue.has( "interior_color" ) && AnimationJSONUtil::readFloats( fractureValue.get( "interior_color" ), &inoutSettings._interiorColor._x, 4 ) == false )
+        if ( fractureValue.has( "interior_color" ) && ModelImportJSONUtil::readFloats( fractureValue.get( "interior_color" ), &inoutSettings._interiorColor._x, 4 ) == false )
         {
             SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
             return false;
@@ -369,7 +369,7 @@ namespace sw::editor
         if ( fractureValue.has( "slices" ) )
         {
             float32    arrSlice[3]            = { 0.0f, 0.0f, 0.0f };
-            const bool bRead                  = AnimationJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
+            const bool bRead                  = ModelImportJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
             const bool bInvalidFractureSlices = bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f;
             if ( bInvalidFractureSlices )
             {
