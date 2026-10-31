@@ -58,6 +58,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("net-pair", "net.NetPairRun", "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(run · check)"),
     Subcommand("move-source", "dev.MoveSource:mainMove", "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"),
     Subcommand("rename-symbol", "dev.MoveSource:mainRename", "C++ 이름을 낱말 경계로 바꾼다(Old=New, 새 이름이 이미 쓰이면 멈춘다)"),
+    Subcommand("shipping-check", "dev.ShippingCheck", "배포 프리셋 셋(클라이언트 · 서버 · 자동화 없음)을 빌드하고 산출물의 기동 · 종료를 본다(통합에서 한 번)"),
     Subcommand("destruction-net", "dev.DestructionNetPair", "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"),
 )
 

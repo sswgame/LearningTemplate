@@ -129,6 +129,7 @@
 ## 5. 검증
 
 - 단계마다: `App --test`, ctest(단위 · 에디터 · 시나리오), Release 빌드. 7 단계 뒤에는 Shipping 구성 빌드와 `-cooked-content` 시나리오도.
+- 배포 구성(통합에서 한 번): `py -3 -m Scripts shipping-check` — `Ninja-Shipping` · `Ninja-Shipping-Server` · `Ninja-Shipping-NoAutomation` 을 짓고(쿠킹 포함), 배포 App 을 몇 초 돌려 창 닫기로 0 종료, 서버를 정한 틱만 돌려 0 종료, 자동화 없는 App 의 `-scenario` 가 기동 오류인지 보고 로그의 [Error] · [Warning] 을 모아 찍는다. CTest 가 아닌 이유: 프리셋마다 빌드 폴더가 달라 한 ctest 트리에 담기지 않는다.
 - 새로 만들 확인(원칙 4 — 손 확인 대신 자동화):
   - 같은 상대 경로가 common · game 두 도메인에 있을 때 domain=비움 / common / game 으로 각각 읽기 · 편집 왕복(연 도메인 파일만 바뀐다).
   - 패치 팩을 올린 뒤 도메인 없는 키 · 있는 키 모두 교체 · 제거가 보인다, dlc 팩 찾기.
