@@ -6,6 +6,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -52,11 +53,7 @@ namespace sw
 
     bool GPUNanCheck::isRequested()
     {
-#if defined( SW_SHIPPING )
-        return false; // 배포본은 PSO 도 디스패치도 만들지 않는다 - 스위치는 등록되지 않아 기본값이지만 컴파일 시점에도 막는다
-#else
-        return static_cast<bool>( gv_nanCheck );
-#endif
+        return GPUDiagnosticsBuild::isAvailable() && static_cast<bool>( gv_nanCheck ); // 배포본은 PSO 도 디스패치도 만들지 않는다
     }
 
     bool GPUNanCheck::isScannableFormat( RHIFormat format )

@@ -150,13 +150,11 @@ namespace sw
             return caps;
         }
 
-#if !defined( SW_SHIPPING )
         /**
          * @brief 텍스처 · 버퍼 등록 표의 그 자리에 핸들이 있으면 true 입니다(GL 은 인덱스를 텍스처 유닛 · 버퍼 바인딩으로 흉내 낸다).
          * @note GL 의 등록 표에는 잠금이 없다. 표는 GL 컨텍스트를 쥔 스레드만 읽고 쓴다 — 등록 · 해제 · 파괴가 `ScopedOpenGLContext` 안에서 표를 바꾸고, 읽는 쪽은 프레임을 기록하는 스레드다.
          */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
-#endif
 
         /** @brief RHI 텍스처 핸들에 대응하는 GL 텍스처 이름을 반환합니다. 없으면 0 입니다. */
         uint32 getGlTextureName( RHITextureHandle texture ) const;

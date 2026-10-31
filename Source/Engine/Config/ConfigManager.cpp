@@ -6,7 +6,6 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/GameSelection.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
@@ -19,11 +18,6 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/ConfigConstants.h"
-#include "sw/config/ShippingHostDefaults.h"
-
-#if defined( SW_SHIPPING )
-    #include "sw/config/ShippingGameDefaults.h" // 베이크한 게임의 프리셋 — Dev 는 디스크에서 고른 게임의 것을 읽어 활성 게임과 무관하다
-#endif
 
 namespace sw
 {
@@ -224,31 +218,4 @@ namespace sw
         return nullptr;
     }
 
-} // namespace sw
-
-namespace sw
-{
-    SubsystemInitResult ConfigManager::initializeSubsystem()
-    {
-#if defined( SW_SHIPPING )
-        EngineConfig probe;
-        if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
-        {
-            SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
-            return SubsystemInitResult::Failed;
-        }
-        // Shipping 은 디스크의 Config/ 를 보지 않고 베이크한 JSON 만 읽는다. 그 밖은 디스크 파일이 필수다 — 없으면 베이크한 사본이나 `T{}` 로 서지 않고 멈춘다.
-        const ConfigSource engineSource = ConfigSource::baked( shipping_host::kEngineConfigJSON );
-        const ConfigSource gameSource   = ConfigSource::baked( shipping_host::kGameConfigJSON );
-#else
-        const ConfigSource engineSource = ConfigSource::disk( config::kFileRuntimeEngineConfig );
-        const ConfigSource gameSource   = ConfigSource::disk( GameSelection::getConfigPath() );
-#endif
-        // 읽은 값은 호스트 자리(`getHostEngineConfig` · `getHostGameConfig`)에 담긴다 - 서비스 표가 그 주소를 이미 쥐고 있다.
-        if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
-            return SubsystemInitResult::Failed;
-        if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
-            return SubsystemInitResult::Failed;
-        return SubsystemInitResult::Succeeded;
-    }
 } // namespace sw

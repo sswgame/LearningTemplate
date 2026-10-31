@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -63,11 +64,9 @@ namespace sw
         , _bBindlessRootSignature{ SW_FALSE }
         , _reservedPassFlags{ 0 }
         , _bDeviceRemovedLogged{ SW_FALSE }
-    #if !defined( SW_SHIPPING )
         , _breadcrumbBuffer{}
         , _breadcrumbAddress{ 0 }
         , _pBreadcrumbMapped{ nullptr }
-    #endif
         , _bBlitMismatchLogged{ SW_FALSE }
         , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _bTimestampEnabled{ SW_FALSE }
@@ -393,13 +392,14 @@ namespace sw
 
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
     {
-    #if !defined( SW_SHIPPING )
+        if ( GPUDiagnosticsBuild::isAvailable() == false )
+            return; // 배포본 — 디버그 레이어 메시지도 DRED 도 켜지 않았다
         // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
         // 수십 줄 + DRED 덤프를 무한 반복하지 않는다. 자동 복구가 없어서 그 이후 매 프레임
         // 여기로 다시 들어오는데, 정보량 없이 로그만 무한히 쌓인다.
         const bool bAlreadyDeviceRemoved = _bDeviceRemovedLogged.load( std::memory_order_relaxed ) != SW_FALSE;
 
-        #if defined( SW_DEBUG )
+    #if defined( SW_DEBUG )
         Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
         if ( SUCCEEDED( _device.As( &infoQueue ) ) && infoQueue != nullptr )
         {
@@ -415,7 +415,7 @@ namespace sw
             }
             infoQueue->ClearStoredMessages();
         }
-        #endif
+    #endif
 
         if ( bAlreadyDeviceRemoved )
             return;
@@ -478,9 +478,6 @@ namespace sw
                 }
             }
         }
-    #else
-        (void)pStage;
-    #endif
     }
 
     bool D3D12RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )

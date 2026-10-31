@@ -50,8 +50,7 @@ namespace sw
 
         // 경로 칸이 가리키는 파일이 있어야 한다. 이 호스트가 읽지 않는 에셋 종류(전용 서버의 UI 문서)는 팩에 없으므로 보지 않는다.
         // Shipping 은 쿠킹이 팩의 짝을 지킨다(`EngineDefaultAssets::loadFromAsset` 와 같다).
-        bool bComplete = true;
-#if !defined( SW_SHIPPING )
+        bool                bComplete = true;
         const hashed_string dataPathType( "DataPath" );
         for ( const PropertyInfo& prop : StaticType()->getPropertiesWithBase() )
         {
@@ -65,7 +64,6 @@ namespace sw
             SW_LOG_ERROR_ID( "PackSettings.FileMissing", "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );
             bComplete = false;
         }
-#endif
         return bComplete;
     }
 

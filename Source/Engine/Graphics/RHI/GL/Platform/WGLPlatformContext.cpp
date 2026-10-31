@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/GL/Platform/WGLPlatformContext.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Log/Logger.h"
 
@@ -97,15 +99,13 @@ namespace sw
             };
             for ( const int32( &ver )[2] : kArrVersions )
             {
-                // 디버그 컨텍스트는 비-Shipping 에서만 켠다. KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
+                // 디버그 컨텍스트는 진단을 켜는 빌드에서만 켠다(`GPUDiagnosticsBuild`). KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다
                 // (OpenGLRHIDeviceInit 이 콜백을 등록한다). Shipping 은 검증 비용을 부담하지 않는다.
                 int32 arrAttrib[] = {
                     WGL_CONTEXT_MAJOR_VERSION_ARB, ver[0],
                     WGL_CONTEXT_MINOR_VERSION_ARB, ver[1],
                     WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-    #if !defined( SW_SHIPPING )
-                    WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-    #endif
+                    WGL_CONTEXT_FLAGS_ARB, GPUDiagnosticsBuild::isAvailable() ? WGL_CONTEXT_DEBUG_BIT_ARB : 0,
                     0 };
                 hRC = wglCreateContextAttribsARB( hDC, nullptr, arrAttrib );
                 if ( hRC != nullptr )

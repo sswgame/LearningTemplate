@@ -296,9 +296,8 @@ namespace sw
          */
         virtual bool supportsNativeBindlessSampling() const { return false; }
 
-#if !defined( SW_SHIPPING )
         /**
-         * @brief @p index 가 @p space 에서 지금 살아 있는 리소스를 가리키면 true 입니다(Debug · Dev 진단 전용, Shipping 에는 없습니다).
+         * @brief @p index 가 @p space 에서 지금 살아 있는 리소스를 가리키면 true 입니다(Debug · Dev 진단 — 배포는 묻는 쪽 `BindlessIndexValidator` 가 꺼져 있다).
          * @details 해제했거나(해제 대기 포함) 발급한 적 없는 번호, 다른 종류(텍스처 자리에 버퍼)를 가리키는 번호는 false 다.
          *          셰이더에 그 번호를 넘기면 DX12 · Vulkan 은 무효 디스크립터를 읽어 디바이스를 잃을 수 있다. 정책(언제 묻고 무엇을 남기나)은
          *          Engine 의 `BindlessIndexValidator` 가, 생존 판정(등록 표 읽기)은 백엔드가 한다. `kInvalidDescriptorIndex` 는 묻지 않는다.
@@ -310,7 +309,6 @@ namespace sw
             (void)index;
             return true;
         }
-#endif
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(InstanceData)를 읽을 수 있으면 true 를 반환합니다.

@@ -55,14 +55,12 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( bool, gv_vertexPool, true, "씬 메시 정점 풀 (false=메시마다 정점 버퍼, 진단용)" );
 
-#if !defined( SW_SHIPPING )
     /**
      * @brief 라이트 컬링 방식입니다. `-gv_lightCulling=None` 이면 라이트 그리드 없이 픽셀마다 목록 전체를 돕니다(비교 기준), `CPU` 면 CPU 가 만든 클러스터 그리드, `GPU` 면 GPU 컴퓨트가 만든 그리드입니다.
-     * @details 학습용으로 세 방식을 나란히 보게 둔다. 기본값은 Shipping 과 같은 GPU 다. Shipping 은 변수를 두지 않고 GPU 로 고정한다
+     * @details 학습용으로 세 방식을 나란히 보게 둔다. 기본값은 GPU 다. Shipping 은 테스트 변수를 등록하지 않아(명령줄 · 콘솔이 못 바꾼다) 기본값 GPU 로 고정된다
      *          (`FrameRenderer::selectLightGridProducer`). 명령줄은 열거자 이름만 받는다(숫자는 오류).
      */
     SW_TEST_GLOBAL_VARIABLE( LightGridProducer, gv_lightCulling, LightGridProducer::GPU, "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)" );
-#endif
 
     /**
      * @brief `-gv_viewMode=<이름>` 은 주 출력(게임 창)의 보기 모드입니다(Lit, Unlit, Wireframe, Normals, Depth, Overdraw, LightingOnly, Roughness, Metallic, Mipmaps, LightComplexity, ShadedWireframe, LODLevel, LODFadeCode, MarkerSlots).
@@ -558,11 +556,7 @@ namespace sw
 
     LightGridProducer FrameRenderer::selectLightGridProducer()
     {
-#if defined( SW_SHIPPING )
-        const LightGridProducer requested = LightGridProducer::GPU;
-#else
         const LightGridProducer requested = gv_lightCulling;
-#endif
         if ( requested == LightGridProducer::None )
             return LightGridProducer::None;
         if ( requested == LightGridProducer::CPU )

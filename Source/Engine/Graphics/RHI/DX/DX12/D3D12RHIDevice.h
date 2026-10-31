@@ -228,10 +228,8 @@ namespace sw
         /** @brief VS 가 슬롯 테이블의 t4(g_SwInstances)에서 인스턴스를 읽을 수 있으면 true 입니다(루트 시그니처가 만들어졌을 때). */
         bool supportsInstancedSceneDraw() const override { return _bBindlessRootSignature != SW_FALSE; }
 
-    #if !defined( SW_SHIPPING )
         /** @brief 힙 슬롯 @p index 에 그 종류(텍스처 · 버퍼)의 뷰가 등록돼 있으면 true 입니다. 텍스처와 버퍼는 힙 하나를 나눠 쓴다. */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
-    #endif
 
         /** @brief 정적 테이블에 런타임 값(네이티브 bindless)을 반영해 반환합니다. */
         RHICapabilities getCapabilities() const override
@@ -240,9 +238,7 @@ namespace sw
             caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
             // 텍스처 업로드는 영속 매핑 스테이징 링으로만 간다(링이 없으면 초기화가 실패한다). 되읽기는 읽기마다 자기 읽기 힙 버퍼를 만들어 되읽기 링이 없다.
             caps._bPersistentStagingRing = _uploadRing._buffer != nullptr ? SW_TRUE : SW_FALSE;
-    #if !defined( SW_SHIPPING )
-            caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
-    #endif
+            caps._bGPUBreadcrumbs        = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
@@ -756,7 +752,6 @@ namespace sw
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
         /// 렌더 스레드 · 기록 워커(리스트 생성) · PSO 생성이 함께 읽고 쓰므로 atomic 입니다(비트필드면 옆 비트와 한 바이트를 고쳐 쓴다).
         atomic<uint8> _bDeviceRemovedLogged;
-    #if !defined( SW_SHIPPING )
         /// @brief GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 4 바이트 버퍼를 영속 매핑해 두고 `WriteBufferImmediate`(MARKER_IN)가 패스 id 를 쓴다.
         ///        디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-gv_gpuBreadcrumbs` 가 꺼졌으면 주소가 0 이다.
         Microsoft::WRL::ComPtr<ID3D12Resource> _breadcrumbBuffer;
@@ -764,7 +759,6 @@ namespace sw
         const volatile uint32*                 _pBreadcrumbMapped;
         /// @brief 브레드크럼 버퍼를 만들어 매핑합니다. 못 만들면 능력을 켜지 않을 뿐 초기화는 이어진다(진단 기능이다).
         void createBreadcrumbBuffer();
-    #endif
         /// @brief blitTexture 포맷이나 크기 불일치 경고를 한 번만 남기기 위한 래치입니다. 병렬 기록 워커가 함께 쓰므로 atomic 입니다.
         atomic<uint8>                     _bBlitMismatchLogged;
         uint8 _bOnlineHeapExhaustedLogged SW_GUARDED_BY( _onlineBlockMutex ); ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다.

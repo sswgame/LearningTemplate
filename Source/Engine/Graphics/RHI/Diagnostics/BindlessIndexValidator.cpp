@@ -2,13 +2,13 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 
-#if !defined( SW_SHIPPING )
-    #include "Core/Hash/HashUtil.h"
-    #include "Core/Concurrency/mutex.h"
-    #include "Core/Container/unordered_set.h"
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Hash/HashUtil.h"
 
-    #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
 {
@@ -36,11 +36,11 @@ namespace sw
             static constexpr int32 kLevelDeadIndex   = 1;
             static constexpr int32 kLevelTraceAbsent = 2;
             // Debug 는 항상 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고, 필요할 때 -gv_ 로 켠다.
-    #if defined( SW_DEBUG )
+#if defined( SW_DEBUG )
             static constexpr int32 kDefaultLevel = kLevelDeadIndex;
-    #else
+#else
             static constexpr int32 kDefaultLevel = 0;
-    #endif
+#endif
 
             static const utf8* getSpaceName( RHIBindlessIndexSpace space )
             {
@@ -69,12 +69,12 @@ namespace sw
 
     bool BindlessIndexValidator::isEnabled()
     {
-        return gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelDeadIndex;
+        return GPUDiagnosticsBuild::isAvailable() && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelDeadIndex;
     }
 
     bool BindlessIndexValidator::isTracingAbsent()
     {
-        return gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelTraceAbsent;
+        return GPUDiagnosticsBuild::isAvailable() && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelTraceAbsent;
     }
 
     bool BindlessIndexValidator::validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
@@ -142,4 +142,3 @@ namespace sw
         s_uniqueAbsentSite.clear();
     }
 } // namespace sw
-#endif

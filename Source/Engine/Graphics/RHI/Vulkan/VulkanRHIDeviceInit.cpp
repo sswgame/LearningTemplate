@@ -10,6 +10,7 @@
 #include "Core/File/ProcessRoots.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -464,11 +465,10 @@ namespace sw
             if ( _bMemoryBudget == SW_TRUE )
                 listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
         }
-#if !defined( SW_SHIPPING )
         // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
         faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
-        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
+        if ( GPUDiagnosticsBuild::isAvailable() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
         {
             VkPhysicalDeviceFeatures2 faultQuery{};
             faultQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -483,8 +483,6 @@ namespace sw
                 _bDeviceFault = SW_TRUE;
             }
         }
-#endif
-#if !defined( SW_SHIPPING )
         // VK_NV_device_diagnostic_checkpoints(진단 전용): GPU 브레드크럼 - 패스마다 `vkCmdSetCheckpointNV` 로 id 를 남기고 소실 뒤 큐에서 읽는다(`readLastBreadcrumbs`).
         // 그래픽스 큐 패밀리가 체크포인트를 지원하는 단계(checkpointExecutionStageMask)가 있어야 쓴다. 없으면 켜지 않는다 - 이 능력이 없는 드라이버는 CPU 가 마지막으로 기록한 패스만 보고한다.
         if ( GPUBreadcrumbs::isEnabled() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
@@ -507,7 +505,6 @@ namespace sw
                 _bCheckpoints = SW_TRUE;
             }
         }
-#endif
         createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
         createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
 
@@ -517,7 +514,6 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
-#if !defined( SW_SHIPPING )
         if ( _bCheckpoints != SW_FALSE )
         {
             _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
@@ -530,7 +526,6 @@ namespace sw
             else
                 SW_LOG_INFO( "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
         }
-#endif
         return true;
     }
 

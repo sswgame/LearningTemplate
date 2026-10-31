@@ -30,7 +30,6 @@ namespace sw
         return index < _listBindlessSourceBuffer.size() ? _listBindlessSourceBuffer[index] : RHIBufferHandle{ 0 };
     }
 
-#if !defined( SW_SHIPPING )
     bool VulkanRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
@@ -39,7 +38,6 @@ namespace sw
         // 1 = 사용 중. 2(해제 대기)는 원소가 아직 옛 이미지를 가리키지만 그 이미지는 같은 펜스 뒤에 파괴된다.
         return index < kBindlessTextureCount && index < _listTextureUsed.size() && _listTextureUsed[index] == 1;
     }
-#endif
 
     RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
     {

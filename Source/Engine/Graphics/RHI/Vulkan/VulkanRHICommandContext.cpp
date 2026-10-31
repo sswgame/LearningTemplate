@@ -1035,15 +1035,11 @@ namespace sw
 
     void VulkanRHICommandContext::writeBreadcrumb( uint32 markerID )
     {
-#if !defined( SW_SHIPPING )
         VkCommandBuffer cmd = commandBuffer();
         if ( _pDevice->_bCheckpoints == SW_FALSE || cmd == VK_NULL_HANDLE )
             return;
         // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
         reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
-#else
-        (void)markerID;
-#endif
     }
 
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )

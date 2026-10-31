@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 
 namespace sw
 {
@@ -27,5 +28,17 @@ namespace sw
         static string getConfigPath();
         /** @brief 고른 게임의 전용 서버 운영 설정 경로(`Config/Server/<이름>.json`)입니다. 파일이 없을 수 있다(서버가 없는 게임). */
         static string getServerConfigPath();
+
+        /** @brief 게임 이름의 최대 길이(끝 0 포함)입니다. */
+        static constexpr uint32 kNameCapacity = 64;
+
+    private:
+        /**
+         * @brief 고르지 않았을 때의 게임입니다 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 베이크한 게임입니다. 없으면 빈 문자열입니다.
+         * @details `select` 와 함께 구성마다 다른 파일이다(`GameSelectionBuild.cpp` · `GameSelectionBuildShipping.cpp`, CMake 가 고른다).
+         */
+        static string readDefaultName();
+        /** @brief 고른 이름을 적어 둡니다(`select` 가 기동 스레드에서 한 번). */
+        static void storeName( string_view name );
     };
 } // namespace sw

@@ -451,7 +451,6 @@ namespace sw
         return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
-    #if !defined( SW_SHIPPING )
     bool D3D11RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
@@ -459,6 +458,5 @@ namespace sw
             return index < _listRegisteredTexture.size() && _listRegisteredTexture[index] != 0;
         return index < _listRegisteredBindless.size() && _listRegisteredBindless[index] != 0;
     }
-    #endif
 } // namespace sw
 #endif

@@ -4,6 +4,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
@@ -18,7 +19,6 @@ namespace sw
 {
     SW_LOG_CALLER( "OpenGL" );
 
-#if !defined( SW_SHIPPING )
     namespace
     {
         /**
@@ -43,7 +43,6 @@ namespace sw
                 SW_LOG_TRACE( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
         }
     } // namespace
-#endif
 
     // 길이 유지(긴 함수 정리 기준): 컨텍스트 · 확장 확인 · 기본 객체 생성의 순서가 곧 의미라 나누지 않는다(나누면 순서를 여러 곳에서 읽는다).
     bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
@@ -109,10 +108,11 @@ namespace sw
                 SW_LOG_ERROR( "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
             }
 
-#if !defined( SW_SHIPPING )
             // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
-            // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 비-Shipping 빌드에서 켠다. SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
-            if ( glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr )
+            // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 진단을 켜는 빌드에서 켠다(`GPUDiagnosticsBuild`). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
+            const bool bDebugOutput = GPUDiagnosticsBuild::isAvailable(); // 배포본은 디버그 컨텍스트가 없어 메시지도 없다
+            const bool bHasDebugAPI = glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr;
+            if ( bDebugOutput && bHasDebugAPI )
             {
                 glEnable( GL_DEBUG_OUTPUT );
                 glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
@@ -120,9 +120,8 @@ namespace sw
                 glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE );
                 SW_LOG_INFO( "OpenGL KHR_debug output enabled - GL errors appear as error logs (counted in the smoke error count)." );
             }
-            else
+            else if ( bDebugOutput )
                 SW_LOG_WARNING( "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
-#endif
 
             // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
             // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 모두

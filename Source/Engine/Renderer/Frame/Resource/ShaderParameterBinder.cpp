@@ -111,30 +111,16 @@ namespace sw
             /** @brief 이번 바인딩에서 bindless 인덱스를 검사하는지입니다. 배포 구성은 늘 false 다. */
             static bool isIndexCheckOn( const BindlessIndexCheckSite* pIndexCheck )
             {
-#if !defined( SW_SHIPPING )
                 return pIndexCheck != nullptr && BindlessIndexValidator::isEnabled();
-#else
-                (void)pIndexCheck;
-                return false;
-#endif
             }
 
             /** @brief 넘기는 bindless 인덱스가 살아 있는 슬롯인지 봅니다. 죽은 번호는 DX12 · Vulkan 에서 디바이스 손실로 끝나므로 검사가 로그로 남긴다. */
             static void checkIndex( const BindlessIndexCheckSite* pIndexCheck, bool bCheck, RHIBindlessIndexSpace space, RHIDescriptorIndex index,
                                     const hashed_string& name, uint32 elementIndex = 0 )
             {
-#if !defined( SW_SHIPPING )
                 if ( bCheck == false )
                     return;
                 (void)BindlessIndexValidator::validate( *pIndexCheck, space, index, name, elementIndex ); // 죽은 번호는 검사가 로그로 남긴다
-#else
-                (void)pIndexCheck;
-                (void)bCheck;
-                (void)space;
-                (void)index;
-                (void)name;
-                (void)elementIndex;
-#endif
             }
 
             /**

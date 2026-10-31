@@ -9,6 +9,7 @@
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 
 namespace sw
@@ -52,11 +53,7 @@ namespace sw
 
     bool GPUBreadcrumbs::isEnabled()
     {
-#if defined( SW_SHIPPING )
-        return false; // 배포본은 표지도 DRED 도 체크포인트도 켜지 않는다
-#else
-        return static_cast<bool>( gv_gpuBreadcrumbs );
-#endif
+        return GPUDiagnosticsBuild::isAvailable() && static_cast<bool>( gv_gpuBreadcrumbs ); // 배포본은 표지도 DRED 도 체크포인트도 켜지 않는다
     }
 
     uint32 GPUBreadcrumbs::registerPass( string_view name )

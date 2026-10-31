@@ -173,11 +173,9 @@ namespace sw
                 continue;
             if ( prop._assetPath.empty() )
             {
-#if !defined( SW_SHIPPING )
                 // 텍스처가 붙지 않은 필드는 머티리얼 데이터에 kInvalidDescriptorIndex 로 실려 셰이더로 간다(-gv_validateBindlessIndex=2 로 자리를 남긴다).
                 if ( BindlessIndexValidator::isTracingAbsent() )
                     (void)BindlessIndexValidator::noteAbsent( hashed_string( _desc._name.c_str() ), hashed_string( prop._name.c_str() ), 0 ); // 자리마다 한 번만 남긴다
-#endif
                 continue;
             }
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSRV.size() );

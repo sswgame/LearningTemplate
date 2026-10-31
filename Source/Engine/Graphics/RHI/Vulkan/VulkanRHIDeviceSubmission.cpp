@@ -97,7 +97,6 @@ namespace sw
 
     uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
-#if !defined( SW_SHIPPING )
         if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutID == nullptr || capacity == 0 )
             return 0;
         uint32                               dataCount            = 0;
@@ -126,11 +125,6 @@ namespace sw
                 pOutID[filled++] = markerID;
         }
         return filled;
-#else
-        (void)pOutID;
-        (void)capacity;
-        return 0;
-#endif
     }
 
     void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )

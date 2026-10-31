@@ -179,12 +179,8 @@ namespace sw
         const bool   bUpToDate       = ( context._lastBindPSO == pso ) && ( context._lastCbBuffer == engineCb._buffer ) &&
                                ( context._lastCbValuesVersion == valuesVersion ) && ( context._lastCbRegistryVersion == registryVersion );
 
-#if !defined( SW_SHIPPING )
         const BindlessIndexCheckSite  indexCheck{ _pDevice, context._passName };
         const BindlessIndexCheckSite* pIndexCheck = &indexCheck;
-#else
-        const BindlessIndexCheckSite* pIndexCheck = nullptr;
-#endif
         ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues, engineCb, materialCb,
                                              _pDevice->supportsNativeBindlessSampling(), pMaterialTexSRV, bUpToDate, pIndexCheck );
 

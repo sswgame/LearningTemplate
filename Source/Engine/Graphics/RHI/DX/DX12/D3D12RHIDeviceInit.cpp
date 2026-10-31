@@ -33,7 +33,6 @@ namespace sw
             }
         }
     #endif
-    #if !defined( SW_SHIPPING )
         // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
         // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
         if ( GPUBreadcrumbs::isEnabled() )
@@ -46,7 +45,6 @@ namespace sw
                 SW_LOG_INFO( "DRED (Device Removed Extended Data) diagnostic enabled." );
             }
         }
-    #endif
 
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
@@ -80,9 +78,7 @@ namespace sw
 
         if ( FAILED( D3D12CreateDevice( softwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
-    #if !defined( SW_SHIPPING )
         createBreadcrumbBuffer();
-    #endif
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
         _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
         // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
@@ -268,7 +264,6 @@ namespace sw
         RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
     }
 
-    #if !defined( SW_SHIPPING )
     void D3D12RHIDevice::createBreadcrumbBuffer()
     {
         if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
@@ -306,24 +301,14 @@ namespace sw
         pOutID[0] = marker;
         return 1;
     }
-    #else
-    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
-    {
-        (void)pOutID;
-        (void)capacity;
-        return 0;
-    }
-    #endif
 
     void D3D12RHIDevice::shutdownInternal()
     {
-    #if !defined( SW_SHIPPING )
         if ( _breadcrumbBuffer != nullptr && _pBreadcrumbMapped != nullptr )
             _breadcrumbBuffer->Unmap( 0, nullptr );
         _pBreadcrumbMapped = nullptr;
         _breadcrumbAddress = 0;
         _breadcrumbBuffer.Reset();
-    #endif
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _renderPassLedger.clear();

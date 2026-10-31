@@ -291,10 +291,8 @@ namespace sw
         /** @brief VS 가 슬롯 세트의 t4(g_SwInstances)로 GPUScene 인스턴스 버퍼를 읽을 수 있어 true 입니다. */
         bool supportsInstancedSceneDraw() const override { return true; }
 
-#if !defined( SW_SHIPPING )
         /** @brief 텍스처는 배열 원소가 사용 중(해제 대기 아님)이고 배열 안이면, 버퍼는 인덱스 → 버퍼 표에 버퍼가 있으면 true 입니다. */
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
-#endif
 
         /** @brief 백엔드 버전 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "Vulkan 1.3"; }

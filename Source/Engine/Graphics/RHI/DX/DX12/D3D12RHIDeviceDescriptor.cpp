@@ -267,7 +267,6 @@ namespace sw
         return true;
     }
 
-    #if !defined( SW_SHIPPING )
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
         ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
@@ -279,7 +278,6 @@ namespace sw
             return false;
         return ( space == RHIBindlessIndexSpace::Texture ) ? record._texture != 0 : record._buffer != 0;
     }
-    #endif
 
 } // namespace sw
 #endif
