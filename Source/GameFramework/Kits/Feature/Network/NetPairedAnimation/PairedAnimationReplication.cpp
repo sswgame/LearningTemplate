@@ -44,7 +44,8 @@ namespace sw
          * @details 줄 형식의 정본은 이 함수다. `start` 는 서버가 새 세션을 모두에게 보냈고, `join` 은 늦게 붙은 연결에 재생 중인 세션을
          *          보냈고, `end` 는 끝 메시지(서버가 보냈다 · 클라이언트가 받았다), `restore` 는 클라이언트가 상태를 이어 받았다. 끝 줄의 앵커 시각은 뜻이 없어 0 이다.
          */
-        string formatEventLine( const utf8* pSide, const utf8* pEvent, uint32 sessionID, float32 anchorTime )
+        // 배포본은 Info 줄을 버려(SW_LOG_DISCARDED — 인자는 평가되지 않는 sizeof 안) 이 함수를 부르는 곳이 없다.
+        [[maybe_unused]] string formatEventLine( const utf8* pSide, const utf8* pEvent, uint32 sessionID, float32 anchorTime )
         {
             StringBuilder<constant::kMaxBuffer256> text;
             text.appendFormat( "[PairedAnimationNet] side=%# event=%# session=%# anchor=%#", pSide, pEvent, sessionID, anchorTime );

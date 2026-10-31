@@ -30,7 +30,7 @@
 
 | 일 | 상태 |
 |---|---|
-| 크기만 줄이려 쪼갠 클래스(전면 구조 정리) | 에이전트 없이 직접 내용을 읽고 고친다(메모리 `no-agents`). 떼어 낸 부분이 자기 상태 · 책임을 가지면 별도 클래스, 아니면 본 파일로 합친다. 대상: Jolt/Box2D 씬(질의 · 차량 · 연체), FramePassExecutor(Passes · Compute · Draw · Extension · Occlusion · NanCheck), FrameRenderer(Views · Resources · Transients · Constants · ScenePreview), D3D11/D3D12/Vulkan/GL RHIDevice · ResourceFactory 분할, RTSWorld · HorrorMatch · MechArenaWorld · ScheduleSystem · AbilityComponent · StressTestScene, InputMap(Evaluate · Serialization), ModelImportUtil · MaterialUtil · Material(XML), AudioEngine(Events), FileUtil(FileSystem), GameObjectManager(Tick), ShaderCooker(CookStamp), DestructionState/Damage, FramePostProcess. 찾는 법: scratchpad `scatter.py`(멤버 정의가 여러 cpp 에 흩어진 클래스) · `pairs2.py`(같은 이름 헤더 없는 cpp). 플랫폼별 구현(Windows/Posix/X11 …)과 스스로 등록하는 파일은 정상 |
+| 크기만 줄이려 쪼갠 클래스(전면 구조 정리) | 에이전트 없이 직접 내용을 읽고 고친다(메모리 `no-agents`). 떼어 낸 부분이 자기 상태 · 책임을 가지면 별도 클래스, 아니면 본 파일로 합친다. 남은 것: RHI 디바이스의 Transfer(D3D12 · Vulkan — 전송 큐 · 스테이징 링 · 전송 펜스가 제 상태 묶음이라 클래스로), Vulkan Descriptor · RenderPass(디스크립터 풀 · 렌더 패스 캐시 — 상태 묶음이 있는지 읽고 정한다), 합친 뒤 큰 클래스(RTSWorld · HorrorMatch · MechArenaWorld · ScheduleSystem · InputMap · AudioEngine · FramePassExecutor · FrameRenderer)를 "공유 상태 + 시스템" 으로 나누기. 찾는 법: scratchpad `scatter.py`(멤버 정의가 여러 cpp 에 흩어진 클래스) · `pairs2.py`(같은 이름 헤더 없는 cpp) · `batch_members.sh`(파일별 전용 · 공유 멤버). 플랫폼별 구현(Windows/Posix/X11/Headless …) · 스스로 등록하는 파일 · cpp 안에 선언된 클래스는 정상 |
 | 통합 대기 브랜치 | `worktree-agent-a553e85cb60a845aa`(SOLID GF/Editor/App — GameFramework/Base → Runtime 이름 바꾸기 983 파일 포함), `tests-integration`(하네스 · 단위 테스트 이식, 하위 브랜치 6 개 병합본). 내용을 직접 읽고 받아들일 것만 가져온다 |
 | SOLID 점검 남은 표 | StructureRefactor 7 절(Core · Engine 과 GF · Editor · App 두 표)의 "남김" 줄 — IEditorPanel 분리, 모듈 수명 두 벌(EditorModuleManager · GameModuleManager), App · Server 프레임 · 종료 두 벌, 파일 감시 4 개, BinaryStream · ByteStream 두 모델 등 |
 
@@ -57,7 +57,7 @@
 
 | 주제 | 남은 것 (2026-10-31) |
 |---|---|
-| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유, `Engine.cpp` 의 `SW_WITH_CLIENT_CODE` 셋, 배포의 모듈 해제(`unregisterModuleTypes`) 없음 → `ElementRuleTable` · `InteractionCatalog` 캐시가 남았다는 경고 둘. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
+| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유, 배포의 모듈 해제(`unregisterModuleTypes`) 없음 → `ElementRuleTable` · `InteractionCatalog` 캐시가 남았다는 경고 둘. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
 | T9 | 등록자의 모듈 이름 — CMake 가 대상마다 `SW_REGISTRAR_MODULE` 을 주고 매크로가 찍는다(설계는 StructureRefactor T9). 런타임 모듈 이름 = 대상 이름 가정을 핫 리로드 시나리오로 확인 |
 | T6 | 에디터 사용자 외형 프리셋 · 썸네일을 슬롯으로(에디터 쪽 저장소 주인), `AccountDeviceSecret` 을 `GameLocalStore` 와 맞춤 |
 | T10 | `ShaderCooker::getSubfolderForFormat` 이 모르는 형식에 기본 폴더를 돌려준다(폴백) |
