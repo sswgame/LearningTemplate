@@ -160,6 +160,13 @@ namespace sw::internal
 //    Debug 의 단언은 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 가로채기를 건 동안은 멈추지 않고
 //    개수만 센다. 유니티의 `LogAssert.Expect`, 언리얼 자동화의 기대 오류와 같은 역할이다. 정의는 `Core/Foundation/Macros.cpp` 에 있다.
 // ------------------------------------------------------------------------------
+/**
+ * @brief 단언이 남기는 Error 로그(`SW_LOG_ASSERT` · `SW_LOW_LEVEL_ASSERT` · 가로챈 필수 서비스 부재)의 로그 id 입니다.
+ * @details 단언 경로를 일부러 지나는 테스트는 가로채기(`test::ScopedAssertCapture`)와 함께 `SW_EXPECT_LOG( SW_ASSERT_LOG_ID )` 로 그 Error 를 적는다 —
+ *          id 가 없으면 테스트 틀이 기대한 로그로 받을 수 없다(부분 문자열로 가리지 않는다). 문자열 리터럴이라 `SW_LOG_ERROR_ID` 에 그대로 넣는다.
+ */
+#define SW_ASSERT_LOG_ID "Core.Assert"
+
 #if defined( SW_DEBUG )
 // 멈추는 단언(`SW_ASSERT`, 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다. 배포본에는 테스트가 단언을 끄는 함수가 없다.
 namespace sw::internal
@@ -235,18 +242,18 @@ namespace sw::internal
     static constexpr size_t kLowLevelMessageCapacity = 512;
 
     /**
-     * @brief 보고자 함수입니다. @p pFile · @p line 은 보고한 위치(`__FILE__` · `__LINE__`)이고 @p pMessage 는 끝난 글입니다.
+     * @brief 보고자 함수입니다. @p pFile · @p line 은 보고한 위치(`__FILE__` · `__LINE__`)이고 @p pMessage 는 끝난 글, @p pID 는 로그 id(없으면 nullptr)입니다.
      * @return 로그가 받았으면 true(수준 필터로 버려진 것도 받은 것). 받지 못했으면(싱크 없음) false 이고, 그러면 `Warning` 은 stderr 로 갑니다.
      */
-    using LowLevelReporterFunc = bool ( * )( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
+    using LowLevelReporterFunc = bool ( * )( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept;
 
     /** @brief 보고자를 설치하고 전에 등록돼 있던 보고자를 돌려줍니다. nullptr 이면 해제하며, 이후 보고는 stderr 로 갑니다. */
     SW_API LowLevelReporterFunc setLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept;
     /** @brief @p pFormat(`printf` 문법)을 @p pBuffer 에 씁니다. @p capacity 를 넘기면 끝을 `...[truncated]` 로 바꿔 잘렸음을 드러냅니다. */
     SW_API void formatLowLevelMessage( utf8* pBuffer, size_t capacity, const utf8* pFormat, ... ) noexcept SW_PRINTF_FORMAT( 3, 4 );
-    /** @brief 한 줄을 보고합니다. `Error` 는 stderr 에 먼저 쓰고 보고자에게 넘기며, `Warning` 은 보고자가 받지 못할 때만 stderr 로 갑니다. */
-    SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
-    /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글). */
+    /** @brief 한 줄을 보고합니다. `Error` 는 stderr 에 먼저 쓰고 보고자에게 넘기며, `Warning` 은 보고자가 받지 못할 때만 stderr 로 갑니다. @p pID 는 로그 id 입니다. */
+    SW_API void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID = nullptr ) noexcept;
+    /** @brief 단언 실패 하나를 `Error` 로 보고합니다(`SW_LOG_ASSERT` 와 같은 모양의 글, 로그 id `SW_ASSERT_LOG_ID`). */
     SW_API void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
     /**
      * @brief 반드시 있어야 하는 서비스 · 서브시스템 조회가 비었을 때 부르는 **유일한** 보고 함수입니다. 모든 구성에서 `Error` 를 stderr 에 먼저 쓰고 로그로 남긴 뒤 `abort` 합니다.
@@ -269,12 +276,15 @@ namespace sw::internal
  * @brief 로그보다 아래 티어가 한 줄을 보고합니다(`SW_LOG_ERROR` · `SW_LOG_WARNING` 에 해당). 인자는 `printf` 문법의 서식과 값입니다(512 자까지).
  * @note 서식은 `snprintf` 문법입니다. 엔진 `formatstring` 의 `%#` 를 쓰면 `-Wformat` 이 막습니다(`SW_PRINTF_FORMAT`).
  */
-#define SW_LOW_LEVEL_INTERNAL( level, ... )                                                                                 \
+#define SW_LOW_LEVEL_INTERNAL( level, ... ) SW_LOW_LEVEL_INTERNAL_ID( level, nullptr, __VA_ARGS__ )
+
+/** @brief `SW_LOW_LEVEL_INTERNAL` 에 로그 id(문자열 리터럴 또는 nullptr)를 붙인 판입니다. */
+#define SW_LOW_LEVEL_INTERNAL_ID( level, pID, ... )                                                                         \
     do                                                                                                                      \
     {                                                                                                                       \
         utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
         ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
-        ::sw::internal::reportLowLevel( level, __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage );              \
+        ::sw::internal::reportLowLevel( level, __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage, pID );         \
     } while ( false )
 
 /** @brief 로그보다 아래 티어의 `SW_LOG_ERROR` 입니다. stderr 에 먼저 동기로 쓰고 로그로도 남깁니다. 서식은 `printf` 문법입니다. */
@@ -282,6 +292,12 @@ namespace sw::internal
 
 /** @brief 로그보다 아래 티어의 `SW_LOG_WARNING` 입니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_WARNING( ... ) SW_LOW_LEVEL_INTERNAL( ::sw::internal::LowLevelReportLevel::Warning, __VA_ARGS__ )
+
+/** @brief 로그 id 를 붙인 `SW_LOW_LEVEL_ERROR` 입니다(`SW_LOG_ERROR_ID` 에 해당 — 테스트가 `SW_EXPECT_LOG` 로 적는다). id 는 문자열 리터럴입니다. */
+#define SW_LOW_LEVEL_ERROR_ID( id, ... ) SW_LOW_LEVEL_INTERNAL_ID( ::sw::internal::LowLevelReportLevel::Error, "" id, __VA_ARGS__ )
+
+/** @brief 로그 id 를 붙인 `SW_LOW_LEVEL_WARNING` 입니다(`SW_LOG_WARNING_ID` 에 해당). id 는 문자열 리터럴입니다. */
+#define SW_LOW_LEVEL_WARNING_ID( id, ... ) SW_LOW_LEVEL_INTERNAL_ID( ::sw::internal::LowLevelReportLevel::Warning, "" id, __VA_ARGS__ )
 
 /** @brief 로그보다 아래 티어의 `SW_FATAL` 입니다. 한 줄을 남기고(stderr 동기 + 로그 · 싱크 비우기) 멈춥니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_FATAL( ... )                                                                                           \

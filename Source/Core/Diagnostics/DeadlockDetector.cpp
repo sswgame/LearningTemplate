@@ -210,7 +210,7 @@ namespace sw
             builder.append( "-------------------------------------------------------\n" );
         }
 
-        SW_LOG_ERROR( "%#", builder.c_str() );
+        SW_LOG_ERROR_ID( "Deadlock.Detected", "%#", builder.c_str() );
         SW_ASSERT( false && "deadlock detected - see the log above" ); // 테스트는 단언 가로채기로 센다
     }
 

@@ -317,14 +317,14 @@ namespace sw
                 utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                                                                  \
                 sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );                                                      \
                 ::sw::Logger::printAssertFailureToStderr( #expr, _assertMsg, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
-                SW_LOG_INTERNAL( sw::LogLevel::Error,                                                                                           \
-                                 "ASSERT failed\n"                                                                                              \
-                                 "Expression : %#\n"                                                                                            \
-                                 "Message    : %#\n"                                                                                            \
-                                 "FileName   : %#\n"                                                                                            \
-                                 "Function   : %#\n"                                                                                            \
-                                 "Line       : %#",                                                                                             \
-                                 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );                                                \
+                SW_LOG_WRITE( sw::LogLevel::Error, SW_ASSERT_LOG_ID,                                                                            \
+                              "ASSERT failed\n"                                                                                                 \
+                              "Expression : %#\n"                                                                                               \
+                              "Message    : %#\n"                                                                                               \
+                              "FileName   : %#\n"                                                                                               \
+                              "Function   : %#\n"                                                                                               \
+                              "Line       : %#",                                                                                                \
+                              #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );                                                   \
                 if ( ::sw::internal::tryCaptureAssert() == false &&                                                                             \
                      ::sw::internal::shouldBreakOnAssert( #expr, _assertMsg, __FILE__, __LINE__ ) )                                             \
                     SW_DEBUG_BREAK();                                                                                                           \
@@ -342,12 +342,12 @@ namespace sw
             {                                                                              \
                 utf8 _assertMsg[sw::constant::kMaxBuffer8192];                             \
                 sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ ); \
-                SW_LOG_ERROR( "ASSERT failed\n"                                            \
-                              "Expression : %#\n"                                          \
-                              "Message    : %#\n"                                          \
-                              "FileName   : %#\n"                                          \
-                              "Line       : %#",                                           \
-                              #expr, _assertMsg, __FILE__, __LINE__ );                     \
+                SW_LOG_ERROR_ID( SW_ASSERT_LOG_ID, "ASSERT failed\n"                       \
+                                                   "Expression : %#\n"                     \
+                                                   "Message    : %#\n"                     \
+                                                   "FileName   : %#\n"                     \
+                                                   "Line       : %#",                      \
+                                 #expr, _assertMsg, __FILE__, __LINE__ );                  \
             }                                                                              \
         } while ( false )
 #endif

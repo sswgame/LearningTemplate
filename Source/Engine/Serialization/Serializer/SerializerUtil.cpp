@@ -536,9 +536,9 @@ namespace sw
 {
     void SerializerUtil::reportForbiddenProperty( const TypeInfo& owner, const PropertyInfo& prop )
     {
-        SW_LOG_ERROR( "%#::%# is PROPERTY( RuntimeState ) but the authoring file writes it - the read fails. Rewrite the file without the field "
-                      "(authoring files never hold runtime state).",
-                      owner._fullyQualifiedName.c_str(), prop._name.c_str() );
+        SW_LOG_ERROR_ID( "Serialization.RuntimeStateInAuthoring", "%#::%# is PROPERTY( RuntimeState ) but the authoring file writes it - the read fails. Rewrite the file without the field "
+                                                                  "(authoring files never hold runtime state).",
+                         owner._fullyQualifiedName.c_str(), prop._name.c_str() );
     }
 
     const TypeInfo* SerializerUtil::findNestedObjectType( hashed_string typeName, const SerializeContext& context )

@@ -133,7 +133,7 @@ namespace sw
          * @details Caller 는 `SW_LOG_*` 와 같은 방식으로 **보고한 파일**에서 정해집니다. 그 파일이 `SW_LOG_CALLER` 를 등록했으면 그 이름이고, 낮은 층 파일은
          *          `Logger.h` 를 쓸 수 없어 등록하지 못하므로 파일 이름(확장자 뺀)이 Caller 가 됩니다. 태그(`SW_LOG_TAG`)는 이 파일(Core)의 것, 곧 Engine 입니다.
          */
-        bool forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+        bool forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept
         {
             if ( s_globalSink.load( std::memory_order_acquire ) == nullptr )
                 return false;
@@ -148,7 +148,7 @@ namespace sw
                     copyFileStem( pFile, arrStem );
                     pCaller = arrStem;
                 }
-                Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, pFile, line );
+                Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pCaller, pMessage, pFile, line, pID );
             }
             if ( level == internal::LowLevelReportLevel::Fatal )
                 Logger::flushGlobalForCrash(); // 곧 멈춘다(`reportFatal`) — 비동기 싱크가 쥔 줄을 내보낸다

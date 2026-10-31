@@ -20,7 +20,7 @@ namespace sw
         const bool bValid = static_cast<size_t>( width ) * height == listTile.size() && tileSize > 0.0f;
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "PlacementTileSurface: refused %# x %# tiles of size %# with %# entries", width, height, tileSize, static_cast<uint32>( listTile.size() ) );
+            SW_LOG_ERROR_ID( "Placement.TilesRefused", "PlacementTileSurface: refused %# x %# tiles of size %# with %# entries", width, height, tileSize, static_cast<uint32>( listTile.size() ) );
             return false;
         }
         _width    = width;

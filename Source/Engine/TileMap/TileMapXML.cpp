@@ -87,7 +87,7 @@ namespace sw
                 const bool                 bValidSize = width.has_value() && height.has_value() && *width > 0 && *height > 0;
                 if ( bValidSize == false )
                 {
-                    SW_LOG_ERROR( "<TileMap> needs <width> and <height> of at least 1" );
+                    SW_LOG_ERROR_ID( "TileMap.InvalidSize", "<TileMap> needs <width> and <height> of at least 1" );
                     return false;
                 }
                 data._width  = *width;
@@ -102,7 +102,7 @@ namespace sw
                 }
                 if ( TileMapXMLData::isSizeSupported( data._width, data._height ) == false )
                 {
-                    SW_LOG_ERROR( "TileMap size %#x%# is beyond the supported tile count (%#)", data._width, data._height, TileMapXMLData::kMaxTileCount );
+                    SW_LOG_ERROR_ID( "TileMap.InvalidSize", "TileMap size %#x%# is beyond the supported tile count (%#)", data._width, data._height, TileMapXMLData::kMaxTileCount );
                     return false;
                 }
                 return true;
@@ -122,7 +122,7 @@ namespace sw
                     const bool bFullTint = tileNode.findAttribute( "tr" ) != nullptr && tileNode.findAttribute( "tg" ) != nullptr && tileNode.findAttribute( "tb" ) != nullptr;
                     if ( bFullTint == false )
                     {
-                        SW_LOG_ERROR( "TileMap tile %# needs all of tr, tg and tb", index );
+                        SW_LOG_ERROR_ID( "TileMap.InvalidAttributes", "TileMap tile %# needs all of tr, tg and tb", index );
                         inoutValid = false;
                     }
                     inoutValid = readByteAttribute( tileNode, "tr", outVisual._tintR ) && inoutValid;
@@ -220,7 +220,7 @@ namespace sw
                     {
                         if ( cursor < cells.size() )
                         {
-                            SW_LOG_ERROR( "TileMap '%#': <cells> holds something that is not a number", data._name );
+                            SW_LOG_ERROR_ID( "TileMap.InvalidTileLayer", "TileMap '%#': <cells> holds something that is not a number", data._name );
                             return false;
                         }
                         break;
@@ -230,14 +230,14 @@ namespace sw
                                                       static_cast<size_t>( value ) > data._listPaletteName.size();
                     if ( bInvalidPaletteIndex )
                     {
-                        SW_LOG_ERROR( "TileMap '%#': tile cell %# is outside the palette (%# names)", data._name, value, static_cast<uint32>( data._listPaletteName.size() ) );
+                        SW_LOG_ERROR_ID( "TileMap.InvalidTileLayer", "TileMap '%#': tile cell %# is outside the palette (%# names)", data._name, value, static_cast<uint32>( data._listPaletteName.size() ) );
                         return false;
                     }
                     data._listTileCell.push_back( static_cast<uint16>( value ) );
                 }
                 if ( data._listTileCell.size() != count )
                 {
-                    SW_LOG_ERROR( "TileMap '%#': <cells> has %# values, the map has %# cells", data._name, static_cast<uint32>( data._listTileCell.size() ), static_cast<uint32>( count ) );
+                    SW_LOG_ERROR_ID( "TileMap.InvalidTileLayer", "TileMap '%#': <cells> has %# values, the map has %# cells", data._name, static_cast<uint32>( data._listTileCell.size() ), static_cast<uint32>( count ) );
                     return false;
                 }
                 return true;
@@ -268,7 +268,7 @@ namespace sw
                     const bool bHeaderValid                 = layer._name.empty() == false && defaultValue.has_value() && data.findDataLayer( layer._name ) < 0;
                     if ( bHeaderValid == false )
                     {
-                        SW_LOG_ERROR( "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", data._name, layer._name );
+                        SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': <dataLayers><layer> needs a unique non-empty name and a default (name '%#')", data._name, layer._name );
                         return false;
                     }
                     layer._defaultValue = *defaultValue;
@@ -277,7 +277,7 @@ namespace sw
                         StringUtil::parseIntList( pValues != nullptr ? string_view( pValues ) : string_view{}, kValueListSeparators, layer._listValue ) && layer._listValue.size() == count;
                     if ( bValuesValid == false )
                     {
-                        SW_LOG_ERROR( "TileMap '%#': data layer '%#' needs %# integer values (one per cell)", data._name, layer._name, static_cast<uint32>( count ) );
+                        SW_LOG_ERROR_ID( "TileMap.InvalidDataLayer", "TileMap '%#': data layer '%#' needs %# integer values (one per cell)", data._name, layer._name, static_cast<uint32>( count ) );
                         return false;
                     }
                     data._listDataLayer.push_back( std::move( layer ) );
@@ -304,7 +304,7 @@ namespace sw
                     tileCount = MathUtil::min( tileCount, listFlag.size() );
                 }
                 if ( tileCount < count )
-                    SW_LOG_WARNING( "The tile array is shorter than %#x%# (%# cells) - missing cells are written as defaults.", data._width, data._height, static_cast<uint32>( tileCount ) );
+                    SW_LOG_WARNING_ID( "TileMap.ShortTileArray", "The tile array is shorter than %#x%# (%# cells) - missing cells are written as defaults.", data._width, data._height, static_cast<uint32>( tileCount ) );
 
                 const TileMapXMLData::Visual defaultVisual{};
                 for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
@@ -453,7 +453,7 @@ namespace sw
         const XMLNode root = doc.getRoot( "TileMap" );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "Missing <TileMap>" );
+            SW_LOG_ERROR_ID( "TileMap.MissingRoot", "Missing <TileMap>" );
             return false;
         }
 
@@ -490,7 +490,7 @@ namespace sw
 
         if ( bValid == false )
         {
-            SW_LOG_ERROR( "TileMap '%#' has invalid attribute values (listed above)", _name );
+            SW_LOG_ERROR_ID( "TileMap.InvalidAttributes", "TileMap '%#' has invalid attribute values (listed above)", _name );
             *this = {};
             return false;
         }

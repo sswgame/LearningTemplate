@@ -622,8 +622,8 @@ namespace sw
                 ++newlyExceededCount;
                 if ( pOutListNewlyExceeded != nullptr )
                     pOutListNewlyExceeded->push_back( static_cast<MemoryTag>( tagIndex ) );
-                SW_LOG_WARNING( "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", MemoryProfilerInternal::kArrTagName[tagIndex],
-                                liveBytes / 1024, summary._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
+                SW_LOG_WARNING_ID( "MemoryProfiler.OverBudget", "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", MemoryProfilerInternal::kArrTagName[tagIndex],
+                                   liveBytes / 1024, summary._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
             }
             else if ( bWasOver && liveBytes * 100 < budget * MemoryProfilerInternal::kBudgetRearmPercent )
             {

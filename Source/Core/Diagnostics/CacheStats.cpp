@@ -70,9 +70,9 @@ namespace sw
             static void reportAddFailure( AddFailure failure, string_view name )
             {
                 if ( failure == AddFailure::Full )
-                    SW_LOG_ERROR( "Cache stats registry is full (%# entries) - '%#' is not counted. Raise CacheStats::kMaxCacheCount", CacheStats::kMaxCacheCount, name );
+                    SW_LOG_ERROR_ID( "CacheStats.RegistryFull", "Cache stats registry is full (%# entries) - '%#' is not counted. Raise CacheStats::kMaxCacheCount", CacheStats::kMaxCacheCount, name );
                 else if ( failure == AddFailure::BadName )
-                    SW_LOG_ERROR( "Cache stats name '%#' is empty or longer than %# characters - the cache is not counted", name, CacheStatsCounters::kMaxNameLength );
+                    SW_LOG_ERROR_ID( "CacheStats.BadName", "Cache stats name '%#' is empty or longer than %# characters - the cache is not counted", name, CacheStatsCounters::kMaxNameLength );
             }
         };
     } // namespace
@@ -93,7 +93,7 @@ namespace sw
                 handle = CacheStatsHandle{ CacheStatsInternal::addEntry( registry, name, failure ) };
         }
         if ( bDuplicate ) // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
-            SW_LOG_ERROR( "Cache stats name '%#' is already registered - keeping the first", name );
+            SW_LOG_ERROR_ID( "CacheStats.DuplicateName", "Cache stats name '%#' is already registered - keeping the first", name );
         CacheStatsInternal::reportAddFailure( failure, name );
         return handle;
     }

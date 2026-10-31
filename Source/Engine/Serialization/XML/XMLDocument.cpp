@@ -346,7 +346,7 @@ namespace sw
 
     void XMLNode::reportMissing( const utf8* pKind, const utf8* pName ) const
     {
-        SW_LOG_ERROR( "<%#> has no required %# '%#'", getName(), pKind, pName );
+        SW_LOG_ERROR_ID( "Xml.MissingRequired", "<%#> has no required %# '%#'", getName(), pKind, pName );
     }
 
     void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
@@ -586,7 +586,7 @@ namespace sw
             StringBuilder<constant::kMaxBuffer1024> message;
             message.appendFormat( "%#:%#:%#: %#", source, line, column, result.description() );
             _lastError = message.c_str();
-            SW_LOG_ERROR( "XML parse error at %#", _lastError );
+            SW_LOG_ERROR_ID( "Xml.ParseError", "XML parse error at %#", _lastError );
             return false;
         }
 

@@ -88,7 +88,7 @@ namespace sw
                 FILE* pFile = PlatformFileUtil::openFile( tempPath.c_str(), "wb" );
                 if ( pFile == nullptr )
                 {
-                    SW_LOG_ERROR( "Failed to open temporary file for writing: %#", tempPath.c_str() );
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to open temporary file for writing: %#", tempPath.c_str() );
                     return false;
                 }
 
@@ -98,7 +98,7 @@ namespace sw
                 const bool   bWriteIncomplete = written != size || bFlushed == false || bClosed == false;
                 if ( bWriteIncomplete )
                 {
-                    SW_LOG_ERROR( "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
+                    SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to write %# bytes to %# (wrote %#) — the original file was left untouched", size, filePath.c_str(), written );
                     discardTempFile( tempPath );
                     return false;
                 }
@@ -114,7 +114,7 @@ namespace sw
                     }
                     ThreadUtil::sleepForMilliseconds( 20 );
                 }
-                SW_LOG_ERROR( "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
+                SW_LOG_ERROR_ID( "File.WriteFailed", "Failed to replace %# with the newly written file — the original file was left untouched", filePath.c_str() );
                 discardTempFile( tempPath );
                 return false;
             }
@@ -150,7 +150,7 @@ namespace sw
                 if ( offset > uFileSize )
                 {
                     PlatformFileUtil::closeNativeFile( handle );
-                    SW_LOG_ERROR( "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
+                    SW_LOG_ERROR_ID( "File.ReadPastEnd", "Read offset %# exceeds size %# of: %#", offset, uFileSize, fileName );
                     return OptionalFileRead::Failed;
                 }
 
@@ -557,7 +557,7 @@ namespace sw
         string reason;
         if ( gate( path, reason ) )
             return true;
-        SW_LOG_ERROR( "Changing %# was refused: %#", string( path ).c_str(), reason.c_str() );
+        SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %#", string( path ).c_str(), reason.c_str() );
         return false;
     }
 

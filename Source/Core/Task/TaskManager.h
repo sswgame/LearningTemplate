@@ -286,6 +286,17 @@ namespace sw
          *          push 해 벡터가 깨집니다(틱 중 트랜스폼 쓰기 큐에서 세그폴트).
          */
         uint32 getScratchSlotCount() const { return getWorkerCount() + kMaxHelperThreadCount; }
+
+        /**
+         * @struct HelperSlotPool
+         * @brief 워커가 아닌 스레드에 나눠 주는 도우미 슬롯의 장부입니다(매니저와 슬롯을 받은 스레드가 함께 쥔다).
+         */
+        struct HelperSlotPool
+        {
+            atomic<uint32> _count{ 0 };    ///< 한 번이라도 나눠 준 슬롯 수(돌려받은 슬롯은 `_freeMask` 로 다시 쓴다)
+            atomic<uint32> _freeMask{ 0 }; ///< 돌려받아 다시 나눠 줄 수 있는 슬롯의 비트마스크
+        };
+
         /**
          * @brief 현재 스레드의 스크래치 슬롯입니다. 워커면 그 번호이고, 아니면 처음 물을 때 받는 고유한 도우미 번호(워커 수 + n)입니다.
          * @details 도우미 번호는 스레드마다 한 번 배정되어 그 스레드가 사는 동안 바뀌지 않습니다. 상한(`kMaxHelperThreadCount`)을
@@ -294,7 +305,7 @@ namespace sw
          */
         uint32 getCurrentThreadScratchSlot();
         /**
-         * @brief 이 스레드가 받은 도우미 슬롯을 돌려줍니다. **이 매니저에서 태스크를 기다리던 비워커 스레드가 끝나기 직전에** 부릅니다.
+         * @brief 이 스레드가 받은 도우미 슬롯을 지금 돌려줍니다. 스레드가 끝나면 저절로 돌려주므로, 스레드가 살아 있는 채 이 매니저를 그만 도울 때만 부릅니다.
          * @details 돌려받지 않으면 백엔드 교체 · `gv_useRenderThread` 토글로 렌더 스레드를 새로 만들 때마다 새 슬롯을 받아, 상한(8)을 넘을 때
          *          두 스레드가 마지막 슬롯을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
@@ -447,10 +458,10 @@ namespace sw
         atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
         /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
         atomic<uint32>                 _runningWorkerCount;
-        vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
-        atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 슬롯은 `_helperSlotFreeMask` 로 다시 쓴다)
-        atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크
-        uint32                         _instanceID;         ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
+        vector<unique_ptr<WorkerSlot>> _listWorkerSlot; ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
+        /// 도우미 슬롯 장부 — 슬롯을 받은 스레드의 상태도 쥔다. 그 스레드가 끝날 때 매니저가 먼저 사라졌어도 돌려줄 자리가 남는다.
+        std::shared_ptr<HelperSlotPool> _pHelperSlotPool;
+        uint32                          _instanceID; ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
         /**
          * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
          * @details 비트를 내린 쪽만 깨우므로 두 제출자가 같은 워커를 두 번 깨우지 않고, n 번의 깨우기는 서로 독립적인 n 번의 주소

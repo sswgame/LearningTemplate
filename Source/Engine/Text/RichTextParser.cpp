@@ -264,8 +264,8 @@ namespace sw
                     if ( listValid[index] == 0 )
                     {
                         ++outResult._problemCount;
-                        SW_LOG_WARNING( "[Text] Rich text tag '%#' is unknown, unpaired or has a bad value - it is shown as plain text: \"%#\"", string( current._text ).c_str(),
-                                        string( markup ).c_str() );
+                        SW_LOG_WARNING_ID( "Text.RichTextBadTag", "[Text] Rich text tag '%#' is unknown, unpaired or has a bad value - it is shown as plain text: \"%#\"", string( current._text ).c_str(),
+                                           string( markup ).c_str() );
                         Internal::appendText( current._text, listActive, outResult );
                         break;
                     }

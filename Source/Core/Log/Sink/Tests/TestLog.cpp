@@ -1,0 +1,551 @@
+#include "pch.h"
+
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/LogTypes.h"
+#include "Core/Log/Logger.h"
+#include "Core/Log/Sink/AsyncLogSink.h"
+#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Testing/TestFramework.h"
+
+#include <cstring>
+
+// 로그 — 전역 싱크 · 폴더, 레벨마다 리스너까지 닿기, 런타임 상세도, 컴파일 상한, id 로 찾기, 서식 치환, 잘못된 UTF-8, 호출자,
+// 여러 스레드 · 큰 묶음 · 리스너 붙였다 떼기, 출력 장치 상한, 잘못된 바이트만 바꾸기, 같은 이름 파일의 호출자.
+// 케이스가 일부러 내는 Warning · Error 는 테스트 id(`Test.Log*`)를 붙이고 `SW_EXPECT_LOG` 로 적는다(실행기가 그 밖의 Warning · Error 를 실패로 센다).
+
+SW_LOG_CALLER( "TestLog" );
+
+namespace
+{
+    // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 Debug 전용이 아니게 됐으므로 검증도 그래야 한다.
+    /** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
+    constexpr const utf8* kCapturePrefix = "[TestLog] ";
+
+    /**
+     * @class LogCapture
+     * @brief 전역 싱크에 리스너를 붙여 접두사가 맞는 LogEntry만 모으는 테스트 싱크
+     * @note 접두사로 걸러 다른 스레드/서브시스템의 로그가 섞이지 않게 합니다.
+     */
+    class LogCapture
+    {
+    public:
+        /** @brief 전역 싱크에 리스너를 등록합니다. */
+        LogCapture()
+        {
+            _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+                sw::LogWrittenDelegate,
+                [this]( const sw::LogEntry& entry )
+            {
+                if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
+                    _listEntry.push_back( entry );
+            } ) );
+        }
+
+        LogCapture( const LogCapture& )            = delete;
+        LogCapture& operator=( const LogCapture& ) = delete;
+
+        /** @brief 리스너가 실제로 등록되었는지 반환합니다. */
+        bool isAttached() const
+        {
+            return _subscription.isActive();
+        }
+
+        /** @brief 수집된 로그 목록입니다. */
+        [[maybe_unused]] const sw::vector<sw::LogEntry>& getEntries() const
+        {
+            return _listEntry;
+        }
+
+        /** @brief 수집된 로그 개수입니다. */
+        uint32 getCount() const
+        {
+            return static_cast<uint32>( _listEntry.size() );
+        }
+
+        /** @brief 수집된 줄 가운데 id 가 @p pID 인 줄 수입니다(id 없는 줄은 세지 않는다). */
+        uint32 countWithID( const utf8* pID ) const
+        {
+            uint32 count = 0;
+            for ( const sw::LogEntry& entry : _listEntry )
+            {
+                if ( entry._pID != nullptr && std::strcmp( entry._pID, pID ) == 0 )
+                    ++count;
+            }
+            return count;
+        }
+
+    private:
+        sw::vector<sw::LogEntry> _listEntry;
+        sw::Subscription         _subscription; ///< 마지막 멤버라 먼저 풀린다(목록보다 먼저)
+    };
+
+    /**
+     * @class ThreadSafeLogCapture
+     * @brief 멀티스레드 동시 로깅 테스트용 스레드 안전 로그 캡처 싱크
+     */
+    class ThreadSafeLogCapture
+    {
+    public:
+        ThreadSafeLogCapture()
+        {
+            _subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+                sw::LogWrittenDelegate,
+                [this]( const sw::LogEntry& entry )
+            {
+                if ( sw::StringUtil::startsWith( entry._message, kCapturePrefix ) )
+                {
+                    sw::ScopedLock<sw::mutex> lock{ _mutex };
+                    _listEntry.push_back( entry );
+                }
+            } ) );
+        }
+
+        ThreadSafeLogCapture( const ThreadSafeLogCapture& )            = delete;
+        ThreadSafeLogCapture& operator=( const ThreadSafeLogCapture& ) = delete;
+
+        bool isAttached() const
+        {
+            return _subscription.isActive();
+        }
+
+        [[maybe_unused]] sw::vector<sw::LogEntry> getEntries() const
+        {
+            sw::ScopedLock<sw::mutex> lock{ _mutex };
+            return _listEntry;
+        }
+
+        uint32 getCount() const
+        {
+            sw::ScopedLock<sw::mutex> lock{ _mutex };
+            return static_cast<uint32>( _listEntry.size() );
+        }
+
+    private:
+        mutable sw::mutex        _mutex;
+        sw::vector<sw::LogEntry> _listEntry;
+        sw::Subscription         _subscription; ///< 마지막 멤버라 먼저 풀린다(목록 · 잠금보다 먼저)
+    };
+
+    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 테스트용 출력 장치. */
+    class CountingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const sw::LogRecord& ) override { ++_writeCount; }
+
+        uint32 _writeCount{ 0 };
+    };
+
+    /** @brief 받은 줄의 완성된 글(`LogRecord::_formatted` — 파일 · 콘솔이 쓰는 그것)을 모으는 테스트용 출력 장치. */
+    class CapturingLogOutput final : public sw::ILogOutput
+    {
+    public:
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+
+        sw::vector<sw::string> _listFormatted;
+    };
+
+} // namespace
+
+/**
+ * @brief [LogTest] 로거 초기화
+ */
+SW_TEST_CASE( LogTest, LoggerInitialized )
+{
+    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    SW_EXPECT_FALSE( folderPath.empty() );
+}
+
+/**
+ * @brief [LogTest] 로그 폴더 존재
+ */
+SW_TEST_CASE( LogTest, LogFolderExists )
+{
+    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    if ( folderPath.empty() == false )
+        SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
+}
+
+/**
+ * @brief [LogTest] 각 레벨의 로그가 싱크까지 전달됨
+ */
+SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    SW_EXPECT_LOG( "Test.LogLevelProbe" ); // Warning · Error 줄은 이 테스트가 전달을 보려는 대상이다
+
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
+
+    SW_LOG_INFO( "[TestLog] Info level log" );
+    SW_LOG_WARNING_ID( "Test.LogLevelProbe", "[TestLog] Warning level log" );
+    SW_LOG_ERROR_ID( "Test.LogLevelProbe", "[TestLog] Error level log" );
+    SW_LOG_TRACE( "[TestLog] Trace level log" ); // Trace 는 Debug 만 컴파일한다 — 아래 기대 수가 그것을 따른다
+
+    constexpr sw::LogLevel expectedLevels[] = {
+        sw::LogLevel::Info,
+        sw::LogLevel::Warning,
+        sw::LogLevel::Error,
+        sw::LogLevel::Trace,
+    };
+    constexpr const utf8* expectedMessages[] = {
+        "[TestLog] Info level log",
+        "[TestLog] Warning level log",
+        "[TestLog] Error level log",
+        "[TestLog] Trace level log",
+    };
+    constexpr uint32 expectedCount = SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE ) ? 4u : 3u;
+
+    SW_REQUIRE_EQUAL( expectedCount, capture.getCount() );
+
+    for ( uint32 logIndex = 0; logIndex < expectedCount; ++logIndex )
+    {
+        const sw::LogEntry& entry = capture.getEntries()[logIndex];
+        SW_EXPECT_EQUAL( static_cast<uint32>( expectedLevels[logIndex] ), static_cast<uint32>( entry._level ) );
+        SW_EXPECT_EQUAL( sw::string( expectedMessages[logIndex] ), entry._message );
+        SW_EXPECT_EQUAL( sw::string( SW_LOG_TAG ), entry._tag );
+        SW_EXPECT_FALSE( entry._file.empty() );
+        SW_EXPECT_TRUE( entry._line > 0 );
+    }
+}
+
+/**
+ * @brief [LogTest] 런타임 상세도가 그보다 덜 심각한 줄을 버리는지
+ * @details 배포본에서 고객에게 상세도를 올려 재현을 받는 것이 이 값의 용도다. 컴파일 상한과는 다른
+ *          축이다 — 상한은 "무엇을 남길 수 있나", 이 값은 "지금 무엇을 남길까" 를 정한다.
+ */
+SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+    SW_EXPECT_LOG( "Test.LogVerbosityProbe" ); // 남는 Error 줄은 이 테스트가 보려는 대상이다
+
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
+
+    // Error 만 남기게 하면 Warning 아래는 버려져야 한다.
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Error );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Error ) );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Warning ) == false );
+
+    SW_LOG_ERROR_ID( "Test.LogVerbosityProbe", "[TestLog] kept" );
+    SW_LOG_WARNING( "[TestLog] dropped" );
+    SW_LOG_INFO( "[TestLog] dropped" );
+    SW_EXPECT_EQUAL( 1u, capture.getCount() );
+
+    // Warning 까지 올리면 배포본 기본(컴파일 상한 Warning)과 같은 상태가 된다.
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Warning );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Warning ) );
+    SW_EXPECT_TRUE( sw::Logger::shouldLog( sw::LogLevel::Info ) == false );
+}
+
+/**
+ * @brief [LogTest] Error/Warning 은 **모든 빌드**에 컴파일되는지
+ * @details SW_DEBUG 가 아닐 때 매크로가 통째로 사라지면 배포본에 로그가 하나도 없다.
+ *          상한이 Warning 밑으로 내려가면 여기서 걸린다.
+ */
+SW_TEST_CASE( LogTest, ErrorAndWarningSurviveEveryBuild )
+{
+    static_assert( SW_LOG_COMPILED_VERBOSITY >= SW_LOG_VERBOSITY_WARNING, "Error/Warning 은 어떤 빌드에서도 컴파일되어야 한다" );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR ) );
+    SW_EXPECT_TRUE( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_WARNING ) );
+}
+
+/**
+ * @brief [LogTest] id 가 붙은 줄(`SW_LOG_*_ID`)은 문구와 상관없이 리스너의 `LogEntry::_pID` 로 찾아지고, id 없는 줄은 어떤 id 로도 잡히지 않는다
+ */
+SW_TEST_CASE( LogTest, LinesAreFoundByIDNotWording )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+    SW_EXPECT_LOG( "Test.LogIDProbe" );
+    SW_EXPECT_LOG( "Test.LogIDOther" );
+    SW_LOG_WARNING_ID( "Test.LogIDProbe", "[TestLog] first wording %#", 1 );
+    SW_LOG_ERROR_ID( "Test.LogIDProbe", "[TestLog] completely different wording" );
+    SW_LOG_WARNING_ID( "Test.LogIDOther", "[TestLog] third" );
+    SW_LOG_INFO( "[TestLog] Test.LogIDProbe is only a word in a line without an id" ); // id 없는 줄 — 어떤 id 로도 잡히지 않는다
+    SW_EXPECT_EQUAL( 2u, capture.countWithID( "Test.LogIDProbe" ) );
+    SW_EXPECT_EQUAL( 1u, capture.countWithID( "Test.LogIDOther" ) );
+    SW_EXPECT_EQUAL( 0u, capture.countWithID( "Test.LogIDMissing" ) );
+}
+
+/**
+ * @brief [LogTest] 로그 레벨 개수
+ */
+SW_TEST_CASE( LogTest, LogLevelCount )
+{
+    constexpr uint32 expected = 4u;
+    SW_EXPECT_EQUAL( expected, static_cast<uint32>( sw::LogLevel::Count ) );
+}
+
+/**
+ * @brief [LogTest] 로그 매크로가 %# 인자를 치환해 기록함
+ */
+SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    SW_EXPECT_LOG( "Test.LogFormatProbe" ); // Warning · Error 줄은 이 테스트가 치환을 보려는 대상이다
+
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
+    const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
+    sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
+    const struct VerbosityRestore
+    {
+        sw::LogLevel _previous;
+        ~VerbosityRestore() { sw::Logger::setRuntimeVerbosity( _previous ); }
+    } verbosityRestore{ previousVerbosity };
+
+    SW_LOG_INFO( "[TestLog] SW_LOG_INFO %#", 123 );
+    SW_LOG_WARNING_ID( "Test.LogFormatProbe", "[TestLog] SW_LOG_WARNING %#", "warning" );
+    SW_LOG_ERROR_ID( "Test.LogFormatProbe", "[TestLog] SW_LOG_ERROR %#", 404 );
+    SW_LOG_TRACE( "[TestLog] SW_LOG_TRACE %#", 3.14f ); // Trace 는 Debug 만 컴파일한다
+
+    SW_REQUIRE_EQUAL( SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE ) ? 4u : 3u, capture.getCount() );
+    SW_EXPECT_EQUAL( sw::string( "[TestLog] SW_LOG_INFO 123" ), capture.getEntries()[0]._message );
+    SW_EXPECT_EQUAL( sw::string( "[TestLog] SW_LOG_WARNING warning" ), capture.getEntries()[1]._message );
+    SW_EXPECT_EQUAL( sw::string( "[TestLog] SW_LOG_ERROR 404" ), capture.getEntries()[2]._message );
+
+    // 실수 자릿수는 기본 정밀도에 달려 있으므로 앞부분만 확인합니다.
+    if ( capture.getCount() == 4u )
+        SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[3]._message, "[TestLog] SW_LOG_TRACE 3.14" ) );
+}
+
+/**
+ * @brief [LogTest] 비-UTF8(ANSI/CP949) 문자열 전달 시에도 안전하게 처리됨
+ */
+SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    // 유효하지 않은 UTF-8 바이트 시퀀스 (0xFF, 0xFE 등)
+    const utf8 invalidUtf8Bytes[] = { '[', 'T', 'e', 's', 't', 'L', 'o', 'g', ']', ' ', 'B', 'a', 'd', ':', static_cast<utf8>( 0xFF ), static_cast<utf8>( 0xFE ), '\0' };
+    SW_LOG_INFO( "%#", invalidUtf8Bytes );
+
+    SW_REQUIRE_EQUAL( 1u, capture.getCount() );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
+}
+
+/**
+ * @brief [LogTest] Caller 지정 및 수신 검증
+ */
+SW_TEST_CASE( LogTest, LogCallerHandling )
+{
+    LogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    SW_EXPECT_LOG( "Test.LogCallerProbe" ); // Warning 줄은 이 테스트가 호출자 전달을 보려는 대상이다
+    SW_LOG_INFO( "[TestLog] Custom caller message" );
+    SW_LOG_WARNING_ID( "Test.LogCallerProbe", "[TestLog] Warning from caller" );
+
+    SW_REQUIRE_EQUAL( 2u, capture.getCount() );
+    SW_EXPECT_EQUAL( sw::string( "TestLog" ), capture.getEntries()[0]._caller );
+    SW_EXPECT_EQUAL( sw::string( "[TestLog] Custom caller message" ), capture.getEntries()[0]._message );
+    SW_EXPECT_EQUAL( sw::string( "TestLog" ), capture.getEntries()[1]._caller );
+    SW_EXPECT_EQUAL( sw::string( "[TestLog] Warning from caller" ), capture.getEntries()[1]._message );
+}
+
+/**
+ * @brief [LogTest] 8개 스레드 동시 대량 로깅 스트레스 테스트 (데이터 레이스/크래시 검증)
+ */
+SW_TEST_CASE( LogTest, ConcurrentMultiThreadedLogging )
+{
+    ThreadSafeLogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    constexpr uint32 kThreadCount       = 8;
+    constexpr uint32 kLogsPerThread     = 100;
+    constexpr uint32 kExpectedTotalLogs = kThreadCount * kLogsPerThread;
+
+    sw::thread arrWorker[kThreadCount];
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        arrWorker[threadIndex] = sw::thread( [threadIndex]
+        {
+            for ( uint32 logIndex = 0; logIndex < kLogsPerThread; ++logIndex )
+            {
+                SW_LOG_INFO( "[TestLog] Thread %# Log %#", threadIndex, logIndex );
+            }
+        } );
+    }
+
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        if ( arrWorker[threadIndex].joinable() )
+            arrWorker[threadIndex].join();
+    }
+
+    SW_EXPECT_EQUAL( kExpectedTotalLogs, capture.getCount() );
+}
+
+/**
+ * @brief [LogTest] 큐 용량(4096) 초과 시 동기 폴백 안전성 검증
+ */
+SW_TEST_CASE( LogTest, QueueOverflowFallbackStress )
+{
+    ThreadSafeLogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    constexpr uint32 kHeavyLogCount = 6000;
+    for ( uint32 logIndex = 0; logIndex < kHeavyLogCount; ++logIndex )
+    {
+        SW_LOG_INFO( "[TestLog] Heavy burst log %#", logIndex );
+    }
+
+    SW_EXPECT_EQUAL( kHeavyLogCount, capture.getCount() );
+}
+
+/**
+ * @brief [LogTest] 로거 shutdown 시 큐 잔여 로그 플러시(Drain) 일관성 검증
+ */
+SW_TEST_CASE( LogTest, ShutdownQueueDrainConsistency )
+{
+    ThreadSafeLogCapture capture;
+    SW_REQUIRE_TRUE( capture.isAttached() );
+
+    constexpr uint32 kDrainCount = 500;
+    for ( uint32 logIndex = 0; logIndex < kDrainCount; ++logIndex )
+    {
+        SW_LOG_INFO( "[TestLog] Drain check %#", logIndex );
+    }
+
+    SW_EXPECT_EQUAL( kDrainCount, capture.getCount() );
+}
+
+/**
+ * @brief [LogTest] 로깅 진행 중 동시 리스너 등록/해제 동시성 검증
+ */
+SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
+{
+    sw::thread emitter( []
+    {
+        for ( uint32 index = 0; index < 500; ++index )
+        {
+            SW_LOG_TRACE( "[TestLog] Background emitter message %#", index );
+        }
+    } );
+
+    // 리스너 등록/해제 100회 반복
+    for ( uint32 iteration = 0; iteration < 100; ++iteration )
+    {
+        sw::Subscription subscription = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
+            sw::LogWrittenDelegate,
+            []( const sw::LogEntry& ) {} ) );
+        SW_EXPECT_TRUE( subscription.isActive() );
+        subscription.reset();
+    }
+
+    if ( emitter.joinable() )
+        emitter.join();
+    SW_EXPECT_FALSE( emitter.joinable() );
+}
+
+/**
+ * @brief [LogTest] 출력 장치 상한을 넘기면 **거절하고 경고한다** (조용히 삼키지 않는다)
+ * @details 디스패치는 잠금 안에서 포인터만 고정 배열로 떠 와 락 밖에서 쓴다 — 느린 파일 I/O 가
+ *          콘솔을 막지 않게 하는 분리다. 그 배열은 상한에서 잘리므로 `addOutput` 이 상한을 넘는 장치를
+ *          **받아서 `open` 까지 해 놓으면 한 줄도 주지 못한다.** 붙인 자리에서는 보이지 않는 실패라
+ *          상한에서 거절한다 — 그래서 "달린 장치는 반드시 받는다" 가 참이 된다.
+ */
+SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
+{
+    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    logger.initialize();
+
+    // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 테스트용 장치로 채우고, 한 개 더 시도한다.
+    sw::vector<CountingLogOutput*> listAttached;
+    {
+        SW_EXPECT_LOG( "Log.OutputRejected" ); // 상한을 넘은 장치마다 나는 거절 Warning 이 이 테스트가 보려는 것이다
+        for ( uint32 attempt = 0; attempt < 16; ++attempt )
+        {
+            sw::unique_ptr<CountingLogOutput> output = sw::make_unique<CountingLogOutput>();
+            CountingLogOutput*                pRaw   = output.get();
+            // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 **받아들여진 것만** 들고 있는다.
+            // 반환값이 없던 시절에는 이것을 알 방법이 없어, 죽은 포인터를 들고 있게 된다.
+            if ( logger.addOutput( std::move( output ) ) )
+                listAttached.push_back( pRaw );
+        }
+    }
+
+    logger.writeLog( sw::LogLevel::Info, "Test", "Cap", "한 줄", __FILE__, __LINE__ ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
+    logger.shutdown();
+
+    // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
+    uint32 attachedCount = 0;
+    uint32 silentCount   = 0;
+    for ( CountingLogOutput* pOutput : listAttached )
+    {
+        if ( pOutput->_writeCount > 0 )
+            ++attachedCount;
+        else
+            ++silentCount;
+    }
+
+    SW_EXPECT_TRUE_MSG( attachedCount > 0, "no attached output received the line" );
+    SW_EXPECT_TRUE_MSG( silentCount == 0, "an output was accepted but never received a line - one beyond the cap should have been rejected" );
+}
+
+/**
+ * @brief [LogTest] 잘못된 UTF-8 바이트가 섞인 줄은 그 바이트만 백슬래시 + `xNN` 이 되고, 나머지(한글 포함)는 그대로 파일 · 콘솔에 간다
+ * @details 한 바이트만 틀려도 줄 전체를 로캘 변환하면, 아무도 `setlocale` 을 부르지 않아 C 로캘이라 Windows 에서는 멀쩡한 한글까지
+ *          바이트마다 다른 글자로 깨지고 glibc 에서는 변환이 실패해 줄이 통째로 빈다.
+ */
+SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
+{
+    sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
+    logger.initialize();
+    sw::unique_ptr<CapturingLogOutput> output   = sw::make_unique<CapturingLogOutput>();
+    CapturingLogOutput*                pCapture = output.get();
+    SW_REQUIRE_TRUE( logger.addOutput( std::move( output ) ) );
+
+    logger.writeLog( sw::LogLevel::Info, "Test", "Utf8", "\xED\x95\x9C\xEA\xB8\x80 \xFF end", __FILE__, __LINE__ ); // "한글 <FF> end" - 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다
+    logger.shutdown();
+
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    const sw::string& line = pCapture->_listFormatted[0];
+    SW_EXPECT_TRUE_MSG( line.find( "\xED\x95\x9C\xEA\xB8\x80 \\xFF end" ) != sw::string::npos, line.c_str() );
+    SW_EXPECT_TRUE( sw::StringUtil::isValidUTF8( line.c_str() ) );
+}
+
+/**
+ * @brief [LogTest] 이름이 같은 두 파일(다른 폴더)의 로그 호출자 이름이 섞이지 않는다 — 구분자가 섞여도 같은 파일은 같다
+ * @details 호출자 표가 파일 이름만 키로 쓰면 `CallerBase/SameNamedFile.cpp` 와 `CallerKit/SameNamedFile.cpp` 가 같은 키라, 나중에 등록된
+ *          이름이 두 파일의 로그에 모두 붙는다.
+ */
+SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
+{
+    sw::Logger::registerCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp", "BaseCaller" );
+    sw::Logger::registerCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp", "KitCaller" );
+    SW_EXPECT_EQUAL( sw::string( "BaseCaller" ), sw::string( sw::Logger::getCaller( "C:/proj/Source/CallerBase/SameNamedFile.cpp" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "KitCaller" ), sw::string( sw::Logger::getCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp" ) ) );
+    // 앞부분 · 구분자가 달라도(헤더는 TU 마다 `__FILE__` 의 꼴이 다를 수 있다) 같은 파일이다.
+    SW_EXPECT_EQUAL( sw::string( "KitCaller" ), sw::string( sw::Logger::getCaller( "../elsewhere/CallerKit/SameNamedFile.cpp" ) ) );
+}

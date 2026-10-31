@@ -1,0 +1,1466 @@
+// 자료 구조 — DynamicBitset(연산 · 시프트 · 크기 다른 연산 거절 · parse · 블록 경계 모델 비교), SpscQueue · ConcurrentQueue(동시성), sw::array · map · set ·
+// unordered_map · unordered_set(이종 조회 · 충돌 체인 지우기 · reserve · shrink_to_fit · try_emplace) · deque · list, SpinLock, WorkStealingDeque, pair(EBO), vector 의 resize 성장.
+#include "pch.h"
+
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/SpinLock.h"
+#include "Core/Concurrency/SpscQueue.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/DynamicBitset.h"
+#include "Core/Container/WorkStealingDeque.h"
+#include "Core/Container/array.h"
+#include "Core/Container/deque.h"
+#include "Core/Container/list.h"
+#include "Core/Container/map.h"
+#include "Core/Container/pair.h"
+#include "Core/Container/set.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Testing/ScopedAssertCapture.h"
+#include "Core/Testing/TestFramework.h"
+
+using namespace sw;
+
+namespace
+{
+    struct EmptyTestHasher
+    {
+        size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
+    };
+
+    struct EmptyTestEqual
+    {
+        bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
+    };
+
+    /**
+     * @brief 모든 키를 같은 버킷으로 보내는 해시입니다.
+     * @details 충돌 체인을 **손으로** 만들기 위한 것이다 — 실제 해시로는 어떤 체인이 생길지가
+     *          운에 달려 있어서, swap-and-pop 이 고쳐야 하는 링크에 닿을지 보장할 수 없다.
+     */
+    struct AlwaysCollideHasher
+    {
+        size_t operator()( int32 ) const noexcept { return 0; }
+    };
+
+    /** @brief '0' · '1' 리터럴을 비트셋으로 읽습니다. 읽기 실패는 테스트 실패입니다. */
+    sw::DynamicBitset parseBits( const sw::string_view text )
+    {
+        sw::DynamicBitset value;
+        SW_EXPECT_TRUE_MSG( sw::DynamicBitset::parse( text, value ), sw::string( text ) );
+        return value;
+    }
+
+    /** @brief 비트 하나에 바이트 하나인 비교 모델(인덱스 0 이 가장 낮은 비트)을 '0' · '1' 문자열로 씁니다(맨 왼쪽이 가장 높은 비트). */
+    sw::string modelBitsToString( const sw::vector<uint8>& listBit )
+    {
+        sw::string text;
+        for ( size_t bitIndex = listBit.size(); bitIndex > 0; --bitIndex )
+        {
+            text += listBit[bitIndex - 1] != 0 ? '1' : '0';
+        }
+        return text;
+    }
+
+    /** @brief 비트셋이 모델과 같은지 봅니다 — 비트마다 test, 문자열, 개수(마지막 블록의 남는 비트가 0 인지까지). */
+    void expectBitsetMatchesModel( const sw::DynamicBitset& bitset, const sw::vector<uint8>& listBit, const utf8* pWhat )
+    {
+        SW_REQUIRE_TRUE_MSG( static_cast<uint32>( listBit.size() ) == bitset.size(), pWhat );
+        uint32 setCount = 0;
+        bool   bSame    = true;
+        for ( uint32 bitIndex = 0; bitIndex < bitset.size(); ++bitIndex )
+        {
+            setCount += listBit[bitIndex];
+            bSame = bSame && ( bitset.test( bitIndex ) == ( listBit[bitIndex] != 0 ) );
+        }
+        SW_EXPECT_TRUE_MSG( bSame, pWhat );
+        SW_EXPECT_TRUE_MSG( setCount == bitset.count(), pWhat );
+        SW_EXPECT_TRUE_MSG( modelBitsToString( listBit ) == bitset.to_string(), pWhat );
+    }
+
+    /** @brief try_lock · unlock 을 단언 안에서 확인합니다. 잠금 상태를 단언 매크로 안에서 바꾸는 검사라 잠금 분석이 경로를 따라가지 못해 분석하지 않는다. */
+    SW_NO_THREAD_SAFETY_ANALYSIS void checkSpinLockTryLock( sw::SpinLock& spinLock )
+    {
+        SW_EXPECT_TRUE( spinLock.try_lock() );
+        SW_EXPECT_TRUE( spinLock.isLocked() );
+        SW_EXPECT_FALSE( spinLock.try_lock() ); // 이미 잠김
+
+        spinLock.unlock();
+        SW_EXPECT_FALSE( spinLock.isLocked() );
+    }
+} // namespace
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 기본
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetBasic )
+{
+    sw::DynamicBitset bitset( 100 );
+    SW_EXPECT_EQUAL( 100u, bitset.size() );
+    SW_EXPECT_TRUE( bitset.none() );
+    SW_EXPECT_FALSE( bitset.any() );
+    SW_EXPECT_FALSE( bitset.all() );
+
+    bitset.set( 5 );
+    bitset.set( 10 );
+    SW_EXPECT_TRUE( bitset.test( 5 ) );
+    SW_EXPECT_TRUE( bitset.test( 10 ) );
+    SW_EXPECT_FALSE( bitset.test( 0 ) );
+    SW_EXPECT_EQUAL( 2u, bitset.count() );
+    SW_EXPECT_TRUE( bitset.any() );
+
+    bitset.reset( 5 );
+    SW_EXPECT_FALSE( bitset.test( 5 ) );
+    SW_EXPECT_EQUAL( 1u, bitset.count() );
+
+    bitset.flip( 10 );
+    SW_EXPECT_FALSE( bitset.test( 10 ) );
+    SW_EXPECT_TRUE( bitset.none() );
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 연산
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetOperations )
+{
+    const sw::DynamicBitset bs1 = parseBits( "1010" );
+    const sw::DynamicBitset bs2 = parseBits( "0110" );
+
+    sw::DynamicBitset andResult = bs1 & bs2;
+    SW_EXPECT_EQUAL( sw::string( "0010" ), andResult.to_string() );
+
+    sw::DynamicBitset orResult = bs1 | bs2;
+    SW_EXPECT_EQUAL( sw::string( "1110" ), orResult.to_string() );
+
+    sw::DynamicBitset xorResult = bs1 ^ bs2;
+    SW_EXPECT_EQUAL( sw::string( "1100" ), xorResult.to_string() );
+
+    sw::DynamicBitset notResult = ~bs1;
+    SW_EXPECT_EQUAL( sw::string( "0101" ), notResult.to_string() );
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 리사이즈와 변환
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetResizeAndConversions )
+{
+    sw::DynamicBitset bs( 8, 0b10101010u );
+    SW_EXPECT_EQUAL( 8u, bs.size() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0b10101010u ), bs.to_ullong() );
+
+    bs.resize( 16, true );
+    SW_EXPECT_EQUAL( 16u, bs.size() );
+    SW_EXPECT_TRUE( bs.test( 15 ) );
+
+    bs.reserve( 128 );
+    SW_EXPECT_TRUE( bs.capacity() >= 128u );
+
+    bs.shrink_to_fit();
+    SW_EXPECT_TRUE( bs.memory_usage() > 0u );
+
+    sw::DynamicBitset bsShift = bs << 2;
+    SW_EXPECT_EQUAL( bs.size(), bsShift.size() );
+
+    sw::DynamicBitset bsRightShift = bs >> 2;
+    SW_EXPECT_EQUAL( bs.size(), bsRightShift.size() );
+
+    bs >>= 2;
+    SW_EXPECT_EQUAL( 16u, bs.size() );
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 64비트 이상 멀티 블록 시프트(<<=, >>=) 검증
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetMultiBlockShift )
+{
+    // 192비트 (3개 64비트 블록) 비트셋 생성
+    sw::DynamicBitset bitset( 192 );
+    bitset.set( 10 );
+    bitset.set( 70 );
+    bitset.set( 150 );
+
+    SW_EXPECT_TRUE( bitset.test( 10 ) );
+    SW_EXPECT_TRUE( bitset.test( 70 ) );
+    SW_EXPECT_TRUE( bitset.test( 150 ) );
+    SW_EXPECT_EQUAL( 3u, bitset.count() );
+
+    // 1) 64비트 (정확히 1블록) 우측 시프트
+    sw::DynamicBitset shifted64 = bitset >> 64;
+    SW_EXPECT_FALSE( shifted64.test( 10 ) );
+    SW_EXPECT_TRUE( shifted64.test( 6 ) );  // 70 - 64 = 6
+    SW_EXPECT_TRUE( shifted64.test( 86 ) ); // 150 - 64 = 86
+    SW_EXPECT_EQUAL( 2u, shifted64.count() );
+
+    // 2) 128비트 (2블록) 우측 시프트
+    sw::DynamicBitset shifted128 = bitset >> 128;
+    SW_EXPECT_TRUE( shifted128.test( 22 ) ); // 150 - 128 = 22
+    SW_EXPECT_EQUAL( 1u, shifted128.count() );
+
+    // 3) 65비트 (1블록 + 1비트 복합) 우측 시프트
+    sw::DynamicBitset shifted65 = bitset >> 65;
+    SW_EXPECT_TRUE( shifted65.test( 5 ) );  // 70 - 65 = 5
+    SW_EXPECT_TRUE( shifted65.test( 85 ) ); // 150 - 65 = 85
+    SW_EXPECT_EQUAL( 2u, shifted65.count() );
+
+    // 4) 64비트 좌측 시프트
+    sw::DynamicBitset leftShifted64 = bitset << 64;
+    SW_EXPECT_TRUE( leftShifted64.test( 74 ) );  // 10 + 64 = 74
+    SW_EXPECT_TRUE( leftShifted64.test( 134 ) ); // 70 + 64 = 134
+    SW_EXPECT_FALSE( leftShifted64.test( 10 ) );
+    SW_EXPECT_EQUAL( 2u, leftShifted64.count() ); // 150 + 64 = 214 > 192 (truncated by size)
+}
+
+/**
+ * @brief [DataStructureTest] 크기가 다른 DynamicBitset 의 &= · |= · ^= 는 단언하고 아무것도 바꾸지 않는다
+ * @details 크기 검사가 없으면 짧은 쪽 블록 목록의 범위 밖을 읽는다(배포본에서 메모리 오류). Debug 의 단언은 가로채기 안에서 센다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetSizeMismatchLeavesTheTargetUnchanged )
+{
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 크기가 다른 연산은 단언 로그를 남기고 거절한다
+    test::ScopedAssertCapture assertCapture;
+
+    const sw::DynamicBitset shorter( 64 ); // 전부 0
+    sw::DynamicBitset       target( 192 );
+    target.set();
+    const sw::DynamicBitset original = target;
+
+    target &= shorter;
+    SW_EXPECT_TRUE( target == original );
+    target |= shorter;
+    SW_EXPECT_TRUE( target == original );
+    target ^= shorter;
+    SW_EXPECT_TRUE( target == original );
+    SW_EXPECT_EQUAL( 192u, target.size() );
+    SW_EXPECT_EQUAL( 192u, target.count() );
+
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 3u, assertCapture.getCount() );
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 전체 커버리지
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetFullCoverage )
+{
+    sw::DynamicBitset emptySet;
+    SW_EXPECT_TRUE( emptySet.empty() );
+
+    sw::DynamicBitset bs( 8, 0xFFu );
+    SW_EXPECT_EQUAL( static_cast<uint32>( 0xFFu ), bs.to_ulong() );
+
+    const sw::DynamicBitset bsEqual1    = parseBits( "1100" );
+    const sw::DynamicBitset bsEqual2    = parseBits( "1100" );
+    const sw::DynamicBitset bsDifferent = parseBits( "1010" );
+
+    SW_EXPECT_TRUE( bsEqual1 == bsEqual2 );
+    SW_EXPECT_FALSE( bsEqual1 != bsEqual2 );
+    SW_EXPECT_TRUE( bsDifferent != bsEqual1 );
+    SW_EXPECT_TRUE( bsDifferent < bsEqual1 );
+
+    sw::DynamicBitset bsAll( 8 );
+    bsAll.set();
+    SW_EXPECT_TRUE( bsAll.all() );
+    SW_EXPECT_EQUAL( 8u, bsAll.count() );
+
+    bsAll.reset();
+    SW_EXPECT_TRUE( bsAll.none() );
+    SW_EXPECT_EQUAL( 0u, bsAll.count() );
+
+    bsAll.flip();
+    SW_EXPECT_TRUE( bsAll.all() );
+
+    SW_EXPECT_EQUAL( sw::string( "1100" ), bsEqual1.to_string() );
+}
+
+/**
+ * @brief [DataStructureTest] SpscQueue 기본과 동시성
+ */
+SW_TEST_CASE( DataStructureTest, SpscQueueBasicAndConcurrent )
+{
+    sw::SpscQueue<int32, 64> queue;
+    SW_EXPECT_TRUE( queue.empty() );
+    SW_EXPECT_EQUAL( 0u, queue.size() );
+
+    bool push1 = queue.push( 100 );
+    bool push2 = queue.push( 200 );
+    SW_EXPECT_TRUE( push1 );
+    SW_EXPECT_TRUE( push2 );
+    SW_EXPECT_EQUAL( 2u, queue.size() );
+
+    int32 val1{ 0 };
+    int32 val2{ 0 };
+    bool  pop1 = queue.pop( val1 );
+    bool  pop2 = queue.pop( val2 );
+    SW_EXPECT_TRUE( pop1 );
+    SW_EXPECT_TRUE( pop2 );
+    SW_EXPECT_EQUAL( 100, val1 );
+    SW_EXPECT_EQUAL( 200, val2 );
+    SW_EXPECT_TRUE( queue.empty() );
+
+    sw::thread producer( [&queue]()
+    {
+        for ( int32 itemIndex = 0; itemIndex < 1000; ++itemIndex )
+        {
+            while ( queue.push( itemIndex ) == false )
+            {
+                std::this_thread::yield();
+            }
+        }
+    } );
+
+    sw::thread consumer( [&queue]()
+    {
+        int32 receivedCount{ 0 };
+        while ( receivedCount < 1000 )
+        {
+            int32 val{ 0 };
+            if ( queue.pop( val ) )
+                receivedCount++;
+            else
+                std::this_thread::yield();
+        }
+    } );
+
+    producer.join();
+    consumer.join();
+
+    SW_EXPECT_TRUE( queue.empty() );
+}
+
+/**
+ * @brief [DataStructureTest] ConcurrentQueue 의 두 enqueue(복사 · 이동)가 같은 슬롯 예약을 쓴다 — 가득 차면 둘 다 false, 순서는 FIFO
+ */
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueBothEnqueueOverloadsStopWhenFull )
+{
+    sw::ConcurrentQueue<sw::string, 4> queue;
+    const sw::string                   first{ "first" };
+    SW_EXPECT_TRUE( queue.enqueue( first ) );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "second" ) ) );
+    SW_EXPECT_TRUE( queue.enqueue( first ) );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "fourth" ) ) );
+
+    const sw::string overflow{ "overflow" };
+    SW_EXPECT_FALSE( queue.enqueue( overflow ) );
+    SW_EXPECT_FALSE( queue.enqueue( sw::string( "overflow" ) ) );
+    SW_EXPECT_EQUAL( 4u, queue.size() );
+
+    sw::string item;
+    SW_EXPECT_TRUE( queue.dequeue( item ) );
+    SW_EXPECT_EQUAL( sw::string( "first" ), item );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "fifth" ) ) );
+
+    sw::vector<sw::string> listItem;
+    SW_EXPECT_EQUAL( 4u, queue.drain( listItem ) );
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listItem.size() ) );
+    SW_EXPECT_EQUAL( sw::string( "second" ), listItem[0] );
+    SW_EXPECT_EQUAL( sw::string( "first" ), listItem[1] );
+    SW_EXPECT_EQUAL( sw::string( "fourth" ), listItem[2] );
+    SW_EXPECT_EQUAL( sw::string( "fifth" ), listItem[3] );
+    SW_EXPECT_TRUE( queue.empty() );
+}
+
+/**
+ * @brief [DataStructureTest] ConcurrentQueue 멀티스레드
+ */
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
+{
+    sw::ConcurrentQueue<int32, 128> queue;
+    SW_EXPECT_TRUE( queue.empty() );
+    SW_EXPECT_EQUAL( 0u, queue.size() );
+
+    constexpr int32   kItemsPerThread = 500;
+    constexpr int32   kNumProducers   = 4;
+    constexpr int32   kNumConsumers   = 4;
+    sw::atomic<int32> totalSumReceived{ 0 };
+
+    sw::vector<sw::thread> producers;
+    for ( int32 producerIndex = 0; producerIndex < kNumProducers; ++producerIndex )
+    {
+        producers.emplace_back( [&queue, producerIndex]()
+        {
+            for ( int32 itemIndex = 0; itemIndex < kItemsPerThread; ++itemIndex )
+            {
+                while ( queue.enqueue( producerIndex * 10000 + itemIndex ) == false )
+                {
+                    std::this_thread::yield();
+                }
+            }
+        } );
+    }
+
+    sw::vector<sw::thread> consumers;
+    for ( int32 consumerIndex = 0; consumerIndex < kNumConsumers; ++consumerIndex )
+    {
+        consumers.emplace_back( [&queue, &totalSumReceived]()
+        {
+            int32 count{ 0 };
+            int32 target = ( kNumProducers * kItemsPerThread ) / kNumConsumers;
+            while ( count < target )
+            {
+                int32 item{ 0 };
+                if ( queue.dequeue( item ) )
+                {
+                    totalSumReceived.fetch_add( 1, std::memory_order_relaxed );
+                    count++;
+                }
+                else
+                {
+                    std::this_thread::yield();
+                }
+            }
+        } );
+    }
+
+    for ( sw::thread& t : producers )
+    {
+        t.join();
+    }
+    for ( sw::thread& t : consumers )
+    {
+        t.join();
+    }
+
+    SW_EXPECT_TRUE( queue.empty() );
+    SW_EXPECT_EQUAL( kNumProducers * kItemsPerThread, totalSumReceived.load() );
+}
+
+/**
+ * @brief [DataStructureTest] sw::array 생성, 접근, 채우기 및 이터레이터 검증
+ */
+SW_TEST_CASE( DataStructureTest, ArrayOperations )
+{
+    // 1) 초기화 리스트 생성
+    sw::array<int32, 4> arr{ 10, 20, 30, 40 };
+    SW_EXPECT_EQUAL( 4u, arr.size() );
+    SW_EXPECT_FALSE( arr.empty() );
+    SW_EXPECT_EQUAL( 10, arr.front() );
+    SW_EXPECT_EQUAL( 40, arr.back() );
+    SW_EXPECT_EQUAL( 20, arr[1] );
+    SW_EXPECT_EQUAL( 30, arr.at( 2 ) );
+
+    // 2) 이터레이터 및 범위 기반 for
+    int32 sum{ 0 };
+    for ( const int32 val : arr )
+    {
+        sum += val;
+    }
+    SW_EXPECT_EQUAL( 100, sum );
+
+    // 3) fill
+    arr.fill( 99 );
+    SW_EXPECT_EQUAL( 99, arr[0] );
+    SW_EXPECT_EQUAL( 99, arr[1] );
+    SW_EXPECT_EQUAL( 99, arr[2] );
+    SW_EXPECT_EQUAL( 99, arr[3] );
+
+    // 4) 복사 및 비교 연산
+    sw::array<int32, 4> copyArr = arr;
+    SW_EXPECT_TRUE( copyArr == arr );
+    copyArr[0] = 100;
+    SW_EXPECT_TRUE( copyArr != arr );
+    SW_EXPECT_TRUE( arr < copyArr );
+}
+
+/**
+ * @brief [DataStructureTest] sw::map 및 sw::set 정렬 컨테이너 연산 검증
+ */
+SW_TEST_CASE( DataStructureTest, MapAndSetOperations )
+{
+    // 1) sw::map
+    sw::map<sw::string, int32> mapA;
+    mapA["Bravo"]   = 20;
+    mapA["Alpha"]   = 10;
+    mapA["Charlie"] = 30;
+
+    SW_EXPECT_EQUAL( 3u, mapA.size() );
+    SW_EXPECT_TRUE( mapA.contains( "Alpha" ) );
+    SW_EXPECT_TRUE( mapA.contains( "Bravo" ) );
+    SW_EXPECT_FALSE( mapA.contains( "Delta" ) );
+
+    auto itBravo = mapA.find( "Bravo" );
+    SW_EXPECT_TRUE( itBravo != mapA.end() );
+    if ( itBravo != mapA.end() )
+        SW_EXPECT_EQUAL( 20, itBravo->second );
+
+    mapA.erase( "Alpha" );
+    SW_EXPECT_EQUAL( 2u, mapA.size() );
+    SW_EXPECT_FALSE( mapA.contains( "Alpha" ) );
+
+    // 2) sw::set
+    sw::set<int32> setA;
+    setA.insert( 30 );
+    setA.insert( 10 );
+    setA.insert( 20 );
+    setA.insert( 10 ); // 중복 무시
+
+    SW_EXPECT_EQUAL( 3u, setA.size() );
+    SW_EXPECT_TRUE( setA.contains( 10 ) );
+    SW_EXPECT_TRUE( setA.contains( 20 ) );
+    SW_EXPECT_TRUE( setA.contains( 30 ) );
+    SW_EXPECT_FALSE( setA.contains( 40 ) );
+
+    // 정렬 순회 검증
+    sw::vector<int32> listSorted;
+    for ( const int32 val : setA )
+    {
+        listSorted.push_back( val );
+    }
+    SW_EXPECT_EQUAL( 3u, listSorted.size() );
+    SW_EXPECT_EQUAL( 10, listSorted[0] );
+    SW_EXPECT_EQUAL( 20, listSorted[1] );
+    SW_EXPECT_EQUAL( 30, listSorted[2] );
+
+    setA.erase( 20 );
+    SW_EXPECT_EQUAL( 2u, setA.size() );
+    SW_EXPECT_FALSE( setA.contains( 20 ) );
+}
+
+/**
+ * @brief [DataStructureTest] sw::unordered_map 및 sw::unordered_set 해시 컨테이너 연산 검증
+ */
+SW_TEST_CASE( DataStructureTest, UnorderedMapAndSetOperations )
+{
+    // 1) sw::unordered_map
+    sw::unordered_map<int32, sw::string> uMap;
+    uMap[100] = "OneHundred";
+    uMap[200] = "TwoHundred";
+    uMap[300] = "ThreeHundred";
+
+    SW_EXPECT_EQUAL( 3u, uMap.size() );
+    SW_EXPECT_TRUE( uMap.find( 100 ) != uMap.end() );
+    SW_EXPECT_TRUE( uMap.find( 200 ) != uMap.end() );
+    SW_EXPECT_TRUE( uMap.find( 400 ) == uMap.end() );
+
+    auto it = uMap.find( 100 );
+    SW_EXPECT_TRUE( it != uMap.end() );
+    if ( it != uMap.end() )
+        SW_EXPECT_EQUAL( sw::string( "OneHundred" ), it->second );
+
+    uMap.erase( 100 );
+    SW_EXPECT_EQUAL( 2u, uMap.size() );
+    SW_EXPECT_TRUE( uMap.find( 100 ) == uMap.end() );
+
+    // 2) sw::unordered_set
+    sw::unordered_set<int32> uSet;
+    uSet.insert( 42 );
+    uSet.insert( 84 );
+    uSet.insert( 42 ); // 중복 무시
+
+    SW_EXPECT_EQUAL( 2u, uSet.size() );
+    SW_EXPECT_TRUE( uSet.find( 42 ) != uSet.end() );
+    SW_EXPECT_TRUE( uSet.find( 84 ) != uSet.end() );
+    SW_EXPECT_TRUE( uSet.find( 99 ) == uSet.end() );
+    SW_EXPECT_EQUAL( 1u, uSet.count( 42 ) );
+    SW_EXPECT_EQUAL( 0u, uSet.count( 99 ) );
+
+    uSet.erase( 42 );
+    SW_EXPECT_EQUAL( 1u, uSet.size() );
+    SW_EXPECT_TRUE( uSet.find( 42 ) == uSet.end() );
+}
+
+/**
+ * @brief [DataStructureTest] sw::deque 및 sw::list 양방향 컨테이너 연산 검증
+ */
+SW_TEST_CASE( DataStructureTest, DequeAndListOperations )
+{
+    // 1) sw::deque
+    sw::deque<int32> dq;
+    dq.push_back( 20 );
+    dq.push_front( 10 );
+    dq.push_back( 30 );
+
+    SW_EXPECT_EQUAL( 3u, dq.size() );
+    SW_EXPECT_EQUAL( 10, dq.front() );
+    SW_EXPECT_EQUAL( 30, dq.back() );
+    SW_EXPECT_EQUAL( 20, dq[1] );
+
+    dq.pop_front();
+    SW_EXPECT_EQUAL( 2u, dq.size() );
+    SW_EXPECT_EQUAL( 20, dq.front() );
+
+    dq.pop_back();
+    SW_EXPECT_EQUAL( 1u, dq.size() );
+    SW_EXPECT_EQUAL( 20, dq.front() );
+
+    // 2) sw::list
+    sw::list<int32> lst;
+    lst.push_back( 2 );
+    lst.push_front( 1 );
+    lst.push_back( 3 );
+
+    SW_EXPECT_EQUAL( 3u, lst.size() );
+    SW_EXPECT_EQUAL( 1, lst.front() );
+    SW_EXPECT_EQUAL( 3, lst.back() );
+
+    sw::vector<int32> listIterated;
+    for ( const int32 val : lst )
+    {
+        listIterated.push_back( val );
+    }
+    SW_EXPECT_EQUAL( 3u, listIterated.size() );
+    SW_EXPECT_EQUAL( 1, listIterated[0] );
+    SW_EXPECT_EQUAL( 2, listIterated[1] );
+    SW_EXPECT_EQUAL( 3, listIterated[2] );
+
+    lst.remove( 2 );
+    SW_EXPECT_EQUAL( 2u, lst.size() );
+    SW_EXPECT_EQUAL( 1, lst.front() );
+    SW_EXPECT_EQUAL( 3, lst.back() );
+}
+
+/**
+ * @brief [DataStructureTest] SpinLock 기본 lock/unlock, try_lock, isLocked 및 멀티스레드 상호 배제 검증
+ */
+SW_TEST_CASE( DataStructureTest, SpinLockMutualExclusion )
+{
+    sw::SpinLock spinLock;
+    SW_EXPECT_FALSE( spinLock.isLocked() );
+
+    // 1) try_lock 및 unlock
+    checkSpinLockTryLock( spinLock );
+
+    // 2) lock & ScopedLock 연동
+    {
+        ScopedLock<SpinLock> lock{ spinLock };
+        SW_EXPECT_TRUE( spinLock.isLocked() );
+    }
+    SW_EXPECT_FALSE( spinLock.isLocked() );
+
+    // 3) 멀티스레드 동시 증가 상호 배제 검증
+    constexpr int32 kThreadCount  = 4;
+    constexpr int32 kIterations   = 1000;
+    int32           sharedCounter = 0;
+
+    sw::vector<sw::thread> listWorkers;
+    listWorkers.reserve( kThreadCount );
+
+    for ( int32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listWorkers.emplace_back(
+            [&]()
+        {
+            for ( int32 iterIndex = 0; iterIndex < kIterations; ++iterIndex )
+            {
+                ScopedLock<SpinLock> lock{ spinLock };
+                sharedCounter++;
+            }
+        } );
+    }
+
+    for ( auto& worker : listWorkers )
+    {
+        worker.join();
+    }
+
+    SW_EXPECT_EQUAL( kThreadCount * kIterations, sharedCounter );
+}
+
+/**
+ * @brief [DataStructureTest] WorkStealingDeque LIFO push/pop 및 FIFO steal 동작 검증
+ */
+SW_TEST_CASE( DataStructureTest, WorkStealingDequePushPopSteal )
+{
+    sw::WorkStealingDeque<int32> deque( 16 );
+
+    // 빈 덱에서 pop / steal 실패 검증
+    int32 outVal = 0;
+    SW_EXPECT_FALSE( deque.pop( outVal ) );
+    SW_EXPECT_FALSE( deque.steal( outVal ) );
+
+    // 1) 소유자 LIFO push & pop
+    SW_EXPECT_TRUE( deque.push( 100 ) );
+    SW_EXPECT_TRUE( deque.push( 200 ) );
+    SW_EXPECT_TRUE( deque.push( 300 ) );
+
+    // LIFO pop -> 300
+    SW_EXPECT_TRUE( deque.pop( outVal ) );
+    SW_EXPECT_EQUAL( 300, outVal );
+
+    // 2) 타 스레드 FIFO steal -> 100
+    SW_EXPECT_TRUE( deque.steal( outVal ) );
+    SW_EXPECT_EQUAL( 100, outVal );
+
+    // 마지막 남은 원소 -> 200
+    SW_EXPECT_TRUE( deque.pop( outVal ) );
+    SW_EXPECT_EQUAL( 200, outVal );
+
+    // 다시 빈 상태
+    SW_EXPECT_FALSE( deque.pop( outVal ) );
+    SW_EXPECT_FALSE( deque.steal( outVal ) );
+}
+
+/**
+ * @brief [DataStructureTest] WorkStealingDeque 멀티스레드 동시 Push/Pop 및 다중 Steal 무결성 스트레스 검증
+ */
+SW_TEST_CASE( DataStructureTest, WorkStealingDequeMultiThreadStress )
+{
+    constexpr int32              kTotalItems = 1000;
+    constexpr int32              kStealCount = 3;
+    sw::WorkStealingDeque<int32> deque( 2048 );
+
+    std::atomic<bool>  bProducerDone{ false };
+    std::atomic<int64> totalSumPopped{ 0 };
+    std::atomic<int32> totalCountPopped{ 0 };
+    std::atomic<int64> totalSumStolen{ 0 };
+    std::atomic<int32> totalCountStolen{ 0 };
+
+    // 1) 3개 Stealer 스레드
+    sw::vector<sw::thread> listStealers;
+    listStealers.reserve( kStealCount );
+    for ( int32 stealerIndex = 0; stealerIndex < kStealCount; ++stealerIndex )
+    {
+        listStealers.emplace_back(
+            [&]()
+        {
+            int32 item = 0;
+            while ( bProducerDone.load( std::memory_order_acquire ) == false || deque.steal( item ) )
+            {
+                if ( deque.steal( item ) )
+                {
+                    totalSumStolen.fetch_add( item, std::memory_order_relaxed );
+                    totalCountStolen.fetch_add( 1, std::memory_order_relaxed );
+                }
+                else
+                {
+                    std::this_thread::yield();
+                }
+            }
+        } );
+    }
+
+    // 2) Producer (Owner) 스레드: push 하면서 간헐적 pop
+    int64 expectedSum = 0;
+    for ( int32 index = 1; index <= kTotalItems; ++index )
+    {
+        expectedSum += index;
+        deque.push( index );
+        if ( ( index % 3 ) == 0 )
+        {
+            int32 popped = 0;
+            if ( deque.pop( popped ) )
+            {
+                totalSumPopped.fetch_add( popped, std::memory_order_relaxed );
+                totalCountPopped.fetch_add( 1, std::memory_order_relaxed );
+            }
+        }
+    }
+
+    // 남은 항목 owner가 pop
+    int32 remaining = 0;
+    while ( deque.pop( remaining ) )
+    {
+        totalSumPopped.fetch_add( remaining, std::memory_order_relaxed );
+        totalCountPopped.fetch_add( 1, std::memory_order_relaxed );
+    }
+
+    bProducerDone.store( true, std::memory_order_release );
+
+    for ( auto& stealer : listStealers )
+    {
+        stealer.join();
+    }
+
+    // 최종 합산 및 개수 일치 검증 (유실 또는 중복 0건)
+    const int32 totalProcessedCount = totalCountPopped.load() + totalCountStolen.load();
+    const int64 totalProcessedSum   = totalSumPopped.load() + totalSumStolen.load();
+
+    SW_EXPECT_EQUAL( kTotalItems, totalProcessedCount );
+    SW_EXPECT_EQUAL( expectedSum, totalProcessedSum );
+}
+
+/**
+ * @brief [DataStructureTest] pair 기본 및 구조화 바인딩
+ */
+SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
+{
+    sw::pair<int32, sw::string> p1{ 42, "hello" };
+    SW_EXPECT_EQUAL( 42, p1.first );
+    SW_EXPECT_EQUAL( sw::string( "hello" ), p1.second );
+
+    const auto [num, str] = p1;
+    SW_EXPECT_EQUAL( 42, num );
+    SW_EXPECT_EQUAL( sw::string( "hello" ), str );
+
+    auto p2 = sw::make_pair( 100, 200 );
+    SW_EXPECT_EQUAL( 100, p2.first );
+    SW_EXPECT_EQUAL( 200, p2.second );
+}
+
+/**
+ * @brief [DataStructureTest] pair EBO (Empty Base Optimization) 압축 검증
+ */
+SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
+{
+    // 1) 일반 타입 쌍: 8 바이트
+    static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
+    // 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
+    static_assert( sizeof( sw::pair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
+    // 3) 빈 클래스 2개: EBO 압축으로 최소 크기 1 바이트
+    static_assert( sizeof( sw::pair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
+
+    sw::pair<EmptyTestHasher, int32> pEmptyFirst{ EmptyTestHasher{}, 1234 };
+    SW_EXPECT_EQUAL( 1234, pEmptyFirst.second );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 2654435761u ), pEmptyFirst.first()( 10 ) );
+
+    sw::pair<int32, EmptyTestEqual> pEmptySecond{ 5678, EmptyTestEqual{} };
+    SW_EXPECT_EQUAL( 5678, pEmptySecond.first );
+    SW_EXPECT_TRUE( pEmptySecond.second()( 10, 10 ) );
+    SW_EXPECT_FALSE( pEmptySecond.second()( 10, 20 ) );
+
+    sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
+    SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
+}
+
+/**
+ * @brief [DataStructureTest] SpscQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
+ */
+SW_TEST_CASE( DataStructureTest, SpscQueueStress )
+{
+    constexpr int32            kTotalItems = 100000;
+    sw::SpscQueue<int32, 2048> queue;
+
+    sw::atomic<bool>  bProducerDone{ false };
+    sw::atomic<int64> sumConsumed{ 0 };
+    sw::atomic<int32> countConsumed{ 0 };
+    bool              bOrderPreserved = true;
+
+    // Consumer 스레드
+    sw::thread consumer( [&queue, &bProducerDone, &sumConsumed, &countConsumed, &bOrderPreserved]()
+    {
+        int32 expectedNext = 1;
+        int32 item         = 0;
+        while ( bProducerDone.load( std::memory_order_acquire ) == false || queue.empty() == false )
+        {
+            if ( queue.pop( item ) )
+            {
+                if ( item != expectedNext )
+                    bOrderPreserved = false;
+                ++expectedNext;
+                sumConsumed.fetch_add( item, std::memory_order_relaxed );
+                countConsumed.fetch_add( 1, std::memory_order_relaxed );
+            }
+            else
+            {
+                std::this_thread::yield();
+            }
+        }
+    } );
+
+    // Producer 스레드
+    int64 expectedSum = 0;
+    for ( int32 index = 1; index <= kTotalItems; ++index )
+    {
+        expectedSum += index;
+        while ( queue.push( index ) == false )
+        {
+            std::this_thread::yield();
+        }
+    }
+    bProducerDone.store( true, std::memory_order_release );
+
+    consumer.join();
+
+    SW_EXPECT_TRUE( bOrderPreserved );
+    SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
+    SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
+
+/**
+ * @brief [DataStructureTest] ConcurrentQueue 다중 생산자·다중 소비자(MPMC) 동시성 스트레스 테스트 (10만 건)
+ */
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
+{
+    constexpr int32 kProducers        = 4;
+    constexpr int32 kConsumers        = 4;
+    constexpr int32 kItemsPerProducer = 25000;
+    constexpr int32 kTotalItems       = kProducers * kItemsPerProducer;
+
+    sw::ConcurrentQueue<int32, 4096> queue;
+    sw::atomic<int32>                activeProducers{ kProducers };
+    sw::atomic<int64>                sumConsumed{ 0 };
+    sw::atomic<int32>                countConsumed{ 0 };
+
+    sw::vector<sw::thread> listConsumer;
+    listConsumer.reserve( kConsumers );
+    for ( int32 consumerIndex = 0; consumerIndex < kConsumers; ++consumerIndex )
+    {
+        listConsumer.emplace_back( [&queue, &activeProducers, &sumConsumed, &countConsumed]()
+        {
+            int32 item = 0;
+            while ( activeProducers.load( std::memory_order_acquire ) > 0 || queue.empty() == false )
+            {
+                if ( queue.dequeue( item ) )
+                {
+                    sumConsumed.fetch_add( item, std::memory_order_relaxed );
+                    countConsumed.fetch_add( 1, std::memory_order_relaxed );
+                }
+                else
+                {
+                    std::this_thread::yield();
+                }
+            }
+        } );
+    }
+
+    sw::vector<sw::thread> listProducer;
+    listProducer.reserve( kProducers );
+    int64 expectedSum = 0;
+
+    for ( int32 producerIndex = 0; producerIndex < kProducers; ++producerIndex )
+    {
+        const int32 baseVal = producerIndex * kItemsPerProducer;
+        for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+        {
+            expectedSum += ( baseVal + index );
+        }
+
+        listProducer.emplace_back( [&queue, &activeProducers, baseVal]()
+        {
+            for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+            {
+                while ( queue.enqueue( baseVal + index ) == false )
+                {
+                    std::this_thread::yield();
+                }
+            }
+            activeProducers.fetch_sub( 1, std::memory_order_release );
+        } );
+    }
+
+    for ( auto& producer : listProducer )
+    {
+        producer.join();
+    }
+
+    for ( auto& consumer : listConsumer )
+    {
+        consumer.join();
+    }
+
+    SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
+    SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset::parse 는 '0' · '1' 이 아닌 글자가 있으면 실패하고 값을 바꾸지 않는다
+ * @details 예전 문자열 생성자는 잘못된 글자를 로그만 남기고 0 으로 읽었다(폴백). 맨 왼쪽 글자가 가장 높은 비트다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetParseRejectsInvalidCharacters )
+{
+    sw::DynamicBitset bitset = parseBits( "11" );
+    SW_EXPECT_FALSE( sw::DynamicBitset::parse( "10A1B0", bitset ) );
+    SW_EXPECT_FALSE( sw::DynamicBitset::parse( " 1", bitset ) );
+    SW_EXPECT_TRUE( bitset == parseBits( "11" ) );
+
+    SW_REQUIRE_TRUE( sw::DynamicBitset::parse( "100100", bitset ) );
+    SW_EXPECT_EQUAL( 6u, bitset.size() );
+    SW_EXPECT_TRUE( bitset.test( 5 ) );
+    SW_EXPECT_TRUE( bitset.test( 2 ) );
+    SW_EXPECT_FALSE( bitset.test( 0 ) );
+
+    SW_REQUIRE_TRUE( sw::DynamicBitset::parse( "", bitset ) );
+    SW_EXPECT_TRUE( bitset.empty() );
+
+    // 블록 경계(64 · 65 비트): to_string 과 왕복하고 남는 비트는 0 이다
+    for ( const uint32 bitCount : { 63u, 64u, 65u, 128u } )
+    {
+        sw::string text( bitCount, '1' );
+        text[0] = '0';
+        SW_REQUIRE_TRUE( sw::DynamicBitset::parse( text, bitset ) );
+        SW_EXPECT_EQUAL( bitCount, bitset.size() );
+        SW_EXPECT_EQUAL( bitCount - 1, bitset.count() );
+        SW_EXPECT_EQUAL( text, bitset.to_string() );
+    }
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset::push_back 과 resize( n, true ) 는 블록 경계를 넘어도 마지막 블록의 남는 비트를 0 으로 둔다
+ * @details 남는 비트가 켜지면 count · == · any 가 틀린다. 0 비트 · 64 배수 · 경계 하나 넘김을 본다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetGrowKeepsTailBitsClear )
+{
+    sw::DynamicBitset pushed;
+    sw::DynamicBitset reference( 130 );
+    for ( uint32 bitIndex = 0; bitIndex < 130; ++bitIndex )
+    {
+        const bool bValue = ( bitIndex % 3 ) == 0;
+        pushed.push_back( bValue );
+        reference.set( bitIndex, bValue );
+    }
+    SW_EXPECT_EQUAL( 130u, pushed.size() );
+    SW_EXPECT_TRUE( pushed == reference );
+    SW_EXPECT_EQUAL( reference.count(), pushed.count() );
+
+    // 남는 비트가 0 이어야 ~ 뒤의 개수가 맞다
+    SW_EXPECT_EQUAL( 130u - reference.count(), ( ~pushed ).count() );
+
+    for ( const uint32 startSize : { 0u, 1u, 63u, 64u, 65u } )
+    {
+        sw::DynamicBitset grown( startSize );
+        grown.resize( startSize + 70, true );
+        SW_EXPECT_EQUAL( startSize + 70, grown.size() );
+        SW_EXPECT_EQUAL( 70u, grown.count() );
+        SW_EXPECT_TRUE( startSize == 0u || grown.test( startSize - 1 ) == false );
+        SW_EXPECT_TRUE( grown.test( startSize ) );
+
+        // 줄였다가 0 으로 다시 늘리면 지운 자리는 0 이다
+        grown.resize( startSize + 1 );
+        grown.resize( startSize + 70, false );
+        SW_EXPECT_EQUAL( 1u, grown.count() );
+    }
+}
+
+/**
+ * @brief [DataStructureTest] DynamicBitset 의 블록 단위 연산이 비트 하나씩 계산한 모델과 같은 답을 낸다(무작위 입력)
+ * @details 블록 루프(&= · |= · ^= · ~ · << · >> · == · < · to_string · parse)는 블록 경계와 마지막 블록의 남는 비트에서 틀리기 쉽다.
+ *          크기 0 · 1 · 63 · 64 · 65 · 128 · 129 · 1000 과 시프트 양 0 · 1 · 63 · 64 · 65 · n-1 · n · n+5 를 비트 하나씩 계산한 값과 비교한다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
+{
+    uint64 seed = 0x5eed;
+    for ( const uint32 bitCount : { 0u, 1u, 8u, 63u, 64u, 65u, 127u, 128u, 129u, 1000u } )
+    {
+        for ( uint32 trial = 0; trial < 4; ++trial )
+        {
+            sw::vector<uint8> listA( bitCount, 0 );
+            sw::vector<uint8> listB( bitCount, 0 );
+            sw::DynamicBitset bitsetA( bitCount );
+            sw::DynamicBitset bitsetB( bitCount );
+            for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+            {
+                seed            = sw::HashUtil::mix64( seed + sw::HashUtil::kGoldenRatio64 );
+                listA[bitIndex] = static_cast<uint8>( seed & 1 );
+                listB[bitIndex] = static_cast<uint8>( ( seed >> 1 ) & 1 );
+                bitsetA.set( bitIndex, listA[bitIndex] != 0 );
+                bitsetB.set( bitIndex, listB[bitIndex] != 0 );
+            }
+            expectBitsetMatchesModel( bitsetA, listA, "set" );
+
+            sw::vector<uint8> listAnd( bitCount, 0 );
+            sw::vector<uint8> listOr( bitCount, 0 );
+            sw::vector<uint8> listXor( bitCount, 0 );
+            sw::vector<uint8> listNot( bitCount, 0 );
+            for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+            {
+                listAnd[bitIndex] = static_cast<uint8>( listA[bitIndex] & listB[bitIndex] );
+                listOr[bitIndex]  = static_cast<uint8>( listA[bitIndex] | listB[bitIndex] );
+                listXor[bitIndex] = static_cast<uint8>( listA[bitIndex] ^ listB[bitIndex] );
+                listNot[bitIndex] = static_cast<uint8>( listA[bitIndex] ^ 1 );
+            }
+            expectBitsetMatchesModel( bitsetA & bitsetB, listAnd, "&" );
+            expectBitsetMatchesModel( bitsetA | bitsetB, listOr, "|" );
+            expectBitsetMatchesModel( bitsetA ^ bitsetB, listXor, "^" );
+            expectBitsetMatchesModel( ~bitsetA, listNot, "~" );
+
+            for ( const uint32 shift : { 0u, 1u, 3u, 63u, 64u, 65u, bitCount == 0 ? 0u : bitCount - 1, bitCount, bitCount + 5 } )
+            {
+                sw::vector<uint8> listLeft( bitCount, 0 );
+                sw::vector<uint8> listRight( bitCount, 0 );
+                for ( uint32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+                {
+                    listLeft[bitIndex]  = bitIndex >= shift ? listA[bitIndex - shift] : uint8{ 0 };
+                    listRight[bitIndex] = static_cast<uint64>( bitIndex ) + shift < bitCount ? listA[bitIndex + shift] : uint8{ 0 };
+                }
+                expectBitsetMatchesModel( bitsetA << shift, listLeft, "<<" );
+                expectBitsetMatchesModel( bitsetA >> shift, listRight, ">>" );
+            }
+
+            // == · < 는 맨 위 비트부터 처음 다른 비트로 정한다
+            bool bModelLess = false;
+            bool bModelSame = true;
+            for ( uint32 bitIndex = bitCount; bitIndex > 0; --bitIndex )
+            {
+                if ( listA[bitIndex - 1] != listB[bitIndex - 1] )
+                {
+                    bModelLess = listA[bitIndex - 1] < listB[bitIndex - 1];
+                    bModelSame = false;
+                    break;
+                }
+            }
+            SW_EXPECT_EQUAL( bModelSame, bitsetA == bitsetB );
+            SW_EXPECT_EQUAL( bModelLess, bitsetA < bitsetB );
+            SW_EXPECT_TRUE( bitsetA == sw::DynamicBitset( bitsetA ) );
+            SW_EXPECT_FALSE( bitsetA < bitsetA );
+
+            // parse 는 to_string 의 역이고, 잘못된 글자가 어느 블록에 있든 실패하며 값을 바꾸지 않는다
+            const sw::string  text = modelBitsToString( listA );
+            sw::DynamicBitset parsed;
+            SW_REQUIRE_TRUE( sw::DynamicBitset::parse( text, parsed ) );
+            expectBitsetMatchesModel( parsed, listA, "parse" );
+            SW_EXPECT_TRUE( parsed == bitsetA );
+            for ( const uint32 badIndex : { 0u, 63u, 64u, bitCount / 2, bitCount == 0 ? 0u : bitCount - 1 } )
+            {
+                if ( badIndex >= bitCount )
+                    continue;
+                for ( const utf8 badDigit : { '2', '/', 'a', ' ' } )
+                {
+                    sw::string badText = text;
+                    badText[badIndex]  = badDigit;
+                    SW_EXPECT_FALSE( sw::DynamicBitset::parse( badText, parsed ) );
+                    SW_EXPECT_TRUE( parsed == bitsetA );
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
+ * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
+ *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
+ *          두 구성(`SW_ENABLE_STL_CONTAINER`)이 같은 컨테이너 구현이라 이 계약도 구성과 무관하다.
+ *
+ * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
+ */
+SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
+{
+    const sw::string      stored{ "engine/shaders/gbuffer.hlsl" };
+    const sw::string_view probe{ stored.data(), stored.size() };
+    const sw::string_view missing{ "engine/shaders/none.hlsl" };
+
+    sw::map<sw::string, int32> orderedMap;
+    orderedMap[stored] = 7;
+    SW_EXPECT_TRUE( orderedMap.find( probe ) != orderedMap.end() );
+    SW_EXPECT_TRUE( orderedMap.find( missing ) == orderedMap.end() );
+
+    sw::set<sw::string> orderedSet;
+    orderedSet.insert( stored );
+    SW_EXPECT_TRUE( orderedSet.find( probe ) != orderedSet.end() );
+    SW_EXPECT_TRUE( orderedSet.find( missing ) == orderedSet.end() );
+
+    sw::unordered_map<sw::string, int32> hashMap;
+    hashMap[stored] = 7;
+    SW_EXPECT_TRUE( hashMap.find( probe ) != hashMap.end() );
+    SW_EXPECT_TRUE( hashMap.find( missing ) == hashMap.end() );
+
+    sw::unordered_set<sw::string> hashSet;
+    hashSet.insert( stored );
+    SW_EXPECT_TRUE( hashSet.find( probe ) != hashSet.end() );
+    SW_EXPECT_TRUE( hashSet.find( missing ) == hashSet.end() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, hashSet.count( probe ) );
+    SW_EXPECT_TRUE( hashSet.contains( probe ) );
+    SW_EXPECT_TRUE( hashSet.contains( missing ) == false );
+}
+
+/**
+ * @brief [DataStructureTest] 충돌 체인의 **어느 자리**를 지워도 나머지가 전부 남는다
+ * @details `sw::unordered_map` 은 밀집 배열 + 버킷 체인이고, `erase` 는 **마지막 원소를 지운
+ *          자리로 옮긴다**(swap-and-pop). 그러면 "마지막 원소를 가리키던 체인 링크"를 새 자리로
+ *          고쳐 줘야 하는데, 그 고치기가 어긋나면 **지우지도 않은 키가 조회에서 사라진다.**
+ *          특히 까다로운 것이 지우려는 원소의 **바로 앞 노드가 마지막 원소인** 경우다 — 링크를
+ *          끊는 것과 옮기는 것이 같은 노드를 건드린다.
+ *
+ *          해시를 전부 0 으로 만들어 한 버킷에 몰아넣고, 체인의 모든 위치를 하나씩 지워 본다.
+ *          같은 구조를 실제 해시로 재현하려면 운이 필요하므로 여기서는 충돌을 강제한다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapEraseFixesCollisionChainAtEveryPosition )
+{
+    constexpr int32 kCount = 8;
+
+    for ( int32 eraseTarget = 0; eraseTarget < kCount; ++eraseTarget )
+    {
+        sw::unordered_map<int32, int32, AlwaysCollideHasher> map;
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            map[key] = key * 100;
+        }
+
+        SW_REQUIRE_EQUAL( size_t( kCount ), map.size() );
+
+        SW_EXPECT_EQUAL( size_t( 1 ), map.erase( eraseTarget ) );
+        SW_EXPECT_EQUAL( size_t( kCount - 1 ), map.size() );
+        SW_EXPECT_TRUE( map.find( eraseTarget ) == map.end() );
+
+        // 지우지 않은 키는 **전부** 제 값으로 남아 있어야 한다.
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            if ( key == eraseTarget )
+                continue;
+            auto iter = map.find( key );
+            SW_EXPECT_TRUE_MSG( iter != map.end(), "지우지 않은 키가 사라졌습니다 — 체인 고치기가 어긋났습니다" );
+            SW_EXPECT_EQUAL( key * 100, iter->second );
+        }
+
+        // 지운 자리에 다시 넣어도 체인이 성하다.
+        map[eraseTarget] = eraseTarget * 100 + 7;
+        SW_EXPECT_EQUAL( size_t( kCount ), map.size() );
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            auto iter = map.find( key );
+            SW_REQUIRE_TRUE( iter != map.end() );
+            SW_EXPECT_EQUAL( key == eraseTarget ? key * 100 + 7 : key * 100, iter->second );
+        }
+    }
+}
+
+/**
+ * @brief [DataStructureTest] 충돌 체인을 전부 지워도 끝까지 일관된다
+ * @details 위 검사는 한 번 지운 직후만 본다. 이쪽은 **지우는 순서를 바꿔 가며 끝까지** 비운다 —
+ *          swap-and-pop 은 매번 배열 끝의 원소를 옮기므로, 어긋남이 있으면 여러 번 지운 뒤에야
+ *          드러나는 경우가 있다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapEraseAllInSeveralOrdersStaysConsistent )
+{
+    constexpr int32 kCount = 12;
+
+    // 앞에서부터 / 뒤에서부터 / 건너뛰며 — 세 순서 모두 같은 결과여야 한다.
+    for ( int32 orderKind = 0; orderKind < 3; ++orderKind )
+    {
+        sw::unordered_map<int32, int32, AlwaysCollideHasher> map;
+        sw::vector<int32>                                    listRemaining;
+        for ( int32 key = 0; key < kCount; ++key )
+        {
+            map[key] = key * 3;
+            listRemaining.push_back( key );
+        }
+
+        while ( listRemaining.empty() == false )
+        {
+            size_t pickIndex = 0;
+            if ( orderKind == 1 )
+                pickIndex = listRemaining.size() - 1;
+            else if ( orderKind == 2 )
+                pickIndex = listRemaining.size() / 2;
+
+            const int32 key = listRemaining[pickIndex];
+            listRemaining.erase( listRemaining.begin() + static_cast<ptrdiff_t>( pickIndex ) );
+
+            SW_REQUIRE_EQUAL( size_t( 1 ), map.erase( key ) );
+            SW_EXPECT_EQUAL( listRemaining.size(), map.size() );
+
+            for ( int32 remaining : listRemaining )
+            {
+                auto iter = map.find( remaining );
+                SW_EXPECT_TRUE_MSG( iter != map.end(), "남아 있어야 할 키가 사라졌습니다" );
+                SW_EXPECT_EQUAL( remaining * 3, iter->second );
+            }
+        }
+        SW_EXPECT_TRUE( map.empty() );
+    }
+}
+
+/**
+ * @brief [DataStructureTest] 2 의 거듭제곱이 아닌 `reserve` 뒤에 여러 번 자라고 반을 지워도 조회가 맞다
+ * @details 버킷 번호는 `hash % 버킷 수` 가 아니라 곱 · 접기 · 마스크로 뽑는다 — 그래서 버킷 수는 늘 2 의 거듭제곱이어야 하고,
+ *          `reserve( 1000 )` 은 1024 로 올라간다(올리기를 빠뜨리면 마스크가 버킷 일부만 가리켜 체인이 길어진다).
+ *          지우기는 마지막 원소를 옮겨 오며 그 원소의 버킷 체인을 고치는데, 그 버킷도 같은 함수로 찾아야 한다 — 한 곳만
+ *          `%` 로 남으면 옮긴 원소가 사라진다. 실제 해시(흩어진 64비트 키)로 여러 크기를 지나가며 셋 다 본다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
+{
+    auto mixKey = []( uint64 value )
+    {
+        value += sw::HashUtil::kGoldenRatio64;
+        return sw::HashUtil::mix64( value );
+    };
+    constexpr uint64 kCount = 5000;
+
+    sw::unordered_map<uint64, uint64> map;
+    sw::unordered_set<uint64>         set;
+    map.reserve( 1000 );
+    set.reserve( 1000 );
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        map.emplace( mixKey( index ), index );
+        set.insert( mixKey( index ) );
+    }
+    SW_REQUIRE_EQUAL( size_t( kCount ), map.size() );
+    SW_REQUIRE_EQUAL( size_t( kCount ), set.size() );
+
+    // 셋에 하나씩 지운다 — 지울 때마다 배열 끝의 원소가 옮겨 온다.
+    for ( uint64 index = 0; index < kCount; index += 3 )
+    {
+        SW_EXPECT_EQUAL( size_t( 1 ), map.erase( mixKey( index ) ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), set.erase( mixKey( index ) ) );
+    }
+
+    uint32 wrongCount = 0;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const bool bErased   = ( index % 3 ) == 0;
+        const auto iter      = map.find( mixKey( index ) );
+        const bool bInMap    = iter != map.end() && iter->second == index;
+        const bool bInSet    = set.contains( mixKey( index ) );
+        const bool bExpected = bErased == false;
+        if ( bInMap != bExpected || bInSet != bExpected )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    // 지운 자리에 다시 넣으면 전부 찾는다.
+    for ( uint64 index = 0; index < kCount; index += 3 )
+    {
+        map.emplace( mixKey( index ), index + 1 );
+    }
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const auto iter = map.find( mixKey( index ) );
+        if ( iter == map.end() || iter->second != ( ( index % 3 ) == 0 ? index + 1 : index ) )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
+ * @brief [DataStructureTest] 해시맵 `shrink_to_fit` 은 버킷을 줄여도 모든 키를 찾고, `clear()` 뒤에 부르면 처음 상태로 돌아가 다시 쓸 수 있다
+ * @details 버킷을 줄이면 체인을 새 버킷 수로 다시 이어야 한다 — 하나라도 빠지면 그 키를 못 찾는다. 빈 맵은 버킷 표까지 놓으므로
+ *          다음 삽입이 빈 표에서 다시 자라는 경로를 탄다.
+ */
+SW_TEST_CASE( DataStructureTest, HashMapShrinkToFitKeepsKeysAndReleasesWhenEmpty )
+{
+    auto mixKey = []( uint64 value )
+    {
+        value += sw::HashUtil::kGoldenRatio64;
+        return sw::HashUtil::mix64( value );
+    };
+    constexpr uint64 kCount = 3000;
+
+    sw::unordered_map<uint64, uint64> map;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        map.emplace( mixKey( index ), index );
+    }
+    for ( uint64 index = 100; index < kCount; ++index )
+    {
+        map.erase( mixKey( index ) );
+    }
+    map.shrink_to_fit();
+    SW_REQUIRE_EQUAL( size_t( 100 ), map.size() );
+
+    uint32 wrongCount = 0;
+    for ( uint64 index = 0; index < kCount; ++index )
+    {
+        const auto iter   = map.find( mixKey( index ) );
+        const bool bFound = iter != map.end() && iter->second == index;
+        if ( bFound != ( index < 100 ) )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    map.clear();
+    map.shrink_to_fit();
+    SW_EXPECT_TRUE( map.empty() );
+    SW_EXPECT_TRUE( map.find( mixKey( 0 ) ) == map.end() );
+
+    for ( uint64 index = 0; index < 64; ++index )
+    {
+        map.emplace( mixKey( index ), index + 1 );
+    }
+    for ( uint64 index = 0; index < 64; ++index )
+    {
+        const auto iter = map.find( mixKey( index ) );
+        if ( iter == map.end() || iter->second != index + 1 )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+}
+
+/**
+ * @brief [DataStructureTest] 문자열 키 해시는 `string` · `string_view` · C 문자열에서 같은 값이고, 서로 다른 키는 갈린다
+ * @details 해시 컨테이너의 이종 조회(`find( string_view )`)는 세 모양이 같은 바이트에 같은 해시를 낼 때만 맞다 — 하나라도
+ *          다르면 넣은 키를 다른 모양으로 못 찾는다. 해시는 8 바이트씩 읽으므로 끝 자투리(0 ~ 7 바이트)와 길이만 다른 키
+ *          (`"a"` · `"a\0"`)도 본다.
+ */
+SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys )
+{
+    const sw::DefaultHash<sw::string> hasher{};
+    sw::unordered_set<uint64>         setHash;
+    for ( uint32 length = 0; length < 40; ++length )
+    {
+        sw::string text;
+        for ( uint32 index = 0; index < length; ++index )
+        {
+            text.push_back( static_cast<utf8>( 'a' + ( ( index * 7 + length ) % 26 ) ) );
+        }
+        const size_t fromString = hasher( text );
+        const size_t fromView   = hasher( sw::string_view( text.data(), text.size() ) );
+        const size_t fromCStr   = hasher( text.c_str() );
+        SW_EXPECT_EQUAL( fromString, fromView );
+        SW_EXPECT_EQUAL( fromString, fromCStr );
+        setHash.insert( static_cast<uint64>( fromString ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 40 ), setHash.size() );
+
+    const utf8 kWithNul[] = { 'a', '\0' };
+    SW_EXPECT_TRUE( hasher( sw::string_view( kWithNul, 1 ) ) != hasher( sw::string_view( kWithNul, 2 ) ) );
+
+    // 끝 자투리만 다른 키 — 8 바이트 묶음 뒤의 한 글자.
+    SW_EXPECT_TRUE( hasher( sw::string_view( "abcdefgh1" ) ) != hasher( sw::string_view( "abcdefgh2" ) ) );
+
+    // 조회도 세 모양으로 된다.
+    sw::unordered_map<sw::string, int32> mapName;
+    mapName.emplace( sw::string( "engine/materials/glassmaterial.material" ), 7 );
+    SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
+    SW_EXPECT_TRUE( mapName.find( sw::string( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
+    SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.materia" ) ) == mapName.end() );
+}
+
+/**
+ * @brief [DataStructureTest] `vector::resize( size() + 1 )` 를 되풀이해도 재할당은 로그 번이다
+ * @details 용량을 넘을 때 딱 `count` 만 잡으면 한 칸 늘릴 때마다 통째로 옮긴다(N 번에 O(N^2)).
+ *          std::vector 처럼 두 배 이상으로 키우면 용량이 바뀌는 횟수는 log2(N) 남짓이다.
+ */
+SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
+{
+    sw::vector<uint32> listValue;
+    size_t             lastCapacity   = listValue.capacity();
+    uint32             capacityChange = 0;
+    for ( uint32 index = 0; index < 4096; ++index )
+    {
+        listValue.resize( listValue.size() + 1 );
+        listValue.back() = index;
+        if ( listValue.capacity() != lastCapacity )
+        {
+            ++capacityChange;
+            lastCapacity = listValue.capacity();
+        }
+    }
+    SW_EXPECT_EQUAL( size_t( 4096 ), listValue.size() );
+    SW_EXPECT_TRUE_MSG( capacityChange <= 14, "resize 가 용량을 기하급수로 늘리지 않습니다" );
+    uint32 wrongCount = 0;
+    for ( uint32 index = 0; index < 4096; ++index )
+    {
+        if ( listValue[index] != index )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+
+    // 한 번에 크게 늘리면 딱 그만큼 — 빈 벡터의 `resize( n )` 은 넘치게 잡지 않는다.
+    sw::vector<uint32> listOnce;
+    listOnce.resize( 1000 );
+    SW_EXPECT_EQUAL( size_t( 1000 ), listOnce.capacity() );
+}
+
+/**
+ * @brief [DataStructureTest] `try_emplace` 는 키가 있으면 인자를 건드리지 않고, 값을 괄호로 만든다. `map::upper_bound` 가 스칼라 키로 동작한다.
+ * @details `try_emplace` 가 값을 먼저 만들어 넣어 보고 되돌리면 키가 있어도 옮겨 받은 인자가 없어지고, 중괄호로 만들면 `try_emplace( k, 5 )` 가
+ *          원소 하나(5)짜리 벡터가 된다. `map` 비교자의 (키, 원소) 쪽이 키에서 `.first` 를 읽으면 스칼라 키로 `upper_bound` 가 컴파일되지 않는다.
+ */
+SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
+{
+    sw::unordered_map<int32, sw::unique_ptr<int32>> mapOwned;
+    mapOwned.try_emplace( 1, sw::make_unique<int32>( 10 ) );
+
+    sw::unique_ptr<int32> pSecond = sw::make_unique<int32>( 20 );
+    const auto            result  = mapOwned.try_emplace( 1, std::move( pSecond ) );
+    SW_EXPECT_FALSE( result.second );
+    SW_EXPECT_TRUE_MSG( pSecond != nullptr, "키가 있는데 옮겨 받은 인자가 사라졌습니다" );
+    SW_EXPECT_EQUAL( 10, *mapOwned.find( 1 )->second );
+
+    sw::unordered_map<int32, sw::vector<int32>> mapList;
+    mapList.try_emplace( 7, size_t{ 5 } );
+    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
+
+    sw::map<int32, int32> mapSorted;
+    mapSorted.insert( { 10, 1 } );
+    mapSorted.insert( { 20, 2 } );
+    mapSorted.insert( { 30, 3 } );
+    const auto upper = mapSorted.upper_bound( 20 );
+    SW_REQUIRE_TRUE( upper != mapSorted.end() );
+    SW_EXPECT_EQUAL( 30, upper->first );
+}

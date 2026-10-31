@@ -60,15 +60,15 @@ namespace sw
                 ICompressionCodec* const pCodec = findCodec( header._codecType, pRegistry );
                 if ( pCodec == nullptr )
                 {
-                    SW_LOG_ERROR( "Unsupported codec type in stream: %#", static_cast<uint32>( header._codecType ) );
+                    SW_LOG_ERROR_ID( "Compression.UnsupportedCodec", "Unsupported codec type in stream: %#", static_cast<uint32>( header._codecType ) );
                     return nullptr;
                 }
 
                 const uint64 maxUncompressedSize = static_cast<uint64>( pCodec->decompressBound( static_cast<size_t>( header._compressedSize ) ) );
                 if ( header._uncompressedSize > maxUncompressedSize )
                 {
-                    SW_LOG_ERROR( "Stream claims %# bytes from %# compressed bytes, codec %# allows at most %#",
-                                  header._uncompressedSize, header._compressedSize, pCodec->getCodecName(), maxUncompressedSize );
+                    SW_LOG_ERROR_ID( "Compression.SizeExceedsBound", "Stream claims %# bytes from %# compressed bytes, codec %# allows at most %#",
+                                     header._uncompressedSize, header._compressedSize, pCodec->getCodecName(), maxUncompressedSize );
                     return nullptr;
                 }
                 return pCodec;
@@ -131,7 +131,7 @@ namespace sw
         ICompressionCodec* pCodec = CompressionStreamInternal::findCodec( codecType, pRegistry );
         if ( pCodec == nullptr )
         {
-            SW_LOG_ERROR( "Requested codec %# is not registered", static_cast<uint8>( codecType ) );
+            SW_LOG_ERROR_ID( "Compression.CodecNotRegistered", "Requested codec %# is not registered", static_cast<uint8>( codecType ) );
             return false;
         }
 
@@ -173,7 +173,7 @@ namespace sw
         CompressionHeader header{};
         if ( verifyHeader( pSrc, srcSize, header ) == false )
         {
-            SW_LOG_ERROR( "Invalid compression header (size=%#)", srcSize );
+            SW_LOG_ERROR_ID( "Compression.InvalidHeader", "Invalid compression header (size=%#)", srcSize );
             return false;
         }
 
@@ -228,7 +228,7 @@ namespace sw
         const bool bSuccess = pCodec->decompress( pSrcPayload, srcPayloadSize, pDst, dstCapacity, outUncompressedSize );
         if ( bSuccess == false )
         {
-            SW_LOG_ERROR( "Decompression failed using codec: %#", pCodec->getCodecName() );
+            SW_LOG_ERROR_ID( "Compression.DecompressFailed", "Decompression failed using codec: %#", pCodec->getCodecName() );
             return false;
         }
 
@@ -237,7 +237,7 @@ namespace sw
             const uint32 calculatedChecksum = computeChecksum( pDst, outUncompressedSize );
             if ( calculatedChecksum != header._checksum )
             {
-                SW_LOG_ERROR( "Checksum mismatch: expected %x, got %x", header._checksum, calculatedChecksum );
+                SW_LOG_ERROR_ID( "Compression.ChecksumMismatch", "Checksum mismatch: expected %x, got %x", header._checksum, calculatedChecksum );
                 return false;
             }
         }

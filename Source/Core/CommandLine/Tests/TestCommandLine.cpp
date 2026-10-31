@@ -1,0 +1,517 @@
+// CommandLineManager — 기본값 · 인자마다 철자 하나 · RHI 플래그 · 커스텀 인자 · "적혔는가" 와 "읽히는가" · 열거형 조회 = 문자열 조회 · 값 빠진 인자 · initialize 의 표 비우기.
+// 틀린 인자(모르는 이름 · 빠진 값)는 경고 없이 `getParseErrors` 에 모인다(호스트가 기동을 멈춘다) — 케이스는 그 수를 본다.
+#include "pch.h"
+
+#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Testing/TestFramework.h"
+
+namespace
+{
+    /** @brief 디스크 경로 인자의 상대 경로 기준 폴더입니다 — 이 케이스 폴더. */
+    sw::AbsolutePath makeCommandLineTestBaseDirectory()
+    {
+        const std::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ) );
+        SW_ASSERT( baseDirectory.has_value() );
+        return *baseDirectory;
+    }
+} // namespace
+/**
+ * @brief Width 기본값 존재
+ */
+SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    // 창 크기의 기본값은 EngineConfig 가 갖는다. 여기서 기본값을 돌려주면 호출부의
+    //   h = config._window._height;  getArgument( HEIGHT, h );
+    // 가 설정값을 항상 덮어쓴다 — 1280×720 설정이 무시되고 1280×1280 으로 뜬다.
+    int32 width{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
+    SW_EXPECT_EQUAL( -1, width );
+
+    int32 height{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, height ) );
+    SW_EXPECT_EQUAL( -1, height );
+}
+
+/**
+ * @brief Width 인자 파싱
+ */
+SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "W=1920" ),
+    };
+    cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+    int32 width{ 0 };
+    bool  hasWidth = cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width );
+    SW_EXPECT_TRUE( hasWidth );
+    SW_EXPECT_EQUAL( 1920, width );
+}
+
+/**
+ * @brief 열거자 이름은 명령줄 키가 아니다 — 인자마다 철자는 표에 적은 하나다
+ * @details 열거자 이름까지 키로 받으면 같은 인자에 철자가 둘씩 생긴다(`-WIDTH` · `-W`, `-LANGUAGE` · `-lang`). 문서 · 스크립트가
+ *          서로 다른 철자를 쓰기 시작하면 어느 쪽이 원본인지 알 수 없다.
+ */
+SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "-WIDTH=800" ),
+        const_cast<utf8*>( "-LANGUAGE=ko_kr" ),
+        const_cast<utf8*>( "-language=ko_kr" ),
+        const_cast<utf8*>( "-VSYNC" ),
+        const_cast<utf8*>( "-ENABLE_EDITOR" ),
+        const_cast<utf8*>( "-COOK_SHADERS" ),
+    };
+    cmdManager.parse( 7, argv, makeCommandLineTestBaseDirectory() );
+    SW_EXPECT_EQUAL( size_t( 6 ), cmdManager.getParseErrors().size() ); // 프로그램 이름 밖의 여섯 모두 모르는 이름이다
+
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::WIDTH ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::LANGUAGE ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::ENABLE_EDITOR ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
+
+    utf8* spellingArgv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "-W=800" ),
+        const_cast<utf8*>( "-lang=ko_kr" ),
+        const_cast<utf8*>( "-vsync" ),
+        const_cast<utf8*>( "-EnableEditor" ),
+        const_cast<utf8*>( "--cook-shaders" ),
+    };
+    cmdManager.parse( 6, spellingArgv, makeCommandLineTestBaseDirectory() );
+
+    int32 width{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
+    SW_EXPECT_EQUAL( 800, width );
+    sw::string language;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::LANGUAGE, language ) );
+    SW_EXPECT_EQUAL( sw::string( "ko_kr" ), language );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::ENABLE_EDITOR ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
+}
+
+/**
+ * @brief 없는 인자는 false
+ */
+SW_TEST_CASE( CommandLineTest, GetArgumentNotFoundReturnsFalse )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    sw::string cookedDir;
+    bool       hasCookedDir = cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir );
+    SW_EXPECT_FALSE( hasCookedDir );
+}
+
+/**
+ * @brief 여러 낱말 인자는 하이픈 철자 하나만 받는다 — 하이픈 없는 철자는 등록되지 않은 키다
+ */
+SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "--cookshaders" ),
+        const_cast<utf8*>( "--cookscenes" ),
+        const_cast<utf8*>( "--cookeddir=out" ),
+        const_cast<utf8*>( "--importtextures" ),
+        const_cast<utf8*>( "--checktextures" ),
+        const_cast<utf8*>( "-IP=127.0.0.1" ),
+        const_cast<utf8*>( "-PORT=7777" ),
+    };
+    cmdManager.parse( 8, argv, makeCommandLineTestBaseDirectory() );
+    SW_EXPECT_EQUAL( size_t( 7 ), cmdManager.getParseErrors().size() );
+
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SHADERS ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SCENES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOKED_DIR ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::IMPORT_TEXTURES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "IP" ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "PORT" ) );
+
+    utf8* hyphenArgv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "--cook-shaders" ),
+        const_cast<utf8*>( "--cooked-dir=out" ),
+        const_cast<utf8*>( "--check-textures" ),
+    };
+    cmdManager.parse( 4, hyphenArgv, makeCommandLineTestBaseDirectory() );
+
+    bool bCookShaders{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOK_SHADERS, bCookShaders ) );
+    SW_EXPECT_TRUE( bCookShaders );
+    sw::string cookedDir;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir ) );
+    // 디스크 경로 인자는 받을 때 기준 폴더 아래 절대 경로로 푼다.
+    const std::optional<sw::AbsolutePath> expectedCookedDir = sw::AbsolutePath::tryResolve( "out", makeCommandLineTestBaseDirectory() );
+    SW_REQUIRE_TRUE( expectedCookedDir.has_value() );
+    SW_EXPECT_EQUAL( expectedCookedDir->str(), cookedDir );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );
+}
+
+/**
+ * @brief 문자열 키와 UTF-16 파싱
+ */
+SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf16* wargv[] = {
+        const_cast<utf16*>( L"TestApp.exe" ),
+        const_cast<utf16*>( L"W=2560" ),
+    };
+    cmdManager.parse( 2, wargv, makeCommandLineTestBaseDirectory() );
+
+    int32 width{ 0 };
+    bool  hasWidth = cmdManager.getArgument( std::string_view( "W" ), width );
+    SW_EXPECT_TRUE( hasWidth );
+    SW_EXPECT_EQUAL( 2560, width );
+}
+
+/**
+ * @brief RHI 백엔드 CLI 플래그는 백엔드마다 철자 하나다(`dx11` · `dx12` · `vk` · `gl`) — 옛 철자(`vulkan`)는 아무것도 켜지 않는다
+ */
+SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
+{
+    {
+        sw::CommandLineManager cmdManager;
+        cmdManager.initialize();
+        utf8* argv[] = {
+            const_cast<utf8*>( "TestApp.exe" ),
+            const_cast<utf8*>( "vk" ),
+        };
+        cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+        bool bVk{ false };
+        SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk ) );
+        SW_EXPECT_TRUE( bVk );
+    }
+
+    {
+        sw::CommandLineManager cmdManager;
+        cmdManager.initialize();
+        utf8* argv[] = {
+            const_cast<utf8*>( "TestApp.exe" ),
+            const_cast<utf8*>( "vulkan" ),
+        };
+        cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+        SW_EXPECT_EQUAL( size_t( 1 ), cmdManager.getParseErrors().size() );
+
+        bool       bVk{ false };
+        const bool bProvided = cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk );
+        SW_EXPECT_FALSE_MSG( bProvided && bVk, "the old spelling 'vulkan' still selects Vulkan" );
+    }
+
+    {
+        sw::CommandLineManager cmdManager;
+        cmdManager.initialize();
+        utf8* argv[] = {
+            const_cast<utf8*>( "TestApp.exe" ),
+            const_cast<utf8*>( "dx11" ),
+        };
+        cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+        bool bDx11{ false };
+        SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_11, bDx11 ) );
+        SW_EXPECT_TRUE( bDx11 );
+    }
+
+    {
+        sw::CommandLineManager cmdManager;
+        cmdManager.initialize();
+        utf8* argv[] = {
+            const_cast<utf8*>( "TestApp.exe" ),
+            const_cast<utf8*>( "gl" ),
+        };
+        cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+        bool bGl{ false };
+        SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::OPENGL, bGl ) );
+        SW_EXPECT_TRUE( bGl );
+    }
+}
+
+/**
+ * @brief 커스텀 인자 등록 및 복합 파싱 검증
+ */
+SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    // 커스텀 인자 등록
+    cmdManager.addArgument<sw::string>( { "custom_level", "CL" }, sw::string( "DefaultLevel" ), false );
+    cmdManager.addArgument<bool>( { "enable_profiler" }, false, false );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "H=1080" ),
+        const_cast<utf8*>( "custom_level=DesertStage" ),
+        const_cast<utf8*>( "enable_profiler" ),
+    };
+    cmdManager.parse( 4, argv, makeCommandLineTestBaseDirectory() );
+
+    int32 height{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, height ) );
+    SW_EXPECT_EQUAL( 1080, height );
+
+    sw::string customLevel;
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "custom_level" ), customLevel ) );
+    SW_EXPECT_EQUAL( sw::string( "DesertStage" ), customLevel );
+
+    bool enableProfiler{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "enable_profiler" ), enableProfiler ) );
+    SW_EXPECT_TRUE( enableProfiler );
+}
+
+/**
+ * @brief 주지 않은 단독 플래그를 "주었다" 로 읽지 않는다
+ * @details 단독 플래그에 `bUseDefaultValue` 를 켜면 기본값이 `false` 라 값 자체는 맞아도 `getArgument` 가
+ *          **주지 않은 인자에도 true** 를 돌려줘, 반환값만으로는 어느 백엔드를 고르라는 것인지 알 수 없다.
+ */
+SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "dx12" ),
+    };
+    cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+    bool bFlag{ true };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_11, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::OPENGL, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::ENABLE_EDITOR, bFlag ) );
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::VSYNC, bFlag ) );
+
+    // 준 것만 읽힌다.
+    bool bDx12{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
+    SW_EXPECT_TRUE( bDx12 );
+
+    // 단독 플래그에 한해 두 질문의 답이 같다.
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_12 ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_11 ) );
+}
+
+/**
+ * @brief "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
+ * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
+ *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 이것으로 판단하면 설정 파일의 기본 백엔드가
+ *          `-gv_rhiBackend` 를 조용히 덮어, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**가 된다.
+ */
+SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    cmdManager.addArgument<int32>( { "given_value" }, 7, true );
+    cmdManager.addArgument<int32>( { "omitted_value" }, 7, true );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "given_value=3" ),
+    };
+    cmdManager.parse( 2, argv, makeCommandLineTestBaseDirectory() );
+
+    // 둘 다 읽히지만(기본값이 있으므로), 적힌 것은 하나뿐이다.
+    int32 given{ 0 };
+    int32 omitted{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "given_value" ), given ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "omitted_value" ), omitted ) );
+    SW_EXPECT_EQUAL( 3, given );
+    SW_EXPECT_EQUAL( 7, omitted );
+
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "given_value" ), "적은 인자를 안 적었다고 한다" );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "omitted_value" ) == false,
+                        "안 적은 인자를 적었다고 한다 — 설정 기본값이 커맨드라인을 덮는 판단이 여기서 갈린다" );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "no_such_argument" ) == false, "없는 인자를 적었다고 한다" );
+}
+
+/**
+ * @brief 열거형 조회와 문자열 조회가 같은 인자를 가리킨다
+ * @details 열거형 조회는 이름을 만들지 않고 `_listArgument` 를 열거값으로 바로 인덱싱한다.
+ *          그 근거는 ArgumentList.xxx 한 줄이 열거 멤버와 원소를 같은 순서로 만든다는 것뿐이므로,
+ *          두 경로가 같은 답을 내는지 여기서 못박는다. `Count` 는 어느 인자도 아니다.
+ */
+SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-H=1440" ),
+        const_cast<utf8*>( "-lang=ko" ),
+    };
+    cmdManager.parse( 3, argv, makeCommandLineTestBaseDirectory() );
+
+    int32 heightByEnum{ 0 };
+    int32 heightByName{ 0 };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::HEIGHT, heightByEnum ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "H" ), heightByName ) );
+    SW_EXPECT_EQUAL( 1440, heightByEnum );
+    SW_EXPECT_EQUAL( heightByName, heightByEnum );
+
+    sw::string langByEnum;
+    sw::string langByName;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::LANGUAGE, langByEnum ) );
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "lang" ), langByName ) );
+    SW_EXPECT_EQUAL( sw::string( "ko" ), langByEnum );
+    SW_EXPECT_EQUAL( langByName, langByEnum );
+
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::HEIGHT ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::WIDTH ) == false );
+
+    // Count 는 인자가 아니다 — 인덱싱이 범위를 넘지 않고 false 로 돌아와야 한다.
+    int32 none{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::Count, none ) );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::Count ) == false );
+}
+
+/**
+ * @brief 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
+ * @details 값 없이 적을 수 있는 것은 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는 경고를 남기고 무시되므로
+ *          기본값이 그대로 살아 있다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
+ *          int32 자리에 **bool `true` 를 밀어 넣고**, `_bParsed` 는 켜지는데 `get_if<int32>` 가 nullptr 이라
+ *          `getArgument` 가 기본값으로 돌아가지도 못하고 false 를 돌려준다 — 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
+ */
+SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    cmdManager.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    cmdManager.addArgument<sw::string>( { "gv_startupScene" }, sw::string( "default" ), true );
+    cmdManager.addArgument<float32>( { "gv_lightRadius" }, 4.5f, true );
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-gv_benchMeshes" ),  // 값을 빠뜨린다
+        const_cast<utf8*>( "-gv_startupScene" ), //
+        const_cast<utf8*>( "-gv_lightRadius" ),  //
+    };
+    cmdManager.parse( 4, argv, makeCommandLineTestBaseDirectory() );
+    SW_EXPECT_EQUAL( size_t( 3 ), cmdManager.getParseErrors().size() ); // 값 없는 비-bool 인자는 거절 이유를 남기고 무시한다
+
+    // 값이 없었으므로 **적히지 않은 것으로** 남고, 기본값이 그대로 읽힌다.
+    int32 meshCount{ -1 };
+    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( std::string_view( "gv_benchMeshes" ), meshCount ),
+                        "값을 빠뜨린 int 인자가 기본값조차 못 읽게 만들었습니다" );
+    SW_EXPECT_EQUAL( 200, meshCount );
+
+    sw::string sceneName;
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_startupScene" ), sceneName ) );
+    SW_EXPECT_EQUAL( sw::string( "default" ), sceneName );
+
+    float32 radius{ 0.0f };
+    SW_EXPECT_TRUE( cmdManager.getArgument( std::string_view( "gv_lightRadius" ), radius ) );
+    SW_EXPECT_TRUE( radius > 4.4f && radius < 4.6f );
+
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( "gv_benchMeshes" ) == false,
+                        "값 없이 적은 int 인자를 '주었다' 로 셌습니다" );
+
+    // 값을 제대로 준 같은 인자는 당연히 읽힌다 — 위가 "그냥 다 무시" 가 아님을 못박는다.
+    sw::CommandLineManager withValue;
+    withValue.initialize();
+    withValue.addArgument<int32>( { "gv_benchMeshes" }, 200, true );
+    utf8* argvWithValue[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-gv_benchMeshes=512" ),
+    };
+    withValue.parse( 2, argvWithValue, makeCommandLineTestBaseDirectory() );
+
+    int32 givenCount{ 0 };
+    SW_EXPECT_TRUE( withValue.getArgument( std::string_view( "gv_benchMeshes" ), givenCount ) );
+    SW_EXPECT_EQUAL( 512, givenCount );
+    SW_EXPECT_TRUE( withValue.isArgumentProvided( "gv_benchMeshes" ) );
+}
+
+/**
+ * @brief bool 인자는 값이 있어도 없어도 읽힌다
+ * @details 위 검사가 "값 없는 인자를 전부 막는다" 로 과하게 굳는 것을 막는다 — 단독 플래그는
+ *          엔진 전체가 쓰는 형식이다(`-dx12`, `-EnableEditor`).
+ */
+SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-EnableEditor" ), // 단독 플래그
+        const_cast<utf8*>( "-vsync=0" ),      // 명시적 false
+    };
+    cmdManager.parse( 3, argv, makeCommandLineTestBaseDirectory() );
+
+    bool bEditor{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::ENABLE_EDITOR, bEditor ) );
+    SW_EXPECT_TRUE( bEditor );
+
+    bool bVsync{ true };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::VSYNC, bVsync ) );
+    SW_EXPECT_FALSE( bVsync );
+    SW_EXPECT_TRUE_MSG( cmdManager.isArgumentProvided( sw::CommandLineArgument::VSYNC ),
+                        "`-vsync=0` 은 '적지 않은 것' 이 아니라 'false 로 적은 것' 이다" );
+}
+
+/**
+ * @brief initialize 는 앞서 넣은 인자에 밀려나지 않는다
+ * @details 열거형 조회는 `_listArgument` 를 열거값으로 **바로 인덱싱**한다. 그 앞에 커스텀 인자가
+ *          하나라도 들어가 있으면 표 전체가 한 칸씩 밀려 `getArgument(WIDTH)` 가 **그 커스텀 인자를
+ *          읽는다.** 줄마다 걸린 assert 는 Debug 에서만 산다 — Shipping 에서는 아무 말 없이 다른 인자의
+ *          값이 나온다. 그래서 initialize 가 표를 먼저 비운다.
+ *
+ *          비우기를 빼면 이 검사는 Debug 에서 assert 로 멈추고 Shipping 에서 아래 단언이 진다.
+ */
+SW_TEST_CASE( CommandLineTest, InitializeIsNotShiftedByEarlierArguments )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.addArgument<int32>( { "early_custom" }, 99, true );
+    cmdManager.initialize();
+
+    // 비우지 않았다면 0 번 자리가 early_custom 이고 표 전체가 한 칸씩 밀려, 열거값 인덱싱이 다른 인자를 읽는다.
+    int32 width{ -1 };
+    SW_EXPECT_TRUE_MSG( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) == false,
+                        "적지 않은 WIDTH 가 읽힙니다 — 열거값 인덱싱이 다른 인자를 가리킵니다" );
+    SW_EXPECT_EQUAL( -1, width );
+
+    // 비우기의 대가: 먼저 넣은 커스텀 인자는 함께 사라진다. 문서가 약속한 그대로인지 못박는다.
+    int32 custom{ -1 };
+    SW_EXPECT_FALSE( cmdManager.getArgument( std::string_view( "early_custom" ), custom ) );
+
+    // 표가 제자리이므로 평소의 파싱이 그대로 된다.
+    utf8* argv[] = {
+        const_cast<utf8*>( "App.exe" ),
+        const_cast<utf8*>( "-W=1920" ),
+        const_cast<utf8*>( "-dx12" ),
+    };
+    cmdManager.parse( 3, argv, makeCommandLineTestBaseDirectory() );
+
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
+    SW_EXPECT_EQUAL( 1920, width );
+
+    bool bDx12{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
+    SW_EXPECT_TRUE( bDx12 );
+}

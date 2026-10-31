@@ -99,14 +99,14 @@ namespace sw
         {
             if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), TileSetAssetInternal::kFrameListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
             {
-                SW_LOG_ERROR( "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
                 return false;
             }
             if ( node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond ) == false )
                 return false;
             if ( outVisual._listFrameCell.size() > 1 && outVisual._framesPerSecond <= 0.0f )
             {
-                SW_LOG_ERROR( "%#: <%#> has frames but no positive fps", sourceName, node.getName() );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> has frames but no positive fps", sourceName, node.getName() );
                 return false;
             }
         }
@@ -119,7 +119,7 @@ namespace sw
         }
         else if ( bRequired )
         {
-            SW_LOG_ERROR( "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
             return false;
         }
         const int32 cellCount = _columnCount * _rowCount;
@@ -127,7 +127,7 @@ namespace sw
         {
             if ( cell < 0 || cell >= cellCount )
             {
-                SW_LOG_ERROR( "%#: <%#> cell %# is outside the %#x%# atlas", sourceName, node.getName(), cell, _columnCount, _rowCount );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> cell %# is outside the %#x%# atlas", sourceName, node.getName(), cell, _columnCount, _rowCount );
                 return false;
             }
         }
@@ -145,7 +145,7 @@ namespace sw
         const XMLNode root = doc.getRoot( "TileSet" );
         if ( root.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: the root element must be <TileSet>", sourceName );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: the root element must be <TileSet>", sourceName );
             return false;
         }
         static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "normalAtlas", "columns", "rows", "tileSize" };
@@ -164,7 +164,7 @@ namespace sw
         const bool bInvalidTileSetSize = loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f;
         if ( bInvalidTileSetSize )
         {
-            SW_LOG_ERROR( "%#: columns, rows and tileSize must be positive", sourceName );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: columns, rows and tileSize must be positive", sourceName );
             return false;
         }
 
@@ -185,7 +185,7 @@ namespace sw
         const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile" );
         if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile" ) == false )
         {
-            SW_LOG_ERROR( "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
             return false;
         }
         static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
@@ -196,13 +196,13 @@ namespace sw
         const string_view name  = node.getAttributeText( "name" );
         if ( name.empty() )
         {
-            SW_LOG_ERROR( "%#: a <%#> has no name", sourceName, node.getName() );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: a <%#> has no name", sourceName, node.getName() );
             return false;
         }
         brush._name = hashed_string( name );
         if ( findBrush( brush._name ) >= 0 )
         {
-            SW_LOG_ERROR( "%#: brush '%#' is listed twice", sourceName, name );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: brush '%#' is listed twice", sourceName, name );
             return false;
         }
         if ( parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
@@ -221,7 +221,7 @@ namespace sw
         const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
         if ( bInvalidOutsideMode )
         {
-            SW_LOG_ERROR( "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
             return false;
         }
         brush._bOutsideIsSame = StringUtil::equals( outside, "same" ) ? SW_TRUE : SW_FALSE;
@@ -230,7 +230,7 @@ namespace sw
         {
             if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule" ) == false )
             {
-                SW_LOG_ERROR( "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
                 return false;
             }
             static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
@@ -239,7 +239,7 @@ namespace sw
             TileRule rule{};
             if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )
             {
-                SW_LOG_ERROR( "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleNode.getAttributeText( "pattern" ), name );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleNode.getAttributeText( "pattern" ), name );
                 return false;
             }
             if ( parseVisual( ruleNode, sourceName, true, rule._visual ) == false )
@@ -248,7 +248,7 @@ namespace sw
         }
         if ( bRuleTile && brush._listRule.empty() )
         {
-            SW_LOG_ERROR( "%#: rule tile '%#' has no <Rule>", sourceName, name );
+            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule tile '%#' has no <Rule>", sourceName, name );
             return false;
         }
         return true;

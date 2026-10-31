@@ -3,6 +3,7 @@
 #include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include <thread>
 
@@ -220,6 +221,8 @@ SW_TEST_CASE( ProfilerTimelineTest, NetFlowsAreKeptOnlyWhileATimelineRecords )
         }
     }
 
+    // 링은 프로세스에 하나라 앞 회차(`--test-repeat`)의 흐름도 남아 있다 — 이 회차가 쓴 구간만 모은다
+    const uint64         beginNanos = static_cast<uint64>( sw::MonotonicClock::nowNanoseconds() );
     sw::ProfilerTimeline timeline;
     timeline.setRecording( true );
     sw::NetFlowLog::record( 0xBBBBull, 0x81, false );
@@ -227,7 +230,7 @@ SW_TEST_CASE( ProfilerTimelineTest, NetFlowsAreKeptOnlyWhileATimelineRecords )
     timeline.setRecording( false );
     sw::NetFlowLog::record( 0xCCCCull, 0x82, false ); // 꺼진 뒤 — 남지 않는다
 
-    sw::NetFlowLog::collect( 0, ~0ull, listFlow );
+    sw::NetFlowLog::collect( beginNanos, ~0ull, listFlow );
     uint32 sentCount     = 0;
     uint32 receivedCount = 0;
     for ( size_t index = 0; index < listFlow.size(); ++index )

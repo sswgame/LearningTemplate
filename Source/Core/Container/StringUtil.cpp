@@ -507,7 +507,7 @@ namespace sw
         }
 
         if ( bHadInvalidSequence )
-            SW_LOW_LEVEL_WARNING( "utf8ToUTF16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
+            SW_LOW_LEVEL_WARNING_ID( "StringUtil.InvalidUTF8", "utf8ToUTF16: input is not valid UTF-8; invalid bytes were replaced with U+FFFD" );
         return result;
     }
 

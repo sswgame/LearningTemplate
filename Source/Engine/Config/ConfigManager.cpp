@@ -143,7 +143,7 @@ namespace sw
         JSONDocument document;
         if ( document.parse( jsonStr ) == false || document.getRoot().isObject() == false )
         {
-            SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.NotJSONObject", "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
@@ -160,7 +160,7 @@ namespace sw
         collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
         for ( const string& missingPath : listMissing )
         {
-            SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
@@ -170,7 +170,7 @@ namespace sw
         XMLDocument document;
         if ( document.parse( elementXML, pSourceLabel ) == false || document.getRoot().isValid() == false )
         {
-            SW_LOG_ERROR( "Config %#: not an XML element for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.NotXMLElement", "Config %#: not an XML element for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
         // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다). 범위 밖 값은 칸마다 읽기 공통 끝이 이미 알렸다.
@@ -187,7 +187,7 @@ namespace sw
         collectMissingRequiredXML( document.getRoot(), typeInfo, string(), listMissing );
         for ( const string& missingPath : listMissing )
         {
-            SW_LOG_ERROR( "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }

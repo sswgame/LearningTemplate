@@ -47,7 +47,7 @@ namespace sw
 
     void IFileWatcher::reportWatchLost( string_view reason )
     {
-        SW_LOG_ERROR( "File watching of %# stopped: %#", _directoryPath, reason );
+        SW_LOG_ERROR_ID( "FileWatch.WatchLost", "File watching of %# stopped: %#", _directoryPath, reason );
         ScopedLock<mutex> lock{ _eventMutex };
         _bWatchLost = true;
     }

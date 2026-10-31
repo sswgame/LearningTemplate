@@ -28,9 +28,31 @@ namespace sw
          */
         struct ThreadTaskState
         {
-            int32  _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
-            uint32 _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
-            uint32 _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
+            int32                                        _helperScratchSlot = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
+            uint32                                       _helperSlotOwnerID = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+            uint32                                       _parallelBodyDepth = 0;  ///< 이 스레드에서 지금 실행 중인 병렬 본문(`ParallelTaskScope`)의 겹침 깊이. 0 이면 병렬 본문 밖
+            std::shared_ptr<TaskManager::HelperSlotPool> _pHelperSlotPool;        ///< 위 번호를 준 장부. 스레드가 끝날 때 여기로 돌려준다
+
+            ThreadTaskState()                                    = default;
+            ThreadTaskState( const ThreadTaskState& )            = delete;
+            ThreadTaskState& operator=( const ThreadTaskState& ) = delete;
+            /// 끝나는 스레드는 슬롯을 저절로 돌려준다 — 돌려주기를 잊은 짧은 스레드가 슬롯을 하나씩 영영 차지해 상한을 넘기지 않게.
+            ~ThreadTaskState() { releaseHelperSlot(); }
+
+            void releaseHelperSlot()
+            {
+                if ( _helperScratchSlot >= 0 && _pHelperSlotPool != nullptr )
+                {
+                    // 넘쳐서 나눠 쓰던 마지막 슬롯은 다른 스레드도 쓰고 있을 수 있으므로 돌려주지 않는다.
+                    const bool bShared = _pHelperSlotPool->_count.load( std::memory_order_relaxed ) > TaskManager::kMaxHelperThreadCount &&
+                                         _helperScratchSlot == static_cast<int32>( TaskManager::kMaxHelperThreadCount - 1 );
+                    if ( bShared == false )
+                        _pHelperSlotPool->_freeMask.fetch_or( 1u << static_cast<uint32>( _helperScratchSlot ), std::memory_order_acq_rel );
+                }
+                _helperScratchSlot = -1;
+                _helperSlotOwnerID = 0;
+                _pHelperSlotPool.reset();
+            }
         };
         thread_local ThreadTaskState t_threadState{};
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
@@ -194,8 +216,7 @@ namespace sw
         , _bStop{ false }
         , _runningWorkerCount{ 0 }
         , _listWorkerSlot{}
-        , _helperSlotCount{ 0 }
-        , _helperSlotFreeMask{ 0 }
+        , _pHelperSlotPool{ std::make_shared<HelperSlotPool>() }
         , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
@@ -373,13 +394,15 @@ namespace sw
             return static_cast<uint32>( t_currentWorkerIndex );
         if ( t_threadState._helperScratchSlot < 0 || t_threadState._helperSlotOwnerID != _instanceID )
         {
+            t_threadState.releaseHelperSlot(); // 다른 매니저에서 받은 슬롯은 그 장부로 돌려준다
             t_threadState._helperSlotOwnerID = _instanceID;
+            t_threadState._pHelperSlotPool   = _pHelperSlotPool;
             // 돌려받은 슬롯부터 다시 쓴다(가장 낮은 비트).
-            uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
+            uint32 freeMask = _pHelperSlotPool->_freeMask.load( std::memory_order_acquire );
             while ( freeMask != 0 )
             {
                 const uint32 lowestBit = freeMask & ( ~freeMask + 1u );
-                if ( _helperSlotFreeMask.compare_exchange_weak( freeMask, freeMask & ~lowestBit, std::memory_order_acq_rel ) )
+                if ( _pHelperSlotPool->_freeMask.compare_exchange_weak( freeMask, freeMask & ~lowestBit, std::memory_order_acq_rel ) )
                 {
                     uint32 slot = 0;
                     while ( ( lowestBit >> slot ) != 1u )
@@ -391,12 +414,13 @@ namespace sw
                 }
             }
 
-            const uint32 assigned = _helperSlotCount.fetch_add( 1, std::memory_order_relaxed );
+            const uint32 assigned = _pHelperSlotPool->_count.fetch_add( 1, std::memory_order_relaxed );
             if ( assigned >= kMaxHelperThreadCount )
             {
-                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로 동시에 살아 있는 비워커 스레드가
-                // 이만큼일 때만 닿는다.
-                SW_LOG_ERROR( "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
+                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로(`ThreadTaskState` 소멸) 동시에 살아 있는
+                // 비워커 스레드가 이만큼일 때만 닿는다.
+                SW_LOG_ERROR_ID( "Task.HelperSlotsExhausted", "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)",
+                                 kMaxHelperThreadCount );
                 t_threadState._helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
             }
             else
@@ -407,15 +431,9 @@ namespace sw
 
     void TaskManager::releaseCurrentThreadHelperSlot()
     {
-        if ( t_threadState._helperScratchSlot < 0 || t_threadState._helperSlotOwnerID != _instanceID )
+        if ( t_threadState._helperSlotOwnerID != _instanceID )
             return;
-        // 넘쳐서 나눠 쓰던 마지막 슬롯은 다른 스레드도 쓰고 있을 수 있으므로 돌려주지 않는다.
-        const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
-                             t_threadState._helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
-        if ( bShared == false )
-            _helperSlotFreeMask.fetch_or( 1u << static_cast<uint32>( t_threadState._helperScratchSlot ), std::memory_order_acq_rel );
-        t_threadState._helperScratchSlot = -1;
-        t_threadState._helperSlotOwnerID = 0;
+        t_threadState.releaseHelperSlot();
     }
 
     bool TaskManager::isInParallelBody()
