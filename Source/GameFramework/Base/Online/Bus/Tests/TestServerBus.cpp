@@ -105,7 +105,8 @@ SW_TEST_CASE( ServerBusTest, LocalHubStopsDeliveringAfterUnsubscribeOrDestroy )
     SW_EXPECT_EQUAL( 0, hub.deliver( message ) ); // busB 가 사라지며 받은편지함도 지워졌다
 
     sw::vector<sw::ServerBusMessage> listMessage;
-    SW_EXPECT_EQUAL( 0, busA.pollMessages( listMessage ) );
+    SW_REQUIRE_EQUAL( 1, busA.pollMessages( listMessage ) ); // 구독 중에 받은 첫 메시지만 남고, 푼 뒤의 메시지는 오지 않았다
+    SW_EXPECT_EQUAL( 1u, listMessage[0].getSequence() );
 }
 
 /**
