@@ -2,13 +2,20 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
+#include "Core/Concurrency/thread.h"
+#include "Core/Foundation/BuildInfo.h"
+#include "Core/Time/MonotonicClock.h"
+
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHIUtil.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -104,8 +111,8 @@ namespace sw
         {
             GLint totalKb{ 0 };
             GLint currentKb{ 0 };
-            glGetIntegerv( OpenGLRHIDeviceInternal::kGPUMemoryInfoTotalAvailableNvx, &totalKb );
-            glGetIntegerv( OpenGLRHIDeviceInternal::kGPUMemoryInfoCurrentAvailableNvx, &currentKb );
+            glGetIntegerv( OpenGLRHIUtil::kGPUMemoryInfoTotalAvailableNvx, &totalKb );
+            glGetIntegerv( OpenGLRHIUtil::kGPUMemoryInfoCurrentAvailableNvx, &currentKb );
             if ( totalKb <= 0 )
                 return false;
             const uint64 totalBytes    = static_cast<uint64>( totalKb ) * constant::kBytesPerKilobyte;
@@ -121,7 +128,7 @@ namespace sw
 
         // ATI 는 풀별 [남은 양, 가장 큰 덩어리, 보조 남은 양, 보조 가장 큰 덩어리] 를 준다. 총량은 알려 주지 않는다.
         GLint arrTextureFreeKb[4]{};
-        glGetIntegerv( OpenGLRHIDeviceInternal::kTextureFreeMemoryAti, arrTextureFreeKb );
+        glGetIntegerv( OpenGLRHIUtil::kTextureFreeMemoryAti, arrTextureFreeKb );
         if ( arrTextureFreeKb[0] <= 0 )
             return false;
         outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * constant::kBytesPerKilobyte;
@@ -291,5 +298,988 @@ namespace sw
         if ( space == RHIBindlessIndexSpace::Texture )
             return index < _listRegisteredTexture.size() && _listRegisteredTexture[index]._texture != 0;
         return index < _listRegisteredBindless.size() && _listRegisteredBindless[index]._buffer != 0;
+    }
+
+    namespace
+    {
+        /**
+         * @brief KHR_debug 메시지를 엔진 로그로 보냅니다. DX11/DX12 디버그 레이어(flushDebugMessages) · Vulkan 검증 레이어와 같은 자리입니다.
+         * @details GL 오류가 로그에 나오는 경로는 이것뿐입니다(엔진은 glGetError 를 부르지 않습니다). 이 콜백이 있어야 드로우가 정상으로
+         *          나가고 화면만 비는 결함이 스모크의 `[Error]` 수로 드러납니다.
+         *          알림(NOTIFICATION)은 드라이버 잡담("Buffer detailed info")이라 glDebugMessageControl 로 아예 끕니다.
+         */
+        void APIENTRY onOpenGLDebugMessage( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* pMessage,
+                                            const void* pUserParam )
+        {
+            (void)source;
+            (void)length;
+            (void)pUserParam;
+            if ( pMessage == nullptr || severity == GL_DEBUG_SEVERITY_NOTIFICATION )
+                return;
+            if ( type == GL_DEBUG_TYPE_ERROR || severity == GL_DEBUG_SEVERITY_HIGH )
+                SW_LOG_ERROR( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+            else if ( severity == GL_DEBUG_SEVERITY_MEDIUM )
+                SW_LOG_WARNING( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+            else
+                SW_LOG_TRACE( "GL debug %#: %#", static_cast<uint32>( id ), pMessage );
+        }
+    } // namespace
+
+    // 길이 유지(긴 함수 정리 기준): 컨텍스트 · 확장 확인 · 기본 객체 생성의 순서가 곧 의미라 나누지 않는다(나누면 순서를 여러 곳에서 읽는다).
+    bool OpenGLRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    {
+        if ( _bInitialized == SW_TRUE )
+            return true;
+
+        _width  = desc._width;
+        _height = desc._height;
+        if ( desc._bSoftwareAdapter )
+            SW_LOG_WARNING( "gv_rhiSoftwareAdapter is ignored on OpenGL (the driver decides)" );
+        // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
+        getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
+
+        // 플랫폼 컨텍스트 생성(WGL · GLX · EGL)은 GL/Platform 이 맡는다. 디바이스는 플랫폼 분기를 갖지 않는다.
+        _platformContext = IOpenGLPlatformContext::create( desc._surfaceKind );
+        if ( _platformContext == nullptr )
+            return false;
+
+        OpenGLContextHandles contextHandles{};
+        if ( _platformContext->initialize( desc, contextHandles ) == false )
+        {
+            _platformContext.reset();
+            return false;
+        }
+        _pHDC = contextHandles._pDeviceContext;
+        _pHRC = contextHandles._pRenderContext;
+
+        if ( gladLoadGL() != 0 )
+        {
+            SW_LOG_INFO( "OpenGL glad Loaded Successfully." );
+
+            // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 **원점**은 대상마다 달라야 해서 여기서 고정하지 않는다.
+            // 오프스크린 FBO 는 UPPER_LEFT(행 순서를 DX 와 맞춤), 기본 프레임버퍼는 LOWER_LEFT(창 표시가 아래에서 위)로
+            // OpenGLRHICommandContext::beginRenderPass 가 매 패스 정한다. 여기서는 가능 여부만 확인하고 기본값을 깐다.
+            // **이 호출은 선택이 아니다.** 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
+            // 백엔드와 반대로 쌓인다. 풀스크린 블릿은 DX 규약(NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 화면과
+            // 스크린샷이 통째로 상하 반전된다. 깊이도 [-1,1] 로 남아 [0,1] 을 내보내는 투영이 버퍼의 절반만 쓴다.
+            // 주의: 가능 여부를 `#ifdef GL_CLIP_CONTROL` 로 가리면 안 된다. 그런 GL 토큰은 없다(실제 토큰은
+            // GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE 이고 GL_CLIP_CONTROL 은 함수 이름일 뿐이다). 그러면 4.6 컨텍스트에서도
+            // 블록이 통째로 컴파일에서 빠져 로그 없이 한 번도 불리지 않는다.
+            // 그래서 함수 포인터로 판단하고, 실제로 걸렸는지 GL 에 되물어 확인한다.
+            if ( glad_glClipControl != nullptr )
+            {
+                glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE );
+
+                GLint clipOrigin{ 0 };
+                GLint clipDepth{ 0 };
+                glGetIntegerv( GL_CLIP_ORIGIN, &clipOrigin );
+                glGetIntegerv( GL_CLIP_DEPTH_MODE, &clipDepth );
+                if ( clipOrigin != GL_UPPER_LEFT || clipDepth != GL_ZERO_TO_ONE )
+                {
+                    SW_LOG_ERROR( "glClipControl was not applied (origin %#, depth %#) - the screen is flipped vertically and depth precision is halved.",
+                                  static_cast<uint32>( clipOrigin ), static_cast<uint32>( clipDepth ) );
+                }
+                else
+                {
+                    SW_LOG_INFO( "OpenGL glClipControl available - depth fixed to [0,1]. The clip origin is chosen per target (offscreen UPPER_LEFT / default framebuffer LOWER_LEFT)." );
+                }
+            }
+            else
+            {
+                SW_LOG_ERROR( "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
+            }
+
+            // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
+            // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 진단을 켜는 빌드에서 켠다(`build::kShipping` 가 아닌 구성). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
+            const bool bDebugOutput = build::kShipping == false; // 배포본은 디버그 컨텍스트가 없어 메시지도 없다
+            const bool bHasDebugAPI = glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr;
+            if ( bDebugOutput && bHasDebugAPI )
+            {
+                glEnable( GL_DEBUG_OUTPUT );
+                glEnable( GL_DEBUG_OUTPUT_SYNCHRONOUS );
+                glDebugMessageCallback( &onOpenGLDebugMessage, nullptr );
+                glDebugMessageControl( GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE );
+                SW_LOG_INFO( "OpenGL KHR_debug output enabled - GL errors appear as error logs (counted in the smoke error count)." );
+            }
+            else if ( bDebugOutput )
+                SW_LOG_WARNING( "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
+
+            // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
+            // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 모두
+            // 같아 증상이 없지만, 정점마다 다른 flat 값을 넘기는 날 GL 만 다른 그림을 낸다. 백엔드 하나만
+            // 조용히 다른 종류의 버그는 여기서 미리 막는다.
+            if ( glad_glProvokingVertex != nullptr )
+                glProvokingVertex( GL_FIRST_VERTEX_CONVENTION );
+            else
+                SW_LOG_WARNING( "glProvokingVertex is unavailable - nointerpolation values come from a different vertex than on DX/Vulkan." );
+
+            // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGPUMemoryBudgetInternal).
+            _bNvxMemoryInfo = OpenGLRHIUtil::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
+            _bAtiMemInfo    = OpenGLRHIUtil::hasGlExtension( "GL_ATI_meminfo" ) ? SW_TRUE : SW_FALSE;
+
+            // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다.
+            // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
+            // 인스턴스(t4) · 가시 목록(t6) · 모프 정점(t7)을 읽으므로, 한도가 그보다 작으면 링크는
+            // 통과해도 읽기가 어긋난다. 화면으로는 "기하가 무너진다" 로만 보여서 원인을 짚기 어렵다.
+            GLint maxVertexSsbo{ 0 };
+            GLint maxComputeSsbo{ 0 };
+            GLint maxFragmentSsbo{ 0 };
+            glGetIntegerv( GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS, &maxVertexSsbo );
+            glGetIntegerv( GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS, &maxComputeSsbo );
+            glGetIntegerv( GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS, &maxFragmentSsbo );
+            SW_LOG_INFO( "OpenGL SSBO limits: vertex %#, fragment %#, compute %#", static_cast<int32>( maxVertexSsbo ),
+                         static_cast<int32>( maxFragmentSsbo ), static_cast<int32>( maxComputeSsbo ) );
+            if ( maxVertexSsbo < static_cast<GLint>( shaderslot::kSRVSlotCount ) )
+            {
+                SW_LOG_WARNING( "The vertex stage SSBO limit (%#) is smaller than the SRV slot count (%#) - reads of high-numbered slots may be wrong.",
+                                static_cast<int32>( maxVertexSsbo ), shaderslot::kSRVSlotCount );
+            }
+            // 머티리얼 텍스처는 텍스처 유닛 16..31 이다(binding_slots.hlsli 2). 프래그먼트 유닛이 모자라면 큰 번호의 머티리얼 텍스처가 조용히 흰색이 되므로 이 백엔드를 쓰지 않는다.
+            GLint       maxFragmentTextureUnit{ 0 };
+            const GLint requiredTextureUnit = static_cast<GLint>( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+            glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
+            if ( maxFragmentTextureUnit < requiredTextureUnit )
+            {
+                SW_LOG_WARNING( "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
+                                static_cast<int32>( maxFragmentTextureUnit ), static_cast<int32>( requiredTextureUnit ) );
+                _initResult = RHIInitResult::DriverUnsupported;
+                return false;
+            }
+        }
+        else
+        {
+            SW_LOG_WARNING( "gladLoadGL returned 0, OpenGL device initialization failed" );
+            return false;
+        }
+
+        // 이 백엔드는 셰이더를 SPIR-V 로만 올린다(DXC → SPIR-V → glSpecializeShader). ARB_gl_spirv 가
+        // 없으면 PSO 를 단 하나도 만들지 못해 "초기화는 성공했는데 화면이 텅 비는" 상태가 된다.
+        // 그대로 두면 부르는 쪽이 이 백엔드를 멀쩡한 것으로 믿고 계속 쓴다. 여기서 실패로 끊어야
+        // initialize 가 false 를 반환해 부르는 쪽(RHI · 테스트)이 이 백엔드를 쓸 수 없다는 것을 안다.
+        // WSL 의 Mesa 드라이버(llvmpipe/d3d12)가 이 확장을 노출하지 않아 실제로 걸린다.
+        if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
+        {
+            SW_LOG_WARNING( "The OpenGL backend is unusable - GL_ARB_gl_spirv is missing (glShaderBinary/glSpecializeShader are null)." );
+            _initResult = RHIInitResult::DriverUnsupported;
+            return false;
+        }
+
+        if ( initializeStagingRing( desc._stagingRingBytes, desc._stagingSoloMaxBytes ) == false )
+            return false;
+        if ( initializeReadbackRing( desc._readbackRingBytes, desc._stagingSoloMaxBytes ) == false )
+        {
+            shutdownStagingRing(); // _bInitialized 전이라 shutdownInternal 이 링을 지우지 않는다
+            return false;
+        }
+
+        _bInitialized = SW_TRUE;
+
+        {
+            glGenVertexArrays( 1, &_vao );
+            glGenBuffers( 1, &_vbo );
+            glBindVertexArray( _vao );
+            glBindBuffer( GL_ARRAY_BUFFER, _vbo );
+            glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeof( constant::arrFallbackVertex ) ), constant::arrFallbackVertex, GL_STATIC_DRAW );
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            {
+                const RHIVertexAttribute& attribute = constant::arrVertexAttribute[attributeIndex];
+                if ( attribute._inputSlot != 0 )
+                    continue; // 인스턴스 슬롯 스트림은 씬 드로우 전용이다. 풀스크린 VAO 는 슬롯 0 뿐이다
+                glEnableVertexAttribArray( attribute._location );
+                glVertexAttribPointer( attribute._location, static_cast<GLint>( attribute._componentCount ), GL_FLOAT, GL_FALSE,
+                                       static_cast<GLsizei>( sizeof( RHIVertex ) ),
+                                       reinterpret_cast<void*>( static_cast<uintptr_t>( attribute._byteOffset ) ) );
+            }
+            glBindVertexArray( 0 );
+            glBindBuffer( GL_ARRAY_BUFFER, 0 );
+
+            glGenVertexArrays( 1, &_meshVao );
+            glBindVertexArray( _meshVao );
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            {
+                if ( constant::arrVertexAttribute[attributeIndex]._inputSlot == 0 )
+                    glEnableVertexAttribArray( constant::arrVertexAttribute[attributeIndex]._location );
+            }
+            glBindVertexArray( 0 );
+
+            GLuint defaultTex{ 0 };
+            glGenTextures( 1, &defaultTex );
+            glBindTexture( GL_TEXTURE_2D, defaultTex );
+            const uint32 whitePixel = 0xFFFFFFFF;
+            glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, &whitePixel );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+            glBindTexture( GL_TEXTURE_2D, 0 );
+            _defaultTexture = defaultTex;
+
+            GLuint defaultSampler{ 0 };
+            glGenSamplers( 1, &defaultSampler );
+            glSamplerParameteri( defaultSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+            glSamplerParameteri( defaultSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+            glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( defaultSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            // 머티리얼 텍스처 유닛(t16..t31)은 머티리얼 샘플러(선형 · 랩, shaderslot::kMaterialTextureSampler)다. 다른 세 백엔드가 머티리얼을
+            // 그 샘플러로 읽는다(DX12 · Vulkan 정적 샘플러, DX11 슬롯 결합 샘플러). 기본 샘플러로 두면 최근접 · 클램프라 확대한 텍스처가
+            // 계단이 된다. 밉 필터는 텍스처의 밉 수가 정한다(glTexStorage2D 가 할당한 수 = 완전한 텍스처).
+            static_assert( shaderslot::kMaterialTextureSampler == SW_SAMPLER_LINEAR_WRAP, "GL 머티리얼 샘플러의 필터 · 주소가 계약과 다르다" );
+            GLuint materialSampler{ 0 };
+            glGenSamplers( 1, &materialSampler );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_S, GL_REPEAT );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_T, GL_REPEAT );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            // 엔진 텍스처 유닛(칸 번호 — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵 · 쿠키 · 노출)은 엔진 텍스처 샘플러(선형 · 클램프, shaderslot::kEngineTextureSampler)다.
+            // 네이티브 bindless 의 Bindless::sampleIndex 가 고르는 샘플러와 같아야 블룸의 반 텍셀 탭이 같은 텍셀 넷을 섞는다. 렌더 타깃은 밉이 하나라
+            // 축소 필터에 밉 모드를 두지 않는다.
+            static_assert( shaderslot::kEngineTextureSampler == SW_SAMPLER_LINEAR_CLAMP, "GL 엔진 텍스처 샘플러의 필터 · 주소가 계약과 다르다" );
+            GLuint engineSampler{ 0 };
+            glGenSamplers( 1, &engineSampler );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            for ( uint32 unit = 0; unit < 64; ++unit )
+            {
+                const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+                // 엔진 텍스처 칸의 GL 유닛은 칸 번호(0..kEngineTextureCount-1)다 — shaderslot::emulated::getGlTextureUnit.
+                const bool bEngineUnit = unit < shaderslot::kEngineTextureCount;
+                glBindTextureUnit( unit, defaultTex );
+                if ( bMaterialUnit )
+                    glBindSampler( unit, materialSampler );
+                else if ( bEngineUnit )
+                    glBindSampler( unit, engineSampler );
+                else
+                    glBindSampler( unit, defaultSampler );
+            }
+            _defaultSampler  = defaultSampler;
+            _materialSampler = materialSampler;
+            _engineSampler   = engineSampler;
+        }
+
+        _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
+
+        SW_LOG_INFO( "OpenGL RHI Backend Device Active (DirectX Coordinate System & Top-Left UV Texture Space Configured)" );
+        return true;
+    }
+
+    bool OpenGLRHIDevice::initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes )
+    {
+        if ( capacityBytes == 0 )
+        {
+            SW_LOG_ERROR( "The OpenGL backend needs a staging ring capacity (gv_rhiStagingRingMegabytes must be positive)" );
+            return false;
+        }
+        // 영속 매핑(glBufferStorage + GL_MAP_PERSISTENT_BIT)은 GL 4.4 코어다(glad 는 4.4 미만 컨텍스트에서 이 포인터를 채우지 않는다). 없으면 링을 두지 않고
+        // 텍스처 업로드를 모두 Rejected 로 돌려준다 — 클라이언트 메모리에서 바로 올리는 두 번째 경로를 두지 않는다(RHICapabilities::_bPersistentStagingRing).
+        if ( glad_glBufferStorage == nullptr )
+        {
+            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no staging ring and every texture upload is rejected" );
+            return true;
+        }
+
+        // COHERENT 라 복사한 바이트는 뒤에 낸 GL 명령에 보인다(flush 가 필요 없다).
+        uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _stagingRingBuffer );
+        if ( pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "The OpenGL staging ring (%# bytes) could not be created or mapped (gv_rhiStagingRingMegabytes)", capacityBytes );
+            return false;
+        }
+
+        _pStagingRingMapped = pMapped;
+        _stagingRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_stagingRing ), RHIMemoryKind::Staging, capacityBytes );
+        return true;
+    }
+
+    bool OpenGLRHIDevice::initializeReadbackRing( uint64 capacityBytes, uint64 soloMaxBytes )
+    {
+        if ( capacityBytes == 0 )
+        {
+            SW_LOG_ERROR( "The OpenGL backend needs a readback ring capacity (gv_rhiReadbackRingMegabytes must be positive)" );
+            return false;
+        }
+        // 업로드 링과 같은 GL 4.4 조건이다. 없으면 텍스처 되읽기를 모두 Rejected 로 돌려준다 — 컨텍스트를 쥔 채 동기로 읽는 두 번째 경로를 두지 않는다
+        // (RHICapabilities::_bPersistentReadbackRing).
+        if ( glad_glBufferStorage == nullptr )
+        {
+            SW_LOG_ERROR( "OpenGL 4.4 (ARB_buffer_storage) is unavailable - there is no readback ring and every texture readback is rejected" );
+            return true;
+        }
+
+        // GPU 가 쓰고 CPU 가 읽는 버퍼다. COHERENT 라 펜스가 신호한 뒤에는 GPU 가 쓴 바이트가 매핑에 보인다(glMemoryBarrier 가 필요 없다).
+        uint8* pMapped = createPersistentRingBuffer( capacityBytes, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, _readbackRingBuffer );
+        if ( pMapped == nullptr )
+        {
+            SW_LOG_ERROR( "The OpenGL readback ring (%# bytes) could not be created or mapped (gv_rhiReadbackRingMegabytes)", capacityBytes );
+            return false;
+        }
+
+        _pReadbackRingMapped = pMapped;
+        _readbackRing.initialize( capacityBytes, kTransferRingAlignmentBytes, soloMaxBytes );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &_readbackRing ), RHIMemoryKind::Staging, capacityBytes );
+        return true;
+    }
+
+    uint8* OpenGLRHIDevice::createPersistentRingBuffer( uint64 capacityBytes, uint32 mapFlags, uint32& outBuffer )
+    {
+        outBuffer = 0;
+        GLuint name{ 0 };
+        glGenBuffers( 1, &name );
+        if ( name == 0 )
+            return nullptr;
+        // GL_COPY_WRITE_BUFFER 로 만들어 다른 바인딩을 건드리지 않는다.
+        glBindBuffer( GL_COPY_WRITE_BUFFER, name );
+        glBufferStorage( GL_COPY_WRITE_BUFFER, static_cast<GLsizeiptr>( capacityBytes ), nullptr, mapFlags );
+        void* pMapped = glMapBufferRange( GL_COPY_WRITE_BUFFER, 0, static_cast<GLsizeiptr>( capacityBytes ), mapFlags );
+        glBindBuffer( GL_COPY_WRITE_BUFFER, 0 );
+        if ( pMapped == nullptr )
+        {
+            glDeleteBuffers( 1, &name );
+            return nullptr;
+        }
+        outBuffer = name;
+        return static_cast<uint8*>( pMapped );
+    }
+
+    void OpenGLRHIDevice::shutdownStagingRing()
+    {
+        if ( _stagingRingBuffer == 0 )
+            return;
+        // 매핑된 버퍼를 지우면 매핑도 풀린다. 전송은 waitIdle(종료 2단계)이 모두 끝냈다.
+        deleteSoloBuffer( _stagingSolo );
+        GLuint name = _stagingRingBuffer;
+        glDeleteBuffers( 1, &name );
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_stagingRing ) );
+        _stagingRing.shutdown();
+        _stagingRingBuffer  = 0;
+        _pStagingRingMapped = nullptr;
+    }
+
+    void OpenGLRHIDevice::shutdownReadbackRing()
+    {
+        if ( _readbackRingBuffer == 0 )
+            return;
+        deleteSoloBuffer( _readbackSolo );
+        GLuint name = _readbackRingBuffer;
+        glDeleteBuffers( 1, &name );
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &_readbackRing ) );
+        _readbackRing.shutdown();
+        _readbackRingBuffer  = 0;
+        _pReadbackRingMapped = nullptr;
+    }
+
+    void OpenGLRHIDevice::detachCommandRecordingInternal()
+    {
+        _frameStreamContext.reset();
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 생성의 역순으로 놓는 해제 목록이라 나누지 않는다.
+    void OpenGLRHIDevice::shutdownInternal()
+    {
+        if ( _bInitialized == SW_FALSE )
+            return;
+
+        // GL 자원을 지우기 전에 컨텍스트를 되찾는다 (플랫폼이 필요 없으면 아무것도 하지 않는다).
+        if ( _platformContext != nullptr )
+            _platformContext->reacquireForFrame();
+
+        // 프레임 펜스는 `waitIdleInternal`(종료 2단계)이 이미 놓았다. 다시 세우는 디바이스가 이어받지 않도록 번호만 처음으로 돌린다.
+        _frameSerial          = 0;
+        _completedFrameSerial = 0;
+
+        if ( _defaultSampler )
+        {
+            for ( uint32 unit = 0; unit < 64; ++unit )
+            {
+                glBindSampler( unit, 0 );
+                glBindTextureUnit( unit, 0 );
+            }
+            glDeleteSamplers( 1, &_defaultSampler );
+            _defaultSampler = 0;
+        }
+        if ( _materialSampler != 0 )
+        {
+            glDeleteSamplers( 1, &_materialSampler );
+            _materialSampler = 0;
+        }
+        if ( _engineSampler != 0 )
+        {
+            glDeleteSamplers( 1, &_engineSampler );
+            _engineSampler = 0;
+        }
+        if ( _defaultTexture )
+        {
+            glDeleteTextures( 1, &_defaultTexture );
+            _defaultTexture = 0;
+        }
+        if ( _vao )
+        {
+            glDeleteVertexArrays( 1, &_vao );
+            _vao = 0;
+        }
+        if ( _vbo )
+        {
+            glDeleteBuffers( 1, &_vbo );
+            _vbo = 0;
+        }
+        if ( _meshVao )
+        {
+            glDeleteVertexArrays( 1, &_meshVao );
+            _meshVao = 0;
+        }
+        _gpuBuffers.forEach( []( uint32& name )
+        {
+            if ( name != 0 )
+            {
+                GLuint glName = name;
+                glDeleteBuffers( 1, &glName );
+                name = 0;
+            }
+        } );
+        _recordingState._boundMeshVb      = 0;
+        _recordingState._boundMeshStride  = sizeof( RHIVertex );
+        _recordingState._boundMeshOffset  = 0;
+        _recordingState._boundIndexBuffer = 0;
+        _recordingState._boundIndexStride = 4;
+        _recordingState._boundIndexOffset = 0;
+        _listRegisteredBindless.clear();
+        _listRegisteredUAV.clear();
+        _listRegisteredTexture.clear();
+        _listTextureFree.clear();
+        _listBindlessFree.clear();
+        _listUAVFree.clear();
+        Memory::set( _arrComputeRootConstantShadow, 0, sizeof( _arrComputeRootConstantShadow ) );
+
+        _pipelineStates.forEach( []( OpenGLPipelineStateRecord& pso )
+        {
+            if ( pso._program != 0 )
+            {
+                glDeleteProgram( pso._program );
+                pso._program = 0;
+            }
+        } );
+        _pipelineStates.clear();
+        _renderPassLedger.clear();
+
+        _gpuBuffers.forEach( []( uint32& glBuf )
+        {
+            if ( glBuf != 0 )
+            {
+                glDeleteBuffers( 1, &glBuf );
+                glBuf = 0;
+            }
+        } );
+        _gpuBuffers.clear();
+
+        _gpuTextures.forEach( []( OpenGLTextureRecord& record )
+        {
+            if ( record._texture != 0 )
+            {
+                glDeleteTextures( 1, &record._texture );
+                record._texture = 0;
+            }
+            if ( record._fbo != 0 )
+            {
+                glDeleteFramebuffers( 1, &record._fbo );
+                record._fbo = 0;
+            }
+        } );
+        _gpuTextures.clear();
+
+        for ( auto& [key, fbo] : _mapCompositeFbo )
+        {
+            if ( fbo != 0 )
+            {
+                GLuint glFbo = fbo;
+                glDeleteFramebuffers( 1, &glFbo );
+            }
+        }
+        _mapCompositeFbo.clear();
+
+        if ( _vao != 0 )
+        {
+            glDeleteVertexArrays( 1, &_vao );
+            _vao = 0;
+        }
+        if ( _vbo != 0 )
+        {
+            glDeleteBuffers( 1, &_vbo );
+            _vbo = 0;
+        }
+        if ( _meshVao != 0 )
+        {
+            glDeleteVertexArrays( 1, &_meshVao );
+            _meshVao = 0;
+        }
+        if ( _defaultSampler != 0 )
+        {
+            glDeleteSamplers( 1, &_defaultSampler );
+            _defaultSampler = 0;
+        }
+        if ( _computeRootConstantUbo != 0 )
+        {
+            glDeleteBuffers( 1, &_computeRootConstantUbo );
+            _computeRootConstantUbo = 0;
+        }
+        shutdownStagingRing();
+        shutdownReadbackRing();
+
+        if ( _platformContext != nullptr )
+        {
+            _platformContext->destroy();
+            _platformContext.reset();
+        }
+        _pHDC = nullptr;
+        _pHRC = nullptr;
+
+        _bInitialized = SW_FALSE;
+        SW_LOG_INFO( "OpenGL RHI Device Shutdown cleanly." );
+    }
+
+    void OpenGLRHIDevice::resizeInternal( uint32 width, uint32 height )
+    {
+        _width  = width;
+        _height = height;
+        if ( _platformContext != nullptr )
+            _platformContext->resize( width, height );
+        glViewport( 0, 0, static_cast<GLsizei>( width ), static_cast<GLsizei>( height ) );
+        SW_LOG_TRACE( "OpenGL RHI Resized to %#×%#", width, height );
+    }
+
+    bool OpenGLRHIDevice::tryMakeCurrentAndRecordOwner()
+    {
+        if ( _platformContext->makeCurrent() == false )
+            return false;
+        _contextOwnerThread.store( std::this_thread::get_id(), std::memory_order_relaxed );
+        _contextOwnedSinceNanos.store( static_cast<uint64>( MonotonicClock::nowNanoseconds() ), std::memory_order_relaxed );
+        return true;
+    }
+
+    bool OpenGLRHIDevice::bindGraphicsContext()
+    {
+        // 렌더 워커 · 자원 생성 가드(ScopedOpenGLContext)는 프레임 끝 · 생성 끝에 놓는다. 한 번만 시도하면 그 짧은 사이에 진 쪽이 [Error] 를 남기고
+        // 그 프레임의 GL 호출을 모두 잃는다 — 기다리는 쪽과 같은 시한으로 기다린다.
+        return acquireGraphicsContextBlocking( kContextAcquireTimeoutMs );
+    }
+
+    bool OpenGLRHIDevice::acquireGraphicsContextBlocking( uint32 timeoutMs )
+    {
+        if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
+            return false;
+
+        // 경합이 없을 때의 정상 경로다. 대개 여기서 끝난다.
+        if ( tryMakeCurrentAndRecordOwner() )
+            return true;
+
+        // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다. 시도마다 로그를 남기면 정상
+        // 경합이 오류로 보인다(-gl -EnableEditor 의 ERROR_BUSY 가 그런 정상 경합이다).
+        const Deadline deadline = Deadline::afterMilliseconds( timeoutMs );
+        while ( deadline.isExpired() == false )
+        {
+            ThreadUtil::sleepForMilliseconds( 1 );
+            if ( tryMakeCurrentAndRecordOwner() )
+                return true;
+        }
+
+        // 누가 쥐었는지 적는다 — 렌더 스레드인지(드레인 등록 때 받은 id) 다른 스레드인지, 얼마나 오래인지.
+        const std::thread::id owner      = _contextOwnerThread.load( std::memory_order_relaxed );
+        const uint64          nowNanos   = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+        const uint64          sinceNanos = _contextOwnedSinceNanos.load( std::memory_order_relaxed );
+        const uint64          heldMs     = nowNanos > sinceNanos ? ( nowNanos - sinceNanos ) / 1000000ull : 0ull;
+        const bool            bRtOwner   = owner == _renderThreadID.load( std::memory_order_relaxed ) && owner != std::thread::id{};
+        SW_LOG_ERROR( "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,
+                      static_cast<uint64>( std::hash<std::thread::id>{}( owner ) ), bRtOwner ? "render thread" : "not the render thread", heldMs );
+        return false;
+    }
+
+    bool OpenGLRHIDevice::isGraphicsContextCurrent() const
+    {
+        if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
+            return false;
+        return _platformContext->isCurrent();
+    }
+
+    void OpenGLRHIDevice::unbindGraphicsContext()
+    {
+        if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
+            return;
+        _contextOwnerThread.store( std::thread::id{}, std::memory_order_relaxed );
+        _platformContext->clearCurrent();
+    }
+
+    uint32 OpenGLRHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _bTimestampReady.load( std::memory_order_acquire ) != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
+    }
+
+    bool OpenGLRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
+    {
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool OpenGLRHIDevice::readGPUClockNanos( int64& outGPUNanos )
+    {
+        outGPUNanos = 0;
+        // GL_TIMESTAMP 는 기다리지 않고 지금 GPU 시계(나노초, 쿼리 타임스탬프와 같은 시계)를 준다. 컨텍스트를 소유한 스레드에서만 부른다.
+        if ( _bInitialized == SW_FALSE || glGetInteger64v == nullptr )
+            return false;
+        GLint64 now{ 0 };
+        glGetInteger64v( GL_TIMESTAMP, &now );
+        if ( now <= 0 )
+            return false;
+        outGPUNanos = RHITimestamp::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
+        return true;
+    }
+
+    void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
+    {
+        const bool bCannotWriteTimestamp = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot;
+        if ( bCannotWriteTimestamp )
+            return;
+
+        // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
+        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
+        _arrTimestampMask[_timestampFrameIndex] |= makeGPUTimestampSlotBit( slotIndex );
+    }
+
+    void OpenGLRHIDevice::ensureTimestampQueries()
+    {
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_relaxed ) != SW_FALSE )
+            return;
+        // GL 3.3 코어이지만 로더가 채우지 못했을 수 있다. 없으면 이 백엔드는 조용히 보고하지 않는다.
+        const bool bQueryFunctionsMissing = glGenQueries == nullptr || glQueryCounter == nullptr || glGetQueryObjectui64v == nullptr ||
+                                            glGetQueryObjectiv == nullptr;
+        if ( bQueryFunctionsMissing )
+            return;
+
+        constexpr uint32 kQueryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        glGenQueries( static_cast<GLsizei>( kQueryCount ), _arrTimestampQuery );
+        if ( _arrTimestampQuery[0] == 0 )
+            return;
+        _bTimestampReady.store( SW_TRUE, std::memory_order_release ); // 위에서 만든 쿼리를 다른 스레드가 본다
+    }
+
+    void OpenGLRHIDevice::collectTimestampsForSlot()
+    {
+        _timestampFrame._listMicro.clear();
+        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
+        const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask == 0;
+        if ( bNoTimestampsToRead )
+            return;
+
+        const uint32         base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;
+        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        GPUTimestampSlotMask readyMask{ 0 };
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
+        {
+            if ( ( writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
+                continue;
+
+            // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
+            // 측정하려던 파이프라인을 멈춰 세운다. 그러면 측정값이 거짓이 된다.
+            GLint bAvailable{ 0 };
+            glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );
+            if ( bAvailable == GL_FALSE )
+                continue;
+
+            GLuint64 tick{ 0 };
+            glGetQueryObjectui64v( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT, &tick );
+            arrTick[slotIndex] = tick;
+            readyMask |= makeGPUTimestampSlotBit( slotIndex );
+        }
+        // GL 타임스탬프는 나노초다.
+        RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
+    }
+
+    void OpenGLRHIDevice::beginFrame()
+    {
+        if ( _bInitialized == SW_FALSE )
+            return;
+
+        if ( _platformContext != nullptr )
+            _platformContext->reacquireForFrame();
+
+        // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
+        // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩하고 클리어하는 것은 RenderThread 가 여는 명시적
+        // beginRenderPass(핸들 0) 뿐이다. 뷰포트만 창 크기 전체로 되돌려 둔다.
+        glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
+
+        // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
+        ensureTimestampQueries();
+        collectTimestampsForSlot();
+        _arrTimestampMask[_timestampFrameIndex] = 0;
+    }
+
+    void OpenGLRHIDevice::endFrame( bool vsync, bool bPresent )
+    {
+        if ( _bInitialized == SW_FALSE )
+            return;
+
+        // present 여부와 무관하게 이번 프레임의 슬롯은 다 기록됐다. 다음 슬롯으로 넘긴다.
+        _timestampFrameIndex = ( _timestampFrameIndex + 1 ) % constant::kMaxFrameCountInFlight;
+
+        if ( bPresent == false )
+        {
+            retireFrameOnGPU();
+            _releaseQueue.tickFrame();
+            return;
+        }
+
+        const int8 desired = vsync ? 1 : 0;
+        if ( _lastVsync != desired )
+        {
+            if ( _platformContext != nullptr )
+                _platformContext->setSwapInterval( vsync );
+            _lastVsync = desired;
+        }
+
+        // 스왑 직전 컨텍스트 되찾기는 플랫폼이 필요할 때만 한다(WGL 은 ImGui 멀티 뷰포트 때문에
+        // 반드시 필요하고, GLX 는 하지 않는다).
+        if ( _platformContext != nullptr )
+            _platformContext->present();
+        retireFrameOnGPU();
+        _releaseQueue.tickFrame();
+    }
+
+    void OpenGLRHIDevice::waitIdleInternal()
+    {
+        if ( _bInitialized == SW_FALSE )
+            return;
+
+        {
+            ScopedOpenGLContext contextScope( this );
+            glFinish();
+            // GPU 가 쉰다 — 낸 프레임이 모두 끝났으니 펜스를 놓는다.
+            for ( void*& rpSync : _arrFrameDoneSync )
+            {
+                if ( rpSync != nullptr )
+                    glDeleteSync( static_cast<GLsync>( rpSync ) );
+                rpSync = nullptr;
+            }
+            _completedFrameSerial = _frameSerial;
+            // glFinish 가 낸 전송도 모두 끝냈다. 펜스를 놓고 워터마크를 올린다.
+            _transferQueue.retireAll( []( void*& pSync )
+            {
+                glDeleteSync( static_cast<GLsync>( pSync ) ); // 펜스 없는 항목(glFenceSync 실패)은 0 이라 GL 이 무시한다
+                pSync = nullptr;
+            } );
+        }
+        _releaseQueue.flushAll();
+    }
+
+    uint64 OpenGLRHIDevice::endTransfer()
+    {
+        // 펜스는 앞선 모든 명령의 끝을 알린다. glFlush 로 명령을 GPU 로 내보내야 프레임을 돌리지 않아도 신호가 선다.
+        void* pSync = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        glFlush();
+        // 펜스가 없으면 이 전송이 끝났는지 알 길이 없다 — 끝난 것으로 치지 않고 장치 손실로 둔다(티켓은 Failed, 이후 제출은 Rejected).
+        if ( pSync == nullptr && _transferSerials.markLost() )
+            SW_LOG_ERROR( "endTransfer: glFenceSync returned no fence; treating the GL device as lost" );
+        const uint64 serial = _transferQueue.enqueue( pSync );
+        retireFinishedTransfers(); // 앞서 낸 전송 가운데 끝난 것을 모은다(이 스레드가 컨텍스트를 쥐고 있다)
+        return serial;
+    }
+
+    void OpenGLRHIDevice::retireFinishedTransfers()
+    {
+        // 큐의 펜스는 모두 endTransfer 가 단 것이다. 펜스가 없는 항목(glFenceSync 실패)은 glClientWaitSync 가 GL_WAIT_FAILED 로 돌려 손실로 남는다.
+        _transferQueue.retireDone(
+            [this]( void*& pSync )
+        {
+            const GLenum waitResult = glClientWaitSync( static_cast<GLsync>( pSync ), 0, 0 );
+            if ( waitResult == GL_WAIT_FAILED )
+            {
+                // 실패한 항목은 큐 맨 앞에 남아 매 프레임 다시 여기로 온다 — 처음 표시한 때만 로그를 남긴다.
+                if ( _transferSerials.markLost() )
+                    SW_LOG_ERROR( "pollTransfer: glClientWaitSync failed on a transfer fence" );
+                return false;
+            }
+            return waitResult != GL_TIMEOUT_EXPIRED;
+        },
+            []( void*& pSync )
+        {
+            glDeleteSync( static_cast<GLsync>( pSync ) ); // 끝났다고 본 펜스만 온다 — 펜스가 없는 항목은 위에서 끝나지 않는다
+            pSync = nullptr;
+        } );
+        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다. 버퍼는 컨텍스트가 있어야 지우므로 컨텍스트를 쥔 이곳(프레임 끝 · 제출 · 폴링)에서만 한다.
+        const uint64 watermark = _transferSerials.getWatermark();
+        deleteIdleSoloBuffer( _stagingRing, _stagingSolo, watermark );
+        deleteIdleSoloBuffer( _readbackRing, _readbackSolo, watermark );
+    }
+
+    void OpenGLRHIDevice::deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial )
+    {
+        if ( rSolo._buffer == 0 )
+            return;
+        ring.freeCompleted( completedSerial );
+        if ( ring.hasLiveSolo() )
+            return;
+        deleteSoloBuffer( rSolo );
+    }
+
+    void OpenGLRHIDevice::deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo )
+    {
+        if ( rSolo._buffer == 0 )
+            return;
+        GLuint name = rSolo._buffer;
+        glDeleteBuffers( 1, &name ); // 매핑된 버퍼를 지우면 매핑도 풀린다
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( &rSolo ) );
+        rSolo = OpenGLSoloTransferBuffer{};
+    }
+
+    RHISubmitResult OpenGLRHIDevice::attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+                                                       const utf8* pCaller )
+    {
+        // 버퍼를 만드는 동안만 컨텍스트를 빌린다. 바이트 복사(업로드)는 돌아간 뒤 컨텍스트 밖에서 한다.
+        ScopedOpenGLContext contextScope( this );
+        if ( isGraphicsContextCurrent() == false )
+        {
+            ring.free( span );
+            SW_LOG_ERROR( "%#: the GL context could not be acquired to create a %#-byte single transfer buffer; submit again later", pCaller, span._sizeBytes );
+            return RHISubmitResult::Busy;
+        }
+        deleteSoloBuffer( rSolo ); // 장부가 이미 돌려받았지만 아직 지우지 못한 앞 단독 버퍼
+        rSolo._pMapped = createPersistentRingBuffer( span._sizeBytes, mapFlags, rSolo._buffer );
+        if ( rSolo._pMapped == nullptr )
+        {
+            ring.free( span );
+            SW_LOG_ERROR( "%#: a %#-byte single transfer buffer could not be created or mapped; the transfer is rejected", pCaller, span._sizeBytes );
+            return RHISubmitResult::Rejected;
+        }
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( &rSolo ), RHIMemoryKind::Staging, span._sizeBytes );
+        return RHISubmitResult::Accepted;
+    }
+
+    uint8* OpenGLRHIDevice::getStagingBytes( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _stagingSolo._pMapped : _pStagingRingMapped + span._offsetBytes;
+    }
+
+    uint32 OpenGLRHIDevice::getStagingBuffer( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _stagingSolo._buffer : _stagingRingBuffer;
+    }
+
+    const uint8* OpenGLRHIDevice::getReadbackBytes( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _readbackSolo._pMapped : _pReadbackRingMapped + span._offsetBytes;
+    }
+
+    uint32 OpenGLRHIDevice::getReadbackBuffer( const RHIStagingSpan& span ) const
+    {
+        return span._bSolo != SW_FALSE ? _readbackSolo._buffer : _readbackRingBuffer;
+    }
+
+    bool OpenGLRHIDevice::tryRetireFinishedTransfers()
+    {
+        if ( isGraphicsContextCurrent() )
+        {
+            retireFinishedTransfers();
+            return true;
+        }
+        const bool bBorrowed = requiresExclusiveContextThread() && tryMakeCurrentAndRecordOwner();
+        if ( bBorrowed == false )
+            return false;
+        retireFinishedTransfers();
+        unbindGraphicsContext();
+        return true;
+    }
+
+    RHISubmitResult OpenGLRHIDevice::allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan )
+    {
+        if ( _stagingRingBuffer == 0 )
+        {
+            SW_LOG_ERROR( "%#: the GL staging ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the upload is rejected", pCaller );
+            return RHISubmitResult::Rejected;
+        }
+        RHIStagingAllocateResult result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
+            result = _stagingRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다 — 장치를 잃었으면(펜스 확인이 GL_WAIT_FAILED) 링이 다시 비지 않으므로 Full 도 Rejected 다(계약 2).
+        // Busy 는 앞선 전송이 끝나면 비므로 호출자가 다시 제출한다.
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _stagingRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        return attachSoloBuffer( _stagingRing, _stagingSolo, outSpan, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
+    }
+
+    RHISubmitResult OpenGLRHIDevice::allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan )
+    {
+        if ( _readbackRingBuffer == 0 )
+        {
+            SW_LOG_ERROR( "submitTextureReadback: the GL readback ring is unavailable (needs OpenGL 4.4 / ARB_buffer_storage); the readback is rejected" );
+            return RHISubmitResult::Rejected;
+        }
+        // 워터마크는 버린 되읽기(markSubmitted)의 구간만 돌려준다 — 그래서 차 있으면 펜스를 한 번 모아 본다. 가져갈 되읽기의 구간은 take 가 free 로 놓는다.
+        RHIStagingAllocateResult result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        if ( result == RHIStagingAllocateResult::Full && tryRetireFinishedTransfers() )
+            result = _readbackRing.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 업로드 쪽과 같은 한 곳이다 — 잃은 장치의 Full 은 Rejected 다. Busy 는 앞선 되읽기를 가져가거나 버리면 비므로 호출자가 다시 제출한다(계약 2).
+        const utf8* const     pCaller      = "submitTextureReadback";
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( _readbackRing, _transferSerials, result, sizeBytes, "GL", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        return attachSoloBuffer( _readbackRing, _readbackSolo, outSpan, GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT, pCaller );
+    }
+
+    void OpenGLRHIDevice::retireFrameOnGPU()
+    {
+        ScopedOpenGLContext contextScope( this );
+        const uint64        serial     = _frameSerial + 1;
+        void*&              rpSlotSync = _arrFrameDoneSync[( serial - 1 ) % constant::kMaxFrameCountInFlight];
+        // 링이 한 바퀴 돌았다. 이 칸은 프레임 serial - kMaxFrameCountInFlight 의 것이니, 그 프레임이 끝나야 칸을 다시 쓴다.
+        const bool bRingFull = serial - _completedFrameSerial > constant::kMaxFrameCountInFlight;
+        if ( bRingFull )
+        {
+            constexpr GLuint64 kRingWaitTimeoutNanoseconds = 10ull * 1000ull * 1000ull * 1000ull;
+            const GLenum       waitResult                  = glClientWaitSync( static_cast<GLsync>( rpSlotSync ), GL_SYNC_FLUSH_COMMANDS_BIT, kRingWaitTimeoutNanoseconds );
+            if ( waitResult == GL_TIMEOUT_EXPIRED || waitResult == GL_WAIT_FAILED )
+                SW_LOG_ERROR( "endFrame: the GPU did not finish frame %# (glClientWaitSync result %#)", serial - constant::kMaxFrameCountInFlight, static_cast<uint32>( waitResult ) );
+            glDeleteSync( static_cast<GLsync>( rpSlotSync ) );
+            rpSlotSync            = nullptr;
+            _completedFrameSerial = serial - constant::kMaxFrameCountInFlight;
+        }
+        rpSlotSync   = glFenceSync( GL_SYNC_GPU_COMMANDS_COMPLETE, 0 );
+        _frameSerial = serial;
+
+        // 이미 끝난 프레임을 오래된 순서로 모은다(기다리지 않고 묻기만 한다).
+        while ( _completedFrameSerial < _frameSerial )
+        {
+            const uint64 next       = _completedFrameSerial + 1;
+            void*&       rpNextSync = _arrFrameDoneSync[( next - 1 ) % constant::kMaxFrameCountInFlight];
+            const GLenum pollResult = glClientWaitSync( static_cast<GLsync>( rpNextSync ), 0, 0 );
+            if ( pollResult == GL_TIMEOUT_EXPIRED )
+                break;
+            glDeleteSync( static_cast<GLsync>( rpNextSync ) );
+            rpNextSync            = nullptr;
+            _completedFrameSerial = next;
+        }
+        // 프레임을 돌리는 스레드는 컨텍스트를 쥐고 있으니 여기서 전송 워터마크도 올린다(컨텍스트 없는 스레드의 폴링은 이 값을 본다).
+        retireFinishedTransfers();
+        _releaseQueue.tickCompleted( _completedFrameSerial );
+    }
+
+    void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameSerial + 1 );
+    }
+
+    unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
+    {
+        return make_unique<OpenGLRHICommandList>( this );
+    }
+
+    void OpenGLRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    {
+        // 기록이 이미 GL 호출로 즉시 나갔으므로(beginCommandList 에서 컨텍스트 재바인딩까지 마침)
+        // 순서를 맞출 일은 없다. 다만 GL 도 커맨드를 모아 뒀다가 보내므로, 즉시 모드에서는
+        // 리스트 경계마다 밀어내 오류가 어느 리스트에서 났는지 드러나게 한다.
+        (void)pCmdList;
+        if ( _bImmediateSubmit )
+            glFlush();
     }
 } // namespace sw

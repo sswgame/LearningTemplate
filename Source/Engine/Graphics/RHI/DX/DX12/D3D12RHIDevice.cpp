@@ -2,16 +2,24 @@
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Log/LogOnce.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+    #include "Engine/Foundation/EngineServices.h"
+    #include "Engine/Profiling/FrameProfiler.h"
+    #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
@@ -494,5 +502,1317 @@ namespace sw
         return _frameStreamContext.get();
     }
 
+    // 길이 유지(긴 함수 정리 기준): 디바이스 · 큐 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
+    bool D3D12RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
+    {
+    #if defined( SW_DEBUG )
+        {
+            Microsoft::WRL::ComPtr<ID3D12Debug> debugController;
+            if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( debugController.GetAddressOf() ) ) ) )
+            {
+                debugController->EnableDebugLayer();
+                SW_LOG_INFO( "Debug layer enabled." );
+            }
+        }
+    #endif
+        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 디버그 레이어가 없는 개발 빌드(Release)에서도 켠다
+        // (`-gv_gpuBreadcrumbs` 가 기본 켬). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`)가 싣고, DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
+        if ( GPUBreadcrumbs::isEnabled() )
+        {
+            Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
+            if ( SUCCEEDED( D3D12GetDebugInterface( IID_PPV_ARGS( dredSettings.GetAddressOf() ) ) ) )
+            {
+                dredSettings->SetAutoBreadcrumbsEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
+                dredSettings->SetPageFaultEnablement( D3D12_DRED_ENABLEMENT_FORCED_ON );
+                SW_LOG_INFO( "DRED (Device Removed Extended Data) diagnostic enabled." );
+            }
+        }
+
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
+            return false;
+
+        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(gv_rhiSoftwareAdapter).
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> softwareAdapter;
+        if ( desc._bSoftwareAdapter && FAILED( factory->EnumWarpAdapter( IID_PPV_ARGS( softwareAdapter.GetAddressOf() ) ) ) )
+        {
+            SW_LOG_ERROR( "WARP adapter is not available (gv_rhiSoftwareAdapter)" );
+            return false;
+        }
+
+        // 크래시 리포트용 어댑터 정보. 실패해도 디바이스 생성에는 영향이 없다.
+        {
+            Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter;
+            if ( adapter != nullptr || ( SUCCEEDED( factory->EnumAdapters1( 0, adapter.GetAddressOf() ) ) && adapter != nullptr ) )
+            {
+                DXGI_ADAPTER_DESC1 adapterDesc{};
+                if ( SUCCEEDED( adapter->GetDesc1( &adapterDesc ) ) )
+                {
+                    utf8         arrName[constant::kMaxBuffer256]{};
+                    const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
+                    formatstring( arrName, constant::kMaxBuffer256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(),
+                                  adapterDesc.VendorId, adapterDesc.DeviceId,
+                                  static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::kBytesPerMegabyte ) );
+                    CrashHandler::setContextValue( "GPU", arrName );
+                }
+            }
+        }
+
+        if ( FAILED( D3D12CreateDevice( softwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
+            return false;
+        createBreadcrumbBuffer();
+        // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
+        _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
+        // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
+        if ( softwareAdapter != nullptr )
+        {
+            DXGI_ADAPTER_DESC1 softwareDesc{};
+            const LUID         deviceLuid = _device->GetAdapterLuid();
+            _bSoftwareAdapter             = SUCCEEDED( softwareAdapter->GetDesc1( &softwareDesc ) ) && softwareDesc.AdapterLuid.LowPart == deviceLuid.LowPart &&
+                                softwareDesc.AdapterLuid.HighPart == deviceLuid.HighPart;
+        }
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
+        if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
+        {
+            if ( options.ResourceBindingTier >= D3D12_RESOURCE_BINDING_TIER_3 )
+                SW_LOG_TRACE( "Device supports Resource Binding Tier 3 (Bindless)." );
+            else
+                SW_LOG_WARNING( "Device does NOT support Resource Binding Tier 3. Fallback may be required." );
+        }
+
+    #if defined( SW_DEBUG )
+        {
+            Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue;
+            if ( SUCCEEDED( _device.As( &infoQueue ) ) )
+            {
+                infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE );
+                infoQueue->SetBreakOnSeverity( D3D12_MESSAGE_SEVERITY_ERROR, FALSE );
+                // 생성 때 준 최적 클리어 값과 다른 색으로 지우면 "느릴 수 있다" 는 성능 안내뿐이다(지우기는 맞게 된다). 렌더 타깃을 여러 클리어 색으로 다시 쓰는
+                // 그래프 · 에디터 뷰에서 늘 나므로 언리얼 D3D12RHI 처럼 거른다.
+                D3D12_MESSAGE_ID        arrDeniedID[] = { D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE };
+                D3D12_INFO_QUEUE_FILTER filter{};
+                filter.DenyList.NumIDs  = static_cast<UINT>( std::size( arrDeniedID ) );
+                filter.DenyList.pIDList = arrDeniedID;
+                if ( FAILED( infoQueue->PushStorageFilter( &filter ) ) )
+                    SW_LOG_INFO( "D3D12 debug layer storage filter was not applied" );
+            }
+            // 큐는 장치 실패 때만 비운다(flushDebugMessages). 경고가 나는 그 자리에서 보이게 콜백을 단다(Windows 11 의 디버그 레이어부터 있다).
+            Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
+            const bool                               bCallbackRegistered = SUCCEEDED( _device.As( &infoQueue1 ) ) &&
+                                             SUCCEEDED( infoQueue1->RegisterMessageCallback( &D3D12RHIDevice::onValidationMessage, D3D12_MESSAGE_CALLBACK_FLAG_NONE,
+                                                                                             this, &_validationCallbackCookie ) );
+            if ( bCallbackRegistered == false )
+            {
+                _validationCallbackCookie = 0;
+                SW_LOG_INFO( "D3D12 debug layer has no message callback (ID3D12InfoQueue1) - validation warnings show only when the device fails" );
+            }
+        }
+    #endif
+
+        D3D12_COMMAND_QUEUE_DESC queueDesc{};
+        queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        if ( isHrSuccess( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ), "CreateCommandQueue" ) == false )
+            return false;
+
+        _swapChain.setBarrierWatcher( this );
+        if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
+            return false;
+
+        _bBindlessRootSignature = SW_FALSE;
+        _frameStreamState       = D3D12RecordingState{};
+
+        // 백버퍼와 오프스크린 렌더 타깃이 **같은 RTV 힙**을 나눠 쓴다. 앞쪽 bufferCount 칸이 백버퍼,
+        // 그 뒤가 오프스크린이다. 그래서 이 힙은 스왑체인이 아니라 디바이스가 소유한다.
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
+        rtvHeapDesc.NumDescriptors = _swapChain.getBufferCount() + kMaxOffscreenRTVs;
+        rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &rtvHeapDesc, IID_PPV_ARGS( _rtvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
+            return false;
+
+        _rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
+
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc{};
+        dsvHeapDesc.NumDescriptors = kMaxOffscreenDSVs;
+        dsvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+        dsvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &dsvHeapDesc, IID_PPV_ARGS( _dsvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
+            return false;
+
+        D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc{};
+        cbvHeapDesc.NumDescriptors = kMaxShaderVisibleDescriptors;
+        cbvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        cbvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &cbvHeapDesc, IID_PPV_ARGS( _cbvHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
+            return false;
+
+        _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+        // GPU 메모리를 차지하는 것은 셰이더 가시 힙뿐이다(RTV · DSV · 오프라인 힙은 CPU 메모리). 크기는 칸 수 × 칸 크기다.
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ), RHIMemoryKind::Descriptor,
+                                            static_cast<uint64>( cbvHeapDesc.NumDescriptors ) * _cbvDescriptorSize );
+
+        // 오프라인(CPU 전용) 뷰 힙. 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
+        // 등록은 뷰를 두 힙에 같은 인덱스로 만들고, 마지막 두 칸은 안 걸린 슬롯을 채우는 null 뷰다.
+        D3D12_DESCRIPTOR_HEAP_DESC offlineHeapDesc{};
+        offlineHeapDesc.NumDescriptors = kOfflineDescriptorCount;
+        offlineHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        offlineHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if ( isHrSuccess( _device->CreateDescriptorHeap( &offlineHeapDesc, IID_PPV_ARGS( _offlineViewHeap.GetAddressOf() ) ), "CreateDescriptorHeap" ) == false )
+            return false;
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullSRV{};
+            nullSRV.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+            nullSRV.Format                  = DXGI_FORMAT_R32_TYPELESS;
+            nullSRV.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullSRV.Buffer.NumElements      = 1;
+            nullSRV.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+            _device->CreateShaderResourceView( nullptr, &nullSRV, offlineDescriptorAt( kOfflineNullSRVIndex ) );
+
+            D3D12_UNORDERED_ACCESS_VIEW_DESC nullUAV{};
+            nullUAV.ViewDimension      = D3D12_UAV_DIMENSION_BUFFER;
+            nullUAV.Format             = DXGI_FORMAT_R32_TYPELESS;
+            nullUAV.Buffer.NumElements = 1;
+            nullUAV.Buffer.Flags       = D3D12_BUFFER_UAV_FLAG_RAW;
+            _device->CreateUnorderedAccessView( nullptr, nullptr, &nullUAV, offlineDescriptorAt( kOfflineNullUAVIndex ) );
+
+            // 레지스트리 0 번 = null Texture2D SRV(kNullTextureBindlessIndex). 등록은 그 다음 칸부터 받는다 — 0 으로 남은 텍스처 인덱스가
+            // 상수버퍼 · 구조버퍼 뷰를 Texture2D 로 읽지 않고 0 을 읽는다.
+            D3D12_SHADER_RESOURCE_VIEW_DESC nullTexture{};
+            nullTexture.ViewDimension              = D3D12_SRV_DIMENSION_TEXTURE2D;
+            nullTexture.Format                     = DXGI_FORMAT_R8G8B8A8_UNORM;
+            nullTexture.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            nullTexture.Texture2D.MipLevels        = 1;
+            D3D12_CPU_DESCRIPTOR_HANDLE onlineNull = _cbvHeap->GetCPUDescriptorHandleForHeapStart();
+            onlineNull.ptr += static_cast<SIZE_T>( kNullTextureBindlessIndex ) * _cbvDescriptorSize;
+            _device->CreateShaderResourceView( nullptr, &nullTexture, onlineNull );
+            _device->CreateShaderResourceView( nullptr, &nullTexture, offlineDescriptorAt( kNullTextureBindlessIndex ) );
+            _allocatedDescriptorsCount = kNullTextureBindlessIndex + 1;
+        }
+        {
+            ScopedLock<mutex> lock{ _onlineBlockMutex };
+            _listFreeOnlineBlock.clear();
+            for ( uint32 block = kOnlineBlockCount; block > 0; --block )
+            {
+                _listFreeOnlineBlock.push_back( block - 1 );
+            }
+            _bOnlineHeapExhaustedLogged = SW_FALSE;
+        }
+
+        for ( uint32 frameIndex = 0; frameIndex < constant::kMaxFrameCountInFlight; ++frameIndex )
+        {
+            if ( isHrSuccess( _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( _arrCommandAllocator[frameIndex].GetAddressOf() ) ), "CreateCommandAllocator" ) == false )
+                return false;
+            // 디버그 레이어의 "allocator is being reset [in use]" 메시지는 객체 이름을 찍는다. 이름이 없으면
+            // 어느 얼로케이터가 문제인지 주소만 남아 추적이 안 된다.
+            utf16 arrName[constant::kMaxBuffer64]{};
+            swprintf_s( arrName, L"FrameStreamAllocator%u", frameIndex );
+            _arrCommandAllocator[frameIndex]->SetName( arrName );
+        }
+
+        if ( isHrSuccess( _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, _arrCommandAllocator[0].Get(), nullptr, IID_PPV_ARGS( _commandList.GetAddressOf() ) ), "CreateCommandList" ) == false )
+            return false;
+
+        // 갓 만든 리스트는 열린 채라 닫아 둔다(첫 프레임이 Reset 으로 연다). 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다.
+        if ( isHrSuccess( _commandList->Close(), "ID3D12GraphicsCommandList::Close (initial)" ) == false )
+            return false;
+        _frameStreamState._bRecording = SW_FALSE;
+        _frameRing.reset();
+
+        _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
+
+        if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ), "CreateFence" ) == false )
+            return false;
+        _fenceValue = 1;
+        // 전송 전용 펜스: 전송 작업(복사 리스트 하나)을 낼 때마다 한 값을 올린다. 프레임 펜스와 따로라 전송 완료를 프레임 없이도 알 수 있다(RHIAsyncUploads).
+        if ( isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _transferFence.GetAddressOf() ) ), "CreateFence" ) == false )
+            return false;
+        _transferFenceValue = 0;
+        if ( initializeTransfers( desc ) == false )
+            return false;
+
+        if ( createGlobalResources() == false )
+            return false;
+
+        _frameStreamContext = sw::make_unique<D3D12RHICommandContext>( this, _commandList.Get(), &_frameStreamState );
+
+        return true;
+    }
+
+    void D3D12RHIDevice::detachCommandRecordingInternal()
+    {
+        _frameStreamContext.reset();
+        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+    }
+
+    void D3D12RHIDevice::createBreadcrumbBuffer()
+    {
+        if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
+            return;
+        // 읽기 힙(CPU 가 읽는 시스템 메모리) 4 바이트 - GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
+        const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
+        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) );
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
+                          "CreateCommittedResource(breadcrumb)" ) == false )
+        {
+            SW_LOG_WARNING( "The D3D12 GPU breadcrumb buffer could not be created - device lost reports only the CPU-recorded last pass" );
+            return;
+        }
+        void*       pMapped = nullptr;
+        D3D12_RANGE noRead{ 0, 0 };
+        if ( isHrSuccess( _breadcrumbBuffer->Map( 0, &noRead, &pMapped ), "Map(breadcrumb)" ) == false || pMapped == nullptr )
+        {
+            _breadcrumbBuffer.Reset();
+            return;
+        }
+        *static_cast<uint32*>( pMapped ) = 0;
+        _pBreadcrumbMapped               = static_cast<const volatile uint32*>( pMapped );
+        _breadcrumbAddress               = _breadcrumbBuffer->GetGPUVirtualAddress();
+        SW_LOG_INFO( "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
+    }
+
+    uint32 D3D12RHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
+    {
+        if ( _pBreadcrumbMapped == nullptr || pOutID == nullptr || capacity == 0 )
+            return 0;
+        const uint32 marker = *_pBreadcrumbMapped;
+        if ( marker == 0 )
+            return 0;
+        pOutID[0] = marker;
+        return 1;
+    }
+
+    void D3D12RHIDevice::shutdownInternal()
+    {
+        if ( _breadcrumbBuffer != nullptr && _pBreadcrumbMapped != nullptr )
+            _breadcrumbBuffer->Unmap( 0, nullptr );
+        _pBreadcrumbMapped = nullptr;
+        _breadcrumbAddress = 0;
+        _breadcrumbBuffer.Reset();
+        _mapOffscreenTexture.clear();
+        _pipelineStates.clear();
+        _renderPassLedger.clear();
+        _listRegisteredBindless.clear();
+        _listFreeBindless.clear();
+        _listRegisteredUAV.clear();
+        _mapStructuredBufferState.clear();
+        _gpuBuffers.clear();
+        _gpuTextures.clear();
+        _frameStreamState          = D3D12RecordingState{};
+        _nextOffscreenRTVIndex     = 0;
+        _allocatedDescriptorsCount = 0;
+
+        _swapChain.shutdown();
+        _vertexBuffer.Reset();
+        _rootSignature.Reset();
+        _drawCommandSignature.Reset();
+        _drawIndexedCommandSignature.Reset();
+        _dispatchCommandSignature.Reset();
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ) );
+        _cbvHeap.Reset();
+        _offlineViewHeap.Reset();
+        {
+            ScopedLock<mutex> lock{ _onlineBlockMutex };
+            _listFreeOnlineBlock.clear();
+        }
+        _dsvHeap.Reset();
+        _rtvHeap.Reset();
+        _nextOffscreenDSVIndex = 0;
+        _commandList.Reset();
+        for ( Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& allocator : _arrCommandAllocator )
+        {
+            allocator.Reset();
+        }
+        {
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.clear();
+        }
+        _frameStreamState._bRecording = SW_FALSE;
+        _bBindlessRootSignature       = SW_FALSE;
+        // 전송 작업 · 스테이징 링 · 전송을 기다리던 해제는 큐와 펜스를 놓기 전에 정리한다(GPU 는 종료 2단계에서 쉬었다).
+        shutdownTransfers();
+        _fence.Reset();
+        _transferFence.Reset();
+        _commandQueue.Reset();
+        _memoryAdapter.Reset();
+        Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
+        const bool                               bHasValidationCallback = _validationCallbackCookie != 0 && _device != nullptr && SUCCEEDED( _device.As( &infoQueue1 ) );
+        if ( bHasValidationCallback )
+            infoQueue1->UnregisterMessageCallback( _validationCallbackCookie );
+        _validationCallbackCookie = 0;
+        infoQueue1.Reset();
+        _device.Reset();
+
+        _fenceValue        = 0;
+        _rtvDescriptorSize = 0;
+        _cbvDescriptorSize = 0;
+    }
+
+    void D3D12RHIDevice::resizeInternal( uint32 width, uint32 height )
+    {
+        // resize 는 렌더 스레드를 세운 뒤(`Engine::onMainWindowResize` 의 `waitIdle`) 부른다 — 그동안 프레임 진행 상태(백 버퍼 · 프레임 펜스)는 이 스레드가 렌더 스레드 역할을 빌려 만진다.
+        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
+        if ( _swapChain.isValid() == false || ( width == 0 && height == 0 ) )
+            return;
+
+        if ( _frameStreamState._bRecording != SW_FALSE && _commandList != nullptr )
+        {
+            {
+                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                flushPendingUploads( true );
+            }
+            requireHr( _commandList->Close(), "ID3D12GraphicsCommandList::Close (resize)" );
+            ID3D12CommandList* arrCommandList[] = { _commandList.Get() };
+            if ( _commandQueue != nullptr )
+                _commandQueue->ExecuteCommandLists( 1, arrCommandList );
+            _frameStreamState._bRecording = SW_FALSE;
+            releaseOnlineBlocksDeferred( _frameStreamState );
+        }
+
+        waitForPreviousFrame();
+        _swapChain.releaseBackBuffers();
+        if ( _swapChain.resize( width, height ) == false )
+            return;
+        _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
+        _swapChain.acquireNextImage();
+    }
+
+    void D3D12RHIDevice::onRenderThreadRoleChanged( std::thread::id owner )
+    {
+        _swapChain.bindRenderThread( owner );
+    }
+
+    void D3D12RHIDevice::waitIdleInternal()
+    {
+        // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
+        ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
+        waitForPreviousFrame();
+        // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
+        retireCompletedTransfers();
+        _releaseQueue.flushAll();
+    }
+
+    void D3D12RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _fenceValue );
+    }
+
+    unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
+    {
+        unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
+        if ( list->isValid() == false )
+        {
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
+                SW_LOG_ERROR_ONCE( "D3D12RHIDevice::createCommandList: failed to create the native command list." );
+            return nullptr;
+        }
+        return list;
+    }
+
+    void D3D12RHIDevice::registerCommandList( D3D12RHICommandList* pCmdList )
+    {
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
+        _listLiveCmd.push_back( pCmdList );
+    }
+
+    void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
+    {
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
+        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
+    }
+
+    ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()
+    {
+        D3D12CommandListEntry entry = acquireCommandListEntry();
+        if ( entry._list == nullptr || entry._allocator == nullptr )
+            return nullptr;
+
+        // 풀에서 나온 쌍은 이미 펜스를 통과했으므로 곧바로 Reset 해도 된다.
+        if ( isHrSuccess( entry._allocator->Reset(), "Reset" ) == false || isHrSuccess( entry._list->Reset( entry._allocator.Get(), nullptr ), "Reset" ) == false )
+            return nullptr;
+
+        bindBindlessRootState( entry._list.Get() );
+
+        ID3D12GraphicsCommandList* pList = entry._list.Get();
+        _listFrameSegment.push_back( std::move( entry ) );
+        return pList;
+    }
+
+    void D3D12RHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    {
+        auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
+        if ( pNative == nullptr || _commandQueue == nullptr )
+            return;
+
+        ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
+        if ( pList == nullptr )
+            return;
+
+        // 이 리스트가 방금 올린 버퍼를 읽을 수 있다. 열어 둔 업로드 복사를 먼저 내보낸다.
+        {
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( true );
+        }
+        ID3D12CommandList* arr[] = { pList };
+        _commandQueue->ExecuteCommandLists( 1, arr );
+    }
+
+    void D3D12RHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    {
+        auto*      pNative                  = static_cast<D3D12RHICommandList*>( pCmdList );
+        const bool bCannotSubmitCommandList = pNative == nullptr || _commandQueue == nullptr || _pActiveFrameList == nullptr;
+        if ( bCannotSubmitCommandList )
+            return;
+
+        ID3D12GraphicsCommandList* pList = pNative->getNativeCommandList();
+        if ( pList == nullptr )
+            return;
+
+        // 프레임 스트림을 이 지점에서 자르고 [지금까지의 조각][이 리스트] 순서로 모아 endFrame 에서 한 번에
+        // 제출한다(Vulkan 과 같다). 같은 큐의 제출 순서가 곧 실행 순서다. 주의: 여기서 곧바로 ExecuteCommandLists 를
+        // 부르면 프레임 스트림은 endFrame 에 제출되므로, 그래프보다 **먼저** 기록한 것(오프스크린 게임 RT 클리어 등)이
+        // 그래프 뒤에 실행된다.
+        //
+        // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(레벨 배리어는 패스 리스트에 들어가므로
+        // 레벨 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다. 그 조각은 뒤에 기록될
+        // 것만 담으므로 뒤에 제출돼도 순서가 맞다. 잘라 내보내면 큐에 빈 리스트가 나가고 제출이 리스트당 ~7 us 다.
+        const bool bSegmentEmpty = ( _frameStreamState._bRecordedAny == SW_FALSE );
+        if ( bSegmentEmpty )
+        {
+            _listPendingSubmit.push_back( pList );
+            submitPendingIfImmediate();
+            return;
+        }
+
+        // Close 실패는 기록 중 잘못된 명령이 있었다는 뜻이다 — 제출하면 장치가 제거되므로 이유와 함께 멈춘다(아래 Close 도 같다).
+        requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment)" );
+        releaseOnlineBlocksDeferred( _frameStreamState );
+        _listPendingSubmit.push_back( _pActiveFrameList );
+        _listPendingSubmit.push_back( pList );
+        submitPendingIfImmediate();
+
+        ID3D12GraphicsCommandList* pNextSegment = beginNextFrameSegment();
+        _pActiveFrameList                       = pNextSegment;
+        if ( pNextSegment == nullptr )
+        {
+            _frameStreamState._bRecording = SW_FALSE;
+            return;
+        }
+
+        // 새 리스트라 바인딩 캐시가 무효다. 뷰포트/시저도 다시 깔아준다.
+        _frameStreamState             = D3D12RecordingState{};
+        _frameStreamState._bRecording = SW_TRUE;
+        _frameStreamContext->rebindCommandList( pNextSegment );
+
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
+        pNextSegment->RSSetViewports( 1, &viewport );
+
+        D3D12_RECT scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
+        pNextSegment->RSSetScissorRects( 1, &scissor );
+    }
+
+    void D3D12RHIDevice::submitPendingIfImmediate()
+    {
+        if ( _bImmediateSubmit == false || _listPendingSubmit.empty() )
+            return;
+
+        // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+        // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
+        ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+        flushPendingUploads( false );
+        _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+        _listPendingSubmit.clear();
+    }
+
+    void D3D12RHIDevice::flushPendingUploads( bool bExecuteNow )
+    {
+        if ( _commandQueue == nullptr )
+            return;
+        SW_PROFILE_SCOPE( "RT.Upload.flush" ); // Vulkan 의 `RT.Upload.waitIdle` 과 견주는 자리(여기는 기다리지 않고 제출만 한다)
+        for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
+        {
+            if ( slot._bListOpen == SW_FALSE || slot._copyCommandList == nullptr )
+                continue;
+            requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
+            slot._bListOpen = SW_FALSE;
+            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
+            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
+            // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
+            slot._resetFence = _fenceValue.load();
+            if ( bExecuteNow )
+            {
+                ID3D12CommandList* arrList[] = { slot._copyCommandList.Get() };
+                _commandQueue->ExecuteCommandLists( 1, arrList );
+            }
+            else
+            {
+                // 프레임 리스트 앞에 넣는다. 큐 순서가 실행 순서다.
+                _listPendingSubmit.insert( _listPendingSubmit.begin(), slot._copyCommandList.Get() );
+            }
+        }
+    }
+
+    bool D3D12RHIDevice::debugRemoveDevice()
+    {
+        Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+        if ( _device == nullptr || FAILED( _device.As( &device5 ) ) )
+            return false;
+        SW_LOG_WARNING( "Removing the D3D12 device on request (rhi.removeDevice) - every later GPU call fails as after a TDR" );
+        device5->RemoveDevice();
+        _transferSerials.markLost(); // 제거 직후부터 제출 진입이 Rejected 를 준다(다음 질의를 기다리지 않는다)
+        return true;
+    }
+
+    bool D3D12RHIDevice::isDeviceRemoved()
+    {
+        if ( _device == nullptr || SUCCEEDED( _device->GetDeviceRemovedReason() ) )
+            return false;
+        _transferSerials.markLost();
+        return true;
+    }
+
+    bool D3D12RHIDevice::isDeviceLost()
+    {
+        return _transferSerials.isLost() || isDeviceRemoved();
+    }
+
+    void D3D12RHIDevice::waitForPreviousFrame()
+    {
+        if ( _commandQueue == nullptr || _fence == nullptr )
+            return;
+
+        if ( isDeviceRemoved() )
+            return;
+
+        // 업로드 내보내기와 Signal · 올리기를 한 락 안에서 한다(`_fenceValue` 의 설명). 기다리는 것은 락 밖에서다.
+        UINT64  fenceToWait{ 0 };
+        HRESULT signalHr{ S_OK };
+        {
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( true );
+            fenceToWait = _fenceValue.load();
+            signalHr    = _commandQueue->Signal( _fence.Get(), fenceToWait );
+            _fenceValue.store( fenceToWait + 1 );
+        }
+
+        if ( FAILED( signalHr ) )
+        {
+            SW_LOG_ERROR( "Fence Signal failed hr=0x%# (DeviceRemoved=0x%#)",
+                          static_cast<uint32>( signalHr ),
+                          static_cast<uint32>( _device ? _device->GetDeviceRemovedReason() : S_OK ) );
+            return;
+        }
+
+        if ( waitForFenceValue( fenceToWait ) == false )
+            return;
+
+        if ( isDeviceRemoved() == false )
+            _swapChain.acquireNextImage();
+    }
+
+    void D3D12RHIDevice::waitForRingSlot()
+    {
+        if ( _fence == nullptr )
+            return;
+
+        if ( isDeviceRemoved() )
+            return;
+
+        const uint64 completed = _fence->GetCompletedValue();
+        bool         bAdvanced = _frameRing.beginFrame( completed );
+        if ( bAdvanced == false )
+        {
+            const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
+            const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
+            // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 주의: 시간 초과를 무시하고 링을 넘기지 못한 채 이어가면, 방금 제출한
+            // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어쓴다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
+            // 기다리지 않는다.
+            waitForFenceValue( waitValue );
+            bAdvanced = _frameRing.beginFrame( _fence->GetCompletedValue() );
+        }
+        // 새 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다. 넘어가지 못했으면(장치 제거) 지금 칸은
+        // GPU 가 아직 읽는 중일 수 있으니 건드리지 않는다.
+        if ( bAdvanced )
+            fillConstantBufferSlot();
+    }
+
+    bool D3D12RHIDevice::waitForFenceValue( uint64 fenceValue )
+    {
+        if ( _fence == nullptr )
+            return false;
+        if ( _fence->GetCompletedValue() >= fenceValue )
+            return true;
+        // 이벤트는 기다리는 호출마다 만든다. 렌더 스레드(링 슬롯 · 이전 프레임)와 다른 스레드(업로드 슬롯의 얼로케이터)가 동시에 기다리는데, 장치의
+        // 자동 리셋 이벤트 하나를 나눠 쓰면 먼저 끝난 쪽의 신호를 다른 쪽이 가져가 아직 오지 않은 펜스를 지났다고 믿고 쓰는 중인 얼로케이터를 Reset 한다.
+        const HANDLE fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
+        if ( fenceEvent == nullptr )
+        {
+            SW_LOG_ERROR( "Fence %# wait failed: CreateEventW returned null (GetLastError=%#)", fenceValue, static_cast<uint32>( GetLastError() ) );
+            return false;
+        }
+        // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
+        // 풀거나 재사용한다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        bool   bReached = SUCCEEDED( _fence->SetEventOnCompletion( fenceValue, fenceEvent ) );
+        uint32 waitedSeconds{ 0 };
+        while ( bReached && WaitForSingleObject( fenceEvent, 2000 ) != WAIT_OBJECT_0 )
+        {
+            waitedSeconds += 2;
+            if ( isDeviceRemoved() )
+            {
+                SW_LOG_ERROR_ONCE( "Fence %# never completed — the device was removed (hr=0x%#)", fenceValue,
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ) );
+                bReached = false;
+                break;
+            }
+            if ( _fence->GetCompletedValue() >= fenceValue )
+                break;
+            SW_LOG_WARNING( "GPU has not reached fence %# after %# s — still waiting", fenceValue, waitedSeconds );
+        }
+        CloseHandle( fenceEvent );
+        return bReached;
+    }
+
+    void D3D12RHIDevice::signalCurrentFrame()
+    {
+        if ( _commandQueue == nullptr || _fence == nullptr )
+            return;
+
+        if ( isDeviceRemoved() )
+            return;
+
+        // Signal 과 올리기를 업로드 락 안에서 한 덩어리로 한다. 다른 스레드의 업로드가 그 사이에 `_fenceValue` 를 읽고 복사를 실행하면
+        // 복사는 Signal 뒤에 나가는데 앞 값을 받아, 그 펜스를 기다린 얼로케이터 Reset 이 아직 도는 복사를 지운다(`_fenceValue` 의 설명).
+        UINT64  fenceToSignal{ 0 };
+        HRESULT signalHr{ S_OK };
+        {
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            fenceToSignal = _fenceValue.load();
+            signalHr      = _commandQueue->Signal( _fence.Get(), fenceToSignal );
+            _fenceValue.store( fenceToSignal + 1 );
+        }
+        if ( FAILED( signalHr ) )
+        {
+            SW_LOG_ERROR_ONCE( "Fence Signal failed hr=0x%#", static_cast<uint32>( signalHr ) );
+            return;
+        }
+        _frameRing.setFenceValue( _frameRing.currentIndex(), fenceToSignal );
+        const uint64 completedFence = _fence->GetCompletedValue();
+        _releaseQueue.tickCompleted( completedFence );
+        recycleCompletedOnlineBlocks( completedFence );
+        // 프레임을 돌리는 동안 폴링하는 쪽이 없어도 끝난 전송의 작업 · 스테이징 구간 · 전송을 기다리던 해제가 돌아오게 한다(기다리지 않는다).
+        retireCompletedTransfers();
+    }
+
+    ID3D12CommandAllocator* D3D12RHIDevice::currentAllocator()
+    {
+        return _arrCommandAllocator[_frameRing.currentIndex()].Get();
+    }
+
+    D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
+    {
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
+        D3D12CommandListEntry entry;
+        {
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            if ( _listFreeCmdListEntry.empty() == false )
+            {
+                entry = std::move( _listFreeCmdListEntry.back() );
+                _listFreeCmdListEntry.pop_back();
+                return entry;
+            }
+        }
+
+        // 풀이 비었으면 새로 만든다. 생성 직후의 리스트는 열린 상태라 바로 Close 해 둔다
+        // (beginCommandList 가 Reset 으로 다시 연다).
+        if ( _device == nullptr )
+            return entry;
+
+        // HRESULT 를 여기서 남긴다. 부르는 쪽은 "생성 실패" 한 줄만 남기므로 원인(메모리 부족인지 디바이스 제거인지)은 여기서만 보인다.
+        const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
+        if ( FAILED( allocHr ) )
+        {
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
+                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandAllocator failed hr=0x%# removed=0x%# pooled=%#",
+                                   static_cast<uint32>( allocHr ),
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                   static_cast<uint32>( _cmdListEntryCreated ) );
+            flushDebugMessages( "acquireCommandListEntry" );
+            entry = D3D12CommandListEntry{};
+            return entry;
+        }
+        const HRESULT listHr = _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
+                                                           IID_PPV_ARGS( entry._list.GetAddressOf() ) );
+        if ( FAILED( listHr ) )
+        {
+            if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
+                SW_LOG_ERROR_ONCE( "acquireCommandListEntry: CreateCommandList failed hr=0x%# removed=0x%# pooled=%#",
+                                   static_cast<uint32>( listHr ),
+                                   static_cast<uint32>( _device->GetDeviceRemovedReason() ),
+                                   static_cast<uint32>( _cmdListEntryCreated ) );
+            entry = D3D12CommandListEntry{};
+            return entry;
+        }
+        const uint32 entryIndex = _cmdListEntryCreated++;
+        utf16        arrName[constant::kMaxBuffer64]{};
+        swprintf_s( arrName, L"PoolAllocator%u", entryIndex );
+        entry._allocator->SetName( arrName );
+        swprintf_s( arrName, L"PoolList%u", entryIndex );
+        entry._list->SetName( arrName );
+        // 빈 리스트 닫기가 실패하면 장치가 쓸 수 없는 상태다 — 빈 쌍을 돌려줘 부르는 쪽이 생성 실패로 다룬다.
+        if ( isHrSuccess( entry._list->Close(), "ID3D12GraphicsCommandList::Close (pool entry)" ) == false )
+            entry = D3D12CommandListEntry{};
+        return entry;
+    }
+
+    void D3D12RHIDevice::recycleCommandListEntryDeferred( const D3D12CommandListEntry& entry )
+    {
+        if ( entry._list == nullptr || entry._allocator == nullptr )
+            return;
+
+        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 얼로케이터의 커맨드 메모리를 읽고 있다.
+        // 해제 큐에 실어 현재 펜스가 통과한 뒤에야 재사용 풀로 돌려보낸다. 그래야 다음 사용자가
+        // Reset 해도 안전하다.
+        auto recycleCb = [this, entry]()
+        {
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.push_back( entry );
+        };
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
+    }
+
+    uint32 D3D12RHIDevice::getTimestampSlotCount() const
+    {
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
+                 ? constant::kMaxGPUTimestampSlot
+                 : 0u;
+    }
+
+    bool D3D12RHIDevice::readTimestamps( RHITimestampFrame& outFrame )
+    {
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool D3D12RHIDevice::readGPUClockNanos( int64& outGPUNanos )
+    {
+        outGPUNanos = 0;
+        if ( _commandQueue == nullptr )
+            return false;
+        uint64 frequency = _timestampFrequency;
+        if ( frequency == 0 && FAILED( _commandQueue->GetTimestampFrequency( &frequency ) ) )
+            return false;
+        if ( frequency == 0 )
+            return false;
+        // 큐의 GPU 시계와 CPU 시계를 한 순간에 읽는다(기다리지 않는다). GPU 값만 쓴다 — CPU 쪽은 Tracy 가 자기 시계로 찍는다.
+        uint64 gpuTick{ 0 };
+        uint64 cpuTick{ 0 };
+        if ( FAILED( _commandQueue->GetClockCalibration( &gpuTick, &cpuTick ) ) )
+            return false;
+        outGPUNanos = RHITimestamp::convertTickToNanos( gpuTick, constant::kNanosecondsPerSecond / static_cast<float64>( frequency ) );
+        return true;
+    }
+
+    void D3D12RHIDevice::ensureTimestampResources()
+    {
+        const bool bTimestampResourcesNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampHeap != nullptr || _device == nullptr ||
+                                                  _commandQueue == nullptr;
+        if ( bTimestampResourcesNotNeeded )
+            return;
+
+        UINT64 frequency{ 0 };
+        if ( FAILED( _commandQueue->GetTimestampFrequency( &frequency ) ) || frequency == 0 )
+            return;
+
+        D3D12_QUERY_HEAP_DESC heapDesc{};
+        heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        heapDesc.Count = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        if ( isHrSuccess( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ), "CreateQueryHeap" ) == false )
+            return;
+
+        // 읽기 전용 버퍼 하나에 링 전체 분량을 담는다. 슬롯마다 구간이 겹치지 않는다.
+        D3D12_HEAP_PROPERTIES heapProps{};
+        heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+        D3D12_RESOURCE_DESC bufferDesc{};
+        bufferDesc.Dimension        = D3D12_RESOURCE_DIMENSION_BUFFER;
+        bufferDesc.Width            = sizeof( uint64 ) * heapDesc.Count;
+        bufferDesc.Height           = 1;
+        bufferDesc.DepthOrArraySize = 1;
+        bufferDesc.MipLevels        = 1;
+        bufferDesc.SampleDesc.Count = 1;
+        bufferDesc.Layout           = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        if ( isHrSuccess( _device->CreateCommittedResource( &heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+                                                            IID_PPV_ARGS( &_timestampReadback ) ),
+                          "CreateCommittedResource" ) == false )
+        {
+            _timestampHeap.Reset();
+            return;
+        }
+        _timestampFrequency = frequency;
+    }
+
+    void D3D12RHIDevice::collectTimestampsForSlot()
+    {
+        // 이 슬롯은 방금 펜스를 통과했다. 지난번 이 슬롯에 적은 값이 GPU 에서 이미 끝나 있다.
+        _timestampFrame._listMicro.clear();
+        const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_frameRing.currentIndex()];
+        const bool                 bNoTimestampsToRead = _timestampReadback == nullptr || _timestampFrequency == 0 || writtenMask == 0;
+        if ( bNoTimestampsToRead )
+            return;
+
+        const uint32 base       = getTimestampBase();
+        const size_t byteOffset = sizeof( uint64 ) * base;
+        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGPUTimestampSlot };
+
+        void* pMapped{ nullptr };
+        if ( isHrSuccess( _timestampReadback->Map( 0, &range, &pMapped ), "ID3D12Resource::Map (timestamp readback)" ) == false || pMapped == nullptr )
+            return;
+
+        // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
+        // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
+        const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
+        // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
+        RHITimestamp::resolve( pTicks, writtenMask, constant::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+
+        const D3D12_RANGE emptyRange{ 0, 0 };
+        _timestampReadback->Unmap( 0, &emptyRange );
+    }
+
+    void D3D12RHIDevice::beginFrame()
+    {
+        if ( _frameStreamState._bRecording == SW_FALSE )
+        {
+            waitForRingSlot();
+            // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했으므로
+            // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
+            ensureTimestampResources();
+            collectTimestampsForSlot();
+            _timestampWrittenMask.store( 0, std::memory_order_relaxed );
+            // 링 슬롯이 정해졌다. 상수버퍼 CBV 를 그 슬롯으로 맞춘다(드로우 경로에서 하던 일).
+            refreshConstantBufferViews();
+            // 프레임 스트림은 세그먼트로 나뉜다. 첫 세그먼트는 디바이스 소유 리스트를 그대로 쓰고,
+            // 커맨드 리스트가 제출될 때마다 executeCommandList 가 잘라 새 세그먼트를 연다.
+            _listPendingSubmit.clear();
+            ID3D12CommandAllocator* pAllocator = currentAllocator();
+            if ( pAllocator == nullptr || _commandList == nullptr )
+                return;
+            // 디바이스가 제거된 상태에서는 Reset() 이 실패해 커맨드 리스트가 여전히 closed 로 남는다.
+            // 그것을 무시하고 _bRecording=1 로 넘어가면 이후의 모든 커맨드 리스트 호출이 "closed command
+            // list" 에러를 매번 뱉으며 프레임마다 반복 폭주하게 된다. 실패하면 이번 프레임을 건너뛴다.
+            if ( isHrSuccess( pAllocator->Reset(), "Reset" ) == false || isHrSuccess( _commandList->Reset( pAllocator, nullptr ), "Reset" ) == false )
+                return;
+            _frameStreamState._bRecording      = SW_TRUE;
+            _frameStreamState._arrSlotState[0] = D3D12SlotTableState{}; // 새 리스트라 슬롯 테이블은 첫 드로우가 다시 굳힌다
+            _frameStreamState._arrSlotState[1] = D3D12SlotTableState{};
+            _pActiveFrameList                  = _commandList.Get();
+            _frameStreamContext->rebindCommandList( _pActiveFrameList );
+            bindBindlessRootState( _pActiveFrameList );
+        }
+        _swapChain.acquireNextImage();
+
+        // resize() 가 ResizeBuffers 실패로 일찍 반환하면 백버퍼가 비워진 채로 남는다. 그 상태로
+        // 계속 진행하면 null 리소스가 배리어에 들어간다. 디바이스가 이미 맛이 간 프레임이므로
+        // 이번 프레임은 조용히 건너뛴다.
+        if ( _swapChain.isBackBufferReady() == false )
+            return;
+
+        // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다.
+        // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가
+        // 배리어까지 포함해 명시적으로 한다. 뷰포트/시저는 기본값으로 남긴다.
+
+        constexpr float32 kDefaultViewportX        = 0.0f;
+        constexpr float32 kDefaultViewportY        = 0.0f;
+        constexpr float32 kDefaultViewportMinDepth = 0.0f;
+        constexpr float32 kDefaultViewportMaxDepth = 1.0f;
+
+        D3D12_VIEWPORT viewport{};
+        viewport.Width    = static_cast<float32>( _swapChain.getWidth() );
+        viewport.Height   = static_cast<float32>( _swapChain.getHeight() );
+        viewport.MinDepth = kDefaultViewportMinDepth;
+        viewport.MaxDepth = kDefaultViewportMaxDepth;
+        viewport.TopLeftX = kDefaultViewportX;
+        viewport.TopLeftY = kDefaultViewportY;
+        _pActiveFrameList->RSSetViewports( 1, &viewport );
+
+        D3D12_RECT scissorRect{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
+        _pActiveFrameList->RSSetScissorRects( 1, &scissorRect );
+    }
+
+    // 길이를 나누지 않는다: 닫기 · 타임스탬프 해석 · 제출 · 펜스 · Present 의 프레임 끝 순서가 곧 뜻이고,
+    // 업로드 리스트를 프레임 리스트 앞에 끼우는 규칙이 한곳에 있어야 한다.
+    void D3D12RHIDevice::endFrame( bool vsync, bool bPresent )
+    {
+        if ( bPresent )
+            _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
+
+        // Present 의 300 us 가 어디로 가는지 측정하려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 측정한다.
+        {
+            SW_PROFILE_SCOPE( "RT.Present.submit" );
+            static const uint32 s_slotSubmitListCount = engine::getSubsystem<FrameProfiler>().registerScope( "RT.Present.submit.listCount" );
+            if ( _frameStreamState._bRecording != SW_FALSE && _pActiveFrameList != nullptr )
+            {
+                SW_PROFILE_SCOPE( "RT.Present.submit.close" );
+                // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
+                // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
+                // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
+                const GPUTimestampSlotMask writtenMask       = _timestampWrittenMask.load( std::memory_order_relaxed );
+                _arrTimestampMask[_frameRing.currentIndex()] = writtenMask;
+                const bool bShouldResolveTimestamps          = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
+                                                      writtenMask != 0;
+                if ( bShouldResolveTimestamps )
+                {
+                    // 적힌 칸의 연속 구간만 옮긴다. 한 번도 적지 않은 칸을 Resolve 하면 디버그 레이어 오류(1319 "Cannot Resolve query that has never been performed")다.
+                    const uint32 base = getTimestampBase();
+                    uint32       slot = 0;
+                    while ( slot < constant::kMaxGPUTimestampSlot )
+                    {
+                        if ( ( writtenMask & makeGPUTimestampSlotBit( slot ) ) == 0 )
+                        {
+                            ++slot;
+                            continue;
+                        }
+                        const uint32 runStart = slot;
+                        while ( slot < constant::kMaxGPUTimestampSlot && ( writtenMask & makeGPUTimestampSlotBit( slot ) ) != 0 )
+                        {
+                            ++slot;
+                        }
+                        _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base + runStart, slot - runStart,
+                                                             _timestampReadback.Get(), sizeof( uint64 ) * ( base + runStart ) );
+                    }
+                }
+                requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (end frame)" );
+                _listPendingSubmit.push_back( _pActiveFrameList );
+                _frameStreamState._bRecording = SW_FALSE;
+                releaseOnlineBlocksDeferred( _frameStreamState );
+            }
+
+            // 열어 둔 구조 버퍼 갱신 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+            // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
+            // 텍스처 전송은 제출 때 이미 큐에 나갔다 — 이 프레임 리스트들보다 먼저 실행된다(계약 3).
+            {
+                ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+                flushPendingUploads( false );
+
+                // 프레임 세그먼트와 패스 리스트를 기록 순서 그대로 한 번에 제출한다.
+                if ( _listPendingSubmit.empty() == false && _commandQueue != nullptr )
+                {
+                    SW_PROFILE_SCOPE( "RT.Present.submit.execute" );
+                    engine::getSubsystem<FrameProfiler>().addCount( s_slotSubmitListCount, _listPendingSubmit.size() );
+                    _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ),
+                                                        _listPendingSubmit.data() );
+                }
+                _listPendingSubmit.clear();
+            }
+            _pActiveFrameList = nullptr;
+        }
+
+        // 빌려 쓴 추가 세그먼트는 이번 프레임 펜스를 통과한 뒤 풀로 돌아간다.
+        for ( D3D12CommandListEntry& segment : _listFrameSegment )
+        {
+            recycleCommandListEntryDeferred( segment );
+        }
+        _listFrameSegment.clear();
+
+        if ( bPresent )
+        {
+            HRESULT presentHr = S_OK;
+            {
+                SW_PROFILE_SCOPE( "RT.Present.present" );
+                presentHr = _swapChain.present( vsync );
+            }
+            if ( FAILED( presentHr ) )
+            {
+                [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
+                // Present 가 장치 제거 · 리셋으로 실패하면(DXGI_ERROR_DEVICE_REMOVED / DEVICE_RESET) 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
+                const bool bPresentLostDevice = presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET || FAILED( removed );
+                if ( bPresentLostDevice )
+                    _transferSerials.markLost();
+                // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
+                // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
+                if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
+                {
+                    // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
+                    SW_LOG_ERROR_ONCE( "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
+                                       static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
+                }
+                flushDebugMessages( "after Present" );
+            }
+        }
+        {
+            SW_PROFILE_SCOPE( "RT.Present.signalAcquire" );
+            signalCurrentFrame();
+            _swapChain.acquireNextImage();
+        }
+        if ( bPresent )
+            _swapChain.markPresented();
+    }
+
+    void D3D12RHIDevice::bindBindlessRootState( ID3D12GraphicsCommandList* pList )
+    {
+        if ( pList == nullptr || _cbvHeap == nullptr )
+            return;
+        ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
+        pList->SetDescriptorHeaps( 1, heaps );
+        if ( _rootSignature == nullptr )
+            return;
+        // 유일한 테이블(텍스처 배열)이 힙 시작을 가리킨다. 리스트가 사는 동안 바뀌지 않는다. 같은 루트 시그니처를
+        // 그래픽스/컴퓨트 두 바인드 포인트에 건다(루트 인자는 바인드 포인트별로 따로 산다). 상수버퍼는 이후 루트 CBV 로, t/u 는 슬롯 테이블로 건다.
+        const D3D12_GPU_DESCRIPTOR_HANDLE heapStart = _cbvHeap->GetGPUDescriptorHandleForHeapStart();
+        pList->SetGraphicsRootSignature( _rootSignature.Get() );
+        pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+        pList->SetComputeRootSignature( _rootSignature.Get() );
+        pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+    }
+
+    void D3D12RHIDevice::refreshConstantBufferViews()
+    {
+        if ( _device == nullptr || _cbvHeap == nullptr )
+            return;
+
+        // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
+        // 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고 부수므로(레지스트리 · 상수버퍼 맵에 쓴다)
+        // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
+        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
+        const uint32                   slot = _frameRing.currentIndex();
+        for ( BindlessResourceRecord& record : _listRegisteredBindless )
+        {
+            if ( record._resource == nullptr || record._buffer == 0 )
+                continue;
+            const auto sizeIt = _mapCbAlignedSize.find( record._buffer );
+            if ( sizeIt == _mapCbAlignedSize.end() )
+                continue; // 링 상수버퍼가 아니다 (구조버퍼 SRV 등은 주소가 안 바뀐다).
+
+            D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
+            cbvDesc.BufferLocation = record._resource->GetGPUVirtualAddress() + static_cast<UINT64>( slot ) * sizeIt->second;
+            cbvDesc.SizeInBytes    = sizeIt->second;
+            _device->CreateConstantBufferView( &cbvDesc, record._cpuHandle );
+        }
+    }
+
+    void D3D12RHIDevice::writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+    {
+        const auto sizeIt                      = _mapCbAlignedSize.find( buffer );
+        const auto mapIt                       = _mapCbMapped.find( buffer );
+        const bool bCannotUpdateConstantBuffer = sizeIt == _mapCbAlignedSize.end() || mapIt == _mapCbMapped.end() || mapIt->second == nullptr || pData == nullptr;
+        if ( bCannotUpdateConstantBuffer )
+            return;
+        const uint32 alignedSize = sizeIt->second;
+        const uint32 copyBytes   = MathUtil::min( size, alignedSize );
+        Memory::copy( static_cast<uint8*>( mapIt->second ) + static_cast<size_t>( slot ) * alignedSize, pData, copyBytes );
+    }
+
+    void D3D12RHIDevice::fillConstantBufferSlot()
+    {
+        // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
+        ScopedSharedLock<shared_mutex> registryLock{ _bindlessMutex };
+        _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+        { writeConstantBufferSlot( buffer, slot, pData, size ); } );
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 루트 시그니처 · 힙 · 전역 리소스 생성의 순서가 곧 의미라 나누지 않는다.
+    bool D3D12RHIDevice::createGlobalResources()
+    {
+        // 루트 시그니처(binding_slots.hlsli). 언리얼 FD3D12RootSignature 와 같은 배치: CB 는 루트 CBV, t/u 슬롯은 테이블, 텍스처는 배열 테이블.
+        //  [0..2]  루트 CBV  b0..b2 (PassCB / MaterialCB · 컴퓨트 CB / 예비)
+        //  [3]     테이블: t0..t11 space0 (컴퓨트 읽기 t0..t3, 인스턴스 t4, 머티리얼 데이터 t5. 오프라인 뷰를 드로우 직전 온라인 블록에 복사)
+        //  [4]     테이블: u0..u4 space0 (컴퓨트 쓰기 — u4 는 셰이더 assert 링)
+        //  [5]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
+        //  [6]     32비트 루트 상수 b0 space2 (set*RootConstants)
+        //  정적 샘플러 s0..s7 (binding_slots.hlsli 4 의 세트), space0.
+        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). t/u 를 루트 디스크립터로 두면 51 이 된다.
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
+            if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&
+                 options.ResourceBindingTier < D3D12_RESOURCE_BINDING_TIER_2 )
+            {
+                SW_LOG_ERROR( "Resource Binding Tier %# - unbounded texture arrays need Tier 2 or higher.",
+                              static_cast<uint32>( options.ResourceBindingTier ) );
+            }
+        }
+
+        D3D12_ROOT_PARAMETER arrParam[kRootParameterCount]{};
+        auto                 setRootDescriptor = [&]( uint32 paramIndex, D3D12_ROOT_PARAMETER_TYPE type, uint32 shaderRegister )
+        {
+            arrParam[paramIndex].ParameterType             = type;
+            arrParam[paramIndex].Descriptor.ShaderRegister = shaderRegister;
+            arrParam[paramIndex].Descriptor.RegisterSpace  = 0;
+            arrParam[paramIndex].ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+        };
+        for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
+            setRootDescriptor( kCBVRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
+        }
+
+        // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
+        D3D12_DESCRIPTOR_RANGE srvSlotRange{};
+        srvSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        srvSlotRange.NumDescriptors                                  = shaderslot::kSRVSlotCount;
+        srvSlotRange.BaseShaderRegister                              = 0;
+        srvSlotRange.RegisterSpace                                   = 0;
+        srvSlotRange.OffsetInDescriptorsFromTableStart               = 0;
+        arrParam[kSRVTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kSRVTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kSRVTableParam].DescriptorTable.pDescriptorRanges   = &srvSlotRange;
+        arrParam[kSRVTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE uavSlotRange{};
+        uavSlotRange.RangeType                                       = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        uavSlotRange.NumDescriptors                                  = shaderslot::kComputeUAVSlotCount;
+        uavSlotRange.BaseShaderRegister                              = 0;
+        uavSlotRange.RegisterSpace                                   = 0;
+        uavSlotRange.OffsetInDescriptorsFromTableStart               = 0;
+        arrParam[kUAVTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kUAVTableParam].DescriptorTable.NumDescriptorRanges = 1;
+        arrParam[kUAVTableParam].DescriptorTable.pDescriptorRanges   = &uavSlotRange;
+        arrParam[kUAVTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        // 텍스처 테이블. 범위 둘이 같은 힙 시작을 가리킨다: t0 space1 = Texture2D g_SwBindlessTex2D[], u0 space1 = RWTexture2D
+        // g_SwBindlessRWTex2D[] (컴퓨트). 인덱스는 등록이 준 힙 슬롯이라 둘 다 offset 0 이다.
+        D3D12_DESCRIPTOR_RANGE arrTextureRange[2]{};
+        arrTextureRange[0].RangeType                                             = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        arrTextureRange[0].NumDescriptors                                        = UINT_MAX; // 무제한
+        arrTextureRange[0].BaseShaderRegister                                    = 0;
+        arrTextureRange[0].RegisterSpace                                         = shaderslot::bindless::kTextureSpace;
+        arrTextureRange[0].OffsetInDescriptorsFromTableStart                     = 0;
+        arrTextureRange[1].RangeType                                             = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+        arrTextureRange[1].NumDescriptors                                        = UINT_MAX;
+        arrTextureRange[1].BaseShaderRegister                                    = 0;
+        arrTextureRange[1].RegisterSpace                                         = shaderslot::bindless::kTextureSpace;
+        arrTextureRange[1].OffsetInDescriptorsFromTableStart                     = 0;
+        arrParam[kBindlessTextureTableParam].ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        arrParam[kBindlessTextureTableParam].DescriptorTable.NumDescriptorRanges = 2;
+        arrParam[kBindlessTextureTableParam].DescriptorTable.pDescriptorRanges   = arrTextureRange;
+        arrParam[kBindlessTextureTableParam].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        arrParam[kRootConstantsParam].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        arrParam[kRootConstantsParam].Constants.ShaderRegister = shaderslot::kRootConstantRegister;
+        arrParam[kRootConstantsParam].Constants.RegisterSpace  = shaderslot::kRootConstantSpace;
+        arrParam[kRootConstantsParam].Constants.Num32BitValues = shaderslot::kRootConstantDwords;
+        arrParam[kRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
+
+        // 정적 샘플러 세트 s0..s7 (binding_slots.hlsli 4, 언리얼의 정적 샘플러와 같은 자리). 셰이더는 g_SwSamplers[SW_SAMPLER_*].
+        D3D12_STATIC_SAMPLER_DESC staticSamplers[shaderslot::kStaticSamplerCount]{};
+        struct StaticSamplerSpec
+        {
+            D3D12_FILTER               _filter;
+            D3D12_TEXTURE_ADDRESS_MODE _address;
+            D3D12_COMPARISON_FUNC      _comparison;
+            uint32                     _anisotropy;
+        };
+        const StaticSamplerSpec arrSpec[shaderslot::kStaticSamplerCount] = {
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_WRAP
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_CLAMP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_WRAP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_CLAMP
+            {                 D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_MIRROR,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // LINEAR_MIRROR
+            {                        D3D12_FILTER_ANISOTROPIC,   D3D12_TEXTURE_ADDRESS_MODE_WRAP,     D3D12_COMPARISON_FUNC_ALWAYS, 8}, // ANISO_WRAP
+            {                  D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_BORDER,     D3D12_COMPARISON_FUNC_ALWAYS, 1}, // POINT_BORDER
+            {D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,  D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_COMPARISON_FUNC_LESS_EQUAL, 1}, // SHADOW_CMP
+        };
+        for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerCount; ++samplerIndex )
+        {
+            D3D12_STATIC_SAMPLER_DESC& sampler = staticSamplers[samplerIndex];
+            sampler.Filter                     = arrSpec[samplerIndex]._filter;
+            sampler.AddressU                   = arrSpec[samplerIndex]._address;
+            sampler.AddressV                   = arrSpec[samplerIndex]._address;
+            sampler.AddressW                   = arrSpec[samplerIndex]._address;
+            sampler.MipLODBias                 = 0.0f;
+            sampler.MaxAnisotropy              = arrSpec[samplerIndex]._anisotropy;
+            sampler.ComparisonFunc             = arrSpec[samplerIndex]._comparison;
+            sampler.BorderColor                = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+            sampler.MinLOD                     = 0.0f;
+            sampler.MaxLOD                     = D3D12_FLOAT32_MAX;
+            sampler.ShaderRegister             = samplerIndex;
+            sampler.RegisterSpace              = 0;
+            sampler.ShaderVisibility           = D3D12_SHADER_VISIBILITY_ALL;
+        }
+
+        D3D12_ROOT_SIGNATURE_DESC rootSigDesc{};
+        rootSigDesc.NumParameters     = kRootParameterCount;
+        rootSigDesc.pParameters       = arrParam;
+        rootSigDesc.NumStaticSamplers = _countof( staticSamplers );
+        rootSigDesc.pStaticSamplers   = staticSamplers;
+        rootSigDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+        Microsoft::WRL::ComPtr<ID3DBlob> signatureBlob;
+        Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
+        _bBindlessRootSignature = SW_FALSE;
+        if ( FAILED( D3D12SerializeRootSignature( &rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &signatureBlob, &errorBlob ) ) )
+        {
+            if ( errorBlob )
+                SW_LOG_ERROR( "Root Signature Serialize Error: %s", static_cast<const utf8*>( errorBlob->GetBufferPointer() ) );
+            return false;
+        }
+        if ( isHrSuccess( _device->CreateRootSignature( 0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS( _rootSignature.GetAddressOf() ) ), "CreateRootSignature" ) == false )
+        {
+            SW_LOG_ERROR( "CreateRootSignature failed." );
+            return false;
+        }
+        _bBindlessRootSignature = SW_TRUE;
+
+        D3D12_INDIRECT_ARGUMENT_DESC drawArg{};
+        drawArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+        D3D12_COMMAND_SIGNATURE_DESC drawCmdSigDesc{};
+        drawCmdSigDesc.ByteStride       = sizeof( D3D12_DRAW_ARGUMENTS );
+        drawCmdSigDesc.NumArgumentDescs = 1;
+        drawCmdSigDesc.pArgumentDescs   = &drawArg;
+        // 간접 드로우 · 디스패치 서명은 장치 초기화의 필수 조건이다. 못 만들면 간접 호출이 조용히 빠지지 않게 초기화를 실패시킨다.
+        if ( isHrSuccess( _device->CreateCommandSignature( &drawCmdSigDesc, nullptr, IID_PPV_ARGS( _drawCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (draw)" ) == false )
+            return false;
+
+        D3D12_INDIRECT_ARGUMENT_DESC drawIndexedArg{};
+        drawIndexedArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+        D3D12_COMMAND_SIGNATURE_DESC drawIndexedCmdSigDesc{};
+        drawIndexedCmdSigDesc.ByteStride       = sizeof( D3D12_DRAW_INDEXED_ARGUMENTS );
+        drawIndexedCmdSigDesc.NumArgumentDescs = 1;
+        drawIndexedCmdSigDesc.pArgumentDescs   = &drawIndexedArg;
+        if ( isHrSuccess( _device->CreateCommandSignature( &drawIndexedCmdSigDesc, nullptr, IID_PPV_ARGS( _drawIndexedCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (drawIndexed)" ) == false )
+            return false;
+
+        D3D12_INDIRECT_ARGUMENT_DESC dispatchArg{};
+        dispatchArg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+        D3D12_COMMAND_SIGNATURE_DESC dispatchCmdSigDesc{};
+        dispatchCmdSigDesc.ByteStride       = sizeof( D3D12_DISPATCH_ARGUMENTS );
+        dispatchCmdSigDesc.NumArgumentDescs = 1;
+        dispatchCmdSigDesc.pArgumentDescs   = &dispatchArg;
+        if ( isHrSuccess( _device->CreateCommandSignature( &dispatchCmdSigDesc, nullptr, IID_PPV_ARGS( _dispatchCommandSignature.GetAddressOf() ) ), "CreateCommandSignature (dispatch)" ) == false )
+            return false;
+
+        {
+
+            void* pMapped{ nullptr };
+            if ( createMappedUploadBuffer( sizeof( constant::arrFallbackVertex ), _vertexBuffer, pMapped ) == false )
+            {
+                SW_LOG_ERROR( "Failed to create or map fullscreen vertex buffer." );
+                return false;
+            }
+            Memory::copy( pMapped, constant::arrFallbackVertex, sizeof( constant::arrFallbackVertex ) );
+            _vertexBuffer->Unmap( 0, nullptr );
+        }
+
+        return true;
+    }
+
+    bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        if ( index >= _listRegisteredBindless.size() )
+            return false;
+        // 힙 하나를 나눠 쓰므로 종류까지 본다 — 텍스처 자리에 버퍼 뷰가 있으면 Texture2D 로 읽는 셰이더가 잘못된 디스크립터를 읽는다.
+        const BindlessResourceRecord& record = _listRegisteredBindless[index];
+        if ( record._resource == nullptr )
+            return false;
+        return ( space == RHIBindlessIndexSpace::Texture ) ? record._texture != 0 : record._buffer != 0;
+    }
 } // namespace sw
 #endif

@@ -21,9 +21,26 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <vulkan/vulkan_win32.h>
+#elif defined( SW_PLATFORM_LINUX )
+    #include "Core/Foundation/X11Headers.h"
+
+    #include <X11/Xlib-xcb.h>
+    #include <vulkan/vulkan_xcb.h>
+    #include <vulkan/vulkan_xlib.h>
+    #include <xcb/xcb.h>
+
+    #include "Core/Foundation/X11MacroUndef.h"
 #endif
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
+#include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Foundation/BuildInfo.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
+#include "Core/Container/VectorUtil.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 
 namespace sw
 {
@@ -692,4 +709,1549 @@ namespace sw
         return handle;
     }
 
+    namespace
+    {
+        /**
+         * @brief 파이프라인 캐시 파일(`<Bin>/Saved/ShaderCache/vk_pipeline_cache.bin`)입니다.
+         * @details 작업 폴더가 아니라 실행 파일 폴더 기준이다 — 병렬 실행(ctest -j · 시나리오 행렬)도 같은 `Bin` 을 쓰고, 이 캐시는 같은 빌드의 실행끼리 나누는 것이 목적이다(쓰기는 원자적 바꿔치기라 겹쳐도 깨지지 않는다).
+         */
+        string getVulkanPipelineCachePath()
+        {
+            return FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCache/vk_pipeline_cache.bin" );
+        }
+
+        struct VulkanRHIDeviceInternal
+        {
+            /** @brief 큐 호출이 돌려주는 실패 값의 이름입니다. 모르는 값은 "unknown" 이고 숫자는 로그에 같이 적힌다. */
+            static const utf8* getResultName( VkResult result )
+            {
+                switch ( result )
+                {
+                    case VK_ERROR_DEVICE_LOST:
+                        return "VK_ERROR_DEVICE_LOST";
+                    case VK_ERROR_OUT_OF_HOST_MEMORY:
+                        return "VK_ERROR_OUT_OF_HOST_MEMORY";
+                    case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+                        return "VK_ERROR_OUT_OF_DEVICE_MEMORY";
+                    case VK_TIMEOUT:
+                        return "VK_TIMEOUT";
+                    default:
+                        return "unknown";
+                }
+            }
+
+            /** @brief VK_EXT_device_fault 의 주소 종류 이름입니다. */
+            static const utf8* getFaultAddressTypeName( VkDeviceFaultAddressTypeEXT type )
+            {
+                switch ( type )
+                {
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT:
+                        return "read-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT:
+                        return "write-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT:
+                        return "execute-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT:
+                        return "instruction-pointer-unknown";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT:
+                        return "instruction-pointer-invalid";
+                    case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT:
+                        return "instruction-pointer-fault";
+                    default:
+                        return "none";
+                }
+            }
+        };
+    } // namespace
+
+    static_assert( VulkanRHIRequiredVersion::makeAPIVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
+                   "VulkanRHIRequiredVersion::makeAPIVersion must encode like VK_MAKE_API_VERSION" );
+
+    static const vector<const utf8*> s_listValidationLayers = {
+        "VK_LAYER_KHRONOS_validation" };
+
+    static const vector<const utf8*> s_listDeviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+    [[maybe_unused]] static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+        VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        VkDebugUtilsMessageTypeFlagsEXT,
+        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+        void* )
+    {
+        if ( pCallbackData->pMessage != nullptr )
+        {
+            if ( strstr( pCallbackData->pMessage, "image has not been acquired" ) != nullptr &&
+                 strstr( pCallbackData->pMessage, "performs a layout transition" ) != nullptr )
+                return VK_FALSE;
+        }
+        // 정점 셰이더가 내보내고 픽셀 셰이더가 읽지 않는 출력은 명세상 허용된다(보간 슬롯 하나가 노는 것뿐). 셰이더 하나를 여러 픽셀 셰이더와
+        // 짝지우면 늘 생기므로 언리얼 VulkanRHI 도 이 메시지를 거른다.
+        if ( pCallbackData->pMessageIdName != nullptr && strstr( pCallbackData->pMessageIdName, "OutputNotConsumed" ) != nullptr )
+            return VK_FALSE;
+
+        if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT )
+            SW_LOG_ERROR( "%#", pCallbackData->pMessage );
+        else if ( messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT )
+            SW_LOG_WARNING( "%#", pCallbackData->pMessage );
+        else
+            SW_LOG_INFO( "%#", pCallbackData->pMessage );
+        return VK_FALSE;
+    }
+
+    bool VulkanRHIDevice::createRenderPass()
+    {
+        // 스왑체인 렌더패스: CLEAR 변종과 LOAD 변종. 한 프레임 안에서 백버퍼 렌더패스를 두 번 이상 여는 경우(그래프가
+        // 백버퍼에 그린 뒤 UI 를 얹는 경로)에 CLEAR 변종으로 다시 열면 앞의 내용이 통째로 지워진다. 첨부 포맷 · 개수 ·
+        // 샘플 수가 같아 프레임버퍼와 파이프라인은 두 렌더패스 모두와 호환된다(render pass compatibility).
+        // LOAD 변종은 앞선 패스의 finalLayout 인 PRESENT_SRC 에서 시작한다.
+        VulkanRHIRenderPassCache::RenderPassSpec clearSpec{};
+        clearSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPass = createRenderPassFromSpec( clearSpec );
+        if ( _renderPass == VK_NULL_HANDLE )
+            return false;
+
+        VulkanRHIRenderPassCache::RenderPassSpec loadSpec{};
+        loadSpec.addColor( _swapChain.getImageFormat(), VK_ATTACHMENT_LOAD_OP_LOAD, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR );
+        _renderPassLoad = createRenderPassFromSpec( loadSpec );
+        return _renderPassLoad != VK_NULL_HANDLE;
+    }
+
+    bool VulkanRHIDevice::supportsValidationLayer()
+    {
+        vector<VkLayerProperties> listAvailableLayer;
+        if ( enumerateVk( listAvailableLayer, "vkEnumerateInstanceLayerProperties", []( uint32* pCount, VkLayerProperties* pData )
+        { return vkEnumerateInstanceLayerProperties( pCount, pData ); } ) == false )
+            return false;
+
+        for ( const utf8* pLayerName : s_listValidationLayers )
+        {
+            bool layerFound{ false };
+            for ( const VkLayerProperties& layerProperties : listAvailableLayer )
+            {
+                if ( StringUtil::equals( pLayerName, layerProperties.layerName ) )
+                {
+                    layerFound = true;
+                    break;
+                }
+            }
+            if ( layerFound == false )
+                return false;
+        }
+        return true;
+    }
+
+    // 길이를 나누지 않는다: 확장 · 레이어를 확인한 뒤 생성하는 백엔드 API 호출 순서가 곧 뜻이다(창 시스템 길 분기는 짧다).
+    bool VulkanRHIDevice::createInstance()
+    {
+        VkApplicationInfo appInfo{};
+        appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName   = "SW App";
+        appInfo.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
+        appInfo.pEngineName        = "SW Engine";
+        appInfo.engineVersion      = VK_MAKE_VERSION( 1, 0, 0 );
+        appInfo.apiVersion         = VulkanRHIRequiredVersion::kRequiredAPIVersion;
+
+        VkInstanceCreateInfo createInfo{};
+        createInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+
+        vector<const utf8*> listExtension;
+        listExtension.push_back( VK_KHR_SURFACE_EXTENSION_NAME );
+
+        vector<VkExtensionProperties> listAvailableExt;
+        if ( enumerateVk( listAvailableExt, "vkEnumerateInstanceExtensionProperties", []( uint32* pCount, VkExtensionProperties* pData )
+        { return vkEnumerateInstanceExtensionProperties( nullptr, pCount, pData ); } ) == false )
+            return false;
+
+#if defined( SW_PLATFORM_WINDOWS )
+        if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_WIN32_SURFACE_EXTENSION_NAME ) == false )
+        {
+            SW_LOG_ERROR( "VK_KHR_win32_surface is not available." );
+            return false;
+        }
+        listExtension.push_back( VK_KHR_WIN32_SURFACE_EXTENSION_NAME );
+        _wsiKind = VulkanWsiKind::Win32;
+#elif defined( SW_PLATFORM_LINUX )
+        // WSLg · gfxstream 은 흔히 xcb 만 내놓고 xlib 는 없다.
+        _wsiKind = VulkanWsiKind::None;
+        if ( _surfaceKind == NativeSurfaceKind::Win32 )
+        {
+            // 아래 X11 길로 떨어지면 HWND 를 창 ID 로 읽게 된다 — 대신하지 않고 멈춘다.
+            SW_LOG_ERROR( "Vulkan on Linux needs an X11 or Wayland surface, but the window is a Win32 surface" );
+            return false;
+        }
+        if ( _surfaceKind == NativeSurfaceKind::Wayland )
+        {
+            // Wayland 창(`WaylandWindow`) — 표면은 wl_surface 라 X11 확장으로는 만들 수 없다. 대신할 것 없이 이 확장만 받는다.
+            if ( VulkanRHIUtil::hasExtension( listAvailableExt, "VK_KHR_wayland_surface" ) == false )
+            {
+                SW_LOG_ERROR( "The window is a Wayland surface but the Vulkan loader has no VK_KHR_wayland_surface (rebuild vulkan-loader with [wayland])" );
+                return false;
+            }
+            listExtension.push_back( "VK_KHR_wayland_surface" );
+            _wsiKind = VulkanWsiKind::Wayland;
+            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_wayland_surface" );
+        }
+        else if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_XLIB_SURFACE_EXTENSION_NAME ) )
+        {
+            listExtension.push_back( VK_KHR_XLIB_SURFACE_EXTENSION_NAME );
+            _wsiKind = VulkanWsiKind::Xlib;
+            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xlib_surface" );
+        }
+        else if ( VulkanRHIUtil::hasExtension( listAvailableExt, VK_KHR_XCB_SURFACE_EXTENSION_NAME ) )
+        {
+            listExtension.push_back( VK_KHR_XCB_SURFACE_EXTENSION_NAME );
+            _wsiKind = VulkanWsiKind::Xcb;
+            SW_LOG_TRACE( "Vulkan WSI: VK_KHR_xcb_surface (xlib unavailable)" );
+        }
+        else
+        {
+            SW_LOG_ERROR( "No Vulkan X11 WSI extension (VK_KHR_xlib_surface / VK_KHR_xcb_surface). Enumerated %# instance extensions.",
+                          listAvailableExt.size() );
+            for ( const VkExtensionProperties& ext : listAvailableExt )
+            {
+                (void)ext;
+                SW_LOG_TRACE( "  instance ext: %#", ext.extensionName );
+            }
+            SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
+            return false;
+        }
+#endif
+        if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
+            listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+        else if ( _bEnableValidationLayers == SW_TRUE )
+        {
+            SW_LOG_WARNING( "Vulkan validation layer found but VK_EXT_debug_utils is not available - running without validation" );
+            _bEnableValidationLayers = SW_FALSE;
+        }
+
+        createInfo.enabledExtensionCount   = static_cast<uint32>( listExtension.size() );
+        createInfo.ppEnabledExtensionNames = listExtension.data();
+
+        if ( _bEnableValidationLayers == SW_TRUE )
+        {
+            createInfo.enabledLayerCount   = static_cast<uint32>( s_listValidationLayers.size() );
+            createInfo.ppEnabledLayerNames = s_listValidationLayers.data();
+        }
+        else
+            createInfo.enabledLayerCount = 0;
+
+        VkResult result = vkCreateInstance( &createInfo, nullptr, &_instance );
+        if ( result != VK_SUCCESS )
+        {
+            SW_LOG_ERROR( "Failed to create Vulkan instance! Error code: %#", static_cast<int32>( result ) );
+            return false;
+        }
+        return true;
+    }
+
+    void VulkanRHIDevice::createDebugMessenger()
+    {
+        if ( _bEnableValidationLayers == SW_FALSE )
+            return;
+        VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+        createInfo.sType           = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+        createInfo.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+        createInfo.pfnUserCallback = debugCallback;
+
+        // 검증 메시지 수신은 진단용이라 실패해도 장치는 이어 간다 — 오류로 남기고 핸들을 비운다(파괴 쪽이 빈 핸들을 건너뛴다).
+        if ( isVkSuccess( CreateDebugUtilsMessengerEXT( _instance, &createInfo, nullptr, &_debugMessenger ), "vkCreateDebugUtilsMessengerEXT" ) == false )
+            _debugMessenger = VK_NULL_HANDLE;
+    }
+
+    bool VulkanRHIDevice::pickPhysicalDevice( bool bSoftwareAdapter )
+    {
+        vector<VkPhysicalDevice> listDevice;
+        const bool               bEnumerated = enumerateVk( listDevice, "vkEnumeratePhysicalDevices", [this]( uint32* pCount, VkPhysicalDevice* pData )
+                      { return vkEnumeratePhysicalDevices( _instance, pCount, pData ); } );
+        if ( bEnumerated == false || listDevice.empty() )
+            return false;
+
+        for ( const VkPhysicalDevice& device : listDevice )
+        {
+            // 셰이더는 요구 판(VulkanRHIRequiredVersion) 타깃의 SPIR-V 로 쿠킹한다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
+            VkPhysicalDeviceProperties candidateProperties{};
+            vkGetPhysicalDeviceProperties( device, &candidateProperties );
+            if ( VulkanRHIRequiredVersion::isAPIVersionSupported( candidateProperties.apiVersion ) == false )
+            {
+                SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
+                                candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
+                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), constant::kVulkanRequiredMajor,
+                                constant::kVulkanRequiredMinor );
+                continue;
+            }
+            // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
+            if ( bSoftwareAdapter && candidateProperties.deviceType != VK_PHYSICAL_DEVICE_TYPE_CPU )
+                continue;
+
+            uint32 queueFamilyCount{ 0 };
+            vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
+            vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
+            vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, queueFamilies.data() );
+
+            uint32 queueFamilyIndex{ 0 };
+            bool   bFound{ false };
+            for ( const VkQueueFamilyProperties& queueFamily : queueFamilies )
+            {
+                if ( queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                {
+                    VkBool32   presentSupport{ false };
+                    const bool bQueried = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( device, queueFamilyIndex, _swapChain.getSurface(), &presentSupport ),
+                                                       "vkGetPhysicalDeviceSurfaceSupportKHR" );
+                    if ( bQueried && presentSupport )
+                    {
+                        _graphicsQueueFamilyIndex = queueFamilyIndex;
+                        _physicalDevice           = device;
+                        bFound                    = true;
+                        break;
+                    }
+                }
+                queueFamilyIndex++;
+            }
+            if ( bFound )
+                break;
+        }
+
+        // 크래시 리포트에 어댑터 · 드라이버를 남긴다. "어느 GPU · 어느 드라이버에서만 난다" 는 판단이
+        // 이것 없이는 불가능하고, 그게 범위를 좁히는 첫 질문이다.
+        if ( _physicalDevice != nullptr )
+        {
+            VkPhysicalDeviceProperties properties{};
+            vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+            utf8 arrGPU[constant::kMaxBuffer256]{};
+            formatstring( arrGPU, constant::kMaxBuffer256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
+                          properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
+                          VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
+            CrashHandler::setContextValue( "GPU", arrGPU );
+            _bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
+        }
+        if ( _physicalDevice == nullptr && bSoftwareAdapter )
+        {
+            // 환경 탓이다(CPU 구현이 설치되지 않았다) — 결함으로 알리지 않는다.
+            SW_LOG_WARNING( "No CPU Vulkan device (lavapipe / SwiftShader) for gv_rhiSoftwareAdapter - Vulkan does not start" );
+            _initResult = RHIInitResult::DriverUnsupported;
+        }
+        else if ( _physicalDevice == nullptr )
+            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", constant::kVulkanRequiredMajor,
+                          constant::kVulkanRequiredMinor );
+        return _physicalDevice != nullptr;
+    }
+
+    bool VulkanRHIDevice::selectDepthFormat()
+    {
+        if ( _physicalDevice == nullptr )
+            return false;
+
+        const VkFormat arrCandidate[] = {
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D32_SFLOAT_S8_UINT,
+            VK_FORMAT_D32_SFLOAT,
+        };
+        for ( VkFormat format : arrCandidate )
+        {
+            VkFormatProperties props{};
+            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            if ( ( props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT ) == 0 )
+                continue;
+            _depthFormat      = static_cast<uint32>( format );
+            _bDepthHasStencil = ( format == VK_FORMAT_D32_SFLOAT ) ? 0 : 1;
+            SW_LOG_TRACE( "Selected depth format %# (stencil=%#)", static_cast<uint32>( format ),
+                          static_cast<uint32>( _bDepthHasStencil ) );
+            return true;
+        }
+        _depthFormat      = 0;
+        _bDepthHasStencil = 0;
+        return false;
+    }
+
+    bool VulkanRHIDevice::verifyRequiredColorAttachmentFormats() const
+    {
+        const VkFormat arrRequired[] = { VK_FORMAT_R16G16_SNORM };
+        for ( const VkFormat format : arrRequired )
+        {
+            VkFormatProperties props{};
+            vkGetPhysicalDeviceFormatProperties( _physicalDevice, format, &props );
+            const VkFormatFeatureFlags kNeeded = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+            if ( ( props.optimalTilingFeatures & kNeeded ) != kNeeded )
+            {
+                SW_LOG_ERROR( "This GPU cannot use Vulkan format %# as a sampled color attachment (G-buffer normal)", static_cast<uint32>( format ) );
+                return false;
+            }
+        }
+        return true;
+    }
+
+    uint32 VulkanRHIDevice::depthAspectMask() const
+    {
+        return _bDepthHasStencil != 0
+                 ? ( VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT )
+                 : VK_IMAGE_ASPECT_DEPTH_BIT;
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 기능 확인 · 큐 · 확장 · 생성의 순서가 곧 의미라 나누지 않는다.
+    bool VulkanRHIDevice::createLogicalDevice()
+    {
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+        queueCreateInfo.queueCount       = 1;
+        float32 queuePriority{ 1.0f };
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+
+        VkPhysicalDeviceFeatures availableFeatures{};
+        vkGetPhysicalDeviceFeatures( _physicalDevice, &availableFeatures );
+
+        VkPhysicalDeviceFeatures deviceFeatures{};
+        deviceFeatures.multiDrawIndirect = availableFeatures.multiDrawIndirect;
+        // 범위 밖 버퍼 읽기가 0 이 되도록 한다. DX11/GL 과 같은 결과를 내고, 잘못된 인스턴스 · 머티리얼 인덱스가 GPU 폴트 대신
+        // 검은 픽셀로 드러난다(셰이더 쪽 클램프도 따로 있다: binding.hlsli InstanceData::load).
+        deviceFeatures.robustBufferAccess = availableFeatures.robustBufferAccess;
+        deviceFeatures.samplerAnisotropy  = availableFeatures.samplerAnisotropy; // 정적 샘플러 세트의 ANISO_WRAP (없으면 createDescriptorResources 가 1.0 으로 만든다)
+        // 와이어프레임(VK_POLYGON_MODE_LINE). DX11/DX12/GL 은 별도 기능 플래그가 없어 그냥 되는데
+        // Vulkan 만 디바이스 생성 때 켜야 한다. 안 켜면 파이프라인 생성이 검증 오류로 거절되고,
+        // 그 PSO 가 0 으로 돌아와 조용히 솔리드로 그려진다.
+        deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
+        // RW 텍스처 배열(RWTexture2D<float4>[], 포맷 미지정 스토리지 이미지)의 읽기 · 쓰기.
+        deviceFeatures.shaderStorageImageWriteWithoutFormat   = availableFeatures.shaderStorageImageWriteWithoutFormat;
+        deviceFeatures.shaderStorageImageReadWithoutFormat    = availableFeatures.shaderStorageImageReadWithoutFormat;
+        deviceFeatures.shaderStorageImageArrayDynamicIndexing = availableFeatures.shaderStorageImageArrayDynamicIndexing;
+        // 네이티브 bindless: 배열을 푸시 상수 · CB 값으로 인덱싱한다(동적 인덱싱 코어 기능).
+        deviceFeatures.shaderUniformBufferArrayDynamicIndexing = availableFeatures.shaderUniformBufferArrayDynamicIndexing;
+        deviceFeatures.shaderStorageBufferArrayDynamicIndexing = availableFeatures.shaderStorageBufferArrayDynamicIndexing;
+        deviceFeatures.shaderSampledImageArrayDynamicIndexing  = availableFeatures.shaderSampledImageArrayDynamicIndexing;
+        _bMultiDrawIndirect                                    = availableFeatures.multiDrawIndirect ? 1 : 0;
+        _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
+        _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
+
+        // pickPhysicalDevice 가 요구 판(1.3) 미만 디바이스를 건너뛰므로 1.3 기능 구조체는 늘 체인에 넣을 수 있다.
+        VkPhysicalDeviceVulkan13Features available13{};
+        available13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        VkPhysicalDeviceVulkan12Features available12{};
+        available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        available12.pNext = &available13;
+        VkPhysicalDeviceFeatures2 features2{};
+        features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        features2.pNext = &available12;
+        vkGetPhysicalDeviceFeatures2( _physicalDevice, &features2 );
+
+        VkPhysicalDeviceVulkan12Features vulkan12Features{};
+        vulkan12Features.sType                                         = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vulkan12Features.descriptorBindingPartiallyBound               = available12.descriptorBindingPartiallyBound;
+        vulkan12Features.descriptorBindingUniformBufferUpdateAfterBind = available12.descriptorBindingUniformBufferUpdateAfterBind;
+        vulkan12Features.descriptorBindingStorageBufferUpdateAfterBind = available12.descriptorBindingStorageBufferUpdateAfterBind;
+        vulkan12Features.descriptorBindingUpdateUnusedWhilePending     = available12.descriptorBindingUpdateUnusedWhilePending;
+        vulkan12Features.shaderUniformBufferArrayNonUniformIndexing    = available12.shaderUniformBufferArrayNonUniformIndexing;
+        vulkan12Features.descriptorBindingSampledImageUpdateAfterBind  = available12.descriptorBindingSampledImageUpdateAfterBind;
+        vulkan12Features.descriptorBindingStorageImageUpdateAfterBind  = available12.descriptorBindingStorageImageUpdateAfterBind;
+        vulkan12Features.shaderStorageImageArrayNonUniformIndexing     = available12.shaderStorageImageArrayNonUniformIndexing;
+        vulkan12Features.shaderStorageBufferArrayNonUniformIndexing    = available12.shaderStorageBufferArrayNonUniformIndexing;
+        vulkan12Features.shaderSampledImageArrayNonUniformIndexing     = available12.shaderSampledImageArrayNonUniformIndexing;
+        vulkan12Features.runtimeDescriptorArray                        = available12.runtimeDescriptorArray;
+        vulkan12Features.drawIndirectCount                             = available12.drawIndirectCount;
+        // 셰이더는 DX 패킹(-fvk-use-dx-layout)으로 쿠킹한다. relaxed block layout(1.1 코어)으로 대부분 충분하지만
+        // 스칼라 정렬까지 허용해 두면 어떤 구조체든 DX 와 같은 오프셋을 쓸 수 있다.
+        vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
+        _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
+
+        // 셰이더는 -fspv-target-env=vulkan1.3 으로 쿠킹하고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
+        // OpDemoteToHelperInvocation 으로 낸다(deferred_lighting.hlsl · sprite_2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
+        // vkCreateShaderModule 이 검증 오류를 낸다(VUID-VkShaderModuleCreateInfo-pCode-08740). Vulkan 1.3 의 필수 기능이라
+        // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.
+        if ( available13.shaderDemoteToHelperInvocation == VK_FALSE )
+        {
+            SW_LOG_ERROR( "Vulkan 1.3 device reports no shaderDemoteToHelperInvocation (a required 1.3 feature) - HLSL discard cannot run" );
+            return false;
+        }
+        VkPhysicalDeviceVulkan13Features vulkan13Features{};
+        vulkan13Features.sType                          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        vulkan13Features.shaderDemoteToHelperInvocation = VK_TRUE;
+        vulkan12Features.pNext                          = &vulkan13Features;
+
+        VkDeviceCreateInfo createInfo{};
+        createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.pNext                = &vulkan12Features;
+        createInfo.pQueueCreateInfos    = &queueCreateInfo;
+        createInfo.queueCreateInfoCount = 1;
+        createInfo.pEnabledFeatures     = &deviceFeatures;
+        // VK_EXT_memory_budget 은 선택이다. 있으면 켜서 드라이버의 사용량 · 예산을 읽고(queryGPUMemoryBudgetInternal), 없으면 그 값은 "모름" 이다.
+        vector<const utf8*>           listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
+        vector<VkExtensionProperties> listAvailableExt;
+        {
+            if ( enumerateVk( listAvailableExt, "vkEnumerateDeviceExtensionProperties", [this]( uint32* pCount, VkExtensionProperties* pData )
+            { return vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, pCount, pData ); } ) == false )
+                return false;
+            _bMemoryBudget = VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
+            if ( _bMemoryBudget == SW_TRUE )
+                listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
+        }
+        // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
+        VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
+        faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+        if ( build::kShipping == false && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
+        {
+            VkPhysicalDeviceFeatures2 faultQuery{};
+            faultQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+            faultQuery.pNext = &faultFeatures;
+            vkGetPhysicalDeviceFeatures2( _physicalDevice, &faultQuery );
+            faultFeatures.pNext = nullptr;
+            if ( faultFeatures.deviceFault == VK_TRUE )
+            {
+                faultFeatures.deviceFaultVendorBinary = VK_FALSE; // 공급사 바이너리 덤프는 읽지 않는다
+                vulkan13Features.pNext                = &faultFeatures;
+                listDeviceExtension.push_back( VK_EXT_DEVICE_FAULT_EXTENSION_NAME );
+                _bDeviceFault = SW_TRUE;
+            }
+        }
+        // VK_NV_device_diagnostic_checkpoints(진단 전용): GPU 브레드크럼 - 패스마다 `vkCmdSetCheckpointNV` 로 id 를 남기고 소실 뒤 큐에서 읽는다(`readLastBreadcrumbs`).
+        // 그래픽스 큐 패밀리가 체크포인트를 지원하는 단계(checkpointExecutionStageMask)가 있어야 쓴다. 없으면 켜지 않는다 - 이 능력이 없는 드라이버는 CPU 가 마지막으로 기록한 패스만 보고한다.
+        if ( GPUBreadcrumbs::isEnabled() && VulkanRHIUtil::hasExtension( listAvailableExt, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME ) )
+        {
+            uint32 familyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, nullptr );
+            vector<VkQueueFamilyCheckpointPropertiesNV> listCheckpointProperties( familyCount );
+            vector<VkQueueFamilyProperties2>            listFamilyProperties( familyCount );
+            for ( uint32 familyIndex = 0; familyIndex < familyCount; ++familyIndex )
+            {
+                listCheckpointProperties[familyIndex].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_CHECKPOINT_PROPERTIES_NV;
+                listFamilyProperties[familyIndex].sType     = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+                listFamilyProperties[familyIndex].pNext     = &listCheckpointProperties[familyIndex];
+            }
+            vkGetPhysicalDeviceQueueFamilyProperties2( _physicalDevice, &familyCount, listFamilyProperties.data() );
+            const bool bFamilySupports = _graphicsQueueFamilyIndex < familyCount && listCheckpointProperties[_graphicsQueueFamilyIndex].checkpointExecutionStageMask != 0;
+            if ( bFamilySupports )
+            {
+                listDeviceExtension.push_back( VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME );
+                _bCheckpoints = SW_TRUE;
+            }
+        }
+        createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
+        createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
+
+        createInfo.enabledLayerCount = 0;
+
+        if ( vkCreateDevice( _physicalDevice, &createInfo, nullptr, &_device ) != VK_SUCCESS )
+            return false;
+
+        vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+        if ( _bCheckpoints != SW_FALSE )
+        {
+            _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
+            _pGetCheckpointData = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkGetQueueCheckpointDataNV" ) );
+            if ( _pCmdSetCheckpoint == nullptr || _pGetCheckpointData == nullptr )
+            {
+                SW_LOG_WARNING( "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
+                _bCheckpoints = SW_FALSE;
+            }
+            else
+                SW_LOG_INFO( "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
+        }
+        return true;
+    }
+
+    bool VulkanRHIDevice::createCommandPool()
+    {
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_commandPool ) != VK_SUCCESS )
+            return false;
+        // 일회성 제출 전용 풀. 짧게 살다 버려지는 버퍼라 TRANSIENT 를 준다.
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_oneShotCommandPool ) != VK_SUCCESS )
+            return false;
+        return true;
+    }
+
+    bool VulkanRHIDevice::createCommandBuffers()
+    {
+        _listCommandBuffer.resize( constant::kMaxFrameCountInFlight );
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = _commandPool;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = static_cast<uint32>( _listCommandBuffer.size() );
+
+        if ( vkAllocateCommandBuffers( _device, &allocInfo, _listCommandBuffer.data() ) != VK_SUCCESS )
+            return false;
+
+        // 씬 텍스처의 기본 샘플러다. 지금 원하는 성질은 "선형 + 가장자리 고정" 이므로 그 조리법을
+        // 쓴다. 비등방 같은 다른 성질이 필요해지면 여기서 조리법을 바꾸거나 직접 채우면 된다.
+        VkSamplerCreateInfo samplerInfo = VulkanRHISamplerPreset::linearClamp();
+        if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_defaultSampler ) != VK_SUCCESS )
+            return false;
+
+        return true;
+    }
+
+    bool VulkanRHIDevice::createFrameFences()
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        // 펜스는 인플라이트 슬롯마다 하나다. 스왑체인 이미지 개수와 무관하다.
+        // 이미지별 세마포어는 스왑체인이 만든다(VulkanRHISwapChain::createSemaphores).
+        _listInFlightFence.resize( constant::kMaxFrameCountInFlight );
+        _listRingFrameNumber.resize( constant::kMaxFrameCountInFlight, 0 );
+        // "이 이미지를 마지막으로 쓴 펜스" 표는 이미지 개수만큼 필요하다.
+        _listImagesInFlight.resize( _swapChain.getImageCount(), VK_NULL_HANDLE );
+
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for ( VkFence& fence : _listInFlightFence )
+        {
+            if ( vkCreateFence( _device, &fenceInfo, nullptr, &fence ) != VK_SUCCESS )
+                return false;
+        }
+        return true;
+    }
+
+    void VulkanRHIDevice::destroyFrameFences()
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        if ( _device == nullptr )
+            return;
+
+        for ( VkFence fence : _listInFlightFence )
+        {
+            if ( fence != VK_NULL_HANDLE )
+                vkDestroyFence( _device, fence, nullptr );
+        }
+        _listInFlightFence.clear();
+        _listRingFrameNumber.clear();
+
+        // 위 펜스를 가리키는 사본이므로 비우기만 한다.
+        _listImagesInFlight.clear();
+    }
+
+    void VulkanRHIDevice::resizeInternal( uint32 width, uint32 height )
+    {
+        if ( _width == width && _height == height )
+            return;
+
+        _width  = width;
+        _height = height;
+
+        // 아무 스레드에서나 재생성하지 않고 beginFrame 까지 미룬다.
+        if ( width != 0 && height != 0 )
+            _bSwapChainDirty = 1;
+    }
+
+    void VulkanRHIDevice::applyVSyncInternal()
+    {
+        _swapChain.setRequestedVSync( isVSyncEnabled() );
+        if ( _width != 0 && _height != 0 )
+            _bSwapChainDirty = 1;
+    }
+
+    bool VulkanRHIDevice::recreateSwapChain()
+    {
+        const bool bCannotRecreateSwapChain = _device == nullptr || _width == 0 || _height == 0 || isDeviceLost();
+        if ( bCannotRecreateSwapChain )
+            return false;
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSwapChain: vkDeviceWaitIdle" );
+        }
+        // 대기에서 잃었음을 봤으면 다시 만들지 않는다 — 잃은 장치의 스왑체인 생성은 같은 손실만 다시 듣는다.
+        if ( isDeviceLost() )
+            return false;
+
+        // 아래에서 스왑체인을 통째로 버린다. 쥐고 있던 이미지도 같이 사라지므로 표식을 내린다.
+        // 남겨 두면 새 스왑체인에서 첫 acquire 를 건너뛰어 이미지 없이 그리게 된다.
+        _bSwapChainImageHeld = SW_FALSE;
+
+        // 세마포어와 이미지별 펜스 표는 스왑체인 이미지 개수로 크기가 정해지므로 함께 다시 만든다.
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
+
+        // 실패하면 부르는 쪽이 다음 프레임에 다시 시도한다(최소화 · 복원 중에는 서피스 크기가 잠시 0 이라 실패한다). 알림은 연달아
+        // 실패하는 동안 한 번이다.
+        const utf8* pFailedStep{ nullptr };
+        if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
+        {
+            // 서피스 크기 0 은 최소화 중이라는 정상 상태다. 오류 없이 다음 프레임에 다시 본다.
+            if ( _swapChain.isSurfaceEmpty() )
+                return false;
+            pFailedStep = "swapchain";
+        }
+        else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
+            pFailedStep = "swapchain framebuffers";
+        else if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )
+            pFailedStep = "swapchain semaphores";
+        else if ( createFrameFences() == false )
+            pFailedStep = "frame fences";
+        if ( pFailedStep != nullptr )
+        {
+            if ( _bSwapChainRecreateFailing == SW_FALSE )
+                SW_LOG_ERROR( "Failed to recreate the %# (%#x%#) — retrying every frame", pFailedStep, _width, _height );
+            _bSwapChainRecreateFailing = SW_TRUE;
+            return false;
+        }
+
+        _bSwapChainRecreateFailing = SW_FALSE;
+        _currentFrame              = 0;
+        return true;
+    }
+
+    void VulkanRHIDevice::noteSurfaceLost( const utf8* pWhere )
+    {
+        ++_surfaceLostCount;
+        SW_LOG_WARNING( "Vulkan surface lost at %# (%# time(s) on this device, frame %#) - recreating the surface and swapchain", pWhere, _surfaceLostCount,
+                        _frameFenceCounter );
+    }
+
+    bool VulkanRHIDevice::recreateSurfaceAndSwapChain()
+    {
+        const bool bCannotRecreateSurface = _device == nullptr || _instance == nullptr || isDeviceLost();
+        if ( bCannotRecreateSurface )
+            return false;
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "recreateSurfaceAndSwapChain: vkDeviceWaitIdle" );
+        }
+        if ( isDeviceLost() )
+            return false;
+        // 스왑체인이 서피스 위에 있으므로 스왑체인 → 서피스 순으로 버리고 서피스 → 스왑체인 순으로 만든다.
+        _bSwapChainImageHeld = SW_FALSE;
+        destroyFrameFences();
+        _swapChain.destroySemaphores( _device );
+        _swapChain.destroy( _device );
+        _swapChain.destroySurface( _instance );
+        if ( _swapChain.createSurface( _instance, _pHWnd, _pDisplayHandle, _wsiKind ) == false )
+            return false;
+        // 새 서피스를 이 큐가 프레젠트할 수 있는지 — 고를 때(pickPhysicalDevice) 본 것은 옛 서피스다.
+        VkBool32   bPresentSupported = VK_FALSE;
+        const bool bQueried          = isVkSuccess( vkGetPhysicalDeviceSurfaceSupportKHR( _physicalDevice, _graphicsQueueFamilyIndex, _swapChain.getSurface(), &bPresentSupported ),
+                                                    "vkGetPhysicalDeviceSurfaceSupportKHR (recreated surface)" );
+        if ( bQueried == false || bPresentSupported == VK_FALSE )
+        {
+            SW_LOG_ERROR( "The recreated Vulkan surface cannot be presented by queue family %#", _graphicsQueueFamilyIndex );
+            return false;
+        }
+        return recreateSwapChain();
+    }
+
+    bool VulkanRHIDevice::initializePipelineCache()
+    {
+        if ( _device == VK_NULL_HANDLE )
+            return false;
+
+        vector<uint8> listCacheData;
+        const string  cachePath = getVulkanPipelineCachePath();
+        // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
+        if ( FileUtil::exists( cachePath ) )
+            (void)FileUtil::readFile( cachePath, listCacheData ); // 못 읽으면 빈 캐시로 시작한다(위 설명)
+
+        VkPipelineCacheCreateInfo createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+        if ( listCacheData.empty() == false )
+        {
+            createInfo.initialDataSize = listCacheData.size();
+            createInfo.pInitialData    = listCacheData.data();
+        }
+
+        const VkResult res = vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache );
+        if ( res != VK_SUCCESS )
+        {
+            SW_LOG_WARNING( "Failed to create pipeline cache with saved data; falling back to empty cache." );
+            createInfo.initialDataSize = 0;
+            createInfo.pInitialData    = nullptr;
+            if ( isVkSuccess( vkCreatePipelineCache( _device, &createInfo, nullptr, &_pipelineCache ), "vkCreatePipelineCache (empty)" ) == false )
+                _pipelineCache = VK_NULL_HANDLE;
+        }
+        else if ( listCacheData.empty() == false )
+        {
+            SW_LOG_INFO( "Loaded pipeline cache (%# bytes).", static_cast<uint32>( listCacheData.size() ) );
+        }
+        return _pipelineCache != VK_NULL_HANDLE;
+    }
+
+    void VulkanRHIDevice::savePipelineCache()
+    {
+        if ( _device == VK_NULL_HANDLE || _pipelineCache == VK_NULL_HANDLE )
+            return;
+
+        size_t dataSize{ 0 };
+        // 캐시를 읽지 못하면 오류로 남기고 저장만 건너뛴다(다음 실행이 파이프라인을 새로 만들 뿐이다).
+        if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, nullptr ), "vkGetPipelineCacheData (size)" ) && dataSize > 0 )
+        {
+            vector<uint8> listCacheData( dataSize );
+            if ( isVkSuccess( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ), "vkGetPipelineCacheData (data)" ) )
+            {
+                const string cachePath = getVulkanPipelineCachePath();
+                if ( FileUtil::ensureParentDirectoryExists( cachePath ) &&
+                     FileUtil::writeFile( cachePath, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                    SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
+                else
+                    SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );
+            }
+        }
+
+        vkDestroyPipelineCache( _device, _pipelineCache, nullptr );
+        _pipelineCache = VK_NULL_HANDLE;
+    }
+
+    void VulkanRHIDevice::reportQueueResult( int32 result, const utf8* pWhere )
+    {
+        const VkResult vkResult = static_cast<VkResult>( result );
+        if ( vkResult == VK_SUCCESS )
+            return;
+        // 장치 손실은 처음 본 쪽만 알린다. 그 뒤의 호출은 모두 같은 값을 돌려주므로 프레임마다 로그가 쌓인다.
+        const bool bDeviceLost = vkResult == VK_ERROR_DEVICE_LOST;
+        if ( bDeviceLost && _transferSerials.markLost() == false )
+            return;
+
+        fixed_string<constant::kMaxBuffer64> lastMarker;
+        {
+            ScopedLock<mutex> lock{ _submittedMarkerMutex };
+            lastMarker = _lastSubmittedEventMarker;
+        }
+        SW_LOG_ERROR( "%#: VkResult=%# (%#) — last pass put in the submission order: '%#'", pWhere != nullptr ? pWhere : "<queue>", result,
+                      VulkanRHIDeviceInternal::getResultName( vkResult ), lastMarker.empty() ? "<none>" : lastMarker.c_str() );
+        if ( bDeviceLost == false )
+            return;
+        SW_LOG_ERROR( "Vulkan device lost - submits, waits and presents stop; frames are skipped until shutdown" );
+        // 마지막으로 GPU 가 닿은 패스 - 체크포인트를 이름으로 풀어 로그 · 크래시 문맥 · 빵부스러기에 싣는다(없으면 CPU 가 마지막으로 기록한 패스만).
+        uint32       arrBreadcrumb[GPUBreadcrumbs::kMaxReported]{};
+        const uint32 breadcrumbCount = readLastBreadcrumbs( arrBreadcrumb, GPUBreadcrumbs::kMaxReported );
+        GPUBreadcrumbs::reportDeviceLost( "Vulkan", arrBreadcrumb, breadcrumbCount );
+        reportDeviceFault();
+    }
+
+    bool VulkanRHIDevice::debugRemoveDevice()
+    {
+        if ( _device == VK_NULL_HANDLE )
+            return false;
+        SW_LOG_WARNING( "Marking the Vulkan device lost on request (rhi.removeDevice) - Vulkan cannot remove a device, so this is the state after the first "
+                        "VK_ERROR_DEVICE_LOST: no more submits, waits or presents" );
+        _transferSerials.markLost(); // 이미 잃은 장치여도 같은 상태다
+        return true;
+    }
+
+    uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
+    {
+        if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutID == nullptr || capacity == 0 )
+            return 0;
+        uint32                               dataCount            = 0;
+        const PFN_vkGetQueueCheckpointDataNV pfnGetCheckpointData = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>( _pGetCheckpointData );
+        pfnGetCheckpointData( _graphicsQueue, &dataCount, nullptr );
+        if ( dataCount == 0 )
+            return 0;
+        vector<VkCheckpointDataNV> listData( dataCount );
+        for ( VkCheckpointDataNV& data : listData )
+        {
+            data.sType = VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV;
+        }
+        pfnGetCheckpointData( _graphicsQueue, &dataCount, listData.data() );
+        // 파이프라인 단계마다 그 단계가 마지막으로 지난 체크포인트가 온다 - 같은 id 는 한 번만 싣는다.
+        uint32 filled = 0;
+        for ( uint32 index = 0; index < dataCount && filled < capacity; ++index )
+        {
+            const uint32 markerID = static_cast<uint32>( reinterpret_cast<uintptr_t>( listData[index].pCheckpointMarker ) );
+            bool         bKnown   = markerID == 0;
+            for ( uint32 knownIndex = 0; knownIndex < filled; ++knownIndex )
+            {
+                if ( pOutID[knownIndex] == markerID )
+                    bKnown = true;
+            }
+            if ( bKnown == false )
+                pOutID[filled++] = markerID;
+        }
+        return filled;
+    }
+
+    void VulkanRHIDevice::noteSubmittedEventMarker( const utf8* pMarker )
+    {
+        if ( pMarker == nullptr || pMarker[0] == '\0' )
+            return;
+        ScopedLock<mutex> lock{ _submittedMarkerMutex };
+        _lastSubmittedEventMarker = pMarker;
+    }
+
+    void VulkanRHIDevice::reportDeviceFault()
+    {
+        PFN_vkGetDeviceFaultInfoEXT pfnGetFaultInfo =
+            ( _bDeviceFault != SW_FALSE && _device != VK_NULL_HANDLE )
+                ? reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>( vkGetDeviceProcAddr( _device, "vkGetDeviceFaultInfoEXT" ) )
+                : nullptr;
+        if ( pfnGetFaultInfo == nullptr )
+        {
+            SW_LOG_ERROR( "Device lost: VK_EXT_device_fault is not enabled on this device — no fault address or vendor code to report" );
+            return;
+        }
+
+        VkDeviceFaultCountsEXT counts{};
+        counts.sType               = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT;
+        const VkResult countResult = pfnGetFaultInfo( _device, &counts, nullptr );
+        if ( countResult != VK_SUCCESS && countResult != VK_INCOMPLETE )
+        {
+            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed to count the fault records (VkResult=%#)", static_cast<int32>( countResult ) );
+            return;
+        }
+
+        vector<VkDeviceFaultAddressInfoEXT> listAddressInfo( counts.addressInfoCount );
+        vector<VkDeviceFaultVendorInfoEXT>  listVendorInfo( counts.vendorInfoCount );
+        VkDeviceFaultInfoEXT                info{};
+        info.sType                = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT;
+        info.pAddressInfos        = listAddressInfo.empty() ? nullptr : listAddressInfo.data();
+        info.pVendorInfos         = listVendorInfo.empty() ? nullptr : listVendorInfo.data();
+        info.pVendorBinaryData    = nullptr;
+        counts.vendorBinarySize   = 0; // 공급사 바이너리 덤프는 읽지 않는다(도구 없이는 읽을 수 없다)
+        const VkResult infoResult = pfnGetFaultInfo( _device, &counts, &info );
+        if ( infoResult != VK_SUCCESS && infoResult != VK_INCOMPLETE )
+        {
+            SW_LOG_ERROR( "Device lost: vkGetDeviceFaultInfoEXT failed (VkResult=%#)", static_cast<int32>( infoResult ) );
+            return;
+        }
+
+        SW_LOG_ERROR( "Device lost (VK_EXT_device_fault): '%#' — %# address record(s), %# vendor record(s)", info.description, counts.addressInfoCount,
+                      counts.vendorInfoCount );
+        for ( uint32 index = 0; index < counts.addressInfoCount && index < listAddressInfo.size(); ++index )
+        {
+            const VkDeviceFaultAddressInfoEXT& address = listAddressInfo[index];
+            SW_LOG_ERROR( "  fault address %#: %# at 0x%# (precision %# bytes)", index,
+                          VulkanRHIDeviceInternal::getFaultAddressTypeName( address.addressType ),
+                          Fmt( static_cast<uint64>( address.reportedAddress ), Format( 16, Format::Padding::Zero ).hexUpper() ),
+                          static_cast<uint64>( address.addressPrecision ) );
+        }
+        for ( uint32 index = 0; index < counts.vendorInfoCount && index < listVendorInfo.size(); ++index )
+        {
+            const VkDeviceFaultVendorInfoEXT& vendor = listVendorInfo[index];
+            SW_LOG_ERROR( "  vendor record %#: '%#' code %# data %#", index, vendor.description, static_cast<uint64>( vendor.vendorFaultCode ),
+                          static_cast<uint64>( vendor.vendorFaultData ) );
+        }
+    }
+
+    void VulkanRHIDevice::waitIdleInternal()
+    {
+        // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
+        ScopedThreadRoleBorrow borrow{ _renderThread };
+        // 잃은 장치는 기다리지 않는다 — 끝나지 않을 일을 기다리게 되거나(TDR 중의 드라이버) 같은 손실만 다시 듣는다.
+        if ( _device && isDeviceLost() == false )
+        {
+            {
+                ScopedLock<mutex> queueLock{ _queueMutex };
+                reportQueueResult( static_cast<int32>( vkDeviceWaitIdle( _device ) ), "waitIdle: vkDeviceWaitIdle" );
+            }
+            // 큐가 비었으니 낸 전송은 모두 끝났다. 잃었으면 워터마크를 올리지 않는다 — 끝나지 않은 티켓이 Complete 로 보이면 안 된다.
+            if ( isDeviceLost() == false )
+                _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
+                { recycleTransferJob( job ); } );
+        }
+        // 전송을 기다리던 해제가 먼저 프레임 해제 큐로 넘어가야 아래에서 함께 놓인다.
+        _transferReleaseQueue.flushAll();
+        _releaseQueue.flushAll();
+    }
+
+    void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceCounter + 1 );
+    }
+
+    uint32 VulkanRHIDevice::getTimestampSlotCount() const
+    {
+        _renderThread.assumeHeldByJoinedTask(); // 패스 실행(병렬 기록 태스크 포함)이 부른다 — 렌더 스레드가 합류를 기다린다
+        return ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
+                 ? constant::kMaxGPUTimestampSlot
+                 : 0u;
+    }
+
+    bool VulkanRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
+    {
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool VulkanRHIDevice::readGPUClockNanos( int64& outGPUNanos )
+    {
+        outGPUNanos                            = 0;
+        const bool bTimestampDeviceUnavailable = _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
+                                                 _oneShotCommandPool == VK_NULL_HANDLE || isDeviceLost();
+        if ( bTimestampDeviceUnavailable )
+            return false;
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+        if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
+            return false;
+        if ( _clockQueryPool == VK_NULL_HANDLE )
+        {
+            VkQueryPoolCreateInfo poolInfo{};
+            poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+            poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
+            poolInfo.queryCount = 1;
+            if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_clockQueryPool ) != VK_SUCCESS )
+            {
+                _clockQueryPool = VK_NULL_HANDLE;
+                return false;
+            }
+        }
+
+        // 보정 확장(VK_EXT_calibrated_timestamps) 없이 "지금 GPU 시계" 를 얻는 길: 타임스탬프 하나를 일회성 버퍼로 내고 큐가 빌 때까지
+        // 기다린다. 돌아오는 순간의 값이 곧 지금이다(관찰 지연만큼 이르다). 큐를 비우므로 컨텍스트를 열 때 한 번만 부른다.
+        {
+            VulkanOneShotCommands oneShot{ _device, _oneShotCommandPool, _oneShotMutex, _graphicsQueue, _queueMutex };
+            if ( oneShot.isValid() == false )
+                return false;
+            vkCmdResetQueryPool( oneShot.get(), _clockQueryPool, 0, 1 );
+            vkCmdWriteTimestamp( oneShot.get(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, _clockQueryPool, 0 );
+            if ( oneShot.endSubmitAndWait() == false )
+            {
+                reportQueueResult( static_cast<int32>( oneShot.getLastResult() ), "readGPUClockNanos: one-shot submit" );
+                return false;
+            }
+        }
+        uint64         tick{ 0 };
+        const VkResult clockResult = vkGetQueryPoolResults( _device, _clockQueryPool, 0, 1, sizeof( tick ), &tick, sizeof( tick ), VK_QUERY_RESULT_64_BIT );
+        if ( clockResult == VK_ERROR_DEVICE_LOST )
+            reportQueueResult( static_cast<int32>( clockResult ), "readGPUClockNanos: vkGetQueryPoolResults" );
+        if ( clockResult != VK_SUCCESS )
+            return false;
+        outGPUNanos = RHITimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
+        return true;
+    }
+
+    void VulkanRHIDevice::ensureTimestampPool()
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        const bool bTimestampPoolNotNeeded = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool != VK_NULL_HANDLE || _device == VK_NULL_HANDLE ||
+                                             _physicalDevice == VK_NULL_HANDLE;
+        if ( bTimestampPoolNotNeeded )
+            return;
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
+        // 주기가 0 이면 이 디바이스는 타임스탬프를 세지 않는다. 큐가 유효 비트를 안 주는 경우도 같다.
+        if ( properties.limits.timestampPeriod <= 0.0f || properties.limits.timestampComputeAndGraphics == VK_FALSE )
+            return;
+
+        VkQueryPoolCreateInfo poolInfo{};
+        poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
+        poolInfo.queryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
+        if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_timestampPool ) != VK_SUCCESS )
+        {
+            _timestampPool = VK_NULL_HANDLE;
+            return;
+        }
+        _timestampPeriod = properties.limits.timestampPeriod;
+    }
+
+    void VulkanRHIDevice::collectTimestampsForSlot()
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        _timestampFrame._listMicro.clear();
+        const bool bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _timestampPool == VK_NULL_HANDLE || _timestampPeriod <= 0.0f ||
+                                         _arrTimestampSubmitted[_currentFrame] == SW_FALSE;
+        if ( bNoTimestampsToRead )
+            return;
+
+        // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
+        // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
+        uint64       arrResult[constant::kMaxGPUTimestampSlot * 2]{};
+        const uint32 base = getTimestampBase();
+        // **기다리지 않는다**(WAIT 비트 없음). 측정하려던 파이프라인을 멈추면 숫자가 거짓이 된다.
+        // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
+        const VkResult result =
+            vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
+                                   sizeof( uint64 ) * 2, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT );
+        if ( result == VK_ERROR_DEVICE_LOST )
+            reportQueueResult( static_cast<int32>( result ), "collectTimestampsForSlot: vkGetQueryPoolResults" );
+        if ( result != VK_SUCCESS && result != VK_NOT_READY )
+            return;
+
+        // 가용 비트가 선 칸만 준비된 것이다. 값과 비트를 갈라 공통 규칙에 넘긴다.
+        uint64               arrTick[constant::kMaxGPUTimestampSlot]{};
+        GPUTimestampSlotMask readyMask{ 0 };
+        for ( uint32 index = 0; index < constant::kMaxGPUTimestampSlot; ++index )
+        {
+            if ( arrResult[index * 2 + 1] == 0 )
+                continue;
+            arrTick[index] = arrResult[index * 2];
+            readyMask |= makeGPUTimestampSlotBit( index );
+        }
+        RHITimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.
+    void VulkanRHIDevice::beginFrame()
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
+        restoreDroppedFrameLayouts();
+        _bFrameStarted = SW_FALSE;
+        // 장치를 잃었으면 프레임을 시작하지 않는다(펜스 · 이미지 대기도, 스왑체인 다시 만들기도 하지 않는다). endFrame 은 시작하지 않은 프레임을 건너뛴다.
+        const bool bCannotStartFrame = _width == 0 || _height == 0 || isDeviceLost();
+        if ( bCannotStartFrame )
+            return;
+
+        // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
+        // (창이 검은 채로 멈춤).
+        // 서피스를 잃은 채면(지난 present · 재생성 실패) 서피스부터 다시 만든다. 실패하면 이 프레임은 건너뛰고 다음 프레임에 다시 시도한다.
+        if ( _bSurfaceLost == SW_TRUE )
+        {
+            if ( recreateSurfaceAndSwapChain() == false )
+                return;
+            _bSurfaceLost    = SW_FALSE;
+            _bSwapChainDirty = 0;
+        }
+        if ( _bSwapChainDirty && recreateSwapChain() )
+            _bSwapChainDirty = 0;
+
+        // 재생성이 실패하면 스왑체인 · 동기화 객체가 없는 상태이므로 프레임을 건너뛰고 다음 프레임에 다시 시도한다.
+        if ( _swapChain.isValid() == false || _listInFlightFence.empty() )
+        {
+            _bSwapChainDirty = 1;
+            return;
+        }
+
+        const VkResult fenceResult = vkWaitForFences( _device, 1, &_listInFlightFence[_currentFrame], VK_TRUE, UINT64_MAX );
+        reportQueueResult( static_cast<int32>( fenceResult ), "beginFrame: vkWaitForFences" );
+        // 펜스 대기에서 잃었음을 봤으면 이 프레임을 바로 건너뛴다 — 획득 · 기록으로 이어가면 잃은 장치에 대기와 제출을 더 낸다.
+        if ( isDeviceLost() )
+            return;
+        // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했다.
+        ensureTimestampPool();
+        collectTimestampsForSlot();
+        // 이 링 슬롯의 펜스가 신호됐다는 것은 그 슬롯에 마지막으로 제출한 세대(_listRingFrameNumber)의
+        // GPU 작업이 실제로 끝났다는 뜻이다. 그 세대 이하로 태그된 리소스 해제를 지금 실행한다.
+        _releaseQueue.tickCompleted( _listRingFrameNumber[_currentFrame] );
+        // 끝난 텍스처 전송도 걷는다 — 아무도 폴링하지 않는 전송(구간 갱신)의 링 구간과, 전송을 기다리던 텍스처 해제가 프레임마다 진행한다.
+        retireFinishedTransfers();
+        // 이 칸의 GPU 사용이 끝났다. 값이 바뀔 때만 쓰는 상수버퍼 가운데 이 칸이 옛 값인 것을 채운다.
+        fillConstantBufferSlot();
+        // 이 링 슬롯에서 프레임 스트림이 쓴 슬롯 세트들도 GPU 가 다 읽었다. 풀 묶음을 통째로 비워 이번 프레임에 다시 쓴다.
+        // (리스트가 쓴 세트는 리스트 쌍의 풀 묶음에 있고, 쌍이 재사용 풀로 돌아온 뒤 beginCommandList 가 비운다.)
+        resetDescriptorPoolSet( _arrFrameDescriptorPoolSet[_currentFrame] );
+
+        // 앞 프레임이 present 하지 않았다면 그때 획득한 이미지를 아직 쥐고 있다. Vulkan 에는
+        // present 말고 이미지를 돌려주는 길이 없으니, 다시 획득하지 말고 그 이미지에 덮어 그린다.
+        // 매 프레임 새로 획득하면 이미지가 하나씩 소진되고, 개수를 넘기는 순간 acquire 가
+        // UINT64_MAX 타임아웃으로 영원히 막힌다. endFrame(bPresent=false) 로 도는 경로에서 실제로 걸렸다.
+        if ( _bSwapChainImageHeld == SW_FALSE )
+        {
+            VulkanSwapChainStatus status = _swapChain.acquireNextImage( _device, _currentFrame );
+            if ( status == VulkanSwapChainStatus::SurfaceLost )
+            {
+                // 사양: 서피스를 잃으면 스왑체인만이 아니라 서피스부터 다시 만든다. 잃은 서피스로 다시 acquire 하면 계속 진다.
+                noteSurfaceLost( "acquire" );
+                if ( recreateSurfaceAndSwapChain() == false || _swapChain.isValid() == false )
+                {
+                    _bSurfaceLost = SW_TRUE;
+                    return;
+                }
+                status = _swapChain.acquireNextImage( _device, _currentFrame );
+            }
+            if ( status == VulkanSwapChainStatus::DeviceLost )
+            {
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR" );
+                return;
+            }
+            if ( status == VulkanSwapChainStatus::OutOfDate || status == VulkanSwapChainStatus::Suboptimal )
+            {
+                if ( recreateSwapChain() == false || _swapChain.isValid() == false )
+                {
+                    _bSwapChainDirty = 1;
+                    return;
+                }
+
+                status = _swapChain.acquireNextImage( _device, _currentFrame );
+            }
+
+            // Suboptimal 은 "창과 어긋났지만 이번 프레임은 그릴 수 있다" 는 뜻이다. 위에서 이미 한 번 다시
+            // 만들어 봤으므로 그대로 진행한다.
+            if ( status == VulkanSwapChainStatus::DeviceLost ) // 다시 획득한 쪽에서 잃었음을 본 경우(위의 검사는 첫 획득만 본다)
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "beginFrame: vkAcquireNextImageKHR (retry)" );
+            if ( status != VulkanSwapChainStatus::Success && status != VulkanSwapChainStatus::Suboptimal )
+                return;
+
+            _bSwapChainImageHeld = SW_TRUE;
+            // 방금 획득한 이미지의 가용 세마포어는 이 프레임의 첫 제출이 딱 한 번 기다린다.
+            // 이미지를 물려받은 프레임은 기다릴 시그널이 없으므로 이 플래그를 세우지 않는다.
+            _bFrameAcquireWaitPending = SW_TRUE;
+        }
+
+        // 이 이미지를 마지막으로 쓴 프레임이 아직 GPU 에 있으면 그 펜스를 기다린 뒤에 덮어쓴다.
+        const uint32 imageIndex = _swapChain.getImageIndex();
+        if ( imageIndex >= _listImagesInFlight.size() )
+            return;
+        if ( _listImagesInFlight[imageIndex] != VK_NULL_HANDLE )
+            reportQueueResult( static_cast<int32>( vkWaitForFences( _device, 1, &_listImagesInFlight[imageIndex], VK_TRUE, UINT64_MAX ) ), "beginFrame: vkWaitForFences (image in flight)" );
+        _listImagesInFlight[imageIndex] = _listInFlightFence[_currentFrame];
+
+        // 이 셋은 메모리 부족으로만 실패한다(장치 분실은 돌려주지 않는다). 실패한 버퍼에 기록하면 제출이 검증 오류 · 크래시라 멈춘다.
+        requireVk( vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] ), "beginFrame: vkResetFences" );
+        requireVk( vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 ), "beginFrame: vkResetCommandBuffer" );
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        requireVk( vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo ), "beginFrame: vkBeginCommandBuffer" );
+        // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGPUTimestampSlot );
+
+        // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
+        _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
+        _frameSegmentCursor = 0;
+        _listPendingSubmit.clear();
+
+        // 새 커맨드버퍼에는 아직 아무 세트도 안 걸렸다. flushSlotSet 이 슬롯 세트와 텍스처 세트를 다시 건다.
+        _recordingState._bTextureSetBound = SW_FALSE;
+        _recordingState._arrSlotState[0]  = VulkanSlotState{};
+        _recordingState._arrSlotState[1]  = VulkanSlotState{};
+
+        _bFrameStarted                     = SW_TRUE;
+        _recordingState._bRenderPassActive = SW_FALSE;
+
+        constexpr float32 kDefaultViewportX        = 0.0f;
+        constexpr float32 kDefaultViewportMinDepth = 0.0f;
+        constexpr float32 kDefaultViewportMaxDepth = 1.0f;
+
+        VkViewport viewport{};
+        viewport.x = kDefaultViewportX;
+
+        viewport.y        = static_cast<float32>( _swapChain.getExtentHeight() );
+        viewport.width    = static_cast<float32>( _swapChain.getExtentWidth() );
+        viewport.height   = -static_cast<float32>( _swapChain.getExtentHeight() );
+        viewport.minDepth = kDefaultViewportMinDepth;
+        viewport.maxDepth = kDefaultViewportMaxDepth;
+        vkCmdSetViewport( _activeFrameBuffer, 0, 1, &viewport );
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = { _swapChain.getExtentWidth(), _swapChain.getExtentHeight() };
+        vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
+
+        // 백버퍼 렌더패스는 여기서 열지 않는다. beginFrame 은 프레임 수명주기 전용이고, 백버퍼
+        // 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가 명시적으로 한다.
+        // 클리어도 그 렌더패스의 loadOp 이 맡는다.
+    }
+
+    void VulkanRHIDevice::endFrame( bool vsync, bool bPresent )
+    {
+        _renderThread.assumeHeld(); // 렌더 스레드의 프레임 진행(그 병렬 기록 태스크 포함)에서, 또는 렌더 스레드를 세운 뒤(초기화 · 종료 · resize) 불린다
+        (void)vsync;
+        if ( _bFrameStarted == SW_FALSE )
+        {
+            // 건너뛴 프레임이다. 버려진 리스트가 앞서 바꾼 레이아웃 기록을 바로 되돌려야 이 프레임 뒤의 읽기(스크린샷)가 실제 레이아웃을 본다.
+            restoreDroppedFrameLayouts();
+            return;
+        }
+
+        if ( _recordingState._bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( _activeFrameBuffer );
+            _recordingState._bRenderPassActive = SW_FALSE;
+        }
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "endFrame: vkEndCommandBuffer" );
+        _listPendingSubmit.push_back( _activeFrameBuffer );
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        // acquire 대기는 프레임당 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 생략한다.
+        VkSemaphore          arrWaitSemaphore[] = { _swapChain.getImageAvailableSemaphore( _currentFrame ) };
+        VkPipelineStageFlags arrWaitStage[]     = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        if ( _bFrameAcquireWaitPending != SW_FALSE )
+        {
+            submitInfo.waitSemaphoreCount = 1;
+            submitInfo.pWaitSemaphores    = arrWaitSemaphore;
+            submitInfo.pWaitDstStageMask  = arrWaitStage;
+            _bFrameAcquireWaitPending     = SW_FALSE;
+        }
+
+        // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다. 같은 큐에 대한
+        // 제출 순서가 곧 실행 순서라, 세그먼트 사이의 리소스 의존성이 그대로 지켜진다.
+        submitInfo.commandBufferCount = static_cast<uint32>( _listPendingSubmit.size() );
+        submitInfo.pCommandBuffers    = _listPendingSubmit.data();
+
+        // renderFinished 를 기다리는 건 present 뿐이다. present 하지 않는 프레임까지 시그널하면
+        // 아무도 소비하지 않은 이진 세마포어를 거듭 시그널하게 되어 규약 위반이다.
+        VkSemaphore arrSignalSemaphore[] = { _swapChain.getRenderFinishedSemaphore() };
+        if ( bPresent )
+        {
+            submitInfo.signalSemaphoreCount = 1;
+            submitInfo.pSignalSemaphores    = arrSignalSemaphore;
+        }
+
+        // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는
+        // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
+        _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
+        if ( _frameStreamContext != nullptr )
+            noteSubmittedEventMarker( _frameStreamContext->getLastEventMarker() );
+        UniqueLock<mutex> queueLock{ _queueMutex };
+        // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다. 버퍼는 위에서 닫았다.
+        const bool     bDeviceLost  = isDeviceLost();
+        const VkResult submitResult = bDeviceLost ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, _listInFlightFence[_currentFrame] );
+        reportQueueResult( static_cast<int32>( submitResult ), "endFrame: vkQueueSubmit" );
+        // 이 링 슬롯의 쿼리 구간은 이제 "리셋 + 제출" 을 한 번은 거쳤다. 그 전에 읽으면 미정의다.
+        if ( _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
+            _arrTimestampSubmitted[_currentFrame] = SW_TRUE;
+
+        if ( bPresent && isDeviceLost() == false )
+        {
+            const VulkanSwapChainStatus presentStatus = _swapChain.present( _graphicsQueue ); // 큐 락 안(위의 queueLock)
+            if ( presentStatus == VulkanSwapChainStatus::DeviceLost )
+                reportQueueResult( static_cast<int32>( VK_ERROR_DEVICE_LOST ), "endFrame: vkQueuePresentKHR" );
+            else if ( presentStatus == VulkanSwapChainStatus::OutOfDate || presentStatus == VulkanSwapChainStatus::Suboptimal )
+            {
+                // 다음 beginFrame 에서 스왑체인을 다시 만든다.
+                _bSwapChainDirty = 1;
+            }
+            else if ( presentStatus == VulkanSwapChainStatus::SurfaceLost )
+            {
+                // 다음 beginFrame 에서 서피스부터 다시 만든다(큐 락 안이라 여기서 만들지 않는다).
+                noteSurfaceLost( "present" );
+                _bSurfaceLost = SW_TRUE;
+            }
+            // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도
+            // 이미지 자체가 사라지므로, 어느 쪽이든 더 이상 쥐고 있지 않다.
+            _bSwapChainImageHeld = SW_FALSE;
+        }
+        // 해제 콜백(아래 tickFrame)을 큐 락 안에서 부르지 않는다.
+        queueLock.unlock();
+
+        _listPendingSubmit.clear();
+        _activeFrameBuffer = VK_NULL_HANDLE;
+        _currentFrame      = ( _currentFrame + 1 ) % constant::kMaxFrameCountInFlight;
+        _bFrameStarted     = SW_FALSE;
+        _releaseQueue.tickFrame();
+    }
+
+    VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
+    {
+        // 스트림은 하나지만 리스트가 제출될 때마다 세그먼트로 잘린다. 지금 열려 있는 세그먼트를
+        // 반환한다. 오프스크린도 같은 스트림이다(별도 버퍼 · 자체 제출 · 펜스 블로킹 없음).
+        if ( _bFrameStarted == SW_TRUE )
+            return _activeFrameBuffer;
+        return VK_NULL_HANDLE;
+    }
+
+    VulkanCommandListEntry VulkanRHIDevice::acquireCommandListEntry()
+    {
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않는다.
+        VulkanCommandListEntry entry{};
+        {
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            if ( _listFreeCmdListEntry.empty() == false )
+            {
+                entry = _listFreeCmdListEntry.back();
+                _listFreeCmdListEntry.pop_back();
+                return entry;
+            }
+        }
+
+        if ( _device == nullptr )
+            return entry;
+
+        // 풀은 리스트마다 전용이어야 한다. VkCommandPool 은 외부 동기화 대상이라 두 스레드가 같은
+        // 풀에서 동시에 기록하면 정의되지 않은 동작이다. 슬롯 세트 풀 묶음도 같은 이유로 쌍마다 전용이다.
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &entry._pool ) != VK_SUCCESS )
+        {
+            entry = VulkanCommandListEntry{};
+            return entry;
+        }
+
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool        = entry._pool;
+        allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        if ( vkAllocateCommandBuffers( _device, &allocInfo, &entry._buffer ) != VK_SUCCESS )
+        {
+            vkDestroyCommandPool( _device, entry._pool, nullptr );
+            entry = VulkanCommandListEntry{};
+            return entry;
+        }
+
+        {
+            // 풀 묶음은 디바이스가 소유한다. 쌍은 값으로 복사돼 다니므로(지연 반환 람다 캡처) 빌려 쓰는 포인터만 든다.
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            _listCmdListDescriptorPoolSet.push_back( make_unique<VulkanDescriptorPoolSet>() );
+            entry._pDescriptorPoolSet = _listCmdListDescriptorPoolSet.back().get();
+        }
+        return entry;
+    }
+
+    void VulkanRHIDevice::destroyCommandListEntryImmediate( VulkanCommandListEntry& entry )
+    {
+        if ( _device != nullptr && entry._pool != VK_NULL_HANDLE )
+            vkDestroyCommandPool( _device, entry._pool, nullptr ); // 풀을 부수면 버퍼도 같이 간다
+        entry = VulkanCommandListEntry{};
+    }
+
+    void VulkanRHIDevice::registerCommandList( VulkanRHICommandList* pCmdList )
+    {
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
+        _listLiveCmd.push_back( pCmdList );
+    }
+
+    void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
+    {
+        ScopedLock<mutex> lock{ _liveCmdListMutex };
+        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
+    }
+
+    void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )
+    {
+        if ( entry._pool == VK_NULL_HANDLE || entry._buffer == VK_NULL_HANDLE )
+            return;
+
+        // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 버퍼를 읽고 있다. 이번 프레임 세대가
+        // 끝났다고 확인된 뒤에야 재사용 풀로 돌려보낸다(대기 없음).
+        auto recycleCb = [this, entry]()
+        {
+            ScopedLock<mutex> lock{ _cmdListPoolMutex };
+            _listFreeCmdListEntry.push_back( entry );
+        };
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
+    }
+
+    VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()
+    {
+        if ( _device == nullptr || _currentFrame >= constant::kMaxFrameCountInFlight )
+            return VK_NULL_HANDLE;
+
+        vector<VkCommandBuffer>& listSegment = _arrFrameSegment[_currentFrame];
+        if ( _frameSegmentCursor >= listSegment.size() )
+        {
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool        = _commandPool;
+            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandBufferCount = 1;
+            VkCommandBuffer created{ VK_NULL_HANDLE };
+            if ( vkAllocateCommandBuffers( _device, &allocInfo, &created ) != VK_SUCCESS )
+                return VK_NULL_HANDLE;
+            listSegment.push_back( created );
+        }
+
+        VkCommandBuffer segment = listSegment[_frameSegmentCursor];
+        ++_frameSegmentCursor;
+
+        // 이 프레임 슬롯의 펜스를 beginFrame 에서 이미 기다렸으므로 곧바로 Reset 해도 안전하다.
+        requireVk( vkResetCommandBuffer( segment, 0 ), "frame segment: vkResetCommandBuffer" );
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        requireVk( vkBeginCommandBuffer( segment, &beginInfo ), "frame segment: vkBeginCommandBuffer" );
+        return segment;
+    }
+
+    unique_ptr<IRHICommandList> VulkanRHIDevice::createCommandList()
+    {
+        return make_unique<VulkanRHICommandList>( this );
+    }
+
+    void VulkanRHIDevice::executeCommandListImmediate( IRHICommandList* pCmdList )
+    {
+        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
+        if ( pList == nullptr || _graphicsQueue == VK_NULL_HANDLE )
+            return;
+
+        const VkCommandBuffer listBuffer = pList->nativeCommandBuffer();
+        if ( listBuffer == VK_NULL_HANDLE )
+            return;
+
+        // 프레임 밖 일회성 제출이라 프레임 펜스에 얹을 수 없다. 자체 제출 후 큐가 비기를 기다려
+        // 부르는 쪽이 결과를 바로 쓸 수 있게 한다(업로드 · 스모크 용도라 빈도가 낮다).
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &listBuffer;
+        noteSubmittedEventMarker( pList->getLastEventMarker() );
+        ScopedLock<mutex> queueLock{ _queueMutex };
+        VkResult          queueResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE );
+        if ( queueResult == VK_SUCCESS )
+            queueResult = vkQueueWaitIdle( _graphicsQueue );
+        reportQueueResult( static_cast<int32>( queueResult ), "executeCommandListImmediate" );
+
+        // 제출한 리스트가 바꾼 레이아웃은 실제로 일어났으므로 되돌릴 기록에서 뺀다.
+        ScopedLock<mutex> layoutLock{ _imageLayoutMutex };
+        for ( size_t index = _listDroppedFrameLayout.size(); index > 0; --index )
+        {
+            if ( _listDroppedFrameLayout[index - 1]._cmd == listBuffer )
+                _listDroppedFrameLayout.erase( _listDroppedFrameLayout.begin() + static_cast<std::ptrdiff_t>( index - 1 ) );
+        }
+    }
+
+    void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )
+    {
+        VulkanRHICommandList* pList                    = static_cast<VulkanRHICommandList*>( pCmdList );
+        const bool            bCannotSubmitCommandList = pList == nullptr || _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE;
+        if ( bCannotSubmitCommandList )
+            return;
+
+        const VkCommandBuffer listBuffer = pList->nativeCommandBuffer();
+        if ( listBuffer == VK_NULL_HANDLE )
+            return;
+
+        // 지금까지의 프레임 세그먼트를 닫아 제출 순서에 넣고, 그 뒤에 이 리스트의 버퍼를 잇는다.
+        if ( _recordingState._bRenderPassActive == SW_TRUE )
+        {
+            vkCmdEndRenderPass( _activeFrameBuffer );
+            _recordingState._bRenderPassActive = SW_FALSE;
+        }
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "executeCommandList: vkEndCommandBuffer" );
+        _listPendingSubmit.push_back( _activeFrameBuffer );
+        _listPendingSubmit.push_back( listBuffer );
+        noteSubmittedEventMarker( pList->getLastEventMarker() );
+
+        // 즉시 모드: 여기서 바로 내보낸다. acquire 세마포어 대기는 '이 프레임의 첫 제출'에만 걸고,
+        // renderFinished 신호와 인플라이트 펜스는 endFrame 의 마지막 제출이 담당한다.
+        if ( _bImmediateSubmit )
+        {
+            VkSubmitInfo         flushInfo{};
+            VkPipelineStageFlags waitStage     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            flushInfo.sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            flushInfo.commandBufferCount       = static_cast<uint32>( _listPendingSubmit.size() );
+            flushInfo.pCommandBuffers          = _listPendingSubmit.data();
+            const VkSemaphore acquireSemaphore = _swapChain.getImageAvailableSemaphore( _currentFrame );
+            if ( _bFrameAcquireWaitPending != SW_FALSE && acquireSemaphore != VK_NULL_HANDLE )
+            {
+                flushInfo.waitSemaphoreCount = 1;
+                flushInfo.pWaitSemaphores    = &acquireSemaphore;
+                flushInfo.pWaitDstStageMask  = &waitStage;
+                _bFrameAcquireWaitPending    = SW_FALSE;
+            }
+            {
+                ScopedLock<mutex> queueLock{ _queueMutex };
+                const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+                reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
+            }
+            _listPendingSubmit.clear();
+        }
+
+        // 이어서 기록할 새 세그먼트를 연다. 새 버퍼이므로 바인딩 캐시는 무효다.
+        VkCommandBuffer nextSegment = beginNextFrameSegment();
+        if ( nextSegment == VK_NULL_HANDLE )
+        {
+            _activeFrameBuffer = VK_NULL_HANDLE;
+            _bFrameStarted     = SW_FALSE;
+            return;
+        }
+        _activeFrameBuffer = nextSegment;
+        _recordingState    = VulkanRecordingState{};
+
+        VkViewport viewport{};
+        viewport.x        = 0.0f;
+        viewport.y        = static_cast<float32>( _swapChain.getExtentHeight() );
+        viewport.width    = static_cast<float32>( _swapChain.getExtentWidth() );
+        viewport.height   = -static_cast<float32>( _swapChain.getExtentHeight() );
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport( _activeFrameBuffer, 0, 1, &viewport );
+
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = { _swapChain.getExtentWidth(), _swapChain.getExtentHeight() };
+        vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
+    }
 } // namespace sw

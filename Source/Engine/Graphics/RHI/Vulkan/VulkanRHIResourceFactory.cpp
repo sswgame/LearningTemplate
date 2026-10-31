@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -460,7 +460,7 @@ namespace sw
         if ( desc._bIsUnorderedAccess )
             usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
-        const VkFormat requested = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._format );
+        const VkFormat requested = VulkanRHIUtil::toVulkanTextureFormat( desc._format );
         VkFormat       format    = requested;
         if ( desc._bIsDepthStencil != SW_FALSE || desc._format == sw::RHIFormat::D24_UNORM_S8_UINT )
         {
@@ -1571,10 +1571,10 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
         {
             const RHIRenderPassAttachment& attachment = desc._listColorAttachment[colorIndex];
-            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( attachment._format ) ), VulkanRHIDeviceInternal::toVulkanLoadOp( attachment._loadOp ),
+            spec.addColor( static_cast<uint32>( VulkanRHIUtil::toVulkanTextureFormat( attachment._format ) ), VulkanRHIUtil::toVulkanLoadOp( attachment._loadOp ),
                            ( attachment._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-            spec._arrColorStoreOp[colorIndex] = VulkanRHIDeviceInternal::toVulkanStoreOp( attachment._storeOp );
+            spec._arrColorStoreOp[colorIndex] = VulkanRHIUtil::toVulkanStoreOp( attachment._storeOp );
         }
         if ( desc._bHasDepthStencil != SW_FALSE )
             spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );

@@ -5,7 +5,7 @@
  *          빌드하면 `RHIBackendRegistry.cpp`(Engine) 가 `VulkanRHIDevice.h` 를 포함하는데, 그때
  *          Vulkan SDK 헤더 전체가 Engine 번역 단위로 딸려 들어오기 때문입니다. 핸들은 모두
  *          불투명 포인터라, 이렇게 이름만 선언해 두면 헤더에서 멤버로 보관할 수 있습니다.
- * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIDeviceInternal.h` 를 포함합니다.
+ * @note 실제 Vulkan 함수와 구조체가 필요한 .cpp 는 `VulkanRHIUtil.h` 를 포함합니다.
  */
 #pragma once
 // 인자를 `##` 로 붙이고 선언자 이름으로도 쓴다. 괄호를 씌우면 둘 다 깨진다.

@@ -1,5 +1,5 @@
 /**
- * @file VulkanRHIDeviceInternal.h
+ * @file VulkanRHIUtil.h
  * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 모음입니다.
  * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화, 디스크립터, 렌더패스로 나눴는데,
  *          그 조각들과 `VulkanRHIResourceFactory.cpp` 가 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
@@ -29,7 +29,7 @@
 namespace sw
 {
     /** @brief Vulkan 백엔드 조각들이 함께 쓰는 순수 변환과 조회 도우미입니다. */
-    struct VulkanRHIDeviceInternal
+    struct VulkanRHIUtil
     {
         static inline VkFormat toVulkanTextureFormat( RHIFormat format )
         {

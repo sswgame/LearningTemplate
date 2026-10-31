@@ -1,5 +1,5 @@
 /**
- * @file OpenGLRHIDeviceInternal.h
+ * @file OpenGLRHIUtil.h
  * @brief OpenGL 백엔드의 여러 TU 가 함께 쓰는 플랫폼 헤더, 확장 상수, 내부 도우미입니다.
  * @details `OpenGLRHIDevice.cpp` 를 초기화, 제출, 코어로 나누면서 세 TU 가 같은 WGL 상수와
  *          같은 도우미를 쓰게 됐습니다. 익명 네임스페이스에 두면 TU 마다 복사되어 "정의만 하고 쓰지 않는"
@@ -27,7 +27,7 @@ using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC( WINAPI* )( HDC hDC, HGLRC hShar
 namespace sw
 {
     /** @brief OpenGL 백엔드 조각들이 함께 쓰는 내부 도우미입니다. */
-    struct OpenGLRHIDeviceInternal
+    struct OpenGLRHIUtil
     {
         // GPU 메모리 질의 토큰. glad 는 이 벤더 확장을 싣지 않아 값을 직접 둔다(GL 레지스트리의 값).
         static constexpr GLenum kGPUMemoryInfoTotalAvailableNvx   = 0x9048; ///< GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX (KB)

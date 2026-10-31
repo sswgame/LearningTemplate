@@ -7,7 +7,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 
 namespace sw
 {
@@ -153,7 +153,7 @@ namespace sw
             return false;
 
         // 공용 오프스크린 렌더패스는 계약 포맷일 때만 재사용한다. 다른 포맷은 전용 RP 를 만든다.
-        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( constant::kOffscreenColorFormat ) );
+        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIUtil::toVulkanTextureFormat( constant::kOffscreenColorFormat ) );
         if ( vkFormat != 0 && vkFormat != sharedFormat )
             return false;
 
@@ -253,7 +253,7 @@ namespace sw
             key._colorCount = kMaxColorAttachments;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
-            VkFormat colorFmt = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._arrRTVFormat[colorIndex] );
+            VkFormat colorFmt = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[colorIndex] );
             if ( colorFmt == VK_FORMAT_UNDEFINED )
                 colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
             key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );
@@ -261,7 +261,7 @@ namespace sw
         if ( desc._bEnableDepthTest != 0 )
         {
             // FrameRenderer 는 RHI D24 를 요청하지만 GPU 가 지원하지 않을 수 있다 → 디바이스가 고른 포맷을 쓴다.
-            VkFormat   depthFmt              = VulkanRHIDeviceInternal::toVulkanTextureFormat( desc._depthStencilFormat );
+            VkFormat   depthFmt              = VulkanRHIUtil::toVulkanTextureFormat( desc._depthStencilFormat );
             const bool bUseDeviceDepthFormat = desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
                                                depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED;
             if ( bUseDeviceDepthFormat )
@@ -299,7 +299,7 @@ namespace sw
             arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
             width                       = pTex->_width;
             height                      = pTex->_height;
-            spec.addColor( pTex->_format, VulkanRHIDeviceInternal::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
+            spec.addColor( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
         }
 
@@ -317,7 +317,7 @@ namespace sw
                 width  = pTex->_width;
                 height = pTex->_height;
             }
-            spec.setDepth( pTex->_format, VulkanRHIDeviceInternal::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
+            spec.setDepth( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
         }
         if ( attachCount == 0 )

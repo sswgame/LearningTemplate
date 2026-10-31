@@ -1,7 +1,7 @@
 /**
  * @file OpenGLRHIDevice.h
  * @brief OpenGL 4.6 코어 프로파일 RHI 백엔드 디바이스를 정의합니다.
- * @note glad(GL 심볼)는 이 헤더가 아니라 GL 의 .cpp 들이 직접, 또는 OpenGLRHIDeviceInternal.h 를 거쳐 include 합니다.
+ * @note glad(GL 심볼)는 이 헤더가 아니라 GL 의 .cpp 들이 직접, 또는 OpenGLRHIUtil.h 를 거쳐 include 합니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
