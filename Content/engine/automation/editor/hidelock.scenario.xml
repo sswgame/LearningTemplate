@@ -25,13 +25,11 @@
 	<WaitUntil watch="Editor.ObjectHiddenInEditor" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
-	<Wait frames="15"/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.SelectionCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
-	<Wait frames="15"/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>

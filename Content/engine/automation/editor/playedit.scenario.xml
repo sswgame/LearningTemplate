@@ -13,7 +13,6 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
 	<Variable name="gv_editorWatchPanel" value="inspector"/>
@@ -27,7 +26,6 @@
 	<Expect watch="Editor.PlayState" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="7"/>
@@ -55,7 +53,6 @@
 	<!-- 4) Maximize On Play -->
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="30"/>
 	<EditorClick mark="gameView.maximizeOnPlay"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
@@ -69,14 +66,11 @@
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="28"/>
 	<EditorClick mark="gameView.maximizeOnPlay"/>
 	<!-- 2) Keep Simulation Changes 는 남기고, 그것은 되돌리기 하나다 -->
 	<Wait frames="20"/>
 	<DevCommand line="editor play.start"/>
-	<Wait frames="25"/>
 	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="7"/>
@@ -84,7 +78,6 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.SelectedProperty" equals="7" timeoutFrames="60"/>
 	<DevCommand line="editor play.keepChanges"/>
-	<Wait frames="10"/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="7"/>

@@ -24,11 +24,9 @@
 	<!-- 첫 셀을 고치면 입력 칸을 떠날 때(Enter) 문서에 반영된다 -->
 	<Wait frames="5"/>
 	<EditorClick mark="catalog.cell.first"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="zz_edit"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="20"/>
 	<ExpectLog contains="Catalog Edited " count="1"/>

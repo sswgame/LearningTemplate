@@ -29,7 +29,6 @@
 	<EditorClick mark="contentBrowser.search"/>
 	<Wait frames="5"/>
 	<EditorText value="crate_medium.mesh"/>
-	<Wait frames="20"/>
 	<EditorDrag mark="contentBrowser.asset.crate_medium.mesh" toMark="sceneView.canvas"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
@@ -37,17 +36,11 @@
 	<!-- ② 메시 모디파이어 — 고른 것을 대상으로 휘기 -->
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorText value="80"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
@@ -59,9 +52,7 @@
 	<!-- ③ 인스펙터로 이름 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus inspector"/>
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="PlacedCrate"/>

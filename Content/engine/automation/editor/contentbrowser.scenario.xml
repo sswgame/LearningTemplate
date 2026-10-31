@@ -34,11 +34,9 @@
 	<EditorClick mark="contentBrowser.search"/>
 	<Wait frames="5"/>
 	<EditorText value="crate_medium.mesh"/>
-	<Wait frames="20"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="up"/>
-	<Wait frames="12"/>
 	<EditorClick mark="menu.asset.findReferences" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="menu.asset.findReferences" state="up"/>

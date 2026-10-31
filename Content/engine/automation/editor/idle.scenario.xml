@@ -33,9 +33,7 @@
 	<EditorKey key="Ctrl+P"/>
 	<Wait frames="1"/>
 	<Expect watch="Engine.FramePacingState" atMost="1"/>
-	<Wait frames="14"/>
 	<EditorText value="previewred.material"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>

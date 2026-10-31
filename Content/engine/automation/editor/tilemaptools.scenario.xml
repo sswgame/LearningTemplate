@@ -17,22 +17,17 @@
 	<Expect watch="Editor.TileMapFlagCells" equals="64"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.tool.fill"/>
-	<Wait frames="10"/>
 	<EditorClick mark="tileMap.erase"/>
-	<Wait frames="10"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.12,0.12"/>
 	<WaitUntil watch="Editor.TileMapFlagCells" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.erase"/>
-	<Wait frames="10"/>
 	<EditorClick mark="tileMap.tool.brush"/>
 	<!-- 캔버스 왼쪽 위 여백 4 px 뒤가 칸 (0,0) 이다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
 	<WaitUntil watch="Editor.TileMapFlagCells" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.tool.fill"/>
-	<Wait frames="10"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.12,0.12"/>
 	<WaitUntil watch="Editor.TileMapFlagCells" equals="64" timeoutFrames="60"/>
 	<Wait frames="5"/>

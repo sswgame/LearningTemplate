@@ -28,39 +28,27 @@
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>
 	<Wait frames="5"/>
 	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
-	<Wait frames="20"/>
 	<EditorText value="att"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="75"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.node.Walk"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.node.Attack" mods="ctrl"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.linkSelected"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.AnimationGraphConditionCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.link.2"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.condition.param"/>
-	<Wait frames="15"/>
 	<EditorText value="Speed"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
 	<EditorClick mark="animationGraph.condition.op"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.condition.op.1"/>
 	<WaitUntil watch="Editor.AnimationGraphConditionCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.save"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.link.2"/>
-	<Wait frames="15"/>
 	<EditorClick mark="animationGraph.condition.op"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.condition.op.0"/>
 	<WaitUntil watch="Editor.AnimationGraphConditionCount" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
@@ -69,7 +57,6 @@
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="3"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.node.Attack"/>
-	<Wait frames="15"/>
 	<EditorKey key="Delete"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>

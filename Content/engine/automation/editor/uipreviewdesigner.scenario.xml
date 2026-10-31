@@ -18,9 +18,7 @@
 	<!-- 1) 슬롯 손잡이 -->
 	<Wait frames="34"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="pause.ui.xml"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="900"/>
@@ -56,9 +54,7 @@
 	<ExpectLog id="UIPreview.UnsavedEditsDiscarded" atLeast="1"/>
 	<Wait frames="9"/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<Wait frames="10"/>
 	<EditorText value="TextWidget"/>
-	<Wait frames="15"/>
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
@@ -83,11 +79,9 @@
 	<!-- 정리: 거름 칸을 비우고 문서 값을 되찾는다 -->
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.palette.filter"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorKey key="Backspace"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.reload"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
 	<Wait frames="5"/>

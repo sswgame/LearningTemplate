@@ -28,7 +28,6 @@
 	<DevCommand line="content.open game/empty/prefabs"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<Wait frames="10"/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
 	<Wait frames="2"/>
 	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
@@ -38,11 +37,8 @@
 	<Expect watch="Editor.PanelDirty" equals="0"/>
 	<CaptureEditorUI file="prefabwindow/open.png"/>
 	<!-- ② 편집 -->
-	<Wait frames="10"/>
 	<EditorClick mark="prefabwindow.child.TestProp"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.property.SpriteComponent._boundsRadius" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="2"/>
@@ -51,7 +47,6 @@
 	<WaitUntil watch="Editor.PanelDirty" equals="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="prefabwindow/edited.png"/>
 	<!-- ③ X → 확인 → Cancel -->
-	<Wait frames="10"/>
 	<EditorClick mark="panel.close.Prefab Window"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
@@ -64,7 +59,6 @@
 	<!-- ④ X → Don't Save -->
 	<Wait frames="5"/>
 	<EditorClick mark="panel.close.Prefab Window"/>
-	<Wait frames="20"/>
 	<EditorClick mark="unsaved.discard"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<!-- ⑤ 다시 열면 깨끗하고 X 가 묻지 않는다 -->

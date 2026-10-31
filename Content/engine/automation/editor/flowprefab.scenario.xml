@@ -18,11 +18,8 @@
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
 	<!-- ① 만들기 → 이름 → 점광 → 프리팹 -->
-	<Wait frames="20"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Lantern"/>
@@ -40,15 +37,12 @@
 	<DevCommand line="prefab.spawn {out}/lantern.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="LanternB"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.property.PointLightComponent._intensity" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="3"/>
@@ -59,11 +53,8 @@
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius"/>
 	<!-- ③ 첫 인스턴스의 반경을 고쳐 프리팹에 쓴다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.row.Lantern"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="7"/>

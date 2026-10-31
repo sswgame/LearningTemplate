@@ -21,9 +21,16 @@ namespace sw::editor
         float2 _min{};
         float2 _max{};
         uint32 _itemID{ 0 };
-        uint32 _viewportID{ 0 };   ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
-        uint32 _frame{ 0 };        ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
-        bool   _bClipped{ false }; ///< 사각형이 그린 창의 보이는 영역 밖이다(스크롤 아래). 누르면 다른 위젯이 받으므로 클릭 · 드래그 단계가 실패로 알린다
+        uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
+        uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
+        uint32 _stableSinceFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
+        bool   _bClipped{ false };     ///< 사각형이 그린 창의 보이는 영역 밖이다(스크롤 아래). 누르면 다른 위젯이 받으므로 클릭 · 드래그 단계가 실패로 알린다
+
+        /**
+         * @brief 두 프레임 연속 같은 자리에 그려졌으면 true 입니다 — 입력 단계가 이때까지 시계를 붙잡는다(창이 열리며 자리를 잡는 중이면 기다린다).
+         * @details 예전에는 그려지기만 하면 눌러, 시나리오마다 앞에 고정 대기(10 프레임 이상)를 두어 도킹 · 팝업이 자리 잡기를 기다렸다. Playwright 의 "stable" 확인과 같다.
+         */
+        [[nodiscard]] bool isSettled() const { return _frame > _stableSinceFrame; }
     };
 } // namespace sw::editor
 
@@ -91,7 +98,14 @@ namespace sw::editor
          */
         [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         static void               releaseMouseHold();
-        /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. */
+        /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
+        [[nodiscard]] static bool hasPendingEvents();
+        /**
+         * @brief 키 · 글 입력을 받을 곳(초점 창과 그 사각형, 활성 · 내비 위젯, 열린 팝업 수)이 두 프레임 연속 같으면 true 입니다.
+         * @details 키 · 글 단계에는 누를 레이블이 없다 — 그 대상은 키보드 초점이다. 클릭이 연 팝업 · 입력 칸이 초점을 잡는 데 한두 프레임이 걸린다.
+         */
+        [[nodiscard]] static bool isKeyboardTargetSettled();
+        /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 호출합니다. 넣기 전에 키보드 대상을 표본으로 남긴다. */
         static void flushIntoImGui();
     };
 } // namespace sw::editor

@@ -87,23 +87,66 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 입력 단계가 대상이 자리 잡기를 기다리는 최대 프레임 수입니다. 넘기면 단계가 돌며 실패를 적는다. */
+            static constexpr uint32 kSettleWaitFrames = 60;
+
+            /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
+            static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutSettled )
+            {
+                if ( pMark == nullptr )
+                    return;
+                EditorSelfTestMark found{};
+                const bool         bDrawn = EditorSelfTestMarks::find( *pMark, found );
+                inoutDrawn                = inoutDrawn && bDrawn;
+                inoutSettled              = inoutSettled && bDrawn && found.isSettled();
+            }
+
+            /** @brief 누른 채 둔 버튼 · 키를 놓는 단계(`state="up"`)면 true 입니다 — 기다리면 누른 시간이 길어진다(뷰포트 비행이 더 간다). */
+            [[nodiscard]] static bool isRelease( const AutomationStep& step )
+            {
+                const string* pState = step.findAttribute( "state" );
+                return pState != nullptr && *pState == "up";
+            }
+
             /**
-             * @brief 단계가 누를 레이블(`mark` · `toMark`)이 아직 그려지지 않았으면 시나리오 시계를 붙잡고 기다립니다(최대 `kMarkWaitFrames`). 넘기면 단계가 돌며 "no editor widget" 실패를 적습니다.
-             * @details 레이블은 직전 프레임에 그려져야 한다. 패널이 프레임을 건너뛰었거나(로딩 · 리사이즈) 콤보 팝업이 한 프레임 늦게 열리면 고정 프레임 단계가 가끔 진다(옛 A-3 이던 것).
-             *          언리얼 Automation Driver 의 "보일 때까지 기다리기" · Playwright 의 자동 대기와 같다. 기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다.
+             * @brief 단계가 누를 레이블(`mark` · `toMark`)이 두 프레임 연속 같은 자리에 그려지고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
+             * @details 레이블은 직전 프레임에 그려져야 하고, 창이 열리거나 도킹 · 팝업이 자리를 잡는 중이면 움직인다. 예전에는 그려지기만 보아 시나리오가 입력 앞에 고정 대기(10 프레임 이상)를
+             *          두었고(약 260 곳), 부하가 걸린 기계에서는 그것도 모자랐다. 언리얼 Automation Driver 의 "보일 때까지" · Playwright 의 actionability("stable") 확인과 같다.
+             *          기다린 프레임은 `[Scenario] … held the clock` 로그로 남는다. 다 기다려도 그려졌는데 움직이면 실패로 적는다(그려지지 않았으면 단계가 "no editor widget" 을 적는다).
              *          기록을 쓰는 단계가 직접 다시 켠다. 백엔드 교체 · 모듈 리로드가 에디터 컨텍스트를 새로 만들면 새 저장소는 꺼져 있고, 시나리오 준비는 한 번뿐이라 다시 오지 않는다.
              */
-            static AutomationStepHold holdUntilMarked( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            static AutomationStepHold holdUntilMarkSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) == false )
                     return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
-                constexpr uint32   kMarkWaitFrames = 60;
-                const string*      pMark           = step.findAttribute( "mark" );
-                const string*      pToMark         = step.findAttribute( "toMark" );
-                EditorSelfTestMark found{};
-                const bool         bMarkDrawn   = pMark == nullptr || EditorSelfTestMarks::find( *pMark, found );
-                const bool         bToMarkDrawn = pToMark == nullptr || EditorSelfTestMarks::find( *pToMark, found );
-                return runner.holdUntilReady( step, input, bMarkDrawn && bToMarkDrawn, kMarkWaitFrames );
+                const string* pMark = step.findAttribute( "mark" );
+                if ( pMark == nullptr || isRelease( step ) )
+                    return AutomationStepHold::Run; // 호버 풀기 · 누른 것 놓기 — 누를 곳이 없다
+                bool bDrawn   = true;
+                bool bSettled = true;
+                checkMark( pMark, bDrawn, bSettled );
+                checkMark( step.findAttribute( "toMark" ), bDrawn, bSettled );
+                const bool               bReady = bSettled && EditorSelfTestInput::hasPendingEvents() == false;
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames );
+                if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
+                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
+                                                                kSettleWaitFrames ) );
+                return hold;
+            }
+
+            /**
+             * @brief 키 · 글 단계는 받을 곳(키보드 초점)이 두 프레임 연속 같고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
+             * @details 클릭이 연 입력 칸 · 팝업이 초점을 잡는 데 한두 프레임이 걸려, 예전에는 시나리오가 키 앞에 고정 대기를 두었다. 놓기(`state="up"`)는 기다리지 않는다.
+             */
+            static AutomationStepHold holdUntilKeyboardSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            {
+                if ( EditorSelfTestMarks::setEnabled( true ) == false || isRelease( step ) )
+                    return AutomationStepHold::Run;
+                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled();
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames );
+                if ( hold == AutomationStepHold::Run && bReady == false )
+                    runner.recordFailure( step, formatToString( "the keyboard focus did not settle within %# frame(s)", kSettleWaitFrames ) );
+                return hold;
             }
 
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
@@ -528,15 +571,15 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick,
-                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag,
-                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover,
-                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarked, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &EditorScenarioStepValidation::validateText,
-                                   &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilKeyboardSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey,
-                                   &EditorScenarioStepsInternal::prepareKey, nullptr, false );
+                                   &EditorScenarioStepsInternal::prepareKey, &EditorScenarioStepsInternal::holdUntilKeyboardSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject,
                                    &EditorScenarioStepValidation::validateExpectObject, &EditorScenarioStepsInternal::prepareExpectObject, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout,

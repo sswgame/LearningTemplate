@@ -6,16 +6,12 @@
 <Scenario name="editor.inspectorrename" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Blurred"/>
 	<!-- Enter 없이 다른 칸(Hierarchy 검색)을 눌러 떠난다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.filter"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Blurred"/>

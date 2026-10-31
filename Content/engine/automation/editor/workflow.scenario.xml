@@ -13,37 +13,26 @@
 	<EditorExpectObject name="GameObject" count="0"/>
 	<Expect watch="Editor.PlayState" equals="0"/>
 	<!-- 1) 오브젝트 만들기 — 만든 오브젝트가 선택된다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.create"/>
 	<Wait frames="10"/>
 	<EditorExpectObject name="GameObject" selected="1"/>
 	<!-- 2) 컴포넌트 붙이기 — 선택한 줄을 오른쪽 클릭 → Add Component → 검색 → 항목 -->
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.selectedRow" button="1"/>
-	<Wait frames="10"/>
 	<EditorClick mark="menu.scene.object.addComponent"/>
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.addComponent.search"/>
-	<Wait frames="10"/>
 	<EditorText value="PointLight"/>
-	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.addComponent.PointLightComponent"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="GameObject" component="PointLightComponent"/>
 	<!-- 3) 인스펙터에서 값 고치기 — 이름 칸을 눌러 전부 고르고 새 이름 + Enter -->
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="10"/>
 	<EditorText value="Lamp"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<!-- 4) 되돌리기(단축키) · 다시 실행(커맨드) -->
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" count="0"/>

@@ -16,9 +16,7 @@
 	<Variable name="gv_editorWatchObject" value="GameCamera"/>
 	<Wait frames="20"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="sequencerkeys.seq.xml"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="0"/>
@@ -27,7 +25,6 @@
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="2"/>
@@ -36,15 +33,12 @@
 	<WaitUntil watch="Editor.ObjectPositionX" equals="2" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="100"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="12"/>
@@ -52,7 +46,6 @@
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectPositionX" equals="12"/>
-	<Wait frames="10"/>
 	<EditorClick mark="sequencer.scrub"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.ObjectPositionX" atLeast="4"/>

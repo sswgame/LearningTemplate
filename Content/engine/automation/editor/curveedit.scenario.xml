@@ -11,7 +11,6 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.TestParent"/>
 	<Wait frames="10"/>
 	<DevCommand line="component.add EditorCurveTestComponent"/>
@@ -20,9 +19,7 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.curve._curve"/>
-	<Wait frames="20"/>
 	<EditorClick mark="curve.canvas" button="1"/>
-	<Wait frames="15"/>
 	<EditorClick mark="curve.menu.addKey"/>
 	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
@@ -33,9 +30,7 @@
 	<Expect watch="Editor.UndoCount" equals="3"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.row.TestParent"/>
-	<Wait frames="20"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="15"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>

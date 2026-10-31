@@ -19,11 +19,8 @@
 	<Wait frames="5"/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<!-- ① 오브젝트에 컴포넌트를 단다 -->
-	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Prober"/>
@@ -37,11 +34,9 @@
 	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
 	<CaptureEditorUI file="scenereference/inspector.png"/>
 	<!-- ② 콤보로 고른다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
 	<Wait frames="20"/>
 	<CaptureEditorUI file="scenereference/combo.png"/>
-	<Wait frames="10"/>
 	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
@@ -49,21 +44,17 @@
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<CaptureEditorUI file="scenereference/picked.png"/>
 	<!-- ③ 되돌리기 -->
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.SelectedSceneReference" is="(none)" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<!-- ④ 다시 고르고 (none) -->
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
-	<Wait frames="20"/>
 	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
 	<WaitUntil watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
-	<Wait frames="20"/>
 	<EditorHover mark="inspector.sceneref.none"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.none"/>

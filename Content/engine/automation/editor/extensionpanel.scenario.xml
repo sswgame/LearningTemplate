@@ -11,17 +11,13 @@
 	<Variable name="gv_editorWatchPanel" value="admin.tool"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
-	<Wait frames="15"/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<Wait frames="15"/>
 	<EditorText value="Open the GM tool"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<ExpectLog contains="GM Tool panel opened" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus admin.tool"/>
-	<Wait frames="20"/>
 	<EditorClick mark="admin.lookup"/>
 	<Wait frames="15"/>
 	<ExpectLog contains="Admin command LookupAccount: Ok" count="1"/>

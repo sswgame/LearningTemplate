@@ -15,9 +15,7 @@
 	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="150"/>
 	<Wait frames="5"/>
 	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
-	<Wait frames="20"/>
 	<EditorText value="choi"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="6" timeoutFrames="60"/>
 	<Wait frames="5"/>
@@ -25,9 +23,7 @@
 	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="150"/>
 	<Wait frames="5"/>
 	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
-	<Wait frames="20"/>
 	<EditorText value="att"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="60"/>
 	<Wait frames="5"/>

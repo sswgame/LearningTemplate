@@ -16,9 +16,7 @@
 	<DevCommand line="panel.focus vfx_preview"/>
 	<Wait frames="20"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="sparks.vfx.xml"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.VFXPreviewDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>

@@ -20,9 +20,7 @@
 	<!-- 1) 에셋 열기: 기본 문서(pause)가 아닌 문서를 열어 작업공간 포커스가 패널에 전해지는지 본다 -->
 	<Wait frames="35"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="confirm_unsaved.ui.xml"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="11" timeoutFrames="900"/>
@@ -30,9 +28,7 @@
 	<Expect watch="Editor.UIPreviewWidgetCount" atMost="11"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="pause.ui.xml"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 감시 값만 기다리면 앞 문서의 글로 지나가 버린다 -->
 	<Wait frames="5"/>
@@ -42,9 +38,7 @@
 	<Wait frames="5"/>
 	<Expect watch="Editor.UIPreviewWidgetCount" atLeast="9"/>
 	<!-- 2) 언어 -->
-	<Wait frames="15"/>
 	<EditorClick mark="uipreview.language"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.language.en"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" equals="6" timeoutFrames="600"/>
@@ -52,7 +46,6 @@
 	<Expect watch="Editor.UIPreviewRightToLeft" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.language"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.language.qps_ploc"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="600"/>
@@ -60,7 +53,6 @@
 	<Expect watch="Editor.UIPreviewRightToLeft" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.language"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.language.qps_plocm"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="1" timeoutFrames="600"/>
@@ -68,7 +60,6 @@
 	<Expect watch="Editor.UIPreviewFirstTextBytes" atLeast="9"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.language"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.language.game"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="600"/>
@@ -80,11 +71,8 @@
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.inspector.search"/>
-	<Wait frames="10"/>
 	<EditorText value="opacity"/>
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="0.5"/>
@@ -124,9 +112,7 @@
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.interact"/>
 	<!-- 5) 애니메이션: Play 가 Open 을 끝까지 틀고, 시간 막대는 그 시각에서 멈춘다 -->
-	<Wait frames="15"/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<Wait frames="10"/>
 	<EditorClick mark="uipreview.animation.play"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewAnimationPlaying" equals="1" timeoutFrames="120"/>
@@ -156,9 +142,7 @@
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/>
 	<Wait frames="10"/>
 	<EditorClick mark="uipreview.widget.Card"/>
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="0.5"/>
@@ -173,9 +157,7 @@
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
-	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="1"/>

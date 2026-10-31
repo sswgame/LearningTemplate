@@ -26,7 +26,6 @@
 	<EditorClick mark="animationGraph.tab.layers" state="down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="animationGraph.tab.layers" state="up"/>
-	<Wait frames="19"/>
 	<EditorClick mark="animationGraph.layer.add"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
@@ -35,7 +34,6 @@
 	<CaptureEditorUI file="animgraphlayers/layers.png"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.save"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.layer.remove"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
@@ -44,11 +42,8 @@
 	<Expect watch="Editor.AnimationGraphBoneMaskCount" equals="2"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.layer.1"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.layer.remove"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.mask.1"/>
-	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.mask.remove"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.AnimationGraphBoneMaskCount" equals="1"/>

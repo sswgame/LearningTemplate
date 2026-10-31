@@ -12,7 +12,6 @@
 	<Wait frames="50"/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<!-- 에디터 카메라를 오른쪽으로 3 m 남짓(오른쪽 단추 + D) -->
-	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
 	<Wait frames="42"/>

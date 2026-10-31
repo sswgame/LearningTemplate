@@ -13,7 +13,6 @@
 	<Wait frames="50"/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<!-- 오른쪽 단추 + D 로 날아가는 한가운데서 포커스를 잃었다가 얻는다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
 	<Wait frames="20"/>

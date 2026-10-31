@@ -21,11 +21,8 @@
 	<WaitUntil watch="Editor.SelectedNames" is="GameObject" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.name"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
-	<Wait frames="10"/>
 	<EditorText value="BoundaryProbe"/>
-	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add PointLightComponent"/>

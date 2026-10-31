@@ -25,7 +25,6 @@
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
 	<!-- ② 에디터 카메라를 옆으로 3 m 남짓 옮긴다(오른쪽 단추 + D) -->
-	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
 	<Wait frames="42"/>
@@ -62,7 +61,6 @@
 	<Expect watch="Editor.PlayState" equals="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="6"/>
 	<!-- ④ Stop — 정지로 돌아오고 씬 뷰는 계속 씬 뷰다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="90"/>
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>

@@ -12,9 +12,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="40"/>
 	<EditorKey key="Ctrl+Shift+P"/>
-	<Wait frames="15"/>
 	<EditorText value="Open project settings"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus projectsettings"/>
@@ -25,7 +23,6 @@
 	<WaitUntil watch="Editor.ProjectSettingsKeyCount" atLeast="7" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EngineConfig._maxFrameDeltaTime" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="0.2"/>
@@ -35,7 +32,6 @@
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
 	<Wait frames="10"/>
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
-	<Wait frames="10"/>
 	<EditorClick mark="projectsettings.revert"/>
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<!-- 활성 팩의 <Engine> 요소(PackEngineSettings) — 팩 gamesettings.xml 안의 요소 하나를 고치는 페이지다. 창 제목은 늘 적혀 있다. -->

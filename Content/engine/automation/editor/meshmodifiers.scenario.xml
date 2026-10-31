@@ -41,18 +41,13 @@
 	<!-- ① 대상 고르기 · 휘기 더하기 · 각 넣기 -->
 	<Wait frames="8"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
-	<Wait frames="10"/>
 	<EditorText value="80"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
@@ -84,11 +79,8 @@
 	<!-- ③ 곡선 목록: 항목 둘 → 둘째 항목 곡선 편집기에서 키 하나 더하기. 곡선 층도 GPU 변형 프로그램이 그려(MeshModifierGPUProgram 의 curvesculptlayered) GPU 미리보기가 그대로다 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.category.Curve"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.curvesculptlayered"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.CurveListItemCount" equals="0"/>
@@ -101,9 +93,7 @@
 	<Expect watch="MeshModifiers.CurveListKeyCount" equals="4"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.curve.1"/>
-	<Wait frames="20"/>
 	<EditorClick mark="curve.canvas" button="1"/>
-	<Wait frames="15"/>
 	<EditorClick mark="curve.menu.addKey"/>
 	<WaitUntil watch="MeshModifiers.CurveListKeyCount" equals="5" timeoutFrames="60"/>
 	<Wait frames="5"/>
@@ -116,15 +106,12 @@
 	<!-- ④ 참조 목록: 항목 하나 → 선택 사용(상자 자신) -->
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.category.Surface"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.conformmulti"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.ReferenceListCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.referenceList.add"/>
-	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.referenceList.0.useSelection"/>
 	<!-- 클릭의 반영은 ImGui 입력 → 다음 프레임 그리기를 지나 도착한다 — 고정 프레임 수에 단언하지 않고 도착을 기다린다(MeshModifiersChainFailure: 부하 아래 한 번 0) -->
 	<Wait frames="15"/>
@@ -134,17 +121,13 @@
 	<!-- ⑤ 묶음 하위 스택에 비틀기 더하기 -->
 	<Wait frames="9"/>
 	<EditorClick mark="meshmodifiers.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.category.Group"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.deformable"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.NestedCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.nested.add"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.nested.category.Deform"/>
-	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.nested.item.twist"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.NestedCount" equals="1"/>

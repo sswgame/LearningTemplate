@@ -14,9 +14,7 @@
 	<DevCommand line="panel.focus mesh_preview"/>
 	<Wait frames="20"/>
 	<EditorKey key="Ctrl+P"/>
-	<Wait frames="15"/>
 	<EditorText value="crate_medium.mesh"/>
-	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MeshPreviewVertexCount" atLeast="3" timeoutFrames="600"/>

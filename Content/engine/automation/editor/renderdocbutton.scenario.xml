@@ -13,9 +13,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.RenderDocAvailable" equals="0"/>
-	<Wait frames="10"/>
 	<EditorClick mark="toolbar.overflow"/>
-	<Wait frames="10"/>
 	<EditorClick mark="toolbar.renderDoc"/>
 	<Wait frames="40"/>
 	<ExpectLog contains="RenderDoc capture requested" count="0"/>

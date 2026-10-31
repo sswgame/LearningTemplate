@@ -12,7 +12,6 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add RigidBodyComponent"/>

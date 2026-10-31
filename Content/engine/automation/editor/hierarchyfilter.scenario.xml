@@ -7,14 +7,12 @@
 <Scenario name="editor.hierarchyfilter" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<DevCommand line="editor scene.new"/>
-	<Wait frames="20"/>
 	<EditorClick mark="hierarchy.create"/>
 	<Wait frames="10"/>
 	<DevCommand line="tag.add GameObject Scenario.Probe.Child"/>
 	<!-- 부모 태그로 자식 태그를 찾는다 -->
 	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.filter"/>
-	<Wait frames="10"/>
 	<EditorText value="tag:Scenario.Probe"/>
 	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>

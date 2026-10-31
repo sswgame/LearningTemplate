@@ -13,7 +13,6 @@
 	<Expect watch="Editor.GridMajorLines" atLeast="4"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
 	<!-- 옆으로 3 m 남짓 — 정수 · 5 의 배수가 아닌 자리에 선다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="D" state="down"/>
 	<Wait frames="42"/>
@@ -24,7 +23,6 @@
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
 	<!-- 높이 올라가면 간격이 10 m 가 된다 -->
-	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 	<EditorKey key="Shift+E" state="down"/>
 	<Wait frames="460"/>
