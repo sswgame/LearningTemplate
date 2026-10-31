@@ -273,7 +273,7 @@ namespace sw
 
     private:
         /** @brief 메시 로드 · 등장 대기 · 등장 진행 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 아직 할 일이 있으면 true 입니다. */
-        static bool updateArrival( ScenePrimitive& primitive, float32 deltaSeconds );
+        static bool updateArrival( SceneComponent& component, float32 deltaSeconds );
         /** @brief 끝난 메시 로드의 결과를 메시로 삼고 핸들을 놓습니다. 실패면 메시 없이 둔다. */
         void applyMeshLoad();
         /** @brief 등장(@p direction 이 양수) 또는 사라지기(음수)를 시작합니다. `_appearSeconds` 가 0 이면 바로 끝 값입니다. */

@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/VFX/VFXCPUSimulation.h"
@@ -135,8 +136,18 @@ namespace sw
         void publishParticles();
         /** @brief 방출기마다 시뮬레이션을 처음으로 되돌립니다(GPU 방출기는 새 재생 번호를 받는다). */
         void restartSimulations();
-        /** @brief 메시 방출기마다 인스턴스 배치를 만들어 레지스트리에 올립니다. 등록 전(레지스트리 없음)이면 아무것도 하지 않습니다. */
+        /**
+         * @brief 메시 방출기마다 인스턴스 배치를 만들어 레지스트리에 올립니다. 등록 전(레지스트리 없음)이면 아무것도 하지 않습니다.
+         * @details 방출기 메시를 워커가 아직 읽는 중이면 배치 없이 메시 도착을 기다리고(`PrimitiveRegistry::addAssetWaiter`), 다 오면 씬 프레임의 도착 단계가 다시 만든다.
+         */
         void rebuildMeshEmitters();
+        /**
+         * @brief 방출기 메시 로드를 다시 요청합니다(`MeshCache::request` — 이미 쥔 메시는 곧바로 `Ready`). 아직 읽는 중인 메시가 없으면 true 입니다.
+         * @details 새 핸들을 다 받은 뒤 옛 핸들을 놓는다 — 먼저 놓으면 약한 참조 캐시의 메시가 사라져 다시 읽는다.
+         */
+        [[nodiscard]] bool requestEmitterMeshes();
+        /** @brief 메시 도착을 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 다 왔으면 배치를 만들고, 아직 기다리면 true 입니다. */
+        static bool updateMeshArrival( SceneComponent& component, float32 deltaSeconds );
         /** @brief 메시 방출기의 배치를 레지스트리에서 내리고 머티리얼을 놓습니다. */
         void releaseMeshEmitters();
         /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */
@@ -148,6 +159,7 @@ namespace sw
         vector<shared_ptr<const vector<GPUParticle>>> _listPublished;      ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
         vector<VFXGPUEmitterRequest>                  _listGPURequest;     ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
         vector<MeshEmitter>                           _listMeshEmitter;    ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        vector<MeshHandle>                            _listMeshLoad;       ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
         PrimitiveRegistry*                            _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;

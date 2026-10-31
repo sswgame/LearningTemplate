@@ -108,10 +108,10 @@ namespace sw
                 return pMaterial == nullptr || pMaterial->getBlendMode() == RHIBlendMode::Opaque;
             }
 
-            /** @brief 메시 id 를 메시로 해석합니다(`.mesh` 경로는 메시 캐시, 아니면 내장 도형 — `MeshComponent` 와 같은 규칙). */
-            static shared_ptr<Mesh> acquireMesh( const string& meshID )
+            /** @brief 메시 id 의 로드입니다(`.mesh` 경로는 메시 캐시가 워커에서 읽고, 내장 도형은 메모리에서 바로 만들므로 빈 핸들이다 — `MeshComponent` 와 같은 규칙). */
+            static MeshHandle requestMesh( const string& meshID )
             {
-                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::request( meshID ) : MeshHandle{};
             }
 
             /**
@@ -144,6 +144,7 @@ namespace sw
         , _listSimulation{}
         , _listPublished{}
         , _listMeshEmitter{}
+        , _listMeshLoad{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
         , _bPlayOnBegin{ true }
@@ -168,6 +169,9 @@ namespace sw
     void VFXComponent::onUnregister( GameObjectManager& manager )
     {
         releaseMeshEmitters();
+        _listMeshLoad.clear();
+        if ( _pPrimitiveRegistry != nullptr )
+            _pPrimitiveRegistry->removeAssetWaiter( this );
         _pPrimitiveRegistry = nullptr;
         manager.getComponentRegistry().remove<VFXComponent>( this );
         SceneComponent::onUnregister( manager );
@@ -392,13 +396,21 @@ namespace sw
         releaseMeshEmitters();
         if ( _pPrimitiveRegistry == nullptr )
             return;
+        // 메시는 워커가 읽는다 — 게임 스레드가 디스크를 기다리지 않게 다 올 때까지 배치 없이 두고(시뮬레이션은 돈다), 씬 프레임의 도착 단계가 다시 만든다
+        // (언리얼 나이아가라 메시 렌더러도 메시가 스트리밍되기 전에는 그리지 않는다). 항목 바운드가 메시 반지름을 쓰므로 메시 없이 미리 만들지 않는다.
+        if ( requestEmitterMeshes() == false )
+        {
+            _pPrimitiveRegistry->addAssetWaiter( this, &VFXComponent::updateMeshArrival );
+            return;
+        }
         _listMeshEmitter.resize( _listSimulation.size() );
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
             const VFXEmitterDef& def = getEmitterDef( emitterIndex );
             if ( def._renderMode != VFXRenderMode::Mesh )
                 continue;
-            shared_ptr<Mesh> mesh = VFXComponentInternal::acquireMesh( def._mesh._meshID );
+            const MeshHandle& load = _listMeshLoad[emitterIndex];
+            shared_ptr<Mesh>  mesh = load.isValid() ? load.get() : MeshUtil::acquirePrimitive( def._mesh._meshID );
             if ( mesh == nullptr )
             {
                 // 대신 그릴 메시를 고르지 않는다 — 이 방출기는 그리지 않고(시뮬레이션은 돈다) 원인을 남긴다.
@@ -427,6 +439,40 @@ namespace sw
                 writeMeshEntries( emitterIndex, _listPublished[emitterIndex].get() );
             _pPrimitiveRegistry->addInstanceBatch( meshEmitter._batch.get() );
         }
+    }
+
+    bool VFXComponent::requestEmitterMeshes()
+    {
+        vector<MeshHandle> listLoad( _listSimulation.size() );
+        bool               bAllArrived{ true };
+        for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
+        {
+            const VFXEmitterDef& def = getEmitterDef( emitterIndex );
+            if ( def._renderMode != VFXRenderMode::Mesh )
+                continue;
+            listLoad[emitterIndex] = VFXComponentInternal::requestMesh( def._mesh._meshID );
+            bAllArrived            = bAllArrived && listLoad[emitterIndex].isLoading() == false;
+        }
+        _listMeshLoad = std::move( listLoad );
+        return bAllArrived;
+    }
+
+    bool VFXComponent::updateMeshArrival( SceneComponent& component, float32 /*deltaSeconds*/ )
+    {
+        // 이 함수를 거는 것은 VFX 컴포넌트 자신뿐이다(`rebuildMeshEmitters`).
+        VFXComponent& self = static_cast<VFXComponent&>( component );
+        for ( const MeshHandle& load : self._listMeshLoad )
+        {
+            if ( load.isLoading() )
+                return true;
+        }
+        self.rebuildMeshEmitters();
+        for ( const MeshHandle& load : self._listMeshLoad )
+        {
+            if ( load.isLoading() )
+                return true;
+        }
+        return false;
     }
 
     void VFXComponent::releaseMeshEmitters()

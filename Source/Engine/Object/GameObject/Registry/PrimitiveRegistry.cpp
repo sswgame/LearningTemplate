@@ -69,13 +69,7 @@ namespace sw
 
         ScopedLock<mutex> lock{ _mutex };
         // 에셋을 기다리던 것도 뺀다 — 사라진 컴포넌트의 함수를 부르지 않는다.
-        for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
-        {
-            if ( _listAssetWaiter[waiterIndex]._pPrimitive != pComp )
-                continue;
-            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
-            break;
-        }
+        removeAssetWaiterLocked( pComp );
         (void)_listLODPrimitive.remove( pComp ); // LOD 메시가 아니었으면 목록에 없다
         const uint32 slot = pComp->getPrimitiveIndex();
         // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
@@ -109,20 +103,37 @@ namespace sw
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::addAssetWaiter( ScenePrimitive* pPrimitive, AssetWaitFunction pFunction )
+    void PrimitiveRegistry::addAssetWaiter( SceneComponent* pComponent, AssetWaitFunction pFunction )
     {
-        SW_ASSERT( pPrimitive != nullptr && pFunction != nullptr );
+        SW_ASSERT( pComponent != nullptr && pFunction != nullptr );
         ScopedLock<mutex> lock{ _mutex };
         for ( AssetWaiter& waiter : _listAssetWaiter )
         {
-            if ( waiter._pPrimitive != pPrimitive )
+            if ( waiter._pComponent != pComponent )
                 continue;
             waiter._pFunction = pFunction;
             return;
         }
         AssetWaiter& added = _listAssetWaiter.emplace_back();
-        added._pPrimitive  = pPrimitive;
+        added._pComponent  = pComponent;
         added._pFunction   = pFunction;
+    }
+
+    void PrimitiveRegistry::removeAssetWaiter( const SceneComponent* pComponent )
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        removeAssetWaiterLocked( pComponent );
+    }
+
+    void PrimitiveRegistry::removeAssetWaiterLocked( const SceneComponent* pComponent )
+    {
+        for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
+        {
+            if ( _listAssetWaiter[waiterIndex]._pComponent != pComponent )
+                continue;
+            VectorUtil::removeAtSwap( _listAssetWaiter, waiterIndex );
+            return;
+        }
     }
 
     void PrimitiveRegistry::addLODPrimitive( ScenePrimitive* pPrimitive )
@@ -146,7 +157,7 @@ namespace sw
         while ( waiterIndex < _listAssetWaiter.size() )
         {
             const AssetWaiter waiter      = _listAssetWaiter[waiterIndex];
-            const bool        bStillWaits = waiter._pFunction( *waiter._pPrimitive, deltaSeconds );
+            const bool        bStillWaits = waiter._pFunction( *waiter._pComponent, deltaSeconds );
             if ( bStillWaits )
             {
                 ++waiterIndex;

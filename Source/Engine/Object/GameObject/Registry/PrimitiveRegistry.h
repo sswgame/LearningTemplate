@@ -28,6 +28,7 @@
 
 namespace sw
 {
+    class SceneComponent;
     class ScenePrimitive;
     class ScenePrimitiveBatch;
 
@@ -140,21 +141,25 @@ namespace sw
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
 
         /**
-         * @brief 에셋 로드(또는 그 뒤의 등장)를 기다리는 프리미티브가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @brief 에셋 로드(또는 그 뒤의 등장)를 기다리는 컴포넌트가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
          * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
          */
-        using AssetWaitFunction = bool ( * )( ScenePrimitive& primitive, float32 deltaSeconds );
+        using AssetWaitFunction = bool ( * )( SceneComponent& component, float32 deltaSeconds );
         /**
-         * @brief 에셋 로드(`AssetHandle`)를 기다리는 프리미티브를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
-         * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). `remove` 가 같이 뺀다 — 사라진 컴포넌트는 불리지 않는다.
+         * @brief 에셋 로드(`AssetHandle`)를 기다리는 컴포넌트를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
+         * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). 프리미티브는 `remove` 가 같이 빼고,
+         *          이 레지스트리에 인스턴스 배치를 거는 컴포넌트(폴리지 · VFX — 메시가 와야 배치를 짓는다)는 등록을 풀 때 `removeAssetWaiter` 로 뺀다 — 사라진 컴포넌트는 불리지 않는다.
+         *          자동화의 "에셋 일 0" 판정(`AutomationCaptureUtil::countPendingAssetWork`)이 이 목록의 수를 센다 — 메시를 기다리는 컴포넌트는 여기에 걸어야 사진이 기다린다.
          */
-        void addAssetWaiter( ScenePrimitive* pPrimitive, AssetWaitFunction pFunction );
+        void addAssetWaiter( SceneComponent* pComponent, AssetWaitFunction pFunction );
+        /** @brief 기다리는 컴포넌트를 뺍니다(등록을 풀 때). 걸려 있지 않으면 아무 일도 없습니다. */
+        void removeAssetWaiter( const SceneComponent* pComponent );
         /**
          * @brief 기다리는 프리미티브의 함수를 한 번씩 부르고 다 받은 것을 뺍니다(씬 프레임 `AssetArrival` 단계, 게임 스레드, 병렬 구간 밖).
          * @details 함수 안에서 다시 `addAssetWaiter` 를 불러도 된다(다른 메시로 바꿔 다시 기다리는 경우) — 반환값이 남길지를 정한다.
          */
         void updateAssetWaiters( float32 deltaSeconds );
-        /** @brief 에셋을 기다리는 프리미티브 수입니다(테스트 · 진단). */
+        /** @brief 에셋을 기다리는 컴포넌트 수입니다(테스트 · 진단 · 자동화의 캡처 대기). */
         size_t countAssetWaiters() const { return _listAssetWaiter.size(); }
 
         /**
@@ -168,12 +173,15 @@ namespace sw
         const vector<ScenePrimitive*>& getLODPrimitives() const { return _listLODPrimitive.items(); }
 
     private:
-        /** @brief 에셋을 기다리는 프리미티브 하나입니다. */
+        /** @brief 에셋을 기다리는 컴포넌트 하나입니다. */
         struct AssetWaiter
         {
-            ScenePrimitive*   _pPrimitive{ nullptr };
+            SceneComponent*   _pComponent{ nullptr };
             AssetWaitFunction _pFunction{ nullptr };
         };
+
+        /** @brief `_mutex` 를 이미 쥔 채로 기다리는 컴포넌트를 뺍니다. */
+        void removeAssetWaiterLocked( const SceneComponent* pComponent ) SW_REQUIRES_LOCK( _mutex );
 
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked() SW_REQUIRES_LOCK( _mutex );
@@ -195,7 +203,7 @@ namespace sw
         vector<uint32>                                  _listPrimitiveTransformSlot;
         vector<PrimitiveInstanceEntry>                  _listInstanceEntry;      ///< 배치 순서대로 이어 붙은 항목들
         vector<ScenePrimitiveBatch*> _listInstanceBatch SW_GUARDED_BY( _mutex ); ///< 등록된 배치. 빼기와 자리 당기기에 씁니다
-        vector<AssetWaiter>                             _listAssetWaiter;        ///< 에셋 로드를 기다리는 프리미티브(`addAssetWaiter`). 게임 스레드만 씁니다
+        vector<AssetWaiter>                             _listAssetWaiter;        ///< 에셋 로드를 기다리는 컴포넌트(`addAssetWaiter`). 게임 스레드만 씁니다
         IndexedPtrList<ScenePrimitive>                  _listLODPrimitive;       ///< LOD 단계가 여럿인 메시의 프리미티브(`addLODPrimitive`). 걸기 · 떼기가 O(1) 이라 씬 로드가 O(N^2) 가 되지 않습니다. 게임 스레드만 씁니다
         /**
          * @brief 슬롯마다 "바뀌었다" 비트입니다. **워드 하나가 슬롯 64 개**입니다. 원자값이라 워커 여럿이 동시에 표시해도 됩니다.
