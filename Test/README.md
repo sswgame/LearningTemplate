@@ -106,6 +106,7 @@ App --test --test-run-disabled              # 꺼 둔 케이스도(고친 뒤 �
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 - **시간 기록**: 실행이 끝날 때마다 `[Scenario] <이름> timeline:` 한 줄이 남는다 — 프레임 종류(시작 · 붙잡기 · 단계 · 고정 대기)별 ms 와 무거운 단계 종류, 가장 긴 대기. 단계 사이 초기화는 `stage reset took`. 무엇이 느린지는 새로 재지 말고 이 줄을 모은다. `<WaitUntil>` 이 기다리지 않고 지나가면 `was already true` 가 남는다 — 고정 대기를 조건 대기로 바꿀 때 부정형 단언(일어나지 않음을 보는 것)을 가려낸다.
 - **끝에서만 기다리는 일**: 판정이 다음 단계 진행에 쓰이지 않는 일은 프레임에서 뺀다. 패킷 스크린샷 · 편집기 UI 캡처의 파일 쓰기는 워커가 하고, `<ExpectImage>` 는 미뤄 두었다가 `<Pass/>` 가 남은 쓰기 · 끝 차단 조건(`SW_AUTOMATION_FINISH_BLOCKER`)을 기다린 뒤 한 번에 판정한다. 그래서 한 시나리오 안에서 같은 파일을 두 번 찍을 수 없다(읽을 때 거절).
+- **백엔드 사이의 기록 대조**: `<Record watch="…"/>` 는 값을 보고의 `records[]` 에 남기고, 행렬 부모(`AutomationBackendMatrix`)가 시나리오마다 통과한 백엔드들의 기록을 순번대로 견준다 — 하나라도 다르면 실행이 실패(10)이고 로그에 `record mismatch - <시나리오>: record #N '<이름>': dx11=… vk=…` 가 남는다(부모 보고의 `recordMismatches`). 게임 상태는 CPU 에서만 정해지므로 같아야 한다(예: `game.nilecity.determinism`). `<Record>` 가 있는 시나리오는 나눌 때(`-scenario-backend-split`)도 모든 백엔드에서 돈다.
 - **편집기 자체 테스트**: `SW_EDITOR_SELF_TEST` 케이스는 `<EditorSelfTest pattern="*"/>` 단계(`engine/automation/editor/selftests.scenario.xml`)로 `Scenario.editor` 체인에서 돈다 — 백엔드 넷과 로그 게이트를 함께 받는다(Vulkan 검증 레이어의 오류도 실패다).
 
 ## 옛 틀에서 고친 것
