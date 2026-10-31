@@ -88,6 +88,7 @@
 - `App.cpp` 의 `#if !defined(SW_SHIPPING)` 11 곳 → 개발 도구 함수 선언 하나(Dev 구현 파일 · Shipping 빈 구현 파일을 CMake 가 고름 — 빌드마다 고정이라 인터페이스 · 가상 함수를 두지 않는다, `docs/agents/CppStyle.md` 의 상속 규칙). `AppAutomationHost` 두 구현 → 두 파일, 자동화 없는 빌드에서 `-scenario` 를 받으면 기동 오류(지금은 로그만 남기고 계속).
 - 키트의 개발 대체물(`LoginTicketKey` 개발 키 폴백, LiveOps 가짜 푸시, Account 가벼운 해시 · 테스트 계정, Economy 개발 검증기, NetSecurity 개발 인증서) → DevOnline 빌드 단위가 키트 등록표에 확장점으로 올린다. 키트 코드의 `#if SW_SHIPPING` 0, 값이 없으면 오류.
 - 오디오 · 접근성의 `#if` 팩토리 → RHI 와 같은 등록표. `FileWatchDispatcher` 의 플랫폼 `#if` + mtime 폴백 정리.
+- **코드 끝(2026-10-31, 빌드 · 검증은 통합에서)**: `AppDevTools.h`(구현 `AppDevTools.cpp` · `AppDevToolsShipping.cpp`) · `AppAutomationHost.cpp` · `AppAutomationHostOff.cpp` 를 `sw_pickAppVariant` 가 고른다. 개발 대체물은 `*DevOnline.cpp`(`SW_DEV_ONLY_SOURCE_PATTERNS`)가 `DevOnlineExtension` 에 올린다. 오디오 · 접근성은 `AudioBackendRegistrar` · `UIAccessibilityBridgeRegistrar`, 파일 감시자는 `IFileWatcher::createNative`(플랫폼 폴더). **결정**: 플랫폼 백엔드 파일(오디오 · 접근성) 안의 파일 전체 `#if` 는 남긴다 — Engine 은 아직 `sw_filterPlatformSources` 를 쓰지 않고 서버 타깃(클라이언트 코드 없음)도 같은 매크로로 가른다. Engine 에 폴더 규칙을 켤 때 함께 지운다.
 
 ### T9. 생성 계약 · 도구 (R8 · R6)
 - **타입 → 모듈 판정 넷**(파서의 경로 글자 `module_rules` — 런타임이 덮어써 버려지는 데이터, 런타임 `_activeModuleName`, `ContentModules.py` 정규식 — 주석 · 템플릿의 REFLECT 도 셈, CMake 대상)을 하나로: CMake 가 `--module <이름>` 을 넘기고 파서가 대상마다 `ReflectedTypes.list`(FQN · 모듈)를 낸다. `ContentModules` 검사는 정규식을 버리고 이 목록을 읽는 빌드 단계로.
