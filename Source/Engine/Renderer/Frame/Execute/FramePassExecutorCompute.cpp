@@ -400,13 +400,14 @@ namespace sw
         // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 패스가 쓰기 전이다).
         // 가림 타일은 옮긴 깊이 히스토리에서 바로 짓는다 — 컬링(dispatchCullAndSort)이 이 뒤에 읽는다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
         recordDepthHistory( _state._mainView );
-        recordOcclusionTiles( _state._mainView );
-        requestOcclusionReadback( _state._mainView );
+        const RHIPipelineStateHandle occlusionPSO = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
+        _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( _state._mainView ), _state._mainView );
+        _occlusion.requestReadback( _pCmd, _pDevice, _state._mainView );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
             recordDepthHistory( *pView );
             if ( pView->_bRenderThisFrame == SW_TRUE )
-                recordOcclusionTiles( *pView );
+                _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( *pView ), *pView );
             else
                 pView->_bOcclusionTilesThisFrame = SW_FALSE;
         }
@@ -527,9 +528,9 @@ namespace sw
         // 가림 판정은 장면을 그리는 뷰의 슬롯만 본다(주 시점 · 추가 뷰). 그림자 슬롯은 빛에서 본 것이라 카메라 깊이로 거르면 그림자가 빠진다.
         const FrameViewTarget* pOcclusionView = pExtraView != nullptr ? pExtraView : ( cullViewIndex == static_cast<uint32>( RenderViewType::Main ) ? &_state._mainView : nullptr );
         if ( pOcclusionView != nullptr )
-            fillOcclusionParams( *pOcclusionView, cullParams );
+            OcclusionTiles::fillCullParams( *pOcclusionView, cullParams );
         const bool               bOccludes    = cullParams._arrOcclusionGrid[3] != 0u;
-        const RHIDescriptorIndex occlusionSRV = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusionTilesPlaceholder._srv;
+        const RHIDescriptorIndex occlusionSRV = bOccludes ? pOcclusionView->_occlusionTiles._srv : _occlusion.getPlaceholderSRV();
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 

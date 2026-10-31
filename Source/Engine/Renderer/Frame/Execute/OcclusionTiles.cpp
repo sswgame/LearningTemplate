@@ -11,19 +11,21 @@
  */
 #include "pch.h"
 
+#include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
+
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
+#include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "FramePassExecutor" );
+    SW_LOG_CALLER( "OcclusionTiles" );
 
     /**
      * @brief `-gv_occlusionCulling=1`: GPU 컬링이 지난 프레임 장면 깊이로 가려진 인스턴스를 거릅니다(가림 타일). 컬링이 없는 백엔드(DX11)는 보지 않습니다.
@@ -33,7 +35,7 @@ namespace sw
 
     namespace
     {
-        struct FramePassExecutorOcclusionInternal
+        struct OcclusionTilesInternal
         {
             /// occlusion_tiles.hlsl 의 루트 상수입니다 — `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
@@ -52,48 +54,62 @@ namespace sw
         };
     } // namespace
 
-    void FramePassExecutor::recordOcclusionTiles( FrameViewTarget& target )
+    void OcclusionTiles::ensurePlaceholder( IRHIDevice* pDevice )
     {
-        using Internal                       = FramePassExecutorOcclusionInternal;
-        target._bOcclusionTilesThisFrame     = SW_FALSE;
-        const RHIPipelineStateHandle pso     = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
-        const bool                   bBuilds = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && canCopyDepthHistory( target );
-        if ( bBuilds == false || _pCmd == nullptr )
+        // 컬링 디스패치의 t2 자리표 — 가림을 보지 않는 슬롯도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트). 깊이 1 은 아무것도 가리지 않는다.
+        constexpr float32 kFarDepth = 1.0f;
+        if ( _placeholder.ensureCapacity( pDevice, sizeof( float32 ), 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, &kFarDepth ) == false )
+            SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
+    }
+
+    void OcclusionTiles::release( IRHIDevice* pDevice )
+    {
+        _placeholder.release( pDevice );
+        _readback.shutdown();
+        _mailbox.clear();
+    }
+
+    void OcclusionTiles::record( IRHICommandList* pCmd, IRHIDevice& device, RHIPipelineStateHandle pso, bool bDepthHistoryReady, FrameViewTarget& target ) const
+    {
+        using Internal                   = OcclusionTilesInternal;
+        target._bOcclusionTilesThisFrame = SW_FALSE;
+        const bool bBuilds               = static_cast<bool>( gv_occlusionCulling ) && pso != 0 && target._occlusionTiles.isValid() && bDepthHistoryReady;
+        if ( bBuilds == false || pCmd == nullptr )
             return;
         const TransientAttachmentPool::Attachment depth = target._transientPool.find( attachmentNames()._sceneDepth.view() );
 
         // 깊이 히스토리는 방금 RT 로 썼다 — RW 텍스처로 읽도록 옮긴다(GPU 입자 시뮬레이션도 같은 상태로 읽는다).
-        _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
-        _pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->setComputePipelineState( pso );
+        pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
+        pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::UnorderedAccess );
+        pCmd->setComputePipelineState( pso );
         Internal::RootConstants constants{};
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 0 의 서수로 고른다(Bindless::loadRwTexture2D — GPU 입자와 같다).
-        constants._depthIndex  = _pDevice->supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
+        constants._depthIndex  = device.supportsNativeBindlessSampling() ? static_cast<uint32>( target._depthHistoryUAV ) : 0u;
         constants._depthWidth  = depth._width;
         constants._depthHeight = depth._height;
         constants._columnCount = target._occlusionColumns;
         constants._rowCount    = target._occlusionRows;
         constants._tileSize    = FrameRendererUtil::kOcclusionTileSize;
         // g_OcclusionTilesRW(u0) / 깊이 히스토리(RW 슬롯 0 — 에뮬만). occlusion_tiles.hlsl 레지스터와 1:1 이다.
-        _pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
-        _pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
-        _pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
-        _pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), FrameRendererUtil::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
+        pCmd->bindComputeUAV( target._occlusionTiles._uav, 0 );
+        pCmd->bindComputeUAV( target._depthHistoryUAV, shaderslot::kComputeTextureUAV0 );
+        pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( target._occlusionColumns, Internal::kGroupSize ), FrameRendererUtil::divideRoundUp( target._occlusionRows, Internal::kGroupSize ), 1 );
         // 컬링이 t2 로 읽는다. 쓰기가 끝났음을 알린다(빠지면 DX12 · Vulkan 에서 지난 프레임 타일을 읽는다).
-        _pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
+        pCmd->transitionBuffer( target._occlusionTiles._buffer, RHIBufferState::ShaderResource );
         target._bOcclusionTilesThisFrame = SW_TRUE;
     }
 
-    void FramePassExecutor::requestOcclusionReadback( const FrameViewTarget& view )
+    void OcclusionTiles::requestReadback( IRHICommandList* pCmd, IRHIDevice* pDevice, const FrameViewTarget& view )
     {
         // 켜져 있지 않으면 고리를 비워 둔다(읽기 버퍼를 만들지 않는다). 켰다 끄면 남은 사본도 치운다.
-        const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && _pDevice != nullptr && _pCmd != nullptr;
+        const bool bEnabled = static_cast<bool>( gv_occlusionCulling ) && pDevice != nullptr && pCmd != nullptr;
         if ( bEnabled == false )
         {
-            if ( _occlusionReadback.isInitialized() )
+            if ( _readback.isInitialized() )
             {
-                _occlusionReadback.shutdown();
-                _occlusionMailbox.clear();
+                _readback.shutdown();
+                _mailbox.clear();
             }
             return;
         }
@@ -101,12 +117,12 @@ namespace sw
         // 먼저 도착한 사본을 우편함에 올린다. 요청 때 기록을 버리는 프레임이었으면 올리지 않고 비운다.
         vector<uint8> bytes;
         uint64        serial = 0;
-        if ( _occlusionReadback.takeLatest( bytes, serial ) )
+        if ( _readback.takeLatest( bytes, serial ) )
         {
-            const OcclusionReadbackMeta& meta = _arrOcclusionReadbackMeta[serial % kOcclusionReadbackMetaCount];
+            const ReadbackMeta& meta = _arrReadbackMeta[serial % kReadbackMetaCount];
             if ( meta._bValid == SW_FALSE )
             {
-                _occlusionMailbox.clear();
+                _mailbox.clear();
             }
             else
             {
@@ -121,9 +137,9 @@ namespace sw
                 pSnapshot->_listTileDepth.resize( bytes.size() / sizeof( float32 ) );
                 Memory::copy( pSnapshot->_listTileDepth.data(), bytes.data(), pSnapshot->_listTileDepth.size() * sizeof( float32 ) );
                 if ( pSnapshot->isValid() )
-                    _occlusionMailbox.publish( std::move( pSnapshot ) );
+                    _mailbox.publish( std::move( pSnapshot ) );
                 else
-                    _occlusionMailbox.clear();
+                    _mailbox.clear();
             }
         }
 
@@ -131,18 +147,18 @@ namespace sw
         if ( view._bOcclusionTilesThisFrame == SW_FALSE || view._occlusionTiles.isValid() == false )
             return;
         const uint32 elementCount = view._occlusionColumns * view._occlusionRows;
-        const bool   bResized     = _occlusionReadback.isInitialized() && _occlusionReadback.getElementCount() != elementCount;
+        const bool   bResized     = _readback.isInitialized() && _readback.getElementCount() != elementCount;
         if ( bResized )
         {
-            _occlusionReadback.shutdown();
-            _occlusionMailbox.clear();
+            _readback.shutdown();
+            _mailbox.clear();
         }
-        if ( _occlusionReadback.isInitialized() == false && _occlusionReadback.initialize( _pDevice, sizeof( float32 ), elementCount ) == false )
+        if ( _readback.isInitialized() == false && _readback.initialize( pDevice, sizeof( float32 ), elementCount ) == false )
             return; // 만들지 못했다 — 이유는 initialize 가 남겼다. 가림을 보지 않는 채로 둔다.
 
         const TransientAttachmentPool::Attachment depth = view._transientPool.find( attachmentNames()._sceneDepth.view() );
-        const uint64                              next  = _occlusionReadbackSerial + 1;
-        OcclusionReadbackMeta&                    meta  = _arrOcclusionReadbackMeta[next % kOcclusionReadbackMetaCount];
+        const uint64                              next  = _readbackSerial + 1;
+        ReadbackMeta&                             meta  = _arrReadbackMeta[next % kReadbackMetaCount];
         meta._viewProj                                  = view._depthHistoryViewProj;
         meta._columns                                   = view._occlusionColumns;
         meta._rows                                      = view._occlusionRows;
@@ -150,11 +166,11 @@ namespace sw
         meta._depthHeight                               = static_cast<float32>( depth._height );
         meta._bValid                                    = view._bHistoryReset == SW_FALSE ? SW_TRUE : SW_FALSE;
         // 타일은 이 프레임의 컬링이 읽으므로 복사 뒤 SRV 상태로 되돌린다(`recordOcclusionTiles` 가 끝낸 상태).
-        if ( _occlusionReadback.request( *_pCmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
-            _occlusionReadbackSerial = next;
+        if ( _readback.request( *pCmd, view._occlusionTiles._buffer, RHIBufferState::ShaderResource, next ) )
+            _readbackSerial = next;
     }
 
-    void FramePassExecutor::fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const
+    void OcclusionTiles::fillCullParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams )
     {
         const bool bOccludes             = view._bOcclusionTilesThisFrame == SW_TRUE && view._bHistoryReset == SW_FALSE;
         inoutParams._arrOcclusionGrid[3] = bOccludes ? 1u : 0u;

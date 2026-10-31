@@ -107,7 +107,7 @@ namespace sw
 
     /**
      * @struct PhysicsBackend
-     * @brief 쓰는 물리 백엔드를 고르는 곳입니다. 3D 는 Jolt(`Physics/Jolt/JoltPhysicsBackend.cpp`), 2D 는 Box2D(`Physics/Box2D`)가 정의합니다.
+     * @brief 쓰는 물리 백엔드를 고르는 곳입니다. 3D 는 Jolt(`Physics/Jolt/JoltPhysicsBackend.cpp`), 2D 는 Box2D(`Physics/Box2D/Box2DPhysicsScene.cpp`)가 정의합니다.
      * @details `PhysicsSystem` 만 부른다. 바꾸려면 이 선언을 정의하는 .cpp 를 바꾼다 — 언리얼이 Chaos 를 `FPhysicsInterface` 뒤에, Godot 가 서버를 `PhysicsServer3D` 뒤에 두는 자리.
      */
     struct SW_API PhysicsBackend

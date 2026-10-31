@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
+#include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
@@ -138,7 +139,7 @@ namespace sw
         // 5) 조회
         // ------------------------------------------------------------------------------
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다(`FrameRenderer::getOcclusionSnapshot`). 어느 스레드에서 불러도 됩니다. */
-        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _occlusionMailbox.getLatest(); }
+        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _occlusion.getSnapshot(); }
         /** @brief 지난 `submitGraph` 가 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). */
         uint32 getIndirectDrawCallCount() const { return _indirectDrawCallCount.load( std::memory_order_relaxed ); }
         /** @brief 지난 `submitGraph` 가 실제로 그린 추가 뷰 수입니다. */
@@ -186,17 +187,6 @@ namespace sw
             uint32                                             _drawCallCount{ 0 };
             bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지
         };
-        /// @brief 주 시점 가림 타일의 되읽기 고리, 게임 스레드가 가져가는 우편함, 요청 때의 메타데이터(요청 번호 % 개수 로 찾는다)입니다. 요청한 프레임과 사본이 도착하는 프레임은 다르다.
-        struct OcclusionReadbackMeta
-        {
-            float4x4 _viewProj{};
-            uint32   _columns{ 0 };
-            uint32   _rows{ 0 };
-            float32  _depthWidth{ 0.0f };
-            float32  _depthHeight{ 0.0f };
-            uint8    _bValid{ SW_FALSE }; ///< 이 요청의 타일이 판정에 쓸 수 있는 프레임이었다(기록을 버리는 프레임이 아니었다)
-        };
-        static constexpr uint32 kOcclusionReadbackMetaCount = 8;
 
         // ------------------------------------------------------------------------------
         // 그래프 콜백과 패스별 실행(FramePassExecutorPasses.cpp)
@@ -365,7 +355,7 @@ namespace sw
         bool drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
 
         // ------------------------------------------------------------------------------
-        // 컴퓨트 프리패스(FramePassExecutorCompute.cpp · FramePassExecutorOcclusion.cpp · FramePassExecutorNanCheck.cpp)
+        // 컴퓨트 프리패스(FramePassExecutorCompute.cpp · FramePassExecutorNanCheck.cpp — 가림 판정은 `OcclusionTiles`)
         // ------------------------------------------------------------------------------
         /**
          * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instance_animation.hlsl).
@@ -416,23 +406,6 @@ namespace sw
         void recordDepthHistory( FrameViewTarget& target );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
-        /**
-         * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusion_tiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
-         * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
-         */
-        void recordOcclusionTiles( FrameViewTarget& target );
-        /**
-         * @brief 주 시점 가림 타일을 되읽는 복사를 컴퓨트 프리패스 리스트에 넣고, 이미 도착한 사본이 있으면 우편함에 올립니다(`getOcclusionSnapshot`).
-         * @details `recordOcclusionTiles` 직후에 부른다. 이번 프레임에 타일을 짓지 않았거나 기록을 버리는 프레임이면 우편함을 비운다(그 타일은 지난 장면의 것이라 맞지 않는다).
-         *          요청 때의 뷰-투영 · 격자는 `_arrOcclusionReadbackMeta` 에 적어 두었다가 사본이 도착하면 붙인다.
-         */
-        void requestOcclusionReadback( const FrameViewTarget& view );
-        /**
-         * @brief 뷰 @p view 의 컬링 상수에 가림 판정 값을 채웁니다. 이번 프레임에 타일을 지었고 기록을 버리는 프레임(처음 · 컷)이 아닐 때만 켭니다.
-         * @details 지난 프레임 깊이로 이번 경계를 보므로 그 사이에 드러난 물체는 한 프레임 늦게 나온다(언리얼의 지난 프레임 HZB 와 같은 한계). 컷 프레임은 지난 깊이가
-         *          다른 장면이라 보지 않는다.
-         */
-        void fillOcclusionParams( const FrameViewTarget& view, FrameRendererUtil::GPUCullParams& inoutParams ) const;
         /**
          * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
@@ -516,13 +489,8 @@ namespace sw
         RenderGraphExecutionContext _graphContext;
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
-        /// @brief 가림 타일이 없는 컬링(그림자 슬롯 · 가림을 보지 않는 뷰)이 t2 에 바인딩하는 원소 하나(깊이 1 — 아무것도 가리지 않는다)짜리 자리 표시 버퍼입니다. 셰이더는 가림이 꺼지면 읽지 않습니다.
-        RHIStructuredBufferSlot _occlusionTilesPlaceholder;
-        /// @brief 주 시점 가림 타일의 되읽기 고리, 게임 스레드가 가져가는 우편함, 요청 때의 메타데이터(요청 번호 % 개수 로 찾는다)입니다.
-        AsyncBufferReadback   _occlusionReadback;
-        OcclusionTileMailbox  _occlusionMailbox;
-        OcclusionReadbackMeta _arrOcclusionReadbackMeta[kOcclusionReadbackMetaCount];
-        uint64                _occlusionReadbackSerial;
+        /// @brief GPU 컬링의 가림 판정(가림 타일 짓기 · 되읽기 · 자리표)입니다.
+        OcclusionTiles _occlusion;
         /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
         GPUAssertMonitor _gpuAssert;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.

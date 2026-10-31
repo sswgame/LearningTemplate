@@ -64,11 +64,7 @@ namespace sw
         , _mapExtensionPassIndex{}
         , _graphContext{}
         , _transparentRankPlaceholder{}
-        , _occlusionTilesPlaceholder{}
-        , _occlusionReadback{}
-        , _occlusionMailbox{}
-        , _arrOcclusionReadbackMeta{}
-        , _occlusionReadbackSerial{ 0 }
+        , _occlusion{}
         , _gpuAssert{}
         , _nanCheck{}
         , _nanCheckCommandList{}
@@ -98,18 +94,13 @@ namespace sw
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
             SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
-        // 컬링 디스패치의 t2 자리표 — 가림을 보지 않는 슬롯도 빈 슬롯으로 디스패치하지 않는다(위와 같은 이유). 깊이 1 은 아무것도 가리지 않는다.
-        constexpr float32 kFarDepth = 1.0f;
-        if ( _occlusionTilesPlaceholder.ensureCapacity( _pDevice, sizeof( float32 ), 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, &kFarDepth ) == false )
-            SW_LOG_ERROR( "Failed to create the occlusion tiles placeholder - GPU culling binds no buffer at t2" );
+        _occlusion.ensurePlaceholder( _pDevice );
     }
 
     void FramePassExecutor::releaseResources()
     {
         _transparentRankPlaceholder.release( _pDevice );
-        _occlusionTilesPlaceholder.release( _pDevice );
-        _occlusionReadback.shutdown();
-        _occlusionMailbox.clear();
+        _occlusion.release( _pDevice );
         _gpuAssert.shutdown();
         _nanCheckCommandList.reset();
         _nanCheck.shutdown();
