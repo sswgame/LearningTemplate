@@ -3,6 +3,7 @@
 #include "Programs/ReflectionParser/ParserConfig.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -21,33 +22,30 @@ namespace sw
     {
         struct ParserConfigInternal
         {
-            /** @brief 현재 디렉터리에서 위로 올라가며 상대 경로의 파일을 찾습니다. 없으면 빈 문자열입니다. */
+            /**
+             * @brief 프로젝트 루트(`ProcessRoots` - 파서 실행 파일 위치에서 정한다) 아래 설정 파일입니다. 없으면 빈 문자열입니다.
+             * @details 예전에는 작업 폴더에서 위로 올라가며 찾았다 - 띄운 자리에 따라 다른 저장소의 설정을 읽거나 못 찾고 기본값으로 진행했다.
+             */
             static string findConfigFile( const string& relPath )
             {
-                string cur = FileUtil::getCurrentPath();
-                while ( true )
-                {
-                    const string candidate = FileUtil::joinPath( cur, relPath );
-                    if ( FileUtil::isRegularFile( candidate ) )
-                        return candidate;
-
-                    const string parent = FileUtil::getDirectoryPart( cur );
-                    if ( parent.empty() || parent == cur )
-                        break;
-                    cur = parent;
-                }
-                return {};
+                const string candidate = FileUtil::joinPath( ProcessRoots::get()._project.str(), relPath );
+                return FileUtil::isRegularFile( candidate ) ? candidate : string{};
             }
 
             /**
              * @brief 설정 파일을 찾아 JSON 으로 읽고, 읽었으면 경로를 남깁니다.
-             * @return 파일이 없거나 비었으면 null 객체와 true(선택 파일), 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
+             * @return 선택 파일이 없거나 비었으면 null 객체와 true, 필수 파일(@p bRequired)이 없거나 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
              * @details 깨진 설정을 기본값으로 대신하지 않는다 — 어느 칸이 왜 무시됐는지 남지 않고 libclang 오류가 엉뚱한 자리에서 난다.
              */
-            [[nodiscard]] static bool loadDocument( const string& relPath, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument )
+            [[nodiscard]] static bool loadDocument( const string& relPath, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
             {
                 outDocument       = nlohmann::json{};
                 const string path = findConfigFile( relPath );
+                if ( path.empty() && bRequired )
+                {
+                    SW_LOG_ERROR( "Parser setting file '%#' is missing under the project root '%#' - it is committed and required", relPath, ProcessRoots::get()._project.str() );
+                    return false;
+                }
                 if ( path.empty() )
                     return true;
 
@@ -399,7 +397,7 @@ namespace sw
 
         nlohmann::json defaultsDoc;
         nlohmann::json rawLocalDoc;
-        if ( ParserConfigInternal::loadDocument( parserpath::kParserConfigDefaults, _listLoadedFile, defaultsDoc ) == false ||
+        if ( ParserConfigInternal::loadDocument( parserpath::kParserConfigDefaults, _listLoadedFile, defaultsDoc, true ) == false ||
              ParserConfigInternal::loadDocument( parserpath::kParserConfig, _listLoadedFile, rawLocalDoc ) == false )
             return false;
         // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
