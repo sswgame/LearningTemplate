@@ -55,6 +55,7 @@ SW_TEST_CASE( SerializationTextTest, MalformedOwnedPointerElementDropsOnlyThatEl
     state.insert( pos - 1, "42," );
 
     SW_EXPECT_LOG( "Serialization.MalformedOwnedPointerElement" );
+    SW_EXPECT_LOG( "Schema.FieldsDropped" ); // 버린 원소는 orphan 이라 로드 끝에 버린 칸 보고에도 남는다
     SW_REQUIRE_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pObject, state, sw::ObjectLoadContext{ sw::SerializePurpose::Authoring } ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<sw::SceneComponent>() );
 }

@@ -110,8 +110,11 @@ SW_TEST_CASE( JSONLinesLogOutputTest, SinkBuildsJSONOnlyWhenAStructuredOutputIsA
 
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( pPlain->_listJSON.size() ) );
     SW_EXPECT_TRUE( pPlain->_listJSON[0].empty() ); // 장치가 달리기 전의 줄은 JSON 을 만들지 않았다
-    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pJSON->_listJSON.size() ) );
-    const string& line = pJSON->_listJSON[0];
+    // 비동기 싱크라 "before" 가 JSON 장치를 붙인 뒤에 나갈 수 있다 — 그래도 그 줄은 JSON 없이 쓴 줄이다(만드는 때는 쓰기 때다)
+    SW_REQUIRE_TRUE( pJSON->_listJSON.empty() == false && pJSON->_listJSON.size() <= 2 );
+    if ( pJSON->_listJSON.size() == 2 )
+        SW_EXPECT_TRUE( pJSON->_listJSON[0].empty() );
+    const string& line = pJSON->_listJSON.back();
     SW_EXPECT_TRUE_MSG( line.find( "\"level\":\"info\"" ) != string::npos, line.c_str() );
     SW_EXPECT_TRUE_MSG( line.find( "\"trace\":\"00000000000000000000000000000009\"" ) != string::npos, line.c_str() );
     SW_EXPECT_TRUE_MSG( line.find( "\"id\":\"Test.Json\",\"msg\":\"after\"" ) != string::npos, line.c_str() );

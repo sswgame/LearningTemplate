@@ -23,9 +23,13 @@ namespace sw::internal
             static constexpr size_t kAssertTextCapacity = 1024;
 
             /** @brief stderr 에 한 줄을 쓰고 비웁니다. 낮은 층 보고가 stderr 로 가는 유일한 위치입니다. */
-            static void writeStderr( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+            static void writeStderr( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept
             {
-                std::fprintf( stderr, "[%s] %s:%d: %s\n", level == LowLevelReportLevel::Error ? "Error" : "Warning", pFile, line, pMessage );
+                const utf8* pLevel = level == LowLevelReportLevel::Error ? "Error" : "Warning";
+                if ( pID != nullptr ) // 로그 줄과 같은 꼴(`[id:…] `) — stderr 줄도 로그 판정이 id 로 가른다
+                    std::fprintf( stderr, "[%s] [id:%s] %s:%d: %s\n", pLevel, pID, pFile, line, pMessage );
+                else
+                    std::fprintf( stderr, "[%s] %s:%d: %s\n", pLevel, pFile, line, pMessage );
                 std::fflush( stderr );
             }
         };
@@ -58,13 +62,13 @@ namespace sw::internal
         // Error 는 보고자가 있어도 먼저 동기로 쓴다 — 비동기 로거의 큐는 크래시 직전 메시지를 잃는다(SW_ASSERT 가 멈추기 전에 쓰는 것과 같다).
         const bool bWarning = level == LowLevelReportLevel::Warning;
         if ( bWarning == false )
-            LowLevelReportInternal::writeStderr( LowLevelReportLevel::Error, pFile, line, pMessage ); // Fatal 도 stderr 에는 Error 로 쓴다
+            LowLevelReportInternal::writeStderr( LowLevelReportLevel::Error, pFile, line, pMessage, pID ); // Fatal 도 stderr 에는 Error 로 쓴다
 
         const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
         const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage, pID );
         // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
         if ( bReported == false && bWarning )
-            LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
+            LowLevelReportInternal::writeStderr( level, pFile, line, pMessage, pID );
     }
 
     void reportLowLevelAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept

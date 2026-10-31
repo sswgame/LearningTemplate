@@ -313,9 +313,9 @@ SW_TEST_CASE( PackedValueSerializationTest, ArgumentConversionReadsAndWritesPack
     SW_EXPECT_FALSE( ReflectTypeOpsOf<float32>::convert( ReflectValue::make( half::fromBits( 0x7C00u ) ), converted ) );
     // 글로 보이기
     const string pairText = ReflectValue::make( half2::fromFloat2( float2{ 0.25f, 0.5f } ) ).toText();
-    SW_EXPECT_EQUAL( string( "0.250000, 0.500000" ), pairText );
+    SW_EXPECT_EQUAL( string( "0.25, 0.5" ), pairText ); // 성분마다 가장 짧은 왕복 표기
     const string unitText = ReflectValue::make( unorm8::fromRaw( 255 ) ).toText();
-    SW_EXPECT_EQUAL( string( "1.000000" ), unitText );
+    SW_EXPECT_EQUAL( string( "1" ), unitText );
 }
 
 /**

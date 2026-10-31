@@ -1119,7 +1119,7 @@ SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
 
     // 단위를 붙여 쓴 로그 — 'd', 's', 't' 가 서식으로 읽히지 않는다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%#dB %#s %#time", 3, 2.5f, 7 );
-    SW_EXPECT_EQUAL( sw::string_view( "3dB 2.500000s 7time" ), sw::string_view( buffer ) );
+    SW_EXPECT_EQUAL( sw::string_view( "3dB 2.5s 7time" ), sw::string_view( buffer ) ); // `%#` 실수는 가장 짧은 왕복 표기
 
     // 서식은 printf 형으로 — 너비·정렬·0채움·16진수·정밀도·부호. 타입은 인자가 정한다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%3d|%-5s|%08x|%.2f|%+d]", 7, "w", 255, 3.14159, 5 );
@@ -1267,15 +1267,15 @@ SW_TEST_CASE( StringTest, FormatPlaceholderFollowedByExtensionIsLiteral )
 }
 
 /**
- * @brief [StringTest] 큰 실수는 고정소수점 자릿수를 전부 담는다 — |x| ≥ 1e121 에서 uint64 캐스트(UB)로 떨어지면 안 된다.
+ * @brief [StringTest] 큰 실수의 `%f` 는 고정소수점 자릿수를 전부 담는다 — |x| ≥ 1e121 에서 uint64 캐스트(UB)로 떨어지면 안 된다.
  * @details 1e300 의 double 값은 정수부 301자리(1000000000000000052504760255…)다. 그리고 값 변환은 목적지에 자리가 있으면
  *          바로 쓰고, 작은 버퍼에서는 임시를 거쳐 앞부분만 남긴다 — 두 경로의 결과가 같아야 한다.
  */
 SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
 {
     utf8 wide[1024]{};
-    sw::formatstring( wide, static_cast<uint32>( sizeof( wide ) ), "%#", 1e300 );
-    SW_EXPECT_EQUAL( 301u + 7u, static_cast<uint32>( sw::StringUtil::strlen( wide ) ) ); // 301자리 + ".000000"
+    sw::formatstring( wide, static_cast<uint32>( sizeof( wide ) ), "%f", 1e300 );
+    SW_REQUIRE_EQUAL( 301u + 7u, sw::StringUtil::strlen( wide ) ); // 301자리 + ".000000" — 짧으면 아래 substr 가 범위를 넘는다
     SW_EXPECT_TRUE( sw::string_view( wide ).substr( 0, 29 ) == "10000000000000000525047602552" );
     SW_EXPECT_TRUE( sw::string_view( wide ).substr( 301 ) == ".000000" );
 
@@ -1284,7 +1284,7 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
     utf8 tight[12]{};
     sw::formatstring( direct, static_cast<uint32>( sizeof( direct ) ), "v=%# %#", 1234567, 3.5 );
     sw::formatstring( tight, static_cast<uint32>( sizeof( tight ) ), "v=%# %#", 1234567, 3.5 );
-    SW_EXPECT_EQUAL( sw::string_view( "v=1234567 3.500000" ), sw::string_view( direct ) );
+    SW_EXPECT_EQUAL( sw::string_view( "v=1234567 3.5" ), sw::string_view( direct ) ); // `%#` 은 가장 짧은 왕복 표기
     SW_EXPECT_EQUAL( sw::string_view( "v=1234567 3" ), sw::string_view( tight ) );
 }
 
