@@ -826,7 +826,7 @@ namespace sw
         uint32 removeVirtualCursorConflicts( string_view sourceName, const hashed_string& action, uint32 firstIndex );
 
     private:
-        friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMapSerialization.cpp)
+        friend struct InputMapActionLoader; ///< `<action>` 노드 하나를 읽는 도구(InputMap.cpp)
         friend struct InputRemapSerializer; ///< 사용자 바인딩 읽기가 가상 커서와 겹친 바인딩을 지운다(`removeVirtualCursorConflicts`)
 
     private:

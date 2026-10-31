@@ -41,7 +41,7 @@ kAppRunSeconds = 8.0
 kExitTimeoutSeconds = 60.0
 #: 전용 서버가 스스로 끝날 틱 수.
 kServerExitTicks = 120
-#: 자동화를 뺀 구성이 `-scenario` 를 받았을 때 남기는 오류(`AppAutomationHostOff.cpp`).
+#: 자동화를 뺀 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
 kNoAutomationError = "need a build with SW_ENABLE_AUTOMATION=ON"
 kLogLinePattern = re.compile(r"\[(Error|Warning)\]")
 kExecutableSuffix = ".exe" if sys.platform == "win32" else ""

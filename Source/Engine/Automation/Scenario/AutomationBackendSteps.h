@@ -1,6 +1,6 @@
 /**
  * @file AutomationBackendSteps.h
- * @brief 시나리오 단계 `SwapBackend` 의 속성 읽기와 검사 함수를 정의합니다. 단계 자체(교체 요청 · 준비)는 App 이 등록하고(`RHIBackendSwitcherDevCommands.cpp`), 속성만 읽는 이 부분은 App 을 모릅니다.
+ * @brief 시나리오 단계 `SwapBackend` 의 속성 읽기와 검사 함수를 정의합니다. 단계 자체(교체 요청 · 준비)는 App 이 등록하고(`RHIBackendSwitcher.cpp`), 속성만 읽는 이 부분은 App 을 모릅니다.
  * @details 검사 함수가 App 안에 있으면 App 이 없는 프로세스(nogpu 테스트)가 이 단계의 속성을 검사하지 못한다. 그래서 순수 부분을 Engine 으로 두고
  *          `SW_AUTOMATION_STEP_VALIDATOR` 로 따로 올린다(`AutomationStepValidation`). Shipping 에는 단계도 검사도 없다.
  */

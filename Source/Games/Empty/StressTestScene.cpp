@@ -2,6 +2,7 @@
 
 #include "Games/Empty/StressTestScene.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -10,11 +11,17 @@
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -22,6 +29,7 @@
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -29,6 +37,9 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
@@ -37,6 +48,7 @@
 
 #include "Games/Empty/StressTestCombatComponent.h"
 #include "Games/Empty/StressTestMoverComponent.h"
+#include "Games/Empty/StressTestSceneSettings.h"
 
 namespace sw
 {
@@ -60,6 +72,103 @@ namespace sw
          *       기존 측정과 스크린샷을 비교할 수 있습니다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
+
+        struct StressTestSceneInternal
+        {
+            /**
+             * @brief 스킨 없는 메시를 본 하나(0)에 가중치 1 로 묶은 스킨드 사본을 만듭니다 — 암묵 스켈레톤 유닛(무기)이 루트 본 포즈로 움직인다.
+             */
+            static shared_ptr<Mesh> createRigidSkinnedCopy( const Mesh& source )
+            {
+                shared_ptr<Mesh> copy = Mesh::create();
+                copy->setVertices( source.getVertices() );
+                copy->setSkin( vector<MeshSkinVertex>( source.getVertices().size(), MeshSkinVertex{} ), 1 );
+                return copy;
+            }
+
+            /**
+             * @brief 망토 메시를 망토 스켈레톤(`knight_cape.skeleton.xml` — 루트 + 아래로 사슬)에 높이로 나눠 묶은 스킨드 사본을 만듭니다.
+             * @details 원본 망토(KayKit)는 스킨이 없는 단단한 부품이다 — 스프링 본을 보이려고 데모가 뼈 데이터를 두고 가중치를 높이로 나눈다
+             *          (실제 게임은 DCC 에서 스킨한 망토). 정점 높이가 사슬 본 두 개 사이면 둘에 선형으로 나눈다.
+             */
+            static shared_ptr<Mesh> createCapeSkinnedCopy( const Mesh& source, const Skeleton& skeleton )
+            {
+                Pose             reference;
+                vector<float4x4> listModel;
+                reference.setToReference( skeleton );
+                reference.computeModelSpace( skeleton.getParentIndices(), listModel );
+                const uint32             boneCount  = skeleton.getBoneCount();
+                const vector<RHIVertex>& listVertex = source.getVertices();
+                vector<MeshSkinVertex>   listSkin( listVertex.size() );
+                for ( size_t index = 0; index < listVertex.size() && boneCount >= 2; ++index )
+                {
+                    const float32 y     = listVertex[index]._arrPosition[1];
+                    uint32        lower = 0;
+                    while ( lower + 2 < boneCount && y < listModel[lower + 1].getTranslation()._y )
+                    {
+                        ++lower;
+                    }
+                    const float32   top      = listModel[lower].getTranslation()._y;
+                    const float32   bottom   = listModel[lower + 1].getTranslation()._y;
+                    const float32   fraction = MathUtil::saturate( ( top - y ) / MathUtil::max( top - bottom, 1e-4f ) );
+                    MeshSkinVertex& skin     = listSkin[index];
+                    skin._arrJoint[0]        = static_cast<uint16>( lower );
+                    skin._arrJoint[1]        = static_cast<uint16>( lower + 1 );
+                    skin._arrWeight[0]       = 1.0f - fraction;
+                    skin._arrWeight[1]       = fraction;
+                }
+                shared_ptr<Mesh> copy = Mesh::create();
+                copy->setVertices( listVertex );
+                copy->setSkin( std::move( listSkin ), boneCount );
+                return copy;
+            }
+
+            /** @brief 오브젝트에 유닛(스켈레탈 메시)을 붙이고 메시 id 와 머티리얼(KayKit 아틀라스)을 풉니다. */
+            static SkeletalMeshComponent* addUnit( GameObject& object, const string& meshID, const string& materialPath )
+            {
+                SkeletalMeshComponent* pUnit = object.addComponent<SkeletalMeshComponent>();
+                if ( pUnit == nullptr )
+                    return nullptr;
+                pUnit->setMeshID( meshID.c_str() );
+                pUnit->setMaterialPath( materialPath );
+                pUnit->resolveRenderAssets();
+                return pUnit;
+            }
+            static constexpr uint32 kHangulFirst = 0xAC00u; ///< '가'
+            static constexpr uint32 kHangulCount = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
+            /// 음절을 고르는 보폭이다. 음절 수와 서로소라 N 개가 모두 다르고, 받침 · 모음이 고루 섞인다.
+            static constexpr uint32 kHangulStride = 37u;
+            /// 몇 음절마다 띄어 쓸지다. 줄 바꿈이 단어 경계에서 일어나게 한다.
+            static constexpr uint32 kHangulWordLength = 6u;
+
+            static void setFixedSize( Widget& widget, float32 width, float32 height )
+            {
+                WidgetLayoutSlot slot = widget.getLayoutSlot();
+                slot._widthOverride   = width;
+                slot._heightOverride  = height;
+                widget.setLayoutSlot( slot );
+            }
+
+            /** @brief 서로 다른 한글 음절 @p count 개로 된 글입니다(같은 실행이면 늘 같은 글). */
+            static string makeHangulText( uint32 count )
+            {
+                string text;
+                text.reserve( static_cast<size_t>( count ) * 4u );
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    if ( index > 0 && ( index % kHangulWordLength ) == 0 )
+                        text.push_back( ' ' );
+                    StringUtil::appendUTF8( text, kHangulFirst + ( index * kHangulStride ) % kHangulCount );
+                }
+                return text;
+            }
+        };
+
+        [[nodiscard]] bool loadBenchSceneSettings( const AssetID& id )
+        {
+            StressTestSceneSettings settings;
+            return ReflectedXMLFile::loadDesc( id, settings );
+        }
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -1539,4 +1648,361 @@ namespace sw
             }
         }
     }
+
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief `-gv_stressTestRig=N` — 후처리 리그를 건 기사 N 명(1 이면 데모 장면, 여럿이면 리그 비용 측정).
+     * @details 기사마다 무기(쇠뇌) · 망토 유닛이 자식으로 붙는다. 비용을 측정하려면 `-gv_stressTestRigEnabled=0` 과 짝으로 돌려
+     *          `GT.Animation.evaluate` 차이를 기사 수로 나눈다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)" );
+
+    /** @brief `-gv_stressTestRigEnabled=0` — 리그 컴포넌트를 끈 채 세웁니다(리그 비용 대조군). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestRigEnabled, 1, "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)" );
+
+    /** @brief `-gv_stressTestRigView=N` — 리그 데모 카메라(기사 한 명일 때): 0 왼쪽 앞(시선 · 왼손 · 발) · 1 정면 · 2 오른쪽 옆(쇠뇌 · 망토) · 3 오른쪽 뒤(망토 · 발). */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)" );
+
+    /** @brief 벤치 공통 스위치 — 0 이면 시간 구동 변화를 멈춘다(StressTestScene.cpp 가 정의). */
+    SW_EXTERN_GLOBAL_VARIABLE( int32, gv_stressTestAnimate );
+
+    uint32 StressTestScene::getRigCharacterCount()
+    {
+        return static_cast<uint32>( MathUtil::max( gv_stressTestRig, 0 ) );
+    }
+
+    int32 StressTestScene::getRigView()
+    {
+        return gv_stressTestRigView;
+    }
+
+    void StressTestScene::spawnRigSlope( Scene* pScene, GameObjectManager& objects, float32 halfWidth )
+    {
+        // 기울어진 바닥입니다. 물리용 정적 상자(발 디딤의 광선이 맞는 대상)와, 같은 위치와 크기의 큐브(화면에 보이는 것)로 이루어집니다.
+        const float3  slopeRotation{ 0.0f, 0.0f, _settings._rigSlopeAngle };
+        const float3& slopeCenter = _settings._rigSlopeCenter;
+        GameObject*   pSlope      = objects.createGameObject( "RigSlope" );
+        if ( pSlope == nullptr )
+            return;
+        RigidBodyComponent* pBody = pSlope->addComponent<RigidBodyComponent>();
+        if ( pBody != nullptr )
+        {
+            PhysicsShapeDesc3D box{};
+            box._halfExtents = float3{ halfWidth, _settings._rigSlopeHalfThickness, _settings._rigSlopeHalfDepth };
+            pBody->setShape( box );
+            pBody->setBodyType( PhysicsBodyType::Static );
+            pBody->setLocalPosition( slopeCenter );
+            pBody->setLocalRotation( slopeRotation );
+            _listBenchExtra.push_back( pBody->getHandle() );
+        }
+        MeshComponent* pVisual = pSlope->addComponent<MeshComponent>();
+        if ( pVisual != nullptr )
+        {
+            pVisual->setMesh( MeshUtil::createPrimitive( "Cube" ) );
+            pVisual->setMaterial( pScene->getMaterial() );
+            pVisual->setLocalPosition( slopeCenter );
+            pVisual->setLocalRotation( slopeRotation );
+            pVisual->setLocalScale( float3{ halfWidth * 2.0f, _settings._rigSlopeHalfThickness * 2.0f, _settings._rigSlopeHalfDepth * 2.0f } );
+            pVisual->setVisible( true );
+        }
+    }
+
+    void StressTestScene::spawnRigLookTarget( Scene* pScene, GameObjectManager& objects )
+    {
+        // 시선 목표인 작은 구입니다. update 가 기사 앞에서 원을 그리며 움직입니다.
+        GameObject* pLook = objects.createGameObject( "RigLookTarget" );
+        if ( pLook == nullptr )
+            return;
+        MeshComponent* pBall = pLook->addComponent<MeshComponent>();
+        if ( pBall == nullptr )
+            return;
+        pBall->setMesh( MeshUtil::createPrimitive( "Sphere" ) );
+        pBall->setMaterial( pScene->getMaterial() );
+        pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
+        pBall->setLocalPosition( _settings._rigLookTargetStart );
+        pBall->setVisible( true );
+        _rigLookTarget = TComponentHandle<MeshComponent>{ pBall };
+        _listBenchExtra.push_back( pBall->getHandle() );
+    }
+
+    shared_ptr<const Skeleton> StressTestScene::createSingleBoneSkeleton()
+    {
+        shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
+        (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{}, float4x4::Identity );
+        return skeleton;
+    }
+
+    SkeletalMeshComponent* StressTestScene::spawnRigWeapon( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
+    {
+        // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 루트 본에 묶은 사본으로 그립니다.
+        GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
+        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? StressTestSceneInternal::addUnit( *pWeapon, _settings._rigWeaponMesh, _settings._rigWeaponMaterial ) : nullptr;
+        // 사본을 만들 원본은 지금 있어야 한다 — 컴포넌트의 비동기 로드를 기다리지 않고 같은 로드를 동기로 받는다(`MeshCache::acquire`).
+        const shared_ptr<Mesh> weaponSource = MeshCache::acquire( _settings._rigWeaponMesh );
+        if ( pWeaponUnit == nullptr || weaponSource == nullptr )
+            return pWeaponUnit;
+        (void)pWeapon->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
+        // 리그는 데이터 스켈레톤을 받은 유닛에만 묶인다(암묵 스켈레톤이면 묶지 않아 쇠뇌가 손을 따르지 못하고 바닥에 남는다) — 루트 본 하나를 데이터로 준다.
+        pWeaponUnit->setSkeleton( createSingleBoneSkeleton() );
+        pWeaponUnit->setMesh( StressTestSceneInternal::createRigidSkinnedCopy( *weaponSource ) );
+        pWeaponUnit->resolveRenderAssets();
+        PoseModifierComponent* pWeaponRig = pWeapon->addComponent<PoseModifierComponent>();
+        if ( pWeaponRig != nullptr )
+        {
+            pWeaponRig->setRigPath( _settings._rigWeaponRig.c_str() );
+            pWeaponRig->bindUnit( "Body", pBody );
+            pWeaponRig->setRigEnabled( bRig );
+        }
+        _listBenchExtra.push_back( pWeaponUnit->getHandle() );
+        return pWeaponUnit;
+    }
+
+    void StressTestScene::spawnRigCape( GameObjectManager& objects, GameObject* pKnight, SkeletalMeshComponent* pBody, bool bRig )
+    {
+        // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 루트 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
+        GameObject*            pCape      = objects.createGameObject( "RigCape" );
+        SkeletalMeshComponent* pCapeUnit  = ( pCape != nullptr ) ? StressTestSceneInternal::addUnit( *pCape, _settings._rigCapeMesh, _settings._rigCapeMaterial ) : nullptr;
+        const shared_ptr<Mesh> capeSource = MeshCache::acquire( _settings._rigCapeMesh ); // 무기와 같다 — 사본의 원본은 동기로 받는다
+        if ( pCapeUnit == nullptr || capeSource == nullptr )
+            return;
+        (void)pCape->attachToParent( pKnight ); // 방금 만든 오브젝트끼리라 순환이 없어 실패하지 않는다
+        pCapeUnit->setSkeletonPath( _settings._rigCapeSkeleton.c_str() );
+        pCapeUnit->setMesh( StressTestSceneInternal::createCapeSkinnedCopy( *capeSource, pCapeUnit->getSkeleton() ) );
+        pCapeUnit->resolveRenderAssets();
+        PoseModifierComponent* pCapeRig = pCape->addComponent<PoseModifierComponent>();
+        if ( pCapeRig != nullptr )
+        {
+            pCapeRig->setRigPath( _settings._rigCapeRig.c_str() );
+            pCapeRig->bindUnit( "Body", pBody );
+            pCapeRig->setRigEnabled( bRig );
+        }
+        _listBenchExtra.push_back( pCapeUnit->getHandle() );
+    }
+
+    void StressTestScene::spawnRigKnight( GameObjectManager& objects, uint32 index, float32 origin, bool bRig, const shared_ptr<SocketSet>& weaponSockets )
+    {
+        StringBuilder<constant::kMaxBuffer64> name;
+        name.append( "RigKnight_" ).append( index );
+        GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
+        if ( pKnight == nullptr )
+            return;
+        SkeletalMeshComponent*     pBody     = StressTestSceneInternal::addUnit( *pKnight, _settings._knightMesh, _settings._knightMaterial );
+        SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
+        if ( pBody == nullptr || pAnimator == nullptr )
+            return;
+        pBody->setSkeletonPath( _settings._knightSkeleton.c_str() );
+        // 기사는 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다. 기사는 X 축을 따라 한 줄로 서고, 바닥이 기울어 있어서 사람마다 땅 높이가 다릅니다.
+        const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
+        pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
+        pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
+        pAnimator->setClipFolder( _settings._knightClips.c_str() );
+        pAnimator->setInitialState( _settings._rigAimState.c_str() );
+        _listRigBody.push_back( TComponentHandle<SkeletalMeshComponent>{ pBody } );
+        _listBenchExtra.push_back( pBody->getHandle() );
+
+        SkeletalMeshComponent* pWeaponUnit = spawnRigWeapon( objects, pKnight, pBody, bRig );
+        spawnRigCape( objects, pKnight, pBody, bRig );
+
+        PoseModifierComponent* pBodyRig = pKnight->addComponent<PoseModifierComponent>();
+        if ( pBodyRig != nullptr )
+        {
+            pBodyRig->setRigPath( _settings._rigKnightRig.c_str() );
+            pBodyRig->bindUnit( "Weapon", pWeaponUnit, weaponSockets );
+            pBodyRig->setRigEnabled( bRig );
+        }
+    }
+
+    void StressTestScene::spawnRigCharacters( uint32 characterCount )
+    {
+        SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
+        Scene*        pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        if ( pScene == nullptr && pSceneManager != nullptr )
+            pScene = pSceneManager->createEmptyActiveScene( "StressTestScene" );
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        pScene->pickActiveGameCamera();
+        GameObjectManager& objects = *pScene->getObjectManager();
+        const bool         bRig    = gv_stressTestRigEnabled != 0;
+
+        const float32 halfWidth =
+            MathUtil::max( _settings._rigSlopeMinHalfWidth, 0.5f * static_cast<float32>( characterCount ) * _settings._rigSpacing + _settings._rigSlopeEndMargin );
+        spawnRigSlope( pScene, objects, halfWidth );
+        spawnRigLookTarget( pScene, objects );
+
+        SocketKindTable       kinds;
+        shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
+        if ( kinds.loadDefault() == false )
+            SW_LOG_ERROR( "[Bench] Failed to read the default socket kind table the crossbow sockets need." );
+        else if ( weaponSockets->loadFromAsset( AssetID{ _settings._rigWeaponSockets.c_str() }, kinds ) == false )
+            SW_LOG_ERROR( "[Bench] Failed to read the crossbow sockets '%#'.", _settings._rigWeaponSockets.c_str() );
+
+        const float32 origin = -0.5f * static_cast<float32>( characterCount - 1 ) * _settings._rigSpacing;
+        for ( uint32 index = 0; index < characterCount; ++index )
+        {
+            spawnRigKnight( objects, index, origin, bRig, weaponSockets );
+        }
+
+        const float32 halfExtent = MathUtil::max( _settings._rigMinHalfExtent, halfWidth );
+        spawnLight( pScene, halfExtent );
+        applyFraming( pScene, FramingMode::Rig );
+        SW_LOG_INFO( "[Bench] Placed %# rig knights on the slope (rig %#).", characterCount, bRig ? "on" : "off" );
+    }
+
+    void StressTestScene::frameRigCameras( Scene* pScene )
+    {
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        const uint32  count    = static_cast<uint32>( _listRigBody.size() );
+        const float32 halfSpan = 0.5f * static_cast<float32>( count ) * _settings._rigSpacing;
+        for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
+        {
+            if ( isFramedCamera( pCamera ) == false )
+                continue;
+            if ( count <= 1 )
+            {
+                // 한 명 — 상반신 · 다리가 함께 들어오게 비스듬히 가까이(손잡이 · 시선 · 망토 · 발이 한 화면).
+                const float3 arrEye[] = { _settings._rigViewFrontLeft, _settings._rigViewFront, _settings._rigViewRightSide, _settings._rigViewBackRight };
+                pCamera->setLocalPosition( arrEye[MathUtil::clamp( gv_stressTestRigView, 0, 3 )] );
+                pCamera->lookAt( _settings._rigViewFocus );
+                continue;
+            }
+            const float32 tanHalf  = MathUtil::tan( pCamera->getFieldOfViewY() * 0.5f );
+            const float32 distance = ( tanHalf > MathUtil::kEpsilon ) ? ( halfSpan * _settings._characterFrameMargin / tanHalf ) : ( halfSpan * 3.0f );
+            pCamera->setLocalPosition( float3{ 0.0f, _settings._characterEyeHeight, -distance } );
+            pCamera->lookAt( float3{ 0.0f, _settings._characterLookHeight, 0.0f } );
+        }
+    }
+
+    void StressTestScene::updateRigCharacters( float32 deltaTime )
+    {
+        (void)deltaTime;
+        if ( _listRigBody.empty() )
+            return;
+        SceneManager*      pSceneManager = game::findSubsystem<SceneManager>();
+        Scene*             pScene        = ( pSceneManager != nullptr ) ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pObjects      = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
+        if ( pObjects == nullptr )
+            return;
+
+        // 거리 LOD 기준점 = 첫 카메라(스프링 본의 lod_distance).
+        const vector<CameraComponent*>& listCamera = pObjects->getCameraRegistry().getAll();
+        if ( listCamera.empty() == false )
+            pObjects->getSubsystem<AnimationSystem>().setLODViewPosition( listCamera.front()->getCameraPosition() );
+
+        // `-gv_stressTestAnimate=0` 이면 화면을 멈춰 둡니다(스크린샷 비교용). 시선 목표와 몸 돌리기를 움직이지 않습니다.
+        const float32 time = ( gv_stressTestAnimate != 0 ) ? _benchElapsed : _settings._rigStillTime;
+        if ( MeshComponent* pBall = pObjects->resolveComponent( _rigLookTarget ) )
+            pBall->setLocalPosition( float3{ _settings._rigLookSwing * MathUtil::sin( time * _settings._rigLookSwingRate ),
+                                             _settings._rigLookHeight + _settings._rigLookBob * MathUtil::sin( time * _settings._rigLookBobRate ), _settings._rigLookDepth } );
+        // 몸을 좌우로 틀어 망토가 관성으로 흔들리게 한다(스프링 본은 월드 공간 입자라 몸이 돌면 뒤처진다).
+        const float32 yaw = MathUtil::kPi + ( ( gv_stressTestAnimate != 0 ) ? _settings._rigSwayAngle * MathUtil::sin( time * _settings._rigSwayRate ) : 0.0f );
+        for ( const TComponentHandle<SkeletalMeshComponent> handle : _listRigBody )
+        {
+            if ( SkeletalMeshComponent* pBody = pObjects->resolveComponent( handle ) )
+                pBody->setLocalRotation( float3{ 0.0f, yaw, 0.0f } );
+        }
+    }
+
+    /**
+     * @brief `-gv_stressTestUiNameplates=K`: 앞쪽 벤치 큐브 K 개에 RTS 이름(이름 한 줄과 HP 막대)를 붙입니다.
+     * @details 월드 공간 UI 를 대량으로 그리는 비용을 측정합니다. 마커 투영과 그리기 목록 만들기는 게임 스레드에서, 캔버스 업로드와 그리기는 렌더 스레드에서 합니다.
+     *          기준은 RTS 유닛 2,000개입니다. 게임 스레드 `GT.UI.*` 의 합이 0.5ms 를 넘으면 투영, 컬링, 간접 드로우를 컴퓨트로 옮길지 결정합니다.
+     *          HP 는 큐브마다 다른 고정값입니다. 바뀌지 않는 트리 출력을 재사용하는 방식이 어디까지 적용되는지도 함께 봅니다.
+     *          `-gv_stressTestUiMarkers` 와 함께 주면 이름이 우선합니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestUiNameplates, 0, "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)" );
+
+    /**
+     * @brief `-gv_stressTestUiHangulGlyphs=N`: `gv_stressTestWatchFrame` 프레임에 서로 다른 한글 음절 N 개로 된 긴 글을 화면에 띄웁니다.
+     * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화, SDF, 아틀라스 업로드)의 최악 시간을 측정합니다. 프로파일 목록의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 봅니다.
+     *          히치가 4ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 결정합니다.
+     *          `-lang=ko` 로 실행해야 합니다. 영어 문화권의 대체 글꼴 체인에는 한글 글꼴이 없어서 글자가 두부(□)로만 그려지고, 그러면 측정이 되지 않습니다. 시스템에도 한글 글꼴이 있어야 합니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestUiHangulGlyphs, 0, "감시 값 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
+
+    /**
+     * @brief `-gv_stressTestSceneLoadPath=<리소스 경로>`: `gv_stressTestWatchFrame` 프레임에 이 씬을 비동기로 엽니다.
+     * @details 워커가 파싱하고 오브젝트를 생성하는 동안과, 활성 씬을 바꾸는 프레임의 최악 시간을 측정합니다(`GT.Frame` 의 p99와 max). 로드 자체에 걸린 시간은
+     *          로그의 `'Scene.load.parse'` 와 `'Scene.load.instantiate'` 에 나옵니다. 쿠킹한 결과를 측정하려면 `--cooked-dir` 로 쿠킹 폴더를 마운트합니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_stressTestSceneLoadPath, "", "감시 값 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
+
+    /**
+     * @brief `-gv_stressTestWatchFrame=F`: 한 번 일어나는 감시 값(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
+     * @details 프로파일 측정 창은 워밍업(60 프레임) 뒤에 시작하므로 그보다 뒤여야 표에 잡힌다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestWatchFrame, 180, "한 번 일어나는 벤치 감시 값(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
+} // namespace sw
+
+namespace sw
+{
+} // namespace sw
+
+namespace sw
+{
+    bool StressTestScene::attachNameplate( GameObject& object, uint32 index ) const
+    {
+        if ( gv_stressTestUiNameplates <= 0 || index >= static_cast<uint32>( gv_stressTestUiNameplates ) )
+            return false;
+        WidgetComponent* pPlate = object.addComponent<WidgetComponent>();
+        if ( pPlate == nullptr )
+            return false;
+        unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
+        column->setOrientation( UIOrientation::Vertical );
+        column->setSpacing( _settings._nameplateSpacing );
+        unique_ptr<TextWidget> name = make_unique<TextWidget>();
+        name->setLocalized( false );
+        name->setText( formatToString( "Unit %#", index ) );
+        StressTestSceneInternal::setFixedSize( *name, _settings._nameplateWidth, _settings._nameplateTextHeight );
+        (void)column->addChild( std::move( name ) );
+        unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();
+        health->setPercent( 0.2f + 0.8f * static_cast<float32>( ( index * 7u ) % 10u ) / 10.0f );
+        health->setFillColor( _settings._nameplateFillColor );
+        health->setBackgroundColor( _settings._nameplateBackgroundColor );
+        StressTestSceneInternal::setFixedSize( *health, _settings._nameplateWidth, _settings._nameplateBarHeight );
+        (void)column->addChild( std::move( health ) );
+        pPlate->setSpace( WidgetSpace::Screen );
+        pPlate->setWorldOffset( float3{ 0.0f, _settings._nameplateHeight, 0.0f } );
+        pPlate->setContent( std::move( column ) );
+        return true;
+    }
+
+    void StressTestScene::updateProbes( GameObjectManager* pObjects )
+    {
+        ++_probeFrame;
+        if ( _probeFrame != static_cast<uint32>( MathUtil::max( gv_stressTestWatchFrame, 1 ) ) )
+            return;
+
+        if ( gv_stressTestUiHangulGlyphs > 0 && pObjects != nullptr )
+        {
+            // 화면 마커는 주 씬 컴포넌트의 월드 점을 투영한다. 없으면 마커가 접혀 글리프를 하나도 만들지 않는다(격자 가운데인 원점에 둔다).
+            GameObject*      pObject = pObjects->createGameObject( hashed_string( "StressTestHangulText" ) );
+            SceneComponent*  pAnchor = ( pObject != nullptr ) ? pObject->addComponent<SceneComponent>() : nullptr;
+            WidgetComponent* pText   = ( pAnchor != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
+            if ( pText != nullptr )
+            {
+                unique_ptr<TextWidget> text = make_unique<TextWidget>();
+                text->setLocalized( false );
+                text->setText( StressTestSceneInternal::makeHangulText( static_cast<uint32>( gv_stressTestUiHangulGlyphs ) ) );
+                StressTestSceneInternal::setFixedSize( *text, _settings._hangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
+                pText->setSpace( WidgetSpace::Screen );
+                pText->setContent( std::move( text ) );
+                _listBenchExtra.push_back( pText->getHandle() );
+                SW_LOG_INFO( "[Bench] probe frame %#: %# Hangul syllables on screen", _probeFrame, gv_stressTestUiHangulGlyphs );
+            }
+        }
+
+        if ( gv_stressTestSceneLoadPath.empty() == false )
+        {
+            SceneManager*               pSceneManager = game::findSubsystem<SceneManager>();
+            [[maybe_unused]] const bool bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_stressTestSceneLoadPath, SceneLoadKind::Travel );
+            SW_LOG_INFO( "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_stressTestSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
+        }
+    }
+
+    /** @brief 벤치 장면 설정(`StressTestSceneSettings`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
+    SW_RESOURCE_DATA_KIND( StressTestSceneSettings, "benchscene", "game/", nullptr, "/data/benchscene.xml", &loadBenchSceneSettings );
 } // namespace sw

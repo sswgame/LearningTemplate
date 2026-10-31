@@ -51,7 +51,7 @@ namespace sw
         /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
         void applyIfPending();
 
-        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcherDevCommands.cpp`) -------------------------------------------------
+        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcher.cpp`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
         [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
         /**
@@ -72,7 +72,7 @@ namespace sw
         [[nodiscard]] bool requestSwap( RHIBackend backend );
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
-        // --- 개발 명령 `rhi.removeDevice <ms>` — 구현은 `RHIBackendSwitcherDevCommands.cpp`(배포 구성은 짓지 않는다) ---------------------------------------
+        // --- 개발 명령 `rhi.removeDevice <ms>` — 구현은 `RHIBackendSwitcher.cpp`(배포 구성은 짓지 않는다) ---------------------------------------
         /** @brief `removeDeviceAfterDriverWaitForTest` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
         static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = 60000;
         /**

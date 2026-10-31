@@ -28,7 +28,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 // 엔진 루프의 렌더러 몫(창 크기 · 렌더 스레드 · 렌더 패킷 · 백엔드 교체)이다. 렌더러를 짓는 타깃(Game · Client)의 구현이고, 전용 서버(SW_TARGET_TYPE=Server —
-// `Renderer/` 를 짓지 않는다)는 `EngineRenderingServer.cpp` 를 CMake 가 고른다(`Source/Engine/CMakeLists.txt`). 파일 안 `SW_WITH_CLIENT_CODE` 분기 대신 빌드 단위로 가른다.
+// `Renderer/` 를 짓지 않는다)는 (서버 타깃은 짓지 않는다) 를 CMake 가 고른다(`Source/Engine/CMakeLists.txt`). 파일 안 `SW_WITH_CLIENT_CODE` 분기 대신 빌드 단위로 가른다.
 namespace sw
 {
     SW_LOG_CALLER( "Engine" );

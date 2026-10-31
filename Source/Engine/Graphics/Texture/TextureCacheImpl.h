@@ -1,6 +1,6 @@
 /**
  * @file TextureCacheImpl.h
- * @brief 텍스처 캐시의 내부 상태(`TextureCache::Impl`)와 스트리밍 폐기 목록입니다. 캐시 본문과 핫 리로드(`TextureCacheReload.cpp`)만 include 한다.
+ * @brief 텍스처 캐시의 내부 상태(`TextureCache::Impl`)와 스트리밍 폐기 목록입니다. 캐시 본문과 핫 리로드(`TextureCache.cpp`)만 include 한다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

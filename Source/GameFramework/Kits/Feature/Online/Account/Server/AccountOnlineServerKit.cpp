@@ -23,7 +23,7 @@
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — DevOnline 단위만, 실제 비용을 재려면 끈다).
 //   seedTestAccounts            `이름:비밀번호` 를 쉼표로 이은 목록. 서버가 서자마자 이 계정들을 가입시켜 둔다(개발 · 두 프로세스 시나리오 `Scripts/net/NetPairRun.py` 용 — 이미 있으면 그대로 둔다).
 //                               **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패(비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않는다). 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리다.
-//   개발 옵션의 값(가벼운 해시 · 시드 읽기 · 개발 티켓 키)은 확장점 `AccountDevOptions`(`AccountDevOnline.cpp` 가 올린다)가 준다.
+//   개발 옵션의 값(가벼운 해시 · 시드 읽기 · 개발 티켓 키)은 확장점 `AccountDevOptions`(이 파일 아래의 등록이 올린다)가 준다.
 //   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `PlatformLoginProviderFactory::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 외부 로그인이 없다.
 //   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
 //   linkSecretKeySecretEnvironment  연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름.

@@ -1,6 +1,6 @@
 /**
  * @file InputMapXMLUtil.h
- * @brief 맵 정의(`InputMapSerialization.cpp`)와 사용자 바인딩(`InputRemapSerializer.cpp`) 두 XML 형식이 함께 쓰는 속성 읽기 · 쓰기를 선언합니다.
+ * @brief 맵 정의(`InputMap.cpp`)와 사용자 바인딩(`InputRemapSerializer.cpp`) 두 XML 형식이 함께 쓰는 속성 읽기 · 쓰기를 선언합니다.
  * @details 패드 번호 · 수정 키 마스크 · 스틱 배율 · 발화 시간 같은 칸은 두 형식이 같은 규칙으로 읽어야 한다. 한쪽만 고치면 다른 파일로 같은 깨진 값이 들어온다.
  *          두 번역 단위만 포함한다(엔진 안 헬퍼라 내보내지 않는다).
  */

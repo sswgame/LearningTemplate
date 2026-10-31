@@ -28,7 +28,7 @@
  *          멀티 프로세스 재생과 테스트가 이 줄로 접속을 확인한다.
  *
  *          샤드 전송은 건 데코레이터(`setTransportDecorator`)로 감쌀 수 있다 — 개발 도구가 회선 흉내(`NetEmulationTransport`, 시작 값 `-gv_netEmulation*`,
- *          실행 중 `net.emulation`)를 건다. 개발 명령 `net.disconnect` · `net.reconnect` · `net.traffic` 은 기능 옆 `GameNetSessionDevCommands.cpp` 다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
+ *          실행 중 `net.emulation`)를 건다. 개발 명령 `net.disconnect` · `net.reconnect` · `net.traffic` 은 기능 옆 `GameNetSession.cpp` 다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
  *          `net.stats` 는 연결 · 트래픽 수치 한 줄(`NetStatsReport`)을 답한다(Profiler 탭이 0.5 초마다 묻는다).
  *          배포 빌드에는 개발 도구가 없어 감싸지 않는다.
  *

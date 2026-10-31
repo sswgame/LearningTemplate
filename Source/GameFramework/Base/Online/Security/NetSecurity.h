@@ -5,7 +5,7 @@
  *       OpenSSL 은 GameFramework 만 링크합니다 — 온라인을 쓰지 않는 게임의 Engine.dll 은 libssl · libcrypto 에 매이지 않는다.
  * @details 인증서 · 키는 PEM 파일 경로로 받는다(두 플랫폼 같은 길 — 전용 서버는 서버 설정 `Config/Server/<게임>.json` 의 `_tlsCertificateFile` ·
  *          `_tlsPrivateKeyFile` 이 경로를 준다). 상대 경로는 프로젝트 루트 기준이다. 경로를 비우면 개발 인증서(DerivedData 의 `Certificates/devserver.pem` — 인증서와 키를
- *          한 PEM 에, 없으면 만든다)를 쓴다. 개발 인증서는 DevOnline 단위(`NetSecurityDevOnline.cpp`)가 확장점 `NetSecurityDevOptions` 에 올리고, 그 단위가 없는
+ *          한 PEM 에, 없으면 만든다)를 쓴다. 개발 인증서는 DevOnline 단위(`NetSecurity.cpp`)가 확장점 `NetSecurityDevOptions` 에 올리고, 그 단위가 없는
  *          구성(배포)은 오류다.
  */
 #pragma once
@@ -28,7 +28,7 @@ namespace sw
 {
     struct SW_GF_API NetSecurity
     {
-        static constexpr const utf8* kDevCertificateFolder = "Certificates"; ///< DerivedData 아래 — 서버 · 클라이언트(다른 빌드 구성도)가 같은 인증서를 본다(`NetSecurityDevOnline.cpp`)
+        static constexpr const utf8* kDevCertificateFolder = "Certificates"; ///< DerivedData 아래 — 서버 · 클라이언트(다른 빌드 구성도)가 같은 인증서를 본다(`NetSecurity.cpp`)
         /**
          * @brief 개발 인증서와 그 키를 함께 담은 PEM 하나입니다. 인증서 · 키 경로 둘 다 이 파일이다(PEM 읽기는 다른 종류 블록을 건너뛴다).
          * @details 두 파일로 따로 쓰면 서버 둘이 동시에 처음 뜰 때 한쪽의 인증서와 다른 쪽의 키가 남아 짝이 어긋난다 — 한 파일의 원자적 쓰기 한 번이면 늘 한 쌍이다.
@@ -64,7 +64,7 @@ namespace sw
 
     /**
      * @struct NetSecurityDevOptions
-     * @brief 개발 인증서의 확장점입니다. DevOnline 단위(`NetSecurityDevOnline.cpp`)가 올린다(`DevOnlineExtension.h`). 같은 모듈(GameFramework) 안에서만 쓴다.
+     * @brief 개발 인증서의 확장점입니다. DevOnline 단위(`NetSecurity.cpp`)가 올린다(`DevOnlineExtension.h`). 같은 모듈(GameFramework) 안에서만 쓴다.
      */
     struct NetSecurityDevOptions
     {

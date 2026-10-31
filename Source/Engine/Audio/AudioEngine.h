@@ -407,7 +407,7 @@ namespace sw
         void loadEventLibraryLocked( const hashed_string& libraryName, const AudioEventLibrary& library, vector<string>& outListError,
                                      shared_ptr<const AudioEventLibrary>& outLibrary ) SW_REQUIRES_LOCK( _libraryMutex );
 
-        // AudioEngineEvents.cpp: 이벤트, 파라미터, 보이스 제한
+        // AudioEngine.cpp: 이벤트, 파라미터, 보이스 제한
         /** @brief 이벤트를 재생합니다. 쿨다운, 상한, 컨테이너를 적용합니다. */
         void applyPostEvent( const Command& command );
         /** @brief 쿨다운과 동시 재생 상한을 봅니다. 상한이면 뺏을 인스턴스를 멈춥니다. 버려야 하면(버린 수를 올리고) false 입니다. */

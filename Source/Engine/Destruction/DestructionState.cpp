@@ -12,6 +12,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -113,6 +114,24 @@ namespace sw
                         return;
                 }
                 inoutList.push_back( value );
+            }
+
+            /** @brief 노드와 그 노드에 이번 사건이 준 변형입니다. */
+            struct NodeStrain
+            {
+                uint32  _node;
+                float32 _strain;
+            };
+
+            /** @brief 노드가 포함한 잎들의 이번 변형 중 가장 큰 값입니다. */
+            static float32 findMaxStrain( const FractureNode& node, const vector<float32>& listLeafStrain )
+            {
+                float32 maxStrain = 0.0f;
+                for ( uint32 leaf = node._firstLeaf; leaf < node._firstLeaf + node._leafCount; ++leaf )
+                {
+                    maxStrain = MathUtil::max( maxStrain, listLeafStrain[leaf] );
+                }
+                return maxStrain;
             }
         };
     } // namespace
@@ -728,5 +747,108 @@ namespace sw
         _nextGroupID    = nextGroupID;
         _eventCount     = eventCount;
         return true;
+    }
+
+    bool DestructionState::applyDamage( const DestructionDamageEvent& event, DestructionChange& outChange )
+    {
+        using Internal = DestructionStateInternal;
+        if ( _pGraph == nullptr )
+            return false;
+        const FractureGraph& graph = *_pGraph;
+        ++_eventCount;
+        vector<DestructionLeafStrain> listLeafStrain;
+        DestructionDamageUtil::computeLeafStrain( graph, event, _listLeafGroup, listLeafStrain );
+        if ( listLeafStrain.empty() )
+            return false;
+        _listScratchStrain.assign( graph._leafCount, 0.0f );
+        vector<uint32> listDirtyGroup;
+        for ( const DestructionLeafStrain& entry : listLeafStrain )
+        {
+            _listScratchStrain[entry._leaf] = entry._strain;
+            const uint32 groupID            = _listLeafGroup[entry._leaf];
+            if ( VectorUtil::contains( listDirtyGroup, groupID ) == false )
+                listDirtyGroup.push_back( groupID );
+        }
+        const uint32 brokenNodeBefore = outChange._brokenNodeCount;
+        const uint32 brokenLinkBefore = outChange._brokenLinkCount;
+
+        // 활성 노드마다 그 잎들의 최대 변형을 노드 번호 순으로 쌓고, 갈라지면 넘친 비율만큼 자식에게 넘긴다.
+        vector<Internal::NodeStrain> listQueue;
+        for ( const DestructionLeafStrain& entry : listLeafStrain )
+        {
+            const uint32 node  = _listLeafActive[entry._leaf];
+            bool         bSeen = false;
+            for ( Internal::NodeStrain& queued : listQueue )
+            {
+                if ( queued._node == node )
+                {
+                    queued._strain = MathUtil::max( queued._strain, entry._strain );
+                    bSeen          = true;
+                }
+            }
+            if ( bSeen == false )
+                listQueue.push_back( Internal::NodeStrain{ node, entry._strain } );
+        }
+        while ( listQueue.empty() == false )
+        {
+            VectorUtil::sort( listQueue, []( const Internal::NodeStrain& lhs, const Internal::NodeStrain& rhs )
+            { return lhs._node > rhs._node; } );
+            const Internal::NodeStrain current = listQueue.back();
+            listQueue.pop_back();
+            const FractureNode& data       = graph._listNode[current._node];
+            const float32       threshold  = _profile.getStrainThreshold( data._depth );
+            const float32       after      = _listNodeStrain[current._node] + current._strain;
+            _listNodeStrain[current._node] = after;
+            if ( after < threshold || _listNodeBroken[current._node] != SW_FALSE )
+                continue;
+            if ( data.isLeaf() )
+            {
+                _listNodeBroken[current._node] = SW_TRUE;
+                ++outChange._brokenNodeCount;
+                severLeaf( current._node, outChange );
+                continue;
+            }
+            const float32 excess = MathUtil::clamp( ( after - threshold ) / current._strain, 0.0f, 1.0f );
+            openNode( current._node, outChange );
+            if ( excess <= 0.0f )
+                continue;
+            for ( const uint32 child : graph.getChildren( current._node ) )
+            {
+                const float32 childStrain = Internal::findMaxStrain( graph._listNode[child], _listScratchStrain ) * excess;
+                if ( childStrain > 0.0f )
+                    listQueue.push_back( Internal::NodeStrain{ child, childStrain } );
+            }
+        }
+
+        // 연결: 활성 노드가 서로 다른 두 잎 사이만, 두 잎 변형의 평균을 쌓는다(연결 번호 순으로 한 번씩).
+        vector<uint32> listTouchedLink;
+        for ( const DestructionLeafStrain& entry : listLeafStrain )
+        {
+            for ( const uint32 link : getLeafLinks( entry._leaf ) )
+            {
+                listTouchedLink.push_back( link );
+            }
+        }
+        VectorUtil::sort( listTouchedLink );
+        listTouchedLink.erase( std::unique( listTouchedLink.begin(), listTouchedLink.end() ), listTouchedLink.end() );
+        for ( const uint32 link : listTouchedLink )
+        {
+            const FractureLink& data = graph._listLink[link];
+            if ( _listLinkBroken[link] != SW_FALSE || _listLeafActive[data._leafA] == _listLeafActive[data._leafB] )
+                continue;
+            _listLinkStrain[link] += 0.5f * ( _listScratchStrain[data._leafA] + _listScratchStrain[data._leafB] );
+            if ( _listLinkStrain[link] < data._area * _profile._linkStrength )
+                continue;
+            _listLinkBroken[link] = SW_TRUE;
+            ++outChange._brokenLinkCount;
+            const uint32 otherGroup = _listLeafGroup[data._leafB];
+            if ( VectorUtil::contains( listDirtyGroup, otherGroup ) == false )
+                listDirtyGroup.push_back( otherGroup );
+        }
+
+        const bool bChanged = outChange._brokenNodeCount != brokenNodeBefore || outChange._brokenLinkCount != brokenLinkBefore;
+        if ( bChanged )
+            regroup( listDirtyGroup, outChange );
+        return bChanged;
     }
 } // namespace sw

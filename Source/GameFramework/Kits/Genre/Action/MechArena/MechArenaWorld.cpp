@@ -2,9 +2,12 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 
+#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Net/NetMessageChannel.h"
+#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
@@ -49,6 +52,247 @@ namespace sw
             boost._bOverheatMode        = SW_TRUE;
             return boost;
         }
+
+        struct MechArenaWorldInternal
+        {
+            static constexpr float32 kTiny = 1.0e-5f;
+
+            /** @brief XZ 평면에서 길이 1로 만듭니다. 너무 짧으면 @p fallback 을 반환합니다. */
+            static float3 flattenDirection( const float3& direction, const float3& fallback )
+            {
+                const float3  flat{ direction._x, 0.0f, direction._z };
+                const float32 length = flat.getLength();
+                return length > kTiny ? flat / length : fallback;
+            }
+
+            static float3 normalizeOr( const float3& direction, const float3& fallback )
+            {
+                const float32 length = direction.getLength();
+                return length > kTiny ? direction / length : fallback;
+            }
+
+            static const hashed_string& getMeleeName()
+            {
+                static const hashed_string name( "melee" );
+                return name;
+            }
+
+            static const hashed_string& getShotName()
+            {
+                static const hashed_string name( "shot" );
+                return name;
+            }
+
+            static const hashed_string& getDownName()
+            {
+                static const hashed_string name( "down" );
+                return name;
+            }
+            static const hashed_string& getAttackName()
+            {
+                static const hashed_string name( "attack" );
+                return name;
+            }
+            static const hashed_string& getDefenseName()
+            {
+                static const hashed_string name( "defense" );
+                return name;
+            }
+            static const hashed_string& getDownResistName()
+            {
+                static const hashed_string name( "downResist" );
+                return name;
+            }
+
+            static void writeInput( Archive& outArchive, const MechInput& input )
+            {
+                outArchive << input._moveX;
+                outArchive << input._moveZ;
+                outArchive << input._skillSlot;
+                outArchive << input._bDash;
+                outArchive << input._bJump;
+                outArchive << input._bHover;
+                outArchive << input._bFire;
+                outArchive << input._bMelee;
+                outArchive << input._bSpecial;
+                outArchive << input._bTransform;
+                outArchive << input._bLockOn;
+            }
+
+            [[nodiscard]] static bool readInput( Archive& archive, MechInput& outInput )
+            {
+                archive >> outInput._moveX;
+                archive >> outInput._moveZ;
+                archive >> outInput._skillSlot;
+                archive >> outInput._bDash;
+                archive >> outInput._bJump;
+                archive >> outInput._bHover;
+                archive >> outInput._bFire;
+                archive >> outInput._bMelee;
+                archive >> outInput._bSpecial;
+                archive >> outInput._bTransform;
+                archive >> outInput._bLockOn;
+                const uint8 combined = static_cast<uint8>( outInput._bDash | outInput._bJump | outInput._bHover | outInput._bFire | outInput._bMelee |
+                                                           outInput._bSpecial | outInput._bTransform | outInput._bLockOn );
+                return archive.isOk() && combined <= SW_TRUE;
+            }
+
+            /**
+             * @brief 조종사의 덱(기체 id)과 스킬 id 를 카탈로그에서 찾아 채우고, 스킬 수만큼 타이머 슬롯을 잡습니다.
+             * @return 덱이 비었거나 카탈로그에 없는 기체 · 스킬이면 false 입니다.
+             */
+            [[nodiscard]] static bool readLoadout( Archive& archive, const MechCatalog& catalog, MechPilot& outPilot )
+            {
+                uint32 deckCount = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, deckCount ) == false || deckCount == 0 )
+                    return false;
+                for ( uint32 index = 0; index < deckCount; ++index )
+                {
+                    hashed_string mechID;
+                    if ( StateArchiveUtil::readName( archive, mechID ) == false )
+                        return false;
+                    const MechDef* pMech = catalog.findMech( mechID );
+                    if ( pMech == nullptr || pMech->_listMode.empty() )
+                        return false;
+                    outPilot._listDeckMech.push_back( pMech );
+                }
+                uint32 skillCount = 0;
+                if ( StateArchiveUtil::readCount( archive, 4, skillCount ) == false )
+                    return false;
+                for ( uint32 index = 0; index < skillCount; ++index )
+                {
+                    hashed_string skillID;
+                    if ( StateArchiveUtil::readName( archive, skillID ) == false )
+                        return false;
+                    const MechSkillDef* pSkill = catalog.findSkill( skillID );
+                    if ( pSkill == nullptr )
+                        return false;
+                    outPilot._listSkill.push_back( pSkill );
+                }
+                outPilot._listSkillRemaining.resize( skillCount );
+                outPilot._listSkillCooldown.resize( skillCount );
+                outPilot._listSkillSpent.resize( skillCount, SW_FALSE );
+                return true;
+            }
+
+            /** @brief 스킬마다 남은 시간 · 쿨다운 · 쓴 표시를 읽습니다. 슬롯은 `readLoadout` 이 스킬 수만큼 잡아 두었습니다. */
+            [[nodiscard]] static bool readSkillTimers( Archive& archive, MechPilot& outPilot )
+            {
+                for ( size_t index = 0; index < outPilot._listSkill.size(); ++index )
+                {
+                    const bool bSkillRead = StateArchiveUtil::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
+                                            StateArchiveUtil::readCountdown( archive, outPilot._listSkillCooldown[index] );
+                    archive >> outPilot._listSkillSpent[index];
+                    const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
+                    if ( bPilotSkillInvalid )
+                        return false;
+                }
+                return true;
+            }
+
+            static void writePilot( Archive& outArchive, const MechPilot& pilot )
+            {
+                outArchive << static_cast<uint32>( pilot._listDeckMech.size() );
+                for ( const MechDef* pMech : pilot._listDeckMech )
+                {
+                    StateArchiveUtil::writeName( outArchive, pMech->_id );
+                }
+                outArchive << static_cast<uint32>( pilot._listSkill.size() );
+                for ( const MechSkillDef* pSkill : pilot._listSkill )
+                {
+                    StateArchiveUtil::writeName( outArchive, pSkill->_id );
+                }
+                outArchive << pilot._spawnPosition;
+                outArchive << pilot._team;
+                outArchive << pilot._deckIndex;
+                outArchive << pilot._deathSlot;
+                outArchive << pilot._mode;
+                outArchive << pilot._comboStage;
+                outArchive << pilot._meleeSlot;
+                outArchive << pilot._kills;
+                outArchive << pilot._deaths;
+                outArchive << static_cast<uint8>( pilot._state );
+                outArchive << pilot._bGrounded;
+                outArchive << pilot._bMeleeHit;
+                outArchive << pilot._bMeleeQueued;
+                outArchive << pilot._bWasOverheated;
+                outArchive << static_cast<uint32>( pilot._listParticipant.size() );
+                for ( const int32 participant : pilot._listParticipant )
+                {
+                    outArchive << participant;
+                }
+                outArchive << pilot._position;
+                outArchive << pilot._velocity;
+                outArchive << pilot._forward;
+                outArchive << pilot._dashDirection;
+                StateArchiveUtil::writeCountdown( outArchive, pilot._dashRemaining );
+                StateArchiveUtil::writeCountdown( outArchive, pilot._staggerRemaining );
+                StateArchiveUtil::writeCountdown( outArchive, pilot._transformCooldown );
+                for ( size_t index = 0; index < pilot._listSkill.size(); ++index )
+                {
+                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSkillRemaining[index] );
+                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSkillCooldown[index] );
+                    outArchive << pilot._listSkillSpent[index];
+                }
+                writeInput( outArchive, pilot._input );
+                writeInput( outArchive, pilot._previousInput );
+                pilot._vitality.writeState( outArchive );
+                pilot._boost.writeState( outArchive );
+                pilot._lockOn.writeState( outArchive );
+                pilot._melee.writeState( outArchive );
+                outArchive << static_cast<uint32>( pilot._listWeaponState.size() );
+                for ( size_t index = 0; index < pilot._listWeaponState.size(); ++index )
+                {
+                    pilot._listWeaponState[index].writeState( outArchive );
+                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
+                }
+            }
+            static constexpr float32 kTiny = 1.0e-5f;
+
+            /** @brief XZ 평면에서 길이 1로 만듭니다. 너무 짧으면 @p fallback 을 반환합니다. */
+            static float3 flattenDirection( const float3& direction, const float3& fallback )
+            {
+                const float3  flat{ direction._x, 0.0f, direction._z };
+                const float32 length = flat.getLength();
+                return length > kTiny ? flat / length : fallback;
+            }
+
+            static float3 normalizeOr( const float3& direction, const float3& fallback )
+            {
+                const float32 length = direction.getLength();
+                return length > kTiny ? direction / length : fallback;
+            }
+
+            /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터여야 합니다. */
+            static float3 rotateToward( const float3& direction, const float3& desired, float32 maxRadian )
+            {
+                const float32 cosAngle = MathUtil::clamp( direction.dot( desired ), -1.0f, 1.0f );
+                // 결정적 시뮬레이션 TU 라 libm 대신 `DeterministicMathUtil` 이다(`sw_markDeterministicSources`).
+                const float32 angle = DeterministicMathUtil::acos( cosAngle );
+                if ( angle <= maxRadian || angle < kTiny )
+                    return desired;
+                const float32 sinAngle = DeterministicMathUtil::sin( angle );
+                if ( sinAngle < kTiny )
+                    return direction; // 정반대 방향이라 돌 축이 정해지지 않는다
+                const float32 ratio    = maxRadian / angle;
+                const float32 fromPart = DeterministicMathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
+                const float32 toPart   = DeterministicMathUtil::sin( ratio * angle ) / sinAngle;
+                return normalizeOr( direction * fromPart + desired * toPart, direction );
+            }
+
+            static bool isPressed( uint8 current, uint8 previous ) { return current == SW_TRUE && previous == SW_FALSE; }
+
+            static const hashed_string& getBoostRegenName()
+            {
+                static const hashed_string name( "boostRegen" );
+                return name;
+            }
+            static const hashed_string& getSpeedName()
+            {
+                static const hashed_string name( "speed" );
+                return name;
+            }
+        };
     } // namespace
 
     const MechModeDef* MechPilot::getMode() const
@@ -476,5 +720,803 @@ namespace sw
         event._value = value;
         event._id    = id;
         _eventBuffer.push( event );
+    }
+
+    // --- 무기와 피해 ------------------------------------------------------------------------------
+
+    void MechArenaWorld::fireShot( int32 pilotIndex, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed )
+    {
+        MechPilot&   pilot  = _listPilot[static_cast<size_t>( pilotIndex )];
+        WeaponState& weapon = pilot._listWeaponState[static_cast<size_t>( slotIndex )];
+        if ( weapon.getDef()._id.empty() )
+            return;
+        const int32  target    = findLockTarget( pilotIndex );
+        const float3 origin    = computeCenter( pilot );
+        const float3 direction = target >= 0 ? MechArenaWorldInternal::normalizeOr( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin, pilot._forward )
+                                             : pilot._forward;
+        WeaponShot   shot;
+        if ( weapon.pullTrigger( GameRay{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
+            return;
+        pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
+        const WeaponDef& def = weapon.getDef();
+        for ( const GameRay& ray : shot._listRay )
+        {
+            launch( pilotIndex, target, ray._direction, def._projectileSpeed, def._range, def._damage, slot );
+        }
+    }
+
+    void MechArenaWorld::fireSpecial( int32 pilotIndex, int32 slotIndex, const MechWeaponSlotDef& slot )
+    {
+        MechPilot& pilot    = _listPilot[static_cast<size_t>( pilotIndex )];
+        Countdown& cooldown = pilot._listSpecialCooldown[static_cast<size_t>( slotIndex )];
+        if ( cooldown.isActive() )
+            return;
+        cooldown.start( slot._cooldown );
+        const int32  target    = findLockTarget( pilotIndex );
+        const float3 origin    = computeCenter( pilot );
+        const float3 direction = target >= 0 ? MechArenaWorldInternal::normalizeOr( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin, pilot._forward )
+                                             : pilot._forward;
+        pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
+        launch( pilotIndex, target, direction, slot._projectileSpeed, slot._range, slot._damage, slot );
+    }
+
+    void MechArenaWorld::launch( int32 pilotIndex, int32 target, const float3& direction, float32 speed, float32 range, float32 damage,
+                                 const MechWeaponSlotDef& slot )
+    {
+        const MechPilot& pilot  = _listPilot[static_cast<size_t>( pilotIndex )];
+        const float3     origin = computeCenter( pilot );
+        if ( speed <= 0.0f )
+        {
+            // 즉시 탄(광선)은 사거리 안에서 가장 가까운 적을 맞힌다.
+            const GameRay ray{ origin, direction };
+            int32         hitPilot    = -1;
+            float32       hitDistance = range;
+            for ( int32 other = 0; other < getPilotCount(); ++other )
+            {
+                const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
+                float32          distance  = 0.0f;
+                if ( isEnemyTarget( pilot._team, other ) == false )
+                    continue;
+                if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
+                {
+                    hitDistance = distance;
+                    hitPilot    = other;
+                }
+            }
+            if ( hitPilot >= 0 )
+                resolveHit( pilotIndex, hitPilot, damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind );
+            return;
+        }
+        MechProjectile projectile;
+        projectile._position    = origin;
+        projectile._direction   = direction;
+        projectile._speed       = speed;
+        projectile._homing      = slot._homing;
+        projectile._rangeLeft   = range;
+        projectile._damage      = damage;
+        projectile._downValue   = slot._downValue;
+        projectile._knockback   = slot._knockback;
+        projectile._staggerTime = slot._staggerTime;
+        projectile._owner       = pilotIndex;
+        projectile._target      = target;
+        projectile._kind        = slot._kind;
+        _listProjectile.push_back( projectile );
+    }
+
+    void MechArenaWorld::resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
+                                     MechWeaponKind kind )
+    {
+        using Internal = MechArenaWorldInternal;
+        if ( isTargetable( victim ) == false || _pMechCatalog == nullptr )
+            return;
+        MechPilot&     target      = _listPilot[static_cast<size_t>( victim )];
+        const MechDef* pVictimMech = target.getMech();
+        const bool     bAttacker   = isValidPilot( attacker );
+        float32        scale       = 1.0f;
+        if ( bAttacker )
+        {
+            const MechDef*       pAttackerMech = _listPilot[static_cast<size_t>( attacker )].getMech();
+            const hashed_string& kindName      = kind == MechWeaponKind::Melee ? Internal::getMeleeName() : Internal::getShotName();
+            scale                              = _pMechCatalog->getClassModifier( pAttackerMech->_rangeClass ).getScale( kindName );
+            scale *= computeModifier( attacker, MechArenaWorldInternal::getAttackName() );
+        }
+        const float32 finalDamage = damage * scale / MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldInternal::getDefenseName() ) );
+        float32       finalDown   = downValue * _pMechCatalog->getClassModifier( pVictimMech->_rangeClass ).getScale( Internal::getDownName() ) /
+                            MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldInternal::getDownResistName() ) );
+        if ( bKnockdown )
+            finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
+
+        const VitalityDamageResult result = target._vitality.applyDamage( finalDamage, finalDown, attacker );
+        _listVitalityScratch.clear();
+        target._vitality.drainEvents( _listVitalityScratch );
+        if ( result._bIgnored == SW_TRUE )
+            return;
+        const int32 victimParticipant   = target._listParticipant.empty() ? -1 : target._listParticipant[static_cast<size_t>( target._deckIndex )];
+        const int32 attackerParticipant = bAttacker && _listPilot[static_cast<size_t>( attacker )]._listParticipant.empty() == false
+                                            ? _listPilot[static_cast<size_t>( attacker )]._listParticipant[static_cast<size_t>( _listPilot[static_cast<size_t>( attacker )]._deckIndex )]
+                                            : -1;
+        _match.reportDamage( attackerParticipant, victimParticipant, result._healthDamage );
+        pushEvent( MechArenaEvent::Kind::Hit, victim, attacker, result._healthDamage, hashed_string{} );
+
+        if ( result._bDied == SW_TRUE )
+        {
+            target._state        = MechPilotState::Destroyed;
+            target._deathSlot    = target._deckIndex;
+            target._comboStage   = -1;
+            target._meleeSlot    = -1;
+            target._bMeleeQueued = SW_FALSE;
+            target._velocity     = float3{};
+            target._dashRemaining.clear();
+            target._staggerRemaining.clear();
+            target._melee.cancel();
+            target._lockOn.release();
+            for ( Countdown& remaining : target._listSkillRemaining )
+            {
+                remaining.clear();
+            }
+            ++target._deaths;
+            if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
+                ++_listPilot[static_cast<size_t>( attacker )]._kills;
+            pushEvent( MechArenaEvent::Kind::Destroyed, victim, attacker, 0.0f, pVictimMech->_id );
+            _match.reportKill( victimParticipant, attackerParticipant );
+            return;
+        }
+
+        if ( target._state == MechPilotState::Active )
+        {
+            if ( staggerTime > 0.0f )
+            {
+                // 경직: 하던 근접과 대시가 끊긴다.
+                target._staggerRemaining.extendTo( staggerTime );
+                target._dashRemaining.clear();
+                target._melee.cancel();
+                target._comboStage   = -1;
+                target._meleeSlot    = -1;
+                target._bMeleeQueued = SW_FALSE;
+            }
+            if ( knockback > 0.0f )
+            {
+                const float3 away = bAttacker ? Internal::flattenDirection( target._position - _listPilot[static_cast<size_t>( attacker )]._position, -target._forward )
+                                              : -target._forward;
+                target._position += away * knockback;
+                target._position._x = MathUtil::clamp( target._position._x, -_settings._arenaHalfSize, _settings._arenaHalfSize );
+                target._position._z = MathUtil::clamp( target._position._z, -_settings._arenaHalfSize, _settings._arenaHalfSize );
+            }
+            if ( result._bPoiseBroken == SW_TRUE )
+            {
+                target._state = MechPilotState::Down;
+                target._dashRemaining.clear();
+                target._melee.cancel();
+                target._comboStage   = -1;
+                target._meleeSlot    = -1;
+                target._bMeleeQueued = SW_FALSE;
+                pushEvent( MechArenaEvent::Kind::Downed, victim, attacker, 0.0f, hashed_string{} );
+                triggerSkills( victim, MechSkillTrigger::OnDown );
+            }
+        }
+        triggerSkills( victim, MechSkillTrigger::HealthBelow );
+    }
+
+    // --- 스킬과 장비 ------------------------------------------------------------------------------
+
+    void MechArenaWorld::activateSkill( int32 pilotIndex, int32 skillIndex )
+    {
+        MechPilot&          pilot             = _listPilot[static_cast<size_t>( pilotIndex )];
+        const size_t        index             = static_cast<size_t>( skillIndex );
+        const MechSkillDef* pSkill            = pilot._listSkill[index];
+        const bool          bSkillUnavailable = pilot._listSkillRemaining[index].isActive() || pilot._listSkillCooldown[index].isActive() || pSkill->_duration <= 0.0f;
+        if ( bSkillUnavailable )
+            return;
+        pilot._listSkillRemaining[index].start( pSkill->_duration );
+        pilot._listSkillCooldown[index].start( pSkill->_cooldown );
+        pilot._listSkillSpent[index] = SW_TRUE;
+        pushEvent( MechArenaEvent::Kind::SkillStarted, pilotIndex, -1, pSkill->_duration, pSkill->_id );
+    }
+
+    void MechArenaWorld::triggerSkills( int32 pilotIndex, MechSkillTrigger trigger )
+    {
+        MechPilot&  pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        const int32 count = countActiveSkills( pilot );
+        for ( int32 index = 0; index < count; ++index )
+        {
+            const MechSkillDef* pSkill = pilot._listSkill[static_cast<size_t>( index )];
+            if ( pSkill->_trigger != trigger )
+                continue;
+            if ( trigger == MechSkillTrigger::HealthBelow )
+            {
+                const bool bBelow = pilot._vitality.isAlive() && pilot._vitality.getHealthRatio() < pSkill->_threshold;
+                if ( bBelow == false || pilot._listSkillSpent[static_cast<size_t>( index )] == SW_TRUE )
+                    continue;
+            }
+            activateSkill( pilotIndex, index );
+        }
+    }
+
+    // --- 직렬화 -----------------------------------------------------------------------------------
+
+    void MechArenaWorld::makeSnapshot( MechArenaSnapshot& outSnapshot ) const
+    {
+        outSnapshot                = MechArenaSnapshot{};
+        outSnapshot._tick          = _tick;
+        outSnapshot._phase         = _match.getPhase();
+        outSnapshot._winningTeam   = _match.getWinningTeam();
+        outSnapshot._remainingTime = _match.getRemaining();
+        outSnapshot._arenaHalfSize = _settings._arenaHalfSize;
+        outSnapshot._ceiling       = _settings._ceiling;
+        for ( int32 team = 0; team < static_cast<int32>( _listTeamName.size() ); ++team )
+        {
+            outSnapshot._listTeamGauge.push_back( getTeamGauge( team ) );
+        }
+        for ( int32 index = 0; index < getPilotCount(); ++index )
+        {
+            const MechPilot&  pilot = _listPilot[static_cast<size_t>( index )];
+            const MechDef*    pMech = pilot.getMech();
+            MechPilotSnapshot entry;
+            entry._position      = pilot._position;
+            entry._health        = pilot._vitality.getHealth();
+            entry._boostHeat     = pilot._boost.getRatio();
+            entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._vitality.getPoise() / pMech->_downMax ) : 0.0f;
+            entry._team          = pilot._team;
+            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ) : -1;
+            entry._mode          = pilot._mode;
+            entry._lockTarget    = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : -1;
+            entry._comboStage    = pilot._comboStage;
+            entry._state         = pilot._state;
+            entry._bOverheated   = pilot._boost.isOverheated() ? SW_TRUE : SW_FALSE;
+            entry._bInvulnerable = pilot._vitality.isInvulnerable() ? SW_TRUE : SW_FALSE;
+            const int32 shot     = findSlot( pilot, MechWeaponKind::Shot );
+            if ( shot >= 0 )
+            {
+                entry._magazineAmmo = pilot._listWeaponState[static_cast<size_t>( shot )].getMagazineAmmo();
+                entry._bReloading   = pilot._listWeaponState[static_cast<size_t>( shot )].isReloading() ? SW_TRUE : SW_FALSE;
+            }
+            const int32 skillCount = MathUtil::min( countActiveSkills( pilot ), 32 );
+            for ( int32 skill = 0; skill < skillCount; ++skill )
+            {
+                entry._activeSkillMask |= pilot._listSkillRemaining[static_cast<size_t>( skill )].isActive() ? ( 1u << static_cast<uint32>( skill ) ) : 0u;
+            }
+            outSnapshot._listPilot.push_back( entry );
+        }
+        for ( const MechProjectile& projectile : _listProjectile )
+        {
+            MechProjectileSnapshot entry;
+            entry._position = projectile._position;
+            entry._owner    = projectile._owner;
+            outSnapshot._listProjectile.push_back( entry );
+        }
+    }
+
+    bool MechArenaWorld::registerSnapshotMessage( NetMessageChannel& inoutChannel, uint8 kind )
+    {
+        return inoutChannel.registerMessage<MechArenaSnapshot>( kind );
+    }
+
+    bool MechArenaWorld::writeSnapshotMessage( const NetMessageChannel& channel, uint8 kind, NetMessageWriter& outWriter ) const
+    {
+        MechArenaSnapshot snapshot;
+        makeSnapshot( snapshot );
+        return channel.writeMessage( kind, snapshot, outWriter );
+    }
+
+    void MechArenaWorld::writeState( Archive& outArchive ) const
+    {
+        outArchive << static_cast<uint32>( _listTeamName.size() );
+        for ( const hashed_string& name : _listTeamName )
+        {
+            StateArchiveUtil::writeName( outArchive, name );
+        }
+        outArchive << _bStarted;
+        outArchive << _bEndReported;
+        outArchive << _tick;
+        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        _match.writeState( outArchive );
+        outArchive << static_cast<uint32>( _listPilot.size() );
+        for ( const MechPilot& pilot : _listPilot )
+        {
+            MechArenaWorldInternal::writePilot( outArchive, pilot );
+        }
+        outArchive << static_cast<uint32>( _listProjectile.size() );
+        for ( const MechProjectile& projectile : _listProjectile )
+        {
+            outArchive << projectile._position;
+            outArchive << projectile._direction;
+            outArchive << projectile._speed;
+            outArchive << projectile._homing;
+            outArchive << projectile._rangeLeft;
+            outArchive << projectile._damage;
+            outArchive << projectile._downValue;
+            outArchive << projectile._knockback;
+            outArchive << projectile._staggerTime;
+            outArchive << projectile._owner;
+            outArchive << projectile._target;
+            outArchive << static_cast<uint8>( projectile._kind );
+        }
+    }
+
+    bool MechArenaWorld::readState( Archive& archive )
+    {
+        if ( _pMechCatalog == nullptr || _pMoveCatalog == nullptr )
+            return false;
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정과 카탈로그는 사본이 그대로 가지고 있다.
+        MechArenaWorld restored  = *this;
+        uint32         teamCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, teamCount ) == false )
+            return false;
+        restored._listTeamName.assign( teamCount, hashed_string{} );
+        for ( hashed_string& name : restored._listTeamName )
+        {
+            if ( StateArchiveUtil::readName( archive, name ) == false )
+                return false;
+        }
+        archive >> restored._bStarted;
+        archive >> restored._bEndReported;
+        archive >> restored._tick;
+        const bool bHeadValid = archive.isOk() && restored._bStarted <= SW_TRUE && restored._bEndReported <= SW_TRUE;
+        if ( bHeadValid == false || StateArchiveUtil::readStepTimer( archive, restored._timer ) == false )
+            return false;
+        restored._match.initialize( restored._bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
+        if ( restored._match.readState( archive ) == false )
+            return false;
+
+        uint32 pilotCount = 0;
+        // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 위치, 정수, 상태 슬롯(60) 바이트
+        if ( StateArchiveUtil::readCount( archive, 72, pilotCount ) == false )
+            return false;
+        restored._listPilot.assign( pilotCount, MechPilot{} );
+        for ( uint32 index = 0; index < pilotCount; ++index )
+        {
+            if ( restored.readPilot( archive, static_cast<int32>( index ), restored._listPilot[index] ) == false )
+                return false;
+        }
+
+        uint32 projectileCount = 0;
+        // 탄마다 위치(12) + 방향(12) + 실수 7개(28) + 쏜 쪽과 대상(8) + 종류(1) 바이트
+        if ( StateArchiveUtil::readCount( archive, 61, projectileCount ) == false )
+            return false;
+        restored._listProjectile.assign( projectileCount, MechProjectile{} );
+        for ( MechProjectile& projectile : restored._listProjectile )
+        {
+            uint8 kind = 0;
+            archive >> projectile._position;
+            archive >> projectile._direction;
+            archive >> projectile._speed;
+            archive >> projectile._homing;
+            archive >> projectile._rangeLeft;
+            archive >> projectile._damage;
+            archive >> projectile._downValue;
+            archive >> projectile._knockback;
+            archive >> projectile._staggerTime;
+            archive >> projectile._owner;
+            archive >> projectile._target;
+            archive >> kind;
+            const bool bValid = archive.isOk() && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) && -1 <= projectile._target &&
+                                projectile._target < static_cast<int32>( pilotCount ) && kind <= static_cast<uint8>( MechWeaponKind::Special );
+            if ( bValid == false )
+                return false;
+            projectile._kind = static_cast<MechWeaponKind>( kind );
+        }
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
+    }
+
+    MatchSettings MechArenaWorld::makeMatchSettings() const
+    {
+        MatchSettings matchSettings;
+        matchSettings._respawnDelay = _settings._respawnDelay;
+        matchSettings._timeLimit    = _settings._timeLimit;
+        matchSettings._scorePerKill = 1;
+        return matchSettings;
+    }
+
+    bool MechArenaWorld::readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot )
+    {
+        if ( MechArenaWorldInternal::readLoadout( archive, *_pMechCatalog, outPilot ) == false )
+            return false;
+        const uint32 deckCount = static_cast<uint32>( outPilot._listDeckMech.size() );
+
+        int32 mode           = 0;
+        uint8 state          = 0;
+        uint8 bWasOverheated = SW_FALSE;
+        archive >> outPilot._spawnPosition;
+        archive >> outPilot._team;
+        archive >> outPilot._deckIndex;
+        archive >> outPilot._deathSlot;
+        archive >> mode;
+        archive >> outPilot._comboStage;
+        archive >> outPilot._meleeSlot;
+        archive >> outPilot._kills;
+        archive >> outPilot._deaths;
+        archive >> state;
+        archive >> outPilot._bGrounded;
+        archive >> outPilot._bMeleeHit;
+        archive >> outPilot._bMeleeQueued;
+        archive >> bWasOverheated;
+        const int32 deckSize   = static_cast<int32>( deckCount );
+        const uint8 flags      = static_cast<uint8>( outPilot._bGrounded | outPilot._bMeleeHit | outPilot._bMeleeQueued | bWasOverheated );
+        const bool  bHeadValid = archive.isOk() && 0 <= outPilot._team && outPilot._team < static_cast<int32>( _listTeamName.size() ) && 0 <= outPilot._deckIndex &&
+                                outPilot._deckIndex < deckSize && -1 <= outPilot._deathSlot && outPilot._deathSlot < deckSize && -1 <= outPilot._comboStage &&
+                                state <= static_cast<uint8>( MechPilotState::Retired ) && flags <= SW_TRUE;
+        if ( bHeadValid == false )
+            return false;
+        outPilot._state = static_cast<MechPilotState>( state );
+
+        // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다. 격추된 동안은 격추된 슬롯의 기체를 쓴다(교체한 슬롯은 부활할 때 장착된다).
+        const int32 deckIndex = outPilot._deckIndex;
+        outPilot._deckIndex   = outPilot._deathSlot >= 0 ? outPilot._deathSlot : deckIndex;
+        const MechDef* pMech  = outPilot.getMech();
+        if ( equipMech( outPilot, pilotIndex ) == false )
+            return false;
+        outPilot._deckIndex      = deckIndex;
+        outPilot._bWasOverheated = bWasOverheated;
+        outPilot._mode           = mode;
+        if ( mode < 0 || mode >= static_cast<int32>( pMech->_listMode.size() ) )
+            return false;
+
+        uint32 participantCount = 0;
+        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || ( participantCount != 0 && participantCount != deckCount ) )
+            return false;
+        outPilot._listParticipant.assign( participantCount, -1 );
+        for ( int32& participant : outPilot._listParticipant )
+        {
+            archive >> participant;
+        }
+        archive >> outPilot._position;
+        archive >> outPilot._velocity;
+        archive >> outPilot._forward;
+        archive >> outPilot._dashDirection;
+        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, outPilot._dashRemaining ) &&
+                                StateArchiveUtil::readCountdown( archive, outPilot._staggerRemaining ) &&
+                                StateArchiveUtil::readCountdown( archive, outPilot._transformCooldown );
+        if ( bTimerRead == false || MechArenaWorldInternal::readSkillTimers( archive, outPilot ) == false )
+            return false;
+        const bool bBodyRead = MechArenaWorldInternal::readInput( archive, outPilot._input ) && MechArenaWorldInternal::readInput( archive, outPilot._previousInput ) &&
+                               outPilot._vitality.readState( archive ) && outPilot._boost.readState( archive ) && outPilot._lockOn.readState( archive ) &&
+                               outPilot._melee.readState( archive, *_pMoveCatalog );
+        if ( bBodyRead == false )
+            return false;
+
+        uint32 weaponCount = 0;
+        archive >> weaponCount;
+        const bool bWeaponStateInvalid = archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) || outPilot._meleeSlot >= static_cast<int32>( weaponCount ) ||
+                                         outPilot._meleeSlot < -1;
+        if ( bWeaponStateInvalid )
+            return false;
+        for ( uint32 index = 0; index < weaponCount; ++index )
+        {
+            if ( outPilot._listWeaponState[index].readState( archive ) == false ||
+                 StateArchiveUtil::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    void MechArenaWorld::stepPilot( int32 pilotIndex, float32 deltaTime )
+    {
+        MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        if ( pilot._state != MechPilotState::Active && pilot._state != MechPilotState::Down )
+        {
+            pilot._previousInput = pilot._input;
+            return;
+        }
+        const MechInput& input    = pilot._input;
+        const MechInput& previous = pilot._previousInput;
+        const MechDef*   pMech    = pilot.getMech();
+
+        pilot._vitality.update( deltaTime );
+        _listVitalityScratch.clear();
+        pilot._vitality.drainEvents( _listVitalityScratch );
+        if ( pilot._state == MechPilotState::Down && pilot._vitality.isPoiseBroken() == false )
+        {
+            // 기상: 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
+            pilot._state = MechPilotState::Active;
+            pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
+            pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
+        }
+        pilot._staggerRemaining.update( deltaTime );
+        pilot._transformCooldown.update( deltaTime );
+        for ( WeaponState& weapon : pilot._listWeaponState )
+        {
+            weapon.update( deltaTime );
+        }
+        for ( Countdown& cooldown : pilot._listSpecialCooldown )
+        {
+            cooldown.update( deltaTime );
+        }
+        stepSkills( pilotIndex, deltaTime );
+
+        bool bControl = false;
+        if ( pilot._state == MechPilotState::Active )
+        {
+            stepLockOn( pilotIndex, MechArenaWorldInternal::isPressed( input._bLockOn, previous._bLockOn ), deltaTime );
+            bControl = pilot.canAct();
+            if ( bControl )
+            {
+                const bool bPressedTransform = MechArenaWorldInternal::isPressed( input._bTransform, previous._bTransform );
+                const bool bCanTransform     = bPressedTransform && pilot._transformCooldown.isActive() == false && pilot._comboStage < 0 && pMech->_listMode.size() > 1;
+                if ( bCanTransform )
+                {
+                    pilot._mode = ( pilot._mode + 1 ) % static_cast<int32>( pMech->_listMode.size() );
+                    pilot._transformCooldown.start( pMech->_transformTime );
+                    pilot._dashRemaining.clear();
+                    pushEvent( MechArenaEvent::Kind::Transformed, pilotIndex, -1, static_cast<float32>( pilot._mode ), pilot.getMode()->_id );
+                }
+                stepMelee( pilotIndex, MechArenaWorldInternal::isPressed( input._bMelee, previous._bMelee ) );
+                if ( pilot._comboStage < 0 )
+                    stepWeapons( pilotIndex, deltaTime );
+            }
+        }
+        stepMovement( pilotIndex, bControl, MechArenaWorldInternal::isPressed( input._bDash, previous._bDash ),
+                      MechArenaWorldInternal::isPressed( input._bJump, previous._bJump ), deltaTime );
+
+        pilot._boost.setRegenScale( computeModifier( pilotIndex, MechArenaWorldInternal::getBoostRegenName() ) );
+        pilot._boost.update( deltaTime );
+        const bool bOverheated = pilot._boost.isOverheated();
+        if ( bOverheated && pilot._bWasOverheated == SW_FALSE )
+            pushEvent( MechArenaEvent::Kind::Overheated, pilotIndex, -1, 0.0f, hashed_string{} );
+        pilot._bWasOverheated = bOverheated ? SW_TRUE : SW_FALSE;
+        pilot._previousInput  = input;
+    }
+
+    void MechArenaWorld::stepMovement( int32 pilotIndex, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime )
+    {
+        using Internal             = MechArenaWorldInternal;
+        MechPilot&         pilot   = _listPilot[static_cast<size_t>( pilotIndex )];
+        const MechDef*     pMech   = pilot.getMech();
+        const MechModeDef* pMode   = pilot.getMode();
+        const bool         bRooted = pilot._comboStage >= 0;
+        float3             horizontal{};
+        bool               bHovering = false;
+        if ( bControl && bRooted == false )
+        {
+            const float32 costScale = pMode->_boostCostScale;
+            float3        move{ pilot._input._moveX, 0.0f, pilot._input._moveZ };
+            const float32 moveLength = move.getLength();
+            if ( moveLength > 1.0f )
+                move = move / moveLength;
+            if ( bPressedDash && pilot._boost.trySpend( pMech->_dashCost * costScale ) )
+            {
+                pilot._dashRemaining.start( pMech->_dashTime );
+                pilot._dashDirection = Internal::flattenDirection( move, pilot._forward );
+            }
+            const bool bCanJump = bPressedJump && pilot._bGrounded == SW_TRUE && pilot._boost.trySpend( pMech->_jumpCost * costScale );
+            if ( bCanJump )
+            {
+                pilot._velocity._y = pMech->_jumpSpeed;
+                pilot._bGrounded   = SW_FALSE;
+            }
+            if ( pilot._dashRemaining.isActive() )
+            {
+                horizontal = pilot._dashDirection * pMech->_dashSpeed;
+                pilot._dashRemaining.update( deltaTime );
+            }
+            else
+            {
+                horizontal = move * ( pMode->_speed * computeModifier( pilotIndex, MechArenaWorldInternal::getSpeedName() ) );
+            }
+            if ( pilot._lockOn.hasTarget() == false && moveLength > Internal::kTiny )
+                pilot._forward = Internal::flattenDirection( move, pilot._forward );
+            const bool bWantsHover = pilot._input._bHover == SW_TRUE && pilot._bGrounded == SW_FALSE && pilot._velocity._y <= 0.0f;
+            if ( bWantsHover && pilot._boost.drain( pMech->_hoverPerSecond * costScale, deltaTime ) )
+                bHovering = true;
+        }
+        else
+        {
+            pilot._dashRemaining.clear();
+        }
+
+        pilot._velocity._x = horizontal._x;
+        pilot._velocity._z = horizontal._z;
+        if ( bHovering )
+            pilot._velocity._y = 0.0f;
+        else if ( pilot._bGrounded == SW_FALSE )
+            pilot._velocity._y -= _settings._gravity * deltaTime;
+        pilot._position += pilot._velocity * deltaTime;
+        pilot._position._x = MathUtil::clamp( pilot._position._x, -_settings._arenaHalfSize, _settings._arenaHalfSize );
+        pilot._position._z = MathUtil::clamp( pilot._position._z, -_settings._arenaHalfSize, _settings._arenaHalfSize );
+        if ( pilot._position._y >= _settings._ceiling )
+        {
+            pilot._position._y = _settings._ceiling;
+            pilot._velocity._y = MathUtil::min( 0.0f, pilot._velocity._y );
+        }
+        if ( pilot._position._y <= 0.0f )
+        {
+            pilot._position._y = 0.0f;
+            pilot._velocity._y = 0.0f;
+            pilot._bGrounded   = SW_TRUE;
+        }
+        else
+        {
+            pilot._bGrounded = SW_FALSE;
+        }
+    }
+
+    void MechArenaWorld::stepLockOn( int32 pilotIndex, bool bPressedLockOn, float32 deltaTime )
+    {
+        MechPilot&   pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        const float3 eye   = computeCenter( pilot );
+        collectCandidates( pilotIndex, _listCandidateScratch );
+        if ( bPressedLockOn )
+        {
+            if ( pilot._lockOn.hasTarget() )
+                (void)pilot._lockOn.cycle( eye, pilot._forward, _listCandidateScratch, 1 );
+            else
+                (void)pilot._lockOn.pickBest( eye, pilot._forward, _listCandidateScratch );
+        }
+        (void)pilot._lockOn.update( eye, _listCandidateScratch, deltaTime );
+        if ( pilot._lockOn.hasTarget() )
+        {
+            const MechPilot& target = _listPilot[static_cast<size_t>( pilot._lockOn.getTarget() - 1 )];
+            pilot._forward          = MechArenaWorldInternal::flattenDirection( target._position - pilot._position, pilot._forward );
+        }
+    }
+
+    void MechArenaWorld::stepWeapons( int32 pilotIndex, float32 deltaTime )
+    {
+        (void)deltaTime;
+        MechPilot&         pilot   = _listPilot[static_cast<size_t>( pilotIndex )];
+        const MechModeDef* pMode   = pilot.getMode();
+        const int32        offset  = pilot.getMech()->computeSlotOffset( pilot._mode );
+        const int32        shot    = findSlot( pilot, MechWeaponKind::Shot );
+        const int32        special = findSlot( pilot, MechWeaponKind::Special );
+        if ( shot >= 0 && pilot._input._bFire == SW_TRUE )
+            fireShot( pilotIndex, shot, pMode->_listWeapon[static_cast<size_t>( shot - offset )],
+                      MechArenaWorldInternal::isPressed( pilot._input._bFire, pilot._previousInput._bFire ) );
+        if ( special >= 0 && MechArenaWorldInternal::isPressed( pilot._input._bSpecial, pilot._previousInput._bSpecial ) )
+            fireSpecial( pilotIndex, special, pMode->_listWeapon[static_cast<size_t>( special - offset )] );
+    }
+
+    void MechArenaWorld::stepMelee( int32 pilotIndex, bool bPressedMelee )
+    {
+        MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        if ( _pMoveCatalog == nullptr )
+            return;
+        if ( pilot._comboStage < 0 )
+        {
+            const int32 slotIndex = findSlot( pilot, MechWeaponKind::Melee );
+            if ( bPressedMelee == false || slotIndex < 0 )
+                return;
+            const MechWeaponSlotDef& slot  = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
+            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->find( slot._listMoveID.front() );
+            if ( pMove == nullptr )
+                return;
+            (void)findLockTarget( pilotIndex ); // 고르는 부수 효과만 쓴다 — 대상이 없으면 앞으로 친다
+            if ( pilot._melee.start( *pMove ) == false )
+                return;
+            pilot._comboStage   = 0;
+            pilot._meleeSlot    = slotIndex;
+            pilot._bMeleeHit    = SW_FALSE;
+            pilot._bMeleeQueued = SW_FALSE;
+            pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, -1, 0.0f, pMove->_id );
+        }
+        else
+        {
+            const MechWeaponSlotDef& slot = pilot.getMode()->_listWeapon[static_cast<size_t>( pilot._meleeSlot - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
+            if ( bPressedMelee )
+                pilot._bMeleeQueued = SW_TRUE;
+            const int32          nextStage          = pilot._comboStage + 1;
+            const bool           bHasNext           = nextStage < static_cast<int32>( slot._listMoveID.size() );
+            const MoveFrameData* pNext              = bHasNext ? _pMoveCatalog->find( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
+            const bool           bCanCancelIntoNext = pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id );
+            if ( bCanCancelIntoNext )
+            {
+                // 캔슬 창이 열려서 다음 단이 이 프레임에 나간다.
+                if ( pilot._melee.start( *pNext ) == false )
+                    return;
+                pilot._comboStage   = nextStage;
+                pilot._bMeleeHit    = SW_FALSE;
+                pilot._bMeleeQueued = SW_FALSE;
+                pushEvent( MechArenaEvent::Kind::ComboAdvanced, pilotIndex, -1, static_cast<float32>( nextStage ), pNext->_id );
+            }
+            else
+            {
+                (void)pilot._melee.advanceFrame();
+                if ( pilot._melee.getPhase() == MovePhase::Finished )
+                {
+                    pilot._melee.cancel();
+                    pilot._comboStage   = -1;
+                    pilot._meleeSlot    = -1;
+                    pilot._bMeleeQueued = SW_FALSE;
+                    return;
+                }
+            }
+        }
+
+        if ( pilot._melee.getPhase() != MovePhase::Active || pilot._bMeleeHit == SW_TRUE )
+            return;
+        const MechWeaponSlotDef& slot   = pilot.getMode()->_listWeapon[static_cast<size_t>( pilot._meleeSlot - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
+        const MechDef*           pMech  = pilot.getMech();
+        int32                    target = -1;
+        float32                  best   = MathUtil::kMaxFloat;
+        for ( int32 other = 0; other < getPilotCount(); ++other )
+        {
+            const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
+            if ( isEnemyTarget( pilot._team, other ) == false )
+                continue;
+            const float32 reach    = slot._range + pMech->_radius + candidate.getMech()->_radius;
+            const float32 distance = float3::getDistance( computeCenter( pilot ), computeCenter( candidate ) );
+            // 록온 대상이 닿으면 그쪽을, 아니면 가장 가까운 적을 고른다.
+            const bool    bLocked = pilot._lockOn.getTarget() == static_cast<uint64>( other + 1 );
+            const float32 score   = bLocked ? -1.0f : distance;
+            if ( distance <= reach && score < best )
+            {
+                best   = score;
+                target = other;
+            }
+        }
+        if ( target < 0 )
+            return;
+        const MoveFrameData& move = pilot._melee.getMove();
+        pilot._melee.registerContact( false );
+        pilot._bMeleeHit = SW_TRUE;
+        resolveHit( pilotIndex, target, move._damage, slot._downValue, slot._knockback, static_cast<float32>( move._hitstun ) * _settings._fixedStep,
+                    move._bKnockdown == SW_TRUE, MechWeaponKind::Melee );
+    }
+
+    void MechArenaWorld::stepSkills( int32 pilotIndex, float32 deltaTime )
+    {
+        MechPilot&  pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        const int32 count = countActiveSkills( pilot );
+        for ( int32 index = 0; index < count; ++index )
+        {
+            Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
+            pilot._listSkillCooldown[static_cast<size_t>( index )].update( deltaTime );
+            if ( remaining.update( deltaTime ) )
+                pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
+        }
+        const int32 slot                       = pilot._input._skillSlot;
+        const bool  bPressedManual             = slot >= 0 && slot < count && slot != pilot._previousInput._skillSlot;
+        const bool  bShouldActivateManualSkill = bPressedManual && pilot.canAct() && pilot._listSkill[static_cast<size_t>( slot )]->_trigger == MechSkillTrigger::Manual;
+        if ( bShouldActivateManualSkill )
+            activateSkill( pilotIndex, slot );
+    }
+
+    void MechArenaWorld::stepProjectiles( float32 deltaTime )
+    {
+        using Internal    = MechArenaWorldInternal;
+        size_t writeIndex = 0;
+        for ( size_t readIndex = 0; readIndex < _listProjectile.size(); ++readIndex )
+        {
+            MechProjectile projectile = _listProjectile[readIndex];
+            const bool     bCanHome   = projectile._target >= 0 && projectile._homing > 0.0f && isTargetable( projectile._target );
+            if ( bCanHome )
+            {
+                const float3 targetCenter = computeCenter( _listPilot[static_cast<size_t>( projectile._target )] );
+                const float3 desired      = Internal::normalizeOr( targetCenter - projectile._position, projectile._direction );
+                projectile._direction     = Internal::rotateToward( projectile._direction, desired, MathUtil::toRadian( projectile._homing ) * deltaTime );
+            }
+            const float32 stepLength = MathUtil::min( projectile._speed * deltaTime, projectile._rangeLeft );
+            const int32   ownerTeam  = isValidPilot( projectile._owner ) ? _listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
+            const GameRay ray{ projectile._position, projectile._direction };
+            int32         hitPilot    = -1;
+            float32       hitDistance = stepLength;
+            for ( int32 other = 0; other < getPilotCount(); ++other )
+            {
+                const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
+                float32          distance  = 0.0f;
+                if ( isEnemyTarget( ownerTeam, other ) == false )
+                    continue;
+                if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
+                {
+                    hitDistance = distance;
+                    hitPilot    = other;
+                }
+            }
+            if ( hitPilot >= 0 )
+            {
+                resolveHit( projectile._owner, hitPilot, projectile._damage, projectile._downValue, projectile._knockback, projectile._staggerTime, false,
+                            projectile._kind );
+                continue;
+            }
+            projectile._position += projectile._direction * stepLength;
+            projectile._rangeLeft -= stepLength;
+            const bool bOutside = MathUtil::abs( projectile._position._x ) > _settings._arenaHalfSize ||
+                                  MathUtil::abs( projectile._position._z ) > _settings._arenaHalfSize || projectile._position._y < 0.0f ||
+                                  projectile._position._y > _settings._ceiling;
+            if ( projectile._rangeLeft <= 0.0f || bOutside )
+                continue;
+            _listProjectile[writeIndex++] = projectile;
+        }
+        _listProjectile.resize( writeIndex );
     }
 } // namespace sw

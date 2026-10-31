@@ -108,7 +108,7 @@ namespace sw
     private:
         /** @brief `request` 와 `acquire` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */
         static MeshHandle requestWith( string_view path, AssetLoadStart start );
-        /** @brief 지금 누가 쥔 @p path 의 메시입니다(없으면 nullptr). 핫 리로드(`MeshCacheReload.cpp`)가 같은 표를 본다. */
+        /** @brief 지금 누가 쥔 @p path 의 메시입니다(없으면 nullptr). 핫 리로드(`MeshCache.cpp`)가 같은 표를 본다. */
         static shared_ptr<Mesh> findLiveMesh( string_view path );
         /** @brief 메시에서 기하를 만든 위 층 캐시(엔진 범위의 `IMeshDerivedCache`)를 비웁니다. 걸린 것이 없으면(물리 없는 실행) 할 일이 없다. */
         static void invalidateDerivedCaches();

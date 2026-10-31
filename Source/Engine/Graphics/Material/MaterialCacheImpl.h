@@ -1,6 +1,6 @@
 /**
  * @file MaterialCacheImpl.h
- * @brief 머티리얼 캐시의 내부 상태(`MaterialCache::Impl`)입니다. 캐시 본문과 핫 리로드(`MaterialCacheReload.cpp`)만 include 한다.
+ * @brief 머티리얼 캐시의 내부 상태(`MaterialCache::Impl`)입니다. 캐시 본문과 핫 리로드(`MaterialCache.cpp`)만 include 한다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

@@ -144,7 +144,7 @@ namespace sw
         /** @brief 머리 줄이 화면 폭에 차는 카메라 거리(m)입니다. */
         float32 computeFaceCameraDistance( uint32 faceCount ) const;
         /**
-         * @brief `-gv_stressTestRig=N`: 후처리 리그를 적용한 KayKit 기사 N 명을 경사면 위에 스폰합니다(StressTestSceneRig.cpp). 발 디딤, 머리 시선,
+         * @brief `-gv_stressTestRig=N`: 후처리 리그를 적용한 KayKit 기사 N 명을 경사면 위에 스폰합니다(StressTestScene.cpp). 발 디딤, 머리 시선,
          *        무기 손잡이 왼손 IK, 망토 스프링 본을 확인합니다. 무기와 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
          */
         void spawnRigCharacters( uint32 characterCount );
@@ -152,9 +152,9 @@ namespace sw
         void updateRigCharacters( float32 deltaTime );
         /** @brief 리그 데모 카메라를 맞춥니다. 기사 한 명이면 상반신 가까이, 여럿이면 줄 전체를 봅니다. */
         void frameRigCameras( Scene* pScene );
-        /** @brief `-gv_stressTestRig` 값입니다(스위치는 StressTestSceneRig.cpp 가 선언합니다). */
+        /** @brief `-gv_stressTestRig` 값입니다(스위치는 StressTestScene.cpp 가 선언합니다). */
         static uint32 getRigCharacterCount();
-        /** @brief `-gv_stressTestRigView` 값입니다(스위치는 StressTestSceneRig.cpp 가 선언하므로 StressTestScene.cpp 의 맞춤 입력은 이 함수로 읽습니다). */
+        /** @brief `-gv_stressTestRigView` 값입니다(스위치는 StressTestScene.cpp 가 선언하므로 StressTestScene.cpp 의 맞춤 입력은 이 함수로 읽습니다). */
         static int32 getRigView();
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
@@ -174,7 +174,7 @@ namespace sw
         /** @brief `-gv_stressTestSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다. */
         void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
         /**
-         * @brief `-gv_stressTestUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(StressTestSceneWatches.cpp).
+         * @brief `-gv_stressTestUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안에 들면 RTS 이름(이름 한 줄과 HP 막대)를 붙이고 true 를 반환합니다(StressTestScene.cpp).
          */
         [[nodiscard]] bool attachNameplate( GameObject& object, uint32 index ) const;
         /**

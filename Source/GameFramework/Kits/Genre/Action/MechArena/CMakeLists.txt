@@ -11,7 +11,4 @@ endif()
 # 카탈로그 읽기는 계산이 아니라 넣지 않는다.
 sw_markDeterministicSources(GF_MechArena
 	MechArenaWorld.cpp
-	MechArenaWorldCombat.cpp
-	MechArenaWorldState.cpp
-	MechArenaWorldStep.cpp
 )
