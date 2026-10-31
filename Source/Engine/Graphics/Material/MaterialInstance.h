@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
@@ -136,14 +137,17 @@ namespace sw
     private:
         /**
          * @struct TextureOverride
-         * @brief 텍스처 덮어쓰기 하나입니다. 게임 스레드는 `_assetPath` 만 쓰고, 렌더 스레드가 빌린 것(`_acquiredPath`, `_pTexture`)을 맞춥니다.
+         * @brief 텍스처 덮어쓰기 하나입니다. 게임 스레드는 `_assetPath` 만 쓰고, 렌더 스레드가 요청한 것(`_acquiredPath`, `_load`)을 맞춥니다.
          */
         struct TextureOverride
         {
-            hashed_string _name;                ///< 텍스처 프로퍼티 이름
-            string        _assetPath;           ///< 원하는 텍스처 경로. 비면 지울 덮어쓰기이며 렌더 스레드가 반환한 뒤 뺀다.
-            string        _acquiredPath;        ///< 렌더 스레드가 마지막으로 맞춘 경로. 빌리지 못했어도 적어 두어 매 프레임 다시 시도하지 않는다.
-            Texture2D*    _pTexture{ nullptr }; ///< 빌린 텍스처. 다시 올려도 객체는 그대로라 SRV 를 그때마다 읽는다.
+            hashed_string _name;         ///< 텍스처 프로퍼티 이름
+            string        _assetPath;    ///< 원하는 텍스처 경로. 비면 지울 덮어쓰기이며 렌더 스레드가 놓은 뒤 뺀다.
+            string        _acquiredPath; ///< 렌더 스레드가 마지막으로 맞춘 경로. 읽지 못했어도 적어 두어 매 프레임 다시 시도하지 않는다.
+            TextureHandle _load{};       ///< 요청한 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 이유를 한 번 남기고 놓는다.
+
+            /** @brief 준비된 텍스처입니다. 읽는 중이거나 요청이 없으면 nullptr 입니다(그동안 부모의 텍스처가 보인다). 다시 올려도 객체는 그대로라 SRV 를 그때마다 읽는다. */
+            Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getBlock()->getTexture() : nullptr; }
         };
 
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
@@ -153,8 +157,8 @@ namespace sw
          * @return 다시 패킹해야 하면 true 입니다(빌린 것이 바뀌었거나 텍스처가 다시 올라왔습니다).
          */
         bool syncTextureOverrides( IRHIDevice* pRHI );
-        /** @brief 빌린 텍스처를 모두 반환합니다. `pRHI` 가 nullptr 이면(디바이스가 이미 없다) 참조만 놓습니다. */
-        void releaseTextureOverrides( IRHIDevice* pRHI );
+        /** @brief 요청한 텍스처를 모두 놓습니다(핸들이 쥔 참조를 캐시에 돌려준다). 디바이스가 이미 없으면 캐시가 참조 수만 줄인다(`Material::forgetRHI` 와 같다). */
+        void releaseTextureOverrides();
         /**
          * @brief 덮어쓴 텍스처의 슬롯 번호입니다. 부모가 그 프로퍼티에 텍스처를 빌렸으면 그 슬롯을, 아니면 부모 슬롯 뒤에 덮어쓰기 순서대로 이어 붙입니다.
          * @return 슬롯 수(`shaderslot::kMaterialTextureCount`)를 넘거나 덮어쓰기가 없으면 Material::kInvalidTextureSlot 입니다.

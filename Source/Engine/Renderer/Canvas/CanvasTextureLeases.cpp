@@ -52,7 +52,8 @@ namespace sw
                     pState->_drawnRevision = 0;
                 continue;
             }
-            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다.
+            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다. 렌더 타깃은 읽을 파일이 없어(`TextureLoadBlock::runLoad`) 기다림이
+            // 이 스레드의 GPU 생성뿐이라 동기로 둔다 — 핸들로 미루면 같은 생성을 한 프레임 늦게 할 뿐이다(언리얼 렌더 타깃도 렌더 스레드가 그 자리에서 만든다).
             textures.declareRenderTarget( target._targetPath.view(), width, height );
             pState->_pTexture      = textures.acquire( target._targetPath.view(), &device );
             pState->_drawnRevision = 0;

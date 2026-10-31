@@ -147,8 +147,8 @@ namespace sw
         // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다. Mesh::releaseVertexBuffer 와 같은 함정이다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
             releaseRHI( pLiveDevice );
-        // 텍스처를 빌린 디바이스가 죽었으면 forgetRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
-        releaseTextureOverrides( _pTextureDevice );
+        // 텍스처를 요청한 디바이스가 죽었으면 forgetRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
+        releaseTextureOverrides();
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
     }
@@ -158,7 +158,7 @@ namespace sw
         ScopedLock<mutex> lock{ _overrideMutex };
         // 텍스처는 디바이스와 함께 갔다(TextureCache 의 Texture2D 도 같은 통보를 받는다). 참조만 놓는다.
         if ( _pTextureDevice == pDevice )
-            releaseTextureOverrides( nullptr );
+            releaseTextureOverrides();
         if ( _constant._pDevice != pDevice )
             return;
         // 디바이스가 이미 없다. 상수버퍼는 그와 함께 갔다.
@@ -172,7 +172,7 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _overrideMutex };
         if ( pRHI == nullptr || _pTextureDevice == pRHI )
-            releaseTextureOverrides( pRHI );
+            releaseTextureOverrides();
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
         const bool bBufferOnOtherDevice = pRHI != nullptr && _constant._buffer != 0 && _constant._pDevice != pRHI;
         if ( bBufferOnOtherDevice )
@@ -295,9 +295,10 @@ namespace sw
         const bool bNativeBindless = pRHI->supportsNativeBindlessSampling();
         for ( const TextureOverride& texture : _listTextureOverride )
         {
-            if ( texture._pTexture == nullptr )
+            const Texture2D* pTexture = texture.findReadyTexture();
+            if ( pTexture == nullptr )
                 continue;
-            const uint32 textureBinding = bNativeBindless ? texture._pTexture->getSRV() : findTextureSlot( texture._name );
+            const uint32 textureBinding = bNativeBindless ? pTexture->getSRV() : findTextureSlot( texture._name );
             if ( textureBinding != kInvalidDescriptorIndex && textureBinding != Material::kInvalidTextureSlot )
                 _pParentMaterial->packTextureIntoBuffer( texture._name, textureBinding, _bytes );
         }
@@ -338,35 +339,38 @@ namespace sw
             return false;
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         bool          bChanged{ false };
-        // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
+        // 디바이스가 바뀌었으면 옛 디바이스로 요청한 것을 놓고 새로 요청한다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
         if ( _pTextureDevice != nullptr && _pTextureDevice != pRHI )
         {
-            releaseTextureOverrides( _pTextureDevice );
+            releaseTextureOverrides();
             bChanged = true;
         }
         _pTextureDevice = pRHI;
 
         for ( TextureOverride& texture : _listTextureOverride )
         {
-            if ( texture._acquiredPath == texture._assetPath )
-                continue;
-            if ( texture._pTexture != nullptr )
-                textures.release( texture._acquiredPath, pRHI );
-            texture._pTexture     = nullptr;
-            texture._acquiredPath = texture._assetPath;
-            bChanged              = true;
-            if ( texture._assetPath.empty() )
-                continue;
-            texture._pTexture = textures.acquire( texture._assetPath, pRHI );
-            if ( texture._pTexture == nullptr )
-                SW_LOG_WARNING( "MaterialInstance '%#': texture '%#' for '%#' could not be loaded — the parent's texture stays.", _desc._name.c_str(),
-                                texture._assetPath.c_str(), texture._name.c_str() );
+            if ( texture._acquiredPath != texture._assetPath )
+            {
+                texture._load.reset();
+                texture._acquiredPath = texture._assetPath;
+                bChanged              = true;
+                // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 부모의 텍스처가 보인다(`Material` 의 텍스처 자리와 같은 길, 언리얼 MID 도
+                // 스트리밍 중인 텍스처 파라미터는 낮은 밉 · 기본 텍스처로 그린다). 업로드가 끝나면 리로드 세대가 올라 아래에서 다시 패킹한다.
+                if ( texture._assetPath.empty() == false )
+                    texture._load = textures.request( texture._assetPath, pRHI, AssetLoadStart::Async );
+            }
+            if ( texture._load.hasFailed() )
+            {
+                SW_LOG_WARNING( "MaterialInstance '%#': texture '%#' for '%#' could not be loaded (%#) — the parent's texture stays.", _desc._name.c_str(),
+                                texture._assetPath.c_str(), texture._name.c_str(), texture._load.getError().c_str() );
+                texture._load.reset(); // 경로는 적어 두었다 — 다시 묻지 않는다(같은 경로를 다시 주면 `setTextureParameter` 가 다시 시도하게 한다)
+            }
         }
-        // 지운 덮어쓰기(빈 경로)는 돌려준 뒤 뺀다.
+        // 지운 덮어쓰기(빈 경로)는 놓은 뒤 뺀다.
         VectorUtil::removeIf( _listTextureOverride, []( const TextureOverride& texture )
-        { return texture._assetPath.empty() && texture._pTexture == nullptr; } );
+        { return texture._assetPath.empty() && texture._load.isValid() == false; } );
 
-        // 다시 올린 텍스처는 같은 객체에 새 SRV 를 받았다 — 다시 패킹한다.
+        // 다시 올린 텍스처는 같은 객체에 새 SRV 를 받았고, 비동기 로드가 끝난 텍스처는 처음 SRV 를 받았다 — 다시 패킹한다.
         const uint32 reloadGeneration = textures.getReloadGeneration();
         if ( reloadGeneration != _textureReloadGeneration )
         {
@@ -376,14 +380,11 @@ namespace sw
         return bChanged;
     }
 
-    void MaterialInstance::releaseTextureOverrides( IRHIDevice* pRHI )
+    void MaterialInstance::releaseTextureOverrides()
     {
-        const bool bServicesBound = engine::areEngineServicesBound();
         for ( TextureOverride& texture : _listTextureOverride )
         {
-            if ( texture._pTexture != nullptr && bServicesBound )
-                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( texture._acquiredPath, pRHI );
-            texture._pTexture = nullptr;
+            texture._load.reset(); // 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
             texture._acquiredPath.clear();
         }
         _pTextureDevice = nullptr;
@@ -422,11 +423,12 @@ namespace sw
         }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
-            if ( texture._pTexture == nullptr )
+            const Texture2D* pTexture = texture.findReadyTexture();
+            if ( pTexture == nullptr )
                 continue;
             const uint32 slot = findTextureSlot( texture._name );
             if ( slot < slotCount )
-                pOutSlot[slot] = texture._pTexture->getSRV();
+                pOutSlot[slot] = pTexture->getSRV();
         }
     }
 
@@ -516,8 +518,8 @@ namespace sw
             if ( texture._name != name )
                 continue;
             texture._assetPath = string( textureAssetPath );
-            // 같은 경로를 다시 주면 지난번에 빌리지 못한 것을 다시 시도한다(파일을 고친 뒤).
-            if ( texture._pTexture == nullptr )
+            // 같은 경로를 다시 주면 지난번에 읽지 못한 것을 다시 시도한다(파일을 고친 뒤). 읽는 중이거나 준비된 것은 그대로 둔다.
+            if ( texture._load.isValid() == false )
                 texture._acquiredPath.clear();
             return;
         }
