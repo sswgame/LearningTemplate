@@ -203,6 +203,44 @@ namespace sw
             return desc;
         }
 
+        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`findOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). */
+        hashed_string makeExtensionProgramKey( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
+        {
+            string key = program._shaderPath;
+            key.append( "|" );
+            key.push_back( program._bCullBack ? 'c' : 'n' );
+            key.push_back( bDepthTest ? 't' : 'f' );
+            key.push_back( program._bDepthWrite ? 'w' : 'r' );
+            key.push_back( program._bBlend ? 'b' : 'o' );
+            key.append( "|" );
+            for ( uint32 formatValue = static_cast<uint32>( colorFormat );; formatValue /= 10u )
+            {
+                key.push_back( static_cast<char>( '0' + ( formatValue % 10u ) ) );
+                if ( formatValue < 10u )
+                    break;
+            }
+            return hashed_string{ string_view{ key } };
+        }
+
+        /** @brief 확장 프로그램 PSO 의 desc 입니다(진입점은 스테이지 기본값, define 없음 — 쿠커가 그 한 벌만 굽는다). */
+        RHIPipelineStateDesc makeExtensionProgramDesc( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
+        {
+            RHIPipelineStateDesc desc{};
+            desc._vertexShaderPath    = program._shaderPath;
+            desc._pixelShaderPath     = program._shaderPath;
+            desc._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets    = 1;
+            desc._arrRTVFormat[0]     = colorFormat;
+            desc._bEnableDepthTest    = bDepthTest ? 1 : 0;
+            desc._bEnableDepthWrite   = ( bDepthTest && program._bDepthWrite ) ? 1 : 0;
+            desc._depthStencilFormat  = bDepthTest ? constant::kDepthStencilFormat : RHIFormat::Unknown;
+            desc._bEnableBlend        = program._bBlend ? 1 : 0;
+            desc._bPremultipliedAlpha = program._bBlend ? SW_TRUE : SW_FALSE;
+            desc._cullMode            = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+            return desc;
+        }
+
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`findOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
         RHIPipelineStateDesc makeCookieAtlasPSODesc( const string& shaderPath, RHIFormat atlasFormat )
         {
@@ -574,43 +612,35 @@ namespace sw
         return createPSOForPass( passType, findPassDescByType( passType ), pRTVFormatOverride );
     }
 
+    void FramePSOManager::warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const
+    {
+        if ( _pDevice == nullptr )
+            return;
+        vector<ShaderCompileDesc> listShader;
+        for ( const ExtensionProgramRequest& request : listRequest )
+        {
+            RHIPipelineStateHandle existing{ 0 };
+            const bool             bNoProgram = request._pProgram == nullptr || request._pProgram->_shaderPath.empty();
+            if ( bNoProgram || _pCache->findExtensionProgramPSO( makeExtensionProgramKey( *request._pProgram, request._colorFormat, request._bDepthTest ), existing ) )
+                continue;
+            appendShaderWarm( makeExtensionProgramDesc( *request._pProgram, request._colorFormat, request._bDepthTest ), listShader );
+        }
+        warmShaders( listShader );
+    }
+
     RHIPipelineStateHandle FramePSOManager::findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
     {
         // 모듈 확장 패스의 프로그램(ExtensionRenderPass M3)이다. 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다. 기록 중에는 만들 수 없으므로 셋업(`FrameExtensionHost::collectFrame`)만 부른다.
         // 실패(0)도 기록한다 — 매 프레임 같은 컴파일을 되풀이하지 않고, 부르는 쪽이 0 을 보고 오류를 남기고 그리지 않는다(다른 셰이더로 대신 그리지 않는다).
         if ( _pDevice == nullptr || program._shaderPath.empty() )
             return 0;
-        string key = program._shaderPath;
-        key.append( "|" );
-        key.push_back( program._bCullBack ? 'c' : 'n' );
-        key.push_back( bDepthTest ? 't' : 'f' );
-        key.push_back( program._bDepthWrite ? 'w' : 'r' );
-        key.push_back( program._bBlend ? 'b' : 'o' );
-        key.append( "|" );
-        for ( uint32 formatValue = static_cast<uint32>( colorFormat );; formatValue /= 10u )
-        {
-            key.push_back( static_cast<char>( '0' + ( formatValue % 10u ) ) );
-            if ( formatValue < 10u )
-                break;
-        }
-        const hashed_string    programKey{ string_view{ key } };
+        const hashed_string    programKey = makeExtensionProgramKey( program, colorFormat, bDepthTest );
         RHIPipelineStateHandle existing{ 0 };
         if ( _pCache->findExtensionProgramPSO( programKey, existing ) )
             return existing;
 
-        RHIPipelineStateDesc desc{};
-        desc._vertexShaderPath              = program._shaderPath;
-        desc._pixelShaderPath               = program._shaderPath;
-        desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-        desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-        desc._numRenderTargets              = 1;
-        desc._arrRTVFormat[0]               = colorFormat;
-        desc._bEnableDepthTest              = bDepthTest ? 1 : 0;
-        desc._bEnableDepthWrite             = ( bDepthTest && program._bDepthWrite ) ? 1 : 0;
-        desc._depthStencilFormat            = bDepthTest ? constant::kDepthStencilFormat : RHIFormat::Unknown;
-        desc._bEnableBlend                  = program._bBlend ? 1 : 0;
-        desc._bPremultipliedAlpha           = program._bBlend ? SW_TRUE : SW_FALSE;
-        desc._cullMode                      = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+        // 셰이더는 부르는 쪽이 이번 프레임의 프로그램과 함께 데웠다(`warmExtensionPrograms`) — 여기는 드라이버 생성만 남는다.
+        const RHIPipelineStateDesc   desc   = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         registerLayout( handle, desc );
         if ( handle == 0 )

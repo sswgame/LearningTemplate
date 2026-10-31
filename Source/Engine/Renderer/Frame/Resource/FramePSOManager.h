@@ -94,6 +94,18 @@ namespace sw
         RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRTVFormatOverride = nullptr );
         /** @brief `createPSOForPassType` 의 몸체입니다. 패스 서술을 직접 받습니다 — 같은 종류의 패스가 여럿인 모듈 패스가 패스마다 부릅니다. */
         RHIPipelineStateHandle createPSOForPass( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride );
+        /** @brief 모듈 확장 패스 프로그램 PSO 하나의 요청입니다(키 = 셰이더 · 고정 상태 · 타깃 포맷 · 깊이 테스트). 프로그램은 부르는 쪽 것을 빌린다. */
+        struct ExtensionProgramRequest
+        {
+            const ExtensionProgramDesc* _pProgram{ nullptr };
+            RHIFormat                   _colorFormat{ RHIFormat::Unknown };
+            bool                        _bDepthTest{ false };
+        };
+        /**
+         * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `findOrCreateExtensionProgramPSO` 가 차례로 만든다).
+         * @details `createPassPSOS` 와 같은 "셰이더 병렬 데우기 → PSO 직렬 생성" 이다 — 처음 보는 프로그램이 여럿인 프레임에 렌더 스레드가 하나씩 컴파일하지 않게.
+         */
+        void warmExtensionPrograms( const vector<ExtensionProgramRequest>& listRequest ) const;
         /**
          * @brief 모듈 확장 패스의 프로그램(`ExtensionProgramDesc`) PSO 를 셋업에서 찾거나 만듭니다(키 = 셰이더 · 고정 상태 · 타깃 포맷). 기록 중에는 부르지 않습니다.
          * @return 0 이면 만들지 못한 것입니다(오류를 남겼다 — 부르는 쪽은 그 패스를 그리지 않는다).
