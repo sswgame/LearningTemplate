@@ -294,6 +294,11 @@ SW_TEST_CASE( EphemeralStoreTest, ValueAndScoreSetKindsDoNotMix )
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeSet( "board", makeBytes( "plain" ), 0 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreRank( "board", "m" ) ) == sw::EphemeralResult::Invalid ); // 이제 값 키다
 
+    // 정렬 집합 키의 증감은 Invalid 이고 집합은 그대로다(RESP `INCRBY` 의 WRONGTYPE 과 같다)
+    SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board3", "m", 4 ) ) == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeIncrement( "board3", 1, 0 ) ) == sw::EphemeralResult::Invalid );
+    SW_EXPECT_EQUAL( int64( 4 ), rig.run( sw::EphemeralRequest::makeScoreRank( "board3", "m" ) )._score );
+
     SW_REQUIRE_TRUE( rig.result( sw::EphemeralRequest::makeScoreSet( "board2", "m", 1 ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeErase( "board2" ) ) == sw::EphemeralResult::Ok );
     SW_EXPECT_TRUE( rig.result( sw::EphemeralRequest::makeScoreRank( "board2", "m" ) ) == sw::EphemeralResult::NotFound );

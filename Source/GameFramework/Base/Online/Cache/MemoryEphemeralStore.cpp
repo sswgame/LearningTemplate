@@ -286,6 +286,11 @@ namespace sw
             }
             case EphemeralOperation::Increment:
             {
+                if ( pValue == nullptr && findScoreSet( request._key, nowMs ) != nullptr )
+                {
+                    outReply._result = EphemeralResult::Invalid; // 정렬 집합 키의 증감(RESP `INCRBY` 의 WRONGTYPE 과 같다) — 값을 만들면 집합이 가려진다
+                    break;
+                }
                 int64 current = 0;
                 if ( pValue != nullptr && MemoryEphemeralStoreInternal::parseInteger( pValue->_bytes, current ) == false )
                 {
