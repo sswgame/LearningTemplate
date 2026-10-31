@@ -22,8 +22,8 @@ namespace sw
         const bool bInvalidDescriptor = pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false;
         if ( bInvalidDescriptor )
         {
-            SW_LOG_ERROR( "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#)", descriptor._kind.c_str(), descriptor._region.c_str(),
-                          descriptor._serverID );
+            SW_LOG_ERROR_ID( "ServerRegistration.InvalidDescriptor", "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#)", descriptor._kind.c_str(), descriptor._region.c_str(),
+                             descriptor._serverID );
             return false;
         }
         _pRouter            = pRouter;
