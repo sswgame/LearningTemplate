@@ -18,7 +18,10 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSUnitBuckets.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSVision.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowField.h"
+#include "GameFramework/Runtime/Character/Navigation/FlowFieldCache.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
@@ -184,14 +187,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 안개의 상태입니다. */
-    enum class RTSVisibility : uint8
-    {
-        Unexplored = 0,
-        Explored, ///< 본 적이 있다(지형과 마지막으로 본 건물)
-        Visible
-    };
-
     /** @brief 게임에 알리는 이벤트입니다. */
     struct RTSEvent
     {
@@ -350,13 +345,6 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        struct FlowFieldSlot
-        {
-            FlowField _field{};
-            int2      _goal{ -1, -1 };
-            int32     _userCount{ 0 };
-        };
-
         RTSUnit*  findUnitMutable( RTSUnitID unitID );
         void      freeDeadUnits();
         void      beginOrder( RTSUnit& unit );
@@ -405,9 +393,6 @@ namespace sw
         void               payCost( RTSPlayer& player, const RTSUnitDef& def );
         void               refundCost( RTSPlayer& player, const RTSUnitDef& def );
         void               pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
-        FlowField*         acquireFlowField( const int2& goal );
-        void               releaseFlowField( const FlowField* pField );
-        int32              computeBucketIndex( const float3& position ) const;
 
         NavGrid               _grid;
         NavGrid               _airGrid; ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다
@@ -418,20 +403,16 @@ namespace sw
         vector<RTSPlayer>     _listPlayer;
         EventBuffer<RTSEvent> _eventBuffer;
         vector<uint8>         _listTerrainBlocked;
-        vector<vector<uint8>> _listTeamVisibility; ///< 팀마다 셀의 RTSVisibility 를 담는다
-        vector<int32>         _listBucketHead;     ///< 버킷마다 첫 유닛의 슬롯(-1 이면 끝)
-        vector<int32>         _listBucketNext;     ///< 유닛 슬롯마다 다음 유닛의 슬롯
+        RTSVision             _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
+        RTSUnitBuckets        _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)
         vector<float3>        _listNeighborScratch;
         vector<RTSUnitID>     _listQueryScratch;
-        deque<FlowFieldSlot>  _listFlowField; ///< deque 라서 슬롯이 움직이지 않으므로 행위자가 포인터를 보관할 수 있다
+        FlowFieldCache        _flowFields; ///< 무리 이동이 목적지마다 나눠 쓰는 흐름장(땅 격자)
         const RTSCatalog*     _pCatalog;
         RTSSettings           _settings;
         FixedStepTimer        _stepTimer;
         float32               _time;
-        Countdown             _visionTimer;
-        GridTopology          _bucketTopology; ///< 이웃 탐색 버킷 격자(버킷 하나는 `_settings._bucketSize` 셀)
-        LandBinding           _land;           ///< 빌린 공유 땅(없으면 단독 동작)
-        int32                 _teamCount;
+        LandBinding           _land; ///< 빌린 공유 땅(없으면 단독 동작)
         int32                 _winningTeam;
         uint32                _landRevision; ///< 마지막으로 땅 격자를 칠한 땅 리비전
     };

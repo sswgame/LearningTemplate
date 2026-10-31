@@ -172,20 +172,16 @@ namespace sw
         , _listPlayer{}
         , _eventBuffer{}
         , _listTerrainBlocked{}
-        , _listTeamVisibility{}
-        , _listBucketHead{}
-        , _listBucketNext{}
+        , _vision{}
+        , _buckets{}
         , _listNeighborScratch{}
         , _listQueryScratch{}
-        , _listFlowField{}
+        , _flowFields{}
         , _pCatalog{ nullptr }
         , _settings{}
         , _stepTimer{}
         , _time{ 0.0f }
-        , _visionTimer{}
-        , _bucketTopology{}
         , _land{}
-        , _teamCount{ 0 }
         , _winningTeam{ -1 }
         , _landRevision{ 0 }
     {
@@ -214,16 +210,11 @@ namespace sw
         _listPlayer.clear();
         _eventBuffer.clear();
         _listTerrainBlocked.assign( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), SW_FALSE );
-        _listTeamVisibility.clear();
-        _listFlowField.clear();
-        _bucketTopology = GridTopology{ ( _grid.getWidth() + _settings._bucketSize - 1 ) / _settings._bucketSize,
-                                        ( _grid.getHeight() + _settings._bucketSize - 1 ) / _settings._bucketSize };
-        _listBucketHead.assign( static_cast<size_t>( _bucketTopology.getCellCount() ), -1 );
-        _listBucketNext.clear();
-        _stepTimer = FixedStepTimer{ _settings._fixedStep, 0.25f };
-        _time      = 0.0f;
-        _visionTimer.clear();
-        _teamCount   = 0;
+        _vision.reset( _grid.getWidth(), _grid.getHeight() );
+        _flowFields.clear();
+        _buckets.initialize( _grid.getWidth(), _grid.getHeight(), _settings._bucketSize );
+        _stepTimer   = FixedStepTimer{ _settings._fixedStep, 0.25f };
+        _time        = 0.0f;
         _winningTeam = -1;
         return true;
     }
@@ -287,11 +278,7 @@ namespace sw
         player._pWallet       = pWallet;
         player._startPosition = startPosition;
         _listPlayer.push_back( player );
-        _teamCount = MathUtil::max( _teamCount, player._team + 1 );
-        while ( static_cast<int32>( _listTeamVisibility.size() ) < _teamCount )
-        {
-            _listTeamVisibility.emplace_back( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), static_cast<uint8>( RTSVisibility::Unexplored ) );
-        }
+        _vision.ensureTeamCount( player._team + 1 );
         return static_cast<int32>( _listPlayer.size() ) - 1;
     }
 
@@ -487,11 +474,7 @@ namespace sw
     void RTSWorld::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
-        for ( FlowFieldSlot& slot : _listFlowField )
-        {
-            if ( slot._userCount > 0 && slot._field.isStale( _grid ) )
-                (void)slot._field.computeToCell( _grid, slot._goal );
-        }
+        _flowFields.refreshStale( _grid );
         recomputeSupply();
         rebuildBuckets();
         const size_t unitCount = _listUnit.size(); // 이번 걸음에 생긴 유닛은 다음 걸음부터 처리한다
@@ -501,54 +484,26 @@ namespace sw
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
-        _visionTimer.update( deltaTime );
-        if ( _visionTimer.isActive() == false )
-        {
-            _visionTimer.start( _settings._visionInterval );
+        if ( _vision.updateRepaintTimer( deltaTime, _settings._visionInterval ) )
             updateVision();
-        }
         updateDefeat();
         freeDeadUnits();
-    }
-
-    int32 RTSWorld::computeBucketIndex( const float3& position ) const
-    {
-        const int2  cell    = _grid.computeCell( position );
-        const int32 bucketX = MathUtil::clamp( cell._x / _settings._bucketSize, 0, _bucketTopology._width - 1 );
-        const int32 bucketY = MathUtil::clamp( cell._y / _settings._bucketSize, 0, _bucketTopology._height - 1 );
-        return _bucketTopology.toIndex( bucketX, bucketY );
     }
 
     void RTSWorld::queryUnits( const float3& center, float32 radius, vector<RTSUnitID>& outListUnit ) const
     {
         outListUnit.clear();
-        if ( _listBucketHead.empty() )
-            return;
-        const float32 reach       = radius + RTSWorldInternal::kMaxUnitExtent;
-        const float32 cellSize    = _grid.getCellSize() * static_cast<float32>( _settings._bucketSize );
-        const int32   lastBucketX = _bucketTopology._width - 1;
-        const int32   lastBucketY = _bucketTopology._height - 1;
-        const int32   minBucketX  = MathUtil::clamp( static_cast<int32>( ( center._x - reach - _grid.getOrigin()._x ) / cellSize ), 0, lastBucketX );
-        const int32   maxBucketX  = MathUtil::clamp( static_cast<int32>( ( center._x + reach - _grid.getOrigin()._x ) / cellSize ), 0, lastBucketX );
-        const int32   minBucketY  = MathUtil::clamp( static_cast<int32>( ( center._z - reach - _grid.getOrigin()._z ) / cellSize ), 0, lastBucketY );
-        const int32   maxBucketY  = MathUtil::clamp( static_cast<int32>( ( center._z + reach - _grid.getOrigin()._z ) / cellSize ), 0, lastBucketY );
-        for ( int32 bucketY = minBucketY; bucketY <= maxBucketY; ++bucketY )
+        _buckets.forEachSlotNear( _grid, center, radius + RTSWorldInternal::kMaxUnitExtent,
+                                  [&]( int32 slot )
         {
-            for ( int32 bucketX = minBucketX; bucketX <= maxBucketX; ++bucketX )
-            {
-                for ( int32 index = _listBucketHead[static_cast<size_t>( _bucketTopology.toIndex( bucketX, bucketY ) )]; index >= 0;
-                      index       = _listBucketNext[static_cast<size_t>( index )] )
-                {
-                    const RTSUnit& unit = _listUnit[static_cast<size_t>( index )];
-                    if ( unit._bAlive == SW_FALSE )
-                        continue;
-                    const float32 distance = unit.isMobile() ? float3::getHorizontalDistance( center, unit._position ) - unit._pDef->_radius
-                                                             : computeRectDistance( center, unit._cell, unit._pDef->_footprint );
-                    if ( distance <= radius )
-                        outListUnit.push_back( unit._id );
-                }
-            }
-        }
+            const RTSUnit& unit = _listUnit[static_cast<size_t>( slot )];
+            if ( unit._bAlive == SW_FALSE )
+                return;
+            const float32 distance = unit.isMobile() ? float3::getHorizontalDistance( center, unit._position ) - unit._pDef->_radius
+                                                     : computeRectDistance( center, unit._cell, unit._pDef->_footprint );
+            if ( distance <= radius )
+                outListUnit.push_back( unit._id );
+        } );
     }
 
     RTSUnitID RTSWorld::pickUnit( const float3& position ) const
@@ -676,9 +631,7 @@ namespace sw
     RTSVisibility RTSWorld::getVisibility( int32 player, const int2& cell ) const
     {
         const RTSPlayer* pPlayer = findPlayer( player );
-        if ( pPlayer == nullptr || _grid.isInside( cell ) == false )
-            return RTSVisibility::Unexplored;
-        return static_cast<RTSVisibility>( _listTeamVisibility[static_cast<size_t>( pPlayer->_team )][static_cast<size_t>( _grid.computeIndex( cell ) )] );
+        return pPlayer == nullptr ? RTSVisibility::Unexplored : _vision.get( pPlayer->_team, cell );
     }
 
     bool RTSWorld::isVisibleTo( int32 player, RTSUnitID unitID ) const
@@ -761,7 +714,7 @@ namespace sw
     {
         if ( order._pFlowField != nullptr )
         {
-            releaseFlowField( order._pFlowField );
+            _flowFields.release( order._pFlowField );
             order._pFlowField = nullptr;
         }
         if ( order._type == RTSOrderType::Gather || order._type == RTSOrderType::Build )
@@ -956,7 +909,7 @@ namespace sw
             order._target       = target;
             order._arriveRadius = listUnit.size() > 1 ? arriveRadius : 0.0f;
             if ( bUseField && isGroundUnitCommand( *pUnit ) )
-                order._pFlowField = acquireFlowField( goalCell );
+                order._pFlowField = _flowFields.acquire( _grid, goalCell );
             (void)pushOrder( *pUnit, order, bQueue );
             ++issuedCount;
         }
@@ -1468,44 +1421,8 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 흐름장과 알림
+    // 보급과 버킷
     // ------------------------------------------------------------------------------
-    FlowField* RTSWorld::acquireFlowField( const int2& goal )
-    {
-        FlowFieldSlot* pFree = nullptr;
-        for ( FlowFieldSlot& slot : _listFlowField )
-        {
-            if ( slot._userCount > 0 && slot._goal == goal )
-            {
-                ++slot._userCount;
-                return &slot._field;
-            }
-            if ( slot._userCount == 0 && pFree == nullptr )
-                pFree = &slot;
-        }
-        if ( pFree == nullptr )
-        {
-            _listFlowField.emplace_back();
-            pFree = &_listFlowField.back();
-        }
-        pFree->_goal      = goal;
-        pFree->_userCount = 1;
-        (void)pFree->_field.computeToCell( _grid, goal );
-        return &pFree->_field;
-    }
-
-    void RTSWorld::releaseFlowField( const FlowField* pField )
-    {
-        for ( FlowFieldSlot& slot : _listFlowField )
-        {
-            if ( &slot._field == pField && slot._userCount > 0 )
-            {
-                --slot._userCount;
-                return;
-            }
-        }
-    }
-
     void RTSWorld::recomputeSupply()
     {
         for ( RTSPlayer& player : _listPlayer )
@@ -1530,16 +1447,12 @@ namespace sw
 
     void RTSWorld::rebuildBuckets()
     {
-        std::fill( _listBucketHead.begin(), _listBucketHead.end(), -1 );
-        _listBucketNext.assign( _listUnit.size(), -1 );
+        _buckets.beginRebuild( _listUnit.size() );
         for ( size_t index = 0; index < _listUnit.size(); ++index )
         {
             const RTSUnit& unit = _listUnit[index];
-            if ( unit._bAlive == SW_FALSE )
-                continue;
-            const int32 bucket                             = computeBucketIndex( unit._position );
-            _listBucketNext[index]                         = _listBucketHead[static_cast<size_t>( bucket )];
-            _listBucketHead[static_cast<size_t>( bucket )] = static_cast<int32>( index );
+            if ( unit._bAlive )
+                _buckets.insert( static_cast<int32>( index ), _grid.computeCell( unit._position ) );
         }
     }
 
@@ -1794,33 +1707,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     void RTSWorld::updateVision()
     {
-        for ( vector<uint8>& listVisibility : _listTeamVisibility )
-        {
-            for ( uint8& visibility : listVisibility )
-            {
-                if ( visibility == static_cast<uint8>( RTSVisibility::Visible ) )
-                    visibility = static_cast<uint8>( RTSVisibility::Explored );
-            }
-        }
+        _vision.beginRepaint();
         for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner == kNoOwner )
                 continue;
-            vector<uint8>& listVisibility = _listTeamVisibility[static_cast<size_t>( _listPlayer[static_cast<size_t>( unit._owner )]._team )];
-            const float32  sight          = unit._pDef->_sight + ( unit.isMobile() ? 0.0f : static_cast<float32>( unit._pDef->_footprint ) * 0.5f );
-            const int2     center         = _grid.computeCell( unit._position );
-            const int32    radius         = static_cast<int32>( sight );
-            const float32  sightSquared   = sight * sight;
-            for ( int32 y = MathUtil::max( 0, center._y - radius ); y <= MathUtil::min( _grid.getHeight() - 1, center._y + radius ); ++y )
-            {
-                for ( int32 x = MathUtil::max( 0, center._x - radius ); x <= MathUtil::min( _grid.getWidth() - 1, center._x + radius ); ++x )
-                {
-                    const float32 dx = static_cast<float32>( x - center._x );
-                    const float32 dy = static_cast<float32>( y - center._y );
-                    if ( dx * dx + dy * dy <= sightSquared )
-                        listVisibility[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = static_cast<uint8>( RTSVisibility::Visible );
-                }
-            }
+            const float32 sight = unit._pDef->_sight + ( unit.isMobile() ? 0.0f : static_cast<float32>( unit._pDef->_footprint ) * 0.5f );
+            _vision.reveal( _listPlayer[static_cast<size_t>( unit._owner )]._team, _grid.computeCell( unit._position ), sight );
         }
     }
 
@@ -1844,9 +1737,10 @@ namespace sw
             player._bDefeated = SW_TRUE;
             pushEvent( RTSEvent::Kind::PlayerDefeated, static_cast<int32>( index ), RTSUnitID{}, hashed_string{} );
         }
-        int32 aliveTeam  = -1;
-        int32 aliveCount = 0;
-        for ( int32 team = 0; team < _teamCount; ++team )
+        int32       aliveTeam  = -1;
+        int32       aliveCount = 0;
+        const int32 teamCount  = _vision.getTeamCount();
+        for ( int32 team = 0; team < teamCount; ++team )
         {
             for ( const RTSPlayer& player : _listPlayer )
             {
@@ -1858,7 +1752,7 @@ namespace sw
                 }
             }
         }
-        if ( _teamCount > 1 && aliveCount == 1 )
+        if ( teamCount > 1 && aliveCount == 1 )
         {
             _winningTeam = aliveTeam;
             pushEvent( RTSEvent::Kind::GameOver, aliveTeam, RTSUnitID{}, hashed_string{} );
@@ -1936,15 +1830,9 @@ namespace sw
             outArchive << player._bDefeated;
             outArchive << player._bHadBuilding;
         }
-        outArchive << static_cast<uint32>( _listTeamVisibility.size() );
-        for ( const vector<uint8>& listVisibility : _listTeamVisibility )
-        {
-            outArchive << listVisibility;
-        }
+        _vision.writeState( outArchive );
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         outArchive << _time;
-        outArchive << _visionTimer._remaining;
-        outArchive << _teamCount;
         outArchive << _winningTeam;
     }
 
@@ -2000,28 +1888,18 @@ namespace sw
         {
             Internal::readPlayer( archive, player );
         }
-        uint32 teamCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, sizeof( uint32 ), teamCount ) == false )
+        // 시야는 사본에 읽는다 — 뒤가 깨졌으면 상태를 그대로 둬야 한다.
+        RTSVision vision = _vision;
+        if ( archive.isError() || vision.readState( archive ) == false )
             return false;
-        vector<vector<uint8>> listTeamVisibility( teamCount );
-        for ( vector<uint8>& listVisibility : listTeamVisibility )
-        {
-            archive >> listVisibility;
-            if ( listVisibility.size() != _listTerrainBlocked.size() )
-                archive.setError();
-        }
         FixedStepTimer stepTimer   = _stepTimer;
         float32        time        = 0.0f;
-        float32        visionTimer = 0.0f;
-        int32          teams       = 0;
         int32          winningTeam = -1;
-        if ( archive.isError() || StateArchiveUtil::readStepTimer( archive, stepTimer ) == false )
+        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false )
             return false;
         archive >> time;
-        archive >> visionTimer;
-        archive >> teams;
         archive >> winningTeam;
-        if ( archive.isError() || teams != static_cast<int32>( teamCount ) )
+        if ( archive.isError() )
             return false;
 
         _listTerrainBlocked = std::move( listTerrainBlocked );
@@ -2029,14 +1907,12 @@ namespace sw
         _listGeneration     = std::move( listGeneration );
         _listFreeSlot       = std::move( listFreeSlot );
         _listPlayer         = std::move( listPlayer );
-        _listTeamVisibility = std::move( listTeamVisibility );
+        _vision             = std::move( vision );
         _eventBuffer.clear();
-        _listFlowField.clear();
-        _stepTimer              = stepTimer;
-        _time                   = time;
-        _visionTimer._remaining = visionTimer;
-        _teamCount              = teams;
-        _winningTeam            = winningTeam;
+        _flowFields.clear();
+        _stepTimer   = stepTimer;
+        _time        = time;
+        _winningTeam = winningTeam;
 
         // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다(`repaintGrid`). 같은 데이터에서 나오므로 저장하지 않는다.
         const float32 cellSize = _grid.getCellSize();
@@ -2066,7 +1942,7 @@ namespace sw
             {
                 const bool bFlowField = listFlowFieldOrder[flowFieldOrderIndex++] != SW_FALSE;
                 if ( bFlowField && unit._bAlive != SW_FALSE )
-                    order._pFlowField = acquireFlowField( _grid.computeCell( order._target ) );
+                    order._pFlowField = _flowFields.acquire( _grid, _grid.computeCell( order._target ) );
             }
         }
     }
