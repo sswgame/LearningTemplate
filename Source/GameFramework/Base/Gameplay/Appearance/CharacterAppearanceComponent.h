@@ -152,7 +152,8 @@ namespace sw
         void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
         /**
          * @brief 미리보기 입히기 — 프리셋 id 대신 외형 선택 @p selection 을 데이터 @p database 로 조립합니다. 게임 서비스가 없는 씬(에디터 미리보기 창)이 씁니다.
-         * @details 시작(`onBeginPlay`)을 기다리지 않고 조립을 예약한다 — 미리보기 씬은 플레이를 돌리지 않는다. 한 번 부르면 이 컴포넌트는 프리셋 id 와
+         * @details 게임과 같은 길로 조립한다 — 미리보기 씬도 플레이하고 틱해야 한다(`ScenePreviewPolicy::_bPlay`, 언리얼 FPreviewScene). 플레이하지 않는 씬이면 오류를 남기고 입히지 않는다.
+         *          시작 전(방금 붙인 컴포넌트)이면 `onBeginPlay` 가 조립하고, 베이크한 메시는 틱이 받아 건다. 한 번 부르면 이 컴포넌트는 프리셋 id 와
          *          게임 서비스 `AppearanceDatabase` 를 보지 않고 이 선택 · 데이터로만 조립한다(두 길이 섞이지 않는다). @p database 는 빌린 것이라 컴포넌트보다 오래 살아야 한다.
          *          선택을 펼치며 버리거나 되돌린 것(`AppearanceSelectionReport`)은 경고로 남긴다.
          */
@@ -303,7 +304,7 @@ namespace sw
         void onAppearanceDataReloaded();
         /**
          * @brief 베이크한 메시에 필요한 원본 메시 · 피팅 표 · 피팅 데이터를 요청합니다(조립 끝). 구울 것이 없고 지난번에도 베이크하지 않았으면 아무것도 하지 않습니다.
-         * @details 다 읽히면 `applyMeshAssembly` 가 유닛에 건다 — 플레이 중이면 틱이 기다렸다 틱 뒤에, 플레이하지 않는 미리보기 씬이면 이 자리에서 기다린다.
+         * @details 다 읽히면 틱이 기다렸다 틱 뒤에 `applyMeshAssembly` 가 유닛에 건다(미리보기 씬도 틱한다 — 이 자리에서 기다리지 않는다).
          */
         void requestMeshAssembly( GameObjectManager& manager );
         /** @brief 요청한 것 가운데 아직 읽는 것이 있으면 true 입니다. */

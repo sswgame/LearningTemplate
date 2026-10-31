@@ -207,7 +207,8 @@ namespace sw
         AppearanceDatabase* pDatabase = game::findSubsystem<AppearanceDatabase>();
         if ( pDatabase != nullptr )
             _reloadSubscription = pDatabase->registerReloaded( Delegate<void()>::create<&CharacterAppearanceComponent::onAppearanceDataReloaded>( this ) );
-        if ( _presetID.empty() == false )
+        // 미리보기 입히기(`previewSelection`)도 시작한 뒤 같은 틱 길로 조립한다 — 미리보기 씬도 플레이하고 틱한다(언리얼 FPreviewScene).
+        if ( _presetID.empty() == false || _pPreviewDatabase != nullptr )
             requestAssemble();
     }
 
@@ -292,9 +293,17 @@ namespace sw
 
     void CharacterAppearanceComponent::previewSelection( const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
-        _previewSelection = selection;
-        _pPreviewDatabase = &database;
-        requestAssemble(); // 미리보기 씬은 플레이를 돌리지 않는다 — 시작을 기다리지 않는다
+        _previewSelection                 = selection;
+        _pPreviewDatabase                 = &database;
+        const GameObjectManager* pManager = findManager();
+        // 베이크한 메시는 틱이 받아 건다 — 플레이하지 않는 씬에 입히면 영영 걸리지 않으므로 오류로 알린다(그 자리에서 기다리지 않는다).
+        if ( pManager == nullptr || pManager->hasBegunPlay() == false )
+        {
+            SW_LOG_ERROR( "Appearance preview needs a playing scene (ScenePreviewPolicy::_bPlay) - '%#' is not dressed", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+            return;
+        }
+        if ( _bStarted == SW_TRUE )
+            requestAssemble(); // 아직 시작 전이면(방금 붙인 컴포넌트 — 다음 틱에 시작) `onBeginPlay` 가 조립한다
     }
 
     void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemID )
@@ -1045,20 +1054,6 @@ namespace sw
             if ( pObject != nullptr && bHidesPart )
                 CharacterAppearanceComponentInternal::forEachMesh( *pObject, []( MeshComponent& mesh )
                 { mesh.setVisible( false ); } );
-        }
-        // 플레이하지 않는 씬(에디터 미리보기)은 틱이 돌지 않아 뒤 프레임에 받을 자리가 없다 — 이 자리에서 기다려 건다(플레이 중에는 틱이 받는다).
-        if ( _bStarted == SW_FALSE )
-        {
-            for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
-            {
-                (void)load._mesh.wait(); // 실패는 applyMeshAssembly 가 알린다
-                if ( load._fit.isValid() )
-                    (void)load._fit.wait();
-            }
-            if ( _fitTablesLoad.isValid() )
-                (void)_fitTablesLoad.wait();
-            _bMeshAssemblyPending = SW_FALSE;
-            applyMeshAssembly();
         }
     }
 

@@ -346,7 +346,7 @@ namespace sw::editor
     ScenePreviewPolicy CharacterEditorPanel::getPreviewPolicy() const
     {
         ScenePreviewPolicy policy = EditorPreviewPanel::getPreviewPolicy();
-        policy._bPlay             = true; // 몸의 애니메이터는 onBeginPlay 에서 유닛에 붙는다(외형 조립은 `previewSelection` 이 시작을 기다리지 않는다)
+        policy._bPlay             = true; // 몸의 애니메이터 · 외형 조립은 게임과 같이 onBeginPlay 와 틱으로 돈다(언리얼 FPreviewScene)
         return policy;
     }
 
