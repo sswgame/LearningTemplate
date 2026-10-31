@@ -285,7 +285,8 @@ namespace sw
 
         rebindEditorService();
 
-        engine::registerModuleTypes( sw::config::kTargetEditorModule );
+        if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
+            return false;
         return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
     }
 

@@ -152,12 +152,17 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_setTargetDefsHeader — 타깃 고유 정의(`SW_LOG_TAG` · `SW_KIT_EXPORTS`)를 `-D` 대신 PCH 뒤에 강제 포함하는 헤더로 준다.
 #   PCH 를 나눠 쓰려면 명령줄 정의가 같아야 하므로 타깃마다 다른 값은 여기로 옮긴다. `Logger.h` 가 PCH 안에서 기본 `SW_LOG_TAG` 를 정의해
-#   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, KIT_EXPORTS(켜면 `SW_KIT_EXPORTS` 정의), KIT_SERVER_EXPORTS(서버 키트 — `SW_KIT_SERVER_EXPORTS` 정의).
+#   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, REGISTRAR_MODULE(등록자의 런타임 모듈 이름 `SW_REGISTRAR_MODULE` — 필수), KIT_EXPORTS(켜면 `SW_KIT_EXPORTS` 정의),
+#   KIT_SERVER_EXPORTS(서버 키트 — `SW_KIT_SERVER_EXPORTS` 정의).
 #   PCH 안의 헤더가 읽는 정의는 여기 둘 수 없다(PCH 를 만들 때 이미 정해졌다) — `SW_KIT_EXPORTS` 를 읽는 키트 헤더(`SW_KIT_API`)도 PCH 밖이다.
 # ------------------------------------------------------------------------------
 function(sw_setTargetDefsHeader TARGET_NAME)
-	cmake_parse_arguments(ARG "KIT_EXPORTS;KIT_SERVER_EXPORTS" "LOG_TAG" "" ${ARGN})
-	set(content "// ${TARGET_NAME}: per-target definitions (generated)\n#pragma once\n#undef SW_LOG_TAG\n#define SW_LOG_TAG \"${ARG_LOG_TAG}\"\n")
+	cmake_parse_arguments(ARG "KIT_EXPORTS;KIT_SERVER_EXPORTS" "LOG_TAG;REGISTRAR_MODULE" "" ${ARGN})
+	if(NOT ARG_REGISTRAR_MODULE)
+		message(FATAL_ERROR "sw_setTargetDefsHeader(${TARGET_NAME}): REGISTRAR_MODULE <런타임 모듈 이름> 이 없다")
+	endif()
+	set(content "// ${TARGET_NAME}: per-target definitions (generated)\n#pragma once\n#undef SW_LOG_TAG\n#define SW_LOG_TAG \"${ARG_LOG_TAG}\"\n#define SW_REGISTRAR_MODULE \"${ARG_REGISTRAR_MODULE}\"\n")
+
 	if(ARG_KIT_EXPORTS)
 		string(APPEND content "#define SW_KIT_EXPORTS\n")
 	endif()

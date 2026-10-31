@@ -128,7 +128,7 @@ target_link_libraries(Engine
 	${listEngineCompressionLib}
 )
 
-target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" SW_ENGINE_INTERNAL)
+target_compile_definitions(Engine PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"Engine\"" SW_ENGINE_INTERNAL)
 sw_configurePCH(Engine "${CMAKE_CURRENT_SOURCE_DIR}/pch.h")
 
 target_sources(Engine PRIVATE

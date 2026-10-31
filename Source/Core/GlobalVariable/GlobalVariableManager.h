@@ -238,8 +238,11 @@ namespace sw
         /** @brief 새 전역 변수를 등록합니다. @p bTestOnly 는 테스트용 매크로로 선언한 변수면 true 입니다. */
         [[nodiscard]] bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4, bool bTestOnly = false );
 
-        /** @brief pHead 로 시작하는 연결 리스트(한 모듈의 변수들)를 등록합니다. */
-        void registerPendingVariables( string_view moduleName, const struct GlobalVariableRegistrar* pHead );
+        /**
+         * @brief pHead 로 시작하는 연결 리스트의 변수를 등록합니다. 변수마다 등록자에 찍힌 모듈 이름(`GlobalVariableRegistrar::_pModuleName`)으로 오른다.
+         * @details 올리는 쪽의 이름과 맞는지는 모듈을 올리는 길(`engine::verifyModuleRegistrars`)이 먼저 본다 — 호스트 이미지(Engine · App · 배포의 정적 링크)는 여러 대상의 등록자를 함께 올린다.
+         */
+        void registerPendingVariables( const struct GlobalVariableRegistrar* pHead );
 
         /** @brief 특정 모듈 이름으로 등록된 변수들을 해제합니다. */
         void unregisterVariablesByModule( string_view moduleName );
@@ -323,11 +326,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 정적 객체가 전역 리스트(`getHead()`)에 자신을 붙입니다. 어느 이미지(Engine, 모듈, App, 테스트)에서 정의해도 같습니다.
-     * @details 리스트를 가져와 등록하는 쪽이 이미지마다 정해져 있어서, 정의하는 쪽은 아무것도 고를 필요가 없다.
-     *          - Engine(과 함께 링크된 App, 테스트, 배포본의 모든 것): 기동할 때 `Engine` 와 테스트 main 이 "Engine" 으로 등록하고 비운다.
-     *          - 핫 리로드 모듈(EditorModule, SWGame 등): 로드 직후 `LiveReloadManager` 가 타입 등록자와 함께 가져와 **모듈 이름으로** 등록하고
-     *            (`engine::registerModuleTypes`), 언로드하기 전에 그 이름으로 해제한다(`engine::unregisterModuleTypes`). 모듈 코드는 등록과 해제를
-     *            부르지 않는다.
+     * @details 등록자는 자기 모듈 이름을 안다 — 정의 매크로가 CMake 가 대상마다 준 `SW_REGISTRAR_MODULE`(리플렉션 `--module` 과 같은 값)을 찍는다.
+     *          정의가 없는 대상에서 매크로를 쓰면 컴파일 오류다(폴백 없음). 언리얼은 UBT 가 대상마다 `UE_MODULE_NAME` 을 정의한다.
+     *          - 호스트 이미지(Engine · App · Server · DevTools, 배포본의 모든 것): 기동할 때 `CommandLineSubsystem` 이 걷어 등록자의 이름으로 올린다.
+     *          - 동적 모듈(EditorModule, SWGame, 키트 …): 로드 직후 올리는 쪽이 타입 등록자와 함께 걷어 등록하고(`engine::registerModuleTypes`),
+     *            등록자 이름이 올리는 쪽 이름과 다르면 오류로 멈춘다(남의 이름으로 들어가면 그 모듈을 내릴 때 해제되지 않는다).
+     *            언로드하기 전에 그 이름으로 해제한다(`engine::unregisterModuleTypes`). 모듈 코드는 등록과 해제를 부르지 않는다.
      *          주의: 헤더 매크로로 모듈 로컬 헤드를 바꿔 끼우는 방식은 그 헤더를 include 하지 않은 .cpp 의 변수를 조용히 Engine 리스트에
      *          붙여, 모듈이 언로드된 뒤 매니저가 언맵된 주소를 가리키게 한다.
      */
@@ -341,24 +345,25 @@ namespace sw
         std::variant<bool, int32, float32, string> _defaultValue;
         const utf8*                                _pDescription;
         const utf8*                                _pEnumType;
-        const utf8*                                _pModuleName;
+        const utf8*                                _pModuleName; ///< 정의한 대상의 런타임 모듈 이름(`SW_REGISTRAR_MODULE`)
         uint32                                     _typeSize;
         bool                                       _bTestOnly;
         GlobalVariableRegistrar*                   _pNext;
 
         /** @brief `getHead()` 리스트의 앞에 연결합니다. 글 인자(@p pName · @p pDescription · @p pEnumType · @p pModuleName)는 등록자보다 오래 사는 정적 글이어야 합니다. */
-        GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4, bool bTestOnly = false );
+        GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType, const utf8* pModuleName, uint32 typeSize, bool bTestOnly );
 
         /**
          * @brief 정의 매크로가 부르는 오버로드입니다. 저장 타입과 크기는 `GlobalVariableTraits<T>` 가, 기본값은 지금 @p variable 의 값이 정합니다.
          * @details 매크로가 변수를 기본값으로 초기화한 바로 다음 줄에서 만들어지므로(같은 TU 의 정적 초기화는 선언 순서다) 읽는 값이 곧 기본값이다.
          *          @p pTypeName 은 매크로 첫 인자의 문자열(`#type`)이고 enum 일 때만 남긴다. 에디터와 명령줄이 그 이름으로 리플렉션 enum 테이블을 찾는다.
+         *          @p pModuleName 은 매크로가 넘기는 `SW_REGISTRAR_MODULE` 이다.
          */
         template <typename T>
-        GlobalVariableRegistrar( const utf8* pName, T& variable, const utf8* pTypeName, const utf8* pDescription, bool bTestOnly )
+        GlobalVariableRegistrar( const utf8* pName, T& variable, const utf8* pTypeName, const utf8* pDescription, const utf8* pModuleName, bool bTestOnly )
             : GlobalVariableRegistrar( pName, GlobalVariableTraits<T>::kType, &variable,
                                        static_cast<typename GlobalVariableTraits<T>::StorageType>( variable ), pDescription,
-                                       GlobalVariableTraits<T>::kType == GlobalVariableType::Enum ? pTypeName : "", "",
+                                       GlobalVariableTraits<T>::kType == GlobalVariableType::Enum ? pTypeName : "", pModuleName,
                                        GlobalVariableTraits<T>::kTypeSize, bTestOnly )
         {
         }
@@ -390,6 +395,7 @@ namespace sw
 // Shipping 에서 빠진 테스트용 변수를 `const` 로 만들지 않는다: 같은 TU 에서 컴파일 시간 상수가 되면 그 값을 루프 상한으로 쓰는 벤치
 // 코드가 Shipping 에서만 `-Wtautological-unsigned-zero-compare` 경고를 낸다. 등록만 빼고 보통 변수로 둔다.
 //
+// 정의 매크로는 대상의 `SW_REGISTRAR_MODULE`(CMake 가 준다)을 등록자에 찍는다 — 정의가 없는 대상에서 쓰면 컴파일 오류다.
 // `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰이고, `type` 은 선언 타입이면서 `#type` 이다.
 // 괄호를 씌우면 깨진다. 값 인자(`defaultValue`)는 괄호로 감싸 두었다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
@@ -398,13 +404,13 @@ namespace sw
 #define SW_GLOBAL_VARIABLE( type, name, defaultValue, desc )      \
     extern type                          name;                    \
     type                                 name = ( defaultValue ); \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, false )
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, SW_REGISTRAR_MODULE, false )
 
 /** @brief 테스트용 전역 변수인데 Shipping 에도 등록합니다: `( type, name, defaultValue, desc )`. */
 #define SW_TEST_GLOBAL_VARIABLE_SHIPPED( type, name, defaultValue, desc ) \
     extern type                          name;                            \
     type                                 name = ( defaultValue );         \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, true )
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, SW_REGISTRAR_MODULE, true )
 
 /** @brief 테스트용 전역 변수입니다. Shipping 에서는 등록하지 않고 기본값으로 초기화한 변수만 남깁니다: `( type, name, defaultValue, desc )`. */
 #if defined( SW_SHIPPING )

@@ -24,6 +24,6 @@ target_link_libraries(DevTools
 		renderdoc # RenderDoc in-app API 헤더 하나(`RenderDoc/RenderDocCapture.cpp`)
 		sw_global_options
 )
-target_compile_definitions(DevTools PRIVATE "SW_LOG_TAG=\"DevTools\"" SW_TOOL_INTERNAL) # 호스트 쪽 도구라 엔진 서비스 표를 직접 찾는다
+target_compile_definitions(DevTools PRIVATE "SW_LOG_TAG=\"DevTools\"" "SW_REGISTRAR_MODULE=\"DevTools\"" SW_TOOL_INTERNAL) # 호스트 쪽 도구라 엔진 서비스 표를 직접 찾는다
 sw_configureDLLExports(DevTools SHARED DEVTOOLS)
 sw_configurePCH(DevTools "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

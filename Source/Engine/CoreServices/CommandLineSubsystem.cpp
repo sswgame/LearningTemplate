@@ -28,7 +28,8 @@ namespace sw
     SubsystemInitResult CommandLineSubsystem::initializeSubsystem()
     {
         _commandLine->initialize();
-        _globalVariables->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
+        // 호스트 이미지(Engine · App · 배포의 정적 링크 전부)의 변수 — 여러 대상의 것이 섞여 있어 각자 찍힌 모듈 이름으로 오른다.
+        _globalVariables->registerPendingVariables( GlobalVariableRegistrar::getHead() );
         GlobalVariableRegistrar::getHead() = nullptr;
         _globalVariables->registerToCommandLine( _commandLine.get() );
         // 경로 인자의 상대 경로 기준은 기동 때 이 프로세스가 받은 작업 폴더다(그 셸에서 적은 상대 경로의 뜻) - 여기서 한 번 읽고 다시 읽지 않는다.

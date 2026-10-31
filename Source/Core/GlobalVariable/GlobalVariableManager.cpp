@@ -657,9 +657,9 @@ namespace sw
     }
 
     /**
-     * @brief DLL · 모듈이 로드될 때 정적 초기화로 연결된 체인(pHead)의 변수들을 한꺼번에 등록합니다.
+     * @brief DLL · 모듈이 로드될 때 정적 초기화로 연결된 체인(pHead)의 변수들을 각자 등록자에 찍힌 모듈 이름으로 한꺼번에 등록합니다.
      */
-    void GlobalVariableManager::registerPendingVariables( string_view moduleName, const GlobalVariableRegistrar* pHead )
+    void GlobalVariableManager::registerPendingVariables( const GlobalVariableRegistrar* pHead )
     {
         const GlobalVariableRegistrar* pCurrent = pHead;
         while ( pCurrent != nullptr )
@@ -671,7 +671,7 @@ namespace sw
                                     pCurrent->_defaultValue,
                                     pCurrent->_pDescription,
                                     pCurrent->_pEnumType,
-                                    moduleName,
+                                    pCurrent->_pModuleName,
                                     pCurrent->_typeSize,
                                     pCurrent->_bTestOnly );
             pCurrent = pCurrent->_pNext;

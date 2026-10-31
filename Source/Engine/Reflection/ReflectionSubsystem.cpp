@@ -17,7 +17,7 @@ namespace sw
 
     SubsystemInitResult ReflectionSubsystem::initializeSubsystem()
     {
-        engine::registerModuleTypes( "Engine" );
+        engine::registerHostImageTypes();
         return bindEnumNames();
     }
 

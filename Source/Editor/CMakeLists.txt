@@ -189,7 +189,7 @@ endforeach()
 
 # 코어 부분 하나가 받는 공통 설정. EditorModule 과 같은 정의 · 로그 태그 · 유니티 묶음을 받아 DLL 에 들어가도 달라지지 않는다.
 function(sw_applyEditorCoreSettings TARGET_NAME)
-	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
+	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"Editor\"" "SW_REGISTRAR_MODULE=\"${SW_TARGET_EDITOR_MODULE}\"" SW_MODULE_EXPORTS SW_EDITOR_EXPORTS)
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 	target_link_libraries(${TARGET_NAME} PRIVATE Engine DevTools ModuleAPI Microsoft::DirectXTex cgltf meshoptimizer stb sw_global_options)
 	set_target_properties(${TARGET_NAME} PROPERTIES

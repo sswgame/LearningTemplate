@@ -65,7 +65,7 @@ target_link_libraries(App
 if(NOT SW_SHIPPING_BUILD)
 	target_link_libraries(App PRIVATE DevTools)
 endif()
-target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
+target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" "SW_REGISTRAR_MODULE=\"App\"" SW_APP_INTERNAL)
 
 sw_configurePCH(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 sw_splitShippingDebugInfo(App)

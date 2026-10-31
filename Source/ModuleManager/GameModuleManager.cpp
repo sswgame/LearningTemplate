@@ -305,7 +305,8 @@ namespace sw
 
         rebindGameService();
 
-        engine::registerModuleTypes( sw::config::kTargetGameModule );
+        if ( engine::registerModuleTypes( sw::config::kTargetGameModule ) == false )
+            return false;
         return _gameAPI.create != nullptr && _gameAPI.destroy != nullptr;
     }
 

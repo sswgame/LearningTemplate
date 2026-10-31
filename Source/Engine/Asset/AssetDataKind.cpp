@@ -35,22 +35,22 @@ namespace sw
     {
     }
 
-    uint32 AssetDataKindRegistry::registerModuleKinds( string_view moduleName, const AssetDataKindRegistrar* pHead )
+    uint32 AssetDataKindRegistry::registerModuleKinds( const AssetDataKindRegistrar* pHead )
     {
         // 목록은 나중에 만든 것이 앞이다 — 모아서 뒤에서부터 올리면 정적 초기화 순서(= 등록 순서)가 된다.
-        vector<const AssetDataKind*> listKind;
+        vector<const AssetDataKindRegistrar*> listRegistrar;
         for ( const AssetDataKindRegistrar* pRegistrar = pHead; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
         {
-            listKind.push_back( pRegistrar->_pKind );
+            listRegistrar.push_back( pRegistrar );
         }
         uint32 registeredCount = 0;
-        for ( size_t index = listKind.size(); index > 0; --index )
+        for ( size_t index = listRegistrar.size(); index > 0; --index )
         {
-            const AssetDataKind* pKind = listKind[index - 1];
-            if ( registerKind( pKind ) == false )
+            const AssetDataKindRegistrar* pRegistrar = listRegistrar[index - 1];
+            if ( registerKind( pRegistrar->_pKind ) == false )
                 continue;
             ScopedLock<mutex> lock{ _mutex };
-            _mapModuleKind[string{ moduleName }].push_back( pKind );
+            _mapModuleKind[string{ pRegistrar->_pModuleName }].push_back( pRegistrar->_pKind );
             ++registeredCount;
         }
         return registeredCount;
@@ -134,8 +134,10 @@ namespace sw
         return s_pHead;
     }
 
-    AssetDataKindRegistrar::AssetDataKindRegistrar( const AssetDataKind* pKind )
+    AssetDataKindRegistrar::AssetDataKindRegistrar( const AssetDataKind* pKind, const utf8* pModuleName )
         : _pKind{ pKind }
+        , _pModuleName{ pModuleName }
+
         , _pNext{ getHead() }
     {
         getHead() = this;

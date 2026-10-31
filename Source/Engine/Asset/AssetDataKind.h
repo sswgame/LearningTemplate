@@ -48,7 +48,7 @@ namespace sw
      * @brief 데이터 파일 종류의 레지스트리입니다. 서비스 범위의 서브시스템이라 엔진 범위보다 먼저 서고 나중에 사라지며, 엔진 · 키트 · 게임 모듈이 등록하고
      *        모듈을 내리면 그 종류가 빠집니다(`engine::getSubsystem<AssetDataKindRegistry>()`).
      * @details **등록 경로.** 이미지의 정적 등록자(`SW_RESOURCE_DATA_KIND`)는 레지스트리를 모르고 링크 때 목록에만 달린다(`AssetDataKindRegistrar::getHead`).
-     *          모듈을 올린 쪽이 그 목록을 걷어 모듈 이름과 함께 올리고(`engine::registerModuleTypes` → `registerModuleKinds`), 모듈을 내리기 전에 같은 이름으로 뺀다
+     *          모듈을 올린 쪽이 그 목록을 걷어 등록자에 찍힌 모듈 이름으로 올리고(`engine::registerModuleTypes` → `registerModuleKinds`), 모듈을 내리기 전에 같은 이름으로 뺀다
      *          (`engine::unregisterModuleTypes` → `unregisterModuleKinds`). 타입 · 전역 변수 등록자와 같은 길이라 핫 리로드의 내림 처리가 따로 없다.
      *          등록 · 해제는 모듈을 올리고 내리는 스레드에서, 조회는 테스트 · 에디터에서 오므로 목록은 잠금 하나로 지킵니다. 종류의 로더는 잠금 밖에서 부릅니다
      *          (찾은 등록 줄은 그 모듈이 내려가기 전까지 삽니다). 프레임마다 도는 경로가 아닙니다.
@@ -69,10 +69,11 @@ namespace sw
         /** @brief 종류를 뺍니다(없으면 아무 일도 없습니다). */
         void unregisterKind( const AssetDataKind* pKind );
         /**
-         * @brief 방금 올린 이미지의 정적 등록자 목록 @p pHead 를 걷어 @p moduleName 의 종류로 올립니다. 올린 순서(정적 초기화 순서)를 지킵니다.
+         * @brief 방금 올린 이미지의 정적 등록자 목록 @p pHead 를 걷어 등록자마다 찍힌 모듈 이름(`AssetDataKindRegistrar::_pModuleName`)의 종류로 올립니다.
+         *        올린 순서(정적 초기화 순서)를 지킵니다. 올리는 쪽 이름과 맞는지는 `engine::verifyModuleRegistrars` 가 먼저 본다.
          * @return 올라간 종류 수입니다(이름이 겹치는 등록은 오류를 남기고 세지 않습니다).
          */
-        uint32 registerModuleKinds( string_view moduleName, const AssetDataKindRegistrar* pHead );
+        uint32 registerModuleKinds( const AssetDataKindRegistrar* pHead );
         /** @brief @p moduleName 이 올린 종류를 모두 뺍니다(모듈 라이브러리를 내리기 전에). 뺀 수를 반환합니다. */
         uint32 unregisterModuleKinds( string_view moduleName );
         /** @brief 이름(대소문자 무시)으로 종류를 찾습니다. */
@@ -102,12 +103,13 @@ namespace sw
     struct SW_API AssetDataKindRegistrar
     {
         const AssetDataKind*          _pKind;
-        const AssetDataKindRegistrar* _pNext; ///< 목록의 다음(먼저 만든 쪽). 목록은 나중에 만든 것이 앞이다.
+        const utf8*                   _pModuleName; ///< 정의한 대상의 런타임 모듈 이름 — 등록 줄이 `SW_REGISTRAR_MODULE` 을 찍는다(`GlobalVariableRegistrar` 와 같다)
+        const AssetDataKindRegistrar* _pNext;       ///< 목록의 다음(먼저 만든 쪽). 목록은 나중에 만든 것이 앞이다.
 
         /** @brief 아직 아무도 걷어 가지 않은 등록자들의 목록 머리입니다(Engine 이미지가 가집니다). 걷어 간 쪽이 nullptr 로 비웁니다. */
         static AssetDataKindRegistrar*& getHead();
 
-        explicit AssetDataKindRegistrar( const AssetDataKind* pKind );
+        AssetDataKindRegistrar( const AssetDataKind* pKind, const utf8* pModuleName );
         AssetDataKindRegistrar( const AssetDataKindRegistrar& )            = delete;
         AssetDataKindRegistrar& operator=( const AssetDataKindRegistrar& ) = delete;
     };
@@ -141,6 +143,7 @@ namespace sw
 
 /**
  * @brief 데이터 파일 종류를 그 카탈로그의 .cpp 에서 등록합니다. 모든 구성(Shipping 포함)에 남습니다 — Shipping 은 모듈을 통째로 링크합니다(`sw_linkWholeArchive`).
+ * @details 등록자에 대상의 `SW_REGISTRAR_MODULE`(CMake 가 준다)을 찍는다 — 정의가 없는 대상에서 쓰면 컴파일 오류다.
  * @param varName  파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pLabel   종류 이름(리터럴)
  * @param pPrefix  리소스 id 접두(리터럴 또는 nullptr)
@@ -152,5 +155,5 @@ namespace sw
     static const ::sw::AssetDataKind          sw_resourceDataKind_##varName{ pLabel, pPrefix, pContains, pSuffix, pLoad }; \
     static const ::sw::AssetDataKindRegistrar sw_resourceDataKindRegistrar_##varName                                       \
     {                                                                                                                      \
-        &sw_resourceDataKind_##varName                                                                                     \
+        &sw_resourceDataKind_##varName, SW_REGISTRAR_MODULE                                                                \
     }

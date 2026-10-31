@@ -41,10 +41,10 @@ namespace sw
                 }
 
                 // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
-                engine::registerModuleTypes( sw::config::kTargetEditorModule );
-
                 bool bSucceeded = false;
-                if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
+                if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
+                    SW_LOG_ERROR( "%# cannot register the editor module types", pPurpose );
+                else if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
                 {
                     const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
                     if ( pfnEntry == nullptr )

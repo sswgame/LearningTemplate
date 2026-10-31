@@ -104,23 +104,45 @@ namespace sw
 
     namespace engine
     {
-        void registerModuleTypes( string_view moduleName )
+        bool verifyModuleRegistrars( string_view moduleName, const ModuleRegistrarHeads& heads )
         {
-            // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다. 그것을 걷어서 넘긴다.
-            // 이미 등록한 모듈인데 머리에 새 등록기가 있으면 **다른 라이브러리**의 것이다 — 핫 리로드는 올린 직후 머리를 따로 걷어 넘기므로(인자 있는
-            // 오버로드) 이 자리에서는 비어 있어야 한다. 지연 로드로 늦게 올라온 공용 모듈이 이렇게 남의 이름으로 들어간다. 알린다.
-            if ( getModuleHeadCache().contains( string{ moduleName } ) &&
-                 TypeRegistrar::getHead() != nullptr )
+            bool bMatched = true;
+            for ( const GlobalVariableRegistrar* pRegistrar = heads._pVariable; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
             {
-                SW_LOG_WARNING( "Registrars of another image were waiting when '%#' registered again — they are attributed to '%#'. "
-                                "Load shared modules explicitly first (LiveReloadManager::loadSharedModule).",
-                                moduleName, moduleName );
+                if ( moduleName == string_view{ pRegistrar->_pModuleName } )
+                    continue;
+                SW_LOG_ERROR( "Global variable %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
+                              pRegistrar->_pName, pRegistrar->_pModuleName, moduleName );
+                bMatched = false;
             }
-            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.**
-            registerModuleTypes( moduleName, peekGlobalRegistrarHeads() );
+            for ( const AssetDataKindRegistrar* pRegistrar = heads._pDataKind; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
+            {
+                if ( moduleName == string_view{ pRegistrar->_pModuleName } )
+                    continue;
+                SW_LOG_ERROR( "Resource data kind %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
+                              pRegistrar->_pKind->_pLabel, pRegistrar->_pModuleName, moduleName );
+                bMatched = false;
+            }
+            return bMatched;
+        }
 
-            // 소비했으므로 비운다. 다음 DLL 이 자기 것만 매달도록.
+        bool registerModuleTypes( string_view moduleName )
+        {
+            // 방금 로드된 DLL 의 정적 등록기들이 전역 머리에 매달려 있다. 걷어서 비운다 — 다음 DLL 이 자기 것만 매달도록(실패해도 남기지 않는다).
+            const ModuleRegistrarHeads heads = peekGlobalRegistrarHeads();
             setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
+            if ( verifyModuleRegistrars( moduleName, heads ) == false )
+                return false;
+            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.**
+            registerModuleTypes( moduleName, heads );
+            return true;
+        }
+
+        void registerHostImageTypes()
+        {
+            const ModuleRegistrarHeads heads = peekGlobalRegistrarHeads();
+            setGlobalRegistrarHeads( ModuleRegistrarHeads{} );
+            registerModuleTypes( "Engine", heads ); // 타입 머리 캐시 · 모듈 서브시스템 자리의 이름 — 호스트 이미지는 내리지 않는다
         }
 
         ModuleRegistrarHeads peekGlobalRegistrarHeads()
@@ -150,12 +172,12 @@ namespace sw
             SW_MEMORY_SCOPE( Reflection );
             TypeRegistrar* pTypeHead = heads._pType;
             EnumRegistrar* pEnumHead = heads._pEnum;
-            // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다). 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
+            // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다) — 각자 찍힌 모듈 이름으로. 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( heads._pVariable != nullptr )
-                getSubsystem<GlobalVariableManager>().registerPendingVariables( moduleName, heads._pVariable );
+                getSubsystem<GlobalVariableManager>().registerPendingVariables( heads._pVariable );
             // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
             if ( heads._pDataKind != nullptr )
-                (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( moduleName, heads._pDataKind );
+                (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( heads._pDataKind );
             // 엔진 밖 레지스트리(편집기 확장 · 키트)의 등록자도 새로 뗀 것만 붙인다. 모듈을 내리기 전에 같은 이름으로 뗀다.
             if ( heads._pObject != nullptr )
                 attachModuleObjects( moduleName, heads._pObject );

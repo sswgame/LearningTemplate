@@ -125,8 +125,9 @@ namespace sw
                         SW_LOG_ERROR( "OnlineLoadBot: cannot load the module %#", pModule );
                         return false;
                     }
-                    engine::registerModuleTypes( pModule );
-                    _listLoadedModule.push_back( pModule );
+                    _listLoadedModule.push_back( pModule ); // 올렸으면 등록이 일부 실패해도 내릴 때 거둔다
+                    if ( engine::registerModuleTypes( pModule ) == false )
+                        return false;
                     if ( string_view{ pModule } == LoadBotModuleEntry::kModuleName )
                         _pBotModule = pHandle;
                 }

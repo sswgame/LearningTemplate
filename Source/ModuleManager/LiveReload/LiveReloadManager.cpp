@@ -234,8 +234,10 @@ namespace sw
             SW_LOG_ERROR( "Failed to load the shared module %#", modulePath );
             return false;
         }
-        engine::registerModuleTypes( moduleName );
+        // 라이브러리는 남긴다(정적 초기화가 이미 돌았다) — 실패는 기동을 멈춘다.
         _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, pSharedHandle } );
+        if ( engine::registerModuleTypes( moduleName ) == false )
+            return false;
         SW_LOG_INFO( "Shared module loaded: %#", moduleName );
         return true;
     }
@@ -721,6 +723,17 @@ namespace sw
 
             outShadow._heads = engine::peekGlobalRegistrarHeads();
             engine::setGlobalRegistrarHeads( engine::ModuleRegistrarHeads{} );
+        }
+
+        BLOCK( "Check Registrar Module" )
+        {
+            // 새 이미지의 등록자가 모두 이 모듈 것이어야 커밋이 그 이름으로 올리고 내린다. 아니면 적용 전에 거절한다(옛 라이브러리는 그대로).
+            if ( engine::verifyModuleRegistrars( context._moduleName, outShadow._heads ) == false )
+            {
+                abortShadowCopy( context, outShadow );
+                outShadow = {};
+                return false;
+            }
         }
 
         BLOCK( "Validate New Image" )

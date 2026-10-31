@@ -114,7 +114,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 		if(ARG_DEFINITIONS)
 			target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_DEFINITIONS})
 		endif()
-		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}")
+		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}" REGISTRAR_MODULE "${ARG_MODULE_NAME}")
 		set(listPCHDefinition "")
 		if(libType STREQUAL "SHARED")
 			# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
@@ -137,13 +137,14 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		# 키트를 링크하는 게임 모듈은 키트 타깃의 PUBLIC `SW_KIT_IMPORTS` 를 물려받는다. 게임 PCH 와 게임 TU 의 명령줄 정의가 같아야
 		# 하므로 모든 게임이 이 정의를 직접 가지고 PCH 소유자도 같게 가진다(키트가 없는 게임에도 해롭지 않다. 키트 헤더만 읽는다).
-		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+		# 게임 모듈 이름은 모두 SWGame 이라 등록자 이름(`SW_REGISTRAR_MODULE`)도 PCH 소유자와 같다.
+		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 		sw_addSharedPCHOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK Engine ModuleAPI GameFramework sw_global_options
-			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
-		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
+		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" ${ARG_DEFINITIONS})
 		sw_configurePCH(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 	endif()
