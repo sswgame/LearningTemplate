@@ -12,8 +12,11 @@
 
 namespace sw
 {
+    struct PropertyInfo;
     struct SequenceKeyTrack;
 
+    class Component;
+    class GameObject;
     class GameObjectManager;
     class SequenceAsset;
     class SequencePlayer;
@@ -88,11 +91,14 @@ namespace sw
          */
         static void applyPlayback( GameObjectManager* pManager, const SequencePlayer& player,
                                    vector<const SequenceTrackItem*>* pOutListCrossedEvent = nullptr );
+        /** @brief 트랙 · 클립의 대상 이름 @p name 이 묶이는 오브젝트입니다. 관리자가 없거나 이름이 비었거나 없으면 nullptr 입니다. 재생과 에디터의 키 찍기가 같은 묶기 규칙을 쓴다. */
+        static GameObject* findTarget( GameObjectManager* pManager, string_view name );
         /**
-         * @brief 키 트랙 대상의 현재 값을 채널 순서로 읽습니다(트랜스폼은 로컬 이동, 회전(라디안), 크기이고, 프로퍼티는 그 값입니다).
-         * @return 대상, 컴포넌트, 숫자 프로퍼티를 찾지 못하면 false 를 반환합니다. 에디터의 키 찍기(현재 상태를 키로)가 씁니다.
+         * @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다(`_propertyPath` = "컴포넌트 타입.프로퍼티"). 못 찾거나 숫자가 아니면 false 입니다.
+         * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
+         *          재생이 값을 쓰는 길과 에디터가 지금 값을 읽어 키로 찍는 길이 이 한 규칙을 쓴다(언리얼 `FTrackInstancePropertyBindings` 처럼 묶기는 런타임, 키 찍기는 편집기).
          */
-        [[nodiscard]] static bool readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity );
+        [[nodiscard]] static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty );
         /**
          * @brief 리그 슬롯 트랙의 @p frame 가중치입니다(0..1 로 자른다). 키가 없으면 1(슬롯을 정하지 않은 것과 같다)입니다.
          * @details 언리얼 Control Rig 트랙의 가중치 커브, 유니티 Animation Rigging 의 Rig Weight 키에 해당한다.

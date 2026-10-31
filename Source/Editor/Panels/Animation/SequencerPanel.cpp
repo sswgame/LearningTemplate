@@ -21,8 +21,12 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectValue.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -147,6 +151,52 @@ namespace sw::editor
             {
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
+            }
+
+            /**
+             * @brief 키 트랙 대상의 지금 값을 채널 순서로 읽습니다(트랜스폼은 로컬 이동, 회전(라디안), 크기이고, 리그 슬롯은 가중치, 프로퍼티는 그 값입니다).
+             * @details 키 찍기(지금 상태를 키로)만 쓰는 읽기라 에디터에 둔다 — 대상 · 프로퍼티 묶기는 재생과 같은 런타임 규칙(`SequenceTimelineUtil::findTarget` · `findTrackProperty`)을 쓴다.
+             * @return 대상, 컴포넌트, 숫자 프로퍼티를 찾지 못하면 false 입니다.
+             */
+            [[nodiscard]] static bool readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
+            {
+                GameObject* pTarget               = SequenceTimelineUtil::findTarget( pManager, track._targetObject );
+                const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
+                if ( bInvalidSampleRequest )
+                    return false;
+                if ( track._kind == SequenceTrackKind::Transform )
+                {
+                    const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
+                    if ( pScene == nullptr )
+                        return false;
+                    const float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                    for ( uint32 groupIndex = 0; groupIndex < 3; ++groupIndex )
+                    {
+                        pOutArrValue[groupIndex * 3 + 0] = arrValue[groupIndex]._x;
+                        pOutArrValue[groupIndex * 3 + 1] = arrValue[groupIndex]._y;
+                        pOutArrValue[groupIndex * 3 + 2] = arrValue[groupIndex]._z;
+                    }
+                    return true;
+                }
+                if ( track._kind == SequenceTrackKind::RigSlot )
+                {
+                    const PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
+                    if ( pModifier == nullptr )
+                        return false;
+                    pOutArrValue[0] = pModifier->getSlotWeight( hashed_string( track._propertyPath.c_str() ) );
+                    return true;
+                }
+                if ( track._kind != SequenceTrackKind::Property )
+                    return false;
+                Component*          pComponent{ nullptr };
+                const PropertyInfo* pProperty{ nullptr };
+                if ( SequenceTimelineUtil::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
+                    return false;
+                float64 number{ 0.0 };
+                if ( ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
+                    return false;
+                pOutArrValue[0] = static_cast<float32>( number );
+                return true;
             }
         };
     } // namespace
@@ -395,7 +445,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
         float32            arrCurrent[kSequenceTransformChannelCount]{};
-        const bool         bTargetFound = SequenceTimelineUtil::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
+        const bool         bTargetFound = SequencerPanelInternal::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
 
         drawKeyButtons( track, frame, arrCurrent, bTargetFound );
         drawChannelRows( track, frame, arrCurrent );

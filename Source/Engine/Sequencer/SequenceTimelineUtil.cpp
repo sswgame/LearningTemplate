@@ -51,13 +51,6 @@ namespace sw
                 return false;
             }
 
-            static GameObject* findTarget( GameObjectManager* pManager, string_view name )
-            {
-                if ( pManager == nullptr || name.empty() )
-                    return nullptr;
-                return pManager->findGameObjectByName( hashed_string{ name } );
-            }
-
             /** @brief 축 하나(0 은 x, 1 은 y, 2 는 z)입니다. */
             static float32& axisOf( float3& value, uint32 axis )
             {
@@ -66,31 +59,6 @@ namespace sw
                 if ( axis == 1 )
                     return value._y;
                 return value._z;
-            }
-
-            /**
-             * @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다. 못 찾거나 숫자가 아니면 false 를 반환합니다.
-             * @details 숫자 여부는 내장 타입 표의 갈래(`ReflectBuiltinClass::Number` — 정수 · 실수 · 성분이 하나인 압축 타입)로 가른다. 값은 `ReflectValueUtil::readNumber` · `writeNumber` 로만 읽고 쓴다.
-             */
-            [[nodiscard]] static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
-            {
-                pOutComponent    = nullptr;
-                pOutProperty     = nullptr;
-                const size_t dot = track._propertyPath.find( '.' );
-                if ( pTarget == nullptr || dot == string::npos )
-                    return false;
-                Component* pComponent = pTarget->findComponentByTypeName( hashed_string( track._propertyPath.substr( 0, dot ).c_str() ) );
-                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
-                    return false;
-                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
-                if ( pProperty == nullptr )
-                    return false;
-                const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( pProperty->_typeName );
-                if ( ReflectValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Number )
-                    return false;
-                pOutComponent = pComponent;
-                pOutProperty  = pProperty;
-                return true;
             }
 
             /** @brief 트랜스폼 트랙의 아홉 채널을 대상 SceneComponent 에 씁니다. 키가 없는 채널은 지금 값을 둔다. */
@@ -124,7 +92,7 @@ namespace sw
             {
                 Component*          pComponent{ nullptr };
                 const PropertyInfo* pProperty{ nullptr };
-                const bool          bNoKeyData = track._listChannel.empty() || track._listChannel[0]._listKey.empty() || findTrackProperty( pTarget, track, pComponent, pProperty ) == false;
+                const bool          bNoKeyData = track._listChannel.empty() || track._listChannel[0]._listKey.empty() || SequenceTimelineUtil::findTrackProperty( pTarget, track, pComponent, pProperty ) == false;
                 if ( bNoKeyData )
                     return;
                 // 위에서 채널 0 에 키가 있음을 확인했다.
@@ -150,7 +118,7 @@ namespace sw
             static void applyCameraCut( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame )
             {
                 const SequenceTrackItem* pCut    = asset.findCameraCut( frame );
-                GameObject*              pTarget = pCut != nullptr ? findTarget( pManager, pCut->_targetObject ) : nullptr;
+                GameObject*              pTarget = pCut != nullptr ? SequenceTimelineUtil::findTarget( pManager, pCut->_targetObject ) : nullptr;
                 CameraComponent*         pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
                 pManager->getCameraRegistry().setCutCamera( pCamera );
             }
@@ -264,7 +232,7 @@ namespace sw
         {
             if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false || item._targetObject.empty() )
                 continue;
-            GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, item._targetObject );
+            GameObject* pTarget = SequenceTimelineUtil::findTarget( pManager, item._targetObject );
             if ( pTarget == nullptr )
                 continue;
             const bool bCovered = SequenceTimelineUtilInternal::isTargetCovered( listActive, item._targetObject );
@@ -278,7 +246,7 @@ namespace sw
         const float32 keyFrame = static_cast<float32>( frame );
         for ( const SequenceKeyTrack& track : asset._listTrack )
         {
-            GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
+            GameObject* pTarget = SequenceTimelineUtil::findTarget( pManager, track._targetObject );
             if ( pTarget == nullptr )
                 continue;
             if ( track._kind == SequenceTrackKind::Transform )
@@ -326,42 +294,31 @@ namespace sw
             pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
     }
 
-    bool SequenceTimelineUtil::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
+    GameObject* SequenceTimelineUtil::findTarget( GameObjectManager* pManager, string_view name )
     {
-        GameObject* pTarget               = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
-        const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
-        if ( bInvalidSampleRequest )
+        if ( pManager == nullptr || name.empty() )
+            return nullptr;
+        return pManager->findGameObjectByName( hashed_string{ name } );
+    }
+
+    bool SequenceTimelineUtil::findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
+    {
+        pOutComponent    = nullptr;
+        pOutProperty     = nullptr;
+        const size_t dot = track._propertyPath.find( '.' );
+        if ( pTarget == nullptr || dot == string::npos )
             return false;
-        if ( track._kind == SequenceTrackKind::Transform )
-        {
-            const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
-            if ( pScene == nullptr )
-                return false;
-            float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
-            for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
-            {
-                pOutArrValue[channelIndex] = SequenceTimelineUtilInternal::axisOf( arrValue[channelIndex / 3], channelIndex % 3 );
-            }
-            return true;
-        }
-        if ( track._kind == SequenceTrackKind::RigSlot )
-        {
-            const PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
-            if ( pModifier == nullptr )
-                return false;
-            pOutArrValue[0] = pModifier->getSlotWeight( hashed_string( track._propertyPath.c_str() ) );
-            return true;
-        }
-        if ( track._kind != SequenceTrackKind::Property )
+        Component* pComponent = pTarget->findComponentByTypeName( hashed_string( track._propertyPath.substr( 0, dot ).c_str() ) );
+        if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
             return false;
-        Component*          pComponent{ nullptr };
-        const PropertyInfo* pProperty{ nullptr };
-        if ( SequenceTimelineUtilInternal::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
+        const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
+        if ( pProperty == nullptr )
             return false;
-        float64 number{ 0.0 };
-        if ( ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
+        const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( pProperty->_typeName );
+        if ( ReflectValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Number )
             return false;
-        pOutArrValue[0] = static_cast<float32>( number );
+        pOutComponent = pComponent;
+        pOutProperty  = pProperty;
         return true;
     }
 
