@@ -160,6 +160,79 @@ namespace sw
                 }
                 return kDxgiFormatUnknown;
             }
+
+            /**
+             * @brief 읽는 DXGI 형식의 블록 크기 표입니다. 형식 목록의 정본은 `Config/Editor/DdsFormats.json` 의 `dxgi_formats` 이고 테스트가 이 표와 견준다.
+             * @details 압축 여부도 이 표가 정한다(블록 너비 > 1) — 번호 범위로 어림하지 않는다. DirectXTex `BitsPerPixel` · `ComputePitch` 와 같은 값이다.
+             */
+            static constexpr DDSFormatSize kArrFormatSizeRow[] = {
+                { 2, 1, 1, 16}, // R32G32B32A32_FLOAT
+                { 6, 1, 1, 12}, // R32G32B32_FLOAT
+                {10, 1, 1,  8}, // R16G16B16A16_FLOAT
+                {16, 1, 1,  8}, // R32G32_FLOAT
+                {24, 1, 1,  4}, // R10G10B10A2_UNORM
+                {28, 1, 1,  4}, // R8G8B8A8_UNORM
+                {29, 1, 1,  4}, // R8G8B8A8_UNORM_SRGB
+                {34, 1, 1,  4}, // R16G16_FLOAT
+                {41, 1, 1,  4}, // R32_FLOAT
+                {54, 1, 1,  2}, // R16_FLOAT
+                {61, 1, 1,  1}, // R8_UNORM
+                {71, 4, 4,  8}, // BC1_UNORM
+                {72, 4, 4,  8}, // BC1_UNORM_SRGB
+                {74, 4, 4, 16}, // BC2_UNORM
+                {75, 4, 4, 16}, // BC2_UNORM_SRGB
+                {77, 4, 4, 16}, // BC3_UNORM
+                {78, 4, 4, 16}, // BC3_UNORM_SRGB
+                {80, 4, 4,  8}, // BC4_UNORM
+                {83, 4, 4, 16}, // BC5_UNORM
+                {87, 1, 1,  4}, // B8G8R8A8_UNORM
+                {88, 1, 1,  4}, // B8G8R8X8_UNORM
+                {91, 1, 1,  4}, // B8G8R8A8_UNORM_SRGB
+                {95, 4, 4, 16}, // BC6H_UF16
+                {98, 4, 4, 16}, // BC7_UNORM
+                {99, 4, 4, 16}, // BC7_UNORM_SRGB
+            };
+
+            /** @brief @p dxgiFormat 의 블록 크기 줄입니다. 표에 없으면 nullptr 입니다(읽기가 거절한다). */
+            static const DDSFormatSize* findFormatSize( uint32 dxgiFormat )
+            {
+                for ( const DDSFormatSize& row : kArrFormatSizeRow )
+                {
+                    if ( row._dxgiFormat == dxgiFormat )
+                        return &row;
+                }
+                return nullptr;
+            }
+
+            /** @brief 너비 · 높이 · 깊이 중 가장 큰 변을 1 까지 반씩 줄인 밉 수(온전한 밉 사슬의 길이)입니다. */
+            static uint32 computeFullMipCount( uint32 width, uint32 height, uint32 depth )
+            {
+                uint32 extent   = width > height ? width : height;
+                extent          = extent > depth ? extent : depth;
+                uint32 mipCount = 1;
+                while ( extent > 1 )
+                {
+                    extent >>= 1;
+                    ++mipCount;
+                }
+                return mipCount;
+            }
+
+            /** @brief 층 하나의 밉 사슬이 차지하는 바이트입니다(밉마다 블록 수 × 블록 바이트 × 그 밉의 깊이). */
+            static uint64 computeLayerBytes( const DDSFormatSize& size, uint32 width, uint32 height, uint32 depth, uint32 mipCount )
+            {
+                uint64 total = 0;
+                for ( uint32 mip = 0; mip < mipCount; ++mip )
+                {
+                    const uint64 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1;
+                    const uint64 mipHeight = ( height >> mip ) > 0 ? ( height >> mip ) : 1;
+                    const uint64 mipDepth  = ( depth >> mip ) > 0 ? ( depth >> mip ) : 1;
+                    const uint64 blocksX   = ( mipWidth + size._blockWidth - 1 ) / size._blockWidth;
+                    const uint64 blocksY   = ( mipHeight + size._blockHeight - 1 ) / size._blockHeight;
+                    total += blocksX * blocksY * size._blockBytes * mipDepth;
+                }
+                return total;
+            }
         };
     } // namespace
 
@@ -234,7 +307,13 @@ namespace sw
             }
 
             const DDSHeaderDxt10* pDxt10 = reinterpret_cast<const DDSHeaderDxt10*>( pBuffer + dataOffset );
-            image._dxgiFormat            = pDxt10->_dxgiFormat;
+            if ( pDxt10->_arraySize == 0 )
+            {
+                SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS DX10 header has an array size of 0." );
+                return false;
+            }
+            image._dxgiFormat = pDxt10->_dxgiFormat;
+            image._layerCount = pDxt10->_arraySize * ( ( pDxt10->_miscFlag & DDSFormat::kDx10MiscTextureCubeFlag ) != 0 ? 6u : 1u );
             dataOffset += sizeof( DDSHeaderDxt10 );
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 )
@@ -246,10 +325,9 @@ namespace sw
         {
             image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfRGBMasks( pHeader->_pixelFormat );
         }
-
-        const bool bIsBc1To5 = ( 70 <= image._dxgiFormat && image._dxgiFormat <= 84 );
-        const bool bIsBc6Or7 = ( 94 <= image._dxgiFormat && image._dxgiFormat <= 99 );
-        image._bCompressed   = ( bIsBc1To5 || bIsBc6Or7 ) ? SW_TRUE : SW_FALSE;
+        // 옛 머리의 큐브 맵은 caps2 가 면 여섯을 말한다(DX10 머리는 위에서 misc 플래그로 정했다).
+        if ( dataOffset == sizeof( uint32 ) + sizeof( DDSFileHeader ) && ( pHeader->_caps2 & DDSFormat::kCaps2CubemapFlag ) != 0 )
+            image._layerCount = 6;
 
         const bool bBgraFormat = image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
                                  image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSRGB;
@@ -267,6 +345,22 @@ namespace sw
                 pHeader->_pixelFormat._rgbBitCount );
             return false;
         }
+        // 형식은 알지만 크기 표에 없으면(DX10 머리가 적은 아무 번호) 바이트 수를 셀 수 없다 — 읽지 않는다.
+        const DDSFormatSize* pSize = DDSLoaderInternal::findFormatSize( image._dxgiFormat );
+        if ( pSize == nullptr )
+        {
+            SW_LOG_ERROR_ID( "DDS.UnsupportedFormat", "Unsupported DXGI format %# in the DDS header — the loader has no block size for it.", image._dxgiFormat );
+            return false;
+        }
+        image._bCompressed = pSize->_blockWidth > 1 ? SW_TRUE : SW_FALSE;
+
+        const uint32 fullMipCount = DDSLoaderInternal::computeFullMipCount( image._width, image._height, image._depth );
+        if ( image._mipCount > fullMipCount )
+        {
+            SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS header lists %# mips but a %# x %# x %# image has at most %#.", image._mipCount, image._width, image._height, image._depth,
+                             fullMipCount );
+            return false;
+        }
 
         // 머리만 있고 픽셀이 없으면 실패다 — 성공은 곧 `isValid()` 여야 한다(빈 바이트로 텍스처를 만들지 않게).
         if ( bufferSize <= dataOffset )
@@ -275,7 +369,15 @@ namespace sw
             return false;
         }
 
-        const size_t payloadSize = bufferSize - dataOffset;
+        // 픽셀 바이트는 형식 · 크기 · 밉 · 층으로 정해진다. 짧으면 업로드가 버퍼 밖을 읽고, 길면 형식이나 밉 수를 잘못 읽은 것이다(DirectXTex 도 크기를 셈해 견준다).
+        const size_t payloadSize   = bufferSize - dataOffset;
+        const uint64 expectedBytes = DDSLoaderInternal::computeLayerBytes( *pSize, image._width, image._height, image._depth, image._mipCount ) * image._layerCount;
+        if ( payloadSize != expectedBytes )
+        {
+            SW_LOG_ERROR_ID( "DDS.PayloadSizeMismatch", "DDS pixel data is %# bytes but DXGI format %# at %# x %# x %#, %# mips, %# layers needs %# bytes.", payloadSize,
+                             image._dxgiFormat, image._width, image._height, image._depth, image._mipCount, image._layerCount, expectedBytes );
+            return false;
+        }
         image._bytes.resize( payloadSize );
         Memory::copy( image._bytes.data(), pBuffer + dataOffset, payloadSize );
 
@@ -287,6 +389,16 @@ namespace sw
     {
         vector<DDSLegacyFourCc> listRow;
         for ( const DDSLegacyFourCc& row : DDSLoaderInternal::kArrFourCcRow )
+        {
+            listRow.push_back( row );
+        }
+        return listRow;
+    }
+
+    vector<DDSFormatSize> DDSLoader::getFormatSizeTable()
+    {
+        vector<DDSFormatSize> listRow;
+        for ( const DDSFormatSize& row : DDSLoaderInternal::kArrFormatSizeRow )
         {
             listRow.push_back( row );
         }

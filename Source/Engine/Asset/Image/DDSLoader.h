@@ -19,6 +19,7 @@ namespace sw
         uint32                 _height;
         uint32                 _depth;
         uint32                 _mipCount;
+        uint32                 _layerCount; ///< 배열 원소 × 큐브 면(평면 텍스처는 1) — 바이트는 층마다 밉 사슬 하나씩이다
         uint32                 _dxgiFormat;
         uint8                  _bCompressed : 1;
         uint8                  _bIsBgra     : 1;
@@ -30,6 +31,7 @@ namespace sw
             , _height{ 0 }
             , _depth{ 1 }
             , _mipCount{ 1 }
+            , _layerCount{ 1 }
             , _dxgiFormat{ 0 }
             , _bCompressed{ SW_FALSE }
             , _bIsBgra{ SW_FALSE }
@@ -80,6 +82,21 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct DDSFormatSize
+     * @brief DXGI 형식 하나의 블록 크기(가로 · 세로 화소)와 블록 바이트입니다. 압축 없는 형식은 1×1 블록 = 화소 하나입니다.
+     */
+    struct DDSFormatSize
+    {
+        uint32 _dxgiFormat;
+        uint32 _blockWidth;
+        uint32 _blockHeight;
+        uint32 _blockBytes;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct DDSLoader
      * @brief 외부 라이브러리 없이 표준 DDS 헤더와 바이너리 데이터를 직접 파싱하는 가벼운 로더입니다.
      */
@@ -98,10 +115,16 @@ namespace sw
         /**
          * @brief 로더가 아는 옛 머리 FourCC 표입니다(읽기가 쓰는 표 그대로).
          * @details 형식 이름의 정본은 데이터 파일 `Config/Editor/DdsFormats.json` 이고 파이썬 에셋 검증이 그것을 읽는다. 이 표가 그 파일과 같은지
-         *          `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 가 본다.
+         *          `DDSFormatFileTest.MatchesTheLoaderTables` 가 본다.
          */
         [[nodiscard]] static vector<DDSLegacyFourCc> getLegacyFourCcTable();
         /** @brief 로더가 아는 옛 머리 RGB 마스크 표입니다(읽기가 쓰는 표 그대로). 파일과 같은지는 `getLegacyFourCcTable` 과 같은 테스트가 본다. */
         [[nodiscard]] static vector<DDSLegacyRGBMask> getLegacyRGBMaskTable();
+        /**
+         * @brief 로더가 읽는 DXGI 형식과 그 블록 크기의 표입니다(읽기가 쓰는 표 그대로). 이 표에 없는 형식은 읽기가 거절한다.
+         * @details 형식 목록은 `Config/Editor/DdsFormats.json` 의 `dxgi_formats` 와 같아야 한다(같은 테스트가 본다). 픽셀 바이트 수는 이 표로 셈한
+         *          밉 사슬 × 층 × 깊이와 정확히 같아야 한다 — 짧으면 업로드가 버퍼 밖을 읽고, 길면 형식 · 밉 수를 잘못 읽은 파일이다.
+         */
+        [[nodiscard]] static vector<DDSFormatSize> getFormatSizeTable();
     };
 } // namespace sw

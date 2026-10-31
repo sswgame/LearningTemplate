@@ -26,5 +26,9 @@ namespace sw
         static constexpr uint32 kPixelFormatFourCcFlag = 0x4u;
         /** @brief 픽셀 형식 플래그 DDPF_RGB 입니다. */
         static constexpr uint32 kPixelFormatRGBFlag = 0x40u;
+        /** @brief caps2 플래그 DDSCAPS2_CUBEMAP(옛 머리의 큐브 맵 — 면 여섯)입니다. */
+        static constexpr uint32 kCaps2CubemapFlag = 0x200u;
+        /** @brief DX10 머리 misc 플래그 D3D11_RESOURCE_MISC_TEXTURECUBE(배열 원소마다 면 여섯)입니다. */
+        static constexpr uint32 kDx10MiscTextureCubeFlag = 0x4u;
     };
 } // namespace sw

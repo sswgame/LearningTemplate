@@ -126,17 +126,18 @@ namespace sw
         AssetLoadScope    loadScope( "Texture", relativePath );
         if ( DDSLoader::loadFromAsset( assetID, outImage ) == false || outImage.isValid() == false )
         {
-            SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
+            SW_LOG_ERROR_ID( "Texture.LoadFailed", "Texture2D: failed to load '%#'", relativePath );
             return false;
         }
         if ( toRHIFormatFromDxgi( outImage._dxgiFormat ) == RHIFormat::Unknown )
         {
-            SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, outImage._dxgiFormat );
+            SW_LOG_ERROR_ID( "Texture.UnsupportedFormat", "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, outImage._dxgiFormat );
             return false;
         }
-        if ( outImage._depth > 1 )
+        if ( outImage._depth > 1 || outImage._layerCount > 1 )
         {
-            SW_LOG_ERROR( "Texture2D: '%#' is a volume/array texture (depth=%#) — only 2D is supported", relativePath, outImage._depth );
+            SW_LOG_ERROR_ID( "Texture.NotTwoDimensional", "Texture2D: '%#' is a volume/array/cube texture (depth=%#, layers=%#) — only 2D is supported", relativePath,
+                             outImage._depth, outImage._layerCount );
             return false;
         }
         loadScope.setBytes( outImage._bytes.size() );

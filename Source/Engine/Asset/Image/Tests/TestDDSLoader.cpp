@@ -31,7 +31,7 @@ namespace
     };
 
     /** @brief 옛 머리(DX10 확장 없음) DDS 를 만듭니다. 머리 뒤에 @p payloadSize 바이트를 붙입니다. */
-    vector<uint8> makeLegacyDDS( const LegacyPixelFormat& pixelFormat, size_t payloadSize, uint32 depth = 0, uint32 mipCount = 0 )
+    vector<uint8> makeLegacyDDS( const LegacyPixelFormat& pixelFormat, size_t payloadSize, uint32 depth = 0, uint32 mipCount = 0, uint32 caps2 = 0 )
     {
         vector<uint8> bytes;
         LittleEndianUtil::appendUint32( bytes, DDSFormat::kMagic );
@@ -54,10 +54,25 @@ namespace
         LittleEndianUtil::appendUint32( bytes, pixelFormat._gMask );
         LittleEndianUtil::appendUint32( bytes, pixelFormat._bMask );
         LittleEndianUtil::appendUint32( bytes, pixelFormat._aMask );
-        for ( uint32 index = 0; index < 5; ++index )
+        LittleEndianUtil::appendUint32( bytes, 0 ); // caps
+        LittleEndianUtil::appendUint32( bytes, caps2 );
+        for ( uint32 index = 0; index < 3; ++index )
         {
-            LittleEndianUtil::appendUint32( bytes, 0 ); // caps · caps2 · caps3 · caps4 · 예약
+            LittleEndianUtil::appendUint32( bytes, 0 ); // caps3 · caps4 · 예약
         }
+        bytes.resize( bytes.size() + payloadSize, 0x5A );
+        return bytes;
+    }
+
+    /** @brief DX10 머리 DDS 를 만듭니다(형식 @p dxgiFormat, 배열 @p arraySize, misc @p miscFlag). 머리 뒤에 @p payloadSize 바이트를 붙입니다. */
+    vector<uint8> makeDx10DDS( uint32 dxgiFormat, size_t payloadSize, uint32 arraySize = 1, uint32 miscFlag = 0 )
+    {
+        vector<uint8> bytes = makeLegacyDDS( LegacyPixelFormat{ DDSFormat::kPixelFormatFourCcFlag, DDSFormat::kDx10FourCc, 0, 0, 0, 0, 0 }, 0 );
+        LittleEndianUtil::appendUint32( bytes, dxgiFormat );
+        LittleEndianUtil::appendUint32( bytes, 3 ); // D3D10_RESOURCE_DIMENSION_TEXTURE2D
+        LittleEndianUtil::appendUint32( bytes, miscFlag );
+        LittleEndianUtil::appendUint32( bytes, arraySize );
+        LittleEndianUtil::appendUint32( bytes, 0 ); // misc2
         bytes.resize( bytes.size() + payloadSize, 0x5A );
         return bytes;
     }
@@ -122,27 +137,28 @@ SW_TEST_CASE( DDSLoaderTest, LegacyHeadersMapToDXGIFormats )
         uint32            _dxgiFormat;
         bool              _bCompressed;
         bool              _bBgra;
+        size_t            _payloadSize; ///< 4 × 2 한 장의 바이트(BC 는 4×4 블록 하나)
     };
     const Case arrCase[] = {
-        { makeFourCc( FourCcUtil::make( "DXT1" ) ), 71, true, false },
-        { makeFourCc( FourCcUtil::make( "DXT5" ) ), 77, true, false },
-        { makeFourCc( FourCcUtil::make( "ATI2" ) ), 83, true, false },
-        { makeFourCc( 113 ), 10, false, false }, // D3DFMT_A16B16G16R16F
-        { makeFourCc( 114 ), 41, false, false }, // D3DFMT_R32F
-        { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u ), 28, false, false },
-        { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0x00000000u ), 28, false, false },
-        { makeRGB( 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u ), 87, false, true },
-        { makeRGB( 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00000000u ), 88, false, true },
+        { makeFourCc( FourCcUtil::make( "DXT1" ) ), 71, true, false, 8 },
+        { makeFourCc( FourCcUtil::make( "DXT5" ) ), 77, true, false, 16 },
+        { makeFourCc( FourCcUtil::make( "ATI2" ) ), 83, true, false, 16 },
+        { makeFourCc( 113 ), 10, false, false, 64 }, // D3DFMT_A16B16G16R16F
+        { makeFourCc( 114 ), 41, false, false, 32 }, // D3DFMT_R32F
+        { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u ), 28, false, false, 32 },
+        { makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0x00000000u ), 28, false, false, 32 },
+        { makeRGB( 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0xFF000000u ), 87, false, true, 32 },
+        { makeRGB( 0x00FF0000u, 0x0000FF00u, 0x000000FFu, 0x00000000u ), 88, false, true, 32 },
     };
     for ( const Case& testCase : arrCase )
     {
-        const vector<uint8> bytes = makeLegacyDDS( testCase._pixelFormat, 16 );
+        const vector<uint8> bytes = makeLegacyDDS( testCase._pixelFormat, testCase._payloadSize );
         DDSImageData        image;
         SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
         SW_EXPECT_EQUAL( testCase._dxgiFormat, image._dxgiFormat );
         SW_EXPECT_EQUAL( testCase._bCompressed, image._bCompressed == SW_TRUE );
         SW_EXPECT_EQUAL( testCase._bBgra, image._bIsBgra == SW_TRUE );
-        SW_EXPECT_EQUAL( size_t( 16 ), image._bytes.size() );
+        SW_EXPECT_EQUAL( testCase._payloadSize, image._bytes.size() );
     }
 
     // 표를 돌려주는 함수는 읽기가 쓰는 표 그대로다
@@ -152,14 +168,110 @@ SW_TEST_CASE( DDSLoaderTest, LegacyHeadersMapToDXGIFormats )
 
 /**
  * @brief [DDSLoaderTest] 머리에 적은 깊이 · 밉 수는 그대로 읽고, 0 이면 1 로 본다
+ * @details DXT1 4×2×3 밉 셋: 밉 0 은 블록 하나 × 깊이 3(24 B), 밉 1 · 2 는 블록 하나(8 B씩) — 40 B.
  */
 SW_TEST_CASE( DDSLoaderTest, KeepsDepthAndMipCount )
 {
-    const vector<uint8> bytes = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8, 3, 5 );
+    const vector<uint8> bytes = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 40, 3, 3 );
     DDSImageData        image;
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
     SW_EXPECT_EQUAL( 3u, image._depth );
-    SW_EXPECT_EQUAL( 5u, image._mipCount );
+    SW_EXPECT_EQUAL( 3u, image._mipCount );
+    SW_EXPECT_EQUAL( 1u, image._layerCount );
+}
+
+/**
+ * @brief [DDSLoaderTest] 픽셀 바이트 수는 너비 × 높이 × 형식 크기(밉 · 층 포함)와 정확히 같아야 한다 — 짧거나 길면 실패하고 출력을 비운다
+ * @details 전에는 머리 뒤 바이트를 크기와 견주지 않아, 잘린 파일은 업로드가 버퍼 밖을 읽었고 밉 수 · 형식을 잘못 적은 파일도 그대로 읽혔다.
+ */
+SW_TEST_CASE( DDSLoaderTest, PayloadMustMatchTheFormatSize )
+{
+    SW_EXPECT_LOG( "DDS.PayloadSizeMismatch" );
+    const LegacyPixelFormat rgba = makeRGB( 0x000000FFu, 0x0000FF00u, 0x00FF0000u, 0xFF000000u );
+    // RGBA8 4×2 = 32 B
+    const size_t arrBadSize[] = { 31, 33, 8 };
+    for ( const size_t badSize : arrBadSize )
+    {
+        const vector<uint8> bytes = makeLegacyDDS( rgba, badSize );
+        DDSImageData        image = makeLoadedImage();
+        SW_EXPECT_FALSE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
+        SW_EXPECT_FALSE( image.isValid() );
+    }
+    // 밉 둘(4×2 + 2×1) = 40 B
+    DDSImageData        image;
+    const vector<uint8> twoMips = makeLegacyDDS( rgba, 40, 0, 2 );
+    SW_EXPECT_TRUE( DDSLoader::loadFromMemory( twoMips.data(), twoMips.size(), image ) );
+    const vector<uint8> twoMipsShort = makeLegacyDDS( rgba, 32, 0, 2 );
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( twoMipsShort.data(), twoMipsShort.size(), image ) );
+    // DX10 R16_FLOAT 4×2 = 16 B — 형식마다 화소 바이트가 다르다
+    const vector<uint8> halfFloat = makeDx10DDS( 54, 16 );
+    SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( halfFloat.data(), halfFloat.size(), image ) );
+    SW_EXPECT_EQUAL( size_t( 16 ), image._bytes.size() );
+}
+
+/**
+ * @brief [DDSLoaderTest] 배열 · 큐브 맵은 층 수를 세어 바이트를 견준다 — DX10 배열 × misc 큐브 면 여섯, 옛 머리 caps2 큐브 맵
+ */
+SW_TEST_CASE( DDSLoaderTest, ArraysAndCubeMapsCountTheirLayers )
+{
+    DDSImageData        image;
+    const vector<uint8> array = makeDx10DDS( 28, size_t( 32 ) * 3, 3 );
+    SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( array.data(), array.size(), image ) );
+    SW_EXPECT_EQUAL( 3u, image._layerCount );
+    const vector<uint8> cubeArray = makeDx10DDS( 28, size_t( 32 ) * 12, 2, DDSFormat::kDx10MiscTextureCubeFlag );
+    SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( cubeArray.data(), cubeArray.size(), image ) );
+    SW_EXPECT_EQUAL( 12u, image._layerCount );
+    const vector<uint8> legacyCube = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), size_t( 8 ) * 6, 0, 0, DDSFormat::kCaps2CubemapFlag );
+    SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( legacyCube.data(), legacyCube.size(), image ) );
+    SW_EXPECT_EQUAL( 6u, image._layerCount );
+}
+
+/**
+ * @brief [DDSLoaderTest] 온전한 사슬보다 많은 밉 수 · 배열 크기 0 은 깨진 머리, 크기 표에 없는 DX10 형식은 모르는 형식이다
+ */
+SW_TEST_CASE( DDSLoaderTest, InconsistentHeadersFail )
+{
+    SW_EXPECT_LOG( "DDS.CorruptHeader" );
+    SW_EXPECT_LOG( "DDS.UnsupportedFormat" );
+    DDSImageData        image;
+    const vector<uint8> tooManyMips = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), size_t( 8 ) * 4, 0, 4 ); // 4×2 는 밉 셋까지
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( tooManyMips.data(), tooManyMips.size(), image ) );
+    const vector<uint8> emptyArray = makeDx10DDS( 28, 32, 0 );
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( emptyArray.data(), emptyArray.size(), image ) );
+    const vector<uint8> unknownDxgi = makeDx10DDS( 11, 64 ); // R16G16B16A16_UNORM — 크기 표에 없다
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( unknownDxgi.data(), unknownDxgi.size(), image ) );
+    SW_EXPECT_FALSE( image.isValid() );
+}
+
+/**
+ * @brief [DDSLoaderTest] 크기 표는 번호가 겹치지 않고, 옛 머리 표가 가리키는 형식은 모두 크기 표에 있으며, 블록은 1×1 이거나 4×4 다
+ */
+SW_TEST_CASE( DDSLoaderTest, FormatSizeTableCoversTheLegacyTables )
+{
+    const vector<DDSFormatSize> listSize    = DDSLoader::getFormatSizeTable();
+    const auto                  countOfDxgi = [&listSize]( uint32 dxgiFormat )
+    {
+        uint32 count = 0;
+        for ( const DDSFormatSize& row : listSize )
+        {
+            count += row._dxgiFormat == dxgiFormat ? 1u : 0u;
+        }
+        return count;
+    };
+    for ( const DDSFormatSize& row : listSize )
+    {
+        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "duplicate DXGI " + to_string( row._dxgiFormat ) );
+        SW_EXPECT_TRUE( row._blockBytes > 0 );
+        SW_EXPECT_TRUE( ( row._blockWidth == 1 && row._blockHeight == 1 ) || ( row._blockWidth == 4 && row._blockHeight == 4 ) );
+    }
+    for ( const DDSLegacyFourCc& row : DDSLoader::getLegacyFourCcTable() )
+    {
+        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "legacy FourCC maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+    }
+    for ( const DDSLegacyRGBMask& row : DDSLoader::getLegacyRGBMaskTable() )
+    {
+        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "legacy RGB mask maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+    }
 }
 
 /**
