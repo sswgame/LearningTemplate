@@ -13,10 +13,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#if !defined( SW_SHIPPING )
-    #include "DevTools/AssetReload/ContentFolderWatchService.h"
-    #include "DevTools/DevToolsHost.h"
-#endif
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -26,9 +22,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Module/HostServices.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -43,11 +37,8 @@
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
 
-#include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 #include "ModuleManager/ModuleStateStore.h"
-
-#include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
@@ -58,10 +49,6 @@ namespace sw
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바, 도크 다섯 개, 게임 뷰 툴바가 겹치지 않는 하한입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
-#if !defined( SW_SHIPPING )
-            /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 아는 App 만 쓴다(배포본엔 리로드가 없다). */
-            static constexpr const utf8* kReloadEditorAction = "ReloadEditor";
-#endif
 
             /** @brief 이 기계 · 빌드가 그 백엔드를 못 돌린다는(환경) 결과면 true 입니다. 결함일 수 있는 `Failed` 는 false 입니다. */
             static constexpr bool isRHIUnusableHere( RHIInitResult result )
@@ -110,8 +97,7 @@ namespace sw
     App::App()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _pDevTools{ nullptr }
-        , _devToolsFrameSubscription{}
+        , _devTools{}
         , _engine{}
         , _automation{}
         , _moduleReload{}
@@ -156,10 +142,8 @@ namespace sw
             return false;
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
-#if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devToolsFrameSubscription = _engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
-#endif
+        _devTools.attachFrameHooks( _engine );
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가
@@ -269,18 +253,8 @@ namespace sw
         // 자동화 구동기는 App 만 든다 — 범위를 세우기(Server 와 같은 한 곳) 전에 더한다. 엔진이 선 뒤 `begin` 으로 시작한다.
         _automation.addToHostScope( _host );
         // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
-#if !defined( SW_SHIPPING )
-        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
-        }
-        _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
-        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
-        const bool bFolderWatchBound = _host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
-        SW_ASSERT( bFolderWatchBound );
-        (void)bFolderWatchBound;
-#endif
+        // 개발 도구(엔진 기동 확장 · 콘텐츠 폴더 감시 — 배포 구현은 비어 있다).
+        _devTools.addToHostScope( _host, _engine );
         const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
         SW_ASSERT( bStateStoreBound );
         (void)bStateStoreBound;
@@ -336,17 +310,9 @@ namespace sw
     {
         // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 GameModuleManager 가 에디터와 게임 태그를 걸어 처리한다.
         SW_MEMORY_SCOPE( EngineMisc );
-#if !defined( SW_SHIPPING )
-        // 무엇을 로드할지는 모듈 매니페스트가 정한다. App 은 빌드가 담은 모든 대상을 로드한다(Game 은 클라이언트와 리슨 서버용 서버 모듈,
-        // Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
-        if ( ModuleCatalogLoader::loadAndResolve( ModuleCatalog::getBuildTargetMask(), _moduleCatalog, _moduleResolution ) == false )
+        // 모듈 매니페스트 · 핫 리로드 구동기(개발 빌드만 — 배포는 모듈을 정적으로 링크한다).
+        if ( _devTools.loadModuleCatalog( _host, *_pModuleImageHost, _moduleReload, _moduleCatalog, _moduleResolution ) == false )
             return false;
-        _pModuleImageHost->setResolution( _moduleResolution );
-
-        // 모듈 감시자는 모듈을 로드하는 GameModuleManager 보다 먼저 있어야 한다. GameModuleManager 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        // 구동기는 자신을 호스트 범위에 건다(개발 명령 `module.reload` · 감시 값 `Module.*` 가 찾는다).
-        _moduleReload.initialize( _host, *_pModuleImageHost );
-#endif
 
         _gameModuleManager = make_unique<EditorModuleManager>();
         return _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
@@ -389,9 +355,7 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-#if !defined( SW_SHIPPING )
-                _pDevTools->startConsole( bEnableEditor );
-#endif
+                _devTools.startConsole( bEnableEditor );
                 return true;
             }
             case HostServiceID::Observability:
@@ -438,9 +402,7 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-#if !defined( SW_SHIPPING )
-                _pDevTools->stopConsole();
-#endif
+                _devTools.stopConsole();
                 return;
             }
             case HostServiceID::Observability:
@@ -496,9 +458,7 @@ namespace sw
         {
             pRenderThread->setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
             pRenderThread->setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
-#if !defined( SW_SHIPPING )
-            pRenderThread->setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &_backendSwap ) ); // 개발 명령 `rhi.removeDevice <ms>`
-#endif
+            _devTools.bindRenderThreadHooks( *pRenderThread, _backendSwap );
         }
     }
 
@@ -514,16 +474,14 @@ namespace sw
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다. 호스트 범위는 엔진보다 오래 살아야 하므로(모듈 라이브러리 창구가
         // 엔진 종료 안에서 불린다) 범위째가 아니라 창구 뒤에 서는 구동기만 내린다.
         _automation.detach( _host );
-#if !defined( SW_SHIPPING )
-        _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-#endif
+        _devTools.detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         // 엔진이 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
         _automation.release();
-        _pDevTools = nullptr;
+        _devTools.release();
 
         // 주 창은 엔진 범위의 MainWindow 서브시스템이 소유한다 — 엔진 종료(RHI 가 내려간 뒤)가 파괴했다. 관찰 포인터만 비운다.
         _pWindow = nullptr;
@@ -587,10 +545,7 @@ namespace sw
             _gameModuleManager->beginFrame();
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
-#if !defined( SW_SHIPPING )
-            engine::getSubsystem<DebugKeyActions>().update( engine::getSubsystem<InputManager>(), frameTime._deltaTime );
-#endif
-            pollReloadHotkeys();
+            _devTools.pollShellActions( frameTime._deltaTime, _moduleReload, _bEnableEditor == SW_TRUE );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.
@@ -651,25 +606,6 @@ namespace sw
         }
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
         _engine.onWindowClosed();
-    }
-
-    void App::pollReloadHotkeys()
-    {
-#if !defined( SW_SHIPPING )
-        // 모듈을 다시 로드하는 장치는 호스트(App)에 있다. 디버그 키 맵에는 "이 액션이 눌렸나"만 묻는다.
-        const DebugKeyActions& debugKeys = engine::getSubsystem<DebugKeyActions>();
-        if ( debugKeys.wasActionTriggered( hashed_string( InputMapDefaults::kReloadGameAction ) ) )
-        {
-            _moduleReload.requestReload( config::kTargetGameModule );
-            SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
-        }
-        if ( _bEnableEditor == SW_TRUE && debugKeys.wasActionTriggered( hashed_string( AppInternal::kReloadEditorAction ) ) )
-        {
-            _moduleReload.requestReload( config::kTargetEditorModule );
-            SW_LOG_INFO( "%#: force EditorModule reload", AppInternal::kReloadEditorAction );
-        }
-#endif
-        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 InputMap 도 로드하지 않는다.
     }
 
     int32 App::getInitFailureExitCode() const

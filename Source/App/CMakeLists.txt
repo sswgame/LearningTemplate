@@ -21,6 +21,20 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
+# 빌드마다 다른 구현 — 선언은 헤더 하나, 구현 .cpp 를 여기서 고른다(인터페이스 · 가상 함수 · 파일 안 `#if` 를 두지 않는다).
+# 배포는 `<이름>Shipping.cpp` 를, 개발은 `<이름>.cpp` 를 짓는다. 고르지 않은 쪽은 소스 검사 게이트에 적힌다(`sw_excludeUnbuiltSources`).
+set(listAppBuildVariant AppDevTools)
+foreach(variantName IN LISTS listAppBuildVariant)
+	if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${variantName}.cpp" OR NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${variantName}Shipping.cpp")
+		message(FATAL_ERROR "[App] build variant ${variantName} needs both ${variantName}.cpp and ${variantName}Shipping.cpp")
+	endif()
+	if(SW_SHIPPING_BUILD)
+		sw_excludeUnbuiltSources(APP_SOURCES "/Source/App/${variantName}\\.cpp$")
+	else()
+		sw_excludeUnbuiltSources(APP_SOURCES "/Source/App/${variantName}Shipping\\.cpp$")
+	endif()
+endforeach()
+
 add_executable(App ${APP_SOURCES})
 sw_embedProcessManifest(App)
 if(WIN32)

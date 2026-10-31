@@ -12,6 +12,7 @@
  */
 #pragma once
 #include "App/AppAutomationHost.h"
+#include "App/AppDevTools.h"
 #include "App/RHIBackendSwitcher.h"
 #include "App/RuntimeUIHost.h"
 #include "App/UserSettingsHost.h"
@@ -34,7 +35,6 @@ namespace sw
     struct NativeWindowEvent;
     struct RenderFramePacket;
 
-    class DevToolsHost;
     class CommandLineManager;
     class EditorModuleManager;
     class IRHIDevice;
@@ -89,12 +89,6 @@ namespace sw
         /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 서비스이 선 뒤). */
         void bindHostCallbacks();
 
-        /**
-         * @brief 이번 프레임에 리로드 단축키가 눌렸으면 리로드를 요청합니다(Ctrl+F7 게임, 에디터 모드의 Ctrl+F6 에디터). Shipping 에서는 아무것도 하지 않습니다.
-         * @details 셸 액션(`DebugKeyActions::update`)을 갱신한 뒤에 부릅니다. 실제 교체는 `ModuleReloadDriver::update` 가 틱 직전에 합니다. 에디터 모듈을 아는 것은 App 이라 여기 둡니다.
-         */
-        void pollReloadHotkeys();
-
         /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
@@ -115,9 +109,9 @@ namespace sw
         ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
-        DevToolsHost*          _pDevTools;                 ///< 호스트 범위의 개발 도구(배포 빌드는 늘 nullptr)
-        Subscription           _devToolsFrameSubscription; ///< 개발 도구의 프레임 관찰 구독
-        Engine                 _engine;
+        /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 매니페스트 · 리로드 단축키 · 콘솔)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`AppDevTools.h`). */
+        AppDevTools _devTools;
+        Engine      _engine;
         /** @brief 자동화 시나리오 연결(호스트 범위의 구동기 · 엔진 프레임 관찰자)입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 뗀다). */
         AppAutomationHost _automation;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
