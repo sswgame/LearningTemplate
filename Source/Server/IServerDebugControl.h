@@ -1,10 +1,10 @@
 /**
- * @file ServerDebugControl.h
+ * @file IServerDebugControl.h
  * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`).
  * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
- *          개발 구성에만 있다 — 구현(`Dev/ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않고, `ServerApp` 은 `IServerDebugControl` 포인터를
- *          `build::kShipping` 이 아닐 때만 채운다(배포는 비어 있다 — 명령을 받지 않고 틱을 붙잡지 않는다). 빈 구현 파일을 두지 않는다.
+ *          개발 구성에만 있다 — 구현(`Dev/ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않고, `ServerApp` 은 `makeServerDebugControl` 로
+ *          `build::kShipping` 이 아닐 때만 만든다(배포는 비어 있다 — 명령을 받지 않고 틱을 붙잡지 않는다). 빈 구현 파일을 두지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -46,40 +46,6 @@ namespace sw
         virtual void onTickFinished() = 0;
     };
 
-    /**
-     * @class ServerDebugControl
-     * @brief 전용 서버의 개발 조종입니다. 파일 머리말 참고.
-     */
-    class ServerDebugControl final : public IServerDebugControl
-    {
-    public:
-        explicit ServerDebugControl( const ServerTickCountDelegate& tickCount );
-        ~ServerDebugControl() override;
-        ServerDebugControl( const ServerDebugControl& )            = delete;
-        ServerDebugControl& operator=( const ServerDebugControl& ) = delete;
-
-        const utf8*        getHelpSuffix() const override;
-        void               startConsole() override;
-        void               stopConsole() override;
-        [[nodiscard]] bool startChannel() override;
-        void               stopChannel() override;
-        void               pump() override;
-        [[nodiscard]] bool executeCommand( string_view command ) override;
-        bool               isHoldingTick() const override { return _bPaused && _pendingStepCount == 0; }
-        bool               isPaused() const override { return _bPaused; }
-        void               onTickFinished() override;
-
-    private:
-        /** @brief 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. */
-        [[nodiscard]] bool executePauseCommand( string_view command );
-
-    private:
-        /** @brief 개발 콘솔 · 디버그 채널입니다. .cpp 가 정의한다. */
-        struct DevParts;
-
-        ServerTickCountDelegate _tickCount;
-        unique_ptr<DevParts>    _pDev;                  ///< `startConsole` 이 세우고 `stopConsole` 이 지운다
-        uint32                  _pendingStepCount{ 0 }; ///< 일시정지 중 더 돌 틱 수(`step N`)
-        bool                    _bPaused{ false };      ///< 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다)
-    };
+    /** @brief 개발 조종을 만듭니다. 정의는 개발 구성에만 있다(`Dev/ServerDebugControl.cpp`) — `build::kShipping` 이 아닌 갈래에서만 부른다. */
+    [[nodiscard]] unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount );
 } // namespace sw

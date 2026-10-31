@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Server/ServerDebugControl.h"
-
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -12,10 +10,49 @@
 
 #include "Engine/Observability/DebugChannel.h"
 
+#include "Server/IServerDebugControl.h"
+
 // 개발 구성에만 있다 — 배포는 짓지 않고 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 
 namespace sw
 {
+    /**
+     * @class ServerDebugControl
+     * @brief 전용 서버의 개발 조종입니다. 파일 머리말 참고.
+     */
+    class ServerDebugControl final : public IServerDebugControl
+    {
+    public:
+        explicit ServerDebugControl( const ServerTickCountDelegate& tickCount );
+        ~ServerDebugControl() override;
+        ServerDebugControl( const ServerDebugControl& )            = delete;
+        ServerDebugControl& operator=( const ServerDebugControl& ) = delete;
+
+        const utf8*        getHelpSuffix() const override;
+        void               startConsole() override;
+        void               stopConsole() override;
+        [[nodiscard]] bool startChannel() override;
+        void               stopChannel() override;
+        void               pump() override;
+        [[nodiscard]] bool executeCommand( string_view command ) override;
+        bool               isHoldingTick() const override { return _bPaused && _pendingStepCount == 0; }
+        bool               isPaused() const override { return _bPaused; }
+        void               onTickFinished() override;
+
+    private:
+        /** @brief 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. */
+        [[nodiscard]] bool executePauseCommand( string_view command );
+
+    private:
+        /** @brief 개발 콘솔 · 디버그 채널입니다. .cpp 가 정의한다. */
+        struct DevParts;
+
+        ServerTickCountDelegate _tickCount;
+        unique_ptr<DevParts>    _pDev;                  ///< `startConsole` 이 세우고 `stopConsole` 이 지운다
+        uint32                  _pendingStepCount{ 0 }; ///< 일시정지 중 더 돌 틱 수(`step N`)
+        bool                    _bPaused{ false };      ///< 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다)
+    };
+
     /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_debugChannelPort, 0, "디버그 채널 포트 (0=끄기, 루프백 전용, 토큰 필요)" );
     SW_TEST_GLOBAL_VARIABLE( string, gv_debugChannelToken, "", "디버그 채널 접속 토큰" );
@@ -190,5 +227,10 @@ namespace sw
         _bPaused          = true; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
         _pendingStepCount = static_cast<uint32>( stepCount );
         return true;
+    }
+
+    unique_ptr<IServerDebugControl> makeServerDebugControl( const ServerTickCountDelegate& tickCount )
+    {
+        return make_unique<ServerDebugControl>( tickCount );
     }
 } // namespace sw

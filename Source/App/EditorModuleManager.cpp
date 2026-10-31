@@ -14,6 +14,16 @@
 
 #include "sw/config/ConfigConstants.h"
 
+#if !defined( SW_SHIPPING )
+    #include "Core/File/FileUtil.h"
+    #include "Core/Module/ModuleLibraryUtil.h"
+    #include "Core/Path/AbsolutePath.h"
+    #include "Core/Subsystem/SubsystemScope.h"
+    #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+    #include "DevTools/DebugHUD/DebugHUD.h"
+    #include "ModuleManager/LiveReload/LiveReloadManager.h"
+#endif
+
 namespace sw
 {
     namespace
@@ -79,7 +89,7 @@ namespace sw
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderThread ) == false )
             return false;
 
-        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`Dev/EditorModuleManagerDevTools.cpp` — 배포는 짓지 않는다).
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManager.cpp` 의 개발 전용 구역 — 배포는 짓지 않는다).
         if constexpr ( build::kShipping )
         {
             // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
@@ -340,7 +350,7 @@ namespace sw
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
         fillModuleServiceScope( *editorServices, false );
-        if constexpr ( build::kShipping == false ) // 개발 도구 서비스(`Dev/EditorModuleManagerDevTools.cpp`)는 개발 구성에만 있다
+        if constexpr ( build::kShipping == false ) // 개발 도구 서비스(`EditorModuleManager.cpp` 의 개발 전용 구역)는 개발 구성에만 있다
             bindDevToolServices( *editorServices );
         _editorAPI.bindService( editorServices.get() );
         _editorServices = std::move( editorServices );
@@ -364,4 +374,139 @@ namespace sw
         _bFreshEditorInstance = bCreated ? SW_TRUE : SW_FALSE;
         return bCreated;
     }
+
+#if !defined( SW_SHIPPING )
+    // ----------------------------------------------------------------------------------------------------------------------
+    // 개발 구성에만 있는 경로 — 리로드 그래프 등록 · 개발 도구 서비스(LiveReload · DevTools), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
+    // 배포는 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kShipping` 으로 가른다.
+    // ----------------------------------------------------------------------------------------------------------------------
+    bool EditorModuleManager::registerEditorModule( LiveReloadManager* pLiveReloadManager )
+    {
+        if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
+        {
+            // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
+            SW_LOG_ERROR( "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
+            return false;
+        }
+        if ( _bEnableEditor == SW_FALSE || pLiveReloadManager == nullptr )
+            return true;
+
+        BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
+        {
+            SW_MEMORY_SCOPE( Editor );
+            holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
+            holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
+            // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
+            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
+            if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
+            {
+                SW_LOG_ERROR( "Failed to load the Editor Module." );
+                return false;
+            }
+
+            // 확장 모듈은 EditorModule 과 자기 키트에 의존한다. 의존이 바뀌면 리로드 그래프가 확장을 다시 로드한다(키트와 SWGame 의 관계와 같다).
+            // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorContext::syncExtensionRegistrations).
+            for ( const EditorExtensionModule& extension : _listEditorExtension )
+            {
+                if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
+                {
+                    // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
+                    SW_LOG_ERROR( "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
+                    continue;
+                }
+                SW_LOG_INFO( "Editor extension module %# loaded", extension._name.c_str() );
+            }
+
+            if ( pLiveReloadManager->isGraphBroken() )
+            {
+                SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void EditorModuleManager::bindDevToolServices( SubsystemScope& editorServices ) const
+    {
+        // 개발 도구는 엔진의 기동 확장(`DevToolsHost`)이 세워 서비스 목록의 행이 아니다 — 에디터가 찾는 것(HUD 조작 · 설정 리로드 창)을 빌려 건다(없는 호스트면 걸지 않는다).
+        (void)editorServices.bind( engine::findSubsystem<DebugHUD>() );
+        (void)editorServices.bind( engine::findSubsystem<ConfigReloadSubsystem>() );
+    }
+
+    namespace
+    {
+        /** @brief 이 TU 전용 도우미 모음입니다. 인스턴스 없이 에디터 모듈을 올려 부르는 헤드리스 경로입니다. */
+        struct EditorModuleManagerHeadlessInternal
+        {
+            /**
+             * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 진입점 @p pSymbol 하나를 부르고 내립니다(헤드리스 임포트 · 로컬라이제이션 공통).
+             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ISubsystemLocator& ) -> bool` 이고 엔진 서비스 범위를 받습니다.
+             * @param symbols 에디터 모듈의 ABI 심볼 이름(`EditorModuleManager::getModuleSymbols`)입니다.
+             * @param pPurpose 로그에 쓰는 작업 이름입니다(`"Asset importing"`).
+             */
+            template <typename TEntryFn, typename TCall>
+            [[nodiscard]] static bool callEditorModuleEntry( const ModuleAPISymbols& symbols, const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
+            {
+                const string                      modulePath     = ModuleLibraryUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+                const std::optional<AbsolutePath> libraryPath    = AbsolutePath::tryMake( modulePath );
+                void* const                       pLibraryModule = libraryPath.has_value() && FileUtil::exists( modulePath ) ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
+                if ( pLibraryModule == nullptr )
+                {
+                    SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
+                    return false;
+                }
+
+                // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
+                bool bSucceeded = false;
+                if ( engine::registerModuleTypes( sw::config::kTargetEditorModule ) == false )
+                    SW_LOG_ERROR( "%# cannot register the editor module types", pPurpose );
+                else if ( ModuleInstanceUtil::matchesModuleABI( pLibraryModule, symbols ) )
+                {
+                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
+                    if ( pfnEntry == nullptr )
+                        SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
+                    else
+                    {
+                        SubsystemScope service;
+                        engine::bindModuleServices( service, false );
+                        bSucceeded = call( pfnEntry, static_cast<const ISubsystemLocator&>( service ) );
+                    }
+                }
+
+                engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+                // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
+                (void)ModuleLibraryUtil::unloadModuleLibrary( sw::config::kTargetEditorModule, pLibraryModule );
+                return bSucceeded;
+            }
+        };
+    } // namespace
+
+    bool EditorModuleManager::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )
+    {
+        // 인스턴스 없이 부르므로 엔진 서비스 범위를 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
+        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_ImportEditorAssets>(
+            getModuleSymbols(), kImportEditorAssetsSymbol, "Asset importing", [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ISubsystemLocator& service )
+        {
+            return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
+        } );
+    }
+
+    bool EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
+    {
+        const string poPathText( poPath );
+        const string projectText( projectArgument );
+        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
+            getModuleSymbols(), kRunEditorLocalizationTaskSymbol, "Localization tools",
+            [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ISubsystemLocator& service )
+        {
+            return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
+        } );
+    }
+#endif // !SW_SHIPPING
 } // namespace sw

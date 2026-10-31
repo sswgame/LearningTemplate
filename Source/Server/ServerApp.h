@@ -35,8 +35,8 @@
 
 #include "ModuleManager/HostDevLayer.h"
 
+#include "Server/IServerDebugControl.h"
 #include "Server/ServerAdminChannel.h"
-#include "Server/ServerDebugControl.h"
 #include "Server/ServerObservability.h"
 
 namespace sw

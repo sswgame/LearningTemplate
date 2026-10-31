@@ -314,7 +314,7 @@ namespace sw
     private:
         friend class PrefabLoadBlock;
 
-        /** @brief 경로의 캐시 키입니다(본문 · 핫 리로드 `PrefabCacheReload.cpp` 가 같은 키를 쓴다). */
+        /** @brief 경로의 캐시 키입니다(본문 · 핫 리로드 `PrefabAsset.cpp` 가 같은 키를 쓴다). */
         static string makeCacheKey( string_view assetRelativePath );
 
         /** @brief `request` 와 `loadPrefab` 의 본문입니다. 새 로드를 @p start 대로 시작합니다(동기 API 는 이 자리에서 읽는다 — `AssetLoadStart`). */

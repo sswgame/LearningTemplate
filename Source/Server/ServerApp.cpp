@@ -155,7 +155,7 @@ namespace sw
         {
             _pDevLayer = makeHostDevLayer();
             _pDevLayer->addToHostScope( _host, _engine );
-            _pDebugControl = make_unique<ServerDebugControl>( SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
+            _pDebugControl = makeServerDebugControl( SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
             { return _tickCount; } ) );
         }
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );

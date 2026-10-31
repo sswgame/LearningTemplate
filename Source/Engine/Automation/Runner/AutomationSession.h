@@ -120,7 +120,7 @@ namespace sw
 
         /**
          * @class Runtime
-         * @brief 바깥 창구(`IAutomationRuntime`)입니다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 공개한다(`getPublishedPart`). 구현은 `AutomationSessionRuntime.cpp`.
+         * @brief 바깥 창구(`IAutomationRuntime`)입니다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 공개한다(`getPublishedPart`). 구현은 `AutomationSession.cpp`.
          */
         class Runtime final : public IAutomationRuntime
         {
