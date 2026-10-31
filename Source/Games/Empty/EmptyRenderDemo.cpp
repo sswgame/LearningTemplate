@@ -12,8 +12,8 @@ namespace sw
     namespace
     {
         /// @brief 두 패스가 프로그램으로 쓰는 셰이더입니다(파이프라인 `_listExtensionShader` 에 선언돼 있어야 한다).
-        constexpr const utf8* kTintShader = "engine/shaders/extensionpassdemo.hlsl";
-        constexpr const utf8* kDrawShader = "engine/shaders/extensiondrawdemo.hlsl";
+        constexpr const utf8* kTintShader = "engine/shaders/extension_pass_demo.hlsl";
+        constexpr const utf8* kDrawShader = "engine/shaders/extension_draw_demo.hlsl";
 
         /// @brief 셰이더의 PassCB 칸 `g_OutlineColor` 를 요소 색 · 틴트로 빌린다(두 셰이더 머리 주석).
         constexpr const utf8* kColorConstant = "g_OutlineColor";

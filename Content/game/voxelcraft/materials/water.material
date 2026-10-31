@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 블록 청크의 물(반투명) 머티리얼 — 유리 머티리얼과 같은 블렌드에 _albedoMap 이 블록 아틀라스다. 알파는 메셔의 정점 색이 준다. -->
-<MaterialDesc formatVersion="0" name="VoxelWater" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Transparent">
+<MaterialDesc formatVersion="0" name="VoxelWater" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Transparent">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>

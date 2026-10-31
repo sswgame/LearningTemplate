@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 아레나 바닥 — 기본 머티리얼에 회색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="ShooterFloor" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="ShooterFloor" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.45 0.47 0.50 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>

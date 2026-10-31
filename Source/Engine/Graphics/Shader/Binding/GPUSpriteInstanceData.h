@@ -1,7 +1,7 @@
 /**
  * @file GPUSpriteInstanceData.h
  * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형, 색, 픽셀 스냅)을 셰이더 레이아웃 그대로 묶은 16바이트입니다.
- * @details HLSL 쪽은 `Content/engine/shaders/instancedata.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
+ * @details HLSL 쪽은 `Content/engine/shaders/instance_data.hlsli` 의 `uvStart`, `uvEnd`, `tint`, `pixelSnap` 이고, 해석하는 함수는
  *          `InstanceData::computeUvRect` 와 `InstanceData::computeTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
  *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트와
  *          인스턴스 배치 항목이 보관하고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
@@ -33,7 +33,7 @@ namespace sw
         uint32 _uvEnd{ 0xFFFFFFFFu }; ///< (u, v) unorm16 둘. 기본은 (1, 1)
         uint32 _tint{ 0xFFFFFFFFu };  ///< RGBA8 unorm, r 이 하위 바이트. 기본은 흰색 불투명
         /**
-         * @brief 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다. sprite2d.hlsl 이 인스턴스 원점의 X, Y 를 이 격자에 붙입니다.
+         * @brief 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다. sprite_2d.hlsl 이 인스턴스 원점의 X, Y 를 이 격자에 붙입니다.
          * @details 값은 픽셀 퍼펙트 카메라(`PixelPerfectCameraComponent`)가 정하고 메시 컴포넌트가 보관합니다. 프레임과 색을 바꾸는 쪽(`make`)은
          *          이 필드를 모릅니다(`MeshComponent::setSpriteInstanceData` 가 지금 값을 유지합니다). 유니티 Pixel Perfect Camera 의 Pixel Snapping 에 해당합니다.
          */

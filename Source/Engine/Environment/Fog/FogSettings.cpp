@@ -31,7 +31,7 @@ namespace sw
         const float32 baseExp     = MathUtil::min( -_heightFalloff * ( startHeight - _baseHeight ), Internal::kMaxExponent );
         const float32 baseDensity = _density * MathUtil::exp( baseExp );
         const float32 exponent    = _heightFalloff * directionY * clearedLen;
-        // 지수는 -kMaxExponent 아래로 자른다 — 아주 가파르게 내려가는 시선의 exp 가 넘치지 않는다(fog.hlsl · fogcommon.hlsli 와 같다).
+        // 지수는 -kMaxExponent 아래로 자른다 — 아주 가파르게 내려가는 시선의 exp 가 넘치지 않는다(fog.hlsl · fog_common.hlsli 와 같다).
         const bool    bSmall  = MathUtil::abs( exponent ) < Internal::kSmallExponent;
         const float32 rate    = _heightFalloff * directionY;
         const float32 falloff = bSmall ? clearedLen * ( 1.0f - 0.5f * exponent ) : ( 1.0f - MathUtil::exp( -MathUtil::max( exponent, -Internal::kMaxExponent ) ) ) / rate;

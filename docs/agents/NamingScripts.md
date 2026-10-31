@@ -47,7 +47,7 @@ Shaders follow the C++ rules wherever HLSL can express them.
 - A helper used in one `.hlsl` is a free function (`isVisible`, `hashSeed`).
 - C++ function-name rules apply (`Bindless::loadRwTexture2D`, `Tex` → `Texture`; a computed value is `compute…`). GPU verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
 - Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
-- **A pass or feature switch picks a definition, not a branch inside a body.** A step a switch changes is a member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty definition), so the calling body reads the same in every permutation (`surface.applyAlphaCutoff()` in `materialshadermain.hlsli`). A `#if` inside a function body is allowed only when its condition names a backend macro.
+- **A pass or feature switch picks a definition, not a branch inside a body.** A step a switch changes is a member function with one definition per case, chosen by a file-level `#if` (a switched-off case is an empty definition), so the calling body reads the same in every permutation (`surface.applyAlphaCutoff()` in `material_shader_main.hlsli`). A `#if` inside a function body is allowed only when its condition names a backend macro.
 
 #### Types, fields, locals, constants
 
@@ -72,7 +72,7 @@ Shaders follow the C++ rules wherever HLSL can express them.
 
 #### String-bound names
 
-C++ binds globals and cbuffer members **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention). They are not renamed for style, and the container, plural and abbreviation rules do not apply. The same holds for every other string-bound name: cbuffer names, semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), macros in `bindingslots.hlsli`, shader file names, material field names.
+C++ binds globals and cbuffer members **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention). They are not renamed for style, and the container, plural and abbreviation rules do not apply. The same holds for every other string-bound name: cbuffer names, semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), macros in `binding_slots.hlsli`, shader file names, material field names.
 
 **Renaming a string-bound name changes C++ in the same commit**: `ShaderBindingValidator::validate` skips an unknown reflected name, so a name C++ binds that is missing from the cooked reflection goes unnoticed.
 

@@ -452,7 +452,7 @@ namespace sw
         // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다. b# 는 루트 CBV(GPU 주소)이고, t#/u# 슬롯은 **디스크립터 테이블**이다
         // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 바인딩한다. FD3D12DescriptorCache). 텍스처 배열(t0 space1)은 힙 시작을
         // 가리키는 테이블이다. 예산은 shaderslot::dx12 (25/64 dword)이고, 슬롯을 늘려도 테이블 안이라 예산이 늘지 않는다.
-        // 슬롯 번호는 bindingslots.hlsli(shaderslot)가 정한다. 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
+        // 슬롯 번호는 binding_slots.hlsli(shaderslot)가 정한다. 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
         static constexpr uint32 kCBVRootParam0             = 0;                                                     ///< b0..b(N-1) 루트 CBV
         static constexpr uint32 kSRVTableParam             = kCBVRootParam0 + shaderslot::kConstantBufferSlotCount; ///< t0..t(N-1) space0 테이블
         static constexpr uint32 kUAVTableParam             = kSRVTableParam + 1;                                    ///< u0..u(N-1) space0 테이블

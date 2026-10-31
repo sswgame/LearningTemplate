@@ -445,7 +445,7 @@ namespace sw
                     // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
                     // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
                     listArgument.push_back( L"-fvk-use-dx-layout" );
-                    // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(bindingslots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
+                    // 세트 0 의 binding = 레지스터 종류별 시프트 + 번호(binding_slots.hlsli 6). 셰이더는 register(b#/t#/u#) 만
                     // 쓰고 [[vk::binding]] 을 적지 않는다. 파이프라인 레이아웃(VulkanRHIDeviceDescriptor.cpp)이 같은 값으로 만든다.
                     static const wstring s_bShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kBShift ).c_str() );
                     static const wstring s_tShift = StringUtil::utf8ToUTF16( to_string( shaderslot::vk::kTShift ).c_str() );

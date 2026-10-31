@@ -73,7 +73,7 @@ namespace sw
 
     /**
      * @brief `-gv_stressTestCharacters=N`: 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 스폰하고, 짝수 번째는 Idle, 홀수 번째는 Walking_A 를 재생합니다.
-     * @details GPU 스키닝(모프 풀의 스킨 구간, meshskin.hlsl)과 애니메이션 시스템을 실제 에셋으로 실행하는 스위치입니다. `-gv_screenshotFrame` 을 둘
+     * @details GPU 스키닝(모프 풀의 스킨 구간, mesh_skin.hlsl)과 애니메이션 시스템을 실제 에셋으로 실행하는 스위치입니다. `-gv_screenshotFrame` 을 둘
      *          다르게 주고 찍으면 포즈가 달라야 합니다. 개발 빌드 전용입니다. 에셋이 Shooter3D 의 리소스에 있어서 Empty 게임의 배포 팩에는 없습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
@@ -149,7 +149,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestTransparent=<퍼센트>`: 벤치 큐브 중 이 비율을 투명으로 만듭니다(0 이면 전부 불투명).
      * @details 투명 오브젝트는 불투명 오브젝트와 다른 경로를 탑니다. 배치가 깊이 순서로 나뉘고, 컬링이 압축한 순서를
-     *          instancesort 가 되돌리며, 블렌딩 PSO 를 씁니다. 벤치가 전부 불투명이면 그 경로를 한 번도
+     *          instance_sort 가 되돌리며, 블렌딩 PSO 를 씁니다. 벤치가 전부 불투명이면 그 경로를 한 번도
      *          실행하지 않습니다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
      *          인스턴스가 여럿 들어갑니다. 그래야 배치 안의 정렬이 실제로 검사됩니다.
      */
@@ -194,7 +194,7 @@ namespace sw
 
     /**
      * @brief `-gv_stressTestMeshMorph=1`: 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
-     * @details 컴퓨트(meshmorph.hlsl)가 레스트 포즈를 읽어 결과 버퍼에 쓰고, 정점 셰이더가 그 결과를
+     * @details 컴퓨트(mesh_morph.hlsl)가 레스트 포즈를 읽어 결과 버퍼에 쓰고, 정점 셰이더가 그 결과를
      *          `SV_VertexID` 로 읽습니다. CPU 는 정점을 한 번도 다시 업로드하지 않습니다. `Mesh::setVertices` 로
      *          매 프레임 바꾸면 메시마다 정점 버퍼를 파괴하고 다시 만들어야 하고, 게임 스레드에서 부르는 호출이라
      *          OpenGL 에서는 컨텍스트도 없습니다.
@@ -206,7 +206,7 @@ namespace sw
     /**
      * @brief `-gv_stressTestAnimate=0`: 벤치의 **모든** 시간 구동 변화를 멈춥니다(기본값 1 은 움직입니다).
      * @details **기하가 있는 씬을 픽셀로 비교하려면 이 스위치가 필요합니다.** 벤치는 두 가지를 시간에 따라
-     *          움직입니다. 컴퓨트(instanceanimation)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
+     *          움직입니다. 컴퓨트(instance_animation)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
      *          이동과 스케일입니다. 둘 다 실제 시계의 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
      *          찍어도 이미지가 다릅니다(같은 설정으로 두 번 실행하면 **1.5%** 어긋나서, 셰이더 변경으로 생기는 0.5% 차이를 가립니다).
      *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심하세요. 회전만 멈추는 것으로는 부족합니다(사인파가 남아
@@ -448,7 +448,7 @@ namespace sw
         // 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 됩니다.
         //
         // 인스턴스는 **소수만 만들어 돌려 씁니다.** 큐브마다 하나씩 주면 배치가 인스턴스마다 갈라져서 한
-        // 배치에 투명 인스턴스가 하나뿐이고, 그러면 배치 안의 정렬(instancesort 가 되돌리는 그 순서)이
+        // 배치에 투명 인스턴스가 하나뿐이고, 그러면 배치 안의 정렬(instance_sort 가 되돌리는 그 순서)이
         // 한 번도 검사되지 않습니다.
         constexpr uint32 kTransparentMaterialCount = 3;
         outList.assign( kTransparentMaterialCount, nullptr );
@@ -526,7 +526,7 @@ namespace sw
                 _listChurnInstance.push_back( instance );
                 pMesh->setMaterialInstance( std::move( instance ) );
             }
-            // 일부를 투명으로 만듭니다. 블렌드 모드가 배치를 가르고, 컬링이 압축한 순서를 instancesort 가
+            // 일부를 투명으로 만듭니다. 블렌드 모드가 배치를 가르고, 컬링이 압축한 순서를 instance_sort 가
             // 깊이순으로 되돌립니다. 투명 큐브끼리는 머티리얼 인스턴스를 나눠 쓰므로 한 배치에 여럿 들어갑니다.
             if ( isBenchTransparent( index, transparentPercent ) && bHasTransparent )
             {
@@ -1416,7 +1416,7 @@ namespace sw
                                            wave * _settings._waveHeight,
                                            origin + static_cast<float32>( index / side ) * _settings._cubeSpacing };
             write._bSetPosition        = SW_TRUE;
-            // 회전은 **컴퓨트가 만듭니다**(instanceanimation.hlsl). 시드 해시가 인스턴스마다 속도와 방향을 다르게 정해 줍니다
+            // 회전은 **컴퓨트가 만듭니다**(instance_animation.hlsl). 시드 해시가 인스턴스마다 속도와 방향을 다르게 정해 줍니다
             // (속도가 하나면 큐브가 몇천 개여도 한 덩어리처럼 보입니다). CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
             // 다음 업로드가 덮어써서 다시 균일해집니다. 그래서 회전은 CPU 가 건드리지 않습니다.
 

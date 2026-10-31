@@ -15,7 +15,7 @@ namespace sw
     SW_LOG_CALLER( "GPUAssert" );
 
     /**
-     * @brief `-gv_gpuAssert=1`: assert 를 가진 컴퓨트 셰이더(gpucull · canvasmarker · meshmorph)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일해 조건이 틀린 스레드가 링 버퍼에 기록을 남기고, CPU 가 몇 프레임 뒤 로그로 낸다.
+     * @brief `-gv_gpuAssert=1`: assert 를 가진 컴퓨트 셰이더(gpu_cull · canvas_marker · mesh_morph)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일해 조건이 틀린 스레드가 링 버퍼에 기록을 남기고, CPU 가 몇 프레임 뒤 로그로 낸다.
      * @details 기본 끔 — 켜면 그 패스의 셰이더 변형이 하나 더 컴파일되고 u4 에 버퍼가 걸린다(Shipping 은 등록되지 않아 늘 끔).
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuAssert, false,
@@ -25,28 +25,28 @@ namespace sw
     {
         struct GPUAssertInternal
         {
-            /// 표의 모든 항목입니다. 번호는 gpuassertids.hlsli 의 SW_GPU_ASSERT_ID_* 이다.
+            /// 표의 모든 항목입니다. 번호는 gpu_assert_ids.hlsli 의 SW_GPU_ASSERT_ID_* 이다.
             static constexpr GPUAssertInfo kArrInfo[] = {
-                {         SW_GPU_ASSERT_ID_CULL_LOD_LEVEL,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                         "LOD level is not below the group level count",       "gpucull.hlsl"},
-                {      SW_GPU_ASSERT_ID_CULL_LOD_PREVIOUS,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                "previous LOD level is not below the group level count",       "gpucull.hlsl"},
-                {    SW_GPU_ASSERT_ID_CULL_LOD_LEVEL_BITS,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,            "LOD level does not fit the 3 bit field of a visible entry",       "gpucull.hlsl"},
-                {        SW_GPU_ASSERT_ID_CULL_FADE_LEVEL,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,          "crossfade progress does not fit the 4 bit field of an entry",       "gpucull.hlsl"},
-                {       SW_GPU_ASSERT_ID_CULL_BATCH_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                 "visible entry batch index is outside the batch table",       "gpucull.hlsl"},
-                {     SW_GPU_ASSERT_ID_CULL_VISIBLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint, "visible list write slot is outside the visible range (entry dropped)",       "gpucull.hlsl"},
-                {       SW_GPU_ASSERT_ID_CULL_INSTANCE_ID,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,         "instance id does not fit the 24 bit field of a visible entry",       "gpucull.hlsl"},
-                {        SW_GPU_ASSERT_ID_MARKER_CLIP_NAN, GPUAssertSeverity::Warning, GPUAssertValueKind::Float,           "marker projection produced a NaN or infinite clip position",  "canvasmarker.hlsl"},
-                {  SW_GPU_ASSERT_ID_MARKER_INSTANCE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,         "marker instance slot is outside the GPUScene instance buffer",  "canvasmarker.hlsl"},
-                {       SW_GPU_ASSERT_ID_MARKER_ROW_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                           "marker input row is outside the row buffer",  "canvasmarker.hlsl"},
-                {       SW_GPU_ASSERT_ID_MARKER_WORLD_NAN, GPUAssertSeverity::Warning, GPUAssertValueKind::Float,                                "marker world point is NaN or infinite",  "canvasmarker.hlsl"},
-                {     SW_GPU_ASSERT_ID_MORPH_VERTEX_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                       "rest vertex element is outside the rest buffer",     "meshmorph.hlsl"},
-                {     SW_GPU_ASSERT_ID_MORPH_PROGRAM_SLOT,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                     "deform program slot is outside the program table",     "meshmorph.hlsl"},
-                { SW_GPU_ASSERT_ID_MODIFIER_PROGRAM_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                  "modifier program start is outside the program table", "meshmodifier.hlsli"},
-                {  SW_GPU_ASSERT_ID_MODIFIER_RECORD_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                         "modifier record is outside the program table", "meshmodifier.hlsli"},
-                {     SW_GPU_ASSERT_ID_MODIFIER_RAW_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                          "raw program table read is outside the table", "meshmodifier.hlsli"},
-                {    SW_GPU_ASSERT_ID_MODIFIER_NODE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                   "conform BVH node index is not below the node count", "meshmodifier.hlsli"},
-                {SW_GPU_ASSERT_ID_MODIFIER_TRIANGLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,              "conform BVH leaf triangle is outside the triangle table", "meshmodifier.hlsli"},
-                {SW_GPU_ASSERT_ID_MODIFIER_STACK_OVERFLOW,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                           "conform BVH traversal stack would overflow", "meshmodifier.hlsli"},
-                {SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,           "modifier vertex UV table read is outside the program table", "meshmodifier.hlsli"},
+                {         SW_GPU_ASSERT_ID_CULL_LOD_LEVEL,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                         "LOD level is not below the group level count",       "gpu_cull.hlsl"},
+                {      SW_GPU_ASSERT_ID_CULL_LOD_PREVIOUS,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                "previous LOD level is not below the group level count",       "gpu_cull.hlsl"},
+                {    SW_GPU_ASSERT_ID_CULL_LOD_LEVEL_BITS,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,            "LOD level does not fit the 3 bit field of a visible entry",       "gpu_cull.hlsl"},
+                {        SW_GPU_ASSERT_ID_CULL_FADE_LEVEL,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,          "crossfade progress does not fit the 4 bit field of an entry",       "gpu_cull.hlsl"},
+                {       SW_GPU_ASSERT_ID_CULL_BATCH_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                 "visible entry batch index is outside the batch table",       "gpu_cull.hlsl"},
+                {     SW_GPU_ASSERT_ID_CULL_VISIBLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint, "visible list write slot is outside the visible range (entry dropped)",       "gpu_cull.hlsl"},
+                {       SW_GPU_ASSERT_ID_CULL_INSTANCE_ID,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,         "instance id does not fit the 24 bit field of a visible entry",       "gpu_cull.hlsl"},
+                {        SW_GPU_ASSERT_ID_MARKER_CLIP_NAN, GPUAssertSeverity::Warning, GPUAssertValueKind::Float,           "marker projection produced a NaN or infinite clip position",  "canvas_marker.hlsl"},
+                {  SW_GPU_ASSERT_ID_MARKER_INSTANCE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,         "marker instance slot is outside the GPUScene instance buffer",  "canvas_marker.hlsl"},
+                {       SW_GPU_ASSERT_ID_MARKER_ROW_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                           "marker input row is outside the row buffer",  "canvas_marker.hlsl"},
+                {       SW_GPU_ASSERT_ID_MARKER_WORLD_NAN, GPUAssertSeverity::Warning, GPUAssertValueKind::Float,                                "marker world point is NaN or infinite",  "canvas_marker.hlsl"},
+                {     SW_GPU_ASSERT_ID_MORPH_VERTEX_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                       "rest vertex element is outside the rest buffer",     "mesh_morph.hlsl"},
+                {     SW_GPU_ASSERT_ID_MORPH_PROGRAM_SLOT,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                     "deform program slot is outside the program table",     "mesh_morph.hlsl"},
+                { SW_GPU_ASSERT_ID_MODIFIER_PROGRAM_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                  "modifier program start is outside the program table", "mesh_modifier.hlsli"},
+                {  SW_GPU_ASSERT_ID_MODIFIER_RECORD_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                         "modifier record is outside the program table", "mesh_modifier.hlsli"},
+                {     SW_GPU_ASSERT_ID_MODIFIER_RAW_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                          "raw program table read is outside the table", "mesh_modifier.hlsli"},
+                {    SW_GPU_ASSERT_ID_MODIFIER_NODE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                   "conform BVH node index is not below the node count", "mesh_modifier.hlsli"},
+                {SW_GPU_ASSERT_ID_MODIFIER_TRIANGLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,              "conform BVH leaf triangle is outside the triangle table", "mesh_modifier.hlsli"},
+                {SW_GPU_ASSERT_ID_MODIFIER_STACK_OVERFLOW,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,                           "conform BVH traversal stack would overflow", "mesh_modifier.hlsli"},
+                {SW_GPU_ASSERT_ID_MODIFIER_UV_TABLE_RANGE,   GPUAssertSeverity::Error,  GPUAssertValueKind::Uint,           "modifier vertex UV table read is outside the program table", "mesh_modifier.hlsli"},
             };
 
             /// 한 번 읽을 때 구별해 모으는 id 수의 상한입니다(표에 없는 id 도 따로 센다).

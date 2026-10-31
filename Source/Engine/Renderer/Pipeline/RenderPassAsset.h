@@ -41,7 +41,7 @@ namespace sw
         Transparent,
         SSAO,
         Bloom,
-        /// @brief 블룸의 밝은 부분을 반해상도 첨부(`BloomBright`)에 구합니다(postbloom.hlsl 의 `SW_PASS_BLOOM_DOWNSAMPLE`). Bloom 패스가 그것을 업샘플해 더합니다.
+        /// @brief 블룸의 밝은 부분을 반해상도 첨부(`BloomBright`)에 구합니다(post_bloom.hlsl 의 `SW_PASS_BLOOM_DOWNSAMPLE`). Bloom 패스가 그것을 업샘플해 더합니다.
         BloomDownsample,
         Outline,
         TAA,
@@ -65,20 +65,20 @@ namespace sw
          */
         ForwardOnlyOpaque,
         /**
-         * @brief 피사계 심도입니다. HDR 색(`SourceColor`)과 장면 깊이(`SceneDepth`)를 읽어 초점면에서 먼 픽셀을 착란원 반지름만큼 흐린 같은 형식의 색을 냅니다(depthoffield.hlsl).
+         * @brief 피사계 심도입니다. HDR 색(`SourceColor`)과 장면 깊이(`SceneDepth`)를 읽어 초점면에서 먼 픽셀을 착란원 반지름만큼 흐린 같은 형식의 색을 냅니다(depth_of_field.hlsl).
          *        렌즈 값은 뷰 카메라의 `CameraDepthOfFieldValues` 이고 패스 상수 `g_CameraLens` 로 받습니다. 조리개 0 · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않고
          *        출력 이름이 원본을 가리킵니다(`RenderPassTraitFlag::kBypassesToSource` — 출력 타깃도 처음 켜질 때 만듭니다). 디퍼드는 TAA 와 Tonemap 사이, 포워드는 후처리 체인(Present) 앞에 둡니다.
          */
         DepthOfField,
         /**
-         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motionblur.hlsl).
+         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motion_blur.hlsl).
          *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 카메라가 서 있거나 컷인 프레임(속도가 모두 0)은
          *        피사계 심도와 같이 패스를 기록하지 않고 출력 이름이 원본을 가리킵니다(`kBypassesToSource`).
          *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
          */
         MotionBlur,
         /**
-         * @brief 인스턴스 강조 외곽선입니다(highlightoutline.hlsl). 강조 방식이 Outline 인 인스턴스(`GPUInstance::_highlight`)만 뒤집은 껍질로 깊이 테스트해 그립니다.
+         * @brief 인스턴스 강조 외곽선입니다(highlight_outline.hlsl). 강조 방식이 Outline 인 인스턴스(`GPUInstance::_highlight`)만 뒤집은 껍질로 깊이 테스트해 그립니다.
          *        상호작용 대상의 외곽선(언리얼 CustomDepth + 외곽선 후처리, 유니티 Render Objects 의 자리)이며 불투명 패스 뒤에 둡니다.
          */
         HighlightOutline,
@@ -98,7 +98,7 @@ namespace sw
          */
         SceneColorCopy,
         /**
-         * @brief 장면 깊이 사본입니다. 장면 깊이(`SceneDepth`)를 선언한 R32 실수 컬러 출력(`SceneDepthCopy` 역할)으로 풀스크린 셰이더(scenedepthcopy.hlsl)가 텍셀 그대로 옮깁니다.
+         * @brief 장면 깊이 사본입니다. 장면 깊이(`SceneDepth`)를 선언한 R32 실수 컬러 출력(`SceneDepthCopy` 역할)으로 풀스크린 셰이더(scene_depth_copy.hlsl)가 텍셀 그대로 옮깁니다.
          *        반투명 패스는 장면 깊이를 깊이 붙임으로 쥐고 있어 읽을 수 없다(백엔드마다 읽기 전용 깊이 + SRV 상태를 보장하지 못한다). 반투명 패스가 이 출력을 같은 역할의 입력으로 선언하면
          *        물의 화면 공간 두께(`g_SceneDepthCopyIndex`)가 읽습니다. 반투명 앞에 둡니다(언리얼의 Scene Depth 사본 · 유니티 URP 의 Depth Texture 와 같은 자리).
          */
@@ -107,24 +107,24 @@ namespace sw
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
         GPUCull,
-        /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instanceanimation.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
+        /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instance_animation.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
         InstanceAnimation,
-        /// @brief 배치 안의 가시 인스턴스를 CPU 정렬 순서(인스턴스 번호)로 되돌리는 컴퓨트(instancesort.hlsl)입니다. 투명 블렌딩 순서를 맞춥니다.
+        /// @brief 배치 안의 가시 인스턴스를 CPU 정렬 순서(인스턴스 번호)로 되돌리는 컴퓨트(instance_sort.hlsl)입니다. 투명 블렌딩 순서를 맞춥니다.
         InstanceSort,
-        /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트(meshmorph.hlsl)입니다. 정점 셰이더가 그 결과를 풀링합니다.
+        /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트(mesh_morph.hlsl)입니다. 정점 셰이더가 그 결과를 풀링합니다.
         MeshMorph,
-        /// @brief 스킨드 메시의 바인드 포즈 정점을 본 팔레트로 블렌딩해 모프 풀의 스킨 구간에 쓰는 컴퓨트(meshskin.hlsl)입니다.
+        /// @brief 스킨드 메시의 바인드 포즈 정점을 본 팔레트로 블렌딩해 모프 풀의 스킨 구간에 쓰는 컴퓨트(mesh_skin.hlsl)입니다.
         MeshSkin,
-        /// @brief 뷰마다의 라이트 그리드(클러스터드 라이팅의 빛 목록)를 만드는 컴퓨트(lightgrid.hlsl)입니다. 그룹 하나가 뷰 하나입니다.
+        /// @brief 뷰마다의 라이트 그리드(클러스터드 라이팅의 빛 목록)를 만드는 컴퓨트(light_grid.hlsl)입니다. 그룹 하나가 뷰 하나입니다.
         LightGrid,
-        /// @brief GPU 방출기의 입자 시뮬레이션 컴퓨트(vfxsimulate.hlsl)입니다. 그룹 하나가 방출기 하나이고 간접 인자를 씁니다(`VFXGPUSimulation`).
+        /// @brief GPU 방출기의 입자 시뮬레이션 컴퓨트(vfx_simulate.hlsl)입니다. 그룹 하나가 방출기 하나이고 간접 인자를 씁니다(`VFXGPUSimulation`).
         VFXSimulation,
-        /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfxmeshinstance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
+        /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfx_mesh_instance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
         VFXMeshInstance,
-        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depthhistory.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
+        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
         DepthHistory,
         /**
-         * @brief 자동 노출의 측정 · 적응 풀스크린(autoexposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
+         * @brief 자동 노출의 측정 · 적응 풀스크린(auto_exposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
          *        톤맵하는 패스(Tonemap, 후처리 체인 Present)가 자기 그리기 바로 앞에 같은 리스트로 기록한다(`FramePostProcess::recordAutoExposure`).
          */
         AutoExposure,
@@ -133,27 +133,27 @@ namespace sw
         /// @brief FSR 1 의 RCAS(fsr1.hlsl 의 `SW_PASS_FSR_RCAS`) — 중간 RT 를 선명하게 해 Present 대상에 그립니다. 대상 포맷마다 PSO 가 다른 출력 패스다(Present 와 같다).
         UpscaleRcas,
         /**
-         * @brief 가림 타일 컴퓨트(occlusiontiles.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 16 px 타일마다 최대 깊이 하나로 줄여 구조 버퍼에 씁니다.
-         *        컬링(gpucull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FramePassExecutor::recordOcclusionTiles`).
+         * @brief 가림 타일 컴퓨트(occlusion_tiles.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 16 px 타일마다 최대 깊이 하나로 줄여 구조 버퍼에 씁니다.
+         *        컬링(gpu_cull.hlsl)이 경계 구를 그 프레임의 뷰-투영으로 옮겨 덮는 타일보다 멀면 가려졌다고 본다(`FramePassExecutor::recordOcclusionTiles`).
          */
         OcclusionTiles,
         /**
-         * @brief 볼륨 안개 컴퓨트(volumetricfog.hlsl)입니다. 뷰의 froxel 격자(화면 칸 × 깊이 조각)마다 안개 밀도와 라이트 산란(방향광 + 라이트 그리드의 점광 · 스폿)을 구하고
+         * @brief 볼륨 안개 컴퓨트(volumetric_fog.hlsl)입니다. 뷰의 froxel 격자(화면 칸 × 깊이 조각)마다 안개 밀도와 라이트 산란(방향광 + 라이트 그리드의 점광 · 스폿)을 구하고
          *        깊이 방향으로 누적해 (산란 rgb, 투과율)을 구조 버퍼에 쓴다. 안개 패스(`Fog`)가 그 버퍼를 읽는다(`FramePostProcess::dispatchVolumetricFog`).
          */
         VolumetricFog,
         /**
-         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probeupdate.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
+         * @brief 실시간 라이트 프로브 갱신 컴퓨트(probe_update.hlsl)입니다. 프로브마다 점유 복셀(`SceneVoxelGrid`)로 광선을 쏘아 SH9 기록을 갱신하고, 소비 셰이더의 프로브 원소로 바꿔
          *        프로브 버퍼(t13)에 쓴다(`RealtimeProbeUpdater`). 라이트 업로드 뒤 · 조명 패스 앞에 한 번 돈다.
          */
         ProbeUpdate,
         /**
-         * @brief 화면 마커 투영 컴퓨트(canvasmarker.hlsl)입니다. 마커마다 월드 점을 게임 카메라로 투영해 가시 판정과 함께 캔버스 사각형 버퍼의 앵커 원소(x, y, 배율)에 씁니다(`CanvasRenderer::recordMarkerProjection`).
+         * @brief 화면 마커 투영 컴퓨트(canvas_marker.hlsl)입니다. 마커마다 월드 점을 게임 카메라로 투영해 가시 판정과 함께 캔버스 사각형 버퍼의 앵커 원소(x, y, 배율)에 씁니다(`CanvasRenderer::recordMarkerProjection`).
          *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
          */
         CanvasMarker,
         /**
-         * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpunancheck.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
+         * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpu_nan_check.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
          *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */
         NanCheck,

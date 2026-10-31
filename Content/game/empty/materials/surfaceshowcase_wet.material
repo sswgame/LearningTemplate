@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 표면 셰이더 쇼케이스(surfaceshowcase.scene.xml)의 구 — surfacelit.material 에 Wet 값만 켠 것. 마스크 텍스처는 비워 흰색으로 읽히므로 켠 채널이 구 전체를 덮는다. -->
-<MaterialDesc formatVersion="0" name="SurfaceShowcaseWet" shaderPath="engine/shaders/surfacelit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="SurfaceShowcaseWet" shaderPath="engine/shaders/surface_lit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.6 0.6 0.6 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>

@@ -159,7 +159,7 @@ namespace sw
 } // namespace sw
 namespace sw
 {
-    /** @brief 마커 기록의 `_flags` 비트입니다. 숫자는 `canvasmarker.hlsl` 의 `kMarkerFlag*` 와 같아야 합니다. */
+    /** @brief 마커 기록의 `_flags` 비트입니다. 숫자는 `canvas_marker.hlsl` 의 `kMarkerFlag*` 와 같아야 합니다. */
     enum class CanvasMarkerFlag : uint32
     {
         None  = 0,
@@ -167,7 +167,7 @@ namespace sw
     };
 
     /**
-     * @brief 컴퓨트가 투영하는 화면 마커 하나의 입력입니다(앵커 번호가 인덱스). 월드 점과 보이기 규칙만 싣는다 — 화면 좌표 · 가시 판정은 `canvasmarker.hlsl` 이 계산한다.
+     * @brief 컴퓨트가 투영하는 화면 마커 하나의 입력입니다(앵커 번호가 인덱스). 월드 점과 보이기 규칙만 싣는다 — 화면 좌표 · 가시 판정은 `canvas_marker.hlsl` 이 계산한다.
      * @details 기록 하나가 렌더러 쪽 마커 인스턴스 하나다: 마커 ↔ GPU 인스턴스 대응은 앵커 번호(= 구조 버퍼의 앞 원소 번호)이므로 따로 표를 두지 않는다.
      *          `_bActive` 가 0 이면 컴퓨트는 그 앵커를 건드리지 않는다(CPU 가 투영하는 마커이거나 숨긴 마커). 배치는 float4 둘이다(`CanvasMarkerView` 앞 머리 행 뒤에 이어 올린다).
      */
@@ -209,7 +209,7 @@ namespace sw
         /** @brief 주 출력 사각형의 `_anchor` 가 가리키는 앵커입니다. 프레임마다 바뀌어도 `_contentRevision` 을 증가시키지 않습니다. 렌더러가 앵커 구간만 업로드합니다. */
         vector<CanvasAnchor> _listAnchor{};
         /**
-         * @brief 컴퓨트가 투영할 화면 마커 입력입니다(앵커 번호가 인덱스, 비어 있으면 컴퓨트를 돌리지 않는다). 렌더러가 업로드한 뒤 `canvasmarker.hlsl` 이 활성 기록의 앵커 원소를 덮어쓴다.
+         * @brief 컴퓨트가 투영할 화면 마커 입력입니다(앵커 번호가 인덱스, 비어 있으면 컴퓨트를 돌리지 않는다). 렌더러가 업로드한 뒤 `canvas_marker.hlsl` 이 활성 기록의 앵커 원소를 덮어쓴다.
          * @details 게임 스레드가 월드 점만 싣고(`_listAnchor` 의 CPU 투영을 하지 않는다) 화면 좌표 · 가시 판정은 GPU 가 낸다. 사각형 버퍼는 그대로라 `_contentRevision` 도 올리지 않는다.
          */
         vector<CanvasMarkerRecord> _listMarker{};
@@ -220,7 +220,7 @@ namespace sw
          */
         uint64 _contentRevision{ 0 };
         /**
-         * @brief 주 출력에 적용하는 색각 보정 방식입니다(`gv_colorVisionMode`: 0 끔, 1 적색약, 2 녹색약, 3 청색약, colorvision.hlsli).
+         * @brief 주 출력에 적용하는 색각 보정 방식입니다(`gv_colorVisionMode`: 0 끔, 1 적색약, 2 녹색약, 3 청색약, color_vision.hlsli).
          * @details UI 는 톤맵 뒤에 그려 톤맵 쪽 보정이 닿지 않으므로 캔버스 셰이더가 직접 적용한다. 렌더 텍스처 대상(월드 위젯)에는 적용하지 않는다.
          *          그 이미지는 장면을 지나 톤맵 쪽 보정을 받는다.
          */

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 블록아웃용 격자 머티리얼(언리얼 WorldGridMaterial 에 해당). MATERIAL_WORLD_UV 로 월드 좌표에서 읽어 메시 크기와 상관없이 한 칸이 1 m 다(forwardlit.hlsl 트라이플래너). -->
-<MaterialDesc formatVersion="0" name="PrototypeGridLight" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+<!-- 블록아웃용 격자 머티리얼(언리얼 WorldGridMaterial 에 해당). MATERIAL_WORLD_UV 로 월드 좌표에서 읽어 메시 크기와 상관없이 한 칸이 1 m 다(forward_lit.hlsl 트라이플래너). -->
+<MaterialDesc formatVersion="0" name="PrototypeGridLight" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.8" min="0.0" max="1.0" group="Surface"/>

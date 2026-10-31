@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 끌어 고르기 상자 — 반투명 유리 머티리얼에 초록을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="StarSkirmishDrag" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Transparent">
+<MaterialDesc formatVersion="0" name="StarSkirmishDrag" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Transparent">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.3 1.0 0.4 0.3" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>

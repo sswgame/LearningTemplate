@@ -33,5 +33,5 @@ namespace sw
         float4 _extra{};
     };
 
-    static_assert( sizeof( GPULight ) == 80, "GPULight 는 float4 다섯(80바이트)이어야 한다 — 셰이더 LightData(lightdata.hlsli) 와 같은 크기 — 쿠킹한 stride 는 ShaderBindingValidatorTest.LightElementLayoutMatchesCPUStruct 가 본다" );
+    static_assert( sizeof( GPULight ) == 80, "GPULight 는 float4 다섯(80바이트)이어야 한다 — 셰이더 LightData(light_data.hlsli) 와 같은 크기 — 쿠킹한 stride 는 ShaderBindingValidatorTest.LightElementLayoutMatchesCPUStruct 가 본다" );
 } // namespace sw

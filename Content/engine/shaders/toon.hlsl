@@ -15,7 +15,7 @@
  *          외곽선 퍼뮤테이션은 정점이 읽어(두께가 정점에 필요하다) 픽셀이 쓸 값을 보간 칸으로 넘긴다.
  *
  *          **알파 컷오프 머티리얼은 깊이 패스도 이 파일로 그린다**(`SW_PASS_SHADOW` · `SW_PASS_DEPTH_PREPASS` — `FrameRendererUtil::drawsDepthWithMaterialShader`).
- *          shadowdepth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(MorphPool::loadVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
+ *          shadow_depth.hlsl 은 머티리얼을 몰라 머리카락 카드가 사각형 그림자를 드리우므로, 같은 정점 경로(MorphPool::loadVertex)로 투영하고 픽셀에서 같은 알파로 버린다.
  *          컬러 출력이 없어 픽셀 셰이더는 `clip` 만 한다.
  *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
@@ -74,7 +74,7 @@ SW_MATERIAL_END
     #error "toon.hlsl is forward-only: the material must list MATERIAL_FORWARD_ONLY in _alwaysDefines (deferred draws it in ForwardOnlyOpaque)"
 #endif
 
-// 훅 선택(materialshader.hlsli). 조명은 툰 식이라 직접 정의한다. 외곽선 퍼뮤테이션은 머티리얼을 정점에서만 읽고(GL 이 구조버퍼를 두 단계에서 읽으면 링크를 거절한다)
+// 훅 선택(material_shader.hlsli). 조명은 툰 식이라 직접 정의한다. 외곽선 퍼뮤테이션은 머티리얼을 정점에서만 읽고(GL 이 구조버퍼를 두 단계에서 읽으면 링크를 거절한다)
 // 픽셀이 쓸 값을 사용자 보간 칸으로 넘긴다. 노멀 맵의 탄젠트는 색을 내는 퍼뮤테이션(깊이 · 외곽선이 아닌 것)만 월드로 옮긴다.
 #define SW_MATERIAL_CUSTOM_LIGHTING
 #if defined( SW_PASS_MESH_OUTLINE )
@@ -92,7 +92,7 @@ struct MaterialVaryings
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS ) && !defined( SW_PASS_MESH_OUTLINE )
     #define SW_MATERIAL_USES_TANGENT
 #endif
-#include "materialshader.hlsli"
+#include "material_shader.hlsli"
 
 /**
  * @brief 노멀 맵을 적용한 월드 노멀입니다. 맵이 없으면 @p normal 그대로입니다.
@@ -206,7 +206,7 @@ float2 computeAnimatedUv( MaterialData material, float2 uv )
 }
 
 // ------------------------------------------------------------------------------
-// 훅 — 정점 · 픽셀 진입점은 materialshadermain.hlsli 가 가진다(깊이 · 외곽선 · 색 퍼뮤테이션 모두).
+// 훅 — 정점 · 픽셀 진입점은 material_shader_main.hlsli 가 가진다(깊이 · 외곽선 · 색 퍼뮤테이션 모두).
 // ------------------------------------------------------------------------------
 #if defined( SW_PASS_MESH_OUTLINE )
 
@@ -361,4 +361,4 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 
 #endif // SW_PASS_MESH_OUTLINE
 
-#include "materialshadermain.hlsli"
+#include "material_shader_main.hlsli"

@@ -21,9 +21,9 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
 {
     // engine 에만 있는 상대 키 — 읽기가 고른 그 파일에 쓴다(검색 순서의 앞 도메인에 새로 만들지 않는다).
-    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forwardlit.hlsl" );
+    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
     SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forwardlit.hlsl" ) );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
 
 SW_TEST_CASE( WriteIDTest, MissingRelativeKeyHasNoDomain )

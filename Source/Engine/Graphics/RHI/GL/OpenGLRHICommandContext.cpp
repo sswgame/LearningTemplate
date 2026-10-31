@@ -481,7 +481,7 @@ namespace sw
         if ( tex == 0 )
             return;
 
-        // 엔진 텍스처 칸은 HLSL 레지스터(t32..)와 GL 유닛(칸 번호)이 다르다 — GL 프래그먼트 유닛은 32 개라 레지스터 번호를 유닛으로 쓸 수 없다(bindingslots.hlsli 2).
+        // 엔진 텍스처 칸은 HLSL 레지스터(t32..)와 GL 유닛(칸 번호)이 다르다 — GL 프래그먼트 유닛은 32 개라 레지스터 번호를 유닛으로 쓸 수 없다(binding_slots.hlsli 2).
         const uint32 unit = shaderslot::emulated::getGlTextureUnit( slot );
         glBindTextureUnit( unit, tex );
         static_assert( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount <= 32, "텍스처 유닛 마스크(uint32)가 머티리얼 텍스처 유닛을 다 담지 못한다" );
@@ -492,7 +492,7 @@ namespace sw
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // 그래픽스 bindConstantBuffer 와 같은 근거다. 명시 [[vk::binding]] 이 있으면 -fvk-b-shift 는 적용되지
-        // 않으므로 b# 는 SPIR-V binding # 그대로다(gpucull 의 CullParams b0 = binding 0).
+        // 않으므로 b# 는 SPIR-V binding # 그대로다(gpu_cull 의 CullParams b0 = binding 0).
         const bool bInvalidConstantBufferIndex = _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
                                                  constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
         if ( bInvalidConstantBufferIndex )
@@ -504,7 +504,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpucull 의 g_Instances 등).
+        // HLSL t# 는 시프트 없이 그대로 GL SSBO 바인딩 # 에 매핑된다(gpu_cull 의 g_Instances 등).
         const bool bInvalidBufferIndex = _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex ||
                                          index >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() );
         if ( bInvalidBufferIndex )

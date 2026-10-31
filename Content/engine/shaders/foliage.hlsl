@@ -1,7 +1,7 @@
 /**
  * foliage.hlsl — 식생(FoliageComponent). GPU 인스턴스마다 바람에 흔들고, 휘게 하는 구(캐릭터)에서 밀려나고, 먼 인스턴스는 뿌리 쪽으로 줄여 사라지게 한다.
  *
- * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋 · 사용자 보간 칸 · 표면 훅만 정의한다.
+ * 머티리얼 셰이더 뼈대(material_shader.hlsli · material_shader_main.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋 · 사용자 보간 칸 · 표면 훅만 정의한다.
  * 위치는 뼈대가 만든다 — 훅은 오프셋(줄이기 + 바람 + 휘기)만 돌려준다(깊이 · 그림자와 같은 위치 함수).
  *
  * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 사용자 보간 칸으로 넘긴다.
@@ -9,7 +9,7 @@
  * 밝기 흔들기는 인스턴스 색 칸(InstanceData::computeTint)이다.
  * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM — 두 머티리얼이 늘 가진다)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 —
  * 정점 스테이지뿐이다(FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
- * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadowdepth.hlsl 이 뺀다).
+ * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadow_depth.hlsl 이 뺀다).
  */
 #include "lighting.hlsli"
 
@@ -37,7 +37,7 @@ SW_MATERIAL_END
     #error "foliage.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
-// 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
+// 훅 선택(material_shader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
 #define SW_MATERIAL_READ_IN_VERTEX
 #define SW_MATERIAL_DEFAULT_LIGHTING
 #define SW_MATERIAL_CUSTOM_VARYINGS
@@ -46,7 +46,7 @@ struct MaterialVaryings
     float4               _tintedColor : TEXCOORD8; // 정점 색 × 머티리얼 색 × 인스턴스 밝기 × 뿌리 그늘
     nointerpolation uint _albedoMap : TEXCOORD9;   // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
 };
-#include "materialshader.hlsli"
+#include "material_shader.hlsli"
 
 /**
  * @brief 위치를 [0, 1) 로 섞는다 — 인스턴스마다 다른 흔들림 위상.
@@ -139,4 +139,4 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     return surface;
 }
 
-#include "materialshadermain.hlsli"
+#include "material_shader_main.hlsli"

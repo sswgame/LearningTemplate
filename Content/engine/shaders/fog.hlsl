@@ -5,18 +5,18 @@
  * 그래서 이 셰이더가 내는 값은 (안개색 × 불투명도, 불투명도)이고, 결과 = 안개색 × 불투명도 + 장면 × (1 - 불투명도)다. 장면 색을 읽지 않으므로 복사 첨부가 없다.
  * 불투명 · 하늘 · 반투명을 그린 뒤, 블룸 · 톤맵 앞에 둔다. 하늘 픽셀(깊이 1)에는 안개를 입히지 않는다(대기 산란이 자기 안개를 낸다 — RealtimeGlobalIllumination R3).
  *
- * 평범한 안개: FogMath(fogcommon.hlsli)가 시선 위 광학 두께를 구해 불투명도 = min( 최대 불투명도, 1 - exp( -광학 두께 ) )를 낸다. 색은 안개 색에
+ * 평범한 안개: FogMath(fog_common.hlsli)가 시선 위 광학 두께를 구해 불투명도 = min( 최대 불투명도, 1 - exp( -광학 두께 ) )를 낸다. 색은 안개 색에
  * 방향광 쪽 시선의 산란(g_FogInscatter — 색 × 세기, 지수)을 더한 것이다. 눈은 g_InvViewProj 로 구한다 — (0, 0, 1, 0) 의 역투영이 눈의 동차 좌표(원근)이고,
  * w 가 0 이면 직교라 화면 점의 가까운 면 점이 시선 원점이다.
  *
- * 볼륨 안개(g_FogVolumeParams.x = 1, 주 시점에서 컴퓨트 volumetricfog.hlsl 이 돈 프레임): froxel 버퍼(t11, float4 = 산란 rgb, 투과율 a)에서 이 픽셀의 시선 거리까지의
+ * 볼륨 안개(g_FogVolumeParams.x = 1, 주 시점에서 컴퓨트 volumetric_fog.hlsl 이 돈 프레임): froxel 버퍼(t11, float4 = 산란 rgb, 투과율 a)에서 이 픽셀의 시선 거리까지의
  * 누적 값을 읽는다(화면 칸 쌍선형 × 거리 조각 선형). 볼륨 거리 밖은 평범한 안개 식으로 이어 붙인다. 볼륨이 안개 색을 앰비언트로 이미 포함하므로 안쪽 구간에서 평범한 안개를 더하지 않는다.
  * 표면 값 보기 모드(Normals · Depth · Overdraw)와 와이어프레임은 C++ 가 이 패스를 그리지 않는다(값 위를 덮는다). 후처리를 끈 뷰(CCTV)도 안개는 그린다 — 장면의 일이다.
  *
  * 바인딩 계약: 패스 상수 g_FogColorDensity · g_FogHeightParams · g_FogInscatter · g_FogVolumeParams, 장면 깊이(역할 SceneDepth), 볼륨 버퍼 t11(SW_SLOT_PASS_SRV, 볼륨이 켜진 때만 걸린다).
  */
 #include "binding.hlsli"
-#include "fogcommon.hlsli"
+#include "fog_common.hlsli"
 
 struct PSInput
 {
@@ -36,7 +36,7 @@ PSInput VSMain( VertexInput input, uint vertexID : SV_VertexID )
     return output;
 }
 
-/** @brief 볼륨 한 칸의 값입니다. @p slice 가 -1 이면 시작(산란 0, 투과율 1)이다. 칸 번호는 volumetricfog.hlsl 의 쓰기와 같다((조각 × Y + y) × X + x). */
+/** @brief 볼륨 한 칸의 값입니다. @p slice 가 -1 이면 시작(산란 0, 투과율 1)이다. 칸 번호는 volumetric_fog.hlsl 의 쓰기와 같다((조각 × Y + y) × X + x). */
 float4 loadFogVolume( uint tileX, uint tileY, int slice )
 {
     const uint   safeSlice = (uint)max( slice, 0 );

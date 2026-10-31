@@ -22,7 +22,7 @@
 		<RenderGraphPassDesc _name="Shadow"
 		                     _type="Shadow"
 		                     _depthAttachment="ShadowMap"
-		                     _shaderPath="engine/shaders/shadowdepth.hlsl"
+		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -38,7 +38,7 @@
 		<RenderGraphPassDesc _name="ForwardOpaque"
 		                     _type="ForwardOpaque"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _shaderPath="engine/shaders/forward_lit.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -77,7 +77,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
+		<!-- 강조 외곽선(highlight_outline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
 		<RenderGraphPassDesc _name="HighlightOutline"
 		                     _type="HighlightOutline"
 		                     _depthAttachment="SceneDepth"
@@ -120,7 +120,7 @@
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _shaderPath="engine/shaders/forward_lit.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -178,7 +178,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 카메라 모션 블러(motionblur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
+		<!-- 카메라 모션 블러(motion_blur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
 		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 서 있으면 원본 그대로다. -->
 		<RenderGraphPassDesc _name="MotionBlur"
 		                     _type="MotionBlur"
@@ -200,7 +200,7 @@
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
-		                     _shaderPath="engine/shaders/postchain.hlsl"
+		                     _shaderPath="engine/shaders/post_chain.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
@@ -241,7 +241,7 @@
 	</_listRenderPassRef>
 	<!-- 모듈 확장(EmptyGame 의 `Empty.RenderExtension`)이 패스 프로그램으로 고르는 셰이더 — 쿠커가 굽는다. 목록에 없는 셰이더를 요청한 모듈 패스는 오류로 막힌다. -->
 	<_listExtensionShader>
-		<item>engine/shaders/extensionpassdemo.hlsl</item>
-		<item>engine/shaders/extensiondrawdemo.hlsl</item>
+		<item>engine/shaders/extension_pass_demo.hlsl</item>
+		<item>engine/shaders/extension_draw_demo.hlsl</item>
 	</_listExtensionShader>
 </RenderPipelineDesc>

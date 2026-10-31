@@ -729,7 +729,7 @@ namespace sw
 
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
-        VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
+        VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< binding_slots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
         VkBuffer         _vertexBuffer;                                      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 

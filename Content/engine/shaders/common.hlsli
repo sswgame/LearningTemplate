@@ -5,7 +5,7 @@
  * - Vulkan (DXC, SPIR-V, SM6.x)
  * - OpenGL (DXC, SPIR-V, GL_ARB_gl_spirv)
  *
- * 선언은 네 백엔드에서 같다 (bindingslots.hlsli 의 표). 백엔드별로 다른 것은 SPIR-V 의 binding 번호뿐인데,
+ * 선언은 네 백엔드에서 같다 (binding_slots.hlsli 의 표). 백엔드별로 다른 것은 SPIR-V 의 binding 번호뿐인데,
  * Vulkan 은 DXC 시프트(-fvk-*-shift)가, OpenGL 은 아래 매크로의 [[vk::binding]] 이 정한다.
  *
  *   SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB ) { float4 color; };   // 픽스처·비 GPUScene 드로우용
@@ -17,7 +17,7 @@
 #ifndef SW_ENGINE_COMMON_HLSLI
 #define SW_ENGINE_COMMON_HLSLI
 
-#include "bindingslots.hlsli"
+#include "binding_slots.hlsli"
 
 // 토큰 붙이기(##)는 인자를 매크로 확장하기 **전에** 붙인다. 한 겹으로는 register( SW_CAT( t, slot ) ) 에 리터럴만 넘길 수
 // 있어 슬롯 번호를 손으로 다시 적어야 한다(어긋나면 엉뚱한 슬롯을 읽는다). 한 겹 더
@@ -63,7 +63,7 @@
 // 컴퓨트 RW 텍스처 슬롯(DX11/GL 에뮬 전용 — binding.hlsli 가 쓴다). GL 은 이미지 유닛이 SSBO 와 다른 이름공간이라
 // 명시 binding(SW_GL_IMAGE_UNIT0 + 서수)을 적는다 — -fvk-u-shift 가 붙으면 유닛 20 같은 값이 나와 GL 한계(8)를 넘는다.
 // GL 의 이미지 유닛은 묶은 텍스처 포맷과 셰이더의 `layout(포맷)` 이 **같아야** 읽는다 — 다르면 imageLoad 가 0 을 준다(R32F 깊이 히스토리를 rgba32f 로
-// 선언한 vfxsimulate · occlusiontiles 가 GL 에서만 깊이를 못 읽던 결함). 그래서 슬롯 선언이 포맷을 받고, 셰이더가 binding.hlsli 를 포함하기 전에
+// 선언한 vfx_simulate · occlusion_tiles 가 GL 에서만 깊이를 못 읽던 결함). 그래서 슬롯 선언이 포맷을 받고, 셰이더가 binding.hlsli 를 포함하기 전에
 // `SW_RW_SLOT0_GL_FORMAT "r32f"` 처럼 슬롯별로 정한다(기본 rgba32f). GL 밖은 이 인자를 쓰지 않는다.
 #if defined( OPENGL )
     #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
@@ -138,7 +138,7 @@
 #endif
 
 // 엔진 텍스처 칸 ordinal(리터럴 0..SW_ENGINE_TEXTURE_COUNT-1)의 이름 · 샘플러 · 선언(에뮬 — binding.hlsli 11-2). HLSL 레지스터는 SW_SLOT_ENGINE_TEX<n>(DX11),
-// GL 텍스처 유닛은 칸 번호 그대로다(bindingslots.hlsli 2). DX11 은 짝 샘플러 없이 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+// GL 텍스처 유닛은 칸 번호 그대로다(binding_slots.hlsli 2). DX11 은 짝 샘플러 없이 정적 세트의 엔진 텍스처 샘플러로 읽는다.
 #define SW_ENGINE_TEXTURE( ordinal ) SW_CAT( g_SwEngineTex, ordinal )
 #if defined( __spirv__ )
     #define SW_ENGINE_SAMPLER( ordinal ) SW_CAT( SW_ENGINE_TEXTURE( ordinal ), Sampler )

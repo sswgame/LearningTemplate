@@ -1,7 +1,7 @@
 /**
  * terrain.hlsl — 지형(TerrainComponent). 스플랫 맵 둘(RGBA 한 장에 레이어 넷 — splatMap 은 레이어 0..3, splatMap1 은 4..7)로 레이어 여덟을 섞는다.
  *
- * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 표면 훅만 정의한다 — 조명(기본 PBR) · 보기 모드 ·
+ * 머티리얼 셰이더 뼈대(material_shader.hlsli · material_shader_main.hlsli)의 사용자다. 이 파일은 표면 훅만 정의한다 — 조명(기본 PBR) · 보기 모드 ·
  * G버퍼 서명 · 정점 변환은 뼈대가 한다.
  *
  * 레이어 하나 = 색(layerNColor) × 디테일 맵의 자기 채널(타일링 무늬, 0.5 가 중립). 디테일은 위에서 내려 찍거나(평면), 세 축에서 찍어
@@ -52,10 +52,10 @@ SW_MATERIAL_END
     #error "terrain.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
-// 훅 선택(materialshader.hlsli) — 기본 PBR 조명, 사용자 보간 칸 없음.
+// 훅 선택(material_shader.hlsli) — 기본 PBR 조명, 사용자 보간 칸 없음.
 #define SW_MATERIAL_DEFAULT_LIGHTING
 #define SW_MATERIAL_DEFAULT_VARYINGS
-#include "materialshader.hlsli"
+#include "material_shader.hlsli"
 
 /** @brief 가중치 여덟(낮은 넷 · 높은 넷)을 여덟 전체의 합 1 로 나눈다. 합이 0 이면 레이어 0 이다(C++ SurfaceLayerWeights::computeNormalized 와 같다). */
 void normalizeWeights( inout float4 inoutLow, inout float4 inoutHigh )
@@ -174,4 +174,4 @@ float3 computeWorldPositionOffset( VertexContext context )
 }
 #endif
 
-#include "materialshadermain.hlsli"
+#include "material_shader_main.hlsli"

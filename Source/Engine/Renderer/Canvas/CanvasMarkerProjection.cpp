@@ -20,7 +20,7 @@ namespace sw
     {
         struct CanvasMarkerProjectionInternal
         {
-            /** @brief 마커 투영 컴퓨트의 입력 행 배치입니다 — canvasmarker.hlsl 의 kRow* · kMarkerFlagActive · numthreads 와 같아야 합니다. */
+            /** @brief 마커 투영 컴퓨트의 입력 행 배치입니다 — canvas_marker.hlsl 의 kRow* · kMarkerFlagActive · numthreads 와 같아야 합니다. */
             static constexpr uint32 kRowViewProjection     = 0;
             static constexpr uint32 kRowCamera             = 4;
             static constexpr uint32 kRowViewport           = 5;
@@ -52,7 +52,7 @@ namespace sw
         _bMarkerReadsInstances = false;
         if ( frame._listMarker.empty() )
             return;
-        // 입력 행 배치는 canvasmarker.hlsl 의 kRow* 와 1:1 이다(뷰 · 투영 4행 · 카메라 · 뷰포트 · 한계 · 여백 1행 뒤에 마커마다 두 행).
+        // 입력 행 배치는 canvas_marker.hlsl 의 kRow* 와 1:1 이다(뷰 · 투영 4행 · 카메라 · 뷰포트 · 한계 · 여백 1행 뒤에 마커마다 두 행).
         const CanvasMarkerView& view        = frame._markerView;
         const uint32            markerCount = static_cast<uint32>( frame._listMarker.size() );
         const uint32            rowCount    = Internal::kRowFirstMarker + markerCount * Internal::kMarkerRowCount;
@@ -115,16 +115,16 @@ namespace sw
         // 앵커 원소는 사각형 버퍼의 맨 앞이다. 컴퓨트가 쓰고 나면 캔버스 그리기가 읽기로 본다(프로브 갱신과 같은 상태 전환).
         cmd.transitionBuffer( quads._buffer, RHIBufferState::UnorderedAccess );
         cmd.setComputePipelineState( pso );
-        // g_MarkerRows(t0) / g_MarkerInstances(t1) / g_MarkerQuadsRW(u0). canvasmarker.hlsl 레지스터와 1:1 이다.
+        // g_MarkerRows(t0) / g_MarkerInstances(t1) / g_MarkerQuadsRW(u0). canvas_marker.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( _markerRowBuffer._srv, 0 );
         if ( _bMarkerReadsInstances )
             cmd.transitionBuffer( instanceBuffer, RHIBufferState::ShaderResource );
         cmd.bindComputeShaderResource( _bMarkerReadsInstances ? instanceSRV : placeholderSRV, 1 );
         cmd.bindComputeUAV( quads._uav, 0 );
-        // 루트 상수 하나(canvasmarker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
+        // 루트 상수 하나(canvas_marker.hlsl g_MarkerDebugMode) — 1 이면 앵커의 네 번째 값에 인스턴스 칸 유무 코드를 쓴다(보기 모드 MarkerSlots).
         const uint32 debugMode = bShowInstanceSlots ? 1u : 0u;
         cmd.setComputeRootConstants( 0, 1, &debugMode );
-        inoutAssert.bind( cmd ); // canvasmarker.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
+        inoutAssert.bind( cmd ); // canvas_marker.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         cmd.dispatchCompute( ( _markerCount + Internal::kMarkerThreadGroupSize - 1u ) / Internal::kMarkerThreadGroupSize, 1, 1 );
         cmd.transitionBuffer( quads._buffer, RHIBufferState::ShaderResource );
     }

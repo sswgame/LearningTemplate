@@ -4,7 +4,7 @@
  * @details 카메라의 "보이는가"(`RenderViewCollector`)가 가려짐까지 보게 하는 길이다. GPU 컬링은 가림 타일(`FramePassExecutorOcclusion.cpp`)로 가려진 인스턴스를 거르는데,
  *          게임 스레드는 그 결과를 모른다. 렌더러가 타일을 몇 프레임 늦게 되읽어(`AsyncBufferReadback`) 여기 `OcclusionTileMailbox` 에 올리고,
  *          수집기가 모니터(보임 오브젝트)의 경계 구를 `OcclusionTileQuery::isSphereOccluded` 로 같은 식에 넣는다 — 언리얼 `WasRecentlyRendered` 의 역할이다.
- *          판정 식은 gpucull.hlsl 의 `isOccluded` 와 같다(바꾸면 두 곳을 함께 고친다).
+ *          판정 식은 gpu_cull.hlsl 의 `isOccluded` 와 같다(바꾸면 두 곳을 함께 고친다).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -49,9 +49,9 @@ namespace sw
      */
     struct SW_API OcclusionTileQuery
     {
-        /// 판정하는 타일 줄의 한 축 상한입니다 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(gpucull.hlsl `kMaxOcclusionTestTiles`).
+        /// 판정하는 타일 줄의 한 축 상한입니다 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(gpu_cull.hlsl `kMaxOcclusionTestTiles`).
         static constexpr uint32 kMaxTestTiles = 8;
-        /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(gpucull.hlsl `kMinOcclusionClipW`).
+        /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(gpu_cull.hlsl `kMinOcclusionClipW`).
         static constexpr float32 kMinClipW = 1.0e-4f;
 
         /**

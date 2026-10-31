@@ -21,7 +21,7 @@ namespace sw
 
     namespace
     {
-        /// gpunancheck.hlsl 의 루트 상수입니다 — 선언 순서 · 크기가 같아야 한다.
+        /// gpu_nan_check.hlsl 의 루트 상수입니다 — 선언 순서 · 크기가 같아야 한다.
         struct GPUNanCheckRootConstants
         {
             uint32 _textureIndex;
@@ -29,7 +29,7 @@ namespace sw
             uint32 _height;
             uint32 _slot;
         };
-        static_assert( sizeof( GPUNanCheckRootConstants ) == 4 * sizeof( uint32 ), "gpunancheck.hlsl 의 루트 상수와 크기가 같아야 한다" );
+        static_assert( sizeof( GPUNanCheckRootConstants ) == 4 * sizeof( uint32 ), "gpu_nan_check.hlsl 의 루트 상수와 크기가 같아야 한다" );
     } // namespace
 
     GPUNanCheck::GPUNanCheck()

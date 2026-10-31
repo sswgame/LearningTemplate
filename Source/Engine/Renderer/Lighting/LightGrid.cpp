@@ -11,7 +11,7 @@ namespace sw
     {
         struct LightGridInternal
         {
-            /// @brief 범위 여유와 카메라 면 판정 — 원본은 bindingslots.hlsli 10절이고 GPU 생산자가 같은 값을 쓴다.
+            /// @brief 범위 여유와 카메라 면 판정 — 원본은 binding_slots.hlsli 10절이고 GPU 생산자가 같은 값을 쓴다.
             static constexpr float32 kMinCornerClipW = shaderslot::lightgrid::kMinCornerClipW;
             static constexpr float32 kNdcPad         = shaderslot::lightgrid::kNdcPad;
             static constexpr float32 kSlicePad       = shaderslot::lightgrid::kSlicePad;
@@ -155,7 +155,7 @@ namespace sw
                 _listGlobalScratch.push_back( lightIndex );
                 continue;
             }
-            // 경계 구로 넣는 타입은 bindingslots.hlsli 의 비트 하나가 정한다(GPU 생산자 lightgrid.hlsl 과 같은 값).
+            // 경계 구로 넣는 타입은 binding_slots.hlsli 의 비트 하나가 정한다(GPU 생산자 light_grid.hlsl 과 같은 값).
             const bool   bLocal = lightType < 32u && ( ( shaderslot::kLightGridLocalTypeMask >> lightType ) & 1u ) != 0u;
             ClusterRange range{};
             if ( bLocal == false || computeLightRange( viewProj, light, range ) == false )

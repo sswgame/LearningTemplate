@@ -1,7 +1,7 @@
 /**
  * lighting.hlsli — 씬 라이트 목록과 **조명 식 하나**.
  *
- * 포워드(`forwardlit.hlsl`)와 디퍼드(`deferredlighting.hlsl`)가 이 파일의 같은 함수를 부른다.
+ * 포워드(`forward_lit.hlsl`)와 디퍼드(`deferred_lighting.hlsl`)가 이 파일의 같은 함수를 부른다.
  * 조명 식을 두 벌 두면 둘은 반드시 갈라진다("경로마다 다른 그림"). 언리얼도 포워드와 디퍼드가 같은 `FDeferredLightingCommon` 을 나눠 쓴다.
  *
  * 라이트는 상수버퍼가 아니라 **구조버퍼**(t8, `SW_SLOT_LIGHT_SRV`)다 — 개수가 씬마다 다르고,
@@ -17,14 +17,14 @@
 
 #include "binding.hlsli"
 
-// 씬 라이트 한 개(LightData)의 정의는 lightdata.hlsli 하나다 — 컴퓨트(lightgrid.hlsl)도 같은 파일을 쓴다. float4 로만 채운 이유는 그 파일 머리 주석.
-#include "lightdata.hlsli"
+// 씬 라이트 한 개(LightData)의 정의는 light_data.hlsli 하나다 — 컴퓨트(light_grid.hlsl)도 같은 파일을 쓴다. float4 로만 채운 이유는 그 파일 머리 주석.
+#include "light_data.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 // 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 LightProbe::load 하나다.
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV );
 
-// 이 헤더가 내놓는 함수의 묶음 — 선언만 둔다(정의는 아래, binding.hlsli 0-1 절과 같은 방식). 빛 원소 하나의 함수는 LightData(lightdata.hlsli) 멤버다.
+// 이 헤더가 내놓는 함수의 묶음 — 선언만 둔다(정의는 아래, binding.hlsli 0-1 절과 같은 방식). 빛 원소 하나의 함수는 LightData(light_data.hlsli) 멤버다.
 /** @brief 그림자 아틀라스 읽기 — 방향광 캐스케이드와 그 필터. 점광 · 스폿은 LightData::sampleLocalShadow 다. */
 struct Shadow
 {
@@ -233,7 +233,7 @@ static float3 Transform::computeWorldPositionFromDepth( float2 uv, float deviceD
 bool LightData::computeIncidence( float3 worldPosition, out float3 outToLight, out float outAttenuation )
 {
     const uint lightType = (uint)( _directionType.w + 0.5f );
-    // 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
+    // 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting_2d.hlsli)의 것이다.
     const bool bLight3d    = ( lightType <= SW_LIGHT_TYPE_SPOT );
     float3     toLight     = -_directionType.xyz;
     float      attenuation = 1.0f;
@@ -299,7 +299,7 @@ static float3 LightProbe::evaluateSphericalHarmonics( uint probeIndex, float3 no
 }
 
 /**
- * @brief 프로브 볼륨 원소 하나(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
+ * @brief 프로브 볼륨 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
  * @return rgb = 조도 / π(이웃 프로브 여덟의 삼선형 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
  *         (IndirectLighting.md P3 계약 — 볼륨이 없는 곳은 볼륨의 빛을 받지 않는다). 프로브 버퍼가 안 걸렸으면 0 이다.
  */
@@ -365,7 +365,7 @@ static float3 ReflectionProbe::sampleLevel( uint firstTexel, uint resolution, ui
 }
 
 /**
- * @brief 반사 프로브 원소 하나(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)에서 이 위치 · 반사 방향의 빛을 구합니다.
+ * @brief 반사 프로브 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)에서 이 위치 · 반사 방향의 빛을 구합니다.
  * @return rgb = 거칠기에 맞게 거른 빛(두 단계 사이를 섞는다), a = 가중치 — 상자 안 깊이 들어가면 1, 경계 안쪽 섞는 폭에서 0 으로 떨어지고 상자 밖은 0.
  *         프로브 버퍼가 안 걸렸으면 0 이다. 텍셀은 단계마다 같은 크기라 거칠기 단계를 고르는 것은 번호 식 하나다.
  */

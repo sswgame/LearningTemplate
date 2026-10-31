@@ -1,8 +1,8 @@
 /**
  * @file GPUAssert.h
  * @brief 셰이더 assert / printf 의 CPU 쪽입니다 — 컴퓨트 셰이더가 UAV 링에 적은 기록(조건 id · 값 · 스레드)을 몇 프레임 뒤 비동기 되읽기로 읽어 로그로 냅니다.
- * @details 언리얼 ShaderPrint · ShaderDebug, 유니티 셰이더 printf 선과 같은 자리다. 셰이더 쪽은 `Content/engine/shaders/gpuassert.hlsli`(`SW_GPU_ASSERT( 조건, id, 값 )`),
- *          조건 id 표는 `gpuassertids.hlsli` 하나다 — HLSL 과 이 파일이 같은 파일을 include 하므로 번호를 두 번 적지 않는다. id 별 심각도 · 메시지는 `GPUAssert.cpp` 의 표가 정한다.
+ * @details 언리얼 ShaderPrint · ShaderDebug, 유니티 셰이더 printf 선과 같은 자리다. 셰이더 쪽은 `Content/engine/shaders/gpu_assert.hlsli`(`SW_GPU_ASSERT( 조건, id, 값 )`),
+ *          조건 id 표는 `gpu_assert_ids.hlsli` 하나다 — HLSL 과 이 파일이 같은 파일을 include 하므로 번호를 두 번 적지 않는다. id 별 심각도 · 메시지는 `GPUAssert.cpp` 의 표가 정한다.
  *
  *          **퍼뮤테이션이다.** 켜는 스위치는 `-gv_gpuAssert=1`(기본 끔)이고, 켜면 assert 를 가진 컴퓨트 패스(표의 `RenderPassTraitFlag::kGPUAssertTarget`)가 셰이더에
  *          `SW_GPU_ASSERT_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서 이 버퍼를 u4 에 건다. Shipping 은 `isRequested` 가 늘 거짓이라
@@ -20,7 +20,7 @@
 #include "Engine/Graphics/RHI/AsyncBufferReadback.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 
-#include "gpuassertids.hlsli"
+#include "gpu_assert_ids.hlsli"
 
 namespace sw
 {
@@ -41,7 +41,7 @@ namespace sw
         Float,
     };
 
-    /** @brief 조건 id 하나의 표 항목입니다(`gpuassertids.hlsli` 의 `SW_GPU_ASSERT_ID_*` 와 같은 번호). */
+    /** @brief 조건 id 하나의 표 항목입니다(`gpu_assert_ids.hlsli` 의 `SW_GPU_ASSERT_ID_*` 와 같은 번호). */
     struct GPUAssertInfo
     {
         uint32             _id;

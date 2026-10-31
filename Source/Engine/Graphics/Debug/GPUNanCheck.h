@@ -32,7 +32,7 @@ namespace sw
     public:
         /// @brief 감시할 수 있는 출력의 수입니다(슬롯 하나가 카운터 둘 — NaN · Inf).
         static constexpr uint32 kMaxSlot = 64;
-        /// @brief 스레드 그룹 한 변입니다(gpunancheck.hlsl 의 numthreads 와 같다).
+        /// @brief 스레드 그룹 한 변입니다(gpu_nan_check.hlsl 의 numthreads 와 같다).
         static constexpr uint32 kGroupSize = 8;
 
         GPUNanCheck();

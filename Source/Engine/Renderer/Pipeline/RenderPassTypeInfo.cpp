@@ -163,7 +163,7 @@ namespace sw
                     case RenderPassType::Present:
                     {
                         // 화면에 낼 색(SourceColor)은 필수 입력이다 — 옛 코드는 선언이 없으면 "가장 나중 컬러" 를 이름 후보로 짐작했다(resolvePresentSource).
-                        // 후처리 체인(postchain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
+                        // 후처리 체인(post_chain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
                         info._flags          = Flag::kHasInputContract | Flag::kOutputPass;
@@ -247,7 +247,7 @@ namespace sw
                     }
                     case RenderPassType::SceneDepthCopy:
                     {
-                        // 장면 깊이를 선언한 R32 실수 출력으로 옮기는 일반 풀스크린 패스다(scenedepthcopy.hlsl). 꺼지는 조건이 없다 — 반투명이 읽는 입력이라 늘 돈다.
+                        // 장면 깊이를 선언한 R32 실수 출력으로 옮기는 일반 풀스크린 패스다(scene_depth_copy.hlsl). 꺼지는 조건이 없다 — 반투명이 읽는 입력이라 늘 돈다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSceneDepthCopy;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
@@ -511,7 +511,7 @@ namespace sw
         const string_view define{ kPostTonemapDefine };
         for ( const string& permutation : passDesc._listPermutation )
         {
-            // "이름" 또는 "이름=값" — 이름 부분만 비교한다(postchain.hlsl 은 `defined()` 로 본다).
+            // "이름" 또는 "이름=값" — 이름 부분만 비교한다(post_chain.hlsl 은 `defined()` 로 본다).
             const string_view name = string_view{ permutation }.substr( 0, permutation.find( '=' ) );
             if ( name == define )
                 return true;

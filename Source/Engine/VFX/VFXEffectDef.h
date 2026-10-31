@@ -48,7 +48,7 @@ namespace sw
     enum class VFXSimulationTarget : uint8
     {
         CPU, ///< `VFXCPUSimulation` — 게임 스레드가 입자 배열을 낸다
-        GPU, ///< vfxsimulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VFXGPUSimulation`)
+        GPU, ///< vfx_simulate.hlsl — 렌더 스레드가 컴퓨트로 돌리고 간접 인자로 그린다(`VFXGPUSimulation`)
     };
 
     /** @brief 입자가 무엇에 닿았을 때 반응하는지입니다. */
@@ -163,7 +163,7 @@ namespace sw
      * @brief 파티클 라이트입니다. 살아 있는 입자 중 앞의 `_maxLights` 개가 점광 하나씩을 냅니다(언리얼 Niagara Light Renderer).
      * @details 빛 색은 입자 색(RGB), 세기는 `_intensity` × 입자 알파, 반경은 `_radius` × 방출기 배율이다. `_maxLights` 가 0 이면 빛을 내지 않는다.
      *          CPU 방출기의 빛은 게임 스레드가 씬 라이트 목록에 붙이고(`collectSceneLights`), GPU 방출기의 빛은 시뮬레이션 컴퓨트가 라이트 버퍼의 GPU 구간에
-     *          쓴다(`GPULightBuffer` 의 구간, vfxsimulate.hlsl). 둘 다 점광이고 그림자가 없으며 라이트 그리드(`LightGrid`)에 들어간다.
+     *          쓴다(`GPULightBuffer` 의 구간, vfx_simulate.hlsl). 둘 다 점광이고 그림자가 없으며 라이트 그리드(`LightGrid`)에 들어간다.
      *          GPU 방출기의 빛은 **GPU 라이트 그리드 생산자**(`gv_lightCulling=GPU`, Shipping 은 고정)에서만 그려진다 — 다른 생산자에서는 오류를 한 번 남기고 그리지 않는다.
      *          GPU 구간이 받는 슬롯 합에는 상한(`GPULightBuffer::kMaxGPULight`)이 있다 — 넘는 방출기는 빛이 없고 오류를 한 번 남긴다.
      */

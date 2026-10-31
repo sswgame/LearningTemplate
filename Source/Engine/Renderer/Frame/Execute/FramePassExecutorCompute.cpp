@@ -82,7 +82,7 @@ namespace sw
                 // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
                 _pCmd->transitionBuffer( _state._gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
                 _pCmd->setComputePipelineState( animationPSO );
-                // AnimationParams(b0) / g_InstancesRW(u0). instanceanimation.hlsl 레지스터와 1:1 로 대응한다.
+                // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
                 _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
                 const uint32 animationGroups = ( instanceCount + 63u ) / 64u;
@@ -250,11 +250,11 @@ namespace sw
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( morphPSO );
         _pCmd->bindComputeConstantBuffer( _state._deform._meshMorphCb._index, 0 );
-        // MorphParams(b0) / g_RestVertices(t0) / g_DeformPrograms(t1, 칸 표 + 변형 프로그램) / g_MorphVerticesRW(u0). meshmorph.hlsl 레지스터와 1:1 로 대응한다.
+        // MorphParams(b0) / g_RestVertices(t0) / g_DeformPrograms(t1, 칸 표 + 변형 프로그램) / g_MorphVerticesRW(u0). mesh_morph.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( programSRV, 1 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        _gpuAssert.bind( *_pCmd ); // meshmorph.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
+        _gpuAssert.bind( *_pCmd ); // mesh_morph.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
             _pCmd->dispatchCompute( morphGroups, 1, 1 );
@@ -288,7 +288,7 @@ namespace sw
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( skinPSO );
         // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
-        // meshskin.hlsl 레지스터와 1:1 로 대응한다.
+        // mesh_skin.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeConstantBuffer( _state._deform._meshSkinCb._index, 0 );
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinWeightBuffer()._srv, 1 );
@@ -375,7 +375,7 @@ namespace sw
         const RHIStructuredBufferSlot& gridBuffer = _state._lightBuffer.getGPUGridBuffer();
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::LightGrid ) );
-        // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). lightgrid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
+        // g_LightGridLights(t0) / g_LightGridViews(t1) / g_LightGridRW(u0). light_grid.hlsl 레지스터와 1:1 로 대응한다. 상수 버퍼는 없다(뷰마다의 값은 t1).
         _pCmd->bindComputeShaderResource( _state._lightBuffer.getBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _state._lightBuffer.getGPUGridViewBuffer()._srv, 1 );
         _pCmd->bindComputeUAV( gridBuffer._uav, 0 );
@@ -433,7 +433,7 @@ namespace sw
         _pCmd->setVertexBuffer( 0, 0, 0, 0 );
         _pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         _pCmd->setPipelineState( _psoManager.getEnginePSO( RenderPassType::DepthHistory ) );
-        // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depthhistory.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        // 원본 깊이 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SceneDepth 칸(depth_history.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool   bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         const uint32 sourceIndex     = bNativeBindless ? static_cast<uint32>( depth._srv ) : 0u;
         if ( bNativeBindless == false )
@@ -540,7 +540,7 @@ namespace sw
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
-        // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
+        // gpu_cull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체와 가림 타일만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getInstanceSRV(), 0 );
         _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
@@ -558,13 +558,13 @@ namespace sw
         {
             _pCmd->bindComputeUAV( view._visibleInstances._uav, 2 );
         }
-        _gpuAssert.bind( *_pCmd ); // gpucull.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
+        _gpuAssert.bind( *_pCmd ); // gpu_cull.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
         const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
         if ( groups > 0 )
             _pCmd->dispatchCompute( groups, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
-        // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instancesort.hlsl).
+        // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는
         // 아무것도 하지 않으므로 **UAV 배리어**를 따로 걸어야 한다. 없으면 정렬이 아직
         // 채워지지 않은 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).

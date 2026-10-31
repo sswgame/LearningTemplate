@@ -1,7 +1,7 @@
 /**
  * @file FramePostProcessFog.cpp
  * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassType::Fog`)는 렌더러의 패스 실행이 그린다(`FramePassExecutor::executeFogPass`).
- * @details 안개는 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 블렌드한다(fog.hlsl). 볼륨 안개를 켜면 주 시점에서만 컴퓨트(volumetricfog.hlsl)가 froxel 마다
+ * @details 안개는 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 블렌드한다(fog.hlsl). 볼륨 안개를 켜면 주 시점에서만 컴퓨트(volumetric_fog.hlsl)가 froxel 마다
  *          라이트 산란을 누적해 구조 버퍼에 쓰고, 안개 패스가 그 버퍼를 t11(`SW_SLOT_PASS_SRV`)로 읽는다. 컴퓨트는 라이트 그리드(`dispatchLightGrid`) 뒤에 돈다.
  *          버퍼를 만드는 준비(`prepareVolumetricFog`)는 기록 전에, 디스패치(`dispatchVolumetricFog`)는 프레임 컴퓨트 프리패스에서 한다.
  */
@@ -31,7 +31,7 @@ namespace sw
     {
         struct FramePostProcessFogInternal
         {
-            /// 볼륨 안개 컴퓨트 입력의 행 번호입니다(volumetricfog.hlsl 의 kRow* 와 같은 순서).
+            /// 볼륨 안개 컴퓨트 입력의 행 번호입니다(volumetric_fog.hlsl 의 kRow* 와 같은 순서).
             static constexpr uint32 kRowInverseViewProj = 0;
             static constexpr uint32 kRowViewProj        = 4;
             static constexpr uint32 kRowEyeNear         = 8;
@@ -41,7 +41,7 @@ namespace sw
             static constexpr uint32 kRowSunDirection    = 12;
             static constexpr uint32 kRowSunRadiance     = 13;
             static constexpr uint32 kRowLightGrid       = 14;
-            static_assert( kRowLightGrid + 1 == SW_FOG_VOLUME_PARAM_FLOAT4_COUNT, "the parameter rows must fill the buffer exactly (volumetricfog.hlsl)" );
+            static_assert( kRowLightGrid + 1 == SW_FOG_VOLUME_PARAM_FLOAT4_COUNT, "the parameter rows must fill the buffer exactly (volumetric_fog.hlsl)" );
 
             /// 행렬의 행 넷을 @p firstRow 부터 float4 넷으로 씁니다(행벡터 규약 — 셰이더가 float4x4( 행 넷 ) 으로 다시 짓는다).
             static void writeMatrixRows( vector<float4>& inoutListRow, uint32 firstRow, const float4x4& matrix )
@@ -119,7 +119,7 @@ namespace sw
             return;
         }
 
-        // 입력 행 — 주 시점의 행렬, 눈, 안개 값, 해, 라이트 그리드(volumetricfog.hlsl 머리 주석과 같은 순서).
+        // 입력 행 — 주 시점의 행렬, 눈, 안개 값, 해, 라이트 그리드(volumetric_fog.hlsl 머리 주석과 같은 순서).
         const float4x4 inverse = mainView._viewProj.invert();
         // (0, 0, 1, 0) 의 역투영 동차 좌표 w 가 0 이면 직교다(fog.hlsl 과 같은 판정). 원근은 눈에서, 직교는 화면 점의 가까운 면 점에서 쏜다.
         const bool bPerspective = MathUtil::abs( inverse._34 ) > 1.0e-6f;
@@ -169,7 +169,7 @@ namespace sw
 
         cmd.transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::UnorderedAccess );
         cmd.setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::VolumetricFog ) );
-        // g_FogLights(t0) / g_FogParams(t1) / g_FogLightGrid(t2) / g_FogVolumeRW(u0). volumetricfog.hlsl 레지스터와 1:1 이다.
+        // g_FogLights(t0) / g_FogParams(t1) / g_FogLightGrid(t2) / g_FogVolumeRW(u0). volumetric_fog.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( lights, 0 );
         cmd.bindComputeShaderResource( _fogVolumeParamBuffer._srv, 1 );
         cmd.bindComputeShaderResource( grid, 2 );

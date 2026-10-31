@@ -49,7 +49,7 @@ namespace sw
          */
         static float32 computeScreenSize( const LODView& view, const float3& center, float32 radius );
         /**
-         * @brief 화면 크기 식(`computeScreenSize`)이 읽는 투영의 두 항입니다. GPU 컬링의 인스턴스 LOD 선택(`gpucull.hlsl`)이 같은 식을 쓰도록 한 곳에서 뽑는다.
+         * @brief 화면 크기 식(`computeScreenSize`)이 읽는 투영의 두 항입니다. GPU 컬링의 인스턴스 LOD 선택(`gpu_cull.hlsl`)이 같은 식을 쓰도록 한 곳에서 뽑는다.
          * @param outArrDepthRow 클립 w 를 만드는 열(m14, m24, m34, m44) — `w = dot( center, xyz ) + w`
          * @param outScaleY      투영의 y 배율(열 1 의 xyz 길이)
          */

@@ -7,7 +7,7 @@
 
 using namespace sw;
 
-// 가림 타일 사본 — 구가 가려졌는지 묻는 식(gpucull.hlsl 의 isOccluded 와 같다)과 우편함.
+// 가림 타일 사본 — 구가 가려졌는지 묻는 식(gpu_cull.hlsl 의 isOccluded 와 같다)과 우편함.
 
 namespace
 {

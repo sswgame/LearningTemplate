@@ -95,7 +95,7 @@ function(sw_addReflectionStep TARGET_NAME)
 		list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
 	endif()
 
-	# 셰이더 바인딩 계약(bindingslots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
+	# 셰이더 바인딩 계약(binding_slots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
 	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
 	list(APPEND parserArgs "--include" "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
 	foreach(inc IN LISTS ARG_INCLUDES)

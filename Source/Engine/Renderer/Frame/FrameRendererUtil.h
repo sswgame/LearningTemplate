@@ -118,7 +118,7 @@ namespace sw
          * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭(라디안/초)입니다.
          * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
          *          속도 차이가 눈에 띄지 않아 결국 "다 같은 속도" 로 보인다. 그것이 이 패스를 만든 이유다.
-         *          instanceanimation.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 정한다.
+         *          instance_animation.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 정한다.
          */
         static constexpr float32 kGPUSpinBaseSpeed  = 0.35f;
         static constexpr float32 kGPUSpinSpeedRange = 1.75f;
@@ -133,7 +133,7 @@ namespace sw
         static constexpr float32 kMeshMorphFrequency = 6.0f;
 
         /**
-         * @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다.
+         * @brief 컬링 디스패치 상수(gpu_cull.hlsl `CullParams`, b0)입니다. 상수 버퍼 크기와 올리는 값이 이 정의 하나를 씁니다.
          * @details 뒤 셋은 가림 판정이다(`FramePassExecutor::recordOcclusionTiles`) — 지난 프레임 장면 깊이를 그린 뷰-투영(행 벡터 규약, 셰이더가 `-Zpr` 로 그대로 읽는다),
          *          타일 격자(열 · 행 · 타일 한 변 px · 켬), 깊이 크기(px). 켬이 0 이면 셰이더가 나머지를 읽지 않는다(그림자 슬롯 · 기록을 버린 프레임 · `gv_occlusionCulling` 끔).
          */
@@ -154,11 +154,11 @@ namespace sw
             /// @brief x 인스턴스 LOD 선택 켬 1 · 끔 0(끄면 늘 단계 0). 나머지는 예약.
             uint32 _arrLODControl[4]{};
         };
-        /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusiontiles.hlsl 이 루트 상수로 받는다).
+        /// @brief 가림 타일 한 변(px)입니다. 타일마다 지난 장면 깊이의 최대를 하나 둔다(occlusion_tiles.hlsl 이 루트 상수로 받는다).
         static constexpr uint32 kOcclusionTileSize = 16;
         /** @brief @p value 를 @p divisor 칸으로 나눈 칸 수(올림)입니다. 가림 타일 격자와 그 디스패치 그룹 수가 쓴다. */
         static constexpr uint32 divideRoundUp( uint32 value, uint32 divisor ) { return ( value + divisor - 1u ) / divisor; }
-        /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanimation.hlsl `AnimationParams`, b0)입니다. */
+        /** @brief 인스턴스 애니메이션 디스패치 상수(instance_animation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {
             float32 _time{ 0.0f };
@@ -166,7 +166,7 @@ namespace sw
             float32 _speedRange{ 0.0f };
             uint32  _instanceCount{ 0 };
         };
-        /** @brief 메시 모프 디스패치 상수(meshmorph.hlsl `MorphParams`, b0)입니다. */
+        /** @brief 메시 모프 디스패치 상수(mesh_morph.hlsl `MorphParams`, b0)입니다. */
         struct GPUMorphParams
         {
             float32 _time{ 0.0f };
@@ -174,7 +174,7 @@ namespace sw
             float32 _frequency{ 0.0f };
             uint32  _vertexCount{ 0 };
         };
-        /** @brief 메시 스킨 디스패치 상수(meshskin.hlsl `SkinParams`, b0)입니다. */
+        /** @brief 메시 스킨 디스패치 상수(mesh_skin.hlsl `SkinParams`, b0)입니다. */
         struct GPUSkinParams
         {
             uint32 _skinVertexBase{ 0 };
@@ -183,7 +183,7 @@ namespace sw
             uint32 _skinInstanceCount{ 0 };
             uint32 _arrPad[4]{ 0, 0, 0, 0 };
         };
-        /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
+        /** @brief 인스턴스 정렬 디스패치 상수(instance_sort.hlsl `SortParams`, b0)입니다. */
         struct GPUSortParams
         {
             float32 _arrCameraPos[4]{};
@@ -280,7 +280,7 @@ namespace sw
          * @details 셰이더 쿠커가 "이 패스의 PS 를 쿠킹하는가" 를 정할 때 쓴다. 런타임은 같은 규칙을
          *          createPSOForPassType 이 RT 수로 적용한다(RT 가 0개면 PS 경로를 비운다). 주의: 쿠커와 런타임이
          *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 적용한 변형이 PS 리플렉션을 요구하는데 매니페스트에는
-         *          그 조합이 없다(Shipping 의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다`).
+         *          그 조합이 없다(Shipping 의 `리플렉션 매니페스트에 'shadow_depth.hlsl' 가 없습니다`).
          * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙인다(clip 을 위해). 알파 마스크가
          *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 한다. 쿠커도 이 함수를
          *       보므로 그때도 고칠 곳은 여기 하나다.
@@ -350,10 +350,10 @@ namespace sw
 
         /**
          * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 **머티리얼의 셰이더**로 그리는지 반환합니다.
-         * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadowdepth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
+         * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadow_depth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면
          *          그 셰이더는 같은 모양을 못 만든다 — 알파 컷오프(머리카락 카드가 사각형 그림자를 드리운다)와 정점 변형(흔드는 식생의 그림자가 서 있다).
          *          언리얼이 Masked · World Position Offset 머티리얼만 자기 깊이 · 그림자 셰이더를 컴파일하고 나머지는 기본 머티리얼의 것을 나눠 쓰는 것과 같다.
-         *          정점 변형은 그림자 패스만 갈아탄다 — 깊이 프리패스는 그 머티리얼을 빼므로(shadowdepth.hlsl 의 `MATERIAL_VERTEX_DEFORM`) 어긋날 깊이가 없다.
+         *          정점 변형은 그림자 패스만 갈아탄다 — 깊이 프리패스는 그 머티리얼을 빼므로(shadow_depth.hlsl 의 `MATERIAL_VERTEX_DEFORM`) 어긋날 깊이가 없다.
          *          그림자를 끈 머티리얼은 패스 셰이더가 정점을 모아 그리지 않으므로 갈아타지 않는다.
          *          갈아타는 머티리얼 셰이더는 `SW_PASS_SHADOW`(알파 컷오프면 `SW_PASS_DEPTH_PREPASS` 도) 퍼뮤테이션을 가져야 한다.
          *          런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
@@ -380,7 +380,7 @@ namespace sw
         }
 
         /**
-         * @brief 깊이만 쓰는 패스가 패스 셰이더(shadowdepth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
+         * @brief 깊이만 쓰는 패스가 패스 셰이더(shadow_depth.hlsl)로 등장 디더 변형을 그릴 때 픽셀 스테이지를 붙이는지 반환합니다.
          * @details 패스 셰이더의 깊이 패스는 컬러 출력이 없어 픽셀 스테이지가 없다(`hasPixelStage`). 등장 디더는 픽셀을 버리므로 그 변형에만 붙인다 —
          *          붙이지 않으면 프리패스가 물체의 깊이를 다 써 기본 패스가 버린 픽셀 자리에 뒤의 물체가 그려지지 않는다(구멍).
          *          머티리얼 셰이더로 그리는 깊이 배치(알파 컷오프)는 그 셰이더의 픽셀 스테이지가 이미 있고, 정점 변형만인 배치는 디더 없이 깊이를 쓴다.
@@ -504,7 +504,7 @@ namespace sw
         hashed_string _viewProj{ "g_ViewProj" };
         /// @brief 뷰-투영의 역행렬입니다. 디퍼드 조명이 깊이에서 월드 위치를 복원합니다.
         hashed_string _invViewProj{ "g_InvViewProj" };
-        /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러가 화면 속도를 구한다, motionblur.hlsl). 처음 · 컷 프레임은 이번 것과 같다.
+        /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러가 화면 속도를 구한다, motion_blur.hlsl). 처음 · 컷 프레임은 이번 것과 같다.
         hashed_string _prevViewProj{ "g_PrevViewProj" };
         hashed_string _world{ "g_World" };
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
@@ -532,11 +532,11 @@ namespace sw
         hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
         hashed_string _bloomParams{ "g_BloomParams" };
-        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, postgrade.hlsli.
+        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };
-        /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). postgrade.hlsli.
+        /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). post_grade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
-        /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depthoffield.hlsl.
+        /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depth_of_field.hlsl.
         hashed_string _cameraLens{ "g_CameraLens" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };

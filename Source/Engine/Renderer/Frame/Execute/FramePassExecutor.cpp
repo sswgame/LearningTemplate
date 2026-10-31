@@ -38,7 +38,7 @@ namespace sw
     namespace
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
-        /// 피사계 심도 착란원 반지름의 상한(px)입니다. depthoffield.hlsl 의 탭 16 개가 이 반지름 안에 퍼지므로, 더 키우면 탭 사이가 벌어져 고리 무늬가 보인다.
+        /// 피사계 심도 착란원 반지름의 상한(px)입니다. depth_of_field.hlsl 의 탭 16 개가 이 반지름 안에 퍼지므로, 더 키우면 탭 사이가 벌어져 고리 무늬가 보인다.
         constexpr float32 kMaxDepthOfFieldRadiusPixels = 8.0f;
         /// 센서 높이(mm, `CameraDepthOfFieldValues::_sensorHeight`)를 m 로 바꾸는 비율입니다.
         constexpr float32 kMillimetersPerMeter = 1000.0f;
@@ -199,7 +199,7 @@ namespace sw
         _nanCheck.poll();
         recordDepthHistories();
         // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
-        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfxsimulate.hlsl · vfxmeshinstance.hlsl).
+        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfx_simulate.hlsl · vfx_mesh_instance.hlsl).
         _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
         const uint32 animationInstanceCount = static_cast<uint32>( _state._gpuScene.getInstances().size() );
         dispatchInstanceAnimation( animationInstanceCount );
@@ -383,7 +383,7 @@ namespace sw
         const bool    bScreenOutput   = view._pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
-        // 피사계 심도(depthoffield.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
+        // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
         const CameraDepthOfFieldValues& lens          = view._settings._depthOfField;
@@ -397,7 +397,7 @@ namespace sw
         }
         context._passValues.setFloat4( passConstantNames()._cameraLens,
                                        float4{ lens._focusDistance, cocScale, kMaxDepthOfFieldRadiusPixels, bDepthOfField ? 1.0f : 0.0f } );
-        // 패스 플래그: 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
+        // 패스 플래그: 비트는 binding_slots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 기준이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( view._settings.usesPostProcess() == false )
             flags |= shaderslot::kPassFlagSkipPost;

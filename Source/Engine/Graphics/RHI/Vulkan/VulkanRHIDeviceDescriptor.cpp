@@ -2,7 +2,7 @@
  * @file VulkanRHIDeviceDescriptor.cpp
  * @brief VulkanRHIDevice 의 디스크립터 자원입니다. 슬롯 세트(set 0) 레이아웃 · 풀 묶음, 텍스처 배열 세트(set 1), 파이프라인 레이아웃을 만듭니다.
  * @details 언리얼 Vulkan RHI 와 같은 방식입니다: 셰이더는 register(b#/t#/u#) 로 선언하고(binding = 종류별 시프트 + 번호,
- *          bindingslots.hlsli 6), 드로우 · 디스패치 직전에 바인딩 상태가 바뀌었으면 그 커맨드 버퍼의 풀 묶음에서 세트를 하나 할당해
+ *          binding_slots.hlsli 6), 드로우 · 디스패치 직전에 바인딩 상태가 바뀌었으면 그 커맨드 버퍼의 풀 묶음에서 세트를 하나 할당해
  *          쓴 뒤 겁니다(VulkanRHICommandContext::flushSlotSet). 텍스처 배열은 별도 세트(set 1)에 한 번 채워 두고
  *          커맨드버퍼마다 한 번 바인딩합니다.
  */
@@ -57,7 +57,7 @@ namespace sw
         namespace bindless                 = shaderslot::bindless;
         const VkShaderStageFlags allStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
 
-        // 1) 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4). set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6)
+        // 1) 정적 샘플러 세트 s0..s7 (binding_slots.hlsli 4). set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6)
         //    + binding SW_VK_SHADOW_SAMPLER_BINDING 의 비교 샘플러(7). DX12 의 정적 샘플러와 같은 표.
         {
             struct SamplerSpec

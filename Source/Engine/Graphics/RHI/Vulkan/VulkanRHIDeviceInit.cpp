@@ -434,7 +434,7 @@ namespace sw
         _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
         // 셰이더는 -fspv-target-env=vulkan1.3 으로 쿠킹하고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
-        // OpDemoteToHelperInvocation 으로 낸다(deferredlighting.hlsl · sprite2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
+        // OpDemoteToHelperInvocation 으로 낸다(deferred_lighting.hlsl · sprite_2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
         // vkCreateShaderModule 이 검증 오류를 낸다(VUID-VkShaderModuleCreateInfo-pCode-08740). Vulkan 1.3 의 필수 기능이라
         // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.
         if ( available13.shaderDemoteToHelperInvocation == VK_FALSE )

@@ -28,7 +28,7 @@ namespace sw
             static constexpr float32 kFreeformDefaultHalfSize{ 1.0f };
             static constexpr float32 kFreeformDefaultFalloff{ 1.0f };
 
-            /** @brief 2D 빛 공통 덧칸(그림자 원천 반경 · 섞는 방식 · 뒤 원소 수)을 씁니다 — 칸의 뜻은 lighting2d.hlsli 머리 주석의 표. */
+            /** @brief 2D 빛 공통 덧칸(그림자 원천 반경 · 섞는 방식 · 뒤 원소 수)을 씁니다 — 칸의 뜻은 lighting_2d.hlsli 머리 주석의 표. */
             static float4 makeExtra( float32 shadowSoftness, Light2DBlendStyle blendStyle, uint32 trailingCount )
             {
                 // w 는 쿠키 아틀라스 칸 — 빛은 모른다(렌더러가 칸을 나눠 적는다, Light2DCookieAtlas). 칸이 없다는 값으로 둔다.
@@ -107,7 +107,7 @@ namespace sw
         if ( direction2D.getLengthSquared() <= MathUtil::kEpsilon )
             direction2D = float2{ 1.0f, 0.0f };
         direction2D.normalize();
-        // 칸의 뜻은 lighting2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.
+        // 칸의 뜻은 lighting_2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.
         outLight._positionRadius = float4{ position._x, position._y, MathUtil::max( _normalMapHeight, 1e-3f ), _outerRadius };
         outLight._directionType  = float4{ direction2D._x, direction2D._y, _innerRadius, outLight._directionType._w };
         outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, Internal::computeHalfAngleCos( _outerAngle ),
@@ -204,7 +204,7 @@ namespace sw
         {
             reach = MathUtil::max( reach, ( point - float2{ origin._x, origin._y } ).getLength() );
         }
-        // 칸의 뜻은 lighting2d.hlsli 머리 주석의 표 — 반경(w)은 원점에서 빛이 닿는 가장 먼 거리다.
+        // 칸의 뜻은 lighting_2d.hlsli 머리 주석의 표 — 반경(w)은 원점에서 빛이 닿는 가장 먼 거리다.
         outLight._positionRadius = float4{ origin._x, origin._y, MathUtil::max( _normalMapHeight, 1e-3f ), reach + _falloffDistance };
         outLight._directionType  = float4{ 0.0f, 0.0f, _falloffDistance, outLight._directionType._w };
         outLight._params         = float4{ _bCastShadows ? 1.0f : 0.0f, 0.0f, 0.0f, MathUtil::max( _falloffExponent, 1e-3f ) };

@@ -142,7 +142,7 @@ namespace sw
 
             /**
              * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
-             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다. 모션 블러는 카메라 움직임만 흐리므로(motionblur.hlsl — 물체 속도 버퍼가 없다) 속도가 모두 0 이다.
+             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다. 모션 블러는 카메라 움직임만 흐리므로(motion_blur.hlsl — 물체 속도 버퍼가 없다) 속도가 모두 0 이다.
              */
             static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill )
             {
@@ -344,7 +344,7 @@ namespace sw
     FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj )
     {
         using Internal = FrameViewResourcesInternal;
-        // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motionblur.hlsl).
+        // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motion_blur.hlsl).
         const bool                          bCameraStill   = view._bHistoryReset == SW_TRUE || Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
         const vector<RenderGraphPassDesc>&  listPass       = _pipeline.getGraphPass();
         const vector<RenderPassAttachment>& listAttachment = _pipeline.getDesc()._listAttachment;

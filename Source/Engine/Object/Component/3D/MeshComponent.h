@@ -113,7 +113,7 @@ namespace sw
 
         /**
          * @brief GPU 회전 애니메이션 시드를 설정합니다(0 이면 애니메이션 없음).
-         * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instanceanimation.hlsl` 이 이 값을 해시해
+         * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instance_animation.hlsl` 이 이 값을 해시해
          *          **인스턴스마다 다른 각속도**로 회전을 적용한다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
          *          되고, 회전은 전적으로 컴퓨트가 만든다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 준다.
          */
@@ -130,13 +130,13 @@ namespace sw
 
         /**
          * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형)과 색입니다. 빌더가 `GPUInstance::_sprite` 로 옮깁니다.
-         * @details 기본값(텍스처 전체, 흰색)이면 아무 일도 하지 않는다. 읽는 셰이더는 sprite2d.hlsl 이고, 값을 정하는 쪽은 파생 타입
+         * @details 기본값(텍스처 전체, 흰색)이면 아무 일도 하지 않는다. 읽는 셰이더는 sprite_2d.hlsl 이고, 값을 정하는 쪽은 파생 타입
          *          (`SpriteComponent`)이다. 그래서 세터는 protected 이다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게 하려는 것이다).
          */
         const GPUSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
         /**
          * @brief 2D 픽셀 스냅 단위(에셋 픽셀 하나의 월드 길이 = 1 / PPU, 0 이면 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
-         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 모든 메시에 알리고, 새로 등록되는 메시는 카메라 레지스트리의 값을 읽는다. 읽는 셰이더는 sprite2d 이다.
+         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 모든 메시에 알리고, 새로 등록되는 메시는 카메라 레지스트리의 값을 읽는다. 읽는 셰이더는 sprite_2d 이다.
          */
         void setPixelSnapUnit( float32 unit );
 
@@ -150,7 +150,7 @@ namespace sw
         uint32 getSortKey() const { return _sortKey; }
 
         /**
-         * @brief 강조(상호작용 외곽선 · 감각 모드)를 정합니다. 빌더가 `GPUInstance::_highlight` 로 옮기고 강조 패스(highlightoutline.hlsl)가 그립니다.
+         * @brief 강조(상호작용 외곽선 · 감각 모드)를 정합니다. 빌더가 `GPUInstance::_highlight` 로 옮기고 강조 패스(highlight_outline.hlsl)가 그립니다.
          * @details 배치 키가 아니라 인스턴스 내용이라 켜고 꺼도 배치를 다시 나누지 않는다. 저장하지 않는 런타임 값이다 — 상호작용 쪽(`InteractionHighlightComponent`)이 매 프레임 정한다.
          *          불투명 배치만 그린다(반투명 메시는 강조 패스가 보지 않는다).
          */

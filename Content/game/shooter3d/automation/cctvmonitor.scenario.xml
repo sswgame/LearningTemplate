@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Shooter3D CCTV 모니터 — 게임 셰이더(shaders/cctvmonitor.hlsl)로 그린 북쪽 벽 모니터를 가까이서 찍어 골든과 견준다(머티리얼 셰이더 훅의 게임 셰이더).
+  Shooter3D CCTV 모니터 — 게임 셰이더(shaders/cctv_monitor.hlsl)로 그린 북쪽 벽 모니터를 가까이서 찍어 골든과 견준다(머티리얼 셰이더 훅의 게임 셰이더).
   자동 플레이를 끄고 엄폐물 사이로 걸어(시작 (0, -16) 에서 +Z 를 본다. x 5.5 로 비켜 Cover_6 을, x 4.2 로 Cover_2 · Cover_3 사이를 지난다)
   모니터 5 m 앞 (0, 15) 에 선 뒤 찍는다. 걸음은 프레임 수가 아니라 위치(Object.X · Object.Z)로 끊는다.
   골든을 뜰 때 볼 것: 모니터에 CCTV 렌더 텍스처가 빛 없이(그늘과 상관없이 같은 밝기) 보이고 가로 주사선이 겹친다.

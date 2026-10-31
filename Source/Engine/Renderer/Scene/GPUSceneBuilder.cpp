@@ -361,7 +361,7 @@ namespace sw
         const Mesh* pMesh       = candidate._mesh.get();
         if ( _bGPULODActive == SW_FALSE || pMesh == nullptr )
             return;
-        // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instancesort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
+        // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instance_sort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
         // LOD 를 가진 메시는 구간 · 모프 · VAT 가 없다(`Mesh::setLODs` 가 거절한다)이므로 단계가 있는지와 블렌드만 본다. 스킨드 메시는 단계 배치가 자기 모프 풀 구간(`assignMorphBases`)을 가진다.
         const uint32 levelCount     = pMesh->getLODCount();
         const bool   bGroupableMesh = levelCount > 1 && levelCount <= kGPULODMaxLevels;

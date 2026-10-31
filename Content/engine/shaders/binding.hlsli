@@ -2,7 +2,7 @@
  * binding.hlsli — 셰이더가 엔진 리소스(상수 · 버퍼 · 텍스처 · 샘플러)를 읽는 경로를 한곳에 모은 헤더.
  *
  * 셰이더는 `#include "binding.hlsli"` 하나만 한다. 처음 읽는 사람은 아래 0 절(bindless 입문)만 읽어도 셰이더를 쓸 수 있다.
- * 슬롯 번호(t# · s# · space)의 원본은 bindingslots.hlsli 다 — 이 파일은 그 번호로 리소스를 선언하고 읽는 함수를 준다.
+ * 슬롯 번호(t# · s# · space)의 원본은 binding_slots.hlsli 다 — 이 파일은 그 번호로 리소스를 선언하고 읽는 함수를 준다.
  *
  * ==============================================================================
  * 0) bindless 입문
@@ -77,14 +77,14 @@
 #define SW_ENGINE_BINDING_HLSLI
 
 #include "common.hlsli"
-#include "instancedata.hlsli"
-#include "lightgridcommon.hlsli"
+#include "instance_data.hlsli"
+#include "light_grid_common.hlsli"
 
 static const uint kInvalidIndex = 0xFFFFFFFFu;
 
 // ------------------------------------------------------------------------------
 // 0-1) 이 헤더가 내놓는 함수의 묶음 — 선언만 둔다. 정의는 각 절에 있다(리소스 선언과 백엔드 분기 사이에 두어야 해서 밖에 정의한다).
-//      정의도 `static` 을 붙인다(FXC 가 선언과 정의의 static 이 다르면 거절한다). 인스턴스 · 배치 원소의 함수는 그 구조체(instancedata · batchdata)에 있다.
+//      정의도 `static` 을 붙인다(FXC 가 선언과 정의의 static 이 다르면 거절한다). 인스턴스 · 배치 원소의 함수는 그 구조체(instance_data · batch_data)에 있다.
 // ------------------------------------------------------------------------------
 /** @brief 정점 위치 · 노멀을 공간 사이로 옮긴다(7 절). 깊이에서 월드 위치를 되짚는 식은 lighting.hlsli 다. */
 struct Transform
@@ -211,7 +211,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     // 따로 저장하지 않는다: 첨부 하나를 통째로 아끼고, 언리얼도 깊이에서 복원한다). 점광은 위치가
     // 있어야 거리 감쇠를 계산할 수 있으므로 이게 없으면 디퍼드에 점광을 넣을 수 없다.
     float4x4 g_InvViewProj;
-    // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motionblur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
+    // 지난번 이 뷰를 그린 뷰-투영 — 모션 블러가 깊이로 복원한 월드 위치를 다시 투영해 화면 속도를 구한다(motion_blur.hlsl). 처음 · 컷 프레임은 g_ViewProj 와 같다.
     float4x4 g_PrevViewProj;
     float4x4 g_World;
     float4   g_KeyLightDirIntensity;
@@ -225,9 +225,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_ShadowCascade2;
     float4 g_ShadowCascade3;
     float4 g_BloomParams;
-    float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, postgrade.hlsli)
-    float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(colorvision.hlsli, 렌더 텍스처 뷰는 0)
-    float4 g_CameraLens;  // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depthoffield.hlsl)
+    float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, post_grade.hlsli)
+    float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(color_vision.hlsli, 렌더 텍스처 뷰는 0)
+    float4 g_CameraLens;  // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
     float4 g_OutlineColor;
     float4 g_OutlineParams;
     float4 g_SourceTexel; // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
@@ -259,7 +259,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint   g_AmbientOcclusionIndex;   // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
     uint   g_BloomBrightIndex;        // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
     uint   g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
-    uint   g_AutoExposureIndex;       // 자동 노출의 이번 EV(1x1 R32, autoexposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(postgrade.hlsli)
+    uint   g_AutoExposureIndex;       // 자동 노출의 이번 EV(1x1 R32, auto_exposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(post_grade.hlsli)
     uint   g_SceneColorCopyIndex;     // 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 굴절)
     uint   g_SceneDepthCopyIndex;     // 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스 출력, R32 실수)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 화면 공간 두께)
     uint   g_Flags;
@@ -287,7 +287,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 //    PassCB 는 패스당 한 번 올리는 버퍼라, 배치마다 바뀌는 값을 거기 넣으면 한 패스의 드로우들이 서로를
 //    덮어써 전부 마지막 값을 읽는다(GPU 는 제출 뒤에 읽는다). 언리얼이 FMeshDrawCommand 의 느슨한
 //    파라미터를 드로우별로 싣는 자리와 같다. DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬.
-//    컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: computetexturewrite.hlsl) 여기서는 빼 둔다 —
+//    컴퓨트 셰이더는 자기 루트 상수 블록을 직접 선언하므로(예: compute_texture_write.hlsl) 여기서는 빼 둔다 —
 //    한 셰이더에 블록이 둘이면 재정의다. 자기 블록을 쓰는 그래픽스 셰이더(canvas.hlsl)는 include 앞에 SW_OWN_ROOT_CONSTANTS 를 정의한다.
 // ------------------------------------------------------------------------------
 #if !defined( SW_STAGE_COMPUTE ) && !defined( SW_OWN_ROOT_CONSTANTS )
@@ -326,17 +326,17 @@ static float4x4 View::getViewProjection()
 #endif
 
 // ------------------------------------------------------------------------------
-// 3) GPUScene 인스턴스 버퍼 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instancedata.hlsli 하나다(컴퓨트도 그것을 쓴다).
+// 3) GPUScene 인스턴스 버퍼 (per-instance world/material/스프라이트 프레임 · 색). 원소 정의는 instance_data.hlsli 하나다(컴퓨트도 그것을 쓴다).
 //    네 백엔드 공통 — 엔진이 리플렉션 슬롯 t4 에 인스턴스 버퍼를 바인딩한다 (레지스트리 이름 "SwInstances"). 읽는 함수는 8 절.
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( InstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(4바이트 열 칸, 40바이트, batchdata.hlsli).
+// 4) 씬 배치 테이블 — C++ GPUBatchInfo 와 레이아웃 일치(4바이트 열 칸, 40바이트, batch_data.hlsli).
 //    배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(InstanceData::load)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
-// 원소 정의는 batchdata.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
-#include "batchdata.hlsli"
+// 원소 정의는 batch_data.hlsli 하나다(컬링 컴퓨트도 같은 파일을 쓴다).
+#include "batch_data.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( BatchData, g_SwBatches, SW_SLOT_BATCH_SRV );
 
@@ -440,7 +440,7 @@ static float4 MorphPool::loadTangent( uint batchIndex, uint vertexID, float4 res
 //    텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 경로).
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
-// 헤더 · 원소 단어 수는 SW_VERTEX_ANIMATION_HEADER_WORDS · SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT(bindingslots.hlsli — C++ MeshVertexAnimationElement 와 같은 배치).
+// 헤더 · 원소 단어 수는 SW_VERTEX_ANIMATION_HEADER_WORDS · SW_VERTEX_ANIMATION_WORDS_PER_ELEMENT(binding_slots.hlsli — C++ MeshVertexAnimationElement 와 같은 배치).
 
 /**
  * @brief 옥타헤드럴 좌표 [-1, 1]^2 를 단위 벡터로 푼다. C++ `OctahedralNormal::decodeOctant` 와 같은 식이다(0 은 양수 부호).
@@ -538,7 +538,7 @@ static float3 VertexAnimation::computePosition( uint headerBase, uint firstEleme
 
 /**
  * @brief 이 정점의 위치 · 노멀 — VAT 가 걸린 배치면 표에서, 아니면 모프 · 스킨 결과(MorphPool::loadVertex)에서, 그것도 아니면 입력 스트림에서.
- * @details 정점을 읽는 **모든** 패스(본 · G버퍼 · 그림자 · 깊이 프리패스)가 머티리얼 셰이더 뼈대(materialshadermain.hlsli)를 거쳐 이것 하나로 읽는다 —
+ * @details 정점을 읽는 **모든** 패스(본 · G버퍼 · 그림자 · 깊이 프리패스)가 머티리얼 셰이더 뼈대(material_shader_main.hlsli)를 거쳐 이것 하나로 읽는다 —
  *          위치만 읽는 짧은 형태를 따로 두면 패스마다 위치가 비트 단위로 갈라질 수 있어 없앴다.
  */
 void InstanceData::loadAnimatedVertex( uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
@@ -581,7 +581,7 @@ static float4 Transform::computeClipPosition( float4 worldPosition, float4x4 vie
 }
 
 /**
- * @brief 로컬 노멀을 월드로 옮겨 정규화한다. 노멀을 내보내는 **모든** 지오메트리 패스(forwardlit · gbuffer · gbuffernormal)가 이것을 쓴다.
+ * @brief 로컬 노멀을 월드로 옮겨 정규화한다. 노멀을 내보내는 **모든** 지오메트리 패스(forward_lit · gbuffer · gbuffernormal)가 이것을 쓴다.
  * @details 노멀은 위치처럼 월드 행렬로 옮기면 안 된다. 행 벡터 규약(`p' = p · M`)에서 접선은 `t · M` 으로 가므로, 수직을 지키는 노멀은
  *          `n · (M⁻¹)ᵀ` 다. 균등 스케일 · 회전뿐이면 두 식의 방향이 같아 드러나지 않지만, 비균등 스케일(스케일한 부모 아래 회전한 자식도)에서는
  *          노멀이 늘어난 축 **쪽으로** 기울어 조명이 틀린다(`mul( float4( n, 0 ), world )` 가 그렇다).
@@ -738,7 +738,7 @@ static float Appearance::computeLODFadeAppearance( float instanceAppearance, uin
 //      Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처가 아닌 uint(pointFilter)는 Map 으로 끝나는 이름을 쓰지 않는다.
 //      **머티리얼은 픽셀 단계에서만 읽는다.** 정점 · 픽셀 두 단계가 g_SwMaterials 를 함께 읽으면 GL(ARB_gl_spirv) 드라이버가 구조 버퍼의
 //      이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 짓고("_struct14_member0" · "_struct19_member0") 링크를 거절한다 — 그 배치는 패스
-//      셰이더로 물러나 그려진다. 정점에서 필요한 값(sprite2d 의 uvRect)은 픽셀에서 적용한다(아핀이면 결과가 같다).
+//      셰이더로 물러나 그려진다. 정점에서 필요한 값(sprite_2d 의 uvRect)은 픽셀에서 적용한다(아핀이면 결과가 같다).
 //      RenderPassGPUTest.SpriteDrawsWithTheSpriteShader 가 GL 에서 확인한다.
 // ------------------------------------------------------------------------------
 static uint MaterialBuffer::clampIndex( uint index )
@@ -757,7 +757,7 @@ static uint MaterialBuffer::clampIndex( uint index )
 // 10) 샘플러 세트 — 네이티브 bindless 백엔드(DX12 · Vulkan)만 여기서 선언한다. 에뮬 백엔드(DX11 · OpenGL)는 칸 결합 샘플러(GL g_SwEngineTex#Sampler) · DX11 정적 세트라
 //     여기서 s0 를 또 선언하면 같은 레지스터를 두 샘플러가 나눠 갖는다(FXC 는 안 쓰면 조용히 버려 드러나지 않았다). DX11 의 정적 세트는 11-2 절.
 //     DX12 는 루트 시그니처 정적 샘플러 s0..s7, Vulkan 은 set SW_VK_TEXTURE_SET 의 immutable sampler 배열(binding 1) + 비교 샘플러(binding 2).
-//     번호는 bindingslots.hlsli 4 절의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트에 해당한다.
+//     번호는 binding_slots.hlsli 4 절의 SW_SAMPLER_* 다 — 언리얼의 정적 샘플러 세트에 해당한다.
 // ------------------------------------------------------------------------------
 #if defined( SW_NATIVE_BINDLESS )
     #if defined( __spirv__ )
@@ -849,7 +849,7 @@ static float4 Bindless::sampleIndex( uint index, float2 uv )
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
  * @details 게더는 필터를 하지 않고 텍셀 넷을 그대로 돌려준다 — 값은 바이리니어 샘플 하나와 비슷한데
  *          텍셀은 넷이다. 그래서 십자 다섯 칸이 샘플 다섯 번이 아니라 게더 두 번이면 된다.
- * @note 샘플러 3 번은 `SW_SAMPLER_POINT_CLAMP` 다 (bindingslots.hlsli 4 의 표).
+ * @note 샘플러 3 번은 `SW_SAMPLER_POINT_CLAMP` 다 (binding_slots.hlsli 4 의 표).
  *       게더는 필터 모드를 안 보지만 **주소 모드는 본다** — 화면 가장자리에서 WRAP 이면 반대편을 읽는다.
  */
 static float4 PassTexture::gatherDepthRed( float2 uv )
@@ -940,7 +940,7 @@ static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint e
 // 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 엔진 텍스처를 걸지 않는다).
 // 엔진 텍스처는 역할 하나가 한 장이다(칸 번호 = C++ 표 shaderslot::emulated::kEngineTextureNames 의 순서, 컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
 // 칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 따로 두는 것과 같다).
-// 레지스터는 DX11 t32.., GL 텍스처 유닛 0..(bindingslots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+// 레지스터는 DX11 t32.., GL 텍스처 유닛 0..(binding_slots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
 SW_DECLARE_ENGINE_TEXTURE( 0 );
 SW_DECLARE_ENGINE_TEXTURE( 1 );
 SW_DECLARE_ENGINE_TEXTURE( 2 );
@@ -957,7 +957,7 @@ SW_DECLARE_ENGINE_TEXTURE( 11 );
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
-        // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 bindingslots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
+        // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 binding_slots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
         // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
         // GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
         #if defined( DX11 )
@@ -997,7 +997,7 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex15, g_SwMaterialTex15Sampler, SW_SL
         #endif
 
         #if defined( DX11 )
-// DX11 정적 샘플러 세트 s9..s15 (bindingslots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
+// DX11 정적 샘플러 세트 s9..s15 (binding_slots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
 // DX12 와 같은 표(SW_SAMPLER_*)라 셰이더가 고른 samplerID 가 DX11 에서도 존중된다.
 SamplerState g_SwSampler0 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER0 ) );
 SamplerState g_SwSampler1 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER1 ) );
@@ -1753,7 +1753,7 @@ struct SurfaceOutput
 // 라이트 목록과 라이트 그리드 읽기 — 조명 식(lighting.hlsli 의 커서)과 보기 모드 Light Complexity(G버퍼 · 포워드 표면)가 같은 함수를 쓴다.
 // 라이트 원소 구조체와 버퍼(g_SwLights)는 lighting.hlsli 다. 여기는 개수와 그리드(g_SwLightGrid, t12)만 안다.
 // ------------------------------------------------------------------------------
-// 뷰마다의 라이트 그리드(32 비트 단어, 배치는 bindingslots.hlsli 10 절). CPU 생산자와 GPU 생산자가 같은 슬롯에 건다 — 읽는 함수는 LightGrid::loadWord 하나다.
+// 뷰마다의 라이트 그리드(32 비트 단어, 배치는 binding_slots.hlsli 10 절). CPU 생산자와 GPU 생산자가 같은 슬롯에 건다 — 읽는 함수는 LightGrid::loadWord 하나다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwLightGrid, SW_SLOT_LIGHT_GRID_SRV );
 
 /** @brief 이번 패스에 바인딩된 라이트 수입니다. 라이트 버퍼가 바인딩되지 않았으면 0 이고, 그 씬은 앰비언트만 받습니다(키 라이트로 대신하지 않습니다). */
@@ -1763,7 +1763,7 @@ static uint LightGrid::computeLightCount()
 }
 
 /**
- * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(bindingslots.hlsli 10절의 배치).
+ * @brief 지금 뷰의 라이트 그리드 단어 하나를 읽습니다. @p wordIndex 는 그리드 첫 단어 기준입니다(binding_slots.hlsli 10절의 배치).
  * @details 이 함수만 그리드의 위치를 안다(g_SwLightGrid, t12 — CPU · GPU 생산자가 같은 슬롯에 건다).
  */
 static uint LightGrid::loadWord( uint wordIndex )
@@ -1842,7 +1842,7 @@ static float3 ViewMode::overrideLightingAlbedo( float3 albedo )
 #endif
 
 // 보기 모드 LODLevel · LODFade — 그리는 인스턴스의 가시 목록 항목(컬링이 쓴 LOD 단계 3 비트 + 크로스페이드 코드 5 비트)을 정점 단계가 픽셀로 넘긴 값이다.
-// 항목을 못 받은 셰이더(머티리얼 셰이더가 아닌 것)는 kInvalidIndex 그대로라 회색으로 보인다. 정점 → 픽셀 칸은 머티리얼 셰이더(materialshader.hlsli)만 가진다.
+// 항목을 못 받은 셰이더(머티리얼 셰이더가 아닌 것)는 kInvalidIndex 그대로라 회색으로 보인다. 정점 → 픽셀 칸은 머티리얼 셰이더(material_shader.hlsli)만 가진다.
 // 매크로로 남긴 이유: 칸은 구조체 **필드 선언**이라 함수가 될 수 없다(SW_APPEARANCE_VARYING 과 같다). 퍼뮤테이션이 칸의 유무를 가른다.
 #if defined( SW_VIEWMODE_LODLEVEL ) || defined( SW_VIEWMODE_LODFADE )
 static uint g_ViewModeLODEntry = 0xFFFFFFFFu;
@@ -1971,7 +1971,7 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 }
 #endif
 
-// G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferredlighting 이 읽는다).
+// G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferred_lighting 이 읽는다).
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
 #define SW_GBUFFER_SHADING_LIT   1.0f
 #define SW_GBUFFER_SHADING_UNLIT 0.0f
@@ -1995,7 +1995,7 @@ static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metal
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
  * @param roughness · metallic 보기 모드 Roughness · Metallic 이 보이는 값이다. 기본값을 두지 않는다 — 셰이더마다 자기 값(머티리얼 칸이나 그 셰이더의 정의)을 넘긴다.
  * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델) · 월드 노멀 · 머티리얼(금속도 · 거칠기) 셋. 노멀 인코딩은 한 군데뿐이어야
- *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
+ *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferred_lighting)이 어긋나면 조명이 조용히 틀린다.
  *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
  *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
  */

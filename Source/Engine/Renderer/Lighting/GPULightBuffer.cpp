@@ -50,7 +50,7 @@ namespace sw
             }
 
             /**
-             * @brief 프로브 볼륨 하나를 라이트 원소(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)로 만들고, 그 프로브들의 SH9 원소를 붙입니다.
+             * @brief 프로브 볼륨 하나를 라이트 원소(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)로 만들고, 그 프로브들의 SH9 원소를 붙입니다.
              * @details 경계 구는 상자의 외접구다 — 라이트 그리드가 점광과 같은 식으로 클러스터에 넣는다. 수와 번호는 실수로 싣는다(2^24 안이면 정확하다).
              */
             static GPULight makeProbeVolumeElement( const LightProbeGrid& grid, vector<float4>& inoutListProbeElement )
@@ -67,7 +67,7 @@ namespace sw
             }
 
             /**
-             * @brief 실시간 갱신 볼륨의 라이트 원소를 만들고, 프로브 버퍼에 자리(프로브마다 0 으로 채운 SH9 원소)를 잡습니다. 값은 GPU 의 프로브 갱신(`probeupdate.hlsl`)이 프레임마다 덮어쓴다.
+             * @brief 실시간 갱신 볼륨의 라이트 원소를 만들고, 프로브 버퍼에 자리(프로브마다 0 으로 채운 SH9 원소)를 잡습니다. 값은 GPU 의 프로브 갱신(`probe_update.hlsl`)이 프레임마다 덮어쓴다.
              * @details 소비 셰이더는 베이크 볼륨과 같은 원소를 읽는다 — 다른 길이 없다. 자리 번호(`_params.w`)가 갱신 컴퓨트의 쓰기 위치이기도 하다.
              */
             static GPULight makeRealtimeProbeVolumeElement( const LightProbeGridLayout& layout, vector<float4>& inoutListProbeElement )
@@ -126,7 +126,7 @@ namespace sw
             }
 
             /**
-             * @brief 반사 프로브 하나를 라이트 원소(bindingslots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)로 만들고, 그 옥타헤드럴 텍셀을 프로브 버퍼(t13)에 붙입니다.
+             * @brief 반사 프로브 하나를 라이트 원소(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)로 만들고, 그 옥타헤드럴 텍셀을 프로브 버퍼(t13)에 붙입니다.
              * @details 텍셀 하나가 float4 하나(rgb, a 는 0)다 — SH9 원소와 같은 버퍼라 텍스처 슬롯이 없는 에뮬 백엔드도 같은 길로 읽는다. 경계 구는 상자의 외접구다.
              */
             static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeAsset& data, vector<float4>& inoutListProbeElement )
@@ -229,7 +229,7 @@ namespace sw
             }
         }
 
-        // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting2d.hlsli).
+        // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
         for ( const ShadowCaster2DComponent* pCaster : registry.getAll<ShadowCaster2DComponent>() )
         {
             if ( pCaster != nullptr && pCaster->isActive() )
@@ -319,7 +319,7 @@ namespace sw
     bool GPULightBuffer::uploadLightList( IRHIDevice* pDevice, uint32 cpuCount )
     {
         // 업로드 목록: [CPU 라이트][GPU 구간 — 죽은 라이트][그림자 타일]. 점광과 스폿 그림자 타일 원소는 구간 뒤에 붙는다 — 셰이더는 g_SwLightCount(= 둘의 합) + 라이트의
-        // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(lightgrid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
+        // params.w 로 찾는다. 죽은 라이트는 반경 0 의 점광이라 그리드에 들지 않는다(light_grid.hlsl classifyLight) — 컴퓨트가 이번 프레임에 쓰지 못한 슬롯이 낡은 값으로 남지 않는다.
         _listUploadScratch.assign( _listLightScratch.begin(), _listLightScratch.begin() + cpuCount );
         GPULight deadLight{};
         deadLight._directionType = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( shaderslot::kLightTypePoint ) };
@@ -419,7 +419,7 @@ namespace sw
     void GPULightBuffer::updateGPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj )
     {
         namespace grid = shaderslot::lightgrid;
-        // 뷰 정보(bindingslots.hlsli 10 절): 행 넷 · (가까운 면 w, 조각 배율, 원근, 0) · asuint(라이트 수, 그리드 첫 단어, 0, 0). 그룹 번호가 곧 이 목록의 번호다.
+        // 뷰 정보(binding_slots.hlsli 10 절): 행 넷 · (가까운 면 w, 조각 배율, 원근, 0) · asuint(라이트 수, 그리드 첫 단어, 0, 0). 그룹 번호가 곧 이 목록의 번호다.
         // 뷰-투영이 깨진 뷰는 목록에서 뺀다 — 그 뷰는 그리드 없이 그린다.
         _listGridViewScratch.clear();
         uint32 gridViewCount = 0;

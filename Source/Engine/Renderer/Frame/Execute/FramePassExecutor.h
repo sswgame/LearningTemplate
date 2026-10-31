@@ -368,7 +368,7 @@ namespace sw
         // 컴퓨트 프리패스(FramePassExecutorCompute.cpp · FramePassExecutorOcclusion.cpp · FramePassExecutorNanCheck.cpp)
         // ------------------------------------------------------------------------------
         /**
-         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instanceanimation.hlsl).
+         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instance_animation.hlsl).
          * @details **컬링보다 먼저** 돌아야 한다. 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의
          *          바운드로 판정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
          */
@@ -387,7 +387,7 @@ namespace sw
         /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_meshMorphDebugMode` 를 씁니다. */
         MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
         /**
-         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 CPU 정렬 순서로 되돌립니다(gpucull/instancesort.hlsl).
+         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 CPU 정렬 순서로 되돌립니다(gpu_cull/instance_sort.hlsl).
          * @details 컬링 결과는 절두체에 종속되므로 뷰(메인, 그림자)마다 자기 인자와 목록을 따로 만든다.
          */
         void dispatchCullAndSort( uint32 instanceCount );
@@ -399,7 +399,7 @@ namespace sw
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
         void computeLODFadeStep();
         /**
-         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(lightgrid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
+         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
          * @details 그리기 전에, 그래프 밖의 컴퓨트 프리패스로 기록한다(렌더 그래프에 컴퓨트 패스 상태가 없다). 끝나면 그리드 버퍼를 SRV 로 돌린다.
          */
         void dispatchLightGrid();
@@ -408,7 +408,7 @@ namespace sw
         /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
         bool canCopyDepthHistory( const FrameViewTarget& view ) const;
         /**
-         * @brief 컴퓨트 프리패스 리스트에 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린 하나를 기록합니다(depthhistory.hlsl).
+         * @brief 컴퓨트 프리패스 리스트에 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린 하나를 기록합니다(depth_history.hlsl).
          * @details GPU 입자 시뮬레이션보다 먼저 기록한다 — 깊이 충돌이 이 히스토리를 읽는다. 지금 읽는 쪽은 주 시점뿐이지만 히스토리는 뷰마다 둔다.
          */
         void recordDepthHistories();
@@ -417,7 +417,7 @@ namespace sw
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
         /**
-         * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusiontiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
+         * @brief 컴퓨트 프리패스 리스트에 뷰 @p target 의 가림 타일(깊이 히스토리 → 타일마다 최대 깊이)을 기록합니다(occlusion_tiles.hlsl). 깊이 히스토리를 옮긴 뒤 · 컬링 앞입니다.
          * @details `gv_occlusionCulling` 이 꺼졌거나 이번 프레임에 옮긴 지난 깊이가 없으면 짓지 않는다 — 그 뷰의 컬링은 가림을 보지 않는다.
          */
         void recordOcclusionTiles( FrameViewTarget& target );

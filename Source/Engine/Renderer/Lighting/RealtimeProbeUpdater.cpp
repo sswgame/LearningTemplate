@@ -206,7 +206,7 @@ namespace sw
         cmd.transitionBuffer( pProbeBuffer->_buffer, RHIBufferState::UnorderedAccess );
         cmd.transitionBuffer( _historyBuffer._buffer, RHIBufferState::UnorderedAccess );
         cmd.setComputePipelineState( pso );
-        // g_ProbeLights(t0) / g_ProbeParams(t1) / g_ProbeVoxels(t2) / g_ProbeHistoryRW(u0) / g_ProbeOutRW(u1). probeupdate.hlsl 레지스터와 1:1 이다.
+        // g_ProbeLights(t0) / g_ProbeParams(t1) / g_ProbeVoxels(t2) / g_ProbeHistoryRW(u0) / g_ProbeOutRW(u1). probe_update.hlsl 레지스터와 1:1 이다.
         cmd.bindComputeShaderResource( lights, 0 );
         cmd.bindComputeShaderResource( _paramBuffer._srv, 1 );
         cmd.bindComputeShaderResource( _voxelBuffer._srv, 2 );

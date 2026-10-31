@@ -21,7 +21,7 @@ namespace
 SW_TEST_CASE( ShaderBinaryLocationTest, BinFolderSitsUnderTheFirstShadersComponent )
 {
     const string rhi = string( ShaderCooker::getSubfolderForFormat( ShaderTargetFormat::DXIL_D3D12 ) );
-    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/forwardlit.hlsl" ), string( "engine/shaders/bin/" + rhi ) );
+    SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/forward_lit.hlsl" ), string( "engine/shaders/bin/" + rhi ) );
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "engine/shaders/sub/x.hlsl" ), string( "engine/shaders/bin/" + rhi ) );
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ), string( "game/shooter3d/shaders/bin/" + rhi ) );
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "mounted/myshaders/shaders/x.hlsl" ), string( "mounted/myshaders/shaders/bin/" + rhi ) ); // `myshaders` 는 shaders 칸이 아니다

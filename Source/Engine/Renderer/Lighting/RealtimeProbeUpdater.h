@@ -1,12 +1,12 @@
 /**
  * @file RealtimeProbeUpdater.h
- * @brief 실시간 라이트 프로브 갱신의 렌더 스레드 쪽입니다 — 복셀 · 기록(history) · 입력 행 버퍼를 갖추고 컴퓨트(`probeupdate.hlsl`)를 기록합니다.
+ * @brief 실시간 라이트 프로브 갱신의 렌더 스레드 쪽입니다 — 복셀 · 기록(history) · 입력 행 버퍼를 갖추고 컴퓨트(`probe_update.hlsl`)를 기록합니다.
  * @details 흐름: 게임 스레드의 `collectSceneLights` 가 실시간 볼륨마다 `RealtimeProbeRequest`(볼륨 원소 사본, 갱신 값, 복셀 격자)를 만든다. 이 클래스는
  *          (1) `prepare` 가 기록 전에 버퍼를 갖춘다 - 복셀 단어(격자가 바뀐 프레임에만 올린다), 기록(볼륨 구성이 바뀌면 0 으로 되돌린다), 입력 행(프레임마다);
  *          (2) `dispatch` 가 라이트 업로드 뒤 · 조명 전에 컴퓨트 한 번을 돈다. 컴퓨트는 모든 실시간 프로브를 한 번에 돈다 - 프로브마다 이번 프레임의 조면 광선을 쏘아 기록을 갱신하고,
  *          기록을 소비 셰이더 배치로 바꿔 프로브 버퍼(t13)에 쓴다. 프로브 버퍼는 CPU 가 프레임마다 0 으로 올리므로 갱신하지 않는 프레임에도 전부 다시 쓴다.
  *          하늘은 `SkyGradient::evaluateRadiance` 를 SH9 로 투영해 입력 행에 싣는다(광선이 닿지 않는 방향의 복사휘도 — 베이커와 같은 규칙).
- *          입력 행 배치(`probeupdate.hlsl` 의 kRow*)는 `makeParamRows` 가 한 곳에서 짠다.
+ *          입력 행 배치(`probe_update.hlsl` 의 kRow*)는 `makeParamRows` 가 한 곳에서 짠다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -44,9 +44,9 @@ namespace sw
     class SW_API RealtimeProbeUpdater
     {
     public:
-        static constexpr uint32 kThreadGroupSize = 64; ///< probeupdate.hlsl SW_NUMTHREADS 와 같다
-        static constexpr uint32 kHeaderRowCount  = 8;  ///< 머리 행 1 + 하늘 SH 행 7 (probeupdate.hlsl kRowFirstVolume)
-        static constexpr uint32 kVolumeRowCount  = 7;  ///< 볼륨마다 행 수 (probeupdate.hlsl kVolumeRowCount)
+        static constexpr uint32 kThreadGroupSize = 64; ///< probe_update.hlsl SW_NUMTHREADS 와 같다
+        static constexpr uint32 kHeaderRowCount  = 8;  ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
+        static constexpr uint32 kVolumeRowCount  = 7;  ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
         static constexpr uint32 kSkySampleCount  = 64; ///< 하늘 SH 투영의 방향 수
         static constexpr uint32 kSkyRowCount     = 7;  ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
 
@@ -57,7 +57,7 @@ namespace sw
          */
         [[nodiscard]] static SH9Color projectSky( const SkyGradient& sky, bool bHasSky );
         /**
-         * @brief 컴퓨트 입력 행을 짭니다(배치는 `probeupdate.hlsl` 머리 주석).
+         * @brief 컴퓨트 입력 행을 짭니다(배치는 `probe_update.hlsl` 머리 주석).
          * @param listWarmup 볼륨마다 프로브당 지금까지 갱신된 횟수(섞는 비율의 초기 가속에 쓴다)
          * @param lightCount 직접광으로 읽을 CPU 라이트 수(라이트 버퍼의 앞쪽)
          */

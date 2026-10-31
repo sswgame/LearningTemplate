@@ -30,9 +30,9 @@ namespace sw
 {
     SW_LOG_CALLER( "WidgetComponent" );
 
-    /// true 면 화면 마커의 월드 → 화면 투영을 렌더러의 컴퓨트(`canvasmarker.hlsl`)가 합니다(`WidgetComponent::isGPUProjected` 조건을 만족하는 마커만).
+    /// true 면 화면 마커의 월드 → 화면 투영을 렌더러의 컴퓨트(`canvas_marker.hlsl`)가 합니다(`WidgetComponent::isGPUProjected` 조건을 만족하는 마커만).
     /// 켜려면 엔진 셰이더를 쿠킹해야 하고 컴퓨트 능력이 있는 백엔드여야 한다(없으면 렌더러가 오류를 남기고 마커를 그리지 않는다 — CPU 투영으로 대신하지 않는다).
-    SW_GLOBAL_VARIABLE( bool, gv_uiMarkerGpuProjection, false, "화면 마커(이름표 · HP 바)의 화면 투영을 GPU 컴퓨트로 한다 — 마커 2,000 개 이상에서 GT.UI.Markers 를 줄인다(컴퓨트 백엔드 + 쿠킹된 canvasmarker 셰이더 필요)" );
+    SW_GLOBAL_VARIABLE( bool, gv_uiMarkerGpuProjection, false, "화면 마커(이름표 · HP 바)의 화면 투영을 GPU 컴퓨트로 한다 — 마커 2,000 개 이상에서 GT.UI.Markers 를 줄인다(컴퓨트 백엔드 + 쿠킹된 canvas_marker 셰이더 필요)" );
 } // namespace sw
 
 namespace sw

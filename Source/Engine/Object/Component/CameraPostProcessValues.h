@@ -16,7 +16,7 @@ namespace sw
      * @details 언리얼 CineCameraComponent 의 PostProcessSettings 덮어쓰기와 Cinemachine Volume Settings 에 해당한다.
      *          값이 중립과 같으면 덮어쓰지 않는 것이라 따로 켜고 끄는 표시를 두지 않는다. 그래서 두 카메라 사이를 그냥 직선으로 섞을 수 있다.
      *          카메라 컴포넌트(`CameraComponent::setPostProcess`)가 갖고, 게임 프레임워크의 프리셋 `<PostProcess>` 섹션과 포즈 블렌드가 이 값을 쓴다.
-     *          렌더러는 뷰마다(`RenderViewSettings::_postProcess`) 읽는다 — 노출은 톤맵 앞, 채도 · 대비 · 비네트 · 레터박스는 톤맵 뒤(`postgrade.hlsli`),
+     *          렌더러는 뷰마다(`RenderViewSettings::_postProcess`) 읽는다 — 노출은 톤맵 앞, 채도 · 대비 · 비네트 · 레터박스는 톤맵 뒤(`post_grade.hlsli`),
      *          블룸 배율은 블룸 세기(`g_BloomParams.y`)에 곱한다. 후처리를 끈 뷰와 표면 값을 보이는 보기 모드는 적용하지 않는다.
      */
     REFLECT()

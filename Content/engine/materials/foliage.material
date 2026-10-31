@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 식생(FoliageComponent) 나무 · 덤불 — 그림자를 드리운다(그림자도 같이 흔들린다).
      바람 · 카메라 · 휘게 하는 구 · 페이드는 컴포넌트가 틱마다 인스턴스에 싣는다. 프로퍼티 이름 · 타입은 foliage.hlsl 의 SW_MATERIAL 구조체와 같다.
-     MATERIAL_VERTEX_DEFORM 은 깊이 프리패스에서 빠지게 하고(shadowdepth.hlsl — 흔들린 정점이 프리패스 깊이와 어긋나지 않게),
+     MATERIAL_VERTEX_DEFORM 은 깊이 프리패스에서 빠지게 하고(shadow_depth.hlsl — 흔들린 정점이 프리패스 깊이와 어긋나지 않게),
      그림자 패스를 foliage.hlsl 의 그림자 퍼뮤테이션으로 그리게 한다(FrameRendererUtil::drawsDepthWithMaterialShader). -->
 <MaterialDesc formatVersion="0" name="Foliage" shaderPath="engine/shaders/foliage.hlsl" blendMode="Opaque">
 	<_properties>

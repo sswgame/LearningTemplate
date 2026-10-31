@@ -5,7 +5,7 @@
 	계산을 건너뛴다). 언리얼의 EarlyZ 패스(r.EarlyZPass) · 유니티 URP 의 Depth Priming 자리다. 픽셀 셰이딩이 비싼 장면에서 이득이고,
 	깊이만 그리는 비용이 하나 더 든다.
 
-	맞물림: 프리패스는 shadowdepth.hlsl 을 **카메라** 행렬로 그리고(패스 define `SW_PASS_DEPTH_PREPASS`), 기본 패스는 같은 위치 함수
+	맞물림: 프리패스는 shadow_depth.hlsl 을 **카메라** 행렬로 그리고(패스 define `SW_PASS_DEPTH_PREPASS`), 기본 패스는 같은 위치 함수
 	(binding.hlsli `Transform::computeWorldPosition` · `Transform::computeClipPosition`, precise)로 같은 깊이를 내 LessEqual 을 통과한다 — 언리얼이 depth-only 와
 	base pass 에 같은 정점 팩토리 코드를 쓰는 것과 같은 이유다. 프리패스가 돈 프레임의 ForwardOpaque 는 깊이 쓰기를 끈 PSO 로 그린다.
 	같은 그림을 내는지 테스트가 프리패스 없는 판과 대조한다(`RenderPassGPUTest.DepthPrepassRendersTheSameImage`).
@@ -32,7 +32,7 @@
 		<RenderGraphPassDesc _name="Shadow"
 		                     _type="Shadow"
 		                     _depthAttachment="ShadowMap"
-		                     _shaderPath="engine/shaders/shadowdepth.hlsl"
+		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -48,7 +48,7 @@
 		<RenderGraphPassDesc _name="DepthPrepass"
 		                     _type="DepthPrepass"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/shadowdepth.hlsl"
+		                     _shaderPath="engine/shaders/shadow_depth.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -64,7 +64,7 @@
 		<RenderGraphPassDesc _name="ForwardOpaque"
 		                     _type="ForwardOpaque"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _shaderPath="engine/shaders/forward_lit.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -103,7 +103,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
+		<!-- 강조 외곽선(highlight_outline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
 		<RenderGraphPassDesc _name="HighlightOutline"
 		                     _type="HighlightOutline"
 		                     _depthAttachment="SceneDepth"
@@ -160,7 +160,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 장면 깊이 사본 — 장면 깊이를 R32 실수로 옮긴다(scenedepthcopy.hlsl). 반투명이 읽는다. -->
+		<!-- 장면 깊이 사본 — 장면 깊이를 R32 실수로 옮긴다(scene_depth_copy.hlsl). 반투명이 읽는다. -->
 		<RenderGraphPassDesc _name="SceneDepthCopy"
 		                     _type="SceneDepthCopy"
 		                     _vertexEntryPoint="VSMain"
@@ -180,7 +180,7 @@
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forwardlit.hlsl"
+		                     _shaderPath="engine/shaders/forward_lit.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
@@ -256,7 +256,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 카메라 모션 블러(motionblur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
+		<!-- 카메라 모션 블러(motion_blur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
 		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 서 있으면 원본 그대로다. -->
 		<RenderGraphPassDesc _name="MotionBlur"
 		                     _type="MotionBlur"
@@ -278,7 +278,7 @@
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
-		                     _shaderPath="engine/shaders/postchain.hlsl"
+		                     _shaderPath="engine/shaders/post_chain.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"

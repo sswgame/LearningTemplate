@@ -2,15 +2,13 @@
  * @file FramePostProcessExposure.cpp
  * @brief 자동 노출입니다 — 뷰마다 HDR 장면의 평균 로그 휘도를 재어 노출을 천천히 맞춥니다(언리얼 Auto Exposure Basic 에 해당).
  * @details 흐름: 셋업(`prepareAutoExposure`, 뷰마다 프레임에 한 번)이 잴지 · 측정 상수 · 쓰는 기록 칸을 정하고, 톤맵하는 패스(`findTonemapPass`)가 자기 그리기 앞에서
- *          측정 풀스크린 하나를 같은 리스트에 기록한다(`recordAutoExposure`, autoexposure.hlsl). 측정은 지난 칸의 EV 를 읽어 목표 EV 로 다가간 값을 이번 칸(1x1 R32)에 쓰고,
- *          톤맵은 이번 칸을 `g_AutoExposureIndex` 로 읽어 2^-EV 를 곱한다(postgrade.hlsli). 칸이 둘인 까닭은 한 텍스처를 읽으며 쓸 수 없어서다.
+ *          측정 풀스크린 하나를 같은 리스트에 기록한다(`recordAutoExposure`, auto_exposure.hlsl). 측정은 지난 칸의 EV 를 읽어 목표 EV 로 다가간 값을 이번 칸(1x1 R32)에 쓰고,
+ *          톤맵은 이번 칸을 `g_AutoExposureIndex` 로 읽어 2^-EV 를 곱한다(post_grade.hlsli). 칸이 둘인 까닭은 한 텍스처를 읽으며 쓸 수 없어서다.
  *          EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다 — 카메라의 범위가 0 · 0(기본)이면 노출 1 이라 자동 노출을 쓰지 않는 카메라의 화면이 그대로다.
  *          기록을 버리는 프레임(처음 · 컷 — `FrameViewTarget::_bHistoryReset`)은 다가가는 비율이 1 이라 측정값을 그대로 쓴다(지난 칸은 읽어도 섞지 않는다).
  * @note 히스토그램 방식(밝은 끝 · 어두운 끝을 잘라 내는 언리얼 기본값)은 없다 — 화면 대부분이 하늘인 장면은 평균이 하늘 쪽으로 끌린다.
  */
 #include "pch.h"
-
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -20,6 +18,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -33,7 +32,7 @@ namespace sw
     {
         struct FramePostProcessExposureInternal
         {
-            /// 측정 셰이더의 루트 상수입니다 — autoexposure.hlsl 의 `SwRootConstants` 와 같은 순서 · 크기다.
+            /// 측정 셰이더의 루트 상수입니다 — auto_exposure.hlsl 의 `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
             {
                 uint32  _source{ 0 };  ///< HDR 원본의 bindless 번호(네이티브). 에뮬은 엔진 텍스처 슬롯 0
@@ -43,7 +42,7 @@ namespace sw
                 float32 _rateUp{ 1.0f };
                 float32 _rateDown{ 1.0f };
             };
-            static_assert( sizeof( RootConstants ) == 6 * sizeof( uint32 ), "autoexposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
+            static_assert( sizeof( RootConstants ) == 6 * sizeof( uint32 ), "auto_exposure.hlsl 의 루트 상수와 크기가 같아야 한다" );
 
             /** @brief 지수 적응에서 @p deltaSeconds 동안 목표로 다가가는 비율(1 - e^(-속도 · dt))입니다. 기록을 버리는 프레임은 1(측정값 그대로)입니다. */
             static float32 computeAdaptRate( float32 speed, float32 deltaSeconds, bool bReset )
@@ -175,7 +174,7 @@ namespace sw
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
-        // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(autoexposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
+        // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
         const bool                                      bNativeBindless = _pDevice->supportsNativeBindlessSampling();
         FramePostProcessExposureInternal::RootConstants constants{};
         constants._source   = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;

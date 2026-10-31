@@ -351,17 +351,17 @@ namespace sw
             // 라이트 프로브 t13 (네 백엔드 공통): 조명 식이 프로브 볼륨 원소를 만나면 읽는다(lighting.hlsli LightProbe::load).
             addReserved( list, shaderslot::resname::kLightProbes, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ),
                          slotAt( vk::kTShift, shaderslot::kLightProbeBuffer ), slotAt( 0, shaderslot::kLightProbeBuffer ) );
-            // lightgrid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
+            // light_grid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
             addReserved( list, shaderslot::resname::kLightGridRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
-            // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
+            // gpu_cull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
             addReserved( list, shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             addReserved( list, shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kUShift, 1 ), slotAt( 0, shaderslot::gl::kUAVBinding0 + 1 ) );
             addReserved( list, shaderslot::resname::kCullLODState, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 2 ), slotAt( 0, 2 ), slotAt( vk::kUShift, 2 ), slotAt( 0, shaderslot::gl::kUAVBinding0 + 2 ) );
-            // instanceanimation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
+            // instance_animation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
             addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             // 엔진 텍스처 칸 t32.. / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
             // 엔진 텍스처 칸의 GL binding 은 칸 번호다(레지스터와 다르다 — shaderslot::emulated::getGlTextureUnit). 짝 샘플러는 계약에 없다 —

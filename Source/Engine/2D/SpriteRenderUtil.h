@@ -22,7 +22,7 @@ namespace sw
      */
     struct SW_API SpriteRenderUtil
     {
-        /** @brief 스프라이트 머티리얼(투명 · `sprite2d.hlsl`) 경로입니다. */
+        /** @brief 스프라이트 머티리얼(투명 · `sprite_2d.hlsl`) 경로입니다. */
         static hashed_string getSpriteMaterialPath();
 
         /**

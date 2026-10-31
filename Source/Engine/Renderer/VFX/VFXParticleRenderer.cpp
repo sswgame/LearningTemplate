@@ -184,7 +184,7 @@ namespace sw
             ++drawnBatchCount;
             if ( bGPUBatch )
             {
-                // 정점 수 · 인스턴스 수(띠는 마디 수)는 컴퓨트가 썼다(vfxsimulate.hlsl). 시작 인스턴스는 0 이다.
+                // 정점 수 · 인스턴스 수(띠는 마디 수)는 컴퓨트가 썼다(vfx_simulate.hlsl). 시작 인스턴스는 0 이다.
                 cmd.drawIndirect( pGPUSource->_argsBuffer, 0, 1 );
                 continue;
             }

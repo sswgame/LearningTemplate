@@ -19,7 +19,7 @@ namespace sw
         /**
          * @brief 부르는 쪽이 준 슬롯을 레지스터 번호로 정규화합니다.
          * @details 엔진 바인더는 리플렉션의 `_registerIndex` 를 그대로 넘기는데, Vulkan 리플렉션에서 그 값은 세트 0 의 **binding**
-         *          (레지스터 + 종류별 시프트, bindingslots.hlsli 6)입니다. 명시 호출(bindComputeUAV( idx, 0 ) 등)은 레지스터를 줍니다.
+         *          (레지스터 + 종류별 시프트, binding_slots.hlsli 6)입니다. 명시 호출(bindComputeUAV( idx, 0 ) 등)은 레지스터를 줍니다.
          *          t 범위(16..31) · u 범위(32..47)는 레지스터 범위와 겹치지 않으므로 둘 다 받아 레지스터로 되돌립니다.
          */
         uint32 toRegister( uint32 slot, uint32 rangeShift )

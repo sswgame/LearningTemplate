@@ -34,7 +34,7 @@ namespace sw
                 outListNormal[vertexIndex]   = normal;
                 continue;
             }
-            // meshskin.hlsl 과 같은 식 — 본 넷을 가중치로 섞고(본 번호는 본 수 안으로), 노멀은 이동 없이 옮겨 정규화한다.
+            // mesh_skin.hlsl 과 같은 식 — 본 넷을 가중치로 섞고(본 번호는 본 수 안으로), 노멀은 이동 없이 옮겨 정규화한다.
             float3 skinnedPosition{};
             float3 skinnedNormal{};
             for ( uint32 influence = 0; influence < 4; ++influence )

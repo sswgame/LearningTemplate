@@ -145,7 +145,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 강조 외곽선(highlightoutline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
+		<!-- 강조 외곽선(highlight_outline.hlsl) — 강조 방식이 Outline 인 인스턴스만 뒤집은 껍질로 깊이 테스트해 그린다(상호작용 대상). 두께는 화면 높이 비율. -->
 		<RenderGraphPassDesc _name="HighlightOutline"
 		                     _type="HighlightOutline"
 		                     _depthAttachment="SceneDepth"
@@ -202,7 +202,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 장면 깊이 사본 — 장면 깊이를 R32 실수로 옮긴다(scenedepthcopy.hlsl). 반투명이 읽는다. -->
+		<!-- 장면 깊이 사본 — 장면 깊이를 R32 실수로 옮긴다(scene_depth_copy.hlsl). 반투명이 읽는다. -->
 		<RenderGraphPassDesc _name="SceneDepthCopy"
 		                     _type="SceneDepthCopy"
 		                     _vertexEntryPoint="VSMain"

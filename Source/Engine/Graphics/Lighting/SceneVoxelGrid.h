@@ -2,9 +2,9 @@
  * @file SceneVoxelGrid.h
  * @brief 장면의 불투명 정적 메시를 1 비트 점유 복셀로 옮긴 격자입니다.
  * @details 격자는 축 정렬 상자 하나(시작점, 정육면체 칸 크기, 축마다 칸 수)이고 칸 번호는 (z × Y + y) × X + x 입니다. 칸마다 1 비트(켜졌으면 면이 있다)이며 32 칸이
- *          `uint32` 한 단어에 담긴다(번호의 아래 5 비트가 단어 안 위치) — GPU 의 읽기 전용 구조 버퍼(`probeupdate.hlsl`)가 같은 배치를 읽는다.
+ *          `uint32` 한 단어에 담긴다(번호의 아래 5 비트가 단어 안 위치) — GPU 의 읽기 전용 구조 버퍼(`probe_update.hlsl`)가 같은 배치를 읽는다.
  *          삼각형은 칸과 겹치는지(삼각형-상자 분리축 판정, Akenine-Möller 2001)로 켠다 — 얇은 면도 빠짐없이 켜는 보수적 복셀화다.
- *          광선은 칸을 따라 걷는다(Amanatides-Woo DDA). 셰이더 `probeupdate.hlsl` 의 `traceVoxelRay` 가 같은 식이다 — 식을 고치면 두 곳을 함께 고친다.
+ *          광선은 칸을 따라 걷는다(Amanatides-Woo DDA). 셰이더 `probe_update.hlsl` 의 `traceVoxelRay` 가 같은 식이다 — 식을 고치면 두 곳을 함께 고친다.
  *          메시 컴포넌트를 모으는 일은 렌더러의 `SceneVoxelizer` 가 하고, 이 형식은 컴포넌트를 모른다(그래서 컴포넌트가 이 형식을 값으로 들 수 있다).
  */
 #pragma once

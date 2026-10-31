@@ -81,7 +81,7 @@ namespace sw
         ShadedWireframe,
         /**
          * @brief 그리는 인스턴스의 LOD 단계를 색으로 보인다(언리얼 Visualize LOD Coloration, 유니티 Scene 뷰 LOD 색). 0 초록 · 1 연두 · 2 노랑 · 3 주황 · 4 빨강 · 5 보라 · 6 파랑 · 7 청록이다.
-         * @details 컬링이 가시 목록 항목에 쓴 단계 번호(`gpucull.hlsl`)를 정점 단계가 픽셀로 넘긴다(binding.hlsli `SW_LODDEBUG_*`). 머티리얼 셰이더 경로의 메시만 읽고 그 밖의 셰이더는 회색이다.
+         * @details 컬링이 가시 목록 항목에 쓴 단계 번호(`gpu_cull.hlsl`)를 정점 단계가 픽셀로 넘긴다(binding.hlsli `SW_LODDEBUG_*`). 머티리얼 셰이더 경로의 메시만 읽고 그 밖의 셰이더는 회색이다.
          */
         LODLevel,
         /**
@@ -91,7 +91,7 @@ namespace sw
         LODFadeCode,
         /**
          * @brief 화면 마커(`gv_uiMarkerGpuProjection`)가 GPUScene 인스턴스 칸을 가졌는지를 마커 위젯의 색조로 보인다 — 칸이 있으면 초록, 없으면(월드 점을 게임 스레드가 보낸다) 빨강, 칸이 인스턴스 버퍼 밖이면 자홍이다.
-         * @details 장면 지오메트리는 Lit 그대로 그린다(셰이더 define 이 없다). 마커 투영 컴퓨트가 앵커의 네 번째 값에 코드를 쓰고(canvasmarker.hlsl) 캔버스 셰이더가 그 위젯을 칠한다(canvas.hlsl). 주 출력 모드만 본다.
+         * @details 장면 지오메트리는 Lit 그대로 그린다(셰이더 define 이 없다). 마커 투영 컴퓨트가 앵커의 네 번째 값에 코드를 쓰고(canvas_marker.hlsl) 캔버스 셰이더가 그 위젯을 칠한다(canvas.hlsl). 주 출력 모드만 본다.
          */
         MarkerSlots,
 

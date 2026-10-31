@@ -219,7 +219,7 @@ namespace sw
         const uint32 tailCount          = static_cast<uint32>( pOrder->_pListRank->size() );
         if ( _state._gpuScene.areIndirectCountsGPUFilled() )
         {
-            // GPU 정렬이 순번으로 되돌린다(instancesort.hlsl). 표는 뷰마다 자기 것 — 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮는다(정렬 CB 와 같은 함정).
+            // GPU 정렬이 순번으로 되돌린다(instance_sort.hlsl). 표는 뷰마다 자기 것 — 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮는다(정렬 CB 와 같은 함정).
             if ( view._transparentRank.ensureCapacity( _pDevice, sizeof( uint32 ), tailCount, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )
                 return;
             view._transparentRank.upload( _pDevice, pOrder->_pListRank->data(), tailCount * static_cast<uint32>( sizeof( uint32 ) ) );

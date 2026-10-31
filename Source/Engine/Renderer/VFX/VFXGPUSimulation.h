@@ -1,6 +1,6 @@
 /**
  * @file VFXGPUSimulation.h
- * @brief GPU 방출기의 입자 시뮬레이션(렌더 스레드, vfxsimulate.hlsl · vfxmeshinstance.hlsl)입니다. `VFXParticleRenderer` 가 소유합니다.
+ * @brief GPU 방출기의 입자 시뮬레이션(렌더 스레드, vfx_simulate.hlsl · vfx_mesh_instance.hlsl)입니다. `VFXParticleRenderer` 가 소유합니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -50,8 +50,8 @@ namespace sw
         RHIDescriptorIndex   _lightUAV{ kInvalidDescriptorIndex }; ///< 라이트 버퍼의 UAV. GPU 구간이 없는 프레임은 invalid 다
         uint32               _lightBase{ 0 };                      ///< GPU 구간의 첫 라이트 번호(`GPULightBuffer::getGPULightBase`)
         uint32               _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
-        bool                 _bSimulationPipelineReady{ false };   ///< vfxsimulate.hlsl PSO 가 있다
-        bool                 _bMeshPipelineReady{ false };         ///< vfxmeshinstance.hlsl PSO 가 있다
+        bool                 _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다
+        bool                 _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다
         bool                 _bNativeBindless{ false };            ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다)
     };
 } // namespace sw
@@ -84,7 +84,7 @@ namespace sw
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
      *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 컴퓨트 프리패스(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
-     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfxmeshinstance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
+     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과, 언리얼 Niagara GPU 압축 · 유니티 VFX Graph dead list 와 같은 선)를 디스패치하고, 메시 방출기는 이어서 인스턴스 칸을 쓴다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
      *          이번 프레임에 없는 재생 번호의 상태는 놓는다(멈췄거나 다시 재생했거나 컴포넌트가 사라졌다). 다시 나타나면 처음부터 다시 돌아 같은 결과에 닿는다.
      */

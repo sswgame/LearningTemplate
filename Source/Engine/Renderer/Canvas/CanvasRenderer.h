@@ -71,7 +71,7 @@ namespace sw
          */
         void drawTargets( IRHICommandList& cmd, IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache );
         /**
-         * @brief 화면 마커 투영 컴퓨트(`canvasmarker.hlsl`)를 기록합니다. 마커 입력(`CanvasFrameData::_listMarker`)이 있는 프레임에만 돌고, 렌더 패스 밖(컴퓨트 프리패스)에서 부릅니다 —
+         * @brief 화면 마커 투영 컴퓨트(`canvas_marker.hlsl`)를 기록합니다. 마커 입력(`CanvasFrameData::_listMarker`)이 있는 프레임에만 돌고, 렌더 패스 밖(컴퓨트 프리패스)에서 부릅니다 —
          *        `prepareFrame` 이 사각형 버퍼에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
          * @param instanceBuffer GPUScene 인스턴스 버퍼와 그 SRV 입니다(`GPUScene::getInstanceBuffer` · `getInstanceSRV`). 인스턴스 칸을 읽는 마커가 있으면 읽기 상태로 전환해 바인딩한다. 없으면 @p placeholderSRV 를 건다(읽지 않는다).
          * @param pso `RenderPassType::CanvasMarker` 의 엔진 PSO 입니다. 0 이면(셰이더가 쿠킹되지 않았거나 컴퓨트 능력이 없는 백엔드) 오류를 한 번 남기고 아무것도 하지 않습니다 —

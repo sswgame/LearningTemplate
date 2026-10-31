@@ -1,6 +1,6 @@
 /**
  * @file ShaderBindingValidator.h
- * @brief 쿠킹된 셰이더의 리플렉션이 바인딩 계약(bindingslots.hlsli)과 맞는지 검사합니다.
+ * @brief 쿠킹된 셰이더의 리플렉션이 바인딩 계약(binding_slots.hlsli)과 맞는지 검사합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -37,7 +37,7 @@ namespace sw
 {
     /**
      * @brief 예약 리소스 하나의 계약 위치입니다. 백엔드별로 "어디에 있어야 하는가"를 담습니다.
-     * @details 값은 모두 ShaderBindingSlots.h(= bindingslots.hlsli)에서 옵니다. 네이티브 bindless(DX12/Vulkan)는
+     * @details 값은 모두 ShaderBindingSlots.h(= binding_slots.hlsli)에서 옵니다. 네이티브 bindless(DX12/Vulkan)는
      *          종류별 무제한 배열 번호(= DX12 space = Vulkan binding)이고, 에뮬(DX11/GL)은 register 슬롯입니다.
      */
     struct ShaderReservedBinding

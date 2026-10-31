@@ -12,7 +12,7 @@ namespace sw
             return false;
         const float4x4& m = snapshot._viewProj;
 
-        // 구를 감싼 상자의 여덟 모서리를 지난 깊이를 그린 뷰-투영으로 옮겨 화면 사각형과 가장 가까운 깊이를 얻는다(gpucull.hlsl isOccluded 와 같다).
+        // 구를 감싼 상자의 여덟 모서리를 지난 깊이를 그린 뷰-투영으로 옮겨 화면 사각형과 가장 가까운 깊이를 얻는다(gpu_cull.hlsl isOccluded 와 같다).
         float32 minU     = 1.0f;
         float32 minV     = 1.0f;
         float32 maxU     = 0.0f;

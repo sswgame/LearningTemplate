@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 몸 표면 상태 머티리얼(surfacelit.hlsl) — forwardlit 의 PBR 에 젖음 · 흙 · 피 · 상처 · 찢김을 얹는다. _surface* 프로퍼티는 외형 컴포넌트의 CharacterSurfaceBinding 이 인스턴스에 올리는 이름과 같다
+<!-- 몸 표면 상태 머티리얼(surface_lit.hlsl) — forward_lit 의 PBR 에 젖음 · 흙 · 피 · 상처 · 찢김을 얹는다. _surface* 프로퍼티는 외형 컴포넌트의 CharacterSurfaceBinding 이 인스턴스에 올리는 이름과 같다
      (_surface<채널> 스칼라 · _surface<채널>Mask 마스크 — CharacterSurfaceBinding.h). 채널 이름은 engine/character/default.surfacechannels.xml 의 Wet · Dirt · Blood · Wound · Tear 다.
      MATERIAL_ALPHA_CUTOFF 는 찢김(Tear) 구멍을 내려고 늘 켠다. 마스크 텍스처는 R 채널만 읽으므로 sRGB 가 아니다. -->
-<MaterialDesc formatVersion="0" name="SurfaceLit" shaderPath="engine/shaders/surfacelit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="SurfaceLit" shaderPath="engine/shaders/surface_lit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>

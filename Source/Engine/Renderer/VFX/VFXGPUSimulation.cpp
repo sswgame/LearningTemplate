@@ -15,7 +15,7 @@
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
-#include "vfxsimulate.hlsli"
+#include "vfx_simulate.hlsli"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
         struct VFXGPUSimulationInternal
         {
             static constexpr uint32 kWordsPerRow = 4;
-            /** @brief 입자 상태 원소 하나의 바이트 수입니다(vfxsimulate.hlsl 의 VFXParticleState). */
+            /** @brief 입자 상태 원소 하나의 바이트 수입니다(vfx_simulate.hlsl 의 VFXParticleState). */
             static constexpr uint32 kStateStride = static_cast<uint32>( sizeof( float4 ) ) * SW_VFX_STATE_FLOAT4_COUNT;
             /** @brief 입자 상태는 두 반쪽이다 — 단계마다 한쪽에서 읽어 다른 쪽에 압축한다. */
             static constexpr uint32 kStateHalfCount = 2;
@@ -430,7 +430,7 @@ namespace sw
         {
             Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         }
-        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfxsimulate.hlsli" );
+        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
 
         // 일정 — 게임 스레드와 같은 시계를 같은 단계 수만큼 돌린다.
         for ( uint32 stepIndex = 0; stepIndex < steps; ++stepIndex )
@@ -466,7 +466,7 @@ namespace sw
         const uint32          paramRow = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
         Internal::appendRow( _listParamWord, poolSize, 0u, BitUtil::floatToBits( emitter._meshRadius ), BitUtil::floatToBits( emitter._sizeScale ) );
         Internal::appendMatrixRows( _listParamWord, emitter._world );
-        static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfxsimulate.hlsli" );
+        static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfx_simulate.hlsli" );
         // 풀 자리마다 칸 — 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 자리는 쓰지 않는다.
         const uint32 slotRowCount = ( poolSize + Internal::kWordsPerRow - 1u ) / Internal::kWordsPerRow;
         for ( uint32 slotRow = 0; slotRow < slotRowCount; ++slotRow )
@@ -499,7 +499,7 @@ namespace sw
     void VFXGPUSimulation::recordEmitterPasses( IRHICommandList& cmd, const Dispatch& dispatch ) const
     {
         const EmitterState& state = *dispatch._pState;
-        // 루트 상수 둘: 매개변수 구간의 첫 행, 패스 번호 | 단계 번호 << SW_VFX_PASS_STEP_SHIFT(vfxsimulate.hlsl).
+        // 루트 상수 둘: 매개변수 구간의 첫 행, 패스 번호 | 단계 번호 << SW_VFX_PASS_STEP_SHIFT(vfx_simulate.hlsl).
         const auto recordPass = [&]( uint32 pass, uint32 stepIndex, uint32 groupCount )
         {
             const uint32 arrRoot[2]{ dispatch._paramRow, pass | ( stepIndex << SW_VFX_PASS_STEP_SHIFT ) };
@@ -548,7 +548,7 @@ namespace sw
         const bool bBindDepth = depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
         if ( bBindDepth )
             cmd.prepareTextureForUnorderedAccess( depth._texture );
-        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다(u3). 쓰기 전에 UAV 로 옮기고, 끝나면 그리드 생산자(lightgrid.hlsl)와 조명 패스가 읽도록 SRV 로 되돌린다.
+        // 파티클 라이트는 라이트 버퍼의 GPU 구간에 쓴다(u3). 쓰기 전에 UAV 로 옮기고, 끝나면 그리드 생산자(light_grid.hlsl)와 조명 패스가 읽도록 SRV 로 되돌린다.
         const bool bLightBufferReady = _frameInput._lightUAV != kInvalidDescriptorIndex && _frameInput._lightBuffer != 0;
         bool       bAnyLights        = false;
         for ( const Dispatch& dispatch : _listDispatch )
@@ -565,7 +565,7 @@ namespace sw
             cmd.transitionBuffer( state._particleBuffer._buffer, RHIBufferState::UnorderedAccess );
             cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::UnorderedAccess );
             // g_VFXParams(t0) / g_VFXStateRW(u0) / g_VFXParticlesRW(u1) / g_VFXArgsRW(u2) / 깊이 히스토리(RW 텍스처 슬롯 0) / 루트 상수 g_VFXParamBase.
-            // vfxsimulate.hlsl 레지스터와 1:1 이다.
+            // vfx_simulate.hlsl 레지스터와 1:1 이다.
             cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
             cmd.bindComputeUAV( state._stateBuffer._uav, 0 );
             cmd.bindComputeUAV( state._particleBuffer._uav, 1 );
@@ -597,7 +597,7 @@ namespace sw
             const EmitterState& state = *dispatch._pState;
             // 살아 있는 수는 인자 버퍼(SRV)에서 읽는다 — 이번 프레임에 시뮬레이션을 건너뛴 방출기도 지난 값이 그대로 맞다.
             cmd.transitionBuffer( state._argsBuffer._buffer, RHIBufferState::ShaderResource );
-            // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXInstancesRW(u0) / 루트 상수 g_VFXMeshParamBase. vfxmeshinstance.hlsl 과 1:1 이다.
+            // g_VFXParams(t0) / g_VFXParticles(t1) / g_VFXArgs(t2) / g_VFXInstancesRW(u0) / 루트 상수 g_VFXMeshParamBase. vfx_mesh_instance.hlsl 과 1:1 이다.
             cmd.bindComputeShaderResource( _paramBuffer._srv, 0 );
             cmd.bindComputeShaderResource( state._particleBuffer._srv, 1 );
             cmd.bindComputeShaderResource( state._argsBuffer._srv, 2 );

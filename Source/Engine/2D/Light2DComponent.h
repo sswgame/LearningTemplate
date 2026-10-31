@@ -30,7 +30,7 @@ namespace sw
      * @class PointLight2DComponent
      * @brief 한 점에서 퍼지는 2D 빛입니다. 바깥 각을 줄이면 스폿(원뿔)입니다. 그림자를 켜면 2D 가림막(`ShadowCaster2DComponent`)에 가려집니다.
      * @details 유니티 Light 2D(Point · 안/바깥 반경 · 안/바깥 각 · Falloff · Normal Map Distance · Shadows), Godot PointLight2D 의 자리입니다.
-     *          감쇠: 안 반경 안은 1, 바깥 반경에서 0, 그 사이는 ((바깥 − 거리) / (바깥 − 안))^지수(`computeAttenuation` — 셰이더 lighting2d.hlsli 와 같은 식).
+     *          감쇠: 안 반경 안은 1, 바깥 반경에서 0, 그 사이는 ((바깥 − 거리) / (바깥 − 안))^지수(`computeAttenuation` — 셰이더 lighting_2d.hlsli 와 같은 식).
      *          원뿔 방향은 컴포넌트의 로컬 +X 를 월드 회전으로 돌린 것입니다(2D 는 Z 축 회전).
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Point Light 2D", Tooltip = "2D point or spot light for lit sprites", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )
@@ -102,7 +102,7 @@ namespace sw
      * @brief 다각형 모양의 2D 빛입니다. 다각형 안은 세기 그대로, 밖은 감쇠 거리까지 줄어듭니다(유니티 Freeform Light 2D 의 자리).
      * @details 꼭짓점은 컴포넌트 로컬 XY 이고 월드 트랜스폼을 따른다. GPU 에는 빛 원소 하나 뒤에 변마다 `shaderslot::kLightTypeFreeform2DEdge` 원소가 붙는다
      *          (`appendGPUTrailingElements`). 노멀 맵 · 그림자의 빛 위치는 컴포넌트 원점이다.
-     *          감쇠: 안은 1, 밖은 (1 − 다각형까지 거리 / 감쇠 거리)^지수(`computeAttenuation` — 셰이더 lighting2d.hlsli 와 같은 식).
+     *          감쇠: 안은 1, 밖은 (1 − 다각형까지 거리 / 감쇠 거리)^지수(`computeAttenuation` — 셰이더 lighting_2d.hlsli 와 같은 식).
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Freeform Light 2D", Tooltip = "2D light shaped by a polygon for lit sprites", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )
     class SW_API FreeformLight2DComponent : public LightComponent

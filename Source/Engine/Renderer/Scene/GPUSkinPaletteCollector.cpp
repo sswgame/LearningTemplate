@@ -18,7 +18,7 @@ namespace sw
     {
         /**
          * @brief 팔레트 한 벌(과 모프 가중치)을 행 · 가중치 버퍼 끝에 싣고 스냅샷에 항목을 더합니다.
-         * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
+         * @details 행 벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(mesh_skin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
          */
         void appendPalette( GPUSceneSnapshot& inoutSnapshot, vector<float4>& inoutListRow, vector<float32>& inoutListWeight, const Mesh* pMesh, const vector<float4x4>& listPalette,
                             const vector<float32>* pListMorphWeight )

@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @brief 단계 하나에 만들 입자입니다. 풀이 차서 만들지 못한 입자도 번호는 쓴 것으로 센다(`VFXCPUSimulation` · vfxsimulate.hlsl 가 같은 규칙). */
+    /** @brief 단계 하나에 만들 입자입니다. 풀이 차서 만들지 못한 입자도 번호는 쓴 것으로 센다(`VFXCPUSimulation` · vfx_simulate.hlsl 가 같은 규칙). */
     struct VFXSpawnStep
     {
         uint64 _firstParticleIndex{ 0 }; ///< 이 단계의 첫 입자 번호(난수 수열의 번호 — 만든 순서)

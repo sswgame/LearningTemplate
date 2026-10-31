@@ -87,7 +87,7 @@ namespace sw
         /**
          * @brief 컴퓨트 루트 상수(푸시 상수)를 씁니다.
          * @details 백엔드마다 실제 용량(dword)이 다르다. DX11 은 64, OpenGL 은 64, DX12 와 Vulkan 은 16이다(루트 상수와 푸시 상수,
-         *          bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
+         *          binding_slots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
          *          상한은 shaderslot::kRootConstantDwords 이고, 그보다 크면 조용히 잘린다.
          */
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
@@ -132,7 +132,7 @@ namespace sw
 
         /**
          * @brief 컴퓨트 스테이지에 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.
-         * @details 컴퓨트 패스(gpucull 등) 전용이다. bindConstantBuffer 는 그래픽스 스테이지만 대상으로 한다.
+         * @details 컴퓨트 패스(gpu_cull 등) 전용이다. bindConstantBuffer 는 그래픽스 스테이지만 대상으로 한다.
          * @param constantBufferIndex bindless 디스크립터 인덱스입니다.
          * @param slot                HLSL `register(bN)` 의 N 입니다.
          */

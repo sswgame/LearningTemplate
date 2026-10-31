@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
-// 안개 — 높이 · 거리 지수 안개의 광학 두께 식(셰이더 fog.hlsl · fogcommon.hlsli 가 같은 식)과 컴포넌트 찾기 · 물속 덮어쓰기.
+// 안개 — 높이 · 거리 지수 안개의 광학 두께 식(셰이더 fog.hlsl · fog_common.hlsli 가 같은 식)과 컴포넌트 찾기 · 물속 덮어쓰기.
 
 using namespace sw;
 

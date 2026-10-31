@@ -38,7 +38,7 @@ namespace sw
      * @struct SpriteMeshBuilder
      * @brief 9-슬라이스와 타일 스프라이트의 정점을 만듭니다. 유니티의 `SpriteRenderer.drawMode`(Sliced, Tiled), Godot 의 `NinePatchRect` 에 해당합니다.
      * @details 정점 규약은 `MeshUtil::createSpriteQuad` 와 같습니다. XY 평면에 앞면(-Z 노멀)과 그것을 X 로 거울에 비친 뒷면(+Z 노멀)이 같은 UV 를 쓰므로
-     *          어느 쪽에서 봐도 뒤집히지 않고, v 는 위가 0 입니다. UV 는 **프레임 안의 0..1** 이므로 셰이더가 인스턴스의 아틀라스 프레임으로 옮깁니다(sprite2d.hlsl).
+     *          어느 쪽에서 봐도 뒤집히지 않고, v 는 위가 0 입니다. UV 는 **프레임 안의 0..1** 이므로 셰이더가 인스턴스의 아틀라스 프레임으로 옮깁니다(sprite_2d.hlsl).
      *          크기가 테두리 합보다 작으면 테두리를 비율대로 줄입니다(유니티와 같음). 타일은 마지막 타일을 잘라 UV 도 그만큼만 씁니다.
      */
     struct SW_API SpriteMeshBuilder

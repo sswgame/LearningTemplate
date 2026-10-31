@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 기수 모자(가죽색) — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="WildWestHat" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="WildWestHat" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="0.36 0.23 0.12 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.7" min="0.0" max="1.0" group="Surface"/>

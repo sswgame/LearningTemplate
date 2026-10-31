@@ -503,7 +503,7 @@ namespace sw
 
     void D3D11RHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
-        // gpucull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
+        // gpu_cull 등 컴퓨트 셰이더가 읽는 구조버퍼(g_Instances 등)를 CS 스테이지에 바인딩한다.
         if ( _pContext == nullptr )
             return;
         ID3D11ShaderResourceView* pSRV = findBindlessBufferSRV( index );

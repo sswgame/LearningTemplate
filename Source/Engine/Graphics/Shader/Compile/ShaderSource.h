@@ -23,7 +23,7 @@ namespace sw
 
     /**
      * @class ShaderSourceID
-     * @brief 셰이더 소스 하나의 리소스 경로입니다(`<도메인>/…/shaders/<상대>.hlsl` — `engine/shaders/forwardlit.hlsl`). 빈 값은 "소스 없음" 입니다.
+     * @brief 셰이더 소스 하나의 리소스 경로입니다(`<도메인>/…/shaders/<상대>.hlsl` — `engine/shaders/forward_lit.hlsl`). 빈 값은 "소스 없음" 입니다.
      * @details 디스크 경로가 아니다 — 문자열에서 암시적으로 만들 수 없어(`AssetID` 와 같다) 쿠커가 절대 경로를 넣던 자리가 컴파일을 지나지 못한다.
      *          경로 첫 칸(도메인) 뒤에 `shaders` 라는 폴더 칸이 있어야 한다(`getShadersFolder`). 그 폴더가 include 검색 · 쿠킹 스탬프 · 바이너리 자리의 기준이다.
      */

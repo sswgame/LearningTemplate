@@ -219,7 +219,7 @@ namespace sw
         /**
          * @brief 컴파일러 도구의 지문입니다. 컴파일 옵션 버전, Vulkan 타깃 버전, 컴파일러 버전 식별자를 합칩니다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는
-         *          `bindingslots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일이나 OS 에 따라 달라지는 값은 넣지 않는다.
+         *          `binding_slots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일이나 OS 에 따라 달라지는 값은 넣지 않는다.
          */
         static uint64 getToolchainFingerprint();
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */

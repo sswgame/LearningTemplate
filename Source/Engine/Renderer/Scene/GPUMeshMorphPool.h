@@ -22,7 +22,7 @@
  * 이미 네 백엔드에서 도는 `RHIStructuredBufferSlot` 을 그대로 쓰므로 백엔드 분기가 없다.
  *
  * [스키닝]
- * 결과 버퍼는 두 구간이다. [모프 메시][스킨 인스턴스] 순서이며, 모프 컴퓨트(meshmorph.hlsl)는 앞 구간을, 스키닝 컴퓨트(meshskin.hlsl)는 뒤 구간을
+ * 결과 버퍼는 두 구간이다. [모프 메시][스킨 인스턴스] 순서이며, 모프 컴퓨트(mesh_morph.hlsl)는 앞 구간을, 스키닝 컴퓨트(mesh_skin.hlsl)는 뒤 구간을
  * 쓴다. 스킨 데이터는 **원본**(`Mesh::getSkinDataID` 가 같은 메시들)마다 한 번만 올라간다. 레스트 정점(`_skinRest`)과 정점마다 가중치와
  * 본 번호(`_skinWeight`, float4 둘)가 그것이다. 스킨 **인스턴스**(그리는 메시 객체이며 캐릭터, 군중 묶음, 사본이 해당한다)는 결과 구간, 원본 구간, 정점 수,
  * 팔레트 시작을 인스턴스 테이블(`_skinInstance`, uint4 둘)에 한 줄씩 가지고, 팔레트(`_skinPalette`, 본 하나가 float4 셋)는 프레임마다 올라간다.
@@ -87,7 +87,7 @@ namespace sw
 {
     /**
      * @struct GPUSkinInstanceRow
-     * @brief 스킨 인스턴스 테이블의 한 줄(uint4 둘)입니다. 셰이더 meshskin.hlsl 이 `g_SkinInstances[2i]` 와 `[2i + 1]` 로 읽습니다.
+     * @brief 스킨 인스턴스 테이블의 한 줄(uint4 둘)입니다. 셰이더 mesh_skin.hlsl 이 `g_SkinInstances[2i]` 와 `[2i + 1]` 로 읽습니다.
      */
     struct GPUSkinInstanceRow
     {
@@ -104,7 +104,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUSkinInstanceRow ) == shaderslot::kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(meshskin.hlsl)" );
+    static_assert( sizeof( GPUSkinInstanceRow ) == shaderslot::kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(mesh_skin.hlsl)" );
 
     /**
      * @class GPUMeshMorphPool

@@ -64,7 +64,7 @@ namespace sw
          */
         const RenderGraphPassDesc* findTonemapPass() const;
 
-        // --- 자동 노출(autoexposure.hlsl) ---
+        // --- 자동 노출(auto_exposure.hlsl) ---
         /** @brief 뷰의 자동 노출 기록 둘(1x1 R32 실수 RT + SRV)을 **셋업 단계에서** 만들어 둡니다. 톤맵하는 패스가 없으면 만들지 않습니다. */
         void ensureAutoExposureHistory( FrameViewTarget& view );
         /** @brief 뷰의 자동 노출 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
@@ -97,7 +97,7 @@ namespace sw
         /** @brief 열린 Present 렌더 패스(뷰포트를 건 뒤)에 RCAS(중간 RT → 대상)를 그립니다. @p viewportX · @p viewportY 는 대상 안의 뷰포트 왼쪽 위(px)입니다. */
         void drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const;
 
-        // --- 안개 · 볼륨 안개(fog.hlsl · volumetricfog.hlsl) ---
+        // --- 안개 · 볼륨 안개(fog.hlsl · volumetric_fog.hlsl) ---
         /** @brief 이번 프레임의 안개를 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameFog( bool bHasFog, const FogSettings& fog );
         /**
@@ -127,7 +127,7 @@ namespace sw
         const RenderPipelineAsset& _pipeline;
         const FramePSOManager&     _psoManager;
         FrameFogState              _frameFog;
-        /// @brief 볼륨 안개의 froxel 출력입니다. 컴퓨트가 쓰고 안개 패스가 t11 로 읽습니다(`volumetricfog.hlsl`).
+        /// @brief 볼륨 안개의 froxel 출력입니다. 컴퓨트가 쓰고 안개 패스가 t11 로 읽습니다(`volumetric_fog.hlsl`).
         RHIStructuredBufferSlot _fogVolumeBuffer;
         /// @brief 볼륨 안개 컴퓨트의 입력(float4 행, `SW_FOG_VOLUME_PARAM_FLOAT4_COUNT` 개)입니다. 프레임마다 올립니다.
         RHIStructuredBufferSlot _fogVolumeParamBuffer;

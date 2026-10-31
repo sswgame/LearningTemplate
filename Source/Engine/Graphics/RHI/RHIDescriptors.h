@@ -150,7 +150,7 @@ namespace sw
          */
         inline constexpr uint32 kFallbackVertexCount = 6;
         /**
-         * @brief 메시가 안 걸린 드로우의 슬롯 0 버퍼 내용입니다. 앞의 셋은 풀스크린 삼각형(NDC 큰 삼각형 — `fullscreentriangle.hlsl` 이 변환 없이 쓴다)이고 나머지는 자리만 채운다.
+         * @brief 메시가 안 걸린 드로우의 슬롯 0 버퍼 내용입니다. 앞의 셋은 풀스크린 삼각형(NDC 큰 삼각형 — `fullscreen_triangle.hlsl` 이 변환 없이 쓴다)이고 나머지는 자리만 채운다.
          * @details 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다. 셰이더는 SV_VertexID 로 UV 를 만들지만 레이아웃에 맞춰 같은 값을 실어 둔다.
          */
         inline constexpr RHIVertex arrFallbackVertex[kFallbackVertexCount] = {

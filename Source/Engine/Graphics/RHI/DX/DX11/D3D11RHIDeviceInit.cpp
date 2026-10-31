@@ -207,7 +207,7 @@ namespace sw
         // 풀스크린 삼각형 정점 버퍼. 메시 VB 없이 그리는 패스(Present/Bloom/Outline/Tonemap 등)는 draw() 가 이것을 건다.
         // 주의: 이것이 nullptr 이면 그 패스들이 정점 없이 그려 아무것도 안 나오지만 크래시는 없다
         // (RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다.
-        // fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
+        // fullscreen_triangle.hlsl 이 변환 없이 그대로 쓴다.
         {
             D3D11_BUFFER_DESC vbDesc{};
             vbDesc.Usage     = D3D11_USAGE_IMMUTABLE;

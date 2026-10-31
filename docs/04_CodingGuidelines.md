@@ -98,7 +98,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | `0x53574846`(4 글자 표식) | `FourCcUtil::make( "SWHF" )` |
 | `char buf[64]` · `fixed_string<256>` | `constant::kMaxBuffer64` · `constant::kMaxPathSize` |
 | 게임플레이 튜닝 `kWalkSpeed` | 컴포넌트 `PROPERTY` `_walkSpeed` |
-| 코드에 박은 에셋 경로 `"engine/shaders/forwardlit.hlsl"` | 그 경로를 읽는 데이터 파일의 칸(엔진 기본 에셋 표 · 게임 설정 · 카탈로그) |
+| 코드에 박은 에셋 경로 `"engine/shaders/forward_lit.hlsl"` | 그 경로를 읽는 데이터 파일의 칸(엔진 기본 에셋 표 · 게임 설정 · 카탈로그) |
 | `readOrDefault( key, 1.0f )` · `fallback` 인자 · "using defaults" 로그 | 필수 값이 없으면 오류로 멈춘다. 선택 값의 기본은 스키마(리플렉션 Def 초기값)가 정한다 |
 | `(void)table.loadFromAsset();` | 읽기 결과를 받아 실패를 알리거나 멈춘다 |
 | 파이썬 `except Exception: pass` · `os.environ.get( "X", "경로" )` | 예상한 예외만 잡고, 필수 설정이 없으면 `sys.exit` 로 멈춘다 |

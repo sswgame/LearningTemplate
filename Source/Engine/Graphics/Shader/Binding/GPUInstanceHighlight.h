@@ -1,7 +1,7 @@
 /**
  * @file GPUInstanceHighlight.h
  * @brief 인스턴스 강조(상호작용 외곽선 · 감각 모드)를 셰이더 레이아웃 그대로 담는 32비트 값입니다.
- * @details HLSL 쪽은 `Content/engine/shaders/instancedata.hlsli` 의 `highlight` 이고, 읽는 셰이더는 `highlightoutline.hlsl` 입니다.
+ * @details HLSL 쪽은 `Content/engine/shaders/instance_data.hlsli` 의 `highlight` 이고, 읽는 셰이더는 `highlight_outline.hlsl` 입니다.
  *          컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어 `GPUSpriteInstanceData` 처럼 렌더러 아래의 계약 폴더에 둡니다.
  *          배치 키가 아니라 인스턴스 내용이라, 강조를 켜고 꺼도 배치를 다시 나누지 않고 그 인스턴스만 다시 올라갑니다.
  */
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @brief 강조 방식입니다. 값은 셰이더 `kHighlightStyle*`(instancedata.hlsli) 와 같습니다(상위 바이트). */
+    /** @brief 강조 방식입니다. 값은 셰이더 `kHighlightStyle*`(instance_data.hlsli) 와 같습니다(상위 바이트). */
     enum class InstanceHighlightStyle : uint8
     {
         None = 0, ///< 강조 없음

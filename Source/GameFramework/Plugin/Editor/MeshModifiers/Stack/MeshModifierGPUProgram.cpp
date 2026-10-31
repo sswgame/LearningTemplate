@@ -16,7 +16,7 @@ namespace sw::editor
     {
         struct MeshModifierGPUProgramInternal
         {
-            /** @brief 셰이더 `SW_MODIFIER_*` 번호 순서입니다(번호 = 배열 위치). 바꾸면 meshmodifier.hlsli 도 같이 바꾼다. */
+            /** @brief 셰이더 `SW_MODIFIER_*` 번호 순서입니다(번호 = 배열 위치). 바꾸면 mesh_modifier.hlsli 도 같이 바꾼다. */
             static constexpr const utf8* kArrKindTypeID[] = { "bend", "twist", "taper", "stretch", "wave", "ripple", "noise", "melt",
                                                               "push", "poke", "displace", "bubble", "bulge", "cylindrify", "globe", "hump",
                                                               "radialskew", "skew", "spherify", "squeeze", "scale", "sinuscurve", "rolled", "simplemod",

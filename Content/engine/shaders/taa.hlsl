@@ -1,5 +1,5 @@
 // taa.hlsl — 시간 누적(TAA) 해석. 이번 원본(SourceColor)과 지난 출력(기록 — C++ 가 g_GBufferAlbedo 슬롯에 바인딩한다)을 섞는다.
-// 기록은 이 픽셀의 깊이로 월드 위치를 복원해 지난 프레임 뷰-투영(g_PrevViewProj)으로 다시 투영한 자리에서 읽고(재투영 — motionblur.hlsl 과 같은 식),
+// 기록은 이 픽셀의 깊이로 월드 위치를 복원해 지난 프레임 뷰-투영(g_PrevViewProj)으로 다시 투영한 자리에서 읽고(재투영 — motion_blur.hlsl 과 같은 식),
 // 이번 원본의 3x3 이웃 최소 · 최대로 자른다(이웃 클램프 — 언리얼 TAA 의 히스토리 클램프 · 유니티 URP TAA 와 같은 갈래). 그래서 카메라가 움직여도 앞 그림이
 // 겹치지 않고, 속도 버퍼가 없는 움직이는 물체의 기록도 클램프가 잘라 낸다. 재투영한 자리가 화면 밖이면 이번 원본만 쓴다.
 // 컷 · 후처리를 끈 뷰는 C++ 가 기록 슬롯에 이번 원본을 바인딩한다(섞어도 이번 그림만 남는다).
@@ -50,7 +50,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const bool   bOnScreen = prevClip.w > 0.0f && all( prevUv >= 0.0f ) && all( prevUv <= 1.0f );
 
     const float3 history = clamp( PassTexture::sampleAlbedo( prevUv ).rgb, neighborMin, neighborMax );
-    // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motionblur.hlsl).
+    // 고르기는 early-return 이 아니라 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — motion_blur.hlsl).
     const float weight = bOnScreen ? kHistoryWeight : 0.0f;
     return float4( lerp( current, history, weight ), 1.0f );
 }

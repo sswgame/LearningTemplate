@@ -45,7 +45,7 @@ namespace sw
      * @brief 방출기 하나(`VFXEmitterDef`)를 CPU 에서 돌리고 렌더 입력(`GPUParticle`)을 냅니다.
      * @details 단계 하나는 생성 → 적분 → 수명 제거(마지막 입자와 바꾸기)입니다. 풀은 고정 크기이고(`_maxParticles`), 차면 새 입자를 만들지 않고
      *          방출기마다 한 번 경고합니다. 프레임 시간(`update`)은 고정 간격으로 나눠 단계를 여러 번 돕니다. 생성 일정(버스트 · 생성률 · 반복)은
-     *          `VFXEmitterClock` 이 정한다 — GPU 시뮬레이션(vfxsimulate.hlsl)이 같은 시계로 같은 일정을 얻는다.
+     *          `VFXEmitterClock` 이 정한다 — GPU 시뮬레이션(vfx_simulate.hlsl)이 같은 시계로 같은 일정을 얻는다.
      *
      *          난수는 **방출기 씨앗과 입자 번호**로만 정해집니다(`HashUtil::mix64` · `splitMix64Next`). 풀 안의 자리나 프레임 시간과 무관해서,
      *          같은 씨앗 · 같은 단계 수면 입자가 같습니다(GPU 시뮬레이션이 같은 해시로 같은 초기값을 냅니다 — `VFXGPUSimulation` 이 해시 상수를 올린다).

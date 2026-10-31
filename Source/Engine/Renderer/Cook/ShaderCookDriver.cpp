@@ -432,7 +432,7 @@ namespace sw
 
         const ShaderCookSummary& summary = state._summary;
         if ( summary._contractViolationCount > 0 )
-            SW_LOG_ERROR( "%# binding contract violations - see the [Binding contract] logs above and fix the shader declarations or bindingslots.hlsli.", summary._contractViolationCount );
+            SW_LOG_ERROR( "%# binding contract violations - see the [Binding contract] logs above and fix the shader declarations or binding_slots.hlsli.", summary._contractViolationCount );
         if ( summary._failedCount > 0 )
             SW_LOG_ERROR( "Shader cooking failed for %# item(s) - their sources are left out of cook.stamp so the next cook retries them.", summary._failedCount );
         SW_LOG_INFO( "Shader cooking completed: %# binaries generated/updated, %# stale binaries removed (compile %# ms, reflection %# ms - summed over workers, total %# ms).",

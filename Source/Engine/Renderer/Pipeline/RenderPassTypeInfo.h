@@ -30,7 +30,7 @@ namespace sw
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
     /**
-     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadowdepth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
+     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadow_depth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
      * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어갑니다.
      *          언리얼의 EarlyZ 패스, 유니티 URP 의 Depth Priming 에 해당합니다.
      */
@@ -41,11 +41,11 @@ namespace sw
      */
     inline constexpr const utf8* kPassMeshOutlineDefine = "SW_PASS_MESH_OUTLINE=1";
 
-    /** @brief 감각 모드 강조 패스가 강조 셰이더(highlightoutline.hlsl)에 추가하는 define 입니다. Sense 인스턴스만 남기는 퍼뮤테이션을 고릅니다. */
+    /** @brief 감각 모드 강조 패스가 강조 셰이더(highlight_outline.hlsl)에 추가하는 define 입니다. Sense 인스턴스만 남기는 퍼뮤테이션을 고릅니다. */
     inline constexpr const utf8* kPassHighlightSenseDefine = "SW_PASS_HIGHLIGHT_SENSE=1";
 
     /**
-     * @brief 블룸 다운샘플 패스가 블룸 셰이더(postbloom.hlsl)에 추가하는 define 입니다. 합성 대신 반해상도의 밝은 부분만 내는 퍼뮤테이션을 고릅니다.
+     * @brief 블룸 다운샘플 패스가 블룸 셰이더(post_bloom.hlsl)에 추가하는 define 입니다. 합성 대신 반해상도의 밝은 부분만 내는 퍼뮤테이션을 고릅니다.
      * @details 언리얼의 블룸 셋업과 다운샘플 체인처럼 밝은 부분은 낮은 해상도에서 구하고, Bloom 패스가 원래 해상도에서 업샘플해 더합니다.
      */
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
@@ -94,12 +94,12 @@ namespace sw
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";
 
     /**
-     * @brief 후처리 체인(postchain.hlsl)이 톤맵까지 하게 하는 퍼뮤테이션 이름입니다(값을 붙인 `SW_POST_TONEMAP=1` 도 켠 것이다). 파이프라인 XML 의 Present 패스가 적습니다.
-     * @details 자동 노출은 톤맵하는 패스 앞에서 측정한다(`passAppliesTonemap`). 이 철자와 postchain.hlsl 의 `#if defined( SW_POST_TONEMAP )` 이 어긋나면 노출을 재지 않는다.
+     * @brief 후처리 체인(post_chain.hlsl)이 톤맵까지 하게 하는 퍼뮤테이션 이름입니다(값을 붙인 `SW_POST_TONEMAP=1` 도 켠 것이다). 파이프라인 XML 의 Present 패스가 적습니다.
+     * @details 자동 노출은 톤맵하는 패스 앞에서 측정한다(`passAppliesTonemap`). 이 철자와 post_chain.hlsl 의 `#if defined( SW_POST_TONEMAP )` 이 어긋나면 노출을 재지 않는다.
      */
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
-    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpuassert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGPUAssertTarget` 패스에만 붙는다. */
+    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpu_assert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGPUAssertTarget` 패스에만 붙는다. */
     inline constexpr const utf8* kGPUAssertDefine = "SW_GPU_ASSERT_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
@@ -163,7 +163,7 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
         /**
-         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpucull · meshmorph · canvasmarker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGPUAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
+         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpu_cull · mesh_morph · canvas_marker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGPUAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
          * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
         static constexpr uint32 kGPUAssertTarget = SW_BIT( 20 );

@@ -3,7 +3,7 @@
  * @brief 2D 빛의 쿠키(빛 텍스처)를 텍스처 하나(아틀라스)의 칸에 모읍니다. 빛 받는 스프라이트는 패스 역할 텍스처 `Light2DCookieAtlas` 하나만 읽습니다.
  * @details 빛마다 텍스처를 바인딩하지 않는 이유: 에뮬 백엔드(DX11 · GL)는 패스 텍스처가 역할마다 한 칸(shaderslot::emulated)뿐이고 머티리얼 칸은 드로우의 머티리얼 것이다.
  *          아틀라스 하나면 네 백엔드가 같은 경로(역할 텍스처 + 칸 번호)로 읽는다. 칸은 `shaderslot::kLight2DCookieCellCount` 개이고, 칸 번호는 빛 원소의
- *          `_extra.w` 에 적는다(lighting2d.hlsli LightData::sampleLight2dCookie).
+ *          `_extra.w` 에 적는다(lighting_2d.hlsli LightData::sampleLight2dCookie).
  */
 #pragma once
 #include "Core/Container/vector.h"

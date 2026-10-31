@@ -298,7 +298,7 @@ namespace sw
         uint64 _lastPermutationGeneration{ 0 };
         /**
          * @brief 재구축 중 **퍼뮤테이션 해시**에서 대표 머티리얼을 찾는 맵입니다(배치 키 합치기용).
-         * @details 셰이더 **경로**를 키로 쓰면 forwardlit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이 한 대표로 합쳐져
+         * @details 셰이더 **경로**를 키로 쓰면 forward_lit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이 한 대표로 합쳐져
          *          같은 배치가 된다. 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 사라진다.
          */
         unordered_map<uint64, Material*> _mapShaderRepresentative;

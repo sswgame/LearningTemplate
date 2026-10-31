@@ -46,7 +46,7 @@ namespace sw
             caps._bOffscreenRT    = SW_TRUE;
             caps._bIndirectDraw   = SW_TRUE;
             // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 설정할 수 없다.
-            // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
+            // gpu_cull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
             // 쓰려면 둘 중 하나를 포기해야 한다. 인다이렉트 드로우를 살리고 컬링을 끈다
             // (간접 인자는 GPUScene 이 CPU 에서 이미 채운다).
             caps._bGPUCulling        = SW_FALSE;

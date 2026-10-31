@@ -96,7 +96,7 @@ namespace sw
     {
         None, ///< 그리드 없이 목록 전체를 돈다(비교 기준)
         CPU,  ///< `LightGrid::populate` 가 만들어 동적 버퍼로 올린다
-        GPU,  ///< 컴퓨트 lightgrid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassExecutor::dispatchLightGrid`)
+        GPU,  ///< 컴퓨트 light_grid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassExecutor::dispatchLightGrid`)
     };
 
     /**
@@ -113,8 +113,8 @@ namespace sw
 
         /**
          * @brief GPU 구간(`getGPULightBase` 부터 `getGPULightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
-         * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfxsimulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
-         *          셰이더가 보는 라이트 수(`g_SwLightCount`)에 든다 — 라이트 그리드 생산자(lightgrid.hlsl)와 조명 커서가 구간을 따로 알 필요가 없다.
+         * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfx_simulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
+         *          셰이더가 보는 라이트 수(`g_SwLightCount`)에 든다 — 라이트 그리드 생산자(light_grid.hlsl)와 조명 커서가 구간을 따로 알 필요가 없다.
          *          CPU 라이트 수는 이 구간만큼 줄여 CPU + GPU 가 `shaderslot::kMaxFrameLight` 를 넘지 않게 한다.
          */
         static constexpr uint32 kMaxGPULight = shaderslot::kMaxFrameLight / 4;
@@ -133,7 +133,7 @@ namespace sw
          * @details 상한 처리(`shaderslot::kMaxFrameLight` 에서 GPU 구간을 뺀 몫)는 GPU 구간 수를 아는 `update` 가 합니다.
          *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 라이트 뒤에 붙고 `getCount` 에 들지 않습니다.
          *          @p listProbeElement(라이트 프로브 SH9, `collectSceneLights`)는 따로 프로브 버퍼(t13)로 올라갑니다.
-         * @param bProbeWritable 실시간 프로브 볼륨이 있어 컴퓨트(`probeupdate.hlsl`)가 프로브 버퍼를 쓴다 — 프로브 버퍼가 UAV 가 있는 기본 힙 버퍼가 된다.
+         * @param bProbeWritable 실시간 프로브 볼륨이 있어 컴퓨트(`probe_update.hlsl`)가 프로브 버퍼를 쓴다 — 프로브 버퍼가 UAV 가 있는 기본 힙 버퍼가 된다.
          */
         void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement, bool bProbeWritable );
 

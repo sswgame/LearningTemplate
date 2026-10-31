@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  상호작용 강조 — 고른 대상이 외곽선(PickUp)으로, 감각 모드(Hide)는 벽 너머로도 구별되는지 본다(InteractionHighlightAndMontage H3). 강조 패스(highlightoutline.hlsl)를 본다.
+  상호작용 강조 — 고른 대상이 외곽선(PickUp)으로, 감각 모드(Hide)는 벽 너머로도 구별되는지 본다(InteractionHighlightAndMontage H3). 강조 패스(highlight_outline.hlsl)를 본다.
   결정적: 무대 maps/interactionhighlight(카메라 고정), 고정 프레임 시간. 하는 쪽(Player 빈 오브젝트)만 순간이동으로 옮겨 같은 그림틀에서 강조만 켜고 끈다 —
   먼 곳(base) → PickCube 1.2 m 앞(outline) → HideCube 앞, 사이에 벽(sense).
   지표는 영역 안에서 기준 사진과 색이 다른 화소의 비율이다. 대상 둘레의 영역은 카메라 (0,1.6,-6)·시야 0.7 rad 로 계산한 값이다 — PickCube 는 화면 (0.34, 0.51), HideCube 는 (0.69, 0.48).

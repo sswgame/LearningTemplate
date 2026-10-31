@@ -1,7 +1,7 @@
 /**
  * water.hlsl — 물(WaterBodyComponent). 거스트너 파도로 정점을 옮기고, 깊이 색 · 프레넬 · 반사광 · 잔물결 · 물가 거품으로 칠한다.
  *
- * 머티리얼 셰이더 뼈대(materialshader.hlsli · materialshadermain.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋(파도) · 사용자 보간 칸 · 표면 · 조명 훅만
+ * 머티리얼 셰이더 뼈대(material_shader.hlsli · material_shader_main.hlsli)의 사용자다. 이 파일은 월드 위치 오프셋(파도) · 사용자 보간 칸 · 표면 · 조명 훅만
  * 정의한다. 위치는 뼈대가 만든다 — 파도는 오프셋으로만 준다(물은 MATERIAL_VERTEX_DEFORM 을 가진다).
  *
  * 머티리얼은 **정점 셰이더만** 읽는다 — GL(ARB_gl_spirv)은 구조버퍼를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다. 픽셀이 필요한 값은
@@ -44,7 +44,7 @@ SW_MATERIAL_END
     #error "water.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
 #endif
 
-// 훅 선택(materialshader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값은 사용자 보간 칸으로 넘긴다. 조명(몸통 + 프레넬 + 주광 반사 + 거품)은 직접 정의한다.
+// 훅 선택(material_shader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값은 사용자 보간 칸으로 넘긴다. 조명(몸통 + 프레넬 + 주광 반사 + 거품)은 직접 정의한다.
 #define SW_MATERIAL_READ_IN_VERTEX
 #define SW_MATERIAL_CUSTOM_LIGHTING
 #define SW_MATERIAL_CUSTOM_VARYINGS
@@ -57,7 +57,7 @@ struct MaterialVaryings
     float2 _flow : TEXCOORD12;
     float3 _waveNormal : TEXCOORD13; // 거스트너 파도의 노멀(정규화 전 — 메시 노멀이 아니다)
 };
-#include "materialshader.hlsli"
+#include "material_shader.hlsli"
 
 /** @brief 거스트너 파도 넷(머티리얼 프로퍼티)입니다. */
 void loadWaves( MaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_COUNT] )
@@ -199,4 +199,4 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     return float4( color, alpha );
 }
 
-#include "materialshadermain.hlsli"
+#include "material_shader_main.hlsli"

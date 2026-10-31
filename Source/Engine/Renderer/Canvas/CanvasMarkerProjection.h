@@ -1,6 +1,6 @@
 /**
  * @file CanvasMarkerProjection.h
- * @brief 화면 마커 투영 컴퓨트(`canvasmarker.hlsl`)의 입력 행 버퍼와 그 디스패치입니다(렌더 스레드).
+ * @brief 화면 마커 투영 컴퓨트(`canvas_marker.hlsl`)의 입력 행 버퍼와 그 디스패치입니다(렌더 스레드).
  * @details `CanvasRenderer` 가 값으로 소유합니다. 컴퓨트는 사각형 버퍼(`CanvasQuadBuffer`) 맨 앞의 앵커 원소를 화면 좌표 · 배율로 덮어씁니다.
  */
 #pragma once
@@ -50,7 +50,7 @@ namespace sw
         uint32 getMarkerCount() const { return _markerCount; }
 
     private:
-        vector<float4>          _listMarkerRowScratch;  ///< 마커 입력 행의 사본입니다(`canvasmarker.hlsl` 의 kRow* 배치)
+        vector<float4>          _listMarkerRowScratch;  ///< 마커 입력 행의 사본입니다(`canvas_marker.hlsl` 의 kRow* 배치)
         RHIStructuredBufferSlot _markerRowBuffer;       ///< 마커 입력 행(float4)입니다. 마커가 있는 프레임마다 다시 올린다.
         uint32                  _markerCount;           ///< 이번 프레임 컴퓨트가 돌릴 마커 기록 수(0 이면 돌리지 않는다)
         bool                    _bMarkerReadsInstances; ///< 이번 프레임 마커 중 GPUScene 인스턴스 칸을 읽는 것이 있다(인스턴스 버퍼를 읽기 상태로 둔다).

@@ -219,7 +219,7 @@ namespace sw
 
     void GPUScene::uploadInstanceAndVisibleBuffers( IRHIDevice* pDevice, uint32 instanceCount )
     {
-        // UnorderedAccess 를 함께 요구한다. instanceanimation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
+        // UnorderedAccess 를 함께 요구한다. instance_animation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
         // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
         constexpr RHIBufferUsage kInstanceUsage =
             RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
@@ -255,7 +255,7 @@ namespace sw
             if ( bVisibleBuffer == false && visibleSlotCount > 0 )
                 SW_LOG_ERROR_ONCE( "Failed to create the visible instance buffer (%# slots) of a cull view", visibleSlotCount );
         }
-        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instancedata.hlsli `kVisibleEntryIDMask`).
+        // 가시 목록 항목은 아래 24비트가 인스턴스 번호다(다음 3비트는 LOD 단계, 위쪽 5비트는 크로스페이드 코드 — instance_data.hlsli `kVisibleEntryIDMask`).
         SW_ASSERT( instanceCount <= 0x00FFFFFFu );
         ensureLODStateBuffers( pDevice, instanceCount );
     }

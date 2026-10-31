@@ -34,7 +34,7 @@ namespace sw
         RHIStructuredBufferSlot _indirectArgs;
         RHIStructuredBufferSlot _visibleInstances;
         /**
-         * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpucull.hlsl` 의 `g_LODState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
+         * @brief 인스턴스마다의 LOD 전환 상태입니다(`gpu_cull.hlsl` 의 `g_LODState`, 인스턴스 번호로 읽는다). LOD 그룹이 있을 때만 만든다.
          * @details 뷰마다 하나다 — 뷰마다 보는 거리와 갱신 주기가 달라 전환 진행이 다르다.
          */
         RHIStructuredBufferSlot _lodState;
@@ -49,23 +49,23 @@ namespace sw
      * @brief 배치의 가시 목록 정렬 방식입니다.
      * @details 컬링이 압축을 하면 슬롯 번호가 원자 연산의 완료 순서로 정해진다. 불투명은 상관없지만
      *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 **GPU 에서 CPU 정렬 순서로 되돌린다**
-     *          (instancesort.hlsl. 인스턴스 번호가 곧 CPU 가 정한 그리는 순서다). 한 워크그룹에 담기지 않는 큰 배치만 압축을 포기하고 CPU 가
+     *          (instance_sort.hlsl. 인스턴스 번호가 곧 CPU 가 정한 그리는 순서다). 한 워크그룹에 담기지 않는 큰 배치만 압축을 포기하고 CPU 가
      *          정렬해 둔 제자리 매핑을 쓴다.
      */
     enum class GPUBatchSortMode : uint32
     {
         None     = 0, ///< 불투명. 압축만 하고 순서는 상관없다.
         Preserve = 1, ///< 압축하지 않고 CPU 정렬 순서를 그대로 쓴다(GPU 정렬 한계를 넘는 투명 배치).
-        DepthGPU = 2, ///< 압축한 뒤 GPU 가 CPU 정렬 순서(인스턴스 번호)로 되돌린다(투명 기본, instancesort.hlsl).
+        DepthGPU = 2, ///< 압축한 뒤 GPU 가 CPU 정렬 순서(인스턴스 번호)로 되돌린다(투명 기본, instance_sort.hlsl).
     };
 
-    /// @brief 한 배치에서 GPU 정렬로 처리할 수 있는 최대 인스턴스 수입니다(instancesort.hlsl 의 SW_SORT_MAX_ELEMENTS).
+    /// @brief 한 배치에서 GPU 정렬로 처리할 수 있는 최대 인스턴스 수입니다(instance_sort.hlsl 의 SW_SORT_MAX_ELEMENTS).
     inline constexpr uint32 kGPUSortMaxElements = 512;
 
     /**
      * @brief 배치 테이블의 원소 하나입니다. 컬링 컴퓨트(t1)와 정점 셰이더(`g_SwBatches`, t9)가 같은 테이블을 읽습니다.
      * @details 컬링은 배치의 인스턴스 구간으로 "이 배치의 가시 목록은 어디서 시작하나" 를 알고, 정점 셰이더는
-     *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpucull.hlsl 의 GPUBatchInfo 와
+     *          모프와 정점 풀 오프셋을 읽는다. binding.hlsli 의 BatchData, gpu_cull.hlsl 의 GPUBatchInfo 와
      *          레이아웃이 같아야 한다(4바이트 10칸, 40바이트).
      */
     struct GPUBatchInfo
@@ -73,7 +73,7 @@ namespace sw
         uint32 _instanceBase{ 0 };
         uint32 _instanceCount{ 0 };
         /**
-         * @brief 이 배치의 가시 목록을 어떻게 다룰지 정합니다(GPUBatchSortMode). gpucull.hlsl 과 instancesort.hlsl 의 값과 같아야 합니다.
+         * @brief 이 배치의 가시 목록을 어떻게 다룰지 정합니다(GPUBatchSortMode). gpu_cull.hlsl 과 instance_sort.hlsl 의 값과 같아야 합니다.
          */
         uint32 _sortMode{ 0 };
         /**
@@ -86,7 +86,7 @@ namespace sw
         uint32 _firstVertex{ 0 };
         /// @brief 정점 애니메이션(VAT) 테이블에서 이 배치 메시의 첫 원소입니다. 0xFFFFFFFF 이면 VAT 가 없습니다(binding.hlsli `vertexAnimationBase`).
         uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
-        /// @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. VAT 표는 메시 전체의 정점 순서라 배치 안 번호에 이 값을 더해 찾는다(batchdata.hlsli `sectionVertexOffset`).
+        /// @brief 이 배치가 그리는 메시 구간의 첫 정점(메시 안 번호)입니다. VAT 표는 메시 전체의 정점 순서라 배치 안 번호에 이 값을 더해 찾는다(batch_data.hlsli `sectionVertexOffset`).
         uint32 _sectionVertexOffset{ 0 };
         /**
          * @brief 가시 목록 안에서 이 배치 구간의 시작입니다(`GPUMeshBatch::_visibleBase`). 컬링이 `_visibleBase + 자리` 에 인스턴스 번호를 쓴다.
@@ -102,7 +102,7 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GPUBatchInfo ) == 10 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(40바이트) — batchdata.hlsli BatchData 와 같아야 한다" );
+    static_assert( sizeof( GPUBatchInfo ) == 10 * sizeof( uint32 ), "GPUBatchInfo 는 4바이트 열 칸(40바이트) — batch_data.hlsli BatchData 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하며, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
     struct GPUMaterialGroupBuffer
@@ -215,7 +215,7 @@ namespace sw
         RHIDescriptorIndex getInstanceSRV() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
-         * @details instanceanimation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
+         * @details instance_animation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
         RHIDescriptorIndex getInstanceUAV() const { return _instances._uav; }

@@ -34,7 +34,7 @@ namespace sw
 
     /**
      * @brief GPU 인스턴스 하나를 나타냅니다. 월드 행렬, 바운드, 배치 인덱스, 머티리얼 원소 인덱스, 블렌드, 회전 시드, 스프라이트 프레임과 색을 가집니다.
-     * @details HLSL 쪽은 `Content/engine/shaders/instancedata.hlsli` 의 `InstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
+     * @details HLSL 쪽은 `Content/engine/shaders/instance_data.hlsli` 의 `InstanceData` 하나이며 그래픽스와 컴퓨트가 함께 쓴다.
      *          필드를 고치면 그 파일과 ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 의 테이블을 함께 고친다(쿠킹된 바이너리로 대조한다).
      */
     struct GPUInstance
@@ -47,12 +47,12 @@ namespace sw
         uint32   _blendMode{ 0 }; ///< RHIBlendMode
         /**
          * @brief GPU 인스턴스 애니메이션 시드입니다. 0 이면 애니메이션이 없습니다.
-         * @details instanceanimation.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
+         * @details instance_animation.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
          *          계산해 올리지 않고 GPU 가 계산한다.
          */
         uint32 _spinSeed{ 0 };
         /**
-         * @brief 스프라이트 프레임(UV 사각형)과 색입니다. 지금 이 값을 읽는 셰이더는 sprite2d.hlsl 하나입니다.
+         * @brief 스프라이트 프레임(UV 사각형)과 색입니다. 지금 이 값을 읽는 셰이더는 sprite_2d.hlsl 하나입니다.
          * @details 머티리얼 인스턴스가 아니라 여기에 싣는 이유는 `GPUSpriteInstanceData` 주석에 있다. 배치 키(머티리얼 인스턴스)를 건드리지
          *          않으므로 같은 텍스처의 스프라이트는 프레임과 색이 달라도 한 배치이고, 값이 바뀌면 그 인스턴스만 더티 구간으로 올라간다.
          */
@@ -63,7 +63,7 @@ namespace sw
          *          그 캐릭터의 클립 시각에 맞춰 한 번 기록하고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않는다. 셰이더의 `vertexAnimationPhase` 에 해당한다.
          */
         float32 _vertexAnimationPhase{ 0.0f };
-        /** @brief 강조(상호작용 외곽선 · 감각 모드)입니다(`GPUInstanceHighlight::pack`, 0 이면 없음). 셰이더의 `highlight` 이고 `highlightoutline.hlsl` 이 읽습니다. */
+        /** @brief 강조(상호작용 외곽선 · 감각 모드)입니다(`GPUInstanceHighlight::pack`, 0 이면 없음). 셰이더의 `highlight` 이고 `highlight_outline.hlsl` 이 읽습니다. */
         uint32 _highlight{ 0 };
         /**
          * @brief 등장 비율(0 ~ 1)입니다. 1 이면 다 보인다. 1 보다 작은 인스턴스는 디더 변형(`kAppearanceDitherDefine`)으로 그려져 그 비율만큼의 픽셀만 남는다.
@@ -80,7 +80,7 @@ namespace sw
     /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULODGroup`).
     inline constexpr uint32 kGPULODMaxLevels = 8;
 
-    static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instancedata.hlsli) byte for byte" );
+    static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
 
     /// @brief 같은 메시, 머티리얼, 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GPUMeshBatch
@@ -115,7 +115,7 @@ namespace sw
         /**
          * @brief LOD 그룹의 머리 배치(단계 0)에만 있는 값으로 그룹의 단계 수입니다. 0 이면 그룹이 아닙니다(CPU 가 단계를 고르거나 단계가 하나뿐인 메시).
          * @details 그룹의 단계 배치는 머리 바로 뒤에 `_lodLevelCount - 1` 개 이어지고(같은 머티리얼 · 같은 메시, 정점 구간만 단계의 것) 인스턴스는 머리 배치 번호를
-         *          `_meshBatchIndex` 로 가진다. 컬링(`gpucull.hlsl`)이 인스턴스마다 화면 크기로 단계를 골라 그 배치의 가시 구간에 쓴다.
+         *          `_meshBatchIndex` 로 가진다. 컬링(`gpu_cull.hlsl`)이 인스턴스마다 화면 크기로 단계를 골라 그 배치의 가시 구간에 쓴다.
          */
         uint32 _lodLevelCount{ 0 };
         /// @brief 그룹의 낮은 단계(1 이상) 배치에만 있는 값으로, 이 단계로 넘어가는 화면 크기 임계값입니다(`MeshLOD::_screenSize`).
@@ -406,7 +406,7 @@ namespace sw
      * @struct GPUVFXMeshEmitter
      * @brief GPU 로 시뮬레이션하는 메시 방출기 하나입니다. 입자 그리기가 아니라 메시 인스턴스 배치(`MeshInstanceWriter::GPU`)의 인스턴스 칸에 쓴다.
      * @details GT 는 배치 항목마다 그 프레임의 인스턴스 칸(`getInstances()` 의 번호, 불투명 구간)을 찾아 싣는다 — 칸은 배치 구성이 바뀔 때마다 옮겨진다.
-     *          RT 는 시뮬레이션 뒤 · 인스턴스 애니메이션과 컬링 앞에 그 칸들의 행렬 · 바운드 · 색을 쓰고(vfxmeshinstance.hlsl), 컬링이 간접 인자를 만든다.
+     *          RT 는 시뮬레이션 뒤 · 인스턴스 애니메이션과 컬링 앞에 그 칸들의 행렬 · 바운드 · 색을 쓰고(vfx_mesh_instance.hlsl), 컬링이 간접 인자를 만든다.
      */
     struct GPUVFXMeshEmitter
     {
