@@ -610,7 +610,7 @@ namespace sw
         if ( _mapVariable.find( name ) != _mapVariable.end() )
         {
             lock.unlock(); // 잠금은 잎이다 — 로그는 놓은 뒤에 쓴다
-            SW_LOG_WARNING( "Variable %# is already registered.", string( name ).c_str() );
+            SW_LOG_WARNING_ID( "GlobalVariable.AlreadyRegistered", "Variable %# is already registered.", string( name ).c_str() );
             return false;
         }
 
@@ -773,7 +773,7 @@ namespace sw
                 valueError = "no variable of that name is registered";
             if ( pInfo != nullptr && pInfo->setValueFromCommandLine( text, valueError ) )
                 continue;
-            SW_LOG_ERROR( "-%#=%# : not applied, %#", name.c_str(), text.c_str(), valueError.c_str() );
+            SW_LOG_ERROR_ID( "GlobalVariable.EnumTextNotApplied", "-%#=%# : not applied, %#", name.c_str(), text.c_str(), valueError.c_str() );
             bAllApplied = false;
         }
         _mapPendingEnumText.clear();
