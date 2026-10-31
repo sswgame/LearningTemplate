@@ -35,9 +35,10 @@ namespace sw
 
     /**
      * @class PoseModifierBinding
-     * @brief 컴포넌트가 유닛과 리그에 노출하는 어댑터입니다(단계 작업, 커브 출처, 소켓 해석). 리플렉션 컴포넌트는 기반 클래스 하나만 둘 수 있으므로 이 객체가 구현합니다.
+     * @brief 컴포넌트가 유닛에 노출하는 단계 작업 어댑터입니다. 리플렉션 컴포넌트는 기반 클래스 하나만 둘 수 있으므로 이 객체가 구현합니다.
+     * @details 리그에 주는 커브 출처와 소켓 해석은 따로 `PoseModifierCurveSource` · `PoseModifierSocketResolver` 가 맡는다(역할 하나에 객체 하나 - 인터페이스를 덧붙이지 않는다).
      */
-    class SW_API PoseModifierBinding final : public IAnimationPhaseTask, public IRigCurveSource, public IRigSocketResolver
+    class SW_API PoseModifierBinding final : public IAnimationPhaseTask
     {
     public:
         explicit PoseModifierBinding( PoseModifierComponent& owner );
@@ -48,11 +49,43 @@ namespace sw
         void                prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) override;
         void                onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
-        float32             getCurveValue( const hashed_string& curveName ) const override;
-        RigSocketLookup     findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const override;
 
     private:
         PoseModifierComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PoseModifierCurveSource
+     * @brief 리그(`RigInstance::setCurveSource`)가 노드 가중치 커브를 읽을 때 같은 유닛 애니메이터의 이번 프레임 커브 값을 줍니다. 컴포넌트가 하나 보관합니다.
+     */
+    class SW_API PoseModifierCurveSource final : public IRigCurveSource
+    {
+    public:
+        explicit PoseModifierCurveSource( const PoseModifierComponent& owner );
+        float32 getCurveValue( const hashed_string& curveName ) const override;
+
+    private:
+        const PoseModifierComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class PoseModifierSocketResolver
+     * @brief 리그(`RigInstance::initialize`)가 자기 유닛의 소켓 이름을 풀 때 해석된 소켓 테이블이나 소켓 에셋으로 답합니다. 컴포넌트가 하나 보관합니다.
+     */
+    class SW_API PoseModifierSocketResolver final : public IRigSocketResolver
+    {
+    public:
+        explicit PoseModifierSocketResolver( const PoseModifierComponent& owner );
+        RigSocketLookup findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const override;
+
+    private:
+        const PoseModifierComponent& _owner;
     };
 } // namespace sw
 
@@ -63,6 +96,8 @@ namespace sw
     class SW_API PoseModifierComponent : public Component
     {
         friend class PoseModifierBinding;
+        friend class PoseModifierCurveSource;
+        friend class PoseModifierSocketResolver;
 
     public:
         REFLECT_BODY();
@@ -200,6 +235,8 @@ namespace sw
         string _physicsAssetPath;
 
         PoseModifierBinding                             _binding;
+        PoseModifierCurveSource                         _curveSource;         ///< 리그의 커브 출처다(`_instance` 가 빌린다)
+        PoseModifierSocketResolver                      _socketResolver;      ///< 리그의 자기 유닛 소켓 해석이다(`_instance` 가 빌린다)
         Subscription                                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
         RigInstance                                     _instance;
         shared_ptr<const RigAsset>                      _asset;

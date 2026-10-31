@@ -112,13 +112,23 @@ namespace sw
             _owner._pUnit = nullptr;
     }
 
-    float32 PoseModifierBinding::getCurveValue( const hashed_string& curveName ) const
+    PoseModifierCurveSource::PoseModifierCurveSource( const PoseModifierComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    float32 PoseModifierCurveSource::getCurveValue( const hashed_string& curveName ) const
     {
         // 같은 유닛의 애니메이터다. 시간 단계(같은 유닛, 앞 단계)가 이번 프레임 커브를 기록했다.
         return ( _owner._pFrameAnimator != nullptr ) ? _owner._pFrameAnimator->getCurveValue( curveName ) : 0.0f;
     }
 
-    RigSocketLookup PoseModifierBinding::findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const
+    PoseModifierSocketResolver::PoseModifierSocketResolver( const PoseModifierComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    RigSocketLookup PoseModifierSocketResolver::findSocket( const hashed_string& socketName, hashed_string& outParentBone, BoneTransform& outLocal ) const
     {
         const ResolvedSocketTable* pTable = _owner._pSocketTable;
         if ( pTable != nullptr )
@@ -153,6 +163,8 @@ namespace sw
         , _socketSetPath{}
         , _physicsAssetPath{}
         , _binding{ *this }
+        , _curveSource{ *this }
+        , _socketResolver{ *this }
         , _instance{}
         , _asset{}
         , _ownSockets{}
@@ -172,7 +184,7 @@ namespace sw
         , _bRigEnabled{ SW_TRUE }
         , _reserved{ 0 }
     {
-        _instance.setCurveSource( &_binding );
+        _instance.setCurveSource( &_curveSource );
     }
 
     PoseModifierComponent::~PoseModifierComponent()
@@ -386,7 +398,7 @@ namespace sw
             return;
 
         const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath;
-        if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_binding, label ) == false )
+        if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_socketResolver, label ) == false )
         {
             SW_LOG_ERROR( "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
             return;
