@@ -8,6 +8,7 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
@@ -16,6 +17,7 @@
 #include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 
@@ -156,6 +158,8 @@ namespace sw
 
 namespace sw
 {
+    SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "fakeReceipts" );
+
     EconomyService::EconomyService()
         : _listPendingCall{}
         , _metrics{}
@@ -188,13 +192,13 @@ namespace sw
             SW_LOG_ERROR( "EconomyService needs a store and both catalogs" );
             return false;
         }
-#if defined( SW_SHIPPING )
-        if ( settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->hasDevelopmentValidator() )
+        // 서명 없는 개발 전용 제공자는 DevOnline 단위가 있는 구성(개발)에서만 받는다 — 배포는 그 단위를 짓지 않는다.
+        const bool bDevValidatorRefused = settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->hasDevelopmentValidator() && EconomyDevOptions::s_devOnline.isRegistered() == false;
+        if ( bDevValidatorRefused )
         {
-            SW_LOG_ERROR( "EconomyService refuses a development-only receipt validator in a shipping build" );
+            SW_LOG_ERROR( "EconomyService refuses a development-only receipt validator in a build without the DevOnline unit (Shipping)" );
             return false;
         }
-#endif
         _pStore          = pStore;
         _settings        = settings;
         _findOwner       = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};

@@ -1,20 +1,21 @@
 #include "pch.h"
 
+#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Server/OnlineProviderFile.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
 // 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 만든다.
 // 실제 푸시 제공자는 설정이 있을 때만 만든다 — 자격(서비스 계정 키)은 환경 변수에서 읽고, 없으면 서버 기동이 실패한다. 지금은 FCM 이다.
 // 옵션:
-//   fakePush           1 이면 가짜 푸시 제공자("fake")를 등록한다(Dev 만).
+//   fakePush           1 이면 가짜 푸시 제공자("fake")를 등록한다(DevOnline 단위만 — 확장점 `LiveOpsDevOptions`, 그 단위가 없는 구성은 기동 실패).
 //   pushProvidersFile  실제 푸시 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `PushProviderSet::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 실제 제공자가 없다.
 //   pushTrustFile      제공자 `https://` 서버를 검증할 CA 번들 PEM. `pushProvidersFile` 이 https 주소를 쓰면 필수다.
 
@@ -56,7 +57,7 @@ namespace sw
                 , _server{}
                 , _dispatcher{}
                 , _offlinePush{ &_dispatcher }
-                , _fakeProvider{}
+                , _pFakeProvider{}
                 , _providerSet{}
             {
             }
@@ -111,20 +112,19 @@ namespace sw
             }
 
         private:
-            /** @brief 옵션 `fakePush` 이면 가짜 제공자를 발송기에 올립니다(Dev 만 — Shipping 은 거절한다). */
+            /** @brief 옵션 `fakePush` 이면 가짜 제공자를 발송기에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
             [[nodiscard]] bool registerFakePush( bool bFakePush, string& outError )
             {
                 if ( bFakePush == false )
                     return true;
-#if defined( SW_SHIPPING )
-                outError = "fakePush is a development option and is refused in Shipping";
-                return false;
-#else
-                if ( _dispatcher.registerProvider( &_fakeProvider ) )
+                const LiveOpsDevOptions* pDevOptions = LiveOpsDevOptions::s_devOnline.require( outError );
+                if ( pDevOptions == nullptr )
+                    return false;
+                _pFakeProvider = pDevOptions->_pCreateFakePushProvider();
+                if ( _dispatcher.registerProvider( _pFakeProvider.get() ) )
                     return true;
                 outError = "the fake push provider could not be registered";
                 return false;
-#endif
             }
 
             /** @brief 설정 파일을 읽어 실제 푸시 제공자를 만들고 발송기에 등록합니다. 파일을 정하지 않았으면 실제 제공자가 없습니다. */
@@ -146,17 +146,19 @@ namespace sw
                 return true;
             }
 
-            LiveOpsService             _service;
-            LiveOpsServer              _server;
-            PushNotificationDispatcher _dispatcher;
-            LiveOpsOfflinePush         _offlinePush; ///< 발송기를 빌려 쓰므로 뒤에 선언한다
-            FakePushProvider           _fakeProvider;
-            PushProviderSet            _providerSet;
+            LiveOpsService                        _service;
+            LiveOpsServer                         _server;
+            PushNotificationDispatcher            _dispatcher;
+            LiveOpsOfflinePush                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
+            unique_ptr<IPushNotificationProvider> _pFakeProvider; ///< `fakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
+            PushProviderSet                       _providerSet;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "fakePush" );
+
     SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, OnlineServerKitName::kLiveOps );
 } // namespace sw

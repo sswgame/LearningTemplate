@@ -7,7 +7,9 @@
 
 #include "Engine/Config/Server/ServerSecret.h"
 
+#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 
 namespace sw
 {
@@ -47,14 +49,16 @@ namespace sw
     {
         if ( environment.empty() )
         {
-#if defined( SW_SHIPPING )
-            outError = "the game ticket master key is required - set the ticketKeySecretEnvironment option";
-            return false;
-#else
-            SW_LOG_WARNING( "Account kit: no ticketKeySecretEnvironment - using the development ticket key (Dev only)" );
-            Memory::set( outArrKey, kDevKeyByte, sizeof( outArrKey ) );
+            // 개발 키는 DevOnline 단위만 준다 — 그 단위가 없는 구성(배포)은 주 키가 반드시 있어야 한다.
+            const AccountDevOptions* pDevOptions = AccountDevOptions::s_devOnline.require( outError );
+            if ( pDevOptions == nullptr )
+            {
+                outError.append( " - the game ticket master key is required, set the ticketKeySecretEnvironment option" );
+                return false;
+            }
+            SW_LOG_WARNING( "Account kit: no ticketKeySecretEnvironment - using the development ticket key (DevOnline)" );
+            Memory::set( outArrKey, pDevOptions->_devTicketKeyByte, sizeof( outArrKey ) );
             return true;
-#endif
         }
         string secret;
         if ( ServerSecret::read( environment, secret ) == false || secret.empty() )

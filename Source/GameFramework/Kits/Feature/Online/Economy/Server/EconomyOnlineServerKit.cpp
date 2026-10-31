@@ -1,13 +1,14 @@
 #include "pch.h"
 
+#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Base/Online/Server/OnlineProviderFile.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 
@@ -15,7 +16,7 @@
 // 옵션:
 //   currencyCatalog        화폐 카탈로그(리소스 경로, `<CurrencyCatalog>`). 필수.
 //   offerCatalog           상품 카탈로그(리소스 경로, `<OfferCatalog>`). 필수.
-//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 등록한다(Dev 만 — Shipping 경제 서비스가 거절한다).
+//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 등록한다(DevOnline 단위만 — 확장점 `EconomyDevOptions`, 그 단위가 없는 구성은 기동 실패).
 //   acceptSandboxReceipts  1 이면 스토어의 샌드박스 영수증을 받는다(스테이징 서버).
 //   receiptProvidersFile   실제 영수증 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `ReceiptProviderSet::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 실제 제공자가 없다 —
 //                          있으면 자격(키 · 서비스 계정)을 환경 변수에서 읽고, 읽지 못하면 서버 기동이 실패한다(OnlineKits H3).
@@ -35,7 +36,7 @@ namespace sw
             EconomyOnlineServerKit()
                 : _currencyCatalog{}
                 , _offerCatalog{}
-                , _fakeValidator{}
+                , _pFakeValidator{}
                 , _receiptProviders{}
                 , _receiptRegistry{}
                 , _service{}
@@ -76,11 +77,8 @@ namespace sw
                     outError = "the offer catalog could not be read ('" + offerPath + "')";
                     return false;
                 }
-                if ( bFakeReceipts && _receiptRegistry.registerValidator( &_fakeValidator ) == false )
-                {
-                    outError = "the fake receipt validator could not be registered";
+                if ( bFakeReceipts && registerFakeReceipts( outError ) == false )
                     return false;
-                }
                 // 여기부터 실패하면 세운 것을 스스로 내린다 — 초기화에 실패한 키트는 stop · shutdown 을 받지 않는다.
                 if ( createReceiptProviders( providersFile, trustFile, context._clock, outError ) == false )
                 {
@@ -162,12 +160,25 @@ namespace sw
                 return true;
             }
 
-            CurrencyCatalog          _currencyCatalog;
-            OfferCatalog             _offerCatalog;
-            FakeReceiptValidator     _fakeValidator;
-            ReceiptProviderSet       _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptValidatorRegistry _receiptRegistry;
-            EconomyService           _service;
+            /** @brief 옵션 `fakeReceipts` 의 가짜 스토어를 레지스트리에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
+            [[nodiscard]] bool registerFakeReceipts( string& outError )
+            {
+                const EconomyDevOptions* pDevOptions = EconomyDevOptions::s_devOnline.require( outError );
+                if ( pDevOptions == nullptr )
+                    return false;
+                _pFakeValidator = pDevOptions->_pCreateFakeReceiptValidator();
+                if ( _receiptRegistry.registerValidator( _pFakeValidator.get() ) )
+                    return true;
+                outError = "the fake receipt validator could not be registered";
+                return false;
+            }
+
+            CurrencyCatalog               _currencyCatalog;
+            OfferCatalog                  _offerCatalog;
+            unique_ptr<IReceiptValidator> _pFakeValidator;   ///< `fakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptProviderSet            _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptValidatorRegistry      _receiptRegistry;
+            EconomyService                _service;
         };
     } // namespace
 } // namespace sw

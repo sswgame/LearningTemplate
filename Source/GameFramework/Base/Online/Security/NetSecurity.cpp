@@ -10,6 +10,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
 
 namespace sw
 {
@@ -19,10 +20,6 @@ namespace sw
     {
         struct NetSecurityInternal
         {
-#if !defined( SW_SHIPPING )
-            static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
-#endif
-
             [[nodiscard]] static bool readPem( const string& fileName, string& outText, string& outError )
             {
                 if ( FileUtil::readTextFile( fileName, outText ) )
@@ -36,6 +33,8 @@ namespace sw
 
 namespace sw
 {
+    SW_DEFINE_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, "the development TLS certificate (empty certificate / trust file)" );
+
     bool NetSecurity::resolveProjectPath( string_view path, string& outPath, string& outError )
     {
         // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다). 해석 규칙은 `AbsolutePath::tryResolve` 하나 - 드라이브 상대(`C:foo`)는 풀지 않는다.
@@ -54,31 +53,13 @@ namespace sw
 
     bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
     {
-#if defined( SW_SHIPPING )
-        (void)provider;
-        (void)outCertificateFile;
-        (void)outPrivateKeyFile;
-        outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
-        return false;
-#else
-        const string folder = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), kDevCertificateFolder ); // 서버 · 클라이언트(다른 빌드 구성도)가 같은 인증서를 본다
-        outCertificateFile  = FileUtil::joinPath( folder, kDevCertificateBundleFile );
-        outPrivateKeyFile   = outCertificateFile;
-        if ( FileUtil::isRegularFile( outCertificateFile ) )
-            return true;
-        string     certificatePem;
-        string     privateKeyPem;
-        const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
-                              provider.createSelfSignedCertificate( "localhost", NetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
-                              FileUtil::writeTextFile( outCertificateFile, certificatePem + privateKeyPem ); // 한 번의 원자적 쓰기 — 늘 한 쌍
-        if ( bCreated == false )
+        const NetSecurityDevOptions* pDevOptions = NetSecurityDevOptions::s_devOnline.require( outError );
+        if ( pDevOptions == nullptr )
         {
-            outError = "cannot create the development certificate in " + folder;
+            outError.append( " - configure the TLS certificate and private key files" );
             return false;
         }
-        SW_LOG_INFO( "Created a development TLS certificate: %#", outCertificateFile.c_str() );
-        return true;
-#endif
+        return pDevOptions->_pEnsureDevCertificate( provider, outCertificateFile, outPrivateKeyFile, outError );
     }
 
     unique_ptr<ITLSContext> NetSecurity::createServerTLSContext( INetSecurityProvider& provider, string_view certificateFile, string_view privateKeyFile,

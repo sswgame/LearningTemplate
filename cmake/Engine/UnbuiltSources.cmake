@@ -16,9 +16,10 @@
 set(SW_UNBUILT_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/UnbuiltSources.txt")
 
 # 배포 구성이 짓지 않는 개발 전용 소스의 이름 규칙 — 기능 폴더의 단위 테스트(`Tests/`), 기능 옆 개발 명령(`*DevCommands.cpp`, 언리얼의 모듈별 콘솔 명령),
-# 캐시의 핫 리로드 본문(`*Reload.cpp` — 등록은 `SW_ASSET_CACHE_RELOAD_FUNCTION` 이 배포에서 nullptr 이다).
+# 캐시의 핫 리로드 본문(`*Reload.cpp` — 등록은 `SW_ASSET_CACHE_RELOAD_FUNCTION` 이 배포에서 nullptr 이다),
+# 온라인 기반 · 키트의 개발 대체물(`*DevOnline.cpp` — 확장점 `DevOnlineExtension` 에 값을 올린다. 그 단위가 없는 구성에서 개발 옵션을 쓰면 기동 오류다).
 # 파일을 통째로 `#if` 로 감싸지 않고 이 규칙 하나로 뺀다(Core · Engine · 모듈 타깃이 같은 목록을 쓴다).
-set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" "DevCommands\\.cpp$" "Reload\\.cpp$")
+set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" "DevCommands\\.cpp$" "Reload\\.cpp$" "DevOnline\\.cpp$")
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
 function(sw_declareUnbuiltSources)

@@ -87,7 +87,7 @@ namespace sw
 
         /** @brief 스토어 이름을 반환합니다. `[0-9a-z_]` 형식이며 27자 이하이고 분개 범위 `rcpt.<이름>` 에 들어갑니다. */
         virtual const utf8* getStoreName() const = 0;
-        /** @brief 개발과 테스트 전용 제공자이면 true 입니다. 서명이 없으므로 Shipping 서비스가 거절합니다. */
+        /** @brief 개발과 테스트 전용 제공자이면 true 입니다. 서명이 없으므로 DevOnline 단위가 없는 구성(배포)의 서비스가 거절합니다(`EconomyDevOptions`). */
         virtual bool isDevelopmentOnly() const { return false; }
         /** @brief 검증을 맡깁니다(@p now 는 서버 루프의 시각). 결과는 정확히 한 번 `pollCompletions` 로 나오며, 종료할 때 남은 것은 Retry 로 나옵니다. */
         virtual void submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) = 0;
