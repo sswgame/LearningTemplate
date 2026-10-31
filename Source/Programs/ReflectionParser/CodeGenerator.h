@@ -73,7 +73,7 @@ namespace sw
         static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
-        void appendTemplate( CodeEmitBuffer& outBuffer, const string_view name, const EmitTemplateStore::TemplateVars vars ) const;
+        void appendTemplate( CodeEmitBuffer& outBuffer, EmitTemplate kind, const EmitTemplateStore::TemplateVars vars ) const;
 
     private:
         const ParsedHeader&        _header;

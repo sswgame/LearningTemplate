@@ -40,26 +40,16 @@ namespace sw
 
 namespace sw
 {
-    EmitTemplateStore::EmitTemplateStore()
-        : _mapTemplate{}
-        , _bLoaded{ SW_FALSE }
-        , _reserved{ 0 }
-    {
-    }
-
-    void EmitTemplateStore::clear()
-    {
-        _mapTemplate.clear();
-        _bLoaded = SW_FALSE;
-    }
-
     bool EmitTemplateStore::loadDirectory( const string_view absDir, const string_view extension )
     {
-        clear();
+        for ( string& content : _arrTemplate )
+        {
+            content.clear();
+        }
 
         if ( FileUtil::isDirectory( absDir ) == false )
         {
-            SW_LOG_WARNING( "Not a directory: %#", absDir );
+            SW_LOG_ERROR( "Not a directory: %#", absDir );
             return false;
         }
 
@@ -71,42 +61,51 @@ namespace sw
             return false;
         }
 
-        uint32 count = 0;
+        bool arrLoaded[static_cast<size_t>( EmitTemplate::Count )] = {};
         for ( const string& filePath : listFile )
         {
+            // 하나라도 못 읽으면 그 템플릿의 출력이 조용히 빈다 - 읽지 않는다.
             string content;
             if ( FileUtil::readTextFile( filePath, content ) == false )
-                continue;
+            {
+                SW_LOG_ERROR( "Emit template '%#' could not be read", filePath );
+                return false;
+            }
 
-            _mapTemplate[FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) )] = std::move( content );
-            ++count;
+            const string name  = FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) );
+            size_t       index = 0;
+            while ( index < std::size( kArrEmitTemplateName ) && name != kArrEmitTemplateName[index] )
+            {
+                ++index;
+            }
+            // 모르는 이름은 철자가 틀린 골격이다 - 쓰이지 않고 남아 고친 줄 알게 한다.
+            if ( index == std::size( kArrEmitTemplateName ) )
+            {
+                SW_LOG_ERROR( "Emit template '%#' is not a known template (EmitTemplate) - rename or remove it", filePath );
+                return false;
+            }
+            _arrTemplate[index] = std::move( content );
+            arrLoaded[index]    = true;
         }
 
-        if ( count == 0 )
+        bool bAllLoaded = true;
+        for ( size_t index = 0; index < std::size( kArrEmitTemplateName ); ++index )
         {
-            SW_LOG_WARNING( "No %# files in %#", extension, absDir );
-            return false;
+            if ( arrLoaded[index] )
+                continue;
+            SW_LOG_ERROR( "Emit template '%#%#' is missing under '%#'", kArrEmitTemplateName[index], extension, absDir );
+            bAllLoaded = false;
         }
+        if ( bAllLoaded == false )
+            return false;
 
-        _bLoaded = SW_TRUE;
-        SW_LOG_TRACE( "Loaded %# templates from %#", count, absDir );
+        SW_LOG_TRACE( "Loaded %# templates from %#", static_cast<uint32>( listFile.size() ), absDir );
         return true;
     }
 
-    bool EmitTemplateStore::has( const string_view name ) const
+    string EmitTemplateStore::render( const EmitTemplate kind, const TemplateVars vars ) const
     {
-        return _mapTemplate.find( string( name ) ) != _mapTemplate.end();
-    }
-
-    string EmitTemplateStore::render( const string_view name, const TemplateVars vars ) const
-    {
-        const auto it = _mapTemplate.find( string( name ) );
-        if ( it == _mapTemplate.end() )
-        {
-            SW_LOG_WARNING( "Missing template: %#", name );
-            return {};
-        }
-        return expand( it->second, vars );
+        return expand( _arrTemplate[static_cast<size_t>( kind )], vars );
     }
 
     string EmitTemplateStore::expand( const string_view tpl, const TemplateVars vars )

@@ -4,6 +4,33 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
+# 0) ReflectionSchema — 파서와 엔진 런타임이 함께 지키는 리플렉션 스키마 헤더(헤더만, 구현 없음)
+# 파서는 Engine.dll 을 링크하지 않는다(순환). 예전에는 그러면서 Engine 헤더를 그냥 include 해 무엇에 기대는지 대상 그래프에 없었다 —
+# 이 목록이 파서가 읽어도 되는 Engine 헤더의 전부다(그 헤더들이 include 하는 Engine 헤더까지). 구현이 필요한 헤더를 여기 넣지 않는다(파서가 링크하지 못한다).
+# ------------------------------------------------------------------------------
+add_library(ReflectionSchema INTERFACE)
+target_sources(ReflectionSchema INTERFACE
+	FILE_SET HEADERS
+	BASE_DIRS "${CMAKE_SOURCE_DIR}/Source"
+	FILES
+		"${CMAKE_SOURCE_DIR}/Source/Engine/EngineMinimal.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/EngineDefines.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/Foundation.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectUnits.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionAnnotationKeys.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionConstants.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionContainers.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionEnumNames.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionIntellisense.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionMacros.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionTypes.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TextAddress.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TypeCastHeader.h"
+		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TypeLookupCache.h"
+)
+target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
+
+# ------------------------------------------------------------------------------
 # 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
 include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
@@ -21,7 +48,7 @@ add_executable(ReflectionParser ${PARSER_SOURCES})
 sw_embedProcessManifest(ReflectionParser)
 
 # 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verifySourceIncludeRoots`).
-target_link_libraries(ReflectionParser PRIVATE sw_public_source_includes)
+target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
 sw_addPCHEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")

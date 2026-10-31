@@ -14,6 +14,7 @@ namespace sw
         vector<string> _listIncludePath;       ///< --include (여러 번)
         string         _outputDir;             ///< --output
         string         _builtinsPath;          ///< --builtins
+        string         _configPath;            ///< --config: 커밋된 parser_config.defaults.json 의 절대 경로(로컬 · 툴체인 설정은 그 옆)
         string         _annotationMetaPath;    ///< --annotation-meta
         string         _emitTemplatesDir;      ///< --emit-templates
         string         _moduleName;            ///< --module: 이 대상의 타입이 오르는 런타임 모듈 이름(CMake 가 정한다 - 경로로 추측하지 않는다)

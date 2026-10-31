@@ -257,9 +257,9 @@ namespace sw
     {
     }
 
-    void CodeGenerator::appendTemplate( CodeEmitBuffer& outBuffer, const string_view name, const EmitTemplateStore::TemplateVars vars ) const
+    void CodeGenerator::appendTemplate( CodeEmitBuffer& outBuffer, const EmitTemplate kind, const EmitTemplateStore::TemplateVars vars ) const
     {
-        outBuffer.append( _session._emitTemplateStore.render( name, vars ) );
+        outBuffer.append( _session._emitTemplateStore.render( kind, vars ) );
     }
 
     string CodeGenerator::makeSourceText() const
@@ -319,23 +319,23 @@ namespace sw
 
     void CodeGenerator::emitFileHeader( CodeEmitBuffer& outBuffer ) const
     {
-        appendTemplate( outBuffer, templatefile::kFileHeader, {
-                                                                  {templatekey::kSourcePath,                   _sourceFilePath},
-                                                                  {    templatekey::kBanner, sw::config::kTextReflectionBanner}
+        appendTemplate( outBuffer, EmitTemplate::FileHeader, {
+                                                                 {templatekey::kSourcePath,                   _sourceFilePath},
+                                                                 {    templatekey::kBanner, sw::config::kTextReflectionBanner}
         } );
     }
 
     void CodeGenerator::emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
-        appendTemplate( outBuffer, templatefile::kReflectTypeTraits, {
-                                                                         { templatekey::kFqn, typeInfo._fullyQualifiedName }
+        appendTemplate( outBuffer, EmitTemplate::ReflectTypeTraits, {
+                                                                        { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 
     void CodeGenerator::emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const
     {
-        appendTemplate( outBuffer, templatefile::kTypeInfoAccessors, {
-                                                                         { templatekey::kFqn, typeInfo._fullyQualifiedName }
+        appendTemplate( outBuffer, EmitTemplate::TypeInfoAccessors, {
+                                                                        { templatekey::kFqn, typeInfo._fullyQualifiedName }
         } );
     }
 
@@ -689,13 +689,13 @@ namespace sw
             }
         }
 
-        appendTemplate( outBuffer, templatefile::kTypeRegistrarBegin, {
-                                                                          {        templatekey::kID,                registrarName},
-                                                                          {       templatekey::kFqn, typeInfo._fullyQualifiedName},
-                                                                          {      templatekey::kName,               typeInfo._name},
-                                                                          { templatekey::kParentFqn,          typeInfo._parentFQN},
-                                                                          {templatekey::kModuleName,                  _moduleName},
-                                                                          {     templatekey::kFlags,    string( flagsBuf.view() )},
+        appendTemplate( outBuffer, EmitTemplate::TypeRegistrarBegin, {
+                                                                         {        templatekey::kID,                registrarName},
+                                                                         {       templatekey::kFqn, typeInfo._fullyQualifiedName},
+                                                                         {      templatekey::kName,               typeInfo._name},
+                                                                         { templatekey::kParentFqn,          typeInfo._parentFQN},
+                                                                         {templatekey::kModuleName,                  _moduleName},
+                                                                         {     templatekey::kFlags,    string( flagsBuf.view() )},
         } );
 
         CodeEmit emit( outBuffer );
@@ -724,7 +724,7 @@ namespace sw
 
         _fixedCodec.emitRegistration( emit, typeIndex );
 
-        appendTemplate( outBuffer, templatefile::kTypeRegistrarEnd,
+        appendTemplate( outBuffer, EmitTemplate::TypeRegistrarEnd,
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
@@ -748,16 +748,16 @@ namespace sw
             return "static_cast<int64>( ::" + enumInfo._fullyQualifiedName + "::" + enumerator._name + " )";
         };
 
-        appendTemplate( outBuffer, templatefile::kEnumRegistrarBegin, {
-                                                                          {          templatekey::kID,                                                  registrarName},
-                                                                          {         templatekey::kFqn,                                   enumInfo._fullyQualifiedName},
-                                                                          {        templatekey::kName,                                                 enumInfo._name},
-                                                                          {  templatekey::kModuleName,                                                    _moduleName},
-                                                                          {   templatekey::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
-                                                                          {  templatekey::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
-                                                                          {templatekey::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
-                                                                          {    templatekey::kHasCount,                          countEn != nullptr ? "true" : "false"},
-                                                                          {  templatekey::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
+        appendTemplate( outBuffer, EmitTemplate::EnumRegistrarBegin, {
+                                                                         {          templatekey::kID,                                                  registrarName},
+                                                                         {         templatekey::kFqn,                                   enumInfo._fullyQualifiedName},
+                                                                         {        templatekey::kName,                                                 enumInfo._name},
+                                                                         {  templatekey::kModuleName,                                                    _moduleName},
+                                                                         {   templatekey::kIsBitFlag,                        enumInfo._bIsBitFlag ? "true" : "false"},
+                                                                         {  templatekey::kHasInvalid,                        invalidEn != nullptr ? "true" : "false"},
+                                                                         {templatekey::kInvalidValue, invalidEn != nullptr ? valueExpr( *invalidEn ) : string( "0" )},
+                                                                         {    templatekey::kHasCount,                          countEn != nullptr ? "true" : "false"},
+                                                                         {  templatekey::kCountValue,     countEn != nullptr ? valueExpr( *countEn ) : string( "0" )},
         } );
 
         CodeEmit emit( outBuffer );
@@ -831,7 +831,7 @@ namespace sw
             emit.line( "};" );
         }
 
-        appendTemplate( outBuffer, templatefile::kEnumRegistrarEnd,
+        appendTemplate( outBuffer, EmitTemplate::EnumRegistrarEnd,
                         {
                             { templatekey::kID, registrarName },
                             { templatekey::kFqn, enumInfo._fullyQualifiedName },

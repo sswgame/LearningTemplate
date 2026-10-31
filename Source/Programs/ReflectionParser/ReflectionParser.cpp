@@ -52,17 +52,13 @@ namespace sw
             }
 
             /**
-             * @brief 파싱에 쓰는 표들을 채웁니다: builtins(선택) · 철자 표(필수, 필드 표와 대조).
+             * @brief 파싱에 쓰는 표들을 채웁니다: builtins · 철자 표(둘 다 필수, 철자 표는 필드 표와 대조).
              * @details 철자 표와 필드 표가 어긋나면 그 토큰은 애노테이션을 적는 자리에서 보이지 않게 사라진다. 시작할 때 막는다.
              */
             [[nodiscard]] static bool loadTables( const ParserOptions& options, ParserSession& session )
             {
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
-                if ( options._builtinsPath.empty() )
-                {
-                    SW_LOG_WARNING( "No %#; scalar aliases / std containers will not be registered.", cli::kBuiltins );
-                }
-                else if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
+                if ( loadReflectBuiltins( options._builtinsPath, session ) == false )
                 {
                     SW_LOG_ERROR( "Failed to load %#: %#", cli::kBuiltins, options._builtinsPath );
                     return false;
@@ -114,16 +110,15 @@ int32 main( int32 argc, utf8* argv[] )
 
     // 파서 한 번 실행이 쓰는 설정과 표들이다. 여기가 소유자고, 아래로는 읽기만 하게 내려 준다.
     sw::ParserSession session;
-    session._bModuleLocal    = options._bModuleLocal;
-    const bool bConfigLoaded = session._config.load();
+    session._bModuleLocal = options._bModuleLocal;
     if ( sw::ReflectionParserInternal::loadTemplates( options, session ) == false )
         return 1;
 
-    // ReflectBuiltins.gen.cpp 전용 모드 — clang 을 부르지 않으므로 설정은 기본값이어도 된다.
+    // ReflectBuiltins.gen.cpp 전용 모드 — clang 을 부르지 않아 설정을 읽지 않는다.
     if ( options.isBuiltinsGenMode() )
         return sw::emitReflectBuiltinsGen( options._builtinsPath, options._emitBuiltinsGenPath, options._moduleName, session ) ? 0 : 1;
 
-    if ( bConfigLoaded == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
+    if ( session._config.load( options._configPath ) == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;
 
     sw::GameTimer timer;

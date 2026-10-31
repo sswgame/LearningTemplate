@@ -46,10 +46,10 @@ namespace sw
         ParserConfig() noexcept;
 
         /**
-         * @brief 설정 파일을 찾아(현재 디렉터리에서 위로) 읽습니다.
-         * @return clang 인자를 얻었으면 true. 없으면 파싱할 수 없습니다(코드젠 전용 모드는 기본값으로 충분합니다).
+         * @brief 커밋된 기본 설정(`--config`, 절대 경로)과 그 옆의 로컬 설정 · 툴체인 설정을 읽습니다.
+         * @return 절대 경로가 아니거나, 기본 설정이 없거나 깨졌거나, 필수 값이 빠졌거나, clang 인자가 없으면 이유를 알리고 false. 코드에 기본값을 두지 않는다.
          */
-        [[nodiscard]] bool load();
+        [[nodiscard]] bool load( const string& defaultsPath );
 
         /**
          * @brief 기본 인자에 포함 경로와 강제 include 를 붙여 최종 clang 인자를 만듭니다.

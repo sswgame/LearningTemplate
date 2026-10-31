@@ -24,24 +24,29 @@ namespace sw
         _bLoaded = SW_FALSE;
     }
 
-    void ContainerTypeMap::registerRule( const string& match, ContainerKind kind, const string& type )
+    bool ContainerTypeMap::registerRule( const string& match, ContainerKind kind, const string& type )
     {
         if ( match.empty() || type.empty() )
-            return;
+            return false;
         ContainerTypeRule rule;
         rule._match = match;
         rule._kind  = kind;
         rule._type  = type;
         _listRule.push_back( std::move( rule ) );
+        return true;
     }
 
-    void ContainerTypeMap::registerRule( const string& match, const string& kindSpelling,
+    bool ContainerTypeMap::registerRule( const string& match, const string& kindSpelling,
                                          const string& type )
     {
+        // 철자를 모르면 Sequence 로 대신하지 않는다 - 맵 · 집합이 배열로 직렬화되어 저장 파일이 조용히 다른 꼴이 된다.
         ContainerKind kind = ContainerKind::Sequence;
-        if ( kindSpelling.empty() == false && tryParseContainerKind( kindSpelling, kind ) == false )
-            SW_LOG_WARNING( "Unknown kind '%#', using Sequence", kindSpelling );
-        registerRule( match, kind, type );
+        if ( tryParseContainerKind( kindSpelling, kind ) == false )
+        {
+            SW_LOG_ERROR( "Unknown container kind '%#' for '%#'", kindSpelling, match );
+            return false;
+        }
+        return registerRule( match, kind, type );
     }
 
     const ContainerTypeRule* ContainerTypeMap::match( const string_view clangTypeSpelling ) const

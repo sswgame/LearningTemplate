@@ -23,6 +23,11 @@ namespace sw
     {
         struct ReflectBuiltinsLoaderInternal
         {
+            /** @brief TYPE 줄의 칸 수 하한(정규 이름 · C++ 타입 · 글 처리기 · 네임스페이스)입니다. */
+            static constexpr size_t kMinTypeArgumentCount = 4;
+            /** @brief CONTAINER 줄의 칸 수 하한(매칭 이름 · 종류 · 래퍼)입니다. */
+            static constexpr size_t kMinContainerArgumentCount = 3;
+
             /** @brief builtins 표의 매크로 한 줄입니다. */
             struct BuiltinRow
             {
@@ -62,7 +67,7 @@ namespace sw
                 string text;
                 if ( FileUtil::readTextFile( absPath, text ) == false )
                 {
-                    SW_LOG_WARNING( "Failed to read builtins: %#", absPath );
+                    SW_LOG_ERROR( "Failed to read builtins: %#", absPath );
                     return false;
                 }
 
@@ -74,18 +79,31 @@ namespace sw
                     if ( bSkippedLine )
                         continue;
 
+                    // 틀린 줄을 건너뛰면 그 타입 · 컨테이너가 조용히 빠져 직렬화가 엉뚱한 래퍼를 쓴다 - 줄 하나라도 틀리면 멈춘다.
                     BuiltinRow row;
+                    size_t     minArgumentCount = 0;
+                    bool       bParsed          = false;
                     if ( StringUtil::startsWith( line, builtinmacro::kType ) )
                     {
-                        if ( parseMacroLine( line, builtinmacro::kType, row._listArgument ) )
-                            outListRow.push_back( std::move( row ) );
+                        bParsed          = parseMacroLine( line, builtinmacro::kType, row._listArgument );
+                        minArgumentCount = kMinTypeArgumentCount;
                     }
                     else if ( StringUtil::startsWith( line, builtinmacro::kContainer ) )
                     {
-                        row._bContainer = SW_TRUE;
-                        if ( parseMacroLine( line, builtinmacro::kContainer, row._listArgument ) )
-                            outListRow.push_back( std::move( row ) );
+                        row._bContainer  = SW_TRUE;
+                        bParsed          = parseMacroLine( line, builtinmacro::kContainer, row._listArgument );
+                        minArgumentCount = kMinContainerArgumentCount;
                     }
+                    else
+                    {
+                        continue;
+                    }
+                    if ( bParsed == false || row._listArgument.size() < minArgumentCount )
+                    {
+                        SW_LOG_ERROR( "%#: malformed builtins line (needs at least %# arguments): %#", absPath, static_cast<uint32>( minArgumentCount ), line );
+                        return false;
+                    }
+                    outListRow.push_back( std::move( row ) );
                 }
                 return true;
             }
@@ -156,15 +174,15 @@ namespace sw
             const vector<string>& listArgument = row._listArgument;
             if ( row._bContainer == SW_TRUE )
             {
-                if ( listArgument.size() < 3 )
-                    continue;
-                outSession._containerTypeMap.registerRule( listArgument[0], listArgument[1], listArgument[2] );
+                if ( outSession._containerTypeMap.registerRule( listArgument[0], listArgument[1], listArgument[2] ) == false )
+                {
+                    SW_LOG_ERROR( "%#: bad CONTAINER row '%#'", absPath, listArgument[0] );
+                    return false;
+                }
                 ++containerCount;
             }
             else
             {
-                if ( listArgument.size() < 4 )
-                    continue;
                 outSession._typeNameMap.registerEntry( listArgument[0], string( ReflectBuiltinsLoaderInternal::getNamespace( listArgument ) ),
                                                        ReflectBuiltinsLoaderInternal::getAliases( listArgument ) );
                 if ( listArgument[2] == builtinmacro::kTextConvPacked )
@@ -185,24 +203,17 @@ namespace sw
         if ( ReflectBuiltinsLoaderInternal::readRows( builtinsAbsPath, listRow ) == false )
             return false;
 
-        const EmitTemplateStore& tpls                  = session._emitTemplateStore;
-        const bool               bMissingEmitTemplates = tpls.isLoaded() == false || tpls.has( templatefile::kBuiltinFileHeader ) == false ||
-                                           tpls.has( templatefile::kBuiltinTypeRegistrar ) == false || tpls.has( templatefile::kBuiltinFileFooter ) == false;
-        if ( bMissingEmitTemplates )
-        {
-            SW_LOG_ERROR( "emit requires %# (%# / %# / %#).", cli::kEmitTemplates, templatefile::kBuiltinFileHeader,
-                          templatefile::kBuiltinTypeRegistrar, templatefile::kBuiltinFileFooter );
-            return false;
-        }
+        // 골격은 시작할 때 모두 읽었다(`EmitTemplateStore::loadDirectory` 가 하나라도 없으면 멈춘다).
+        const EmitTemplateStore& tpls = session._emitTemplateStore;
 
-        string out       = tpls.render( templatefile::kBuiltinFileHeader, {
-                                                                        {templatekey::kSourcePath,                   builtinsAbsPath},
-                                                                        {    templatekey::kBanner, sw::config::kTextReflectionBanner}
+        string out       = tpls.render( EmitTemplate::BuiltinFileHeader, {
+                                                                       {templatekey::kSourcePath,                   builtinsAbsPath},
+                                                                       {    templatekey::kBanner, sw::config::kTextReflectionBanner}
         } );
         uint32 typeCount = 0;
         for ( const ReflectBuiltinsLoaderInternal::BuiltinRow& row : listRow )
         {
-            if ( row._bContainer == SW_TRUE || row._listArgument.size() < 4 )
+            if ( row._bContainer == SW_TRUE )
                 continue;
 
             const string&                           canonical = row._listArgument[0];
@@ -216,7 +227,7 @@ namespace sw
 
             StringBuilder<constant::kMaxBuffer128> id;
             id.appendFormat( "Builtin_%#", canonical );
-            out += tpls.render( templatefile::kBuiltinTypeRegistrar,
+            out += tpls.render( EmitTemplate::BuiltinTypeRegistrar,
                                 {
                                     {        templatekey::kID,            id.view()},
                                     {      templatekey::kName,            canonical},
@@ -229,10 +240,10 @@ namespace sw
 
         if ( typeCount == 0 )
         {
-            SW_LOG_WARNING( "emit: no TYPE rows in %#", builtinsAbsPath );
+            SW_LOG_ERROR( "emit: no TYPE rows in %#", builtinsAbsPath );
             return false;
         }
-        out += tpls.render( templatefile::kBuiltinFileFooter, {} );
+        out += tpls.render( EmitTemplate::BuiltinFileFooter, {} );
 
         if ( GeneratedFileUtil::writeIfChanged( string( outCppAbsPath ), out ) == false )
             return false;

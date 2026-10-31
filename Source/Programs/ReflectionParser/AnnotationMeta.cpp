@@ -64,7 +64,7 @@ namespace sw
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
         {
-            SW_LOG_WARNING( "Failed to read: %#", absPath );
+            SW_LOG_ERROR( "Failed to read: %#", absPath );
             return false;
         }
 
@@ -86,12 +86,19 @@ namespace sw
                 currentScope = StringUtil::trim( line.substr( 1, line.size() - 2 ) );
                 continue;
             }
+            // 틀린 줄을 건너뛰면 그 철자가 "모르는 토큰" 이 되어 애노테이션이 적는 자리에서 사라진다 - 줄 하나라도 틀리면 멈춘다.
             if ( currentScope.empty() )
-                continue;
+            {
+                SW_LOG_ERROR( "%#: binding outside a [scope] section: %#", absPath, line );
+                return false;
+            }
 
             const size_t equalPos = line.find( '=' );
             if ( equalPos == string_view::npos )
-                continue;
+            {
+                SW_LOG_ERROR( "%#: expected kind.Field = aliases: %#", absPath, line );
+                return false;
+            }
 
             const string_view left                = StringUtil::trim( line.substr( 0, equalPos ) );
             const string_view right               = StringUtil::trim( line.substr( equalPos + 1 ) );
@@ -99,15 +106,15 @@ namespace sw
             const bool        bMalformedAliasLine = dot == string::npos || dot == 0 || dot + 1 >= left.size();
             if ( bMalformedAliasLine )
             {
-                SW_LOG_WARNING( "Expected kind.Field = aliases: %#", line );
-                continue;
+                SW_LOG_ERROR( "%#: expected kind.Field = aliases: %#", absPath, line );
+                return false;
             }
 
             AnnotationBinding binding;
             if ( tryParseAnnotationKind( left.substr( 0, dot ), binding._kind ) == false )
             {
-                SW_LOG_WARNING( "Unknown kind: %#", line );
-                continue;
+                SW_LOG_ERROR( "%#: unknown kind: %#", absPath, line );
+                return false;
             }
 
             binding._field = left.substr( dot + 1 );
@@ -122,8 +129,12 @@ namespace sw
                 bAnyAlias = true;
                 ++bindingCount;
             }
-            if ( bAnyAlias )
-                _listEntry.push_back( AnnotationMetaEntry{ currentScope, std::move( binding ) } );
+            if ( bAnyAlias == false )
+            {
+                SW_LOG_ERROR( "%#: binding without aliases: %#", absPath, line );
+                return false;
+            }
+            _listEntry.push_back( AnnotationMetaEntry{ currentScope, std::move( binding ) } );
         }
 
         _bLoaded = SW_TRUE;

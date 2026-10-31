@@ -83,6 +83,8 @@ function(sw_addReflectionStep TARGET_NAME)
 	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
 
 	list(APPEND parserArgs "--module" "${ARG_MODULE}")
+	# 설정은 절대 경로로 넘긴다(파서가 작업 폴더 · 프로젝트 루트를 추측하지 않는다). 로컬 parser_config.json · toolchain_config.json 은 그 옆이다.
+	list(APPEND parserArgs "--config" "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}")
 
 	# 실행 파일과 게임 모듈의 타입은 모듈 경계를 넘지 않는다. 그래서 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
 	# 그 밖의 라이브러리(Base · 키트, STATIC 배포 포함)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.

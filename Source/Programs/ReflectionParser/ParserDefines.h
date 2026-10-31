@@ -131,28 +131,14 @@ namespace sw
         inline constexpr const utf8* kBuiltins        = "--builtins";
         inline constexpr const utf8* kAnnotationMeta  = "--annotation-meta";
         inline constexpr const utf8* kModule          = "--module";
+        inline constexpr const utf8* kConfig          = "--config";
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";
         inline constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
         inline constexpr const utf8* kDepfile         = "--depfile";
         inline constexpr const utf8* kModuleLocal     = "--module-local";
     } // namespace cli
 
-    // ------------------------------------------------------------------------------
-    // 5) emit — *.tpl 골격 이름 (Templates/ 파일 stem)
-    // ------------------------------------------------------------------------------
-    namespace templatefile
-    {
-        inline constexpr const utf8* kFileHeader           = "FileHeader";
-        inline constexpr const utf8* kReflectTypeTraits    = "ReflectTypeTraits";
-        inline constexpr const utf8* kTypeInfoAccessors    = "TypeInfoAccessors";
-        inline constexpr const utf8* kTypeRegistrarBegin   = "TypeRegistrarBegin";
-        inline constexpr const utf8* kTypeRegistrarEnd     = "TypeRegistrarEnd";
-        inline constexpr const utf8* kEnumRegistrarBegin   = "EnumRegistrarBegin";
-        inline constexpr const utf8* kEnumRegistrarEnd     = "EnumRegistrarEnd";
-        inline constexpr const utf8* kBuiltinFileHeader    = "BuiltinFileHeader";
-        inline constexpr const utf8* kBuiltinTypeRegistrar = "BuiltinTypeRegistrar";
-        inline constexpr const utf8* kBuiltinFileFooter    = "BuiltinFileFooter";
-    } // namespace templatefile
+    // 5) emit — *.tpl 골격 이름은 `EmitTemplate`(EmitTemplateStore.h) 열거형 하나다.
 
     // ------------------------------------------------------------------------------
     // 6) parse — parser JSON 섹션/키 (defaults.json 스키마)

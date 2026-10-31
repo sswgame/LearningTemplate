@@ -37,10 +37,10 @@ namespace sw
         /** @brief clang 타입 표기에 맞는 규칙을 찾습니다. */
         const ContainerTypeRule* match( const string_view clangTypeSpelling ) const;
 
-        /** @brief 매칭 문자열·종류·래퍼 stem 규칙을 등록합니다. */
-        void registerRule( const string& match, ContainerKind kind, const string& type );
-        /** @brief 종류 철자를 파싱해 규칙을 등록합니다. */
-        void registerRule( const string& match, const string& kindSpelling, const string& type );
+        /** @brief 매칭 문자열·종류·래퍼 stem 규칙을 등록합니다. 매칭 · 래퍼가 비면 false 입니다. */
+        [[nodiscard]] bool registerRule( const string& match, ContainerKind kind, const string& type );
+        /** @brief 종류 철자를 파싱해 규칙을 등록합니다. 모르는 종류 · 빈 칸이면 이유를 알리고 false 입니다(Sequence 로 대신하지 않는다). */
+        [[nodiscard]] bool registerRule( const string& match, const string& kindSpelling, const string& type );
 
         /** @brief 등록 규칙을 비웁니다. */
         void clear();

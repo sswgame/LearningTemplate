@@ -3,9 +3,9 @@
 #include "Programs/ReflectionParser/ParserConfig.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringBuilder.h"
 
@@ -23,30 +23,29 @@ namespace sw
         struct ParserConfigInternal
         {
             /**
-             * @brief 프로젝트 루트(`ProcessRoots` - 파서 실행 파일 위치에서 정한다) 아래 설정 파일입니다. 없으면 빈 문자열입니다.
-             * @details 예전에는 작업 폴더에서 위로 올라가며 찾았다 - 띄운 자리에 따라 다른 저장소의 설정을 읽거나 못 찾고 기본값으로 진행했다.
+             * @brief 커밋된 기본 설정(`--config`) 옆의 설정 파일 경로입니다 — 로컬 `parser_config.json` · `toolchain_config.json` 은 같은 폴더에 있다.
+             * @details 예전에는 작업 폴더에서 위로 올라가며 찾았고, 그다음엔 프로젝트 루트를 추측했다 - 이제 CMake 가 기본 설정의 절대 경로를 넘긴다.
              */
-            static string findConfigFile( const string& relPath )
+            static string makeSiblingPath( const string& defaultsPath, const utf8* pConfigRelPath )
             {
-                const string candidate = FileUtil::joinPath( ProcessRoots::get()._project.str(), relPath );
-                return FileUtil::isRegularFile( candidate ) ? candidate : string{};
+                return FileUtil::joinPath( FileUtil::getDirectoryPart( defaultsPath ), FileUtil::getFileNamePart( pConfigRelPath ) );
             }
 
             /**
-             * @brief 설정 파일을 찾아 JSON 으로 읽고, 읽었으면 경로를 남깁니다.
+             * @brief 설정 파일을 JSON 으로 읽고, 읽었으면 경로를 남깁니다.
              * @return 선택 파일이 없거나 비었으면 null 객체와 true, 필수 파일(@p bRequired)이 없거나 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
              * @details 깨진 설정을 기본값으로 대신하지 않는다 — 어느 칸이 왜 무시됐는지 남지 않고 libclang 오류가 엉뚱한 자리에서 난다.
              */
-            [[nodiscard]] static bool loadDocument( const string& relPath, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
+            [[nodiscard]] static bool loadDocument( const string& path, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument, const bool bRequired = false )
             {
-                outDocument       = nlohmann::json{};
-                const string path = findConfigFile( relPath );
-                if ( path.empty() && bRequired )
+                outDocument         = nlohmann::json{};
+                const bool bPresent = FileUtil::isRegularFile( path );
+                if ( bPresent == false && bRequired )
                 {
-                    SW_LOG_ERROR( "Parser setting file '%#' is missing under the project root '%#' - it is committed and required", relPath, ProcessRoots::get()._project.str() );
+                    SW_LOG_ERROR( "Parser setting file '%#' is missing - it is committed and required", path );
                     return false;
                 }
-                if ( path.empty() )
+                if ( bPresent == false )
                     return true;
 
                 string text;
@@ -228,6 +227,54 @@ namespace sw
                 return kept;
             }
 
+            /**
+             * @brief 커밋된 기본 설정이 채워야 하는 값이 모두 있는지 봅니다. 빠진 것마다 키를 알리고 false 입니다.
+             * @details 예전에는 같은 값을 생성자 기본값에도 적어(설정과 두 벌) 키가 빠지면 코드의 옛 값으로 조용히 진행했다.
+             */
+            [[nodiscard]] static bool hasRequiredValues( const ParserConfig& config, const string& defaultsPath )
+            {
+                const pair<const string*, const utf8*> arrRequiredText[] = {
+                    {              &config._llvmClangRel,                  "paths.llvm_clang_rel"},
+                    {           &config._clangIncludeRel,               "paths.clang_include_rel"},
+                    {            &config._msvcIncludeRel,                "paths.msvc_include_rel"},
+                    {          &config._winSdkIncludeRel,              "paths.winsdk_include_rel"},
+                    {             &config._winSdkUcrtRel,                 "paths.winsdk_ucrt_rel"},
+                    {         &config._flagIncludePrefix,            "clang_flags.include_prefix"},
+                    {               &config._flagIsystem,                   "clang_flags.isystem"},
+                    {           &config._flagResourceDir,              "clang_flags.resource_dir"},
+                    {          &config._flagForceInclude,             "clang_flags.force_include"},
+                    {      &config._flagFmsCompatibility,         "clang_flags.fms_compatibility"},
+                    {         &config._flagFmsExtensions,            "clang_flags.fms_extensions"},
+                    {&config._flagFmsCompatVersionPrefix, "clang_flags.fms_compat_version_prefix"},
+                    {     &config._valueForbiddenMessage,          "emit.value_forbidden_message"},
+                };
+                bool bComplete = true;
+                for ( const auto& [pValue, pKey] : arrRequiredText )
+                {
+                    if ( pValue->empty() == false )
+                        continue;
+                    SW_LOG_ERROR( "%#: '%#' is required", defaultsPath, pKey );
+                    bComplete = false;
+                }
+                const pair<const vector<string>*, const utf8*> arrRequiredList[] = {
+                    {&config._listComponentBaseType, "parsing.component_base_types"},
+                    {  &config._listTypeStripPrefix,  "parsing.type_strip_prefixes"},
+                };
+                for ( const auto& [pList, pKey] : arrRequiredList )
+                {
+                    if ( pList->empty() == false )
+                        continue;
+                    SW_LOG_ERROR( "%#: '%#' is required (a non-empty list)", defaultsPath, pKey );
+                    bComplete = false;
+                }
+                if ( config._sourceLookbackBytes == 0 )
+                {
+                    SW_LOG_ERROR( "%#: 'tuning.source_lookback_bytes' is required (a positive number)", defaultsPath );
+                    bComplete = false;
+                }
+                return bComplete;
+            }
+
             using ApplyFn = void ( * )( ParserConfig&, const nlohmann::json& );
 
             /** @brief 기본값 문서 다음 로컬 문서 순으로 한 섹션을 덮어씁니다(로컬이 이긴다). */
@@ -307,31 +354,31 @@ namespace sw
     ParserConfig::ParserConfig() noexcept
         : _listBaseArg{}
         , _listForceInclude{}
-        , _llvmClangRel{ "lib/clang" }
-        , _clangIncludeRel{ "include" }
-        , _msvcIncludeRel{ "include" }
-        , _winSdkIncludeRel{ "Include" }
-        , _winSdkUcrtRel{ "ucrt" }
-        , _flagIncludePrefix{ "-I" }
-        , _flagIsystem{ "-isystem" }
-        , _flagResourceDir{ "-resource-dir" }
-        , _flagForceInclude{ "-include" }
-        , _flagFmsCompatibility{ "-fms-compatibility" }
-        , _flagFmsExtensions{ "-fms-extensions" }
-        , _flagFmsCompatVersionPrefix{ "-fms-compatibility-version" }
-        , _listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" }
-        , _valueForbiddenMessage{ "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, or a GameObjectHandle / ComponentHandle for a reference kept across frames." }
-        , _listComponentBaseType{ "Component", "sw::Component", "SceneComponent", "sw::SceneComponent" }
-        , _listTypeStripPrefix{ "const ", "volatile ", "class ", "struct ", "enum " }
+        , _llvmClangRel{}
+        , _clangIncludeRel{}
+        , _msvcIncludeRel{}
+        , _winSdkIncludeRel{}
+        , _winSdkUcrtRel{}
+        , _flagIncludePrefix{}
+        , _flagIsystem{}
+        , _flagResourceDir{}
+        , _flagForceInclude{}
+        , _flagFmsCompatibility{}
+        , _flagFmsExtensions{}
+        , _flagFmsCompatVersionPrefix{}
+        , _listValueForbiddenBaseType{}
+        , _valueForbiddenMessage{}
+        , _listComponentBaseType{}
+        , _listTypeStripPrefix{}
         , _listLoadedFile{}
-        , _sourceLookbackBytes{ 512 }
+        , _sourceLookbackBytes{ 0 }
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
         , _padding{ 0 }
     {
     }
 
-    bool ParserConfig::load()
+    bool ParserConfig::load( const string& defaultsPath )
     {
         _listBaseArg.clear();
         _listForceInclude.clear();
@@ -346,14 +393,19 @@ namespace sw
         constexpr const utf8* kPlatformParserKey = "";
 #endif
 
+        if ( AbsolutePath::tryMake( defaultsPath ).has_value() == false )
+        {
+            SW_LOG_ERROR( "%# must be an absolute path to %# (got '%#')", cli::kConfig, parserpath::kParserConfigDefaults, defaultsPath );
+            return false;
+        }
+        const string   localPath = ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kParserConfig );
         nlohmann::json defaultsDoc;
         nlohmann::json rawLocalDoc;
-        if ( ParserConfigInternal::loadDocument( parserpath::kParserConfigDefaults, _listLoadedFile, defaultsDoc, true ) == false ||
-             ParserConfigInternal::loadDocument( parserpath::kParserConfig, _listLoadedFile, rawLocalDoc ) == false )
+        if ( ParserConfigInternal::loadDocument( defaultsPath, _listLoadedFile, defaultsDoc, true ) == false ||
+             ParserConfigInternal::loadDocument( localPath, _listLoadedFile, rawLocalDoc ) == false )
             return false;
         // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
-        const nlohmann::json localDoc =
-            ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, ParserConfigInternal::findConfigFile( parserpath::kParserConfig ) );
+        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, localPath );
 
         BLOCK( "Load Base Arguments from Config" )
         {
@@ -373,6 +425,8 @@ namespace sw
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kEmit, ParserConfigInternal::applyEmitSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kParsing, ParserConfigInternal::applyParsingSection );
             ParserConfigInternal::mergeConfigSection( *this, defaultsDoc, localDoc, jsonkey::kTuning, ParserConfigInternal::applyTuningSection );
+            if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath ) == false )
+                return false;
         }
 
         BLOCK( "Load force_include" )
@@ -388,7 +442,7 @@ namespace sw
         BLOCK( "Load Engine Config" )
         {
             nlohmann::json engineDoc;
-            if ( ParserConfigInternal::loadDocument( parserpath::kToolchainConfig, _listLoadedFile, engineDoc ) == false )
+            if ( ParserConfigInternal::loadDocument( ParserConfigInternal::makeSiblingPath( defaultsPath, parserpath::kToolchainConfig ), _listLoadedFile, engineDoc ) == false )
                 return false;
             if ( engineDoc.is_object() )
             {
