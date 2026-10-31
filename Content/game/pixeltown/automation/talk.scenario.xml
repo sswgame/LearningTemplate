@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PixelTown 걸음 · 충돌 · 대화 시나리오 — 가상 키 → 플레이어 조종자 → 주인공 폰의 의도 → 오버월드 키트의 한 칸 걸음 → 디렉터의 대화.
+  주인공은 스폰 칸 (7,7)에서 시작한다. 위로 두 칸 가면 집 벽(소품 레이어의 solid 브러시)에 막히고, 내려와 오른쪽 다섯 칸 가서
+  위를 보면 촌장(대화 러너를 단 오브젝트)이 선 칸이라 막힌다. Space 로 말을 걸고 두 줄을 넘기면 대화가 끝나고 다시 걸을 수 있다.
+  한 칸 걸음은 0.18 초(11 프레임)라 걸음 사이의 19 프레임은 걸음이 끝나는 시간이고, 막힘 · 대화 중 걷지 않음은 일어나지 않는 것을 보므로 고정 대기다.
+  실행: ctest -R Scenario.pixeltown (SW_ACTIVE_GAME=PixelTown) · App -scenario=game/pixeltown/automation/talk.scenario.xml -unattended
+-->
+<Scenario name="game.pixeltown.talk" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<Wait frames="1"/>
+	<Expect watch="Town.HeroTileX" equals="7"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<!-- 위로 두 칸, 셋째 칸은 집 벽이라 서서 위를 본다(3 = 위). -->
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="5"/>
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="5"/>
+	<Expect watch="Town.HeroFacing" equals="3"/>
+	<!-- 길로 내려와 오른쪽 다섯 칸. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.S" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.S" hold="2"/>
+	<Wait frames="21"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileX" equals="12"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<!-- 위는 촌장이 선 칸이라 막히고 위를 본다. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.W" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileY" equals="7"/>
+	<Expect watch="Town.HeroFacing" equals="3"/>
+	<Expect watch="Town.Talking" equals="0"/>
+	<!-- 말을 건다 — 첫 줄. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.Talking" equals="1" timeoutFrames="30"/>
+	<Expect watch="Town.ShownLines" equals="1"/>
+	<!-- 대화 중에는 걷지 않는다. -->
+	<Tap slot="Key.D" hold="2"/>
+	<Wait frames="19"/>
+	<Expect watch="Town.HeroTileX" equals="12"/>
+	<!-- 둘째 줄, 그리고 끝. -->
+	<Wait frames="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.ShownLines" equals="2" timeoutFrames="30"/>
+	<Expect watch="Town.Talking" equals="1"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Town.Talking" equals="0" timeoutFrames="30"/>
+	<Expect watch="Town.FinishedTalks" equals="1"/>
+	<!-- 대화가 끝나면 다시 걷는다. -->
+	<Tap slot="Key.D" hold="2"/>
+	<WaitUntil watch="Town.HeroTileX" equals="13" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>
