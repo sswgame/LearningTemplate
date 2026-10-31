@@ -20,6 +20,8 @@ namespace sw::test
         string _sourceFolder{};   ///< 비지 않으면 정의한 파일 경로에 이 폴더(`/` 구분, 예: `Source/Editor/`)가 든 케이스만 돈다 — 에디터 이미지의 케이스를 에디터 안에서 돌린다
         string _reportPath{};     ///< JSON 보고를 쓸 경로(비면 이 실행의 폴더 `<뿌리>/<프로세스>/report.json`)
         string _scratchRoot{};    ///< 케이스별 쓰기 폴더의 뿌리(비면 `Saved/Test`)
+        string _childRole{};      ///< 비지 않으면 이 자식 역할(`SW_TEST_CHILD_ROLE`) 하나만 돈다 — 거르개 · 샤드 · 반복은 보지 않는다(`runChildRole` 이 띄운 자식)
+        string _childArgument{};  ///< 자식 역할이 `getChildRoleArgument` 로 받는 값
         uint32 _seed{ 0 };        ///< 순서 섞기 씨앗(0 이면 시각에서 고르고 찍는다)
         uint32 _repeatCount{ 1 }; ///< 같은 순서를 몇 번 돌지(간헐 실패를 찾는다). 회차마다 씨앗을 하나씩 올린다
         uint32 _shardIndex{ 0 };  ///< 이 프로세스가 도는 몫(0 부터)
@@ -44,7 +46,7 @@ namespace sw::test
         [[nodiscard]] static bool parseShard( string_view text, uint32& outIndex, uint32& outCount );
         /** @brief @p name 이 @p shardCount 몫 가운데 몇 번째인지입니다(이름의 FNV-1a — 실행 · 빌드마다 같다). */
         [[nodiscard]] static uint32 getShardOf( string_view name, uint32 shardCount );
-        /** @brief 지금 등록된 케이스 이름입니다(이름 순). */
+        /** @brief 지금 등록된 케이스 이름입니다(이름 순, 자식 역할은 빼고). */
         static vector<string> collectCaseNames();
         /**
          * @brief 거른 케이스를 섞어 돌립니다. 모두 통과하면 true 입니다.

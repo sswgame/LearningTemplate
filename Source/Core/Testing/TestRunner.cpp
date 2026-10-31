@@ -16,6 +16,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/JSONStringUtil.h"
@@ -65,6 +66,7 @@ namespace sw::test
                 vector<string>              _listFailure;
                 vector<string>              _listUpdatedSnapshot;
                 string                      _scratchFolder;
+                string                      _childArgument; ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
                 uint32                      _assertionCount{ 0 };
                 bool                        _bUpdateSnapshots{ false };
                 bool                        _bActive{ false };
@@ -338,6 +340,101 @@ namespace sw::test
         return false;
     }
 
+    string ChildRunResult::getOutputTail( uint32 lineCount ) const
+    {
+        size_t start = _output.size();
+        for ( uint32 line = 0; line <= lineCount && start > 0; ++line )
+        {
+            const size_t newline = _output.rfind( '\n', start - 1 );
+            if ( newline == string::npos )
+            {
+                start = 0;
+                break;
+            }
+            start = newline;
+        }
+        return _output.substr( start );
+    }
+
+    ChildRunResult runChildRole( string_view roleName, string_view argument, float32 timeoutSeconds )
+    {
+        ChildRunResult result;
+        bool           bRegistered = false;
+        {
+            TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
+            ScopedLock<mutex>             lock{ registry._mutex };
+            for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
+                bRegistered = bRegistered || ( pCase->_bChildRole && roleName == pCase->_pName );
+        }
+        if ( bRegistered == false )
+        {
+            reportFailure( __FILE__, __LINE__, "no child role named " + string( roleName ) + " is registered (declare it with SW_TEST_CHILD_ROLE)" );
+            return result;
+        }
+        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+        if ( executable.has_value() == false )
+        {
+            reportFailure( __FILE__, __LINE__, "the test executable path is not absolute: " + FileUtil::getExecutablePath() );
+            return result;
+        }
+        // 자식의 로그 파일은 이 케이스의 쓰기 폴더에 둔다 — 자식마다 `Saved/Logs` 에 파일이 쌓이지 않게.
+        vector<string> listArgument{ "-test", "-test-child-role=" + string( roleName ), "-unattended",
+                                     "-log-file=" + makeScratchPath( TestRunnerInternal::toFileName( roleName ) + ".child.log" ) };
+        if ( argument.empty() == false )
+            listArgument.push_back( "-test-child-arg=" + string( argument ) );
+        const ProcessCommand command = ProcessCommand::at( *executable, std::move( listArgument ) );
+        ProcessOptions       options;
+        options._workingDirectory = FileUtil::getCurrentPath();
+        Process process;
+        result._bLaunched = process.launch( command, options );
+        if ( result._bLaunched == false )
+        {
+            reportFailure( __FILE__, __LINE__, "could not launch the child " + command.toCommandLine() );
+            return result;
+        }
+        // 출력을 읽는 이 스레드는 자식이 말없이 멈추면 깨지 않는다 — 감시 스레드가 시한에 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전한 계약).
+        atomic<bool>   bTimedOut{ false };
+        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1000.0 ) );
+        thread         watchThread( [&process, &bTimedOut, deadline]( const StopToken& stopToken )
+        {
+            while ( stopToken.isStopRequested() == false )
+            {
+                if ( deadline.isExpired() )
+                {
+                    bTimedOut.store( true, std::memory_order_release );
+                    (void)process.terminate( 1 );
+                    return;
+                }
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 20 * constant::kNanosecondsPerMillisecond );
+            }
+        } );
+        string         line;
+        while ( process.readOutputLine( line ) )
+        {
+            result._output += line;
+            result._output.push_back( '\n' );
+        }
+        result._exitCode  = process.waitForExit();
+        watchThread       = thread{};                                    // 정지를 요청하고 합류한다
+        result._bTimedOut = bTimedOut.load( std::memory_order_acquire ); // 실패로 적지 않는다 — 시한에 죽이는 것을 보는 케이스도 있다. 죽은 자식은 종료 코드가 0 이 아니다
+        return result;
+    }
+
+    string getChildRoleArgument()
+    {
+        TestRunnerInternal::CaseState& state      = TestRunnerInternal::getState();
+        bool                           bChildRole = false;
+        string                         argument;
+        {
+            ScopedLock<mutex> lock{ state._mutex };
+            bChildRole = state._pCase != nullptr && state._pCase->_bChildRole;
+            argument   = state._childArgument;
+        }
+        if ( bChildRole == false )
+            reportFailure( __FILE__, __LINE__, "getChildRoleArgument is only valid inside a child role (SW_TEST_CHILD_ROLE)" );
+        return argument;
+    }
+
     bool checkConditionWithMessage( bool bPassed, const utf8* pExpression, string_view message, const utf8* pFile, int32 line )
     {
         countAssertion();
@@ -432,7 +529,8 @@ namespace sw::test
             ScopedLock<mutex> lock{ registry._mutex };
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
             {
-                listName.emplace_back( pCase->_pName );
+                if ( pCase->_bChildRole == false )
+                    listName.emplace_back( pCase->_pName );
             }
         }
         VectorUtil::sort( listName );
@@ -441,17 +539,27 @@ namespace sw::test
 
     bool TestRunner::run( const TestRunOptions& options )
     {
-        using Internal = TestRunnerInternal;
+        using Internal                                = TestRunnerInternal;
+        const bool                          bChildRun = options._childRole.empty() == false;
         vector<const TestCaseRegistration*> listCase;
         {
             Internal::Registry& registry = Internal::getRegistry();
             ScopedLock<mutex>   lock{ registry._mutex };
             for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
             {
-                if ( matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) && getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex &&
-                     Internal::isInSourceFolder( pCase->_pFile, options._sourceFolder ) )
+                // 자식 실행은 그 역할 하나만, 평소 실행은 자식 역할을 빼고 고른다.
+                const bool bSelected = bChildRun ? ( pCase->_bChildRole && options._childRole == pCase->_pName )
+                                                 : ( pCase->_bChildRole == false && matchesFilter( options._filter, pCase->_pName, pCase->_options._tags ) &&
+                                                     getShardOf( pCase->_pName, options._shardCount ) == options._shardIndex &&
+                                                     Internal::isInSourceFolder( pCase->_pFile, options._sourceFolder ) );
+                if ( bSelected )
                     listCase.push_back( pCase );
             }
+        }
+        if ( bChildRun && listCase.empty() )
+        {
+            Internal::writeLine( string( "[  NO TESTS ] no child role (SW_TEST_CHILD_ROLE) is named '" ) + options._childRole + "'" );
+            return false;
         }
         // 이름 순으로 놓은 뒤 섞는다 — 등록 순서(링크 순서)에 기대지 않고, 씨앗이 같으면 어느 빌드에서나 같은 순서다.
         VectorUtil::sort( listCase, []( const TestCaseRegistration* pA, const TestCaseRegistration* pB )
@@ -503,7 +611,7 @@ namespace sw::test
         thread       watchThread;
         if ( Process::isDebuggerPresent() == false )
             watchThread = thread( &Internal::watchCaseDeadline );
-        const uint32   repeatCount = MathUtil::max( options._repeatCount, 1u );
+        const uint32   repeatCount = bChildRun ? 1u : MathUtil::max( options._repeatCount, 1u );
         uint32         failedCount = 0;
         uint32         ranCount    = 0;
         string         caseReport;
@@ -531,6 +639,7 @@ namespace sw::test
                     state._assertionCount   = 0;
                     state._bUpdateSnapshots = options._bUpdateSnapshots;
                     state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
+                    state._childArgument    = options._childArgument;
                     state._bActive          = true;
                 }
                 LogOnce::beginScope(); // 한 번만 알리는 로그(`LogOnce`)도 케이스마다 처음이다 — 앞 케이스 · 앞 회차가 알렸다고 기대 로그가 사라지지 않게

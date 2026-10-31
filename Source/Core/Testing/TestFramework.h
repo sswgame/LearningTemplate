@@ -10,10 +10,11 @@
  *          - 쓰기는 `makeScratchPath` 의 케이스별 폴더에만 한다(프로세스 · 케이스 · 회차마다 다르다).
  *          - 손으로 옮겨 적는 기대값 대신 스냅숏(`SW_EXPECT_SNAPSHOT`, `--update-snapshots` 로 갱신)을 쓴다.
  *          - 멈춘 케이스는 시한(`TestCaseOptions::_timeoutSeconds`, 기본 `kDefaultCaseTimeoutSeconds`)이 끝내고 이름을 남긴다. 크래시 문맥에도 지금 케이스가 있다.
- *          선언 셋 — 모두 끝에 케이스 옵션(지정 초기화)을 붙일 수 있다(`._tags = "slow"` · `._disabledReason = "…"` · `._timeoutSeconds = 60`):
+ *          선언 넷 — 모두 끝에 케이스 옵션(지정 초기화)을 붙일 수 있다(`._tags = "slow"` · `._disabledReason = "…"` · `._timeoutSeconds = 60`):
  *          - `SW_TEST_CASE( Suite, Name )` — 함수 하나.
  *          - `SW_TEST_CASE_F( Fixture, Name )` — 케이스마다 `Fixture` 를 새로 만들고(생성자 = 준비, 소멸자 = 정리) 본문은 그 멤버 함수다(GoogleTest TEST_F).
  *          - `SW_TEST_CASE_EACH( Suite, Name, 배열 )` — 배열 원소마다 케이스 `Name/<번호>` 하나, 본문은 `param` 을 받는다(GoogleTest TEST_P · Catch2 GENERATE).
+ *          - `SW_TEST_CHILD_ROLE( Suite, Name )` — 자식 역할. 평소에는 돌지 않고 부모 케이스가 `runChildRole` 로 자식 프로세스에서 띄운다(크래시 · 교착 · 표준 출력).
  *          `SW_REQUIRE_*` 는 실패하면 케이스 함수에서 `return` 한다 — 케이스 본문에서만 쓴다.
  */
 #pragma once
@@ -66,6 +67,7 @@ namespace sw::test
         TestCaseOptions     _options{};
         TestIndexedFunction _pfnRunIndexed{ nullptr }; ///< 매개변수 케이스면 `_pfnRun` 대신 이것을 `_index` 로 부른다
         size_t              _index{ 0 };
+        bool                _bChildRole{ false }; ///< 자식 역할(`SW_TEST_CHILD_ROLE`) — 평소 실행 · 목록 · 케이스 수에서 빠지고 `--test-child-role` 로만 돈다
     };
 
     /** @brief `SW_TEST_CASE` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
@@ -168,6 +170,35 @@ namespace sw::test
     /** @brief `*_MSG` 단언의 본체입니다 — 실패 글에 식과 함께 @p message 를 붙인다. */
     SW_API bool checkConditionWithMessage( bool bPassed, const utf8* pExpression, string_view message, const utf8* pFile, int32 line );
 
+    /**
+     * @brief 자식 역할 하나를 띄운 결과입니다(`runChildRole`).
+     */
+    struct ChildRunResult
+    {
+        int32  _exitCode{ -1 };     ///< 자식의 종료 코드(띄우지 못했으면 -1). 자식 역할이 통과하면 0 이다
+        bool   _bLaunched{ false }; ///< 프로세스를 만들었는가
+        bool   _bTimedOut{ false }; ///< 시한을 넘겨 죽였는가
+        string _output;             ///< 표준 출력과 표준 에러(합쳐서, 줄마다 `\n`)
+
+        /** @brief 실패 글에 붙일 마지막 몇 줄입니다 — 자식이 어디서 멈췄는지가 대개 거기 있다. */
+        [[nodiscard]] string getOutputTail( uint32 lineCount = 12 ) const;
+    };
+
+    /**
+     * @brief 이 실행 파일을 자식 프로세스로 띄워 자식 역할(`SW_TEST_CHILD_ROLE`) @p roleName(`스위트.케이스`) 하나만 돌립니다(`-test -test-child-role=… -unattended`).
+     * @details 프로세스를 죽이거나(크래시 보고) 멈출 수 있는 일(교착) · 표준 출력 · 표준 에러 · 프로세스 전역 상태(전역 싱크를 뗀다)를 보는 케이스가 쓴다.
+     *          @p argument 는 자식이 `getChildRoleArgument` 로 받는다(환경 변수 대신 — 부모 환경을 건드리지 않고, 명령줄로 자식 하나를 손으로 다시 돌릴 수 있다).
+     *          시한을 넘기면 감시 스레드가 자식을 죽이고 `_bTimedOut` 이 선다(실패로 적지는 않는다 — 죽은 자식의 종료 코드는 0 이 아니므로 종료 코드를 보면 걸린다).
+     *          자식의 로그 파일은 이 케이스의 쓰기 폴더에 둔다(`Saved/Logs` 에 쌓지 않는다). 자식 App 기동만 Debug 에서 몇 초다 — 부르는 케이스의 `._timeoutSeconds` 를
+     *          자식 시한보다 넉넉히 준다. 등록되지 않은 역할 이름 · 띄우지 못한 자식은 실패로 적는다.
+     */
+    SW_API ChildRunResult runChildRole( string_view roleName, string_view argument, float32 timeoutSeconds );
+    /**
+     * @brief 자식 역할로 띄워진 이 프로세스가 받은 `--test-child-arg` 의 값입니다(없으면 빈 글).
+     * @details 자식 역할 케이스 밖에서 부르면 실패다(평소 실행에서 빈 값으로 이어 가지 않는다).
+     */
+    SW_API string getChildRoleArgument();
+
     /** @brief `SW_EXPECT_NEAR` 의 본체입니다. */
     SW_API bool checkNear( float64 expected, float64 actual, float64 tolerance, const utf8* pExpression, const utf8* pFile, int32 line );
     /** @brief `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_REQUIRE_TRUE` 의 본체입니다. */
@@ -184,6 +215,19 @@ namespace sw::test
         static const ::sw::test::TestCaseRegistration sw_testCase_##suite##_##name{ #suite "." #name, &sw_testBody_##suite##_##name, __FILE__, \
                                                                                     __LINE__, ::sw::test::TestCaseOptions{ __VA_ARGS__ } };    \
         static const ::sw::test::TestCaseRegistrar    sw_testRegistrar_##suite##_##name{ &sw_testCase_##suite##_##name };                      \
+        static void                                   sw_testBody_##suite##_##name()
+
+    /**
+     * @brief 자식 역할 — `SW_TEST_CHILD_ROLE( LogTest, CrashChild ) { … test::getChildRoleArgument() … }`. 부모 케이스가 `test::runChildRole` 로 띄운다.
+     * @details 평소 실행 · 목록 · 케이스 수에서 빠지고 `App --test --test-child-role=<스위트>.<케이스> [--test-child-arg=<글>]` 로만 그 하나가 돈다.
+     *          옛 틀은 자식 역할이 보통 케이스라 평소 실행에서 스스로 건너뛰었다 — 지금 틀은 단언 없는 케이스가 실패라 그 모양을 쓸 수 없고, 등록 줄에 표시해 아예 고르지 않는다.
+     *          본문은 보통 케이스와 같은 규칙(단언 · 기대 로그)으로 판정되고, 통과하면 자식의 종료 코드가 0 이다.
+     */
+    #define SW_TEST_CHILD_ROLE( suite, name, ... )                                                                                                            \
+        static void                                   sw_testBody_##suite##_##name();                                                                         \
+        static const ::sw::test::TestCaseRegistration sw_testCase_##suite##_##name{ #suite "." #name, &sw_testBody_##suite##_##name, __FILE__,                \
+                                                                                    __LINE__, ::sw::test::TestCaseOptions{ __VA_ARGS__ }, nullptr, 0, true }; \
+        static const ::sw::test::TestCaseRegistrar    sw_testRegistrar_##suite##_##name{ &sw_testCase_##suite##_##name };                                     \
         static void                                   sw_testBody_##suite##_##name()
 
     /**
@@ -220,7 +264,8 @@ namespace sw::test
                                                                                           ::sw::test::TestCaseOptions{ __VA_ARGS__ } };      \
         static void                                    sw_testBody_##suite##_##name( const std::remove_cv_t<std::remove_reference_t<decltype( ( values )[0] )>>& param )
 #else
-    #define SW_TEST_CASE( suite, name, ... ) [[maybe_unused]] static void sw_testBody_##suite##_##name()
+    #define SW_TEST_CASE( suite, name, ... )       [[maybe_unused]] static void sw_testBody_##suite##_##name()
+    #define SW_TEST_CHILD_ROLE( suite, name, ... ) [[maybe_unused]] static void sw_testBody_##suite##_##name()
     #define SW_TEST_CASE_F( fixture, name, ... )                 \
         struct sw_testFixture_##fixture##_##name final : fixture \
         {                                                        \

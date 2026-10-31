@@ -299,6 +299,8 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::TEST_REPORT, options._reportPath );
                 (void)commandLine.getArgument( CommandLineArgument::UPDATE_SNAPSHOTS, options._bUpdateSnapshots );
                 (void)commandLine.getArgument( CommandLineArgument::TEST_RUN_DISABLED, options._bRunDisabled );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ROLE, options._childRole );
+                (void)commandLine.getArgument( CommandLineArgument::TEST_CHILD_ARG, options._childArgument );
                 string shard{ "0/1" }; // 주지 않으면 몫 하나(전부)
                 (void)commandLine.getArgument( CommandLineArgument::TEST_SHARD, shard );
                 if ( test::TestRunner::parseShard( shard, options._shardIndex, options._shardCount ) == false )

@@ -61,6 +61,20 @@ App --test --test-shard=1/4                 # 이름 해시로 나눈 4 몫 가�
 App --test --test-run-disabled              # 꺼 둔 케이스도(고친 뒤 확인)
 ```
 
+프로세스를 죽이거나(크래시 보고) 멈출 수 있는 일(교착) · 표준 출력 · 표준 에러 · 프로세스 전역 상태(전역 싱크 떼기)는 자식 역할로 본다. 자식 역할은 평소 실행 · 목록 · 케이스 수에서 빠지고, 부모 케이스가 이 실행 파일을 자식으로 다시 띄워 그 하나만 돌린다(같은 판정 규칙, 통과하면 종료 코드 0):
+
+```cpp
+SW_TEST_CHILD_ROLE( LogTest, ConsoleChild ) { const string mode = test::getChildRoleArgument(); … }  // 인자는 환경 변수 대신 명령줄로
+SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )                                  // 자식 App 기동만 Debug 에서 몇 초 — 넉넉히
+{
+    const test::ChildRunResult child = test::runChildRole( "LogTest.ConsoleChild", "probe", 45.0f ); // 시한을 넘기면 죽이고 _bTimedOut
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( StringUtil::contains( child._output, "probe" ), child.getOutputTail() );    // 표준 출력 · 에러를 합친 글
+}
+```
+
+손으로 자식 하나를 다시 돌리려면 `App --test --test-child-role=LogTest.ConsoleChild --test-child-arg=probe -unattended`. 자식의 로그 파일은 부모 케이스의 쓰기 폴더에 남는다.
+
 케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다(샤드가 빈 것은 실패가 아니다). 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
 
 ## 시나리오

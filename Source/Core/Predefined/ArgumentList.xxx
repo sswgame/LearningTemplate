@@ -153,6 +153,10 @@ SW_REGISTER_ARGUMENT( TEST_REPEAT, 1, false, "test-repeat" )
 SW_REGISTER_ARGUMENT( TEST_SHARD, "", false, "test-shard" )
 // 비활성 케이스(`._disabledReason`)도 돈다 — 고친 뒤 다시 켜기 전에 확인한다.
 SW_REGISTER_ARGUMENT( TEST_RUN_DISABLED, false, false, "test-run-disabled" )
+// 자식 역할(`SW_TEST_CHILD_ROLE`) 하나만 돈다 — 부모 케이스의 `test::runChildRole` 이 이 실행 파일을 다시 띄울 때 준다. 거르개 · 샤드 · 반복은 보지 않는다.
+SW_REGISTER_ARGUMENT( TEST_CHILD_ROLE, "", false, "test-child-role" )
+// 자식 역할이 `test::getChildRoleArgument()` 로 받는 값(환경 변수 대신 — 자식 하나를 명령줄로 손수 다시 돌릴 수 있다).
+SW_REGISTER_ARGUMENT( TEST_CHILD_ARG, "", false, "test-child-arg" )
 // 결과 JSON(케이스 수 · 씨앗 · 케이스별 시간 · 실패 글)을 쓸 경로.
 SW_REGISTER_ARGUMENT( TEST_REPORT, CommandLineDiskPath{}, false, "test-report" )
 // 다른 스냅숏(`SW_EXPECT_SNAPSHOT`)을 지금 값으로 다시 쓴다 — 바뀐 파일을 리뷰한다.
