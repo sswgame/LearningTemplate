@@ -30,6 +30,7 @@ namespace
     {
     public:
         sw::Subscription issue() { return issueSubscription( _nextID.fetch_add( 1 ) + 1 ); }
+        void             detach( uint64 id ) { detachSubscription( id ); }
         uint32           getReleasedCount() const { return _releasedCount.load(); }
 
     private:
@@ -297,6 +298,23 @@ SW_TEST_CASE( DelegateTest, SubscriptionsFromManyThreadsKeepTheListConsistent )
     // 스레드가 끝난 뒤에도 출처는 새 구독을 낸다(목록이 빈 채로 남았다)
     const sw::Subscription leftover = source.issue();
     SW_EXPECT_TRUE( leftover.isActive() );
+}
+
+/**
+ * @brief [DelegateTest] 출처가 구독 하나만 무효화하면(한 번 쓰고 끝난 등록) 그 구독만 꺼지고, 그 뒤 풀어도 해제를 부르지 않으며 이웃 구독은 그대로다
+ */
+SW_TEST_CASE( DelegateTest, DetachingOneSubscriptionLeavesTheOthers )
+{
+    CountingSubscriptionSource source;
+    sw::Subscription           first  = source.issue(); // id 1
+    sw::Subscription           second = source.issue(); // id 2
+    source.detach( 1 );
+    SW_EXPECT_FALSE( first.isActive() );
+    SW_EXPECT_TRUE( second.isActive() );
+    first.reset();
+    SW_EXPECT_EQUAL( 0u, source.getReleasedCount() );
+    second.reset();
+    SW_EXPECT_EQUAL( 1u, source.getReleasedCount() );
 }
 
 struct ConstListener
