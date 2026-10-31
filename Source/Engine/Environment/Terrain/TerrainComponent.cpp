@@ -95,7 +95,11 @@ namespace sw
                 uint32 _arrNeighborLOD[static_cast<uint32>( TerrainChunkSide::Count )]{};
             };
 
-            /** @brief 청크 메시 정점 만들기 한 덩어리입니다. 워커는 높이장을 읽기만 하고 자기 구간의 정점 배열만 씁니다. */
+            /**
+             * @brief 청크 메시 정점 만들기 한 덩어리입니다. 워커는 높이장을 읽기만 하고 자기 구간의 정점 배열만 씁니다.
+             * @details 탄젠트도 여기서 구한다(`Mesh::computeTangents` — 정점만 읽고 쓴다). 예전에는 게임 스레드의 `Mesh::setVertices` 가 청크마다 구해, 지형 전체(청크 64,
+             *          정점 39 만)를 세우는 데 Debug 에서 3.5 초(부하가 걸리면 7 초)가 들었다 — 씬 열기 · 플레이 · 멈춤 · 백엔드 교체마다 세운다.
+             */
             struct ChunkVertexJob
             {
                 const TerrainHeightfield* _pHeightfield{ nullptr };
@@ -112,8 +116,11 @@ namespace sw
                         const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
                         const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
                         TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, _pListVertex[index] );
+                        // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담는다 - 탄젠트를 구하면 지운다.
                         if ( _geomorphLODDistance > 0.0f )
                             TerrainMeshBuilder::applyGeomorph( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, _geomorphLODDistance, _pListVertex[index] );
+                        else
+                            Mesh::computeTangents( _pListVertex[index] );
                     }
                 }
             };
@@ -833,11 +840,7 @@ namespace sw
             chunk._vertexCount    = static_cast<uint32>( listChunkVertex[index].size() );
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create();
-            // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담았다 - 탄젠트를 다시 구하면 지운다.
-            if ( _bGeomorph == SW_TRUE && _lodDistance > 0.0f )
-                mesh->setVerticesWithTangents( std::move( listChunkVertex[index] ) );
-            else
-                mesh->setVertices( std::move( listChunkVertex[index] ) );
+            mesh->setVerticesWithTangents( std::move( listChunkVertex[index] ) ); // 탄젠트(또는 지오모프 값)는 워커가 채웠다
             chunk._batch->setMesh( std::move( mesh ) );
         }
     }

@@ -55,6 +55,9 @@ namespace sw
                 vertex._arrNormal[1]   = 1.0f;
                 vertex._arrUv[0]       = localPosition._x;
                 vertex._arrUv[1]       = localPosition._z;
+                // UV 가 xz 그대로라 평평한 수면(호수)의 탄젠트는 +x, 손잡이 +1 이다(`Mesh::computeTangents` 가 구하는 값). 강은 높이가 변해 메시가 다시 구한다.
+                vertex._arrTangent[0] = 1.0f;
+                vertex._arrTangent[3] = 1.0f;
                 // 색: rg 는 흐름 방향(강), b 는 0, a 는 물 깊이(m)다. water.hlsl 이 읽는다.
                 vertex._arrColor[0] = flow._x;
                 vertex._arrColor[1] = flow._y;
@@ -326,7 +329,11 @@ namespace sw
             (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
         _surfaceVertexCount   = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
-        mesh->setVertices( std::move( listVertex ) );
+        // 호수는 평평해 탄젠트를 정점이 이미 들었다 — 정점 9 만 개의 탄젠트 구하기(Debug 0.6~1 초)를 씬 열기 · 플레이 · 백엔드 교체마다 하지 않는다.
+        if ( _shape == WaterBodyShape::River )
+            mesh->setVertices( std::move( listVertex ) );
+        else
+            mesh->setVerticesWithTangents( std::move( listVertex ) );
         _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
         _batch->setOwnerComponent( this );
         _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
