@@ -187,6 +187,11 @@ namespace sw::editor
         return validateAttributes( step, { "value" }, "value", outError );
     }
 
+    bool EditorScenarioStepValidation::validateSelfTest( const AutomationStep& step, string& outError )
+    {
+        return validateAttributes( step, { "pattern" }, "pattern", outError );
+    }
+
     bool EditorScenarioStepValidation::validateDrag( const AutomationStep& step, string& outError )
     {
         if ( validateAttributes( step, { "mark", "toMark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
@@ -288,4 +293,5 @@ namespace sw::editor
     SW_AUTOMATION_STEP_VALIDATOR( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepValidation::validateExpectObject );
     SW_AUTOMATION_STEP_VALIDATOR( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepValidation::validateDockLayout );
     SW_AUTOMATION_STEP_VALIDATOR( editorCaptureUI, EditorScenarioStepValidation::kCaptureKind, &EditorScenarioStepValidation::validateCapture );
+    SW_AUTOMATION_STEP_VALIDATOR( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepValidation::validateSelfTest );
 } // namespace sw::editor

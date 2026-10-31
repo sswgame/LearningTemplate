@@ -6,7 +6,6 @@
 
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
-#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -26,6 +25,7 @@
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
+#include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -48,8 +48,8 @@ namespace sw::editor
         {
             static constexpr const utf8* kContentBrowserPanelID    = ContentBrowserPanel::kPanelID;
             static constexpr const utf8* kContentBrowserPanelTitle = ContentBrowserPanel::kPanelTitle;
-            static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래의 테스트 폴더. 끝나면 지운다
-            static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
+            static constexpr const utf8* kProbeFolderID            = "scratch/editorselftest"; ///< 테스트 폴더(프로세스마다 `_p<pid>`). 끝나면 지운다
+            static constexpr uint32      kMaxWaitStepCount         = 180;                      ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
 
             /** @brief 콘텐츠 브라우저 테스트의 진행 상태입니다. */
             struct ContentBrowserProbe
@@ -74,11 +74,12 @@ namespace sw::editor
             /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
-                // 활성 팩 폴더가 없으면 멈춘다 - 빈 루트에 이으면 상대 경로가 되어 지울 폴더를 정할 수 없다(예전에는 그대로 removeDirectory 에 넘겼다).
-                const string packFolder = EditorPaths::findContentFolder( editor::getSubsystem<const GameConfig>()._packRoot.get() );
-                if ( packFolder.empty() )
+                // 추적하지 않는 scratch 도메인의 이 프로세스 몫에 쓴다 - 예전에는 활성 게임 팩(추적 원본) 아래에 써, 시나리오의 쓰기 게이트가 거절했고 죽은 실행은 저장소에 폴더를 남겼다.
+                // 백엔드마다 나란히 도는 실행이 서로의 폴더를 지우지 않게 프로세스 꼬리를 단다(`AutomationScratch::makeInstanceID`).
+                const std::optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( AutomationScratch::makeInstanceID( kProbeFolderID ) );
+                if ( folder.has_value() == false )
                     return false;
-                probe._folderAbs = FileUtil::joinPath( packFolder, kProbeFolderName );
+                probe._folderAbs = folder->str();
                 if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                     return false;
                 if ( FileUtil::ensureDirectoryExists( probe._folderAbs ) == false )

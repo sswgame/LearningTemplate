@@ -40,21 +40,25 @@ namespace sw
 #undef SW_MATRIX_BACKEND_NAME_ROW
             };
 
-            /** @brief 그린 화소를 판정하는 단계(종류 · 그 판정을 켜는 속성, 비면 늘) — 이것이 있는 시나리오는 백엔드마다 결과가 다를 수 있어 나눌 때도 모든 백엔드에서 돈다. */
-            struct PixelJudgingStep
+            /**
+             * @brief 판정이 백엔드에 달린 단계(종류 · 그 판정을 켜는 속성, 비면 늘) — 이것이 있는 시나리오는 백엔드마다 결과가 다를 수 있어 나눌 때도 모든 백엔드에서 돈다.
+             *        그린 화소를 보는 단계와, GPU 수명 결함을 백엔드 검증 레이어(Vulkan)의 로그로만 드러내는 에디터 자체 테스트(`EditorSelfTest`)다.
+             */
+            struct BackendJudgingStep
             {
                 string_view _kind;
                 string_view _attribute;
             };
             // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
-            static constexpr PixelJudgingStep kArrPixelJudgingStep[] = {
+            static constexpr BackendJudgingStep kArrBackendJudgingStep[] = {
                 {    "ExpectImage",                   {}},
-                {"CaptureEditorUI", "maxMagentaFraction"}
+                {"CaptureEditorUI", "maxMagentaFraction"},
+                { "EditorSelfTest",                   {}}
             };
 
-            static bool judgesPixels( const AutomationStep& step )
+            static bool judgesPerBackend( const AutomationStep& step )
             {
-                return std::any_of( std::begin( kArrPixelJudgingStep ), std::end( kArrPixelJudgingStep ), [&step]( const PixelJudgingStep& judging )
+                return std::any_of( std::begin( kArrBackendJudgingStep ), std::end( kArrBackendJudgingStep ), [&step]( const BackendJudgingStep& judging )
                 { return step._kind == judging._kind && ( judging._attribute.empty() || step.findAttribute( judging._attribute ) != nullptr ); } );
             }
 
@@ -180,15 +184,15 @@ namespace sw
         {
             AutomationScenario scenario;
             string             error;
-            const bool         bLoaded       = scenario.loadFromPath( AssetID{ path }, error );
-            const bool         bJudgesPixels = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPixels );
+            const bool         bLoaded     = scenario.loadFromPath( AssetID{ path }, error );
+            const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPerBackend );
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {
-                const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bJudgesPixels || i == nextBackend % listScenarioList.size();
+                const bool bThisBackend = options._bSplitScenarios == false || bLoaded == false || bPerBackend || i == nextBackend % listScenarioList.size();
                 if ( bThisBackend )
                     listScenarioList[i] += ( listScenarioList[i].empty() ? "" : "," ) + path;
             }
-            if ( options._bSplitScenarios && bLoaded && bJudgesPixels == false )
+            if ( options._bSplitScenarios && bLoaded && bPerBackend == false )
                 ++nextBackend;
         }
         return listScenarioList;

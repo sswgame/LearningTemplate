@@ -485,6 +485,45 @@ namespace sw::editor
                 }
                 return true;
             }
+
+            // ------------------------------------------------------------------------------
+            // EditorSelfTest: 에디터 자체 테스트를 시나리오 안에서 돌린다 - 자체 테스트도 시나리오의 백엔드 넷(Vulkan 검증 레이어 포함)과 로그 게이트(선언하지 않은
+            //    Error · Warning 이면 실패)를 받는다. 예전에는 따로 도는 CTest 항목(EditorTests)이 기본 백엔드 하나에서 케이스 성패만 봐, 결함이 로그로만 드러나는
+            //    케이스(sceneView.resizeEveryFrame - 쓰는 중인 텍스처 해제)는 통과가 아무것도 증명하지 못했다.
+            // ------------------------------------------------------------------------------
+            /** @brief 이 시나리오 단계가 시작시킨 실행입니다. 단계는 한 번에 하나만 돈다(자체 테스트 실행도 하나뿐이다). */
+            static inline const AutomationStep* s_pRequestedSelfTestStep = nullptr;
+
+            /** @brief 첫 차례에 실행을 청하고, 실행이 끝날 때까지 시나리오 시계를 붙잡습니다. 청할 수 없으면 돌려 실패를 적게 합니다. */
+            static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& /*runner*/, const AutomationStep& step, InputManager& /*input*/ )
+            {
+                if ( s_pRequestedSelfTestStep != &step )
+                {
+                    if ( EditorSelfTestRunner::requestRun( *step.findAttribute( "pattern" ), false ) == false )
+                        return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
+                    s_pRequestedSelfTestStep = &step;
+                    return AutomationStepHold::Hold;
+                }
+                return EditorSelfTestRunner::isRunning() ? AutomationStepHold::Hold : AutomationStepHold::Run;
+            }
+
+            static bool runSelfTest( AutomationStepContext& runner, const AutomationStep& step )
+            {
+                const bool bRequested                                         = s_pRequestedSelfTestStep == &step;
+                s_pRequestedSelfTestStep                                      = nullptr;
+                const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
+                if ( bRequested == false || listResult.empty() )
+                {
+                    runner.recordFailure( step, "no editor self test ran for pattern '" + *step.findAttribute( "pattern" ) + "' (no editor, a run already active, or no match)" );
+                    return true;
+                }
+                for ( const EditorSelfTestResult& result : listResult )
+                {
+                    if ( result._bPassed == false )
+                        runner.recordFailure( step, "self test " + result._id + ": " + result._reason );
+                }
+                return true;
+            }
         };
     } // namespace
 
@@ -502,5 +541,7 @@ namespace sw::editor
                                    &EditorScenarioStepValidation::validateExpectObject, &EditorScenarioStepsInternal::prepareExpectObject, nullptr, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectDockLayout, EditorScenarioStepValidation::kDockLayoutKind, &EditorScenarioStepsInternal::runDockLayout,
                                    &EditorScenarioStepValidation::validateDockLayout, &EditorScenarioStepsInternal::prepareMarks, nullptr, false );
+    SW_AUTOMATION_STEP_WITH_HOOKS( editorSelfTest, EditorScenarioStepValidation::kSelfTestKind, &EditorScenarioStepsInternal::runSelfTest,
+                                   &EditorScenarioStepValidation::validateSelfTest, &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilSelfTestsEnd, false );
 
 } // namespace sw::editor

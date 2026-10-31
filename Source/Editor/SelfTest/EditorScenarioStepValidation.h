@@ -83,6 +83,7 @@ namespace sw::editor
         static constexpr const utf8* kExpectObjectKind = "EditorExpectObject";
         static constexpr const utf8* kDockLayoutKind   = "EditorExpectDockLayout";
         static constexpr const utf8* kCaptureKind      = "CaptureEditorUI";
+        static constexpr const utf8* kSelfTestKind     = "EditorSelfTest";
 
         /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다. 형식이 틀리면 false 이고 값은 그대로입니다. */
         [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32& inoutValue );
@@ -108,6 +109,8 @@ namespace sw::editor
         static bool validateKey( const AutomationStep& step, string& outError );
         /** @brief 속성 이름 · 필수 · 수 형식을 봅니다. `component` 가 아는 컴포넌트 타입인지는 타입 레지스트리(에디터 서비스)가 있어야 알 수 있어 단계의 준비 함수가 봅니다. */
         static bool validateExpectObject( const AutomationStep& step, string& outError );
+        /** @brief `pattern`(에디터 자체 테스트 이름 패턴, `*` · 쉼표) 하나만 받습니다. */
+        static bool validateSelfTest( const AutomationStep& step, string& outError );
         static bool validateDockLayout( const AutomationStep& step, string& outError );
         static bool validateCapture( const AutomationStep& step, string& outError );
     };

@@ -635,7 +635,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // sceneView.resizeEveryFrame: 씬 뷰 렌더 타깃을 프레임마다 다른 크기로 다시 만든다. 패널을 닫아도 두 뷰가 모두 안 보이면 씬 뷰 렌더 타깃에 그린다.
             // 해제한 ImGui 텍스처와 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 해제해야 한다. 어기면 Vulkan 검증 레이어가
-            // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, AppSmokeTest 가 그 줄을 센다.
+            // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, 시나리오 로그 게이트가 그 줄로 진다(`selftests.scenario.xml` 이 Vulkan 에서도 돈다).
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
             {

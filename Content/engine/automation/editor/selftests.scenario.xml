@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터 자체 테스트(SW_EDITOR_SELF_TEST) 모두와 에디터 단위 테스트(editor.unitTests)를 시나리오 안에서 돌린다.
+  자체 테스트도 시나리오 체인의 백엔드 넷(Vulkan 검증 레이어 포함)과 로그 게이트(선언하지 않은 Error · Warning 이면 실패)를 받는다 — 결함이 로그로만 드러나는
+  케이스(sceneView.resizeEveryFrame: GPU 가 쓰는 중인 텍스처 해제)가 여기서 진다. 예전의 따로 도는 CTest 항목(EditorTests)은 기본 백엔드 하나에서 케이스 성패만 봤다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/selftests.scenario.xml -unattended
+-->
+<Scenario name="editor.selftests" fixedDelta="0.0166667" timeoutFrames="30000" startAfter="Immediately" input="exclusive">
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="5"/>
+	<EditorSelfTest pattern="*"/>
+	<Pass/>
+</Scenario>

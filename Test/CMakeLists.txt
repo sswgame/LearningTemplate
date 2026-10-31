@@ -45,14 +45,9 @@ else()
 	endforeach()
 endif()
 
-# 편집기 자체 테스트 — 편집기를 띄워 자체 테스트(`SW_EDITOR_SELF_TEST`) 모두와 편집기 단위 테스트(`Source/Editor/**/Tests/`, 자체 테스트 `editor.unitTests` 가 돌린다)를 돌리고
-# 결과를 종료 코드로 낸다(`QuitRequest` — 하나라도 지면 실패 코드). 편집기 단위 테스트는 엔진의 `App --test` 가 돌지 못한다 — 편집기 모듈이 기동 뒤에 올라온다.
-# 창과 GPU 가 있어야 하므로 hostgpu. 배포 · 전용 서버 구성에는 편집기가 없다.
+# 편집기 자체 테스트(`SW_EDITOR_SELF_TEST`)와 편집기 단위 테스트는 따로 된 항목이 없다 — 시나리오 단계 `<EditorSelfTest>`(`engine/automation/editor/selftests.scenario.xml`)로
+# `Scenario.editor` 체인 안에서 돌아 백엔드 넷과 로그 게이트를 함께 받는다(예전 EditorTests 는 기본 백엔드에서 케이스 성패만 봐 로그로만 드러나는 결함을 놓쳤다).
 if(TARGET EditorModule)
-	add_test(NAME EditorTests
-		COMMAND $<TARGET_FILE:App> -EnableEditor -gv_editorSelfTest=* -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/EditorTests.log
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(EditorTests PROPERTIES LABELS hostgpu TIMEOUT 900 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 
 	# 헤드리스 도구 명령 하나 — 현지화 표가 코드 · 데이터와 맞는지 보고, 도구 실행의 기동 · 종료 길을 지난다(모듈이 내려갈 때 서비스를 찾다 죽던 결함이
 	# 모든 도구 명령에 있었는데 위 항목들은 도구 명령을 돌리지 않아 숨었다). 임포트 검사는 산출물을 커밋하지 않아 새 체크아웃에서 늘 지므로 이것을 고른다.
