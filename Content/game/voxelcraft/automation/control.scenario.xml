@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VoxelCraft 조종 시나리오 — 입력 층(가상 키 · 마우스) → 플레이어 조종자(입력 맵) → 폰의 의도 → 몸(걷기 · 핫바 · 시선 · 부수기),
+  자동 플레이 스위치를 켜고 끄면 플레이어 폰의 빙의가 AI 조종자 ↔ 플레이어 조종자로 오간다.
+  실행: ctest -R Scenario.voxelcraft (SW_ACTIVE_GAME=VoxelCraft) · App -scenario=game/voxelcraft/automation/control.scenario.xml -unattended
+-->
+<Scenario name="game.voxelcraft.control" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_voxelAutoPlay" value="0"/>
+	<!-- 시작 60 프레임은 옛 시나리오 그대로 둔다 — 몸이 자리를 잡는 시뮬레이션 시간(걷기 거리를 그 뒤부터 잰다). -->
+	<Wait frames="60"/>
+	<Expect watch="VoxelCraft.ControllerKind" equals="0"/>
+
+	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
+	<Press slot="Key.W"/>
+	<Wait frames="60"/>
+	<Release slot="Key.W"/>
+	<WaitUntil watch="VoxelCraft.WalkedDistance" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 핫바: 3 을 한 번 — 셋째 칸. -->
+	<Tap slot="Key.Digit3" hold="1"/>
+	<WaitUntil watch="VoxelCraft.HotbarSlot" equals="2" timeoutFrames="30"/>
+
+	<!-- 시선: 마우스 오른쪽 100 px — 조종 요가 시작 0.6 에서 100 × 0.0022 만큼 돈다. -->
+	<MouseDelta x="100" y="0"/>
+	<WaitUntil watch="VoxelCraft.ControlYaw" near="0.82" tolerance="0.01" timeoutFrames="30"/>
+
+	<!-- 부수기: 아래를 보고 왼쪽 버튼을 4 초 — 블록이 하나 넘게 부서진다. -->
+	<MouseDelta x="0" y="400"/>
+	<Wait frames="5"/>
+	<Press slot="Mouse.Left"/>
+	<Wait frames="240"/>
+	<Release slot="Mouse.Left"/>
+	<WaitUntil watch="VoxelCraft.BrokenCount" atLeast="1" timeoutFrames="30"/>
+
+	<!-- 자동 플레이 = AI 조종자의 빙의. 얼마 동안 AI 가 몸을 움직이게 둔 뒤 끄면 플레이어 조종자가 다시 쥐고 키가 먹는다. -->
+	<Variable name="gv_voxelAutoPlay" value="1"/>
+	<WaitUntil watch="VoxelCraft.ControllerKind" equals="1" timeoutFrames="30"/>
+	<Wait frames="280"/>
+	<Variable name="gv_voxelAutoPlay" value="0"/>
+	<WaitUntil watch="VoxelCraft.ControllerKind" equals="0" timeoutFrames="30"/>
+	<Tap slot="Key.Digit5" hold="1"/>
+	<WaitUntil watch="VoxelCraft.HotbarSlot" equals="4" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>
