@@ -98,10 +98,10 @@ namespace sw
         /** @brief 트랜지언트 첨부를 읽어 파일로 저장합니다. 확장자 규칙은 `dumpPresentToFile` 과 같습니다. */
         bool dumpTransientToFile( string_view attachmentName, string_view outFilePath ) const;
         /**
-         * @brief 임의의 2D 텍스처(첫 밉)를 읽어 파일로 저장합니다. 확장자 규칙은 `dumpPresentToFile` 과 같습니다.
-         * @details 에디터 씬 뷰 RT 처럼 주 출력이 아닌 렌더 타깃을 저장할 때 씁니다.
+         * @brief 임의의 2D 텍스처(첫 밉)를 CPU 로 읽습니다. 읽지 못했거나 크기가 0 이면 false 입니다(까닭은 로그로 남긴다).
+         * @details 에디터 씬 뷰 RT 처럼 주 출력이 아닌 렌더 타깃을 저장할 때 씁니다. 파일 쓰기는 부른 쪽이 워커에 맡긴다(`RenderThread::writeRequestedScreenshot`).
          */
-        bool dumpTextureToFile( RHITextureHandle texture, RHIFormat format, string_view outFilePath ) const;
+        [[nodiscard]] bool readbackTexture( RHITextureHandle texture, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const;
 
     private:
         IRHIDevice* const&             _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고).

@@ -171,20 +171,17 @@ namespace sw
         return RenderTargetImageFile::writeImageFile( bytes, layout, format, outFilePath );
     }
 
-    bool FrameCapture::dumpTextureToFile( RHITextureHandle texture, RHIFormat format, string_view outFilePath ) const
+    bool FrameCapture::readbackTexture( RHITextureHandle texture, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const
     {
-        const bool bInvalidDumpArguments = _pDevice == nullptr || texture == 0 || outFilePath.empty();
-        if ( bInvalidDumpArguments )
+        if ( _pDevice == nullptr || texture == 0 )
             return false;
-
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        const bool        bReadbackFailed = RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, bytes, layout ) == false || layout._width == 0 || layout._height == 0;
+        const bool bReadbackFailed = RHITransferUtil::readbackTexture2DAndWait( *_pDevice->getResourceFactory(), texture, 0, 0, outBytes, outLayout ) == false || outLayout._width == 0 ||
+                                     outLayout._height == 0;
         if ( bReadbackFailed )
         {
-            SW_LOG_ERROR( "dumpTextureToFile: readbackTexture2DAndWait failed (%#).", string( outFilePath ).c_str() );
+            SW_LOG_ERROR( "readbackTexture: readbackTexture2DAndWait failed (texture %#).", texture );
             return false;
         }
-        return RenderTargetImageFile::writeImageFile( bytes, layout, format, outFilePath );
+        return true;
     }
 } // namespace sw

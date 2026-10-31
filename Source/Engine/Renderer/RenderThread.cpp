@@ -46,25 +46,43 @@ namespace sw
              */
             static ScreenshotRequestQueue* findMailbox() { return engine::findSubsystem<ScreenshotRequestQueue>(); }
 
-            /** @brief 패킷 사진 한 장의 파일 쓰기입니다(렌더 스레드가 읽어 만들고 워커가 쓴다). */
-            struct PacketScreenshotWrite
+            /**
+             * @brief 사진 한 장의 파일 쓰기입니다. 렌더 스레드가 GPU 에서 읽어 만들고, 워커가 RGBA 로 풀어 쓴 뒤 우편함에 알린다.
+             * @details 둘이 같은 모양이다 - 패킷 사진(`<Screenshot>` · 사진 모드, 처리 수 `reportPacketCaptureCompleted`)과 실행 중 요청(개발 명령 · 편집기 버튼, `reportCompleted`).
+             */
+            struct ScreenshotFileWrite
             {
-                string                  _path;
-                vector<uint8>           _rgbaBytes;
-                uint32                  _width{ 0 };
-                uint32                  _height{ 0 };
-                ScreenshotRequestQueue* _pMailbox{ nullptr }; ///< 다 쓰면 알린다 - 엔진 종료는 모듈을 내리기 전에 엔진 태스크를 모두 기다린다
+                string                     _path;
+                vector<uint8>              _bytes;    ///< GPU 에서 읽은 그대로의 바이트
+                RHITextureMipSpan          _layout{}; ///< `_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다
+                RHIFormat                  _format{ RHIFormat::R8G8B8A8_UNORM };
+                ScreenshotRequestQueue*    _pMailbox{ nullptr }; ///< 다 쓰면 알린다 - 엔진 종료는 모듈을 내리기 전에 엔진 태스크를 모두 기다린다
+                shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청만: 쓰는 중인 수 - 렌더 스레드는 0 이 될 때까지 다음 요청을 꺼내지 않는다(처리 순서 = 요청 순서)
+                bool                       _bPacket{ false };    ///< 패킷 사진이다(알림 · 로그가 다르다)
             };
 
-            /** @brief 워커 잡 본문입니다. 쓰고(실패는 쓰는 쪽이 경로와 함께 Error 로 남긴다) 처리했음을 알린다 - 기다리는 쪽(시나리오 끝)은 처리 수로 끝을 안다. */
-            static void runPacketScreenshotWrite( const TaskArgs& args )
+            /** @brief 워커 잡 본문입니다. 풀어 쓰고(실패는 쓰는 쪽이 경로와 함께 Error 로 남긴다) 처리했음을 알린다 - 기다리는 쪽은 처리 수로 끝을 알고, 그때 파일은 다 써졌다. */
+            static void runScreenshotFileWrite( const TaskArgs& args )
             {
-                const shared_ptr<PacketScreenshotWrite> pWrite = args.get<shared_ptr<PacketScreenshotWrite>>( 0 );
-                (void)FileUtil::ensureParentDirectoryExists( pWrite->_path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
-                if ( RenderTargetImageFile::writeRGBA8File( pWrite->_rgbaBytes, pWrite->_width, pWrite->_height, pWrite->_path ) == false )
-                    SW_LOG_WARNING( "Packet screenshot was not written: %#", pWrite->_path.c_str() );
-                if ( pWrite->_pMailbox != nullptr )
-                    pWrite->_pMailbox->reportPacketCaptureCompleted();
+                const shared_ptr<ScreenshotFileWrite> pWrite = args.get<shared_ptr<ScreenshotFileWrite>>( 0 );
+                const ScreenshotFileWrite&            write  = *pWrite;
+                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
+                const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
+                if ( write._bPacket )
+                {
+                    if ( bWritten == false )
+                        SW_LOG_WARNING( "Packet screenshot was not written: %#", write._path.c_str() );
+                    if ( write._pMailbox != nullptr )
+                        write._pMailbox->reportPacketCaptureCompleted();
+                    return;
+                }
+                if ( bWritten )
+                    SW_LOG_INFO( "Screenshot saved: %#", write._path.c_str() );
+                else
+                    SW_LOG_WARNING( "Screenshot was not written: %#", write._path.c_str() );
+                if ( write._pMailbox != nullptr )
+                    write._pMailbox->reportCompleted( bWritten, write._path );
+                --*write._pInFlight;
             }
 
             /** @brief 컨텍스트가 스레드에 묶이는 디바이스(DX11, GL)면 이 스레드에서 컨텍스트를 뗍니다. 그 능력이 없는 디바이스는 할 일이 없습니다. */
@@ -173,6 +191,7 @@ namespace sw
         , _requestedScreenshotTexture{ 0 }
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
         , _requestedScreenshotWaitFrames{ 0 }
+        , _pRequestedScreenshotWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }
         , _pPendingTargetRead{}
         , _arrRingBuffer{}
         , _head{ 0 }
@@ -575,13 +594,16 @@ namespace sw
         // 예전에는 장마다 이 스레드(인라인 제출이면 게임 스레드)에서 써 다음 프레임이 그만큼 늦었다.
         if ( packet._screenshotPath.empty() == false )
         {
-            auto pWrite       = make_shared<RenderThreadInternal::PacketScreenshotWrite>();
+            auto pWrite       = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
             pWrite->_path     = packet._screenshotPath;
             pWrite->_pMailbox = RenderThreadInternal::findMailbox();
-            if ( _pFrameRenderer != nullptr && readPresentedImage( pWrite->_path, pWrite->_rgbaBytes, pWrite->_width, pWrite->_height ) )
+            pWrite->_format   = constant::kBackBufferFormat;
+            pWrite->_bPacket  = true;
+            if ( _pFrameRenderer != nullptr && readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout ) )
             {
+                pWrite->_layout._pData = nullptr;
                 engine::getSubsystem<TaskManager>()
-                    .emplaceTask( "PacketScreenshotWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderThreadInternal::runPacketScreenshotWrite ), MakeTaskArgs( pWrite ) )
+                    .emplaceTask( "PacketScreenshotWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderThreadInternal::runScreenshotFileWrite ), MakeTaskArgs( pWrite ) )
                     .submit();
             }
             else
@@ -697,19 +719,12 @@ namespace sw
         }
     }
 
-    bool RenderThread::readPresentedImage( const string& path, vector<uint8>& outRGBABytes, uint32& outWidth, uint32& outHeight )
+    bool RenderThread::readPresentedBytes( const string& path, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        vector<uint8>     bytes;
-        RHITextureMipSpan layout{};
-        if ( _pFrameRenderer->getCapture().readbackPresent( bytes, layout ) == false ||
-             RenderTargetImageFile::unpackRGBA8( bytes, layout, constant::kBackBufferFormat, outRGBABytes ) == false )
-        {
-            SW_LOG_ERROR_ID( "Screenshot.NoPresentCapture", "Screenshot '%#': this frame has no Present capture to read (name an attachment with -gv_screenshotAttachment)", path );
-            return false;
-        }
-        outWidth  = layout._width;
-        outHeight = layout._height;
-        return true;
+        if ( _pFrameRenderer->getCapture().readbackPresent( outBytes, outLayout ) )
+            return true;
+        SW_LOG_ERROR_ID( "Screenshot.NoPresentCapture", "Screenshot '%#': this frame has no Present capture to read (name an attachment with -gv_screenshotAttachment)", path );
+        return false;
     }
 
     bool RenderThread::writePresentedImage( const string& path )
@@ -780,7 +795,8 @@ namespace sw
 
     void RenderThread::takeScreenshotRequest()
     {
-        if ( _requestedScreenshotPath.empty() == false )
+        // 앞 요청을 워커가 쓰는 중이면 꺼내지 않는다 - 처리 수(`getCompletedScreenshotSerial`)가 요청 순서대로 오르게(뒤 장이 먼저 끝나 앞 장의 끝으로 읽히지 않게).
+        if ( _requestedScreenshotPath.empty() == false || _pRequestedScreenshotWritesInFlight->load() > 0 )
             return;
         ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         ScreenshotRequest             request;
@@ -803,20 +819,29 @@ namespace sw
             return;
         }
 
-        (void)FileUtil::ensureParentDirectoryExists( _requestedScreenshotPath ); // 실패하면 아래 쓰기가 경로와 함께 알린다.
-        const bool bWritten = _requestedScreenshotTexture == 0
-                                ? writePresentedImage( _requestedScreenshotPath )
-                                : _pFrameRenderer->getCapture().dumpTextureToFile( _requestedScreenshotTexture, _requestedScreenshotFormat, _requestedScreenshotPath );
-        if ( bWritten )
-            SW_LOG_INFO( "Screenshot saved: %#", _requestedScreenshotPath.c_str() );
-        else
-            SW_LOG_WARNING( "Screenshot was not written: %#", _requestedScreenshotPath.c_str() );
-
-        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        if ( pMailbox != nullptr )
-            pMailbox->reportCompleted( bWritten, _requestedScreenshotPath ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
+        // 그 프레임의 그림은 지금만 있어 GPU 읽기는 여기(디바이스 스레드)서 하고, 풀기 · 인코딩 · 쓰기는 워커가 한다(패킷 사진과 같다).
+        // 예전에는 장마다 이 스레드에서 써 다음 프레임이 PNG 인코딩만큼 늦었다. 끝 알림(`reportCompleted`)은 워커가 다 쓴 뒤 한다.
+        auto pWrite        = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
+        pWrite->_path      = std::move( _requestedScreenshotPath );
+        pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
+        pWrite->_pInFlight = _pRequestedScreenshotWritesInFlight;
+        pWrite->_format    = _requestedScreenshotTexture == 0 ? constant::kBackBufferFormat : _requestedScreenshotFormat;
         _requestedScreenshotPath.clear();
+        const bool bRead            = _requestedScreenshotTexture == 0 ? readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout )
+                                                                       : _pFrameRenderer->getCapture().readbackTexture( _requestedScreenshotTexture, pWrite->_bytes, pWrite->_layout );
+        pWrite->_layout._pData      = nullptr;
         _requestedScreenshotTexture = 0;
+        if ( bRead )
+        {
+            (void)_pRequestedScreenshotWritesInFlight->fetch_add( 1 ); // 제출 전에 센다 - 다음 프레임의 `takeScreenshotRequest` 가 쓰는 중임을 놓치지 않는다
+            engine::getSubsystem<TaskManager>()
+                .emplaceTask( "RequestedScreenshotWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderThreadInternal::runScreenshotFileWrite ), MakeTaskArgs( pWrite ) )
+                .submit();
+            return;
+        }
+        SW_LOG_WARNING( "Screenshot was not written: %#", pWrite->_path.c_str() );
+        if ( pWrite->_pMailbox != nullptr )
+            pWrite->_pMailbox->reportCompleted( false, pWrite->_path ); // 우편함이 먼저 내려갔으면 알릴 곳이 없다
     }
 
     void RenderThread::discardPendingRenderTargetRead()
