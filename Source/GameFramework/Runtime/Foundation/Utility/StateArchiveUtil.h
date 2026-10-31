@@ -43,6 +43,12 @@ namespace sw
          * @return 머리가 잘렸거나 길이가 남은 바이트를 넘으면 false 이며, @p archive 에 오류를 남긴다.
          */
         [[nodiscard]] static bool readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody );
+        /**
+         * @brief 표가 @p tag 이고 버전이 @p version 인 구간 하나를 읽어 본문을 @p outBody 로 자릅니다. 다른 표 · 버전이면 false 입니다.
+         * @details 자리가 정해진 구간(디렉터가 든 키트 상태)은 이것으로 읽는다 — 표와 버전을 부르는 쪽이 따로 견주면 하나를 빼먹는다(버전을 안 봐 옛 판을 새 판으로 읽었다).
+         *          표로 갈라 읽는 쪽(`SessionStateComponent`)만 `readSection` 을 쓴다.
+         */
+        [[nodiscard]] static bool readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody );
 
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );

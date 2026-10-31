@@ -109,15 +109,13 @@ namespace sw
     bool FrontierCityDirectorComponent::readState( Archive& archive )
     {
         SessionStateComponent* pState   = SessionStateComponent::findOnOwner( *this );
-        uint32                 tag      = 0;
-        uint32                 version  = 0;
         uint8                  bLaidOut = SW_FALSE;
         Archive                body;
         const bool             bHeadRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
         if ( bHeadRead == false )
             return false;
         archive >> bLaidOut;
-        const bool bInvalidCityHeader = archive.isError() || StateArchiveUtil::readSection( archive, tag, version, body ) == false || tag != CitySimulation::kStateTag;
+        const bool bInvalidCityHeader = archive.isError() || StateArchiveUtil::readExpectedSection( archive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body ) == false;
         if ( bInvalidCityHeader )
             return false;
         CitySimulation city;

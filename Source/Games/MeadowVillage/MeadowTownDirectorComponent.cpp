@@ -81,14 +81,11 @@ namespace sw
 
     bool MeadowTownDirectorComponent::readState( Archive& archive )
     {
-        SessionStateComponent* pState  = SessionStateComponent::findOnOwner( *this );
-        uint32                 tag     = 0;
-        uint32                 version = 0;
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         Archive                body;
         const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
-                                StateArchiveUtil::readSection( archive, tag, version, body );
-        const bool bTownFrameMismatch = bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion;
-        if ( bTownFrameMismatch )
+                                StateArchiveUtil::readExpectedSection( archive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
+        if ( bFrameRead == false )
             return false;
         CreatureTown town;
         if ( initializeTown( town, *pState ) == false )

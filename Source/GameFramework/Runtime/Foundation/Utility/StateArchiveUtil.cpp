@@ -53,6 +53,13 @@ namespace sw
         return outBody.isOk();
     }
 
+    bool StateArchiveUtil::readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody )
+    {
+        uint32 readTag     = 0;
+        uint32 readVersion = 0;
+        return readSection( archive, readTag, readVersion, outBody ) && readTag == tag && readVersion == version;
+    }
+
     void StateArchiveUtil::writeName( Archive& outArchive, const hashed_string& name )
     {
         outArchive << string_view( name.c_str() );

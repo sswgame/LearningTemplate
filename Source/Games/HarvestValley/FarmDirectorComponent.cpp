@@ -296,18 +296,12 @@ namespace sw
         FarmShippingBin shipment;
         GameRandom      random;
         field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
-        uint32     fieldTag        = 0;
-        uint32     fieldVersion    = 0;
-        uint32     shipmentTag     = 0;
-        uint32     shipmentVersion = 0;
         Archive    fieldBody;
         Archive    shipmentBody;
-        const bool bSectionsRead = StateArchiveUtil::readSection( archive, fieldTag, fieldVersion, fieldBody ) &&
-                                   StateArchiveUtil::readSection( archive, shipmentTag, shipmentVersion, shipmentBody );
-        const bool bSimulationRead = bSectionsRead && fieldTag == FarmField::kStateTag && fieldVersion == FarmField::kStateVersion && field.readState( fieldBody ) &&
-                                     fieldBody.getRemainingBytes() == 0 && shipmentTag == FarmShippingBin::kStateTag &&
-                                     shipmentVersion == FarmShippingBin::kStateVersion && shipment.readState( shipmentBody ) && shipmentBody.getRemainingBytes() == 0 &&
-                                     StateArchiveUtil::readRandom( archive, random );
+        const bool bSectionsRead = StateArchiveUtil::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody ) &&
+                                   StateArchiveUtil::readExpectedSection( archive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
+        const bool bSimulationRead = bSectionsRead && field.readState( fieldBody ) && fieldBody.getRemainingBytes() == 0 && shipment.readState( shipmentBody ) &&
+                                     shipmentBody.getRemainingBytes() == 0 && StateArchiveUtil::readRandom( archive, random );
         if ( bSimulationRead == false )
             return false;
         float3 playerPosition{};

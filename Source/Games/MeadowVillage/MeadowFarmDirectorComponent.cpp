@@ -101,12 +101,10 @@ namespace sw
 
     bool MeadowFarmDirectorComponent::readState( Archive& archive )
     {
-        uint32     tag     = 0;
-        uint32     version = 0;
         Archive    body;
-        const bool bFrameRead          = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && StateArchiveUtil::readSection( archive, tag, version, body );
-        const bool bFieldFrameMismatch = bFrameRead == false || tag != FarmField::kStateTag || version != FarmField::kStateVersion;
-        if ( bFieldFrameMismatch )
+        const bool bFrameRead = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
+                                StateArchiveUtil::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, body );
+        if ( bFrameRead == false )
             return false;
         FarmField field;
         field.initialize( kFieldWidth, kFieldHeight, game::findSubsystem<CropCatalog>() );

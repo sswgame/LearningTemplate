@@ -271,12 +271,10 @@ namespace sw
     {
         if ( StateArchiveUtil::readHeader( archive, kTownStateTag, kTownStateVersion ) == false )
             return false;
-        uint32             moverTag     = 0;
-        uint32             moverVersion = 0;
         Archive            moverBody;
         OverworldTileMover mover      = _mover;
-        const bool         bMoverRead = StateArchiveUtil::readSection( archive, moverTag, moverVersion, moverBody ) && moverTag == OverworldTileMover::kStateTag &&
-                                moverVersion == OverworldTileMover::kStateVersion && mover.readState( moverBody ) && moverBody.getRemainingBytes() == 0;
+        const bool         bMoverRead = StateArchiveUtil::readExpectedSection( archive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody ) &&
+                                mover.readState( moverBody ) && moverBody.getRemainingBytes() == 0;
         const bool bStateRead = bMoverRead && archive.isError() == false && archive.getRemainingBytes() == 0;
         if ( bStateRead == false )
             return false;
