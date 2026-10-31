@@ -31,6 +31,12 @@ namespace sw
 
 namespace sw
 {
+    CurrencyCatalog::CurrencyCatalog()
+        : _listCurrency{}
+        , _ledgerPolicy{ *this }
+    {
+    }
+
     void CurrencyCatalog::addCurrency( const CurrencyDef& def )
     {
         for ( CurrencyDef& existing : _listCurrency )

@@ -121,7 +121,7 @@ namespace sw
                 outRequest._journalKey     = input._journalKey;
                 outRequest._reason         = "shop.buy";
                 outRequest._memo           = offer._id;
-                outRequest._pPolicy        = &currencies;
+                outRequest._pPolicy        = &currencies.getLedgerPolicy();
                 outRequest._timeMs         = input._nowMs;
                 outRequest._actorID        = input._accountID;
                 outRequest._actorKind      = LedgerActorKind::Player;
@@ -321,7 +321,7 @@ namespace sw
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Unavailable );
         request._reason            = "iap.redeem";
         request._memo              = receipt._productID.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
-        request._pPolicy           = &currencies;
+        request._pPolicy           = &currencies.getLedgerPolicy();
         request._timeMs            = input._nowMs;
         request._actorID           = input._accountID;
         request._actorKind         = LedgerActorKind::Player;
@@ -382,7 +382,7 @@ namespace sw
                 return EconomyResult::InvalidRequest;
             request._reason     = "refund.revoke";
             request._memo       = redeem._memo;
-            request._pPolicy    = &currencies;
+            request._pPolicy    = &currencies.getLedgerPolicy();
             request._timeMs     = nowMs;
             request._actorKind  = LedgerActorKind::System;
             request._bAllowDebt = SW_TRUE; // 환불 회수만 빚을 허용한다
@@ -440,7 +440,7 @@ namespace sw
                 return Internal::finish( outReply, EconomyResult::InvalidRequest );
             request._reason    = "iap.withdraw";
             request._memo      = redeem._memo;
-            request._pPolicy   = &currencies;
+            request._pPolicy   = &currencies.getLedgerPolicy();
             request._timeMs    = input._nowMs;
             request._actorID   = input._accountID;
             request._actorKind = LedgerActorKind::Player;
