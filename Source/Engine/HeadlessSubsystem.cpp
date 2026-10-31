@@ -95,24 +95,24 @@ namespace sw
                 return removeFailedCount == 0;
             }
 
-            /** @brief 팩에 담을 셰이더 바이너리 폴더입니다 — 명령줄 백엔드(`-dx12` …), 없으면 엔진 설정의 `_defaultRHI` 입니다. */
-            static string resolveShaderFolder( const CommandLineManager& commandLine )
+            /** @brief 팩에 담을 셰이더 바이너리 포맷입니다 — 명령줄 백엔드(`-dx12` …), 없으면 엔진 설정의 `_defaultRHI` 입니다. */
+            static ShaderTargetFormat resolveShaderTarget( const CommandLineManager& commandLine )
             {
                 RHIBackend backend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
                 RHIBackend commandLineBackend{};
                 if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) )
                     backend = commandLineBackend;
-                return string( ShaderCooker::getSubfolderForFormat( RHI::getShaderTargetFormat( backend ) ) );
+                return RHI::getShaderTargetFormat( backend );
             }
 
-            /** @brief 쿠킹 스테이징(@p cookedDir)의 @p shaderFolder 셰이더 바이너리를 판정하고 문제를 오류로 남깁니다. 문제가 없으면 true 입니다. */
-            static bool verifyShaderFolder( string_view cookedDir, string_view shaderFolder )
+            /** @brief 쿠킹 스테이징(@p cookedDir)의 @p format 셰이더 바이너리를 판정하고 문제를 오류로 남깁니다. 문제가 없으면 true 입니다. */
+            static bool verifyShaderTarget( string_view cookedDir, ShaderTargetFormat format )
             {
                 vector<string> listProblem;
-                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, shaderFolder, listProblem );
+                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
                 for ( const string& problem : listProblem )
                 {
-                    SW_LOG_ERROR( "[%#] %#", shaderFolder, problem );
+                    SW_LOG_ERROR( "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
                 }
                 return listProblem.empty();
             }
@@ -124,11 +124,11 @@ namespace sw
              */
             [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, string_view cookedDir )
             {
-                const string shaderFolder = resolveShaderFolder( commandLine );
+                const ShaderTargetFormat shaderTarget = resolveShaderTarget( commandLine );
 #if defined( SW_WITH_CLIENT_CODE )
                 const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir );
                 ShaderCooker::invalidateSharedHeaderCache();
-                if ( summary.isClean() == false || verifyShaderFolder( cookedDir, shaderFolder ) == false )
+                if ( summary.isClean() == false || verifyShaderTarget( cookedDir, shaderTarget ) == false )
                 {
                     SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
                     return false;
@@ -136,7 +136,7 @@ namespace sw
                 return true;
 #else
                 // 셰이더 쿠커는 렌더러(`Engine/Renderer/Cook`)에 있고 Server 타깃은 그 폴더를 짓지 않고, 서버 팩에는 셰이더 바이너리가 없다 — 할 일이 없다.
-                (void)shaderFolder;
+                (void)shaderTarget;
                 (void)cookedDir;
                 return true;
 #endif
@@ -149,7 +149,7 @@ namespace sw
              */
             [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const string& cookedDir, const CookStore& cookStore )
             {
-                const string shaderFolder = resolveShaderFolder( commandLine );
+                const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
 
                 PackConfig   packConfig;
                 const string packConfigPath = FileUtil::joinPath( ProcessRoots::get()._project.str(), PackConfig::kConfigPath );
@@ -427,7 +427,7 @@ namespace sw
                 bool bAllCurrent = true;
                 for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
                 {
-                    bAllCurrent = verifyShaderFolder( cookedDir, ShaderCooker::getSubfolderForFormat( info._shaderTarget ) ) && bAllCurrent; // 비면 판정이 문제로 적는다
+                    bAllCurrent = verifyShaderTarget( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }
                 if ( bAllCurrent )
                     SW_LOG_INFO( "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );

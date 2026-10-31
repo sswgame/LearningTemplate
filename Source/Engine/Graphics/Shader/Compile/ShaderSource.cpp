@@ -43,8 +43,18 @@ namespace sw
         const std::optional<string_view> shadersFolder = source.getShadersFolder();
         if ( shadersFolder.has_value() == false )
             return std::nullopt;
+        return makeUnderShadersFolder( *shadersFolder, format );
+    }
+
+    ShaderBinaryLocation ShaderBinaryLocation::makeForDomain( string_view domain, ShaderTargetFormat format )
+    {
+        return makeUnderShadersFolder( FileUtil::joinPath( domain, path::kShaderFolder ), format );
+    }
+
+    ShaderBinaryLocation ShaderBinaryLocation::makeUnderShadersFolder( string_view shadersFolder, ShaderTargetFormat format )
+    {
         ShaderBinaryLocation location;
-        location._binDirectory = string( *shadersFolder );
+        location._binDirectory = string( shadersFolder );
         location._binDirectory += "/bin/";
         location._binDirectory += ShaderCooker::getSubfolderForFormat( format );
         return location;

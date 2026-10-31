@@ -263,7 +263,7 @@ namespace sw
                                            ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile = nullptr );
 
         /**
-         * @brief 도메인(`engine` · `common` · `game/<팩>` — @p assetPaths 의 리소스 루트와 우선순위로 찾는다)마다 쿠킹 스테이징(@p cookedDir)의 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
+         * @brief 도메인(`engine` · `common` · `game/<팩>` — @p assetPaths 의 리소스 루트와 우선순위로 찾는다)마다 쿠킹 스테이징(@p cookedDir)의 @p format 바이너리(`ShaderBinaryLocation::makeForDomain`)가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
          * @details 판정은 스탬프를 쓰는 쪽(`writeCookStamp`)과 같은 수집 규칙 · 같은 해시다 — 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인가" 를 볼 게이트가 없다.
          *          보는 것: 바이너리 폴더 · 스탬프 · 스탬프 판 · 도구 지문(스탬프의 `kToolchainKey` 줄), 스탬프에 빠진 · 바뀐 · 남은 소스, 소스마다 스탬프에 적힌 헤더가 지금도 같은지,
          *          바이너리가 하나라도 있는지, 리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 베이크하지 않은 것). 소스가 없는 도메인은 건너뛴다.
@@ -271,7 +271,7 @@ namespace sw
          *          이 판정이 못 잡는다 — `findShadowedHeaders` 가 같은 이름을 오류로 막아 두므로 거기서 걸린다.
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
-        static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem );
+        static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, vector<string>& outListProblem );
 
         /**
          * @brief 파일 내용 해시 캐시(`ContentHash`)를 버려, 다음 조회가 다시 읽게 합니다(스탬프 읽기 캐시는 쿠킹마다의 값 `ShaderCookStampCache` 다).

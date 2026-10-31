@@ -34,3 +34,10 @@ SW_TEST_CASE( ShaderBinaryLocationTest, IdWithoutADomainShadersFolderHasNoLocati
     SW_EXPECT_TRUE( makeDX12BinDirectory( "engine/shaders" ).empty() );          // 파일 없음
     SW_EXPECT_TRUE( makeDX12BinDirectory( "" ).empty() );
 }
+
+SW_TEST_CASE( ShaderBinaryLocationTest, DomainFolderMatchesTheSourceRule )
+{
+    // 쿠킹 판정(도메인마다)과 쿠커 출력(소스마다)이 같은 자리를 본다.
+    const ShaderBinaryLocation domain = ShaderBinaryLocation::makeForDomain( "game/shooter3d", ShaderTargetFormat::DXIL_D3D12 );
+    SW_EXPECT_EQUAL( domain._binDirectory, makeDX12BinDirectory( "game/shooter3d/shaders/x.hlsl" ) );
+}
