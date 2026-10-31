@@ -104,13 +104,6 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
-         * @details `Config/...` 는 상대 경로다. 실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어,
-         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig, GameConfig, EditorConfig 가 모두 "없음"으로 처리되고 생성된
-         *          기본값으로 조용히 대체된다(창 크기, VSync, 리소스 우선순위, 게임 키트 모듈 목록이 모두 무시된다).
-         *          `Content/` 처럼 거슬러 올라가 찾은 루트(`AssetPaths`)를 여기에 넣어 준다.
-         */
-        /**
          * @brief 설정 하나를 파일에서 읽어 등록합니다. 테이블에 이미 같은 타입이 있으면 덮어씁니다.
          * @return 없으면 `Missing`(로그 없음, 부르는 쪽이 기본값을 쓴다), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다)
          * @note 없는 파일은 정상 상태라 `readOptionalTextFile` 한 번으로 읽는다(있는지 묻고 읽지 않는다 - R7).
@@ -226,7 +219,7 @@ namespace sw
             const ConfigReadResult result    = loadOptionalConfig<T>( source );
             if ( result == ConfigReadResult::Missing )
             {
-                SW_LOG_ERROR( "Required config %# was not found at '%#' (cwd, project root, or exe directory)", pTypeName, source.getPath().c_str() );
+                SW_LOG_ERROR( "Required config %# was not found at '%#' (relative paths are under the project root)", pTypeName, source.getPath().c_str() );
                 return nullptr;
             }
             if ( result == ConfigReadResult::Invalid )
