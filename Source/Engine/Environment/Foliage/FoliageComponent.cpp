@@ -408,7 +408,7 @@ namespace sw
         return bAllArrived;
     }
 
-    bool FoliageComponent::updateMeshArrival( SceneComponent& component, float32 /*deltaSeconds*/ )
+    bool FoliageComponent::updateMeshArrival( Component& component, float32 /*deltaSeconds*/ )
     {
         // 이 함수를 거는 것은 폴리지 자신뿐이다(`rebuildFoliage`).
         FoliageComponent& self = static_cast<FoliageComponent&>( component );

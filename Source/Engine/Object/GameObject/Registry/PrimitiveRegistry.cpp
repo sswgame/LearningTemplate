@@ -103,7 +103,7 @@ namespace sw
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void PrimitiveRegistry::addAssetWaiter( SceneComponent* pComponent, AssetWaitFunction pFunction )
+    void PrimitiveRegistry::addAssetWaiter( Component* pComponent, AssetWaitFunction pFunction )
     {
         SW_ASSERT( pComponent != nullptr && pFunction != nullptr );
         ScopedLock<mutex> lock{ _mutex };
@@ -119,13 +119,13 @@ namespace sw
         added._pFunction   = pFunction;
     }
 
-    void PrimitiveRegistry::removeAssetWaiter( const SceneComponent* pComponent )
+    void PrimitiveRegistry::removeAssetWaiter( const Component* pComponent )
     {
         ScopedLock<mutex> lock{ _mutex };
         removeAssetWaiterLocked( pComponent );
     }
 
-    void PrimitiveRegistry::removeAssetWaiterLocked( const SceneComponent* pComponent )
+    void PrimitiveRegistry::removeAssetWaiterLocked( const Component* pComponent )
     {
         for ( size_t waiterIndex = 0; waiterIndex < _listAssetWaiter.size(); ++waiterIndex )
         {

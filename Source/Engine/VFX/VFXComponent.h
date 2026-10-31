@@ -147,7 +147,7 @@ namespace sw
          */
         [[nodiscard]] bool requestEmitterMeshes();
         /** @brief 메시 도착을 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 다 왔으면 배치를 만들고, 아직 기다리면 true 입니다. */
-        static bool updateMeshArrival( SceneComponent& component, float32 deltaSeconds );
+        static bool updateMeshArrival( Component& component, float32 deltaSeconds );
         /** @brief 메시 방출기의 배치를 레지스트리에서 내리고 머티리얼을 놓습니다. */
         void releaseMeshEmitters();
         /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */

@@ -25,6 +25,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -224,15 +225,7 @@ namespace sw
             applySurface( *pManager, false );
         }
         if ( _bMeshAssemblyPending == SW_TRUE )
-        {
-            if ( isMeshAssemblyLoading() )
-                return;
-            // 유닛의 메시를 바꾸는 일은 렌더 상태라 틱 뒤에 한다.
-            _bMeshAssemblyPending = SW_FALSE;
-            pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance )
-            { appearance.applyMeshAssembly(); } );
-            return;
-        }
+            return; // 베이크한 메시를 기다린다(`waitMeshAssembly` 가 걸면 다시 본다)
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
         // 베이크한 메시도 원본 메시 · 피팅 표 · 피팅 데이터의 사본이라 같다.
         const bool bSocketsStale = _socketCache.isStale();
@@ -261,11 +254,21 @@ namespace sw
         _surfaceAppliedRevision = invalid_index::kUint64;
         // 끝날 때 붙은 부품은 이미 이 오브젝트의 자식으로 함께 지울 예정이다 — 풀에 넣을 수 없다(넣으려면 부르는 쪽이 지우기 전에 `stowParts`).
         despawnParts();
+        GameObjectManager* pManager = findManager();
+        if ( pManager != nullptr )
+            pManager->getPrimitiveRegistry().removeAssetWaiter( this );
         _listMeshAssemblyLoad.clear();
         _fitTablesLoad.reset();
         _bMeshAssemblyPending = SW_FALSE;
         _bStarted             = SW_FALSE;
         Component::onEndPlay();
+    }
+
+    void CharacterAppearanceComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getPrimitiveRegistry().removeAssetWaiter( this );
+        _bMeshAssemblyPending = SW_FALSE;
+        Component::onUnregister( manager );
     }
 
     void CharacterAppearanceComponent::onPropertyChanged( hashed_string propertyName )
@@ -1013,6 +1016,7 @@ namespace sw
     {
         _listMeshAssemblyLoad.clear();
         _fitTablesLoad.reset();
+        manager.getPrimitiveRegistry().removeAssetWaiter( this );
         _bMeshAssemblyPending                    = SW_FALSE;
         const ResolvedAppearance& resolved       = _state.getResolved();
         const ResolvedPart*       pBodyPart      = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
@@ -1045,6 +1049,8 @@ namespace sw
             _listMeshAssemblyLoad.push_back( std::move( load ) );
         }
         _bMeshAssemblyPending = SW_TRUE;
+        // 씬의 에셋 대기 목록에 건다 — 도착 단계가 받아 걸고, 자동화의 "에셋 일 0"(`Assets.Pending`)이 그동안 사진을 미룬다(옷이 숨은 몸이 찍히지 않게).
+        manager.getPrimitiveRegistry().addAssetWaiter( this, &CharacterAppearanceComponent::waitMeshAssembly );
         // 새로 입은 피팅 부품은 베이크한 메시를 걸 때까지 숨긴다 — 피팅 전의 옷은 몸을 뚫고 나온다. 이미 베이크한 것을 그리는 부품은 다시 조립하는 동안 그대로 보인다.
         for ( const SpawnedPart& spawned : _listSpawnedPart )
         {
@@ -1055,6 +1061,22 @@ namespace sw
                 CharacterAppearanceComponentInternal::forEachMesh( *pObject, []( MeshComponent& mesh )
                 { mesh.setVisible( false ); } );
         }
+    }
+
+    bool CharacterAppearanceComponent::waitMeshAssembly( Component& component, float32 /*deltaSeconds*/ )
+    {
+        // 이 함수를 거는 것은 외형 컴포넌트 자신뿐이다(`requestMeshAssembly`).
+        CharacterAppearanceComponent& self     = static_cast<CharacterAppearanceComponent&>( component );
+        GameObjectManager*            pManager = self.findManager();
+        if ( self._bMeshAssemblyPending == SW_FALSE || pManager == nullptr )
+            return false;
+        if ( self.isMeshAssemblyLoading() )
+            return true;
+        self._bMeshAssemblyPending = SW_FALSE;
+        // 유닛의 메시 · 구간 컴포넌트를 바꾸는 일은 대기 목록을 도는 중에 하지 않는다 — 같은 프레임의 틱 뒤 큐(`ApplyPrePhysics`)가 건다.
+        pManager->deferPostTickOnComponent( self, []( CharacterAppearanceComponent& appearance )
+        { appearance.applyMeshAssembly(); } );
+        return false;
     }
 
     bool CharacterAppearanceComponent::isMeshAssemblyLoading() const

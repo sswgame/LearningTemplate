@@ -144,7 +144,7 @@ namespace sw
             _pPrimitiveRegistry->addAssetWaiter( this, &MeshComponent::updateArrival );
     }
 
-    bool MeshComponent::updateArrival( SceneComponent& component, float32 deltaSeconds )
+    bool MeshComponent::updateArrival( Component& component, float32 deltaSeconds )
     {
         // 이 함수를 거는 것은 메시 컴포넌트 자신뿐이다(`addAssetWaiter( this, &MeshComponent::updateArrival )`).
         MeshComponent& self = static_cast<MeshComponent&>( component );

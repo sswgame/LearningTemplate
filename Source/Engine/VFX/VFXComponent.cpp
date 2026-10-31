@@ -451,7 +451,7 @@ namespace sw
         return bAllArrived;
     }
 
-    bool VFXComponent::updateMeshArrival( SceneComponent& component, float32 /*deltaSeconds*/ )
+    bool VFXComponent::updateMeshArrival( Component& component, float32 /*deltaSeconds*/ )
     {
         // 이 함수를 거는 것은 VFX 컴포넌트 자신뿐이다(`rebuildMeshEmitters`).
         VFXComponent& self = static_cast<VFXComponent&>( component );

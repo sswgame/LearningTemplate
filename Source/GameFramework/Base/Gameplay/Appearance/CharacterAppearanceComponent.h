@@ -136,6 +136,8 @@ namespace sw
 
         void onBeginPlay() override;
         void onEndPlay() override;
+        /** @brief 씬의 에셋 대기 목록에서 빠집니다 — 사라진 컴포넌트의 대기 함수가 불리지 않게(`PrimitiveRegistry::addAssetWaiter`). */
+        void onUnregister( GameObjectManager& manager ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
         /**
          * @brief 베이크한 메시의 재료가 다 읽혔으면 틱 뒤에 겁니다. 조립에 쓴 에셋(소켓 · 원본 메시 · 피팅 표 · 피팅 데이터)을 에셋 매니저가 다시 읽었으면 다시 조립을 예약합니다(에셋 핫 리로드).
@@ -304,9 +306,14 @@ namespace sw
         void onAppearanceDataReloaded();
         /**
          * @brief 베이크한 메시에 필요한 원본 메시 · 피팅 표 · 피팅 데이터를 요청합니다(조립 끝). 구울 것이 없고 지난번에도 베이크하지 않았으면 아무것도 하지 않습니다.
-         * @details 다 읽히면 틱이 기다렸다 틱 뒤에 `applyMeshAssembly` 가 유닛에 건다(미리보기 씬도 틱한다 — 이 자리에서 기다리지 않는다).
+         * @details 씬의 에셋 대기 목록(`waitMeshAssembly`)에 걸고, 다 읽히면 그 프레임의 틱 뒤에 `applyMeshAssembly` 가 유닛에 건다(미리보기 씬도 플레이 · 틱한다 — 이 자리에서 기다리지 않는다).
          */
         void requestMeshAssembly( GameObjectManager& manager );
+        /**
+         * @brief 베이크한 메시의 재료를 기다리는 동안 씬 프레임의 도착 단계가 부릅니다(`PrimitiveRegistry::addAssetWaiter`). 다 읽혔으면 걸기를 틱 뒤 큐에 넣고 false 입니다.
+         * @details 대기 목록에 있는 동안 자동화의 "에셋 일 0" 이 이 조립을 센다 — 틱이 따로 기다리면 그 프레임이 캡처 판정에 보이지 않았다.
+         */
+        static bool waitMeshAssembly( Component& component, float32 deltaSeconds );
         /** @brief 요청한 것 가운데 아직 읽는 것이 있으면 true 입니다. */
         bool isMeshAssemblyLoading() const;
         /** @brief 읽은 것으로 베이크한 메시를 지어 몸과 스킨드 부품 유닛의 스킨 원본으로 겁니다(바꿀 것이 없는 부품은 원본). 틱 밖, 게임 스레드입니다. */
@@ -393,7 +400,7 @@ namespace sw
         bool                                    _bPartsVisible;
         uint8                                   _bAssembleScheduled   : 1;
         uint8                                   _bStarted             : 1;
-        uint8                                   _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(틱이 기다린다)
+        uint8                                   _bMeshAssemblyPending : 1; ///< 요청한 것을 아직 걸지 않았다(씬의 에셋 대기 목록에 걸려 있다)
         uint8                                   _bMeshAssembled       : 1; ///< 유닛이 베이크한 메시를 그린다 — 구울 것이 없어져도 원본으로 되돌려야 한다
         uint8                                   _bProportionTask      : 1; ///< 본 비율 단계 작업을 몸 유닛에 등록했다(비율이 있을 때만 등록해 군중 공유를 막지 않는다)
         uint8                                   _bMeshMerged          : 1; ///< 몸 유닛이 합친 메시를 그리고 구간 이름을 가졌다 — 합치지 않게 되면 되돌려야 한다

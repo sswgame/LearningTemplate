@@ -28,7 +28,7 @@
 
 namespace sw
 {
-    class SceneComponent;
+    class Component;
     class ScenePrimitive;
     class ScenePrimitiveBatch;
 
@@ -141,19 +141,21 @@ namespace sw
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
 
         /**
-         * @brief 에셋 로드(또는 그 뒤의 등장)를 기다리는 컴포넌트가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @brief 에셋 로드(또는 그 뒤의 등장 · 조립)를 기다리는 컴포넌트가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @details 씬 컴포넌트에 묶지 않는다 — 메시를 직접 그리지 않고 읽은 에셋으로 다른 컴포넌트를 조립하는 컴포넌트(외형)도 같은 목록에 걸어야
+         *          자동화의 "에셋 일 0" 이 그 조립까지 센다(따로 세는 길을 두지 않는다).
          * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
          */
-        using AssetWaitFunction = bool ( * )( SceneComponent& component, float32 deltaSeconds );
+        using AssetWaitFunction = bool ( * )( Component& component, float32 deltaSeconds );
         /**
          * @brief 에셋 로드(`AssetHandle`)를 기다리는 컴포넌트를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
          * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). 프리미티브는 `remove` 가 같이 빼고,
          *          이 레지스트리에 인스턴스 배치를 거는 컴포넌트(폴리지 · VFX — 메시가 와야 배치를 짓는다)는 등록을 풀 때 `removeAssetWaiter` 로 뺀다 — 사라진 컴포넌트는 불리지 않는다.
          *          자동화의 "에셋 일 0" 판정(`AutomationCaptureUtil::countPendingAssetWork`)이 이 목록의 수를 센다 — 메시를 기다리는 컴포넌트는 여기에 걸어야 사진이 기다린다.
          */
-        void addAssetWaiter( SceneComponent* pComponent, AssetWaitFunction pFunction );
+        void addAssetWaiter( Component* pComponent, AssetWaitFunction pFunction );
         /** @brief 기다리는 컴포넌트를 뺍니다(등록을 풀 때). 걸려 있지 않으면 아무 일도 없습니다. */
-        void removeAssetWaiter( const SceneComponent* pComponent );
+        void removeAssetWaiter( const Component* pComponent );
         /**
          * @brief 기다리는 프리미티브의 함수를 한 번씩 부르고 다 받은 것을 뺍니다(씬 프레임 `AssetArrival` 단계, 게임 스레드, 병렬 구간 밖).
          * @details 함수 안에서 다시 `addAssetWaiter` 를 불러도 된다(다른 메시로 바꿔 다시 기다리는 경우) — 반환값이 남길지를 정한다.
@@ -176,12 +178,12 @@ namespace sw
         /** @brief 에셋을 기다리는 컴포넌트 하나입니다. */
         struct AssetWaiter
         {
-            SceneComponent*   _pComponent{ nullptr };
+            Component*        _pComponent{ nullptr };
             AssetWaitFunction _pFunction{ nullptr };
         };
 
         /** @brief `_mutex` 를 이미 쥔 채로 기다리는 컴포넌트를 뺍니다. */
-        void removeAssetWaiterLocked( const SceneComponent* pComponent ) SW_REQUIRES_LOCK( _mutex );
+        void removeAssetWaiterLocked( const Component* pComponent ) SW_REQUIRES_LOCK( _mutex );
 
         /** @brief `_mutex` 를 이미 쥔 채로 더티 표시를 지웁니다. */
         void clearDirtyLocked() SW_REQUIRES_LOCK( _mutex );

@@ -202,7 +202,7 @@ namespace sw
          */
         [[nodiscard]] bool requestLayerMeshes();
         /** @brief 메시 도착을 기다리는 동안 씬 프레임마다 불립니다(`PrimitiveRegistry::addAssetWaiter`). 다 왔으면 다시 짓고, 아직 기다리면 true 입니다. */
-        static bool updateMeshArrival( SceneComponent& component, float32 deltaSeconds );
+        static bool updateMeshArrival( Component& component, float32 deltaSeconds );
 
     private:
         PROPERTY( Category = "Foliage", DisplayName = "Layers" )
