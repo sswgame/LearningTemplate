@@ -127,11 +127,11 @@ SW_TEST_CASE( RhythmChartTest, RootBpmIsUsedWithoutBpmElements )
  */
 SW_TEST_CASE( RhythmChartTest, OverlappingNoteFailsTheChart )
 {
+    SW_EXPECT_LOG( "RhythmChart.NoteOverlap" ); // 기대 로그는 동작 앞에 선언해야 받는다
     sw::RhythmChart chart;
     SW_EXPECT_FALSE( chart.loadFromXMLText(
         R"(<Chart lanes="2"><Note lane="0" beat="1" endBeat="3"/><Note lane="0" beat="2"/><Note lane="1" beat="2"/></Chart>)", "test" ) );
     SW_EXPECT_EQUAL( size_t( 2 ), chart.getNotes().size() );
-    SW_EXPECT_LOG( "RhythmChart.NoteOverlap" );
 }
 
 /**
@@ -139,14 +139,14 @@ SW_TEST_CASE( RhythmChartTest, OverlappingNoteFailsTheChart )
  */
 SW_TEST_CASE( RhythmChartTest, InvalidElementsAndEmptyChartFail )
 {
+    SW_EXPECT_LOG( "RhythmChart.InvalidNote" ); // 기대 로그는 동작 앞에 선언해야 받는다
+    SW_EXPECT_LOG( "RhythmChart.UnknownElement" );
+    SW_EXPECT_LOG( "RhythmChart.NoNotes" );
     sw::RhythmChart chart;
     SW_EXPECT_FALSE( chart.loadFromXMLText(
         R"(<Chart lanes="2"><Note lane="5" beat="1"/><Note lane="0" beat="2" endBeat="1"/><Foo/><Note lane="1" beat="3"/></Chart>)", "test" ) );
     SW_EXPECT_EQUAL( size_t( 1 ), chart.getNotes().size() );
-    SW_EXPECT_LOG( "RhythmChart.InvalidNote" );
-    SW_EXPECT_LOG( "RhythmChart.UnknownElement" );
 
     sw::RhythmChart emptyChart;
     SW_EXPECT_FALSE( emptyChart.loadFromXMLText( "<Chart/>", "test" ) );
-    SW_EXPECT_LOG( "RhythmChart.NoNotes" );
 }
