@@ -4,7 +4,6 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -15,45 +14,11 @@ namespace sw
      * @brief `-gv_socketPartPool=0` — 소켓 부품 풀을 끕니다(`takePart` 는 늘 못 내주고 `storePart` 는 늘 받지 않는다 → 부르는 쪽이 새로 스폰하고 지운다). 풀 전 · 후 스폰 비용 비교용입니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_socketPartPool, 1, "Socket part pool for appearance parts (0 = off: every part is spawned and destroyed, for before/after cost comparison)" );
-
-    namespace
-    {
-        struct SocketPartPoolInternal
-        {
-            /** @brief 첫 씬이 아니라 지금 활성 씬의 풀을 읽는다 — 시나리오 감시 값이 부릅니다. */
-            [[nodiscard]] static bool readTakeHitCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                if ( pManager == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeHitCount() );
-                return true;
-            }
-            [[nodiscard]] static bool readTakeMissCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                if ( pManager == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getTakeMissCount() );
-                return true;
-            }
-            [[nodiscard]] static bool readStoredCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                if ( pManager == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pManager->getSubsystem<SocketPartPool>().getStoredCount() );
-                return true;
-            }
-        };
-    } // namespace
 } // namespace sw
 
 namespace sw
 {
     SW_SCENE_SERVICE( SocketPartPool, DestroyPost )
-
-    SW_AUTOMATION_WATCH( socketPartPoolTakeHits, "SocketPartPool.TakeHits", "Appearance parts the socket part pool handed out from rest (cumulative)", &SocketPartPoolInternal::readTakeHitCount );
-    SW_AUTOMATION_WATCH( socketPartPoolTakeMisses, "SocketPartPool.TakeMisses", "Appearance part requests the socket part pool could not serve (the part was spawned new, cumulative)",
-                         &SocketPartPoolInternal::readTakeMissCount );
-    SW_AUTOMATION_WATCH( socketPartPoolStored, "SocketPartPool.Stored", "Appearance parts the socket part pool took in to rest (cumulative)", &SocketPartPoolInternal::readStoredCount );
 
     SocketPartPool::SocketPartPool( GameObjectManager& manager )
         : _pManager{ &manager }
