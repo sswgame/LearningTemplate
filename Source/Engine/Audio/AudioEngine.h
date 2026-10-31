@@ -12,6 +12,7 @@
  *          장치 없이 버퍼에 렌더해 측정값을 확인하는 테스트가 이 성질에 의존한다.
  */
 #pragma once
+#include "Core/Concurrency/LockedSwapQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
@@ -400,6 +401,8 @@ namespace sw
         void publishState( uint32 realCount, uint32 virtualCount );
         /** @brief 명령을 쌓습니다. */
         void pushCommand( Command&& command );
+        /** @brief 재생 명령을 쌓고 재생 id 를 매겨 돌려줍니다(id 는 큐에 넣는 잠금 안에서 매긴다). */
+        AudioPlayingID pushPlayCommand( Command&& command );
         /**
          * @brief 이벤트 라이브러리를 검사하고 맞으면 표에 넣습니다(`loadEventLibrary` 의 잠금 안 부분). 오류는 @p outListError 에 모으고, 넣었으면 @p outLibrary 가 그 라이브러리입니다.
          * @details 로그 · 클립 요청 · 명령은 부르는 쪽이 잠금을 놓은 뒤에 한다(잠금은 잎 잠금, 결정 5-3).
@@ -452,12 +455,11 @@ namespace sw
 
         AudioClipCache _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
         // 게임 스레드
-        vector<Command> _listPendingCommand              SW_GUARDED_BY( _commandMutex ); /**< 쌓인 명령입니다(`_commandMutex`). */
+        LockedSwapQueue<Command>                         _commandQueue;                  /**< 게임 스레드가 쌓은 명령입니다. 오디오 스레드가 블록 머리에 통째로 가져간다. */
         ThreadRole                                       _audioThread;                   ///< 오디오 스레드 역할 — 꺼내 온 명령 목록은 믹스를 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
         vector<Command> _listApplyingCommand             SW_GUARDED_BY( _audioThread );  /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */
         LibraryMap _mapGameLibrary                       SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 라이브러리입니다. */
         shared_ptr<const AudioMixerDesc> _pGameMixerDesc SW_GUARDED_BY( _libraryMutex ); /**< 게임 스레드가 아는 그래프입니다. 이름으로 대조합니다. */
-        mutex                                            _commandMutex;                  /**< `_listPendingCommand` 를 지킵니다. */
         mutable mutex                                    _libraryMutex;                  /**< `_mapGameLibrary` 와 `_pGameMixerDesc` 를 지킵니다. 이벤트는 병렬 틱에서도 재생합니다. */
         atomic<uint32>                                   _libraryGeneration;             /**< `_mapGameLibrary` 를 바꿀 때마다 오릅니다(`getEventLibraryGeneration`). */
         atomic<uint64>                                   _nextPlayingID;                 /**< 다음 재생 id 입니다. */

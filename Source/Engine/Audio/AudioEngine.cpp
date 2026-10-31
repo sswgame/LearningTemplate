@@ -34,11 +34,10 @@ namespace sw
 
     AudioEngine::AudioEngine()
         : _clipStore{}
-        , _listPendingCommand{}
+        , _commandQueue{}
         , _listApplyingCommand{}
         , _mapGameLibrary{}
         , _pGameMixerDesc{ nullptr }
-        , _commandMutex{}
         , _libraryMutex{}
         , _libraryGeneration{ 1 }
         , _nextPlayingID{ 1 }
@@ -105,10 +104,7 @@ namespace sw
         _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
         if ( _bInitialized.exchange( false, std::memory_order_acq_rel ) == false )
             return;
-        {
-            ScopedLock<mutex> lock{ _commandMutex };
-            _listPendingCommand.clear();
-        }
+        _commandQueue.clear();
         _listApplyingCommand.clear();
         _listVoice.clear();
         _listInstance.clear();
@@ -422,12 +418,7 @@ namespace sw
         command._type      = CommandType::PostEvent;
         command._name      = eventName;
         command._emitterID = emitterID;
-        // id 는 명령을 쌓을 때(잠금 안에서) 매긴다. 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정이 맞다.
-        ScopedLock<mutex> lock{ _commandMutex };
-        command._playingID             = _nextPlayingID.fetch_add( 1 );
-        const AudioPlayingID playingID = command._playingID;
-        _listPendingCommand.push_back( std::move( command ) );
-        return playingID;
+        return pushPlayCommand( std::move( command ) );
     }
 
     AudioPlayingID AudioEngine::playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params )
@@ -440,11 +431,7 @@ namespace sw
         command._path       = path;
         command._name       = bus;
         command._clipParams = params;
-        ScopedLock<mutex> lock{ _commandMutex };
-        command._playingID             = _nextPlayingID.fetch_add( 1 );
-        const AudioPlayingID playingID = command._playingID;
-        _listPendingCommand.push_back( std::move( command ) );
-        return playingID;
+        return pushPlayCommand( std::move( command ) );
     }
 
     void AudioEngine::stop( AudioPlayingID playingID, float32 fadeSeconds )
@@ -493,11 +480,7 @@ namespace sw
         command._type   = CommandType::StartMusic;
         command._pMusic = std::move( pMusic );
         command._value  = fadeSeconds;
-        ScopedLock<mutex> lock{ _commandMutex };
-        command._playingID             = _nextPlayingID.fetch_add( 1 );
-        const AudioPlayingID playingID = command._playingID;
-        _listPendingCommand.push_back( std::move( command ) );
-        return playingID;
+        return pushPlayCommand( std::move( command ) );
     }
 
     void AudioEngine::setMusicSegment( const hashed_string& segment )
@@ -660,8 +643,14 @@ namespace sw
 
     void AudioEngine::pushCommand( Command&& command )
     {
-        ScopedLock<mutex> lock{ _commandMutex };
-        _listPendingCommand.push_back( std::move( command ) );
+        _commandQueue.push( std::move( command ) );
+    }
+
+    AudioPlayingID AudioEngine::pushPlayCommand( Command&& command )
+    {
+        // id 는 큐에 넣는 잠금 안에서 매긴다. 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정(`isPlaying`)이 맞다.
+        return _commandQueue.pushStamped( std::move( command ), [this]( Command& queued )
+        { return queued._playingID = _nextPlayingID.fetch_add( 1 ); } );
     }
 
     void AudioEngine::render( float32* pOutput, uint32 frameCount )
@@ -703,10 +692,7 @@ namespace sw
     void AudioEngine::applyCommands()
     {
         _audioThread.assumeHeld(); // 믹스를 도는 오디오 스레드에서, 또는 그 스레드를 멈춘 뒤(종료) 불린다
-        {
-            ScopedLock<mutex> lock{ _commandMutex };
-            _listApplyingCommand.swap( _listPendingCommand );
-        }
+        _commandQueue.takeAll( _listApplyingCommand );
         for ( Command& command : _listApplyingCommand )
         {
             applyCommand( command );
