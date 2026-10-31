@@ -1,5 +1,5 @@
 /**
- * @file FramePostProcessFog.cpp
+ * @file FrameFog.cpp
  * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassType::Fog`)는 렌더러의 패스 실행이 그린다(`FramePassExecutor::executeFogPass`).
  * @details 안개는 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 블렌드한다(fog.hlsl). 볼륨 안개를 켜면 주 시점에서만 컴퓨트(volumetric_fog.hlsl)가 froxel 마다
  *          라이트 산란을 누적해 구조 버퍼에 쓰고, 안개 패스가 그 버퍼를 t11(`SW_SLOT_PASS_SRV`)로 읽는다. 컴퓨트는 라이트 그리드(`dispatchLightGrid`) 뒤에 돈다.
@@ -17,7 +17,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
@@ -25,11 +25,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FramePostProcess" );
+    SW_LOG_CALLER( "FrameFog" );
 
     namespace
     {
-        struct FramePostProcessFogInternal
+        struct FrameFogInternal
         {
             /// 볼륨 안개 컴퓨트 입력의 행 번호입니다(volumetric_fog.hlsl 의 kRow* 와 같은 순서).
             static constexpr uint32 kRowInverseViewProj = 0;
@@ -63,14 +63,24 @@ namespace sw
         };
     } // namespace
 
-    void FramePostProcess::release()
+    FrameFog::FrameFog( IRHIDevice* const& pDevice, const FramePSOManager& psoManager )
+        : _pDevice{ pDevice }
+        , _psoManager{ psoManager }
+        , _frameFog{}
+        , _fogVolumeBuffer{}
+        , _fogVolumeParamBuffer{}
+        , _listScratchFogVolumeParam{}
+    {
+    }
+
+    void FrameFog::release()
     {
         _fogVolumeBuffer.release( _pDevice );
         _fogVolumeParamBuffer.release( _pDevice );
         _bFogVolumeActive = SW_FALSE;
     }
 
-    void FramePostProcess::applyFrameFog( bool bHasFog, const FogSettings& fog )
+    void FrameFog::applyFrameFog( bool bHasFog, const FogSettings& fog )
     {
         // 셰이더 상수 배치는 FogSettings 머리 주석이 정본이다(fog.hlsl 이 같은 순서로 읽는다).
         _bHasFrameFog = bHasFog ? SW_TRUE : SW_FALSE;
@@ -91,10 +101,10 @@ namespace sw
         _frameFog._bVolumetric  = bVolumetric ? SW_TRUE : SW_FALSE;
     }
 
-    void FramePostProcess::prepareVolumetricFog( IRHIDevice* pDevice, const RenderView& mainView, const float4& keyLightDirIntensity, const float4& keyLightColorAmbient,
-                                                 const GPULightBuffer& lightBuffer, uint32 mainLightGridIndex )
+    void FrameFog::prepareVolumetricFog( IRHIDevice* pDevice, const RenderView& mainView, const float4& keyLightDirIntensity, const float4& keyLightColorAmbient,
+                                         const GPULightBuffer& lightBuffer, uint32 mainLightGridIndex )
     {
-        using Internal     = FramePostProcessFogInternal;
+        using Internal     = FrameFogInternal;
         _bFogVolumeActive  = SW_FALSE;
         const bool bWanted = pDevice != nullptr && _bHasFrameFog == SW_TRUE && _frameFog._bVolumetric == SW_TRUE;
         if ( bWanted == false )
@@ -156,7 +166,7 @@ namespace sw
         _bFogVolumeActive = SW_TRUE;
     }
 
-    void FramePostProcess::dispatchVolumetricFog( IRHICommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const
+    void FrameFog::dispatchVolumetricFog( IRHICommandList& cmd, const GPULightBuffer& lightBuffer, RHIDescriptorIndex placeholderSRV ) const
     {
         if ( _bFogVolumeActive == SW_FALSE )
             return;

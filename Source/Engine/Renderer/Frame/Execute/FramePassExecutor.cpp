@@ -46,7 +46,9 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Capture/FrameCapture.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
@@ -160,15 +162,17 @@ namespace sw
     FramePassExecutor::~FramePassExecutor() = default;
 
     FramePassExecutor::FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
-                                          FramePostProcess& postProcess, FrameExtensionHost& extensionHost, FrameCapture& capture )
+                                          FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture )
         : _pDevice{ pDevice }
         , _pipelineResource{ pipeline }
         , _state{ state }
         , _psoManager{ psoManager }
-        , _postProcess{ postProcess }
+        , _autoExposure{ autoExposure }
+        , _upscale{ upscale }
+        , _fog{ fog }
         , _extensionHost{ extensionHost }
         , _capture{ capture }
-        , _prepass{ pDevice, state, psoManager, postProcess }
+        , _prepass{ pDevice, state, psoManager, fog }
         , _pActiveView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
@@ -443,7 +447,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
         float32 exposureScale = MathUtil::pow( 2.0f, post._exposureCompensation );
-        _postProcess.prepareAutoExposure( view, _state.getAnimationTime(), exposureScale );
+        _autoExposure.prepareAutoExposure( view, _state.getAnimationTime(), exposureScale );
         context._passValues.setFloat4( passConstantNames()._cameraGrade, float4{ exposureScale, MathUtil::max( 0.0f, post._saturation ), MathUtil::max( 0.0f, post._contrast ),
                                                                                  MathUtil::saturate( post._vignetteIntensity ) } );
         const float32 viewAspect = pool.getHeight() > 0 ? static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) : 0.0f;
@@ -1081,7 +1085,7 @@ namespace sw
         if ( activePool().isForwarded( pTarget->view() ) )
             return;
         registerDeclaredInputs( context, passDesc );
-        _postProcess.recordAutoExposure( context, *_pActiveView, passDesc );
+        _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
 
         // PSO 가 0이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대체할 PSO 는 테이블이 정한 것만 쓴다(Tonemap 은 Present).
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( input._passType );
@@ -1264,7 +1268,7 @@ namespace sw
         const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
         const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::Fog );
         const bool                   bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
-        const bool                   bDraws       = _postProcess.hasFrameFog() && pso != 0 && bShowsScene;
+        const bool                   bDraws       = _fog.hasFrameFog() && pso != 0 && bShowsScene;
         if ( bDraws == false )
             return;
 
@@ -1273,8 +1277,8 @@ namespace sw
         registerDeclaredInputs( context, input._passDesc );
 
         // 볼륨은 컴퓨트가 돈 프레임의 주 시점에서만 읽는다(추가 뷰는 볼륨을 계산하지 않는다). 상수는 이 패스의 복사본에만 쓴다.
-        const bool bVolume      = _postProcess.isFogVolumeActive() && _pActiveView == &_state._mainView && _postProcess.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
-        float4     volumeParams = _postProcess.getFrameFog()._volumeParams;
+        const bool bVolume      = _fog.isFogVolumeActive() && _pActiveView == &_state._mainView && _fog.getFogVolumeBuffer()._srv != kInvalidDescriptorIndex;
+        float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
 
@@ -1288,7 +1292,7 @@ namespace sw
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         if ( bVolume )
-            context._pCmd->bindStructuredBuffer( _postProcess.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
+            context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
         context._pCmd->draw( 3, 0 );
         context._pCmd->endRenderPass();
     }
@@ -1366,9 +1370,9 @@ namespace sw
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
-            _postProcess.recordAutoExposure( context, *_pActiveView, passDesc );
+            _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
-            const bool             bUpscale = _postProcess.recordUpscaleEasu( context, *_pActiveView, srcName );
+            const bool             bUpscale = _upscale.recordUpscaleEasu( context, *_pActiveView, srcName );
             RHIRenderPassBeginInfo beginInfo{};
             beginInfo._bBindColor        = SW_TRUE;
             beginInfo._arrColorTarget[0] = dstTarget;
@@ -1405,7 +1409,7 @@ namespace sw
                 const float4& rect      = activeView._settings._screenRect;
                 const float32 viewportX = bFullRect ? 0.0f : rect._x * static_cast<float32>( outputWidth );
                 const float32 viewportY = bFullRect ? 0.0f : rect._y * static_cast<float32>( outputHeight );
-                _postProcess.drawUpscaleRcas( context, *_pActiveView, target._format, viewportX, viewportY );
+                _upscale.drawUpscaleRcas( context, *_pActiveView, target._format, viewportX, viewportY );
             }
             else
             {

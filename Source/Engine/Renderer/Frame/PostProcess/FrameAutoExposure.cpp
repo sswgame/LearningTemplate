@@ -1,5 +1,5 @@
 /**
- * @file FramePostProcessExposure.cpp
+ * @file FrameAutoExposure.cpp
  * @brief 자동 노출입니다 — 뷰마다 HDR 장면의 평균 로그 휘도를 재어 노출을 천천히 맞춥니다(언리얼 Auto Exposure Basic 에 해당).
  * @details 흐름: 셋업(`prepareAutoExposure`, 뷰마다 프레임에 한 번)이 잴지 · 측정 상수 · 쓰는 기록 칸을 정하고, 톤맵하는 패스(`findTonemapPass`)가 자기 그리기 앞에서
  *          측정 풀스크린 하나를 같은 리스트에 기록한다(`recordAutoExposure`, auto_exposure.hlsl). 측정은 지난 칸의 EV 를 읽어 목표 EV 로 다가간 값을 이번 칸(1x1 R32)에 쓰고,
@@ -18,7 +18,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -26,11 +26,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FramePostProcess" );
+    SW_LOG_CALLER( "FrameAutoExposure" );
 
     namespace
     {
-        struct FramePostProcessExposureInternal
+        struct FrameAutoExposureInternal
         {
             /// 측정 셰이더의 루트 상수입니다 — auto_exposure.hlsl 의 `SwRootConstants` 와 같은 순서 · 크기다.
             struct RootConstants
@@ -52,20 +52,16 @@ namespace sw
         };
     } // namespace
 
-    FramePostProcess::FramePostProcess( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const FramePSOManager& psoManager )
+    FrameAutoExposure::FrameAutoExposure( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const FramePSOManager& psoManager )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
         , _psoManager{ psoManager }
-        , _frameFog{}
-        , _fogVolumeBuffer{}
-        , _fogVolumeParamBuffer{}
-        , _listScratchFogVolumeParam{}
     {
     }
 
-    const RenderGraphPassDesc* FramePostProcess::findTonemapPass() const
+    const RenderGraphPassDesc* FrameAutoExposure::findTonemapPass( const RenderPipelineAsset& pipeline )
     {
-        for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
+        for ( const RenderGraphPassDesc& pass : pipeline.getGraphPass() )
         {
             if ( passAppliesTonemap( pass ) )
                 return &pass;
@@ -73,9 +69,9 @@ namespace sw
         return nullptr;
     }
 
-    void FramePostProcess::ensureAutoExposureHistory( FrameViewTarget& view )
+    void FrameAutoExposure::ensureAutoExposureHistory( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || findTonemapPass() == nullptr || view._arrAutoExposure[0] != 0;
+        const bool bNotNeeded = _pDevice == nullptr || findTonemapPass( _pipeline ) == nullptr || view._arrAutoExposure[0] != 0;
         if ( bNotNeeded )
             return;
         RHITextureDesc desc{};
@@ -96,7 +92,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to create the auto exposure history (2 x 1x1 R32 float RT) - auto exposure is not measured on this view" );
     }
 
-    void FramePostProcess::releaseAutoExposureHistory( FrameViewTarget& view )
+    void FrameAutoExposure::releaseAutoExposureHistory( FrameViewTarget& view )
     {
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
@@ -112,7 +108,7 @@ namespace sw
         view._bAutoExposureMeasured  = SW_FALSE;
     }
 
-    void FramePostProcess::prepareAutoExposure( FrameViewTarget& view, float32 now, float32& inoutExposureScale ) const
+    void FrameAutoExposure::prepareAutoExposure( FrameViewTarget& view, float32 now, float32& inoutExposureScale ) const
     {
         const CameraPostProcessValues& post = view._settings._postProcess;
         view._bAutoExposureThisFrame        = SW_FALSE;
@@ -135,14 +131,14 @@ namespace sw
         view._autoExposureClock      = now;
         view._autoExposureWrite      = view._autoExposureWrite == 0 ? 1 : 0;
         view._autoExposureParams     = float4{ post._autoExposureMinEv, post._autoExposureMaxEv,
-                                           FramePostProcessExposureInternal::computeAdaptRate( post._autoExposureSpeedUp, deltaSeconds, bReset ),
-                                           FramePostProcessExposureInternal::computeAdaptRate( post._autoExposureSpeedDown, deltaSeconds, bReset ) };
+                                           FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedUp, deltaSeconds, bReset ),
+                                           FrameAutoExposureInternal::computeAdaptRate( post._autoExposureSpeedDown, deltaSeconds, bReset ) };
         view._bAutoExposureThisFrame = SW_TRUE;
     }
 
-    void FramePostProcess::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
+    void FrameAutoExposure::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
     {
-        if ( &passDesc != findTonemapPass() || view._bAutoExposureThisFrame == SW_FALSE )
+        if ( &passDesc != findTonemapPass( _pipeline ) || view._bAutoExposureThisFrame == SW_FALSE )
             return;
         TransientAttachmentPool::Attachment source{};
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )
@@ -175,8 +171,8 @@ namespace sw
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::AutoExposure ) );
         // 입력 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor · AutoExposure 칸(auto_exposure.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool                                      bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FramePostProcessExposureInternal::RootConstants constants{};
+        const bool                               bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FrameAutoExposureInternal::RootConstants constants{};
         constants._source   = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
         constants._history  = bNativeBindless ? static_cast<uint32>( view._arrAutoExposureSRV[readSlot] ) : 0u;
         constants._minEv    = view._autoExposureParams._x;

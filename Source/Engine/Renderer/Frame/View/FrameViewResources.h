@@ -15,7 +15,8 @@ namespace sw
 {
     struct FrameViewTarget;
 
-    class FramePostProcess;
+    class FrameAutoExposure;
+    class FrameUpscale;
     class IRHIDevice;
     class RenderPipelineAsset;
 
@@ -35,7 +36,7 @@ namespace sw
             uint8 _bTargetsChanged{ SW_FALSE };   ///< 처음 도는 패스의 타깃을 만들었거나 오래 빠진 패스의 타깃을 놓았다
         };
 
-        FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FramePostProcess& postProcess );
+        FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale );
         FrameViewResources( const FrameViewResources& )            = delete;
         FrameViewResources& operator=( const FrameViewResources& ) = delete;
 
@@ -73,7 +74,8 @@ namespace sw
     private:
         IRHIDevice* const&         _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다(생성자 참고)
         const RenderPipelineAsset& _pipeline;
-        FramePostProcess&          _postProcess;
+        FrameAutoExposure&         _autoExposure;
+        FrameUpscale&              _upscale;
         vector<uint8>              _listScratchNeededAttachment; ///< 패스를 고를 때 선언한 첨부 자리마다 "이번 프레임에 읽힌다"(뷰마다 다시 쓴다)
     };
 } // namespace sw

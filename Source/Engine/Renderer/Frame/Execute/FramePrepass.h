@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    class FramePostProcess;
+    class FrameFog;
     class FramePSOManager;
     class IRHICommandList;
     class IRHIDevice;
@@ -35,7 +35,7 @@ namespace sw
     class FramePrepass
     {
     public:
-        FramePrepass( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FramePostProcess& postProcess );
+        FramePrepass( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog );
         FramePrepass( const FramePrepass& )            = delete;
         FramePrepass& operator=( const FramePrepass& ) = delete;
 
@@ -121,7 +121,7 @@ namespace sw
         IRHIDevice* const& _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         FrameRenderState&  _state;
         FramePSOManager&   _psoManager;
-        FramePostProcess&  _postProcess;
+        FrameFog&          _fog;
         IRHICommandList*   _pCmd{ nullptr }; ///< `record` 하는 동안만 프리패스 리스트를 가리킨다
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder{};

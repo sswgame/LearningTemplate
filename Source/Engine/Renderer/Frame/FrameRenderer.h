@@ -23,7 +23,9 @@
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
@@ -93,7 +95,7 @@ namespace sw
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
      *
      *          **얇은 지휘자.** 렌더러는 프레임 순서(스냅샷 받기 · 라이트 · 그림자 · 하늘 · 뷰 준비 · 업로드 · PSO 준비 · 제출)를 정하고 프레임 데이터(`FrameRenderState`)를 소유한다.
-     *          혼자 서는 일은 소유한 협력 객체가 한다 — 기록과 제출(`FramePassExecutor`), PSO 만들기 · 찾기(`FramePSOManager`), 후처리 효과 셋(`FramePostProcess`),
+     *          혼자 서는 일은 소유한 협력 객체가 한다 — 기록과 제출(`FramePassExecutor`), PSO 만들기 · 찾기(`FramePSOManager`), 후처리 효과 셋(`FrameAutoExposure` · `FrameUpscale` · `FrameFog`),
      *          모듈 확장 받아들이기(`FrameExtensionHost`), 뷰 GPU 자원 수명(`FrameViewResources`), 캡처(`FrameCapture`).
      *          협력 객체는 지금 그리는 뷰를 인자로 받고 렌더러의 `_pDevice` 변수를 참조한다. 언리얼 `FSceneRenderer` 의 셋업(InitViews)과 패스 기록(RDG 패스 실행)을 나눈 것과 같다.
      */
@@ -416,7 +418,9 @@ namespace sw
          * @brief 후처리 효과 셋(자동 노출 · FSR 1 업스케일 · 안개와 볼륨 안개)의 셋업과 기록입니다. 지금 그리는 뷰는 인자로 넘긴다.
          * @details `_psoManager` 를 참조로 읽으므로 그 뒤에 선언한다. 언리얼의 효과별 `AddXxxPass` 처럼 장면 렌더러 밖에 둔다.
          */
-        FramePostProcess _postProcess;
+        FrameAutoExposure _autoExposure;
+        FrameUpscale      _upscale;
+        FrameFog          _fog;
         /**
          * @brief 모듈 렌더 확장의 프레임 받아들이기(확장 훅 · 프록시 요소 · 패스 선언 검사 · 프로그램 PSO · 임시 텍스처 · 요소 메시)입니다. 그래프에 묶고 기록하는 일은 패스 실행(`_passExecutor`)이 한다.
          * @details `_psoManager` 를 참조로 쓰므로 그 뒤에 선언한다. 언리얼 `FSceneViewExtensions` 가 확장을 모으고 장면 렌더러가 훅 자리마다 부르는 나눔과 같다.
@@ -424,7 +428,7 @@ namespace sw
         FrameExtensionHost _extensionHost;
         /**
          * @brief 뷰(`FrameViewTarget`)의 GPU 자원 수명 — 트랜지언트 풀, TAA · 깊이 히스토리, 가림 타일, 프레임마다의 패스 고르기입니다.
-         * @details `_postProcess` 를 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
+         * @details `_autoExposure` · `_upscale` 을 참조로 쓰므로(뷰의 노출 기록 · 업스케일 중간 RT 를 함께 놓는다) 그 뒤에 선언한다.
          */
         FrameViewResources _viewResources;
         string             _pipelinePath;
@@ -458,7 +462,7 @@ namespace sw
         FrameCapture _capture;
         /**
          * @brief 패스 실행 — 컴퓨트 프리패스, 그래프 콜백과 패스별 기록, 드로우, 뷰별 커맨드 리스트 제출입니다. 셋업이 끝난 뒤 `submitGraph` 로 넘긴다.
-         * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_postProcess` · `_extensionHost` · `_capture`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
+         * @details 프레임 데이터(`_state`)와 협력 객체(`_psoManager` · `_autoExposure` · `_upscale` · `_fog` · `_extensionHost` · `_capture`)를 참조로 쓰므로 그들보다 뒤에 선언한다.
          *          언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스를 더하고 실행하는 자리다.
          */
         FramePassExecutor _passExecutor;

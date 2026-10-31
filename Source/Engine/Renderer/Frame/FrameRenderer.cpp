@@ -89,15 +89,17 @@ namespace sw
         , _sceneBuilder{}
         , _pipelineResource{}
         , _psoManager{ _pDevice, _pipelineResource, _state._gpuScene }
-        , _postProcess{ _pDevice, _pipelineResource, _psoManager }
+        , _autoExposure{ _pDevice, _pipelineResource, _psoManager }
+        , _upscale{ _pDevice, _pipelineResource, _psoManager }
+        , _fog{ _pDevice, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
-        , _viewResources{ _pDevice, _pipelineResource, _postProcess }
+        , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
         , _pipelinePath{}
         , _directViewScheduler{}
         , _listDirectViewScratch{}
         , _lastIndirectDrawCallCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
-        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _postProcess, _extensionHost, _capture }
+        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
         , _listScenePreviewRenderer{}
         , _statusMessage{}
         , _directOutputWidth{ 0 }
@@ -400,7 +402,7 @@ namespace sw
         // 안개도 같다 — 물속이면 물의 안개가 컴포넌트의 값을 덮는다(FogComponent::findFog).
         FogSettings sceneFog;
         const bool  bSceneFog = scene.getObjectManager() != nullptr && FogComponent::findFog( *scene.getObjectManager(), pMainCamera->getCameraPosition(), sceneFog );
-        _postProcess.applyFrameFog( bSceneFog, sceneFog );
+        _fog.applyFrameFog( bSceneFog, sceneFog );
         // 출력 크기(인자가 없으면 스왑체인)를 먼저 정한다 — 주 시점의 비율이 그것을 본다.
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
@@ -512,7 +514,7 @@ namespace sw
         }
         // 하늘도 패킷으로만 온다.
         applyFrameSky( packet._bHasSky != SW_FALSE, packet._sky );
-        _postProcess.applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
+        _fog.applyFrameFog( packet._bHasFog != SW_FALSE, packet._fog );
         // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         std::swap( _state._frameShadow, packet._shadow );
         applyFrameShadow();
@@ -624,7 +626,7 @@ namespace sw
         // 라이트 버퍼는 뷰가 정해진 뒤에 올린다 — 뷰마다 라이트 그리드가 붙는다(주 시점과 이번 프레임에 그리는 추가 뷰).
         updateLightBuffer( pDevice );
         // 볼륨 안개의 버퍼와 입력은 라이트 그리드(주 시점의 그리드 번호)가 정해진 뒤, 기록 전에 갖춘다.
-        _postProcess.prepareVolumetricFog( pDevice, _state.view( RenderViewType::Main ), _state._frameLight._dirIntensity, _state._frameLight._colorAmbient, _state._lightBuffer, _state._mainView._lightGridIndex );
+        _fog.prepareVolumetricFog( pDevice, _state.view( RenderViewType::Main ), _state._frameLight._dirIntensity, _state._frameLight._colorAmbient, _state._lightBuffer, _state._mainView._lightGridIndex );
         // 실시간 라이트 프로브 갱신도 라이트 버퍼(프로브 버퍼의 UAV)가 올라간 뒤, 기록 전에 갖춘다.
         prepareRealtimeProbes( pDevice );
         // 추가 뷰의 투명 순서(스냅샷)를 뷰 자원에 옮긴다. 컬링과 정렬 디스패치, 기록보다 먼저 한다.
@@ -751,10 +753,10 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._skyCloudShape, _state._frameSky._cloudShape );
         context._passValues.setFloat4( passConstantNames()._skyCloudWind, _state._frameSky._cloudWind );
         context._passValues.setFloat4( passConstantNames()._skyCloudColor, _state._frameSky._cloudColor );
-        context._passValues.setFloat4( passConstantNames()._fogColorDensity, _postProcess.getFrameFog()._colorDensity );
-        context._passValues.setFloat4( passConstantNames()._fogHeightParams, _postProcess.getFrameFog()._heightParams );
-        context._passValues.setFloat4( passConstantNames()._fogInscatter, _postProcess.getFrameFog()._inscatter );
-        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _postProcess.getFrameFog()._volumeParams );
+        context._passValues.setFloat4( passConstantNames()._fogColorDensity, _fog.getFrameFog()._colorDensity );
+        context._passValues.setFloat4( passConstantNames()._fogHeightParams, _fog.getFrameFog()._heightParams );
+        context._passValues.setFloat4( passConstantNames()._fogInscatter, _fog.getFrameFog()._inscatter );
+        context._passValues.setFloat4( passConstantNames()._fogVolumeParams, _fog.getFrameFog()._volumeParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         _passExecutor.applyViewPassConstants( context, _state._mainView );
     }
@@ -876,7 +878,7 @@ namespace sw
         _state._deform._meshMorphPool.release( _pDevice );
         _state._deform._vertexAnimationPool.release( _pDevice );
         _state._lightBuffer.release( _pDevice );
-        _postProcess.release();
+        _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
         _bPassResourcesReady = SW_FALSE;
@@ -973,7 +975,7 @@ namespace sw
         // Present 뷰포트(출력 × 사각형) — FSR 1 로 키우면 중간 RT 가 이 크기다(executePresentPass 의 뷰포트와 같은 식).
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
-        _postProcess.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
+        _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
     }
 
@@ -1226,7 +1228,7 @@ namespace sw
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
         (void)_viewResources.applyViewPassSelection( view, request._viewProj ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
-        _postProcess.prepareUpscale( view, view._outputWidth, view._outputHeight );
+        _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 
     void FrameRenderer::releaseExtraView( FrameViewTarget& view )

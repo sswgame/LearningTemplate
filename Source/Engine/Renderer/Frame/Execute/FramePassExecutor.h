@@ -36,7 +36,9 @@
 namespace sw
 {
     class FrameCapture;
-    class FramePostProcess;
+    class FrameAutoExposure;
+    class FrameFog;
+    class FrameUpscale;
     class FramePSOManager;
     class IRHICommandList;
     class IRHIDevice;
@@ -54,7 +56,7 @@ namespace sw
     {
     public:
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
-                           FramePostProcess& postProcess, FrameExtensionHost& extensionHost, FrameCapture& capture );
+                           FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture );
         ~FramePassExecutor(); ///< 밖에 둔다 — 내보내는 클래스의 소멸자는 쓰는 곳마다 만들어져 앞선 선언만 본 `unique_ptr<IRHICommandList>` 을 지우지 못한다
         FramePassExecutor( const FramePassExecutor& )            = delete;
         FramePassExecutor& operator=( const FramePassExecutor& ) = delete;
@@ -221,7 +223,7 @@ namespace sw
         void executeHighlightPass( const PassExecuteInput& input );
         /** @brief 하늘입니다. 씬에 하늘이 없거나 뎁스 · 컬러 출력이 없으면 그리지 않습니다. */
         void executeSkyPass( const PassExecuteInput& input );
-        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FramePostProcess` 가 정해 둔 것을 읽습니다. */
+        /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
@@ -406,7 +408,9 @@ namespace sw
         const RenderPipelineAsset& _pipelineResource;
         FrameRenderState&          _state;
         FramePSOManager&           _psoManager;
-        FramePostProcess&          _postProcess;
+        FrameAutoExposure&         _autoExposure;
+        FrameUpscale&              _upscale;
+        FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
         /// @brief 그래프 앞의 프리패스 단계(컴퓨트 프리패스 · 깊이 히스토리 · 가림 타일 · 볼륨 안개 · 렌더 텍스처)입니다.

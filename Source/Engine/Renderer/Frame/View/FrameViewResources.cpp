@@ -12,7 +12,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -157,10 +158,11 @@ namespace sw
         };
     } // namespace
 
-    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FramePostProcess& postProcess )
+    FrameViewResources::FrameViewResources( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameAutoExposure& autoExposure, FrameUpscale& upscale )
         : _pDevice{ pDevice }
         , _pipeline{ pipeline }
-        , _postProcess{ postProcess }
+        , _autoExposure{ autoExposure }
+        , _upscale{ upscale }
         , _listScratchNeededAttachment{}
     {
     }
@@ -203,7 +205,7 @@ namespace sw
         ensureTAAHistory( view );
         ensureDepthHistory( view );
         ensureOcclusionTiles( view );
-        _postProcess.ensureAutoExposureHistory( view );
+        _autoExposure.ensureAutoExposureHistory( view );
         // 새 풀의 장면 깊이에는 아직 아무것도 없다 — 이 뷰를 한 번 그릴 때까지 깊이 충돌은 보지 않는다. 시간 누적 기록(TAA · 지난 뷰-투영 · 노출)도 새것이라 첫 프레임은 버린다.
         view._bLastFrameDepthValid = SW_FALSE;
         view._bHasHistory          = SW_FALSE;
@@ -300,8 +302,8 @@ namespace sw
 
     void FrameViewResources::releaseViewTransients( FrameViewTarget& view )
     {
-        _postProcess.releaseAutoExposureHistory( view );
-        _postProcess.releaseUpscaleIntermediate( view );
+        _autoExposure.releaseAutoExposureHistory( view );
+        _upscale.releaseUpscaleIntermediate( view );
         view._bOcclusionTilesThisFrame = SW_FALSE;
         if ( _pDevice == nullptr )
         {

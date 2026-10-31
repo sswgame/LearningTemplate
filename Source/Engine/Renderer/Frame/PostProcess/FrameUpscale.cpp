@@ -1,5 +1,5 @@
 /**
- * @file FramePostProcessUpscale.cpp
+ * @file FrameUpscale.cpp
  * @brief Present 의 FSR 1 업스케일입니다 — 렌더 배율(`gv_renderScale`)로 작게 그린 뷰를 선형 블릿 대신 EASU + RCAS 로 출력 크기로 키웁니다(fsr1.hlsl).
  * @details 흐름: 셋업(`prepareUpscale`, 뷰마다 프레임에 한 번)이 키울지 정하고 뷰포트 크기 중간 RT 를 맞춘다. Present 가 렌더 패스를 열기 전에 EASU(풀 크기 원본 →
  *          중간 RT)를 기록하고(`recordUpscaleEasu`), 렌더 패스 안에서 블릿 대신 RCAS(중간 RT → 대상 뷰포트)를 그린다(`drawUpscaleRcas`).
@@ -8,7 +8,9 @@
  */
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/PostProcess/FramePostProcess.h"
+#include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
+
+#include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -25,7 +27,7 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FramePostProcess" );
+    SW_LOG_CALLER( "FrameUpscale" );
 
     /**
      * @brief `-gv_upscalerSharpness=<단계>`: FSR 1 RCAS 의 선명도를 줄이는 단계입니다(0 = 가장 선명, 1 단계마다 절반 — AMD FSRRcasCon 의 sharpness). AMD 예제 기본값은 0.2 다.
@@ -34,7 +36,7 @@ namespace sw
 
     namespace
     {
-        struct FramePostProcessUpscaleInternal
+        struct FrameUpscaleInternal
         {
             /// `gv_upscaler` 의 FSR 1 선택지 순번입니다(engine.settings.xml 의 graphics.upscaler — off 0, spatial 1).
             static constexpr int32 kUpscalerSpatial = 1;
@@ -55,7 +57,14 @@ namespace sw
         };
     } // namespace
 
-    void FramePostProcess::releaseUpscaleIntermediate( FrameViewTarget& view )
+    FrameUpscale::FrameUpscale( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const FramePSOManager& psoManager )
+        : _pDevice{ pDevice }
+        , _pipeline{ pipeline }
+        , _psoManager{ psoManager }
+    {
+    }
+
+    void FrameUpscale::releaseUpscaleIntermediate( FrameViewTarget& view )
     {
         if ( _pDevice != nullptr && view._upscaleIntermediateSRV != kInvalidDescriptorIndex )
             _pDevice->getResourceFactory()->unregisterBindlessTexture( view._upscaleIntermediateSRV );
@@ -68,15 +77,15 @@ namespace sw
         view._bUpscaleThisFrame      = SW_FALSE;
     }
 
-    void FramePostProcess::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
+    void FrameUpscale::prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight )
     {
-        using Internal                                  = FramePostProcessUpscaleInternal;
+        using Internal                                  = FrameUpscaleInternal;
         view._bUpscaleThisFrame                         = SW_FALSE;
         const TransientAttachmentPool& pool             = view._transientPool;
         const bool                     bSpatial         = static_cast<int32>( gv_upscaler ) == Internal::kUpscalerSpatial;
         const bool                     bSmaller         = pool.getWidth() < viewportWidth || pool.getHeight() < viewportHeight;
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
-        const RenderGraphPassDesc*     pTonemap         = findTonemapPass();
+        const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
         const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_resolvedType == RenderPassType::Present;
         const bool                     bReportPostChain = bCandidate && bPostChain && _bUpscalePostChainLogged == SW_FALSE;
         if ( bReportPostChain )
@@ -119,7 +128,7 @@ namespace sw
         view._bUpscaleThisFrame = SW_TRUE;
     }
 
-    bool FramePostProcess::recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const
+    bool FrameUpscale::recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, string_view sourceName ) const
     {
         if ( view._bUpscaleThisFrame == SW_FALSE )
             return false;
@@ -143,8 +152,8 @@ namespace sw
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( _psoManager.getEnginePSO( RenderPassType::UpscaleEasu ) );
         // 원본 — 네이티브는 bindless 번호(루트 상수), 에뮬은 SourceColor 칸(fsr1.hlsl 이 같은 이름으로 읽는다). PSO 뒤에 건다(setPipelineState 가 슬롯 상태를 비운다).
-        const bool                                     bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FramePostProcessUpscaleInternal::RootConstants constants{};
+        const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FrameUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( source._srv ) : 0u;
         constants._inputWidth        = static_cast<float32>( source._width );
         constants._inputHeight       = static_cast<float32>( source._height );
@@ -162,15 +171,15 @@ namespace sw
         return true;
     }
 
-    void FramePostProcess::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const
+    void FrameUpscale::drawUpscaleRcas( FramePassContext& context, const FrameViewTarget& view, RHIFormat targetFormat, float32 viewportX, float32 viewportY ) const
     {
         const RHIPipelineStateHandle pso = _psoManager.findOutputPSO( RenderPassType::UpscaleRcas, targetFormat ); // 셋업에 없으면 멈춘다
         IRHICommandList&             cmd = *context._pCmd;
         cmd.setVertexBuffer( 0, 0, 0, 0 );
         cmd.setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         cmd.setPipelineState( pso );
-        const bool                                     bNativeBindless = _pDevice->supportsNativeBindlessSampling();
-        FramePostProcessUpscaleInternal::RootConstants constants{};
+        const bool                          bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        FrameUpscaleInternal::RootConstants constants{};
         constants._source            = bNativeBindless ? static_cast<uint32>( view._upscaleIntermediateSRV ) : 0u;
         constants._viewportX         = viewportX;
         constants._viewportY         = viewportY;
