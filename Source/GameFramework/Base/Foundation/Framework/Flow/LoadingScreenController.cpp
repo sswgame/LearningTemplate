@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -48,17 +47,6 @@ namespace sw
             }
         };
 
-        /**
-         * @brief 화면 페이드가 그림을 덮고 있으면 true 입니다(캡처 차단 조건). 로딩 화면이 닫힌 뒤 실제 시간으로 걷히므로 그동안 찍으면 어두운 화면이 찍힌다.
-         * @details 페이드는 입력을 막지 않아 시나리오 시작은 미루지 않는다. 화면 UI 를 막은 동안(멈춘 에디터)은 그려지지 않으니 덮지 않는다.
-         */
-        bool isScreenFadeCoveringCapture()
-        {
-            const LoadingScreenController* pController = game::findSubsystem<LoadingScreenController>();
-            const UISystem*                pUISystem   = pController != nullptr ? pController->getUISystem() : nullptr;
-            return pUISystem != nullptr && pUISystem->isOnScreenSuppressed() == false && pController->findFadeScreen() != nullptr;
-        }
-
         /** @brief `<Tip text="원문"/>` 들을 읽습니다. `text` 가 없거나 빈 팁은 읽기 오류입니다(조용히 건너뛰지 않는다). */
         [[nodiscard]] bool readTips( const XMLNode& root, string_view sourceName, vector<string>& outListTip )
         {
@@ -79,8 +67,6 @@ namespace sw
             return bValid;
         }
     } // namespace
-
-    SW_AUTOMATION_CAPTURE_BLOCKER( screenFade, "ScreenFade", &isScreenFadeCoveringCapture );
 } // namespace sw
 
 namespace sw
