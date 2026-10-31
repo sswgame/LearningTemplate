@@ -57,8 +57,6 @@ namespace sw
          */
         [[nodiscard]] bool addSolidLayer( const TileMapXMLData& layer, const TileSetAsset& tileSet );
 
-        /** @brief Resource 상대 XML 로 타일맵을 저장합니다. */
-        [[nodiscard]] bool saveToXML( string_view assetRelativePath ) const;
         /** @brief 맵 데이터를 비웁니다. */
         void clear();
         /** @brief 맵 크기를 변경합니다. */

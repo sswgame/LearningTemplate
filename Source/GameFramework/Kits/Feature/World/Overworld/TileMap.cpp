@@ -79,11 +79,6 @@ namespace sw
         return true;
     }
 
-    bool TileMap::saveToXML( string_view assetRelativePath ) const
-    {
-        return _data.save( assetRelativePath );
-    }
-
     void TileMap::clear()
     {
         _data = TileMapXMLData{};
