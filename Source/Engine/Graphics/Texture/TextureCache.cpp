@@ -51,6 +51,7 @@ namespace sw
     TextureCache::TextureCache()
         : IAssetCache{ CacheTracking::counted( kAssetKindName ) }
         , _impl{ sw::make_shared<Impl>() }
+        , _renderTargetDeclarationSink{ *this }
     {
     }
 

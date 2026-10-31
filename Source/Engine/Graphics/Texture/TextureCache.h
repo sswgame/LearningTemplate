@@ -36,8 +36,10 @@ namespace sw
      * @note **렌더 텍스처**: `rendertarget/` 로 시작하는 경로는 파일이 아니라 렌더 타깃입니다(`Texture2D::createRenderTarget`). 카메라가 그 경로로
      *       그리고(`CameraRenderOutput`), 머티리얼은 DDS 와 같은 경로(`acquire`)로 빌려 읽습니다. 크기는 처음 만들 때 정해집니다. 카메라가
      *       `declareRenderTarget` 으로 먼저 알리면 그 크기, 아니면 `kDefaultRenderTargetSize` 입니다.
+     * @note 렌더 타깃 크기를 받는 인터페이스(`IRenderTargetDeclarationSink`)는 상속하지 않는다. 캐시가 가진 어댑터 멤버가 구현해 이 캐시로 넘기고,
+     *       `getRenderTargetDeclarationSink` 가 그 멤버를 준다(언리얼 `IModularFeatures` 도 기능 구현을 따로 된 객체로 건다).
      */
-    class SW_API TextureCache final : public IAssetCache, public IRenderTargetDeclarationSink
+    class SW_API TextureCache final : public IAssetCache
     {
     public:
         /** @brief 빈 캐시로 만듭니다. */
@@ -135,9 +137,11 @@ namespace sw
         /**
          * @brief 렌더 텍스처의 크기를 알립니다(게임 스레드, 카메라가 붙을 때). 이미 만들어진 것은 바꾸지 않습니다(다음에 새로 만들 때부터).
          * @details 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게 하는 함수입니다. 렌더러는 항상 텍스처의 실제 크기로 그립니다.
-         *          카메라(아래 층)는 엔진 범위의 `IRenderTargetDeclarationSink` 로 찾아 부른다(`EngineSubsystemSet` 이 이 캐시를 그 타입으로 건다).
+         *          카메라(아래 층)는 엔진 범위의 `IRenderTargetDeclarationSink` 로 찾아 부른다(`EngineSubsystemSet` 이 `getRenderTargetDeclarationSink` 를 그 타입으로 건다).
          */
-        void declareRenderTarget( string_view relativePath, uint32 width, uint32 height ) override;
+        void declareRenderTarget( string_view relativePath, uint32 width, uint32 height );
+        /** @brief `declareRenderTarget` 으로 넘기는 렌더 타깃 크기 수신 객체입니다. 수명은 이 캐시와 같습니다. */
+        IRenderTargetDeclarationSink& getRenderTargetDeclarationSink() { return _renderTargetDeclarationSink; }
         /**
          * @brief 이미 만든 렌더 텍스처를 새 크기로 다시 만듭니다(렌더 스레드, 기록 전에). 크기가 같거나 아직 없으면 크기만 알리고 false 입니다.
          * @details 언리얼 `UTextureRenderTarget2D::ResizeTarget` 에 해당합니다. 위젯이 그리기 크기를 바꾼 캔버스 대상처럼, 먼저 만든 크기가 낡은 경우에 씁니다.
@@ -191,12 +195,29 @@ namespace sw
         void clear() override;
 
     private:
+        /** @brief 렌더 타깃 크기 수신 능력입니다. 캐시의 `declareRenderTarget` 으로 넘깁니다(수명은 캐시와 같다). */
+        class RenderTargetDeclarationSink final : public IRenderTargetDeclarationSink
+        {
+        public:
+            explicit RenderTargetDeclarationSink( TextureCache& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void declareRenderTarget( string_view relativePath, uint32 width, uint32 height ) override { _owner.declareRenderTarget( relativePath, width, height ); }
+
+        private:
+            TextureCache& _owner;
+        };
+
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
         friend class TextureLoadBlock; // 로드 블록이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
         shared_ptr<Impl> _impl; ///< 로드 블록이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 블록은 놓을 것이 없다
+        /// @brief 엔진 범위에 `IRenderTargetDeclarationSink` 로 거는 객체입니다(`getRenderTargetDeclarationSink`).
+        RenderTargetDeclarationSink _renderTargetDeclarationSink;
     };
 } // namespace sw
 

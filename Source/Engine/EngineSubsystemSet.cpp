@@ -225,7 +225,7 @@ namespace sw::engine
             AssetManager& assetManager = startup.addSubsystem( sw::make_unique<AssetManager>() );
             (void)startup.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
             // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 매니저와 수명이 같다.
-            (void)startup.bind<IRenderTargetDeclarationSink>( &assetManager.getAssetCache<TextureCache>() );
+            (void)startup.bind( &assetManager.getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );
         }
         if ( setup._defaultAssets == nullptr )
             setup._defaultAssets = sw::make_unique<EngineDefaultAssetsSubsystem>();
