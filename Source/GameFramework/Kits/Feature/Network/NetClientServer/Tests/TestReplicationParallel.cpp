@@ -8,8 +8,6 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
-
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
@@ -83,7 +81,7 @@ namespace
                 SW_EXPECT_TRUE( listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientConfig{} ) );
             }
 
-            vector<uint64> listHash( kClientCount, HashUtil::kFnvOffset64 );
+            vector<uint64> listHash( kClientCount, HashUtil::kFNVOffset64 );
             vector<uint8>  buffer;
             for ( uint32 tick = 0; tick < 60; ++tick )
             {
@@ -125,8 +123,12 @@ namespace
 
 SW_TEST_CASE( ReplicationParallelTest, ReplicationServerSendsTheSameSnapshotsOnWorkerThreads )
 {
+    // 키트는 엔진 서비스 표(EngineServices.h)를 include 하지 못한다 — 이 케이스만 쓰는 작업 스레드 셋을 둔다.
+    TaskManager taskManager;
+    SW_REQUIRE_TRUE( taskManager.initialize( 3 ) );
     const vector<uint64> listSerial   = ReplicationParallelTestInternal::runReplication( nullptr );
-    const vector<uint64> listParallel = ReplicationParallelTestInternal::runReplication( &engine::getSubsystem<TaskManager>() ); // 엔진의 작업 스레드
+    const vector<uint64> listParallel = ReplicationParallelTestInternal::runReplication( &taskManager );
+    taskManager.shutdown();
     SW_REQUIRE_EQUAL( listSerial.size(), listParallel.size() );
     for ( size_t index = 0; index < listSerial.size(); ++index )
     {

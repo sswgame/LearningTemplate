@@ -6,7 +6,6 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Scene/StreamingCellGrid.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
@@ -85,7 +84,7 @@ namespace
                 server.setObserver( index, 1000u + static_cast<uint32>( index ) );
             }
 
-            vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), HashUtil::kFnvOffset64 );
+            vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), HashUtil::kFNVOffset64 );
             vector<uint8>  buffer;
             for ( uint32 tick = 0; tick < 60; ++tick )
             {
@@ -119,8 +118,12 @@ namespace
 
 SW_TEST_CASE( MMOReplicatorParallelTest, MMOReplicatorSendsTheSameViewsOnWorkerThreads )
 {
+    // 키트는 엔진 서비스 표(EngineServices.h)를 include 하지 못한다 — 이 케이스만 쓰는 작업 스레드 셋을 둔다.
+    TaskManager taskManager;
+    SW_REQUIRE_TRUE( taskManager.initialize( 3 ) );
     const vector<uint64> listSerial   = MMOReplicatorParallelTestInternal::runMMO( nullptr );
-    const vector<uint64> listParallel = MMOReplicatorParallelTestInternal::runMMO( &engine::getSubsystem<TaskManager>() ); // 엔진의 작업 스레드
+    const vector<uint64> listParallel = MMOReplicatorParallelTestInternal::runMMO( &taskManager );
+    taskManager.shutdown();
     SW_REQUIRE_EQUAL( listSerial.size(), listParallel.size() );
     for ( size_t index = 0; index < listSerial.size(); ++index )
     {

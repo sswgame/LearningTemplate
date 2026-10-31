@@ -161,7 +161,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     SW_REQUIRE_TRUE( cluster.areClientsConnected() );
 
     vector<LockstepSession>     listSession( 3 );
-    vector<uint32>              listHash( 3, HashUtil::kFnvOffset32 );
+    vector<uint32>              listHash( 3, HashUtil::kFNVOffset32 );
     vector<map<uint32, uint32>> listHashByTick( 3 );
     for ( int32 index = 0; index < 3; ++index )
     {
