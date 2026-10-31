@@ -58,7 +58,7 @@ if(TARGET EditorModule)
 endif()
 
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
-# 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다. 봇은 Engine · 서드파티 DLL 을 `Bin` 에서 찾으므로 작업 폴더는 `Bin` 이다.
+# 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)
 	set(swLoadBotDir "${CMAKE_SOURCE_DIR}/Source/Programs/OnlineLoadBot")
 	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/Testing/Logs")
@@ -70,8 +70,9 @@ if(TARGET OnlineLoadBot)
 			--online-config=${swLoadBotDir}/LoadBot.online.json
 			--light-hash
 			--report=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.json
+			-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/OnlineLoadBot.localServer.log
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
-	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 180)
+	set_tests_properties(OnlineLoadBot.localServer PROPERTIES LABELS nogpu TIMEOUT 120)
 endif()
 
 add_subdirectory(Scenario)

@@ -37,23 +37,10 @@ namespace sw
             }
 
             /**
-             * @brief 바이너리 폴더(`Bin`)입니다 - 실행 파일의 폴더. 키트 DLL 을 링크하는 실행 파일(테스트 `TestBin`, 개발 도구 `ToolBin`)은 그 DLL 사본과 함께 따로 나오고
-             *        작업할 바이너리 폴더는 옆의 `Bin` 이다. 그 `Bin` 이 없으면 기동 오류다(예전에는 TestBin 그대로 물러나 산출물이 엉뚱한 폴더에 쌓였다).
+             * @brief 바이너리 폴더(`Bin`)입니다 - 실행 파일의 폴더. 모든 실행 파일이 `Bin` 에 있다 — GameFramework · 키트를 쓰는 실행 파일도 그 DLL 을 직접 링크하지 않고
+             *        엔진 기동 뒤에 모듈로 올린다(키트 DLL 사본을 옆에 둔 `ToolBin` · `TestBin` 은 없앴다, `Programs/OnlineLoadBot/LoadBotModuleEntry.h`).
              */
-            static string findBinaryFolder()
-            {
-                static constexpr string_view kTestBinaryFolder = "TestBin";
-                static constexpr string_view kToolBinaryFolder = "ToolBin";
-                static constexpr string_view kBinaryFolder     = "Bin";
-                const string                 executableFolder  = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                const string                 folderName        = FileUtil::getFileNamePart( executableFolder );
-                if ( folderName != kTestBinaryFolder && folderName != kToolBinaryFolder )
-                    return executableFolder;
-                const string siblingBinary = FileUtil::joinPath( FileUtil::getDirectoryPart( executableFolder ), kBinaryFolder );
-                if ( FileUtil::isDirectory( siblingBinary ) == false )
-                    SW_FATAL( "ProcessRoots: '%#' runs from '%#' but there is no '%#' folder beside it - build the App target first", folderName, executableFolder, kBinaryFolder );
-                return siblingBinary;
-            }
+            static string findBinaryFolder() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ); }
 
             static ProcessRoots make()
             {

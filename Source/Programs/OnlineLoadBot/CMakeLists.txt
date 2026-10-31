@@ -23,38 +23,40 @@ foreach(swKit IN LISTS swLoadBotKit)
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 2) 코어(정적 라이브러리 — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립)와 실행 파일. 코어를 따로 둔 것은 이후 테스트 틀이 링크해 끝단 테스트를 돌 수 있게 하기 위해서다.
+# 2) 봇 모듈(`OnlineLoadBotCore` — 봇 · 시나리오 · 지표 · 실행기 · 서버 조립 · 진입점 `LoadBotMain.cpp`)과 그것을 올리는 실행 파일.
+#    실행 파일은 Engine · ModuleManager 만 링크한다. GameFramework · 키트 DLL 은 정적 초기화에서 이름 풀(`hashed_string`)을 써서 엔진 기동 뒤에만 올라올 수 있다 —
+#    실행 파일이 직접 링크하면 main 전에 DLL 초기화가 실패한다(0xC0000142, 로그 없음, Windows 오류 대화상자로 CTest 가 시간 초과). App · Server 가 모듈을
+#    기동 뒤에 올리는 것과 같은 모양으로, 실행 파일이 엔진의 `ModuleTypes` 단계에서 `SW_LOADBOT_MODULES` 를 순서대로 올리고 진입점(`LoadBotModuleEntry.h`)을 부른다.
+#    모듈은 App 이 올리는 동적 모듈 레지스트리(`Bin/Modules`)에 넣지 않고 `Bin` 에 둔다(`findModuleLibraryPath` 가 Modules → Bin 으로 찾는다).
 # ------------------------------------------------------------------------------
 file(GLOB swLoadBotCoreSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h")
-add_library(OnlineLoadBotCore STATIC ${swLoadBotCoreSource})
-target_link_libraries(OnlineLoadBotCore PUBLIC sw_public_source_includes) # "Programs/OnlineLoadBot/..." 는 Source/ 기준 전체 경로다
+# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verifyDynamicModuleRegistry`) — 이 모듈은 봇 실행 파일만 올린다.
+add_library(OnlineLoadBotCore SHARED ${swLoadBotCoreSource})
 target_link_libraries(OnlineLoadBotCore
-	PUBLIC
+	PRIVATE
+		sw_public_source_includes # "Programs/OnlineLoadBot/..." 는 Source/ 기준 전체 경로다
 		Engine
 		GameFramework
 		${swLoadBotKit}
-	PRIVATE
 		sw_global_options
 )
+target_compile_definitions(OnlineLoadBotCore PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"")
+sw_configureDLLExports(OnlineLoadBotCore SHARED MODULE_SHARED)
 sw_configurePCH(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-set_target_properties(OnlineLoadBotCore PROPERTIES FOLDER "Source/Programs")
+set_target_properties(OnlineLoadBotCore PROPERTIES
+	FOLDER "Source/Programs"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
+)
+
+# 올리는 순서 = 의존 순서: GameFramework → 키트(런타임 키트 다음에 같은 기능의 서버 키트 — 위 목록 순서) → 봇 모듈.
+set(swLoadBotModuleList GameFramework ${swLoadBotKit} OnlineLoadBotCore)
+list(JOIN swLoadBotModuleList "\",\"" swLoadBotModuleText)
 
 sw_addExecutable(OnlineLoadBot Main.cpp)
 # ModuleManager: 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
-target_link_libraries(OnlineLoadBot PRIVATE OnlineLoadBotCore ModuleManager sw_global_options)
-target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"")
+target_link_libraries(OnlineLoadBot PRIVATE ModuleManager Engine sw_public_source_includes sw_global_options)
+target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_LOADBOT_MODULES=\"${swLoadBotModuleText}\"")
+add_dependencies(OnlineLoadBot OnlineLoadBotCore) # 실행 파일을 지으면 올릴 모듈(과 그것이 링크하는 키트)도 선다
 sw_configurePCH(OnlineLoadBot "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBot PROPERTIES FOLDER "Source/Programs")
-
-# Dev(Windows): 키트 DLL 은 `Bin/Modules` 에 있어 OS 로더가 시작 때 찾지 못한다 — `ToolBin` 에 내고 키트 DLL 을 옆에 복사한다.
-# 작업 폴더는 `Bin` 이다(Engine · 서드파티 DLL 은 거기서 찾고, `FileUtil::getBinaryDirectory` 가 ToolBin → Bin 으로 본다). 서버 키트는 실행 파일이 심볼을 쓰지 않아
-# 링커가 import 를 버린다 — `Main.cpp` 가 시작할 때 이름으로 올린다(정적 등록자가 서버 조립 레지스트리에 오른다).
-if(WIN32 AND NOT SW_SHIPPING_BUILD)
-	set(swToolBin "${CMAKE_BINARY_DIR}/ToolBin")
-	set_target_properties(OnlineLoadBot PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${swToolBin}$<0:>" PDB_OUTPUT_DIRECTORY "${swToolBin}")
-	set(swCopyCommands "")
-	foreach(swKit IN LISTS swLoadBotKit)
-		list(APPEND swCopyCommands COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${swKit}>" "${swToolBin}/")
-	endforeach()
-	add_custom_command(TARGET OnlineLoadBot POST_BUILD ${swCopyCommands} COMMENT "[OnlineLoadBot] Copying kit DLLs next to the tool executable" VERBATIM)
-endif()
