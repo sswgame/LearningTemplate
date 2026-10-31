@@ -31,14 +31,14 @@ namespace sw
         request._numRenderTargets =
             request._bDepthOnly != SW_FALSE ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
 
-        request._vertex._filePath     = desc._vertexShaderPath;
+        request._vertex._source       = ShaderSourceID{ desc._vertexShaderPath };
         request._vertex._entryPoint   = string( resolveEntryPoint( desc._vertexEntryPoint, ShaderStage::Vertex ) );
         request._vertex._stage        = ShaderStage::Vertex;
         request._vertex._targetFormat = targetFormat;
 
         if ( request._bHasPixelShader != SW_FALSE )
         {
-            request._pixel._filePath     = desc._pixelShaderPath;
+            request._pixel._source       = ShaderSourceID{ desc._pixelShaderPath };
             request._pixel._entryPoint   = string( resolveEntryPoint( desc._pixelEntryPoint, ShaderStage::Pixel ) );
             request._pixel._stage        = ShaderStage::Pixel;
             request._pixel._targetFormat = targetFormat;

@@ -115,7 +115,7 @@ namespace sw
 
         /**
          * @brief 셰이더 하나를 지정한 포맷과 스테이지로 컴파일해 디스크에 바이너리로 저장합니다.
-         * @param sourcePath 원본 HLSL 소스 파일 경로
+         * @param source 원본 HLSL 소스의 리소스 경로(컴파일러가 해석한다 — 디스크 경로를 넣지 않는다)
          * @param outputPath 출력 바이너리 파일 경로
          * @param entryPoint 셰이더 진입점 함수 이름(예: "VSMain", "PSMain", "CSMain")
          * @param stage 셰이더 스테이지(Vertex, Pixel, Compute)
@@ -123,7 +123,7 @@ namespace sw
          * @param pOutResult 쿠킹 결과 상세 정보(선택)
          * @return 성공하면 true 입니다.
          */
-        [[nodiscard]] static bool cookShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
+        [[nodiscard]] static bool cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
                                               ShaderStage stage, ShaderTargetFormat targetFormat,
                                               const vector<string>* pListPermutation = nullptr,
                                               ShaderCookResult*     pOutResult       = nullptr );

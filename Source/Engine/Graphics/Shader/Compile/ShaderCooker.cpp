@@ -191,14 +191,14 @@ namespace sw
         return ShaderTargetFormat::Count;
     }
 
-    bool ShaderCooker::cookShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
+    bool ShaderCooker::cookShader( const ShaderSourceID& source, string_view outputPath, string_view entryPoint,
                                    ShaderStage stage, ShaderTargetFormat targetFormat,
                                    const vector<string>* pListPermutation,
                                    ShaderCookResult*     pOutResult )
     {
         if ( pOutResult != nullptr )
         {
-            pOutResult->_sourcePath   = string( sourcePath );
+            pOutResult->_sourcePath   = source.str();
             pOutResult->_outputPath   = string( outputPath );
             pOutResult->_entryPoint   = string( entryPoint );
             pOutResult->_stage        = stage;
@@ -209,7 +209,7 @@ namespace sw
         }
 
         ShaderCompileDesc desc{};
-        desc._filePath     = sourcePath;
+        desc._source       = source;
         desc._entryPoint   = entryPoint;
         desc._stage        = stage;
         desc._targetFormat = targetFormat;
@@ -228,7 +228,7 @@ namespace sw
         if ( compileResult._bSuccess == false || compileResult._bytecode.empty() )
         {
             SW_LOG_WARNING( "Failed to compile shader '%#' [%#] for %#: %#",
-                            sourcePath.data(), entryPoint.data(),
+                            source.c_str(), entryPoint.data(),
                             getSubfolderForFormat( targetFormat ).data(),
                             compileResult._errorMessage.c_str() );
             return false;
@@ -248,7 +248,7 @@ namespace sw
         }
 
         SW_LOG_INFO( "Cooked shader '%#' [%#] -> '%#' (%zu bytes)",
-                     sourcePath.data(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
+                     source.c_str(), entryPoint.data(), outputPath.data(), compileResult._bytecode.size() );
         return true;
     }
 } // namespace sw

@@ -250,7 +250,7 @@ namespace sw
     RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
     {
         ShaderCompileDesc csDesc{};
-        csDesc._filePath     = shaderPath;
+        csDesc._source       = ShaderSourceID{ shaderPath };
         csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
         csDesc._stage        = ShaderStage::Compute;
         csDesc._targetFormat = ShaderTargetFormat::SPIRV_Vulkan;

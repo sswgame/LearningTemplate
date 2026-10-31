@@ -128,7 +128,7 @@ namespace sw
         if ( shaderPath.empty() == false )
         {
             ShaderCompileDesc csDesc{};
-            csDesc._filePath     = shaderPath;
+            csDesc._source       = ShaderSourceID{ shaderPath };
             csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
             csDesc._stage        = ShaderStage::Compute;
             csDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;

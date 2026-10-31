@@ -449,7 +449,7 @@ namespace sw
     bool Material::reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection )
     {
         ShaderCompileDesc desc{};
-        desc._filePath     = shaderPath;
+        desc._source       = ShaderSourceID{ shaderPath };
         desc._entryPoint   = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
         desc._stage        = ShaderStage::Pixel;
         desc._targetFormat = targetFormat;

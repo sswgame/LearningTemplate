@@ -113,14 +113,6 @@ namespace sw
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
-         * @brief 이 컴파일 요청이 팩에서 읽을 쿠킹된 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>` — 쿠킹본 정책만 읽는다).
-         * @details 파일 이름은 `ShaderCooker::computeBinaryFileName` 그대로입니다(스템, 스테이지, 진입점, **퍼뮤테이션 해시**).
-         *          주의: 해시를 빼면 쿠커는 퍼뮤테이션마다 다른 파일을 쿠킹해 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
-         *          어떤 define 도 GPU 에 닿지 않습니다. 리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로
-         *          찾으므로 레이아웃은 맞고 바이트코드만 틀린, 가장 조용한 종류의 어긋남이 됩니다.
-         */
-        static string makePrecookedRelativePath( const ShaderCompileDesc& desc );
-        /**
          * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`<Bin>/Saved/ShaderCache/<rhi>/<소스 지문>-<opt|dbg>/<이름>`, 절대 경로 — 작업 폴더와 무관). 이름 규칙은 위와 같습니다.
          * @details 런타임 컴파일 결과와 ShaderRecompiler 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
          *          있으면 처음 컴파일된 퍼뮤테이션 하나가 같은 셰이더의 다른 퍼뮤테이션 모두를 덮습니다.

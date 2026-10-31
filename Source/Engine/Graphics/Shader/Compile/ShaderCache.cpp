@@ -35,9 +35,7 @@ namespace sw
         /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템, 스테이지, 진입점, 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
         string makeBinaryFileName( const ShaderCompileDesc& desc )
         {
-            const string fileName = FileUtil::getFileNamePart( desc._filePath );
-            const string stem     = StringUtil::toLower( FileUtil::removeExtension( fileName ).c_str() );
-            return ShaderCooker::computeBinaryFileName( stem, desc._stage, desc._entryPoint,
+            return ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage, desc._entryPoint,
                                                         ShaderCooker::computePermutationHash( desc._listDefine ),
                                                         ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         }
@@ -52,21 +50,6 @@ namespace sw
 
 namespace sw
 {
-    string ShaderCache::makePrecookedRelativePath( const ShaderCompileDesc& desc )
-    {
-        const string      norm      = FileUtil::normalizeSeparators( desc._filePath );
-        const string_view rhiFolder = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      fileName  = makeBinaryFileName( desc );
-
-        const size_t pos = norm.find( "shaders/" );
-        if ( pos != string::npos )
-        {
-            const string prefix = norm.substr( 0, pos + sizeof( "shaders/" ) - 1 );
-            return prefix + "bin/" + string( rhiFolder ) + "/" + fileName;
-        }
-        return string( "shaders/bin/" ) + string( rhiFolder ) + "/" + fileName;
-    }
-
     string ShaderCache::makeLocalCachePath( const ShaderCompileDesc& desc )
     {
         // **경로에 소스 지문을 한 단계 끼운다.** "캐시 파일이 소스보다 새것인가"를 파일 시간으로 보면 안 된다 —
@@ -78,7 +61,7 @@ namespace sw
         // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
         // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
         const string_view                 rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._filePath );
+        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._source.str() );
         const uint64                      sourceHash = sourceFile.has_value() ? ShaderCooker::computeSourceFingerprint( sourceFile->str(), vector<string>{} ) : 0u;
 
         StringBuilder<constant::kMaxBuffer64> sb;
@@ -137,7 +120,7 @@ namespace sw
     }
 
     ShaderLoadBlock::ShaderLoadBlock( ShaderCache* pCache, const ShaderCompileDesc& desc, string cacheKey )
-        : AssetLoadBlock{ "Shader", desc._filePath }
+        : AssetLoadBlock{ "Shader", desc._source.str() }
         , _pCache{ pCache }
         , _desc{ desc }
         , _cacheKey{ std::move( cacheKey ) }
@@ -192,7 +175,7 @@ namespace sw
     string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )
     {
         StringBuilder<constant::kMaxBuffer256> sb;
-        sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
+        sb.append( desc._source.str() ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
         sb.append( desc._bDebugCodegen != SW_FALSE ? "_dbg" : "_opt" );
         for ( const auto& def : desc._listDefine )
         {
@@ -261,7 +244,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Shader );
         string                            cacheKey   = inCacheKey;
-        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._filePath );
+        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._source.str() );
         const string                      absPath    = sourceFile.has_value() ? sourceFile->str() : string{};
 
         // 0) 인메모리 캐시 조회 — 항목을 만든 컴파일이 연 헤더까지 포함한 지문이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
@@ -289,11 +272,20 @@ namespace sw
         // 쿠킹본 정책(배포 · `-cooked-content`)은 팩의 쿠킹본만 읽는다 — 컴파일러가 없고, 소스도 팩에 없다.
         if ( AssetIO::getContentSource() == ContentSource::Cooked )
         {
-            const string  precookedRelPath = makePrecookedRelativePath( desc );
-            vector<uint8> precookedBytes;
-            if ( AssetIO::readBinaryAsset( AssetID{ precookedRelPath }, precookedBytes ) && precookedBytes.empty() == false )
+            const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
+            if ( location.has_value() == false )
             {
-                SW_LOG_TRACE( "Loaded cooked shader binary: %# (%zu bytes)", precookedRelPath.c_str(), precookedBytes.size() );
+                SW_LOG_ERROR( "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
+                ShaderCompileResult failedResult{};
+                failedResult._bSuccess     = false;
+                failedResult._errorMessage = "Shader source is not inside a domain 'shaders' folder";
+                return failedResult;
+            }
+            const AssetID precookedID = location->makeFileID( makeBinaryFileName( desc ) );
+            vector<uint8> precookedBytes;
+            if ( AssetIO::readBinaryAsset( precookedID, precookedBytes ) && precookedBytes.empty() == false )
+            {
+                SW_LOG_TRACE( "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
                 ShaderCompileResult result{};
                 result._bytecode = std::move( precookedBytes );
                 result._bSuccess = true;
@@ -301,7 +293,7 @@ namespace sw
                 return result;
             }
             // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
-            SW_LOG_ERROR( "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._filePath.c_str(), desc._entryPoint.c_str(), precookedRelPath.c_str() );
+            SW_LOG_ERROR( "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
             ShaderCompileResult failedResult{};
             failedResult._bSuccess     = false;
             failedResult._errorMessage = "Shader binary missing in the cooked content";
@@ -344,7 +336,7 @@ namespace sw
         for ( const pair<const string, ShaderCacheEntry>& entry : _mapCache )
         {
             // 파일 경로가 없는 항목은 다시 컴파일할 수 없다.
-            if ( entry.second._desc._filePath.empty() == false )
+            if ( entry.second._desc._source.isEmpty() == false )
                 outListDesc.push_back( entry.second._desc );
         }
     }

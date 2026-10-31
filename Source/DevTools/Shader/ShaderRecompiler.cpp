@@ -75,7 +75,7 @@ namespace sw
             {
                 ++failed;
                 SW_LOG_ERROR( "Shader reload failed for %# (Entry: %#):\n%#",
-                              desc._filePath.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
+                              desc._source.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
                 continue;
             }
 
@@ -91,7 +91,7 @@ namespace sw
 
             ++changed;
             if ( _onAnyRecompiled.isBound() )
-                _onAnyRecompiled.get()( desc._filePath, newResult );
+                _onAnyRecompiled.get()( desc._source.str(), newResult );
         }
 
         if ( changed > 0 && engine::areEngineServicesBound() )

@@ -38,7 +38,7 @@ namespace sw
                                       ShaderReflectionData& outReflection )
             {
                 ShaderCompileDesc compileDesc{};
-                compileDesc._filePath     = shaderPath;
+                compileDesc._source       = ShaderSourceID{ shaderPath };
                 compileDesc._entryPoint   = string( resolveEntryPoint( entryPoint, stage ) );
                 compileDesc._stage        = stage;
                 compileDesc._targetFormat = targetFormat;

@@ -239,7 +239,7 @@ namespace sw
                 vector<uint8> sourceBytes;
                 (void)FileUtil::readFile( absPathStr, sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
 
-                uint64 hash = HashUtil::computeStringHash64( desc._filePath, false );
+                uint64 hash = HashUtil::computeStringHash64( desc._source.str(), false );
                 hash        = HashUtil::computeStringHash64( desc._entryPoint, false, hash );
                 hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._stage ) ), false, hash );
                 hash        = HashUtil::computeStringHash64( to_string( static_cast<uint32>( desc._targetFormat ) ), false, hash );
@@ -732,11 +732,11 @@ namespace sw
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
-        const std::optional<AbsolutePath> sourceFile = findSourceFile( desc._filePath );
+        const std::optional<AbsolutePath> sourceFile = findSourceFile( desc._source.str() );
         const string                      absPathStr = sourceFile.has_value() ? sourceFile->str() : string{};
         if ( absPathStr.empty() )
         {
-            result._errorMessage = "Shader source file not found: " + desc._filePath;
+            result._errorMessage = "Shader source file not found: " + desc._source.str();
             // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
             return result;
         }
@@ -808,7 +808,7 @@ namespace sw
 
         if ( result._errorMessage.empty() )
             result._errorMessage = "DXC produced no shader output (see the DXC error above)";
-        SW_LOG_ERROR( "%# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
+        SW_LOG_ERROR( "%# (Path: %#)", result._errorMessage.c_str(), desc._source.c_str() );
         return result;
     }
 } // namespace sw

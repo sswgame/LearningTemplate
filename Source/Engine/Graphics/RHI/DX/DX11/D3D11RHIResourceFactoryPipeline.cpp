@@ -66,7 +66,7 @@ namespace sw
         if ( desc._computeShaderPath.empty() == false )
         {
             ShaderCompileDesc csDesc{};
-            csDesc._filePath     = desc._computeShaderPath;
+            csDesc._source       = ShaderSourceID{ desc._computeShaderPath };
             csDesc._entryPoint   = string( resolveEntryPoint( desc._computeEntryPoint, ShaderStage::Compute ) );
             csDesc._stage        = ShaderStage::Compute;
             csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
@@ -135,7 +135,7 @@ namespace sw
             return 0;
         {
             ShaderCompileDesc csDesc{};
-            csDesc._filePath     = shaderPath;
+            csDesc._source       = ShaderSourceID{ shaderPath };
             csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
             csDesc._stage        = ShaderStage::Compute;
             csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;

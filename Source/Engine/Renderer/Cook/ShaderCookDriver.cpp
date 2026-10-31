@@ -75,7 +75,7 @@ namespace sw
             struct FormatTask
             {
                 const ShaderCookRequest* _pRequest{ nullptr };
-                string                   _absPath;
+                ShaderSourceID           _source;
                 string                   _normPath;
                 string                   _outDir;
                 string                   _fileName;
@@ -143,7 +143,7 @@ namespace sw
                     {
                         outResult._listIncludedFile.clear();
                         ShaderCookResult cookResult{};
-                        outResult._bCooked        = ShaderCooker::cookShader( task._absPath, task._outPath, request._entryPoint, request._stage, task._format, &request._listPermutation, &cookResult );
+                        outResult._bCooked        = ShaderCooker::cookShader( task._source, task._outPath, request._entryPoint, request._stage, task._format, &request._listPermutation, &cookResult );
                         outResult._bCompileFailed = outResult._bCooked == false;
                         if ( outResult._bCooked )
                             outResult._listIncludedFile = std::move( cookResult._listIncludedFile );
@@ -202,24 +202,23 @@ namespace sw
                     SW_LOG_ERROR( "Shader cook request's source is not inside a 'shaders' folder: '%#' (%#)", normPath, request._entryPoint );
                     return;
                 }
-                // 출력은 쿠킹 스테이징의 같은 상대 자리다(`<도메인>/shaders` → `<쿠킹 폴더>/<도메인>/shaders/bin/<rhi>`). 리소스 루트 밖의 소스는 둘 자리가 없다.
-                string relativeShaderDir;
-                if ( FileUtil::tryMakePathUnderRoot( ioState._resourceRoot, shaderDir, relativeShaderDir, true ) == false )
+                // 출력은 쿠킹 스테이징의 같은 상대 자리다 — 런타임이 팩에서 읽는 자리와 같은 규칙 하나(`ShaderBinaryLocation`)로 정한다.
+                const ShaderSourceID source{ request._shaderPath };
+                if ( source.getShadersFolder().has_value() == false )
                 {
                     ++ioState._summary._failedCount;
-                    SW_LOG_ERROR( "Shader cook request's source is not under the content root '%#': '%#' (%#)", ioState._resourceRoot, normPath, request._entryPoint );
+                    SW_LOG_ERROR( "Shader cook request's source id has no domain 'shaders' folder: '%#' (%#)", request._shaderPath, request._entryPoint );
                     return;
                 }
-                const string binRoot   = FileUtil::joinPath( FileUtil::joinPath( ioState._cookedDir, relativeShaderDir ), "bin" );
-                const string stemLower = ShaderCooker::getStemLower( normPath );
+                const string stemLower = source.getStemLower();
                 for ( ShaderTargetFormat fmt : listTargetFormat )
                 {
                     FormatTask task;
                     task._pRequest                                     = &request;
-                    task._absPath                                      = absPath;
+                    task._source                                       = source;
                     task._normPath                                     = normPath;
                     task._format                                       = fmt;
-                    task._outDir                                       = FileUtil::normalizeSeparators( FileUtil::joinPath( binRoot, ShaderCooker::getSubfolderForFormat( fmt ) ) );
+                    task._outDir                                       = FileUtil::normalizeSeparators( FileUtil::joinPath( ioState._cookedDir, ShaderBinaryLocation::make( source, fmt )->_binDirectory ) );
                     task._fileName                                     = ShaderCooker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash, ShaderCooker::getExtensionForFormat( fmt ) );
                     task._outPath                                      = FileUtil::joinPath( task._outDir, task._fileName );
                     ioState._mapSourceShadersDirByOutDir[task._outDir] = shaderDir;

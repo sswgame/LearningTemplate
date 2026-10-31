@@ -152,31 +152,6 @@ namespace sw
         }
 
         /**
-         * @brief 셰이더 소스 경로에서 `<...>/shaders/bin/<rhi>/` 리소스 상대 경로를 만듭니다.
-         * @details ShaderCache 의 사전 컴파일 바이너리 경로와 같은 규칙이라 매니페스트가 바이트코드
-         *          바로 옆에 놓입니다.
-         */
-        string makeBinDirRelativeInternal( string_view shaderFilePath, string_view rhiFolder )
-        {
-            const string norm = FileUtil::normalizeSeparators( shaderFilePath );
-            const size_t pos  = norm.find( "shaders/" );
-            if ( pos != string::npos )
-            {
-                const string prefix = norm.substr( 0, pos + sizeof( "shaders/" ) - 1 );
-                return prefix + "bin/" + string( rhiFolder ) + "/";
-            }
-            return string( "shaders/bin/" ) + string( rhiFolder ) + "/";
-        }
-
-        /// @brief 소스 경로에서 소문자 스템을 뽑습니다(쿠커의 파일 이름 규칙과 같아야 합니다).
-        string getStemLowerInternal( string_view filePath )
-        {
-            const string fileName = FileUtil::getFileNamePart( filePath );
-            const string stem     = FileUtil::removeExtension( fileName );
-            return StringUtil::toLower( stem.c_str() );
-        }
-
-        /**
          * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
          * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
          */
@@ -281,13 +256,18 @@ namespace sw
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
         SW_MEMORY_SCOPE( Shader );
-        const string_view rhiFolder = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string_view ext       = ShaderCooker::getExtensionForFormat( desc._targetFormat );
-        const string      binDirRel = makeBinDirRelativeInternal( desc._filePath, rhiFolder );
+        const string_view                         ext      = ShaderCooker::getExtensionForFormat( desc._targetFormat );
+        const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
+        if ( location.has_value() == false )
+        {
+            SW_LOG_ERROR( "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
+            return false;
+        }
+        const string binDirRel = location->_binDirectory + "/";
 
         // 키는 쿠커가 만든 바이너리 파일 이름 그대로다. 진입점과 퍼뮤테이션 해시가 반영된다.
         const uint64 permutationHash = ShaderCooker::computePermutationHash( desc._listDefine );
-        const string key             = ShaderCooker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage,
+        const string key             = ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage,
                                                                             desc._entryPoint, permutationHash, ext );
 
         // 매니페스트는 쿠킹본이다 — 쿠킹본 정책(배포 · `-cooked-content`)만 팩에서 읽는다. 소스 정책(개발 실행)은 바이트코드를 실행 중에 얻으므로
@@ -331,7 +311,7 @@ namespace sw
         {
             // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 쿠커가 쓰는 파일 이름 그대로
             // 적어야 "그 셰이더는 쿠킹했는데?" 로 끝나지 않는다. define 목록까지 붙여 어느 조합인지 바로 보이게 한다.
-            const string missingKey = ShaderCooker::computeBinaryFileName( getStemLowerInternal( desc._filePath ), desc._stage, desc._entryPoint,
+            const string missingKey = ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage, desc._entryPoint,
                                                                            ShaderCooker::computePermutationHash( desc._listDefine ),
                                                                            ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
             string       defineList;
@@ -344,7 +324,7 @@ namespace sw
                 defineList += define._value;
             }
             SW_LOG_ERROR( "The reflection manifest has no entry for '%#' (%#, define: %#) - the shader must be re-cooked.",
-                          string( desc._filePath ).c_str(), missingKey.c_str(), defineList.c_str() );
+                          desc._source.c_str(), missingKey.c_str(), defineList.c_str() );
             return false;
         }
         // 2순위(소스를 읽는 실행만): 바이트코드를 얻어 그 자리에서 리플렉션한다. 셰이더를 막 고쳐 아직
@@ -354,7 +334,7 @@ namespace sw
                                              : ShaderCompiler::compileHLSL( desc );
         if ( result._bSuccess == false || result._bytecode.empty() )
         {
-            SW_LOG_WARNING( "Runtime reflection fallback failed: '%#' (%#)", string( desc._filePath ).c_str(),
+            SW_LOG_WARNING( "Runtime reflection fallback failed: '%#' (%#)", desc._source.c_str(),
                             result._errorMessage.c_str() );
             return false;
         }

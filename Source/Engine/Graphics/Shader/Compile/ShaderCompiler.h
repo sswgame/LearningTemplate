@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Shader/Compile/ShaderSource.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -141,7 +142,7 @@ namespace sw
      */
     struct ShaderCompileDesc
     {
-        string                    _filePath;                                        ///< HLSL 소스 파일 경로(상대 · 절대 경로)
+        ShaderSourceID            _source;                                          ///< HLSL 소스의 리소스 경로(디스크 경로가 아니다 — 쿠커도 리소스 경로를 넣는다)
         string                    _entryPoint;                                      ///< 진입점 함수 이름(예: "VSMain", "CSMain")
         vector<ShaderMacroDefine> _listDefine;                                      ///< 추가 전처리 매크로(-D NAME=VALUE)
         ShaderStage               _stage        = ShaderStage::Vertex;              ///< 컴파일 대상 셰이더 스테이지
