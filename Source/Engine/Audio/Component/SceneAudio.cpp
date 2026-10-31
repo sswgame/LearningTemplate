@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/Component/SceneAudio.h"
 
+#include "Core/Subsystem/SubsystemScope.h"
+
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/Component/AudioListenerComponent.h"
@@ -63,7 +65,7 @@ namespace sw
         , _listZoneValue{}
         , _listZoneCurrent{}
         , _manager{ manager }
-        , _pAudioService{ manager.getSceneEngineServices()._pAudioService }
+        , _pAudioService{ locateSubsystem<IAudioService>( manager.getSceneEngineServices()._pEngineSubsystems ) }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}

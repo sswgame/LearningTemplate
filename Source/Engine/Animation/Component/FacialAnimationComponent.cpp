@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -331,9 +332,9 @@ namespace sw
             SW_LOG_ERROR( "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
-        // 소리는 이 오브젝트가 속한 씬이 받은 오디오 서비스로 낸다(`SceneEngineServices` — 전역 표를 다시 찾지 않는다).
+        // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 오디오 서비스로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        IAudioService*           pAudio   = pManager != nullptr ? pManager->getSceneEngineServices()._pAudioService : nullptr;
+        IAudioService*           pAudio   = pManager != nullptr ? locateSubsystem<IAudioService>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
         if ( pAudio != nullptr && pAudio->isInitialized() )
             (void)pAudio->play( assetID );
         return true;
