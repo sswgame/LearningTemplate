@@ -110,7 +110,7 @@ namespace sw
         const uint64 ownerID = _subscriptions.findIssued( owner );
         if ( ownerID == 0 || onReply.isBound() == false )
         {
-            SW_LOG_ERROR( "EphemeralStoreRouter: submit %# - nothing is submitted", ownerID == 0 ? "without a live reply owner of this router" : "with an empty delegate" );
+            SW_LOG_ERROR_ID( "EphemeralStoreRouter.SubmitRefused", "EphemeralStoreRouter: submit %# - nothing is submitted", ownerID == 0 ? "without a live reply owner of this router" : "with an empty delegate" );
             return 0;
         }
         const uint64 requestID = _pStore->submit( request );
@@ -124,7 +124,7 @@ namespace sw
         const bool bCannotSubscribe = _pStore == nullptr || onMessage.isBound() == false;
         if ( bCannotSubscribe )
         {
-            SW_LOG_ERROR( "EphemeralStoreRouter: subscribe('%#') %# - nothing is subscribed", channel, _pStore == nullptr ? "before initialize" : "with an empty delegate" );
+            SW_LOG_ERROR_ID( "EphemeralStoreRouter.SubscribeRefused", "EphemeralStoreRouter: subscribe('%#') %# - nothing is subscribed", channel, _pStore == nullptr ? "before initialize" : "with an empty delegate" );
             return Subscription{};
         }
         if ( hasChannelSubscriber( channel ) == false )
