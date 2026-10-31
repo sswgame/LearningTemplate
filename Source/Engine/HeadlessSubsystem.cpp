@@ -20,6 +20,7 @@
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Audio/LipSyncImport.h"
+#include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -523,6 +524,25 @@ namespace sw
                               Internal::runCookTask( commandLine, _bDedicatedServer, _state ) || Internal::runImportLipSyncTask( commandLine, _state ) ||
                               Internal::enterEditorToolTask( commandLine, _state );
         return bTaskRan ? SubsystemInitResult::SkipDependents : SubsystemInitResult::Succeeded;
+    }
+
+    bool HeadlessSubsystem::runScenarioMatrixTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+    {
+        // `-scenario-backends` 가 없으면 보통 시나리오 실행(이 프로세스가 직접 돈다)이다.
+        string backends;
+        if ( commandLine.getArgument( CommandLineArgument::SCENARIO_BACKENDS, backends ) == false || backends.empty() )
+            return false;
+        IAutomationRuntime* const pAutomation = engine::findSubsystem<IAutomationRuntime>();
+        if ( pAutomation == nullptr )
+        {
+            // 행렬을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
+            inoutState.enterHeadless();
+            SW_LOG_ERROR( "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
+            inoutState._bFailed = true;
+            return true;
+        }
+        pAutomation->runBackendMatrix( backends, commandLine, inoutState );
+        return true;
     }
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const

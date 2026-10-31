@@ -15,7 +15,6 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/HostSubsystemNames.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/HostServices.h"
@@ -54,20 +53,16 @@ namespace sw
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
         , _scenarioPlayer{ *this }
+        , _runtime{ *this }
     {
     }
 
     AutomationSession::~AutomationSession() = default;
 
-    span<const utf8* const> AutomationSession::getSubsystemDependencies() const
-    {
-        static constexpr const utf8* kArrDependency[] = { HostSubsystemNames::kModuleLoader };
-        return kArrDependency;
-    }
-
     void AutomationSession::shutdownSubsystem()
     {
-        // 실행기가 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스가 사라지기 전에 비운다.
+        // 실행기가 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스가 사라지기 전에 떼고 비운다.
+        _runtime.detach();
         _pRunner.reset();
         _pChain.reset();
         _recordPath.clear();

@@ -25,8 +25,6 @@ endif()
 # 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 짓는다.
 #   EditorModuleManagerDevTools  : 에디터 모듈 등록 · 개발 도구 서비스가 없다 — `-EnableEditor` 는 기동 오류
 #   EditorModuleManagerHeadless  : 에디터 모듈이 없다 — 헤드리스 임포트 · 로컬라이제이션 작업은 오류
-# 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 `<이름>Off.cpp` 를 짓는다.
-#   AppAutomationHost            : 구동기가 없고 `-scenario` 는 기동 오류
 set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
 # 기능 옆 개발 전용 파일(`*DevCommands.cpp` 의 개발 명령 · 시나리오 단계)은 다른 타깃과 같은 이름 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
 if(SW_SHIPPING_BUILD)
@@ -39,11 +37,6 @@ foreach(swVariantName IN ITEMS EditorModuleManagerDevTools EditorModuleManagerHe
 		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping OFF)
 	endif()
 endforeach()
-if(SW_ENABLE_AUTOMATION)
-	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppAutomationHost Off OFF)
-else()
-	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppAutomationHost Off ON)
-endif()
 
 sw_addExecutable(App ${APP_SOURCES})
 if(WIN32)

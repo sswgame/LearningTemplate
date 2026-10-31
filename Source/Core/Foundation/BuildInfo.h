@@ -24,8 +24,8 @@ namespace sw::build
 #if defined( SW_SHIPPING )
     /**
      * @brief 배포 구성이면 true 입니다. 개발 · 배포 차이가 값뿐이면 이 상수를 `if` · `if constexpr` 로 읽는다 — 두 갈래가 모든 구성에서 컴파일된다.
-     * @details 갈래 하나가 다른 구성에 없는 헤더 · 모듈을 쓰면 그 자리만 `#if defined( SW_SHIPPING )`, 기능 전체가 배포에 없으면 CMake 가 구현 파일을 고른다
-     *          (`sw_pickVariantSource`). 규칙은 `docs/agents/BuildConfigSwitch.md`.
+     * @details 갈래 하나가 다른 구성에 없는 헤더 · 모듈을 쓰면 그 자리만 `#if defined( SW_SHIPPING )`, 기능 전체가 배포에 없으면 그 기능이 스스로 등록하고 호스트는 찾기만 한다
+     *          (빈 구현 파일 없이 기능이 스스로 등록). 규칙은 `docs/agents/BuildConfigSwitch.md`.
      */
     inline constexpr bool kShipping = true;
 #else

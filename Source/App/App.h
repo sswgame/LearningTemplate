@@ -11,7 +11,6 @@
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
  */
 #pragma once
-#include "App/AppAutomationHost.h"
 #include "App/AppDevTools.h"
 #include "App/RHIBackendSwitcher.h"
 #include "App/RuntimeUIHost.h"
@@ -32,6 +31,7 @@
 
 namespace sw
 {
+    class IAutomationRuntime;
     struct EngineConfig;
     struct NativeWindowEvent;
     struct RenderFramePacket;
@@ -65,8 +65,13 @@ namespace sw
 
     private:
         // 부팅 단계. initialize() 가 차례로 부른다.
-        /** @brief 호스트 범위를 세웁니다 — 모듈 라이브러리 창구와 자동화 구동기를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
+        /** @brief 호스트 범위를 세웁니다 — 모듈 라이브러리 창구를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
         [[nodiscard]] bool initializeHostScope();
+        /**
+         * @brief 엔진이 선 뒤 자동화 실행기(`IAutomationRuntime`)를 찾아 시작합니다.
+         * @return 실행기가 없는 구성이 `-scenario` · `-scenario-record` 를 받았으면 false(기동 오류)입니다 — 시나리오 없이 돌면 결과를 낼 수 없다.
+         */
+        [[nodiscard]] bool startAutomation( const CommandLineManager& commandLineManager );
         /** @brief 플랫폼 창을 확보합니다. Engine 가 이미 만들어 두었으면 그 소유권을 넘겨받습니다. */
         bool acquireMainWindow( const EngineConfig& engineConfig, const CommandLineManager& commandLineManager );
         /**
@@ -102,8 +107,8 @@ namespace sw
     private:
         /**
          * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 라이브러리 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)와 자동화 구동기(`AutomationSession`)를 듭니다.
-         *          구동기는 엔진 서비스를 빌려 쓰므로 `shutdown` 이 엔진 종료 앞에서 먼저 내립니다. 개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
+         * @details 모듈 라이브러리 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)를 듭니다.
+         *          개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
          */
         SubsystemScope _host;
         /** @brief 모듈이 리로드 사이에 맡기는 칸입니다. 호스트 범위에 `IModuleStateStore` 로 건다(`initializeHostScope`). 범위보다 먼저 선언해 나중에 사라진다. */
@@ -113,8 +118,11 @@ namespace sw
         /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 프레임 훅 · 콘솔 — Server 와 같은 것)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`HostDevTools.h`). */
         HostDevTools _devTools;
         Engine       _engine;
-        /** @brief 자동화 시나리오 연결(호스트 범위의 구동기 · 엔진 프레임 관찰자)입니다. 엔진보다 뒤에 선언해 먼저 사라진다(`shutdown` 이 엔진 종료 전에 뗀다). */
-        AppAutomationHost _automation;
+        /**
+         * @brief 자동화 실행기입니다(엔진 범위에 스스로 선 서브시스템 — 빌려 쓴다). 실행기를 짓지 않은 구성은 nullptr 입니다.
+         * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
+         */
+        IAutomationRuntime* _pAutomation;
         /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
         ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */

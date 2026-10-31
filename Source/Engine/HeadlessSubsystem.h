@@ -80,7 +80,7 @@ namespace sw
     private:
         /**
          * @brief `-scenario=<경로> -scenario-backends=all|dx11,vk` — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모은다(`AutomationBackendMatrix`). 작업을 돌렸으면 true 입니다.
-         * @details 자동화 런타임(`Automation/Runner`)이 있는 구성은 `HeadlessScenarioMatrix.cpp`, 없는 구성(`SW_ENABLE_AUTOMATION=OFF` · 전용 서버)은 `HeadlessScenarioMatrixOff.cpp` 를 CMake 가 고른다.
+         * @details 일은 자동화 실행기(`IAutomationRuntime::runBackendMatrix`)가 한다. 실행기를 짓지 않은 구성(`SW_ENABLE_AUTOMATION=OFF`)은 찾는 것이 없어 이유를 남기고 실패로 끝낸다.
          */
         [[nodiscard]] static bool runScenarioMatrixTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState );
 

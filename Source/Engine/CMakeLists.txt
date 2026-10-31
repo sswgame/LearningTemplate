@@ -40,15 +40,9 @@ list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
 if(NOT SW_ENABLE_AUTOMATION)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES
 		"/Source/Engine/Automation/Runner/.*\\.(cpp|h)$")
-	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
-endif()
-# 헤드리스 시나리오 행렬 작업(`-scenario-backends`)은 실행기를 부른다 — 실행기가 없는 구성은 기동 오류만 내는 `HeadlessScenarioMatrixOff.cpp` 다.
-if(SW_ENABLE_AUTOMATION)
-	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" HeadlessScenarioMatrix Off OFF)
-else()
-	sw_pickVariantSource(ENGINE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" HeadlessScenarioMatrix Off ON)
-	# 실행기 헤더를 include 하는 나머지(실행기 단위 테스트)도 뺀다 — 짝을 고른 뒤라 남는 것은 실행기를 시험하는 파일뿐이다.
+	# 실행기 헤더를 include 하는 나머지(실행기 단위 테스트)도 뺀다. 실행기는 스스로 등록하므로(`IAutomationRuntime`) 호스트 쪽에 고를 짝이 없다.
 	sw_excludeSourcesIncludingPrefix(ENGINE_SOURCES "Engine/Automation/Runner/")
+	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
 endif()
 
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
