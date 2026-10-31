@@ -119,13 +119,8 @@ namespace sw
         ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
-        ShaderCompileDesc csDesc{};
-        csDesc._source       = ShaderSourceID{ shaderPath };
-        csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-        csDesc._stage        = ShaderStage::Compute;
-        csDesc._targetFormat = ShaderTargetFormat::SPIRV_OpenGL;
-        RHIShaderRequest::appendDefines( csDesc, listDefine );
-        ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
+        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_OpenGL );
+        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
 
         if ( csResult._bSuccess )
         {

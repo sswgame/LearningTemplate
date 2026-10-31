@@ -24,6 +24,7 @@
 namespace sw
 {
     struct ExtensionProgramDesc;
+    struct ShaderCompileDesc;
 
     class GPUScene;
     class IRHIDevice;
@@ -62,7 +63,8 @@ namespace sw
         /**
          * @brief 엔진 패스 PSO(패스 종류 표를 enum 순서로), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
          * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`SW_FATAL`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
-         *          그래픽스 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`prewarmPassShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
+         *          그래픽스 · 컴퓨트 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`warmShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
+         *          처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더도 같은 데우기에 넣는다 — 그 프레임에는 드라이버 생성만 남는다.
          */
         void createPassPSOs();
         /** @brief 소유한 저장소의 PSO · 레이아웃과 폴백 버퍼를 놓습니다. 빌린 저장소는 놓지 않습니다(소유자의 몫). 디바이스가 없으면 핸들만 잊습니다. */
@@ -162,11 +164,21 @@ namespace sw
          * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(출력 변형). nullptr 이면 표의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
          */
         [[nodiscard]] bool makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const;
+        /** @brief 셋업이 만들 컴퓨트 패스 PSO 하나입니다(셰이더 경로 · define 은 쿠커와 같은 `selectRenderPassShader`). */
+        struct ComputePSOJob
+        {
+            string         _shaderPath;
+            vector<string> _listDefine;
+            RenderPassType _passType{ RenderPassType::Invalid };
+        };
+
+        /** @brief 그래픽스 PSO desc 의 셰이더 요청(정점 · 있으면 픽셀)을 @p inoutListShader 에 더합니다. 백엔드 팩토리와 같은 해석이라(`RHIShaderRequest::resolveGraphics`) 캐시 키가 같다. */
+        void appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const;
         /**
-         * @brief @p listJob 의 셰이더를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
-         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS`).
+         * @brief @p listShader 를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
+         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS` · `findOrCreateExtensionProgramPSO`).
          */
-        void prewarmPassShaders( const vector<PassPSOJob>& listJob ) const;
+        void warmShaders( const vector<ShaderCompileDesc>& listShader ) const;
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
          * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSRV` 는 bindless 레지스트리를 바꾸는데, 패스 콜백은 태스크 워커에서 병렬로 돈다.

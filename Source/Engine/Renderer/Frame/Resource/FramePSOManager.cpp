@@ -170,24 +170,55 @@ namespace sw
                 desc._cullMode = RHICullMode::Front;
         }
 
-        /** @brief 셋업의 셰이더 미리 데우기 잡입니다(`FramePSOManager::prewarmPassShaders`). 워커는 요청 배열을 읽기만 하고, 캐시는 자기 잠금으로 같은 요청을 한 번만 컴파일한다. */
-        struct PassShaderWarmJob
+        /** @brief 셋업의 셰이더 미리 데우기 잡입니다(`FramePSOManager::warmShaders`). 워커는 요청 배열을 읽기만 하고, 캐시는 자기 잠금으로 같은 요청을 한 번만 컴파일한다. */
+        struct ShaderWarmJob
         {
-            const RHIGraphicsShaderRequest* _pRequest{ nullptr };
-            ShaderCache*                    _pShaders{ nullptr };
+            const ShaderCompileDesc* _pShader{ nullptr };
+            ShaderCache*             _pShaders{ nullptr };
 
             void run( uint32 start, uint32 end )
             {
                 for ( uint32 index = start; index < end; ++index )
                 {
                     // 결과는 버린다 — 실패는 뒤의 PSO 생성이 같은 요청으로 다시 받아 경로와 함께 알린다.
-                    const RHIGraphicsShaderRequest& request = _pRequest[index];
-                    (void)_pShaders->getOrCompile( request._vertex );
-                    if ( request._bHasPixelShader != SW_FALSE )
-                        (void)_pShaders->getOrCompile( request._pixel );
+                    (void)_pShaders->getOrCompile( _pShader[index] );
                 }
             }
         };
+
+        /** @brief 입자 PSO 의 desc 입니다 — 투명 패스 PSO 의 렌더 상태(@p transparentDesc)를 물려받고 셰이더만 입자 셰이더로 바꾼다(`ensureParticlePSO` · 셋업의 셰이더 데우기). */
+        RHIPipelineStateDesc makeParticlePSODesc( const RHIPipelineStateDesc& transparentDesc, const string& shaderPath )
+        {
+            RHIPipelineStateDesc desc = transparentDesc;
+            desc._vertexShaderPath    = shaderPath;
+            desc._pixelShaderPath     = shaderPath;
+            desc._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._listShaderDefine.clear();
+            desc._cullMode            = RHICullMode::None;
+            desc._fillMode            = RHIFillMode::Solid;
+            desc._bEnableBlend        = 1;
+            desc._bPremultipliedAlpha = SW_TRUE;
+            desc._bEnableDepthWrite   = 0;
+            return desc;
+        }
+
+        /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`findOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
+        RHIPipelineStateDesc makeCookieAtlasPSODesc( const string& shaderPath, RHIFormat atlasFormat )
+        {
+            RHIPipelineStateDesc desc{};
+            desc._vertexShaderPath   = shaderPath;
+            desc._pixelShaderPath    = shaderPath;
+            desc._vertexEntryPoint   = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets   = 1;
+            desc._arrRTVFormat[0]    = atlasFormat;
+            desc._depthStencilFormat = RHIFormat::Unknown;
+            desc._bEnableDepthTest   = 0;
+            desc._bEnableDepthWrite  = 0;
+            desc._cullMode           = RHICullMode::None;
+            return desc;
+        }
 
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
         [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
@@ -212,8 +243,9 @@ namespace sw
     {
         if ( _pDevice == nullptr )
             return;
-        // 그래픽스 패스는 desc 를 먼저 모으고(아래 1), 셰이더를 워커가 나눠 데운 뒤(2), PSO 를 이 스레드가 차례로 만든다(3).
-        vector<PassPSOJob> listJob;
+        // 그래픽스 · 컴퓨트 패스는 desc 를 먼저 모으고(아래 1), 셰이더를 워커가 나눠 데운 뒤(2), PSO 를 이 스레드가 차례로 만든다(3).
+        vector<PassPSOJob>    listJob;
+        vector<ComputePSOJob> listComputeJob;
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
         // 저장소에 이미 있는 패스는 만들지 않는다 — 미리보기 씬 렌더러는 주 렌더러의 저장소를 함께 쓰고(`shareCacheOf`), 주 렌더러가 같은 파이프라인으로 먼저 만들었다.
@@ -258,22 +290,49 @@ namespace sw
             if ( bCapable == false )
                 continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
             // 셰이더 경로와 define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다).
-            // 컴퓨트 셰이더는 백엔드 팩토리가 스스로 요청을 짓는다(그래픽스 요청 해석을 타지 않는다) — 데우지 않고 이 자리에서 만든다.
-            const RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
-            const RHIPipelineStateHandle    pso           = _pDevice->getResourceFactory()->createComputePipelineState( computeShader._shaderPath, {}, computeShader._listDefine );
-            // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고 여기서 이유를 한 번 남긴다.
-            if ( pso == 0 )
-            {
-                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
-                              ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
-                continue;
-            }
-            _pCache->setEnginePSO( passType, pso );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+            ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
+            computeJob._shaderPath                  = std::move( computeShader._shaderPath );
+            computeJob._listDefine                  = std::move( computeShader._listDefine );
+            computeJob._passType                    = passType;
         }
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         collectOutputPSOJobs( listJob );
-        prewarmPassShaders( listJob );
+
+        // 2) 셰이더 데우기 — 패스 PSO 셋과, 처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더를 한 번에 나눈다.
+        //    입자 PSO 는 투명 패스의 desc 를 물려받으므로 이번에 만들 투명 패스 desc 가 있을 때만 넣는다(이미 있으면 처음 셋업이 데웠다).
+        vector<ShaderCompileDesc> listShader;
+        for ( const PassPSOJob& job : listJob )
+        {
+            appendShaderWarm( job._desc, listShader );
+            if ( job._passType == RenderPassType::Transparent && job._outputFormat == RHIFormat::Unknown )
+                appendShaderWarm( makeParticlePSODesc( job._desc, engineDefaultAssets._shaderParticle.get() ), listShader );
+        }
+        if ( listJob.empty() == false )
+        {
+            // 아틀라스 포맷은 셰이더 바이트코드에 들지 않는다(RT 수만 든다 — `RHIShaderRequest::resolveGraphics`) — 아틀라스와 같은 RGBA8 로 데운다.
+            appendShaderWarm( makeCookieAtlasPSODesc( engineDefaultAssets._shaderFullscreenBlit.get(), RHIFormat::R8G8B8A8_UNORM ), listShader );
+        }
+        const ShaderTargetFormat targetFormat = RHI::getShaderTargetFormat( _pDevice->getBackendType() );
+        for ( const ComputePSOJob& computeJob : listComputeJob )
+        {
+            listShader.push_back( RHIShaderRequest::resolveCompute( computeJob._shaderPath, string_view{}, computeJob._listDefine, targetFormat ) );
+        }
+        warmShaders( listShader );
+
+        // 3) PSO 생성 — 이 스레드가 차례로(드라이버 생성은 직렬이고 GL 은 컨텍스트가 이 스레드에 묶인다).
+        for ( const ComputePSOJob& computeJob : listComputeJob )
+        {
+            const RHIPipelineStateHandle pso = _pDevice->getResourceFactory()->createComputePipelineState( computeJob._shaderPath, string_view{}, computeJob._listDefine );
+            // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고 여기서 이유를 한 번 남긴다.
+            if ( pso == 0 )
+            {
+                SW_LOG_ERROR( "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
+                continue;
+            }
+            _pCache->setEnginePSO( computeJob._passType, pso );
+        }
         for ( const PassPSOJob& job : listJob )
         {
             const RHIPipelineStateHandle pso = createPipelineStateTimed( *_pDevice, job._desc );
@@ -429,26 +488,27 @@ namespace sw
         }
     }
 
-    void FramePSOManager::prewarmPassShaders( const vector<PassPSOJob>& listJob ) const
+    void FramePSOManager::appendShaderWarm( const RHIPipelineStateDesc& desc, vector<ShaderCompileDesc>& inoutListShader ) const
+    {
+        // 백엔드 팩토리와 같은 해석이다(`RHIShaderRequest::resolveGraphics`) — 캐시 키가 같아 뒤의 생성이 적중한다.
+        RHIGraphicsShaderRequest request = RHIShaderRequest::resolveGraphics( desc, RHI::getShaderTargetFormat( _pDevice->getBackendType() ) );
+        inoutListShader.push_back( std::move( request._vertex ) );
+        if ( request._bHasPixelShader != SW_FALSE )
+            inoutListShader.push_back( std::move( request._pixel ) );
+    }
+
+    void FramePSOManager::warmShaders( const vector<ShaderCompileDesc>& listShader ) const
     {
         // 셰이더 읽기 · 컴파일(DXC · FXC, 병렬 쿠킹이 이미 워커에서 돌린다)은 디바이스를 쓰지 않아 모든 백엔드에서 워커로 나눈다. PSO 생성은 나누지 않는다 —
         // 드라이버 생성이 직렬이라 병렬 이득이 9 % 로 기각됐고(`MaterialPSOBuilder.h`), GL 은 컨텍스트가 이 스레드에 묶여 워커가 만들 수 없다
         // (언리얼도 셰이더 컴파일은 ShaderCompileWorker 로 나누고 PSO 는 RHI 스레드가 만든다).
-        if ( listJob.empty() || engine::areEngineServicesBound() == false )
+        if ( listShader.empty() || engine::areEngineServicesBound() == false )
             return;
         SW_PROFILE_SCOPE( "RT.PSO.prewarmShaders" );
-        const ShaderTargetFormat         targetFormat = RHI::getShaderTargetFormat( _pDevice->getBackendType() );
-        vector<RHIGraphicsShaderRequest> listRequest;
-        listRequest.reserve( listJob.size() );
-        for ( const PassPSOJob& job : listJob )
-        {
-            // 백엔드 팩토리와 같은 해석이다(`RHIShaderRequest::resolveGraphics`) — 캐시 키가 같아 뒤의 생성이 적중한다.
-            listRequest.push_back( RHIShaderRequest::resolveGraphics( job._desc, targetFormat ) );
-        }
-        PassShaderWarmJob warmJob{};
-        warmJob._pRequest = listRequest.data();
+        ShaderWarmJob warmJob{};
+        warmJob._pShader  = listShader.data();
         warmJob._pShaders = &engine::getSubsystem<ShaderCache>();
-        engine::runParallelByCost( static_cast<uint32>( listRequest.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PassShaderWarmJob::run, &warmJob ) );
+        engine::runParallelByCost( static_cast<uint32>( listShader.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &ShaderWarmJob::run, &warmJob ) );
     }
 
     void FramePSOManager::collectOutputPSOJobs( vector<PassPSOJob>& inoutListJob )
@@ -497,17 +557,8 @@ namespace sw
         const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCcUtil::make( "CKAT" ) ), RenderViewMode::Lit, false );
         if ( _pCache->hasMaterialPSO( psoKey ) == false )
         {
-            RHIPipelineStateDesc desc{};
-            desc._vertexShaderPath              = shaderPath;
-            desc._pixelShaderPath               = shaderPath;
-            desc._vertexEntryPoint              = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-            desc._pixelEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-            desc._numRenderTargets              = 1;
-            desc._arrRTVFormat[0]               = atlasFormat;
-            desc._depthStencilFormat            = RHIFormat::Unknown;
-            desc._bEnableDepthTest              = 0;
-            desc._bEnableDepthWrite             = 0;
-            desc._cullMode                      = RHICullMode::None;
+            // 셰이더는 셋업이 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
+            const RHIPipelineStateDesc   desc   = makeCookieAtlasPSODesc( shaderPath, atlasFormat );
             const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
             if ( handle == 0 )
                 SW_LOG_ERROR( "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
@@ -946,23 +997,15 @@ namespace sw
         if ( _pCache->hasMaterialPSO( _particlePSOKey ) )
             return;
 
-        RHIPipelineStateDesc desc{};
-        if ( _pCache->findDesc( transparentPSO, desc ) == false )
+        RHIPipelineStateDesc transparentDesc{};
+        if ( _pCache->findDesc( transparentPSO, transparentDesc ) == false )
         {
             SW_LOG_ERROR( "Transparent pass PSO has no recorded desc - particles are not drawn" );
             _pCache->setMaterialPSO( _particlePSOKey, RenderPSOCache::MaterialPSOEntry::failed() );
             return;
         }
-        desc._vertexShaderPath = shaderPath;
-        desc._pixelShaderPath  = shaderPath;
-        desc._vertexEntryPoint = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-        desc._pixelEntryPoint  = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-        desc._listShaderDefine.clear();
-        desc._cullMode                      = RHICullMode::None;
-        desc._fillMode                      = RHIFillMode::Solid;
-        desc._bEnableBlend                  = 1;
-        desc._bPremultipliedAlpha           = SW_TRUE;
-        desc._bEnableDepthWrite             = 0;
+        // 셰이더는 셋업이 투명 패스와 함께 데웠다(`createPassPSOS`) — 여기는 드라이버 생성만 남는다.
+        const RHIPipelineStateDesc   desc   = makeParticlePSODesc( transparentDesc, shaderPath );
         const RHIPipelineStateHandle handle = createPipelineStateTimed( *_pDevice, desc );
         if ( handle == 0 )
             SW_LOG_ERROR( "Failed to create the particle PSO from '%#' - particles are not drawn", shaderPath );

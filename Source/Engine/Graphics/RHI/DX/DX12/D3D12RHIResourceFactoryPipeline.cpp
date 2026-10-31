@@ -127,13 +127,8 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
         if ( shaderPath.empty() == false )
         {
-            ShaderCompileDesc csDesc{};
-            csDesc._source       = ShaderSourceID{ shaderPath };
-            csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-            csDesc._stage        = ShaderStage::Compute;
-            csDesc._targetFormat = ShaderTargetFormat::DXIL_D3D12;
-            RHIShaderRequest::appendDefines( csDesc, listDefine );
-            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
+            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXIL_D3D12 );
+            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess )
             {
                 D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};

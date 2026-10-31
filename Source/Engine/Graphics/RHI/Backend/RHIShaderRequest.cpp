@@ -63,6 +63,17 @@ namespace sw
         }
     }
 
+    ShaderCompileDesc RHIShaderRequest::resolveCompute( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine, ShaderTargetFormat targetFormat )
+    {
+        ShaderCompileDesc desc{};
+        desc._source       = ShaderSourceID{ shaderPath };
+        desc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
+        desc._stage        = ShaderStage::Compute;
+        desc._targetFormat = targetFormat;
+        appendDefines( desc, listDefine );
+        return desc;
+    }
+
     ShaderCompileResult RHIShaderRequest::compile( const ShaderCompileDesc& desc )
     {
         return engine::getSubsystem<ShaderCache>().getOrCompile( desc );

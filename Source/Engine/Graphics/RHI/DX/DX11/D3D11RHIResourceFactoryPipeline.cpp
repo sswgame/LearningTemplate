@@ -65,16 +65,8 @@ namespace sw
         }
         if ( desc._computeShaderPath.empty() == false )
         {
-            ShaderCompileDesc csDesc{};
-            csDesc._source       = ShaderSourceID{ desc._computeShaderPath };
-            csDesc._entryPoint   = string( resolveEntryPoint( desc._computeEntryPoint, ShaderStage::Compute ) );
-            csDesc._stage        = ShaderStage::Compute;
-            csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
-            for ( const string& define : desc._listShaderDefine )
-            {
-                csDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
-            }
-            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
+            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( desc._computeShaderPath, desc._computeEntryPoint, desc._listShaderDefine, ShaderTargetFormat::DXBC_D3D11 );
+            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
             {
                 SW_LOG_ERROR( "createPipelineState: compute shader compile/create failed '%#'", desc._computeShaderPath.c_str() );
@@ -134,13 +126,8 @@ namespace sw
         if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(다른 백엔드와 같다)
             return 0;
         {
-            ShaderCompileDesc csDesc{};
-            csDesc._source       = ShaderSourceID{ shaderPath };
-            csDesc._entryPoint   = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
-            csDesc._stage        = ShaderStage::Compute;
-            csDesc._targetFormat = ShaderTargetFormat::DXBC_D3D11;
-            RHIShaderRequest::appendDefines( csDesc, listDefine );
-            ShaderCompileResult res = RHIShaderRequest::compile( csDesc );
+            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXBC_D3D11 );
+            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
             if ( res._bSuccess == false || isHrSuccess( _pDevice->_device->CreateComputeShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._cs.GetAddressOf() ), "CreateComputeShader" ) == false )
                 return 0;
         }
