@@ -213,7 +213,7 @@ namespace sw
         }
         if ( bAscending == false )
         {
-            SW_LOG_ERROR( "Metric histogram '%#' needs strictly ascending bucket bounds", name );
+            SW_LOG_ERROR_ID( "Metric.BoundsNotAscending", "Metric histogram '%#' needs strictly ascending bucket bounds", name );
             return nullptr;
         }
         Series* pSeries = getOrCreateSeries( Kind::Histogram, name, help, listLabel, &listUpperBound );
@@ -225,7 +225,7 @@ namespace sw
     {
         if ( MetricRegistryInternal::isValidName( name, true ) == false )
         {
-            SW_LOG_ERROR( "Metric name '%#' is not a valid Prometheus name", name );
+            SW_LOG_ERROR_ID( "Metric.InvalidName", "Metric name '%#' is not a valid Prometheus name", name );
             return nullptr;
         }
         string labelText;
@@ -235,7 +235,7 @@ namespace sw
             const bool bInvalidLabelName = MetricRegistryInternal::isValidName( label._name, false ) == false || bReserved || label._name == "le";
             if ( bInvalidLabelName )
             {
-                SW_LOG_ERROR( "Metric '%#' has an invalid label name '%#'", name, label._name.c_str() );
+                SW_LOG_ERROR_ID( "Metric.InvalidLabelName", "Metric '%#' has an invalid label name '%#'", name, label._name.c_str() );
                 return nullptr;
             }
             if ( labelText.empty() == false )
@@ -278,7 +278,7 @@ namespace sw
             bSameShape = pFamily->_listUpperBound == *pUpperBound;
         if ( bSameShape == false )
         {
-            SW_LOG_ERROR( "Metric '%#' was registered before with another kind, label names or buckets", name );
+            SW_LOG_ERROR_ID( "Metric.ShapeMismatch", "Metric '%#' was registered before with another kind, label names or buckets", name );
             return nullptr;
         }
         for ( unique_ptr<Series>& series : pFamily->_listSeries )

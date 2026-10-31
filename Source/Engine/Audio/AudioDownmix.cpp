@@ -58,7 +58,7 @@ namespace sw
         const bool bChannelCountInRange = 3 <= channelCount && channelCount <= kMaxSourceChannelCount;
         if ( bChannelCountInRange == false || pSpeakerBit == nullptr )
         {
-            SW_LOG_ERROR( "Downmix needs 3 to %# source channels (got %#)", kMaxSourceChannelCount, channelCount );
+            SW_LOG_ERROR_ID( "Audio.DownmixChannelCount", "Downmix needs 3 to %# source channels (got %#)", kMaxSourceChannelCount, channelCount );
             return false;
         }
         AudioDownmix downmix;
@@ -70,7 +70,7 @@ namespace sw
             const bool                                     bRepeated  = ( usedMask & speakerBit ) != 0;
             if ( pGain == nullptr || bRepeated )
             {
-                SW_LOG_ERROR( "Downmix cannot place source channel %# (speaker mask bit 0x%#)", channelIndex, Fmt( speakerBit, Format().hex() ) );
+                SW_LOG_ERROR_ID( "Audio.DownmixSpeakerUnplaceable", "Downmix cannot place source channel %# (speaker mask bit 0x%#)", channelIndex, Fmt( speakerBit, Format().hex() ) );
                 return false;
             }
             usedMask |= speakerBit;
@@ -87,7 +87,7 @@ namespace sw
         const bool bChannelCountInRange = 3 <= channelCount && channelCount <= kMaxSourceChannelCount;
         if ( bChannelCountInRange == false )
         {
-            SW_LOG_ERROR( "Downmix needs 3 to %# source channels (got %#)", kMaxSourceChannelCount, channelCount );
+            SW_LOG_ERROR_ID( "Audio.DownmixChannelCount", "Downmix needs 3 to %# source channels (got %#)", kMaxSourceChannelCount, channelCount );
             return false;
         }
         // 마스크가 없으면(WAVEFORMATEX) 마스크 비트 순서로 아래부터 채운다.
@@ -104,7 +104,7 @@ namespace sw
         }
         if ( assigned < channelCount )
         {
-            SW_LOG_ERROR( "Channel mask 0x%# places only %# of %# channels", Fmt( channelMask, Format().hex() ), assigned, channelCount );
+            SW_LOG_ERROR_ID( "Audio.DownmixMaskShort", "Channel mask 0x%# places only %# of %# channels", Fmt( channelMask, Format().hex() ), assigned, channelCount );
             return false;
         }
         return makeForSpeakers( arrSpeakerBit, channelCount, outDownmix );
