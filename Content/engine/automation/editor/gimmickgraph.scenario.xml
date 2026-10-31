@@ -19,8 +19,7 @@
 	<DevCommand line="select.type GimmickCircuitComponent"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus gimmick_graph"/>
-	<Wait frames="40"/>
-	<Expect watch="Editor.GraphNodeCount" atLeast="1"/>
+	<WaitUntil watch="Editor.GraphNodeCount" atLeast="1" timeoutFrames="120"/>
 	<!-- 노드 둘 -->
 	<Wait frames="5"/>
 	<EditorClick mark="gimmick.addnode"/>

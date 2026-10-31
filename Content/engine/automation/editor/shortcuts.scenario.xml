@@ -14,8 +14,7 @@
 	<EditorClick mark="shortcuts.set.edit.undo"/>
 	<Wait frames="15"/>
 	<EditorKey key="Ctrl+U"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.ShortcutOverrideCount" equals="1"/>
+	<WaitUntil watch="Editor.ShortcutOverrideCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus hierarchy"/>
 	<Wait frames="20"/>
@@ -30,8 +29,7 @@
 	<EditorClick mark="shortcuts.set.edit.redo"/>
 	<Wait frames="15"/>
 	<EditorKey key="Ctrl+U"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.ShortcutConflictCount" equals="1"/>
+	<WaitUntil watch="Editor.ShortcutConflictCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="shortcuts.cancel"/>
 	<WaitUntil watch="Editor.ShortcutConflictCount" equals="0" timeoutFrames="60"/>

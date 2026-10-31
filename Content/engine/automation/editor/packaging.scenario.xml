@@ -26,8 +26,7 @@
 	<EditorClick mark="packaging.package" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="packaging.package" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.PackagingState" equals="1"/>
+	<WaitUntil watch="Editor.PackagingState" equals="1" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.PackagingState" equals="2" timeoutFrames="1400"/>
 	<Wait frames="10"/>

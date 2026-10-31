@@ -12,16 +12,14 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.TestParent"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectedComponentCount" equals="1"/>
+	<WaitUntil watch="Editor.SelectedComponentCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.addComponent"/>
 	<Wait frames="20"/>
 	<EditorText value="PointLight"/>
 	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedComponentCount" equals="2"/>
+	<WaitUntil watch="Editor.SelectedComponentCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>

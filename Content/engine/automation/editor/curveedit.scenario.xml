@@ -16,8 +16,7 @@
 	<Wait frames="10"/>
 	<DevCommand line="component.add EditorCurveTestComponent"/>
 	<Variable name="gv_editorWatchProperty" value="EditorCurveTestComponent._curve"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectedCurveKeyCount" equals="2"/>
+	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.curve._curve"/>

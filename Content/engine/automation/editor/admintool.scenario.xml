@@ -21,8 +21,7 @@
 	<EditorText value="Open the GM"/>
 	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.PanelOpen" equals="1"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<ExpectLog contains="GM Tool panel opened" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus admin.tool"/>

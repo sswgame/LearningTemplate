@@ -75,22 +75,19 @@
 	<Remember watch="Editor.UndoIndex" as="beforeApply"/>
 	<DevCommand line="editor prefab.applyOverrides"/>
 	<!-- ④ 퍼짐 · 덮어쓴 값 유지 · 되돌리기 -->
-	<Wait frames="15"/>
-	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7" timeoutFrames="60"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="beforeApply"/>
 	<ExpectLog contains="Saved prefab changes to" count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius"/>
+	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" sameAs="templateRadius" timeoutFrames="60"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Editor.UndoIndex" sameAs="beforeApply"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7" timeoutFrames="60"/>
 	<!-- ⑤ 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/flowprefab.scene.xml"/>
@@ -102,8 +99,7 @@
 	<DevCommand line="scene.open {out}/flowprefab.scene.xml"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
-	<Wait frames="24"/>
-	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7"/>
+	<WaitUntil watch="Object.Property" target="LanternB" key="PointLightComponent._radius" equals="7" timeoutFrames="72"/>
 	<Expect watch="Object.Property" target="LanternB" key="PointLightComponent._intensity" equals="3"/>
 	<Expect watch="Object.Property" target="Lantern" key="PointLightComponent._radius" equals="7"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>

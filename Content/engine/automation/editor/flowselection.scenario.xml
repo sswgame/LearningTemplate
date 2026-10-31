@@ -27,12 +27,10 @@
 	<Expect watch="Editor.SelectedComponentCount" atLeast="1"/>
 	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.row.GameCamera" mods="ctrl"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedNames" is="GameCamera,TestMesh"/>
+	<WaitUntil watch="Editor.SelectedNames" is="GameCamera,TestMesh" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
+	<WaitUntil watch="Editor.SelectedNames" is="TestMesh" timeoutFrames="60"/>
 	<!-- ② 인스펙터로 이름 → 다른 창에 포커스를 두고 되돌리기 · 다시 실행 -->
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.name"/>

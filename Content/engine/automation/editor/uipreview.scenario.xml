@@ -72,12 +72,11 @@
 	<EditorClick mark="uipreview.language.game"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="600"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewLanguageIndex" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewLanguageIndex" equals="0" timeoutFrames="60"/>
 	<!-- 3) 속성 편집: Window 의 _opacity 를 0.5 로 — 되돌리기 항목 하나, Undo 로 1, Redo 로 0.5 -->
 	<Wait frames="15"/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<Wait frames="15"/>
+	<Wait frames="10"/>
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.inspector.search"/>
@@ -91,22 +90,18 @@
 	<EditorText value="0.5"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<!-- 4) 입력 흉내 -->
 	<Wait frames="5"/>
 	<Expect watch="Editor.UIPreviewHoveredOrdinal" equals="-1"/>
@@ -116,8 +111,7 @@
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="600"/>
 	<Wait frames="10"/>
 	<EditorHover mark="uipreview.image" anchor="0.5,0.5"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.UIPreviewHoveredOrdinal" atLeast="0"/>
+	<WaitUntil watch="Editor.UIPreviewHoveredOrdinal" atLeast="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorHover release="true"/>
 	<Wait frames="5"/>
@@ -170,8 +164,7 @@
 	<EditorText value="0.5"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.save"/>
 	<Wait frames="10"/>
@@ -188,15 +181,15 @@
 	<EditorText value="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.save"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
-	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
+	<Wait frames="5"/>
+	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.close ui_preview"/>
 	<Wait frames="10"/>

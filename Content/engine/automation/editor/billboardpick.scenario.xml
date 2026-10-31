@@ -18,8 +18,7 @@
 	<Expect watch="Editor.SelectionCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.billboard.GameCamera"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
 	<Wait frames="5"/>

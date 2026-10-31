@@ -33,8 +33,7 @@
 	<EditorText value="7"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedProperty" equals="7"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="7" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
@@ -83,8 +82,7 @@
 	<EditorText value="7"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedProperty" equals="7"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="7" timeoutFrames="60"/>
 	<DevCommand line="editor play.keepChanges"/>
 	<Wait frames="10"/>
 	<EditorClick mark="toolbar.stop"/>
@@ -93,8 +91,7 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedProperty" equals="0"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

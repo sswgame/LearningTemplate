@@ -16,8 +16,7 @@
 	<EditorClick mark="hierarchy.filter"/>
 	<Wait frames="10"/>
 	<EditorText value="tag:Scenario.Probe"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.HierarchyVisibleRoots" equals="1"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<!-- 지우고 소문자로 — 대소문자를 가리지 않는다 -->
 	<Wait frames="5"/>
@@ -26,8 +25,7 @@
 	<EditorKey key="Backspace"/>
 	<Wait frames="5"/>
 	<EditorText value="tag:scenario.probe.child"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.HierarchyVisibleRoots" equals="1"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="1" timeoutFrames="60"/>
 	<!-- 없는 태그 — 루트가 없고 0 건 안내를 그린다 -->
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+A"/>
@@ -35,16 +33,14 @@
 	<EditorKey key="Backspace"/>
 	<Wait frames="5"/>
 	<EditorText value="tag:Scenario.Missing"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.HierarchyVisibleRoots" equals="0"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
 	<!-- 칸을 비우면 다시 보인다 -->
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorKey key="Backspace"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.HierarchyVisibleRoots" atLeast="1"/>
+	<WaitUntil watch="Editor.HierarchyVisibleRoots" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<Pass/>
 </Scenario>

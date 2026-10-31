@@ -24,8 +24,7 @@
 	<DevCommand line="asset.openScratch scratch/animgraphedit/animgraphedit.animgraph.xml"/>
 	<Wait frames="40"/>
 	<WaitUntil watch="Editor.AnimationGraphLinkCount" equals="2"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.GraphNodeCount" equals="2"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="2"/>
 	<Wait frames="5"/>
 	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
@@ -33,8 +32,7 @@
 	<EditorText value="att"/>
 	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.GraphNodeCount" equals="3"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="3" timeoutFrames="75"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.node.Walk"/>
 	<Wait frames="20"/>

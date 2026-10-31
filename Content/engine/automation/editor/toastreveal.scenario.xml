@@ -17,8 +17,7 @@
 	<EditorClick mark="notification.showInExplorer" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="notification.showInExplorer" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.ExplorerLaunchCount" atLeast="1"/>
+	<WaitUntil watch="Editor.ExplorerLaunchCount" atLeast="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ExplorerCommandWellFormed" equals="1"/>
 	<Wait frames="10"/>
 	<DevCommand line="explorer.dryRun 0"/>

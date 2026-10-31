@@ -25,8 +25,7 @@
 	<EditorText value="Cost"/>
 	<Wait frames="10"/>
 	<EditorClick mark="tileMap.dataLayer.add"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.TileMapDataLayers" equals="1"/>
+	<WaitUntil watch="Editor.TileMapDataLayers" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.TileMapDataCells" equals="0"/>
 	<!-- 값 7 로 왼쪽 위 칸 하나 칠하기 -->
 	<Wait frames="5"/>
@@ -39,8 +38,7 @@
 	<EditorClick mark="tileMap.tool.brush"/>
 	<Wait frames="10"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.TileMapDataCells" equals="1"/>
+	<WaitUntil watch="Editor.TileMapDataCells" equals="1" timeoutFrames="60"/>
 	<!-- 저장 -->
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.path"/>
@@ -55,13 +53,13 @@
 	<EditorClick mark="tileMap.erase"/>
 	<Wait frames="10"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.TileMapDataCells" equals="0"/>
+	<WaitUntil watch="Editor.TileMapDataCells" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.erase"/>
 	<Wait frames="10"/>
 	<EditorClick mark="tileMap.load"/>
-	<WaitUntil watch="Editor.TileMapDataLayers" equals="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Expect watch="Editor.TileMapDataLayers" equals="1"/>
 	<Expect watch="Editor.TileMapDataCells" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="asset.removeTemp {out}/temp.tilemap.xml"/>

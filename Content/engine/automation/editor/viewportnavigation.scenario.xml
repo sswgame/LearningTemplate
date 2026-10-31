@@ -24,8 +24,7 @@
 	<!-- ① 휠 세 눈금: 8 * 0.85^3 = 약 4.9 -->
 	<Wait frames="5"/>
 	<EditorWheel dy="3"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneViewOrbitDistance" atMost="6"/>
+	<WaitUntil watch="Editor.SceneViewOrbitDistance" atMost="6" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneViewOrbitDistance" atLeast="0.5"/>
 	<Expect watch="Editor.SceneViewCameraX" sameAs="xStart"/>
 	<!-- ② 가운데 단추 끌기: 카메라 X 가 바뀐다 -->

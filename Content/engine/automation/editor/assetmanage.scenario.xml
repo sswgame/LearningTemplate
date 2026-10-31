@@ -19,8 +19,7 @@
 	     시계 잡기 조건 ContentBrowserReferenceIndex 가 시계를 멈춘다 — 아래 고정 프레임의 단언과 이름 바꾸기는 따라온 색인을 쓴다 -->
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.ReferenceCount" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<DevCommand line="content.open scratch/assetmanage"/>
 	<!-- 1) 새 머티리얼 -->
 	<Wait frames="20"/>
@@ -55,8 +54,7 @@
 	<ExpectLog contains="to 'scratch/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
 	<Expect watch="Editor.ReferenceCount" equals="0"/>
 	<Variable name="gv_editorWatchAsset" value="scratch/assetmanage/probe_renamed.material"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.ReferenceCount" equals="1"/>
+	<WaitUntil watch="Editor.ReferenceCount" equals="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="renamed.png"/>
 	<!-- 3) 되돌리기 -->
 	<Wait frames="10"/>

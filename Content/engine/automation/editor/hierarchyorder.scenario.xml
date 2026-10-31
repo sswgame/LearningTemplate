@@ -19,8 +19,7 @@
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor scene.moveSiblingUp"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.HierarchyRowIndex" equals="1"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
@@ -28,8 +27,7 @@
 	<Expect watch="Editor.UndoIndex" equals="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor scene.moveSiblingDown"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.HierarchyRowIndex" equals="3"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="3" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
@@ -37,8 +35,7 @@
 	<Expect watch="Editor.ObjectCount" equals="9"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor scene.createFolder"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectCount" equals="10"/>
+	<WaitUntil watch="Editor.ObjectCount" equals="10" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>

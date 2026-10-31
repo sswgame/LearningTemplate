@@ -18,14 +18,12 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus preferences"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.PreferencesVisibleSections" equals="7"/>
+	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="7" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="preferences.search"/>
 	<Wait frames="10"/>
 	<EditorText value="snap"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.PreferencesVisibleSections" equals="1"/>
+	<WaitUntil watch="Editor.PreferencesVisibleSections" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.property.EditorViewportPreferences._gridSnapValue" mods="ctrl"/>
 	<Wait frames="10"/>

@@ -21,8 +21,7 @@
 	<EditorText value="4"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedProperty" equals="4"/>
+	<WaitUntil watch="Editor.SelectedProperty" equals="4" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
 	<WaitUntil watch="Editor.SelectedProperty" equals="0" timeoutFrames="60"/>

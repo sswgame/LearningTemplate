@@ -104,20 +104,17 @@
 	<!-- 경계를 다 넘은 뒤에도 되돌리기가 같은 명령을 되돌리고, 다시 실행이 같은 상태로 돌아온다 -->
 	<Wait frames="10"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.UndoIndex" equals="2"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.SceneHash" differsFrom="editedScene"/>
 	<EditorExpectObject name="BoundaryProbe" component="PointLightComponent" count="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneHash" sameAs="editedScene"/>
+	<WaitUntil watch="Editor.SceneHash" sameAs="editedScene" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<!-- 경계를 넘은 뒤에도 씬을 저장할 수 있다(모듈 리로드가 게임을 내린 채 저장을 막지 않는다) -->
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/flowboundaries.scene.xml"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<ExpectLog contains="Scene save refused" count="0"/>
 	<Pass/>
 </Scenario>

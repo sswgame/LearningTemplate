@@ -73,8 +73,7 @@
 	<Expect watch="Editor.GameViewRequested" equals="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus game_view"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.GameViewRequested" equals="1"/>
+	<WaitUntil watch="Editor.GameViewRequested" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="10"/>

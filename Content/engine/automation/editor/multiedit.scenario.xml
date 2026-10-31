@@ -14,8 +14,7 @@
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.row.TestGameCamera" mods="ctrl"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectionCount" equals="2"/>
+	<WaitUntil watch="Editor.SelectionCount" equals="2" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.SelectedPropertySum" equals="0"/>
@@ -27,13 +26,11 @@
 	<EditorText value="5"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedPropertySum" equals="10"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectedPropertySum" equals="0"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

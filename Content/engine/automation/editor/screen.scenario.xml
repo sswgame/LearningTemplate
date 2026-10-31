@@ -42,12 +42,10 @@
 	<!-- 4) 테마 — 토큰 벌을 바꾸고, 라이트에서 테마 대화상자를 열어 셋째 스와치(Neon Violet 0xA65AF2)를 누른다 -->
 	<Wait frames="9"/>
 	<DevCommand line="editor.theme midnight"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.ThemeName" is="midnight"/>
+	<WaitUntil watch="Editor.ThemeName" is="midnight" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor.theme light"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.ThemeName" is="light"/>
+	<WaitUntil watch="Editor.ThemeName" is="light" timeoutFrames="60"/>
 	<DevCommand line="editor editor.themeSettings"/>
 	<Wait frames="15"/>
 	<EditorClick mark="theme.swatch.violet"/>

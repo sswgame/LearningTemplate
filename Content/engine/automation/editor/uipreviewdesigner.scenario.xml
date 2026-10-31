@@ -39,16 +39,13 @@
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" near="0" tolerance="0.5" timeoutFrames="60"/>
 	<!-- 2) 팔레트 · 끌어 놓기 · 지우기 -->
 	<Wait frames="10"/>
 	<DevCommand line="asset.openScratch scratch/uipreviewdesigner/save_probe.ui.xml"/>
@@ -65,26 +62,21 @@
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.delete"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" equals="2"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" equals="2"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>

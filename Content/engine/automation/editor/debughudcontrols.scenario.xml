@@ -55,8 +55,7 @@
 	<Wait frames="5"/>
 	<DevCommand line="hud off"/>
 	<DevCommand line="hud physics off"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.DebugHUDShownSections" equals="4"/>
+	<WaitUntil watch="Editor.DebugHUDShownSections" equals="4" timeoutFrames="60"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

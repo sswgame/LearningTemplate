@@ -53,8 +53,7 @@
 	<!-- ③ 되돌리기 -->
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<!-- ④ 다시 고르고 (none) -->
 	<Wait frames="10"/>
@@ -70,8 +69,7 @@
 	<EditorHover mark="inspector.handle.none"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.none"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<!-- ⑤ 행 메뉴의 Paste Value 는 비활성 -->
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="down"/>

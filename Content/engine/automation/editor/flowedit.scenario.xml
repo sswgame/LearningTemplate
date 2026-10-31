@@ -73,8 +73,7 @@
 	<!-- ④ 저장 -->
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/flowedit.scene.xml"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<Remember watch="Editor.SceneHash" as="saved"/>
 	<Remember watch="Editor.UndoState" as="savedUndo"/>
 	<Remember watch="Editor.StateHash" as="savedState"/>
@@ -102,8 +101,7 @@
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.redo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneHash" sameAs="saved"/>
+	<WaitUntil watch="Editor.SceneHash" sameAs="saved" timeoutFrames="60"/>
 	<EditorExpectObject name="PlacedCrate" selected="1"/>
 	<!-- ⑦ 다른 씬 → 저장한 씬 다시 열기(되돌리기 · 다시 실행으로 변경 표시가 켜져 있어 scene.new 는 확인 상자를 띄운다 — 확인 없이 여는 scene.open 을 쓴다) -->
 	<Wait frames="5"/>

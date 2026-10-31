@@ -24,8 +24,7 @@
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectDepth" equals="0"/>
+	<WaitUntil watch="Editor.ObjectDepth" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

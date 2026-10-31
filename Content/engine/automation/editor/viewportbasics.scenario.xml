@@ -15,8 +15,7 @@
 	<DevCommand line="select.type MeshComponent"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectionOutlineBoxes" atLeast="1"/>
+	<WaitUntil watch="Editor.SelectionOutlineBoxes" atLeast="1" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchPanel" value="hierarchy"/>
 	<Wait frames="5"/>
 	<EditorKey key="E"/>

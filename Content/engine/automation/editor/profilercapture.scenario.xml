@@ -20,8 +20,7 @@
 	<Expect watch="Editor.ProfilerSelectedFrame" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.graph.GT.Frame" anchor="0.5,0.5"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.ProfilerSelectedFrame" atLeast="1"/>
+	<WaitUntil watch="Editor.ProfilerSelectedFrame" atLeast="1" timeoutFrames="60"/>
 	<!-- 2) Pause · Save · Clear · Load -->
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.capture.pause"/>

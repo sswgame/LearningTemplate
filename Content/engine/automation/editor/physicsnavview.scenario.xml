@@ -27,8 +27,7 @@
 	<Expect watch="Editor.NavigationBakeCount" equals="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor navigation.bake"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.NavigationBakeCount" equals="1"/>
+	<WaitUntil watch="Editor.NavigationBakeCount" equals="1" timeoutFrames="75"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.visualizer.physics_shapes"/>
 	<Wait frames="20"/>

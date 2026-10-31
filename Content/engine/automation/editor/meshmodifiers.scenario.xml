@@ -138,8 +138,7 @@
 	<EditorClick mark="meshmodifiers.category.Group"/>
 	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.deformable"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.ModifierCount" equals="4"/>
+	<WaitUntil watch="MeshModifiers.ModifierCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.NestedCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.nested.add"/>

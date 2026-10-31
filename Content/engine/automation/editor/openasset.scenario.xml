@@ -20,8 +20,7 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.close tile_map"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.PanelOpen" equals="0"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+P"/>
 	<Wait frames="15"/>

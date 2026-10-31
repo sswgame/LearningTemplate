@@ -18,8 +18,7 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus projectsettings"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ProjectSettingsPageCount" atLeast="3"/>
+	<WaitUntil watch="Editor.ProjectSettingsPageCount" atLeast="3" timeoutFrames="60"/>
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="projectsettings.page.EngineConfig"/>

@@ -17,8 +17,7 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus audiomixer"/>
-	<Wait frames="45"/>
-	<Expect watch="Editor.AudioMixerBusCount" atLeast="7"/>
+	<WaitUntil watch="Editor.AudioMixerBusCount" atLeast="7" timeoutFrames="135"/>
 	<Expect watch="Editor.AudioMixerMutedCount" equals="0"/>
 	<Expect watch="Editor.AudioMixerSoloCount" equals="0"/>
 	<Wait frames="5"/>

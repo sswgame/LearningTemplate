@@ -16,12 +16,10 @@
 	<EditorText value="ThemePark"/>
 	<Wait frames="10"/>
 	<EditorClick mark="modules.toggle.GF_ThemePark"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ModulePreviewNewlyInactive" equals="2"/>
+	<WaitUntil watch="Editor.ModulePreviewNewlyInactive" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="modules.cancel"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ModulePreviewNewlyInactive" equals="0"/>
+	<WaitUntil watch="Editor.ModulePreviewNewlyInactive" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

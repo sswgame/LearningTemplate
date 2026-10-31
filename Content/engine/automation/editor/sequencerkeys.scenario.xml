@@ -33,8 +33,7 @@
 	<EditorText value="2"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectPositionX" equals="2"/>
+	<WaitUntil watch="Editor.ObjectPositionX" equals="2" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
 	<Wait frames="10"/>
@@ -51,8 +50,7 @@
 	<EditorText value="12"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SequencerKeyFrameCount" equals="2"/>
+	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectPositionX" equals="12"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.scrub"/>

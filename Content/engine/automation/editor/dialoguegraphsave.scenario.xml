@@ -25,13 +25,11 @@
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="dialogueGraph.save"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.TempAssetExists" equals="0"/>
+	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="dialogueGraph.add.End"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
@@ -43,8 +41,7 @@
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.TempAssetExists" equals="0"/>
+	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

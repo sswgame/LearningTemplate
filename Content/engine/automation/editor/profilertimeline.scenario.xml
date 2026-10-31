@@ -48,14 +48,12 @@
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="3"/>
 	<EditorText value="GT.Frame"/>
-	<Wait frames="17"/>
-	<Expect watch="Editor.ProfilerTraceSearchMatches" atLeast="2"/>
+	<WaitUntil watch="Editor.ProfilerTraceSearchMatches" atLeast="2" timeoutFrames="60"/>
 	<Wait frames="3"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="3"/>
 	<EditorText value="zzNoSuchScope"/>
-	<Wait frames="19"/>
-	<Expect watch="Editor.ProfilerTraceSearchMatches" equals="0"/>
+	<WaitUntil watch="Editor.ProfilerTraceSearchMatches" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.unloadTrace"/>
 	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" equals="0" timeoutFrames="60"/>

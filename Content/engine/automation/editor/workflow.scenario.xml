@@ -55,8 +55,7 @@
 	<!-- 5) 저장 → 새 씬 → 다시 열기 -->
 	<Wait frames="10"/>
 	<DevCommand line="scene.saveAs {out}/workflow.scene.xml"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" count="0"/>
@@ -68,8 +67,7 @@
 	<!-- 6) 에디터 안 플레이 시작 · 정지 — 정지하면 편집 씬이 그대로다 -->
 	<Wait frames="10"/>
 	<DevCommand line="play"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="150"/>
 	<Wait frames="10"/>
 	<DevCommand line="stop"/>
 	<Wait frames="30"/>

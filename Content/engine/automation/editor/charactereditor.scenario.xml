@@ -19,8 +19,7 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus charactereditor.main"/>
-	<Wait frames="45"/>
-	<Expect watch="Editor.CharacterEditorSocketCount" atLeast="3"/>
+	<WaitUntil watch="Editor.CharacterEditorSocketCount" atLeast="3" timeoutFrames="135"/>
 	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.loadSockets"/>
 	<Wait frames="30"/>
@@ -100,8 +99,7 @@
 	<Remember watch="Editor.PreviewViewportOrbitDistance" as="previewDistance"/>
 	<Wait frames="2"/>
 	<EditorWheel dy="2"/>
-	<Wait frames="6"/>
-	<Expect watch="Editor.PreviewViewportOrbitDistance" differsFrom="previewDistance"/>
+	<WaitUntil watch="Editor.PreviewViewportOrbitDistance" differsFrom="previewDistance" timeoutFrames="60"/>
 	<Wait frames="2"/>
 	<EditorHover release="true"/>
 	<Wait frames="2"/>

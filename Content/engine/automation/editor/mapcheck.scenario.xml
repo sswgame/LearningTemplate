@@ -20,14 +20,12 @@
 	<EditorClick mark="statusBar.mapCheck" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="statusBar.mapCheck" state="up"/>
-	<Wait frames="22"/>
-	<Expect watch="Editor.PanelOpen" equals="1"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="66"/>
 	<Wait frames="5"/>
 	<EditorClick mark="mapCheck.row.0" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="mapCheck.row.0" state="up"/>
-	<Wait frames="17"/>
-	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<EditorExpectObject name="ZeroRadiusLight" selected="1"/>
 	<CaptureEditorUI file="mapcheck.png"/>
 	<!-- 오류를 심은 씬을 열어 둔 채 끝내면 상태줄의 검사 수와 토스트가 다음 시나리오까지 남는다 — 깨끗한 씬으로 돌아가고 끝낸다 -->

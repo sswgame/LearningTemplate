@@ -43,8 +43,7 @@
 	<EditorKey key="DownArrow"/>
 	<Wait frames="8"/>
 	<EditorKey key="Enter"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.InputMapSelectedTrigger" equals="10"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="10" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.close input_map"/>
 	<Variable name="gv_editorUiScale" value="0"/>

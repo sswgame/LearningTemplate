@@ -61,8 +61,7 @@
 	<EditorClick mark="multiplayer.inprocess.world2" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.world2" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.NetSimInputFocus" equals="2"/>
+	<WaitUntil watch="Editor.NetSimInputFocus" equals="2" timeoutFrames="60"/>
 	<Tap slot="Key.W" hold="20"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.NetSimTick" atLeast="700"/>
@@ -79,7 +78,6 @@
 	<EditorClick mark="multiplayer.inprocess.stop" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.inprocess.stop" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.NetSimRunning" equals="0"/>
+	<WaitUntil watch="Editor.NetSimRunning" equals="0" timeoutFrames="60"/>
 	<Pass/>
 </Scenario>

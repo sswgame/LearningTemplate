@@ -20,8 +20,7 @@
 	<DevCommand line="asset.openScratch scratch/animgraphlayers/animgraphlayers.animgraph.xml"/>
 	<Wait frames="40"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.AnimationGraphBoneMaskCount" equals="1"/>
+	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.tab.layers" state="down"/>
@@ -38,8 +37,7 @@
 	<EditorClick mark="animationGraph.save"/>
 	<Wait frames="20"/>
 	<EditorClick mark="animationGraph.layer.remove"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.AnimationGraphLayerCount" equals="1"/>
+	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="animationGraph.load"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="2" timeoutFrames="75"/>

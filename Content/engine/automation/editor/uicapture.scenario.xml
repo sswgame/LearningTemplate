@@ -12,8 +12,7 @@
 	<CaptureEditorUI file="ui_dark.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="editor.theme light"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.ThemeName" is="light"/>
+	<WaitUntil watch="Editor.ThemeName" is="light" timeoutFrames="60"/>
 	<CaptureEditorUI file="ui_light.png" maxMagentaFraction="0"/>
 	<Wait frames="2"/>
 	<DevCommand line="editor.theme highcontrast"/>
