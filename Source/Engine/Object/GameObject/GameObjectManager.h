@@ -320,10 +320,29 @@ namespace sw
         template <typename TComponent, typename TFunc>
         void executeOrDeferPostTickOnComponent( const TComponent& self, TFunc func )
         {
+            executeOrDeferPostTick( makeComponentPostTickTask( self, func ) );
+        }
+
+        /**
+         * @brief `executeOrDeferPostTickOnComponent` 와 같되 늘 틱 뒤(게임 스레드의 씬 프레임)로 미룹니다 - 바로 실행하지 않는다.
+         * @details 비동기 씬 로드의 워커에서 불리는 `onPostLoad` 처럼 게임 스레드가 아닌 곳에서 공유 자원(머티리얼 · 프리미티브 레지스트리)을 만질 일을 넘길 때 쓴다.
+         *          구조 변경 버퍼는 씬 프레임마다 비워지므로 편집 모드(플레이 전)에서도 돈다 - `onBeginPlay` 로 넘기면 편집 모드에서는 오지 않는다.
+         */
+        template <typename TComponent, typename TFunc>
+        void deferPostTickOnComponent( const TComponent& self, TFunc func )
+        {
+            deferPostTick( makeComponentPostTickTask( self, func ) );
+        }
+
+    private:
+        /** @brief 컴포넌트 일을 핸들로 다시 찾아 부르는 틱 뒤 작업입니다(위 두 함수가 함께 쓴다). 사라졌거나 삭제 대기면 부르지 않는다. */
+        template <typename TComponent, typename TFunc>
+        PostTickDelegate makeComponentPostTickTask( const TComponent& self, TFunc func )
+        {
             static_assert( std::is_empty_v<TFunc>, "post-tick component callable must not capture" );
             const TComponentHandle<TComponent> handle{ &self };
             GameObjectManager*                 pManager = this;
-            executeOrDeferPostTick( [pManager, handle, func]()
+            return PostTickDelegate( [pManager, handle, func]()
             {
                 TComponent* pComponent = pManager->resolveComponent( handle );
                 // 삭제 대기 컴포넌트는 핸들로 아직 찾히지만 일을 받지 않는다(틱 · 이벤트와 같은 규칙).
@@ -336,6 +355,7 @@ namespace sw
             } );
         }
 
+    public:
         /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
         void registerRootSceneComponent( SceneComponent* pComp );
 

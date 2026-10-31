@@ -172,8 +172,11 @@ namespace sw
         RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 
     private:
-        /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
-        [[nodiscard]] bool rebindSceneAfterDeviceRecreate();
+        /**
+         * @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다.
+         * @param pOutTiming 주면 자원 다시 올리기 · 단계 다시 세우기에 든 시간을 한 줄로 받습니다(교체 로그).
+         */
+        [[nodiscard]] bool rebindSceneAfterDeviceRecreate( string* pOutTiming = nullptr );
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
         /**

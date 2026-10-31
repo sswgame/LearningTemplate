@@ -178,6 +178,8 @@ namespace sw
          *          참조가 0 인 CPU 텍스처는 GPU 자원이 없다는 캐시의 불변식을 지키기 위해서입니다.
          */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
+        /** @brief 디바이스가 바뀔 때 파일을 다시 읽어야 하는 텍스처(DDS)면 워커에서 미리 읽어 둡니다(`RHIRenderResource::prepareRHI`). */
+        void prepareRHI() override;
 
         bool isRHIValid() const { return getHandle() != 0 && getSRV() != kInvalidDescriptorIndex; }
         /** @brief GPU 텍스처 핸들입니다. 스트리밍이 렌더 스레드에서 바꿔 끼우므로 원자값으로 읽는다(`upgradeResidency`). */
@@ -241,7 +243,9 @@ namespace sw
         uint32                     _mipCount;
         uint32                     _streamedMipCount; ///< 아직 GPU 에 없는 위쪽 밉 수(`TextureResidency::StreamingBase` 로 올렸을 때). 0 이면 다 올라와 있다
         RHIFormat                  _format;
-        uint8                      _bRenderTarget; ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
-        vector<uint8>              _cpuBytes;      ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
+        uint8                      _bRenderTarget;              ///< `createRenderTarget` 으로 만들었다. 다시 만들 때 DDS 를 읽지 않는다
+        vector<uint8>              _cpuBytes;                   ///< CPU 텍스처의 원본(RGBA8 밉 0). 비었으면 DDS 또는 렌더 타깃이다
+        unique_ptr<DDSImageData>   _pPreparedImage;             ///< `prepareRHI` 가 워커에서 읽어 둔 DDS(다음 `initRHI` 가 올리고 놓는다)
+        uint8                      _bPrepareFailed{ SW_FALSE }; ///< `prepareRHI` 가 읽지 못했다(까닭은 그때 로그로 남겼다) - `initRHI` 가 다시 읽지 않는다
     };
 } // namespace sw

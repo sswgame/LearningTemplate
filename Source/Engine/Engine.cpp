@@ -772,6 +772,8 @@ namespace sw
         SW_LOG_INFO( "Soft-recreating RHI: %# → %#",
                      RHI::getBackendTypeName( previous ),
                      RHI::getBackendTypeName( requested ) );
+        // 교체의 단계마다 든 시간을 남긴다 - 무엇이 교체를 무겁게 하는지(내리기 · 디바이스 · 자원 다시 올리기 · 단계 다시 세우기) 실행마다 보인다.
+        const Stopwatch swapWatch;
 
         BLOCK( "디바이스에 매인 단계 내리기" )
         {
@@ -784,6 +786,7 @@ namespace sw
             engine::getSubsystem<ShaderCache>().clearCache();
         }
 
+        const uint64 shutdownMicroseconds = swapWatch.getElapsedMicroseconds();
         if ( _pRHI->recreateDevice( requested ) == false )
         {
             SW_LOG_ERROR( "recreateDevice failed; restoring previous backend %#",
@@ -798,8 +801,12 @@ namespace sw
             return false;
         }
 
-        if ( rebindSceneAfterDeviceRecreate() == false )
+        const uint64 recreateMicroseconds = swapWatch.getElapsedMicroseconds();
+        string       rebindTiming;
+        if ( rebindSceneAfterDeviceRecreate( &rebindTiming ) == false )
             return false;
+        SW_LOG_INFO( "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
+                     ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
         SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
                      _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
@@ -808,18 +815,22 @@ namespace sw
 #endif
     }
 
-    bool Engine::rebindSceneAfterDeviceRecreate()
+    bool Engine::rebindSceneAfterDeviceRecreate( string* pOutTiming )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
 
         // 새 디바이스가 섰다. 레지스트리 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
         // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
+        const Stopwatch rebindWatch;
         RHIRenderResource::initAllFor( &_pRHI->getDevice() );
+        const uint64 initMicroseconds = rebindWatch.getElapsedMicroseconds();
 
         // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
         const bool bRestarted = _startup.getCollection().restartStopped();
+        if ( pOutTiming != nullptr )
+            *pOutTiming = formatToString( "re-init resources %#ms, restart stages %#ms", initMicroseconds / 1000, ( rebindWatch.getElapsedMicroseconds() - initMicroseconds ) / 1000 );
         if ( bRestarted == false )
             SW_LOG_ERROR( "Backend change: %#", _startup.getCollection().getError().c_str() );
 

@@ -150,7 +150,6 @@ namespace sw
         , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
         , _bTerrainRefreshPending{ SW_FALSE }
-        , _bBuildPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -181,12 +180,15 @@ namespace sw
     {
         SceneComponent::onPostLoad();
         // 짓기는 게임 스레드에서만 한다 - 머티리얼 인스턴스와 프리미티브 레지스트리를 만진다. 비동기 씬 로드는 이 함수를 워커에서 부르고(`Component::onPostLoad`),
-        // 예전에는 거기서 지어 공유 머티리얼을 다른 스레드가 쓰는 중에 읽다 경합 감지로 죽었다. 워커면 표시만 하고 시작(`onBeginPlay`)이 짓는다 - 지형이 뒤에 생기는
-        // 로드 순서에서 평면 위에 한 번, 지형 위에 다시 짓던 두 번도 한 번이 된다.
+        // 예전에는 거기서 지어 공유 머티리얼을 다른 스레드가 쓰는 중에 읽다 경합 감지로 죽었다. 워커면 씬 프레임(틱 뒤)으로 미룬다 - 편집 모드에서도 돈다
+        // (`onBeginPlay` 로 넘기면 편집 모드에서는 오지 않아 폴리지가 없었다). 그때는 씬이 다 섰으므로 지형이 뒤에 생기는 로드 순서에서도 한 번에 지형 위다.
         const TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
-        if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false )
+        GameObject*        pOwner       = getOwner();
+        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false && pManager != nullptr )
         {
-            _bBuildPending = SW_TRUE;
+            pManager->deferPostTickOnComponent( *this, []( FoliageComponent& foliage )
+            { foliage.rebuildFoliage(); } );
             return;
         }
         rebuildFoliage();
@@ -198,7 +200,7 @@ namespace sw
         // 로드 순서상 지형이 뒤에 생성되면 처음 계산은 평면 위에서 했다. 모두 생성된 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에 한다.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || ( _bBuiltOnTerrain == SW_TRUE && _bBuildPending == SW_FALSE ) )
+        if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
         { foliage.rebuildFoliage(); } );
@@ -377,7 +379,6 @@ namespace sw
 
     void FoliageComponent::rebuildFoliage()
     {
-        _bBuildPending = SW_FALSE;
         releaseCells();
         _listLayerCandidate.clear();
         _lastRebuiltBatchCount = 0;
@@ -425,7 +426,7 @@ namespace sw
         // 적용(셀 · 배치 · 레지스트리)은 부르는 쪽이 게임 스레드에서 차례로 한다. 레이어 다섯이면 한 번 짓기가 0.8 초 → 가장 큰 레이어 하나의 시간이 된다.
         struct LayerJob
         {
-            FoliageComponent*           _pSelf{ nullptr };
+            const FoliageComponent*     _pSelf{ nullptr }; ///< const - 워커는 멤버를 읽기만 한다(경합 감지기는 비-const 접근을 쓰기로 센다)
             const TerrainComponent*     _pTerrain{ nullptr };
             const PlacementRegion*      _pDirtyArea{ nullptr };
             vector<PlacementInstance>*  _pOut{ nullptr };
@@ -463,7 +464,7 @@ namespace sw
     }
 
     void FoliageComponent::computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea,
-                                                  vector<PlacementCandidate>* pCandidates, vector<PlacementInstance>& outListInstance )
+                                                  vector<PlacementCandidate>* pCandidates, vector<PlacementInstance>& outListInstance ) const
     {
         if ( pTerrain == nullptr )
         {

@@ -4,6 +4,9 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+
+#include "Engine/Foundation/EngineParallel.h"
 
 namespace sw
 {
@@ -126,7 +129,24 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
-        // 실패는 각 리소스가 자기 코드에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 늘어난다.
+        // 1) 디바이스 없는 준비(텍스처 파일 읽기 · 해석)를 워커에 나눈다 - 예전에는 아래 통보 안에서 텍스처마다 디스크를 읽어 백엔드 교체가 텍스처 수만큼 직렬이었다.
+        //    잠금을 잡고 도므로 그 사이 리소스가 생기거나 사라지지 않는다(준비는 리소스를 만들지 않는다).
+        {
+            ScopedLock<mutex>          lock{ getRegistryInternal()._mutex };
+            vector<RHIRenderResource*> listResource( getRegistryInternal()._uniqueSetResource.begin(), getRegistryInternal()._uniqueSetResource.end() );
+            struct PrepareJob
+            {
+                RHIRenderResource* const* _pResource{ nullptr };
+                void                      runRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 index = start; index < end; ++index )
+                        _pResource[index]->prepareRHI();
+                }
+            };
+            PrepareJob job{ listResource.data() };
+            engine::runParallelByCost( static_cast<uint32>( listResource.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &PrepareJob::runRange, &job ) );
+        }
+        // 2) GPU 생성은 디바이스를 쓰는 이 스레드에서 차례로 한다. 실패는 각 리소스가 자기 코드에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 늘어난다.
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
             (void)pResource->initRHI( pDevice ); // 실패는 리소스가 자기 코드에서 로그로 남긴다(위 설명)

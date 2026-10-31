@@ -407,6 +407,10 @@ namespace sw
 
     bool Texture2D::initRHI( IRHIDevice* pDevice )
     {
+        // 워커가 미리 읽어 둔 것(`prepareRHI`)은 어느 길로 돌아가든 여기서 놓는다.
+        const unique_ptr<DDSImageData> pPrepared      = std::move( _pPreparedImage );
+        const bool                     bPrepareFailed = _bPrepareFailed == SW_TRUE;
+        _bPrepareFailed                               = SW_FALSE;
         // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다. 두 번 올리면 그대로 새는 것이다.
         if ( isRHIValid() )
             return true;
@@ -418,7 +422,24 @@ namespace sw
         // CPU 텍스처는 다시 빌릴 때 캐시가 올린다(헤더 — 참조 0 이면 GPU 자원이 없다).
         if ( hasCPUBytes() )
             return true;
+        // 워커가 미리 읽어 두었으면(`prepareRHI`) 그것을 올린다 - 디스크 읽기는 이 스레드에 남지 않는다.
+        if ( bPrepareFailed )
+            return false; // 읽지 못한 까닭은 준비 때 남겼다
+        if ( pPrepared != nullptr )
+            return loadFromImage( pDevice, _path, *pPrepared, TextureResidency::Full );
         return loadFromAsset( pDevice, AssetID{ _path } );
+    }
+
+    void Texture2D::prepareRHI()
+    {
+        // `initRHI` 가 파일을 다시 읽을 텍스처만 - 이미 올라갔거나(머티리얼이 먼저 살렸다), 렌더 타깃 · CPU 텍스처는 읽을 파일이 없다.
+        if ( isRHIValid() || _path.empty() || _bRenderTarget == SW_TRUE || hasCPUBytes() )
+            return;
+        auto pImage = make_unique<DDSImageData>();
+        if ( readImage( AssetID{ _path }, *pImage ) )
+            _pPreparedImage = std::move( pImage );
+        else
+            _bPrepareFailed = SW_TRUE;
     }
 
     void Texture2D::setCPUBytes( string_view name, uint32 width, uint32 height, vector<uint8> rgbaBytes )

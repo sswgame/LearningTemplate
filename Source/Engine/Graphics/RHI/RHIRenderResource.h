@@ -62,6 +62,13 @@ namespace sw
          *          먼저 복원되며 자기 텍스처를 초기화해 놓은 뒤에 그 텍스처가 이 통보를 받는 일이 실제로 일어납니다.
          */
         [[nodiscard]] virtual bool initRHI( IRHIDevice* pDevice );
+        /**
+         * @brief `initAllFor` 가 GPU 생성(`initRHI`) 앞에 워커에서 부릅니다. 디바이스 없이 할 수 있는 준비(파일 읽기 · 해석)만 합니다. 기본은 아무것도 하지 않습니다.
+         * @details 서로 다른 객체로 여러 스레드에서 동시에 불린다 - 자기 상태만 쓰고 다른 리소스 · 디바이스를 만지지 않는다. 그 사이 레지스트리 잠금이 잡혀 있어 리소스를
+         *          만들거나 지울 수 없다. 언리얼 텍스처 스트리밍이 IO 와 GPU 생성을 나누는 것과 같다 - GPU 생성은 디바이스를 쓰는 스레드에 남는다(DX11 즉시 컨텍스트 · GL 컨텍스트).
+         *          백엔드 교체 · 디바이스 복구 시간이 콘텐츠(텍스처 수)에 비례해 늘지 않게 하는 구조다.
+         */
+        virtual void prepareRHI() {}
 
         /** @brief 이 디바이스의 리소스를 보관하는 객체 전부에게 `releaseRHI` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
         static void releaseAllFor( IRHIDevice* pDevice );
