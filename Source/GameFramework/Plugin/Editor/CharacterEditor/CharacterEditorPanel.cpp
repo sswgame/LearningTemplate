@@ -3,6 +3,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -30,12 +31,14 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 
 #include <imgui.h>
 
@@ -213,6 +216,9 @@ namespace sw::editor
         , _bBoneGizmoPlaced{ false }
         , _bRigPreview{ false }
         , _published{}
+        , _thumbnailCapturePath{}
+        , _thumbnailCapturePreset{}
+        , _thumbnailCaptureSerial{ 0 }
     {
     }
 
@@ -224,6 +230,7 @@ namespace sw::editor
             _bRigPreview = false; // 리그가 없는 게임으로 바뀌면 켜 둔 단추도 내린다
         beginPreviewFrame();
         updateFocusedDocument();
+        pollThumbnailCapture();
         if ( _document.getPackDataState() == PackDataState::Ready )
             ensureDocumentLoaded(); // 팩 데이터가 경로 칸을 채운 뒤에 읽는다
         if ( _document.getPackDataState() == PackDataState::Missing )
@@ -1239,18 +1246,44 @@ namespace sw::editor
 
     void CharacterEditorPanel::saveThumbnail()
     {
-        string thumbnailID;
-        if ( _document.makeThumbnailID( thumbnailID ) == false )
-            return; // 까닭은 상태 줄에 남았다
-        const std::optional<AbsolutePath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( thumbnailID );
-        const string                      imagePath = imageFile.has_value() ? imageFile->str() : string{};
-        if ( imagePath.empty() || getPreviewViewport().requestImageFile( imagePath ) == false )
+        if ( _thumbnailCapturePath.empty() == false )
         {
-            _document.setStatus( "The thumbnail needs a write path and the Preview tab drawn at least once" );
+            _document.setStatus( "A thumbnail capture is still running" );
             return;
         }
-        if ( _document.attachThumbnail( thumbnailID ) )
-            SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' requested -> %#", _document.getPaths()._presetName.c_str(), imagePath.c_str() );
+        if ( _document.canAttachThumbnail() == false )
+            return; // 까닭은 상태 줄에 남았다
+        const string imagePath = CharacterEditorLocalStore::makeCaptureImagePath();
+        const uint32 serial    = RenderThread::getCompletedScreenshotSerial(); // 요청 전에 읽는다 - 이 값이 바뀌면 그 뒤에 처리한 요청이다
+        const bool   bReady    = FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( imagePath ) ) && getPreviewViewport().requestImageFile( imagePath );
+        if ( bReady == false )
+        {
+            _document.setStatus( "The thumbnail needs the Preview tab drawn at least once (and a writable user data folder)" );
+            return;
+        }
+        _thumbnailCapturePath   = imagePath;
+        _thumbnailCapturePreset = string{ _document.getPaths()._presetName.c_str() };
+        _thumbnailCaptureSerial = serial;
+        SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' requested", _thumbnailCapturePreset.c_str() );
+    }
+
+    void CharacterEditorPanel::pollThumbnailCapture()
+    {
+        if ( _thumbnailCapturePath.empty() || RenderThread::getCompletedScreenshotSerial() == _thumbnailCaptureSerial )
+            return;
+        const string imagePath = std::move( _thumbnailCapturePath );
+        _thumbnailCapturePath.clear();
+        vector<uint8> pngBytes;
+        // 다른 요청이 이 요청을 덮었거나(앞 요청이 남아 있으면 덮어쓴다) 쓰기에 실패하면 마지막 경로가 다르다.
+        const bool bCaptured = RenderThread::getLastScreenshotPath() == imagePath && FileUtil::readFile( imagePath, pngBytes ) && pngBytes.empty() == false;
+        if ( FileUtil::exists( imagePath ) && FileUtil::removeFile( imagePath ) == false )
+            SW_LOG_WARNING( "Character Editor: the thumbnail capture file %# could not be removed", imagePath.c_str() );
+        if ( bCaptured == false )
+        {
+            _document.setStatus( "The thumbnail capture failed or was replaced by another screenshot - try again" );
+            return;
+        }
+        _document.attachThumbnail( _thumbnailCapturePreset, std::move( pngBytes ) );
     }
 
     void CharacterEditorPanel::drawExplanation()
@@ -1328,12 +1361,9 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawPresetRow()
     {
-        if ( ImGui::CollapsingHeader( "Presets (file)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
+        if ( ImGui::CollapsingHeader( "Presets (user data)", ImGuiTreeNodeFlags_DefaultOpen ) == false )
             return;
-        EditorChrome::setNextItemWidthColumns( -CharacterEditorPanelInternal::kPathButtonsColumns );
         CharacterEditorPaths& paths = _document.editPaths();
-        ImGui::InputText( "##PresetPath", paths._presetPath.data(), paths._presetPath.max_size() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Load presets" ) );
         if ( ImGui::Button( "Load presets" ) )
             _document.loadPresets();
         EditorChrome::setNextItemWidthColumns( 24.0f );
@@ -1354,7 +1384,7 @@ namespace sw::editor
             saveThumbnail();
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "charactereditor.saveThumbnail" );
-        EditorWidgets::drawTooltip( "Writes the Preview tab's picture next to the preset file and attaches it to the preset of this name (save the preset first; it is saved again with the current selection)" );
+        EditorWidgets::drawTooltip( "Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)" );
 
         if ( ImGui::BeginChild( "##PresetList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kPresetListLines ) ), ImGuiChildFlags_Borders ) )
         {

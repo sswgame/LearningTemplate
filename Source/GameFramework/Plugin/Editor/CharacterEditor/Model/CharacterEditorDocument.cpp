@@ -20,6 +20,7 @@
 #include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
 
 #include <algorithm>
@@ -30,23 +31,8 @@ namespace sw::editor
     {
         struct CharacterEditorDocumentInternal
         {
-            static constexpr const utf8* kDefaultPresetPath = "editor/characterpresets.txt";
             static constexpr const utf8* kDefaultPresetName = "MyLook";
             static constexpr const utf8* kDefaultExportID   = "MyCharacter";
-
-            /** @brief 파일 이름에 쓸 수 없는 글자를 밑줄로 바꿉니다(프리셋 이름은 저장소가 정리한 그대로 둔다). */
-            static string makeFileSafeName( string_view name )
-            {
-                string safeName{ name };
-                for ( utf8& character : safeName )
-                {
-                    const bool bAllowed = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) || character == '_' ||
-                                          character == '-';
-                    if ( bAllowed == false )
-                        character = '_';
-                }
-                return safeName;
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -64,6 +50,12 @@ namespace sw::editor
         , _pItems{}
         , _database{}
         , _presetStore{}
+        , _stagedPresetStore{}
+        , _stagedSelection{}
+        , _thumbnailPresetName{}
+        , _thumbnailSlot{}
+        , _presetRequest{}
+        , _thumbnailRequest{}
         , _paths{}
         , _status{}
         , _selectedSocket{}
@@ -84,8 +76,8 @@ namespace sw::editor
         , _bHasFit{ false }
         , _bExternalChange{ false }
         , _bPreviewValid{ false }
+        , _bStagedSelection{ false }
     {
-        _paths._presetPath = CharacterEditorDocumentInternal::kDefaultPresetPath;
         _paths._presetName = CharacterEditorDocumentInternal::kDefaultPresetName;
         _paths._exportID   = CharacterEditorDocumentInternal::kDefaultExportID;
         _presetStore.setDatabase( &_database );
@@ -321,22 +313,92 @@ namespace sw::editor
         _bDatabaseLoaded = true;
     }
 
+    CharacterEditorLocalStore* CharacterEditorDocument::findLocalStore()
+    {
+        CharacterEditorLocalStore* const pStore = editor::findSubsystem<CharacterEditorLocalStore>(); // 열지 못했으면 없다(오류 로그가 남았다)
+        if ( pStore == nullptr )
+            _status = "The character editor local store is not open (see log) - presets are unavailable";
+        return pStore;
+    }
+
     void CharacterEditorDocument::loadPresets()
     {
-        const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._presetPath.c_str() ) );
-        if ( readPath.has_value() == false || AppearanceEditModel::loadPresetFile( _presetStore, readPath->str() ) == false )
-            _status = "Preset file could not be loaded (needs appearance data; see log)";
-        else
-            _status.clear();
+        if ( isPresetRequestPending() )
+        {
+            _status = "A preset request is still running";
+            return;
+        }
+        CharacterEditorLocalStore* const pStore = findLocalStore();
+        if ( pStore == nullptr )
+            return;
+        _presetRequest = pStore->getChannel().submitRead( CharacterEditorLocalStore::kPresetSlot,
+                                                          LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onPresetsRead>( this ) );
+        _status        = "Loading presets...";
+    }
+
+    void CharacterEditorDocument::onPresetsRead( const LocalStoreCompletion& completion )
+    {
+        if ( completion._result == LocalStoreResult::NotFound )
+        {
+            _presetStore.clear();
+            _status = "No presets saved yet";
+            return;
+        }
+        const bool bRead = completion._result == LocalStoreResult::Ok &&
+                           _presetStore.loadFromText( string_view( reinterpret_cast<const utf8*>( completion._bytes.data() ), completion._bytes.size() ) );
+        if ( bRead == false )
+        {
+            _status = "Preset slot could not be read (needs appearance data; see log)";
+            return;
+        }
+        _status.clear();
     }
 
     void CharacterEditorDocument::savePreset()
     {
-        const std::optional<AbsolutePath> writePath = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._presetPath.c_str() ) );
-        if ( writePath.has_value() == false || _appearance.saveToPresetFile( _presetStore, string_view( _paths._presetName.c_str() ), *writePath ) == false )
-            _status = "Preset could not be saved (needs a name and appearance data)";
-        else
-            _status.clear();
+        const string_view name{ _paths._presetName.c_str() };
+        if ( name.empty() || isPresetRequestPending() )
+        {
+            _status = name.empty() ? "The preset needs a name" : "A preset request is still running";
+            return;
+        }
+        UserAppearancePresetStore staged = _presetStore;
+        (void)staged.savePreset( name, _appearance.getSelection() ); // 새 이름이면 붙이고 있으면 바꾼다(번호는 쓰지 않는다)
+        const AppearanceSelection selection = _appearance.getSelection();
+        submitPresetWrite( std::move( staged ), &selection );
+    }
+
+    void CharacterEditorDocument::submitPresetWrite( UserAppearancePresetStore staged, const AppearanceSelection* pSavedSelection )
+    {
+        CharacterEditorLocalStore* const pStore = findLocalStore();
+        if ( pStore == nullptr )
+            return;
+        vector<uint8> bytes;
+        (void)staged.writeBytes( bytes ); // 글로 쓰기는 늘 된다
+        _stagedPresetStore = std::move( staged );
+        _bStagedSelection  = pSavedSelection != nullptr;
+        if ( pSavedSelection != nullptr )
+            _stagedSelection = *pSavedSelection;
+        _presetRequest = pStore->getChannel().submitWrite( CharacterEditorLocalStore::kPresetSlot, std::move( bytes ), LocalStoreWriteOptions{},
+                                                           LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onPresetsWritten>( this ) );
+        _status        = "Saving presets...";
+    }
+
+    void CharacterEditorDocument::onPresetsWritten( const LocalStoreCompletion& completion )
+    {
+        if ( completion._result != LocalStoreResult::Ok )
+        {
+            // 목록과 "저장된 상태" 를 그대로 둔다 — 저장된 줄 알고 넘어가지 않게.
+            _status = "Preset slot could not be written (see log)";
+            SW_LOG_ERROR( "Character Editor: preset slot %# could not be written (result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+            return;
+        }
+        _presetStore = std::move( _stagedPresetStore );
+        _presetStore.setDatabase( &_database );
+        if ( _bStagedSelection )
+            _appearance.markSaved( _stagedSelection );
+        _status.clear();
+        SW_LOG_INFO( "Character Editor: presets saved to slot %# (%# presets)", completion._slot.c_str(), static_cast<uint32>( _presetStore.getPresets().size() ) );
     }
 
     void CharacterEditorDocument::applyPreset( string_view name )
@@ -345,30 +407,46 @@ namespace sw::editor
         _paths._presetName = name;
     }
 
-    bool CharacterEditorDocument::makeThumbnailID( string& outThumbnailID )
+    bool CharacterEditorDocument::canAttachThumbnail()
     {
-        const string name{ _paths._presetName.c_str() };
-        if ( _presetStore.findPresetByName( name ) == nullptr )
+        if ( _presetStore.findPresetByName( string_view( _paths._presetName.c_str() ) ) == nullptr )
         {
             _status = "Save the preset first - a thumbnail belongs to a saved preset";
             return false;
         }
-        outThumbnailID = FileUtil::removeExtension( string_view( _paths._presetPath.c_str() ) ) + "." + CharacterEditorDocumentInternal::makeFileSafeName( name ) + ".png";
-        return true;
-    }
-
-    bool CharacterEditorDocument::attachThumbnail( const string& thumbnailID )
-    {
-        const string                      name{ _paths._presetName.c_str() };
-        const std::optional<AbsolutePath> presetFile = editor::getSubsystem<AssetPaths>().toDiskPath( string_view( _paths._presetPath.c_str() ) );
-        const bool                        bAttached  = presetFile.has_value() && _presetStore.setThumbnailPath( name, thumbnailID );
-        if ( bAttached == false || _appearance.saveToPresetFile( _presetStore, name, *presetFile ) == false )
+        if ( isPresetRequestPending() )
         {
-            _status = "The thumbnail was requested but the preset file could not be updated";
+            _status = "A preset request is still running";
             return false;
         }
-        _status.clear();
-        return true;
+        return findLocalStore() != nullptr;
+    }
+
+    void CharacterEditorDocument::attachThumbnail( string_view presetName, vector<uint8> pngBytes )
+    {
+        CharacterEditorLocalStore* const pStore = findLocalStore();
+        if ( pStore == nullptr || isPresetRequestPending() )
+            return;
+        _thumbnailPresetName = string{ presetName };
+        _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( presetName );
+        _thumbnailRequest    = pStore->getChannel().submitWrite( _thumbnailSlot, std::move( pngBytes ), LocalStoreWriteOptions{},
+                                                                 LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onThumbnailWritten>( this ) );
+        _status              = "Saving the thumbnail...";
+    }
+
+    void CharacterEditorDocument::onThumbnailWritten( const LocalStoreCompletion& completion )
+    {
+        UserAppearancePresetStore staged      = _presetStore;
+        const bool                bAttachable = completion._result == LocalStoreResult::Ok && staged.setThumbnailSlot( _thumbnailPresetName, _thumbnailSlot );
+        if ( bAttachable == false )
+        {
+            _status = "The thumbnail could not be stored (the slot write failed or the preset was removed)";
+            SW_LOG_ERROR( "Character Editor: thumbnail slot %# of preset '%#' could not be stored (result %#)", _thumbnailSlot.c_str(), _thumbnailPresetName.c_str(),
+                          static_cast<int32>( completion._result ) );
+            return;
+        }
+        SW_LOG_INFO( "Character Editor: thumbnail of preset '%#' stored in slot %#", _thumbnailPresetName.c_str(), _thumbnailSlot.c_str() );
+        submitPresetWrite( std::move( staged ), nullptr );
     }
 
     bool CharacterEditorDocument::exportDataPreset()

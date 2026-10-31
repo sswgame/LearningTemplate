@@ -2,8 +2,6 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
@@ -227,47 +225,6 @@ namespace sw::editor
     {
         ++_revision;
         return _history.redo( _selection );
-    }
-
-    bool AppearanceEditModel::saveToPresetStore( UserAppearancePresetStore& store, string_view name )
-    {
-        if ( name.empty() )
-            return false;
-        const int32 slotIndex = store.savePreset( name, _selection );
-        if ( slotIndex < 0 )
-            return false;
-        markSaved();
-        return true;
-    }
-
-    bool AppearanceEditModel::saveToPresetFile( UserAppearancePresetStore& store, string_view name, const AbsolutePath& absPath )
-    {
-        if ( name.empty() )
-            return false;
-        const AppearanceSelection   previousSaved = _saved;
-        const UserAppearancePreset* pExisting     = store.findPresetByName( name );
-        const bool                  bHadPreset    = pExisting != nullptr;
-        const UserAppearancePreset  previous      = bHadPreset ? *pExisting : UserAppearancePreset{};
-        if ( saveToPresetStore( store, name ) == false )
-            return false;
-        if ( FileUtil::writeTextFile( absPath.str(), store.saveToText() ) )
-            return true;
-        // 파일을 못 썼으면 메모리 저장소와 "저장된 상태" 를 되돌려 둔다 — 저장된 줄 알고 넘어가지 않게.
-        if ( bHadPreset )
-            (void)store.savePreset( name, previous._selection ); // 되돌림 경로 - 방금 있던 이름이라 실패하지 않는다
-        else
-            (void)store.removePreset( name ); // 방금 넣은 이름이라 있다
-        _saved = previousSaved;
-        SW_LOG_ERROR( "Appearance preset file could not be written: %#", string( absPath.str() ).c_str() );
-        return false;
-    }
-
-    bool AppearanceEditModel::loadPresetFile( UserAppearancePresetStore& store, string_view absolutePath )
-    {
-        string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
-            return false;
-        return store.loadFromText( text );
     }
 
     bool AppearanceEditModel::loadFromPreset( const UserAppearancePresetStore& store, string_view name )

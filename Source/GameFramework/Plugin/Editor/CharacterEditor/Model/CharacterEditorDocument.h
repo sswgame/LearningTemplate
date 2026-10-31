@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Defines.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -27,6 +28,7 @@
 namespace sw
 {
     struct FitResult;
+    struct LocalStoreCompletion;
 } // namespace sw
 
 namespace sw::editor
@@ -44,7 +46,6 @@ namespace sw::editor
         fixed_string<constant::kMaxPathSize>  _appearanceFolder;
         fixed_string<constant::kMaxPathSize>  _clipFolder; ///< 미리보기 몸 애니메이터의 클립 폴더(팩 데이터의 `clipFolder`)
         fixed_string<constant::kMaxPathSize>  _rigPath;    ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
-        fixed_string<constant::kMaxPathSize>  _presetPath;
         fixed_string<constant::kMaxBuffer128> _presetName;
         fixed_string<constant::kMaxPathSize>  _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
         fixed_string<constant::kMaxBuffer128> _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
@@ -127,16 +128,21 @@ namespace sw::editor
         /** @brief 아이템 파일과 외형 폴더를 읽습니다. 실패하면 외형 데이터가 없는 상태입니다. */
         void loadAppearanceData();
         bool isDatabaseLoaded() const { return _bDatabaseLoaded; }
-        /** @brief 사용자 프리셋 파일(`_presetPath`)을 읽습니다. */
+        /**
+         * @brief 사용자 프리셋 슬롯(`CharacterEditorLocalStore::kPresetSlot`)을 읽기 시작합니다. 결과는 끝나면 목록 · 상태 줄에 온다.
+         * @details 프리셋은 사용자 데이터라 콘텐츠 트리가 아니라 에디터 쪽 로컬 저장소(`CharacterEditorLocalStore`)의 슬롯에 둔다.
+         */
         void loadPresets();
-        /** @brief 지금 선택을 이름(`_presetName`)으로 프리셋 파일에 씁니다. */
+        /** @brief 지금 선택을 이름(`_presetName`)으로 넣은 프리셋 목록을 슬롯에 쓰기 시작합니다. 쓰기가 끝나야 목록과 "저장된 상태" 가 바뀐다(실패하면 그대로). */
         void savePreset();
         /** @brief 목록의 프리셋 @p name 을 선택으로 읽고 이름 칸에 둡니다. */
         void applyPreset( string_view name );
-        /** @brief 이름 칸의 프리셋에 붙일 썸네일 리소스 id 를 만듭니다. 프리셋을 먼저 저장해야 하며, 없으면 false 이고 까닭을 남깁니다. */
-        [[nodiscard]] bool makeThumbnailID( string& outThumbnailID );
-        /** @brief 썸네일 @p thumbnailID 를 이름 칸의 프리셋에 걸고 프리셋 파일을 다시 씁니다. */
-        [[nodiscard]] bool attachThumbnail( const string& thumbnailID );
+        /** @brief 이름 칸의 프리셋에 썸네일을 붙일 수 있으면 true 입니다. 프리셋을 먼저 저장해야 하고, 앞 저장이 끝나야 한다. 아니면 까닭을 남깁니다. */
+        [[nodiscard]] bool canAttachThumbnail();
+        /** @brief 미리보기 그림 @p pngBytes 를 프리셋 @p presetName 의 썸네일 슬롯에 쓰고, 끝나면 그 슬롯을 프리셋에 걸어 목록을 다시 씁니다. */
+        void attachThumbnail( string_view presetName, vector<uint8> pngBytes );
+        /** @brief 프리셋 슬롯 읽기 · 쓰기가 아직 끝나지 않았으면 true 입니다. */
+        bool isPresetRequestPending() const { return _presetRequest.isActive() || _thumbnailRequest.isActive(); }
         /**
          * @brief 지금 선택을 데이터 프리셋 에셋(`<폴더>/<id>.appearance.xml`)으로 쓰고, 이 창과 실행 중인 게임의 외형 데이터에 올립니다. 내보냈으면 true 입니다.
          * @details 씬의 `CharacterAppearanceComponent` 가 그 id 를 가리키면 조립한다(언리얼 · 유니티의 프리셋 에셋). 세이브 형식(프리셋 파일)과 다른 길이다.
@@ -202,6 +208,13 @@ namespace sw::editor
     private:
         /** @brief 클립 폴더를 훑어 클립 이름을 모읍니다. */
         void loadClipNames();
+        /** @brief 에디터 쪽 로컬 저장소입니다. 없으면 까닭을 상태 줄에 남기고 nullptr 입니다. */
+        class CharacterEditorLocalStore* findLocalStore();
+        /** @brief @p staged 를 프리셋 슬롯에 쓰기 시작합니다. 끝나면 목록이 @p staged 가 되고, @p pSavedSelection 이 있으면 그것이 "저장된 상태" 가 된다. */
+        void submitPresetWrite( UserAppearancePresetStore staged, const AppearanceSelection* pSavedSelection );
+        void onPresetsRead( const LocalStoreCompletion& completion );
+        void onPresetsWritten( const LocalStoreCompletion& completion );
+        void onThumbnailWritten( const LocalStoreCompletion& completion );
 
         SocketEditModel           _sockets;
         BonePoseEditModel         _pose;
@@ -211,6 +224,12 @@ namespace sw::editor
         unique_ptr<ItemCatalog>   _pItems;
         AppearanceDatabase        _database;
         UserAppearancePresetStore _presetStore;
+        UserAppearancePresetStore _stagedPresetStore;   ///< 쓰는 중인 프리셋 목록 - 쓰기가 끝나면 `_presetStore` 가 된다
+        AppearanceSelection       _stagedSelection;     ///< 쓰는 중인 저장의 선택(`_bStagedSelection` 일 때) - 끝나면 "저장된 상태"
+        string                    _thumbnailPresetName; ///< 썸네일을 쓰는 중인 프리셋
+        string                    _thumbnailSlot;       ///< 그 썸네일 슬롯
+        Subscription              _presetRequest;       ///< 프리셋 슬롯 읽기 · 쓰기(하나씩)
+        Subscription              _thumbnailRequest;    ///< 썸네일 슬롯 쓰기
         CharacterEditorPaths      _paths;
         string                    _status;
         hashed_string             _selectedSocket;
@@ -231,5 +250,6 @@ namespace sw::editor
         bool                      _bHasFit;
         bool                      _bExternalChange;
         bool                      _bPreviewValid;
+        bool                      _bStagedSelection;
     };
 } // namespace sw::editor

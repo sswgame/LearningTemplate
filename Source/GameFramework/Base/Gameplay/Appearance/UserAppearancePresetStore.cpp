@@ -105,12 +105,12 @@ namespace sw
         return true;
     }
 
-    bool UserAppearancePresetStore::setThumbnailPath( string_view name, string_view thumbnailPath )
+    bool UserAppearancePresetStore::setThumbnailSlot( string_view name, string_view thumbnailSlot )
     {
         UserAppearancePreset* pPreset = findMutablePreset( name );
         if ( pPreset == nullptr )
             return false;
-        pPreset->_thumbnailPath = string( thumbnailPath );
+        pPreset->_thumbnailSlot = string( thumbnailSlot );
         return true;
     }
 
@@ -134,7 +134,7 @@ namespace sw
             UserAppearancePresetRecord record;
             record._name          = preset._name;
             record._code          = _pDatabase != nullptr ? AppearanceShareCode::encode( preset._selection, *_pDatabase ) : string{};
-            record._thumbnailPath = preset._thumbnailPath;
+            record._thumbnailSlot = preset._thumbnailSlot;
             record._bFavorite     = preset._bFavorite == SW_TRUE;
             file._listPreset.push_back( std::move( record ) );
         }
@@ -159,7 +159,7 @@ namespace sw
             const UserAppearancePresetRecord& record = file._listPreset[index];
             UserAppearancePreset              preset;
             preset._name          = record._name;
-            preset._thumbnailPath = record._thumbnailPath;
+            preset._thumbnailSlot = record._thumbnailSlot;
             preset._bFavorite     = record._bFavorite ? SW_TRUE : SW_FALSE;
             string reason;
             if ( _pDatabase == nullptr || AppearanceShareCode::decode( string_view( record._code ), *_pDatabase, preset._selection, &reason ) == false )

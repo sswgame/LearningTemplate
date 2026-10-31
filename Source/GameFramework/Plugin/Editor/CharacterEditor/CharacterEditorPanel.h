@@ -136,8 +136,13 @@ namespace sw::editor
          *          (`CharacterEditorDocument::findCustomizationSchema` — 선택의 것, 비었으면 기준 프리셋의 것). 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
          */
         void drawCustomizationSliders( const AppearanceSelection& selection );
-        /** @brief 미리보기 몸의 지금 모습을 이미지 파일로 쓰고 같은 이름의 프리셋 저장소 항목에 경로를 겁니다. 프리셋을 먼저 저장해야 합니다. */
+        /** @brief 미리보기 몸의 지금 모습 캡처를 요청합니다(`pollThumbnailCapture` 가 받아 같은 이름 프리셋의 썸네일 슬롯에 넣는다). 프리셋을 먼저 저장해야 합니다. */
         void saveThumbnail();
+        /**
+         * @brief 요청한 캡처가 끝났으면 그 PNG 를 읽어 문서에 넘기고(`CharacterEditorDocument::attachThumbnail`) 임시 파일을 지웁니다.
+         * @details shortcut: 렌더 스레드 스크린샷 창구가 파일로만 내놓아 사용자 데이터 폴더의 임시 파일을 거친다, 창구가 바이트를 내주게 되면 바로 받는다.
+         */
+        void pollThumbnailCapture();
         void drawExplanation();
         void drawFitCheck();
         void drawPresetRow();
@@ -162,5 +167,8 @@ namespace sw::editor
         bool                                  _bBoneGizmoPlaced;        ///< `_placedBoneWorld` 가 유효하다
         bool                                  _bRigPreview;             ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`)
         Published                             _published;               ///< 감시 값이 읽는 게시 값
+        string                                _thumbnailCapturePath;    ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
+        string                                _thumbnailCapturePreset;  ///< 그 캡처를 붙일 프리셋 이름
+        uint32                                _thumbnailCaptureSerial;  ///< 요청할 때의 스크린샷 처리 수(`RenderThread::getCompletedScreenshotSerial`)
     };
 } // namespace sw::editor

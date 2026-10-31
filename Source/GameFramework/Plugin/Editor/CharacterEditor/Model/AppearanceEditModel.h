@@ -10,7 +10,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
@@ -42,6 +41,8 @@ namespace sw::editor
         uint32 getRevision() const { return _revision; }
         /** @brief 지금 상태를 "저장된 상태" 로 맞춥니다. 저장 뒤에 부릅니다. */
         void markSaved() { _saved = _selection; }
+        /** @brief 저장이 끝난 선택 @p saved 를 "저장된 상태" 로 맞춥니다 - 비동기 저장은 맡길 때의 선택을 넘긴다(그 사이 편집은 미저장으로 남는다). */
+        void markSaved( const AppearanceSelection& saved ) { _saved = saved; }
         /** @brief 저장된 상태와 다르면 true 입니다. */
         bool isDirty() const;
 
@@ -78,19 +79,7 @@ namespace sw::editor
 
         // --- 저장 ----------------------------------------------------------------------------------------------------
 
-        /**
-         * @brief 지금 선택을 프리셋 저장소의 @p name 슬롯에 넣습니다(같은 이름이면 내용만 바꿉니다). 성공하면 "저장된 상태" 로 맞춥니다.
-         * @details 저장소를 파일에 쓰는 일(세이브)은 호출하는 쪽의 일이다. 이름은 저장소가 정리한다(`UserAppearancePresetStore`).
-         */
-        [[nodiscard]] bool saveToPresetStore( UserAppearancePresetStore& store, string_view name );
-
-        /**
-         * @brief 지금 선택을 프리셋 저장소에 넣고 저장소 전체를 @p absolutePath 에 씁니다(`UserAppearancePresetStore::saveToText`). 쓰기에 실패하면 false 이고 저장 상태는 그대로입니다.
-         * @details 저장소는 프리셋 내용을 공유 코드로 싣기 때문에 `setDatabase` 로 외형 데이터를 먼저 정해 둬야 한다(없으면 코드가 비어 다시 읽을 수 없다).
-         */
-        [[nodiscard]] bool saveToPresetFile( UserAppearancePresetStore& store, string_view name, const AbsolutePath& absPath );
-        /** @brief 파일에서 저장소를 읽습니다. 파일이 없거나 형식이 틀리면 false 이고 저장소는 그대로입니다. */
-        [[nodiscard]] static bool loadPresetFile( UserAppearancePresetStore& store, string_view absolutePath );
+        // 프리셋 저장소를 슬롯에 쓰고 읽는 일은 문서가 한다(`CharacterEditorDocument::savePreset` - 쓰기가 끝난 뒤 `markSaved( 맡긴 선택 )`).
         /** @brief 저장소의 프리셋 하나를 열어 선택을 바꿉니다(기록을 지우고 "저장된 상태" 로 맞춥니다). 이름이 없으면 false 입니다. */
         [[nodiscard]] bool loadFromPreset( const UserAppearancePresetStore& store, string_view name );
 

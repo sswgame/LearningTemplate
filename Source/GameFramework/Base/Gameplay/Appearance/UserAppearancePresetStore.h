@@ -1,6 +1,6 @@
 /**
  * @file UserAppearancePresetStore.h
- * @brief 플레이어가 저장한 외형 프리셋입니다. 이름 붙은 슬롯, 즐겨찾기, 썸네일 경로, 부분 프리셋을 세이브에 싣습니다.
+ * @brief 플레이어가 저장한 외형 프리셋입니다. 이름 붙은 슬롯, 즐겨찾기, 썸네일 슬롯, 부분 프리셋을 세이브에 싣습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -23,7 +23,7 @@ namespace sw
     {
         AppearanceSelection _selection{};
         string              _name{};
-        string              _thumbnailPath{}; ///< 미리보기 이미지 경로. 렌더링은 나중에 붙이고 지금은 필드만 둔다
+        string              _thumbnailSlot{}; ///< 미리보기 이미지(PNG)를 둔 로컬 저장소 슬롯 이름(같은 저장소). 비면 없다
         uint8               _bFavorite{ SW_FALSE };
     };
 } // namespace sw
@@ -43,7 +43,7 @@ namespace sw
         string _code; ///< 선택의 공유 코드
 
         PROPERTY()
-        string _thumbnailPath; ///< 미리보기 이미지 경로
+        string _thumbnailSlot; ///< 미리보기 이미지(PNG)를 둔 로컬 저장소 슬롯 이름
 
         PROPERTY()
         bool _bFavorite{ false }; ///< 즐겨찾기
@@ -72,13 +72,13 @@ namespace sw
      * @class UserAppearancePresetStore
      * @brief 플레이어 프리셋 목록을 리플렉션 JSON(`UserAppearancePresetFile`)으로 읽고 씁니다. 로컬 저장 슬롯의 본문에 해당합니다. 프리셋 내용은 공유 코드(`AppearanceShareCode`) 한 줄로 싣습니다.
      *        세이브와 공유가 같은 코드이고 콘텐츠가 바뀌어도 읽힙니다. 펼칠 때 `AppearanceSelectionUtil::applySelection` 이 지워진 것을 보고합니다.
-     * @details 판 3 부터 JSON 이다. 판 1 · 2 의 `key=value` 세이브는 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
+     * @details 판 3 부터 JSON 이다. 판 1 · 2 의 `key=value` 세이브와 판 3(썸네일 경로)은 출시 전 데이터라 읽는 길을 두지 않았다 — 읽기가 실패로 알린다.
      *          현재 판보다 새 파일도 읽지 않는다. 망가진 프리셋(읽지 못한 공유 코드)은 경고를 남기고 건너뛴다.
      */
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kVersion = 3; ///< 3: 리플렉션 JSON(이전 판은 읽지 않는다)
+        static constexpr int32 kVersion = 4; ///< 3: 리플렉션 JSON, 4: 썸네일을 경로 대신 슬롯 이름으로(이전 판은 읽지 않는다)
 
         UserAppearancePresetStore();
 
@@ -91,7 +91,7 @@ namespace sw
         /** @brief 이름을 바꿉니다. 새 이름이 이미 있으면 false 입니다. */
         [[nodiscard]] bool renamePreset( string_view fromName, string_view toName );
         [[nodiscard]] bool setFavorite( string_view name, bool bFavorite );
-        [[nodiscard]] bool setThumbnailPath( string_view name, string_view thumbnailPath );
+        [[nodiscard]] bool setThumbnailSlot( string_view name, string_view thumbnailSlot );
         void               clear() { _listPreset.clear(); }
 
         const UserAppearancePreset*         findPresetByName( string_view name ) const;
