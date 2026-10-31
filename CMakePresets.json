@@ -30,6 +30,25 @@
       }
     },
     {
+      "name": "base-linux",
+      "hidden": true,
+      "inherits": "base-vcpkg",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "Linux-Debug",
+      "displayName": "Linux Ninja Debug (Clang)",
+      "description": "Linux Debug build using Ninja + Clang — 컴파일러는 DetectToolchain 이 Tools/LLVM 에서 고른다. X11 · ALSA · epoll · POSIX 구현은 이 구성만 짓는다",
+      "inherits": "base-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
       "name": "base-shipping",
       "hidden": true,
       "cacheVariables": {
@@ -118,6 +137,10 @@
     {
       "name": "Ninja-Shipping-Server",
       "configurePreset": "Ninja-Shipping-Server"
+    },
+    {
+      "name": "Linux-Debug",
+      "configurePreset": "Linux-Debug"
     }
   ],
   "testPresets": [
@@ -138,6 +161,17 @@
       "filter": {
         "include": {
           "label": "lint"
+        }
+      }
+    },
+    {
+      "name": "Linux-Debug-nogpu",
+      "displayName": "Linux Debug - GPU 없는 테스트(단위 · 도구)",
+      "inherits": "parallel",
+      "configurePreset": "Linux-Debug",
+      "filter": {
+        "include": {
+          "label": "nogpu"
         }
       }
     }
