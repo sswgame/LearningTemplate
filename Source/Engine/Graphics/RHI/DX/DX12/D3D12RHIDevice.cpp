@@ -98,9 +98,10 @@ namespace sw
         , _transferReleaseQueue{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _timestampProvider{ *this }
     {
         _resourceImpl       = sw::make_unique<D3D12RHIResourceFactory>( this );
-        _pTimestampProvider = this;
+        _pTimestampProvider = &_timestampProvider;
     }
 
     D3D12RHIDevice::~D3D12RHIDevice()

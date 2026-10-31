@@ -146,8 +146,10 @@ namespace sw
     /**
      * @class D3D12RHIDevice
      * @brief Direct3D 12 그래픽스 디바이스 구현입니다(bindless 지원).
+     * @details 선택 능력(타임스탬프)은 상속하지 않는다. 디바이스가 가진 어댑터 멤버가 구현해 이 디바이스로 넘기고,
+     *          `findTimestampProvider` 가 그 멤버를 준다(언리얼 RHI 도 선택 기능을 디바이스의 기반 클래스로 늘리지 않는다).
      */
-    class D3D12RHIDevice : public IRHIDevice, public IRHITimestampProvider
+    class D3D12RHIDevice : public IRHIDevice
     {
     public:
         friend class D3D12RHIResourceFactory;
@@ -271,11 +273,11 @@ namespace sw
         void beginFrame() override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
-        uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
-        bool               isGPUClockReadCheap() const override { return true; }
+        void               setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
+        uint32             getTimestampSlotCount() const;
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
+        bool               isGPUClockReadCheap() const { return true; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
@@ -297,6 +299,25 @@ namespace sw
         void* getNativeContext() const override { return _pActiveFrameList != nullptr ? _pActiveFrameList : _commandList.Get(); }
 
     private:
+        /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
+        class TimestampProvider final : public IRHITimestampProvider
+        {
+        public:
+            explicit TimestampProvider( D3D12RHIDevice& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void               setTimestampEnabled( bool bEnabled ) override { _owner.setTimestampEnabled( bEnabled ); }
+            uint32             getTimestampSlotCount() const override { return _owner.getTimestampSlotCount(); }
+            [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
+            [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
+            bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+
+        private:
+            D3D12RHIDevice& _owner;
+        };
+
         /** @brief 쿼리 힙과 읽기 버퍼를 한 번만 만듭니다. */
         void ensureTimestampResources();
         /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
@@ -828,6 +849,8 @@ namespace sw
         sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;
         /** @brief 리소스 생성과 파괴 구현입니다(getResourceFactory 가 반환하는 것). */
         sw::unique_ptr<D3D12RHIResourceFactory> _resourceImpl;
+        /// @brief `IRHIDevice::_pTimestampProvider` 가 가리키는 능력 객체입니다.
+        TimestampProvider _timestampProvider;
     };
 } // namespace sw
 
