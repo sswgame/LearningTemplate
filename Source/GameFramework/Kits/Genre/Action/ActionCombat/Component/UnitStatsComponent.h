@@ -36,6 +36,8 @@ namespace sw
         void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
         /** @brief 근접 판정의 맞음(`MeleeHitWindowUtil::sweep`)을 피해로 바꿉니다. 피해는 기본 피해 × 히트 존 배율을 반올림한 값이고 때린 쪽은 맞음의 공격자입니다. */
         void onHitReceived( const HitInfo& hit ) override;
+        /** @brief HP 를 @p amount 만큼(최대 HP 까지) 채웁니다. 인스펙터가 인자 칸과 실행 단추로 부른다(에디터 전용 감싼 함수를 두지 않는다). */
+        FUNCTION( Category = "Actions", DisplayName = "Heal", CallInEditor )
         void heal( int32 amount );
 
         /**
@@ -45,9 +47,6 @@ namespace sw
          * @return 등록을 소유하는 구독. 사라지면 해제된다
          */
         [[nodiscard]] Subscription registerDamageApplied( const DamageAppliedDelegate& delegate );
-
-        FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
-        void heal20() { heal( 20 ); }
 
         int32 getHP() const { return _hp; }
         int32 getMaxHP() const { return _maxHP; }
