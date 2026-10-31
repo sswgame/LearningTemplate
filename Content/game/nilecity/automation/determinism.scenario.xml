@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NileCity 결정적 재생 — 자동 계획으로 도시를 고정 틱(1/60 초)에 돌리고 같은 프레임(300 · 1200)의 도시 상태(인구 · 돈 · 달 · 오브젝트 위치 해시)를 보고의 records 에 남긴다.
+  게임 상태는 CPU 에서만 정해지므로 네 백엔드가 같은 기록을 내야 한다. 시뮬레이션 시간이 흘러야 하는 시나리오라 고정 대기다.
+  사이에 액션 단계로 도구를 바꾸고(Nile.NextTool → Nile.RoadTool) 자동 계획이 끝까지 도시를 키우는지 본다.
+  실행: ctest -R Scenario.nilecity (SW_ACTIVE_GAME=NileCity) · App -scenario=game/nilecity/automation/determinism.scenario.xml -unattended
+-->
+<Scenario name="game.nilecity.determinism" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_nileAutoPlay" value="1"/>
+	<Wait frames="20"/>
+	<Action name="Nile.NextTool"/>
+	<Wait frames="4"/>
+	<Action name="Nile.RoadTool"/>
+	<Wait frames="4"/>
+	<ExpectLog contains="[Nile] tool: " atLeast="2"/>
+	<!-- 5 초(300 프레임) -->
+	<Wait frames="272"/>
+	<Record watch="Nile.Month"/>
+	<Record watch="Nile.Population"/>
+	<Record watch="Nile.Money"/>
+	<Record watch="Scene.ObjectCount"/>
+	<Record watch="Scene.TransformHash"/>
+	<!-- 20 초(1200 프레임) -->
+	<Wait frames="900"/>
+	<Expect watch="Nile.Month" atLeast="1"/>
+	<Expect watch="Nile.Population" atLeast="1"/>
+	<Record watch="Nile.Month"/>
+	<Record watch="Nile.Population"/>
+	<Record watch="Nile.Money"/>
+	<Record watch="Scene.ObjectCount"/>
+	<Record watch="Scene.TransformHash"/>
+	<Pass/>
+</Scenario>

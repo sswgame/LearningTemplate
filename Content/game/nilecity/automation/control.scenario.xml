@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NileCity 조작 시나리오 — 디렉터는 마우스 버튼이 아니라 액션(Nile.Place · Nile.Demolish)을 읽는다.
+  커서는 포인터 위치(MousePosition — 화면 가운데 = 리그 초점 칸), 누르는 것은 마우스 버튼 슬롯(왼쪽 = 짓기, 오른쪽 = 허물기) — 패드 A · B 는 가상 커서가 마우스 버튼으로 바꾼다(배타 가상 입력에서도 돈다). — 처음 도구(도로)를 깔고 같은 칸을 허문다.
+  실행: ctest -R Scenario.nilecity (SW_ACTIVE_GAME=NileCity) · App -scenario=game/nilecity/automation/control.scenario.xml -unattended
+-->
+<Scenario name="game.nilecity.control" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_nileAutoPlay" value="0"/>
+	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
+	<MousePosition x="0.5" y="0.5"/>
+	<Wait frames="2"/>
+	<Tap slot="Mouse.Left" hold="1"/>
+	<Wait frames="4"/>
+	<Tap slot="Mouse.Right" hold="1"/>
+	<!-- 허물기 로그는 감시 값이 없어 몇 프레임 뒤에 센다. -->
+	<Wait frames="4"/>
+	<ExpectLog contains="[Nile] demolished" count="1"/>
+	<Pass/>
+</Scenario>

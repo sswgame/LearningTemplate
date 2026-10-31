@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  NileCity 패드 가상 커서 시나리오 — 입력 맵의 virtualCursor="LeftStick"(nile.input.xml)이 켠 가상 커서를 시나리오의 패드 스크립트가 움직인다
+  (InputManager 는 배타 가상 입력일 때도 가상 커서를 돌린다). 왼쪽 스틱 X 를 끝까지 밀면 커서가 오른쪽으로 가고(Input.MouseX 가 늘어난다), 놓으면 선다.
+  A · B 가 마우스 왼쪽 · 오른쪽 버튼이 되는 규칙과 확대 속도의 프레임률 무관은 단위 테스트 VirtualCursorTest(PadButtonsBecomeMouseButtons ·
+  DistanceDoesNotDependOnFrameRate)가 본다.
+  커서 속도 900 px/s(`VirtualCursorSettings::_speed`)라 30 프레임(0.5 초)이면 약 450 px 간다. 시작 위치는 창의 10 %, 문턱 300 px 은 창이 1280 px 보다 좁지 않다는 가정이다.
+  실행: ctest -R Scenario.nilecity (SW_ACTIVE_GAME=NileCity) · App -scenario=game/nilecity/automation/gamepadcursor.scenario.xml -unattended
+-->
+<Scenario name="game.nilecity.gamepadcursor" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_nileAutoPlay" value="0"/>
+	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
+	<MousePosition x="0.1" y="0.5"/>
+	<Wait frames="4"/>
+	<Remember watch="Input.MouseX" as="before"/>
+	<!-- 왼쪽 스틱 X(축 0)를 30 프레임 끝까지 민다 -->
+	<Wait frames="1"/>
+	<GamepadAxis axis="0" value="1"/>
+	<Wait frames="30"/>
+	<GamepadAxis axis="0" value="0"/>
+	<Wait frames="10"/>
+	<Expect watch="Input.MouseX" differsFrom="before"/>
+	<Expect watch="Input.MouseX" atLeast="300"/>
+	<!-- 스틱을 놓으면 커서가 선다 — 움직이지 않는 것을 보므로 고정 대기다 -->
+	<Wait frames="4"/>
+	<Remember watch="Input.MouseX" as="stopped"/>
+	<Wait frames="20"/>
+	<Expect watch="Input.MouseX" sameAs="stopped"/>
+	<Pass/>
+</Scenario>
