@@ -13,4 +13,7 @@
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/shooter3d/audio/shooter3d.audioevents.xml</audioEvents>
+  <!-- 아이템 · 외형은 캐릭터 키트와 함께 공용 팩(common)에 있다 — 자리는 등록 줄의 팩 안 규칙(common/data/items.xml · common/data/appearance) -->
+  <RequiredData kind="items" pack="common"/>
+  <RequiredData kind="appearance" pack="common"/>
 </GameSettings>

@@ -68,6 +68,13 @@ namespace sw
         PROPERTY()
         DataPath _audioEvents; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstance` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
 
+        /**
+         * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.
+         * 자리는 어느 팩이든 등록 줄의 팩 안 규칙 하나(`GamePackDataUtil::tryMakeKindPath`)로 만든다. 적지 않은 종류는 이 게임 팩이다.
+         * 여러 게임이 함께 쓰는 캐릭터 키트 데이터(아이템 · 외형)가 공용 팩에 있어서다.
+         */
+        map<string, string> _mapRequiredDataPack{};
+
         /** @brief 리소스 경로(XML)에서 팩 설정 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID = {} );
         /** @brief `loadFromAsset` 의 XML 문자열 버전이며 테스트가 씁니다. 먼저 비우고 읽습니다. */

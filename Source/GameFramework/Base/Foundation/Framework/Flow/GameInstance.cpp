@@ -235,9 +235,12 @@ namespace sw
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const
     {
         string error;
-        if ( GamePackDataUtil::tryMakeKindPath( _packConfig._packRoot.get(), kindLabel, outPath, error ) )
+        // 공용 팩에서 읽는 종류는 gamesettings 의 <RequiredData pack> 이 팩을 정한다 — 자리 규칙은 어느 팩이든 등록 줄 하나다.
+        const auto    itShared = _packConfig._data._mapRequiredDataPack.find( string( kindLabel ) );
+        const string& pack     = itShared != _packConfig._data._mapRequiredDataPack.end() ? itShared->second : _packConfig._packRoot.get();
+        if ( GamePackDataUtil::tryMakeKindPath( pack, kindLabel, outPath, error ) )
             return true;
-        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, _packConfig._packRoot.c_str(), error.c_str() );
+        SW_LOG_ERROR( "Required game data '%#' has no path in pack '%#': %# - the game does not start", kindLabel, pack.c_str(), error.c_str() );
         return false;
     }
 
