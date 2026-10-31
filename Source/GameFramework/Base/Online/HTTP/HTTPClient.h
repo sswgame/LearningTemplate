@@ -7,7 +7,7 @@
  *          - 호스트가 이름이면 전용 해석 스레드(`PlatformSocketUtil::resolveAddress`, 처음 쓸 때 시작한다)에 맡기고, 해석되면 `update` 가 연결한다.
  *            DNS 왕복은 막는 호출이라 요청 경로(주인 스레드, 잠금)와 TaskManager 워커에서 하지 않는다. libcurl 의 스레드 해석기에 해당한다.
  *            풀리지 않으면 전송 실패("could not resolve host"), 해석 중에도 시한은 흐른다. 숫자 주소는 해석 없이 바로 연결한다.
- *          언리얼 FHTTPModule 과 libcurl multi 처럼 비동기 요청과 완료 회수 구조다.
+ *          언리얼 FHttpModule 과 libcurl multi 처럼 비동기 요청과 완료 회수 구조다.
  */
 #pragma once
 #include "Core/Concurrency/OnceInit.h"

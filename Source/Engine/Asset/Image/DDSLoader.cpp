@@ -103,7 +103,7 @@ namespace sw
 
         struct DDSLoaderInternal
         {
-            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DDSFormats.json` 이고 테스트가 이 표와 견준다. */
+            /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
             static constexpr DDSLegacyFourCc kArrFourCcRow[] = {
                 {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
                 {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
@@ -135,7 +135,7 @@ namespace sw
 
             /**
              * @brief 옛 머리의 비트 수 · 채널 마스크가 가리키는 DXGI 포맷의 표입니다. 마스크는 다섯 칸이 모두 같아야 맞는다(비슷한 모양을 어림하지 않는다).
-             * @details 이름의 정본은 `Config/Editor/DDSFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
+             * @details 이름의 정본은 `Config/Editor/DdsFormats.json` 의 `legacy_rgb_masks` 이고 테스트가 이 표와 견준다. 알파 마스크가 0 인 RGB 순서는 X 채널 형식이 DXGI 에 없어
              *          R8G8B8A8 로 읽는다(알파 바이트는 그 파일이 쓴 값이다).
              */
             static constexpr DDSLegacyRGBMask kArrRGBMaskRow[] = {

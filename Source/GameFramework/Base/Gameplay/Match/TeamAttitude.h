@@ -1,7 +1,7 @@
 /**
  * @file TeamAttitude.h
  * @brief 두 팀 사이의 태도(아군, 중립, 적)를 판정합니다. 팀은 판이 매긴 번호(0 부터)이고 `TeamAttitudeUtil::kNoTeam` 은 팀 없음입니다.
- * @details 언리얼의 `ETeamAttitude` 와 `FGenericTeamID` 에 해당한다. 팀 번호는 `MatchState::addTeam` 과 `RTSWorld::addPlayer` 가 매기는 배열 인덱스이므로
+ * @details 언리얼의 `ETeamAttitude` 와 `FGenericTeamId` 에 해당한다. 팀 번호는 `MatchState::addTeam` 과 `RTSWorld::addPlayer` 가 매기는 배열 인덱스이므로
  *          int32 그대로 둔다(언리얼은 uint8 이고 NoTeam 이 255). 판정기 교체(동맹 테이블, 팀킬 허용)는 쓰는 판이 생기면 여기에 추가한다.
  *          키트가 역할 이름으로 쓰는 팀 enum(`SRPGTeam`, `ConquestTeam`)은 각자의 `isHostile` 을 둔다.
  */
