@@ -109,7 +109,7 @@ namespace sw
             }
             if ( nodeID > 0 && bDuplicate == false )
                 continue;
-            SW_LOG_ERROR( "Dialogue graph '%#': node %# needs a unique _id of 1 or more (has %#)", sourceLabel, nodeIndex, nodeID );
+            SW_LOG_ERROR_ID( "Dialogue.NodeIDInvalid", "Dialogue graph '%#': node %# needs a unique _id of 1 or more (has %#)", sourceLabel, nodeIndex, nodeID );
             bValid = false;
         }
         for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
@@ -123,8 +123,8 @@ namespace sw
             const bool bValidLink = link._id > 0 && bDuplicate == false && link._fromPin > 0 && link._toPin > 0;
             if ( bValidLink )
                 continue;
-            SW_LOG_ERROR( "Dialogue graph '%#': link %# needs a unique _id of 1 or more and two pins (id %#, %# -> %#)", sourceLabel, linkIndex, link._id,
-                          link._fromPin, link._toPin );
+            SW_LOG_ERROR_ID( "Dialogue.LinkInvalid", "Dialogue graph '%#': link %# needs a unique _id of 1 or more and two pins (id %#, %# -> %#)", sourceLabel, linkIndex, link._id,
+                             link._fromPin, link._toPin );
             bValid = false;
         }
         return bValid;

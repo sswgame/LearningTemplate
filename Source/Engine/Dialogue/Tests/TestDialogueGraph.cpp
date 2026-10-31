@@ -1,0 +1,338 @@
+// DialogueGraphAsset · DialogueCursor — 핀 번호 계약, 노드 종류 왕복, 필수 칸 · id 검사, 그래프 따라가기, 진행 규칙(커서). 러너(GameFramework)는 보지 않는다.
+#include "pch.h"
+
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Dialogue/DialogueCursor.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
+
+using namespace sw;
+
+// ------------------------------------------------------------------------------
+// 1) DialogueGraphTest — 핀 번호 계약, 노드 타입 왕복, 그래프 따라가기
+//
+//    여기서 잘못되면 증상이 "가끔 다른 대사가 나온다" 라서, 재현도 추적도 가장 어려운 종류다.
+// ------------------------------------------------------------------------------
+
+namespace
+{
+    /**
+     * @brief Start(1) → Choice(2) → {A:3, B:4} 그래프를 만듭니다.
+     * @details 선택지 핀과 기본 출력 핀이 함께 있는 가장 작은 모양입니다.
+     */
+    DialogueGraphAsset makeChoiceGraph()
+    {
+        DialogueGraphAsset asset;
+
+        DialogueAssetNode startNode{};
+        startNode._id   = 1;
+        startNode._type = DialogueAssetNodeType::Start;
+        DialogueAssetNode choiceNode{};
+        choiceNode._id         = 2;
+        choiceNode._type       = DialogueAssetNodeType::Choice;
+        choiceNode._text       = "어디로 갈까?";
+        choiceNode._listChoice = { "왼쪽", "오른쪽" };
+        DialogueAssetNode leftNode{};
+        leftNode._id   = 3;
+        leftNode._type = DialogueAssetNodeType::Dialogue;
+        leftNode._text = "왼쪽으로 갔다.";
+        DialogueAssetNode rightNode{};
+        rightNode._id   = 4;
+        rightNode._type = DialogueAssetNodeType::Dialogue;
+        rightNode._text = "오른쪽으로 갔다.";
+
+        asset._listNode = { startNode, choiceNode, leftNode, rightNode };
+
+        asset._listLink.push_back( DialogueAssetLink{ 1,
+                                                      DialogueGraphAsset::encodePin( 1, DialogueGraphAsset::kPinOffsetOut ),
+                                                      DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetIn ) } );
+        asset._listLink.push_back( DialogueAssetLink{ 2,
+                                                      DialogueGraphAsset::encodeChoicePin( 2, 0 ),
+                                                      DialogueGraphAsset::encodePin( 3, DialogueGraphAsset::kPinOffsetIn ) } );
+        asset._listLink.push_back( DialogueAssetLink{ 3,
+                                                      DialogueGraphAsset::encodeChoicePin( 2, 1 ),
+                                                      DialogueGraphAsset::encodePin( 4, DialogueGraphAsset::kPinOffsetIn ) } );
+        return asset;
+    }
+
+    /** @brief `makeProbeGraph` 의 노드 2 를 지날 때 쓰는 입력입니다(선택지 1, 조건 참). */
+    DialogueStepInput makeProbeInput()
+    {
+        DialogueStepInput input{};
+        input._choiceIndex   = 1;
+        input._bConditionMet = true;
+        return input;
+    }
+
+    /**
+     * @brief 노드 2(종류 `type`)의 모든 출력 핀을 서로 다른 대사 노드로 잇습니다.
+     * @details Out → 10, True → 11, False → 12, 선택지 0 → 13, 선택지 1 → 14. 대사 노드들은 끝(나가는 링크 없음)입니다.
+     *          조건식은 비어 있어 러너가 참으로 평가합니다(`makeProbeInput` 과 같은 입력).
+     */
+    DialogueGraphAsset makeProbeGraph( DialogueAssetNodeType type )
+    {
+        DialogueGraphAsset asset;
+
+        DialogueAssetNode probeNode{};
+        probeNode._id            = 2;
+        probeNode._type          = type;
+        probeNode._text          = "probe";
+        probeNode._actionCommand = "noop";
+        probeNode._listChoice    = { "a", "b" };
+        asset._listNode.push_back( probeNode );
+
+        const int32 arrTargetID[] = { 10, 11, 12, 13, 14 };
+        for ( int32 targetID : arrTargetID )
+        {
+            DialogueAssetNode target{};
+            target._id   = targetID;
+            target._type = DialogueAssetNodeType::Dialogue;
+            target._text = "target";
+            asset._listNode.push_back( target );
+        }
+
+        const int32 arrFromPin[] = {
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetOut ),
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetTrue ),
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetFalse ),
+            DialogueGraphAsset::encodeChoicePin( 2, 0 ),
+            DialogueGraphAsset::encodeChoicePin( 2, 1 ),
+        };
+        for ( int32 linkIndex = 0; linkIndex < static_cast<int32>( SW_COUNT_OF( arrFromPin ) ); ++linkIndex )
+        {
+            const int32 toPin = DialogueGraphAsset::encodePin( arrTargetID[linkIndex], DialogueGraphAsset::kPinOffsetIn );
+            asset._listLink.push_back( DialogueAssetLink{ linkIndex + 1, arrFromPin[linkIndex], toPin } );
+        }
+        return asset;
+    }
+} // namespace
+
+/**
+ * @brief [DialogueGraphTest] 핀 번호 인코딩·디코딩이 서로 되돌리는지 검증
+ * @details 핀 번호는 **디스크에 저장되는 계약**이다. 에디터의 인코딩과 애셋의 디코딩을 각자 적으면 한쪽만 바뀔 때
+ *          대화가 조용히 엉뚱한 분기를 탄다.
+ */
+SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
+{
+    const int32 outPin = DialogueGraphAsset::encodePin( 7, DialogueGraphAsset::kPinOffsetOut );
+    SW_EXPECT_EQUAL( 7, DialogueGraphAsset::decodePinNodeID( outPin ) );
+    SW_EXPECT_EQUAL( DialogueGraphAsset::kPinOffsetOut, DialogueGraphAsset::decodePinOffset( outPin ) );
+
+    const int32 choicePin = DialogueGraphAsset::encodeChoicePin( 12, 3 );
+    SW_EXPECT_EQUAL( 12, DialogueGraphAsset::decodePinNodeID( choicePin ) );
+    SW_EXPECT_EQUAL( DialogueGraphAsset::kPinOffsetChoiceBase + 3, DialogueGraphAsset::decodePinOffset( choicePin ) );
+
+    // kPinScale 보다 작은 값은 핀이 아니다(노드 id 는 1 부터) — 노드 id * 10 으로 짐작해 읽지 않는다.
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinNodeID( 12 ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinOffset( 12 ) );
+}
+
+/**
+ * @brief [DialogueGraphTest] 자릿수에 담기지 않는 핀은 만들지 않는지 검증
+ * @details 오프셋이 `kPinScale` 을 넘으면 **노드 id 를 오염시켜** 링크가 다른 노드를 가리킨다.
+ *          조용히 그런 번호를 만드느니 "없는 핀"(0)을 돌려준다.
+ */
+SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
+{
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodePin( 5, DialogueGraphAsset::kPinScale ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodePin( 5, DialogueGraphAsset::kPinScale + 1 ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodePin( 0, DialogueGraphAsset::kPinOffsetOut ) );
+
+    // 선택지도 같다 — 마지막으로 담기는 것은 되고, 그 다음은 안 된다.
+    const int32 lastChoiceIndex = DialogueGraphAsset::getMaxChoiceCount() - 1;
+    SW_EXPECT_TRUE( DialogueGraphAsset::encodeChoicePin( 5, lastChoiceIndex ) > 0 );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodeChoicePin( 5, lastChoiceIndex + 1 ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodeChoicePin( 5, -1 ) );
+
+    // 담기는 범위 안에서는 노드 id 가 절대 흔들리지 않는다.
+    for ( int32 choiceIndex = 0; choiceIndex <= lastChoiceIndex; ++choiceIndex )
+    {
+        const int32 pin = DialogueGraphAsset::encodeChoicePin( 5, choiceIndex );
+        SW_EXPECT_EQUAL( 5, DialogueGraphAsset::decodePinNodeID( pin ) );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 모든 노드 타입이 파일 왕복에서 그대로인지 검증
+ * @details 종류 이름은 리플렉션 열거자 이름 하나가 기준이다. 모르는 이름을 Dialogue 로 떨어뜨리면 파일은 멀쩡해 보이는데 대화만 달라진다.
+ */
+SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
+{
+    DialogueGraphAsset source;
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    {
+        DialogueAssetNode node{};
+        node._id   = static_cast<int32>( typeIndex ) + 1;
+        node._type = static_cast<DialogueAssetNodeType>( typeIndex );
+        source._listNode.push_back( node );
+    }
+    const string       written = source.toXML();
+    DialogueGraphAsset reread;
+    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_REQUIRE_EQUAL( static_cast<uint32>( source._listNode.size() ), static_cast<uint32>( reread._listNode.size() ) );
+    for ( size_t nodeIndex = 0; nodeIndex < source._listNode.size(); ++nodeIndex )
+    {
+        SW_EXPECT_TRUE( reread._listNode[nodeIndex]._type == source._listNode[nodeIndex]._type );
+    }
+    SW_EXPECT_TRUE( written.find( "\"Choice\"" ) != string::npos ); // 종류는 열거자 이름으로 적힌다
+    SW_EXPECT_EQUAL( written, reread.toXML() );                     // 다시 읽어 쓰면 바이트까지 같다
+}
+
+/**
+ * @brief [DialogueGraphTest] 필수 칸이 빠졌거나, id 가 겹치거나, 옛 키 이름이면 읽지 않는지 검증
+ * @details 노드 · 링크 id 와 링크의 두 핀은 `PROPERTY( Required )` 다. 빠진 칸을 초기값(0)으로 읽거나 순번으로 채우면 링크가 다른 노드를 가리킨다.
+ *          옛 키(`"nodes"`, `"from"`)를 받아 주는 별칭은 없다.
+ */
+SW_TEST_CASE( DialogueGraphTest, MissingRequiredOrDuplicateIDIsRejected )
+{
+    SW_EXPECT_LOG( "Config.RequiredMissing" ); // 노드 · 링크의 _id 가 없다
+    SW_EXPECT_LOG( "Dialogue.NodeIDInvalid" ); // 노드 id 가 겹친다
+    SW_EXPECT_LOG( "Config.KeyUnknown" );      // 옛 키 이름
+    DialogueGraphAsset asset;
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _type="Start" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /></_listNode><_listLink><DialogueAssetLink _fromPin="102" _toPin="201" /></_listLink></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><_listNode><DialogueAssetNode _id="1" _type="Start" /><DialogueAssetNode _id="1" _type="End" /></_listNode></DialogueGraphAsset>)" ) );
+    SW_EXPECT_FALSE( asset.parseXML( R"(<DialogueGraphAsset><nodes><node id="1" type="Start" /></nodes><links /></DialogueGraphAsset>)" ) );
+    SW_EXPECT_TRUE( asset._listNode.empty() );
+    SW_EXPECT_TRUE( asset._listLink.empty() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 선택지·기본 출력 핀을 따라 다음 노드를 찾는지 검증
+ */
+SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
+{
+    const DialogueGraphAsset asset = makeChoiceGraph();
+
+    const DialogueAssetNode* pStart = asset.findStartNode();
+    SW_EXPECT_NOT_NULL( pStart );
+    SW_EXPECT_EQUAL( 1, pStart->_id );
+
+    SW_EXPECT_EQUAL( 2, asset.findDefaultNextNodeID( 1 ) );
+    SW_EXPECT_EQUAL( 3, asset.findChoiceNextNodeID( 2, 0 ) );
+    SW_EXPECT_EQUAL( 4, asset.findChoiceNextNodeID( 2, 1 ) );
+
+    // 연결되지 않은 선택지는 기본 출력으로 떨어진다 — 여기서는 그것도 없으므로 0 이다.
+    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, 5 ) );
+    // 범위를 벗어난 선택지 번호도 기본 출력을 볼 뿐, 엉뚱한 노드로 가지 않는다.
+    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, DialogueGraphAsset::getMaxChoiceCount() + 10 ) );
+}
+
+/**
+ * @brief [DialogueGraphTest] XML 왕복과 파일 읽기(loadFromDiskFile)가 같은 결과를 내는지 검증
+ * @details 두 경로는 같은 읽기(`readText`)로 모인다. 두 경로의 결과가 같음을 못박아 둔다.
+ */
+SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
+{
+    const DialogueGraphAsset source = makeChoiceGraph();
+
+    DialogueGraphAsset parsed;
+    SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
+    SW_EXPECT_EQUAL( 4u, static_cast<uint32>( parsed._listNode.size() ) );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
+    SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeType::Choice );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
+    SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeID( 2, 0 ) );
+
+    const std::optional<AbsolutePath> filePath = AbsolutePath::tryMake( test::makeScratchPath( "graph.dialogue.xml" ) );
+    SW_REQUIRE_TRUE( filePath.has_value() );
+    SW_EXPECT_TRUE( source.saveToFile( *filePath ) );
+
+    DialogueGraphAsset loaded;
+    SW_REQUIRE_TRUE( loaded.loadFromDiskFile( filePath->str() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
+    SW_EXPECT_EQUAL( parsed._listNode[1]._text, loaded._listNode[1]._text );
+    SW_EXPECT_EQUAL( 4, loaded.findChoiceNextNodeID( 2, 1 ) );
+}
+
+/**
+ * @brief [DialogueGraphTest] 로컬라이즈 키가 아닌 원문은 그대로 돌려주는지 검증
+ * @details 이 조회는 **키가 아닐 수도 있는 텍스트**로 물어본다. 그 원문으로 `hashed_string` 을 만들어 물으면
+ *          대사가 intern 아레나에 영구히 남는다.
+ */
+SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
+{
+    const string plainText = "이건 로컬라이즈 키가 아니라 그냥 대사다.";
+    SW_EXPECT_EQUAL( plainText, DialogueGraphAsset::resolveLocalizedText( plainText ) );
+    SW_EXPECT_TRUE( DialogueGraphAsset::resolveLocalizedText( "" ).empty() );
+}
+
+// ------------------------------------------------------------------------------
+// 2) 노드 종류 표 · DialogueCursor · 러너 — 진행 규칙이 한 곳에 있는지
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [DialogueGraphTest] 특성 표가 노드 타입마다 한 줄이고 순서가 값 순서인지 검증
+ */
+SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
+{
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    {
+        const DialogueAssetNodeType type  = static_cast<DialogueAssetNodeType>( typeIndex );
+        const DialogueNodeInfo*     pInfo = DialogueGraphAsset::findNodeInfo( type );
+        SW_REQUIRE_NOT_NULL( pInfo );
+        SW_EXPECT_TRUE( pInfo->_type == type );
+    }
+    SW_EXPECT_NULL( DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType::Count ) );
+    SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType::Count ) ) );
+}
+
+/**
+ * @brief [DialogueGraphTest] 이어지지 않은 선택지 · 분기 핀은 기본 출력 핀으로 가는지 검증
+ * @details 러너와 미리보기가 이 규칙을 따로 들고 있으면, 미리보기만 "연결 없음" 으로 멈추고 게임은 기본 출력으로 간다.
+ */
+SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
+{
+    const DialogueAssetNodeType arrType[] = { DialogueAssetNodeType::Choice, DialogueAssetNodeType::Branch };
+    for ( DialogueAssetNodeType type : arrType )
+    {
+        DialogueGraphAsset asset = makeProbeGraph( type );
+        asset._listLink.resize( 1 ); // Out(→10) 만 남긴다
+        const DialogueAssetNode* pProbe = asset.findNode( 2 );
+        SW_REQUIRE_NOT_NULL( pProbe );
+        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
+        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, DialogueStepInput{} ) );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 표에 없는 노드 타입을 만나면 커서가 끝(0)으로 가는지 검증
+ * @details 모르는 타입에서 아무 분기도 타지 않으면 상태가 그대로 남고 끝 알림도 없이 대화가 멈춰 있다.
+ */
+SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeEndsTheCursor )
+{
+    const DialogueAssetNodeType arrUnknownType[] = { DialogueAssetNodeType::Count, static_cast<DialogueAssetNodeType>( 42 ) };
+    for ( DialogueAssetNodeType unknownType : arrUnknownType )
+    {
+        const DialogueGraphAsset asset  = makeProbeGraph( unknownType );
+        const DialogueAssetNode* pProbe = asset.findNode( 2 );
+        SW_REQUIRE_NOT_NULL( pProbe );
+        SW_EXPECT_EQUAL( 0, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 새 노드의 기본 본문이 그 종류가 편집하는 칸에 들어가는지 검증
+ * @details Branch 의 기본 조건식 · Action 의 기본 명령이 `_text` 에 들어가면 러너는 빈 조건(참) · 빈 명령을 본다.
+ */
+SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
+{
+    const DialogueAssetNode branchNode = DialogueCursor::makeNode( DialogueAssetNodeType::Branch, 7 );
+    SW_EXPECT_EQUAL( 7, branchNode._id );
+    SW_EXPECT_FALSE( branchNode._condition.empty() );
+    SW_EXPECT_TRUE( branchNode._text.empty() );
+
+    const DialogueAssetNode actionNode = DialogueCursor::makeNode( DialogueAssetNodeType::Action, 8 );
+    SW_EXPECT_FALSE( actionNode._actionCommand.empty() );
+    SW_EXPECT_TRUE( actionNode._text.empty() );
+
+    const DialogueAssetNode choiceNode = DialogueCursor::makeNode( DialogueAssetNodeType::Choice, 9 );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( choiceNode._listChoice.size() ) );
+    SW_EXPECT_EQUAL( "Option 1", choiceNode._listChoice[0] );
+
+    const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeType::Dialogue, 10 );
+    SW_EXPECT_FALSE( dialogueNode._speaker.empty() );
+    SW_EXPECT_FALSE( dialogueNode._text.empty() );
+}
