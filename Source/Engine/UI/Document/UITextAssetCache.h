@@ -38,7 +38,7 @@ namespace sw
      *          실패는 캐시에 남기지 않는다(고치면 다음 요청이 다시 읽는다). 다시 읽기(`reload`)가 실패하면 기존 에셋을 그대로 두고 오류를 남긴다
      *          (실패가 화면을 지우지 않으며, 현지화 `reloadChangedFile` 과 같은 규칙이다). 게임 스레드에서만 쓴다.
      */
-    class SW_API UITextAssetCache : public IAssetCache
+    class SW_API UITextAssetCache final : public IAssetCache
     {
     public:
         /**

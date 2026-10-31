@@ -21,9 +21,9 @@ namespace sw
      * @class UIStyleSheetCache
      * @brief 스타일 시트(`*.uistyle.xml`)를 경로별로 보관하고 나눠 줍니다. 엔진 범위 서브시스템 `UIStyleSheets` 이며 기동이 에셋 캐시 레지스트리에 등록합니다.
      * @details 테마(`UIThemeController`)와 화면 스택이 같이 읽으므로 화면 스택의 값 멤버가 아니다(`UIDocumentCache` 와 같은 자리).
-     *          찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다.
+     *          찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다. 캐시는 값 멤버로 가진다(`UIDocumentCache` 와 같은 모양).
      */
-    class SW_API UIStyleSheetCache final : public UITextAssetCache, public ISubsystem
+    class SW_API UIStyleSheetCache final : public ISubsystem
     {
     public:
         UIStyleSheetCache();
@@ -42,9 +42,12 @@ namespace sw
         /** @brief 시트를 나눠 받습니다. 처음이면 읽고 파싱합니다. 실패하면 nullptr 과 @p outError(`<경로>:<줄>: <이유>`)입니다. */
         shared_ptr<const UIStyleSheetAsset> findOrLoad( string_view path, string& outError );
         /** @brief 파일 대신 읽을 시트 글을 경로에 겁니다(테스트). 이미 읽어 둔 그 경로는 버립니다. */
-        void registerMemorySheet( string_view path, string_view text ) { registerMemoryText( path, text ); }
+        void registerMemorySheet( string_view path, string_view text ) { _cache.registerMemoryText( path, text ); }
+        /** @brief 다시 읽어 바꾼 시트를 알리는 칸입니다(`UITextAssetCache::onReloaded`). */
+        UIAssetReloadedEvent& onReloaded() { return _cache.onReloaded(); }
 
     private:
-        Subscription _assetCacheRegistration; ///< 에셋 캐시 레지스트리 등록 구독(기동이 받고 종료가 놓는다)
+        UITextAssetCache _cache;                  ///< 스타일 시트 캐시(레지스트리에 오르는 에셋 캐시)
+        Subscription     _assetCacheRegistration; ///< 에셋 캐시 레지스트리 등록 구독(기동이 받고 종료가 놓는다 — 캐시보다 먼저 풀린다, 나중에 선언)
     };
 } // namespace sw

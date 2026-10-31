@@ -23,7 +23,7 @@ namespace sw
 namespace sw
 {
     UIStyleSheetCache::UIStyleSheetCache()
-        : UITextAssetCache{ "UIStyleSheet", "UI style sheet", &parseSheet }
+        : _cache{ "UIStyleSheet", "UI style sheet", &parseSheet }
         , _assetCacheRegistration{}
     {
     }
@@ -32,14 +32,14 @@ namespace sw
 
     SubsystemInitResult UIStyleSheetCache::initializeSubsystem()
     {
-        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( this, SW_ASSET_CACHE_RELOAD_FUNCTION( UIStyleSheetCache ) );
+        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, SW_ASSET_CACHE_RELOAD_FUNCTION( UITextAssetCache ) );
         return SubsystemInitResult::Succeeded;
     }
 
     void UIStyleSheetCache::shutdownSubsystem()
     {
         _assetCacheRegistration.reset();
-        clear();
+        _cache.clear();
     }
 
     span<const utf8* const> UIStyleSheetCache::getSubsystemDependencies() const
@@ -50,6 +50,6 @@ namespace sw
 
     shared_ptr<const UIStyleSheetAsset> UIStyleSheetCache::findOrLoad( string_view path, string& outError )
     {
-        return std::static_pointer_cast<const UIStyleSheetAsset>( findOrLoadAsset( path, outError ) );
+        return std::static_pointer_cast<const UIStyleSheetAsset>( _cache.findOrLoadAsset( path, outError ) );
     }
 } // namespace sw
