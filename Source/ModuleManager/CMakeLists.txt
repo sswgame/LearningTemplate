@@ -16,7 +16,7 @@ file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.h
 # 개발 전용은 두 폴더다 — 핫 리로드(`LiveReload/`)와 호스트의 개발 계층(`Dev/` — `IHostDevLayer` 의 구현: 개발 도구 연결 · 리로드 구동기).
 # Shipping 은 폴더째 뺀다(파일 이름을 적은 목록이 없다). 호스트는 `build::kShipping` 이 아닐 때만 개발 계층을 만든다(빈 구현 파일 없음).
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleManager/(LiveReload|Dev)/.*\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleManager/LiveReload/" ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 add_library(ModuleManager STATIC ${MODULE_HOST_SOURCES})

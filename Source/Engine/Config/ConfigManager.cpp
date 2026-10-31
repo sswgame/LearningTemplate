@@ -2,6 +2,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/String/StringBuilder.h"
 
@@ -244,4 +245,14 @@ namespace sw
         return nullptr;
     }
 
+    ReloadOutcome ConfigManager::reloadConfigFile( string_view changedPath )
+    {
+        for ( const auto& [key, source] : _mapSource )
+        {
+            (void)key;
+            if ( source._pReload != nullptr && FileUtil::pathsEqualNormalized( source._resolvedPath, changedPath ) )
+                return source._pReload( *this, source._resolvedPath ) ? ReloadOutcome::Reloaded : ReloadOutcome::Failed;
+        }
+        return ReloadOutcome::NotTracked;
+    }
 } // namespace sw

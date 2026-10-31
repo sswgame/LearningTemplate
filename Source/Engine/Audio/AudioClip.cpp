@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetHandle.h"
@@ -367,5 +368,17 @@ namespace sw
         Entry&            entry = _mapPathToEntry[path];
         entry._status           = pClip != nullptr ? AssetLoadState::Ready : AssetLoadState::Failed;
         entry._pClip            = std::move( pClip );
+    }
+
+    bool AudioClipCache::reloadClip( const hashed_string& path )
+    {
+        shared_ptr<const AudioClipData> pClip = decodeClip( path );
+        if ( pClip == nullptr )
+        {
+            SW_LOG_ERROR( "Reload failed, keeping the previous sound: %#", path.c_str() );
+            return false;
+        }
+        storeResult( path, std::move( pClip ) );
+        return true;
     }
 } // namespace sw

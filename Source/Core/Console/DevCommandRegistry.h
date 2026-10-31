@@ -106,8 +106,9 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 개발 명령을 기능 옆 `<기능>DevCommands.cpp` 에서 등록합니다. 배포 구성은 그 이름의 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`) —
- *        본문 함수도 같은 파일에 둔다(파일을 `#if` 로 감싸지 않는다).
+ * @brief 개발 명령을 기능의 `.cpp` 에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 옆에 둔다).
+ *        배포 구성은 등록하지 않고 본문 함수를 `[[maybe_unused]]` 상수로만 붙잡는다 — 본문은 모든 구성에서 컴파일되고(썩지 않는다) 부르는 곳이 없어 배포 실행 파일에서 빠진다.
+ *        파일 이름으로 배포에서 빼지 않는다(`docs/agents/BuildConfigSwitch.md`).
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   콘솔에 치는 이름(리터럴)
  * @param pUsage  사용법 한 줄
@@ -123,6 +124,6 @@ namespace sw
 
 #else
 
-    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc ) static_assert( true, "SW_DEV_COMMAND is compiled out of Shipping" )
+    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc ) [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
 
 #endif

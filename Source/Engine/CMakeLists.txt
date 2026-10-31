@@ -57,10 +57,6 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
 endforeach()
 
-# 엔진 루프의 렌더러 몫(`EngineRendering.cpp` — 렌더 스레드 · 렌더 패킷 · 백엔드 교체)은 렌더러를 짓는 타깃에만 있다. 부르는 자리는 `build::kWithClientCode` 로 가른다(빈 구현 파일 없음).
-if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/EngineRendering\\.cpp$")
-endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)

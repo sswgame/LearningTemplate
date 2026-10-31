@@ -28,6 +28,34 @@ namespace sw
                 return false;
             }
         };
+
+        struct NetSecurityDevOnlineInternal
+        {
+            static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
+
+            [[nodiscard]] static bool ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
+            {
+                const string folder = FileUtil::joinPath( ProcessRoots::get()._derivedData.str(), NetSecurity::kDevCertificateFolder );
+                outCertificateFile  = FileUtil::joinPath( folder, NetSecurity::kDevCertificateBundleFile );
+                outPrivateKeyFile   = outCertificateFile;
+                if ( FileUtil::isRegularFile( outCertificateFile ) )
+                    return true;
+                string     certificatePem;
+                string     privateKeyPem;
+                const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
+                                      provider.createSelfSignedCertificate( "localhost", kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
+                                      FileUtil::writeTextFile( outCertificateFile, certificatePem + privateKeyPem ); // 한 번의 원자적 쓰기 — 늘 한 쌍
+                if ( bCreated == false )
+                {
+                    outError = "cannot create the development certificate in " + folder;
+                    return false;
+                }
+                SW_LOG_INFO( "Created a development TLS certificate: %#", outCertificateFile.c_str() );
+                return true;
+            }
+
+            static constexpr NetSecurityDevOptions kDevOptions{ &ensureDevCertificate };
+        };
     } // namespace
 } // namespace sw
 
@@ -116,4 +144,6 @@ namespace sw
         }
         return provider.createTLSContext( settings, outError );
     }
+
+    SW_REGISTER_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, NetSecurityDevOnlineInternal::kDevOptions );
 } // namespace sw

@@ -22,14 +22,10 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 endif()
 
 set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
-# 기능 옆 개발 전용 파일(`*DevCommands.cpp` 의 개발 명령 · 시나리오 단계)은 다른 타깃과 같은 이름 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+# 개발 전용(`Dev/` — 에디터 모듈의 리로드 그래프 등록 · 개발 도구 서비스 · 헤드리스 임포트 · 로컬라이제이션)은 다른 타깃과 같은 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+# 부르는 자리는 `build::kShipping` 으로 가르고 배포에서는 이유를 남기고 멈춘다.
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(APP_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
-endif()
-# 에디터 모듈의 개발 경로(리로드 그래프 등록 · 개발 도구 서비스 `EditorModuleManagerDevTools.cpp`, 헤드리스 임포트 · 로컬라이제이션 `EditorModuleManagerHeadless.cpp`)는
-# 배포가 짓지 않는다. 부르는 자리는 `build::kShipping` 으로 가르고 배포에서는 이유를 남기고 멈춘다(빈 구현 파일 없음).
-if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(APP_SOURCES "/Source/App/EditorModuleManager(DevTools|Headless)\\.cpp$")
 endif()
 
 sw_addExecutable(App ${APP_SOURCES})

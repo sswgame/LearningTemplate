@@ -14,6 +14,8 @@ Pick the smallest form that fits the difference. The goal is the same in all thr
 
 Rules:
 
+- No file-name switches. Never exclude a file from a configuration by its name suffix (`*DevCommands.cpp`, `*Reload.cpp`, `*Shipping.cpp`). Dev-only code that registers itself (dev commands, dev online stand-ins) stays in the feature's `.cpp`; the registration macro does not register in Shipping and holds the handler in a `[[maybe_unused]]` constant, so the body compiles everywhere and is dropped from the shipped binary. Code that needs headers or libraries Shipping does not build lives in a `Dev/` folder — the only dev-only source patterns are `Tests/` and `Dev/` (`SW_DEV_ONLY_SOURCE_PATTERNS`).
+- Do not split one class across files to make files shorter. A long file means the class holds several jobs: extract the job into its own class, or keep one file.
 - No stub implementation files. A `<Name>Shipping.cpp` / `<Name>Off.cpp` that implements the same declaration with empty bodies keeps the host calling a feature that does not exist — the dependency points the wrong way. Invert it: the feature attaches to the host, not the host to the feature.
 - Do not create a file pair for a difference of a value or a few lines — use the first two rows.
 - Never re-derive the configuration from other macros (`#if !defined( _DEBUG )` and so on). `SW_SHIPPING`, `SW_WITH_CLIENT_CODE`, `SW_WITH_SERVER_CODE` come from `cmake/Engine/BuildLayout.cmake`; `BuildInfo.h` mirrors them as constants.

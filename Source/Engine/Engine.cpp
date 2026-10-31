@@ -257,7 +257,7 @@ namespace sw
             _pSceneManager              = startupParts._pSceneManager;
             _pFontService               = startupParts._pFontService;
             _pUISystem                  = startupParts._pUISystem;
-            if constexpr ( build::kWithClientCode ) // 렌더러 몫(`EngineRendering.cpp`)은 렌더러를 짓는 타깃에만 있다
+            if constexpr ( build::kWithClientCode ) // 렌더러 몫(`Renderer/EngineRendering.cpp`)은 렌더러를 짓는 타깃에만 있다
                 bindRendererParts( startupParts );
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.

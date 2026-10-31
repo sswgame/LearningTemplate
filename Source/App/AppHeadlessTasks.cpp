@@ -48,7 +48,7 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManagerHeadless.cpp`)도 없다
+                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`Dev/EditorModuleManagerHeadless.cpp`)도 없다
                 {
                     SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
                     return TaskResult::Failed;
@@ -79,7 +79,7 @@ namespace sw
                 if ( bNoLocalizationTask )
                     return TaskResult::NotRequested;
 
-                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManagerHeadless.cpp`)도 없다
+                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`Dev/EditorModuleManagerHeadless.cpp`)도 없다
                 {
                     SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
                     return TaskResult::Failed;

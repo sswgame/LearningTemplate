@@ -116,7 +116,7 @@ namespace sw
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `EngineRendering.cpp` 이고 렌더러를 짓는 타깃에만 있습니다(전용 서버 타깃은 부르지 않는다 — `build::kWithClientCode`). */
+        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `Renderer/EngineRendering.cpp` 이고 렌더러를 짓는 타깃에만 있습니다(전용 서버 타깃은 부르지 않는다 — `build::kWithClientCode`). */
         [[nodiscard]] bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------

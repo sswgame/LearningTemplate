@@ -2,10 +2,13 @@
 
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
+
+#include "Engine/Renderer/RenderThread.h"
 
 #include <ctime>
 
@@ -40,4 +43,30 @@ namespace sw
         localTime._second = calendar._second;
         return localTime;
     }
+
+    namespace
+    {
+        /** @brief `screenshot [file]`: 다음 프레임의 화면을 PNG 로 저장합니다(파일을 주지 않으면 `Saved/Screenshots/<시각>.png`). */
+        bool runScreenshot( const vector<string>& listArgument, string& outReply )
+        {
+            if ( listArgument.size() > 1 )
+                return false;
+            string path;
+            if ( listArgument.empty() )
+                path = ScreenshotPathUtil::makeDefaultPathNow();
+            else if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
+                return true;
+            if ( path.empty() )
+            {
+                outReply = "screenshot: could not reserve a file name (see the log)";
+                return true;
+            }
+            RenderThread::requestScreenshot( path );
+            outReply = "screenshot requested: " + path;
+            return true;
+        }
+    } // namespace
+
+    SW_DEV_COMMAND( Screenshot, "screenshot", "screenshot [file]", "Save the next frame as PNG (default Saved/Screenshots/<time>.png)",
+                    &runScreenshot );
 } // namespace sw

@@ -81,4 +81,27 @@ namespace sw
         // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
         return AssetIO::readTextAsset( assetID, outText );
     }
+
+    void UITextAssetCache::reload( const AssetID& assetID, IRHIDevice* pDevice )
+    {
+        const string_view relativePath = assetID.view();
+        (void)pDevice;
+        const string key = FileUtil::normalizePath( relativePath );
+        string       text;
+        if ( readText( key, assetID, text ) == false )
+        {
+            SW_LOG_ERROR( "[UI] %# reload failed - not found, keeping the old one: %#", _pAssetLabel, relativePath );
+            return;
+        }
+        ++_parseCount;
+        string                       error;
+        const shared_ptr<const void> asset = _pParse( text, relativePath, error );
+        if ( asset == nullptr )
+        {
+            SW_LOG_ERROR( "[UI] %# reload failed, keeping the old one: %#", _pAssetLabel, error.c_str() );
+            return;
+        }
+        _mapPathToAsset[key] = asset;
+        _onReloaded.broadcast( key );
+    }
 } // namespace sw

@@ -56,6 +56,17 @@ namespace sw
                 }
             }
         };
+
+        struct LocalizationManagerInternal
+        {
+            /** @brief 두 리소스 id 가 같은 파일인지 확인합니다(구분자 · 대소문자 무시). */
+            static bool isSamePath( string_view lhs, string_view rhs )
+            {
+                // 둘 다 리소스 id 다(파일 감시 · 데이터 표 편집 · 이 매니저) - 정규화한 id 가 같은지만 본다. 예전에는 꼬리 글자로도 같다고 봐(`a/x` 와 `b/a/x`)
+                // 다른 폴더의 같은 이름 파일 저장이 엉뚱한 프로젝트를 다시 읽게 했다.
+                return lhs.empty() == false && FileUtil::normalizePath( lhs ) == FileUtil::normalizePath( rhs );
+            }
+        };
     } // namespace
 
     string LocalizationManager::normalizeLanguageCode( string_view languageCode )
@@ -879,5 +890,65 @@ namespace sw
     {
         _textRevision.fetch_add( 1, std::memory_order_relaxed );
         _onLanguageChanged.broadcast( oldLanguage, newLanguage );
+    }
+
+    ReloadOutcome LocalizationManager::reloadChangedFile( string_view changedPath )
+    {
+        string            projectPath;
+        LocalizationScope scope{ LocalizationScope::Game };
+        {
+            ScopedSharedLock<shared_mutex> lock{ _mutex };
+            for ( const MountedProject& project : _listProject )
+            {
+                for ( const string& filePath : project._listFilePath )
+                {
+                    if ( projectPath.empty() && LocalizationManagerInternal::isSamePath( filePath, changedPath ) )
+                    {
+                        projectPath = project._projectPath;
+                        scope       = project._scope;
+                    }
+                }
+            }
+        }
+        if ( projectPath.empty() )
+            return ReloadOutcome::NotTracked;
+
+        // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
+        MountedProject reloaded;
+        reloaded._scope = scope;
+        if ( readProject( AssetID{ projectPath }, reloaded ) == false )
+        {
+            SW_LOG_ERROR( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
+            return ReloadOutcome::Failed;
+        }
+        string language;
+        {
+            UniqueLock<shared_mutex> lock{ _mutex };
+            for ( MountedProject& project : _listProject )
+            {
+                if ( project._projectPath == projectPath )
+                    project = std::move( reloaded );
+            }
+            rebuildTablesLocked();
+            rebuildLookupChainLocked();
+            language = _currentLanguage;
+        }
+        SW_LOG_INFO( "Reloaded localization project '%#' (changed: %#).", projectPath.c_str(), changedPath );
+        notifyLanguageChanged( language, language );
+        return ReloadOutcome::Reloaded;
+    }
+
+    bool LocalizationManager::isProjectFile( string_view path ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _mutex };
+        for ( const MountedProject& project : _listProject )
+        {
+            for ( const string& filePath : project._listFilePath )
+            {
+                if ( LocalizationManagerInternal::isSamePath( filePath, path ) )
+                    return true;
+            }
+        }
+        return false;
     }
 } // namespace sw

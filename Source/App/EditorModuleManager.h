@@ -1,9 +1,9 @@
 /**
  * @file App/EditorModuleManager.h
  * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, RHI 교체 뒤 재초기화를 구현합니다.
- *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleManagerHeadless.cpp` 에 있습니다.
+ *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `Dev/EditorModuleManagerHeadless.cpp` 에 있습니다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
- * @note 개발 전용 함수(에디터 모듈 등록 · 개발 도구 서비스 `EditorModuleManagerDevTools.cpp`, 헤드리스 작업 `EditorModuleManagerHeadless.cpp`)는 배포가 짓지 않는다 —
+ * @note 개발 전용 함수(에디터 모듈 등록 · 개발 도구 서비스 `Dev/EditorModuleManagerDevTools.cpp`, 헤드리스 작업 `Dev/EditorModuleManagerHeadless.cpp`)는 배포가 짓지 않는다 —
  *       부르는 자리가 `build::kShipping` 으로 가른다.
  */
 #pragma once
@@ -50,7 +50,7 @@ namespace sw
         /**
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
          * @details 헤드리스 부팅(창과 RHI 없음)에서 부릅니다. 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 해제한 뒤 모듈을 언로드합니다.
-         *          Shipping 에는 에디터 모듈이 없어 실패합니다. 인스턴스 상태를 쓰지 않아 구현은 `EditorModuleManagerHeadless.cpp` 에 따로 둡니다
+         *          Shipping 에는 에디터 모듈이 없어 실패합니다. 인스턴스 상태를 쓰지 않아 구현은 `Dev/EditorModuleManagerHeadless.cpp` 에 따로 둡니다
          *          (모듈 라이브러리를 직접 올리고 내리는 의존이 인스턴스 경로와 `SmokeTest` 에 섞이지 않게).
          * @return 원본과 임포트 결과가 맞으면(임포트는 모두 성공하면) true 를 반환합니다.
          */
@@ -131,7 +131,7 @@ namespace sw
         void onBeforeDrainWorkers( DrainReason reason ) override;
 
     private:
-        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleManagerHeadless.cpp`)가 같이 씁니다. */
+        /** @brief 에디터 모듈 라이브러리의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`Dev/EditorModuleManagerHeadless.cpp`)가 같이 씁니다. */
         static const ModuleAPISymbols& getModuleSymbols();
         /** @brief 에디터를 실제로 호출할 수 있는 상태인지 확인합니다(모드가 켜져 있고 인스턴스가 살아 있음). */
         bool hasEditor() const { return _bEnableEditor == SW_TRUE && _editor != nullptr; }

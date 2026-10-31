@@ -10,9 +10,9 @@ if(SW_TARGET_TYPE STREQUAL "Client")
 	return()
 endif()
 
-# 개발 조종(`ServerDebugControl.cpp` — 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않는다. `ServerApp` 은 `build::kShipping` 이 아닐 때만 만든다(빈 구현 파일 없음).
+# 개발 전용(`Dev/` — 개발 조종 `ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않는다. `ServerApp` 은 `build::kShipping` 이 아닐 때만 만든다.
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(SERVER_SOURCES "/Source/Server/ServerDebugControl\.cpp$")
+	sw_excludeUnbuiltSources(SERVER_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
 sw_addExecutable(Server ${SERVER_SOURCES})

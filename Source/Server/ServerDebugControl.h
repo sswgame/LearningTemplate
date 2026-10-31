@@ -3,7 +3,7 @@
  * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`).
  * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
- *          개발 구성에만 있다 — 구현(`ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않고, `ServerApp` 은 `IServerDebugControl` 포인터를
+ *          개발 구성에만 있다 — 구현(`Dev/ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않고, `ServerApp` 은 `IServerDebugControl` 포인터를
  *          `build::kShipping` 이 아닐 때만 채운다(배포는 비어 있다 — 명령을 받지 않고 틱을 붙잡지 않는다). 빈 구현 파일을 두지 않는다.
  */
 #pragma once
