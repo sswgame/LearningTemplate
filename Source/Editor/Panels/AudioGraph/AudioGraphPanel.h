@@ -1,14 +1,14 @@
 /**
  * @file AudioGraphPanel.h
- * @brief 소리 그래프 창입니다(Window > Audio Graph). `*.audiograph.xml` 하나를 읽어 캔버스(노드 · 연결)와 속성 그리드로 고치고, 검사를 통과하면 저장하며, 미리 들어 봅니다.
- * @details 그래프 사본 · dirty · 고른 노드 · 편집 명령 · 미리 듣기는 `AudioGraphModel`(Model/, ImGui 없음)이 들고, 이 창은 캔버스 · 그리드 그리기와 경로 입력란만 든다.
+ * @brief 소리 그래프 창입니다(Window > Audio Graph). `*.audiograph.xml` 문서 하나를 캔버스(노드 · 연결)와 속성 그리드로 고치고, 검사를 통과하면 저장하며, 미리 들어 봅니다.
+ * @details 그래프 사본 · 고른 노드 · 편집 명령 · 미리 듣기는 `AudioGraphModel`(Model/, ImGui 없음)이 들고, 이 창은 캔버스 · 그리드 그리기만 든다.
+ *          여닫기 · dirty · 되돌리기 · 닫기 확인은 문서 기반(`EditorDocumentPanel`)이다 — 예전에는 경로 입력란과 자기 dirty 를 따로 들어 Ctrl+S · 닫기 확인 · 되돌리기가 이 창의 편집을 보지 못했다.
  */
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphModel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
@@ -30,7 +30,7 @@ namespace sw::editor
      *          에셋 핫 리로드(`IAudioService::reloadDataFile` → `AudioClipCache::reloadClip`)가 다시 굳히고, 재생 중인 소리는 옛 그래프로 끝난다.
      *          "미리 듣기" 는 저장된 파일을 2D 로 한 번 낸다(`AudioEngine::playClip`, 버스 `ui`).
      */
-    class AudioGraphPanel final : public IEditorPanel
+    class AudioGraphPanel final : public EditorDocumentPanel
     {
     public:
         /** @brief 패널 id 입니다. */
@@ -39,13 +39,19 @@ namespace sw::editor
         AudioGraphPanel();
 
         const utf8*      getPanelTitle() const override { return "Audio Graph"; }
-        bool             isToolPanel() const override { return true; }
-        void             drawContent() override;
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 34.0f ); }
+        /** @brief 검사를 통과하면 연 문서에 씁니다. 실패하면 쓰지 않고 false 입니다(사본은 남는다). */
+        [[nodiscard]] bool saveDocument() override;
+
+    protected:
+        void drawDocumentContent() override;
+        /** @brief 소리 종류 중 `*.audiograph.xml` 만 문서로 받습니다(클립은 이 창의 문서가 아니다). */
+        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.captureText(); }
+        void                applyDocumentText( string_view text ) override;
 
     private:
-        /** @brief 입력한 경로의 파일을 사본으로 읽고(`AudioGraphModel::load`) 읽었으면 캔버스를 내용에 맞춥니다. */
-        void loadGraph();
         /** @brief 저장 · 미리 듣기 · 멈춤 단추입니다. */
         void drawToolbar();
         /** @brief 노드 · 핀 · 링크를 그리고 잇기 · 넣기 · 지우기 · 옮기기를 모델에 반영합니다. */
@@ -62,12 +68,11 @@ namespace sw::editor
         void onGraphEdited( const PropertyInfo& prop );
 
     private:
-        AudioGraphModel                      _model;
-        EditorNodeGraph                      _nodeGraph;  ///< 캔버스
-        EditorPropertyGrid                   _graphGrid;  ///< 그래프 설정(출력 · 길이)의 그리드
-        EditorPropertyGrid                   _nodeGrid;   ///< 고른 노드의 그리드
-        vector<int32>                        _listLinkID; ///< 이번 프레임에 캔버스가 지운 링크 id(멤버로 두어 프레임마다 할당하지 않는다)
-        vector<int32>                        _listNodeID; ///< 이번 프레임에 캔버스가 지운 노드 id
-        fixed_string<constant::kMaxPathSize> _pathInput;  ///< 경로 입력 칸
+        AudioGraphModel    _model;
+        EditorNodeGraph    _nodeGraph;  ///< 캔버스
+        EditorPropertyGrid _graphGrid;  ///< 그래프 설정(출력 · 길이)의 그리드
+        EditorPropertyGrid _nodeGrid;   ///< 고른 노드의 그리드
+        vector<int32>      _listLinkID; ///< 이번 프레임에 캔버스가 지운 링크 id(멤버로 두어 프레임마다 할당하지 않는다)
+        vector<int32>      _listNodeID; ///< 이번 프레임에 캔버스가 지운 노드 id
     };
 } // namespace sw::editor

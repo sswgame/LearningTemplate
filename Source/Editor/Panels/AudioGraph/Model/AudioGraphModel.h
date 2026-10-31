@@ -1,11 +1,13 @@
 /**
  * @file AudioGraphModel.h
- * @brief 소리 그래프 창의 모델 — 고치는 그래프 사본 · 읽은 경로 · dirty, 고른 노드, 다음 그리기에서 위치를 정할 새 노드, 잇기 · 넣기 · 지우기 · 옮기기 · 이름 바꾸기 · 출력 고르기,
+ * @brief 소리 그래프 창의 모델 — 고치는 그래프 사본, 고른 노드, 다음 그리기에서 위치를 정할 새 노드, 잇기 · 넣기 · 지우기 · 옮기기 · 이름 바꾸기 · 출력 고르기,
  *        저장(검사 통과할 때만), 미리 듣기 재생 id. ImGui 를 모릅니다.
  * @details 패널(`AudioGraphPanel`)은 캔버스(imgui-node-editor) · 속성 그리드를 그리고 캔버스가 낸 id 를 넘기기만 한다 — 계층 · 인스펙터 `Model/` 과 같은 선이다
  *          (언리얼 MetaSounds 의 문서 그래프와 Slate 그래프 패널이 나뉜 것과 같다). 연결 규칙 · id 짓기는 `AudioGraphEditUtil` 이다.
+ *          연 문서의 경로 · dirty · 되돌리기는 패널의 문서 기반(`EditorDocumentPanel`)이 든다 — 모델은 고친 일을 `takeEdit` 으로 넘길 뿐이다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -16,11 +18,22 @@
 
 namespace sw
 {
+    class AbsolutePath;
     class AudioEngine;
 } // namespace sw
 
 namespace sw::editor
 {
+    /**
+     * @struct AudioGraphEdit
+     * @brief 모델이 사본을 고친 일 하나입니다. 패널이 되돌리기 이름과 합칠 키로 문서 기반에 넘긴다(`EditorDocumentPanel::notifyDocumentEdited`).
+     */
+    struct AudioGraphEdit
+    {
+        const utf8* _pLabel{ nullptr };       ///< 되돌리기 이름. nullptr 이면 고친 것이 없다
+        const utf8* _pCoalesceKey{ nullptr }; ///< 이어진 같은 편집(노드 끌기 · 값 끌기)을 한 단계로 합치는 키. nullptr 이면 합치지 않는다
+    };
+
     /**
      * @class AudioGraphModel
      * @brief 소리 그래프 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -34,28 +47,33 @@ namespace sw::editor
         AudioGraphModel();
 
         // ------------------------------------------------------------------------------
-        // 1) 읽기 · 쓰기 · 미리 듣기
+        // 1) 읽기 · 쓰기 · 되돌리기 · 미리 듣기
         // ------------------------------------------------------------------------------
         /**
-         * @brief @p path 의 파일을 사본으로 읽습니다. 고른 노드 · 놓을 노드 · dirty 를 함께 비운다. 위치가 없는 파일은 처음 배치를 합니다.
-         * @return 읽었으면 true 입니다(캔버스가 내용에 맞춘다). 읽지 못하면 사본 · 경로를 비웁니다(읽기가 오류를 남긴다).
+         * @brief @p path(리소스 id)의 파일을 사본으로 읽습니다. 고른 노드 · 놓을 노드 · 쌓인 편집을 함께 비운다. 위치가 없는 파일은 처음 배치를 합니다.
+         * @return 읽었으면 true 입니다. 읽지 못하면 사본을 비웁니다(읽기가 오류를 남긴다).
          */
-        bool load( string_view path );
-        /** @brief 검사를 통과하면 읽은 경로에 씁니다. 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다). */
-        void save();
-        /** @brief 저장된 파일을 2D 로 한 번 냅니다(버스 `ui`). 앞의 미리 듣기는 멈춘다. */
-        void playPreview( AudioEngine& engine );
+        [[nodiscard]] bool load( string_view path );
+        /** @brief 사본을 되돌리기 글(`captureText`)로 바꿉니다. 고른 노드 · 놓을 노드를 풉니다. 읽지 못하면 오류를 남기고 빈 그래프로 둡니다(이 모델이 쓴 글이라 결함이다). */
+        void restore( string_view xmlText );
+        /** @brief 되돌리기 · dirty 판정에 쓰는 사본의 글입니다. */
+        string captureText() const { return _editGraph.toXMLText(); }
+        /** @brief 검사를 통과하면 @p diskPath 에 쓰고 true 입니다. 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다). */
+        [[nodiscard]] bool save( const AbsolutePath& diskPath ) const;
+        /** @brief 저장된 @p path 의 파일을 2D 로 한 번 냅니다(버스 `ui`). 앞의 미리 듣기는 멈춘다. */
+        void playPreview( AudioEngine& engine, const hashed_string& path );
         void stopPreview( AudioEngine& engine );
         /** @brief 미리 듣기가 끝났으면 재생 id 를 잊습니다(멈춤 단추가 끝난 소리를 가리키지 않는다). 그리기마다 부릅니다. */
         void refreshPreview( const AudioEngine& engine );
         bool isPreviewPlaying() const { return _previewID != 0; }
 
-        bool                 hasGraph() const { return _editPath.empty() == false; }
-        bool                 isDirty() const { return _bEditDirty; }
         const AudioGraphDef& getGraph() const { return _editGraph; }
         /** @brief 속성 그리드가 바로 고치는 사본입니다. 고치면 `markEdited` 를 부릅니다. */
         AudioGraphDef& editGraph() { return _editGraph; }
-        void           markEdited() { _bEditDirty = true; }
+        /** @brief 속성 그리드가 사본을 고쳤습니다. */
+        void markEdited() { noteEdit( "Edit Audio Graph", "audiograph.values" ); }
+        /** @brief 지난번 뒤로 고친 일이 있으면 @p outEdit 에 담고 비운 뒤 true 입니다. 패널이 그리기마다 한 번 부른다. */
+        [[nodiscard]] bool takeEdit( AudioGraphEdit& outEdit );
 
         // ------------------------------------------------------------------------------
         // 2) 캔버스 편집 — 캔버스가 낸 id 를 받는다
@@ -94,13 +112,17 @@ namespace sw::editor
         const vector<uint32>& getProcessingOrder() const { return _listOrder; }
 
     private:
+        /** @brief 고친 일을 쌓습니다. 한 그리기 안의 여러 편집은 마지막 이름 하나로 넘긴다(되돌리기 한 단계). */
+        void noteEdit( const utf8* pLabel, const utf8* pCoalesceKey = nullptr ) { _pendingEdit = AudioGraphEdit{ pLabel, pCoalesceKey }; }
+        /** @brief 노드 번호로 든 고름 · 놓을 노드를 풉니다(그래프를 통째로 바꾸거나 노드를 지웠을 때). */
+        void clearNodeRefs();
+
         AudioGraphDef  _editGraph;         ///< 고치는 중인 그래프 사본(파일에서 읽음)
         vector<uint32> _listOrder;         ///< 처리 순서 버퍼
-        hashed_string  _editPath;          ///< 사본을 읽은 리소스 경로(저장할 곳). 비면 연 파일이 없다.
         AudioPlayingID _previewID;         ///< 미리 듣기의 재생 id 다(0 = 없음).
+        AudioGraphEdit _pendingEdit;       ///< 패널이 아직 가져가지 않은 편집
         int32          _selectedNode;      ///< 고른 노드 번호(-1 = 없음)
         int32          _pendingPlacedNode; ///< 다음 캔버스 프레임에서 위치를 정할 새 노드 번호(-1 = 없음)
         int32          _placingNode;       ///< 이번 캔버스 프레임에 위치를 정하는 노드 번호(-1 = 없음). `beginCanvasFrame` 만 바꾼다
-        bool           _bEditDirty;        ///< 고친 뒤 아직 저장하지 않았다.
     };
 } // namespace sw::editor

@@ -3,59 +3,77 @@
 #include "Editor/Panels/AudioGraph/Model/AudioGraphModel.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/FileSystem/AssetPaths.h"
 
+SW_LOG_CALLER( "AudioGraphModel" );
 namespace sw::editor
 {
     AudioGraphModel::AudioGraphModel()
         : _editGraph{}
         , _listOrder{}
-        , _editPath{}
         , _previewID{ 0 }
+        , _pendingEdit{}
         , _selectedNode{ -1 }
         , _pendingPlacedNode{ -1 }
         , _placingNode{ -1 }
-        , _bEditDirty{ false }
     {
     }
 
-    bool AudioGraphModel::load( string_view path )
+    void AudioGraphModel::clearNodeRefs()
     {
         _selectedNode      = -1;
         _pendingPlacedNode = -1;
         _placingNode       = -1;
-        _bEditDirty        = false;
+    }
+
+    bool AudioGraphModel::load( string_view path )
+    {
+        clearNodeRefs();
+        _pendingEdit = AudioGraphEdit{};
         if ( _editGraph.loadFromAsset( AssetID{ path } ) == false )
         {
             _editGraph = AudioGraphDef{};
-            _editPath  = hashed_string{};
             return false;
         }
-        _editPath = hashed_string( path );
         // 손으로 쓴 파일은 위치가 없다 — 처리 깊이로 한 번 놓는다. 놓기는 고침이 아니다(저장할 것이 생기지 않는다).
         (void)AudioGraphEditUtil::layoutIfUnplaced( _editGraph ); // 이미 놓인 파일이면 아무것도 하지 않는다
         return true;
     }
 
-    void AudioGraphModel::save()
+    void AudioGraphModel::restore( string_view xmlText )
     {
-        // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다).
-        const std::optional<AbsolutePath> graphFile = editor::getSubsystem<AssetPaths>().toDiskPath( _editPath.view() );
-        if ( graphFile.has_value() == false || _editGraph.saveToAsset( *graphFile ) )
-            _bEditDirty = false;
+        clearNodeRefs();
+        AudioGraphDef restored;
+        if ( restored.loadFromXMLText( xmlText, "<audio graph undo>" ) == false )
+            SW_LOG_ERROR( "Audio graph undo snapshot could not be read - the graph is cleared" );
+        _editGraph = std::move( restored );
     }
 
-    void AudioGraphModel::playPreview( AudioEngine& engine )
+    bool AudioGraphModel::save( const AbsolutePath& diskPath ) const
+    {
+        return _editGraph.saveToAsset( diskPath );
+    }
+
+    bool AudioGraphModel::takeEdit( AudioGraphEdit& outEdit )
+    {
+        if ( _pendingEdit._pLabel == nullptr )
+            return false;
+        outEdit      = _pendingEdit;
+        _pendingEdit = AudioGraphEdit{};
+        return true;
+    }
+
+    void AudioGraphModel::playPreview( AudioEngine& engine, const hashed_string& path )
     {
         if ( _previewID != 0 )
             engine.stop( _previewID, 0.0f );
-        _previewID = engine.playClip( _editPath, hashed_string( AudioBusNames::kUI ), AudioClipPlayParams{} );
+        _previewID = engine.playClip( path, hashed_string( AudioBusNames::kUI ), AudioClipPlayParams{} );
     }
 
     void AudioGraphModel::stopPreview( AudioEngine& engine )
@@ -92,7 +110,7 @@ namespace sw::editor
         const bool bDecoded  = AudioGraphEditUtil::tryDecodePinID( _editGraph, fromPin, fromIndex, bInput ) && AudioGraphEditUtil::tryDecodePinID( _editGraph, toPin, toIndex, bInput );
         if ( bDecoded == false || AudioGraphEditUtil::connect( _editGraph, fromIndex, toIndex ) == false )
             return false;
-        _bEditDirty = true;
+        noteEdit( "Connect Audio Graph Nodes" );
         return true;
     }
 
@@ -103,7 +121,7 @@ namespace sw::editor
             return false;
         _pendingPlacedNode = static_cast<int32>( newIndex );
         _selectedNode      = static_cast<int32>( newIndex );
-        _bEditDirty        = true;
+        noteEdit( "Add Audio Graph Node" );
         return true;
     }
 
@@ -116,7 +134,7 @@ namespace sw::editor
             uint32 readerIndex = 0;
             uint32 inputSlot   = 0;
             if ( AudioGraphEditUtil::tryDecodeLinkID( _editGraph, linkID, readerIndex, inputSlot ) && AudioGraphEditUtil::disconnect( _editGraph, readerIndex, inputSlot ) )
-                _bEditDirty = true;
+                noteEdit( "Delete Audio Graph Link" );
         }
         VectorUtil::sort( inoutListNodeID, std::greater<int32>{} );
         for ( const int32 nodeID : inoutListNodeID )
@@ -125,10 +143,8 @@ namespace sw::editor
             if ( AudioGraphEditUtil::tryDecodeNodeID( _editGraph, nodeID, nodeIndex ) && AudioGraphEditUtil::removeNode( _editGraph, nodeIndex ) )
             {
                 // 노드를 지우면 뒤 번호가 당겨진다 — 번호로 든 고름 · 놓을 노드가 다른 노드를 가리키지 않게 푼다.
-                _bEditDirty        = true;
-                _selectedNode      = -1;
-                _pendingPlacedNode = -1;
-                _placingNode       = -1;
+                noteEdit( "Delete Audio Graph Node" );
+                clearNodeRefs();
             }
         }
     }
@@ -141,8 +157,8 @@ namespace sw::editor
         const bool bMoved = MathUtil::abs( position._x - stored._x ) > kMoveEpsilon || MathUtil::abs( position._y - stored._y ) > kMoveEpsilon;
         if ( bMoved == false )
             return;
-        stored      = position;
-        _bEditDirty = true;
+        stored = position;
+        noteEdit( "Move Audio Graph Nodes", "audiograph.move" );
     }
 
     void AudioGraphModel::selectNodeByID( int32 nodeID )
@@ -164,7 +180,7 @@ namespace sw::editor
         if ( pNode == nullptr )
             return;
         _editGraph._output = pNode->_name;
-        _bEditDirty        = true;
+        noteEdit( "Set Audio Graph Output" );
     }
 
     void AudioGraphModel::followSelectedRename( const hashed_string& previousName )

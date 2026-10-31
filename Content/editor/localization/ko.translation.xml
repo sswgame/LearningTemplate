@@ -521,8 +521,6 @@
 		<entry key="EditorAudioGraph.NoGraph"
 		       text="편집할 오디오 그래프(.audiograph.json)를 여세요"
 		       sourceHash="25add86e1f44eef3" />
-		<entry key="EditorAudioGraph.Open" text="열기" sourceHash="1f7698c061c208c9" />
-		<entry key="EditorAudioGraph.PathHint" text="오디오 그래프 리소스 id" sourceHash="4dd40b179c2fed20" />
 		<entry key="EditorAudioGraph.Preview" text="미리 듣기" sourceHash="417b90913e05bc17" />
 		<entry key="EditorAudioGraph.PreviewTip"
 		       text="에디터 오디오 장치로 그래프를 재생합니다"

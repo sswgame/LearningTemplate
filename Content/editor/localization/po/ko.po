@@ -1188,16 +1188,6 @@ msgid "Open an audio graph (.audiograph.json) to edit it"
 msgstr "편집할 오디오 그래프(.audiograph.json)를 여세요"
 
 #: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
-msgctxt "EditorAudioGraph.Open"
-msgid "Open"
-msgstr "열기"
-
-#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
-msgctxt "EditorAudioGraph.PathHint"
-msgid "Audio graph resource id"
-msgstr "오디오 그래프 리소스 id"
-
-#: Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp
 msgctxt "EditorAudioGraph.Preview"
 msgid "Preview"
 msgstr "미리 듣기"

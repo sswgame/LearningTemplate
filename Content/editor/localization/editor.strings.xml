@@ -1245,16 +1245,6 @@
 				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorAudioGraph.Open" source="Open">
-			<origins>
-				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorAudioGraph.PathHint" source="Audio graph resource id">
-			<origins>
-				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorAudioGraph.Preview" source="Preview">
 			<origins>
 				<item>Source/Editor/Panels/AudioGraph/AudioGraphPanel.cpp</item>

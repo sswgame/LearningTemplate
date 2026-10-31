@@ -2,7 +2,9 @@
 
 #include "Editor/Panels/AudioGraph/AudioGraphPanel.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
@@ -17,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/AudioGraph/Model/AudioGraphEditUtil.h"
 
+#include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
 #include "Engine/Audio/IAudioService.h"
@@ -51,21 +54,46 @@ namespace sw::editor
     namespace ed = ax::NodeEditor;
 
     AudioGraphPanel::AudioGraphPanel()
-        : IEditorPanel( false )
+        : EditorDocumentPanel( EditorAssetType{ AudioClipData::kAssetType }, false )
         , _model{}
         , _nodeGraph{}
         , _graphGrid{}
         , _nodeGrid{}
         , _listLinkID{}
         , _listNodeID{}
-        , _pathInput{}
     {
     }
 
-    void AudioGraphPanel::loadGraph()
+    bool AudioGraphPanel::acceptsDocumentPath( string_view assetPath ) const
     {
-        if ( _model.load( string_view{ _pathInput.c_str() } ) )
-            _nodeGraph.requestContentFit();
+        return StringUtil::endsWith( assetPath, AudioGraphDef::kExtension );
+    }
+
+    ToolAssetLoadResult AudioGraphPanel::loadDocument()
+    {
+        const string path = acceptDocumentToLoad();
+        if ( path.empty() )
+            return ToolAssetLoadResult::Missing;
+        // 새 그래프(없는 파일)를 만드는 길은 없다 — 고를 수 있는 것은 있는 파일뿐이라 읽지 못하면 망가진 파일이다(저장을 막는다).
+        if ( _model.load( path ) == false )
+            return ToolAssetLoadResult::Malformed;
+        _nodeGraph.requestContentFit();
+        return ToolAssetLoadResult::Loaded;
+    }
+
+    void AudioGraphPanel::applyDocumentText( string_view text )
+    {
+        _model.restore( text );
+        _nodeGraph.requestContentFit(); // 되돌린 위치를 캔버스에 다시 넣는다
+    }
+
+    bool AudioGraphPanel::saveDocument()
+    {
+        const std::optional<AbsolutePath> diskPath = getDocumentDiskPath();
+        if ( diskPath.has_value() == false || _model.save( *diskPath ) == false )
+            return false;
+        syncDocumentUndoBaseline();
+        return true;
     }
 
     void AudioGraphPanel::onGraphEdited( const PropertyInfo& /*prop*/ )
@@ -85,9 +113,9 @@ namespace sw::editor
 
     void AudioGraphPanel::drawToolbar()
     {
-        ImGui::BeginDisabled( _model.isDirty() == false );
+        ImGui::BeginDisabled( isDocumentDirty() == false || canSaveDocument() == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Save" ) ) )
-            _model.save();
+            (void)saveDocumentAndClearDirty(); // 검사 실패는 그래프 저장이 오류로 알린다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "SaveTip" ) );
 
@@ -96,9 +124,9 @@ namespace sw::editor
         if ( bAudioReady )
             _model.refreshPreview( audio.getEngine() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) );
-        ImGui::BeginDisabled( bAudioReady == false || _model.isDirty() );
+        ImGui::BeginDisabled( bAudioReady == false || isDocumentDirty() );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Preview" ) ) )
-            _model.playPreview( audio.getEngine() );
+            _model.playPreview( audio.getEngine(), hashed_string( getLoadedAssetPath() ) );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioGraph", "PreviewTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) );
@@ -106,7 +134,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "StopPreview" ) ) )
             _model.stopPreview( audio.getEngine() );
         ImGui::EndDisabled();
-        if ( _model.isDirty() )
+        if ( isDocumentDirty() )
         {
             ImGui::SameLine();
             EditorThemeUtil::textMuted( SW_LOCKEY( "EditorAudioGraph", "Unsaved" ) );
@@ -290,14 +318,12 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    void AudioGraphPanel::drawContent()
+    void AudioGraphPanel::drawDocumentContent()
     {
-        EditorChrome::setNextItemWidthColumns( -16.0f );
-        (void)ImGui::InputTextWithHint( "##AudioGraphPath", SW_LOCKEY( "EditorAudioGraph", "PathHint" ), _pathInput.data(), _pathInput.capacity() );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioGraph", "Open" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EditorAudioGraph", "Open" ) ) )
-            loadGraph();
-        if ( _model.hasGraph() == false )
+        updateFocusedDocument();
+        ensureDocumentLoaded();
+        drawDocumentOpenBar( kPanelID );
+        if ( getLoadedAssetPath().empty() || isDocumentLoadFailed() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioGraph", "NoGraph" ) );
             return;
@@ -307,6 +333,10 @@ namespace sw::editor
         drawCanvas( canvasWidth );
         ImGui::SameLine();
         drawInspector();
+        // 이번 그리기에서 캔버스 · 그리드가 고친 일을 문서 기반에 넘긴다 — 되돌리기 단계와 dirty 가 여기서 선다.
+        AudioGraphEdit edit;
+        if ( _model.takeEdit( edit ) )
+            notifyDocumentEdited( edit._pLabel, edit._pCoalesceKey != nullptr ? string_view{ edit._pCoalesceKey } : string_view{} );
     }
 
     SW_EDITOR_PANEL( AudioGraphPanel, AudioGraphPanel::kPanelID, EditorPanelCategory::Tool, 2102 );
