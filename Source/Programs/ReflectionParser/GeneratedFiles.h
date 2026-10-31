@@ -1,8 +1,8 @@
 /**
  * @file GeneratedFiles.h
  * @brief 입력 헤더 하나가 만드는 산출물(.gen.cpp · .gen.h · 스탬프)의 경로 · 쓰기 · 증분 판정입니다.
- * @details "내용이 같으면 쓰지 않기"(.gen.cpp · .gen.h · FlagOps 우산)와 머리말의 원본 경로 읽기(증분 판정 · 이름 충돌 검사)가
- *          여기 한 벌입니다 — 벌마다 두면 공백을 다르게 자르는 식으로 어긋납니다.
+ * @details "내용이 같으면 쓰지 않기"(.gen.cpp · .gen.h · FlagOps 우산)와 스탬프 읽기 · 쓰기(증분 판정 · 이름 충돌 검사 · 대상 목록)가
+ *          여기 한 벌입니다. 입력 하나에 대해 알아야 할 사실(원본 경로 · 타입 · Flags 여부)은 스탬프에 적고, 생성 글을 다시 읽어 추측하지 않습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -41,6 +41,21 @@ namespace sw
         string _path;      /**< 절대 경로(슬래시) */
         uint64 _writeTime; /**< 본 쓰기 시각. 이번 실행이 시작된 뒤에 바뀐 것은 0 — 다음 실행이 다시 본다 */
     };
+
+    /**
+     * @brief 입력 하나의 스탬프(`<.gen.cpp>.stamp`) 한 장 - 마지막으로 성공한 생성이 그 입력에 대해 안 사실입니다.
+     * @details 줄 꼴: 첫 줄 원본 경로, `input <시각>`, `flags`(ENUM(Flags) 가 있으면), `type <FQN>`(타입 · 열거형마다), `dep <시각> <경로>`.
+     *          FlagOps 우산 · `ReflectedTypes.list` 는 이 사실만 읽는다 - 예전에는 생성 글에서 표식 글자(`IsBitFlagEnum`)를 찾았다.
+     *          스탬프가 없으면 산출물은 자리 표시자다(CMake 가 자리 표시자를 심을 때 스탬프를 지운다).
+     */
+    struct GeneratedStamp
+    {
+        string                  _sourcePath;
+        vector<string>          _listTypeFqn;
+        vector<StampDependency> _listDependency;
+        uint64                  _inputWriteTime{ 0 };
+        bool                    _bHasBitFlagEnum{ false };
+    };
 } // namespace sw
 
 namespace sw
@@ -57,15 +72,15 @@ namespace sw
         [[nodiscard]] static bool writeIfChanged( const string& path, const string_view content );
 
         /**
-         * @brief 스탬프를 씁니다. 내용은 원본 경로 한 줄과 `input <쓰기 시각>` 한 줄입니다.
-         * @details `inputWriteTime` 은 **파싱하려고 읽기 전에** 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
+         * @brief 스탬프를 씁니다(`GeneratedStamp` 의 줄 꼴).
+         * @details `_inputWriteTime` 은 **파싱하려고 읽기 전에** 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
          *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
          *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
          */
-        [[nodiscard]] static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency );
+        [[nodiscard]] static bool writeStamp( const string& stampPath, const GeneratedStamp& stamp );
 
-        /** @brief 스탬프에 적힌 의존(`dep` 줄)의 경로를 `outListPath` 에 더합니다. 스탬프가 없거나 시각이 없는 꼴이면 false 입니다. depfile 을 모을 때 씁니다. */
-        [[nodiscard]] static bool readStampDependencies( const string& stampPath, vector<string>& outListPath );
+        /** @brief 스탬프를 읽습니다. 없거나 시각이 없는 꼴이면 false 입니다(그 입력은 아직 생성되지 않았다). */
+        [[nodiscard]] static bool readStamp( const string& stampPath, GeneratedStamp& outStamp );
 
         /**
          * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.
@@ -76,9 +91,6 @@ namespace sw
 
         /** @brief 파일의 마지막 쓰기 시각(플랫폼 단위 그대로)입니다. 없으면 0 입니다. 스탬프에 적는 값과 같은 단위입니다. */
         static uint64 getWriteTime( string_view path );
-
-        /** @brief 산출물 머리말(`// Source: …`)에 적힌 원본 경로입니다. 없으면 빈 뷰입니다. */
-        static string_view findRecordedSourcePath( const string_view generatedText, const ParserConfig& config );
 
         /** @brief CMake 가 구성 때 심어 둔 빈 자리 표시자(또는 등록이 하나도 없는 파서 산출물)인지 봅니다. */
         static bool isPlaceholder( const string_view generatedText, const ParserConfig& config );

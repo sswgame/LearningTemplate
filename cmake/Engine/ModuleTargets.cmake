@@ -55,10 +55,11 @@ endfunction()
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
 #   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
 #   NO_REGISTRY         동적 모듈 레지스트리에 넣지 않는다 — App 이 `Bin/Modules` 에서 올리지 않는 게임 팩(`sw_addGameModule`, 활성 게임이 아닌 것)
-#   MODULE_NAME         매니페스트 · 산출물 · ABI 스탬프의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
+#   MODULE_NAME         매니페스트 · 산출물 · ABI 스탬프 · 리플렉션 타입의 모듈 이름(기본 타깃 이름) — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame` 이다
+#   CONTENT_OWNER       콘텐츠 모듈 검사에서 이 모듈 타입의 주인(기본 MODULE_NAME) — 게임은 이름이 모두 SWGame 이라 `game:<폴더>` 로 가른다
 # ------------------------------------------------------------------------------
 function(sw_addModuleLibrary TARGET_NAME)
-	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE;MODULE_NAME"
+	cmake_parse_arguments(ARG "NO_REFLECTION;NO_REGISTRY" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE;MODULE_NAME;CONTENT_OWNER"
 		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;REFLECTION_HEADERS" ${ARGN})
 
 	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
@@ -71,6 +72,9 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 	if(NOT ARG_MODULE_NAME)
 		set(ARG_MODULE_NAME ${TARGET_NAME})
+	endif()
+	if(NOT ARG_CONTENT_OWNER)
+		set(ARG_CONTENT_OWNER ${ARG_MODULE_NAME})
 	endif()
 	# 게임 팩끼리 PCH 하나(`sw_game_pch`)를 나눠 쓴다 — 명령줄 정의가 같아야 하므로 Dev · clang-cl · PCH 켬일 때만(키트의 `sw_kit_pch` 와 같은 장치).
 	set(bShareGamePCH OFF)
@@ -163,6 +167,8 @@ function(sw_addModuleLibrary TARGET_NAME)
 			set(listReflectionOption MODULE_LOCAL)
 		endif()
 		sw_addReflectionStep(${TARGET_NAME} ${listReflectionOption}
+			MODULE ${ARG_MODULE_NAME}
+			CONTENT_OWNER ${ARG_CONTENT_OWNER}
 			HEADERS ${ARG_REFLECTION_HEADERS}
 			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 			EXCLUDE_REGEX "${ARG_REFLECTION_EXCLUDE}"
@@ -360,6 +366,7 @@ function(sw_addGameModule MODULE_NAME)
 		UNITY_BATCH 8
 		REFLECTION_EXCLUDE "/Editor/"
 		MODULE_NAME ${MODULE_NAME}
+		CONTENT_OWNER "game:${gameName}"
 		${listRegistryOption}
 	)
 

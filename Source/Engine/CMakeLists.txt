@@ -286,11 +286,13 @@ sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources})
 if(swUnbuiltFolderRegex)
 	# 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
 	sw_addReflectionStep(Engine
+		MODULE Engine
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 		EXCLUDE_REGEX "${swUnbuiltFolderRegex}"
 	)
 else()
 	sw_addReflectionStep(Engine
+		MODULE Engine
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	)
 endif()

@@ -25,13 +25,18 @@ endfunction()
 # HEADERS / INCLUDES / OUTPUT_DIR. .gen.cpp는 Unity 배치에서 제외 (ODR)
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
 # MODULE_LOCAL: 이 타깃의 타입을 다른 모듈이 링크하지 않는다(게임 모듈). 실행 파일 타깃은 저절로 이렇게 본다.
+# MODULE(필수): 타입이 오르는 런타임 모듈 이름 — 런타임이 이 이름으로 타입을 올리고 내린다. 경로 글자로 추측하지 않는다(타입 → 모듈 판정은 여기 하나).
+# CONTENT_OWNER: 콘텐츠 모듈 검사(`sw_addContentModuleCheck`)에서 이 타입들의 주인 — 비우면 모든 호스트가 가진 것(엔진 · 실행 파일), 게임은 `game:<폴더>`.
 # ------------------------------------------------------------------------------
 function(sw_addReflectionStep TARGET_NAME)
-	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES" ${ARGN})
 
 	sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
 	if(swSkip)
 		return()
+	endif()
+	if(NOT ARG_MODULE)
+		message(FATAL_ERROR "[Reflection] sw_addReflectionStep(${TARGET_NAME}): MODULE <런타임 모듈 이름> 이 없다 — 타입의 모듈은 부르는 쪽이 정한다")
 	endif()
 
 	if(NOT ARG_OUTPUT_DIR)
@@ -77,9 +82,7 @@ function(sw_addReflectionStep TARGET_NAME)
 	list(APPEND parserArgs "--annotation-meta" "${swAnnotationMeta}")
 	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
 
-	# 모듈 판별을 소스 루트 기준 상대 경로로 하게 한다. 절대 경로로 매칭하면
-	# 리포지토리를 담은 상위 폴더 이름(.../AppData/..., D:/Games/... 등)에 걸려 오분류된다.
-	list(APPEND parserArgs "--source-root" "${CMAKE_SOURCE_DIR}/Source")
+	list(APPEND parserArgs "--module" "${ARG_MODULE}")
 
 	# 실행 파일과 게임 모듈의 타입은 모듈 경계를 넘지 않는다. 그래서 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
 	# 그 밖의 라이브러리(Base · 키트, STATIC 배포 포함)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
@@ -151,6 +154,10 @@ function(sw_addReflectionStep TARGET_NAME)
 
 	set(swFlagOpsHeader "${ARG_OUTPUT_DIR}/FlagOps.gen.h")
 	list(APPEND generatedFiles "${swFlagOpsHeader}")
+	# 대상의 타입 목록(`<FQN>\t<모듈>`) — 콘텐츠 모듈 검사가 읽는다. 파서가 실행마다 스탬프에서 다시 모아 쓴다.
+	set(swReflectedTypesList "${ARG_OUTPUT_DIR}/${SW_FILE_REFLECTED_TYPES_LIST}")
+	list(APPEND generatedFiles "${swReflectedTypesList}")
+	set_property(GLOBAL APPEND PROPERTY SW_REFLECTED_TYPE_LISTS "${ARG_CONTENT_OWNER}|${TARGET_NAME}|${swReflectedTypesList}")
 
 	if(NOT EXISTS "${swFlagOpsHeader}")
 		file(WRITE "${swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
@@ -279,6 +286,7 @@ function(sw_addReflectBuiltinsGen TARGET_NAME)
 		COMMAND "$<TARGET_FILE:ReflectionParser>"
 		"--builtins" "${swReflectBuiltins}"
 		"--emit-templates" "${swEmitTemplatesDir}"
+		"--module" "${TARGET_NAME}"
 		"--emit-builtins-gen" "${genFile}"
 		COMMAND ${CMAKE_COMMAND} -E touch "${swBuiltinStamp}"
 		DEPENDS ReflectionParser "${swReflectBuiltins}" ${swBuiltinTpls}
@@ -294,4 +302,44 @@ function(sw_addReflectBuiltinsGen TARGET_NAME)
 	target_include_directories(${TARGET_NAME} PRIVATE "${outDir}")
 	add_dependencies(${TARGET_NAME} ReflectionParser)
 	message(VERBOSE "[Reflection] Builtins TypeRegistrar gen -> ${genFile}")
+endfunction()
+
+# ------------------------------------------------------------------------------
+# 3) sw_addContentModuleCheck — 콘텐츠(씬 · 프리팹)가 쓰는 타입의 모듈을 그 도메인이 가지는지 빌드 단계에서 본다
+# 타입 → 모듈은 대상마다 파서가 쓴 `ReflectedTypes.list` 만 읽는다(예전에는 configure 가 헤더를 정규식으로 훑어 주석 · 템플릿의 REFLECT 도 셌다).
+# 모든 리플렉션 단계가 선 뒤(루트 CMakeLists 끝)에 한 번 부른다. 입력 목록은 `<주인>|<타깃>|<목록 경로>` 를 줄마다 적은 파일이다.
+# ------------------------------------------------------------------------------
+function(sw_addContentModuleCheck)
+	get_property(listEntry GLOBAL PROPERTY SW_REFLECTED_TYPE_LISTS)
+	if(NOT listEntry)
+		return()
+	endif()
+	set(listInputLine "")
+	set(listTypeList "")
+	set(listGenTarget "")
+	foreach(entry IN LISTS listEntry)
+		string(REPLACE "|" ";" entryParts "${entry}")
+		list(GET entryParts 0 owner)
+		list(GET entryParts 1 target)
+		list(GET entryParts 2 typeList)
+		list(APPEND listInputLine "${owner}\t${typeList}")
+		list(APPEND listTypeList "${typeList}")
+		list(APPEND listGenTarget "${target}_ReflectionGen")
+	endforeach()
+	set(swInputs "${CMAKE_BINARY_DIR}/generated/ContentModuleInputs.list")
+	string(REPLACE ";" "\n" swInputText "${listInputLine}")
+	file(WRITE "${swInputs}.in" "${swInputText}\n")
+	configure_file("${swInputs}.in" "${swInputs}" COPYONLY)
+	set(swStamp "${CMAKE_BINARY_DIR}/generated/ContentModules.stamp")
+	add_custom_command(
+		OUTPUT "${swStamp}"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/ContentModules.py" --inputs "${swInputs}" --stamp "${swStamp}"
+		DEPENDS ${listTypeList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/ContentModules.py"
+		COMMENT "[Reflection] Checking that content uses only modules its domain has"
+		VERBATIM
+	)
+	# 콘텐츠를 고친 뒤에는 목록이 바뀌거나 다시 구성할 때 본다(씬마다 의존을 걸면 저장할 때마다 검사가 돈다 - 예전 configure 검사와 같은 범위).
+	add_custom_target(ContentModuleCheck ALL DEPENDS "${swStamp}")
+	add_dependencies(ContentModuleCheck ${listGenTarget})
+	set_target_properties(ContentModuleCheck PROPERTIES FOLDER "Reflection")
 endfunction()

@@ -53,6 +53,8 @@ namespace sw::config
     inline constexpr const utf8* kFileTplBuiltinFooter    = "@SW_FILE_TPL_BUILTIN_FOOTER@";
     inline constexpr const utf8* kFileTplBuiltinHeader    = "@SW_FILE_TPL_BUILTIN_HEADER@";
     inline constexpr const utf8* kFileTplBuiltinRegistrar = "@SW_FILE_TPL_BUILTIN_REGISTRAR@";
+    /** @brief 리플렉션 대상마다 파서가 쓰는 타입 목록(`<FQN>\t<모듈>` 줄)입니다 — 콘텐츠 모듈 검사가 읽는다. */
+    inline constexpr const utf8* kFileReflectedTypesList = "@SW_FILE_REFLECTED_TYPES_LIST@";
 
     // -------------------------------------------------------------------------
     // 6) 동적 모듈 타겟 이름

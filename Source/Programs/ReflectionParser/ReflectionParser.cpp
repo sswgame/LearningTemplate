@@ -121,7 +121,7 @@ int32 main( int32 argc, utf8* argv[] )
 
     // ReflectBuiltins.gen.cpp 전용 모드 — clang 을 부르지 않으므로 설정은 기본값이어도 된다.
     if ( options.isBuiltinsGenMode() )
-        return sw::emitReflectBuiltinsGen( options._builtinsPath, options._emitBuiltinsGenPath, session ) ? 0 : 1;
+        return sw::emitReflectBuiltinsGen( options._builtinsPath, options._emitBuiltinsGenPath, options._moduleName, session ) ? 0 : 1;
 
     if ( bConfigLoaded == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;

@@ -338,6 +338,8 @@ namespace sw
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
+        if ( writeReflectedTypesList() == false )
+            ++errorCount;
         if ( writeFixedSchemaList() == false )
             ++errorCount;
         if ( writeDepfile() == false )
@@ -479,7 +481,6 @@ namespace sw
     bool ReflectionPipeline::writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
                                            const vector<StampDependency>& listDependency ) const
     {
-        const ParserConfig& config = _pSession->_config;
         FixedCodecGenerator fixedCodec( parsed, inputFile );
         const bool          bFixedPlanned = fixedCodec.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
@@ -490,7 +491,7 @@ namespace sw
             return false;
         }
 
-        const CodeGenerator generator( parsed, fixedCodec, inputFile, *_pSession, _pOptions->_sourceRoot );
+        const CodeGenerator generator( parsed, fixedCodec, inputFile, *_pSession, _pOptions->_moduleName );
         string              headerText;
         if ( generator.makeHeaderText( headerText ) == false )
         {
@@ -504,12 +505,13 @@ namespace sw
         // 나타나서 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
         //
         // 헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
-        string existingCpp;
-        if ( FileUtil::readOptionalTextFile( paths._cppPath, existingCpp ) == OptionalFileRead::Read )
+        // 앞 주인은 그 산출물의 스탬프가 안다(스탬프가 없으면 자리 표시자 - 주인이 없다).
+        GeneratedStamp existingStamp;
+        if ( GeneratedFileUtil::readStamp( paths._stampPath, existingStamp ) )
         {
-            const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
-            const bool bOtherOwner = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
+            const string& recordedSource = existingStamp._sourcePath;
+            const bool    bOtherOwner    = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
@@ -520,9 +522,23 @@ namespace sw
             }
         }
 
+        GeneratedStamp stamp;
+        stamp._sourcePath     = inputFile;
+        stamp._inputWriteTime = inputWriteTime;
+        stamp._listDependency = listDependency;
+        for ( const ParsedTypeInfo& typeInfo : parsed._listType )
+        {
+            stamp._listTypeFqn.push_back( typeInfo._fullyQualifiedName );
+        }
+        for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
+        {
+            stamp._listTypeFqn.push_back( enumInfo._fullyQualifiedName );
+            if ( enumInfo._bIsBitFlag == SW_TRUE )
+                stamp._bHasBitFlagEnum = true;
+        }
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, generator.makeSourceText() ) &&
                               GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
-                              GeneratedFileUtil::writeStamp( paths._stampPath, inputFile, inputWriteTime, listDependency );
+                              GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
         if ( bWritten == false )
             SW_LOG_ERROR( "Code generation failed: %#", inputFile );
         return bWritten;
@@ -546,7 +562,13 @@ namespace sw
             const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
             listTarget.push_back( paths._cppPath );
             listTarget.push_back( paths._headerPath );
-            (void)GeneratedFileUtil::readStampDependencies( paths._stampPath, listDependency ); // 스탬프가 없으면(첫 빌드) 더할 의존이 없다
+            GeneratedStamp stamp;
+            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false )
+                continue; // 스탬프가 없으면(이번 실행에 실패한 입력) 더할 의존이 없다 - 실패는 이미 오류로 셌다
+            for ( const StampDependency& dependency : stamp._listDependency )
+            {
+                listDependency.push_back( dependency._path );
+            }
         }
         listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, config._emitFlagOpsHeader ) );
         VectorUtil::sortUnique( listDependency );
@@ -603,6 +625,40 @@ namespace sw
         return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, fixedlayout::kSchemaListFile ), text );
     }
 
+    bool ReflectionPipeline::writeReflectedTypesList() const
+    {
+        const ParserConfig& config = _pSession->_config;
+        vector<string>      listLine;
+        bool                bComplete = true;
+        for ( const string& inputFile : _pOptions->_listInputFile )
+        {
+            GeneratedStamp stamp;
+            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config )._stampPath, stamp ) == false )
+            {
+                // 목록에서 조용히 빠지면 콘텐츠 검사가 그 타입을 "엔진 것" 으로 본다 - 쓰지 않는다.
+                bComplete = false;
+                continue;
+            }
+            for ( const string& typeFqn : stamp._listTypeFqn )
+            {
+                listLine.push_back( formatToString( "%#\t%#", typeFqn, _pOptions->_moduleName ) );
+            }
+        }
+        if ( bComplete == false )
+        {
+            SW_LOG_ERROR( "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileReflectedTypesList );
+            return false;
+        }
+        VectorUtil::sortUnique( listLine );
+        string text;
+        for ( const string& line : listLine )
+        {
+            text += line;
+            text += "\n";
+        }
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ), text );
+    }
+
     bool ReflectionPipeline::writeFlagOpsUmbrella() const
     {
         const ParserConfig& config = _pSession->_config;
@@ -614,18 +670,17 @@ namespace sw
         emit.blank();
         emit.line( emitdirective::kIfndefParser );
 
+        // 입력마다 Flags 여부는 스탬프가 안다 - 생성 글에서 표식 글자를 찾지 않는다. 스탬프가 없는 입력은 이번 실행에 실패한 것이다(이미 오류로 셌다).
         bool bAnyFlags = false;
         for ( const string& inputFile : _pOptions->_listInputFile )
         {
-            const string genHeader = ParserUtil::makeGeneratedPath( _pOptions->_outputDir, inputFile, config._emitHeaderExtension );
-            string       genText;
-            if ( FileUtil::readOptionalTextFile( genHeader, genText ) != OptionalFileRead::Read )
-                continue;
-            if ( genText.find( config._emitFlagOpsMarker ) == string::npos )
+            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile, config );
+            GeneratedStamp       stamp;
+            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false || stamp._bHasBitFlagEnum == false )
                 continue;
 
             bAnyFlags = true;
-            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( genHeader ) );
+            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( paths._headerPath ) );
         }
 
         if ( bAnyFlags == false )

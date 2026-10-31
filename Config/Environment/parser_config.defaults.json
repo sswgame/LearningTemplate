@@ -78,30 +78,7 @@
             "class ",
             "struct ",
             "enum "
-        ],
-        "module_rules": [
-            {
-                "path_contains": "GameFramework",
-                "module": "GameFramework"
-            },
-            {
-                "path_contains": "Games",
-                "module": "SWGame"
-            },
-            {
-                "path_contains": "SWGame",
-                "module": "SWGame"
-            },
-            {
-                "path_contains": "Editor",
-                "module": "EditorModule"
-            },
-            {
-                "path_contains": "App",
-                "module": "App"
-            }
-        ],
-        "default_module": "Engine"
+        ]
     },
     "tuning": {
         "source_lookback_bytes": 512

@@ -235,7 +235,10 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 		endif()
 		add_library(EditorCoreReflect OBJECT)
 		sw_applyEditorCoreSettings(EditorCoreReflect)
+		# 코어 오브젝트는 EditorModule 안에 들어간다(`sw_linkEditorCore`) — 타입도 그 모듈로 오르고 내린다.
 		sw_addReflectionStep(EditorCoreReflect
+			MODULE ${SW_TARGET_EDITOR_MODULE}
+			CONTENT_OWNER ${SW_TARGET_EDITOR_MODULE}
 			HEADERS ${listEditorReflectCore}
 			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 		)

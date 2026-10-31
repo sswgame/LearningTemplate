@@ -47,6 +47,8 @@ kFileAnnotationMeta = "Source/Core/Predefined/AnnotationMeta.txt"
 kFileTplBuiltinHeader = "BuiltinFileHeader.tpl"
 kFileTplBuiltinRegistrar = "BuiltinTypeRegistrar.tpl"
 kFileTplBuiltinFooter = "BuiltinFileFooter.tpl"
+# 리플렉션 대상마다 파서가 쓰는 타입 목록(`<FQN>\t<모듈>` 줄) — 콘텐츠 모듈 검사가 읽는다
+kFileReflectedTypesList = "ReflectedTypes.list"
 
 kTargetGameModule = "SWGame"
 kTargetEditorModule = "EditorModule"

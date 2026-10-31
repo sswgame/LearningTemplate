@@ -42,7 +42,7 @@ namespace sw
         // 2) 모듈 일괄 등록: registrar 체인을 맵에 넣고, 핫 리로드 때 모듈 단위로 해제한다
         // ------------------------------------------------------------------------------
         /** @brief 모듈의 대기 중인 Type/Enum 등록기 체인을 등록합니다. */
-        void registerPendingTypes( string_view moduleName, struct TypeRegistrar* pClassHead, struct EnumRegistrar* pEnumHead );
+        void registerPendingTypes( struct TypeRegistrar* pClassHead, struct EnumRegistrar* pEnumHead );
         /**
          * @brief 해당 모듈이 등록한 타입을 모두 해제합니다.
          * @details 엔진에서는 핫 리로드(개발 빌드)만 부르지만 **모든 구성에서 컴파일한다**. 구성마다 있고 없는 API 는 부르는 쪽(테스트)마다
@@ -315,7 +315,6 @@ namespace sw
         /** @brief FQN, 짧은 이름, 별칭에서 `_mapFqnToEnum` 의 객체로 가는 맵입니다. 모듈을 해제하면 여기서만 지웁니다. */
         unordered_map<hashed_string, EnumInfo*> _mapNameToEnum       SW_GUARDED_BY( _mutex );
         unordered_map<uint32, hashed_string> _mapHashToCanonicalName SW_GUARDED_BY( _mutex );
-        hashed_string                                                _activeModuleName;
         /** @brief 모듈 내림 알림 구독자입니다(`subscribeModuleUnloading`). 모듈을 올리고 내리는 스레드만 만진다. */
         MulticastDelegate<void( string_view )> _moduleUnloading;
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */

@@ -185,7 +185,7 @@ namespace sw
             // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
             // 등록은 모든 타입의 상속 캐시를 비운다 — 워커가 짓는 씬 로드가 그 캐시를 읽는 중이면 경합이다. 먼저 끝나기를 기다린다.
             getSubsystem<SceneManager>().waitForPendingLoad();
-            getSubsystem<TypeRegistry>().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
+            getSubsystem<TypeRegistry>().registerPendingTypes( pTypeHead, pEnumHead );
 
             // 모듈 서브시스템은 타입이 오른 뒤에 선다(초기화가 그 모듈의 리플렉션 타입을 쓸 수 있다). 새로 뗀 것만 — 리로드는 내릴 때 걷었다.
             if ( heads._pSubsystem != nullptr )

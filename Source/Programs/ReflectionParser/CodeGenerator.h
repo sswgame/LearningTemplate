@@ -22,10 +22,10 @@ namespace sw
     public:
         /**
          * @param fixedCodec 계획을 마친(`FixedCodecGenerator::makePlan`) 고정 배치형 코덱 생성기입니다. 타입마다 코덱 등록과 멤버를 덧붙입니다.
-         * @param sourceRoot 모듈 판별을 이 경로 기준 상대 경로로 합니다. 비면 전체 경로로 매칭합니다.
+         * @param moduleName 타입 · 열거형이 오르는 런타임 모듈 이름(`--module`, CMake 가 대상마다 정한다)입니다.
          */
         CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath, const ParserSession& session,
-                       const string& sourceRoot = string{} );
+                       const string& moduleName );
 
         /** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
         static string sanitizeIdentifier( string_view fqn );
@@ -65,12 +65,6 @@ namespace sw
         void emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief EnumRegistrar 본문을 출력합니다. */
         void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
-        /**
-         * @brief 소스 파일 경로로부터 모듈 이름을 판별합니다(생성자에서 한 번).
-         * @details parser_config 의 parsing.module_rules 를 위에서부터 적용합니다. 매칭은 sourceRoot 기준 상대 경로로
-         *          하므로, 리포지토리를 어디에 두든 결과가 같습니다.
-         */
-        string makeModuleName( const string& sourceRoot ) const;
 
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기
@@ -86,6 +80,6 @@ namespace sw
         const FixedCodecGenerator& _fixedCodec;
         const ParserSession&       _session;
         string                     _sourceFilePath;
-        string                     _moduleName; ///< 타입 · 열거형 · 팩토리 등록마다 쓰던 것을 한 번만 판별한다
+        string                     _moduleName; ///< `--module` 그대로 - 경로 글자로 모듈을 추측하지 않는다(런타임 등록 · 내림이 이 이름을 쓴다)
     };
 } // namespace sw

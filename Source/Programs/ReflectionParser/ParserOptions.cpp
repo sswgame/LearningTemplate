@@ -24,15 +24,15 @@ namespace sw
         };
 
         constexpr OptionRow kArrOptionRow[] = {
-            {          cli::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                     "header to parse (repeatable)"},
-            {         cli::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                         "directory for .gen.cpp / .gen.h / stamps"},
-            {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                  "clang include path (repeatable)"},
-            {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                               "scalar aliases and container rules"},
-            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                       "annotation token spellings"},
-            {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                        "Templates/*.tpl directory"},
-            {     cli::kSourceRoot,          &ParserOptions::_sourceRoot,                          nullptr,                 "<dir>",                        "module rules match paths relative to this"},
-            {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                      "only write ReflectBuiltins.gen.cpp and exit"},
-            {        cli::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>", "write the headers the inputs include as a Makefile-style depfile"},
+            {          cli::kInput,                              nullptr,   &ParserOptions::_listInputFile,            "<header.h>",                                        "header to parse (repeatable)"},
+            {         cli::kOutput,           &ParserOptions::_outputDir,                          nullptr,                 "<dir>",                            "directory for .gen.cpp / .gen.h / stamps"},
+            {        cli::kInclude,                              nullptr, &ParserOptions::_listIncludePath,                 "<dir>",                                     "clang include path (repeatable)"},
+            {       cli::kBuiltins,        &ParserOptions::_builtinsPath,                          nullptr, "<ReflectBuiltins.xxx>",                                  "scalar aliases and container rules"},
+            { cli::kAnnotationMeta,  &ParserOptions::_annotationMetaPath,                          nullptr,  "<AnnotationMeta.txt>",                                          "annotation token spellings"},
+            {  cli::kEmitTemplates,    &ParserOptions::_emitTemplatesDir,                          nullptr,                 "<dir>",                                           "Templates/*.tpl directory"},
+            {         cli::kModule,          &ParserOptions::_moduleName,                          nullptr,                "<name>", "runtime module the types register under (the CMake target's module)"},
+            {cli::kEmitBuiltinsGen, &ParserOptions::_emitBuiltinsGenPath,                          nullptr,            "<file.cpp>",                         "only write ReflectBuiltins.gen.cpp and exit"},
+            {        cli::kDepfile,         &ParserOptions::_depfilePath,                          nullptr,              "<file.d>",    "write the headers the inputs include as a Makefile-style depfile"},
         };
 
         /** @brief 값 없이 켜는 플래그 한 줄입니다. */
@@ -166,7 +166,8 @@ namespace sw
         if ( isBuiltinsGenMode() )
         {
             return ParserOptionsInternal::isGiven( _builtinsPath, cli::kBuiltins, cli::kEmitBuiltinsGen ) &&
-                   ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kEmitBuiltinsGen );
+                   ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kEmitBuiltinsGen ) &&
+                   ParserOptionsInternal::isGiven( _moduleName, cli::kModule, cli::kEmitBuiltinsGen );
         }
 
         if ( _listInputFile.empty() )
@@ -177,14 +178,15 @@ namespace sw
         // 철자 표가 없으면 모든 애노테이션 토큰이 "모르는 토큰" 이 되어 빌드가 선다. 시작할 때 이유를 알린다.
         return ParserOptionsInternal::isGiven( _outputDir, cli::kOutput, cli::kInput ) &&
                ParserOptionsInternal::isGiven( _emitTemplatesDir, cli::kEmitTemplates, cli::kInput ) &&
-               ParserOptionsInternal::isGiven( _annotationMetaPath, cli::kAnnotationMeta, cli::kInput );
+               ParserOptionsInternal::isGiven( _annotationMetaPath, cli::kAnnotationMeta, cli::kInput ) &&
+               ParserOptionsInternal::isGiven( _moduleName, cli::kModule, cli::kInput );
     }
 
     void ParserOptions::printUsage()
     {
         StringBuilder<constant::kMaxBuffer4096> out;
-        out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --annotation-meta <file> --emit-templates <dir> [...]\n" );
-        out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>\n" );
+        out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --module <name> --annotation-meta <file> --emit-templates <dir> [...]\n" );
+        out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --module <name> --emit-builtins-gen <file.cpp>\n" );
         for ( const OptionRow& row : kArrOptionRow )
         {
             out.appendFormat( "  %# %#  %#\n", row._pFlag, row._pValueName, row._pHelp );

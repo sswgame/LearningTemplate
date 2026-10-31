@@ -9,8 +9,6 @@ namespace sw::constant::reflection
 {
     /** @brief 기본 카테고리 이름입니다. */
     inline constexpr const utf8* kDefaultCategory = "General";
-    /** @brief 기본 모듈 이름입니다. */
-    inline constexpr const utf8* kDefaultModuleName = "Engine";
     /** @brief C++ 스코프 구분자입니다. */
     inline constexpr const utf8* kScopeDelimiter = "::";
     /** @brief 열거형 기본 폴백 이름입니다. */

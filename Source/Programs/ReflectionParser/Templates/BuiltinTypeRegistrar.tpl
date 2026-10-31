@@ -6,6 +6,7 @@
 			::sw::TypeInfo info{};
 			info._name               = ::sw::hashed_string( "$Name" );
 			info._fullyQualifiedName = ::sw::hashed_string( "$Name" );
+			info._moduleName         = ::sw::hashed_string( "$ModuleName" );
 			info._size               = sizeof( $CppType );
 			info._bPrimitive         = 1;
 			registry.registerClass( info );

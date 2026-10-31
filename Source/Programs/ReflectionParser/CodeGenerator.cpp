@@ -248,14 +248,13 @@ namespace sw
 namespace sw
 {
     CodeGenerator::CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath,
-                                  const ParserSession& session, const string& sourceRoot )
+                                  const ParserSession& session, const string& moduleName )
         : _header{ header }
         , _fixedCodec{ fixedCodec }
         , _session{ session }
         , _sourceFilePath{ sourceFilePath }
-        , _moduleName{}
+        , _moduleName{ moduleName }
     {
-        _moduleName = makeModuleName( sourceRoot );
     }
 
     void CodeGenerator::appendTemplate( CodeEmitBuffer& outBuffer, const string_view name, const EmitTemplateStore::TemplateVars vars ) const
@@ -668,28 +667,6 @@ namespace sw
         }
         emit.pop();
         emit.line( "};" );
-    }
-
-    string CodeGenerator::makeModuleName( const string& sourceRoot ) const
-    {
-        const ParserConfig& config = _session._config;
-
-        // 절대 경로로 매칭하면 리포지토리를 담은 상위 폴더 이름(예: .../AppData/..., D:/Games/...)이
-        // 규칙에 걸려 모든 타입이 엉뚱한 모듈로 등록된다. 소스 루트 기준 상대 경로로만 본다.
-        string relativePath = _sourceFilePath;
-        if ( sourceRoot.empty() == false )
-        {
-            const size_t rootPos = _sourceFilePath.find( sourceRoot );
-            if ( rootPos != string::npos )
-                relativePath = _sourceFilePath.substr( rootPos + sourceRoot.size() );
-        }
-
-        for ( const ParserConfig::ModuleRule& rule : config._listModuleRule )
-        {
-            if ( rule._pathContains.empty() == false && relativePath.find( rule._pathContains ) != string::npos )
-                return rule._module;
-        }
-        return config._defaultModule;
     }
 
     void CodeGenerator::emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, const size_t typeIndex ) const

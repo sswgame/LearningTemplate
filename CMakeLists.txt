@@ -115,6 +115,8 @@ endif()
 sw_verifyDynamicModuleRegistry()
 # 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`LiveReloadManager`).
 sw_addModuleBuildStamp()
+# 리플렉션 단계가 모두 선 뒤 — 콘텐츠가 쓰는 타입의 모듈을 그 도메인이 가지는지 빌드 단계로 본다(대상마다 파서가 쓴 타입 목록을 읽는다).
+sw_addContentModuleCheck()
 
 # App · Server 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성(없는 타깃은 건너뛴다)
 sw_configureAppDependencies(App)

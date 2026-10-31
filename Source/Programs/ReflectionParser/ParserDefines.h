@@ -129,7 +129,7 @@ namespace sw
         inline constexpr const utf8* kInclude         = "--include";
         inline constexpr const utf8* kBuiltins        = "--builtins";
         inline constexpr const utf8* kAnnotationMeta  = "--annotation-meta";
-        inline constexpr const utf8* kSourceRoot      = "--source-root";
+        inline constexpr const utf8* kModule          = "--module";
         inline constexpr const utf8* kEmitTemplates   = "--emit-templates";
         inline constexpr const utf8* kEmitBuiltinsGen = "--emit-builtins-gen";
         inline constexpr const utf8* kDepfile         = "--depfile";
@@ -204,10 +204,6 @@ namespace sw
         // parsing.*
         inline constexpr const utf8* kParsingComponentBaseTypes = "component_base_types";
         inline constexpr const utf8* kParsingTypeStripPrefixes  = "type_strip_prefixes";
-        inline constexpr const utf8* kParsingModuleRules        = "module_rules";
-        inline constexpr const utf8* kParsingDefaultModule      = "default_module";
-        inline constexpr const utf8* kModuleRulePathContains    = "path_contains";
-        inline constexpr const utf8* kModuleRuleModule          = "module";
         inline constexpr const utf8* kEmitValueForbiddenBases   = "value_forbidden_base_types";
         inline constexpr const utf8* kEmitValueForbiddenMessage = "value_forbidden_message";
 

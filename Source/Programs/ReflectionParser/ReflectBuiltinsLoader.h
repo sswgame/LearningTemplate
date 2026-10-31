@@ -21,7 +21,8 @@ namespace sw
     /**
      * @brief builtins 헤더를 스캔해 primitive TypeRegistrar .gen.cpp 를 씁니다.
      * @details EmitTemplateStore 의 Builtin*.tpl 사용 (--emit-templates 선행 로드 필요).
+     * @param moduleName 내장 타입이 오르는 런타임 모듈 이름(`--module`)입니다.
      */
-    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath,
+    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath, const string_view moduleName,
                                  const ParserSession& session );
 } // namespace sw

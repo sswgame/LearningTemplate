@@ -181,24 +181,6 @@ namespace sw
             {
                 assignArrayIfPresent( config._listComponentBaseType, obj, jsonkey::kParsingComponentBaseTypes );
                 assignArrayIfPresent( config._listTypeStripPrefix, obj, jsonkey::kParsingTypeStripPrefixes );
-                assignIfPresent( config._defaultModule, obj, jsonkey::kParsingDefaultModule );
-
-                const auto itRules = obj.find( jsonkey::kParsingModuleRules );
-                if ( itRules == obj.end() || itRules->is_array() == false )
-                    return;
-
-                config._listModuleRule.clear();
-                for ( const auto& rule : *itRules )
-                {
-                    if ( rule.is_object() == false )
-                        continue;
-                    ParserConfig::ModuleRule parsed;
-                    assignIfPresent( parsed._pathContains, rule, jsonkey::kModuleRulePathContains );
-                    assignIfPresent( parsed._module, rule, jsonkey::kModuleRuleModule );
-                    if ( parsed._pathContains.empty() || parsed._module.empty() )
-                        continue;
-                    config._listModuleRule.push_back( std::move( parsed ) );
-                }
             }
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
@@ -338,8 +320,7 @@ namespace sw
 namespace sw
 {
     ParserConfig::ParserConfig() noexcept
-        : _listBaseArg{
-    }
+        : _listBaseArg{}
         , _listForceInclude{}
         , _llvmClangRel{ "lib/clang" }
         , _clangIncludeRel{ "include" }
@@ -366,17 +347,15 @@ namespace sw
         , _emitRegisterTypeMarker{ "RegisterType" }
         , _emitRegisterEnumMarker{ "RegisterEnum" }
         , _emitSourcePathMarker{ "// Source: " }
-        , _listModuleRule{ { "GameFramework", "GameFramework" }, { "Games", "SWGame" }, { "SWGame", "SWGame" }, { "Editor", "EditorModule" }, { "App", "App" } },
-        _defaultModule{ "Engine" },
-        _listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" },
-        _valueForbiddenMessage{ "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, or a GameObjectHandle / ComponentHandle for a reference kept across frames." },
-        _listComponentBaseType{ "Component", "sw::Component", "SceneComponent", "sw::SceneComponent" },
-        _listTypeStripPrefix{ "const ", "volatile ", "class ", "struct ", "enum " },
-        _listLoadedFile{},
-        _sourceLookbackBytes{ 512 },
-        _bLoaded{ SW_FALSE },
-        _reserved{ 0 },
-        _padding{ 0 }
+        , _listValueForbiddenBaseType{ "sw::Component", "sw::GameObject" }
+        , _valueForbiddenMessage{ "GameObject or Component cannot be stored by value inside a PROPERTY(). Use a pointer, or a GameObjectHandle / ComponentHandle for a reference kept across frames." }
+        , _listComponentBaseType{ "Component", "sw::Component", "SceneComponent", "sw::SceneComponent" }
+        , _listTypeStripPrefix{ "const ", "volatile ", "class ", "struct ", "enum " }
+        , _listLoadedFile{}
+        , _sourceLookbackBytes{ 512 }
+        , _bLoaded{ SW_FALSE }
+        , _reserved{ 0 }
+        , _padding{ 0 }
     {
     }
 

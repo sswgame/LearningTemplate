@@ -1,7 +1,7 @@
 /**
  * @file ParserConfig.h
  * @brief parser_config.defaults.json(+ 로컬 parser_config.json)과 toolchain_config.json 에서 읽은 설정입니다.
- * @details clang 인자 · SDK 경로 · 코드젠 표식 · 모듈 규칙 · 튜닝이 여기 있습니다. 파서 실행 한 번에 한 번 읽어
+ * @details clang 인자 · SDK 경로 · 코드젠 표식 · 튜닝이 여기 있습니다(타입의 모듈은 CMake 가 `--module` 로 넘긴다). 파서 실행 한 번에 한 번 읽어
  *          `ParserSession::_config` 로 내려 보냅니다(프로세스 전역으로 두지 않습니다).
  */
 #pragma once
@@ -40,14 +40,6 @@ namespace sw
         string         _emitRegisterEnumMarker;
         /** @brief 산출물 머리말에 원본 헤더 경로를 적는 줄의 접두어 (FileHeader.tpl 의 "// Source: "). */
         string _emitSourcePathMarker;
-        /** @brief 소스 경로 부분문자열 -> 모듈 이름 규칙. 위에서부터 처음 맞는 것을 씁니다. */
-        struct ModuleRule
-        {
-            string _pathContains;
-            string _module;
-        };
-        vector<ModuleRule> _listModuleRule;
-        string             _defaultModule;
         /** @brief PROPERTY() 에 값으로 담으면 안 되는 기반 타입. 비면 static_assert 를 내보내지 않습니다. */
         vector<string> _listValueForbiddenBaseType;
         string         _valueForbiddenMessage;
@@ -55,7 +47,7 @@ namespace sw
         vector<string> _listTypeStripPrefix;
         /**
          * @brief 실제로 읽은 설정 파일들입니다.
-         * @details **설정도 산출물의 입력입니다.** 코드젠 표식 · 금지 타입 메시지 · 모듈 규칙이 여기서 오므로 증분 판정이 이 파일들의
+         * @details **설정도 산출물의 입력입니다.** 코드젠 표식 · 금지 타입 메시지가 여기서 오므로 증분 판정이 이 파일들의
          *          시각도 봅니다 — 보지 않으면 설정을 고쳐도 산출물이 옛 모양으로 남습니다(CMake 는 DEPENDS 로 파서를 다시 부르지만
          *          파서가 스스로 "최신" 이라며 건너뛴다).
          */

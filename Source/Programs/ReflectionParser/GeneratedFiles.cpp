@@ -24,16 +24,12 @@ namespace sw
             static constexpr const utf8* kStampInputTimeKey = "input";
             /** @brief 스탬프의 의존 줄 머리입니다 — `dep <시각> <경로>`. */
             static constexpr const utf8* kStampDependencyKey = "dep";
+            /** @brief 스탬프의 타입 줄 머리입니다 — `type <FQN>`. */
+            static constexpr const utf8* kStampTypeKey = "type";
+            /** @brief ENUM(Flags) 가 있는 입력의 스탬프에만 있는 줄입니다. */
+            static constexpr const utf8* kStampBitFlagLine = "flags";
             /** @brief 이번 실행의 시작을 적는 표식 파일 이름입니다(`markRunStart`). */
             static constexpr const utf8* kRunMarkerName = "ReflectionParser.run";
-
-            /** @brief 읽은 스탬프 한 장입니다. */
-            struct StampRecord
-            {
-                string_view                       _sourcePath;
-                uint64                            _inputWriteTime{ 0 };
-                vector<pair<uint64, string_view>> _listDependency; ///< (시각, 경로) — 경로는 스탬프 글을 가리킨다
-            };
 
             /**
              * @brief 스탬프에 적은 쓰기 시각을 **부호 없는** 64 비트로 읽습니다.
@@ -56,10 +52,10 @@ namespace sw
             }
 
             /**
-             * @brief 스탬프 글을 읽습니다 — 첫 줄 원본 경로, `input <시각>`, 그리고 `dep <시각> <경로>` 줄들. 시각이 없으면 false.
+             * @brief 스탬프 글을 읽습니다(`GeneratedStamp` 의 줄 꼴). 시각이 없거나 모르는 줄이 있으면 false.
              * @details 경로에는 공백이 있을 수 있어 `dep` 줄은 시각 다음의 **나머지 전부**가 경로다.
              */
-            [[nodiscard]] static bool parseStamp( string_view text, StampRecord& outRecord )
+            [[nodiscard]] static bool parseStamp( string_view text, GeneratedStamp& outRecord )
             {
                 size_t lineStart = 0;
                 bool   bHasInput = false;
@@ -70,9 +66,11 @@ namespace sw
                     lineStart                 = lineEnd == string_view::npos ? text.size() + 1 : lineEnd + 1;
                     if ( lineIndex == 0 )
                     {
-                        outRecord._sourcePath = line;
+                        outRecord._sourcePath = string( line );
                         continue;
                     }
+                    if ( line.empty() )
+                        continue;
                     string_view rest;
                     uint64      time{ 0 };
                     if ( takeKeyedRest( line, kStampInputTimeKey, rest ) )
@@ -85,7 +83,20 @@ namespace sw
                         const size_t space = rest.find( ' ' );
                         if ( space == string_view::npos || parseWriteTime( rest.substr( 0, space ), time ) == false )
                             return false;
-                        outRecord._listDependency.emplace_back( time, rest.substr( space + 1 ) );
+                        outRecord._listDependency.push_back( StampDependency{ string( rest.substr( space + 1 ) ), time } );
+                    }
+                    else if ( takeKeyedRest( line, kStampTypeKey, rest ) )
+                    {
+                        outRecord._listTypeFqn.emplace_back( rest );
+                    }
+                    else if ( line == kStampBitFlagLine )
+                    {
+                        outRecord._bHasBitFlagEnum = true;
+                    }
+                    else
+                    {
+                        // 모르는 줄은 다른 판의 파서가 쓴 스탬프다 - 최신으로 보지 않는다(다시 만든다).
+                        return false;
                     }
                 }
                 return bHasInput;
@@ -150,10 +161,16 @@ namespace sw
         return true;
     }
 
-    bool GeneratedFileUtil::writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency )
+    bool GeneratedFileUtil::writeStamp( const string& stampPath, const GeneratedStamp& stamp )
     {
-        string stampText = inputFile + "\n" + GeneratedFilesInternal::kStampInputTimeKey + " " + to_string( inputWriteTime ) + "\n";
-        for ( const StampDependency& dependency : listDependency )
+        string stampText = formatToString( "%#\n%# %#\n", stamp._sourcePath, string( GeneratedFilesInternal::kStampInputTimeKey ), stamp._inputWriteTime );
+        if ( stamp._bHasBitFlagEnum )
+            stampText += formatToString( "%#\n", string( GeneratedFilesInternal::kStampBitFlagLine ) );
+        for ( const string& typeFqn : stamp._listTypeFqn )
+        {
+            stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampTypeKey ), typeFqn );
+        }
+        for ( const StampDependency& dependency : stamp._listDependency )
         {
             stampText += formatToString( "%# %# %#\n", string( GeneratedFilesInternal::kStampDependencyKey ), dependency._writeTime, dependency._path );
         }
@@ -170,19 +187,13 @@ namespace sw
         return GeneratedFilesInternal::getWriteTime( path );
     }
 
-    bool GeneratedFileUtil::readStampDependencies( const string& stampPath, vector<string>& outListPath )
+    bool GeneratedFileUtil::readStamp( const string& stampPath, GeneratedStamp& outStamp )
     {
+        outStamp = GeneratedStamp{};
         string stampText;
-        if ( FileUtil::readTextFile( stampPath, stampText ) == false )
+        if ( FileUtil::readOptionalTextFile( stampPath, stampText ) != OptionalFileRead::Read )
             return false;
-        GeneratedFilesInternal::StampRecord record;
-        if ( GeneratedFilesInternal::parseStamp( stampText, record ) == false )
-            return false;
-        for ( const auto& [writeTime, path] : record._listDependency )
-        {
-            outListPath.emplace_back( path );
-        }
-        return true;
+        return GeneratedFilesInternal::parseStamp( stampText, outStamp );
     }
 
     uint64 GeneratedFileUtil::markRunStart( const string& outputDir )
@@ -191,20 +202,6 @@ namespace sw
         if ( FileUtil::writeTextFile( markerPath, "ReflectionParser run marker - its write time is the start of the last run\n" ) == false )
             return 0;
         return GeneratedFilesInternal::getWriteTime( markerPath );
-    }
-
-    string_view GeneratedFileUtil::findRecordedSourcePath( const string_view generatedText, const ParserConfig& config )
-    {
-        const string& marker    = config._emitSourcePathMarker;
-        const size_t  markerPos = generatedText.find( marker );
-        if ( markerPos == string_view::npos )
-            return {};
-
-        const size_t valueStart = markerPos + marker.size();
-        size_t       lineEnd    = generatedText.find( '\n', valueStart );
-        if ( lineEnd == string_view::npos )
-            lineEnd = generatedText.size();
-        return StringUtil::trim( generatedText.substr( valueStart, lineEnd - valueStart ) );
     }
 
     bool GeneratedFileUtil::isPlaceholder( const string_view generatedText, const ParserConfig& config )
@@ -267,27 +264,20 @@ namespace sw
 
         // 헤더를 **옮기기만** 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.
-        //
-        // .gen.cpp 머리말(`// Source: …`)로 대조하면 안 된다 — 리플렉트된 타입이 **없는** 헤더의 산출물에는 그 머리말이 없어서
-        // 그런 헤더는 한 번도 "최신" 이 되지 못하고 **파서가 돌 때마다 다시 파싱**된다.
-        string stampText;
-        if ( FileUtil::readTextFile( paths._stampPath, stampText ) == false )
-            return false;
-        // 첫 줄은 원본 경로, 다음은 `input <파싱 전에 본 쓰기 시각>` 과 `dep <시각> <경로>` 줄들. 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
-        GeneratedFilesInternal::StampRecord record;
-        if ( GeneratedFilesInternal::parseStamp( stampText, record ) == false || record._sourcePath != string_view( inputFile ) )
+        // 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
+        GeneratedStamp record;
+        if ( GeneratedFileUtil::readStamp( paths._stampPath, record ) == false || record._sourcePath != inputFile )
             return false;
         // **같아야** 최신이다. 파싱하는 동안 저장한 편집은 스탬프보다 오래된 시각을 가질 수 있다 — 크고 작음이 아니라 같음으로 본다.
         if ( record._inputWriteTime != inputTime )
             return false;
         // include 한 헤더도 같아야 한다. 없어졌으면(시각 0) 다시 만든다.
-        for ( const auto& [recordedTime, dependencyPath] : record._listDependency )
+        for ( const StampDependency& dependency : record._listDependency )
         {
-            const string dependencyKey( dependencyPath );
-            auto         cacheIt = _mapDependencyWriteTime.find( dependencyKey );
+            auto cacheIt = _mapDependencyWriteTime.find( dependency._path );
             if ( cacheIt == _mapDependencyWriteTime.end() )
-                cacheIt = _mapDependencyWriteTime.emplace( dependencyKey, GeneratedFilesInternal::getWriteTime( dependencyPath ) ).first;
-            if ( recordedTime == 0 || cacheIt->second != recordedTime )
+                cacheIt = _mapDependencyWriteTime.emplace( dependency._path, GeneratedFilesInternal::getWriteTime( dependency._path ) ).first;
+            if ( dependency._writeTime == 0 || cacheIt->second != dependency._writeTime )
                 return false;
         }
         return true;

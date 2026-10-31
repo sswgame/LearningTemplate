@@ -63,6 +63,11 @@ namespace sw
         [[nodiscard]] bool writeDepfile() const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
         [[nodiscard]] bool writeFlagOpsUmbrella() const;
+        /**
+         * @brief 대상의 타입 · 열거형을 `<FQN>\t<모듈>` 줄로 `ReflectedTypes.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
+         * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/generate/ContentModules.py`)가 이 목록을 읽는다.
+         */
+        [[nodiscard]] bool writeReflectedTypesList() const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
         [[nodiscard]] bool writeFixedSchemaList() const;
 

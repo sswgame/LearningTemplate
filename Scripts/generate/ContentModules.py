@@ -3,27 +3,26 @@
 """
 Scripts/generate/ContentModules.py
 
-콘텐츠(씬 · 프리팹)가 쓰는 리플렉션 형식의 모듈을 그 도메인이 가질 수 있는지 configure 가 본다 — `game/<팩>` 은 그 게임 매니페스트의 의존(따라 닿는 것
-포함), `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만.
+콘텐츠(씬 · 프리팹)가 쓰는 리플렉션 형식의 모듈을 그 도메인이 가질 수 있는지 빌드 단계(`ContentModuleCheck`)가 본다 — `game/<팩>` 은 그 게임
+매니페스트의 의존(따라 닿는 것 포함), `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만.
 
-**왜 configure 인가.** 키트는 게임 매니페스트의 의존으로만 링크된다(`sw_addGameModule`). 의존에 없는 키트의 컴포넌트를 쓰는 씬은 그 게임의 어떤 실행 ·
+**왜 하는가.** 키트는 게임 매니페스트의 의존으로만 링크된다(`sw_addGameModule`). 의존에 없는 키트의 컴포넌트를 쓰는 씬은 그 게임의 어떤 실행 ·
 쿠킹 · 배포에서도 서지 못하는데, 예전에는 헤드리스 쿠킹이 "등록하는 모듈 없음" 으로 멈출 때야 드러났다(Empty 의 넷 씬 둘, 2026-10-31). 씬은 데이터라
-형식으로 막을 수 없어서, 모듈을 정하는 자리(configure)에서 콘텐츠와 매니페스트를 맞댄다. 상용 엔진: 언리얼은 콘텐츠가 쓰는 플러그인을 `.uproject` 에
-켜야 하고, 켜지 않으면 에셋 로드가 실패한다.
+형식으로 막을 수 없어서 콘텐츠와 매니페스트를 맞댄다. 상용 엔진: 언리얼은 콘텐츠가 쓰는 플러그인을 `.uproject` 에 켜야 하고, 켜지 않으면 에셋 로드가 실패한다.
 
-  - 형식 → 모듈: `Source` 헤더의 `REFLECT(...) class|struct 이름` 을 훑고, 가장 가까운 상위 폴더의 `*.module.json` 이 주인이다. 주인이 없으면
-    Engine · Core 라 늘 있다. 이름이 여러 모듈에 있으면 그 가운데 하나라도 게임이 가지면 된다.
+  - 형식 → 모듈: 리플렉션 대상마다 파서가 쓴 `ReflectedTypes.list`(`<FQN>\t<모듈>`)와 CMake 가 적은 그 대상의 주인(`--inputs` 파일의
+    `<주인>\t<목록>` 줄, 주인이 비면 엔진 · 실행 파일이라 늘 있다)만 본다 — 헤더를 글자로 훑지 않는다(예전 정규식은 주석 · 템플릿의 REFLECT 도 셌다).
+    이름이 여러 모듈에 있으면 그 가운데 하나라도 게임이 가지면 된다.
   - 게임 → 팩: 프리셋 `Config/Game/<게임>.json` 의 `_packRoot`(엔진이 쓰는 값 그대로). 없으면 멈춘다.
   - 게임이 가진 모듈: 자기 폴더, `_listDependency` 를 따라 닿는 모듈, `_listModuleOverride` 로 켠 모듈.
-  - configure 가 돌 때만 본다 — 씬을 고친 뒤에는 다음 configure 가 본다(씬마다 configure 의존을 걸면 저장할 때마다 configure 가 돈다).
+  - 타입 목록이 바뀔 때(또는 다시 구성할 때) 돈다 — 씬마다 의존을 걸면 저장할 때마다 돈다.
 
-  python Scripts/generate/ContentModules.py
+  python Scripts/generate/ContentModules.py --inputs <ContentModuleInputs.list> --stamp <ContentModules.stamp>
 """
 
 from __future__ import annotations
 
 import json
-import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
@@ -38,28 +37,7 @@ from generate.GeneratorOutput import GeneratorError, runGenerator  # noqa: E402
 kTag = "ContentModules"
 kContentSuffix = (".scene.xml", ".prefab.xml")
 kSkipSourceFolder = {"graphify-out"}
-kReflectPattern = re.compile(r"\bREFLECT\s*\(")
-kDeclarationPattern = re.compile(r"\s*(?:class|struct)\s+(?:[A-Z][A-Z0-9_]*_API\s+)?([A-Za-z_]\w*)")
-
-
-def skipReflectArguments(text: str, openIndex: int) -> int:
-    """`REFLECT(` 의 여는 괄호 자리에서 닫는 괄호 다음 자리를 돌려줍니다. 따옴표 안의 괄호는 세지 않습니다. 닫히지 않으면 -1."""
-    depth = 0
-    index = openIndex
-    while index < len(text):
-        character = text[index]
-        if character == '"':
-            index = text.find('"', index + 1)
-            if index < 0:
-                return -1
-        elif character == "(":
-            depth += 1
-        elif character == ")":
-            depth -= 1
-            if depth == 0:
-                return index + 1
-        index += 1
-    return -1
+kScopeSeparator = "::"
 
 
 def readManifest(path: Path) -> dict:
@@ -69,48 +47,48 @@ def readManifest(path: Path) -> dict:
         raise GeneratorError(f"{path}: 매니페스트를 읽지 못했다 ({exception!r})") from exception
 
 
-def collectManifests(sourceRoot: Path) -> tuple[dict[Path, str], dict[str, dict]]:
-    """(모듈 폴더 → 주인 키, 게임 아닌 모듈 이름 → 매니페스트). 게임은 이름이 모두 `SWGame` 이라 주인 키를 `game:<폴더>` 로 가른다."""
-    mapFolder: dict[Path, str] = {}
+def collectManifests(sourceRoot: Path) -> dict[str, dict]:
+    """게임 아닌 모듈 이름 → 매니페스트(게임 의존을 따라가는 데 쓴다)."""
     mapManifestByName: dict[str, dict] = {}
     for manifestPath in sourceRoot.rglob("*.module.json"):
         if kSkipSourceFolder.intersection(manifestPath.parts):
             continue
         manifest = readManifest(manifestPath)
-        if manifest.get("_kind") == "Game":
-            mapFolder[manifestPath.parent] = f"game:{manifestPath.parent.name}"
-            continue
-        mapFolder[manifestPath.parent] = manifest["_name"]
-        mapManifestByName[manifest["_name"]] = manifest
-    return mapFolder, mapManifestByName
+        if manifest.get("_kind") != "Game":
+            mapManifestByName[manifest["_name"]] = manifest
+    return mapManifestByName
 
 
-def findOwner(path: Path, mapFolder: dict[Path, str], sourceRoot: Path) -> str | None:
-    """가장 가까운 상위 모듈 폴더의 주인 키. 없으면 None(Engine · Core — 늘 있다)."""
-    folder = path.parent
-    while folder != sourceRoot and folder != folder.parent:
-        owner = mapFolder.get(folder)
-        if owner is not None:
-            return owner
-        folder = folder.parent
-    return None
+def readTypeOwners(inputsPath: Path) -> dict[str, set[str | None]]:
+    """리플렉션 형식의 짧은 이름(씬 요소 이름) → 주인 키 집합. 주인 None 은 늘 있는 것(엔진 · 실행 파일)이다.
 
-
-def collectTypeOwners(sourceRoot: Path, mapFolder: dict[Path, str]) -> dict[str, set[str | None]]:
-    """리플렉션 형식 이름 → 주인 키 집합."""
+    `inputsPath` 의 줄은 `<주인>\t<ReflectedTypes.list>`(CMake `sw_addContentModuleCheck`), 목록의 줄은 `<FQN>\t<모듈>`(파서)이다.
+    목록 파일이 없거나 줄 꼴이 틀리면 멈춘다 — 빠진 목록의 타입을 "엔진 것" 으로 보면 검사가 조용히 통과한다.
+    """
     mapOwner: dict[str, set[str | None]] = {}
-    for headerPath in sourceRoot.rglob("*.h"):
-        if kSkipSourceFolder.intersection(headerPath.parts):
+    try:
+        listInputLine = inputsPath.read_text(encoding="utf-8").splitlines()
+    except OSError as exception:
+        raise GeneratorError(f"{inputsPath}: 입력 목록을 읽지 못했다 ({exception!r})") from exception
+    for inputLine in listInputLine:
+        if not inputLine.strip():
             continue
-        text = headerPath.read_text(encoding="utf-8", errors="replace")
-        if "REFLECT" not in text:
-            continue
-        owner = findOwner(headerPath, mapFolder, sourceRoot)
-        for match in kReflectPattern.finditer(text):
-            end = skipReflectArguments(text, match.end() - 1)
-            declaration = kDeclarationPattern.match(text, end) if end >= 0 else None
-            if declaration is not None:
-                mapOwner.setdefault(declaration.group(1), set()).add(owner)
+        ownerText, separator, listPathText = inputLine.partition("\t")
+        if not separator or not listPathText:
+            raise GeneratorError(f"{inputsPath}: '<주인>\\t<목록>' 꼴이 아닌 줄: {inputLine!r}")
+        owner = ownerText or None
+        listPath = Path(listPathText)
+        try:
+            listTypeLine = listPath.read_text(encoding="utf-8").splitlines()
+        except OSError as exception:
+            raise GeneratorError(f"{listPath}: 타입 목록을 읽지 못했다 ({exception!r}) — 리플렉션 단계가 먼저 돌아야 한다") from exception
+        for typeLine in listTypeLine:
+            if not typeLine.strip():
+                continue
+            fqn, separator, module = typeLine.partition("\t")
+            if not separator or not fqn or not module:
+                raise GeneratorError(f"{listPath}: '<FQN>\\t<모듈>' 꼴이 아닌 줄: {typeLine!r}")
+            mapOwner.setdefault(fqn.rsplit(kScopeSeparator, 1)[-1], set()).add(owner)
     return mapOwner
 
 
@@ -161,7 +139,7 @@ def findProblems(packRoot: str, packFolder: Path, setModule: set[str], mapOwner:
     return listProblem
 
 
-def checkContentModules(projectRoot: Path) -> int:
+def checkContentModules(projectRoot: Path, inputsPath: Path) -> int:
     """어긋남이 있으면 `GeneratorError`. 본 팩 수를 돌려줍니다.
 
     도메인마다 쓸 수 있는 모듈: `game/<팩>` 은 그 게임이 가진 것, `common/` 은 모든 게임이 가진 것(어느 게임이 쓸지 정적으로 알 수 없다 — 기믹 프리팹은
@@ -169,8 +147,8 @@ def checkContentModules(projectRoot: Path) -> int:
     """
     sourceRoot = projectRoot / "Source"
     contentRoot = projectRoot / "Content"
-    mapFolder, mapManifestByName = collectManifests(sourceRoot)
-    mapOwner = collectTypeOwners(sourceRoot, mapFolder)
+    mapManifestByName = collectManifests(sourceRoot)
+    mapOwner = readTypeOwners(inputsPath)
 
     listProblem: list[str] = []
     setEveryGame: set[str] | None = None
@@ -199,10 +177,15 @@ def checkContentModules(projectRoot: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    def generate(_args) -> None:
-        packCount = checkContentModules(getProjectRoot())
+    def addArguments(parser) -> None:
+        parser.add_argument("--inputs", type=Path, required=True, help="CMake 가 쓴 `<주인>\\t<ReflectedTypes.list>` 줄 파일")
+        parser.add_argument("--stamp", type=Path, required=True, help="검사가 통과하면 쓰는 스탬프(빌드 단계의 산출물)")
+
+    def generate(args) -> None:
+        packCount = checkContentModules(getProjectRoot(), args.inputs)
+        args.stamp.write_text(f"{packCount} game packs checked\n", encoding="utf-8")
         print(f"[{kTag}] {packCount} game packs · common · editor · engine: content uses only modules its domain has")
-    return runGenerator(argv, tag=kTag, description="게임 콘텐츠가 쓰는 형식의 모듈 ⊂ 게임 매니페스트 의존", addArguments=lambda parser: None,
+    return runGenerator(argv, tag=kTag, description="게임 콘텐츠가 쓰는 형식의 모듈 ⊂ 게임 매니페스트 의존", addArguments=addArguments,
                         generate=generate)
 
 

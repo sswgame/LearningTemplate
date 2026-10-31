@@ -179,7 +179,7 @@ namespace sw
         return typeCount > 0 || containerCount > 0;
     }
 
-    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath, const ParserSession& session )
+    bool emitReflectBuiltinsGen( const string_view builtinsAbsPath, const string_view outCppAbsPath, const string_view moduleName, const ParserSession& session )
     {
         vector<ReflectBuiltinsLoaderInternal::BuiltinRow> listRow;
         if ( ReflectBuiltinsLoaderInternal::readRows( builtinsAbsPath, listRow ) == false )
@@ -217,10 +217,11 @@ namespace sw
             id.appendFormat( "Builtin_%#", canonical );
             out += tpls.render( templatefile::kBuiltinTypeRegistrar,
                                 {
-                                    {       templatekey::kID,            id.view()},
-                                    {     templatekey::kName,            canonical},
-                                    {  templatekey::kCppType, row._listArgument[1]},
-                                    {templatekey::kAliasRegs,     aliasRegs.view()}
+                                    {        templatekey::kID,            id.view()},
+                                    {      templatekey::kName,            canonical},
+                                    {   templatekey::kCppType, row._listArgument[1]},
+                                    { templatekey::kAliasRegs,     aliasRegs.view()},
+                                    {templatekey::kModuleName,           moduleName}
             } );
             ++typeCount;
         }
