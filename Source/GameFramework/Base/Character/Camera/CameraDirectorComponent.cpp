@@ -170,7 +170,7 @@ namespace sw
         {
             const hashed_string startID = resolveStartPreset();
             if ( _director.activatePreset( _catalog, startID ) == false )
-                SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
+                SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
         }
         updateCamera( 0.0f );
     }
@@ -337,6 +337,8 @@ namespace sw
             const hashed_string overrideID( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
             if ( _catalog.find( overrideID ) != nullptr )
                 return overrideID;
+            // 요청한 프리셋이 없으면 기본 프리셋으로 조용히 넘어가지 않는다 - 시나리오가 틀린 화면으로 골든을 뜰 수 있었다.
+            SW_LOG_ERROR_ID( "Camera.UnknownPreset", "-gv_cameraPreset='%#' is not a preset in '%#'", gv_cameraPreset.c_str(), _catalogPath );
         }
         return _initialPreset.empty() ? _catalog.getAll().front()._id : _initialPreset;
     }
