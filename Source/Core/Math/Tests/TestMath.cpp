@@ -8,6 +8,7 @@
 #include "Core/Math/SecureRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Math/XorShift32.h"
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -799,4 +800,19 @@ SW_TEST_CASE( MathTest, DeterministicRandomKeepsTheRecordedSequences )
     SW_EXPECT_TRUE( bBounded );
     SW_EXPECT_EQUAL( 7, random32.nextInt( 7, 7 ) );
     SW_EXPECT_EQUAL( sw::DeterministicRandom32::kDefaultSeed, sw::DeterministicRandom32{}.getState() );
+}
+
+/**
+ * @brief [MathTest] 32 비트 결정적 난수의 씨앗 0 은 단언 로그를 남기고 거절하며 상태를 그대로 둔다
+ * @details 0 은 xorshift 의 고정점이다 — 받으면 수열이 0 에 멈춘다. 고정점으로 바꾸지도, 다른 씨앗으로 대신하지도 않는다.
+ */
+SW_TEST_CASE( MathTest, DeterministicRandomRejectsAZeroSeed )
+{
+    SW_EXPECT_LOG( SW_ASSERT_LOG_ID );
+    const test::ScopedAssertCapture assertCapture;
+    sw::DeterministicRandom32       rejected{ 5u };
+    rejected.setSeed( 0u );
+    SW_EXPECT_EQUAL( 5u, rejected.getState() );
+    if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 }
