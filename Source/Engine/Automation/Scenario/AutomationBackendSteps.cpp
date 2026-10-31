@@ -2,12 +2,10 @@
 
 #include "Engine/Automation/Scenario/AutomationBackendSteps.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
-    #include "Engine/Automation/Scenario/AutomationScenario.h"
-    #include "Engine/Automation/Scenario/AutomationStepValidation.h"
-
-    #include "sw/config/CookContract.gen.h"
+#include "sw/config/CookContract.gen.h"
 
 namespace sw
 {
@@ -20,9 +18,9 @@ namespace sw
         };
         // 이름은 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 명령줄 이름 하나뿐이다(`-vk` 와 같은 철자) — 별칭(`vulkan` · `directx12`)과 대소문자 무시는 두지 않는다.
         static constexpr NameRow kArrName[] = {
-    #define SW_SWAP_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, RHIBackend::Backend },
+#define SW_SWAP_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, RHIBackend::Backend },
             SW_RHI_BACKEND_TABLE( SW_SWAP_BACKEND_NAME_ROW )
-    #undef SW_SWAP_BACKEND_NAME_ROW
+#undef SW_SWAP_BACKEND_NAME_ROW
         };
         for ( const NameRow& row : kArrName )
         {
@@ -59,5 +57,3 @@ namespace sw
     // App 이 올라오지 않은 프로세스(nogpu 테스트)도 이 단계의 속성을 검사할 수 있게, App 의 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.
     SW_AUTOMATION_STEP_VALIDATOR( swapBackend, AutomationBackendSteps::kSwapBackendKind, &AutomationBackendSteps::validateSwapBackend );
 } // namespace sw
-
-#endif

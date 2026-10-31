@@ -8,6 +8,7 @@
  *          - 제외 패턴은 `StringUtil::matchesPathPattern`(에디터 임포트 규칙과 같은 마디 매칭: `/` 없는 패턴은 파일 이름에, 있으면 경로 마디별로, `*` 는 폴더를 넘지 않고 마디 `**` 만 넘는다. 대소문자 무시)으로 도메인 기준 경로에 맞춥니다. 제외 폴더는 경로 성분 이름입니다.
  */
 #pragma once
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -95,6 +96,12 @@ namespace sw
 
         /** @brief 프로젝트 루트 기준 설정 파일 경로입니다. */
         static constexpr const utf8* kConfigPath = "Config/Engine/PackConfig.json";
+
+        /**
+         * @brief 셰이더 원본(`.hlsl` · `.hlsli`)인가입니다 — `_bExcludeRawShaderSource` 가 켜진 팩(배포)에는 없고 쿠킹한 바이너리만 있다.
+         * @details 팩 쿠커가 뺄 때와 기본 에셋 검사가 "배포 팩에 없는 것이 맞다" 고 볼 때 같은 판정을 쓴다(확장자를 두 곳에 적지 않는다).
+         */
+        static bool isRawShaderSource( string_view path ) { return StringUtil::endsWith( path, ".hlsl", true ) || StringUtil::endsWith( path, ".hlsli", true ); }
 
         PROPERTY( Required )
         PackCompressionConfig _compression; ///< 팩 압축

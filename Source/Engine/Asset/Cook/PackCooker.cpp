@@ -290,8 +290,7 @@ namespace sw
                 return false;
         }
 
-        const bool bRawShaderSource = StringUtil::endsWith( fileName, ".hlsl", true ) || StringUtil::endsWith( fileName, ".hlsli", true );
-        if ( config._bExcludeRawShaderSource && bRawShaderSource )
+        if ( config._bExcludeRawShaderSource && PackConfig::isRawShaderSource( fileName ) )
             return false;
 
         return PackCookerInternal::isOtherBackendShaderBinary( normalized, listDirectory, shaderFolder ) == false;

@@ -2,13 +2,10 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
-
-#if SW_DEV_COMMANDS_ENABLED
-
-    #include "Core/Log/Logger.h"
-    #include "Core/Container/StringUtil.h"
 
 namespace sw
 {
@@ -101,5 +98,3 @@ namespace sw
             DevCommandRegistry::get().unregisterCommand( _pRegistration );
     }
 } // namespace sw
-
-#endif

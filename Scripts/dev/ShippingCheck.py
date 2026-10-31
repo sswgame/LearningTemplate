@@ -65,7 +65,10 @@ def findBinDir(projectRoot: Path, preset: str) -> Path:
 def makeLogPath(projectRoot: Path, preset: str, name: str) -> Path:
     logDir = projectRoot / "build" / preset / "Testing" / "Logs"
     logDir.mkdir(parents=True, exist_ok=True)
-    return logDir / f"ShippingCheck.{name}.log"
+    logPath = logDir / f"ShippingCheck.{name}.log"
+    # 지난 실행의 로그를 지운다 — 배포 로거는 경고 이상만 쓰고 쓸 줄이 없으면 파일을 만들지 않아, 남은 파일을 이번 결과로 읽게 된다.
+    logPath.unlink(missing_ok=True)
+    return logPath
 
 
 def buildPreset(projectRoot: Path, preset: str) -> bool:

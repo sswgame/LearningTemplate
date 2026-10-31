@@ -1,6 +1,8 @@
 /**
  * @file DevCommandRegistry.h
- * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다. **Shipping 에서는 통째로 빠집니다.**
+ * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다.
+ * @details 선언과 인자 도우미(`readDiskPathArgument` …)는 모든 구성에 있다 — 기능 파일의 명령 본문이 모든 구성에서 컴파일되게. 배포 구성은 `SW_DEV_COMMAND` 가
+ *          등록하지 않아 레지스트리가 비어 있고, 본문은 부르는 곳이 없어 실행 파일에서 빠진다(`docs/agents/BuildConfigSwitch.md`).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -11,8 +13,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
-
-#if SW_DEV_COMMANDS_ENABLED
 
 namespace sw
 {
@@ -104,6 +104,8 @@ namespace sw
         bool                          _bRegistered;
     };
 } // namespace sw
+
+#if SW_DEV_COMMANDS_ENABLED
 
 /**
  * @brief 개발 명령을 기능의 `.cpp` 에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 옆에 둔다).

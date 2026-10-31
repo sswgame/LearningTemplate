@@ -5,14 +5,11 @@
  *          `SW_AUTOMATION_STEP_VALIDATOR` 로 따로 올린다(`AutomationStepValidation`). Shipping 에는 단계도 검사도 없다.
  */
 #pragma once
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Config/RHIBackendType.h"
-
-#if SW_DEV_COMMANDS_ENABLED
 
 namespace sw
 {
@@ -39,5 +36,3 @@ namespace sw
         static bool validateSwapBackend( const AutomationStep& step, string& outError );
     };
 } // namespace sw
-
-#endif

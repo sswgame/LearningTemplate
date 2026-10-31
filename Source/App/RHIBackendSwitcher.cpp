@@ -36,7 +36,7 @@ namespace sw
             return engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
         }
 
-        struct RHIBackendSwitcherDevCommandsInternal
+        struct RHIBackendSwitcherInternal
         {
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
             [[nodiscard]] static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
@@ -325,16 +325,16 @@ namespace sw
 
     SW_DEV_COMMAND( rhiRemoveDevice, "rhi.removeDevice", "rhi.removeDevice [driverWaitMs]",
                     "Remove the GPU device as a TDR would (DirectX 12; Vulkan marks it lost) to check that frames and shutdown do not hang; with a wait, the render thread first blocks that long where the fence wait is",
-                    &RHIBackendSwitcherDevCommandsInternal::runRemoveDevice );
-    SW_AUTOMATION_STEP_WITH_WALL_BUDGET( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherDevCommandsInternal::runSwapBackend,
-                                         &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherDevCommandsInternal::prepareSwapBackend, nullptr,
+                    &RHIBackendSwitcherInternal::runRemoveDevice );
+    SW_AUTOMATION_STEP_WITH_WALL_BUDGET( swapBackend, AutomationBackendSteps::kSwapBackendKind, &RHIBackendSwitcherInternal::runSwapBackend,
+                                         &AutomationBackendSteps::validateSwapBackend, &RHIBackendSwitcherInternal::prepareSwapBackend, nullptr,
                                          AutomationBackendSteps::kSwapBackendWallSeconds );
     SW_AUTOMATION_WATCH( rhiBackend, "RHI.Backend", "Backend the device runs on: 0 DirectX11, 1 DirectX12, 2 Vulkan, 3 OpenGL",
-                         &RHIBackendSwitcherDevCommandsInternal::readCommittedBackend );
+                         &RHIBackendSwitcherInternal::readCommittedBackend );
     SW_AUTOMATION_WATCH( rhiSwapPending, "RHI.SwapPending", "1 from a backend swap request (SwapBackend, gv_rhiBackend) until the end-of-frame swap has run",
-                         &RHIBackendSwitcherDevCommandsInternal::readSwapPending );
+                         &RHIBackendSwitcherInternal::readSwapPending );
     SW_AUTOMATION_WATCH( rhiSwapFailedCount, "RHI.SwapFailedCount", "Backend swaps that failed since the process started (each falls back to the previous backend)",
-                         &RHIBackendSwitcherDevCommandsInternal::readFailedSwapCount );
+                         &RHIBackendSwitcherInternal::readFailedSwapCount );
 
     void RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
     {

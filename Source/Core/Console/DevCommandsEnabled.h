@@ -5,7 +5,7 @@
  */
 #pragma once
 
-/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 레지스트리, 콘솔, 명령 본문이 모두 빠집니다. */
+/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 명령을 등록하지 않으며 콘솔이 없습니다(레지스트리 선언 · 명령 본문은 모든 구성에서 컴파일된다). */
 #if defined( SW_SHIPPING )
     #define SW_DEV_COMMANDS_ENABLED 0
 #else

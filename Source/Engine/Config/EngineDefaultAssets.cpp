@@ -2,8 +2,11 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 
+#include "Core/Foundation/BuildInfo.h"
+
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/FileSystem/AssetPaths.h"
+#include "Engine/FileSystem/Pack/PackConfig.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -45,8 +48,8 @@ namespace sw
         }
 
         // 필수 칸(셰이더 · 파이프라인 · 렌더 패스 경로)은 헤더에 값이 없다 — 데이터가 기준이다. 빠졌거나 가리키는 파일이 없으면
-        // 다른 경로로 대신하지 않고 읽기를 실패로 끝낸다(기동 · 쿠킹이 멈춘다). Shipping 팩에는 셰이더 소스(.hlsl)가 없으므로
-        // 파일 확인은 개발 빌드만 한다 — Shipping 은 쿠킹 스탬프(`cook.stamp`)가 소스와 바이너리의 짝을 지킨다.
+        // 다른 경로로 대신하지 않고 읽기를 실패로 끝낸다(기동 · 쿠킹이 멈춘다). 배포 팩에는 셰이더 원본이 없다(`PackConfig::isRawShaderSource`) —
+        // 그 칸은 쿠킹 스탬프(`cook.stamp`)가 소스와 바이너리의 짝을 지키므로 배포에서는 보지 않는다. 나머지 에셋은 배포도 본다(팩에 빠진 기본 에셋을 기동에서 잡는다).
         bool bComplete = true;
         for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
         {
@@ -60,7 +63,8 @@ namespace sw
                 continue;
             }
             // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 · 글꼴)는 팩에 없다 — 그 칸은 쓰는 쪽도 없으므로 보지 않는다.
-            if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) == false && AssetIO::hasAsset( AssetID{ pValue->get() } ) == false )
+            const bool bNotInThisPackage = engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) || ( build::kShipping && PackConfig::isRawShaderSource( pValue->get() ) );
+            if ( bNotInThisPackage == false && AssetIO::hasAsset( AssetID{ pValue->get() } ) == false )
             {
                 SW_LOG_ERROR( "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );
                 bComplete = false;
