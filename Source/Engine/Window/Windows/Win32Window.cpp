@@ -137,6 +137,7 @@ namespace sw
 
         // 스타일을 바꿔도 보이던 창은 보이게, 숨은 창은 숨은 채로 둔다(기동 중에는 아직 숨어 있다).
         const LONG_PTR visibleStyle = ( IsWindowVisible( _hWnd ) != FALSE ) ? WS_VISIBLE : 0;
+        const bool     bWasWindowed = _displayMode == WindowDisplayMode::Windowed;
         _displayMode                = mode;
         if ( mode == WindowDisplayMode::BorderlessFullscreen )
         {
@@ -148,14 +149,17 @@ namespace sw
             return true;
         }
 
-        // 창 모드는 요청한 클라이언트 크기로, 그 모니터의 작업 영역 가운데에 놓는다.
+        // 창 모드는 요청한 클라이언트 크기다. 이미 창이었으면 크기만 바꾸고 왼쪽 위를 지킨다(X11 · 언리얼의 창 크기 변경과 같다 - 예전에는 늘 가운데로 옮겨
+        // 자동화가 바둑판으로 놓은 백엔드 창이 단계마다 한가운데로 겹쳤다). 전체화면에서 돌아올 때만 그 모니터의 작업 영역 가운데에 놓는다.
         RECT frameRect = { 0, 0, static_cast<LONG>( width ), static_cast<LONG>( height ) };
         AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
         const LONG  frameWidth  = frameRect.right - frameRect.left;
         const LONG  frameHeight = frameRect.bottom - frameRect.top;
         const RECT& workRect    = monitorInfo.rcWork;
-        const LONG  frameX      = workRect.left + ( ( workRect.right - workRect.left ) - frameWidth ) / 2;
-        const LONG  frameY      = workRect.top + ( ( workRect.bottom - workRect.top ) - frameHeight ) / 2;
+        RECT        currentRect{};
+        const bool  bKeepPosition = bWasWindowed && GetWindowRect( _hWnd, &currentRect ) != FALSE;
+        const LONG  frameX        = bKeepPosition ? currentRect.left : workRect.left + ( ( workRect.right - workRect.left ) - frameWidth ) / 2;
+        const LONG  frameY        = bKeepPosition ? currentRect.top : workRect.top + ( ( workRect.bottom - workRect.top ) - frameHeight ) / 2;
         SetWindowLongPtrW( _hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW | visibleStyle );
         SetWindowPos( _hWnd, nullptr, frameX < workRect.left ? workRect.left : frameX, frameY < workRect.top ? workRect.top : frameY, frameWidth, frameHeight,
                       SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOACTIVATE );

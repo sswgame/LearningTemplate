@@ -63,7 +63,10 @@ namespace sw::editor
 
             static void beginProbeWindow()
             {
-                ImGui::SetNextWindowPos( ImVec2( 40.0f, 40.0f ), ImGuiCond_Always );
+                // 주 뷰포트 안에 둔다 - 데스크톱 좌표 (40, 40) 은 에디터 창 밖이라 프로브가 자기 OS 창(뷰포트)으로 떠 화면 왼쪽 위에서 깜박였다(`input.tooltipOnHover` 와 같다).
+                const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
+                ImGui::SetNextWindowViewport( pMainViewport->ID );
+                ImGui::SetNextWindowPos( ImVec2( pMainViewport->WorkPos.x + 40.0f, pMainViewport->WorkPos.y + 40.0f ), ImGuiCond_Always );
                 ImGui::SetNextWindowSize( ImVec2( 480.0f, 240.0f ), ImGuiCond_Always );
                 ImGui::Begin( kProbeWindowName, nullptr, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking );
             }
