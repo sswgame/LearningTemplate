@@ -9,7 +9,7 @@
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
 #          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 체인이 줍지 않는다 — 손으로 돌린다.
-#          게임의 하위 폴더 셋은 따로 항목이 된다: `desktop/`(혼자 도는 데스크톱 시나리오), `sequence/`(두 번 기동 쌍), `editor/`(편집기 체인).
+#          게임의 하위 폴더 넷은 따로 항목이 된다: `desktop/`(혼자 도는 데스크톱 시나리오), `sequence/`(두 번 기동 쌍), `editor/`(편집기 체인), `load/`(부하 측정 — 라벨 load, 엔진 폴더도).
 #          항목이 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) — `ctest -j` 의 다른 항목(단위 테스트)과 겹쳐도 GPU 자식이 늘지 않는다.
 #          다른 게임의 시나리오는 그 게임이 활성일 때(구성의 SW_ACTIVE_GAME) 올라온다 — App 은 활성 게임 하나만 싣는다.
 # ==============================================================================
@@ -74,6 +74,27 @@ foreach(desktopPath IN LISTS listDesktopScenario)
 		COMMAND $<TARGET_FILE:App> -scenario=${desktopPath} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${desktopTestName}.log ${listDesktopLaunch}
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(${desktopTestName} PROPERTIES LABELS hostgpu TIMEOUT 300 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+endforeach()
+
+# 부하 시나리오 — `engine/automation/load/` 와 활성 게임의 `automation/load/` 바로 아래. 측정 창(`<Load durationSeconds="N"/>`)이 끝내는 성능 측정이라 체인에 넣지 않고
+# 하나씩 기본 백엔드 한 프로세스로 혼자 돈다(RUN_SERIAL — 다른 항목이 CPU · GPU 를 나눠 쓰면 잰 값이 흔들린다). 라벨은 `load` 하나라 기본 실행(`-L hostgpu` · `-L nogpu`)에 들지 않고
+# `ctest -L load` 로 돈다(언리얼 Gauntlet 의 성능 테스트가 따로 도는 것과 같다). 시한은 측정 창 + 기동 여유다.
+file(GLOB listLoadScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/load/*.scenario.xml"
+	"${swScenarioRoot}/game/${swActiveGamePack}/automation/load/*.scenario.xml")
+foreach(loadPath IN LISTS listLoadScenario)
+	file(STRINGS "${swScenarioRoot}/${loadPath}" listLoadLine REGEX "<Load ")
+	if(NOT listLoadLine MATCHES "durationSeconds=\"([0-9]+)\"")
+		message(FATAL_ERROR "${loadPath}: a load scenario needs <Load durationSeconds=\"N\"/> (whole seconds) on one line")
+	endif()
+	math(EXPR loadTimeout "${CMAKE_MATCH_1} + 300")
+	string(REGEX REPLACE "^(engine|game/[^/]+)/automation/load/(.+)\\.scenario\\.xml$" "\\1.load.\\2" loadName "${loadPath}")
+	string(REPLACE "game/" "" loadName "${loadName}") # Scenario.<게임>.load.<이름> · Scenario.engine.load.<이름>
+	sw_readScenarioLaunch("${loadPath}" listLoadLaunch)
+	set(loadTestName Scenario.${loadName})
+	add_test(NAME ${loadTestName}
+		COMMAND $<TARGET_FILE:App> -scenario=${loadPath} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${loadTestName}.log ${listLoadLaunch}
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(${loadTestName} PROPERTIES LABELS load TIMEOUT ${loadTimeout} RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 endforeach()
 
 # 두 번 기동 쌍 — 활성 게임의 `automation/sequence/<묶음>.1` · `.2`. 빈 폴더의 사용자 설정 파일로 .1 을 돌려 남기고 같은 파일로 .2 를 띄워 남았는지 본다
