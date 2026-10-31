@@ -141,7 +141,7 @@ namespace sw
         , _builtRegion{}
         , _pPrimitiveRegistry{ nullptr }
         , _time{ 0.0f }
-        , _terrainSettleTime{ 0.0f }
+        , _terrainSettleFrames{ 0 }
         , _instanceCount{ 0 }
         , _lastRebuiltBatchCount{ 0 }
         , _builtTerrainGeneration{ 0 }
@@ -149,7 +149,6 @@ namespace sw
         , _seenTerrainGeneration{ 0 }
         , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
-        , _bTerrainRefreshPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -245,34 +244,28 @@ namespace sw
         const bool         bCanUpdateView = pManager != nullptr && _listCell.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition );
         if ( bCanUpdateView )
             updateView( viewPosition );
-        if ( pManager != nullptr && _bBuiltOnTerrain == SW_TRUE )
-            followTerrainEdits( *pManager, deltaTime );
     }
 
-    void FoliageComponent::followTerrainEdits( GameObjectManager& manager, float32 deltaTime )
+    bool FoliageComponent::followTerrainEdits( const GameObjectManager& manager )
     {
+        if ( _bBuiltOnTerrain == SW_FALSE )
+            return false;
         const float3            origin   = getWorldPosition();
         const TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( manager, origin._x, origin._z );
         if ( pTerrain == nullptr )
-            return;
+            return false;
         const uint32 generation = pTerrain->getHeightfieldGeneration();
         const uint32 revision   = pTerrain->getSplatRevision();
         if ( generation != _seenTerrainGeneration || revision != _seenSplatRevision )
         {
             _seenTerrainGeneration = generation;
             _seenSplatRevision     = revision;
-            _terrainSettleTime     = 0.0f;
-            return;
+            _terrainSettleFrames   = 0;
+            return false;
         }
         const bool bStale = generation != _builtTerrainGeneration || revision != _builtSplatRevision;
-        _terrainSettleTime += deltaTime;
-        const bool bReadyToRefresh = bStale && kTerrainSettleSeconds <= _terrainSettleTime && _bTerrainRefreshPending == SW_FALSE;
-        if ( bReadyToRefresh == false )
-            return;
-        // 같은 편집으로 다시 걸지 않게 표시해 둔다. 계산한 세대는 다시 계산이 적는다(편집 사각형을 그 세대부터 찾는다). 레지스트리를 바꾸므로 틱 뒤에 한다.
-        _bTerrainRefreshPending = SW_TRUE;
-        manager.executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
-        { foliage.refreshFromTerrainEdits(); } );
+        ++_terrainSettleFrames;
+        return bStale && kTerrainSettleFrames <= _terrainSettleFrames;
     }
 
     bool FoliageComponent::isBehindTerrainEdits() const
@@ -288,7 +281,6 @@ namespace sw
 
     void FoliageComponent::refreshFromTerrainEdits()
     {
-        _bTerrainRefreshPending = SW_FALSE;
         [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다. Shipping 은 로그가 빠진다.
         const float3                     origin   = getWorldPosition();
         GameObject*                      pOwner   = getOwner();
