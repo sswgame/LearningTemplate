@@ -108,10 +108,12 @@ namespace sw
         , _directUploadMaxBytes{ 0 }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _timestampProvider{ *this }
+        , _contextThreadBinding{ *this }
     {
         _resourceImpl          = sw::make_unique<D3D11RHIResourceFactory>( this );
-        _pTimestampProvider    = this;
-        _pContextThreadBinding = this;
+        _pTimestampProvider    = &_timestampProvider;
+        _pContextThreadBinding = &_contextThreadBinding;
     }
 
     D3D11RHIDevice::~D3D11RHIDevice()

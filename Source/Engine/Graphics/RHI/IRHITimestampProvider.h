@@ -12,7 +12,8 @@ namespace sw
     /**
      * @class IRHITimestampProvider
      * @brief GPU 타임스탬프 쿼리와 GPU 시계 읽기입니다. 기록은 `IRHICommandList::writeTimestamp` 가 합니다.
-     * @details 디바이스가 이 인터페이스를 함께 상속하고, 생성자에서 `IRHIDevice::_pTimestampProvider` 에 자기를 적는다.
+     * @details 디바이스는 이 인터페이스를 상속하지 않는다. 디바이스가 가진 final 어댑터 멤버가 구현해 디바이스로 넘기고,
+     *          생성자가 `IRHIDevice::_pTimestampProvider` 에 그 멤버를 적는다(수명은 디바이스와 같다).
      *          쓰는 쪽은 `findTimestampProvider()` 가 nullptr 이면 계측을 건너뛴다. 묻는 비용은 멤버 하나를 읽는 것뿐이다.
      *          계측 정책(언제 켜는가)은 엔진이 정하고, 이 인터페이스는 메커니즘만 제공한다. 백엔드는 별도 모듈이라 엔진 전역(프로파일러)을 볼 수 없다.
      */
