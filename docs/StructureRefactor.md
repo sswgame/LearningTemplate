@@ -95,6 +95,8 @@
 ### T10. 폴백 목록 (R6 — 각 주제와 함께 지운다)
 `AutomationScratch::allowWrite` fail-open · `PackManager` 우선순위 기본값 · RHI 백엔드를 OS 기본으로 조용히 바꿈 · 스크린샷 대상 폴백 사슬(골든이 다른 그림을 볼 수 있다) · 머티리얼 폴백 버퍼를 `ensure` 네 곳이 지키는 불변식 · 미선언 렌더 타깃 · DXC→FXC · `ModuleCompiler::findBuildDirectory`(build.ninja 없으면 Bin) · `getBinaryDirectory`(TestBin 그대로) · `getExecutablePath` 빈 글 · `EditorToolAssetCommands::resolveExistingOrRelativePath` · `LocalizationTools::resolveAbsolutePath` · BehaviorTree `diskPath = path` · `EditorBakeOutputPath` · `EditorPaths::getProjectRootPath` · `resolveProjectRelativePath` · 빈 도메인 루트 이어 붙이기(`EditorSelfTestPanelCases.cpp:76` 은 그 경로를 `removeDirectory` 한다 — 작업 폴더 폴더를 지울 위험) · Chat 금칙어 · `ConfigManager` 세 후보 · 파서 설정 기본값 · 봇 `--tls`.
 
+- **끝(2026-10-31)**: `resolveProjectRelativePath` 삭제(디스크 경로 gv 는 받을 때 이미 절대, 상수는 `AbsolutePath::tryResolve` + `ProcessRoots::_project`, 프로젝트 설정 목록은 설정 테이블이 읽은 절대 자리를 넘긴다), `EditorBakeOutputPath` 는 (씬 id, 이름) → 출력 id 순수 함수(`.scene.xml` 이 아니면 오류), 같은 모양 둘(`EditorTracyLauncher::findViewerPath` 의 빈 루트 · `BugReportModel::makeAbsolutePath`) · 팩 `<Engine>` 페이지의 빈 루트 이어 붙이기.
+
 ## 4. 순서
 
 의존 순이다. 각 단계는 코드 → 린트 → 커밋, 단계 묶음 끝에 빌드 · ctest 한 번(CLAUDE.md 원칙 2). 7 단계 전까지는 동작이 바뀌지 않아야 한다.
