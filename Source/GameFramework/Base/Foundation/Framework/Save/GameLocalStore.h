@@ -26,7 +26,7 @@ namespace sw
     /**
      * @class GameLocalStore
      * @brief 게임 인스턴스 서브시스템입니다(`game::findSubsystem<GameLocalStore>()` · 인스턴스의 `getSubsystem<GameLocalStore>()`). 게임 스레드에서만 쓴다.
-     * @details 프레임마다 인스턴스가 `update` 를 불러 끝난 요청의 콜백을 요청 순서대로 부른다. 종료 전 단계(`stopSubsystem`)는 남은 쓰기를 끝까지 마치고 남은 완료를 넘긴다
+     * @details 프레임마다 인스턴스가 `update` 를 불러 끝난 요청의 콜백을 요청 순서대로 부른다. 종료 전 단계(`stopSubsystem`)는 맡긴 일과 완료 콜백이 잇는 일을 끝까지 마치고 완료를 넘긴다
      *          (끝낼 때 쓴 세이브를 잃지 않는다 - 남은 읽기는 IOError 다).
      */
     class SW_GF_API GameLocalStore final : public GameInstanceSubsystem
@@ -50,7 +50,7 @@ namespace sw
 
         /** @brief 저장소를 엽니다. 암호 제공자(`INetSecurityProvider`)가 게임 범위에 없거나 열지 못하면 오류를 남기고 실패한다(세이브 없이 서지 않는다). */
         SubsystemInitResult initializeSubsystem() override;
-        /** @brief 남은 쓰기를 끝까지 마치고(`ILocalStore::shutdown`) 남은 완료를 넘깁니다. */
+        /** @brief 맡긴 일이 바닥날 때까지 완료를 넘기고(콜백이 잇는 쓰기까지) 저장소를 닫습니다(`ILocalStore::shutdown`). */
         void        stopSubsystem() override;
         void        shutdownSubsystem() override;
         const utf8* getSubsystemName() const override { return kSubsystemName; }
@@ -59,6 +59,8 @@ namespace sw
         [[nodiscard]] Subscription submitRead( string_view slot, const CompletionFunction& onComplete );
         /** @brief 슬롯 하나에 씁니다(슬롯 단위 원자 쓰기). 끝나면 @p onComplete 를 부릅니다. 구독을 놓아도 쓰기는 끝까지 한다. */
         [[nodiscard]] Subscription submitWrite( string_view slot, vector<uint8> bytes, const LocalStoreWriteOptions& options, const CompletionFunction& onComplete );
+        /** @brief 슬롯 하나를 지웁니다(없는 슬롯은 저장소가 정한 결과로 끝난다). 구독을 놓아도 지우기는 끝까지 한다. */
+        [[nodiscard]] Subscription submitErase( string_view slot, const CompletionFunction& onComplete );
         /** @brief 끝난 요청의 콜백을 요청 순서대로 부릅니다. 콜백 안에서 새 요청을 맡겨도 된다(다음 `update` 에 끝난다). */
         void update();
         /** @brief 맡겼지만 아직 콜백을 부르지 않은 요청이 있으면 true 입니다. */

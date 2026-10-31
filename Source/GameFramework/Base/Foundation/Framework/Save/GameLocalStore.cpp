@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/Save/GameLocalStore.h"
 
+#include "Core/Concurrency/thread.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
@@ -63,8 +64,14 @@ namespace sw
 
     void GameLocalStore::stopSubsystem()
     {
+        // 완료 콜백이 잇는 쓰기(자동 저장의 슬롯 기록)까지 마치도록, 맡긴 일이 바닥날 때까지 완료를 넘기고 나서 닫는다. 종료 한 번의 대기라 폴링으로 둔다.
+        while ( _store->getPendingCount() > 0 )
+        {
+            update();
+            if ( _store->getPendingCount() > 0 )
+                ThreadUtil::sleepForMilliseconds( 1 );
+        }
         _store->shutdown();
-        update(); // 끝까지 마친 쓰기의 완료를 넘긴다(세이브 알림). 이 뒤에 맡긴 요청은 IOError 로 끝나고 넘기지 않는다
     }
 
     void GameLocalStore::shutdownSubsystem()
@@ -84,6 +91,11 @@ namespace sw
     Subscription GameLocalStore::submitWrite( string_view slot, vector<uint8> bytes, const LocalStoreWriteOptions& options, const CompletionFunction& onComplete )
     {
         return track( _store->submitWrite( slot, std::move( bytes ), options ), onComplete );
+    }
+
+    Subscription GameLocalStore::submitErase( string_view slot, const CompletionFunction& onComplete )
+    {
+        return track( _store->submitErase( slot ), onComplete );
     }
 
     Subscription GameLocalStore::track( uint64 requestID, const CompletionFunction& onComplete )
