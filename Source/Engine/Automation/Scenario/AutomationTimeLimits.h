@@ -14,7 +14,7 @@ namespace sw
      *          - 감시(`kDefaultWallTimeoutSeconds`): 실행기가 프레임 앞뒤에서 보는 시나리오 한 편의 벽시계 상한(시나리오가 `wallTimeoutSeconds` 로 바꿀 수 있다).
      *          - 유예(`kHangGraceSeconds`): 감시 시한이 지났는데도 게임 스레드가 끝맺지 못하면(프레임이 멈춘 행) 감시 스레드가 이만큼 더 기다린 뒤 보고를 대신 쓴다.
      *          - 시계 보류(`kClockHoldTimeoutSeconds`): 시계 잡기 조건 하나가 이어서 시계를 붙잡을 수 있는 시간.
-     *          - 프로세스 시한(`kProcessKillSeconds`): 시나리오 행렬(`AutomationBackendMatrix`)이 끝나지 않은 자식 App 을 죽이는 시한. CTest 시한(600)은 그보다 길다.
+     *          - 프로세스 시한(`kProcessKillSeconds`): 백엔드마다 실행(`AutomationPerBackend`)이 끝나지 않은 자식 App 을 죽이는 시한. CTest 시한(600)은 그보다 길다.
      */
     struct AutomationTimeLimits
     {

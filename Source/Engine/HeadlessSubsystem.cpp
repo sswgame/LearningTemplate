@@ -514,9 +514,9 @@ namespace sw
         using Internal                  = HeadlessSubsystemInternal;
         CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
         // 헤드리스 작업은 `enterHeadless` 로 들어가며 그것이 작업 직전에 누수 기준선을 잡는다(`HeadlessTaskState`). 작업 하나가 돌았으면 뒤 작업과 이 단계의 나머지는 건너뛴다.
-        // 작업 순서가 곧 우선순위다: 도움말 → 단위 테스트 → 시나리오 백엔드 행렬 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
+        // 작업 순서가 곧 우선순위다: 도움말 → 단위 테스트 → 백엔드마다 시나리오 실행 → 서버의 클라이언트 전용 작업 거절 → 셰이더 쿠킹 → 리플렉션 문서 → 리타깃 베이크 → 셰이더 판정 → 패치 → 쿠킹 → 립싱크 → 에디터 도구.
         const bool bTaskRan = Internal::runHelpTask( commandLine, _state ) || Internal::runTestTask( commandLine, _state ) ||
-                              runScenarioMatrixTask( commandLine, _state ) ||
+                              runScenarioPerBackendTask( commandLine, _state ) ||
                               Internal::rejectClientOnlyTask( commandLine, _bDedicatedServer, _state ) ||
                               Internal::runCookShadersTask( commandLine, _state ) ||
                               Internal::runReflectionDocsTask( commandLine, _state ) || Internal::runBakeRetargetTask( commandLine, _state ) ||
@@ -526,7 +526,7 @@ namespace sw
         return bTaskRan ? SubsystemInitResult::SkipDependents : SubsystemInitResult::Succeeded;
     }
 
-    bool HeadlessSubsystem::runScenarioMatrixTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+    bool HeadlessSubsystem::runScenarioPerBackendTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
     {
         // `-scenario-backends` 가 없으면 보통 시나리오 실행(이 프로세스가 직접 돈다)이다.
         string backends;
@@ -535,13 +535,13 @@ namespace sw
         IAutomationRuntime* const pAutomation = engine::findSubsystem<IAutomationRuntime>();
         if ( pAutomation == nullptr )
         {
-            // 행렬을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
+            // 백엔드마다 실행을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
             inoutState.enterHeadless();
             SW_LOG_ERROR( "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
             inoutState._bFailed = true;
             return true;
         }
-        pAutomation->runBackendMatrix( backends, commandLine, inoutState );
+        pAutomation->runPerBackend( backends, commandLine, inoutState );
         return true;
     }
 

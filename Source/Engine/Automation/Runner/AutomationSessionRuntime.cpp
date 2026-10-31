@@ -5,8 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Automation/Runner/AutomationBackendMatrix.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
+#include "Engine/Automation/Runner/AutomationPerBackend.h"
 #include "Engine/Automation/Runner/AutomationSession.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Engine.h"
@@ -68,29 +68,29 @@ namespace sw
         _frameSubscription.reset();
     }
 
-    void AutomationSession::Runtime::runBackendMatrix( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState )
     {
         // 창 · RHI 를 세우기 전에 가로챈다 — 이 프로세스는 기다리기만 한다.
         inoutState.enterHeadless();
-        AutomationBackendMatrixOptions options;
-        string                         error;
+        AutomationPerBackendOptions options;
+        string                      error;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO, options._scenarioPath );
         (void)commandLine.getArgument( CommandLineArgument::LOG_FILE, options._logFilePath );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, options._reportPath );
         options._executablePath          = FileUtil::getExecutablePath();
-        options._listPassThroughArgument = AutomationBackendMatrix::filterPassThroughArguments( commandLine.getOriginalArguments() );
+        options._listPassThroughArgument = AutomationPerBackend::filterPassThroughArguments( commandLine.getOriginalArguments() );
         options._windowWidth             = engine::getSubsystem<EngineConfig>()._window._width;
         options._windowHeight            = engine::getSubsystem<EngineConfig>()._window._height;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT, options._bSplitScenarios );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, options._splitOffset );
-        if ( options._scenarioPath.empty() || AutomationBackendMatrix::parseBackendList( backends, options._listBackend, error ) == false )
+        if ( options._scenarioPath.empty() || AutomationPerBackend::parseBackendList( backends, options._listBackend, error ) == false )
         {
             SW_LOG_ERROR( "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
             inoutState._bFailed         = true;
             inoutState._failureExitCode = getAutomationExitCode( AutomationOutcome::LoadError );
             return;
         }
-        const int32 exitCode        = AutomationBackendMatrix::run( options );
+        const int32 exitCode        = AutomationPerBackend::run( options );
         inoutState._bFailed         = exitCode != 0;
         inoutState._failureExitCode = exitCode;
     }

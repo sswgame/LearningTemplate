@@ -4,7 +4,7 @@
 #        `*.scenario.xml` 모두를 체인 하나(`Scenario.<팩>` — `App -scenario=a,b,c -scenario-keep-going -scenario-backends=all -unattended`, 라벨 hostgpu — 창과 GPU 가 있는 PC 에서)로 돌린다.
 #        엔진 시나리오(`Content/engine/automation/`)는 활성 게임의 체인에 든다. 활성 게임이 아닌 게임은 `-game=<게임>` 을 붙인다(App 이 그 게임 팩 `Bin/Games/<게임>` 을 싣는다).
 #        목록이 없다 — 폴더를 훑는다. 팩 이름은 게임 프리셋(`Config/Game/<게임>.json` 의 `_packRoot`)이 정한다.
-#        그 App 은 창 · GPU 없이 백엔드마다 자식 App 을 하나씩 동시에 띄우고 결과를 모은다(`AutomationBackendMatrix` — 언리얼 Gauntlet 의 컨트롤러 자리).
+#        그 App 은 창 · GPU 없이 백엔드마다 자식 App 을 하나씩 동시에 띄우고 결과를 모은다(`AutomationPerBackend` — 언리얼 Gauntlet 의 컨트롤러 자리).
 #        자식 하나가 시나리오를 차례로 돌고, 단계마다 전역 변수를 되돌리고 `<Launch>` 값을 건 뒤 게임을 처음부터 다시 세운다(`AutomationSession::startStage` — 언리얼 PIE 가
 #        플레이마다 새 GameInstance 를 만들고 CVar 를 되돌리는 것과 같다). 첫 씬을 정하는 것은 게임의 기동 흐름이라 벤치(`gv_stressTest*`)도 체인에 든다. 프로세스는 백엔드 수 + 부모 하나다. 시나리오 하나만 돌리려면 `App -scenario=<경로>` 를 직접 띄운다.
 #        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드는 그 백엔드만 건너뛴다.

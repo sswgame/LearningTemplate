@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/Runner/AutomationBackendMatrix.h"
+#include "Engine/Automation/Runner/AutomationPerBackend.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/thread.h"
@@ -22,19 +22,19 @@
 
 #include "sw/config/CookContract.gen.h"
 
-SW_LOG_CALLER( "ScenarioMatrix" );
+SW_LOG_CALLER( "ScenarioPerBackend" );
 
 namespace sw
 {
     namespace
     {
-        struct AutomationBackendMatrixInternal
+        struct AutomationPerBackendInternal
         {
             static constexpr uint32 kTileColumnCount = 2; ///< 자식 창 바둑판의 열 수 — 백엔드 넷이면 2×2
             // shortcut: 창 틀(제목 줄 · 테두리) 두께를 Win32 기본 모양의 대략 값으로 둔다, 플랫폼 창 틀 크기를 묻는 API 가 생기면 그 값으로.
             static constexpr uint32 kFrameMarginX = 16;
             static constexpr uint32 kFrameMarginY = 40;
-            /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 행렬이 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
+            /** @brief 쿠킹 표의 명령줄 이름(표 순서) — 부모가 받는 백엔드 이름은 이것뿐이다(`-vk` 와 같은 철자). */
             static constexpr const utf8* kArrBackendName[] = {
 #define SW_MATRIX_BACKEND_NAME_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) CommandLineName,
                 SW_RHI_BACKEND_TABLE( SW_MATRIX_BACKEND_NAME_ROW )
@@ -171,13 +171,13 @@ namespace sw
                 }
                 for ( const auto& [path, listRecords] : listScenarioRecords )
                 {
-                    for ( const string& mismatch : AutomationBackendMatrix::findRecordMismatches( listRecords ) )
+                    for ( const string& mismatch : AutomationPerBackend::findRecordMismatches( listRecords ) )
                         listProblem.push_back( path + ": " + mismatch );
                 }
                 return listProblem;
             }
 
-            static void writeReport( const AutomationBackendMatrixOptions& options, const vector<unique_ptr<Child>>& listChild, const vector<string>& listRecordMismatch, int32 exitCode )
+            static void writeReport( const AutomationPerBackendOptions& options, const vector<unique_ptr<Child>>& listChild, const vector<string>& listRecordMismatch, int32 exitCode )
             {
                 string     json;
                 JSONWriter writer{ json, 2 };
@@ -211,14 +211,14 @@ namespace sw
                 writer.endArray();
                 writer.endObject();
                 if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
-                    SW_LOG_ERROR( "[Scenario] matrix: could not write the report %#", options._reportPath.c_str() );
+                    SW_LOG_ERROR( "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
             }
         };
     } // namespace
 
-    bool AutomationBackendMatrix::parseBackendList( string_view text, vector<string>& outListBackend, string& outError )
+    bool AutomationPerBackend::parseBackendList( string_view text, vector<string>& outListBackend, string& outError )
     {
-        using Internal = AutomationBackendMatrixInternal;
+        using Internal = AutomationPerBackendInternal;
         outListBackend.clear();
         const vector<string_view> listName = StringUtil::split( text, ",", { ._bTrim = true, ._bDropEmpty = true } );
         // 표 순서로 모은다 — 적은 순서와 무관하게 보고 · 종료 코드의 "첫 실패" 가 늘 같다.
@@ -246,9 +246,9 @@ namespace sw
         return true;
     }
 
-    vector<string> AutomationBackendMatrix::filterPassThroughArguments( const vector<string>& listOriginalArgument )
+    vector<string> AutomationPerBackend::filterPassThroughArguments( const vector<string>& listOriginalArgument )
     {
-        using Internal                                   = AutomationBackendMatrixInternal;
+        using Internal                                   = AutomationPerBackendInternal;
         static constexpr CommandLineArgument kArrOwned[] = { CommandLineArgument::SCENARIO, CommandLineArgument::SCENARIO_BACKENDS, CommandLineArgument::SCENARIO_BACKEND_SPLIT, CommandLineArgument::SCENARIO_BACKEND_SPLIT_OFFSET, CommandLineArgument::SCENARIO_REPORT,
                                                              CommandLineArgument::LOG_FILE };
         vector<string>                       listArgument;
@@ -265,9 +265,9 @@ namespace sw
         return listArgument;
     }
 
-    vector<string> AutomationBackendMatrix::assignScenarios( const AutomationBackendMatrixOptions& options )
+    vector<string> AutomationPerBackend::assignScenarios( const AutomationPerBackendOptions& options )
     {
-        using Internal = AutomationBackendMatrixInternal;
+        using Internal = AutomationPerBackendInternal;
         vector<string> listScenarioList( options._listBackend.size() );
         size_t         nextBackend = static_cast<size_t>( MathUtil::max<int32>( 0, options._splitOffset ) );
         for ( const string& path : AutomationScenarioChain::splitList( options._scenarioPath ) )
@@ -288,14 +288,14 @@ namespace sw
         return listScenarioList;
     }
 
-    string AutomationBackendMatrix::insertBackendSuffix( string_view path, string_view backend )
+    string AutomationPerBackend::insertBackendSuffix( string_view path, string_view backend )
     {
         return FileUtil::removeExtension( path ) + "." + string( backend ) + FileUtil::getExtension( path );
     }
 
-    vector<string> AutomationBackendMatrix::findRecordMismatches( const vector<AutomationBackendRecords>& listRecords )
+    vector<string> AutomationPerBackend::findRecordMismatches( const vector<AutomationBackendRecords>& listRecords )
     {
-        using Internal = AutomationBackendMatrixInternal;
+        using Internal = AutomationPerBackendInternal;
         vector<string> listMismatch;
         if ( listRecords.size() < 2 )
             return listMismatch;
@@ -340,26 +340,26 @@ namespace sw
         return listMismatch;
     }
 
-    int32 AutomationBackendMatrix::run( const AutomationBackendMatrixOptions& options )
+    int32 AutomationPerBackend::run( const AutomationPerBackendOptions& options )
     {
-        using Internal            = AutomationBackendMatrixInternal;
+        using Internal            = AutomationPerBackendInternal;
         const string scenarioStem = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
-        const string defaultFolder = FileUtil::reserveUniquePath( formatToString( "%#/%#/matrix-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() ), {}, true );
+        const string defaultFolder = FileUtil::reserveUniquePath( formatToString( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() ), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다.
         const bool bTileWindows = options._windowWidth > 0 && options._windowHeight > 0 &&
                                   std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
         { return Internal::getArgumentKey( argument ) == getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_X ); } );
         // 나눌 때 배정의 시작점 — 주지 않았으면 UTC 날짜(일)로 정해 날마다 한 칸씩 돌린다. 백엔드와 무관하다고 본 시나리오도 나흘이면 모든 백엔드를 거친다.
-        AutomationBackendMatrixOptions assignOptions = options;
+        AutomationPerBackendOptions assignOptions = options;
         if ( options._bSplitScenarios && assignOptions._splitOffset < 0 )
         {
             constexpr int64 kSecondsPerDay = 24 * 60 * 60;
             assignOptions._splitOffset     = static_cast<int32>( ( WallClock::nowUnixMilliseconds().toSeconds() / kSecondsPerDay ) % static_cast<int64>( MathUtil::max<size_t>( 1, options._listBackend.size() ) ) );
         }
         if ( options._bSplitScenarios )
-            SW_LOG_INFO( "[Scenario] matrix: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
+            SW_LOG_INFO( "[Scenario] per-backend: split offset %# (rerun the same assignment with -scenario-backend-split-offset=%#)", assignOptions._splitOffset, assignOptions._splitOffset );
         const vector<string>                listScenarioList = assignScenarios( assignOptions );
         vector<unique_ptr<Internal::Child>> listChild;
         for ( const string& backend : options._listBackend )
@@ -394,10 +394,10 @@ namespace sw
             const ProcessCommand              command    = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
             pChild->_bLaunched                           = pChild->_process.launch( command );
             if ( pChild->_bLaunched == false )
-                SW_LOG_ERROR( "[Scenario] matrix: could not launch %#", command.toCommandLine().c_str() );
+                SW_LOG_ERROR( "[Scenario] per-backend: could not launch %#", command.toCommandLine().c_str() );
             else
             {
-                SW_LOG_INFO( "[Scenario] matrix: %# started (log %#)", backend.c_str(), pChild->_logPath.c_str() );
+                SW_LOG_INFO( "[Scenario] per-backend: %# started (log %#)", backend.c_str(), pChild->_logPath.c_str() );
                 Process* pProcess    = &pChild->_process;
                 pChild->_drainThread = thread( [pProcess]()
                 {
@@ -428,7 +428,7 @@ namespace sw
                     MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 50 * constant::kNanosecondsPerMillisecond );
                 const bool bKilled = pChild->_process.isRunning() && pChild->_process.terminate( getAutomationExitCode( AutomationOutcome::TimedOut ) );
                 if ( bKilled )
-                    SW_LOG_ERROR( "[Scenario] matrix: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
+                    SW_LOG_ERROR( "[Scenario] per-backend: %# did not finish within %# s - killed", pChild->_backend.c_str(), killSeconds );
                 pChild->_exitCode = pChild->_process.waitForExit();
                 if ( bKilled )
                     pChild->_exitCode = getAutomationExitCode( AutomationOutcome::TimedOut ); // POSIX 는 종료 코드를 줄 수 없다(128 + SIGKILL) — 결과는 시간 초과다
@@ -440,17 +440,17 @@ namespace sw
                 firstFailure = pChild->_exitCode == -1 ? getAutomationExitCode( AutomationOutcome::Failed ) : pChild->_exitCode;
             const LogLevel level = pChild->_exitCode == 0 || bSkipped ? LogLevel::Info : LogLevel::Error;
             if ( level == LogLevel::Error )
-                SW_LOG_ERROR( "[Scenario] matrix: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                SW_LOG_ERROR( "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
                               pChild->_logPath.c_str() );
             else
-                SW_LOG_INFO( "[Scenario] matrix: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
+                SW_LOG_INFO( "[Scenario] per-backend: %# %# (exit %#) - %#", pChild->_backend.c_str(), Internal::describeExitCode( pChild->_exitCode ), pChild->_exitCode,
                              pChild->_logPath.c_str() );
         }
 
         // 백엔드 사이의 기록 대조 — 게임 상태는 CPU 에서만 정해지므로 같은 시나리오의 `<Record>` 는 모든 백엔드에서 같아야 한다.
         const vector<string> listRecordMismatch = Internal::compareChildRecords( listScenarioList, listChild );
         for ( const string& mismatch : listRecordMismatch )
-            SW_LOG_ERROR( "[Scenario] matrix: record mismatch - %#", mismatch.c_str() );
+            SW_LOG_ERROR( "[Scenario] per-backend: record mismatch - %#", mismatch.c_str() );
         if ( listRecordMismatch.empty() == false && firstFailure == 0 )
             firstFailure = getAutomationExitCode( AutomationOutcome::Failed );
 

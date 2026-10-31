@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @class IAutomationRuntime
-     * @brief 자동화 실행기의 바깥 창구입니다 — 시나리오 시작, 무인 실행 여부, 백엔드 행렬 작업.
+     * @brief 자동화 실행기의 바깥 창구입니다 — 시나리오 시작, 무인 실행 여부, 백엔드마다 실행 작업.
      */
     class IAutomationRuntime
     {
@@ -34,9 +34,9 @@ namespace sw
         /** @brief 무인 시나리오를 돌리는 중인가입니다(재생은 사람이 보는 화면이라 세지 않는다). 프레임 페이싱이 읽는다. */
         virtual bool isBusy() const = 0;
         /**
-         * @brief `-scenario-backends=<목록>` 작업 — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모읍니다(`AutomationBackendMatrix`). 결과는 @p inoutState 에 적습니다.
+         * @brief `-scenario-backends=<목록>` 작업 — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모읍니다(`AutomationPerBackend`). 결과는 @p inoutState 에 적습니다.
          * @param backends `-scenario-backends` 값(비어 있지 않다)
          */
-        virtual void runBackendMatrix( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) = 0;
+        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) = 0;
     };
 } // namespace sw

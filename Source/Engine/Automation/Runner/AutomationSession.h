@@ -132,7 +132,7 @@ namespace sw
 
             [[nodiscard]] bool start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
             bool               isBusy() const override;
-            void               runBackendMatrix( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
+            void               runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
             /** @brief 재생기를 호스트 범위에서 풀고 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
             void detach();
 

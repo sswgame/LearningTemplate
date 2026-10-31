@@ -49,7 +49,7 @@ namespace sw
         bool isHeadless() const { return _bHeadless; }
 
         bool  _bFailed{ false };      ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
-        int32 _failureExitCode{ -1 }; ///< 실패했을 때의 종료 코드(작업이 정하지 않으면 -1) — 시나리오 행렬은 시나리오 종료 코드(10 · 11 · 12 · 13 · 15)를 그대로 낸다
+        int32 _failureExitCode{ -1 }; ///< 실패했을 때의 종료 코드(작업이 정하지 않으면 -1) — 백엔드마다 실행은 시나리오 종료 코드(10 · 11 · 12 · 13 · 15)를 그대로 낸다
 
     private:
         bool _bHeadless{ false }; ///< 헤드리스 작업을 했다(뒤 단계를 세우지 않았다)
@@ -79,10 +79,10 @@ namespace sw
 
     private:
         /**
-         * @brief `-scenario=<경로> -scenario-backends=all|dx11,vk` — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모은다(`AutomationBackendMatrix`). 작업을 돌렸으면 true 입니다.
-         * @details 일은 자동화 실행기(`IAutomationRuntime::runBackendMatrix`)가 한다. 실행기를 짓지 않은 구성(`SW_ENABLE_AUTOMATION=OFF`)은 찾는 것이 없어 이유를 남기고 실패로 끝낸다.
+         * @brief `-scenario=<경로> -scenario-backends=all|dx11,vk` — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모은다(`AutomationPerBackend`). 작업을 돌렸으면 true 입니다.
+         * @details 일은 자동화 실행기(`IAutomationRuntime::runPerBackend`)가 한다. 실행기를 짓지 않은 구성(`SW_ENABLE_AUTOMATION=OFF`)은 찾는 것이 없어 이유를 남기고 실패로 끝낸다.
          */
-        [[nodiscard]] static bool runScenarioMatrixTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState );
+        [[nodiscard]] static bool runScenarioPerBackendTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState );
 
         HeadlessTaskState& _state;
         bool               _bDedicatedServer;

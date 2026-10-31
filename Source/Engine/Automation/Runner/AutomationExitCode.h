@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @brief 결과의 프로세스 종료 코드입니다. 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
-     *        행렬 실행(`AutomationBackendMatrix`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
+     *        백엔드마다 실행(`AutomationPerBackend`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
      */
     constexpr int32 getAutomationExitCode( AutomationOutcome outcome )
     {
