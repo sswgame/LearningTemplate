@@ -206,7 +206,7 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerID, keyId and the signing key", _settings._issuerID.c_str(),
+            SW_LOG_ERROR( "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerId, keyId and the signing key", _settings._issuerID.c_str(),
                           _settings._keyID.c_str() );
         }
         if ( Internal::isTransientStatus( response ) )
@@ -286,7 +286,7 @@ namespace sw
         if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
         {
             _authorization.clear();
-            SW_LOG_ERROR( "Apple rejected the App Store Server API token for the notification history - check issuerID, keyId and the signing key" );
+            SW_LOG_ERROR( "Apple rejected the App Store Server API token for the notification history - check issuerId, keyId and the signing key" );
         }
         if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
         {

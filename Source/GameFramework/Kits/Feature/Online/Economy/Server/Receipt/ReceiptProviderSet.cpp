@@ -30,7 +30,7 @@ namespace sw
             static constexpr const utf8* kKindApple  = "apple";
 
             static constexpr const utf8* kKnownKeys[] = { "kind", "appId", "keySecretEnvironment", "packageName", "serviceAccountEnvironment",
-                                                          "baseUrl", "tokenURL", "sandbox", "reportPollSeconds", "voidedPollSeconds", "issuerID",
+                                                          "baseUrl", "tokenUrl", "sandbox", "reportPollSeconds", "voidedPollSeconds", "issuerId",
                                                           "keyId", "bundleId", "signingKeySecretEnvironment", "rootCertificateFile", "historyPollSeconds" };
 
             static constexpr int64 kMillisecondsPerSecond = 1000;
@@ -152,7 +152,7 @@ namespace sw
             /** @brief 애플 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool readAppleEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
             {
-                outConfig._issuerID                    = readText( entry, "issuerID" );
+                outConfig._issuerID                    = readText( entry, "issuerId" );
                 outConfig._keyID                       = readText( entry, "keyId" );
                 outConfig._bundleID                    = readText( entry, "bundleId" );
                 outConfig._signingKeySecretEnvironment = readText( entry, "signingKeySecretEnvironment" );
@@ -163,7 +163,7 @@ namespace sw
                 const bool bFilesGiven    = outConfig._signingKeySecretEnvironment.empty() == false && outConfig._rootCertificateFile.empty() == false;
                 if ( bIdentityGiven == false || bFilesGiven == false )
                 {
-                    outError = "receipt provider 'apple' needs issuerID, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
+                    outError = "receipt provider 'apple' needs issuerId, keyId, bundleId, signingKeySecretEnvironment and rootCertificateFile";
                     return false;
                 }
                 return true;
@@ -174,7 +174,7 @@ namespace sw
             {
                 outConfig._packageName               = readText( entry, "packageName" );
                 outConfig._serviceAccountEnvironment = readText( entry, "serviceAccountEnvironment" );
-                outConfig._tokenURL                  = readText( entry, "tokenURL" );
+                outConfig._tokenURL                  = readText( entry, "tokenUrl" );
                 if ( outConfig._packageName.empty() || outConfig._serviceAccountEnvironment.empty() )
                 {
                     outError = "receipt provider 'google' needs packageName and serviceAccountEnvironment";

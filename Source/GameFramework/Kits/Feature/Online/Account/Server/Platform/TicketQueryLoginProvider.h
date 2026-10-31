@@ -2,7 +2,7 @@
  * @file TicketQueryLoginProvider.h
  * @brief 세션 티켓 확인 API 형 제공자입니다(OnlineKits A5). 티켓(16 진 글)과 서버 비밀 키를 쿼리 인자로 보내고, 결과 경로의 글이 성공 값이면 주체 경로의 값이 주체입니다.
  * @details 게임 플랫폼의 사용자 인증 티켓 확인(웹 API)을 제품 코드 없이 **데이터**로 정의한다(`PlatformLoginProviderKind::TicketQuery`). 예:
- *          `{"name":"steam","kind":"ticketQuery","profileURL":"https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=<앱>",
+ *          `{"name":"steam","kind":"ticketQuery","profileUrl":"https://partner.steam-api.com/ISteamUserAuth/AuthenticateUserTicket/v1/?appid=<앱>",
  *            "ticketParam":"ticket","keyParam":"key","keySecretEnvironment":"<변수>","resultPath":"response.params.result","resultValue":"OK",
  *            "subjectPath":"response.params.steamid"}`
  *          - 키는 설정 파일에 쓰지 않고 환경 변수(서버 비밀)에서 읽는다. 읽지 못하면 제공자를 만들지 않는다(`create` 가 nullptr — 서버 기동 실패).
