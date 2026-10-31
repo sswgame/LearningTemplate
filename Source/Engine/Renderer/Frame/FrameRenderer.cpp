@@ -146,7 +146,7 @@ namespace sw
             return false;
         }
 
-        if ( FramePassExecutor::isMeshMorphDiagValid() == false )
+        if ( FramePrepass::isMeshMorphDiagValid() == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
@@ -604,9 +604,9 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.usesGPUGeneratedCommands() );
+        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getPrepass().usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
-        _passExecutor.prepareMeshMorphPool();
+        _passExecutor.getPrepass().prepareMeshMorphPool();
         bool bVertexPool = gv_vertexPool;
         _state._gpuScene.setVertexPoolEnabled( bVertexPool );
         _state._gpuScene.upload( pDevice );
@@ -644,7 +644,7 @@ namespace sw
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
-        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.makeVFXSimulationInput() );
+        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.getPrepass().makeVFXSimulationInput() );
 
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;

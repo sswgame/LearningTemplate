@@ -21,7 +21,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
-#include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
+#include "Engine/Renderer/Frame/Execute/FramePrepass.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
@@ -77,17 +77,9 @@ namespace sw
          * @details 그래프 콜백은 이 객체의 `onGraphPassExecute` · `onGraphLevelPrologue` 다.
          */
         [[nodiscard]] bool bindPassCallbacks();
-        /** @brief 이번 프레임에 컴퓨트로 드로우 커맨드를 만들 예정인지 반환합니다. 업로드 전에 GPUScene 에 알리는 데 씁니다. */
-        bool usesGPUGeneratedCommands() const;
-        /** @brief `gv_meshMorphDebugMode` 가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
-        [[nodiscard]] static bool isMeshMorphDiagValid();
-        /**
-         * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 기록합니다. **업로드 전에** 부릅니다.
-         * @details 오프셋은 배치 테이블(g_SwBatches)에 실려 upload() 가 올리므로 테이블은 업로드 시점에 완성되어 있어야 한다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돈다.
-         */
-        void prepareMeshMorphPool();
-        /** @brief GPU 입자 시뮬레이션의 이번 프레임 입력(PSO · 주 시점 깊이 히스토리 · 인스턴스 버퍼)입니다. GPUScene 을 올린 뒤 부릅니다. */
-        VFXSimulationFrameInput makeVFXSimulationInput() const;
+        /** @brief 프레임 프리패스(그래프 앞에 프리패스 리스트로 기록하는 컴퓨트 · 깊이 히스토리 · 렌더 텍스처)입니다. 렌더러가 업로드 전에 묻는 값(`usesGPUGeneratedCommands` · 모프 풀 · VFX 입력)도 여기에 있다. */
+        FramePrepass&       getPrepass() { return _prepass; }
+        const FramePrepass& getPrepass() const { return _prepass; }
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -139,7 +131,7 @@ namespace sw
         // 5) 조회
         // ------------------------------------------------------------------------------
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다(`FrameRenderer::getOcclusionSnapshot`). 어느 스레드에서 불러도 됩니다. */
-        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _occlusion.getSnapshot(); }
+        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _prepass.getOcclusionSnapshot(); }
         /** @brief 지난 `submitGraph` 가 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). */
         uint32 getIndirectDrawCallCount() const { return _indirectDrawCallCount.load( std::memory_order_relaxed ); }
         /** @brief 지난 `submitGraph` 가 실제로 그린 추가 뷰 수입니다. */
@@ -354,58 +346,6 @@ namespace sw
         /** @brief `ExtensionPassContext::drawProxyElements` 의 몸체입니다. */
         bool drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
 
-        // ------------------------------------------------------------------------------
-        // 컴퓨트 프리패스(FramePassExecutorCompute.cpp · FramePassExecutorNanCheck.cpp — 가림 판정은 `OcclusionTiles`)
-        // ------------------------------------------------------------------------------
-        /**
-         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instance_animation.hlsl).
-         * @details **컬링보다 먼저** 돌아야 한다. 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의
-         *          바운드로 판정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
-         */
-        void dispatchInstanceAnimation( uint32 instanceCount );
-        /**
-         * @brief 모프를 요청한 메시들의 정점을 GPU 가 변형합니다(레스트에서 결과로).
-         * @details **컬링보다 앞**이어야 한다. 모프는 회전과 달리 실제로 형태와 바운드를 바꾸므로,
-         *          뒤에 두면 컬링이 한 프레임 늦은 형태로 판정한다.
-         */
-        void dispatchMeshMorph();
-        /**
-         * @brief 스킨드 메시들의 정점을 GPU 가 본 팔레트로 블렌딩합니다(바인드 포즈에서 모프 풀의 스킨 구간으로). 모프와 같이 **컬링보다 앞**이어야 합니다.
-         * @details 디스패치 하나가 모든 스킨드 메시를 처리한다. 정점마다의 팔레트 행 번호에 메시의 팔레트 시작이 이미 더해져 있다.
-         */
-        void dispatchMeshSkin();
-        /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_meshMorphDebugMode` 를 씁니다. */
-        MeshMorphDiagMode getEffectiveMeshMorphDiag() const;
-        /**
-         * @brief 뷰마다 컬링을 돌리고, 압축된 투명 목록을 CPU 정렬 순서로 되돌립니다(gpu_cull/instance_sort.hlsl).
-         * @details 컬링 결과는 절두체에 종속되므로 뷰(메인, 그림자)마다 자기 인자와 목록을 따로 만든다.
-         */
-        void dispatchCullAndSort( uint32 instanceCount );
-        /**
-         * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
-         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
-         */
-        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView );
-        /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
-        void computeLODFadeStep();
-        /**
-         * @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다.
-         * @details 그리기 전에, 그래프 밖의 컴퓨트 프리패스로 기록한다(렌더 그래프에 컴퓨트 패스 상태가 없다). 끝나면 그리드 버퍼를 SRV 로 돌린다.
-         */
-        void dispatchLightGrid();
-        /** @brief 실시간 프로브 갱신 컴퓨트를 기록합니다(라이트 그리드 · 볼륨 안개 뒤, 조명 패스 앞). `prepareRealtimeProbes` 가 켠 프레임에만 돕니다. */
-        void dispatchRealtimeProbes();
-        /** @brief 뷰 @p view 의 지난 깊이를 이번 프레임에 히스토리로 옮길 수 있으면 true 입니다(지난 깊이 · 히스토리 · PSO 가 모두 있다). */
-        bool canCopyDepthHistory( const FrameViewTarget& view ) const;
-        /**
-         * @brief 컴퓨트 프리패스 리스트에 뷰마다 지난 장면 깊이를 깊이 히스토리로 옮기는 풀스크린 하나를 기록합니다(depth_history.hlsl).
-         * @details GPU 입자 시뮬레이션보다 먼저 기록한다 — 깊이 충돌이 이 히스토리를 읽는다. 지금 읽는 쪽은 주 시점뿐이지만 히스토리는 뷰마다 둔다.
-         */
-        void recordDepthHistories();
-        /** @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다). */
-        void recordDepthHistory( FrameViewTarget& target );
-        /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
-        void rememberDepthHistoryViews();
         /**
          * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
@@ -469,6 +409,8 @@ namespace sw
         FramePostProcess&          _postProcess;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
+        /// @brief 그래프 앞의 프리패스 단계(컴퓨트 프리패스 · 깊이 히스토리 · 가림 타일 · 볼륨 안개 · 렌더 텍스처)입니다.
+        FramePrepass _prepass;
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
         /// @brief 컴퓨트 프리패스 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
@@ -487,12 +429,6 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapExtensionPassIndex;
         /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`forgetDevice`).
         RenderGraphExecutionContext _graphContext;
-        /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
-        RHIStructuredBufferSlot _transparentRankPlaceholder;
-        /// @brief GPU 컬링의 가림 판정(가림 타일 짓기 · 되읽기 · 자리표)입니다.
-        OcclusionTiles _occlusion;
-        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). 컴퓨트 프리패스의 assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
-        GPUAssertMonitor _gpuAssert;
         /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
         GPUNanCheck                 _nanCheck;
         unique_ptr<IRHICommandList> _nanCheckCommandList;
@@ -510,16 +446,6 @@ namespace sw
         uint32 _disabledInputRoleMask;
         /// @brief 지난 프레임에 그린 추가 뷰 수입니다.
         uint32 _lastRenderedExtraViewCount;
-        /// @brief 이번 프레임의 LOD 전환 진행량(0 ~ 255)입니다. 0 이면 크로스페이드 없이 바로 바꾼다(`dispatchCullAndSort` 가 정하고 `dispatchCullView` 가 컬링 상수로 싣는다).
-        uint32 _lodFadeStep;
-        /// @brief 지난 컬링 프레임의 시각(나노초)입니다. 전환 진행량의 프레임 간격을 잰다(0 이면 아직 없다).
-        int64 _lodFadePreviousNanoseconds;
-        /**
-         * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다. 가시 목록이 유효한지를 나타냅니다.
-         * @details 드로우가 가시 목록을 바인딩할지 정하는 값이다. 목록을 바인딩했는데 컬링이 돌지 않았다면 셰이더가
-         *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그린다.
-         */
-        uint8 _bGPUCullingActive;
         /// @brief 머티리얼 폴백 stride 가 없다는 것을 한 번만 알리기 위한 래치입니다. 드로우 경로이므로 프레임마다 로그를 찍으면 안 됩니다.
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다는 것을 한 번만 알리기 위한 래치입니다. 패스 경로이므로 프레임마다 로그를 찍으면 안 됩니다.

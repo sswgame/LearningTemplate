@@ -7,6 +7,8 @@
 
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
@@ -55,6 +57,7 @@ namespace sw
         , _postProcess{ postProcess }
         , _extensionHost{ extensionHost }
         , _capture{ capture }
+        , _prepass{ pDevice, state, psoManager, postProcess }
         , _pActiveView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
@@ -63,9 +66,6 @@ namespace sw
         , _mapPassNameToIndex{}
         , _mapExtensionPassIndex{}
         , _graphContext{}
-        , _transparentRankPlaceholder{}
-        , _occlusion{}
-        , _gpuAssert{}
         , _nanCheck{}
         , _nanCheckCommandList{}
         , _pLastSwapchainWriter{ nullptr }
@@ -73,9 +73,6 @@ namespace sw
         , _indirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _lastRenderedExtraViewCount{ 0 }
-        , _lodFadeStep{ 0 }
-        , _lodFadePreviousNanoseconds{ 0 }
-        , _bGPUCullingActive{ SW_FALSE }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
@@ -84,24 +81,14 @@ namespace sw
 
     void FramePassExecutor::ensureResources()
     {
-        // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
-        if ( _gpuAssert.initialize( _pDevice ) == false )
-            SW_FATAL( "gv_gpuAssert is on but the GPU assert ring could not be created - see the log above" );
+        _prepass.ensureResources();
         if ( _nanCheck.initialize( _pDevice ) == false )
             SW_FATAL( "gv_nanCheck is on but the NaN check counters could not be created - see the log above" );
-
-        // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
-        constexpr uint32 kZeroRank = 0;
-        if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
-            SW_LOG_ERROR( "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
-        _occlusion.ensurePlaceholder( _pDevice );
     }
 
     void FramePassExecutor::releaseResources()
     {
-        _transparentRankPlaceholder.release( _pDevice );
-        _occlusion.release( _pDevice );
-        _gpuAssert.shutdown();
+        _prepass.releaseResources();
         _nanCheckCommandList.reset();
         _nanCheck.shutdown();
     }
@@ -165,7 +152,6 @@ namespace sw
             _listPassContext.resize( passCount );
 
         _pCmd->beginCommandList();
-        _bGPUCullingActive = SW_FALSE;
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
         _state._deform._animationTimer.updateTimer();
 
@@ -186,28 +172,8 @@ namespace sw
         // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 슬롯을 돈다.
         // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
         // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
-        _gpuAssert.poll();
         _nanCheck.poll();
-        recordDepthHistories();
-        // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
-        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfx_simulate.hlsl · vfx_mesh_instance.hlsl).
-        _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
-        const uint32 animationInstanceCount = static_cast<uint32>( _state._gpuScene.getInstances().size() );
-        dispatchInstanceAnimation( animationInstanceCount );
-        dispatchMeshMorph();
-        dispatchMeshSkin();
-        dispatchCullAndSort( animationInstanceCount );
-        // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
-        dispatchLightGrid();
-        // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
-        _postProcess.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
-        // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
-        dispatchRealtimeProbes();
-        // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
-                                                       _gpuAssert, _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
-        // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
-        _gpuAssert.requestReadback( *_pCmd );
+        _prepass.record( *pDevice, *_pCmd );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -250,7 +216,7 @@ namespace sw
         _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
-        rememberDepthHistoryViews();
+        _prepass.rememberDepthHistoryViews();
         return bOk;
     }
 
@@ -471,5 +437,46 @@ namespace sw
             }
         }
         return string_view{};
+    }
+
+    void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
+    {
+        if ( _nanCheck.isActive() == false || pDevice == nullptr )
+            return;
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::NanCheck );
+        if ( pso == 0 )
+        {
+            SW_LOG_ERROR_ONCE( "gv_nanCheck is on but the NaN check PSO is missing (shader not cooked?) - no output is scanned" );
+            return;
+        }
+        if ( _nanCheckCommandList == nullptr )
+            _nanCheckCommandList = pDevice->createCommandList();
+        IRHICommandList* pCmd = _nanCheckCommandList.get();
+        if ( pCmd == nullptr )
+            return;
+
+        pCmd->beginCommandList();
+        vector<RHITextureHandle> listScanned; // 같은 텍스처를 가리키는 출력은 한 번만 훑는다
+        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
+        {
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                const TransientAttachmentPool::Attachment attachment = _state._mainView._transientPool.find( output._attachment.view() );
+                const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
+                if ( bScannable == false || VectorUtil::contains( listScanned, attachment._texture ) )
+                    continue;
+                listScanned.push_back( attachment._texture );
+
+                utf8 arrName[constant::kMaxBuffer64];
+                formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
+                // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
+                pCmd->prepareTextureForShaderRead( attachment._texture );
+                _nanCheck.scan( *pCmd, pso, arrName, attachment._srv, attachment._width, attachment._height );
+                pCmd->prepareTextureForRenderTarget( attachment._texture );
+            }
+        }
+        _nanCheck.requestReadback( *pCmd );
+        pCmd->endCommandList();
+        pDevice->executeCommandList( pCmd );
     }
 } // namespace sw

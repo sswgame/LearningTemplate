@@ -74,7 +74,7 @@ namespace sw
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GPUCullViewResources& cullView                  = _state._gpuScene.getCullView( context._cullViewIndex );
-        const bool                  bVisibleInstanceListReady = _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
+        const bool                  bVisibleInstanceListReady = _prepass.isGPUCullingActive() != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
                                                cullView._visibleInstances._srv != kInvalidDescriptorIndex;
         if ( bVisibleInstanceListReady )
         {
