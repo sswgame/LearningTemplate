@@ -351,7 +351,7 @@ namespace sw
 
             const FixedStringWarningGuard guard;
             if ( guard )
-                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
+                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
             return backOffToCharacterStart( pSource, N );
         }
 
@@ -365,8 +365,8 @@ namespace sw
             const FixedStringWarningGuard guard;
             if ( guard )
             {
-                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
-                                static_cast<uint32>( length ) );
+                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
+                                   static_cast<uint32>( length ) );
             }
             return backOffToCharacterStart( pSource, static_cast<uint32>( remaining ) );
         }
@@ -633,7 +633,7 @@ namespace sw
         {
             const FixedStringWarningGuard guard;
             if ( guard )
-                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - push_back dropped", N );
+                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded - push_back dropped", N );
             return;
         }
 

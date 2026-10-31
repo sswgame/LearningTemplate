@@ -276,12 +276,15 @@ namespace sw::internal
  * @brief 로그보다 아래 티어가 한 줄을 보고합니다(`SW_LOG_ERROR` · `SW_LOG_WARNING` 에 해당). 인자는 `printf` 문법의 서식과 값입니다(512 자까지).
  * @note 서식은 `snprintf` 문법입니다. 엔진 `formatstring` 의 `%#` 를 쓰면 `-Wformat` 이 막습니다(`SW_PRINTF_FORMAT`).
  */
-#define SW_LOW_LEVEL_INTERNAL( level, ... )                                                                                 \
+#define SW_LOW_LEVEL_INTERNAL( level, ... ) SW_LOW_LEVEL_INTERNAL_ID( level, nullptr, __VA_ARGS__ )
+
+/** @brief `SW_LOW_LEVEL_INTERNAL` 에 로그 id(문자열 리터럴 또는 nullptr)를 붙인 판입니다. */
+#define SW_LOW_LEVEL_INTERNAL_ID( level, pID, ... )                                                                         \
     do                                                                                                                      \
     {                                                                                                                       \
         utf8 arrLowLevelMessage[::sw::internal::kLowLevelMessageCapacity];                                                  \
         ::sw::internal::formatLowLevelMessage( arrLowLevelMessage, ::sw::internal::kLowLevelMessageCapacity, __VA_ARGS__ ); \
-        ::sw::internal::reportLowLevel( level, __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage );              \
+        ::sw::internal::reportLowLevel( level, __FILE__, static_cast<int32>( __LINE__ ), arrLowLevelMessage, pID );         \
     } while ( false )
 
 /** @brief 로그보다 아래 티어의 `SW_LOG_ERROR` 입니다. stderr 에 먼저 동기로 쓰고 로그로도 남깁니다. 서식은 `printf` 문법입니다. */
@@ -289,6 +292,12 @@ namespace sw::internal
 
 /** @brief 로그보다 아래 티어의 `SW_LOG_WARNING` 입니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_WARNING( ... ) SW_LOW_LEVEL_INTERNAL( ::sw::internal::LowLevelReportLevel::Warning, __VA_ARGS__ )
+
+/** @brief 로그 id 를 붙인 `SW_LOW_LEVEL_ERROR` 입니다(`SW_LOG_ERROR_ID` 에 해당 — 테스트가 `SW_EXPECT_LOG` 로 적는다). id 는 문자열 리터럴입니다. */
+#define SW_LOW_LEVEL_ERROR_ID( id, ... ) SW_LOW_LEVEL_INTERNAL_ID( ::sw::internal::LowLevelReportLevel::Error, "" id, __VA_ARGS__ )
+
+/** @brief 로그 id 를 붙인 `SW_LOW_LEVEL_WARNING` 입니다(`SW_LOG_WARNING_ID` 에 해당). id 는 문자열 리터럴입니다. */
+#define SW_LOW_LEVEL_WARNING_ID( id, ... ) SW_LOW_LEVEL_INTERNAL_ID( ::sw::internal::LowLevelReportLevel::Warning, "" id, __VA_ARGS__ )
 
 /** @brief 로그보다 아래 티어의 `SW_FATAL` 입니다. 한 줄을 남기고(stderr 동기 + 로그 · 싱크 비우기) 멈춥니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_FATAL( ... )                                                                                           \
