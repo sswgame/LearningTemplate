@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 마을 사람 일정의 하루 — 시계를 감지 않고(AdvanceGameTime 없음) 게임 시간 16 배(gv_timeScale)로 0 일 6:00 부터 1 일 0:00 까지 흘려,
+  일정 시스템이 블록 경계를 차례로 지나고 날이 바뀌는지 본다(schedule.scenario.xml 은 시각을 건너뛰어 그 시각의 상태만 본다).
+  시계는 실제 1 초 = 게임 10 분이고 16 배면 한 프레임(1/60 초)이 게임 약 2.7 분이다 — 18 시간은 약 405 프레임이다.
+  0 일은 월요일(맑음): pierre 잠 → 9:00 가게 WorkAt → 17:00 광장 벤치 UseObject → 22:00 잠, harvey 잠 → 9:00 병원 WorkAt → 15:00 강가 GoTo → 22:00 잠.
+  일정은 data/villagers.schedules.xml, 감시 값은 GameFramework Schedule.* · Clock.*(SessionStateWatches).
+  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/scheduleday.scenario.xml -unattended
+-->
+<Scenario name="game.harvestvalley.scheduleday" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<Variable name="gv_timeScale" value="16"/>
+	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
+	<!-- 블록 경계는 시간이 흘러 지난다 — 조건이 설 때까지 기다린다(9:00 은 약 68 프레임, 17:00 은 약 248 프레임 뒤). -->
+	<WaitUntil watch="Schedule.Activity" target="pierre" is="WorkAt" timeoutFrames="200"/>
+	<Expect watch="Schedule.Activity" target="harvey" is="WorkAt"/>
+	<WaitUntil watch="Schedule.Activity" target="harvey" is="GoTo" timeoutFrames="200"/>
+	<WaitUntil watch="Schedule.Activity" target="pierre" is="UseObject" timeoutFrames="200"/>
+	<!-- 날이 바뀐다(자정) — 둘 다 잠자리에 들었고 pierre 의 일정상 자리는 집이다. -->
+	<WaitUntil watch="Clock.Day" equals="1" timeoutFrames="400"/>
+	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
+	<Expect watch="Schedule.Activity" target="harvey" is="Sleep"/>
+	<Expect watch="Schedule.DistanceToPlace" target="pierre" key="pierre_house" atMost="1"/>
+	<Expect watch="Schedule.DistanceToPlace" target="harvey" key="harvey_house" atMost="1"/>
+	<!-- 하루 동안 거친 활동 — 블록을 건너뛰지 않았다 -->
+	<ExpectVisited watch="Schedule.Activity" target="pierre" sequence="Sleep, WorkAt, UseObject, Sleep"/>
+	<ExpectVisited watch="Schedule.Activity" target="harvey" sequence="Sleep, WorkAt, GoTo, Sleep"/>
+	<ExpectVisited watch="Schedule.Phase" target="pierre" sequence="Traveling, Performing"/>
+	<Record watch="Schedule.MinuteOfDay"/>
+	<Pass/>
+</Scenario>
