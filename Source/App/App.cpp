@@ -178,7 +178,11 @@ namespace sw
         }
 
         // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다).
-        _automation.start( _engine, _host, *pCommandLineManager );
+        if ( _automation.start( _engine, _host, *pCommandLineManager ) == false )
+        {
+            splash.dismiss();
+            return false;
+        }
 
         _fixedTimestep.configure( AppInternal::makeFixedTimestepParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.

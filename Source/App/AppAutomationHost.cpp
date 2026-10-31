@@ -7,15 +7,12 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#ifndef SW_AUTOMATION_ENABLED
-    #error "SW_AUTOMATION_ENABLED comes from CMake (cmake/Engine/BuildLayout.cmake, option SW_ENABLE_AUTOMATION)"
-#endif
-#if SW_AUTOMATION_ENABLED
-    #include "Engine/Automation/Runner/AutomationSession.h"
-    #include "Engine/Automation/Scenario/ScenarioPlayback.h"
-#endif
+#include "Engine/Automation/Runner/AutomationSession.h"
+#include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #include "Engine/Engine.h"
 #include "Engine/Renderer/RenderThread.h"
+
+// 자동화 런타임이 있는 구성(`SW_ENABLE_AUTOMATION=ON`)의 구현이다 — 끈 구성은 `AppAutomationHostOff.cpp` 를 CMake 가 고른다(`Source/App/CMakeLists.txt`).
 
 namespace sw
 {
@@ -27,14 +24,13 @@ namespace sw
     {
     }
 
-#if SW_AUTOMATION_ENABLED
     void AppAutomationHost::addToHostScope( SubsystemScope& host )
     {
         SW_MEMORY_SCOPE( EngineMisc );
         _pSession = &host.addSubsystem( make_unique<AutomationSession>() );
     }
 
-    void AppAutomationHost::start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLineManager )
+    bool AppAutomationHost::start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLineManager )
     {
         string recordPath;
         string recordProbes;
@@ -58,6 +54,7 @@ namespace sw
         const bool bPlayerBound = host.bind<IScenarioPlayer>( &_pSession->getScenarioPlayer() );
         SW_ASSERT( bPlayerBound );
         (void)bPlayerBound;
+        return true;
     }
 
     bool AppAutomationHost::isBusy() const
@@ -73,28 +70,4 @@ namespace sw
             _pSession->onDetachedFromEngine();
         _frameSubscription.reset();
     }
-#else
-    void AppAutomationHost::addToHostScope( [[maybe_unused]] SubsystemScope& host )
-    {
-    }
-
-    void AppAutomationHost::start( [[maybe_unused]] Engine& engine, [[maybe_unused]] SubsystemScope& host, const CommandLineManager& commandLineManager )
-    {
-        // 자동화 런타임을 뺀 구성(`SW_ENABLE_AUTOMATION=OFF`)은 시나리오 인자를 조용히 무시하지 않는다 — 폴백 없이 이유를 남기고 시나리오 없이 돈다.
-        string     value;
-        const bool bAsked = commandLineManager.getArgument( CommandLineArgument::SCENARIO, value ) || commandLineManager.getArgument( CommandLineArgument::SCENARIO_RECORD, value );
-        if ( bAsked )
-            SW_LOG_ERROR( "-scenario / -scenario-record need a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime). Ignored" );
-    }
-
-    bool AppAutomationHost::isBusy() const
-    {
-        return false;
-    }
-
-    void AppAutomationHost::detach( [[maybe_unused]] SubsystemScope& host )
-    {
-        _frameSubscription.reset();
-    }
-#endif
 } // namespace sw
