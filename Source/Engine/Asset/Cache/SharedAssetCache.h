@@ -20,7 +20,7 @@
  *            (MaterialCache.h).
  *          - `PrefabCache`: `loadPrefab` 이 매니저 소유 `PrefabAsset*` 를 돌려주고 스폰 · 되돌리기 · 중첩 펼치기를 함께 가진 매니저마다의 객체입니다
  *            (PrefabAsset.h).
- *          - `UITextAssetCache`: 문서 · 스타일 시트 캐시의 기반 클래스(final 아님)이고 메모리 글(`registerMemoryText`), 다시 읽기 알림 델리게이트, 파싱 횟수를
+ *          - `UITextAssetCache`: 문서 · 스타일 시트 서브시스템이 값 멤버로 가지는 캐시이고 메모리 글(`registerMemoryText`), 다시 읽기 알림 델리게이트, 파싱 횟수를
  *            인스턴스마다 가집니다. 실패를 남기지 않는 정책도 다릅니다(UITextAssetCache.h).
  *          - `AudioReloadCache` · `LocalizationReloadCache`(개발 도구 `DevTools/AssetReload`): 표가 없는 어댑터입니다. 데이터는 `IAudioService` · `LocalizationManager` 가 가지고 이 캐시는
  *            바뀐 파일을 넘기기만 합니다(각 .cpp).

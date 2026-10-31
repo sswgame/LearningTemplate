@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @brief 텍스트 하나를 에셋으로 파싱합니다. 실패하면 nullptr 를 반환하고 @p outError 에 `<경로>:<줄>: <이유>` 를 둡니다.
-     * @details 에셋 타입은 파생 캐시만 안다. 공통 구현은 `shared_ptr<const void>` 로 보관하고, 파생 캐시가 자기 타입으로 되돌린다.
+     * @details 에셋 타입은 가진 서브시스템만 안다. 공통 구현은 `shared_ptr<const void>` 로 보관하고, 가진 서브시스템이 자기 타입으로 되돌린다.
      */
     using UITextAssetParseFunction = shared_ptr<const void> ( * )( string_view text, string_view path, string& outError );
 } // namespace sw
@@ -33,7 +33,7 @@ namespace sw
 {
     /**
      * @class UITextAssetCache
-     * @brief 경로에서 파싱한 에셋을 찾아 나눠 주는 공통 구현입니다(`UIDocumentCache` 와 `UIStyleSheetCache` 가 파생합니다).
+     * @brief 경로에서 파싱한 에셋을 찾아 나눠 주는 공통 구현입니다(서브시스템 `UIDocumentCache` 와 `UIStyleSheetCache` 가 값 멤버로 가집니다).
      * @details 텍스트는 메모리 텍스트(`registerMemoryText`, 테스트와 도구), 리소스(팩, `Content/`), 절대 경로 순서로 찾는다.
      *          실패는 캐시에 남기지 않는다(고치면 다음 요청이 다시 읽는다). 다시 읽기(`reload`)가 실패하면 기존 에셋을 그대로 두고 오류를 남긴다
      *          (실패가 화면을 지우지 않으며, 현지화 `reloadChangedFile` 과 같은 규칙이다). 게임 스레드에서만 쓴다.
@@ -41,6 +41,12 @@ namespace sw
     class SW_API UITextAssetCache : public IAssetCache
     {
     public:
+        /**
+         * @param pAssetKindName 레지스트리의 종류 이름("UIDocument")입니다.
+         * @param pAssetLabel    오류와 로그 텍스트에 쓰는 이름("UI document")입니다.
+         * @param pParse         텍스트를 에셋으로 바꾸는 파서입니다.
+         */
+        UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse );
         ~UITextAssetCache() override;
 
         /**
@@ -56,14 +62,6 @@ namespace sw
         size_t getCachedCount() const override { return _mapPathToAsset.size(); }
         /** @brief 읽어 둔 에셋과 메모리 글을 모두 비웁니다. */
         void clear() override;
-
-    protected:
-        /**
-         * @param pAssetKindName 레지스트리의 종류 이름("UIDocument")입니다.
-         * @param pAssetLabel    오류와 로그 텍스트에 쓰는 이름("UI document")입니다.
-         * @param pParse         텍스트를 에셋으로 바꾸는 파서입니다.
-         */
-        UITextAssetCache( const utf8* pAssetKindName, const utf8* pAssetLabel, UITextAssetParseFunction pParse );
 
         /** @brief 에셋을 나눠 줍니다. 처음이면 읽고 파싱합니다. 실패하면 nullptr 를 반환하고 @p outError 를 채웁니다. */
         shared_ptr<const void> findOrLoadAsset( string_view path, string& outError );

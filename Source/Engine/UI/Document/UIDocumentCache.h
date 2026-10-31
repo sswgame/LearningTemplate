@@ -24,8 +24,9 @@ namespace sw
      *          같은 캐시를 읽으므로 화면 스택의 값 멤버가 아니다(언리얼 에셋 레지스트리 · Godot `ResourceLoader` 캐시처럼 화면과 수명이 따로다).
      *          기동이 에셋 캐시 레지스트리(`AssetManager`)에 등록한다(종료, 진단, 핫 리로드가 다른 캐시와 같은 경로를 쓴다).
      *          찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다.
+     *          캐시는 상속하지 않고 값 멤버로 가진다(서브시스템이 캐시 하나를 가지는 `GameDataCacheSubsystem` 과 같은 모양 — 레지스트리에는 멤버를 올린다).
      */
-    class SW_API UIDocumentCache final : public UITextAssetCache, public ISubsystem
+    class SW_API UIDocumentCache final : public ISubsystem
     {
     public:
         UIDocumentCache();
@@ -47,11 +48,14 @@ namespace sw
          */
         shared_ptr<const UIDocumentAsset> findOrLoad( string_view path, string& outError );
         /** @brief 파일 대신 읽을 문서 텍스트를 경로에 등록합니다(테스트와 도구용). 이미 읽어 둔 그 경로의 문서는 버립니다. */
-        void registerMemoryDocument( string_view path, string_view text ) { registerMemoryText( path, text ); }
+        void registerMemoryDocument( string_view path, string_view text ) { _cache.registerMemoryText( path, text ); }
         /** @brief 문서 글을 읽어 파싱한 횟수입니다(캐시가 파일을 한 번만 읽는지 테스트가 본다). */
-        uint32 getParseCount() const { return UITextAssetCache::getParseCount(); }
+        uint32 getParseCount() const { return _cache.getParseCount(); }
+        /** @brief 다시 읽어 바꾼 문서를 알리는 칸입니다(`UITextAssetCache::onReloaded`). */
+        UIAssetReloadedEvent& onReloaded() { return _cache.onReloaded(); }
 
     private:
-        Subscription _assetCacheRegistration; ///< 에셋 캐시 레지스트리 등록 구독(기동이 받고 종료가 놓는다)
+        UITextAssetCache _cache;                  ///< 문서 캐시(레지스트리에 오르는 에셋 캐시)
+        Subscription     _assetCacheRegistration; ///< 에셋 캐시 레지스트리 등록 구독(기동이 받고 종료가 놓는다 — 캐시보다 먼저 풀린다, 나중에 선언)
     };
 } // namespace sw

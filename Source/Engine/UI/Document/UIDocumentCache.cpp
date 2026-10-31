@@ -24,7 +24,7 @@ namespace sw
 namespace sw
 {
     UIDocumentCache::UIDocumentCache()
-        : UITextAssetCache{ "UIDocument", "UI document", &parseDocument }
+        : _cache{ "UIDocument", "UI document", &parseDocument }
         , _assetCacheRegistration{}
     {
     }
@@ -34,14 +34,14 @@ namespace sw
     SubsystemInitResult UIDocumentCache::initializeSubsystem()
     {
         // 핫 리로드 · 종료 · 진단이 다른 에셋 캐시와 같은 길로 간다.
-        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( this, SW_ASSET_CACHE_RELOAD_FUNCTION( UIDocumentCache ) );
+        _assetCacheRegistration = engine::getSubsystem<AssetManager>().registerAssetCache( &_cache, SW_ASSET_CACHE_RELOAD_FUNCTION( UITextAssetCache ) );
         return SubsystemInitResult::Succeeded;
     }
 
     void UIDocumentCache::shutdownSubsystem()
     {
         _assetCacheRegistration.reset();
-        clear();
+        _cache.clear();
     }
 
     span<const utf8* const> UIDocumentCache::getSubsystemDependencies() const
@@ -52,6 +52,6 @@ namespace sw
 
     shared_ptr<const UIDocumentAsset> UIDocumentCache::findOrLoad( string_view path, string& outError )
     {
-        return std::static_pointer_cast<const UIDocumentAsset>( findOrLoadAsset( path, outError ) );
+        return std::static_pointer_cast<const UIDocumentAsset>( _cache.findOrLoadAsset( path, outError ) );
     }
 } // namespace sw
