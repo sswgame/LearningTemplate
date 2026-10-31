@@ -4,11 +4,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/UI/Marker/HealthBarComponent.h"
 
 // PropertyUnitsTest — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 등록된 모든 타입에서 본다(GameFramework 에 둬 HP 바 비율도 늘 본다).
@@ -65,7 +65,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
     SW_REQUIRE_NOT_NULL( sw::HealthBarComponent::StaticType() );
 
     sw::vector<const sw::TypeInfo*> listType;
-    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
+    sw::game::getSubsystem<sw::TypeRegistry>().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
     { listType.push_back( &typeInfo ); } );
     SW_REQUIRE_TRUE( listType.size() > 50 );
 

@@ -2,9 +2,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
@@ -71,7 +71,7 @@ SW_TEST_CASE( PropertyEditConditionTest, EveryEditConditionResolves )
 {
     sw::string failures;
     uint32     checkedCount = 0;
-    sw::engine::getSubsystem<sw::TypeRegistry>().forEachType( [&failures, &checkedCount]( const sw::TypeInfo& type )
+    sw::editor::getSubsystem<sw::TypeRegistry>().forEachType( [&failures, &checkedCount]( const sw::TypeInfo& type )
     {
         for ( const sw::PropertyInfo& prop : type.getPropertiesWithBase() )
         {

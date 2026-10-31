@@ -209,10 +209,10 @@ namespace
         {
             if ( provider.makeX25519KeyPair( outClient._keyPair ) == false )
                 return false;
-            if ( NetPacketSealer::deriveServerKeys( provider, NetAeadAlgorithm::Aes256Gcm, outClient._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
+            if ( NetPacketSealer::deriveServerKeys( provider, NetAeadAlgorithm::AES256Gcm, outClient._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
                                                     outServer ) == false )
                 return false;
-            return NetPacketSealer::deriveClientKeys( provider, NetAeadAlgorithm::Aes256Gcm, outServer._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
+            return NetPacketSealer::deriveClientKeys( provider, NetAeadAlgorithm::AES256Gcm, outServer._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
                                                       outClient );
         }
     };
@@ -305,14 +305,14 @@ SW_TEST_CASE( NetPacketSealerTest, ProofTagBindsSecretSaltsKeyAndToken )
     uint8 arrToken[NetSecurityConstant::kMaxTokenSize]{};
     arrToken[0] = 0x42;
     uint8 arrTag[NetSecurityConstant::kAeadTagSize]{};
-    SW_REQUIRE_TRUE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::Aes256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_TRUE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::Aes256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::Aes256Gcm, secret, 1, 3, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::Aes256Gcm, secret, 1, 2, arrPublic, arrToken, 7, arrTag ) );
+    SW_REQUIRE_TRUE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_TRUE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 3, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 7, arrTag ) );
     NetSessionSecret otherSecret = secret;
     otherSecret._arrByte[0] ^= 0x01u;
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::Aes256Gcm, otherSecret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, otherSecret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
     // 상한을 넘는 토큰은 AAD 를 만들지 않고 거절한다(스택 버퍼를 넘지 않는다).
-    SW_EXPECT_FALSE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::Aes256Gcm, secret, 1, 2, arrPublic, arrToken, NetSecurityConstant::kMaxTokenSize + 1,
+    SW_EXPECT_FALSE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, NetSecurityConstant::kMaxTokenSize + 1,
                                                        arrTag ) );
 }

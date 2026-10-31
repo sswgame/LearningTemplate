@@ -372,12 +372,12 @@ namespace sw
             emit.line( "#if !defined( SW_SHIPPING )" );
             if ( prop._bHasUIMinRange != SW_FALSE )
             {
-                emit.linef( "p._metadata->_uiMinRange   = %#f;", prop._uiMinRange );
+                emit.linef( "p._metadata->_uiMinRange   = %#;", formatRangeLiteral( prop._uiMinRange ).c_str() );
                 emit.assign( "p._metadata->_bHasUIMinRange", "SW_TRUE" );
             }
             if ( prop._bHasUIMaxRange != SW_FALSE )
             {
-                emit.linef( "p._metadata->_uiMaxRange   = %#f;", prop._uiMaxRange );
+                emit.linef( "p._metadata->_uiMaxRange   = %#;", formatRangeLiteral( prop._uiMaxRange ).c_str() );
                 emit.assign( "p._metadata->_bHasUIMaxRange", "SW_TRUE" );
             }
             emit.line( "#endif" );
