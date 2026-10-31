@@ -7,6 +7,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+
 #include "Engine/Asset/AssetFormat.h"
 
 namespace sw::editor
@@ -366,5 +369,26 @@ namespace sw::editor
             outListExtension.push_back( ".json" );
         if ( EditorAssetTypeInternal::containsSuffix( outListExtension, ".txt" ) == false )
             outListExtension.push_back( ".txt" );
+    }
+
+    string_view EditorAssetTypeRegistry::matchingFocusedPath( const EditorAssetType& kind )
+    {
+        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+
+        const string& focused = editorContext.getSubsystem<EditorWorkspace>().getFocusedAssetPath();
+        if ( matches( kind, focused ) == false )
+            return {};
+        return focused;
+    }
+
+    bool EditorAssetTypeRegistry::consumeWorkspaceFocusKey( string& ioLastKey, uint64 extraToken )
+    {
+        string scanKey = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().getFocusedAssetPath();
+        scanKey += '|';
+        scanKey += to_string( extraToken );
+        if ( scanKey == ioLastKey )
+            return false;
+        ioLastKey = std::move( scanKey );
+        return true;
     }
 } // namespace sw::editor

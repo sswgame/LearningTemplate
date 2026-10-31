@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneStateHash.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -14,11 +15,14 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <algorithm>
 #include <charconv>
@@ -77,6 +81,267 @@ namespace sw
                         return false;
                     outName += static_cast<utf8>( high * 16 + low );
                     index += 2;
+                }
+                return true;
+            }
+        };
+
+        struct SceneInspectCommandsInternal
+        {
+            static constexpr uint32 kDefaultTreeLimit = 200;
+
+            /** @brief 이력을 남기고 있는 상태 해시 이력입니다. 서비스가 없거나 꺼져 있으면 nullptr 이고 @p outReply 에 까닭을 씁니다. */
+            static const StateHashHistory* findRecordingHistory( string& outReply )
+            {
+                const StateHashHistory* pHistory = engine::findSubsystem<StateHashHistory>();
+                if ( pHistory == nullptr )
+                    outReply = "state hash history service is not running in this host";
+                else if ( pHistory->isRecording() == false )
+                    outReply = "state hash history is off - start with -gv_stateHashHistory=<ticks>";
+                else
+                    return pHistory;
+                return nullptr;
+            }
+
+            static bool runTree( const vector<string>& listArgument, string& outReply )
+            {
+                uint64 limit = kDefaultTreeLimit;
+                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && StringUtil::parseUint64( listArgument[0], limit ) == false ) )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                vector<GameObject*> listObject;
+                pManager->getAllGameObjects( listObject );
+                VectorUtil::sort( listObject, []( const GameObject* pLeft, const GameObject* pRight )
+                {
+                    return pLeft->getObjectID() < pRight->getObjectID();
+                } );
+                outReply = "objects ";
+                StringUtil::appendNumber( outReply, listObject.size() );
+                outReply += '\n';
+                uint64 written = 0;
+                for ( const GameObject* pObject : listObject )
+                {
+                    if ( written++ >= limit )
+                    {
+                        outReply += "... (limit reached)\n";
+                        break;
+                    }
+                    StringUtil::appendNumber( outReply, pObject->getObjectID() );
+                    outReply += ' ';
+                    outReply += pObject->getName().empty() ? "<unnamed>" : pObject->getName().c_str();
+                    const GameObject* pParent = pObject->getParent();
+                    outReply += " parent=";
+                    outReply += pParent != nullptr && pParent->getName().empty() == false ? pParent->getName().c_str() : "-";
+                    outReply += pObject->isActive() ? " active=1" : " active=0";
+                    outReply += " components=";
+                    bool bFirst = true;
+                    pObject->forEachComponent( [&outReply, &bFirst]( Component* pComponent )
+                    {
+                        const TypeInfo* pType = pComponent->getTypeInfo();
+                        if ( bFirst == false )
+                            outReply += ',';
+                        bFirst = false;
+                        outReply += pType != nullptr ? pType->_name.c_str() : "?";
+                    } );
+                    outReply += '\n';
+                }
+                return true;
+            }
+
+            static bool runObjectDump( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                if ( pObject == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    return false;
+                }
+                outReply = "object ";
+                outReply += listArgument[0];
+                outReply += " id=";
+                StringUtil::appendNumber( outReply, pObject->getObjectID() );
+                outReply += pObject->isActive() ? " active=1\n" : " active=0\n";
+                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Snapshot );
+                pObject->forEachComponent( [&outReply, &context]( Component* pComponent )
+                {
+                    const TypeInfo* pType = pComponent->getTypeInfo();
+                    if ( pType == nullptr )
+                        return;
+                    outReply += '[';
+                    outReply += pType->_name.c_str();
+                    outReply += "]\n";
+                    pType->forEachProperty( [&outReply, &context, pComponent]( const PropertyInfo& prop )
+                    {
+                        outReply += "  ";
+                        outReply += prop._name.c_str();
+                        outReply += " = ";
+                        outReply += SerializerUtil::formatPropertyText( prop, ObjectAddress{ pComponent }, context );
+                        outReply += '\n';
+                    }, true );
+                } );
+                return true;
+            }
+
+            static bool runStateHash( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                vector<StateHashSample> listSample;
+                listSample.push_back( StateHashSample{ 0, SceneStateHash::compute( *pManager ) } );
+                outReply.clear();
+                StateHashHistory::writeReport( listSample, outReply );
+                return true;
+            }
+
+            /** @brief `state.objects` — 이름 있는 오브젝트마다 해시(`<16자리 16진 해시> <이름>`)를 답합니다. 어긋난 틱 근처에서 두 프로세스의 답을 견주면 어느 오브젝트가 다른지 나옵니다(`SceneStateHash::findDifferingObjects`). */
+            static bool runStateObjects( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                uint64                  tick = 0;
+                vector<SceneObjectHash> listObject;
+                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                    return false;
+                SceneStateHash::writeTickedObjectReport( tick, listObject, outReply );
+                return true;
+            }
+
+            /** @brief `state.objectline` — `state.objects` 와 같은 값(틱 + 오브젝트별 해시)을 한 줄(`SceneStateHash::writeObjectReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭의 클라이언트 칸이 쓴다. */
+            static bool runStateObjectLine( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                uint64                  tick = 0;
+                vector<SceneObjectHash> listObject;
+                if ( collectTickedObjects( outReply, tick, listObject ) == false )
+                    return false;
+                if ( SceneStateHash::writeObjectReportLine( tick, listObject, outReply ) == false )
+                {
+                    outReply = "the object report does not fit one line (" + to_string( listObject.size() ) + " objects, limit " + to_string( DebugReplyLine::kMaxBytes ) +
+                               " bytes) - use state.objects";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 두 `state.objects*` 명령이 같이 쓰는 값입니다. 첫 값의 틱은 이력의 가장 최근 틱이다 — 이력이 없으면 어느 틱의 해시인지 말할 수 없어 답하지 않는다(이유는 @p outReply). */
+            [[nodiscard]] static bool collectTickedObjects( string& outReply, uint64& outTick, vector<SceneObjectHash>& outListObject )
+            {
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                StateHashSample latest;
+                if ( pHistory->tryGetLatest( latest ) == false )
+                {
+                    outReply = "state hash history has no tick yet";
+                    return false;
+                }
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                outTick = latest._tick;
+                SceneStateHash::collectObjects( *pManager, outListObject );
+                return true;
+            }
+
+            /** @brief 이력의 줄 이름 인자(생략하면 씬 줄)를 @p outChannelName 에 읽습니다. 그 이름의 줄이 없으면 false 이고 까닭을 @p outReply 에 씁니다. */
+            [[nodiscard]] static bool findChannelArgument( const StateHashHistory& history, const vector<string>& listArgument, size_t nameIndex, string_view& outChannelName,
+                                                           string& outReply )
+            {
+                outChannelName = listArgument.size() > nameIndex ? string_view{ listArgument[nameIndex] } : string_view{ StateHashHistory::kSceneChannelName };
+                if ( history.hasChannel( outChannelName ) )
+                    return true;
+                outReply = "no state hash channel '" + string( outChannelName ) + "' - state.hashnames lists them";
+                return false;
+            }
+
+            static bool runStateHashes( const vector<string>& listArgument, string& outReply )
+            {
+                uint64     fromTick  = 0;
+                uint64     count     = 0;
+                const bool bArgCount = listArgument.size() == 2 || listArgument.size() == 3;
+                const bool bHasFrom  = bArgCount && StringUtil::parseUint64( listArgument[0], fromTick );
+                const bool bHasCount = bHasFrom && StringUtil::parseUint64( listArgument[1], count );
+                if ( bHasCount == false )
+                    return false;
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                string_view channelName;
+                if ( findChannelArgument( *pHistory, listArgument, 2, channelName, outReply ) == false )
+                    return false;
+                vector<StateHashSample> listSample;
+                pHistory->collectChannel( channelName, fromTick, static_cast<uint32>( count ), listSample );
+                outReply.clear();
+                StateHashHistory::writeReport( listSample, outReply );
+                return true;
+            }
+
+            /** @brief `state.hashnames` — 해시 이력의 줄 이름(씬 줄 `scene` 과 키트가 더한 줄)을 한 줄에 하나씩 답합니다. */
+            static bool runStateHashNames( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                vector<string> listName;
+                pHistory->collectChannelNames( listName );
+                outReply = StateHashHistory::kSceneChannelName;
+                outReply += '\n';
+                for ( const string& name : listName )
+                {
+                    outReply += name;
+                    outReply += '\n';
+                }
+                return true;
+            }
+
+            /** @brief `state.hashline <count> [name]` — 가장 최근 @p count 틱의 이력(@p name 은 키트의 줄, 생략하면 씬 줄)을 한 줄(`StateHashHistory::writeReportLine`)로 답합니다. 표준 입력으로 묻는 에디터 Sync 탭이 쓴다. */
+            static bool runStateHashLine( const vector<string>& listArgument, string& outReply )
+            {
+                uint64     count     = 0;
+                const bool bHasCount = ( listArgument.size() == 1 || listArgument.size() == 2 ) && StringUtil::parseUint64( listArgument[0], count );
+                if ( bHasCount == false || count == 0 )
+                    return false;
+                if ( count > StateHashHistory::kMaxReportLineSamples )
+                {
+                    outReply = formatToString( "count %# does not fit one line (at most %#) - use state.hashes", count, StateHashHistory::kMaxReportLineSamples );
+                    return false;
+                }
+                const StateHashHistory* pHistory = findRecordingHistory( outReply );
+                if ( pHistory == nullptr )
+                    return false;
+                string_view channelName;
+                if ( findChannelArgument( *pHistory, listArgument, 1, channelName, outReply ) == false )
+                    return false;
+                vector<StateHashSample> listSample;
+                StateHashSample         latest;
+                if ( pHistory->tryGetLatestChannel( channelName, latest ) )
+                {
+                    const uint64 fromTick = latest._tick + 1 > count ? latest._tick + 1 - count : 0;
+                    pHistory->collectChannel( channelName, fromTick, static_cast<uint32>( count ), listSample );
+                }
+                if ( StateHashHistory::writeReportLine( listSample, outReply ) == false )
+                {
+                    outReply = formatToString( "the hash history does not fit one line (limit %# bytes) - use state.hashes", DebugReplyLine::kMaxBytes );
+                    return false;
                 }
                 return true;
             }
@@ -632,4 +897,21 @@ namespace sw
         }
         return bFound;
     }
+
+    SW_DEV_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
+    SW_DEV_COMMAND( ObjectDump, "object.dump", "object.dump <name>", "Print the components and property values of a named object of the active scene",
+                    &SceneInspectCommandsInternal::runObjectDump );
+    SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
+    SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
+                    &SceneInspectCommandsInternal::runStateObjects );
+    SW_DEV_COMMAND( StateHashes, "state.hashes", "state.hashes <fromTick> <count> [channel]",
+                    "Print the recorded per-tick state hashes (needs -gv_stateHashHistory); channel is a kit's hash line from state.hashnames, default the scene",
+                    &SceneInspectCommandsInternal::runStateHashes );
+    SW_DEV_COMMAND( StateHashNames, "state.hashnames", "state.hashnames", "List the state hash history's channels (the scene and the lines kits registered, e.g. destruction, rollback)",
+                    &SceneInspectCommandsInternal::runStateHashNames );
+    SW_DEV_COMMAND( StateHashLine, "state.hashline", "state.hashline <count> [channel]",
+                    "Print the latest <count> recorded state hashes (of a kit's hash line, default the scene) on one line (the editor Sync tab reads client histories this way)",
+                    &SceneInspectCommandsInternal::runStateHashLine );
+    SW_DEV_COMMAND( StateObjectLine, "state.objectline", "state.objectline", "Print the state.objects hashes with their tick on one line (the editor Sync tab reads client object hashes this way)",
+                    &SceneInspectCommandsInternal::runStateObjectLine );
 } // namespace sw

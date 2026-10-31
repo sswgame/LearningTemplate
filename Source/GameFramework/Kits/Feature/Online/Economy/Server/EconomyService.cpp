@@ -19,6 +19,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 
 namespace sw
@@ -152,6 +153,16 @@ namespace sw
             const CurrencyCatalog*       _pCurrencies;
             UnixMilliseconds             _nowMs;
             EconomyResult                _result;
+        };
+
+        struct EconomyDevOnlineInternal
+        {
+            static unique_ptr<IReceiptValidator> createFakeReceiptValidator()
+            {
+                return make_unique<FakeReceiptValidator>();
+            }
+
+            static constexpr EconomyDevOptions kDevOptions{ &createFakeReceiptValidator };
         };
     } // namespace
 } // namespace sw
@@ -551,4 +562,6 @@ namespace sw
 {
     const OnlinePushRelayEntry kEconomyBalanceChangedRelay{ "Economy.BalanceChanged", EconomyMethod{}, EconomyPushName::BalanceChanged, EconomyProtocol::MessageTypes{},
                                                             OnlinePushBody<EconomyBalanceChanged>{} };
+
+    SW_REGISTER_DEV_ONLINE_EXTENSION( EconomyDevOptions, EconomyDevOnlineInternal::kDevOptions );
 } // namespace sw

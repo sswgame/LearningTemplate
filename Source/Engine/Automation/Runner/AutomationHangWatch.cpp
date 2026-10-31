@@ -3,9 +3,11 @@
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 
 #include "Core/Concurrency/ThreadName.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -47,6 +49,32 @@ namespace sw
             {
                 writer.key( key );
                 writer.valueUint( value );
+            }
+        };
+
+        struct AutomationHangCommandInternal
+        {
+            /**
+             * @brief 한 번에 멈출 수 있는 가장 긴 시간(초)입니다. 행 감시가 먼저 프로세스를 끝내므로 정상 실행에서는 닿지 않는다 — 감시 없이 손으로 부른 실행이
+             *        영영 멈추지 않게 하는 상한이고, 프로세스 시한(`AutomationTimeLimits::kProcessKillSeconds` 180)보다 짧다.
+             */
+            static constexpr int32 kMaxHangSeconds = 60;
+
+            /** @brief `automation.hang <seconds>`: 호출한 게임 스레드를 그만큼 붙잡습니다(프레임 경계를 지나지 않는다). */
+            static bool runHang( const vector<string>& listArgument, string& outReply )
+            {
+                int32 seconds = 0;
+                if ( listArgument.size() != 1 || StringUtil::parseInt( listArgument[0], seconds ) == false )
+                    return false;
+                const bool bInRange = 1 <= seconds && seconds <= kMaxHangSeconds;
+                if ( bInRange == false )
+                {
+                    outReply = formatToString( "hang must be 1..%# s", kMaxHangSeconds );
+                    return true;
+                }
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds ) * constant::kNanosecondsPerSecond );
+                outReply = formatToString( "the game thread was held for %# s", seconds );
+                return true;
             }
         };
     } // namespace
@@ -240,4 +268,7 @@ namespace sw
         else
             std::_Exit( exitCode );
     }
+
+    SW_DEV_COMMAND( AutomationHang, "automation.hang", "automation.hang <seconds>", "Block the calling game thread for that many seconds (hang watchdog checks)",
+                    &AutomationHangCommandInternal::runHang );
 } // namespace sw

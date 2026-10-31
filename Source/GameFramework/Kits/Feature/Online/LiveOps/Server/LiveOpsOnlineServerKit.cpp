@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
@@ -153,6 +154,16 @@ namespace sw
             unique_ptr<IPushNotificationProvider> _pFakeProvider; ///< `fakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
             PushProviderSet                       _providerSet;
         };
+
+        struct LiveOpsDevOnlineInternal
+        {
+            static unique_ptr<IPushNotificationProvider> createFakePushProvider()
+            {
+                return make_unique<FakePushProvider>();
+            }
+
+            static constexpr LiveOpsDevOptions kDevOptions{ &createFakePushProvider };
+        };
     } // namespace
 } // namespace sw
 
@@ -161,4 +172,6 @@ namespace sw
     SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "fakePush" );
 
     SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, OnlineServerKitName::kLiveOps );
+
+    SW_REGISTER_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, LiveOpsDevOnlineInternal::kDevOptions );
 } // namespace sw

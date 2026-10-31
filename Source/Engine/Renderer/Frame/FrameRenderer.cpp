@@ -28,6 +28,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
@@ -654,5 +655,11 @@ namespace sw
         if ( _bScenePreview == SW_FALSE )
             _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
         return bOk;
+    }
+
+    void FrameRenderer::prepareRealtimeProbes( IRHIDevice* pDevice )
+    {
+        const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassType::ProbeUpdate ) != 0;
+        _state._probeUpdater.prepare( pDevice, _state._listFrameRealtimeProbe, _state._lightBuffer, _state._frameSkySource, _state._bHasFrameSky == SW_TRUE, bPipelineReady );
     }
 } // namespace sw
