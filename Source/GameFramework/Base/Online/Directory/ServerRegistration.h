@@ -28,7 +28,7 @@ namespace sw
 
         ServerRegistration();
 
-        /** @brief 종류 · 지역 이름이 규칙 밖이거나 서버 id 가 0 이거나 주소가 길면 오류 로그와 함께 false 입니다. 첫 기록은 다음 `tick` 에. */
+        /** @brief 종류 · 지역 이름이 규칙 밖이거나 서버 id 가 0 이거나 주소가 길거나 게임 포트 수가 1 ~ `kMaxPortCount` 밖(또는 끝 포트가 65535 를 넘으면)이면 오류 로그와 함께 false 입니다. 첫 기록은 다음 `tick` 에. */
         [[nodiscard]] bool initialize( EphemeralStoreRouter* pRouter, const ServerDescriptor& descriptor );
         /** @brief 기록과 색인을 지웁니다. 정상 종료 때 불러 다른 서버의 목록에서 바로 사라지게 합니다. */
         void shutdown();

@@ -265,6 +265,16 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationRejectsInvalidDescriptor )
     longAddress._address             = sw::string( static_cast<size_t>( sw::ServerRecord::kMaxAddressSize ) + 1, 'a' );
     SW_EXPECT_FALSE( registration.initialize( &rig._router, longAddress ) );
     SW_EXPECT_FALSE( registration.initialize( nullptr, valid ) );
+    sw::ServerDescriptor noPort = valid;
+    noPort._portCount           = 0; // 읽는 쪽이 모두 거절할 기록이다
+    SW_EXPECT_FALSE( registration.initialize( &rig._router, noPort ) );
+    sw::ServerDescriptor tooManyPorts = valid;
+    tooManyPorts._portCount           = static_cast<uint8>( sw::ServerDescriptor::kMaxPortCount + 1 );
+    SW_EXPECT_FALSE( registration.initialize( &rig._router, tooManyPorts ) );
+    sw::ServerDescriptor portWraps = valid;
+    portWraps._port                = 65534;
+    portWraps._portCount           = 3; // 65534 · 65535 · 0 — 끝 포트가 넘친다
+    SW_EXPECT_FALSE( registration.initialize( &rig._router, portWraps ) );
 
     registration.update( sw::UnixMilliseconds{ kNowMs } );
     SW_EXPECT_EQUAL( 0, rig._store.getPendingCount() ); // 초기화하지 못한 등록은 쓰지 않는다

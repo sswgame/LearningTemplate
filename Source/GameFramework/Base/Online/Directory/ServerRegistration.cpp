@@ -17,13 +17,16 @@ namespace sw
 
     bool ServerRegistration::initialize( EphemeralStoreRouter* pRouter, const ServerDescriptor& descriptor )
     {
-        const bool bNamesOk           = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
-        const bool bAddressOk         = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
-        const bool bInvalidDescriptor = pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false;
+        const bool bNamesOk   = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
+        const bool bAddressOk = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
+        // 포트 수는 읽는 쪽(`ServerRecord::readStatus`)과 같은 범위다 — 밖이면 모든 읽는 쪽이 기록을 거절해 서버가 목록에서 조용히 빠진다.
+        const bool bPortsOk = 1 <= descriptor._portCount && descriptor._portCount <= ServerDescriptor::kMaxPortCount &&
+                              static_cast<int32>( descriptor._port ) + descriptor._portCount - 1 <= 0xFFFF;
+        const bool bInvalidDescriptor = pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false || bPortsOk == false;
         if ( bInvalidDescriptor )
         {
-            SW_LOG_ERROR_ID( "ServerRegistration.InvalidDescriptor", "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#)", descriptor._kind.c_str(), descriptor._region.c_str(),
-                             descriptor._serverID );
+            SW_LOG_ERROR_ID( "ServerRegistration.InvalidDescriptor", "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#, ports %# x %#)", descriptor._kind.c_str(),
+                             descriptor._region.c_str(), descriptor._serverID, descriptor._port, descriptor._portCount );
             return false;
         }
         _pRouter            = pRouter;
