@@ -82,7 +82,18 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `netplay.stop` — 모두 정상 종료시키고 트레이스를 합칩니다. */
+            /** @brief 감시 값 `Editor.NetPlayStopping` — `netplay.stop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직이면 1 입니다(시나리오가 `<WaitUntil>` 로 끝을 기다린다). */
+            [[nodiscard]] static bool readStopping( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorNetPlaySession* pSession = findSession();
+                outValue                             = pSession != nullptr && pSession->isStopping() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /**
+             * @brief `netplay.stop` — 모두에 정상 종료를 알리고 멈춤을 시작합니다(기다리지 않는다).
+             * @details 끝은 감시 값 `Editor.NetPlayStopping` == 0 이고, 그때 `Multiplayer session stopped` 줄(합친 트레이스 경로)이 남는다.
+             */
             static bool runStop( const vector<string>& listArgument, string& outReply )
             {
                 (void)listArgument;
@@ -92,8 +103,8 @@ namespace sw::editor
                     outReply = "no multiplayer session is running";
                     return true;
                 }
-                const string mergedPath = pSession->stop();
-                outReply                = mergedPath.empty() ? string( "multiplayer session stopped" ) : "multiplayer session stopped - merged trace " + mergedPath;
+                pSession->requestStop();
+                outReply = "multiplayer session stopping (done when Editor.NetPlayStopping is 0)";
                 return true;
             }
 
@@ -140,6 +151,8 @@ namespace sw::editor
 
     SW_AUTOMATION_WATCH( editorNetPlayProcessCount, "Editor.NetPlayProcessCount", "Processes of the running multiplayer session (server and clients, 0 when stopped)",
                          &MultiplayerPanelInternal::readProcessCount );
+    SW_AUTOMATION_WATCH( editorNetPlayStopping, "Editor.NetPlayStopping", "1 while a stopped multiplayer session is still reaping its processes and merging traces",
+                         &MultiplayerPanelInternal::readStopping );
     SW_AUTOMATION_WATCH( editorNetPlayConnectedClients, "Editor.NetPlayConnectedClients", "Clients of the multiplayer session that logged a connection to the server",
                          &MultiplayerPanelInternal::readConnectedClients );
     SW_DEV_COMMAND( NetPlayStart, "netplay.start", "netplay.start [dedicated|listen] [<players>]", "Start the editor's multi-process play session",

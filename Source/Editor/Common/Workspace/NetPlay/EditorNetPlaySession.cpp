@@ -17,6 +17,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
@@ -112,6 +113,115 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 트레이스를 남겼을 프로세스 하나(이름 · 파일)입니다. */
+    struct EditorNetPlayTraceSource
+    {
+        string _label;
+        string _tracePath;
+    };
+
+    /** @brief 멈춤 잡의 입력입니다. UI 스레드가 만들어 넘긴다 - 워커는 이 사본만 본다. */
+    struct EditorNetPlayStopInput
+    {
+        vector<sw::thread*>              _listReader;      ///< 합류할 읽기 스레드(주인은 세션의 `_listStoppingProcess` - 잡이 끝날 때까지 산다)
+        vector<EditorNetPlayTraceSource> _listTraceSource; ///< 트레이스를 켠 세션이면 프로세스마다 하나
+        string                           _traceDirectory;  ///< 비면 합치지 않는다
+    };
+
+    /** @brief 멈춤 잡의 결과입니다. */
+    struct EditorNetPlayStopResult
+    {
+        string _mergedTracePath; ///< 합친 트레이스(없으면 빈 글)
+    };
+
+    /**
+     * @class EditorNetPlayStopJob
+     * @brief 끝난 자식의 읽기 스레드를 합류하고 트레이스를 합치는 에디터 백그라운드 잡입니다(`EditorNetPlaySession::advanceStop` 이 낸다).
+     * @details 자식이 모두 끝난 뒤에만 낸다 - 합류는 파이프가 닫힌 읽기 스레드를 기다릴 뿐이라 워커를 오래 잡지 않는다. 합치기는 트레이스 파일 읽기 · JSON 합치기 · 쓰기(IO + CPU)다.
+     */
+    class EditorNetPlayStopJob final : public EditorBackgroundTask<EditorNetPlayStopInput, EditorNetPlayStopResult>
+    {
+    public:
+        /** @brief 잡을 냅니다(UI 스레드). */
+        void request( EditorNetPlayStopInput input )
+        {
+            const uint32 generation = beginRequest( std::move( input ) );
+            submitEditorBackgroundJob( "EditorNetPlayStop", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorNetPlayStopJob::runJob ), MakeTaskArgs( _pState, generation ) );
+        }
+
+        /** @brief 합류와 합치기입니다. 워커 잡과 이 스레드에서 끝까지 기다리는 길(`stopAndWait`)이 같이 쓴다. */
+        static EditorNetPlayStopResult runWork( const EditorNetPlayStopInput& input )
+        {
+            for ( sw::thread* const pReader : input._listReader )
+            {
+                if ( pReader->joinable() )
+                    pReader->join();
+            }
+            EditorNetPlayStopResult result;
+            result._mergedTracePath = mergeTraces( input );
+            return result;
+        }
+
+    private:
+        static void runJob( const TaskArgs& args )
+        {
+            const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+            const uint32            generation = args.get<uint32>( 1 );
+            EditorNetPlayStopInput  input;
+            if ( readInput( pState, generation, input ) == false )
+                return;
+            // 종료 신호가 올라도 합류는 끝까지 한다 - 세션이 읽기 스레드를 남긴 채 사라지면 안 된다(합치기만 건너뛴다).
+            if ( isStopRaised( readStopSignal( pState ) ) )
+                input._traceDirectory.clear();
+            publish( pState, generation, runWork( input ) );
+        }
+
+        /** @brief 트레이스를 남긴 프로세스의 파일을 모아 합칩니다. 둘 미만이면 빈 문자열입니다. */
+        static string mergeTraces( const EditorNetPlayStopInput& input )
+        {
+            string mergedPath;
+#if SW_PROFILER_TRACE_ENABLED
+            if ( input._traceDirectory.empty() )
+                return mergedPath;
+            vector<ProfilerTraceMergeInput> listInput;
+            for ( const EditorNetPlayTraceSource& source : input._listTraceSource )
+            {
+                ProfilerTraceMergeInput mergeInput;
+                mergeInput._label     = source._label;
+                const bool bTraceRead = source._tracePath.empty() == false && FileUtil::readOptionalTextFile( source._tracePath, mergeInput._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
+                if ( bTraceRead )
+                    listInput.push_back( std::move( mergeInput ) );
+                else
+                    SW_LOG_WARNING( "No trace from %# (%#)", source._label, source._tracePath );
+            }
+            if ( listInput.size() < 2 )
+                return mergedPath;
+            string json;
+            string report;
+            if ( ProfilerTraceExport::mergeTraceJSON( listInput, json, report ) == false )
+            {
+                SW_LOG_WARNING( "Traces could not be merged: %#", report );
+                return mergedPath;
+            }
+            mergedPath = input._traceDirectory + "/" + EditorNetPlaySession::kMergedTraceFileName;
+            if ( FileUtil::writeTextFile( mergedPath, json ) == false )
+            {
+                SW_LOG_WARNING( "Merged trace could not be written to %#", mergedPath );
+                mergedPath.clear();
+                return mergedPath;
+            }
+            SW_LOG_INFO( "Traces merged: %# -> %#", report, mergedPath );
+            return mergedPath;
+#else
+            (void)input;
+            return mergedPath;
+#endif
+        }
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     const utf8* toString( EditorNetMode mode )
     {
         switch ( mode )
@@ -128,6 +238,8 @@ namespace sw::editor
 
     EditorNetPlaySession::EditorNetPlaySession()
         : _listProcess{}
+        , _listStoppingProcess{}
+        , _pStopJob{ make_unique<EditorNetPlayStopJob>() }
         , _listLogLine{}
         , _listDrainScratch{}
         , _traceDirectory{}
@@ -136,8 +248,10 @@ namespace sw::editor
         , _settings{}
         , _pendingSettings{}
         , _presetStore{}
+        , _stopDeadline{ Deadline::afterMilliseconds( 0 ) }
         , _port{ 0 }
         , _debugChannelPort{ 0 }
+        , _stopPhase{ StopPhase::Idle }
         , _bReplayServer{ false }
         , _bMergedTraceUnopened{ false }
     {
@@ -159,8 +273,7 @@ namespace sw::editor
 
     void EditorNetPlaySession::resetToFreshEditor()
     {
-        if ( isRunning() )
-            (void)stop(); // 합친 트레이스는 아래에서 버린다
+        stopAndWait(); // 다음 단계는 새 프로세스와 같은 자리다 - 남은 멈춤까지 끝낸다. 합친 트레이스는 아래에서 버린다
         _pendingSettings      = EditorNetPlaySettings{};
         _bMergedTraceUnopened = false;
         _mergedTracePath.clear();
@@ -188,8 +301,7 @@ namespace sw::editor
 
     EditorNetPlaySession::~EditorNetPlaySession()
     {
-        if ( isRunning() )
-            (void)stop(); // 합친 경로는 쓸 곳이 없다. 경로는 로그에 남는다
+        stopAndWait(); // 읽기 스레드를 남긴 채 사라지지 않는다. 합친 경로는 쓸 곳이 없다 - 로그에 남는다
     }
 
     string EditorNetPlaySession::makeDefaultExecutablePath( const utf8* pBaseName )
@@ -284,7 +396,7 @@ namespace sw::editor
         if ( sendServerCommand( "intent.play " + intentFilePath ) == false )
         {
             SW_LOG_ERROR( "Could not send intent.play to the replay server" );
-            (void)stop();
+            requestStop();
             return false;
         }
         return true;
@@ -295,6 +407,12 @@ namespace sw::editor
         if ( isRunning() )
         {
             SW_LOG_WARNING( "A multiplayer session is already running - stop it first" );
+            return false;
+        }
+        // 앞 세션의 프로세스를 아직 거두는 중이다 - 같은 트레이스 폴더 · 로그 줄 · 포트 조사를 겹치지 않는다(끝은 `Editor.NetPlayStopping` == 0).
+        if ( isStopping() )
+        {
+            SW_LOG_WARNING( "The previous multiplayer session is still stopping - start again when it has finished" );
             return false;
         }
         if ( settings._mode == EditorNetMode::Standalone || ( settings._clientCount < 1 && _bReplayServer == false ) )
@@ -382,7 +500,7 @@ namespace sw::editor
         }
         if ( bLaunched == false )
         {
-            (void)stop(); // 띄운 프로세스는 끈다. 합칠 트레이스는 없다
+            requestStop(); // 띄운 프로세스는 끈다(거두기는 프레임마다 `update` 가 잇는다). 합칠 트레이스는 없다
             return false;
         }
         SW_LOG_INFO( "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
@@ -394,55 +512,66 @@ namespace sw::editor
     {
         for ( size_t processIndex = 0; processIndex < _listProcess.size(); ++processIndex )
         {
-            ChildProcess&  child = *_listProcess[processIndex];
-            vector<string> listLine;
-            {
-                ScopedLock<mutex> lock{ child._mutex };
-                listLine.swap( child._listPendingLine );
-            }
-            for ( string& line : listLine )
-            {
-                // 자식 로그의 소스 위치 줄(` -> 파일:줄`)은 옮기지 않는다. 옮기면 한 사건이 두 줄이 되어 Output Log 를 채운다.
-                if ( line.rfind( EditorNetPlaySessionInternal::kSourceLocationPrefix, 0 ) == 0 )
-                    continue;
-                // Profiler 탭의 주기 질의 응답은 보관만 한다. 0.5 초마다 프로세스 수만큼 오므로, 출력하면 Output Log 와 마지막 줄을 채운다.
-                if ( NetStatsReport::tryParseLine( line, child._statsReport ) )
-                {
-                    ++child._statsReportCount;
-                    continue;
-                }
-                // Sync 탭이 물은 이력(한 줄)도 보관만 한다 — 수천 틱이 한 줄이라 Output Log 에 옮기지 않는다. 형식이 틀린 줄은 버리지 않고 로그로 넘긴다.
-                if ( StateHashHistory::tryParseReportLine( line, child._listStateHash ) )
-                {
-                    ++child._stateHashReportCount;
-                    continue;
-                }
-                // Sync 탭이 물은 오브젝트별 해시(한 줄)도 보관만 한다 — 오브젝트 수만큼 길다.
-                if ( SceneStateHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
-                {
-                    ++child._objectHashReportCount;
-                    continue;
-                }
-                // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
-                if ( line.find( "[Error]" ) != string::npos )
-                    SW_LOG_WARNING( "[%#] %#", child._label, line );
-                else
-                    SW_LOG_INFO( "[%#] %#", child._label, line );
-                if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
-                    child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
-                if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
-                    ++child._emulationReportCount;
-                child._lastLine = line;
-                _listLogLine.push_back( EditorNetPlayLogLine{ std::move( line ), static_cast<int32>( processIndex ) } );
-            }
+            ChildProcess& child = *_listProcess[processIndex];
+            drainChildLines( child, static_cast<int32>( processIndex ) );
             if ( child._exited.load() != 0 && child._bExitReported == false )
             {
                 child._bExitReported = true;
                 SW_LOG_WARNING( "%# exited with code %# during the session - last line: %#", child._label, child._exitCode.load(), child._lastLine );
             }
         }
+        // 거두는 중인 프로세스의 줄도 옮긴다(끝날 때까지 나오는 줄 - 서버의 끊김 줄 등). 번호는 멈추기 전과 같다(목록을 통째로 옮겼다).
+        for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
+        {
+            drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+        }
+        advanceStop( false );
         if ( _listLogLine.size() > kMaxLogLine )
             _listLogLine.erase( _listLogLine.begin(), _listLogLine.begin() + static_cast<ptrdiff_t>( _listLogLine.size() - kMaxLogLine ) );
+    }
+
+    void EditorNetPlaySession::drainChildLines( ChildProcess& child, int32 processIndex )
+    {
+        vector<string> listLine;
+        {
+            ScopedLock<mutex> lock{ child._mutex };
+            listLine.swap( child._listPendingLine );
+        }
+        for ( string& line : listLine )
+        {
+            // 자식 로그의 소스 위치 줄(` -> 파일:줄`)은 옮기지 않는다. 옮기면 한 사건이 두 줄이 되어 Output Log 를 채운다.
+            if ( line.rfind( EditorNetPlaySessionInternal::kSourceLocationPrefix, 0 ) == 0 )
+                continue;
+            // Profiler 탭의 주기 질의 응답은 보관만 한다. 0.5 초마다 프로세스 수만큼 오므로, 출력하면 Output Log 와 마지막 줄을 채운다.
+            if ( NetStatsReport::tryParseLine( line, child._statsReport ) )
+            {
+                ++child._statsReportCount;
+                continue;
+            }
+            // Sync 탭이 물은 이력(한 줄)도 보관만 한다 — 수천 틱이 한 줄이라 Output Log 에 옮기지 않는다. 형식이 틀린 줄은 버리지 않고 로그로 넘긴다.
+            if ( StateHashHistory::tryParseReportLine( line, child._listStateHash ) )
+            {
+                ++child._stateHashReportCount;
+                continue;
+            }
+            // Sync 탭이 물은 오브젝트별 해시(한 줄)도 보관만 한다 — 오브젝트 수만큼 길다.
+            if ( SceneStateHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
+            {
+                ++child._objectHashReportCount;
+                continue;
+            }
+            // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 줄에는 자식의 로그 수준 레이블이 그대로 있다.
+            if ( line.find( "[Error]" ) != string::npos )
+                SW_LOG_WARNING( "[%#] %#", child._label, line );
+            else
+                SW_LOG_INFO( "[%#] %#", child._label, line );
+            if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
+                child._bConnected = true; // 0 번은 서버(전용 서버나 리슨 호스트)다
+            if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
+                ++child._emulationReportCount;
+            child._lastLine = line;
+            _listLogLine.push_back( EditorNetPlayLogLine{ std::move( line ), processIndex } );
+        }
     }
 
     bool EditorNetPlaySession::sendServerCommand( string_view command )
@@ -495,10 +624,11 @@ namespace sw::editor
         return status;
     }
 
-    string EditorNetPlaySession::stop()
+    void EditorNetPlaySession::requestStop()
     {
         if ( _listProcess.empty() )
-            return {};
+            return;
+        SW_ASSERT( _stopPhase == StopPhase::Idle ); // 거두는 중이면 `_listProcess` 는 비어 있다(`start` 가 거절한다)
         // 정상 종료한다. 클라이언트부터 끄면 서버 로그에 끊김이 남아 접속과 끊김을 한 줄로 확인할 수 있다. 이미 끝난 프로세스는 건너뛴다.
         for ( size_t processIndex = _listProcess.size(); processIndex-- > 0; )
         {
@@ -507,79 +637,99 @@ namespace sw::editor
             if ( child._exited.load() == 0 && child._process.writeInput( "quit\n" ) == false )
                 SW_LOG_WARNING( "Could not send quit to %# - it is terminated after the timeout", child._label );
         }
-        updateUntil( static_cast<int64>( _settings._stopTimeoutSeconds * constant::kMillisecondsPerSecond ), [this]()
-        {
-            for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
-            {
-                if ( pChild->_exited.load() == 0 )
-                    return false;
-            }
-            return true;
-        } );
-        for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
-        {
-            if ( pChild->_exited.load() == 0 )
-            {
-                SW_LOG_WARNING( "%# did not exit within %# s - terminating it (its trace is lost)", pChild->_label, _settings._stopTimeoutSeconds );
-                (void)pChild->_process.terminate( 1 ); // 죽으면 파이프가 닫혀 읽기 스레드가 끝난다
-            }
-        }
-        for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
-        {
-            if ( pChild->_reader.joinable() )
-                pChild->_reader.join();
-        }
-        update();                                                                      // 남은 줄을 로그로
-        for ( [[maybe_unused]] const unique_ptr<ChildProcess>& pChild : _listProcess ) // Shipping 은 로그를 지워 안 쓴다
-        {
-            SW_LOG_INFO( "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
-        }
-        _mergedTracePath      = mergeTraces();
-        _bMergedTraceUnopened = _mergedTracePath.empty() == false;
+        // 프로세스는 거둘 때까지 따로 둔다 - 이때부터 세션은 돌지 않는다(`isRunning` 거짓 · 명령을 보내지 않는다 · 디버그 채널을 내놓는다).
+        _listStoppingProcess = std::move( _listProcess );
         _listProcess.clear();
         _debugChannelPort = 0;
         _debugChannelToken.clear();
-        SW_LOG_INFO( "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
-        return _mergedTracePath;
+        _stopDeadline = Deadline::afterMilliseconds( static_cast<int64>( _settings._stopTimeoutSeconds * constant::kMillisecondsPerSecond ) );
+        _stopPhase    = StopPhase::WaitingForExit;
+        SW_LOG_INFO( "Multiplayer session stopping - %# process(es)", _listStoppingProcess.size() );
     }
 
-    string EditorNetPlaySession::mergeTraces()
+    void EditorNetPlaySession::advanceStop( bool bInline )
     {
-        string mergedPath;
-#if SW_PROFILER_TRACE_ENABLED
-        if ( _traceDirectory.empty() )
-            return mergedPath;
-        vector<ProfilerTraceMergeInput> listInput;
-        for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
+        switch ( _stopPhase )
         {
-            ProfilerTraceMergeInput input;
-            input._label          = pChild->_label;
-            const bool bTraceRead = pChild->_tracePath.empty() == false && FileUtil::readOptionalTextFile( pChild->_tracePath, input._json ) == OptionalFileRead::Read; // 자식이 죽어 파일이 없으면 아래 경고 하나로 알린다
-            if ( bTraceRead )
-                listInput.push_back( std::move( input ) );
-            else
-                SW_LOG_WARNING( "No trace from %# (%#)", pChild->_label, pChild->_tracePath );
+            case StopPhase::Idle:
+                return;
+            case StopPhase::WaitingForExit:
+            {
+                bool bAllExited = true;
+                for ( const unique_ptr<ChildProcess>& pChild : _listStoppingProcess )
+                {
+                    bAllExited = bAllExited && pChild->_exited.load() != 0;
+                }
+                if ( bAllExited == false && _stopDeadline.isExpired() == false )
+                    return;
+                EditorNetPlayStopInput input;
+                for ( const unique_ptr<ChildProcess>& pChild : _listStoppingProcess )
+                {
+                    if ( pChild->_exited.load() == 0 )
+                    {
+                        SW_LOG_WARNING( "%# did not exit within %# s - terminating it (its trace is lost)", pChild->_label, _settings._stopTimeoutSeconds );
+                        (void)pChild->_process.terminate( 1 ); // 죽으면 파이프가 닫혀 읽기 스레드가 끝난다
+                    }
+                    input._listReader.push_back( &pChild->_reader );
+                    input._listTraceSource.push_back( EditorNetPlayTraceSource{ pChild->_label, pChild->_tracePath } );
+                }
+                input._traceDirectory = _traceDirectory;
+                if ( bInline )
+                {
+                    finishStop( EditorNetPlayStopJob::runWork( input )._mergedTracePath );
+                    return;
+                }
+                _pStopJob->request( std::move( input ) );
+                _stopPhase = StopPhase::Merging;
+                return;
+            }
+            case StopPhase::Merging:
+            {
+                EditorNetPlayStopResult result;
+                if ( _pStopJob->take( result ) == EditorTaskPoll::Ready )
+                    finishStop( result._mergedTracePath );
+                return;
+            }
         }
-        if ( listInput.size() < 2 )
-            return mergedPath;
-        string json;
-        string report;
-        if ( ProfilerTraceExport::mergeTraceJSON( listInput, json, report ) == false )
+    }
+
+    void EditorNetPlaySession::stopAndWait()
+    {
+        requestStop();
+        // 기다리는 동안에도 줄을 옮긴다(`update`). 끝남 기다리기는 이 스레드에서 끝까지 하고(@p bInline), 이미 낸 합치기 잡이 있으면 그 결과를 기다린다.
+        while ( _stopPhase == StopPhase::WaitingForExit )
         {
-            SW_LOG_WARNING( "Traces could not be merged: %#", report );
-            return mergedPath;
+            for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
+            {
+                drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+            }
+            advanceStop( true );
+            if ( _stopPhase == StopPhase::WaitingForExit )
+                ThreadUtil::sleepForMilliseconds( kUpdatePollMilliseconds );
         }
-        mergedPath = _traceDirectory + "/" + kMergedTraceFileName;
-        if ( FileUtil::writeTextFile( mergedPath, json ) == false )
+        while ( _stopPhase == StopPhase::Merging )
         {
-            SW_LOG_WARNING( "Merged trace could not be written to %#", mergedPath );
-            mergedPath.clear();
-            return mergedPath;
+            advanceStop( false );
+            if ( _stopPhase == StopPhase::Merging )
+                ThreadUtil::sleepForMilliseconds( kUpdatePollMilliseconds );
         }
-        SW_LOG_INFO( "Traces merged: %# -> %#", report, mergedPath );
-        return mergedPath;
-#else
-        return mergedPath;
-#endif
+    }
+
+    void EditorNetPlaySession::finishStop( const string& mergedTracePath )
+    {
+        // 읽기 스레드는 합류했다 - 남은 줄은 모두 쌓여 있다.
+        for ( size_t processIndex = 0; processIndex < _listStoppingProcess.size(); ++processIndex )
+        {
+            drainChildLines( *_listStoppingProcess[processIndex], static_cast<int32>( processIndex ) );
+        }
+        for ( [[maybe_unused]] const unique_ptr<ChildProcess>& pChild : _listStoppingProcess ) // Shipping 은 로그를 지워 안 쓴다
+        {
+            SW_LOG_INFO( "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
+        }
+        _listStoppingProcess.clear();
+        _mergedTracePath      = mergedTracePath;
+        _bMergedTraceUnopened = _mergedTracePath.empty() == false;
+        _stopPhase            = StopPhase::Idle;
+        SW_LOG_INFO( "Multiplayer session stopped%#", _mergedTracePath.empty() ? string{} : " - merged trace " + _mergedTracePath );
     }
 } // namespace sw::editor

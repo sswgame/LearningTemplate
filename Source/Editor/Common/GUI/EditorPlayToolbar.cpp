@@ -110,8 +110,10 @@ namespace sw::editor
                     return false;
                 if ( session.isRunning() == false )
                 {
+                    ImGui::BeginDisabled( session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                         (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
+                    ImGui::EndDisabled();
                     EditorSelfTestMarks::note( "toolbar.netPlay" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStart" ) );
                     return true;
@@ -122,7 +124,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
-                    (void)session.stop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 Timeline 탭에 연다
+                    session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 Timeline 탭에 연다
                 EditorSelfTestMarks::note( "toolbar.netStop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStop" ) );
                 return true;

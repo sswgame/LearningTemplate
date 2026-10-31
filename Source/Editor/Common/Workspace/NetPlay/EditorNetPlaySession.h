@@ -15,6 +15,10 @@
  *            Output Log 하나에 모인다. 패널에서 출처별로 거를 수 있도록 최근 줄도 보관한다.
  *          - Stop: 모든 프로세스의 표준 입력에 `quit` 를 보내 정상 종료시키고(트레이스는 이때 쓰인다), 시한 안에 끝나지 않으면 강제 종료한다.
  *            트레이스를 켠 세션이면 남은 파일을 `ProfilerTraceExport::mergeTraceJSON` 으로 `<폴더>/merged.trace.json` 에 합친다.
+ *            멈춤은 프레임을 붙잡지 않는다(`requestStop`): 끝남 기다리기는 `update` 가 프레임마다 보고(값만 읽는다), 다 끝나면 읽기 스레드 합류 · 트레이스 합치기를
+ *            에디터 백그라운드 잡(`EditorNetPlayStopJob`)이 하고, 그 결과를 받은 `update` 가 마무리한다. 그동안 `isStopping` 이 참이고(감시 값 `Editor.NetPlayStopping`)
+ *            새 `start` 는 거절한다. 예전에는 `stop` 이 UI 스레드를 시한(기본 15 초)까지 붙잡고 합치기까지 했다. 기다리기를 워커에 두지 않는 것은 몇 초씩 워커 하나를 잡지 않기 위해서다
+ *            (`EditorExternalToolJob` 과 같은 까닭). 언리얼 PIE 가 멈춘 클라이언트 프로세스를 비동기로 거두는 것과 같다.
  *            같은 PC 이므로 단조 시계를 그대로 맞출 수 있어 정확하다. 어느 길(툴바 · Session 탭 · `netplay.stop`)로 멈춰도 합친 트레이스는
  *            `takeUnopenedMergedTrace` 가 한 번 내주고, Profiler 창의 프레임 단계(`SW_EDITOR_FRAME_STEP`)가 그것을 Timeline 탭에 연다.
  *          - 사용자 프리셋(`EditorNetPlayPresetStore`, `Saved/Editor/NetPlayPresets.json`)은 초기화 때 읽고, 마지막으로 고른 프리셋을 다음 세션의 구성으로 둔다.
@@ -81,6 +85,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    class EditorNetPlayStopJob;
+
     /**
      * @class EditorNetPlaySession
      * @brief 서버와 클라이언트 프로세스를 묶은 세션 하나입니다. `start`, 프레임마다 `update`, `stop` 순서로 씁니다. 게임(UI) 스레드에서만 호출합니다.
@@ -122,11 +128,11 @@ namespace sw::editor
          */
         [[nodiscard]] bool startReplayServer( const string& intentFilePath );
         /**
-         * @brief 모든 프로세스를 정상 종료시키고(시한을 넘으면 강제 종료) 읽기 스레드를 정리합니다. 트레이스를 켰으면 합칩니다.
-         * @return 합친 트레이스 경로입니다. 트레이스가 꺼져 있거나 둘 미만이면 빈 문자열입니다.
+         * @brief 모든 프로세스에 정상 종료를 알리고 멈춤을 시작합니다(기다리지 않는다). 시한을 넘긴 프로세스는 강제 종료하고, 다 끝나면 읽기 스레드를 정리하고 트레이스를 합칩니다.
+         * @details 끝은 `isStopping` 이 거짓이 되는 것이다 - 합친 경로는 그때 `getMergedTracePath` · `takeUnopenedMergedTrace` 로 보인다. 돌던 세션이 없으면 아무것도 하지 않는다.
          */
-        string stop();
-        /** @brief 모은 줄을 에디터 로그로 옮기고, 먼저 끝난 프로세스를 알립니다. 프레임마다 호출합니다. */
+        void requestStop();
+        /** @brief 모은 줄을 에디터 로그로 옮기고, 먼저 끝난 프로세스를 알리고, 멈추는 중이면 그 단계를 진행합니다. 프레임마다 호출합니다. */
         void update();
         /**
          * @brief @p isDone 이 true 를 돌려주거나 시한이 지날 때까지 `update` 를 돌리며 부른 스레드를 붙잡습니다.
@@ -155,6 +161,8 @@ namespace sw::editor
         [[nodiscard]] bool sendProcessCommand( int32 processIndex, string_view command );
 
         bool isRunning() const { return _listProcess.empty() == false; }
+        /** @brief `requestStop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직 끝나지 않았으면 true 입니다. 이 동안 `isRunning` 은 거짓이고 `start` 는 거절한다. */
+        bool isStopping() const { return _stopPhase != StopPhase::Idle; }
         /** @brief 서버에 연결되었다고 로그에 남긴 클라이언트 수입니다. `Net session connected to` 줄을 센 값이며, 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
         int32 getConnectedClientCount() const;
         /** @brief 패널과 툴바가 편집하는 다음 세션의 구성입니다. `start` 는 받은 구성을 따로 복사해서 씁니다. */
@@ -200,16 +208,34 @@ namespace sw::editor
     private:
         struct ChildProcess;
 
+        /** @brief 멈춤의 단계입니다. */
+        enum class StopPhase : uint8
+        {
+            Idle,           ///< 멈추는 중이 아니다
+            WaitingForExit, ///< `quit` 을 보냈고 프로세스가 끝나기를 프레임마다 본다(시한을 넘으면 강제 종료)
+            Merging,        ///< 모두 끝났고 백그라운드 잡이 읽기 스레드 합류 · 트레이스 합치기를 한다
+        };
+
         /** @brief 읽기 스레드 본문입니다. 파이프가 닫힐 때까지 줄을 쌓고 종료 코드를 수집합니다. */
         static void readChildOutput( ChildProcess* pChild );
+        /** @brief 프로세스 하나의 쌓인 줄을 꺼내 에디터 로그 · 패널 줄로 옮깁니다(`update`). */
+        void drainChildLines( ChildProcess& child, int32 processIndex );
+        /**
+         * @brief 멈춤 단계를 하나 진행합니다. 모두 끝났으면(또는 시한을 넘겨 강제 종료했으면) 합치기를 백그라운드 잡에 넘기고(@p bInline 이면 이 스레드에서 한다),
+         *        잡의 결과가 왔으면 마무리합니다.
+         */
+        void advanceStop( bool bInline );
+        /** @brief 멈춤을 끝까지 이 스레드에서 기다립니다(소멸 · 자동화 단계 되돌리기 - 다음 일이 새 세션과 같은 자리를 바란다). */
+        void stopAndWait();
+        /** @brief 거둔 프로세스의 남은 줄 · 종료 코드를 로그로 남기고 합친 경로를 받아 멈춤을 끝냅니다. */
+        void finishStop( const string& mergedTracePath );
         /** @brief 프로세스 하나를 인자 목록 @p listArgument 로 띄우고 읽기 스레드를 붙입니다(셸을 거치지 않는다 — `ProcessCommand`). */
         [[nodiscard]] bool launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath );
         /** @brief 트레이스 폴더 안의 `<이름>.trace.json` 경로를 만듭니다. 트레이스가 꺼져 있으면 빈 문자열입니다. */
-        string makeTracePath( const string& fileStem ) const;
-        /** @brief 트레이스를 남긴 프로세스의 파일을 모아 합칩니다. 둘 미만이면 빈 문자열입니다. */
-        string mergeTraces();
-
+        string                           makeTracePath( const string& fileStem ) const;
         vector<unique_ptr<ChildProcess>> _listProcess;
+        vector<unique_ptr<ChildProcess>> _listStoppingProcess; ///< `requestStop` 이 옮긴 프로세스(멈춤이 끝날 때까지 산다 - 잡이 읽기 스레드를 원시 포인터로 합류한다)
+        unique_ptr<EditorNetPlayStopJob> _pStopJob;            ///< 읽기 스레드 합류 · 트레이스 합치기 잡
         vector<EditorNetPlayLogLine>     _listLogLine;
         vector<EditorNetPlayLogLine>     _listDrainScratch;
         string                           _traceDirectory;
@@ -218,8 +244,10 @@ namespace sw::editor
         EditorNetPlaySettings            _settings;          ///< 실행 중인 세션의 구성
         EditorNetPlaySettings            _pendingSettings;   ///< 다음 세션의 구성(`getSettings`)
         EditorNetPlayPresetStore         _presetStore;
+        Deadline                         _stopDeadline; ///< `WaitingForExit` 의 시한(넘으면 남은 프로세스를 강제 종료한다)
         uint16                           _port;
-        uint16                           _debugChannelPort;     ///< 전용 서버의 디버그 채널 TCP 포트. 채널이 없으면 0
+        uint16                           _debugChannelPort; ///< 전용 서버의 디버그 채널 TCP 포트. 채널이 없으면 0
+        StopPhase                        _stopPhase;
         bool                             _bReplayServer;        ///< `startReplayServer` 가 `start` 를 부르는 동안만 참 — 클라이언트 0 을 허용하고 서버를 멈춘 채 띄운다
         bool                             _bMergedTraceUnopened; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
     };

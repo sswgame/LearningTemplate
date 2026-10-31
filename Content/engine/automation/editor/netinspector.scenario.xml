@@ -5,7 +5,7 @@
   감시 값 Editor.NetPlayInspectorObjects 가 읽은 오브젝트 수를 보고하고, 같은 채널로 보낸 pause 의 답(paused tick N)이 멈춘 서버도 답하는지 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/netinspector.scenario.xml -unattended
 -->
-<Scenario name="editor.netinspector" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.netinspector" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
 	<Wait frames="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<Expect watch="Editor.NetPlayInspectorObjects" equals="0"/>
@@ -26,7 +26,7 @@
 	<DevCommand line="netplay.inspect resume"/>
 	<Wait frames="1"/>
 	<DevCommand line="netplay.stop"/>
-	<Wait frames="1"/>
+	<WaitUntil watch="Editor.NetPlayStopping" equals="0" timeoutSeconds="20"/>
 	<Expect watch="Editor.NetPlayProcessCount" equals="0"/>
 	<Pass/>
 </Scenario>

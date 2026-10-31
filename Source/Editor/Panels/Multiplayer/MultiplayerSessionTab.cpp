@@ -173,7 +173,7 @@ namespace sw::editor
 
         if ( session.isRunning() == false )
         {
-            ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone );
+            ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone || session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                 (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
             EditorSelfTestMarks::note( "multiplayer.play" );
@@ -183,7 +183,7 @@ namespace sw::editor
         else
         {
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
-                (void)session.stop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 연다. 경로는 아래 줄에도 남는다
+                session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 연다. 경로는 아래 줄에도 남는다
             EditorSelfTestMarks::note( "multiplayer.stop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
