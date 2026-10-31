@@ -158,7 +158,6 @@ namespace sw::editor
 
     const FunctionInfo* EditorViewportPreview::findPreviewMethod( const TypeInfo& type, string_view previewKind )
     {
-#if !defined( SW_SHIPPING )
         if ( previewKind.empty() )
             return nullptr;
         for ( const TypeInfo* pType = &type; pType != nullptr; pType = pType->getParentType() )
@@ -169,10 +168,6 @@ namespace sw::editor
                     return &method;
             }
         }
-#else
-        (void)type;
-        (void)previewKind;
-#endif
         return nullptr;
     }
 

@@ -4,12 +4,15 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
-// 인스펙터는 에디터 기능이라 Shipping 에는 없다 — 에디터 메타데이터(카테고리 · 표시 이름 · 숨김)도 Shipping 빌드에서 빠진다.
-// 타입 사슬은 메타데이터를 읽지 않아 모든 구성에 있다(`InspectorComponentManager` 가 쓰고, EditorTest 는 Shipping 에서도 빌드한다).
+// 인스펙터는 에디터 기능이라 배포 구성은 이 파일을 짓지 않는다(Editor 빌드 단위 — `Source/Editor/CMakeLists.txt`).
 namespace sw::editor
 {
     void InspectorPropertyLayout::collectTypeChain( const TypeInfo& type, vector<const TypeInfo*>& outListType )
@@ -29,18 +32,7 @@ namespace sw::editor
         }
         VectorUtil::reverse( outListType );
     }
-} // namespace sw::editor
 
-#if !defined( SW_SHIPPING )
-
-    #include "Core/Math/MathUtil.h"
-    #include "Core/Container/StringUtil.h"
-
-    #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
-    #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-
-namespace sw::editor
-{
     void InspectorPropertyLayout::collectPropertyGroups( const TypeInfo& type, const vector<hashed_string>& listDrawnName, const EditorListFilter& filter,
                                                          vector<InspectorPropertyGroup>& outListGroup )
     {
@@ -223,5 +215,3 @@ namespace sw::editor
         return text;
     }
 } // namespace sw::editor
-
-#endif // !SW_SHIPPING

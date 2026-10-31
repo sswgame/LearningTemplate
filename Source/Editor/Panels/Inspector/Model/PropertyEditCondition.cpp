@@ -42,11 +42,6 @@ namespace sw
     {
         outExpr = PropertyEditConditionExpr{};
         outError.clear();
-#if defined( SW_SHIPPING )
-        (void)type;
-        (void)prop;
-        return true;
-#else
         string_view text = StringUtil::trim( prop._metadata->_editCondition );
         if ( text.empty() )
             return true;
@@ -99,7 +94,6 @@ namespace sw
             }
         }
         return true;
-#endif
     }
 
     bool PropertyEditCondition::evaluate( const PropertyEditConditionExpr& expr, const ObjectAddress instance )
@@ -115,12 +109,6 @@ namespace sw
 
     PropertyEditState PropertyEditCondition::getEditState( const TypeInfo& type, const PropertyInfo& prop, const ObjectAddress instance )
     {
-#if defined( SW_SHIPPING )
-        (void)type;
-        (void)prop;
-        (void)instance;
-        return PropertyEditState::Enabled;
-#else
         if ( prop._metadata->_editCondition.empty() )
             return PropertyEditState::Enabled;
         PropertyEditConditionExpr expr;
@@ -128,6 +116,5 @@ namespace sw
         if ( parse( type, prop, expr, error ) == false || evaluate( expr, instance ) )
             return PropertyEditState::Enabled;
         return prop._metadata->_bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
-#endif
     }
 } // namespace sw

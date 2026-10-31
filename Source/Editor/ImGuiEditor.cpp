@@ -792,11 +792,9 @@ namespace sw::editor
         // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
         if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
             EditorThemeUtil::reloadThemes();
-#if !defined( SW_SHIPPING )
         // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
         if ( EditorPreferencesStore::hasNewSections() )
             (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
-#endif
         _editorContext->getSubsystem<EditorRenderViews>().beginFrameFocus();
         _editorContext->getSubsystem<EditorRenderViews>().clearViewDrawnMarks();
     }
