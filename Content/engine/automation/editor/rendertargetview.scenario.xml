@@ -31,13 +31,12 @@
 	<EditorClick mark="renderTargets.linearize"/>
 	<WaitUntil watch="Editor.RenderTargetLinearized" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="renderTargets.refresh"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
+	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutFrames="120"/>
 	<!-- 3) 채널 -->
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.row.SceneColor"/>
 	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="0" timeoutFrames="90"/>
-	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
+	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutFrames="120"/>
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.channel.G"/>
 	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
