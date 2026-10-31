@@ -161,6 +161,7 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
+        , _balanceNotice{ *this }
         , _pHost{ nullptr }
         , _pStore{ nullptr }
         , _pMetricRegistry{ nullptr }

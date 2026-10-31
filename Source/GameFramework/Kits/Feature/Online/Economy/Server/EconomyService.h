@@ -88,7 +88,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_KIT_SERVER_API EconomyService final : public IOnlineServerService, public IBalanceNotice
+    class SW_KIT_SERVER_API EconomyService final : public IOnlineServerService
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
@@ -115,8 +115,10 @@ namespace sw
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onHostShutdown( OnlineServiceHost& host ) override;
-        // IBalanceNotice: 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다
-        void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance ) override;
+        /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotice` 가 이 함수로 넘깁니다. */
+        void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance );
+        /** @brief 다른 키트(GM · 우편함)에 거는 잔액 변경 알림 창구입니다. 이 서비스와 수명이 같습니다. */
+        IBalanceNotice& getBalanceNotice() { return _balanceNotice; }
         // 예약 작업 — 보존 검사 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
@@ -134,6 +136,21 @@ namespace sw
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:
+        /** @brief 잔액 변경 알림 창구입니다. 서비스의 `notifyBalancesChanged` 로 넘깁니다. 서비스가 멤버로 들어 수명이 같다. */
+        class BalanceNotice final : public IBalanceNotice
+        {
+        public:
+            explicit BalanceNotice( EconomyService& service )
+                : _service{ service }
+            {
+            }
+
+            void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance ) override { _service.notifyBalancesChanged( accountID, listBalance ); }
+
+        private:
+            EconomyService& _service;
+        };
+
         /** @brief 응답을 기다리는 요청 하나입니다. 호스트 경로이면 토큰으로, 아니면 델리게이트로 응답합니다. */
         struct PendingCall
         {
@@ -159,6 +176,7 @@ namespace sw
         EconomyServiceConfig                         _settings;
         Subscription                                 _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
+        BalanceNotice                                _balanceNotice;              ///< 잔액 변경 알림 창구(`getBalanceNotice`)
         OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         IServiceStore*                               _pStore;
         MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
