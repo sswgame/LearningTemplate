@@ -157,3 +157,15 @@ SW_TEST_CASE( XMLWriterTest, MisuseIsReported )
     if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 6u, assertCapture.getCount() );
 }
+
+/**
+ * @brief [XMLWriterTest] 속성 값 이스케이프(`XMLWriter::appendEscaped`)를 `XMLDocument::unescapeString` 이 원래 값으로 되돌린다 — 쓰기 규칙은 하나, 읽기는 그 짝이다
+ */
+SW_TEST_CASE( XMLWriterTest, AttributeEscapeRoundTripsThroughUnescape )
+{
+    const sw::string value = "a&b<c>d\"e'f\tg\nh\ri \xEA\xB0\x80";
+    sw::string       escaped;
+    sw::XMLWriter::appendEscaped( escaped, value, true );
+    SW_EXPECT_EQUAL( sw::string( "a&amp;b&lt;c&gt;d&quot;e'f&#9;g&#10;h&#13;i \xEA\xB0\x80" ), escaped );
+    SW_EXPECT_EQUAL( value, sw::XMLDocument::unescapeString( escaped ) );
+}

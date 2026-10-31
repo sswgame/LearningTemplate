@@ -164,7 +164,7 @@ namespace sw
         append( " " );
         append( name );
         append( "=\"" );
-        appendEscaped( value, true );
+        appendEscaped( *_pString, value, true );
         append( "\"" );
     }
 
@@ -183,7 +183,7 @@ namespace sw
             return;
         }
         closeStartTag();
-        appendEscaped( value, false );
+        appendEscaped( *_pString, value, false );
     }
 
     void XMLWriter::endElement()
@@ -229,7 +229,7 @@ namespace sw
         _pString->append( text );
     }
 
-    void XMLWriter::appendEscaped( string_view text, bool bAttribute )
+    void XMLWriter::appendEscaped( string& inoutText, string_view text, bool bAttribute )
     {
         using Internal  = XMLWriterInternal;
         size_t runBegin = 0;
@@ -249,17 +249,17 @@ namespace sw
                 uint32       codepoint = 0;
                 if ( StringUtil::tryDecodeUTF8( text, offset, codepoint ) )
                     continue;
-                append( text.substr( runBegin, charBegin - runBegin ) );
-                append( Internal::kReplacement );
+                inoutText.append( text.substr( runBegin, charBegin - runBegin ) );
+                inoutText.append( Internal::kReplacement );
                 runBegin = offset;
                 continue;
             }
-            append( text.substr( runBegin, offset - runBegin ) );
-            append( Internal::getEscape( byte ) );
+            inoutText.append( text.substr( runBegin, offset - runBegin ) );
+            inoutText.append( Internal::getEscape( byte ) );
             ++offset;
             runBegin = offset;
         }
-        append( text.substr( runBegin ) );
+        inoutText.append( text.substr( runBegin ) );
     }
 
     void XMLWriter::closeStartTag()

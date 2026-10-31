@@ -61,6 +61,12 @@ namespace sw
         /** @brief 이 쓰기기가 아무것도 쓰지 않았으면 true 입니다. */
         bool isEmpty() const { return _pString->size() == _startSize; }
 
+        /**
+         * @brief @p text 를 @p bAttribute 면 속성 값(큰따옴표 안) 규칙, 아니면 글 규칙으로 이스케이프해 @p inoutText 뒤에 붙입니다.
+         * @details XML 이스케이프 규칙은 이것 하나다 — 쓰기기 밖에서 글을 고치는 쪽(에디터 카탈로그 글 편집)도 이것을 쓴다(같은 값이 저장 경로마다 다른 바이트가 되지 않게).
+         */
+        static void appendEscaped( string& inoutText, string_view text, bool bAttribute );
+
     private:
         /** @brief 연 원소 하나의 이름 위치(버퍼 안)입니다. */
         struct OpenElement
@@ -70,8 +76,6 @@ namespace sw
         };
 
         void append( string_view text );
-        /** @brief @p bAttribute 면 속성 값 규칙, 아니면 글 규칙으로 이스케이프합니다. */
-        void appendEscaped( string_view text, bool bAttribute );
         /** @brief 연 시작 태그를 `>` 로 닫습니다(자식 · 글 앞). */
         void closeStartTag();
         void fail();

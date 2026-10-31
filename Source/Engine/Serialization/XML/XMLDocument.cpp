@@ -686,48 +686,6 @@ namespace sw
         return FileUtil::writeTextFile( absPath, text );
     }
 
-    string XMLDocument::escapeString( string_view text )
-    {
-        StringBuilder<constant::kMaxBuffer1024> out;
-        for ( const utf8 ch : text )
-        {
-            switch ( ch )
-            {
-                case '&':
-                {
-                    out.append( "&amp;" );
-                    break;
-                }
-                case '<':
-                {
-                    out.append( "&lt;" );
-                    break;
-                }
-                case '>':
-                {
-                    out.append( "&gt;" );
-                    break;
-                }
-                case '"':
-                {
-                    out.append( "&quot;" );
-                    break;
-                }
-                case '\'':
-                {
-                    out.append( "&apos;" );
-                    break;
-                }
-                default:
-                {
-                    out.append( ch );
-                    break;
-                }
-            }
-        }
-        return string{ out.view() };
-    }
-
     string XMLDocument::unescapeString( string_view text )
     {
         StringBuilder<constant::kMaxBuffer1024> out;
@@ -760,6 +718,25 @@ namespace sw
                 {
                     out.append( '\'' );
                     index += 5;
+                }
+                else if ( StringUtil::startsWith( remaining, "&#" ) && remaining.find( ';' ) != string_view::npos )
+                {
+                    // 문자 참조(`&#9;` · `&#x1F600;`) — 쓰는 쪽(`XMLWriter::appendEscaped`)이 속성 값의 탭 · 줄바꿈을 이렇게 쓴다.
+                    const size_t      end       = remaining.find( ';' );
+                    const bool        bHex      = remaining.size() > 2 && ( remaining[2] == 'x' || remaining[2] == 'X' );
+                    const string_view digits    = remaining.substr( bHex ? 3 : 2, end - ( bHex ? 3 : 2 ) );
+                    uint64            codepoint = 0;
+                    if ( digits.empty() == false && StringUtil::parseUint64( digits, codepoint, bHex ? 16 : 10 ) && codepoint <= 0x10FFFF )
+                    {
+                        string encoded;
+                        StringUtil::appendUTF8( encoded, static_cast<uint32>( codepoint ) );
+                        out.append( encoded.c_str() );
+                        index += end;
+                    }
+                    else
+                    {
+                        out.append( text[index] );
+                    }
                 }
                 else
                 {

@@ -7,6 +7,7 @@
 #include "Core/Log/Sink/AsyncLogSink.h"
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
+#include "Core/String/JSONStringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 // JSON lines 로그 — 칸과 이스케이프, 문맥의 추적 id, 장치가 달렸을 때만 싱크가 줄마다 JSON 을 만든다.
@@ -52,11 +53,15 @@ namespace
 SW_TEST_CASE( JSONLinesLogOutputTest, EscapesQuotesBackslashesAndControlCharacters )
 {
     string escaped;
-    JSONLinesLogOutput::appendEscaped( escaped, "a\"b\\c\nd\te\x01" );
+    JSONStringUtil::appendEscaped( escaped, "a\"b\\c\nd\te\x01" );
     SW_EXPECT_TRUE_MSG( escaped == "a\\\"b\\\\c\\nd\\te\\u0001", escaped.c_str() );
     string korean;
-    JSONLinesLogOutput::appendEscaped( korean, "서버" );
+    JSONStringUtil::appendEscaped( korean, "서버" );
     SW_EXPECT_TRUE( korean == "서버" ); // UTF-8 이어짐 바이트는 그대로
+    string invalid;
+    JSONStringUtil::appendEscaped( invalid, "a\xFF"
+                                            "b\b" );
+    SW_EXPECT_TRUE_MSG( invalid == "a\\ufffdb\\b", invalid.c_str() ); // 줄이 늘 올바른 JSON 이다 — 예전 싱크는 잘못된 바이트를 그대로 흘렸다
 }
 
 SW_TEST_CASE( JSONLinesLogOutputTest, LineHasTheFieldsThatArePresent )

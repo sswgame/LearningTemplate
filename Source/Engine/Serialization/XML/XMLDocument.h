@@ -352,9 +352,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸: escape, unescape
         // ------------------------------------------------------------------------------
-        /** @brief XML 특수 문자(&, <, >, ", ')를 엔티티 문자열로 이스케이프합니다. */
-        static string escapeString( string_view text );
-        /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. */
+        /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. 쓰는 쪽(이스케이프)은 `XMLWriter::appendEscaped` 하나다. */
         static string unescapeString( string_view text );
 
     private:

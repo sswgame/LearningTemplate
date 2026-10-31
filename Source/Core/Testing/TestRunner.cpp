@@ -18,6 +18,7 @@
 #include "Core/Math/XorShift32.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
+#include "Core/String/JSONStringUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
@@ -198,21 +199,7 @@ namespace sw::test
             static string escapeJSON( string_view text )
             {
                 string out;
-                out.reserve( text.size() + 8 );
-                for ( const char ch : text )
-                {
-                    if ( ch == '"' || ch == '\\' )
-                    {
-                        out += '\\';
-                        out += ch;
-                    }
-                    else if ( ch == '\n' )
-                        out += "\\n";
-                    else if ( ch == '\r' )
-                        continue;
-                    else
-                        out += ch;
-                }
+                JSONStringUtil::appendEscaped( out, text );
                 return out;
             }
         };

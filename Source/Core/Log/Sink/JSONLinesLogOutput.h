@@ -58,8 +58,6 @@ namespace sw
 
         /** @brief @p fields 를 JSON 한 줄(끝의 줄바꿈 포함)로 만들어 @p outLine 뒤에 붙입니다. 싱크와 테스트가 같이 씁니다. */
         static void appendLine( string& outLine, const JSONLogFields& fields );
-        /** @brief @p text 를 JSON 문자열 본문으로 이스케이프해 붙입니다(따옴표는 붙이지 않는다). 제어 문자는 `\u00XX` 입니다. */
-        static void appendEscaped( string& outText, string_view text );
 
     private:
         mutex _mutex; ///< 이 장치 전용

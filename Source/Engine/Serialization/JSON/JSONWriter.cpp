@@ -3,7 +3,7 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Foundation/HexDigitUtil.h"
+#include "Core/String/JSONStringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -21,28 +21,6 @@ namespace sw
             static constexpr uint32 kNumberBufferSize = 48;
             /** @brief 고정 소수 자리의 한도입니다. 10^19 는 uint64 를 넘는다. */
             static constexpr uint32 kMaxFractionDigits = 18;
-            /** @brief 잘못된 UTF-8 바이트를 대신하는 글자(U+FFFD)입니다. */
-            static constexpr string_view kReplacement = "\\ufffd";
-
-            /** @brief 따로 적는 이스케이프가 있는 제어 문자이면 그 글자(`n` 등), 없으면 0 입니다. */
-            static utf8 getShortEscape( utf8 character )
-            {
-                switch ( character )
-                {
-                    case '\b':
-                        return 'b';
-                    case '\f':
-                        return 'f';
-                    case '\n':
-                        return 'n';
-                    case '\r':
-                        return 'r';
-                    case '\t':
-                        return 't';
-                    default:
-                        return 0;
-                }
-            }
 
             static uint64 getPowerOfTen( uint32 exponent )
             {
@@ -296,52 +274,12 @@ namespace sw
 
     void JSONWriter::appendEscaped( string_view text )
     {
-        using Internal  = JSONWriterInternal;
-        size_t runBegin = 0;
-        size_t offset   = 0;
-        while ( offset < text.size() )
-        {
-            const uint8 byte   = static_cast<uint8>( text[offset] );
-            const bool  bPlain = byte >= 0x20 && byte < 0x80 && byte != '"' && byte != '\\';
-            if ( bPlain )
-            {
-                ++offset;
-                continue;
-            }
-            if ( byte >= 0x80 )
-            {
-                // 여러 바이트 글자: 올바르면 그대로 둔 채 지나가고, 잘못된 바이트만 U+FFFD 로 바꾼다.
-                const size_t charBegin = offset;
-                uint32       codepoint = 0;
-                if ( StringUtil::tryDecodeUTF8( text, offset, codepoint ) )
-                    continue;
-                append( text.substr( runBegin, charBegin - runBegin ) );
-                append( Internal::kReplacement );
-                runBegin = offset;
-                continue;
-            }
-            append( text.substr( runBegin, offset - runBegin ) );
-            const utf8 shortEscape = Internal::getShortEscape( static_cast<utf8>( byte ) );
-            if ( byte == '"' || byte == '\\' )
-            {
-                const utf8 arrEscape[2]{ '\\', static_cast<utf8>( byte ) };
-                append( string_view{ arrEscape, 2 } );
-            }
-            else if ( shortEscape != 0 )
-            {
-                const utf8 arrEscape[2]{ '\\', shortEscape };
-                append( string_view{ arrEscape, 2 } );
-            }
-            else
-            {
-                utf8 arrEscape[6]{ '\\', 'u', '0', '0', 0, 0 };
-                HexDigitUtil::writeDigits( arrEscape + 4, byte, 2, HexCase::Lower );
-                append( string_view{ arrEscape, 6 } );
-            }
-            ++offset;
-            runBegin = offset;
-        }
-        append( text.substr( runBegin ) );
+        JSONStringUtil::escape( text, &JSONWriter::appendPiece, this );
+    }
+
+    void JSONWriter::appendPiece( void* pWriter, string_view piece )
+    {
+        static_cast<JSONWriter*>( pWriter )->append( piece );
     }
 
     void JSONWriter::appendNewLine( uint32 depth )

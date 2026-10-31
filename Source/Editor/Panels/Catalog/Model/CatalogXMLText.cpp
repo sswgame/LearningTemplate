@@ -5,6 +5,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLWriter.h"
 
 namespace sw::editor
 {
@@ -62,7 +63,7 @@ namespace sw::editor
                 string result = " ";
                 result.append( name.data(), name.size() );
                 result += "=\"";
-                result += XMLDocument::escapeString( value );
+                XMLWriter::appendEscaped( result, value, true );
                 result += "\"";
                 return result;
             }
@@ -323,8 +324,9 @@ namespace sw::editor
         if ( attributeIndex >= 0 )
         {
             const CatalogXMLAttribute& attribute = element._listAttribute[static_cast<size_t>( attributeIndex )];
-            const string               escaped   = XMLDocument::escapeString( value );
-            outText                              = CatalogXMLTextInternal::joinPieces( text.substr( 0, attribute._valueBegin ), escaped, text.substr( attribute._valueEnd ) );
+            string                     escaped;
+            XMLWriter::appendEscaped( escaped, value, true );
+            outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, attribute._valueBegin ), escaped, text.substr( attribute._valueEnd ) );
             return true;
         }
         if ( name.empty() )

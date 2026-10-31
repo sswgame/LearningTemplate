@@ -43,7 +43,7 @@ namespace sw
      * @brief `beginObject` · `key` · `value*` · `beginArray` 로 JSON 을 스트림처럼 씁니다.
      * @details
      * - 문자열: `"` · `\` · 제어 문자(`\b \f \n \r \t`, 나머지는 `\u00xx`)를 이스케이프하고 올바른 UTF-8 은 그대로 둔다. 잘못된 UTF-8 바이트는
-     *   U+FFFD 이스케이프로 바꾼다(출력이 늘 올바른 JSON 이다). 이 규칙은 `JSONDocument::escapeString`(nlohmann `dump`)과 같은 바이트를 낸다.
+     *   U+FFFD 이스케이프로 바꾼다(출력이 늘 올바른 JSON 이다). 규칙은 `JSONStringUtil`(Core) 하나다 — 구조화 로그와 같은 바이트.
      * - 실수: 가장 짧은 왕복 표기이고 정수처럼 보이면 `.0` 을 붙인다. NaN · 무한대는 JSON 에 없으므로 `null` 을 쓰고 실패로 남긴다(`isComplete` 가 false).
      * - 순서 위반(배열 안의 `key`, 객체 안의 키 없는 값, 짝이 안 맞는 `end*`, 두 번째 루트 값)은 단언이고 실패로 남긴다.
      * - 고정 버퍼 대상은 할당하지 않는다(`valueJSON` 제외). 넘치면 자르고 실패로 남기며 늘 0 으로 끝낸다.
@@ -107,7 +107,9 @@ namespace sw
         void append( string_view text );
         void appendChar( utf8 character );
         void appendEscaped( string_view text );
-        void appendNewLine( uint32 depth );
+        /** @brief `JSONStringUtil::escape` 가 넘기는 조각을 @p pWriter 에 붙입니다. */
+        static void appendPiece( void* pWriter, string_view piece );
+        void        appendNewLine( uint32 depth );
         /** @brief 배열 원소나 객체 키 앞의 쉼표와 줄바꿈입니다. */
         void writeItemSeparator();
         /** @brief 값 하나를 쓸 자리인지 확인하고 앞 구분자를 씁니다. 자리가 아니면 실패로 남기고 false 입니다. */

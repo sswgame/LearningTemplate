@@ -590,16 +590,6 @@ namespace sw
         return FileUtil::writeTextFile( absPath, dump( indent ) );
     }
 
-    string JSONDocument::escapeString( string_view value )
-    {
-        const JSONImpl quoted      = JSONDocumentInternal::toJSONString( value );
-        string         dumped      = JSONDocumentInternal::fromJSONString( quoted.dump() );
-        const bool     bQuotedDump = dumped.size() >= 2 && dumped.front() == '"' && dumped.back() == '"';
-        if ( bQuotedDump )
-            dumped = dumped.substr( 1, dumped.size() - 2 );
-        return dumped;
-    }
-
     string JSONDocument::unescapeString( string_view value )
     {
         if ( value.empty() )
