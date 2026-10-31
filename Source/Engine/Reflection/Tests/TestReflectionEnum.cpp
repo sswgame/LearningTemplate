@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
+#include "Engine/Reflection/Tests/ScopedTestModule.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -198,20 +199,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
 
 namespace
 {
-    /** @brief 케이스가 레지스트리에 올린 시험 모듈의 타입 · 열거형을 케이스 끝에 내린다(단언이 중간에 끝내도 남기지 않는다). */
-    struct ScopedTestModule
-    {
-        explicit ScopedTestModule( const utf8* pModuleName )
-            : _pModuleName( pModuleName )
-        {
-        }
-        ~ScopedTestModule() { sw::engine::getSubsystem<sw::TypeRegistry>().unregisterTypesByModule( _pModuleName ); }
-
-        ScopedTestModule( const ScopedTestModule& )            = delete;
-        ScopedTestModule& operator=( const ScopedTestModule& ) = delete;
-
-        const utf8* _pModuleName;
-    };
+    using sw::test::ScopedTestModule;
 
     /** @brief @p pFqn 에 열거자 목록을 채운 EnumInfo 입니다(모듈 @p pModuleName). */
     sw::EnumInfo makeTestEnum( const utf8* pFqn, const utf8* pModuleName, std::initializer_list<std::pair<const utf8*, int64>> listEnumerator )

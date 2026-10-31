@@ -358,8 +358,8 @@ namespace sw
         const bool bSingleBit = changedBits != 0 && ( changedBits & static_cast<uint8>( changedBits - 1 ) ) == 0;
         if ( bSingleBit == false )
         {
-            SW_LOG_ERROR( "Bit field '%#' could not be located (%# bytes changed) - it will read as false and ignore writes", _name.c_str(),
-                          static_cast<uint64>( changedByteCount ) );
+            SW_LOG_ERROR_ID( "Reflection.BitFieldNotLocated", "Bit field '%#' could not be located (%# bytes changed) - it will read as false and ignore writes",
+                             _name.c_str(), static_cast<uint64>( changedByteCount ) );
             return false;
         }
         _offset    = changedByteIndex;
@@ -672,8 +672,7 @@ namespace sw
         // 돌아왔다는 뜻이다. 더 올라가면 스택이 넘친다. 자기 것만 반환하고 끊는다.
         if ( _bBuildingPropertyWithBase == SW_TRUE )
         {
-            SW_LOG_ERROR( "Reflection parent chain loops at '%#' — returning own properties only.",
-                          _fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", _fullyQualifiedName.c_str() );
             return _listProperty;
         }
         _bBuildingPropertyWithBase = SW_TRUE;
