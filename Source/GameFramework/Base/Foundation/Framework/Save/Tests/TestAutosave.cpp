@@ -35,11 +35,15 @@ namespace
 
     sw::AutosaveSettings makeSettings( sw::string_view folderName )
     {
-        sw::AutosaveSettings settings;
-        settings._directory = sw::test::makeScratchPath( folderName );
+        sw::AutosaveSettings                  settings;
+        const sw::string                      directory         = sw::test::makeScratchPath( folderName );
+        const std::optional<sw::AbsolutePath> absoluteDirectory = sw::AbsolutePath::tryMake( directory );
+        SW_EXPECT_TRUE( absoluteDirectory.has_value() ); // REQUIRE 는 void 함수에서만 돌아간다
+        if ( absoluteDirectory.has_value() )
+            settings._location = sw::LocalStoreLocation::absolute( *absoluteDirectory );
         settings._interval  = 0.0f;
         settings._slotCount = 3;
-        SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( settings._directory ) ); // REQUIRE 는 void 함수에서만 돌아간다
+        SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( directory ) );
         return settings;
     }
 } // namespace

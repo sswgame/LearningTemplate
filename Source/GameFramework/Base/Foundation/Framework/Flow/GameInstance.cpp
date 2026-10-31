@@ -292,16 +292,31 @@ namespace sw
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) );
     }
 
-    bool GameInstance::saveStateToFile( string_view filePath )
+    bool GameInstance::resolveSaveFilePath( string_view filePath, string& outPath ) const
     {
         const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
         if ( filePath.empty() && defaultSavePath.isSet() == false )
         {
-            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved" );
+            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved or loaded" );
             return false;
         }
-        // 상대 경로는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소와 같은 규칙 - 작업 폴더가 아니다).
-        const string  path = UserDataPath::resolve( GameSelection::getName(), filePath.empty() ? string_view( defaultSavePath.get() ) : filePath );
+        // 세이브는 그 게임의 사용자 데이터 폴더 아래 상대 경로다(작업 폴더도, 데이터에 적은 절대 경로도 아니다 - 자리는 `LocalStoreLocation` 이 고른다).
+        const string_view                       relativePath = filePath.empty() ? string_view( defaultSavePath.get() ) : filePath;
+        const std::optional<LocalStoreLocation> location     = LocalStoreLocation::tryUnderUserData( relativePath );
+        if ( location.has_value() == false )
+        {
+            SW_LOG_ERROR( "Save path '%#' must be a relative path under the user data folder (no drive, no root, no '..')", relativePath );
+            return false;
+        }
+        outPath = location->resolveDiskPath( GameSelection::getName() );
+        return true;
+    }
+
+    bool GameInstance::saveStateToFile( string_view filePath )
+    {
+        string path;
+        if ( resolveSaveFilePath( filePath, path ) == false )
+            return false;
         vector<uint8> snapshotBytes;
         const bool    bSaved = captureSnapshot( SerializePurpose::SaveGame, snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
 
@@ -314,13 +329,9 @@ namespace sw
 
     bool GameInstance::loadStateFromFile( string_view filePath )
     {
-        const DataPath& defaultSavePath = _packConfig._data._defaultSavePath;
-        if ( filePath.empty() && defaultSavePath.isSet() == false )
-        {
-            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is loaded" );
+        string path;
+        if ( resolveSaveFilePath( filePath, path ) == false )
             return false;
-        }
-        const string  path = UserDataPath::resolve( GameSelection::getName(), filePath.empty() ? string_view( defaultSavePath.get() ) : filePath );
         vector<uint8> snapshotBytes;
         const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( SerializePurpose::SaveGame, snapshotBytes );
 

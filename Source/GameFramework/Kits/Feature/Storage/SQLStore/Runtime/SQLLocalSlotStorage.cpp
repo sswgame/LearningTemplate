@@ -43,7 +43,7 @@ namespace sw
         vector<SQLMigration> listMigration;
         if ( SQLMigrationRunner::loadMigrations( kMigrationFolder, driver.getName(), listMigration, outError ) == false )
             return false;
-        if ( databasePath != ":memory:" )
+        if ( databasePath != kMemoryDatabasePath )
             (void)FileUtil::ensureParentDirectoryExists( databasePath ); // 못 만들면 ensure 가 알리고 바로 뒤 openConnection 이 오류로 답한다
         _connection = driver.openConnection( databasePath, "", outError );
         if ( _connection == nullptr )
@@ -106,10 +106,13 @@ namespace sw
         return LocalStoreResult::Ok;
     }
 
-    unique_ptr<ILocalSlotStorage> SQLLocalSlotStorage::createForRoot( string_view rootPath, string& outError )
+    unique_ptr<ILocalSlotStorage> SQLLocalSlotStorage::createForLocation( const LocalStoreLocation& location, string_view gameName, string& outError )
     {
-        unique_ptr<SQLLocalSlotStorage> storage = sw::make_unique<SQLLocalSlotStorage>();
-        if ( storage->initialize( FileUtil::joinPath( rootPath, kDatabaseFileName ), outError ) == false )
+        // 메모리 자리는 SQLite 의 메모리 데이터베이스다 - 그 약속(`:memory:`)은 이 바닥만 안다(예전에는 경로 글로 모든 바닥에 통했다).
+        const bool                      bMemory      = location.getKind() == LocalStoreLocation::Kind::Memory;
+        const string                    databasePath = bMemory ? string( kMemoryDatabasePath ) : FileUtil::joinPath( location.resolveDiskPath( gameName ), kDatabaseFileName );
+        unique_ptr<SQLLocalSlotStorage> storage      = sw::make_unique<SQLLocalSlotStorage>();
+        if ( storage->initialize( databasePath, outError ) == false )
             return nullptr;
         return storage;
     }
@@ -118,5 +121,5 @@ namespace sw
 namespace sw
 {
     // 모듈이 로드되면 "sqlite" 바닥을 기반 공장에 올리고, 언로드되면 내린다.
-    const LocalStoreBackendRegistration s_sqliteLocalStoreBackendRegistration{ SQLLocalSlotStorage::kBackendName, SQLLocalSlotStorage::createForRoot };
+    const LocalStoreBackendRegistration s_sqliteLocalStoreBackendRegistration{ SQLLocalSlotStorage::kBackendName, SQLLocalSlotStorage::createForLocation };
 } // namespace sw

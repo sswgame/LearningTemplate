@@ -87,11 +87,50 @@ namespace sw
         return directory;
     }
 
-    string UserDataPath::resolve( string_view gameName, string_view relativeOrAbsolutePath )
+} // namespace sw
+
+namespace sw
+{
+    LocalStoreLocation::LocalStoreLocation( Kind kind, string path )
+        : _path{ std::move( path ) }
+        , _kind{ kind }
     {
-        const bool bKeepAsIs = relativeOrAbsolutePath == ":memory:" || FileUtil::isAbsolutePath( relativeOrAbsolutePath );
-        if ( bKeepAsIs )
-            return string( relativeOrAbsolutePath );
-        return FileUtil::joinPath( getDataDirectory( gameName ), relativeOrAbsolutePath );
+    }
+
+    LocalStoreLocation LocalStoreLocation::memory()
+    {
+        return LocalStoreLocation( Kind::Memory, string{} );
+    }
+
+    std::optional<LocalStoreLocation> LocalStoreLocation::tryUnderUserData( string_view relativePath )
+    {
+        // 느슨한 판정(`isAbsolutePath`)으로 거른다 - 드라이브 상대 · 드라이브 없는 루트도 데이터 폴더 아래 상대 경로가 아니다.
+        if ( relativePath.empty() || FileUtil::isAbsolutePath( relativePath ) )
+            return std::nullopt;
+        size_t segmentBegin = 0;
+        while ( segmentBegin <= relativePath.size() )
+        {
+            size_t segmentEnd = relativePath.find_first_of( "/\\", segmentBegin );
+            if ( segmentEnd == string_view::npos )
+                segmentEnd = relativePath.size();
+            if ( relativePath.substr( segmentBegin, segmentEnd - segmentBegin ) == ".." )
+                return std::nullopt; // 데이터 폴더 밖으로 나간다
+            segmentBegin = segmentEnd + 1;
+        }
+        return LocalStoreLocation( Kind::UnderUserData, string( relativePath ) );
+    }
+
+    LocalStoreLocation LocalStoreLocation::absolute( const AbsolutePath& path )
+    {
+        return LocalStoreLocation( Kind::Absolute, path.str() );
+    }
+
+    string LocalStoreLocation::resolveDiskPath( string_view gameName ) const
+    {
+        if ( _kind == Kind::Memory )
+            SW_FATAL( "A memory local store location has no disk path - check getKind() first" );
+        if ( _kind == Kind::UnderUserData )
+            return FileUtil::joinPath( UserDataPath::getDataDirectory( gameName ), _path );
+        return _path;
     }
 } // namespace sw

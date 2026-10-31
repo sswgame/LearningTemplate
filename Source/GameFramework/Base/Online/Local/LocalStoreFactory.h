@@ -6,10 +6,12 @@
  *          키트는 등록을 손으로 부르지 않고 `.cpp` 의 정적 `LocalStoreBackendRegistration` 하나로 둔다. 모듈이 로드되면 오르고,
  *          이미지를 내릴 때 그 정적 등록 객체(구독)가 만들기 함수를 지운다. 핫 리로드가 옛 이미지의
  *          언로드를 미뤄도(정적 소멸자가 새 이미지의 등록 뒤에 돈다) 옛 함수가 남거나 새 등록을 지우지 않는다.
- *          모든 저장소는 전용 스레드 하나(`ThreadedLocalStore`) 위에 선다. 경로는 `UserDataPath::resolve( 게임 이름, _root )`.
+ *          모든 저장소는 전용 스레드 하나(`ThreadedLocalStore`) 위에 선다. 자리는 `LocalStoreLocation`(메모리 · 사용자 데이터 폴더 아래 · 절대)이고, 바닥이 자기가 열 수 없는 종류면 오류다
+ *          (파일 바닥에 메모리 자리, 메모리 바닥에 디스크 자리 - 다른 바닥으로 바꾸지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -23,15 +25,18 @@ namespace sw
     /** @brief 로컬 저장 설정(게임 데이터)입니다. */
     struct LocalStoreConfig
     {
-        string _backend{ "file" }; ///< "file", "memory", 등록된 이름("sqlite")
-        string _root{ "saves" };   ///< 사용자 데이터 폴더 기준 상대 경로(절대 경로면 그대로)
+        string             _backend;  ///< "file", "memory", 등록된 이름("sqlite")
+        LocalStoreLocation _location; ///< 슬롯을 두는 자리 - 기본값을 두지 않는다(어디에 쓸지는 부르는 쪽이 고른다)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 백엔드를 만드는 함수입니다. @p rootPath 는 이미 절대 경로입니다. 실패하면 nullptr 과 까닭을 돌려줍니다. */
-    using LocalSlotStorageCreateSignature = unique_ptr<ILocalSlotStorage>( string_view rootPath, string& outError );
+    /**
+     * @brief 백엔드를 만드는 함수입니다. 디스크 자리면 @p location 을 `resolveDiskPath( gameName )` 으로 풉니다.
+     *        열 수 없는 종류(파일 바닥에 메모리 자리)거나 실패하면 nullptr 과 까닭을 돌려줍니다.
+     */
+    using LocalSlotStorageCreateSignature = unique_ptr<ILocalSlotStorage>( const LocalStoreLocation& location, string_view gameName, string& outError );
     using LocalSlotStorageCreateFunction  = LocalSlotStorageCreateSignature*;
 
     /** @brief 백엔드 하나입니다. 이름은 설정 `_backend` 에 쓰고(정적 문자열), 만들기 함수는 비어 있을 수 없습니다(등록 객체가 함수 참조로만 받습니다). */

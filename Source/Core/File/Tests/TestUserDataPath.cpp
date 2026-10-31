@@ -5,7 +5,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Testing/TestFramework.h"
 
-// 사용자 데이터 경로 — 게임 이름은 소문자 폴더, 상대 경로는 데이터 폴더 아래, 절대 경로 · `:memory:` 는 그대로.
+// 사용자 데이터 경로 — 게임 이름은 소문자 폴더. 로컬 저장 자리(`LocalStoreLocation`)는 종류를 만드는 쪽이 고르고, 데이터 폴더 아래 자리는 상대 경로만 받는다.
 
 using namespace sw;
 
@@ -16,11 +16,32 @@ SW_TEST_CASE( UserDataPathTest, GameFolderIsLowercaseAndRelativePathsResolveUnde
     SW_EXPECT_TRUE( FileUtil::getFileNamePart( dataDirectory ) == "meadowvillage" );
     SW_EXPECT_TRUE( FileUtil::getFileNamePart( configDirectory ) == "meadowvillage" );
     SW_EXPECT_TRUE( FileUtil::getFileNamePart( UserDataPath::getDataDirectory( "" ) ) == "default" );
+}
 
-    SW_EXPECT_TRUE( UserDataPath::resolve( "MeadowVillage", "saves" ) == FileUtil::joinPath( dataDirectory, "saves" ) );
-    SW_EXPECT_TRUE( UserDataPath::resolve( "MeadowVillage", ":memory:" ) == ":memory:" );
-    const string absolutePath = FileUtil::joinPath( FileUtil::getCurrentPath(), "elsewhere/saves" );
-    SW_EXPECT_TRUE( UserDataPath::resolve( "MeadowVillage", absolutePath ) == absolutePath );
+/**
+ * @brief [UserDataPathTest] 데이터 폴더 아래 자리는 상대 경로만 받고(절대 꼴 · 드라이브 상대 · `..` · 빈 글은 거절), 절대 자리는 그대로, 메모리 자리는 디스크가 없다
+ * @details 변이: 거절 검사를 `AbsolutePath::isStrictAbsolute` 로 바꾸면 `C:foo` 가 통과해 진다. `..` 마디 검사를 지우면 `../escape` 가 통과해 진다.
+ */
+SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
+{
+    const std::optional<LocalStoreLocation> saves = LocalStoreLocation::tryUnderUserData( "saves" );
+    SW_REQUIRE_TRUE( saves.has_value() );
+    SW_EXPECT_TRUE( saves->getKind() == LocalStoreLocation::Kind::UnderUserData );
+    SW_EXPECT_TRUE( saves->resolveDiskPath( "MeadowVillage" ) == FileUtil::joinPath( UserDataPath::getDataDirectory( "MeadowVillage" ), "saves" ) );
+
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "" ).has_value() );
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "C:foo" ).has_value() );
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "../escape" ).has_value() );
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( "saves/../../escape" ).has_value() );
+    SW_EXPECT_FALSE( LocalStoreLocation::tryUnderUserData( FileUtil::getCurrentPath() ).has_value() );
+    SW_EXPECT_TRUE( LocalStoreLocation::tryUnderUserData( "saves/..hidden" ).has_value() ); // `..` 로 시작할 뿐인 이름은 마디 `..` 가 아니다
+
+    const std::optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( FileUtil::joinPath( FileUtil::getCurrentPath(), "elsewhere/saves" ) );
+    SW_REQUIRE_TRUE( absolutePath.has_value() );
+    const LocalStoreLocation absolute = LocalStoreLocation::absolute( *absolutePath );
+    SW_EXPECT_TRUE( absolute.getKind() == LocalStoreLocation::Kind::Absolute );
+    SW_EXPECT_TRUE( absolute.resolveDiskPath( "MeadowVillage" ) == absolutePath->str() );
+    SW_EXPECT_TRUE( LocalStoreLocation::memory().getKind() == LocalStoreLocation::Kind::Memory );
 }
 
 /**

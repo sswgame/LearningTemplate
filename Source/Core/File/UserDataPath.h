@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 namespace sw
 {
@@ -28,7 +29,41 @@ namespace sw
         static string getDataDirectory( string_view gameName );
         /** @brief 설정 폴더(`usersettings.json`)입니다. 끝에 구분자가 없습니다. */
         static string getConfigDirectory( string_view gameName );
-        /** @brief 로컬 저장 경로를 데이터 폴더 기준 절대 경로로 바꿉니다. 절대 경로 · SQLite `:memory:` 는 그대로입니다. */
-        static string resolve( string_view gameName, string_view relativeOrAbsolutePath );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LocalStoreLocation
+     * @brief 로컬 저장(세이브 · 슬롯 저장소)을 두는 자리입니다. 종류(메모리 · 사용자 데이터 폴더 아래 · 절대 경로)는 만드는 쪽이 고른다.
+     * @details 예전 `UserDataPath::resolve` 는 글을 보고 추측했다 - `:memory:` 면 그대로, 느슨한 절대(`C:foo` 도)면 그대로, 아니면 데이터 폴더 아래.
+     *          그래서 데이터에 적은 드라이브 상대 경로가 "절대"로 통했고 SQLite 의 `:memory:` 약속이 파일 저장소에도 통했다. 언리얼 `ISaveGameSystem` 은 플랫폼이 자리를 정하고
+     *          게임은 슬롯 이름만 준다 - 여기도 데이터는 사용자 데이터 폴더 아래 상대 경로만 적고(`tryUnderUserData`), 절대 경로 · 메모리는 코드(테스트 · 도구)만 고른다.
+     */
+    class SW_API LocalStoreLocation
+    {
+    public:
+        enum class Kind : uint8
+        {
+            Memory,        ///< 디스크 없음(테스트 - 바닥이 메모리 · SQLite `:memory:` 를 연다)
+            UnderUserData, ///< 사용자 데이터 폴더(`UserDataPath::getDataDirectory`) 아래 상대 경로
+            Absolute,      ///< 엄격한 절대 경로
+        };
+
+        [[nodiscard]] static LocalStoreLocation memory();
+        /** @brief 사용자 데이터 폴더 아래 상대 경로 @p relativePath 입니다. 빈 글 · 절대 꼴(드라이브 상대 `C:foo` · 드라이브 없는 루트 포함) · `..` 마디는 빈 값입니다(데이터 오류 - 부르는 쪽이 알린다). */
+        [[nodiscard]] static std::optional<LocalStoreLocation> tryUnderUserData( string_view relativePath );
+        [[nodiscard]] static LocalStoreLocation                absolute( const AbsolutePath& path );
+
+        [[nodiscard]] Kind getKind() const { return _kind; }
+        /** @brief 디스크 자리입니다 - 사용자 데이터 폴더 아래면 `<데이터 폴더>/<상대>`, 절대면 그대로. 메모리 자리는 디스크가 없어 멈춥니다(부르는 쪽이 종류를 먼저 본다). */
+        [[nodiscard]] string resolveDiskPath( string_view gameName ) const;
+
+    private:
+        LocalStoreLocation( Kind kind, string path );
+
+        string _path; ///< 사용자 데이터 폴더 아래면 상대, 절대면 절대 경로 글. 메모리면 빈 글
+        Kind   _kind;
     };
 } // namespace sw

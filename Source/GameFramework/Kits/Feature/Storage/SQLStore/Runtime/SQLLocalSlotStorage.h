@@ -15,6 +15,7 @@
 namespace sw
 {
     class ISQLConnection;
+    class LocalStoreLocation;
 
     /**
      * @class SQLLocalSlotStorage
@@ -23,9 +24,10 @@ namespace sw
     class SW_KIT_API SQLLocalSlotStorage final : public ILocalSlotStorage
     {
     public:
-        static constexpr const utf8* kBackendName      = "sqlite";
-        static constexpr const utf8* kMigrationFolder  = "common/sql/localstore";
-        static constexpr const utf8* kDatabaseFileName = "localstore.db";
+        static constexpr const utf8* kBackendName        = "sqlite";
+        static constexpr const utf8* kMigrationFolder    = "common/sql/localstore";
+        static constexpr const utf8* kDatabaseFileName   = "localstore.db";
+        static constexpr string_view kMemoryDatabasePath = ":memory:"; ///< SQLite 의 메모리 데이터베이스 이름(메모리 자리 - `LocalStoreLocation::Kind::Memory`)
 
         SQLLocalSlotStorage();
         ~SQLLocalSlotStorage() override;
@@ -38,8 +40,8 @@ namespace sw
         LocalStoreResult eraseSlot( const string& slot ) override;
         LocalStoreResult listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo ) override;
 
-        /** @brief 팩토리가 부르는 생성 함수입니다. `<rootPath>/localstore.db` 를 엽니다. */
-        static unique_ptr<ILocalSlotStorage> createForRoot( string_view rootPath, string& outError );
+        /** @brief 팩토리가 부르는 생성 함수입니다. 디스크 자리면 `<자리>/localstore.db`, 메모리 자리면 SQLite 메모리 데이터베이스를 엽니다. */
+        static unique_ptr<ILocalSlotStorage> createForLocation( const LocalStoreLocation& location, string_view gameName, string& outError );
 
     private:
         unique_ptr<ISQLConnection> _connection;

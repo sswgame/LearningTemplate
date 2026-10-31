@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
@@ -44,15 +45,16 @@ namespace sw
      */
     struct SW_GF_API AutosaveSettings
     {
-        string  _directory{ "saves" };     ///< 슬롯 파일을 둘 폴더(저장 경로 기준)
-        string  _prefix{ "autosave_" };    ///< 슬롯 파일 이름의 접두사. 경로는 `<폴더>/<접두사><슬롯>.sav` 다
-        float32 _interval{ 300.0f };       ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
-        float32 _minimumGap{ 30.0f };      ///< 두 자동 저장 사이의 최소 간격(초). 종료 · 직접 부른 것은 이 간격을 무시한다
-        int32   _slotCount{ 3 };           ///< 순환해 쓰는 슬롯 수(1 이상). 새 저장은 가장 새 슬롯을 건드리지 않는다
-        uint8   _bOnAreaChange{ SW_TRUE }; ///< 지역 이동에 저장한다
-        uint8   _bOnCheckpoint{ SW_TRUE }; ///< 체크포인트에 저장한다
-        uint8   _bOnBeforeBoss{ SW_TRUE }; ///< 보스 앞에 저장한다
-        uint8   _bOnQuit{ SW_TRUE };       ///< 종료에 저장한다
+        /** @brief 슬롯 파일을 둘 폴더입니다. XML `directory` 는 사용자 데이터 폴더 아래 상대 경로만 받는다(절대 · `..` 는 읽기 오류). 상수라 늘 풀린다 */
+        LocalStoreLocation _location{ *LocalStoreLocation::tryUnderUserData( "saves" ) };
+        string             _prefix{ "autosave_" };    ///< 슬롯 파일 이름의 접두사. 경로는 `<폴더>/<접두사><슬롯>.sav` 다
+        float32            _interval{ 300.0f };       ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
+        float32            _minimumGap{ 30.0f };      ///< 두 자동 저장 사이의 최소 간격(초). 종료 · 직접 부른 것은 이 간격을 무시한다
+        int32              _slotCount{ 3 };           ///< 순환해 쓰는 슬롯 수(1 이상). 새 저장은 가장 새 슬롯을 건드리지 않는다
+        uint8              _bOnAreaChange{ SW_TRUE }; ///< 지역 이동에 저장한다
+        uint8              _bOnCheckpoint{ SW_TRUE }; ///< 체크포인트에 저장한다
+        uint8              _bOnBeforeBoss{ SW_TRUE }; ///< 보스 앞에 저장한다
+        uint8              _bOnQuit{ SW_TRUE };       ///< 종료에 저장한다
 
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

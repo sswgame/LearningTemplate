@@ -23,7 +23,7 @@ namespace sw
     public:
         static constexpr const utf8* kSlotExtension = ".swls";
 
-        /** @brief @p rootDirectory(`UserDataPath::resolve` 가 낸 절대 경로)를 만들고 남은 임시 파일을 지웁니다. */
+        /** @brief @p rootDirectory(`LocalStoreLocation::resolveDiskPath` 가 낸 경로)를 만들고 남은 임시 파일을 지웁니다. */
         explicit FileLocalSlotStorage( string_view rootDirectory );
 
         LocalStoreResult readSlot( const string& slot, vector<uint8>& outEnvelopeBytes ) override;

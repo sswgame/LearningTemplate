@@ -79,7 +79,8 @@ namespace sw
 
         /**
          * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameSettings::_defaultSavePath`)입니다.
-         * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다. 경로가 없으면 알리고 아무것도 내지 않습니다.
+         * @details 경로는 사용자 데이터 폴더 아래 상대 경로다(`LocalStoreLocation::tryUnderUserData` - 절대 · 드라이브 상대 · `..` 는 오류).
+         *          경로가 정해졌으면 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다. 경로가 없거나 틀리면 알리고 아무것도 내지 않습니다.
          */
         [[nodiscard]] bool saveStateToFile( string_view filePath = {} );
 
@@ -196,6 +197,8 @@ namespace sw
         IRHIDevice*    _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
+        /** @brief 세이브 파일 경로(비면 기본 세이브 경로)를 사용자 데이터 폴더 아래 디스크 경로로 풉니다. 없거나 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool resolveSaveFilePath( string_view filePath, string& outPath ) const;
         /**
          * @brief 기동(`initialize`)이 쓰는 엔진 서비스가 있는지 아무것도 걸기 전에 확인합니다(언리얼 `InitializeDependency`). 들고 있지 않고 쓰는 자리에서 게임 창구로 찾는다.
          * @details 네트워크 세션은 모든 호스트의 필수 서비스다. UI · 사용자 설정은 Client 호스트 서비스라 창이 있는 호스트(클라이언트)에서는 필수이고,

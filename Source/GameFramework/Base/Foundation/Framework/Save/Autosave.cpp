@@ -6,7 +6,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
@@ -61,25 +60,37 @@ namespace sw
     {
         const utf8* pDirectory = root.findAttribute( "directory" );
         const utf8* pPrefix    = root.findAttribute( "prefix" );
+        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
+        bool bValid = true;
         if ( pDirectory != nullptr )
-            _directory = pDirectory;
+        {
+            const std::optional<LocalStoreLocation> location = LocalStoreLocation::tryUnderUserData( pDirectory );
+            if ( location.has_value() )
+            {
+                _location = *location;
+            }
+            else
+            {
+                SW_LOG_ERROR( "%#: Autosave directory '%#' must be a relative path under the user data folder (no drive, no root, no '..')", sourceName, pDirectory );
+                bValid = false;
+            }
+        }
         if ( pPrefix != nullptr )
             _prefix = pPrefix;
-        // 적지 않은 칸은 생성자의 초기값이다. 깨진 값 · 범위 밖 값은 읽기 실패이고 그 칸은 바꾸지 않는다(자르거나 다른 값으로 바꿔 쓰지 않는다).
-        bool bValid = XMLReadUtil::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval );
-        bValid      = XMLReadUtil::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
-        bValid      = XMLReadUtil::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
-        bValid      = XMLReadUtil::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
-        bValid      = XMLReadUtil::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
-        bValid      = XMLReadUtil::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
-        bValid      = XMLReadUtil::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( root, "interval", sourceName, 0.0f, MathUtil::kMaxFloat, _interval ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( root, "minimumGap", sourceName, 0.0f, MathUtil::kMaxFloat, _minimumGap ) && bValid;
+        bValid = XMLReadUtil::readOptionalNumber( root, "slots", sourceName, 1, AutosaveInternal::kMaxSlotCount, _slotCount ) && bValid;
+        bValid = XMLReadUtil::readOptionalFlag( root, "areaChange", _bOnAreaChange ) && bValid;
+        bValid = XMLReadUtil::readOptionalFlag( root, "checkpoint", _bOnCheckpoint ) && bValid;
+        bValid = XMLReadUtil::readOptionalFlag( root, "beforeBoss", _bOnBeforeBoss ) && bValid;
+        bValid = XMLReadUtil::readOptionalFlag( root, "quit", _bOnQuit ) && bValid;
         return bValid;
     }
 
     string AutosaveSettings::makeSlotPath( int32 slot ) const
     {
-        // 슬롯 폴더의 상대 경로는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소 · `GameInstance` 세이브와 같은 규칙 - 작업 폴더가 아니다).
-        return FileUtil::joinPath( UserDataPath::resolve( GameSelection::getName(), _directory ), formatToString( "%#%#.sav", _prefix, slot ) );
+        // 슬롯 폴더는 그 게임의 사용자 데이터 폴더 아래다(로컬 저장소 · `GameInstance` 세이브와 같은 자리 형식 - 작업 폴더가 아니다).
+        return FileUtil::joinPath( _location.resolveDiskPath( GameSelection::getName() ), formatToString( "%#%#.sav", _prefix, slot ) );
     }
 
     // ------------------------------------------------------------------------------
