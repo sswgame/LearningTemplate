@@ -413,7 +413,9 @@ namespace sw
         // 프로세스 시한 — 자식 안의 감시(행 보고)가 먼저 닿고, 그래도 끝나지 않은 자식만 여기서 죽인다. 부모가 기다리기만 하면 멈춘 자식 하나에 CTest 시한이
         // 부모만 죽이고 자식은 고아로 남는다(Windows 는 부모가 죽어도 자식을 거두지 않는다).
         // 시한은 단계마다다 — 체인(`-scenario=a,b,c`)은 단계 수만큼 길다.
-        const int64    stageCount   = MathUtil::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
+        const int64 stageCount = MathUtil::max<int64>( 1, static_cast<int64>( AutomationScenarioChain::splitList( options._scenarioPath ).size() ) );
+        // shortcut: 단계 예산(`SwapBackend` 15 초씩)으로 늘어난 벽시계 상한은 보지 않는다 — 단계 하나뿐인 자식에서 교체가 둘 이상이면 감시보다 이 시한이 먼저 닿을 수 있다.
+        //           교체가 많은 시나리오를 혼자 도는 항목으로 등록할 때 부모도 시나리오를 읽어 상한 합으로 바꾼다.
         const int64    killSeconds  = static_cast<int64>( AutomationTimeLimits::kProcessKillSeconds ) * stageCount;
         const Deadline killDeadline = Deadline::afterMilliseconds( killSeconds * 1000 );
         int32          firstFailure = 0;

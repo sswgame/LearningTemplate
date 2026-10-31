@@ -5,6 +5,7 @@
 #include "App/EditorModuleManager.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -169,10 +170,14 @@ namespace sw
         void* const pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
 
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
+        // 엔진 몫(`Backend swap took`)과 모듈 몫(게임 · 에디터를 다시 세우고 씬 상태를 되돌린다)을 함께 남긴다 - 교체 시간의 대부분이 모듈 몫이던 때 엔진 줄만 보였다.
+        const Stopwatch swapWatch;
         _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
+        const uint64 suspendMicroseconds = swapWatch.getElapsedMicroseconds();
 
-        const bool bSwapOk = _pEngine->applyPendingBackendChange();
-        RHI*       pRHI    = _pEngine->getRHI();
+        const bool   bSwapOk            = _pEngine->applyPendingBackendChange();
+        const uint64 engineMicroseconds = swapWatch.getElapsedMicroseconds();
+        RHI*         pRHI               = _pEngine->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "applyPendingBackendChange failed - no RHI device, modules are not recreated." );
@@ -182,6 +187,9 @@ namespace sw
         const bool bReinitOk = _pGameModuleManager->reinitializeAfterRHISwap( pEditorModule, pGameModule );
         if ( bReinitOk == false )
             SW_LOG_ERROR( "reinitializeAfterRHISwap failed." );
+        const uint64 totalMicroseconds = swapWatch.getElapsedMicroseconds();
+        SW_LOG_INFO( "Backend swap with modules took %#ms (suspend modules %#ms, engine %#ms, recreate modules %#ms)", totalMicroseconds / 1000, suspendMicroseconds / 1000,
+                     ( engineMicroseconds - suspendMicroseconds ) / 1000, ( totalMicroseconds - engineMicroseconds ) / 1000 );
         if ( bSwapOk == false )
             SW_LOG_ERROR( "applyPendingBackendChange failed - restored the previous backend and recreated the modules." );
         return bSwapOk && bReinitOk;

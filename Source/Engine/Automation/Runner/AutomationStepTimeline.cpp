@@ -16,7 +16,6 @@ namespace sw
         , _clockHoldStartSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _frameIndex{ 0 }
-        , _elapsedFrameCount{ 0 }
         , _currentStepNumber{ 0 }
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }

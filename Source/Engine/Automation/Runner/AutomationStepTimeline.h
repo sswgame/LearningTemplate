@@ -48,8 +48,7 @@ namespace sw
         float64                          _lastFrameEndSeconds;   ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
         float64                          _clockHoldStartSeconds; ///< 시계 잡기가 시작된 단조 시계 초
         size_t                           _nextStepIndex;         ///< 다음에 돌 단계의 순번
-        uint32                           _frameIndex;            ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점의 축. `<WaitUntil>` 이 붙잡는 동안은 서 있다
-        uint32                           _elapsedFrameCount;     ///< 시작한 뒤 지난 프레임 수(붙잡힌 프레임도 센다) — 시한(`timeoutFrames`)과 보고의 축
+        uint32                           _frameIndex;            ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
         uint32                           _currentStepNumber;     ///< `_currentStepKind` 의 파일 순번
         uint32                           _waitFrameCount;        ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;

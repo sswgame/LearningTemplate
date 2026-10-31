@@ -552,6 +552,14 @@ namespace sw
                 return false;
             }
         }
+        // 프레임 시한은 적은 프레임(고정 대기 · 단계)만 센다 — 붙잡는 대기는 저마다 제 시한이 있다. 그래서 마지막 단계가 시한 밖이면 실행 전에 늘 지는 파일이다.
+        const bool bLastStepPastTimeout = _testOptions._load._bDeclared == false && _listStep.empty() == false && _listStep.back()._frameIndex > _timeoutFrames;
+        if ( bLastStepPastTimeout )
+        {
+            outError = _sourcePath + ": " + _listStep.back().describe() + " is at scenario frame " + to_string( _listStep.back()._frameIndex ) + ", past timeoutFrames " +
+                       to_string( _timeoutFrames ) + " (the limit counts written frames - fixed waits and steps; each held wait keeps its own limit)";
+            return false;
+        }
         return true;
     }
 

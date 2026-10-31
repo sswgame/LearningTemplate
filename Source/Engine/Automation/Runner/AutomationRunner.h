@@ -208,6 +208,8 @@ namespace sw
          *          이 감시는 프레임이 도는 동안만 본다 — 프레임 자체가 멈춘 행은 행 감시 스레드(`AutomationHangWatchdog`)가 상한 + 유예 뒤에 잡는다.
          */
         void finishIfWallClockExceeded();
+        /** @brief 시나리오의 `wallTimeoutSeconds` 에 단계마다 그 종류의 벽시계 예산(`AutomationStepRegistration::_wallSeconds`)을 더한 상한입니다. 읽은 직후 한 번 구한다. */
+        [[nodiscard]] float32 computeWallLimitSeconds() const;
         /** @brief 지금 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임` — 창 제목과 같은 글)입니다. */
         string describeRunPosition() const;
         /** @brief 크래시 보고에 싣는 자리(`Scenario` 키 — 시나리오 · 백엔드 · 단계 · 프레임)를 갱신합니다. 크래시 · 행 뒤 덤프가 어느 시나리오의 어느 단계였는지 알려 준다. */
@@ -242,6 +244,7 @@ namespace sw
         GameObjectManager*       _pObjectManagerOverride;   ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
         InputManager*            _pInputManager;            ///< 시작 프레임에 받은 입력 관리자(`onFrameBegin`)
         int64                    _startedUnixMs;            ///< 시작 시각의 유닉스 밀리초(보고용)
+        float32                  _wallLimitSeconds;         ///< 이 실행의 벽시계 상한 — 시나리오의 `wallTimeoutSeconds` + 단계 종류별 예산(`computeWallLimitSeconds`)
         string                   _startScenePath;           ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
         TaskFuture<Scene*>       _startSceneLoad;           ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;

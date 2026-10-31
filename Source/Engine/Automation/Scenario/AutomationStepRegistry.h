@@ -52,6 +52,11 @@ namespace sw
          *          (`AutomationStepValidation::validateDesktopSteps`).
          */
         bool _bUsesDesktop{ false };
+        /**
+         * @brief 이 단계 하나가 시나리오의 벽시계 상한에 더하는 초입니다(`SW_AUTOMATION_STEP_WITH_WALL_BUDGET`). 0 이면 더하지 않는다.
+         * @details 단계 하나가 몇 초씩 드는 종류(백엔드 교체)가 쓴다 — 상한이 그 수에 맞게 는다(`AutomationRunner::computeWallLimitSeconds`).
+         */
+        float32 _wallSeconds{ 0.0f };
     };
 } // namespace sw
 
@@ -187,6 +192,14 @@ namespace sw
     static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                  \
     {                                                                                                                              \
         &sw_automationStep_##id                                                                                                    \
+    }
+
+/** @brief `SW_AUTOMATION_STEP_WITH_HOOKS` 와 같되 단계 하나마다 시나리오 벽시계 상한에 @p wallSeconds 초를 더합니다(백엔드 교체처럼 단계 하나가 몇 초 드는 종류). */
+#define SW_AUTOMATION_STEP_WITH_WALL_BUDGET( id, pKind, pRun, pValidate, pPrepare, pHold, wallSeconds )                                         \
+    static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, pPrepare, pHold, false, false, wallSeconds }; \
+    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                               \
+    {                                                                                                                                           \
+        &sw_automationStep_##id                                                                                                                 \
     }
 
 /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 참인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */

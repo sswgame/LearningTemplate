@@ -27,6 +27,11 @@ namespace sw
         static constexpr const utf8* kOtherBackend = "other";
         /** @brief `backend="start"` — 시나리오가 시작할 때의 백엔드입니다. `other` 로 건넌 뒤 돌아와 체인의 다음 시나리오가 같은 백엔드에서 돌게 한다. */
         static constexpr const utf8* kStartBackend = "start";
+        /**
+         * @brief 교체 한 번이 시나리오 벽시계 상한에 더하는 초입니다. 교체는 디바이스 · 렌더 단계 · 자원과 함께 게임 · 에디터 모듈과 씬을 다시 세운다.
+         * @details Debug 에서 혼자 2~6 초, 다른 빌드가 CPU 를 쓰면 그 몇 배다(flowterrain 의 교체 넷이 혼자서 19 초, 부하에서 150 초 상한을 넘었다).
+         */
+        static constexpr float32 kSwapBackendWallSeconds = 15.0f;
 
         /** @brief 명령줄 철자(`dx11`, `dx12`, `vulkan`, `opengl`)와 열거자 이름을 대소문자 없이 받습니다. */
         [[nodiscard]] static bool tryParseBackend( string_view text, RHIBackend& outBackend );

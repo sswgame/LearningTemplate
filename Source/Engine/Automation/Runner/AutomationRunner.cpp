@@ -102,6 +102,7 @@ namespace sw
         , _pObjectManagerOverride{ nullptr }
         , _pInputManager{ nullptr }
         , _startedUnixMs{ 0 }
+        , _wallLimitSeconds{ AutomationScenario::kDefaultWallTimeoutSeconds }
         , _startScenePath{}
         , _startSceneLoad{}
         , _result{ AutomationOutcome::Running }
@@ -147,7 +148,8 @@ namespace sw
             finish( AutomationOutcome::LoadError, error );
             return;
         }
-        _outputDirectory = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
+        _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
+        _wallLimitSeconds = computeWallLimitSeconds();
         if ( skipIfThisBuildCannotRun() || prepareScratchFolders() == false )
             return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
@@ -211,6 +213,7 @@ namespace sw
             return false;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );
+        _wallLimitSeconds = computeWallLimitSeconds();
         const bool bReady = skipIfThisBuildCannotRun() == false && prepareScratchFolders();
         if ( bReady )
             startHangWatchdog();
@@ -398,18 +401,17 @@ namespace sw
                                                _run._exitDeadlineSeconds < static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6;
             if ( bExitDeadlineExceeded )
                 finish( AutomationOutcome::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
-            // 단계 시점(`_frameIndex`)은 `WaitUntil` 이 붙잡은 프레임에 서 있다(뒤 단계가 그만큼 밀린다). 시한은 붙잡힌 프레임까지 모두 센 `_elapsedFrameCount` 로 본다 —
-            // 예전에는 붙잡힌 프레임을 세지 않아 조건이 끝내 서지 않는 시나리오를 프레임 시한이 잡지 못하고 벽시계 그물만 잡았다.
+            // 단계 시점(`_frameIndex`)은 붙잡은 프레임(`WaitUntil` · 입력 대상 자리 잡기 · 씬 로드 …)에 서 있다(뒤 단계가 그만큼 밀린다). 프레임 시한도 이 축으로 본다 —
+            // 붙잡기마다 제 시한(`holdUntilReady` 의 `timeoutFrames`)이 있어 늦게 선 조건은 그 단계의 이름으로 지고, 바깥 시한은 시나리오에 적은 프레임(고정 대기 · 단계)만의 예산이다.
+            // 예전에는 붙잡힌 프레임까지 세어, 대기 시한의 합보다 작게 잡은 바깥 시한(45 편)이 늦게 선 조건을 "timeoutFrames reached" 로만 지게 했다.
+            // 언리얼 latent 명령 · 유니티 WaitUntil 도 대기마다 제 시한이고, 전체를 묶는 것은 벽시계(언리얼 Functional Test 의 TimeLimit, 여기서는 `wallTimeoutSeconds`)다.
             // 시나리오 끝(`<Pass/>`)이 뒤의 일(캡처 파일 쓰기)을 기다리는 프레임은 세지 않는다 - 단계는 이미 다 돌았고 그 대기는 따로 묶인다.
-            if ( _result == AutomationOutcome::Running && _run._bFinishWaiting == false )
-            {
-                ++_run._elapsedFrameCount;
-                if ( _run._holdFrameCount == 0 )
-                    ++_run._frameIndex;
-            }
+            const bool bScenarioClockRuns = _result == AutomationOutcome::Running && _run._bFinishWaiting == false && _run._holdFrameCount == 0;
+            if ( bScenarioClockRuns )
+                ++_run._frameIndex;
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다). 부하 시나리오는 측정 창이 끝내므로 벽시계 그물만 본다.
             const bool bFrameTimeoutReached = _result == AutomationOutcome::Running && _run._exitDeadlineSeconds <= 0.0 && _run._loadDeadlineSeconds <= 0.0 &&
-                                              _run._elapsedFrameCount > _scenario.getTimeoutFrames();
+                                              _run._frameIndex > _scenario.getTimeoutFrames();
             if ( bFrameTimeoutReached )
                 finish( AutomationOutcome::TimedOut, "timeoutFrames reached without <Pass/>" );
             const bool bLoadDeadlineExceeded = _result == AutomationOutcome::Running && _run._loadDeadlineSeconds > 0.0 &&
@@ -475,6 +477,20 @@ namespace sw
         _run._lastFrameEndSeconds = nowSeconds;
     }
 
+    float32 AutomationRunner::computeWallLimitSeconds() const
+    {
+        // 단계 하나가 몇 초씩 드는 종류(백엔드 교체 — 디바이스 · 모듈 · 씬을 다시 세운다)는 그 수만큼 상한을 늘린다. 고정 상한이면 교체가 많은 시나리오만
+        // 부하가 걸린 기계에서 넘었고, 숫자를 올리면 교체가 없는 시나리오의 행 감지까지 늦어진다(언리얼 Gauntlet 도 테스트마다 MaxDuration 을 따로 둔다).
+        float32 limitSeconds = _scenario.getWallTimeoutSeconds();
+        for ( const AutomationStep& step : _scenario.getSteps() )
+        {
+            const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
+            if ( pRegistration != nullptr )
+                limitSeconds += pRegistration->_wallSeconds;
+        }
+        return limitSeconds;
+    }
+
     void AutomationRunner::finishIfWallClockExceeded()
     {
         // 부하 시나리오는 측정 창을 닫는 그물(`_run._loadDeadlineSeconds`)이 따로 있어 길이가 `durationSeconds` 에 매인다.
@@ -482,9 +498,10 @@ namespace sw
         if ( bWatches == false )
             return;
         const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
-        if ( elapsedSeconds <= static_cast<float64>( _scenario.getWallTimeoutSeconds() ) )
+        if ( elapsedSeconds <= static_cast<float64>( _wallLimitSeconds ) )
             return;
-        string reason = formatToString( "the wall-clock limit of %# s (wallTimeoutSeconds) was exceeded at %#", _scenario.getWallTimeoutSeconds(), describeRunPosition() );
+        string reason = formatToString( "the wall-clock limit of %# s (wallTimeoutSeconds %# + step budgets) was exceeded at %#", _wallLimitSeconds, _scenario.getWallTimeoutSeconds(),
+                                        describeRunPosition() );
         if ( _bStarted == SW_FALSE )
             reason += formatToString( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
         if ( _run._holdFrameCount > 0 )
@@ -558,7 +575,7 @@ namespace sw
         AutomationHangPayload::assign( _hangPayload._reportPath, AutomationHangPayload::kReportPathBytes, _reportWriter.getReportPath() );
         AutomationHangPayload::assign( _hangPayload._result, AutomationHangPayload::kResultBytes, getEnumName( AutomationOutcome::TimedOut ) );
         _hangPayload._startedUnixMs         = _startedUnixMs;
-        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 );
+        _hangPayload._wallLimitMilliseconds = static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 );
         // 행에서는 보고 폴더를 만들 수 없다(할당 · 잠금 없이 쓴다) — 미리 만들어 둔다.
         const string reportDirectory = FileUtil::getDirectoryPart( _reportWriter.getReportPath() );
         if ( reportDirectory.empty() == false )
@@ -566,7 +583,7 @@ namespace sw
         _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
         settings._startSeconds = _run._wallStartSeconds;
-        settings._limitSeconds = _scenario.getWallTimeoutSeconds();
+        settings._limitSeconds = _wallLimitSeconds;
         settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
         settings._exitCode     = getAutomationExitCode( AutomationOutcome::TimedOut );
         _hangWatchdog.start( settings );
@@ -847,7 +864,7 @@ namespace sw
         report._startedAt                = _startedAt;
         report._startedUnixMs            = _startedUnixMs;
         report._wallMilliseconds         = static_cast<uint32>( wallSeconds * 1000.0 );
-        report._wallLimitMilliseconds    = bWatchedByWallTime ? static_cast<uint32>( static_cast<float64>( _scenario.getWallTimeoutSeconds() ) * 1000.0 ) : 0u;
+        report._wallLimitMilliseconds    = bWatchedByWallTime ? static_cast<uint32>( static_cast<float64>( _wallLimitSeconds ) * 1000.0 ) : 0u;
         report._lastStep                 = lastStep;
         report._reproduce                = reproduce;
         report._pTimeline                = &_wallProfile;
