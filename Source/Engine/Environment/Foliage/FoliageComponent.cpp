@@ -275,6 +275,17 @@ namespace sw
         { foliage.refreshFromTerrainEdits(); } );
     }
 
+    bool FoliageComponent::isBehindTerrainEdits() const
+    {
+        if ( _bBuiltOnTerrain == SW_FALSE )
+            return false;
+        const GameObject*        pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const float3             origin   = getWorldPosition();
+        const TerrainComponent*  pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) : nullptr;
+        return pTerrain != nullptr && ( pTerrain->getHeightfieldGeneration() != _builtTerrainGeneration || pTerrain->getSplatRevision() != _builtSplatRevision );
+    }
+
     void FoliageComponent::refreshFromTerrainEdits()
     {
         _bTerrainRefreshPending = SW_FALSE;

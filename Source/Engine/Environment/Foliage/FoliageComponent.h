@@ -120,6 +120,11 @@ namespace sw
          * @return 레이어가 없으면 false 를 반환합니다.
          */
         bool computeLayerPlacements( uint32 layerIndex, vector<PlacementInstance>& outListInstance ) const;
+        /**
+         * @brief 지형 위에 지었는데 지형이 그 뒤에 바뀌어 아직 다시 계산하지 않았으면 true 입니다(편집이 가라앉기를 기다리는 동안 포함).
+         * @details 런타임 상태 질의다(바뀐 지형 위의 배치가 아직 옛것이다). 자동화 층이 이것으로 화면 캡처를 미룬다(`AutomationCaptureUtil`).
+         */
+        [[nodiscard]] bool isBehindTerrainEdits() const;
         /** @brief 셀 거리 컬링과 머티리얼 값(바람, 시간, 카메라, 휘게 하는 구)을 @p viewPosition 기준으로 갱신합니다. 틱이 호출하고 테스트가 직접 호출합니다. */
         void updateView( const float3& viewPosition );
 
