@@ -180,6 +180,8 @@ SW_TEST_CASE( AutosaveTest, RestoresTheLatestCheckpoint )
  */
 SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
 {
+    SW_EXPECT_LOG( "Autosave.WriteFailed" );
+
     const sw::AutosaveSettings settings = makeSettings();
     sw::MemoryLocalDatabase    database;
     FakeGame                   game;

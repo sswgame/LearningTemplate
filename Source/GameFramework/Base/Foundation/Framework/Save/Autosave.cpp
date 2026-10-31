@@ -403,8 +403,8 @@ namespace sw
         if ( completion._result != LocalStoreResult::Ok )
         {
             // 상태 슬롯은 원자 쓰기라 옛 상태가 남았는데 기록은 새 순번으로 쓰였을 수 있다 - 기록을 지워 그 칸을 빈 칸으로 둔다(옛 상태를 새것으로 되돌리지 않는다).
-            SW_LOG_WARNING( "Autosave (%#) to %# failed (local store result %#) - the previous slots are kept", getEnumName( info._trigger ), completion._slot.c_str(),
-                            static_cast<int32>( completion._result ) );
+            SW_LOG_WARNING_ID( "Autosave.WriteFailed", "Autosave (%#) to %# failed (local store result %#) - the previous slots are kept", getEnumName( info._trigger ), completion._slot.c_str(),
+                               static_cast<int32>( completion._result ) );
             _listSlot[static_cast<size_t>( info._slot )] = AutosaveSlotInfo{};
             _infoRequest                                 = _pStore->submitErase( _settings.makeInfoSlotName( info._slot ), GameLocalStore::CompletionFunction::create<&AutosaveManager::onInfoWritten>( this ) );
             return;

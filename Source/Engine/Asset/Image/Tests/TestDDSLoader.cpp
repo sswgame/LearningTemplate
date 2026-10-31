@@ -167,6 +167,10 @@ SW_TEST_CASE( DDSLoaderTest, KeepsDepthAndMipCount )
  */
 SW_TEST_CASE( DDSLoaderTest, MalformedBuffersFailAndClearTheOutput )
 {
+    SW_EXPECT_LOG( "DDS.Truncated" );
+    SW_EXPECT_LOG( "DDS.InvalidMagic" );
+    SW_EXPECT_LOG( "DDS.CorruptHeader" );
+
     DDSImageData image = makeLoadedImage();
     SW_REQUIRE_TRUE( image.isValid() );
 
@@ -197,10 +201,6 @@ SW_TEST_CASE( DDSLoaderTest, MalformedBuffersFailAndClearTheOutput )
     image                          = makeLoadedImage();
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( headerOnly.data(), headerOnly.size(), image ) );
     SW_EXPECT_FALSE( image.isValid() );
-
-    SW_EXPECT_LOG( "DDS.Truncated" );
-    SW_EXPECT_LOG( "DDS.InvalidMagic" );
-    SW_EXPECT_LOG( "DDS.CorruptHeader" );
 }
 
 /**
@@ -208,6 +208,8 @@ SW_TEST_CASE( DDSLoaderTest, MalformedBuffersFailAndClearTheOutput )
  */
 SW_TEST_CASE( DDSLoaderTest, UnknownFormatsFail )
 {
+    SW_EXPECT_LOG( "DDS.UnsupportedFormat" );
+
     const LegacyPixelFormat arrPixelFormat[] = {
         makeFourCc( FourCcUtil::make( "ABCD" ) ),
         makeRGB( 0x0000FFFFu, 0x00FF0000u, 0xFF000000u, 0x00000000u ),
@@ -220,5 +222,4 @@ SW_TEST_CASE( DDSLoaderTest, UnknownFormatsFail )
         SW_EXPECT_FALSE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
         SW_EXPECT_FALSE( image.isValid() );
     }
-    SW_EXPECT_LOG( "DDS.UnsupportedFormat" );
 }
