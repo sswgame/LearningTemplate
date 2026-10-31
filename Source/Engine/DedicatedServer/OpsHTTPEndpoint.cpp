@@ -2,14 +2,13 @@
 
 #include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Observability/MetricRegistry.h"
-
-#include <charconv>
 
 namespace sw
 {
@@ -44,24 +43,17 @@ namespace sw
                 }
             }
 
-            static void appendNumber( string& outText, uint64 value )
-            {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
-
             static int32 writeResponse( int32 status, string_view contentType, string_view body, string& outResponse )
             {
                 outResponse.clear();
                 outResponse += "HTTP/1.1 ";
-                appendNumber( outResponse, static_cast<uint64>( status ) );
+                StringUtil::appendNumber( outResponse, static_cast<uint64>( status ) );
                 outResponse.push_back( ' ' );
                 outResponse += findReason( status );
                 outResponse += "\r\nContent-Type: ";
                 outResponse += contentType;
                 outResponse += "\r\nContent-Length: ";
-                appendNumber( outResponse, body.size() );
+                StringUtil::appendNumber( outResponse, body.size() );
                 outResponse += "\r\nConnection: close\r\nCache-Control: no-store\r\n\r\n";
                 outResponse += body;
                 return status;

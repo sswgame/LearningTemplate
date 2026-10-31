@@ -7,8 +7,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include <charconv>
-
 namespace sw
 {
     SW_LOG_CALLER( "DebugChannel" );
@@ -18,13 +16,6 @@ namespace sw
         struct DebugChannelInternal
         {
             static constexpr int64 kPollSleepNanoseconds = 1 * constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond;
-
-            static void appendNumber( string& outText, uint64 value )
-            {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
 
             static int64 nowMilli() { return MonotonicClock::nowNanoseconds() / ( constant::kNanosecondsPerSecond / constant::kMillisecondsPerSecond ); }
         };
@@ -100,7 +91,7 @@ namespace sw
     void DebugChannel::sendReply( uint64 packedHandle, bool bOk, string_view body ) const
     {
         string reply = bOk ? "OK " : "ERR ";
-        DebugChannelInternal::appendNumber( reply, body.size() );
+        StringUtil::appendNumber( reply, body.size() );
         reply += '\n';
         reply += body;
         (void)_pTransport->send( StreamConnectionHandle::fromPacked( packedHandle ), reinterpret_cast<const uint8*>( reply.data() ), static_cast<int32>( reply.size() ) );

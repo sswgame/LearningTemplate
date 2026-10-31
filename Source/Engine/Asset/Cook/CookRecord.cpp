@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Defines.h"
-#include "Core/String/StringBuilder.h"
+#include "Core/String/HexUtil.h"
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/FileSystem/ContentHash.h"
@@ -24,15 +24,15 @@ namespace sw
             /** @brief 16 자리 소문자 hex 입니다. */
             static string toHex( uint64 value )
             {
-                StringBuilder<constant::kMaxBuffer64> builder;
-                builder.appendFormat( "%#", Fmt( value, Format( 16, Format::Padding::Zero ).hex() ) );
-                return string( builder.c_str(), builder.size() );
+                string text;
+                HexUtil::appendUint64( text, value );
+                return text;
             }
 
             /** @brief 16 자리 hex 를 읽습니다. 형식이 아니면 false 입니다. */
             [[nodiscard]] static bool parseHex( string_view text, uint64& outValue )
             {
-                return text.size() == 16 && StringUtil::parseUint64( text, outValue, 16 );
+                return text.size() == HexDigitUtil::kMaxDigitCount && HexDigitUtil::tryParseFixed( text, outValue );
             }
         };
     } // namespace

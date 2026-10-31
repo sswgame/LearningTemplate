@@ -3,6 +3,7 @@
  * @brief 바이트 · 정수를 16진 글로 쓰고 읽는 정본입니다 — 다이제스트 · 해시 · 키 · GUID 의 글 표현이 모두 이것을 씁니다.
  * @details 호출부마다 `"0123456789abcdef"` 표를 두고 니블을 손으로 뽑으면 대소문자 · 자릿수 채움 · 바이트 순서가 갈립니다.
  *          한 줄 서식 안의 정수 하나는 `formatstring` 의 `%x` · `%016llx` 로도 됩니다. 이것은 바이트 열과 고정 폭 정수용입니다.
+ *          글자 하나 ↔ 니블은 할당 없는 바닥(`HexDigitUtil`, 티어 0) 하나가 정하고 이 파일은 그 위의 `string` · `vector` 편의만 둔다(글자표를 따로 두지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -24,8 +25,6 @@ namespace sw
         static void appendUint64( string& inoutText, uint64 value, uint32 digitCount = 16, HexCase hexCase = HexCase::Lower );
         /** @brief @p value 를 앞 0 없이(적어도 @p minDigits 글자, 0 은 한 글자) 붙입니다. 값이 필요한 만큼만 쓰고 싶을 때(청크 크기 · 주소)의 짝입니다. */
         static void appendUint64Minimal( string& inoutText, uint64 value, uint32 minDigits = 1, HexCase hexCase = HexCase::Lower );
-        /** @brief 16 진 글자 하나를 값(0 ~ 15)으로 읽습니다(대소문자 무관). 16 진 글자가 아니면 false 입니다. */
-        [[nodiscard]] static bool tryReadDigit( utf8 character, uint8& outValue );
         /** @brief 두 글자씩 바이트로 읽습니다(대소문자 무관). 길이가 홀수이거나 16진 글자가 아니면 false 이고 @p outBytes 는 비웁니다. */
         [[nodiscard]] static bool decodeBytes( string_view text, vector<uint8>& outBytes );
     };

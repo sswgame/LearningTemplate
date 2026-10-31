@@ -26,7 +26,6 @@
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <algorithm>
-#include <charconv>
 
 namespace sw
 {
@@ -35,20 +34,6 @@ namespace sw
         struct SceneInspectCommandsInternal
         {
             static constexpr uint32 kDefaultTreeLimit = 200;
-
-            static void appendNumber( string& outText, uint64 value )
-            {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
-
-            static void appendFloat( string& outText, float32 value )
-            {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
 
             /** @brief 이력을 남기고 있는 상태 해시 이력입니다. 서비스가 없거나 꺼져 있으면 nullptr 이고 @p outReply 에 까닭을 씁니다. */
             static const StateHashHistory* findRecordingHistory( string& outReply )
@@ -81,7 +66,7 @@ namespace sw
                     return pLeft->getObjectID() < pRight->getObjectID();
                 } );
                 outReply = "objects ";
-                appendNumber( outReply, listObject.size() );
+                StringUtil::appendNumber( outReply, listObject.size() );
                 outReply += '\n';
                 uint64 written = 0;
                 for ( const GameObject* pObject : listObject )
@@ -91,7 +76,7 @@ namespace sw
                         outReply += "... (limit reached)\n";
                         break;
                     }
-                    appendNumber( outReply, pObject->getObjectID() );
+                    StringUtil::appendNumber( outReply, pObject->getObjectID() );
                     outReply += ' ';
                     outReply += pObject->getName().empty() ? "<unnamed>" : pObject->getName().c_str();
                     const GameObject* pParent = pObject->getParent();
@@ -126,7 +111,7 @@ namespace sw
                 outReply = "object ";
                 outReply += listArgument[0];
                 outReply += " id=";
-                appendNumber( outReply, pObject->getObjectID() );
+                StringUtil::appendNumber( outReply, pObject->getObjectID() );
                 outReply += pObject->isActive() ? " active=1\n" : " active=0\n";
                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Snapshot );
                 pObject->forEachComponent( [&outReply, &context]( Component* pComponent )

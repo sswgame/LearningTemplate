@@ -436,6 +436,29 @@ namespace sw
             return 0;
         }
 
+        /** @brief @p text 안의 @p character 개수입니다(줄 수 세기 등). */
+        static uint32 countChar( string_view text, utf8 character )
+        {
+            uint32 count = 0;
+            for ( const utf8 current : text )
+            {
+                count += current == character ? 1u : 0u;
+            }
+            return count;
+        }
+
+        /**
+         * @brief `formatNumber` 로 쓴 숫자를 @p inoutText 뒤에 붙입니다(인자 뜻도 같다). 숫자를 글에 붙이는 정본이다 — 호출부마다 `to_chars` 감싸기를 두지 않는다.
+         * @details 64 글자에 들어가지 않는 값(고정 소수점의 아주 큰 실수)은 `formatNumber` 처럼 아무것도 붙이지 않습니다.
+         */
+        template <typename T>
+        static void appendNumber( string& inoutText, T value, int32 precisionOrBase = -1 )
+        {
+            utf8         arrBuffer[constant::kMaxBuffer64];
+            const uint32 length = formatNumber( arrBuffer, constant::kMaxBuffer64, value, precisionOrBase );
+            inoutText.append( arrBuffer, length );
+        }
+
     private:
         static constexpr array<uint32, constant::kMaxBuffer256> kArrCRC32Table = StringUtilCRCInternal::makeCRC32TableInternal();
 

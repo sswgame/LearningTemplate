@@ -49,8 +49,6 @@ namespace sw
                 outParams.queryFilterType       = 0;
                 outParams.userData              = nullptr;
             }
-
-            static float3 toFloat3( const float32* pValue ) { return float3{ pValue[0], pValue[1], pValue[2] }; }
         };
     } // namespace
 } // namespace sw
@@ -248,7 +246,7 @@ namespace sw
             const dtCrowdAgent* pAgent      = _pCrowd->getAgent( static_cast<int32>( agentIndex ) );
             LinkTraversal&      traversal   = _listLink[agentIndex];
             const bool          bLastIsLink = pAgent->ncorners > 0 && ( pAgent->cornerFlags[pAgent->ncorners - 1] & DT_STRAIGHTPATH_OFFMESH_CONNECTION ) != 0;
-            traversal._previousPosition     = Internal::toFloat3( pAgent->npos );
+            traversal._previousPosition     = float3( pAgent->npos );
             traversal._pendingPoly          = bLastIsLink ? static_cast<uint32>( pAgent->cornerPolys[pAgent->ncorners - 1] ) : 0u;
         }
         _pCrowd->update( deltaTime, nullptr );
@@ -266,7 +264,7 @@ namespace sw
             }
             if ( traversal._linkPoly == 0 )
                 beginLinkTraversal( traversal );
-            traversal._velocity = ( Internal::toFloat3( pAgent->npos ) - traversal._previousPosition ) * ( 1.0f / deltaTime );
+            traversal._velocity = ( float3( pAgent->npos ) - traversal._previousPosition ) * ( 1.0f / deltaTime );
         }
     }
 
@@ -283,8 +281,8 @@ namespace sw
             return;
         }
         // 양방향 링크는 거꾸로 건널 수 있다 — 오르기 직전 위치에 가까운 끝이 오른 끝이다.
-        const float3 first    = DetourNavCrowdInternal::toFloat3( &pLink->pos[0] );
-        const float3 second   = DetourNavCrowdInternal::toFloat3( &pLink->pos[3] );
+        const float3 first    = float3( &pLink->pos[0] );
+        const float3 second   = float3( &pLink->pos[3] );
         const bool   bForward = float3::getHorizontalDistance( first, inoutTraversal._previousPosition ) <=
                               float3::getHorizontalDistance( second, inoutTraversal._previousPosition );
         inoutTraversal._linkPoly = inoutTraversal._pendingPoly;
@@ -300,12 +298,12 @@ namespace sw
             return false;
         using Internal             = DetourNavCrowdInternal;
         const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
-        outState._position         = Internal::toFloat3( pAgent->npos );
-        outState._velocity         = Internal::toFloat3( pAgent->vel );
-        outState._desiredVelocity  = Internal::toFloat3( pAgent->dvel );
+        outState._position         = float3( pAgent->npos );
+        outState._velocity         = float3( pAgent->vel );
+        outState._desiredVelocity  = float3( pAgent->dvel );
         outState._target           = _listTarget[static_cast<size_t>( agentID )];
         outState._bOnNavMesh       = pAgent->state == DT_CROWDAGENT_STATE_WALKING;
-        outState._nextCorner       = pAgent->ncorners > 0 ? Internal::toFloat3( pAgent->cornerVerts ) : outState._position;
+        outState._nextCorner       = pAgent->ncorners > 0 ? float3( pAgent->cornerVerts ) : outState._position;
         if ( _listFailed[static_cast<size_t>( agentID )] == SW_TRUE )
         {
             outState._moveState = NavCrowdMoveState::Failed;
@@ -396,21 +394,21 @@ namespace sw
             if ( isActiveAgent( static_cast<NavCrowdAgentID>( agentIndex ) ) == false )
                 continue;
             const dtCrowdAgent* pAgent   = _pCrowd->getAgent( static_cast<int32>( agentIndex ) );
-            const float3        position = Internal::toFloat3( pAgent->npos ) + lift;
+            const float3        position = float3( pAgent->npos ) + lift;
             if ( bPath )
             {
                 float3 from = position;
                 for ( int32 cornerIndex = 0; cornerIndex < pAgent->ncorners; ++cornerIndex )
                 {
-                    const float3 corner = Internal::toFloat3( &pAgent->cornerVerts[cornerIndex * 3] ) + lift;
+                    const float3 corner = float3( &pAgent->cornerVerts[cornerIndex * 3] ) + lift;
                     renderer.drawLine( from, corner, pathColor );
                     from = corner;
                 }
             }
             if ( bVelocity )
             {
-                renderer.drawLine( position, position + Internal::toFloat3( pAgent->vel ), velocityColor );
-                renderer.drawLine( position + lift, position + lift + Internal::toFloat3( pAgent->dvel ), desiredColor );
+                renderer.drawLine( position, position + float3( pAgent->vel ), velocityColor );
+                renderer.drawLine( position + lift, position + lift + float3( pAgent->dvel ), desiredColor );
             }
         }
     }

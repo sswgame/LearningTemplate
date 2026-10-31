@@ -27,8 +27,8 @@ namespace sw
 
             static int32 findHexValue( utf8 ch )
             {
-                uint8 value = 0;
-                return HexUtil::tryReadDigit( ch, value ) ? static_cast<int32>( value ) : -1;
+                uint32 value = 0;
+                return HexDigitUtil::tryParseDigit( ch, value ) ? static_cast<int32>( value ) : -1;
             }
 
             /** @brief @p bytes 에서 "\r\n" 의 위치입니다(없으면 npos). */

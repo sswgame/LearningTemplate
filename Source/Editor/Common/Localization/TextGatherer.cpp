@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/set.h"
-#include "Core/String/HexUtil.h"
+#include "Core/Foundation/HexDigitUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -269,8 +269,8 @@ namespace sw
                 while ( digitCount < maxDigits && _position < _text.size() )
                 {
                     const utf8 character = _text[_position];
-                    uint8      digit{ 0 };
-                    if ( HexUtil::tryReadDigit( character, digit ) == false )
+                    uint32     digit{ 0 };
+                    if ( HexDigitUtil::tryParseDigit( character, digit ) == false )
                         break;
                     value = value * 16 + digit;
                     ++digitCount;

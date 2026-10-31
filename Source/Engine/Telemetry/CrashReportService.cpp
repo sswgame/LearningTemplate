@@ -96,16 +96,6 @@ namespace sw
                 bool operator()( const CrashReportSummary& lhs, const CrashReportSummary& rhs ) const { return lhs._crashTime < rhs._crashTime; }
             };
 
-            static uint32 countLines( string_view text )
-            {
-                uint32 count = 0;
-                for ( const utf8 character : text )
-                {
-                    count += character == '\n' ? 1u : 0u;
-                }
-                return count;
-            }
-
             [[nodiscard]] static bool loadManifest( const string& bundleFolder, JSONDocument& outDocument )
             {
                 return outDocument.tryParse( readText( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ) ) );
@@ -352,7 +342,7 @@ namespace sw
                 continue;
             }
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
-                breadcrumbCount = Internal::countLines( Internal::readText( target ) );
+                breadcrumbCount = StringUtil::countChar( Internal::readText( target ), '\n' );
             (void)FileUtil::removeFile( source ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
             const JSONValue entry = files.pushBack();
             entry.setObject();

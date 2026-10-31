@@ -3,6 +3,7 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/HexDigitUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -295,10 +296,9 @@ namespace sw
 
     void JSONWriter::appendEscaped( string_view text )
     {
-        using Internal                   = JSONWriterInternal;
-        constexpr string_view kHexDigits = "0123456789abcdef";
-        size_t                runBegin   = 0;
-        size_t                offset     = 0;
+        using Internal  = JSONWriterInternal;
+        size_t runBegin = 0;
+        size_t offset   = 0;
         while ( offset < text.size() )
         {
             const uint8 byte   = static_cast<uint8>( text[offset] );
@@ -334,7 +334,8 @@ namespace sw
             }
             else
             {
-                const utf8 arrEscape[6]{ '\\', 'u', '0', '0', kHexDigits[byte >> 4], kHexDigits[byte & 0xF] };
+                utf8 arrEscape[6]{ '\\', 'u', '0', '0', 0, 0 };
+                HexDigitUtil::writeDigits( arrEscape + 4, byte, 2, HexCase::Lower );
                 append( string_view{ arrEscape, 6 } );
             }
             ++offset;

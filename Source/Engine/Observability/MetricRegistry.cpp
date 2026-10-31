@@ -2,6 +2,7 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"
@@ -9,7 +10,6 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 
 namespace sw
@@ -63,13 +63,6 @@ namespace sw
                 }
             }
 
-            static void appendUint( string& outText, uint64 value )
-            {
-                utf8                       arrBuffer[constant::kMaxBuffer32];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
-            }
-
             /** @brief 최단 왕복 표현(`0.25` · `1` · `2.5`)으로 붙입니다. NaN · 무한은 Prometheus 철자. */
             static void appendFloat( string& outText, float64 value )
             {
@@ -83,9 +76,7 @@ namespace sw
                     outText += value > 0.0 ? "+Inf" : "-Inf";
                     return;
                 }
-                utf8                       arrBuffer[constant::kMaxBuffer64];
-                const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sizeof( arrBuffer ), value );
-                outText.append( arrBuffer, result.ptr );
+                StringUtil::appendNumber( outText, value );
             }
 
             /** @brief `name<suffix>{labels,extra}` 를 붙입니다(라벨이 모두 비면 중괄호 없이). */
@@ -339,7 +330,7 @@ namespace sw
                     case Kind::Counter:
                     {
                         MetricRegistryInternal::appendSample( outText, pFamily->_name, "", series->_labelText, "" );
-                        MetricRegistryInternal::appendUint( outText, series->_counter->getValue() );
+                        StringUtil::appendNumber( outText, series->_counter->getValue() );
                         outText.push_back( '\n' );
                         break;
                     }
@@ -364,7 +355,7 @@ namespace sw
                                 leLabel += "+Inf";
                             leLabel.push_back( '"' );
                             MetricRegistryInternal::appendSample( outText, pFamily->_name, "_bucket", series->_labelText, leLabel );
-                            MetricRegistryInternal::appendUint( outText, cumulative );
+                            StringUtil::appendNumber( outText, cumulative );
                             outText.push_back( '\n' );
                         }
                         MetricRegistryInternal::appendSample( outText, pFamily->_name, "_sum", series->_labelText, "" );
@@ -372,7 +363,7 @@ namespace sw
                         outText.push_back( '\n' );
                         // 개수는 칸 합과 같은 값을 쓴다 — 긁는 동안의 증가로 +Inf 칸과 _count 가 어긋나지 않게.
                         MetricRegistryInternal::appendSample( outText, pFamily->_name, "_count", series->_labelText, "" );
-                        MetricRegistryInternal::appendUint( outText, cumulative );
+                        StringUtil::appendNumber( outText, cumulative );
                         outText.push_back( '\n' );
                         break;
                     }

@@ -103,8 +103,6 @@ namespace sw
                 }
             };
 
-            static float3 toFloat3( const float32* pValue ) { return float3{ pValue[0], pValue[1], pValue[2] }; }
-
             /** @brief 시작 · 끝 · 레이캐스트가 모두 이 함수로 붙으므로 상자 밖 점에 붙는 길이 없다(규칙은 `RecastQueryUtil::findPolyInBox`). */
             static dtPolyRef findPolyInBox( const dtNavMeshQuery* pQuery, const float3& position, const float3& searchExtent, const dtQueryFilter& filter, float32* pOutNearest )
             {
@@ -781,7 +779,7 @@ namespace sw
         releaseQuery( bLocked );
         if ( polyRef == 0 )
             return false;
-        outLocation._position = RecastNavMeshInternal::toFloat3( arrNearest );
+        outLocation._position = float3( arrNearest );
         outLocation._poly     = static_cast<NavPolyRef>( polyRef );
         return true;
     }
@@ -838,7 +836,7 @@ namespace sw
         outPath._listPoint.reserve( static_cast<size_t>( straightCount ) );
         for ( int32 pointIndex = 0; pointIndex < straightCount; ++pointIndex )
         {
-            outPath._listPoint.push_back( Internal::toFloat3( &arrStraight[pointIndex * 3] ) );
+            outPath._listPoint.push_back( float3( &arrStraight[pointIndex * 3] ) );
             // 링크에 오르는 점이다 — 그 점의 폴리곤이 링크 폴리곤이다. 링크 번호는 그 링크의 사용자 번호다.
             if ( ( arrStraightFlag[pointIndex] & DT_STRAIGHTPATH_OFFMESH_CONNECTION ) == 0 )
                 continue;
@@ -879,7 +877,7 @@ namespace sw
         releaseQuery( bLocked );
         if ( dtStatusFailed( status ) )
             return false;
-        const float3 from = RecastNavMeshInternal::toFloat3( arrStart );
+        const float3 from = float3( arrStart );
         if ( hitFraction > 1.0f )
         {
             outHit._position = end;
@@ -889,7 +887,7 @@ namespace sw
         outHit._bHit     = true;
         outHit._fraction = hitFraction;
         outHit._position = from + ( end - from ) * hitFraction;
-        outHit._normal   = RecastNavMeshInternal::toFloat3( arrNormal );
+        outHit._normal   = float3( arrNormal );
         return true;
     }
 
@@ -924,8 +922,8 @@ namespace sw
                 for ( int32 edgeIndex = 0; edgeIndex < poly.vertCount; ++edgeIndex )
                 {
                     const int32  nextIndex = ( edgeIndex + 1 ) % poly.vertCount;
-                    const float3 from      = RecastNavMeshInternal::toFloat3( &pTile->verts[poly.verts[edgeIndex] * 3] ) + lift;
-                    const float3 to        = RecastNavMeshInternal::toFloat3( &pTile->verts[poly.verts[nextIndex] * 3] ) + lift;
+                    const float3 from      = float3( &pTile->verts[poly.verts[edgeIndex] * 3] ) + lift;
+                    const float3 to        = float3( &pTile->verts[poly.verts[nextIndex] * 3] ) + lift;
                     const bool   bBoundary = poly.neis[edgeIndex] == 0;
                     renderer.drawLine( from, to, bBoundary ? color : innerColor );
                 }
@@ -935,8 +933,8 @@ namespace sw
             for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
             {
                 const dtOffMeshConnection& link   = pTile->offMeshCons[linkIndex];
-                const float3               start  = RecastNavMeshInternal::toFloat3( &link.pos[0] ) + lift;
-                const float3               end    = RecastNavMeshInternal::toFloat3( &link.pos[3] ) + lift;
+                const float3               start  = float3( &link.pos[0] ) + lift;
+                const float3               end    = float3( &link.pos[3] ) + lift;
                 const float32              height = ( end - start ).getLength() * RecastNavMeshInternal::kLinkArcHeightRatio;
                 const bool                 bOpen  = pTile->polys[link.poly].flags != 0;
                 float3                     from   = start;
@@ -983,7 +981,7 @@ namespace sw
                         const uint8    vertex = pTriangle[corner];
                         const float32* pPoint = vertex < poly.vertCount ? &pTile->verts[poly.verts[vertex] * 3]
                                                                         : &pTile->detailVerts[( detail.vertBase + vertex - poly.vertCount ) * 3];
-                        outListCorner.push_back( RecastNavMeshInternal::toFloat3( pPoint ) );
+                        outListCorner.push_back( float3( pPoint ) );
                     }
                     outListArea.push_back( engine );
                 }

@@ -22,12 +22,10 @@ namespace sw
 
             static void appendFloat( string& inoutText, const utf8* pKey, float32 value )
             {
-                utf8 arrBuffer[constant::kMaxBuffer32];
-                (void)StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value, kFractionDigits );
                 inoutText += ' ';
                 inoutText += pKey;
                 inoutText += '=';
-                inoutText += arrBuffer;
+                StringUtil::appendNumber( inoutText, value, kFractionDigits );
             }
 
             static bool isLargerKind( const NetStatsKindEntry& left, const NetStatsKindEntry& right )

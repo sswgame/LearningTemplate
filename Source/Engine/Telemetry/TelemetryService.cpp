@@ -71,16 +71,6 @@ namespace sw
                 }
             };
 
-            static uint32 countLines( string_view text )
-            {
-                uint32 count = 0;
-                for ( const utf8 character : text )
-                {
-                    count += character == '\n' ? 1u : 0u;
-                }
-                return count;
-            }
-
             static void setValueJSON( const JSONValue& target, const TelemetryValue& value )
             {
                 switch ( value._type )
@@ -745,7 +735,7 @@ namespace sw
                 _listClosedFile.erase( _listClosedFile.begin() ); // 지워진 파일 — 목록에서만 뺀다
                 continue;
             }
-            const uint32 lineCount             = TelemetryServiceInternal::countLines( batch._content );
+            const uint32 lineCount             = StringUtil::countChar( batch._content, '\n' );
             batch._eventCount                  = lineCount > 0 ? lineCount - 1 : 0; // 첫 줄은 문맥
             const TelemetryUploadResult result = uploader.upload( batch );
             if ( result != TelemetryUploadResult::Sent )

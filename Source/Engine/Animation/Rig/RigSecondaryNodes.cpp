@@ -23,13 +23,6 @@ namespace sw
         {
             static constexpr const utf8* kArrColliderShape[] = { "Sphere", "Capsule" };
 
-            /** @brief 두 회전 사이의 각(라디안, 0..π)입니다. */
-            static float32 computeAngleBetween( const quaternion& lhs, const quaternion& rhs )
-            {
-                const float32 dot = MathUtil::clamp( MathUtil::abs( lhs.dot( rhs ) ), 0.0f, 1.0f );
-                return 2.0f * MathUtil::acos( dot );
-            }
-
             /** @brief 가우스 RBF 핵입니다. */
             static float32 computeKernel( float32 angle, float32 radius ) { return std::exp( -( angle * angle ) / ( radius * radius ) ); }
 
@@ -288,7 +281,7 @@ namespace sw
                 {
                     for ( uint32 column = 0; column < poseCount; ++column )
                     {
-                        const float32 angle              = RigSecondaryNodesInternal::computeAngleBetween( _listPose[row]._rotation, _listPose[column]._rotation );
+                        const float32 angle              = quaternion::getAngleBetween( _listPose[row]._rotation, _listPose[column]._rotation );
                         kernel[row * poseCount + column] = RigSecondaryNodesInternal::computeKernel( angle, _radius );
                     }
                 }
@@ -309,7 +302,7 @@ namespace sw
                 const uint32     poseCount = static_cast<uint32>( _listPose.size() );
                 for ( uint32 index = 0; index < poseCount; ++index )
                 {
-                    _listKernel[index] = RigSecondaryNodesInternal::computeKernel( RigSecondaryNodesInternal::computeAngleBetween( current, _listPose[index]._rotation ), _radius );
+                    _listKernel[index] = RigSecondaryNodesInternal::computeKernel( quaternion::getAngleBetween( current, _listPose[index]._rotation ), _radius );
                 }
                 for ( uint32 row = 0; row < poseCount; ++row )
                 {

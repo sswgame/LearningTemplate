@@ -56,8 +56,8 @@ namespace sw
 
             static int32 hexValue( utf8 ch )
             {
-                uint8 value = 0;
-                return HexUtil::tryReadDigit( ch, value ) ? static_cast<int32>( value ) : -1;
+                uint32 value = 0;
+                return HexDigitUtil::tryParseDigit( ch, value ) ? static_cast<int32>( value ) : -1;
             }
 
             /** @brief `%XX` 를 푼 이름입니다. 잘못된 `%` 이면 false 입니다. */

@@ -2,6 +2,8 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Core/Foundation/HexDigitUtil.h"
+
 namespace sw
 {
     namespace
@@ -216,24 +218,13 @@ namespace sw
                 }
             }
 
+            /** @brief `to_string` 여섯 오버로드의 몸체입니다 — 숫자 쓰기는 `StringUtil::appendNumber` 하나다(최단 왕복 표현이라 64 글자 안에 늘 든다). */
             template <typename T>
-            static string integerToString( T value )
+            static string numberToString( T value )
             {
-                utf8 arrBuf[constant::kMaxBuffer32];
-                auto [ptr, ec] = std::to_chars( arrBuf, arrBuf + sizeof( arrBuf ), value );
-                return string( arrBuf, static_cast<size_t>( ptr - arrBuf ) );
-            }
-
-            template <typename T>
-            static string floatToString( T value )
-            {
-                utf8 arrBuf[constant::kMaxBuffer64];
-                auto [ptr, ec] = std::to_chars( arrBuf, arrBuf + sizeof( arrBuf ), value );
-                if ( ec == std::errc() )
-                    return string( arrBuf, static_cast<size_t>( ptr - arrBuf ) );
-
-                formatstring( arrBuf, sizeof( arrBuf ), "%#", value );
-                return string{ arrBuf };
+                string text;
+                StringUtil::appendNumber( text, value );
+                return text;
             }
 
             /**
@@ -424,7 +415,7 @@ namespace sw
      */
     string to_string( int32 value )
     {
-        return StringUtilInternal::integerToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     /**
@@ -432,7 +423,7 @@ namespace sw
      */
     string to_string( uint32 value )
     {
-        return StringUtilInternal::integerToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     /**
@@ -440,7 +431,7 @@ namespace sw
      */
     string to_string( int64 value )
     {
-        return StringUtilInternal::integerToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     /**
@@ -448,7 +439,7 @@ namespace sw
      */
     string to_string( uint64 value )
     {
-        return StringUtilInternal::integerToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     /**
@@ -456,7 +447,7 @@ namespace sw
      */
     string to_string( float32 value )
     {
-        return StringUtilInternal::floatToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     /**
@@ -464,7 +455,7 @@ namespace sw
      */
     string to_string( float64 value )
     {
-        return StringUtilInternal::floatToString( value );
+        return StringUtilInternal::numberToString( value );
     }
 
     bool StringUtil::isNullOrEmpty( const utf8* pStr )
@@ -1271,8 +1262,7 @@ namespace sw
 
     string StringUtil::escapeInvalidUTF8( string_view text )
     {
-        constexpr utf8 kHexDigit[] = "0123456789ABCDEF";
-        string         result;
+        string result;
         result.reserve( text.size() + 16 );
         size_t pos = 0;
         while ( pos < text.size() )
@@ -1286,9 +1276,10 @@ namespace sw
             }
             // 잘못된 바이트 하나를 `\xNN` 으로. 디코더가 몇 바이트를 묶었든 첫 바이트만 적고 한 바이트 간다 — 뒤 바이트가 올바른 글자의 시작일 수 있다.
             const uint8 byte = static_cast<uint8>( text[pos] );
+            utf8        arrDigit[2]{};
+            HexDigitUtil::writeDigits( arrDigit, byte, 2, HexCase::Upper );
             result.append( "\\x" );
-            result.push_back( kHexDigit[byte >> 4] );
-            result.push_back( kHexDigit[byte & 0x0F] );
+            result.append( arrDigit, 2 );
             ++pos;
         }
         return result;
