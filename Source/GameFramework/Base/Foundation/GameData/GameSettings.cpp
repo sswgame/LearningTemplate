@@ -76,8 +76,8 @@ namespace sw
             // 팩 밖에서 읽는 필수 데이터 — 종류 하나에 팩 하나다. 자리는 읽는 쪽(`GameInstance::makeRequiredDataPath`)이 등록 줄의 규칙으로 만든다.
             if ( StringUtil::equals( pName, "RequiredData" ) )
             {
-                const string kind = child.getAttributeText( "kind" );
-                const string pack = child.getAttributeText( "pack" );
+                const string kind( child.getAttributeText( "kind" ) );
+                const string pack( child.getAttributeText( "pack" ) );
                 if ( kind.empty() || pack.empty() )
                 {
                     SW_LOG_ERROR( "GameSettings %#: <RequiredData> needs both kind and pack (kind='%#' pack='%#')", sourceName, kind.c_str(), pack.c_str() );
