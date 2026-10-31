@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
-#include "Engine/Destruction/Fracture/MeshFracture.h"
+#include "Engine/Destruction/Fracture/FractureSettings.h"
 
 namespace sw
 {

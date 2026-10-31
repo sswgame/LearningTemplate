@@ -20,6 +20,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/Model/MeshFracture.h"
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
@@ -32,7 +33,6 @@
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Destruction/Fracture/MeshFracture.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

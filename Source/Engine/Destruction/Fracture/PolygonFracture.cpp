@@ -10,8 +10,8 @@
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
+#include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Destruction/Fracture/FractureSiteUtil.h"
-#include "Engine/Destruction/Fracture/MeshFracture.h"
 #include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 namespace sw

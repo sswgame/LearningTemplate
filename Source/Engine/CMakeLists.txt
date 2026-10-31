@@ -270,7 +270,6 @@ sw_markDeterministicSources(Engine
 	Destruction/DestructionState.cpp
 	Destruction/Fracture/FractureAsset.cpp
 	Destruction/Fracture/FractureGraph.cpp
-	Destruction/Fracture/MeshFracture.cpp
 	Destruction/Fracture/PolygonFracture.cpp
 	Destruction/Fracture/PolygonTriangulation.cpp
 )

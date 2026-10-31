@@ -14,7 +14,7 @@
 #include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Destruction/Fracture/MeshFracture.h"
+#include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Serialization/JSON/ConfigKeyDoc.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

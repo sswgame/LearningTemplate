@@ -14,83 +14,28 @@
  *          조각은 위치가 비트까지 같은 정점끼리 닫혀 있다(`isClosedMesh`).
  *          세 평면이 만나는 셀 꼭짓점 둘레에는 아주 짧은 변이 남는다.
  *          시드와 난수는 `DestructionRandom` 이 만들므로, 같은 메시와 설정과 시드를 주면 어느 기계에서도 같은 조각이 나온다.
+ *          에디터의 모델 임포트(`ModelImporter`)만 부르는 굽기 단계라 에디터에 둔다 — 런타임은 구운 `FractureAsset` 만 읽고, 2D 런타임 쪼개기와 함께 쓰는 설정은 `FractureSettings.h` 다.
  */
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
-#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
+#include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     struct FractureAsset;
-
-    /** @brief 씨앗점을 놓는 방식입니다. */
-    ENUM()
-    enum class FracturePattern : uint8
-    {
-        Uniform = 0, ///< 메시 안에 고르게 놓는다.
-        Clustered,   ///< 맞은 지점(`_impactPoint`) 둘레에 몰리게 놓는다. 가까이는 잘게, 멀리는 크게 쪼갠다.
-        Slices,      ///< 격자(`_arrSliceCount`)에 흔들림을 준 위치에 놓는다. 한 축이면 평면 조각, 두 축이면 벽돌이 된다.
-    };
 } // namespace sw
 
-namespace sw
-{
-    /**
-     * @brief 무엇을 부피로 보고 쪼갤지 정합니다. 게임 모델은 대개 닫혀 있지 않습니다(판자, 겹친 부품, 열린 바닥).
-     *        그럴 때는 닫힌 대리 부피를 쪼개 안쪽 면, 물리 껍질, 부피를 얻고, 겉면은 원래 메시를 같은 평면으로 (막지 않고) 잘라 씁니다.
-     */
-    ENUM()
-    enum class FractureVolume : uint8
-    {
-        Mesh = 0, ///< 메시 자체다(닫혀 있어야 한다).
-        Bounds,   ///< 메시의 경계 상자다.
-        Hull,     ///< 메시 정점의 볼록 껍질이다.
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 쪼개기 설정입니다. 모델 임포트 규칙 `fracture` 가 채웁니다. */
-    struct SW_API FractureSettings
-    {
-        vector<uint32>  _listLevelCount;  ///< 클러스터 레벨마다 클러스터 수다(위에서 아래로). 비면 루트 하나다.
-        float4          _interiorColor;   ///< 안쪽 면의 정점 색이다.
-        float3          _impactPoint;     ///< Clustered 에서 맞은 지점이다(메시 공간).
-        float32         _clusterRadius;   ///< Clustered 에서 시드가 몰리는 반경이다(미터).
-        float32         _clusterFraction; ///< Clustered 에서 반경 안에 놓을 시드의 비율이다(0..1).
-        float32         _interiorUvScale; ///< 안쪽 면 평면 투영 UV 의 미터당 배율이다.
-        float32         _sliceJitter;     ///< Slices 에서 셀 크기에 대한 흔들림이다(0..0.5).
-        uint64          _seed;
-        uint32          _pieceCount;       ///< Uniform, Clustered 에서 조각 수다(시드 수이며, 메시 밖 셀은 빠진다).
-        uint32          _arrSliceCount[3]; ///< Slices 에서 축마다 셀 수다.
-        uint32          _maxHullPoint;     ///< 조각 껍질 점의 상한이다. 넘으면 고른 방향의 끝점만 남긴다.
-        FracturePattern _pattern;
-        FractureVolume  _volume; ///< 부피다(닫히지 않은 모델은 Bounds 나 Hull 을 쓴다).
-
-        FractureSettings();
-
-        /** @brief 이름("uniform", "clustered", "slices")을 읽습니다. 모르는 이름이면 false 입니다. */
-        [[nodiscard]] static bool parsePattern( string_view text, FracturePattern& outPattern );
-        /** @brief 이름을 반환합니다. */
-        static string_view getPatternName( FracturePattern pattern );
-        /** @brief 이름("mesh", "bounds", "hull")을 읽습니다. 모르는 이름이면 false 입니다. */
-        [[nodiscard]] static bool parseVolume( string_view text, FractureVolume& outVolume );
-        /** @brief 이름을 반환합니다. */
-        static string_view getVolumeName( FractureVolume volume );
-    };
-} // namespace sw
-
-namespace sw
+namespace sw::editor
 {
     /** @brief 메시 쪼개기 함수 모음입니다. 전부 static 입니다. */
-    struct SW_API MeshFractureUtil
+    struct SW_EDITOR_API MeshFractureUtil
     {
         /** @brief 쪼개기 결과를 바꾸는 수정마다 올립니다. 임포트 원본 해시에 섞여, 쿠킹해 둔 `.fracture` 가 낡은 것으로 판정됩니다(형식 버전과는 별개입니다). */
         static constexpr uint32 kAlgorithmVersion = 1;
@@ -112,4 +57,4 @@ namespace sw
         /** @brief 점이 닫힌 삼각형 목록 안에 있는지 반환합니다(감음 수, 구면각 합). */
         static bool isPointInside( vector_reference<const RHIVertex> listVertex, const float3& point );
     };
-} // namespace sw
+} // namespace sw::editor

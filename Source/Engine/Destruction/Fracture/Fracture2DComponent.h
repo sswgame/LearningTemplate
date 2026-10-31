@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
-#include "Engine/Destruction/Fracture/MeshFracture.h"
+#include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

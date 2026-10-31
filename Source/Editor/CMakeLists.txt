@@ -267,6 +267,21 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 		list(APPEND listEditorCoreTarget ${part})
 	endforeach()
 	set_property(GLOBAL PROPERTY SW_EDITOR_CORE_TARGETS "${listEditorCoreTarget}")
+
+	# 모델 임포트의 메시 쪼개기는 같은 모델 · 설정 · 시드면 구성마다 같은 조각을 굽는다 — Engine 에 있을 때의 결정성 표시를 그대로 옮긴다.
+	# 그 파일을 짓는 부분을 소스 목록으로 찾는다(티어 번호를 적지 않는다). 못 찾으면 결정성이 소리 없이 꺼지므로 멈춘다.
+	set(swEditorFractureSource "${CMAKE_CURRENT_SOURCE_DIR}/Common/Asset/Model/MeshFracture.cpp")
+	set(bFractureMarked FALSE)
+	foreach(part IN LISTS listEditorCoreTarget)
+		get_target_property(listPartSource ${part} SOURCES)
+		if(listPartSource AND swEditorFractureSource IN_LIST listPartSource)
+			sw_markDeterministicSources(${part} "${swEditorFractureSource}")
+			set(bFractureMarked TRUE)
+		endif()
+	endforeach()
+	if(NOT bFractureMarked)
+		message(FATAL_ERROR "No EditorCore part builds ${swEditorFractureSource} - its deterministic mark has no target")
+	endif()
 endif()
 
 # 배포는 에디터(코어 포함)를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`).
