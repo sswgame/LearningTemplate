@@ -199,8 +199,8 @@ namespace sw
         const FunctionInfo* pFunction = targetType.findMethodInHierarchy( functionName );
         if ( pFunction == nullptr || canBindEventToFunction( event, *pFunction ) == false )
         {
-            SW_LOG_ERROR( "Event '%#' cannot call '%#::%#' - no such function or its parameters do not take the event arguments", event._name.c_str(),
-                          targetType._fullyQualifiedName.c_str(), functionName.c_str() );
+            SW_LOG_ERROR_ID( "Reflection.EventBindRejected", "Event '%#' cannot call '%#::%#' - no such function or its parameters do not take the event arguments", event._name.c_str(),
+                             targetType._fullyQualifiedName.c_str(), functionName.c_str() );
             return Subscription{};
         }
 
