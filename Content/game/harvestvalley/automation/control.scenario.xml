@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 조종 시나리오 — 입력 층(가상 키) → 플레이어 조종자 → 농부 폰의 의도 → 디렉터의 규칙, 그리고 자동 플레이 스위치가 빙의를 옮기는 것.
+  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/control.scenario.xml -unattended
+-->
+<Scenario name="game.harvestvalley.control" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<!-- 농부는 시작 자리(X 6)에 서고 플레이어 조종자가 쥐었다. -->
+	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
+	<Expect watch="Farm.FarmerX" near="6" tolerance="0.01"/>
+	<!-- D 를 반 초 — 걷는 빠르기 4 m/s 라 2 m 오른쪽. 선 뒤에 잰다. -->
+	<Press slot="Key.D"/>
+	<Wait frames="30"/>
+	<Release slot="Key.D"/>
+	<Wait frames="4"/>
+	<Expect watch="Farm.FarmerX" near="8" tolerance="0.2"/>
+	<!-- 2 한 번 = 물뿌리개(도구 1). -->
+	<Wait frames="1"/>
+	<Tap slot="Key.Digit2" hold="1"/>
+	<WaitUntil watch="Farm.FarmerTool" equals="1" timeoutFrames="30"/>
+	<!-- 자동 플레이를 켜면 자동 농부 AI 가 농부를 쥐고 밭을 갈고 심는다. -->
+	<Variable name="gv_farmAutoPlay" value="1"/>
+	<WaitUntil watch="Farm.FarmerControllerKind" equals="1" timeoutFrames="60"/>
+	<!-- 작물이 생길 때까지만 기다린다. 심기는 갈린 칸에만 되므로 작물이 있으면 밭은 갈려 있다. -->
+	<WaitUntil watch="Farm.CropCount" atLeast="1" timeoutFrames="1800"/>
+	<Expect watch="Farm.TilledCount" atLeast="1"/>
+	<!-- 끄면 플레이어 조종자가 되찾는다. -->
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>

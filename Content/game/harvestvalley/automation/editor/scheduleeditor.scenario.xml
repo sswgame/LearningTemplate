@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 에디터 시나리오 — NPC 일정 디버그 창(npc_schedule). 일정 시스템은 이 게임에만 있어 엔진 에디터 체인(engine/automation/editor)에서는 창이 비어 있다.
+  ① 플레이를 시작해 일정 시스템을 띄우고 ② 창을 열어 NPC 목록이 찼는지 본다. ③ pierre 를 골라 오늘 타임라인 줄이 나오는지 보고 에디터 UI 를 찍는다.
+  ④ 10 시로 감아도 창이 따라온다(타임라인 줄 수는 그대로). 플레이를 멈춘다.
+  에디터 단계(EditorClick · CaptureEditorUI)를 쓰므로 게임 체인(Scenario.harvestvalley, 에디터 없음)이 줍지 않게 하위 폴더 editor/ 에 둔다.
+  실행: App -EnableEditor -scenario=game/harvestvalley/automation/editor/scheduleeditor.scenario.xml -unattended (SW_ACTIVE_GAME=HarvestValley)
+-->
+<Scenario name="game.harvestvalley.scheduleeditor" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="layout.reset"/>
+
+	<!-- ① 플레이 -->
+	<Wait frames="1"/>
+	<DevCommand line="play"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+
+	<!-- ② 창 열기 — NPC 목록 -->
+	<DevCommand line="panel.focus npc_schedule"/>
+	<WaitUntil watch="Editor.ScheduleNPCCount" atLeast="2" timeoutFrames="60"/>
+
+	<!-- ③ pierre 고르기 — 타임라인 · 설명. EditorClick 은 레이블이 그려질 때까지 스스로 기다린다. -->
+	<EditorClick mark="schedule.npc.pierre"/>
+	<WaitUntil watch="Editor.ScheduleTimelineRowCount" atLeast="3" timeoutFrames="60"/>
+	<Remember watch="Editor.ScheduleTimelineRowCount" as="pierreRows"/>
+	<CaptureEditorUI file="scheduleeditor/npc_schedule.png"/>
+
+	<!-- ④ 시계를 감아도 같은 날의 계획 -->
+	<Wait frames="1"/>
+	<AdvanceGameTime toHour="10"/>
+	<WaitUntil watch="Schedule.Activity" target="pierre" is="WorkAt" timeoutFrames="60"/>
+	<Expect watch="Editor.ScheduleTimelineRowCount" sameAs="pierreRows"/>
+	<DevCommand line="stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

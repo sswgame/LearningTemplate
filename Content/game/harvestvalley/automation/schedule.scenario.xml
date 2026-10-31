@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 마을 사람 일정 — 판 상태의 시계를 감고(AdvanceGameTime) 그 시각에 NPC 가 있어야 할 위치와 활동을 단언한다.
+  일정은 data/villagers.schedules.xml(ScheduleSystem), 몸은 Villager.<id>(FarmVillagerComponent 가 일정상 위치를 따라간다). 0 일은 월요일이고 6:00 에 시작한다.
+  pierre: 평일 9:00–17:00 가게(general_store 24,0,6) WorkAt, 17:00–19:00 광장 벤치 UseObject. harvey: 9:00–15:00 병원, 15:00–17:00 강가(river) GoTo, 그 뒤 집.
+  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/schedule.scenario.xml -unattended
+-->
+<Scenario name="game.harvestvalley.schedule" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<!-- 6 시 — 모두 집에서 잔다. 몸은 집 위치(pierre_house 22,0,2)에 서 있다. -->
+	<WaitUntil watch="Object.Exists" target="Villager.pierre" equals="1" timeoutFrames="60"/>
+	<Expect watch="Clock.Day" equals="0"/>
+	<Expect watch="Schedule.Activity" target="pierre" is="Sleep"/>
+	<Expect watch="Schedule.Activity" target="harvey" is="Sleep"/>
+	<Expect watch="Object.X" target="Villager.pierre" near="22" tolerance="0.05"/>
+	<Expect watch="Object.Z" target="Villager.pierre" near="2" tolerance="0.05"/>
+	<!-- 10 시로 감는다 — pierre 는 가게에서 일하고 harvey 는 병원에 있다. 일정은 다음 틱에 고른다. -->
+	<Wait frames="1"/>
+	<AdvanceGameTime toHour="10"/>
+	<Wait frames="1"/>
+	<Expect watch="Clock.Hour" near="10" tolerance="0.05"/>
+	<Expect watch="Schedule.Activity" target="pierre" is="WorkAt"/>
+	<Expect watch="Schedule.Phase" target="pierre" is="Performing"/>
+	<Expect watch="Schedule.DistanceToPlace" target="pierre" key="general_store" atMost="1"/>
+	<Expect watch="Schedule.Activity" target="harvey" is="WorkAt"/>
+	<Expect watch="Schedule.DistanceToPlace" target="harvey" key="clinic" atMost="1"/>
+	<!-- 감은 시각의 몸은 그다음 틱에 옮겨진다. -->
+	<WaitUntil watch="Object.X" target="Villager.pierre" near="24" tolerance="1" timeoutFrames="30"/>
+	<Expect watch="Object.Z" target="Villager.pierre" near="6" tolerance="1"/>
+	<!-- 16 시 — harvey 는 강가로 갔다(낮에만 가는 블록). pierre 는 아직 가게. -->
+	<AdvanceGameTime toHour="16"/>
+	<Wait frames="1"/>
+	<Expect watch="Schedule.Activity" target="harvey" is="GoTo"/>
+	<Expect watch="Schedule.DistanceToPlace" target="harvey" key="river" atMost="3"/>
+	<Expect watch="Schedule.Activity" target="pierre" is="WorkAt"/>
+	<!-- 16:54 로 감고 시간이 흐르게 둔다(실제 1 초 = 게임 10 분) — 17:00 에 pierre 가 가게를 나서 광장 벤치로 간다. 3 초 안에 벤치에 닿아야 한다. -->
+	<Wait frames="1"/>
+	<AdvanceGameTime toHour="16.9"/>
+	<WaitUntil watch="Schedule.Activity" target="pierre" is="UseObject" timeoutSeconds="2"/>
+	<WaitUntil watch="Schedule.DistanceToTarget" target="pierre" atMost="0.05" timeoutSeconds="3"/>
+	<WaitUntil watch="Schedule.Phase" target="pierre" is="Performing" timeoutFrames="30"/>
+	<Expect watch="Schedule.DistanceToPlace" target="pierre" key="town_square" atMost="4"/>
+	<Expect watch="Object.DistanceTo" target="Villager.pierre" key="Villager.harvey" atLeast="1"/>
+	<!-- 하루 동안 pierre 가 거친 활동 — 잠 → 가게 일 → 벤치 -->
+	<ExpectVisited watch="Schedule.Activity" target="pierre" sequence="Sleep, WorkAt, UseObject"/>
+	<ExpectVisited watch="Schedule.Activity" target="harvey" sequence="Sleep, WorkAt, GoTo"/>
+	<ExpectVisited watch="Schedule.Phase" target="pierre" is="Traveling"/>
+	<Record watch="Schedule.MinuteOfDay"/>
+	<Record watch="Object.X" target="Villager.pierre"/>
+	<Record watch="Object.Z" target="Villager.pierre"/>
+	<Pass/>
+</Scenario>

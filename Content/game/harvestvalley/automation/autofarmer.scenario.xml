@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 자동 농부 AI — 판단 상태(AI.State)와 블랙보드 · 목표 도달을 단언한다. 아침 6 시, 갈린 타일이 없고 봄 씨앗 10 개로 시작하므로
+  첫 할 일은 갈기(Till)이고, 갈린 타일이 생기면 심기(Sow, 우선순위 3)가 갈기(2)보다 앞서고, 심은 타일은 물주기(Water, 4)가 앞선다.
+  자동 농부 조종자 오브젝트는 FarmAutoFarmer(자동 플레이를 켜면 디렉터가 스폰한다), 폰은 Farmer 다.
+  실행: ctest -R Scenario.harvestvalley (SW_ACTIVE_GAME=HarvestValley) · App -scenario=game/harvestvalley/automation/autofarmer.scenario.xml -unattended
+-->
+<Scenario name="game.harvestvalley.autofarmer" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_farmAutoPlay" value="1"/>
+	<!-- 빙의: 틱 뒤 플러시가 자동 농부를 농부 폰에 붙인다. -->
+	<WaitUntil watch="Pawn.Controller" target="Farmer" is="FarmAutoFarmer" timeoutFrames="60"/>
+	<Expect watch="AI.Blackboard" target="FarmAutoFarmer" key="Stamina" equals="100"/>
+	<!-- 목표 도달: 20 초 안에 첫 작물이 서고, 그때까지 갈기 → 심기 → 물주기를 이 순서로 거친다. -->
+	<WaitUntil watch="Farm.CropCount" atLeast="1" timeoutSeconds="20"/>
+	<WaitUntil watch="AI.State" target="FarmAutoFarmer" is="Water" timeoutSeconds="10"/>
+	<ExpectVisited watch="AI.State" target="FarmAutoFarmer" sequence="Till, Sow, Water"/>
+	<ExpectVisited watch="AI.MoveStatus" target="FarmAutoFarmer" sequence="Moving, Idle"/>
+	<Expect watch="Farm.TilledCount" atLeast="1"/>
+	<!-- 일을 했으니 체력이 줄었다(최대 100 — 괭이 4 · 씨앗 1). 서려는 위치는 블랙보드에 있다. -->
+	<Expect watch="AI.Blackboard" target="FarmAutoFarmer" key="Stamina" atMost="95"/>
+	<Expect watch="AI.Blackboard" target="FarmAutoFarmer" key="StandPosition" atLeast="0.5"/>
+	<Record watch="Farm.TilledCount"/>
+	<Record watch="Farm.CropCount"/>
+	<Record watch="Scene.TransformHash"/>
+	<!-- 끄면 플레이어 조종자가 되찾는다. -->
+	<Wait frames="1"/>
+	<Variable name="gv_farmAutoPlay" value="0"/>
+	<WaitUntil watch="Pawn.Controller" target="Farmer" is="PlayerController" timeoutFrames="60"/>
+	<Pass/>
+</Scenario>
