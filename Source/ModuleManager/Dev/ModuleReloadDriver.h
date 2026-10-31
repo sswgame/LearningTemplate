@@ -1,9 +1,8 @@
 /**
- * @file ModuleManager/ModuleReloadDriver.h
+ * @file ModuleManager/Dev/ModuleReloadDriver.h
  * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `LiveReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 감시 값 `Module.*`)입니다.
  * @details App 과 Server 가 같은 모양으로 씁니다. 리로드를 거는 입력(단축키)은 그 입력을 아는 호스트가 정하고 여기에는 `requestReload` 로 넘깁니다.
- *          빌드마다 다른 것은 이 선언들의 구현 파일이다 — Dev 는 `ModuleReloadDriver.cpp`, Shipping 은 `ModuleReloadDriverShipping.cpp`(모듈이 정적 링크라 리로드할 것이 없다)를
- *          CMake 가 고른다(`sw_pickVariantSource`, `Source/ModuleManager/CMakeLists.txt`).
+ *          개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 모듈이 정적 링크라 리로드할 것이 없어 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로 닿는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,6 +11,8 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+
+#include "ModuleManager/HostDevLayer.h"
 
 namespace sw
 {
@@ -38,9 +39,6 @@ namespace sw
 
         ModuleReloadDriver( const ModuleReloadDriver& )            = delete;
         ModuleReloadDriver& operator=( const ModuleReloadDriver& ) = delete;
-
-        /** @brief 리로드 배치의 첫 교체 직전에 불립니다(교체될 모듈 이름들). false 면 아무것도 바꾸지 않고 옛 모듈이 계속 돕니다(`LiveReloadManager::OnBeforeCommitBatchDelegate` 와 같은 꼴). */
-        using BeforeReloadBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
 
         /**
          * @brief 모듈 매니페스트를 읽어 @p targetMask(`ModuleTarget` 비트)로 해석해 @p moduleLibraryHost 에 넘기고, 매니저를 만들어 자신을 @p hostScope 에 걸며,

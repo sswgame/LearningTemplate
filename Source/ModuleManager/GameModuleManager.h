@@ -4,8 +4,8 @@
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화는 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다. 의존은 그쪽에서 여기로 한 방향입니다.
- * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 구현 파일이 둘이다 — `GameModuleManagerLinkage.cpp`(개발) ·
- *       `GameModuleManagerLinkageShipping.cpp`(배포)를 CMake 가 고른다(`sw_pickVariantSource`, `Source/ModuleManager/CMakeLists.txt`). 나머지는 `GameModuleManager.cpp` 하나다.
+ * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManagerLinkage.cpp` 한 파일이
+ *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
 #pragma once
 #include "Core/Container/string.h"

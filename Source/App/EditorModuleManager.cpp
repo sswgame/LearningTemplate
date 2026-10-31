@@ -2,6 +2,7 @@
 
 #include "App/EditorModuleManager.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -78,8 +79,18 @@ namespace sw
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderThread ) == false )
             return false;
 
-        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManagerDevTools*.cpp` — 배포에서 에디터를 켜 달라면 기동 오류다).
-        return registerEditorModule( pLiveReloadManager );
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManagerDevTools.cpp` — 배포는 짓지 않는다).
+        if constexpr ( build::kShipping )
+        {
+            // 에디터를 켜 달라는 실행을 에디터 없이 조용히 시작하지 않는다.
+            if ( bEnableEditor )
+                SW_LOG_ERROR( "-EnableEditor needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+            return bEnableEditor == false;
+        }
+        else
+        {
+            return registerEditorModule( pLiveReloadManager );
+        }
     }
 
     bool EditorModuleManager::isEditorReloadHeld() const
@@ -329,7 +340,8 @@ namespace sw
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
         fillModuleServiceScope( *editorServices, false );
-        bindDevToolServices( *editorServices );
+        if constexpr ( build::kShipping == false ) // 개발 도구 서비스(`EditorModuleManagerDevTools.cpp`)는 개발 구성에만 있다
+            bindDevToolServices( *editorServices );
         _editorAPI.bindService( editorServices.get() );
         _editorServices = std::move( editorServices );
     }

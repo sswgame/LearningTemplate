@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/HostDevTools.h"
+#include "ModuleManager/Dev/HostDevTools.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -10,7 +10,7 @@
 
 #include "Engine/Engine.h"
 
-// 개발 빌드의 구현이다 — 배포는 `HostDevToolsShipping.cpp` 를 CMake 가 고른다(`Source/ModuleManager/CMakeLists.txt`).
+// 개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로만 닿는다.
 namespace sw
 {
     void HostDevTools::addToHostScope( SubsystemScope& host, Engine& engine )

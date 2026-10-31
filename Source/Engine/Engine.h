@@ -116,7 +116,7 @@ namespace sw
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `EngineRendering.cpp`, 전용 서버는 `EngineRenderingServer.cpp` 입니다. */
+        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `EngineRendering.cpp` 이고 렌더러를 짓는 타깃에만 있습니다(전용 서버 타깃은 부르지 않는다 — `build::kWithClientCode`). */
         [[nodiscard]] bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------
@@ -203,7 +203,7 @@ namespace sw
         void updateScenes( float32 deltaTime, const HostViewTargets& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
         /** @brief 런타임 UI 를 이번 프레임의 게임 상태로 돌립니다(게임 틱 뒤 · 렌더 패킷 앞). 디버그 HUD 와 음성 자막을 먼저 넘기고, 뷰포트는 게임이 그려지는 화면으로 정합니다. */
         void updateRuntimeUI( const HostViewTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
-        /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. Server 타깃에는 렌더러가 없어 아무 일도 하지 않습니다. */
+        /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. 렌더러를 짓는 타깃에만 있습니다. */
         void submitRenderPacket( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
 
     private:

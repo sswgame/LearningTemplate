@@ -2,7 +2,7 @@
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
  * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/GameModuleManager` 의 것 —
- *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleLoaderSubsystem::initializeHostScope`), 핫 리로드 구동기(`ModuleReloadDriver` — 개발 명령 `module.reload` 와
+ *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleLoaderSubsystem::initializeHostScope`), 개발 계층(`IHostDevLayer` — 핫 리로드 · 개발 명령 `module.reload` 와
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 라이브러리 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
@@ -33,8 +33,7 @@
 #include "Engine/HostServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/HostDevTools.h"
-#include "ModuleManager/ModuleReloadDriver.h"
+#include "ModuleManager/HostDevLayer.h"
 
 #include "Server/ServerAdminChannel.h"
 #include "Server/ServerDebugControl.h"
@@ -74,6 +73,9 @@ namespace sw
         void shutdown();
 
     private:
+        /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포(개발 계층 없음)는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
+        LiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
+
         /** @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 서버 대상 모듈의 이미지를 로드합니다(App::loadModuleLibrarys 에 해당합니다). */
         [[nodiscard]] bool loadModuleLibrarys();
         [[nodiscard]] bool loadServerConfig();
@@ -116,14 +118,12 @@ namespace sw
         SubsystemScope _host;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
-        /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 프레임 훅 — App 과 같은 것)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`HostDevTools.h`). */
-        HostDevTools                  _devTools;
+        /** @brief 개발 계층(개발 도구 연결 · 모듈 핫 리로드 — App 과 같은 것)입니다. 배포는 nullptr 이다(`build::kShipping`, `IHostDevLayer`). */
+        unique_ptr<IHostDevLayer>     _pDevLayer;
         Engine                        _engine;
         unique_ptr<GameModuleManager> _gameModuleManager;
-        /** @brief 모듈 핫 리로드입니다(App 과 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
-        ModuleReloadDriver _moduleReload;
-        /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서비스 `DevConsole` · `DebugChannel` 이 세우고 내린다. Shipping 은 몸통이 비어 있다. */
-        ServerDebugControl _debugControl;
+        /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서비스 `DevConsole` · `DebugChannel` 이 세우고 내린다. 배포 서버는 nullptr 이다(`build::kShipping`). */
+        unique_ptr<IServerDebugControl> _pDebugControl;
         /** @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료)입니다. 호스트 서비스 `DebugChannel` 이 세우고 내린다. 모든 구성(Shipping 포함)이다. */
         ServerAdminChannel    _adminChannel;
         ModuleCatalog         _moduleCatalog;

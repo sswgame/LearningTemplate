@@ -8,6 +8,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -98,10 +99,9 @@ namespace sw
     App::App()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _devTools{}
+        , _pDevLayer{ nullptr }
         , _engine{}
         , _pAutomation{ nullptr }
-        , _moduleReload{}
         , _gameModuleManager{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
@@ -144,7 +144,8 @@ namespace sw
         }
         [[maybe_unused]] const int64 engineEndMicro = MonotonicClock::nowMicroseconds();
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devTools.attachFrameHooks( _engine );
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->attachFrameHooks( _engine );
 
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이 프로세스를 실행하는 빌드(CookAssets 타깃) · `Pack.py` 가
@@ -257,7 +258,11 @@ namespace sw
     {
         // 모듈이 리로드 · 인스턴스 재생성 사이에 데이터를 맡기는 칸(편집기의 되돌리기 기록 · 선택 · 복사 버퍼). 모듈은 인터페이스 형으로 찾는다.
         // 개발 도구(엔진 기동 확장 · 콘텐츠 폴더 감시 — 배포 구현은 비어 있다).
-        _devTools.addToHostScope( _host, _engine );
+        if constexpr ( build::kShipping == false ) // 개발 계층은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
+        {
+            _pDevLayer = makeHostDevLayer();
+            _pDevLayer->addToHostScope( _host, _engine );
+        }
         const bool bStateStoreBound = _host.bind<IModuleStateStore>( &_moduleStateStore );
         SW_ASSERT( bStateStoreBound );
         (void)bStateStoreBound;
@@ -327,11 +332,11 @@ namespace sw
         SW_MEMORY_SCOPE( EngineMisc );
         // 모듈 매니페스트 · 핫 리로드 구동기(개발 빌드만 — 배포는 모듈을 정적으로 링크해 아무것도 하지 않는다). App 은 빌드가 담은 모든 대상을 로드한다
         // (Game 은 클라이언트와 리슨 서버용 서버 모듈, Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
-        if ( _moduleReload.initialize( ModuleCatalog::getBuildTargetMask(), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
+        if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( ModuleCatalog::getBuildTargetMask(), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
             return false;
 
         _gameModuleManager = make_unique<EditorModuleManager>();
-        return _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        return _gameModuleManager->loadModuleLibrarys( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startHostService( HostServiceID id )
@@ -344,7 +349,7 @@ namespace sw
                 if ( _gameModuleManager == nullptr )
                     _gameModuleManager = make_unique<EditorModuleManager>();
                 const bool bStarted =
-                    _gameModuleManager->initialize( _moduleReload.getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
+                    _gameModuleManager->initialize( getLiveReloadManager(), _engine.getRHI(), _pWindow, _engine.getRenderThread(), bEnableEditor );
                 if ( bStarted == false )
                 {
                     SW_LOG_ERROR( "GameModuleManager initialization failed." );
@@ -371,7 +376,8 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _devTools.startConsole( bEnableEditor );
+                if ( _pDevLayer != nullptr )
+                    _pDevLayer->startConsole( bEnableEditor );
                 return true;
             }
             case HostServiceID::Observability:
@@ -418,7 +424,8 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _devTools.stopConsole();
+                if ( _pDevLayer != nullptr )
+                    _pDevLayer->stopConsole();
                 return;
             }
             case HostServiceID::Observability:
@@ -489,13 +496,13 @@ namespace sw
         // 창은 엔진(RHI) 뒤에 파괴한다 — 소유자(MainWindow 서브시스템)가 RHI 에 기대는 순서로 내린다(제목은 창 안의 고정 버퍼라 누수 보고에 남지 않는다).
         // 자동화 실행기는 엔진 범위와 함께 내려간다(스스로 프레임 · 호스트 범위에서 뗀다) — 빌린 포인터만 놓는다.
         _pAutomation = nullptr;
-        _devTools.detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
         if ( _pModuleImageHost != nullptr )
             _host.getCollection().shutdownDependentsOf( *_pModuleImageHost );
         // 엔진이 엔진 범위를 내린 뒤 코어 범위(종료 누수 보고)보다 먼저 호스트 범위를 비운다(창구 · 구동기 소멸, `Engine::shutdown`).
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
-        _devTools.release();
 
         // 주 창은 엔진 범위의 MainWindow 서브시스템이 소유한다 — 엔진 종료(RHI 가 내려간 뒤)가 파괴했다. 관찰 포인터만 비운다.
         _pWindow = nullptr;
@@ -559,7 +566,8 @@ namespace sw
             _gameModuleManager->beginFrame();
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
-            AppDevTools::pollShellActions( frameTime._deltaTime, _moduleReload, _bEnableEditor == SW_TRUE );
+            if ( _pDevLayer != nullptr )
+                AppDevTools::pollShellActions( frameTime._deltaTime, *_pDevLayer, _bEnableEditor == SW_TRUE );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.
@@ -598,7 +606,8 @@ namespace sw
             // 조회 자체를 tick 안으로 넘긴다.
             //
             // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
-            _moduleReload.update();
+            if ( _pDevLayer != nullptr )
+                _pDevLayer->updateModuleReload();
 
             const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
             _engine.update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );

@@ -5,6 +5,7 @@
 #include "App/EditorModuleManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Telemetry/CrashReportService.h"
@@ -47,7 +48,15 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                return EditorModuleManager::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManagerHeadless.cpp`)도 없다
+                {
+                    SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                    return TaskResult::Failed;
+                }
+                else
+                {
+                    return EditorModuleManager::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                }
             }
 
             /**
@@ -70,17 +79,25 @@ namespace sw
                 if ( bNoLocalizationTask )
                     return TaskResult::NotRequested;
 
-                bool bSucceeded = true;
-                if ( bGatherText || bCheckText )
+                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManagerHeadless.cpp`)도 없다
                 {
-                    const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                    bSucceeded                              = EditorModuleManager::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                    SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
+                    return TaskResult::Failed;
                 }
-                if ( importPoPath.empty() == false )
-                    bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
-                if ( bExportPo )
-                    bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
-                return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
+                else
+                {
+                    bool bSucceeded = true;
+                    if ( bGatherText || bCheckText )
+                    {
+                        const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
+                        bSucceeded                              = EditorModuleManager::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                    }
+                    if ( importPoPath.empty() == false )
+                        bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                    if ( bExportPo )
+                        bSucceeded = EditorModuleManager::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                    return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
+                }
             }
 
             /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. 에디터 모듈의 작업이면 인자를 `kArrEditorToolArgument` 에도 더한다(엔진이 헤드리스로 서는 판정). */

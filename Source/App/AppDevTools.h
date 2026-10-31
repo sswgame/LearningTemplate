@@ -2,14 +2,14 @@
  * @file AppDevTools.h
  * @brief App 에만 있는 개발 도구 — 핫 리로드 단축키(게임 · 에디터)와 백엔드 시험 훅을 App 의 프레임 · 시동 열에 끼웁니다.
  * @details 배포에서는 두 함수 모두 아무것도 하지 않는다(`build::kShipping`) — 쓰는 기능(디버그 키 · 백엔드 교체기)이 배포에도 지어져 구현 파일을 가르지 않는다.
- *          App · Server 가 같이 쓰는 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)은 `ModuleManager/HostDevTools.h` 다.
+ *          App · Server 가 같이 쓰는 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)은 `ModuleManager/Dev/HostDevTools.h` 다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 namespace sw
 {
-    class ModuleReloadDriver;
+    class IHostDevLayer;
     class RenderThread;
     class RHIBackendSwitcher;
 
@@ -23,8 +23,8 @@ namespace sw
         static void bindRenderThreadHooks( RenderThread& renderThread, RHIBackendSwitcher& backendSwitcher );
         /**
          * @brief 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신하고, 리로드 단축키가 눌렸으면 리로드를 요청합니다(Ctrl+F7 게임, 에디터 모드의 Ctrl+F6 에디터).
-         * @details 실제 교체는 `ModuleReloadDriver::update` 가 틱 직전에 한다. 배포에는 리로드할 모듈이 없어 셸 InputMap 도 로드하지 않는다 — 아무것도 하지 않는다.
+         * @details 실제 교체는 개발 계층(`IHostDevLayer::updateModuleReload`)이 틱 직전에 한다. 배포에는 개발 계층이 없어 부르지 않는다.
          */
-        static void pollShellActions( float32 deltaTime, ModuleReloadDriver& moduleReload, bool bEnableEditor );
+        static void pollShellActions( float32 deltaTime, IHostDevLayer& devLayer, bool bEnableEditor );
     };
 } // namespace sw

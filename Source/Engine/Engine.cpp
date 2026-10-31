@@ -257,7 +257,8 @@ namespace sw
             _pSceneManager              = startupParts._pSceneManager;
             _pFontService               = startupParts._pFontService;
             _pUISystem                  = startupParts._pUISystem;
-            bindRendererParts( startupParts );
+            if constexpr ( build::kWithClientCode ) // 렌더러 몫(`EngineRendering.cpp`)은 렌더러를 짓는 타깃에만 있다
+                bindRendererParts( startupParts );
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
         if ( const utf8* pMissing = engine::bindEngineServices( _startup ) )
@@ -272,7 +273,8 @@ namespace sw
         _startup.getCollection().setInitClock( &MonotonicClock::nowNanoseconds );
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
-        bindRendererAfterStartup( startupParts );
+        if constexpr ( build::kWithClientCode )
+            bindRendererAfterStartup( startupParts );
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
         {
@@ -499,7 +501,8 @@ namespace sw
         if ( bFinishAssetWork )
         {
             SW_PROFILE_SCOPE( "GT.Asset.finishPending" );
-            drainRenderThreadPackets();
+            if constexpr ( build::kWithClientCode )
+                drainRenderThreadPackets();
             engine::getSubsystem<AssetManager>().finishPendingAssetWork();
         }
         BLOCK( "스트리밍 / 씬 트랜지션 / 이벤트" )
@@ -613,7 +616,8 @@ namespace sw
         // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). UI 단위 크기 · 배율 · 안전 영역은
         // 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         updateRuntimeUI( mainOutput, vpWidth, vpHeight );
-        submitRenderPacket( deltaTime, views, sceneViewCameraProvider );
+        if constexpr ( build::kWithClientCode )
+            submitRenderPacket( deltaTime, views, sceneViewCameraProvider );
     }
 
     void Engine::endFrame()
@@ -649,7 +653,8 @@ namespace sw
                 requestQuit( observerExitCode );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
-        requestQuitAfterCaptures();
+        if constexpr ( build::kWithClientCode )
+            requestQuitAfterCaptures();
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).

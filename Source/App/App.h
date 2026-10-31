@@ -6,7 +6,7 @@
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
- *          핫 리로드는 ModuleReloadDriver(Server 와 같이 쓰는 `Source/GameModuleManager`), 개발 콘솔과 표준 입력 명령은 개발 도구(`DevToolsHost`), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
+ *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`_host`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
  */
@@ -25,8 +25,7 @@
 #include "Engine/HostServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/HostDevTools.h"
-#include "ModuleManager/ModuleReloadDriver.h"
+#include "ModuleManager/HostDevLayer.h"
 #include "ModuleManager/ModuleStateStore.h"
 
 namespace sw
@@ -64,6 +63,9 @@ namespace sw
         int32 getExitCode() const;
 
     private:
+        /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포(개발 계층 없음)는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
+        LiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
+
         // 부팅 단계. initialize() 가 차례로 부른다.
         /** @brief 호스트 범위를 세웁니다 — 모듈 라이브러리 창구를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
         [[nodiscard]] bool initializeHostScope();
@@ -115,16 +117,17 @@ namespace sw
         ModuleStateStore _moduleStateStore;
         /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
         ModuleLoaderSubsystem* _pModuleImageHost;
-        /** @brief 개발 도구 연결(호스트 범위의 `DevToolsHost` · 프레임 훅 · 콘솔 — Server 와 같은 것)입니다. 구현 파일은 CMake 가 빌드마다 고른다(`HostDevTools.h`). */
-        HostDevTools _devTools;
-        Engine       _engine;
+        /**
+         * @brief 개발 계층(개발 도구 연결 · 개발 콘솔 · 모듈 핫 리로드 — Server 와 같은 것)입니다. 배포는 nullptr 이다(`build::kShipping`, `IHostDevLayer`).
+         * @details 엔진보다 앞에 선언해 나중에 사라진다 — 리로드 구동기가 호스트 범위에 건 것을 엔진 종료 뒤까지 쥔다.
+         */
+        unique_ptr<IHostDevLayer> _pDevLayer;
+        Engine                    _engine;
         /**
          * @brief 자동화 실행기입니다(엔진 범위에 스스로 선 서브시스템 — 빌려 쓴다). 실행기를 짓지 않은 구성은 nullptr 입니다.
          * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
          */
         IAutomationRuntime* _pAutomation;
-        /** @brief 모듈 핫 리로드입니다(Engine 가 아니라 런처의 일 — Server 와 같은 구동기). 자신을 `_host` 에 겁니다. Shipping 에서는 아무것도 하지 않습니다. */
-        ModuleReloadDriver _moduleReload;
         /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
         unique_ptr<EditorModuleManager> _gameModuleManager;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(Dev). */

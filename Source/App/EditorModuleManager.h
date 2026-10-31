@@ -3,8 +3,8 @@
  * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, RHI 교체 뒤 재초기화를 구현합니다.
  *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleManagerHeadless.cpp` 에 있습니다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
- * @note 개발 · 배포가 다른 함수는 구현 파일이 둘이다 — 에디터 모듈 등록 · 개발 도구 서비스(`EditorModuleManagerDevTools.cpp` · `…DevToolsShipping.cpp`)와
- *       헤드리스 작업(`EditorModuleManagerHeadless.cpp` · `…HeadlessShipping.cpp`)을 CMake 가 고른다(`sw_pickVariantSource`, `Source/App/CMakeLists.txt`).
+ * @note 개발 전용 함수(에디터 모듈 등록 · 개발 도구 서비스 `EditorModuleManagerDevTools.cpp`, 헤드리스 작업 `EditorModuleManagerHeadless.cpp`)는 배포가 짓지 않는다 —
+ *       부르는 자리가 `build::kShipping` 으로 가른다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -163,7 +163,7 @@ namespace sw
 
         /**
          * @brief `initialize` 의 끝 — 에디터를 켰으면 에디터 모듈과 확장 모듈(의존과 함께)을 리로드 그래프에 등록합니다. 확장 하나가 실패해도 에디터는 뜹니다(그 확장만 없습니다).
-         * @details 배포 구현(`EditorModuleManagerDevToolsShipping.cpp`)에는 에디터 모듈이 없다 — 에디터를 켜 달라면(`-EnableEditor`) 오류로 false 다.
+         * @details 개발 구성에만 있다 — 배포는 `initialize` 가 부르지 않고 `-EnableEditor` 면 오류로 멈춘다.
          * @return 매니페스트가 에디터 모듈을 껐거나 등록이 실패하거나 리로드 그래프가 깨졌으면 false 입니다(기동 실패).
          */
         [[nodiscard]] bool registerEditorModule( LiveReloadManager* pLiveReloadManager );

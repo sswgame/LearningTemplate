@@ -14,7 +14,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
-// 개발 빌드의 구현이다 — 배포(에디터 모듈이 없다)는 `EditorModuleManagerHeadlessShipping.cpp` 를 CMake 가 고른다(`Source/App/CMakeLists.txt`).
+// 개발 구성에만 있다 — 배포(에디터 모듈이 없다)는 짓지 않고 부르는 자리(`AppHeadlessTasks`)가 `build::kShipping` 으로 가른다.
 namespace sw
 {
     namespace

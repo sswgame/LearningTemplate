@@ -10,12 +10,9 @@ if(SW_TARGET_TYPE STREQUAL "Client")
 	return()
 endif()
 
-# 구성마다 다른 구현 — 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 `sw_pickVariantSource` 가 고른다(파일 안 `#if` 를 두지 않는다).
-#   ServerDebugControl : 배포는 빈 몸통 — 개발 콘솔 · 디버그 채널 · 일시정지 명령이 없다
+# 개발 조종(`ServerDebugControl.cpp` — 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않는다. `ServerApp` 은 `build::kShipping` 이 아닐 때만 만든다(빈 구현 파일 없음).
 if(SW_SHIPPING_BUILD)
-	sw_pickVariantSource(SERVER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" ServerDebugControl Shipping ON)
-else()
-	sw_pickVariantSource(SERVER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" ServerDebugControl Shipping OFF)
+	sw_excludeUnbuiltSources(SERVER_SOURCES "/Source/Server/ServerDebugControl\.cpp$")
 endif()
 
 sw_addExecutable(Server ${SERVER_SOURCES})

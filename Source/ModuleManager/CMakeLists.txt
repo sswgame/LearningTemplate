@@ -13,22 +13,11 @@ file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.h
 # 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 # 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 #
-# 핫 리로드는 `LiveReload/` 폴더 하나다 — Shipping 은 폴더째 뺀다(파일 이름을 적은 목록이 없다. 핫 리로드 파일은 그 폴더에 둔다).
+# 개발 전용은 두 폴더다 — 핫 리로드(`LiveReload/`)와 호스트의 개발 계층(`Dev/` — `IHostDevLayer` 의 구현: 개발 도구 연결 · 리로드 구동기).
+# Shipping 은 폴더째 뺀다(파일 이름을 적은 목록이 없다). 호스트는 `build::kShipping` 이 아닐 때만 개발 계층을 만든다(빈 구현 파일 없음).
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleManager/LiveReload/.*\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleManager/(LiveReload|Dev)/.*\\.(cpp|h)$")
 endif()
-
-# 구성마다 다른 구현 — 선언은 헤더 하나, 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 `sw_pickVariantSource` 가 고른다(파일 안 `#if` 를 두지 않는다).
-#   ModuleReloadDriver        : 배포는 빈 구현 — 매니페스트 · 리로드 매니저 · 개발 명령 `module.reload` · 감시 값 `Module.*` 가 없다
-#   GameModuleManagerLinkage  : 배포는 정적 링크 — 라이브러리 로드 · 리로드 콜백 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI`
-#   HostDevTools              : 배포는 빈 구현 — 개발 도구(DevTools)를 링크하지 않는다(App · Server 가 같이 쓴다)
-foreach(swVariantName IN ITEMS ModuleReloadDriver GameModuleManagerLinkage HostDevTools)
-	if(SW_SHIPPING_BUILD)
-		sw_pickVariantSource(MODULE_HOST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" ${swVariantName} Shipping ON)
-	else()
-		sw_pickVariantSource(MODULE_HOST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" ${swVariantName} Shipping OFF)
-	endif()
-endforeach()
 
 add_library(ModuleManager STATIC ${MODULE_HOST_SOURCES})
 set_target_properties(ModuleManager PROPERTIES FOLDER "Source/ModuleManager")

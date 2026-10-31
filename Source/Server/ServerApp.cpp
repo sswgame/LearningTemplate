@@ -98,12 +98,10 @@ namespace sw
     ServerApp::ServerApp()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _devTools{}
+        , _pDevLayer{ nullptr }
         , _engine{}
         , _gameModuleManager{ nullptr }
-        , _moduleReload{}
-        , _debugControl{ SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
-    { return _tickCount; } ) }
+        , _pDebugControl{ nullptr }
         , _moduleCatalog{}
         , _moduleResolution{}
         , _console{}
@@ -153,7 +151,13 @@ namespace sw
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
         // 개발 도구 — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(배포는 빈 구현).
-        _devTools.addToHostScope( _host, _engine );
+        if constexpr ( build::kShipping == false ) // 개발 계층 · 개발 조종은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
+        {
+            _pDevLayer = makeHostDevLayer();
+            _pDevLayer->addToHostScope( _host, _engine );
+            _pDebugControl = make_unique<ServerDebugControl>( SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
+            { return _tickCount; } ) );
+        }
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
@@ -163,7 +167,8 @@ namespace sw
             return false;
         }
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devTools.attachFrameHooks( _engine );
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->attachFrameHooks( _engine );
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() == false;
@@ -205,14 +210,15 @@ namespace sw
         SW_MEMORY_SCOPE( EngineMisc );
         // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다. 리로드 구동기(App 과 같은 것)가 매니페스트를 해석하고
         // 매니저를 만들어 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다(배포는 정적 링크라 아무것도 하지 않는다).
-        if ( _moduleReload.initialize( static_cast<uint8>( ModuleTarget::Server ), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
+        if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( static_cast<uint8>( ModuleTarget::Server ), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
             return false;
         _gameModuleManager = make_unique<GameModuleManager>();
-        if ( _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+        if ( _gameModuleManager->loadModuleLibrarys( getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
-        _reloadStopsServices = _moduleReload.addOnBeforeReloadBatch(
-            SW_DELEGATE_METHOD( ModuleReloadDriver::BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
+        if ( _pDevLayer != nullptr )
+            _reloadStopsServices = _pDevLayer->addOnBeforeReloadBatch(
+                SW_DELEGATE_METHOD( BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
         return true;
     }
 
@@ -278,7 +284,7 @@ namespace sw
             {
                 if ( _gameModuleManager == nullptr )
                     _gameModuleManager = make_unique<GameModuleManager>();
-                const bool bStarted = _gameModuleManager->initializeDedicatedServer( _moduleReload.getLiveReloadManager() );
+                const bool bStarted = _gameModuleManager->initializeDedicatedServer( getLiveReloadManager() );
                 if ( bStarted == false )
                     SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
                 return bStarted;
@@ -291,12 +297,13 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _debugControl.startConsole();
+                if ( _pDebugControl != nullptr )
+                    _pDebugControl->startConsole();
                 return true;
             }
             case HostServiceID::DebugChannel:
             {
-                if ( _debugControl.startChannel() == false )
+                if ( _pDebugControl != nullptr && _pDebugControl->startChannel() == false )
                     return false;
                 // 관리 채널은 Shipping 도 여는 길이다(기본 꺼짐, 켜면 토큰 필수). 상태는 서버 루프가 답한다.
                 return _adminChannel.start( *_pServerConfig, *_observability.getHealthRegistry(), SW_DELEGATE_LAMBDA( ServerAdminStatusDelegate, [this]()
@@ -346,12 +353,14 @@ namespace sw
             }
             case HostServiceID::DevConsole:
             {
-                _debugControl.stopConsole();
+                if ( _pDebugControl != nullptr )
+                    _pDebugControl->stopConsole();
                 return;
             }
             case HostServiceID::DebugChannel:
             {
-                _debugControl.stopChannel();
+                if ( _pDebugControl != nullptr )
+                    _pDebugControl->stopChannel();
                 _adminChannel.stop();
                 return;
             }
@@ -466,7 +475,8 @@ namespace sw
         {
             if ( _console.poll( SW_DELEGATE_METHOD( StandardInputCommandDelegate, &ServerApp::executeCommand, this ) ) )
                 ShutdownSignal::request( ShutdownCause::ConsoleCommand );
-            _debugControl.pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
+            if ( _pDebugControl != nullptr )
+                _pDebugControl->pump(); // 일시정지 중에도 돈다 - 멈춘 상태의 값을 읽는 것이 쓰임이다
             _adminChannel.pump();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
@@ -488,7 +498,7 @@ namespace sw
                 _serverServices->update( WallClock::nowUnixMilliseconds() );
             _observability.updateEverySecond( ServerAppInternal::nowMonotonicMs(), getServiceConnectionCount() );
 
-            if ( _debugControl.isHoldingTick() )
+            if ( _pDebugControl != nullptr && _pDebugControl->isHoldingTick() )
             {
                 // 일시정지에서는 게임 틱만 멈춘다. 서버는 살아 있으므로 상태 확인 박동은 계속 보내(감시자가 재시작하지 않게 한다). 재개할 때 밀린 틱을 몰아서 돌지 않게 마감을 지금으로 바꾼다.
                 _observability.markAlive( ServerAppInternal::nowMonotonicMs() );
@@ -522,7 +532,8 @@ namespace sw
                 if ( pNetSession != nullptr )
                     pNetSession->sendServerTick( _tickCount );
             }
-            _debugControl.onTickFinished();
+            if ( _pDebugControl != nullptr )
+                _pDebugControl->onTickFinished();
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );
 
@@ -559,7 +570,8 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.Game.update" );
             _gameModuleManager->updateGame( deltaSeconds );
         }
-        _moduleReload.update();
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->updateModuleReload();
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
@@ -581,11 +593,11 @@ namespace sw
         }
         if ( command == "help" )
         {
-            SW_LOG_INFO( "Server commands: quit | stop | status | help%#", ServerDebugControl::getHelpSuffix() );
+            SW_LOG_INFO( "Server commands: quit | stop | status | help%#", _pDebugControl != nullptr ? _pDebugControl->getHelpSuffix() : "" );
             return;
         }
         // Dev 는 일시정지 명령과 개발 콘솔의 명령(개발 명령과 gv_* 전역 변수)도 받는다. Shipping 서버는 위의 네 가지만 받는다.
-        if ( _debugControl.executeCommand( command ) )
+        if ( _pDebugControl != nullptr && _pDebugControl->executeCommand( command ) )
             return;
         SW_LOG_WARNING( "Unknown server command '%#' - type help", string( command ).c_str() );
     }
@@ -601,7 +613,7 @@ namespace sw
         (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
         SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
                      "resident %# MiB",
-                     uptimeSeconds, _tickCount, _debugControl.isPaused() ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
+                     uptimeSeconds, _tickCount, ( _pDebugControl != nullptr && _pDebugControl->isPaused() ) ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / constant::kNanosecondsPerMicrosecond, _tickNanoseconds / constant::kNanosecondsPerMicrosecond,
                      _droppedTickCount, serviceCount, connectionCount, residentBytes / static_cast<uint64>( constant::kBytesPerMegabyte ) );
     }
 
@@ -622,10 +634,10 @@ namespace sw
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
-        _devTools.detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
+        if ( _pDevLayer != nullptr )
+            _pDevLayer->detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
-        _devTools.release();
         Logger::clearClockNumber();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();

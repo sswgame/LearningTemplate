@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleReloadDriver.h"
+#include "ModuleManager/Dev/ModuleReloadDriver.h"
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/formatString.h"
@@ -14,7 +14,7 @@
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
-// 개발 빌드의 구현이다 — 배포는 `ModuleReloadDriverShipping.cpp` 를 CMake 가 고른다(`Source/ModuleManager/CMakeLists.txt`).
+// 개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로만 닿는다.
 namespace sw
 {
     namespace

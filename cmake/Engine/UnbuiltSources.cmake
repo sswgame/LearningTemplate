@@ -52,25 +52,6 @@ function(sw_excludeUnbuiltSources LIST_VAR)
 	set(${LIST_VAR} "${listKept}" PARENT_SCOPE)
 endfunction()
 
-# 구성마다 다른 구현 — 선언은 헤더 하나, 구현 .cpp 를 CMake 가 고른다(인터페이스 · 가상 함수 · 파일 안 `#if` 를 두지 않는다, 언리얼의 Developer 모듈을
-# 배포 타깃이 링크하지 않는 자리). 목록 LIST_VAR 에서 USE_VARIANT 가 참이면 `<VARIANT_NAME><VARIANT_SUFFIX>.cpp` 를, 거짓이면 `<VARIANT_NAME>.cpp` 를 남기고
-# 다른 쪽을 "짓지 않는 소스" 로 적는다. 두 파일은 SOURCE_DIR(절대 경로) 바로 아래에 있어야 한다 — 하나라도 없으면 구성을 멈춘다(App · ModuleManager · Server 가 같이 쓴다).
-function(sw_pickVariantSource LIST_VAR SOURCE_DIR VARIANT_NAME VARIANT_SUFFIX USE_VARIANT)
-	set(defaultSource "${SOURCE_DIR}/${VARIANT_NAME}.cpp")
-	set(variantSource "${SOURCE_DIR}/${VARIANT_NAME}${VARIANT_SUFFIX}.cpp")
-	if(NOT EXISTS "${defaultSource}" OR NOT EXISTS "${variantSource}")
-		message(FATAL_ERROR "[sw_pickVariantSource] ${VARIANT_NAME} needs both ${defaultSource} and ${variantSource}")
-	endif()
-	file(RELATIVE_PATH relativeDir "${CMAKE_SOURCE_DIR}" "${SOURCE_DIR}")
-	set(listSource ${${LIST_VAR}})
-	if(USE_VARIANT)
-		sw_excludeUnbuiltSources(listSource "/${relativeDir}/${VARIANT_NAME}\\.cpp$")
-	else()
-		sw_excludeUnbuiltSources(listSource "/${relativeDir}/${VARIANT_NAME}${VARIANT_SUFFIX}\\.cpp$")
-	endif()
-	set(${LIST_VAR} "${listSource}" PARENT_SCOPE)
-endfunction()
-
 # 목록 LIST_VAR 에서 접두(ARGN, 예: `OnlineLoadBot/`)로 시작하는 헤더를 `#include "…"` 하는 소스를 빼고, 뺀 것을 "짓지 않는 소스" 로 적는다.
 # 파일 이름 정규식을 손으로 적는 대신 소스가 스스로 말하는 의존(include)을 읽는다 — 도구 타깃이 없는 구성에서 그 도구를 쓰는 테스트가 빠진다.
 # 한 단계만 본다(그 헤더를 간접으로 끄는 파일은 보지 않는다 — 간접까지 보는 것은 `sw_excludeSourcesIncludingUnbuiltEngineFolders`).

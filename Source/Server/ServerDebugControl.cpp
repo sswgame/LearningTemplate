@@ -12,7 +12,7 @@
 
 #include "Engine/Observability/DebugChannel.h"
 
-// 개발 빌드의 구현이다 — 배포는 `ServerDebugControlShipping.cpp`(빈 몸통)를 CMake 가 고른다(`Source/Server/CMakeLists.txt`).
+// 개발 구성에만 있다 — 배포는 짓지 않고 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 
 namespace sw
 {
@@ -55,7 +55,7 @@ namespace sw
 
     ServerDebugControl::~ServerDebugControl() = default;
 
-    const utf8* ServerDebugControl::getHelpSuffix()
+    const utf8* ServerDebugControl::getHelpSuffix() const
     {
         return " (Dev: pause | resume | step [N], dev commands and gv_* variables too)";
     }

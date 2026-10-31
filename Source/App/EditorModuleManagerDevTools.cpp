@@ -1,7 +1,7 @@
 /**
  * @file App/EditorModuleManagerDevTools.cpp
  * @brief 개발 구성의 에디터 모듈 등록(리로드 그래프 · 확장 모듈)과 에디터 범위의 개발 도구 서비스입니다.
- * @details 배포는 `EditorModuleManagerDevToolsShipping.cpp` 를 CMake 가 고른다(`Source/App/CMakeLists.txt`).
+ * @details 개발 구성에만 있다 — 배포는 짓지 않고 부르는 자리가 `build::kShipping` 으로 가른다(`Source/App/CMakeLists.txt`).
  */
 #include "pch.h"
 
