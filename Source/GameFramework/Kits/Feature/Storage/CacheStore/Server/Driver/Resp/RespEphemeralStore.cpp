@@ -38,6 +38,7 @@ namespace sw
 {
     RespEphemeralStore::RespEphemeralStore( const IClock& clock )
         : _clock{ clock }
+        , _streamEvents{ *this }
         , _settings{}
         , _transportSettings{}
         , _mutex{}
@@ -86,7 +87,7 @@ namespace sw
         _transportSettings.set( transportSettings );
         _transport.set( std::move( transport ) );
         _tlsContext.set( std::move( tlsContext ) );
-        if ( _transport->initialize( this, _transportSettings.get() ) == false )
+        if ( _transport->initialize( &_streamEvents, _transportSettings.get() ) == false )
         {
             outError = "RESP store could not start its stream transport";
             _transport.reset();

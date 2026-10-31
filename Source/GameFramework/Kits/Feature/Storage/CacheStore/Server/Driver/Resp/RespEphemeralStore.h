@@ -48,7 +48,7 @@ namespace sw
      * @class RespEphemeralStore
      * @brief RESP2 휘발성 저장소입니다. 서비스 스레드 하나가 요청을 맡기고 답을 회수하며, 전송 콜백만 I/O 스레드에서 실행됩니다.
      */
-    class SW_KIT_SERVER_API RespEphemeralStore final : public IEphemeralStore, private IStreamHandler
+    class SW_KIT_SERVER_API RespEphemeralStore final : public IEphemeralStore
     {
     public:
         /**
@@ -90,10 +90,27 @@ namespace sw
             uint8            _bDone{ SW_FALSE };
         };
 
-        // IStreamHandler (I/O 스레드)
-        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
-        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
-        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
+        /** @brief 전송에 넘기는 처리기입니다. 저장소의 `onStream*` 로 넘깁니다. 저장소가 멤버로 들어 수명이 같다(전송보다 먼저 선언해 나중에 사라진다). */
+        class StreamEvents final : public IStreamHandler
+        {
+        public:
+            explicit StreamEvents( RespEphemeralStore& store )
+                : _store{ store }
+            {
+            }
+
+            void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override { _store.onStreamOpened( handle, remote, bAccepted ); }
+            void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override { _store.onStreamReceived( handle, pData, size ); }
+            void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override { _store.onStreamClosed( handle, reason ); }
+
+        private:
+            RespEphemeralStore& _store;
+        };
+
+        // 전송 콜백(I/O 스레드) — `StreamEvents` 가 넘긴다
+        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted );
+        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size );
+        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason );
 
         void       pumpTransport();
         Operation* findOperation( uint64 requestID );
@@ -124,6 +141,7 @@ namespace sw
         RespCommand makeAuthCommand() const SW_REQUIRES_LOCK( _mutex );
 
         const IClock&                          _clock;
+        StreamEvents                           _streamEvents; ///< 전송에 넘기는 처리기(`initialize`)
         OnceInit<RespStoreConfig>              _settings;
         OnceInit<StreamTransportConfig>        _transportSettings;
         mutable mutex                          _mutex; ///< 두 연결, 받은 메시지, 확인 수를 보호한다. I/O 스레드와 함께 쓴다
