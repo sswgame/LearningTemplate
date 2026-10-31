@@ -51,7 +51,7 @@ namespace sw
         /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
         void applyIfPending();
 
-        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcherAutomation.cpp`) -------------------------------------------------
+        // --- 자동화 창구(시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` — `RHIBackendSwitcherDevCommands.cpp`) -------------------------------------------------
         /** @brief 지금 확정된(디바이스가 실제로 쓰는) 백엔드입니다. RHI 가 없으면 false 입니다. */
         [[nodiscard]] bool findCommittedBackend( RHIBackend& outBackend ) const;
         /**
@@ -72,7 +72,7 @@ namespace sw
         [[nodiscard]] bool requestSwap( RHIBackend backend );
         /** @brief 지금 디바이스를 제거된 상태로 만듭니다(개발 명령 `rhi.removeDevice`, `IRHIDevice::debugRemoveDevice`). 할 수 없는 백엔드면 false 입니다. */
         [[nodiscard]] bool removeDeviceForTest();
-#if !defined( SW_SHIPPING )
+        // --- 개발 명령 `rhi.removeDevice <ms>` — 구현은 `RHIBackendSwitcherDevCommands.cpp`(배포 구성은 짓지 않는다) ---------------------------------------
         /** @brief `removeDeviceAfterDriverWaitForTest` 가 받는 가장 긴 대기(밀리초)입니다. 행 감시를 시험할 만큼(시나리오 시한 + 유예) 길되 체인의 프로세스 시한은 넘지 않는다. */
         static constexpr uint32 kMaxDeviceLossDriverWaitMilliseconds = 60000;
         /**
@@ -84,7 +84,6 @@ namespace sw
         void removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
         /** @brief 렌더 스레드 프레임 시작 훅입니다(`RenderThread::setBeginFrameHook` — App 이 프레젠트 훅과 같이 건다). 걸린 대기가 있으면 잠든 뒤 디바이스를 제거한다. */
         void onBeginFrameOnRenderThread( IRHIDevice& device );
-#endif
 
     private:
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */
@@ -97,10 +96,8 @@ namespace sw
         EditorModuleManager* _pGameModuleManager; // 소유하지 않는다
 
         uint32 _failedSwapCount;
-#if !defined( SW_SHIPPING )
-        /// @brief `removeDeviceAfterDriverWaitForTest` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 렌더 스레드가 비운다.
+        /// @brief `removeDeviceAfterDriverWaitForTest` 가 건 대기(0 = 요청 없음)입니다. 개발 명령이 쓰고 렌더 스레드가 비운다(배포는 늘 0).
         atomic<uint32> _pendingDeviceLossWaitMilliseconds;
-#endif
         /** @brief 시나리오가 시작할 때의 백엔드입니다(`recordStartBackend`). `_bStartBackendRecorded` 가 참일 때만 뜻이 있다. */
         RHIBackend _startBackend;
 

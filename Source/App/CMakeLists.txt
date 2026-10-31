@@ -29,6 +29,10 @@ endif()
 # 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 `<이름>Off.cpp` 를 짓는다.
 #   AppAutomationHost            : 구동기가 없고 `-scenario` 는 기동 오류
 set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
+# 기능 옆 개발 전용 파일(`*DevCommands.cpp` 의 개발 명령 · 시나리오 단계)은 다른 타깃과 같은 이름 규칙으로 뺀다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
+if(SW_SHIPPING_BUILD)
+	sw_excludeUnbuiltSources(APP_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
+endif()
 foreach(swVariantName IN ITEMS AppDevTools EditorModuleManagerDevTools EditorModuleManagerHeadless)
 	if(SW_SHIPPING_BUILD)
 		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping ON)

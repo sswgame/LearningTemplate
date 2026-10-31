@@ -5,7 +5,6 @@
 #include "App/EditorModuleManager.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -37,9 +36,7 @@ namespace sw
         : _pEngine{ nullptr }
         , _pGameModuleManager{ nullptr }
         , _failedSwapCount{ 0 }
-#if !defined( SW_SHIPPING )
         , _pendingDeviceLossWaitMilliseconds{ 0 }
-#endif
         , _startBackend{}
         , _bEnableEditor{ SW_FALSE }
         , _bHandlingChange{ SW_FALSE }
@@ -80,26 +77,6 @@ namespace sw
         RHI* pRHI = _pEngine != nullptr ? _pEngine->getRHI() : nullptr;
         return pRHI != nullptr && pRHI->getDevice().debugRemoveDevice();
     }
-
-#if !defined( SW_SHIPPING )
-    void RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds )
-    {
-        SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
-        _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
-    }
-
-    void RHIBackendSwitcher::onBeginFrameOnRenderThread( IRHIDevice& device )
-    {
-        const uint32 waitMilliseconds = _pendingDeviceLossWaitMilliseconds.exchange( 0u, std::memory_order_relaxed );
-        if ( waitMilliseconds == 0u )
-            return;
-        SW_LOG_WARNING( "Holding the render thread %# ms before removing the device (rhi.removeDevice <ms>) - the driver wait a real TDR spends before the first device-lost result",
-                        waitMilliseconds );
-        MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( waitMilliseconds ) * constant::kNanosecondsPerMillisecond );
-        if ( device.debugRemoveDevice() == false )
-            SW_LOG_ERROR( "rhi.removeDevice <ms>: this backend cannot remove its device; only the wait ran" );
-    }
-#endif
 
     bool RHIBackendSwitcher::isSwapPending() const
     {
@@ -187,13 +164,9 @@ namespace sw
 
         // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
         // 비었으면 모듈에서 다시 바인딩" 을 하려면 핸들이 필요하다.
-        void* pEditorModule{ nullptr };
-        void* pGameModule{ nullptr };
-#if !defined( SW_SHIPPING )
-        // 모듈 수명은 GameModuleManager 가 안다. 여기서 리로드 내부를 직접 뒤지지 않는다.
-        pEditorModule = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetEditorModule );
-        pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
-#endif
+        // 모듈 수명은 GameModuleManager 가 안다(배포는 정적 링크라 nullptr). 여기서 리로드 내부를 직접 뒤지지 않는다.
+        void* const pEditorModule = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetEditorModule );
+        void* const pGameModule   = _pGameModuleManager->getLoadedModuleHandle( sw::config::kTargetGameModule );
 
         // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다(편집기는 리로드와 같은 길로 상태를 맡겼다 되찾는다 — `IModuleStateStore`).
         _pGameModuleManager->suspendModules( ModuleScope::Both, false, DrainReason::BackendSwap );
