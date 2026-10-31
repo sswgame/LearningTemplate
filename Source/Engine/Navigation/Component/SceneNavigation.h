@@ -32,6 +32,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Navigation/Component/NavDebugView.h"
+#include "Engine/Navigation/Component/NavGeometryCollector.h"
 #include "Engine/Navigation/Component/NavTileRebaker.h"
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
@@ -218,13 +219,19 @@ namespace sw
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );
 
     private:
-        NavMeshRuntime*        findRuntime( const hashed_string& agentType ) const;
-        NavMeshRuntime*        createRuntime( const hashed_string& agentType );
+        NavMeshRuntime* findRuntime( const hashed_string& agentType ) const;
+        /**
+         * @brief 종류의 내비메시를 마련합니다(쿠킹본 또는 베이크). 모르는 종류 · 마련 실패면 nullptr 입니다.
+         * @details @p arrival 이 `Defer` 이고 기하의 메시를 아직 읽는 중이면 마련하지 않고 nullptr 을 돌려준다 — `_waitingMeshCount` 가 그 수를 들고, 다음 갱신이 다시 마련한다.
+         */
+        NavMeshRuntime* createRuntime( const hashed_string& agentType, NavMeshArrival arrival );
+        /** @brief 마련한 내비메시가 있으면 그것을, 없으면 `createRuntime` 입니다. */
+        NavMeshRuntime*        findOrCreateRuntime( const hashed_string& agentType, NavMeshArrival arrival );
         const NavAgentTypeDef* resolveAgentType( const hashed_string& agentType );
         /** @brief 쿠킹본이 맞으면 그것으로 채웁니다. */
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );
-        /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). */
-        void processDirtyAreas();
+        /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). 갱신은 `Defer`, 그 자리에서 끝내는 `flushTileBakes` 는 `Wait` 다. */
+        void processDirtyAreas( NavMeshArrival arrival );
         void updateAgents( float32 deltaTime );
         /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
         void applyLinkStates();
@@ -250,6 +257,7 @@ namespace sw
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;
+        uint32                               _waitingMeshCount; ///< 마지막으로 마련을 미룬(`NavMeshArrival::Defer`) 모으기에서 아직 읽는 중이던 메시 수. 마련하면 0 이다
         bool                                 _bSettingsLoaded;
         bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
 

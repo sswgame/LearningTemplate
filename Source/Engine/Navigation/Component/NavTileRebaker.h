@@ -12,6 +12,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Navigation/Component/NavGeometryCollector.h"
+
 namespace sw
 {
     struct NavConvexVolume;
@@ -60,9 +62,10 @@ namespace sw
         /**
          * @brief 알린 영역을 각 종류의 타일로 바꿔 재베이크 줄에 넣습니다. 장애물이 바뀌었으면 부피 목록을, 정적 기하가 바뀌었으면 기하를 새 사본으로 바꿉니다.
          * @details 베이크하는 중인 일은 옛 사본을 끝까지 읽는다(둘 다 `shared_ptr<const>`).
+         *          기하를 다시 모을 때 메시를 아직 읽는 중이면(@p arrival 이 `Defer`) 옛 기하를 그대로 두고 알린 영역 · 기하 표시를 다음 갱신으로 넘긴다.
          */
         void processDirtyAreas( const vector<unique_ptr<NavMeshRuntime>>& listRuntime, const vector<NavMeshObstacleComponent*>& listObstacle,
-                                GameObjectManager& manager, const NavMeshSettings& settings, const vector<INavGeometrySource*>& listSource );
+                                GameObjectManager& manager, const NavMeshSettings& settings, const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival );
         /** @brief 끝난 일의 타일을 내비메시에 끼웁니다(질의가 없는 구간에서만 — 갱신 첫머리). */
         void applyFinishedBakes( const vector<unique_ptr<NavMeshRuntime>>& listRuntime );
 

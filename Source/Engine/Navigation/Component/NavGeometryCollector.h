@@ -19,6 +19,13 @@ namespace sw
     class NavMeshGeometry;
     class NavMeshSurfaceComponent;
 
+    /** @brief 기하 모으기가 아직 읽는 중인 메시를 어떻게 하는가입니다(`NavGeometryCollector::collectGeometry`). */
+    enum class NavMeshArrival : uint8
+    {
+        Wait = 0, ///< 그 자리에서 읽는다 — 결과를 곧바로 쓰는 쿠킹 · 도구(`SceneNavigation::ensureNavMesh` · `flushTileBakes`)
+        Defer,    ///< 기다리지 않고 센다 — 부르는 쪽이 다음 갱신에 다시 모은다(런타임 갱신, 게임 스레드가 디스크를 기다리지 않는다)
+    };
+
     /** @class NavGeometryCollector @brief 파일 머리말 참고. 상태가 없는 정적 함수 묶음입니다. */
     class SW_API NavGeometryCollector
     {
@@ -26,9 +33,12 @@ namespace sw
         /**
          * @brief 씬의 베이크 기하를 모읍니다 — 표면의 규칙(파일 `NavMeshSurfaceComponent.h` 머리말). 표면이 없으면 기본 규칙(메시 + Static 강체)입니다.
          * @details 기하를 대신 내는 소스가 오브젝트를 맡으면 그것만 씁니다. 여럿이 맡으면 @p listSource 의 첫 소스입니다(등록 순서).
+         *          메시 컴포넌트의 메시를 아직 읽는 중이면 @p arrival 이 정한다 — `Wait` 는 그 자리에서 읽고, `Defer` 는 넣지 않고 센다(기하가 덜 모였다).
+         *          읽지 못한 메시(로드 실패)는 두 방식 모두 넣지 않는다 — 그리지 않는 메시는 걷는 면도 아니다.
+         * @return `Defer` 에서 아직 읽는 중이라 넣지 못한 메시 수입니다. 0 이 아니면 기하가 덜 모였으므로 부르는 쪽이 쓰지 않고 다음 갱신에 다시 모은다. `Wait` 는 늘 0 입니다.
          */
-        static void collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
-                                     const vector<INavGeometrySource*>& listSource, NavMeshGeometry& outGeometry );
+        [[nodiscard]] static uint32 collectGeometry( GameObjectManager& manager, const NavMeshSurfaceComponent* pSurface, const NavMeshSettings& settings,
+                                                     const vector<INavGeometrySource*>& listSource, NavMeshArrival arrival, NavMeshGeometry& outGeometry );
         /** @brief 베이크 경계 — 표면의 상자(있으면)와 기하 경계의 겹침입니다. */
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );
         /** @brief 기하 경계를 표면 상자로 자릅니다. 둘이 겹치지 않으면 표면 상자입니다. */
