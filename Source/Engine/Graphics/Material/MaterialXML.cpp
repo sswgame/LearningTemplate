@@ -12,6 +12,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -130,6 +131,12 @@ namespace sw
         outProp                = MaterialProperty{};
         MaterialProperty& prop = outProp;
         prop._name             = MaterialUtil::fieldText( item, "name" );
+        // 아래 읽기가 보는 속성 이름 전부다. 철자가 다른 속성(bSRGB · bHDR 처럼)이 조용히 기본값이 되지 않게 모르는 이름은 로드 오류다.
+        static constexpr const utf8* kArrKnownAttribute[] = { "name", "type", "cpuType", "shaderType", "defaultValue", "value",
+                                                              "assetPath", "enumType", "displayName", "group", "tooltip", "shaderKeyword",
+                                                              "min", "max", "bHdr", "bSrgb", "bHidden", "bAdvanced" };
+        if ( XMLNameCheck::reportUnknownAttributes( item, kArrKnownAttribute, string_view{ prop._name } ) == false )
+            return false;
         uint32 size{ 0 };
         string typeStr = MaterialUtil::fieldText( item, "type" );
         if ( typeStr.empty() )
@@ -164,8 +171,8 @@ namespace sw
         bool       bSRGB{ false };
         bool       bHidden{ false };
         bool       bAdvanced{ false };
-        const bool bFlagsRead = MaterialUtil::parseOptionalBoolField( item, "bHDR", false, bHDR ) &&
-                                MaterialUtil::parseOptionalBoolField( item, "bSRGB", true, bSRGB ) &&
+        const bool bFlagsRead = MaterialUtil::parseOptionalBoolField( item, "bHdr", false, bHDR ) &&
+                                MaterialUtil::parseOptionalBoolField( item, "bSrgb", true, bSRGB ) &&
                                 MaterialUtil::parseOptionalBoolField( item, "bHidden", false, bHidden ) &&
                                 MaterialUtil::parseOptionalBoolField( item, "bAdvanced", false, bAdvanced );
         if ( bFlagsRead == false )
@@ -456,11 +463,11 @@ namespace sw
             }
             if ( prop._type == MaterialPropertyType::Color )
             {
-                MaterialUtil::appendBoolAttribute( item, "bHDR", prop._bHDR );
-                MaterialUtil::appendBoolAttribute( item, "bSRGB", prop._bSRGB );
+                MaterialUtil::appendBoolAttribute( item, "bHdr", prop._bHDR );
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
             }
             if ( MaterialUtil::isTextureType( prop._type ) )
-                MaterialUtil::appendBoolAttribute( item, "bSRGB", prop._bSRGB );
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
             if ( prop._bHidden )
                 MaterialUtil::appendBoolAttribute( item, "bHidden", true );
             if ( prop._bAdvanced )

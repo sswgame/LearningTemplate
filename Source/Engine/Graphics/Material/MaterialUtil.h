@@ -57,7 +57,7 @@ namespace sw
         /**
          * @brief 머티리얼의 불리언 글(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`)을 읽습니다. 머티리얼의 불리언 글은 모두 여기를 지납니다.
          * @details 비었거나 불리언이 아닌 글이면 `name`(파라미터 · 필드 이름)과 함께 오류를 남기고 false 이며 @p outValue 는 그대로입니다.
-         *          대신할 값을 받지 않습니다 — 읽지 못한 글을 어떤 값으로 읽든 `bSRGB="ture"` 가 데이터와 다른 값이 됩니다.
+         *          대신할 값을 받지 않습니다 — 읽지 못한 글을 어떤 값으로 읽든 `bSrgb="ture"` 가 데이터와 다른 값이 됩니다.
          */
         [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, const utf8* pID, bool& outValue );
         static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
