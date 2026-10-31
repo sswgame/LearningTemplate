@@ -78,8 +78,9 @@ namespace sw
      * @brief 캐시 키트의 캐시 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `IEphemeralStoreDriver` 로 공개된다.
      * @details "memory" 캐시의 데이터(같은 프로세스의 저장소끼리 나눠 쓴다)와 그 시계를 값으로 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 저장소는 이 데이터를
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
+     *          `IEphemeralStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class RespEphemeralStoreDriver final : public ISubsystem, public IEphemeralStoreDriver
+    class RespEphemeralStoreDriver final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RespEphemeralStoreDriver";
@@ -87,6 +88,7 @@ namespace sw
         RespEphemeralStoreDriver()
             : _memoryClock{}
             , _memoryDatabase{ _memoryClock }
+            , _driver{ *this }
         {
         }
 
@@ -99,11 +101,33 @@ namespace sw
          * @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 실패 이유를 반환합니다.
          * @param secret AUTH 비밀(`ServerSecret::read` 로 읽은 것)입니다. 쓰고 나면 호출한 쪽이 비웁니다.
          */
-        unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError ) override;
+        unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError );
+
+        /** @brief 공개할 캐시 드라이버입니다(`ModuleSubsystemRegistration` 이 `IEphemeralStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
+        IEphemeralStoreDriver& getPublishedPart() { return _driver; }
 
     private:
+        /** @brief 캐시 드라이버 능력입니다. 서브시스템의 같은 이름 함수로 넘깁니다(수명은 서브시스템과 같다). */
+        class Driver final : public IEphemeralStoreDriver
+        {
+        public:
+            explicit Driver( RespEphemeralStoreDriver& owner )
+                : _owner{ owner }
+            {
+            }
+
+            unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError ) override
+            {
+                return _owner.createEphemeralStore( driverName, endpoint, secret, outError );
+            }
+
+        private:
+            RespEphemeralStoreDriver& _owner;
+        };
+
         SystemMonotonicClock    _memoryClock;    ///< "memory" 캐시의 시계 — 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
         MemoryEphemeralDatabase _memoryDatabase; ///< "memory" 캐시의 데이터 — 같은 프로세스의 저장소끼리 나눠 쓴다
+        Driver                  _driver;         ///< `IEphemeralStoreDriver` 로 공개되는 부분
     };
 
     SW_MODULE_SUBSYSTEM( Engine, RespEphemeralStoreDriver, IEphemeralStoreDriver );

@@ -39,7 +39,7 @@ namespace sw
 
     /**
      * @class IEphemeralStoreDriver
-     * @brief 캐시 드라이버입니다(캐시 키트 `GF_Server_CacheStore` 의 모듈 서브시스템이 구현한다).
+     * @brief 캐시 드라이버입니다(캐시 키트 `GF_Server_CacheStore` 의 모듈 서브시스템이 멤버로 들고 공개한다).
      */
     class IEphemeralStoreDriver
     {
