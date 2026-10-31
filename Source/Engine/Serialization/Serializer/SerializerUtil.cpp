@@ -31,6 +31,10 @@ namespace sw
         vector<SchemaOrphanValue> listOrphan;
         if ( versionSource == SchemaVersionSource::Payload )
             outVersion = 0;
+        // 스트림 판은 본문 앞에서 이미 안다 — 다른 판이면 본문을 읽기 전에 거절해 대상 객체를 건드리지 않는다(읽고 나서 거절하면 거절한 값이 객체에 남았다).
+        // 언리얼이 패키지 요약의 버전을 보고 로드를 거절하는 것과 같은 자리다. 본문 안 판(JSON · XML)은 본문과 함께 읽혀 이 앞검사가 없다.
+        if ( versionSource == SchemaVersionSource::Stream && outVersion != currentVersion )
+            return finishVersionedRead( outVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
 
         uint32 softVersion{ 0 };
         if ( softDeserialize( instance, typeInfo, listOrphan, softVersion ) == false )
@@ -206,8 +210,8 @@ namespace sw
                 const uint64 key = ( static_cast<uint64>( enumInfo._fullyQualifiedName.getHash() ) << 32 ) | nameHash;
                 if ( LogOnce::tryClaim( LogOnceKind::UnknownEnumerator, key ) == false )
                     return;
-                SW_LOG_WARNING( "%#: a saved enumerator (name hash %#) is not a value of it any more - the field keeps its current value (once per enumerator)",
-                                enumInfo._fullyQualifiedName.c_str(), nameHash );
+                SW_LOG_WARNING_ID( "Serialization.UnknownEnumeratorHash", "%#: a saved enumerator (name hash %#) is not a value of it any more - the field keeps its current value (once per enumerator)",
+                                   enumInfo._fullyQualifiedName.c_str(), nameHash );
             }
 
             /** @brief 열거자 항목 하나를 읽습니다. 이름을 모르면 `outKnown` 이 false 이고 바이트는 읽었습니다. 바이트가 모자라면 false 입니다. */
@@ -767,8 +771,7 @@ namespace sw
             int64 parsedValue{ 0 };
             if ( pEnumInfo->tryParseText( flagsText, parsedValue ) == false )
             {
-                SW_LOG_WARNING_ID( "Serialization.UnknownEnumerator", "'%#' is not a value of enum %# - the field keeps its current value", flagsText,
-                                   pEnumInfo->_fullyQualifiedName.c_str() );
+                SW_LOG_WARNING_ID( "Serialization.UnknownEnumeratorName", "'%#' is not a value of enum %# - the field keeps its current value", flagsText, pEnumInfo->_fullyQualifiedName.c_str() );
                 return false;
             }
             pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
@@ -801,8 +804,8 @@ namespace sw
         if ( prop._metadata->_defaultValue.empty() )
             return;
         if ( applyPropertyText( prop, instance, prop._metadata->_defaultValue, context ) == false )
-            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata->_defaultValue,
-                            prop._name.c_str(), prop._typeName.c_str() );
+            SW_LOG_WARNING_ID( "Serialization.DefaultUnreadable", "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata->_defaultValue,
+                               prop._name.c_str(), prop._typeName.c_str() );
     }
 
     bool SerializerUtil::copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context )

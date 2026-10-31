@@ -202,6 +202,19 @@ namespace sw
             }
 
             /**
+             * @brief 로그에 적을 orphan 이름입니다. 적힌 텍스트가 먼저다 — 파일의 모르는 이름은 intern 하지 않아 `_name` 이 비고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
+             * @details 경고와 거절 오류가 함께 쓴다(거절 오류가 `_name` 만 적어 텍스트 orphan 의 이름이 빈 글로 나왔다). 바이너리는 이름 없이 해시만 싣는다.
+             */
+            static string getShownName( const SchemaOrphanValue& orphan )
+            {
+                if ( orphan._writtenName.empty() == false )
+                    return orphan._writtenName;
+                if ( orphan._name.empty() == false )
+                    return string( orphan._name.c_str() );
+                return formatToString( "#%#", getOrphanNameHash( orphan ) );
+            }
+
+            /**
              * @brief 로드가 성공으로 끝난 뒤 아무 데도 쓰이지 않은 orphan(읽지 못한 값, 타입에 없는 필드)을 **로드마다 한 번** 알립니다.
              * @details 이름은 필드마다 한 번만 적는다(컨테이너 원소가 여럿 실패해도 필드 하나로 센다).
              *          JSON, XML 의 Ignore 정책도 여기서 알린다. 숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다.
@@ -212,15 +225,7 @@ namespace sw
                 string         names;
                 for ( const SchemaOrphanValue& orphan : listOrphan )
                 {
-                    // 적힌 텍스트가 먼저다. 파일의 모르는 이름은 intern 하지 않고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
-                    const uint32 nameHash = getOrphanNameHash( orphan );
-                    string       shownName;
-                    if ( orphan._writtenName.empty() == false )
-                        shownName = orphan._writtenName;
-                    else if ( orphan._name.empty() == false )
-                        shownName = orphan._name.c_str();
-                    else
-                        shownName = formatToString( "#%#", nameHash ); // 바이너리는 이름 없이 해시만 싣는다
+                    const string shownName = getShownName( orphan );
                     const uint32 shownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ shownName } ) );
                     if ( VectorUtil::contains( listListedHash, shownHash ) )
                         continue;
@@ -516,15 +521,15 @@ namespace sw
     {
         if ( fromVersion != currentVersion )
         {
-            SW_LOG_ERROR( "(%#) schema version %# does not match the supported %# - rewrite the data (no migration before the first release) (%# orphans: %#)",
-                          typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
-                          listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
+            SW_LOG_ERROR_ID( "Schema.VersionMismatch", "(%#) schema version %# does not match the supported %# - rewrite the data (no migration before the first release) (%# orphans: %#)",
+                             typeInfo._name.c_str(), fromVersion, currentVersion, static_cast<uint32>( listOrphan.size() ),
+                             listOrphan.empty() ? string{} : SchemaMigrateInternal::getShownName( listOrphan[0] ) );
             return false;
         }
         if ( orphanPolicy == SchemaOrphanPolicy::Reject && listOrphan.empty() == false )
         {
-            SW_LOG_ERROR( "(%#) schema version %# has %# unknown or unreadable field(s) and the format rejects them (first: %#) - rewrite the data (no migration before the first release)",
-                          typeInfo._name.c_str(), fromVersion, static_cast<uint32>( listOrphan.size() ), listOrphan[0]._name.c_str() );
+            SW_LOG_ERROR_ID( "Schema.OrphansRejected", "(%#) schema version %# has %# unknown or unreadable field(s) and the format rejects them (first: %#) - rewrite the data (no migration before the first release)",
+                             typeInfo._name.c_str(), fromVersion, static_cast<uint32>( listOrphan.size() ), SchemaMigrateInternal::getShownName( listOrphan[0] ) );
             return false;
         }
         // 받아 주는 로드다(JSON, XML 의 Ignore 정책, 또는 orphan 이 없다). orphan 은 모두 버려진다.

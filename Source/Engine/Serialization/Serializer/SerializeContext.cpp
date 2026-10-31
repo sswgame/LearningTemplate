@@ -228,8 +228,8 @@ namespace sw
              */
             static bool rejectOutOfRange( string_view token, size_t byteSize )
             {
-                SW_LOG_WARNING( "'%#' is out of range for a %#-byte integer field - the field keeps its current value", token,
-                                static_cast<uint32>( byteSize ) );
+                SW_LOG_WARNING_ID( "Serialization.IntegerOutOfRange", "'%#' is out of range for a %#-byte integer field - the field keeps its current value", token,
+                                   static_cast<uint32>( byteSize ) );
                 return false;
             }
 
