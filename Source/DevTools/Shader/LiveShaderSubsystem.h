@@ -48,20 +48,16 @@ namespace sw
         SubsystemHostMask       getSubsystemHost() const override;
         MemoryTag               getSubsystemMemoryTag() const override { return MemoryTag::Shader; }
 
-#if !defined( SW_SHIPPING )
-        /** @brief 셰이더 라이브 리로드입니다. Debug 가 아니거나 시작하지 않았으면 nullptr 입니다(배포본에는 라이브 리로드 코드가 없습니다). */
+        /** @brief 셰이더 라이브 리로드입니다. Debug 가 아니거나 시작하지 않았으면 nullptr 입니다(배포본은 DevTools 를 짓지 않는다). */
         ShaderRecompiler* findShaderRecompiler() const { return _bReady ? _shaderRecompiler.get() : nullptr; }
-#endif
 
     private:
-#if !defined( SW_SHIPPING )
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
 
-        unique_ptr<ShaderRecompiler> _shaderRecompiler;
-        Subscription                 _recompiledSubscription; ///< 재컴파일 알림 칸 구독(재컴파일기가 먼저 사라지면 무효가 된다)
-#endif
-        [[maybe_unused]] const FrameRendererSubsystem& _frameRendererSubsystem; ///< 배포본은 라이브 리로드가 없어 쓰지 않는다
-        [[maybe_unused]] const RenderThreadSubsystem&  _renderThreadSubsystem;
-        bool                                           _bReady;
+        unique_ptr<ShaderRecompiler>  _shaderRecompiler;
+        Subscription                  _recompiledSubscription; ///< 재컴파일 알림 칸 구독(재컴파일기가 먼저 사라지면 무효가 된다)
+        const FrameRendererSubsystem& _frameRendererSubsystem;
+        const RenderThreadSubsystem&  _renderThreadSubsystem;
+        bool                          _bReady;
     };
 } // namespace sw
