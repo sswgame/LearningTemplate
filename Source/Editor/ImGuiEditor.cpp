@@ -46,6 +46,7 @@
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/EditorModuleExports.h"
+#include "Editor/EditorSubsystemSet.h"
 #include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -675,7 +676,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize( *_editorToolDefaults );
+        _editorContext->initialize( *_editorToolDefaults, &EditorSubsystemSet::install );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
@@ -788,7 +789,7 @@ namespace sw::editor
             return;
         // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
         // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
-        _editorContext->syncExtensionRegistrations();
+        EditorSubsystemSet::syncExtensionRegistrations( *_editorContext );
         // 토큰 파일이 바뀌었으면(핫 리로드) 프레임을 열기 전에 다시 읽어 이번 프레임부터 새 스타일로 그린다.
         if ( _editorContext->getSubsystem<EditorTheme>().consumeTokensChanged() )
             EditorThemeUtil::reloadThemes();

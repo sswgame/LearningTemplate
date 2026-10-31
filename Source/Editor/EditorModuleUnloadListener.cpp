@@ -8,6 +8,7 @@
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
+#include "Editor/EditorSubsystemSet.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
@@ -46,7 +47,7 @@ namespace sw::editor
 
     void EditorModuleUnloadListener::onRegistrationRemoved()
     {
-        _context.syncExtensionRegistrations();
+        EditorSubsystemSet::syncExtensionRegistrations( _context );
     }
 
     void EditorModuleUnloadListener::onModuleUnloading( string_view /*moduleName*/ )

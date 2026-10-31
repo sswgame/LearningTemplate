@@ -23,21 +23,20 @@ namespace sw::editor
     class SW_EDITOR_API EditorContext
     {
     public:
+        /** @brief 범위에 하위 객체를 넣는 조립점입니다(`initialize` 가 범위를 세우기 전에 부른다). */
+        using SubsystemInstaller = void ( * )( SubsystemScope& scope, EditorContext& context );
+
         EditorContext();
         ~EditorContext();
 
         /**
          * @brief 에디터 서브시스템들을 만들고 초기화합니다.
+         * @param install 범위에 하위 객체를 넣는 조립점(`EditorSubsystemSet::install`)입니다. 어느 하위 객체가 있는지는 컨텍스트가 아니라 셸 층이 정한다.
          * @param toolDefaults 에디터 도구 시드 — 셸(ImGuiEditor)이 소유하고 이 컨텍스트보다 오래 산다. 서브시스템을 세우기 전에 범위에 빌려 건다(`getEditorToolDefaults`).
          */
-        void initialize( EditorToolDefaults& toolDefaults );
+        void initialize( EditorToolDefaults& toolDefaults, SubsystemInstaller install );
         /** @brief 에디터 서브시스템들을 정리하고 해제합니다. */
         void shutdown();
-        /**
-         * @brief 패널, 팝업, 인스펙터 매니저를 등록 목록과 맞춥니다. 에디터 프레임 앞에서 호출합니다.
-         * @details 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다(핫 리로드). 등록 세대가 같으면 비교 한 번으로 끝난다.
-         */
-        void syncExtensionRegistrations();
 
         /**
          * @brief 활성 에디터 컨텍스트를 설정합니다. 그 컨텍스트의 범위가 지금 에디터 범위가 되고, `editor::findSubsystem<T>()` 가 거기서 찾습니다.

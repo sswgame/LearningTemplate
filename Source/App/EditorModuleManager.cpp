@@ -411,7 +411,7 @@ namespace sw
             }
 
             // 확장 모듈은 EditorModule 과 자기 키트에 의존한다. 의존이 바뀌면 리로드 그래프가 확장을 다시 로드한다(키트와 SWGame 의 관계와 같다).
-            // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorContext::syncExtensionRegistrations).
+            // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorSubsystemSet::syncExtensionRegistrations).
             for ( const EditorExtensionModule& extension : _listEditorExtension )
             {
                 if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
