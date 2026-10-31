@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/Macros.h"
+#include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -47,23 +48,6 @@ namespace
         ScopedAssertDialogForTest( const ScopedAssertDialogForTest& )            = delete;
         ScopedAssertDialogForTest& operator=( const ScopedAssertDialogForTest& ) = delete;
     };
-
-    /** @brief 단언 가로채기 구간입니다(`internal::beginAssertCapture` · `endAssertCapture` 의 짝) — 구간 안에서 센 수를 돌려준다. */
-    struct ScopedAssertCaptureForDialogTest
-    {
-        ScopedAssertCaptureForDialogTest()
-            : _startCount{ internal::getCapturedAssertCount() }
-        {
-            internal::beginAssertCapture();
-        }
-        ~ScopedAssertCaptureForDialogTest() { internal::endAssertCapture(); }
-        ScopedAssertCaptureForDialogTest( const ScopedAssertCaptureForDialogTest& )            = delete;
-        ScopedAssertCaptureForDialogTest& operator=( const ScopedAssertCaptureForDialogTest& ) = delete;
-
-        uint32 getCount() const { return internal::getCapturedAssertCount() - _startCount; }
-
-        uint32 _startCount;
-    };
 } // namespace
 
 SW_TEST_CASE( AssertDialogTest, IgnoreAlwaysAsksOncePerSite )
@@ -102,8 +86,8 @@ SW_TEST_CASE( AssertDialogTest, BreakWithoutDialogOrWhenChosen )
  */
 SW_TEST_CASE( AssertDialogTest, CaptureComesBeforeTheDialog )
 {
-    const ScopedAssertDialogForTest        dialog( &AssertDialogTestInternal::answerBreak );
-    const ScopedAssertCaptureForDialogTest capture;
+    const ScopedAssertDialogForTest dialog( &AssertDialogTestInternal::answerBreak );
+    const test::ScopedAssertCapture capture;
     AssertDialogTestInternal::failAtOneSite( false );
     SW_EXPECT_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_EQUAL( 0u, AssertDialogTestInternal::_s_callCount );
