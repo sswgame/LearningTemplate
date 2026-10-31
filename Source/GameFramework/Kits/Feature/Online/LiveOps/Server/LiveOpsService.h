@@ -19,10 +19,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Config/LiveEventControl.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
 
 namespace sw
 {

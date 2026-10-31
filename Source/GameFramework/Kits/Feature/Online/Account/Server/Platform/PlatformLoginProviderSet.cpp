@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw
 {

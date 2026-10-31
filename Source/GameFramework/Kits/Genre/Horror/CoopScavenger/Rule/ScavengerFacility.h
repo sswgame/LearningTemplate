@@ -9,9 +9,9 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/World/Land/AreaGraph.h"
-#include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/World/Land/AreaGraph.h"
+#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

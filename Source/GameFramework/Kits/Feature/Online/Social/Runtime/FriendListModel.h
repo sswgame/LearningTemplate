@@ -11,9 +11,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
 namespace sw
 {

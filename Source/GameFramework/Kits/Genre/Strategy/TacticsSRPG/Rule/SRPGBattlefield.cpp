@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/Navigation/GridReachability.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

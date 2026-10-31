@@ -4,10 +4,10 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardProtocol.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
 
 namespace sw
 {

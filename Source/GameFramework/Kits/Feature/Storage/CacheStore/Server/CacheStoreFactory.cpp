@@ -11,11 +11,11 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
-#include "GameFramework/Base/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 
 namespace sw
 {

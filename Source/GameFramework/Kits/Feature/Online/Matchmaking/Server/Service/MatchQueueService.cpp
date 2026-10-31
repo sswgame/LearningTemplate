@@ -6,12 +6,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Base/Online/Identity/AccountStatSource.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Identity/AccountStatSource.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
 

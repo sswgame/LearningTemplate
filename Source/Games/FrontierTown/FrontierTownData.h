@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
 {

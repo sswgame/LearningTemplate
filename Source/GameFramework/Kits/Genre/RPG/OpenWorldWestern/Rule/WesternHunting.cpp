@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 
 namespace sw
 {

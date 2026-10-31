@@ -11,8 +11,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 
 namespace sw
 {

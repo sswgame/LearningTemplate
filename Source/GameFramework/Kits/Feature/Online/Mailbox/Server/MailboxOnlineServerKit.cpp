@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 우편함 키트의 서버 조립 — 우편함 서비스를 만든다. 수령은 원장 이동이라 계정 잔액 상한을 경제 키트의 원장 정책(화폐 카탈로그)으로 받는다.
 // 옵션:

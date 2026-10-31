@@ -14,8 +14,8 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
 #include "Games/HarvestValley/FarmVillagerComponent.h"

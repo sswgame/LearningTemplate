@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWeaponWear.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
 {

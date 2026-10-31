@@ -6,10 +6,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
 {

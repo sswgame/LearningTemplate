@@ -7,10 +7,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
-#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
 

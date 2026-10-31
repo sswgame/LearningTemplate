@@ -7,9 +7,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 #include <algorithm>
 

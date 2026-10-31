@@ -13,8 +13,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 
 namespace sw
 {

@@ -30,13 +30,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
+#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

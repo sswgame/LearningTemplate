@@ -4,8 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Config/RemoteConfig.h"
-#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
+#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
 
 namespace sw
 {

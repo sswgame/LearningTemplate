@@ -10,8 +10,8 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
-#include "GameFramework/Base/Online/Security/JSONWebToken.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
 
 namespace sw
 {

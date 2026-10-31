@@ -10,7 +10,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 
 #include "Games/PixelTown/TownDirectorComponent.h"
 

@@ -1,6 +1,6 @@
 /**
  * @file Shooter3DGame.cpp
- * @brief 기반의 무기 규칙(GameFramework/Base/Character/Combat)을 실제로 쓰는 테스트 게임 — 상자가 놓인 아레나에서 웨이브로 몰려오는 스켈레톤을 히트스캔 무기로 막는 슈터입니다.
+ * @brief 기반의 무기 규칙(GameFramework/Runtime/Character/Combat)을 실제로 쓰는 테스트 게임 — 상자가 놓인 아레나에서 웨이브로 몰려오는 스켈레톤을 히트스캔 무기로 막는 슈터입니다.
  *
  * @details 실행: `App.exe -game=Shooter3D`(`Ninja-Debug` 빌드). 조작은 `Source/Games/Shooter3D/README.md`. `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
  *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterDirectorComponent` ·
@@ -10,12 +10,12 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDataWatcher.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

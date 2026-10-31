@@ -7,10 +7,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

@@ -12,7 +12,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/UUID/UUID.h"
 
-#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {

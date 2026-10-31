@@ -21,10 +21,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
 namespace sw
 {

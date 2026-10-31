@@ -25,11 +25,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Identity/AccountStatSource.h"
-#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
+#include "GameFramework/Runtime/Online/Identity/AccountStatSource.h"
+#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

@@ -20,9 +20,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Gameplay/Gimmick/ElementGrid.h"
-#include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
 
 namespace sw
 {

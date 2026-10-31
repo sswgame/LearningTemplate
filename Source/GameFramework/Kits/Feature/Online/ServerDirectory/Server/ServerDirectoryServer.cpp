@@ -4,9 +4,9 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 
 namespace sw
 {

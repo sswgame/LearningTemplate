@@ -1,11 +1,5 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
-#include "GameFramework/Base/Online/Server/OnlineProviderFile.h"
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
@@ -15,6 +9,12 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
+#include "GameFramework/Runtime/Online/Server/OnlineProviderFile.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 내놓는다.
 // 옵션:

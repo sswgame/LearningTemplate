@@ -10,11 +10,11 @@
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/AI/AIPerception.h"
-#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
+#include "GameFramework/Runtime/Character/AI/AIPerception.h"
+#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

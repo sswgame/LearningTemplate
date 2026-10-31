@@ -15,10 +15,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

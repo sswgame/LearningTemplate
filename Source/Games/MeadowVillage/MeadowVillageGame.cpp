@@ -9,13 +9,13 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
-#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/MeadowVillage/MeadowFarmDirectorComponent.h"
 #include "Games/MeadowVillage/MeadowTownDirectorComponent.h"

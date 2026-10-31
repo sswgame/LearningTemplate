@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
-#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
 {

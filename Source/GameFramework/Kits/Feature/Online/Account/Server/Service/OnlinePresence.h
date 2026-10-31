@@ -21,10 +21,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
 
 namespace sw
 {

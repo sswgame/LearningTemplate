@@ -12,8 +12,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/EditSnapshotHistory.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 
 namespace sw
 {

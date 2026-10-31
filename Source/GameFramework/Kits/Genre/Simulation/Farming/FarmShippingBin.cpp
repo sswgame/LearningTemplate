@@ -4,9 +4,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

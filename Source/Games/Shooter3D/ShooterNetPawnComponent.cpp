@@ -10,10 +10,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
-#include "GameFramework/Base/Character/Control/ControlSystem.h"
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Gameplay/Gimmick/TickedPathMoverComponent.h"
+#include "GameFramework/Runtime/Character/Control/ControlSystem.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

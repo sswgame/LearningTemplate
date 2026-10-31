@@ -14,9 +14,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

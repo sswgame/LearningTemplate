@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "GameFramework/Base/Character/Camera/CameraPreset.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 
 namespace sw
 {

@@ -14,10 +14,10 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 
 namespace sw
 {

@@ -18,14 +18,14 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

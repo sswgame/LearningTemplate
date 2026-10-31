@@ -21,8 +21,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
 
 namespace sw
 {

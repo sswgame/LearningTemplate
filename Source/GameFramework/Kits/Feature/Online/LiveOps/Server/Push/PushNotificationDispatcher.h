@@ -17,9 +17,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
+#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 
 namespace sw
 {

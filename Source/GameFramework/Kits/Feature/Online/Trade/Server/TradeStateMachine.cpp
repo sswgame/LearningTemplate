@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 
-#include "GameFramework/Base/Online/Ledger/LedgerItemInstance.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

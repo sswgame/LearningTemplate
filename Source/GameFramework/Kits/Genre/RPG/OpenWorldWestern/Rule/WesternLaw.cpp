@@ -7,9 +7,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

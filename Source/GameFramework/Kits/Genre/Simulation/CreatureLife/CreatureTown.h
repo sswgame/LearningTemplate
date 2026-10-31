@@ -13,10 +13,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Base/World/Environment/WorldClock.h"
-#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {

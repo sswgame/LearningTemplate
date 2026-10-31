@@ -12,15 +12,15 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleGear.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleZone.h"
+#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionProgress.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
 namespace sw
 {

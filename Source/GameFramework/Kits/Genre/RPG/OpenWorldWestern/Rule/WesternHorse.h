@@ -10,10 +10,10 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 
 namespace sw
 {

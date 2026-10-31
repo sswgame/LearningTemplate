@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Base/Online/Local/LocalSlotStorage.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Local/LocalSlotStorage.h"
 
 namespace sw
 {

@@ -10,9 +10,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

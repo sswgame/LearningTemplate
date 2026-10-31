@@ -5,9 +5,9 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Online/Config/RemoteConfig.h"
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
-#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
+#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 
 #include <algorithm>
 

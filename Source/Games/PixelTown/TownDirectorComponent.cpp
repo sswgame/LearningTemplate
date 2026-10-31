@@ -13,10 +13,10 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/Component/TileMapRendererComponent.h"
 
-#include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
+#include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw
 {

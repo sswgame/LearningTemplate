@@ -10,12 +10,12 @@
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/HTTP/OwnedHTTPClient.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Apple/AppleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Google/GoogleReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw
 {

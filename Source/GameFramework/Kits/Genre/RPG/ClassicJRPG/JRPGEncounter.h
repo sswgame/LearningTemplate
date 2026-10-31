@@ -8,10 +8,10 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/World/Encounter/StepEncounter.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
 namespace sw
 {

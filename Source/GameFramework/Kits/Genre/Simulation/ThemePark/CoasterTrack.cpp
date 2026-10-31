@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/World/Spline/ArcLengthUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/World/Spline/ArcLengthUtil.h"
 
 namespace sw
 {

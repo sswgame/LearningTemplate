@@ -25,12 +25,12 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
+#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
 namespace sw
 {

@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "GameFramework/Base/Online/Ledger/Ledger.h"
-#include "GameFramework/Base/Online/Mail/ServiceMail.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {

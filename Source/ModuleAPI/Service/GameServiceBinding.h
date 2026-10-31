@@ -1,7 +1,7 @@
 /**
  * @file GameServiceBinding.h
  * @brief 게임 모듈의 서비스 조회를 App 이 넘긴 호스트 서비스 범위에 연결하는 선언과 그 export 매크로입니다.
- * @details 정의는 GameFramework 가 가집니다(`GameFramework/Base/Foundation/Framework/GameService.cpp`).
+ * @details 정의는 GameFramework 가 가집니다(`GameFramework/Runtime/Foundation/Framework/GameService.cpp`).
  *          `Export/GameModuleExports.h` 의 진입점 매크로가 이 선언만 보고 부르므로 ModuleAPI 는 GameFramework 를 include 하지 않습니다.
  */
 #pragma once

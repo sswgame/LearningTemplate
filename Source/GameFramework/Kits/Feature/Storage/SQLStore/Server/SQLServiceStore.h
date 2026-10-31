@@ -16,9 +16,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

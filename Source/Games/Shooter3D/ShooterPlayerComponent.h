@@ -14,11 +14,11 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Character/Combat/Weapon/WeaponMath.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
+#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSocketRig.h"
 
 namespace sw
 {

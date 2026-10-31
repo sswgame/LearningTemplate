@@ -6,8 +6,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseMountComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/WildWest/WildWestDirectorComponent.h"
 

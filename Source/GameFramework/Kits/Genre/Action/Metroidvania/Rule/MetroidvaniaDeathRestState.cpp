@@ -6,15 +6,15 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

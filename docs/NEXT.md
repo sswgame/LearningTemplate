@@ -31,7 +31,7 @@
 | 일 | 상태 |
 |---|---|
 | 크기만 줄이려 쪼갠 클래스(전면 구조 정리) | 에이전트 없이 직접 내용을 읽고 고친다(메모리 `no-agents`). 떼어 낸 부분이 자기 상태 · 책임을 가지면 별도 클래스, 아니면 본 파일로 합친다. 남은 것: RHI 디바이스의 Transfer(D3D12 · Vulkan — 전송 큐 · 스테이징 링 · 전송 펜스가 제 상태 묶음이라 클래스로), Vulkan Descriptor · RenderPass(디스크립터 풀 · 렌더 패스 캐시 — 상태 묶음이 있는지 읽고 정한다), 합친 뒤 큰 클래스(RTSWorld · HorrorMatch · MechArenaWorld · ScheduleSystem · InputMap · AudioEngine · FramePassExecutor · FrameRenderer)를 "공유 상태 + 시스템" 으로 나누기. 찾는 법: scratchpad `scatter.py`(멤버 정의가 여러 cpp 에 흩어진 클래스) · `pairs2.py`(같은 이름 헤더 없는 cpp) · `batch_members.sh`(파일별 전용 · 공유 멤버). 플랫폼별 구현(Windows/Posix/X11/Headless …) · 스스로 등록하는 파일 · cpp 안에 선언된 클래스는 정상 |
-| 통합 대기 브랜치 | `worktree-agent-a553e85cb60a845aa`(SOLID GF/Editor/App — GameFramework/Base → Runtime 이름 바꾸기 983 파일 포함), `tests-integration`(하네스 · 단위 테스트 이식, 하위 브랜치 6 개 병합본). 내용을 직접 읽고 받아들일 것만 가져온다 |
+| 통합 대기 브랜치 | `tests-harness-integration`(worktree `.claude/worktrees/tests-integration` — 하네스 · 단위 테스트 이식 20 커밋 + 작업자가 남긴 XML 읽기 WIP 한 커밋). main 위로 옮기며 이동 · 이름 바꿈(ModelImportUtil · MaterialUtil · AudioVorbisDecoder · GameFramework/Runtime …)에 맞춘다 |
 | SOLID 점검 남은 표 | StructureRefactor 7 절(Core · Engine 과 GF · Editor · App 두 표)의 "남김" 줄 — IEditorPanel 분리, 모듈 수명 두 벌(EditorModuleManager · GameModuleManager), App · Server 프레임 · 종료 두 벌, 파일 감시 4 개, BinaryStream · ByteStream 두 모델 등 |
 
 ### 2. 테스트 · 시나리오 공백
@@ -66,7 +66,6 @@
 ### 5. 그 뒤
 
 - Linux 실제 빌드 · 테스트(X11 · Wayland · ALSA · epoll 은 Windows 가 짓지 않는다 — CI 후보).
-- `GameFramework/Base` · `Plugin/Editor/Base` 이름(모듈 이름 · 매니페스트가 따라간다).
 
 ### 6. 다음 설계 (긴 것)
 

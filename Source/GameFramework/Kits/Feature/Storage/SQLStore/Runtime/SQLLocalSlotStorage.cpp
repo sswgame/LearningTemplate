@@ -5,10 +5,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Time/WallClock.h"
 
-#include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
+#include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
 
 namespace sw
 {

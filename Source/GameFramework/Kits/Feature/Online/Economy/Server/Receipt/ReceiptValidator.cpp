@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

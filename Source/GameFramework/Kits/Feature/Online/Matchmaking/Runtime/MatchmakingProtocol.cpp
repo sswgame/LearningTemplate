@@ -4,8 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Base/Online/Store/ServiceRecordUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushPayloadUtil.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {

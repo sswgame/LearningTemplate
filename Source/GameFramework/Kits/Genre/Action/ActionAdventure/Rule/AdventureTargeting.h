@@ -15,8 +15,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Combat/LockOnSelector.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
 
 namespace sw
 {

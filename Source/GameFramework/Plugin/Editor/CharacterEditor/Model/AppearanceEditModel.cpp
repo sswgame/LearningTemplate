@@ -2,10 +2,10 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
-#include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw::editor
 {

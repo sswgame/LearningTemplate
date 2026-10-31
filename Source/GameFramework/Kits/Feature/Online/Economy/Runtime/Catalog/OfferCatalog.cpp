@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

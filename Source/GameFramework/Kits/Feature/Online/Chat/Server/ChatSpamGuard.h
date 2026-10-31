@@ -8,9 +8,9 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
 namespace sw
 {

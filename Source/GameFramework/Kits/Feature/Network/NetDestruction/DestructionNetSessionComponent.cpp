@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Scene/SceneStateHash.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {

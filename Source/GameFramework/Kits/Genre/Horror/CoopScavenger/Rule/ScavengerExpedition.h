@@ -13,14 +13,14 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/AI/SpawnDirector.h"
-#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
+#include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
+#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
 {

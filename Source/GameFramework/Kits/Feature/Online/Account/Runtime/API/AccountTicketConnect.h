@@ -13,9 +13,9 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 namespace sw
 {

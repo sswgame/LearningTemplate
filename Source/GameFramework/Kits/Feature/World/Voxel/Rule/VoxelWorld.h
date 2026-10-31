@@ -7,9 +7,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {

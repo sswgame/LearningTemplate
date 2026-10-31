@@ -14,9 +14,9 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Combat/FrameData.h"
-#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/FrameData.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 
 namespace sw
 {

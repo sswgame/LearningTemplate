@@ -16,10 +16,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
 {

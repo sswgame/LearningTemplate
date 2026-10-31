@@ -15,9 +15,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
 namespace sw
 {

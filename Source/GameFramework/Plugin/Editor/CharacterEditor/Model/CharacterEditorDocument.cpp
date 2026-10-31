@@ -16,12 +16,12 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/GameData/GamePackDataUtil.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
-#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 
 #include <algorithm>
 

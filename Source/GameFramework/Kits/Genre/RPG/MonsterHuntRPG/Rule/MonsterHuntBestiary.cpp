@@ -7,9 +7,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/Combat/Damage/ElementChart.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {

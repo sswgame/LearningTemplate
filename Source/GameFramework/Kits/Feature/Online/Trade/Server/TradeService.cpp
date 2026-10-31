@@ -4,7 +4,7 @@
 
 #include "Core/Hash/HashUtil.h"
 
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

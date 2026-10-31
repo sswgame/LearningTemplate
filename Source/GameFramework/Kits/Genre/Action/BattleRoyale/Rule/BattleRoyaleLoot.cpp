@@ -4,10 +4,10 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 
 #include <algorithm>
 

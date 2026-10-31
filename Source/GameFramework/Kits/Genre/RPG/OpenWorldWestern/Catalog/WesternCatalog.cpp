@@ -9,7 +9,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
 #include <algorithm>
 

@@ -7,10 +7,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Character/Combat/LockOnSelector.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
+#include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

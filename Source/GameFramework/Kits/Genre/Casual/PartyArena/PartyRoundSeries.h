@@ -14,9 +14,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Match/RoundSeries.h"
 
 namespace sw
 {

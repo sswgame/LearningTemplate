@@ -1,0 +1,99 @@
+/**
+ * @file HTTPServer.h
+ * @brief 최소 HTTP/1.1 서버입니다. 연결마다 요청 하나를 받아 처리기에 넘기고 답한 뒤 닫습니다.
+ *        PC 외부 로그인의 루프백 리다이렉트 받기(127.0.0.1)와 테스트의 가짜 제공자가 씁니다.
+ * @details 게임 서비스나 운영 엔드포인트가 아니다(그쪽은 `Online/Service` 와 관측 엔드포인트). 받은 요청은 I/O 스레드에서 모으고 `tick` 을 부른 스레드에서 처리기를 부른다.
+ */
+#pragma once
+#include "Core/Concurrency/OnceInit.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/Transport/IStreamTransport.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPLink.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
+
+namespace sw
+{
+    class ITLSContext;
+
+    /**
+     * @brief 요청 하나에 답을 채우는 함수입니다(`HTTPServer::update` 의 스레드). 주인은 서버를 내릴 때까지 살아 있어야 한다.
+     */
+    using HTTPRequestFunction = Delegate<void( const HTTPServerRequest& request, HTTPServerResponse& outResponse )>;
+} // namespace sw
+
+namespace sw
+{
+    /** @brief HTTP 서버 설정입니다. */
+    struct HTTPServerConfig
+    {
+        NetAddress   _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
+        ITLSContext* _pTLSContext{ nullptr };                         ///< 있으면 HTTPS(빌려 쓴다)
+        int32        _maxRequestBodyBytes{ 64 * 1024 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class HTTPServer
+     * @brief HTTP 서버 하나입니다.
+     */
+    class SW_GF_API HTTPServer final : public IStreamHandler
+    {
+    public:
+        HTTPServer();
+        ~HTTPServer() override;
+
+        HTTPServer( const HTTPServer& )            = delete;
+        HTTPServer& operator=( const HTTPServer& ) = delete;
+
+        /** @brief 전송(넘겨받는다)을 띄우고 듣습니다. 요청마다 @p onRequest 를 부른다. */
+        [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const HTTPServerConfig& settings,
+                                       const HTTPRequestFunction& onRequest );
+        void               shutdown();
+        /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 모인 요청을 처리기에 넘겨 답합니다. */
+        void update();
+
+        uint16 getListenPort() const;
+        int32  getHandledCount() const { return _handledCount; }
+
+        // IStreamHandler: I/O 스레드
+        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
+        void onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
+        void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
+
+    private:
+        struct Peer
+        {
+            HTTPLink          _link{};
+            HTTPMessageParser _parser{};
+            vector<uint8>     _plainBytes{};
+            uint8             _bComplete{ SW_FALSE };
+        };
+
+        struct ReadyRequest
+        {
+            HTTPServerRequest      _request{};
+            StreamConnectionHandle _handle{};
+            uint8                  _bMalformed{ SW_FALSE };
+        };
+
+        mutable mutex                                    _mutex;
+        unordered_map<uint64, unique_ptr<Peer>> _mapPeer SW_GUARDED_BY( _mutex );
+        vector<ReadyRequest> _listReady                  SW_GUARDED_BY( _mutex );
+        OnceInit<unique_ptr<IStreamTransport>>           _transport;
+        OnceInit<HTTPServerConfig>                       _settings;
+        OnceInit<HTTPRequestFunction>                    _onRequest;
+        int32                                            _ioThreadCount;
+        int32                                            _handledCount;
+        atomic<bool>                                     _bInitialized; ///< 시작했는가 — 소유 스레드가 쓰고 update 가 읽는다(원자값)
+    };
+} // namespace sw

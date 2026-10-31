@@ -7,14 +7,14 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
-#include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Base/World/Environment/WeatherSystem.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {

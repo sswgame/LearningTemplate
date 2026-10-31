@@ -20,11 +20,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 
 namespace sw
 {

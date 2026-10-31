@@ -13,9 +13,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"

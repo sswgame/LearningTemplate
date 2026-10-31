@@ -26,8 +26,8 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Config/ConfigManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"

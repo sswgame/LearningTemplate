@@ -9,10 +9,10 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierCityDirectorComponent.h"
 #include "Games/FrontierTown/FrontierSkirmishDirectorComponent.h"

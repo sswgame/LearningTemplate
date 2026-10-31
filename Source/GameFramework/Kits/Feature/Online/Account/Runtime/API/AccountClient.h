@@ -17,11 +17,11 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
 
 namespace sw
 {

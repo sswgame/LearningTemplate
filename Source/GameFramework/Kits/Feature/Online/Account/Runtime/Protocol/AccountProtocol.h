@@ -14,10 +14,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 
 namespace sw
 {

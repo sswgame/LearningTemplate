@@ -15,10 +15,10 @@
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Combat/FrameData.h"
-#include "GameFramework/Base/Character/Input/InputCommandBuffer.h"
-#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/FrameData.h"
+#include "GameFramework/Runtime/Character/Input/InputCommandBuffer.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 
 namespace sw
 {

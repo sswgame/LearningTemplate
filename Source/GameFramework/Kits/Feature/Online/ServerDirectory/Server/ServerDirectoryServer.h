@@ -9,9 +9,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 namespace sw
 {

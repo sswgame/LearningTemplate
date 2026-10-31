@@ -7,7 +7,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Control/Controller/AIControllerComponent.h"
+#include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 

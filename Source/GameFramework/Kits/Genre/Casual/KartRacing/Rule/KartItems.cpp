@@ -8,9 +8,9 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
 {

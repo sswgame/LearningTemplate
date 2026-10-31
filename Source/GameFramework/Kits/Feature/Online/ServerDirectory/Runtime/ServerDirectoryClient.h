@@ -10,11 +10,11 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Runtime/Online/Service/ServiceClientCallTable.h"
 
 namespace sw
 {

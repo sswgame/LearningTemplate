@@ -14,11 +14,11 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Service/ServicePendingTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/ServicePendingTable.h"
 
 namespace sw
 {

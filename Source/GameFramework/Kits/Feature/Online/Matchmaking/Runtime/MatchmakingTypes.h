@@ -9,9 +9,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
 namespace sw
 {

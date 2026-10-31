@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 
-#include "GameFramework/Base/Character/Camera/CameraMode.h"
+#include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 
 namespace sw::editor
 {

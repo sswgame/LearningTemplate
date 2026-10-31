@@ -4,12 +4,12 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 // FarmingTest — 농사 키트: 밭 행동의 거절 이유, 물 준 날만 자람, 비 · 다시 자라는 작물, 계절이 지나 시듦, 상태 왕복,
 // 출하함 정산(수확물 판매가 · 씨앗은 절반 · 모르는 아이템 0). 카탈로그는 글로 준다. 키트 GF_Farming(nogpu).

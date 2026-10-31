@@ -8,10 +8,10 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
-#include "GameFramework/Base/Character/AI/BehaviorTree.h"
-#include "GameFramework/Base/Character/AI/Blackboard.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
+#include "GameFramework/Runtime/Character/AI/Blackboard.h"
 
 namespace sw
 {

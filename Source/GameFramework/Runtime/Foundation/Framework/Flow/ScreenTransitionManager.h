@@ -1,0 +1,128 @@
+/**
+ * @file ScreenTransitionManager.h
+ * @brief 화면 페이드 인/아웃과 씬 전환 시퀀스(FadeOut → OnExecute → FadeIn) FSM 관리자입니다.
+ */
+#pragma once
+#include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 1) ScreenFade: 화면 페이드 아웃/인 알파 보간 서비스
+    // ------------------------------------------------------------------------------
+    /** @brief 화면 페이드 아웃 · 인 단계입니다. */
+    enum class FadePhase : uint8
+    {
+        Idle = 0,
+        FadingOut,
+        HoldBlack,
+        FadingIn
+    };
+
+    /** @brief 화면 페이드 아웃 · 인 알파를 갱신합니다. */
+    class SW_GF_API ScreenFade
+    {
+    public:
+        /** @brief Idle · 알파 0 으로 시작합니다. */
+        ScreenFade();
+
+        /** @brief 페이드 아웃을 시작합니다. */
+        void beginFadeOut( float32 duration = 0.35f );
+        /** @brief 페이드 인을 시작합니다. */
+        void beginFadeIn( float32 duration = 0.35f );
+        /** @brief 페이드 알파와 페이즈를 갱신합니다. */
+        void update( float32 deltaTime );
+
+        /** @brief 현재 페이드가 끝났는지 반환합니다. */
+        bool isFinished() const;
+        /** @brief 페이드가 진행 중인지 반환합니다. */
+        bool isBusy() const { return _phase != FadePhase::Idle; }
+        /** @brief 현재 페이드 페이즈를 반환합니다. */
+        FadePhase getPhase() const { return _phase; }
+        /** @brief 오버레이 알파를 반환합니다(0 = 투명, 1 = 완전 검정). */
+        float32 getOverlayAlpha() const { return _alpha; }
+
+    private:
+        float32                _duration; ///< 현재 구간 길이(초)
+        float32                _elapsed;
+        float32                _alpha; ///< 0=투명, 1=검정
+        FadePhase              _phase;
+        uint8                  _bFinished : 1;
+        [[maybe_unused]] uint8 _reserved  : 7;
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 2) TransitionCallbacks: 전환 시 입력 잠금/복원 및 커스텀 훅 콜백
+    // ------------------------------------------------------------------------------
+    /** @brief 씬 · 화면 전환 때 부르는 콜백 모음입니다. */
+    struct TransitionCallbacks
+    {
+        Delegate<void( bool bEnable )> setPlayerInputEnabled; ///< 전환 중 입력 잠금 · 복원
+        Delegate<void()>               onTransitionStarted;   ///< 전환 시작 훅
+        Delegate<void()>               onTransitionFinished;  ///< 전환 완료 훅
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 3) ScreenTransitionManager: 페이드 효과와 결합된 범용 화면 전환 관리자
+    // ------------------------------------------------------------------------------
+    /** @brief 화면 페이드와 연동해 씬 전환 시퀀스(FadeOut → Execute → FadeIn)를 한곳에서 관리합니다. */
+    class SW_GF_API ScreenTransitionManager final : public GameInstanceSubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "ScreenTransitionManager";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 게임 인스턴스가 내려갈 때 전환 상태를 지웁니다. */
+        void shutdownSubsystem() override { reset(); }
+
+        /** @brief 전환 단계입니다(None → FadeOut → Loading → FadeIn → None). */
+        enum class Phase : uint8
+        {
+            None = 0,
+            FadeOut,
+            Loading,
+            FadeIn
+        };
+
+        /** @brief 초기 상태로 만듭니다. */
+        ScreenTransitionManager();
+
+        /** @brief 범용 전환 시퀀스(FadeOut → onExecute 콜백 실행 → FadeIn)를 시작합니다. */
+        void beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration = 0.35f, float32 fadeInDuration = 0.35f );
+
+        /** @brief 전환 FSM 과 페이드 알파를 갱신합니다. */
+        void update( float32 deltaTime );
+        /** @brief 전환 상태를 초기화합니다. */
+        void reset();
+
+        /** @brief 전환 또는 페이드가 진행 중인지 반환합니다. */
+        bool isBusy() const { return _phase != Phase::None || _fade.isBusy(); }
+        /** @brief 현재 전환 단계를 반환합니다. */
+        Phase getPhase() const { return _phase; }
+        /** @brief 페이드 서비스를 반환합니다. */
+        ScreenFade& fade() { return _fade; }
+        /** @brief 페이드 서비스를 반환합니다. */
+        const ScreenFade& fade() const { return _fade; }
+
+        /** @brief 전환 콜백들을 설정합니다. */
+        void setCallbacks( TransitionCallbacks callbacks ) { _callbacks = std::move( callbacks ); }
+
+    private:
+        ScreenFade             _fade;
+        TransitionCallbacks    _callbacks;
+        Delegate<void()>       _pendingAction;
+        float32                _pendingFadeInDuration;
+        Phase                  _phase;
+        [[maybe_unused]] uint8 _arrReserved[7];
+    };
+} // namespace sw

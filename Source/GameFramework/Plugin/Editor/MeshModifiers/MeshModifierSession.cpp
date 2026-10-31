@@ -23,10 +23,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
-#include "GameFramework/Base/World/Spline/SplineComponent.h"
-#include "GameFramework/Base/World/Spline/SplinePath.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"
+#include "GameFramework/Runtime/World/Spline/SplineComponent.h"
+#include "GameFramework/Runtime/World/Spline/SplinePath.h"
 
 namespace sw::editor
 {

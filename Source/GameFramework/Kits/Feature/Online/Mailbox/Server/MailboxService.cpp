@@ -7,13 +7,13 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
-#include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
-#include "GameFramework/Base/Online/Mail/ServiceMail.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {

@@ -13,9 +13,9 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"

@@ -9,9 +9,9 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "GameFramework/Base/World/Encounter/StepEncounter.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Overworld/PlayerLocomotion.h"
+#include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
 namespace sw
 {

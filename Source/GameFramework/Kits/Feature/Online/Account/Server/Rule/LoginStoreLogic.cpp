@@ -8,10 +8,10 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/HexUtil.h"
 
-#include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 #include <algorithm>
 

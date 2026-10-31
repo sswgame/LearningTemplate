@@ -24,11 +24,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRegistryReader.h"
 
 namespace sw
 {

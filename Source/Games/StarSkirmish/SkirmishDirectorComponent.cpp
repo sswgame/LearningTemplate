@@ -23,10 +23,10 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Character/Control/InputActionCheckUtil.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Character/Control/InputActionCheckUtil.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 

@@ -14,12 +14,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

@@ -15,9 +15,6 @@
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardClient.h"
@@ -25,6 +22,9 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingClient.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryClient.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialClient.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 #include "Programs/OnlineLoadBot/LoadBotGameSession.h"
 #include "Programs/OnlineLoadBot/LoadBotScenario.h"

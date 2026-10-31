@@ -13,9 +13,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

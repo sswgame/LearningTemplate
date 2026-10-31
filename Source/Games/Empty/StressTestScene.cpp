@@ -43,8 +43,8 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/Empty/StressTestCombatComponent.h"
 #include "Games/Empty/StressTestMoverComponent.h"

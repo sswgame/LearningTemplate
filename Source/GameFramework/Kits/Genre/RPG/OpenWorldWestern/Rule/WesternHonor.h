@@ -8,8 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 
 namespace sw
 {

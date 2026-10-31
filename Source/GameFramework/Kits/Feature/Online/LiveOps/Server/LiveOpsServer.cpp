@@ -5,10 +5,10 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {

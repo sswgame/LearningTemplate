@@ -22,14 +22,14 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Combat/FrameData.h"
-#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Character/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Character/Combat/LockOnSelector.h"
-#include "GameFramework/Base/Character/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/FrameData.h"
+#include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
+#include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
+#include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
+#include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 /**
  * @file AbilityArenaGame.cpp
- * @brief 어빌리티 시스템(GameFramework/Base/Gameplay/Ability)을 실제로 쓰는 테스트 게임 — 웨이브를 막는 탑다운 아레나입니다.
+ * @brief 어빌리티 시스템(GameFramework/Runtime/Gameplay/Ability)을 실제로 쓰는 테스트 게임 — 웨이브를 막는 탑다운 아레나입니다.
  *
  * @details 실행: `App.exe -game=AbilityArena`(`Ninja-Debug` 빌드). 조작: WASD 이동, J/Space 근접, K/2 화염구(마나 · 화상), L/3 회복(데이터만),
  *          LeftShift/4 대시(무적). `-gv_arenaAutoPlay=1` 이면 플레이어도 AI 가 움직인다. 자세한 것은 `Source/Games/AbilityArena/README.md`.
@@ -11,9 +11,9 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 #include "Games/AbilityArena/ArenaDirectorComponent.h"

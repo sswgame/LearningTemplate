@@ -12,11 +12,11 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 
 namespace sw
 {

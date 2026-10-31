@@ -16,7 +16,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | UTC time, local calendar | `Core/Time/WallClock.h` (services take `nowMs` as a parameter) | `system_clock` · `localtime` · `gmtime` |
 | Frame delta | `Core/Time/GameTimer.h` · `Core/Time/FixedTimestep.h` | own delta bookkeeping |
 | Random value (engine) | `Core/Math/MathUtil.h` `MathUtil::getRandom<T>` · `getRandomRange` · `getRandomBits64` | `rand` · `srand` · `std::mt19937` · `std::random_device` |
-| Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Hash/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Base/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
+| Deterministic sequence (tests, replay, procedural) | `Core/Math/XorShift32.h`; 64-bit: `Core/Hash/HashUtil.h` `HashUtil::splitMix64Next`; game rules: `GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h` | `std::mt19937` with a seed, `std::shuffle` (its algorithm differs per standard library) |
 | Angle wrap and interpolation | `Core/Math/MathUtil.h` `wrapAngle` · `lerpAngle` (radians) | `while ( a > kPi ) a -= kTwoPi` loops, degree copies of them |
 | Data-defined resource path | `Engine/Serialization/Serializer/DataPath.h` `DataPath` (only data files fill it) | string literal paths in headers |
 | Resolve a resource id | `Engine/FileSystem/AssetPaths.h`; read: `Engine/FileSystem/AssetIO.h` `readTextAsset` · `readBinaryAsset` · `collectResources` | disk paths in runtime game code |

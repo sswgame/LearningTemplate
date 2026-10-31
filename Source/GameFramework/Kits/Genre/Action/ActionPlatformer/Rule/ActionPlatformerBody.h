@@ -13,10 +13,10 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/Time/Countdown.h"
 
-#include "GameFramework/Base/Character/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
+#include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
 namespace sw
 {

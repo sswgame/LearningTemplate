@@ -7,9 +7,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
+#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
 
 namespace sw
 {

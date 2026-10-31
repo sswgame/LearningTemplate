@@ -16,14 +16,14 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/Navigation/FlowField.h"
-#include "GameFramework/Base/Character/Navigation/GridPathfinder.h"
-#include "GameFramework/Base/Character/Navigation/NavAgent.h"
-#include "GameFramework/Base/Character/Navigation/NavGrid.h"
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Runtime/Character/Navigation/FlowField.h"
+#include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
+#include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
+#include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {

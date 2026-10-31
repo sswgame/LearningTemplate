@@ -19,9 +19,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 
 namespace sw
 {

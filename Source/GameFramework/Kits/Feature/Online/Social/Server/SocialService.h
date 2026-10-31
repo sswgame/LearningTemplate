@@ -23,10 +23,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 
 namespace sw
 {

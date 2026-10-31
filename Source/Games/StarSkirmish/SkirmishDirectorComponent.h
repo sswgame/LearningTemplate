@@ -20,12 +20,12 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/AI/BehaviorTreeAsset.h"
-#include "GameFramework/Base/Character/AI/IBehaviorTreeDebugSource.h"
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
+#include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"

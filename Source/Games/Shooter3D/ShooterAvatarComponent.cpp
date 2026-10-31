@@ -14,8 +14,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

@@ -9,7 +9,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 
 #include "Games/WildWest/WildWestDirectorComponent.h"
 #include "Games/WildWest/WildWestHorseComponent.h"

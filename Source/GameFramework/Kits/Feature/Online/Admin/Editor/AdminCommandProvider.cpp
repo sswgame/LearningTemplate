@@ -6,7 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw::editor
 {

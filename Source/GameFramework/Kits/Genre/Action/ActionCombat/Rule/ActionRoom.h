@@ -14,9 +14,9 @@
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
 
-#include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
 namespace sw
 {

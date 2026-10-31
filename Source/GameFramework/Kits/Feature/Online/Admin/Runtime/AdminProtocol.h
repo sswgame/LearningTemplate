@@ -13,17 +13,17 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Base/Online/Mail/ServiceMail.h"
-#include "GameFramework/Base/Online/Report/ServiceReport.h"
-#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
-#include "GameFramework/Base/Online/Service/OnlineLimit.h"
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
-#include "GameFramework/Base/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Report/ServiceReport.h"
+#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 
 namespace sw
 {

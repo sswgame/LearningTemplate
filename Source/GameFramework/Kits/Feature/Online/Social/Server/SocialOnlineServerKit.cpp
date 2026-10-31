@@ -2,14 +2,14 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Server/OnlineServerKit.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/GroupChannelMembership.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 만들고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
 // 옵션:

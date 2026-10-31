@@ -21,10 +21,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
-#include "GameFramework/Base/Online/Security/JSONWebToken.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Runtime/Online/Security/JSONWebToken.h"
 
 #include <optional>
 

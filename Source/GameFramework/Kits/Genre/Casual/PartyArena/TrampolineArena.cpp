@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

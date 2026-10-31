@@ -10,8 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 
 namespace sw
 {

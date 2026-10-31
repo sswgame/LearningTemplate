@@ -34,11 +34,11 @@
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
-#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearance.h"
-#include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include <imgui.h>
 

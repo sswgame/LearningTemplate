@@ -4,9 +4,9 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/World/Land/AreaGraph.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw
 {

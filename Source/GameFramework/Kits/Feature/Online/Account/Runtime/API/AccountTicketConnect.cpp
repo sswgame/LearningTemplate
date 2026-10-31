@@ -13,8 +13,8 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Net/GameNetSession.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw
 {

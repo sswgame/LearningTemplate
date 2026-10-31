@@ -15,15 +15,15 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
-#include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BonePoseEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/FitCheckSummary.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SaveReloadGuard.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SocketEditModel.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
 {

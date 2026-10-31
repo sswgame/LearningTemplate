@@ -32,23 +32,23 @@ sw_addModuleLibrary(GameFramework
 	UNITY_BATCH 8
 	REFLECTION_HEADERS ${listGameFrameworkHeader}
 )
-# 결정적 시뮬레이션 키트(`GF_MechArena` 의 판 걸음)가 부르는 Base 의 줄 밖 실수 함수 — 부르는 TU 만 표시하면 여기 축약이 구성마다 비트를 바꾼다
-# (`sw_markDeterministicSources`). 격투(`GF_Fighting`)가 부르는 Base(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
+# 결정적 시뮬레이션 키트(`GF_MechArena` 의 판 걸음)가 부르는 Runtime 의 줄 밖 실수 함수 — 부르는 TU 만 표시하면 여기 축약이 구성마다 비트를 바꾼다
+# (`sw_markDeterministicSources`). 격투(`GF_Fighting`)가 부르는 Runtime(FrameData · InputCommandBuffer · RoundSeries)는 실수 계산이 없어 넣지 않는다.
 sw_markDeterministicSources(GameFramework
-	Base/Character/Combat/Health/ResourceGauge.cpp
-	Base/Character/Combat/Health/Vitality.cpp
-	Base/Character/Combat/LockOnSelector.cpp
-	Base/Character/Combat/Weapon/Weapon.cpp
-	Base/Foundation/Utility/Math/RayMath.cpp
+	Runtime/Character/Combat/Health/ResourceGauge.cpp
+	Runtime/Character/Combat/Health/Vitality.cpp
+	Runtime/Character/Combat/LockOnSelector.cpp
+	Runtime/Character/Combat/Weapon/Weapon.cpp
+	Runtime/Foundation/Utility/Math/RayMath.cpp
 )
-# 로컬 저장의 장치 키(Base/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
+# 로컬 저장의 장치 키(Runtime/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)
 	target_link_libraries(GameFramework PRIVATE crypt32)
 endif()
 
-# 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Base/Online/Security/OpenSSL 에서만 include 하고
+# 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Runtime/Online/Security/OpenSSL 에서만 include 하고
 # 링크도 여기서만 한다 — Engine.dll 은 libssl · libcrypto 를 모른다. Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와
-# Base/Online/Security/NetSecurity.h 만 본다. x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
+# Runtime/Online/Security/NetSecurity.h 만 본다. x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
 target_link_libraries(GameFramework PRIVATE openssl)
 
 add_subdirectory(Kits)

@@ -8,8 +8,8 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include <algorithm>
 

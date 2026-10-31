@@ -4,10 +4,10 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Ledger/Ledger.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {

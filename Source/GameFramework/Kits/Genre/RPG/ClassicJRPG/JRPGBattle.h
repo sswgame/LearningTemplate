@@ -12,9 +12,9 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Combat/TurnOrder.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
 {

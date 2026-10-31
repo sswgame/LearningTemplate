@@ -4,9 +4,9 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineReplyUtil.h"
 
 namespace sw
 {

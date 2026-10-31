@@ -19,9 +19,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {

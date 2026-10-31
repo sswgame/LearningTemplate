@@ -20,11 +20,11 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"

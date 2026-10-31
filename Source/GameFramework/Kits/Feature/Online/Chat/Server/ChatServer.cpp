@@ -5,8 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatProtocol.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 
 namespace sw
 {

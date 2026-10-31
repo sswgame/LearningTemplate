@@ -9,8 +9,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
 {

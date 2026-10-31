@@ -8,15 +8,15 @@
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Config/LiveEventControl.h"
-#include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Online/Ledger/IBalanceNotice.h"
-#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
+#include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {

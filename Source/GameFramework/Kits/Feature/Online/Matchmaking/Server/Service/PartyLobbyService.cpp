@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
-#include "GameFramework/Base/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {

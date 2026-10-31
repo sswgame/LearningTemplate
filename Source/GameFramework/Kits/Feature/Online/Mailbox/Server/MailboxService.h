@@ -16,14 +16,14 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
-#include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
-#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
+#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

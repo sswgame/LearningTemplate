@@ -7,13 +7,13 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Report/ServiceReport.h"
-#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Report/ServiceReport.h"
+#include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 #include <algorithm>
 

@@ -12,10 +12,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Service/OnlineKitClient.h"
-#include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineKitClient.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {

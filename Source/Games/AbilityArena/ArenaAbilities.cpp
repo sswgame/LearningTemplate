@@ -4,8 +4,8 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 #include "Games/AbilityArena/ArenaUnitComponent.h"

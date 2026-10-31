@@ -6,10 +6,10 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBus.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {

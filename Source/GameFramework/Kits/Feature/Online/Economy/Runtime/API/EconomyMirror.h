@@ -11,8 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {

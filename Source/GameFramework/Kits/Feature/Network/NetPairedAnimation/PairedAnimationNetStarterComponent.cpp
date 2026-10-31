@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {

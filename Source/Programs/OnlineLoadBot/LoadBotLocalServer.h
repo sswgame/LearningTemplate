@@ -15,8 +15,8 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 namespace sw
 {

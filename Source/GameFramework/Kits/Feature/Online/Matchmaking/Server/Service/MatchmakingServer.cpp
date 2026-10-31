@@ -5,11 +5,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBus.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
-#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchServerAgent.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBus.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Identity/GroupChannelMembership.h"
+#include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
 
 #include <algorithm>
 

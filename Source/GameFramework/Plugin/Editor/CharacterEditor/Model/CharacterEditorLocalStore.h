@@ -12,7 +12,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
-#include "GameFramework/Base/Online/Local/LocalStoreChannel.h"
+#include "GameFramework/Runtime/Online/Local/LocalStoreChannel.h"
 
 namespace sw::editor
 {

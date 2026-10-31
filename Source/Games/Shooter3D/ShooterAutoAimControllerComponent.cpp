@@ -7,9 +7,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

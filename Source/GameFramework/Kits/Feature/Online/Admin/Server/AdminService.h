@@ -15,11 +15,11 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
+#include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
 {

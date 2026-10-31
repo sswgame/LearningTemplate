@@ -21,11 +21,11 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Base/Online/Directory/ServerDirectoryControl.h"
-#include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRegistryReader.h"
 
 namespace sw
 {

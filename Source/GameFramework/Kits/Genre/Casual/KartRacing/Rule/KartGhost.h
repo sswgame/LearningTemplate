@@ -13,8 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
 
 namespace sw
 {

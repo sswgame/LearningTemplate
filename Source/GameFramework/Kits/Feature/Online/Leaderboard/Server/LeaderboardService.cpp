@@ -7,14 +7,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Base/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
-#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Base/Online/Mail/ServiceMail.h"
-#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
-#include "GameFramework/Base/Online/Service/OnlineLimit.h"
-#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 #include <algorithm>
 

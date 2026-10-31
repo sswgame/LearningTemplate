@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {

@@ -17,8 +17,8 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminClient.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 namespace sw::editor
 {

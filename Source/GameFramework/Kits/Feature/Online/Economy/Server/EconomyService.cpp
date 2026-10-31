@@ -8,19 +8,19 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#include "GameFramework/Base/Online/Config/DevOnlineExtension.h"
-#include "GameFramework/Base/Online/Config/RemoteConfig.h"
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
-#include "GameFramework/Base/Online/Identity/OnlinePushRelay.h"
-#include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
-#include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
+#include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
+#include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
+#include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerAudit.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {

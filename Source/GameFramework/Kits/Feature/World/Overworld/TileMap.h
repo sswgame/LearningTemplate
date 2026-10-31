@@ -11,8 +11,8 @@
 
 #include "Engine/TileMap/TileMapXML.h"
 
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
 namespace sw
 {

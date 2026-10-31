@@ -6,9 +6,9 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
-#include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 #include "Games/AbilityArena/ArenaUnitComponent.h"

@@ -7,11 +7,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/World/Land/AreaGraph.h"
-#include "GameFramework/Base/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/World/Land/AreaGraph.h"
+#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
 
 namespace sw
 {

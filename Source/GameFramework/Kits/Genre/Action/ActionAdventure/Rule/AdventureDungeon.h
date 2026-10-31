@@ -16,9 +16,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
-#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
 namespace sw
 {

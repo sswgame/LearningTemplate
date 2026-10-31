@@ -24,9 +24,9 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"
 
-#include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespConnection.h"
+#include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 
 namespace sw
 {

@@ -5,15 +5,15 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Online/Identity/ConnectAdmission.h"
+#include "GameFramework/Runtime/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 
 // 계정 키트의 게임 서버 조립(`gameConnect`, OnlineKits F5) — 전용 게임 서버의 UDP 게임 포트가 로그인 서버가 낸 접속 티켓만 받게 한다.
 // 로그인 서버와 같은 주 키로 티켓 확인기(`LoginTicketAuthority`)만 세우고(저장소 없음), 접속 인증기를 엔진의 자리(`GameConnectSecurity`)에 묶는다.

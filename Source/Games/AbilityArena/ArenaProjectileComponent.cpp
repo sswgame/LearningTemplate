@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 

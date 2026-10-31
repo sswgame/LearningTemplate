@@ -18,10 +18,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
-#include "GameFramework/Base/Online/Platform/PlatformServices.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
+#include "GameFramework/Runtime/Online/Platform/PlatformServices.h"
 
 namespace sw
 {

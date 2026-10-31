@@ -5,8 +5,8 @@
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {

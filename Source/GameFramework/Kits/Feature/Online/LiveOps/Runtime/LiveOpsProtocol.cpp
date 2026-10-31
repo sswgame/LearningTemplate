@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
-#include "GameFramework/Base/Online/Store/ServiceRecordUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 
 namespace sw
 {

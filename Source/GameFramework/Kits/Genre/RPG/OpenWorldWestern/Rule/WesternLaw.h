@@ -14,8 +14,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/AI/AIPerception.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/AI/AIPerception.h"
 
 namespace sw
 {

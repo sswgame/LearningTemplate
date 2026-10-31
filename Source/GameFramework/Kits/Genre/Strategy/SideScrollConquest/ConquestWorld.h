@@ -19,9 +19,9 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/GameData/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 
 namespace sw
 {

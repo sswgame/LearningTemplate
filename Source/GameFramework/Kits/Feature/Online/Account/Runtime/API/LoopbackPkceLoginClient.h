@@ -13,10 +13,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
-#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
-#include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/PlatformLoginClient.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 
 namespace sw
 {

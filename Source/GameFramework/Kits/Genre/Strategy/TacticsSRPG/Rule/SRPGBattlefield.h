@@ -12,13 +12,13 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Character/Combat/TurnOrder.h"
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
-#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
+#include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw
 {

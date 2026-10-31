@@ -10,7 +10,7 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Base/Foundation/Framework/Flow/GameInstance.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 
 #include "Games/Empty/StressTestScene.h"
 
@@ -18,7 +18,7 @@
     #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 
     #include "Games/Empty/EmptyRenderDemo.h"
-    #include "GameFramework/Base/Foundation/Framework/GameService.h"
+    #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #endif
 
 #include "ModuleAPI/Export/GameModuleExports.h"

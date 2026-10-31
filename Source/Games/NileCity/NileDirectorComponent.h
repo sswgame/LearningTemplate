@@ -19,13 +19,13 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include "Games/NileCity/NileCityPlanner.h"
 

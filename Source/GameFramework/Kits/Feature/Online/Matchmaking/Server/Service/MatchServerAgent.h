@@ -15,10 +15,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Base/Online/Directory/ServerRecord.h"
-#include "GameFramework/Base/Online/Identity/ConnectAdmission.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
+#include "GameFramework/Runtime/Online/Identity/ConnectAdmission.h"
 
 namespace sw
 {

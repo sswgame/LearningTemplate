@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
 namespace sw
 {

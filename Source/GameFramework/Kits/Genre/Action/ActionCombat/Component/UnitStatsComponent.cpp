@@ -7,11 +7,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Character/Combat/Damage/DamageMath.h"
-#include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/UI/Marker/DamageNumberComponent.h"
 
 namespace sw
 {

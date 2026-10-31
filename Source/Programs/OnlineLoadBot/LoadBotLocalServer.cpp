@@ -6,8 +6,8 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/WallClock.h"
 
-#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
-#include "GameFramework/Base/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 namespace sw
 {

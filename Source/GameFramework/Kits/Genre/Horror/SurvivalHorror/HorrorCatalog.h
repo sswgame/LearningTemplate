@@ -12,11 +12,11 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
-#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
-#include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 
 namespace sw
 {

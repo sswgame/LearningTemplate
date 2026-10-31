@@ -9,9 +9,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
-#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountTypes.h"
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 
 namespace sw
 {

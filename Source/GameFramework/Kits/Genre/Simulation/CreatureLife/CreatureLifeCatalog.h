@@ -11,12 +11,12 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Character/AI/Schedule/ScheduleCondition.h"
-#include "GameFramework/Base/Foundation/GameData/GameCatalog.h"
-#include "GameFramework/Base/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
+#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
+#include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
+#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 namespace sw
 {
