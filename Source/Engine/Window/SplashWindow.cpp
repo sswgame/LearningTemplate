@@ -2,6 +2,8 @@
 
 #include "Engine/Window/SplashWindow.h"
 
+#include "Core/Foundation/BuildInfo.h"
+
 #include "Engine/Window/ISplashWindow.h"
 
 namespace sw
@@ -20,17 +22,11 @@ namespace sw
 
     bool SplashWindow::initialize( const utf8* pTitle, const utf8* pInitialStatus, uint32 width, uint32 height )
     {
-#if defined( SW_SHIPPING )
-        // 스플래시는 에디터 초기화 표시용 기능이고 이미지도 editor 도메인 에셋이다
-        // (Content/editor/textures/splash.dds). Shipping 은 에디터를 빼고 editor.pack 도
-        // 만들지 않으므로 아예 띄우지 않는다(띄우려 하면 매 기동마다 DDS 읽기 실패만 남는다).
-        // _pImpl 이 널로 남으므로 이후 updateStatus/setProgress/dismiss 는 모두 무해한 no-op 이다.
-        (void)pTitle;
-        (void)pInitialStatus;
-        (void)width;
-        (void)height;
-        return false;
-#else
+        // 스플래시는 에디터 초기화 표시용이고 이미지도 editor 도메인 에셋(Content/editor/textures/splash.dds)이다. 배포는 editor.pack 을 만들지 않으므로
+        // 띄우지 않는다. _pImpl 이 널로 남아 이후 updateStatus · setProgress · dismiss 는 아무것도 하지 않는다.
+        if constexpr ( build::kShipping )
+            return false;
+
         // 스플래시가 없는 세션은 폴백 없이 스플래시 없이 기동하는 것이 정상 경로이지만 조용히 지나가지 않고 한 번 알린다.
         if ( ISplashWindow::isPlatformSupported() == false )
         {
@@ -45,7 +41,6 @@ namespace sw
         if ( bOpened == false )
             SW_LOG_INFO( "Splash window: could not be opened (no display connection) - starting without it" );
         return bOpened;
-#endif
     }
 
     void SplashWindow::updateStatus( const utf8* pStatus, float32 progress )

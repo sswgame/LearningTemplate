@@ -4,12 +4,12 @@
 
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashContext.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 
 namespace sw
@@ -53,7 +53,7 @@ namespace sw
 
     bool GPUBreadcrumbs::isEnabled()
     {
-        return GPUDiagnosticsBuild::isAvailable() && static_cast<bool>( gv_gpuBreadcrumbs ); // 배포본은 표지도 DRED 도 체크포인트도 켜지 않는다
+        return build::kShipping == false && static_cast<bool>( gv_gpuBreadcrumbs ); // 배포본은 표지도 DRED 도 체크포인트도 켜지 않는다
     }
 
     uint32 GPUBreadcrumbs::registerPass( string_view name )

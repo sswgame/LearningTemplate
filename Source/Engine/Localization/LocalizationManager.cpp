@@ -7,6 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
@@ -667,11 +668,12 @@ namespace sw
         const auto                     it = _mapLanguageTable.find( code );
         if ( it == _mapLanguageTable.end() || it->second->empty() )
             return false;
-#if defined( SW_SHIPPING )
-        const CultureInfo* pCulture = _cultureTable.findCulture( code );
-        if ( pCulture != nullptr && pCulture->isPseudo() )
-            return false;
-#endif
+        if constexpr ( build::kShipping ) // 배포는 가짜 언어를 고르지 않는다
+        {
+            const CultureInfo* pCulture = _cultureTable.findCulture( code );
+            if ( pCulture != nullptr && pCulture->isPseudo() )
+                return false;
+        }
         return true;
     }
 
@@ -685,11 +687,12 @@ namespace sw
             {
                 if ( pTable->empty() )
                     continue;
-#if defined( SW_SHIPPING )
-                const CultureInfo* pCulture = _cultureTable.findCulture( code );
-                if ( pCulture != nullptr && pCulture->isPseudo() )
-                    continue;
-#endif
+                if constexpr ( build::kShipping )
+                {
+                    const CultureInfo* pCulture = _cultureTable.findCulture( code );
+                    if ( pCulture != nullptr && pCulture->isPseudo() )
+                        continue;
+                }
                 listLanguage.push_back( code );
             }
         }

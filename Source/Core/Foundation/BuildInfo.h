@@ -21,6 +21,16 @@ namespace sw::build
     inline constexpr const utf8* kPlatformName = SW_PLATFORM_NAME;
     /** @brief 빌드 타깃 종류 이름입니다("Game" · "Client" · "Server"). CMake `SW_TARGET_TYPE` 이 정합니다. */
     inline constexpr const utf8* kTargetName = SW_TARGET_NAME;
+#if defined( SW_SHIPPING )
+    /**
+     * @brief 배포 구성이면 true 입니다. 개발 · 배포 차이가 값뿐이면 이 상수를 `if` · `if constexpr` 로 읽는다 — 두 갈래가 모든 구성에서 컴파일된다.
+     * @details 갈래 하나가 다른 구성에 없는 헤더 · 모듈을 쓰면 그 자리만 `#if defined( SW_SHIPPING )`, 기능 전체가 배포에 없으면 CMake 가 구현 파일을 고른다
+     *          (`sw_pickVariantSource`). 규칙은 `docs/agents/BuildConfigSwitch.md`.
+     */
+    inline constexpr bool kShipping = true;
+#else
+    inline constexpr bool kShipping = false;
+#endif
 #if defined( SW_WITH_CLIENT_CODE )
     /** @brief 이 빌드에 클라이언트 코드(창 · 렌더 · 입력 장치 · 오디오 장치)가 들어 있으면 true 입니다(Game · Client). */
     inline constexpr bool kWithClientCode = true;

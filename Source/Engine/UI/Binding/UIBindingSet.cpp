@@ -3,6 +3,7 @@
 #include "Engine/UI/Binding/UIBindingSet.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -299,11 +300,9 @@ namespace sw
                 return false;
             }
         }
-#if defined( SW_SHIPPING )
-        if ( binding._expression._source == UIBindingSource::Poll )
+        if ( build::kShipping && binding._expression._source == UIBindingSource::Poll )
             SW_LOG_WARNING( "[UI] %#:%#: poll binding '%#' in a shipped build - use {bind:} with field notification", _pScreen->getDocumentPath().c_str(),
                             desc._sourceLine, desc._expression.c_str() );
-#endif
         _listBinding.push_back( std::move( binding ) );
         return true;
     }

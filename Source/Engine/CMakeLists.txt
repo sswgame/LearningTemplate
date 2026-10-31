@@ -75,23 +75,7 @@ if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES ${SW_DEV_ONLY_SOURCE_PATTERNS})
 endif()
 
-# 구성마다 다른 구현 — 선언은 헤더 하나, 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 고른다(파일 안 `#if SW_SHIPPING` 대신, 언리얼의 Developer 모듈 자리).
-#   Graphics/RHI/Diagnostics/GPUDiagnosticsBuild : 배포는 GPU 진단 장치(브레드크럼 · DRED · GPU 단언 · NaN · bindless 검사 · GL 디버그 컨텍스트)를 켜지 않는다
-#   Config/GameSelectionBuild                    : 배포는 베이크한 게임 하나(`-game=` · 활성 게임 파일 · 게임 팩을 보지 않는다)
-#   Config/ConfigManagerHostSource               : 배포는 디스크의 `Config/` 대신 베이크한 엔진 설정 · 게임 프리셋 JSON 을 읽는다
-set(swEngineVariantList
-	"Graphics/RHI/Diagnostics/GPUDiagnosticsBuild"
-	"Config/GameSelectionBuild"
-	"Config/ConfigManagerHostSource")
-foreach(swEngineVariant IN LISTS swEngineVariantList)
-	get_filename_component(swVariantDir "${CMAKE_CURRENT_SOURCE_DIR}/${swEngineVariant}" DIRECTORY)
-	get_filename_component(swVariantName "${swEngineVariant}" NAME)
-	if(SW_SHIPPING_BUILD)
-		sw_pickVariantSource(ENGINE_SOURCES "${swVariantDir}" ${swVariantName} Shipping ON)
-	else()
-		sw_pickVariantSource(ENGINE_SOURCES "${swVariantDir}" ${swVariantName} Shipping OFF)
-	endif()
-endforeach()
+# 개발 · 배포 차이가 값뿐인 곳은 `build::kShipping`(Core/Foundation/BuildInfo.h)을 읽는다 — 규칙은 docs/agents/BuildConfigSwitch.md.
 
 # ------------------------------------------------------------------------------
 # 1-1) 층 — 파일마다 층(Scripts/generate/rules/EngineLayers.toml → configure 가 EngineLayers.cmake 로)을 정하고, 층의 .cpp 는 아래 11) 의

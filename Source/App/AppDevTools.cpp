@@ -4,6 +4,7 @@
 
 #include "App/RHIBackendSwitcher.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
@@ -32,11 +33,15 @@ namespace sw
 
     void AppDevTools::bindRenderThreadHooks( RenderThread& renderThread, RHIBackendSwitcher& backendSwitcher )
     {
+        if constexpr ( build::kShipping ) // 배포는 개발 명령이 없어 장치 제거 요청이 오지 않는다
+            return;
         renderThread.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &backendSwitcher ) ); // 개발 명령 `rhi.removeDevice <ms>`
     }
 
     void AppDevTools::pollShellActions( float32 deltaTime, ModuleReloadDriver& moduleReload, bool bEnableEditor )
     {
+        if constexpr ( build::kShipping ) // 배포는 모듈을 정적으로 링크해 리로드 단축키가 없다
+            return;
         DebugKeyActions& debugKeys = engine::getSubsystem<DebugKeyActions>();
         debugKeys.update( engine::getSubsystem<InputManager>(), deltaTime );
 

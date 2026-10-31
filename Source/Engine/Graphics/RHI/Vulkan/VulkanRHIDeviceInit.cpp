@@ -8,9 +8,9 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/Foundation/BuildInfo.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -468,7 +468,7 @@ namespace sw
         // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFault). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
         faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
-        if ( GPUDiagnosticsBuild::isAvailable() && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
+        if ( build::kShipping == false && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
         {
             VkPhysicalDeviceFeatures2 faultQuery{};
             faultQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;

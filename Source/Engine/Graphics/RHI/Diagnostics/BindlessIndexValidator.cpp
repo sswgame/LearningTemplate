@@ -4,10 +4,10 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
@@ -69,12 +69,12 @@ namespace sw
 
     bool BindlessIndexValidator::isEnabled()
     {
-        return GPUDiagnosticsBuild::isAvailable() && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelDeadIndex;
+        return build::kShipping == false && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelDeadIndex;
     }
 
     bool BindlessIndexValidator::isTracingAbsent()
     {
-        return GPUDiagnosticsBuild::isAvailable() && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelTraceAbsent;
+        return build::kShipping == false && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelTraceAbsent;
     }
 
     bool BindlessIndexValidator::validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index,

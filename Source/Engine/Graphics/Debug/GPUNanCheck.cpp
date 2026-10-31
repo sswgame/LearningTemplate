@@ -2,11 +2,11 @@
 
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -53,7 +53,7 @@ namespace sw
 
     bool GPUNanCheck::isRequested()
     {
-        return GPUDiagnosticsBuild::isAvailable() && static_cast<bool>( gv_nanCheck ); // 배포본은 PSO 도 디스패치도 만들지 않는다
+        return build::kShipping == false && static_cast<bool>( gv_nanCheck ); // 배포본은 PSO 도 디스패치도 만들지 않는다
     }
 
     bool GPUNanCheck::isScannableFormat( RHIFormat format )

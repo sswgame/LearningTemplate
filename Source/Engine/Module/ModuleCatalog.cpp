@@ -6,6 +6,7 @@
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -546,11 +547,7 @@ namespace sw
 
     ModuleConfiguration ModuleCatalog::getCurrentConfiguration()
     {
-#if defined( SW_SHIPPING )
-        return ModuleConfiguration::Shipping;
-#else
-        return ModuleConfiguration::Dev;
-#endif
+        return build::kShipping ? ModuleConfiguration::Shipping : ModuleConfiguration::Dev;
     }
 
     uint8 ModuleCatalog::getBuildTargetMask()

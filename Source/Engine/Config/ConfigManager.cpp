@@ -2,10 +2,12 @@
 
 #include "Engine/Config/ConfigManager.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Config/GameSelection.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
@@ -18,6 +20,8 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/ConfigConstants.h"
+#include "sw/config/ShippingGameDefaults.h"
+#include "sw/config/ShippingHostDefaults.h"
 
 namespace sw
 {
@@ -128,6 +132,28 @@ namespace sw
 
 namespace sw
 {
+    SubsystemInitResult ConfigManager::initializeSubsystem()
+    {
+        // 읽은 값은 호스트 자리(`getHostEngineConfig` · `getHostGameConfig`)에 담긴다 - 서비스 표가 그 주소를 이미 쥐고 있다.
+        // 배포는 디스크의 `Config/` 를 보지 않고 베이크한 JSON(엔진 설정 · 베이크한 게임의 프리셋)만 읽는다. 그 밖의 설정은 두 구성 모두 디스크 파일이 필수다.
+        if constexpr ( build::kShipping )
+        {
+            EngineConfig probe;
+            if ( JSONSerializer::deserialize( &probe, *EngineConfig::StaticType(), shipping_host::kEngineConfigJSON ) == false )
+            {
+                SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize - a reflection registrar was dropped at link time" );
+                return SubsystemInitResult::Failed;
+            }
+        }
+        const ConfigSource engineSource = build::kShipping ? ConfigSource::baked( shipping_host::kEngineConfigJSON ) : ConfigSource::disk( config::kFileRuntimeEngineConfig );
+        if ( loadHostConfig<EngineConfig>( engineSource ) == nullptr )
+            return SubsystemInitResult::Failed;
+        const ConfigSource gameSource = build::kShipping ? ConfigSource::baked( shipping_host::kGameConfigJSON ) : ConfigSource::disk( GameSelection::getConfigPath() );
+        if ( loadHostConfig<GameConfig>( gameSource ) == nullptr )
+            return SubsystemInitResult::Failed;
+        return SubsystemInitResult::Succeeded;
+    }
+
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
         // 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다 — `_Width` 오타는 모르는 키다).

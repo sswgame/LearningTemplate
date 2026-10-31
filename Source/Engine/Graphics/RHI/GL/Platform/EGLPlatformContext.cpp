@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/GL/Platform/EGLPlatformContext.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
+#include "Core/Foundation/BuildInfo.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_WAYLAND )
     #include "Core/Log/Logger.h"
@@ -111,7 +111,7 @@ namespace sw
                 EGL_CONTEXT_MINOR_VERSION, ver[1],
                 EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
                 // 디버그 컨텍스트는 진단을 켜는 빌드에서만 켠다(WGL · GLX 와 같다). KHR_debug 메시지는 이 비트가 있어야 드라이버가 만들 의무가 있다.
-                EGL_CONTEXT_OPENGL_DEBUG, GPUDiagnosticsBuild::isAvailable() ? EGL_TRUE : EGL_FALSE,
+                EGL_CONTEXT_OPENGL_DEBUG, build::kShipping == false ? EGL_TRUE : EGL_FALSE,
                 EGL_NONE };
             context = eglCreateContext( display, config, EGL_NO_CONTEXT, arrContextAttrib );
             if ( context != EGL_NO_CONTEXT )

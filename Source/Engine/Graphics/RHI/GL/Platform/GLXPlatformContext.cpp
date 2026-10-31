@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/GL/Platform/GLXPlatformContext.h"
 
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
+#include "Core/Foundation/BuildInfo.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Log/Logger.h"
@@ -164,7 +164,7 @@ namespace sw
                         GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
                         // 디버그 컨텍스트는 진단을 켜는 빌드에서만 켠다(WGL 과 같다). KHR_debug 메시지는 이 비트가 있어야
                         // 드라이버가 만들 의무가 있다(OpenGLRHIDeviceInit 이 콜백을 건다).
-                        GLX_CONTEXT_FLAGS_ARB, GPUDiagnosticsBuild::isAvailable() ? GLX_CONTEXT_DEBUG_BIT_ARB : 0,
+                        GLX_CONTEXT_FLAGS_ARB, build::kShipping == false ? GLX_CONTEXT_DEBUG_BIT_ARB : 0,
                         0 };
                     context = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
                     if ( context != nullptr && trap.failed() == false )

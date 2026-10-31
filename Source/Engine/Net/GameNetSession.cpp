@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
@@ -236,17 +237,15 @@ namespace sw
             outParams._hostSettings._security._pProvider      = pProvider;
             outParams._hostSettings._security._pAuthenticator = &_connectSecurity;
         }
-#if defined( SW_SHIPPING )
         // U4: Shipping 서버는 평문(`LanUnsecured`) 게임 포트를 루프백 밖에 열지 않는다. 공개 포트는 접속 티켓(암호화 + 세션 비밀 결속)이 있어야 한다.
         // 언리얼 · 유니티 NGO 는 평문이 기본이고 암호화가 선택이다 — 여기서는 기본을 닫고 LAN 파티 같은 평문 운영은 루프백 · 개발 빌드로만 남긴다.
-        const bool bPlainPublicPort = outParams._hostSettings._security._mode == NetSecurityMode::LanUnsecured && outParams._bLoopbackOnly == false;
+        const bool bPlainPublicPort = build::kShipping && outParams._hostSettings._security._mode == NetSecurityMode::LanUnsecured && outParams._bLoopbackOnly == false;
         if ( bPlainPublicPort )
         {
             SW_LOG_ERROR( "A shipping server opens a non-loopback game port only with _bGameConnectTicket (encrypted, session-bound) - the game port stays closed" );
             outParams = GameNetSessionParams{};
             return false;
         }
-#endif
         return true;
     }
 

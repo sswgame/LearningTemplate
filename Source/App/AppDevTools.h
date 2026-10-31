@@ -1,8 +1,7 @@
 /**
  * @file AppDevTools.h
  * @brief App 에만 있는 개발 도구 — 핫 리로드 단축키(게임 · 에디터)와 백엔드 시험 훅을 App 의 프레임 · 시동 열에 끼웁니다.
- * @details 빌드마다 다른 것은 이 선언들의 구현 파일이다 — Dev 는 `AppDevTools.cpp`, Shipping 은 `AppDevToolsShipping.cpp`(빈 구현)를 CMake 가 고른다
- *          (`Source/App/CMakeLists.txt`, 언리얼의 Developer 모듈을 배포 타깃이 링크하지 않는 자리). 인터페이스 · 가상 함수를 두지 않는다 — 한 빌드에 구현은 하나다.
+ * @details 배포에서는 두 함수 모두 아무것도 하지 않는다(`build::kShipping`) — 쓰는 기능(디버그 키 · 백엔드 교체기)이 배포에도 지어져 구현 파일을 가르지 않는다.
  *          App · Server 가 같이 쓰는 개발 도구 연결(`DevToolsHost` · 프레임 훅 · 개발 콘솔)은 `ModuleManager/HostDevTools.h` 다.
  */
 #pragma once

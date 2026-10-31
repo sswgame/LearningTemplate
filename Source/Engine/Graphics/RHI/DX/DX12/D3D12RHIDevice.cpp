@@ -3,13 +3,13 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
-#include "Engine/Graphics/RHI/Diagnostics/GPUDiagnosticsBuild.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -392,7 +392,7 @@ namespace sw
 
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )
     {
-        if ( GPUDiagnosticsBuild::isAvailable() == false )
+        if ( build::kShipping )
             return; // 배포본 — 디버그 레이어 메시지도 DRED 도 켜지 않았다
         // 디바이스가 이미 제거된 상태로 한 번 로그를 남겼으면, 프레임마다 똑같은 검증 메시지
         // 수십 줄 + DRED 덤프를 무한 반복하지 않는다. 자동 복구가 없어서 그 이후 매 프레임

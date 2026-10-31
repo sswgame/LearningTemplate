@@ -1,6 +1,6 @@
 /**
  * @file BindlessIndexValidator.h
- * @brief 셰이더에 넘기기 직전의 bindless 인덱스가 살아 있는 슬롯인지 바인드 시점에 검사합니다(Debug와 Dev 진단용 — 모든 구성에서 컴파일되고 배포는 `GPUDiagnosticsBuild` 가 끈다).
+ * @brief 셰이더에 넘기기 직전의 bindless 인덱스가 살아 있는 슬롯인지 바인드 시점에 검사합니다(Debug와 Dev 진단용 — 모든 구성에서 컴파일되고 배포는 `build::kShipping` 으로 끈다).
  * @details 해제한 번호나 발급한 적 없는 번호를 셰이더가 읽으면 DX12 와 Vulkan 은 무효 디스크립터를 읽어 디바이스를 잃고, 로그에는
  *          "제출 실패" 한 줄만 남는다. 이 검사는 그 번호를 CPU 에서 미리 잡아 패스 이름, 필드 이름, 값을 오류 로그로 남긴다.
  *          생존 판정은 디바이스(`IRHIDevice::isBindlessIndexLive`)가, 언제 묻고 무엇을 남기는지는 이 클래스가 정한다. 백엔드는 별도 DLL 이라

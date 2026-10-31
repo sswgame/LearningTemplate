@@ -4,6 +4,7 @@
 
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/Foundation/BuildInfo.h"
 
 namespace sw
 {
@@ -35,11 +36,7 @@ namespace sw
         // `reportMemoryLeaks` 로 비교한다 — 켜지 않으면 누수 덤프가 디버거 출력으로만 나가 콘솔 · CI 에서 보이지 않는다.
         if ( _bDiagnostics )
             MemoryProfiler::enableMemoryLeakChecks();
-#if defined( SW_SHIPPING )
-        const bool bCreateMemoryProfiler = _bDiagnostics;
-#else
-        const bool bCreateMemoryProfiler = true;
-#endif
+        const bool bCreateMemoryProfiler = build::kShipping == false || _bDiagnostics;
         if ( bCreateMemoryProfiler && _memoryProfiler == nullptr )
         {
             _memoryProfiler = make_unique<MemoryProfiler>();
