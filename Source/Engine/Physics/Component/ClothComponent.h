@@ -105,7 +105,7 @@ namespace sw
         void applySkinningPose( ScenePhysics& physics, bool bHardSkinAll );
         /** @brief 같은 오브젝트의 `MeshComponent` 에 이번 정점으로 만든 동적 메시를 겁니다. 메시 컴포넌트나 정점이 없으면 아무것도 하지 않습니다. */
         void updateRenderMesh();
-        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
 
         PROPERTY( Category = "Cloth", Min = 0.01, Tooltip = "Width along the local X axis", Units = m )

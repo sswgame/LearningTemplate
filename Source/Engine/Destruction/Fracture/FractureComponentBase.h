@@ -314,11 +314,11 @@ namespace sw
         void recordRecentStateHash();
 
     private:
-        /** @brief `_staticLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_staticLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateStaticLayer( ValidationContext& context ) const;
-        /** @brief `_chunkLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_chunkLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateChunkLayer( ValidationContext& context ) const;
-        /** @brief `_debrisLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_debrisLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateDebrisLayer( ValidationContext& context ) const;
 
     private:

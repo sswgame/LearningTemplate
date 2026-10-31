@@ -100,7 +100,7 @@ namespace sw
         bool isUpscaleRenderTexture() const { return _bUpscaleRenderTexture; }
 
     private:
-        /** @brief `_barSortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_barSortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`SortingLayerNameValidation`). */
         void validateBarSortingLayer( ValidationContext& context ) const;
 
     private:

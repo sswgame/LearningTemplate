@@ -14,10 +14,10 @@
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
@@ -1819,16 +1819,16 @@ namespace sw
 {
     void FractureComponentBase::validateStaticLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsLayer( context, "_staticLayer", _staticLayer );
+        PhysicsNameValidation::validateLayer( context, "_staticLayer", _staticLayer );
     }
 
     void FractureComponentBase::validateChunkLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsLayer( context, "_chunkLayer", _chunkLayer );
+        PhysicsNameValidation::validateLayer( context, "_chunkLayer", _chunkLayer );
     }
 
     void FractureComponentBase::validateDebrisLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsLayer( context, "_debrisLayer", _debrisLayer );
+        PhysicsNameValidation::validateLayer( context, "_debrisLayer", _debrisLayer );
     }
 } // namespace sw

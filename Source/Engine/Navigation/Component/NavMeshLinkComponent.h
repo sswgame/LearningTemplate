@@ -71,7 +71,7 @@ namespace sw
         void setLinkEnabled( bool bEnabled );
 
     private:
-        /** @brief `_areaName` 가 내비 영역 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_areaName` 가 내비 영역 표에 있는지 봅니다(`NavAreaNameValidation`). */
         void validateAreaName( ValidationContext& context ) const;
 
     private:

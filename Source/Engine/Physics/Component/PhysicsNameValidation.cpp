@@ -1,20 +1,19 @@
 #include "pch.h"
 
+#include "Engine/Physics/Component/PhysicsNameValidation.h"
+
 #include "Core/Container/string.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-
-// ComponentNameValidation 의 물리 표 몫 — 컴포넌트 모델 코어(Object/Component)는 Physics 를 include 하지 않으므로 기능 폴더에 둔다.
 
 namespace sw
 {
     namespace
     {
-        struct ComponentNameValidationPhysicsInternal
+        struct PhysicsNameValidationInternal
         {
             /**
              * @brief 물리 설정 파일을 읽습니다. 못 읽으면 단언하고 빈 표입니다 — 기본 표를 지어내지 않으므로 모든 이름이 "표에 없음" 오류로 드러납니다.
@@ -44,16 +43,16 @@ namespace sw
 
 namespace sw
 {
-    void ComponentNameValidation::validatePhysicsLayer( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
+    void PhysicsNameValidation::validateLayer( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
         uint8 layerIndex = 0;
-        if ( name.empty() == false && ComponentNameValidationPhysicsInternal::getSettings().findLayerIndex( name, layerIndex ) == false )
+        if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findLayerIndex( name, layerIndex ) == false )
             context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics layers (physicssettings.xml) - layer 0 is used" );
     }
 
-    void ComponentNameValidation::validatePhysicsMaterial( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
+    void PhysicsNameValidation::validateMaterial( ValidationContext& context, const utf8* pFieldName, const hashed_string& name )
     {
-        if ( name.empty() == false && ComponentNameValidationPhysicsInternal::getSettings().findMaterial( name ) == nullptr )
+        if ( name.empty() == false && PhysicsNameValidationInternal::getSettings().findMaterial( name ) == nullptr )
             context.addError( string( pFieldName ) + " names '" + name.c_str() + "', which is not in the physics materials (physicssettings.xml) - the first material is used" );
     }
 } // namespace sw

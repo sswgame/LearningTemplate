@@ -86,9 +86,9 @@ namespace sw
     private:
         /** @brief 청크 바디의 공통 서술자입니다(높이장 원점, 회전 없음, 정적, 이 컴포넌트의 레이어 · 재질). 셰이프 칸 하나는 부르는 쪽이 채운다. */
         PhysicsBodyDesc3D makeChunkBodyDesc( const ScenePhysics& physics, const float3& origin ) const;
-        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
-        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateMaterial( ValidationContext& context ) const;
 
     private:

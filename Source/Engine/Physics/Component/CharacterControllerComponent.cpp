@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/StateHashBuilder.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -247,6 +247,6 @@ namespace sw
 {
     void CharacterControllerComponent::validateLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsLayer( context, "_layer", _layer );
+        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
 } // namespace sw

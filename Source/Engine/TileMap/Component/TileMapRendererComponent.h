@@ -106,7 +106,7 @@ namespace sw
         void setGenerateColliders( bool bGenerate ) { _bGenerateColliders = bGenerate; }
 
     private:
-        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`SortingLayerNameValidation`). */
         void validateSortingLayer( ValidationContext& context ) const;
 
     private:

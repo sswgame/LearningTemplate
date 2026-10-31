@@ -15,10 +15,10 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -366,11 +366,11 @@ namespace sw
 {
     void DismembermentComponent::validatePieceLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsLayer( context, "_pieceLayer", _pieceLayer );
+        PhysicsNameValidation::validateLayer( context, "_pieceLayer", _pieceLayer );
     }
 
     void DismembermentComponent::validatePieceMaterial( ValidationContext& context ) const
     {
-        ComponentNameValidation::validatePhysicsMaterial( context, "_pieceMaterial", _pieceMaterial );
+        PhysicsNameValidation::validateMaterial( context, "_pieceMaterial", _pieceMaterial );
     }
 } // namespace sw

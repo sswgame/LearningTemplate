@@ -4,10 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/2D/SortingLayerNameValidation.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -250,6 +250,6 @@ namespace sw
 {
     void PixelPerfectCameraComponent::validateBarSortingLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validateSortingLayer( context, "_barSortingLayer", _barSortingLayer );
+        SortingLayerNameValidation::validate( context, "_barSortingLayer", _barSortingLayer );
     }
 } // namespace sw

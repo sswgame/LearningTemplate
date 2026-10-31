@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/2D/SortingLayerNameValidation.h"
 #include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipCache.h"
@@ -13,7 +14,6 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -290,6 +290,6 @@ namespace sw
 {
     void SpriteComponent::validateSortingLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validateSortingLayer( context, "_sortingLayer", _sortingLayer );
+        SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );
     }
 } // namespace sw

@@ -2,8 +2,8 @@
 
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
 
+#include "Engine/Navigation/Component/NavAreaNameValidation.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -31,6 +31,6 @@ namespace sw
 {
     void NavMeshModifierComponent::validateAreaName( ValidationContext& context ) const
     {
-        ComponentNameValidation::validateNavArea( context, "_areaName", _areaName );
+        NavAreaNameValidation::validate( context, "_areaName", _areaName );
     }
 } // namespace sw

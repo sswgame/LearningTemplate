@@ -71,9 +71,9 @@ namespace sw
         int32 findRegionIndex( const hashed_string& region ) const;
 
     private:
-        /** @brief `_pieceLayer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_pieceLayer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validatePieceLayer( ValidationContext& context ) const;
-        /** @brief `_pieceMaterial` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_pieceMaterial` 가 물리 재질 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validatePieceMaterial( ValidationContext& context ) const;
 
     private:

@@ -109,9 +109,9 @@ namespace sw
         void releasePhysics( ScenePhysics& physics ) override;
 
     private:
-        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_layer` 가 물리 레이어 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateLayer( ValidationContext& context ) const;
-        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_material` 가 물리 재질 표에 있는지 봅니다(`PhysicsNameValidation`). */
         void validateMaterial( ValidationContext& context ) const;
 
     private:

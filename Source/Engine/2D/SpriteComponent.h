@@ -126,7 +126,7 @@ namespace sw
         hashed_string getDefaultMaterialPath() const override;
 
     private:
-        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`ComponentNameValidation`). */
+        /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`SortingLayerNameValidation`). */
         void validateSortingLayer( ValidationContext& context ) const;
 
     private:

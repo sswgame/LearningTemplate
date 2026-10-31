@@ -5,12 +5,12 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/2D/SortingLayerNameValidation.h"
 #include "Engine/2D/SpriteInstanceBatch.h"
 #include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
-#include "Engine/Object/Component/ComponentNameValidation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -510,6 +510,6 @@ namespace sw
 {
     void TileMapRendererComponent::validateSortingLayer( ValidationContext& context ) const
     {
-        ComponentNameValidation::validateSortingLayer( context, "_sortingLayer", _sortingLayer );
+        SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );
     }
 } // namespace sw
