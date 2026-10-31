@@ -38,10 +38,11 @@ namespace sw
 {
     string NetSecurity::makeProjectPath( string_view path )
     {
-        const bool bKeepPathAsIs = path.empty() || FileUtil::isAbsolutePath( path );
-        if ( bKeepPathAsIs )
-            return string( path );
-        return FileUtil::joinPath( ProcessRoots::get()._project.str(), path ); // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다)
+        // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다). 해석 규칙은 `AbsolutePath::tryResolve` 하나 - 드라이브 상대(`C:foo`)는 풀지 않는다(빈 글, 읽기가 실패로 알린다).
+        if ( path.empty() )
+            return {};
+        const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( path, ProcessRoots::get()._project );
+        return resolved.has_value() ? resolved->str() : string{};
     }
 
     bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )

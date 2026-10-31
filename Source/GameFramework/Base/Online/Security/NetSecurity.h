@@ -31,7 +31,7 @@ namespace sw
          */
         static constexpr const utf8* kDevCertificateBundleFile = "devserver.pem";
 
-        /** @brief 설정 파일이 준 상대 경로를 프로젝트 루트 기준으로 펼칩니다(서버 설정과 같은 기준). 빈 경로, 절대 경로, 루트를 모를 때(테스트)는 그대로 돌려줍니다. */
+        /** @brief 설정 파일이 준 경로를 프로젝트 루트 기준으로 풉니다(`AbsolutePath::tryResolve` - 절대면 그대로, 상대면 프로젝트 아래). 빈 글 · 풀 수 없는 글(드라이브 상대)은 빈 글입니다. */
         static string makeProjectPath( string_view path );
 
         /**
