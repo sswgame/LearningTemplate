@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 스프링 망토(ShooterCharacterIntegration S7) — 기사의 망토(itemvisuals.xml 의 cape_knight, kind="Skinned" 에 자기 스켈레톤 · 리그 knight_cape.rig.xml)가
+  몸이 움직일 때 뒤처져 흔들리는지 3인칭 사진을 골든과 견준다. 서 있는 사진 · 달리기 시작 · 달리는 중 · 달리다 멈춘 직후(관성으로 앞으로 쏠린다) · 가라앉은 뒤를 찍는다.
+  망토가 아직 정적 프리팹(knight_cape.prefab.xml)이면 사진이 모두 같은 모양이다 — 골든을 뜨기 전에 S7 의 임포트 · 데이터 전환이 먼저다.
+  달리기는 키를 쥔 채 프레임이 흘러야 하므로 고정 대기다.
+  실행: App -scenario=game/shooter3d/automation/cape.scenario.xml -unattended -gv_cameraPreset=orbit (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.cape" fixedDelta="0.0166667" timeoutFrames="500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="orbit"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="60"/>
+	<Screenshot file="standing.ppm"/>
+	<Wait frames="10"/>
+	<Press slot="Key.W"/>
+	<Press slot="Key.LeftShift"/>
+	<Wait frames="15"/>
+	<Screenshot file="start.ppm"/>
+	<Wait frames="65"/>
+	<Screenshot file="running.ppm"/>
+	<Wait frames="5"/>
+	<Release slot="Key.W"/>
+	<Release slot="Key.LeftShift"/>
+	<Wait frames="7"/>
+	<Screenshot file="stopped.ppm"/>
+	<Wait frames="78"/>
+	<Screenshot file="settled.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="standing.ppm" golden="standing"/>
+	<ExpectImage file="start.ppm" golden="start"/>
+	<ExpectImage file="running.ppm" golden="running"/>
+	<ExpectImage file="stopped.ppm" golden="stopped"/>
+	<ExpectImage file="settled.ppm" golden="settled"/>
+	<Pass/>
+</Scenario>

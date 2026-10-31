@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 보이는 몸 — 1인칭에서 머리 · 몸의 무기를 숨기고 몸은 보이는지(S3), 3인칭에서 다시 보이는지, 왼손 IK 가 총열 아래에 붙고 무기를 바꾸면 새 무기의 손잡이를 따르는지(S5),
+  걷는 동안 몸이 어색하지 않은지 사진을 골든과 견준다. 감시 값 StrideAppliedCount 는 몸 리그(player_body.rig.xml)가 묶여 일하는지 가른다.
+  골든을 뜰 때 볼 것: ① 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없다(근평면에 목 단면이 걸리면 HideHead 를 neck 까지 넓힌다). ② 3인칭에서 머리가 돌아온다.
+  ③ 소총 · 산탄총 · 권총마다 왼손이 총열 아래 SupportHand 에 붙는다(기사 세트의 방패가 왼손에 함께 있어 가리면 총을 든 프리셋에서 방패 칸을 비울지 정한다). 팔꿈치가 어색하면 pole.
+  MouseDelta 의 부호(아래를 보는 쪽)는 입력 맵의 Look 배율에 달렸으니 두 방향을 다 찍는다. 사진 앞의 고정 대기는 카메라 · 애니메이션이 자리 잡을 시간이다.
+  실행: App -scenario=game/shooter3d/automation/bodyviews.scenario.xml -unattended -gv_cameraPreset=firstperson (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.bodyviews" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="firstperson"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="40"/>
+	<Expect watch="Shooter3D.StrideAppliedCount" atLeast="10"/>
+	<Screenshot file="firstperson_level.ppm"/>
+	<Wait frames="10"/>
+	<MouseDelta x="0" y="300"/>
+	<Wait frames="20"/>
+	<Screenshot file="firstperson_down_a.ppm"/>
+	<Wait frames="5"/>
+	<MouseDelta x="0" y="-600"/>
+	<Wait frames="20"/>
+	<Screenshot file="firstperson_down_b.ppm"/>
+	<Wait frames="5"/>
+	<MouseDelta x="0" y="300"/>
+	<!-- 3인칭으로 돌린다(C = CycleCamera: 프리셋 순서대로) — 머리와 투구가 돌아온다 -->
+	<Wait frames="10"/>
+	<Tap slot="Key.C" hold="1"/>
+	<Wait frames="30"/>
+	<Screenshot file="cycled_a.ppm"/>
+	<Wait frames="5"/>
+	<Tap slot="Key.C" hold="1"/>
+	<Wait frames="30"/>
+	<Screenshot file="cycled_b.ppm"/>
+	<!-- 무기마다 왼손: 1 소총 · 2 산탄총 · 3 권총 -->
+	<Wait frames="5"/>
+	<Tap slot="Key.Digit1" hold="1"/>
+	<Wait frames="25"/>
+	<Screenshot file="hand_rifle.ppm"/>
+	<Wait frames="5"/>
+	<Tap slot="Key.Digit2" hold="1"/>
+	<Wait frames="25"/>
+	<Screenshot file="hand_shotgun.ppm"/>
+	<Wait frames="5"/>
+	<Tap slot="Key.Digit3" hold="1"/>
+	<Wait frames="25"/>
+	<Expect watch="Shooter3D.WeaponIndex" equals="2"/>
+	<Screenshot file="hand_pistol.ppm"/>
+	<!-- 걷는 동안 -->
+	<Wait frames="5"/>
+	<Press slot="Key.W"/>
+	<Wait frames="60"/>
+	<Screenshot file="walk.ppm"/>
+	<Wait frames="5"/>
+	<Release slot="Key.W"/>
+	<Wait frames="5"/>
+	<ExpectImage file="firstperson_level.ppm" golden="firstperson_level"/>
+	<ExpectImage file="firstperson_down_a.ppm" golden="firstperson_down_a"/>
+	<ExpectImage file="firstperson_down_b.ppm" golden="firstperson_down_b"/>
+	<ExpectImage file="cycled_a.ppm" golden="cycled_a"/>
+	<ExpectImage file="cycled_b.ppm" golden="cycled_b"/>
+	<ExpectImage file="hand_rifle.ppm" golden="hand_rifle"/>
+	<ExpectImage file="hand_shotgun.ppm" golden="hand_shotgun"/>
+	<ExpectImage file="hand_pistol.ppm" golden="hand_pistol"/>
+	<ExpectImage file="walk.ppm" golden="walk"/>
+	<Pass/>
+</Scenario>

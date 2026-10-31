@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D CCTV 모니터 — 게임 셰이더(shaders/cctvmonitor.hlsl)로 그린 북쪽 벽 모니터를 가까이서 찍어 골든과 견준다(머티리얼 셰이더 훅의 게임 셰이더).
+  자동 플레이를 끄고 엄폐물 사이로 걸어(시작 (0, -16) 에서 +Z 를 본다. x 5.5 로 비켜 Cover_6 을, x 4.2 로 Cover_2 · Cover_3 사이를 지난다)
+  모니터 5 m 앞 (0, 15) 에 선 뒤 찍는다. 걸음은 프레임 수가 아니라 위치(Object.X · Object.Z)로 끊는다.
+  골든을 뜰 때 볼 것: 모니터에 CCTV 렌더 텍스처가 빛 없이(그늘과 상관없이 같은 밝기) 보이고 가로 주사선이 겹친다.
+  실행: App -scenario=game/shooter3d/automation/cctvmonitor.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.cctvmonitor" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="10"/>
+	<Press slot="Key.D"/>
+	<WaitUntil watch="Object.X" target="Player" atLeast="5.5" timeoutFrames="300"/>
+	<Release slot="Key.D"/>
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="Player" atLeast="1.5" timeoutFrames="600"/>
+	<Release slot="Key.W"/>
+	<Press slot="Key.A"/>
+	<WaitUntil watch="Object.X" target="Player" atMost="4.2" timeoutFrames="300"/>
+	<Release slot="Key.A"/>
+	<Press slot="Key.W"/>
+	<WaitUntil watch="Object.Z" target="Player" atLeast="15" timeoutFrames="600"/>
+	<Release slot="Key.W"/>
+	<Press slot="Key.A"/>
+	<WaitUntil watch="Object.X" target="Player" atMost="0.2" timeoutFrames="300"/>
+	<Release slot="Key.A"/>
+	<!-- 멈춘 뒤 몸 · 카메라가 자리 잡을 시간 -->
+	<Wait frames="20"/>
+	<Screenshot file="cctvmonitor.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="cctvmonitor.ppm" golden="cctvmonitor"/>
+	<Pass/>
+</Scenario>

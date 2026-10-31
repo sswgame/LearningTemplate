@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 적 군중 공유(AnimationLodAndCrowd C1 · C2 · C3 확인) — 자동 플레이로 스켈레톤 적이 몰려오는 동안 적(skeleton.prefab.xml 의 _bShareCrowdPose)이 군중 묶음을 나누는지 본다.
+  감시 값 Animation.CrowdSharedUnits(묶음의 포즈를 나눈 유닛 수)·Animation.CrowdSoloUnits(공유를 켰지만 이번 상태는 못 나눠 혼자 평가한 수 — 휘두름 · 움찔 같은 반복하지 않는 클립)는
+  프로파일 카운터 GT.Animation.crowdSharedUnits · crowdSoloUnits 와 같은 값이다. 쫓는 동안(걷기 반복 클립)에는 나눈 수가 적 수만큼이고, 칼을 휘두르는 순간에는 혼자로 내려간다.
+  사진은 골든과 견준다 — 골든을 뜰 때 볼 것: 적의 무기 · 방패(소켓 부품)가 손을 따라가고 몸과 같은 위상으로 도는지, 섞기 묶음이 끝나고 들어간 클립의 묶음으로 갈 때 위상이 튀지 않는지.
+  나눈 수는 프레임마다 흔들린다(맞은 적 · 휘두르는 적은 그 프레임에 혼자로 내려간다) — 그래서 WaitUntil 이 선 뒤 같은 값을 다시 단언하거나 기록하지 않는다.
+  실행: App -scenario=game/shooter3d/automation/crowd.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<!-- 적이 몰려올 시간(시뮬레이션) -->
+	<Wait frames="300"/>
+	<!-- 60 초 안에 둘 이상 나누지 못하면 진다. -->
+	<WaitUntil watch="Animation.CrowdSharedUnits" atLeast="2" timeoutSeconds="60"/>
+	<!-- 쫓는 상태(혼자 평가하는 유닛이 없고 일하는 유닛이 둘 이상)가 선 뒤에 사진을 찍는다. -->
+	<WaitUntil watch="Animation.CrowdSoloUnits" equals="0" timeoutSeconds="60"/>
+	<WaitUntil watch="Animation.ActiveUnits" atLeast="2" timeoutSeconds="60"/>
+	<Screenshot file="chase.ppm"/>
+	<!-- 싸우는 모습 -->
+	<Wait frames="240"/>
+	<Screenshot file="fight.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="chase.ppm" golden="chase"/>
+	<ExpectImage file="fight.ppm" golden="fight"/>
+	<Pass/>
+</Scenario>

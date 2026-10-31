@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 킬캠 프리셋 — shooter.cameras.xml 의 killcam(대상 정면 3인칭 · 얕은 초점 · 채도 0.8 · 비네트)이 읽히고 그려지는지 화면 전체를 골든과 견준다(IntentNetworkWiring 3절).
+  시작 프리셋을 -gv_cameraPreset=killcam 으로 고른다. 예전의 평균 휘도 문턱(meanLuma ≥ 0.30)은 골든 비교로 바꿨다 — 문턱은 빈 화면만 잡고 다른 시점은 못 잡았다.
+  실행: App -scenario=game/shooter3d/automation/killcam.scenario.xml -unattended -gv_cameraPreset=killcam (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.killcam" fixedDelta="0.0166667" timeoutFrames="200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="killcam"/>
+	<!-- 프리셋 블렌드 · 피사계 심도가 자리 잡을 시간 -->
+	<Wait frames="90"/>
+	<Screenshot file="killcam.ppm"/>
+	<Wait frames="10"/>
+	<ExpectImage file="killcam.ppm" golden="killcam" region="0,0,1,1"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 적의 쓰러짐(ShooterCharacterIntegration S1 · S2 · S4) — 자동 플레이로 스켈레톤 적을 쓰러뜨리며 사진을 골든과 견준다.
+  ① 쓰러질 때 래그돌로 넘어져 바닥에 눕는다(키네마틱 바디가 포즈를 따르다가 물리로 넘어간다).
+  ② 적의 무기 · 방패(강체가 있는 소켓 부품)가 떨어져 바닥(정적 강체)에 눕는다 — 층 Debris 라 캐릭터와 부딪히지 않는다.
+  ③ 시체가 걷힐 때 떨어진 무기가 시체와 함께 사라지는지(감독이 적을 걷을 때 부품 풀이 거둔다).
+  ④ 휘두름 피해는 알림 Impact → 이벤트 AttackHit 로 들어온다: 임포트 결과가 Impact 알림을 가지지 않으면 적의 휘두름이 맞지 않는다(PlayerAlive 가 오래 1 이다).
+  숫자로는 EnemyHitCount · ShotCount 가 오르는 것(히트박스 레이어 Ragdoll 질의)만 단언하고, 나머지는 사진이 본다. 사진은 정해진 시뮬레이션 시각에 찍으므로 고정 대기다.
+  실행: App -scenario=game/shooter3d/automation/enemydeath.scenario.xml -unattended -gv_cameraPreset=orbit (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.enemydeath" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_cameraPreset" value="orbit"/>
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<Wait frames="420"/>
+	<Expect watch="Shooter3D.EnemyHitCount" atLeast="2"/>
+	<Screenshot file="death_a.ppm"/>
+	<Wait frames="180"/>
+	<Screenshot file="death_b.ppm"/>
+	<Wait frames="300"/>
+	<Screenshot file="death_c.ppm"/>
+	<Wait frames="600"/>
+	<Expect watch="Shooter3D.ShotCount" atLeast="6"/>
+	<Screenshot file="death_d.ppm"/>
+	<Wait frames="600"/>
+	<Screenshot file="death_e.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="death_a.ppm" golden="death_a"/>
+	<ExpectImage file="death_b.ppm" golden="death_b"/>
+	<ExpectImage file="death_c.ppm" golden="death_c"/>
+	<ExpectImage file="death_d.ppm" golden="death_d"/>
+	<ExpectImage file="death_e.ppm" golden="death_e"/>
+	<Pass/>
+</Scenario>

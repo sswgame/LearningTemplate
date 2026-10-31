@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 키 다시 잡기 — 옵션 메뉴와 같은 길(settings.apply → 사용자 설정 → 입력 맵)로 점프 키를 Space 에서 J 로 바꾸면 J 가 점프하고 Space 는 더는 점프하지 않으며,
+  같은 액션의 다른 바인딩(패드 A)은 그대로 점프한다(패드 실기 입력은 가상 패드 device="gamepad" 로 같은 길을 지난다).
+  무인 실행은 실행마다 새 사용자 설정 파일을 쓴다(UserSettingsManager) — 예전의 -gv_userSettingsFile 돌리기는 필요 없다. 체인의 앞 단계가 J 를 남겼을 수 있어 시작할 때 Space 로 되돌린다.
+  재시작 뒤 유지(저장 → 새 프로세스가 읽기 → 입력 맵 반영)는 sequence/rebind.1 · rebind.2 쌍이 본다. 개발 명령이 없는 구성(Shipping)은 건너뛴다.
+  "Space 는 점프하지 않는다" 는 일어나지 않음을 보는 단언이라 고정 대기 뒤에 본다.
+  실행: App -scenario=game/shooter3d/automation/rebind.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.rebind" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<DevCommand line="settings.apply controls.jump=Key.Space"/>
+	<!-- 기본 키 Space 로 점프한다. -->
+	<Wait frames="12"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+
+	<!-- Jump 를 J 로 다시 잡는다. 이제 Space 는 점프하지 않는다. -->
+	<Wait frames="2"/>
+	<DevCommand line="settings.apply controls.jump=Key.J"/>
+	<Wait frames="5"/>
+	<Tap slot="Key.Space" hold="1"/>
+	<Wait seconds="0.2"/>
+	<Expect watch="Object.Y" target="Player" atMost="1.65"/>
+
+	<!-- J 가 점프한다. -->
+	<Wait frames="2"/>
+	<Tap slot="Key.J" hold="1"/>
+	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+
+	<!-- 같은 액션의 패드 바인딩(A)은 그대로다. 끝에서 기본 키로 되돌린다. -->
+	<Wait frames="2"/>
+	<Action name="Jump" device="gamepad"/>
+	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Object.Y" target="Player" atMost="1.61" timeoutSeconds="1"/>
+	<Wait frames="2"/>
+	<DevCommand line="settings.apply controls.jump=Key.Space"/>
+	<Pass/>
+</Scenario>
