@@ -178,8 +178,8 @@
 | 12 | ISP | `INavMesh`(순수 가상 ~23 — 굽기 · 링크 · 장애물 · 질의 · 군중 · 디버그), `IProfilerBackend`(12 — CPU · 메모리 · GPU) | 남김: 구현이 하나씩이라 지금 비용은 없다. 두 번째 구현(내비 백엔드)이 올 때 Physics 처럼 질의 · 편집 · 디버그로 가른다 | 남김 |
 | 13 | OCP | `BindingKind`(10 종) switch 가 7 파일 · case 82(글리프 · 리맵 직렬화 · 평가 · 직렬화 · 자동화 · UI · 녹화), 도형 → 삼각형이 디버그 그리기 · 내비 지오메트리에 각자 | 남김: 종류 정보 표(`kArrBindingKindInfo`)가 이미 일부를 흡수했다 — 나머지를 종류별 함수 표로 옮기는 단계, 도형 삼각화는 `PhysicsShapeMesh` 하나 | 다음 |
 | 14 | SRP(파일) | `TaskManager.cpp` 1540 · `NetEndpoint.cpp` 1337 · `StringUtil.cpp` 1297 · `MemoryProfiler.cpp` 1009 줄 — 절 머리글로 이미 나뉘어 있다 | 남김: 같은 클래스의 파일 나누기라 동작 이득이 없다(병렬 그룹 · 대기 · 워커, 핸드셰이크 · 수신, 인코딩 · 파싱, 누수 창 순으로 나눌 수 있다) | 남김 |
-| 15 | 같은 일 둘 | float3 성분별 곱 손글씨 9 곳 + `Pose`·`RigPoseBuffer` 의 `multiply` · `divide`(0 분모 대체가 1 · lhs 로 다르다), Wayland xdg 리스너 둘, CRC32 가 `StringUtil` 에(Hash 가 아니라), MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 — 성분별 곱은 Core `float3::multiply`, 나눗셈 대체값은 뜻이 달라 이름을 가른다 | 다음 |
-| 16 | 이름 | `Engine/HostServices.h`(서비스 순서 표) ↔ `Engine/Module/HostServices.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
+| 15 | 같은 일 둘 | float3 성분별 곱 손글씨 9 곳 + `Pose`·`RigPoseBuffer` 의 `multiply` · `divide`(0 분모 대체가 1 · lhs 로 다르다), Wayland xdg 리스너 둘, MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 — 성분별 곱은 Core `float3::multiply`, 나눗셈 대체값은 뜻이 달라 이름을 가른다 | 다음 | CRC32 는 `HashUtil::computeCRC32` 로 옮겼다(2026-11-01).
+| 16 | 이름 | `Engine/HostServiceSet.h`(서비스 순서 표) ↔ `Engine/Module/HostServices.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
 
 - **근본 원인(한 줄)**: 바닥 도우미가 찾기 어려운 자리(Foundation · Container · TU 전용 Internal)에 있어 호출부가 사본을 만들었고, 층 검사는 include 글만 봐서 전방 선언 칸 · 함수 포인터로 역류가 숨었다. 같은 모양이 남았을 곳은 표의 8 · 9 · 15 다.
 

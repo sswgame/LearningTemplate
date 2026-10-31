@@ -30,7 +30,7 @@
 #include "Engine/Console/StandardInputCommands.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/Engine.h"
-#include "Engine/HostServices.h"
+#include "Engine/HostServiceSet.h"
 #include "Engine/Module/ModuleCatalog.h"
 
 #include "ModuleManager/HostDevLayer.h"

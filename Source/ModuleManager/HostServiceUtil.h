@@ -5,7 +5,7 @@
  *          언리얼은 `FEngineLoop::PreInit` 하나가 게임 · 서버 대상을 함께 세운다.
  */
 #pragma once
-#include "Engine/HostServices.h"
+#include "Engine/HostServiceSet.h"
 
 namespace sw
 {

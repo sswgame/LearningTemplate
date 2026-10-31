@@ -21,7 +21,6 @@
 1. 크기만 줄이려 한 클래스를 여러 cpp 로 쪼갠 것을 모두 고친다 — 떼어 낼 책임이면 클래스로, 아니면 한 파일로(아래 1 절 목록).
 2. cpp 와 헤더 짝이 맞지 않는 파일을 모두 확인해, 꼭 그래야 하는 경우(플랫폼별 구현 · 스스로 등록) 외에는 고친다.
 3. 이름 꼬리 · 빈 짝 · 파일 이름 스위치가 남았는지 다시 훑는다(`*DevCommands` 는 에디터 명령 모듈 하나만 남음 — 이름 · 폴더도 정리).
-4. 통합 대기 브랜치 둘(아래 1 절)은 내용을 읽고 받아들일 것만 가져온다. 끝난 worktree 는 지운다.
 5. 위가 끝나면 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 절의 "남김" 줄 포함.
 6. 확인한 상태(Debug 빌드 · 단위 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
 7. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
@@ -31,7 +30,6 @@
 | 일 | 상태 |
 |---|---|
 | 크기만 줄이려 쪼갠 클래스(전면 구조 정리) | 에이전트 없이 직접 내용을 읽고 고친다(메모리 `no-agents`). 떼어 낸 부분이 자기 상태 · 책임을 가지면 별도 클래스, 아니면 본 파일로 합친다. 남은 것: RHI 디바이스의 Transfer(D3D12 · Vulkan — 전송 큐 · 스테이징 링 · 전송 펜스가 제 상태 묶음이라 클래스로), Vulkan Descriptor · RenderPass(디스크립터 풀 · 렌더 패스 캐시 — 상태 묶음이 있는지 읽고 정한다), 합친 뒤 큰 클래스(RTSWorld · HorrorMatch · MechArenaWorld · ScheduleSystem · InputMap · AudioEngine · FramePassExecutor · FrameRenderer)를 "공유 상태 + 시스템" 으로 나누기. 찾는 법: scratchpad `scatter.py`(멤버 정의가 여러 cpp 에 흩어진 클래스) · `pairs2.py`(같은 이름 헤더 없는 cpp) · `batch_members.sh`(파일별 전용 · 공유 멤버). 플랫폼별 구현(Windows/Posix/X11/Headless …) · 스스로 등록하는 파일 · cpp 안에 선언된 클래스는 정상 |
-| 통합 대기 브랜치 | `tests-harness-integration`(worktree `.claude/worktrees/tests-integration` — 하네스 · 단위 테스트 이식 20 커밋 + 작업자가 남긴 XML 읽기 WIP 한 커밋). main 위로 옮기며 이동 · 이름 바꿈(ModelImportUtil · MaterialUtil · AudioVorbisDecoder · GameFramework/Runtime …)에 맞춘다 |
 | SOLID 점검 남은 표 | StructureRefactor 7 절(Core · Engine 과 GF · Editor · App 두 표)의 "남김" 줄 — IEditorPanel 분리, 모듈 수명 두 벌(EditorModuleManager · GameModuleManager), App · Server 프레임 · 종료 두 벌, 파일 감시 4 개, BinaryStream · ByteStream 두 모델 등 |
 
 ### 2. 테스트 · 시나리오 공백

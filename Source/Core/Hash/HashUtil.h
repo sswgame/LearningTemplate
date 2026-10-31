@@ -40,6 +40,30 @@ namespace sw
 
 namespace sw
 {
+    /** @brief CRC32(IEEE 802.3, 다항식 0xEDB88320) 바이트 표입니다. `HashUtil::computeCRC32` 가 쓴다 — 표는 컴파일 타임에 한 번 만든다. */
+    struct CRC32Table
+    {
+        uint32 _arr[256]{};
+
+        static constexpr CRC32Table make() noexcept
+        {
+            CRC32Table table{};
+            for ( uint32 index = 0; index < 256; ++index )
+            {
+                uint32 crc = index;
+                for ( uint32 bitIndex = 0; bitIndex < 8; ++bitIndex )
+                {
+                    crc = ( crc & 1u ) != 0 ? ( ( crc >> 1 ) ^ 0xEDB88320u ) : ( crc >> 1 );
+                }
+                table._arr[index] = crc;
+            }
+            return table;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct HashUtil
      * @brief 해시 섞기 상수와 함수입니다(전부 static).
@@ -195,5 +219,22 @@ namespace sw
             ( ( hash = combine( hash, static_cast<uint64>( DefaultHash<TRest>{}( rest ) ) ) ), ... );
             return hash;
         }
+
+        /** @brief 임의의 바이너리 버퍼에 대한 IEEE 802.3 CRC32 체크섬입니다(PNG 청크 · 팩 항목 검사). 표는 컴파일 타임에 만든다. */
+        static constexpr uint32 computeCRC32( const void* pData, const size_t length ) noexcept
+        {
+            if ( pData == nullptr || length == 0 )
+                return 0;
+            const uint8* pBytes = static_cast<const uint8*>( pData );
+            uint32       crc    = 0xFFFFFFFFu;
+            for ( size_t byteIndex = 0; byteIndex < length; ++byteIndex )
+            {
+                crc = ( crc >> 8 ) ^ kCRC32Table._arr[( crc ^ pBytes[byteIndex] ) & 0xFFu];
+            }
+            return ~crc;
+        }
+
+    private:
+        static constexpr CRC32Table kCRC32Table = CRC32Table::make();
     };
 } // namespace sw

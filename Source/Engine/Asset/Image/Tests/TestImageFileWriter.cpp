@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
@@ -39,7 +40,7 @@ SW_TEST_CASE( ImageFileWriterTest, PNGRoundTripsThroughZlib )
         const uint32 length = readUint32Be( pngBytes, offset );
         SW_REQUIRE_TRUE( offset + 12 + length <= pngBytes.size() );
         lastType.assign( reinterpret_cast<const char*>( pngBytes.data() + offset + 4 ), 4 );
-        SW_EXPECT_EQUAL( StringUtil::computeCRC32( pngBytes.data() + offset + 4, length + 4 ), readUint32Be( pngBytes, offset + 8 + length ) );
+        SW_EXPECT_EQUAL( HashUtil::computeCRC32( pngBytes.data() + offset + 4, length + 4 ), readUint32Be( pngBytes, offset + 8 + length ) );
         if ( lastType == "IHDR" )
         {
             SW_EXPECT_EQUAL( readUint32Be( pngBytes, offset + 8 ), kWidth );

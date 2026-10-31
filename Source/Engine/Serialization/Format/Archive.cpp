@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VarIntUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -239,7 +240,7 @@ namespace sw
         if ( _pData == nullptr || _dataSize == 0 )
             return 0;
 
-        return StringUtil::computeCRC32( _pData, _dataSize );
+        return HashUtil::computeCRC32( _pData, _dataSize );
     }
 
     void Archive::writeChecksum()
@@ -255,7 +256,7 @@ namespace sw
 
         uint32 storedChecksum = 0;
         Memory::copy( &storedChecksum, _pData + _dataSize - sizeof( uint32 ), sizeof( uint32 ) );
-        const uint32 computed = StringUtil::computeCRC32( _pData, _dataSize - sizeof( uint32 ) );
+        const uint32 computed = HashUtil::computeCRC32( _pData, _dataSize - sizeof( uint32 ) );
         return storedChecksum == computed;
     }
 

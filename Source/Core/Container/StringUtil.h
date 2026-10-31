@@ -46,25 +46,6 @@ namespace sw
 
 namespace sw
 {
-    namespace StringUtilCRCInternal
-    {
-        /** @brief IEEE 802.3 CRC32 테이블을 컴파일 타임에 만듭니다. */
-        constexpr array<uint32, constant::kMaxBuffer256> makeCRC32TableInternal() noexcept
-        {
-            array<uint32, constant::kMaxBuffer256> arrTable{};
-            for ( uint32 index = 0; index < constant::kMaxBuffer256; ++index )
-            {
-                uint32 crc = index;
-                for ( uint32 bitIndex = 0; bitIndex < 8; ++bitIndex )
-                {
-                    crc = ( crc & 1u ) != 0 ? ( ( crc >> 1 ) ^ 0xEDB88320u ) : ( crc >> 1 );
-                }
-                arrTable[index] = crc;
-            }
-            return arrTable;
-        }
-    } // namespace StringUtilCRCInternal
-
     // ------------------------------------------------------------------------------
     // 2) StringUtil — UTF 변환 · 해시 · 분할 · 트림(모두 static)
     // ------------------------------------------------------------------------------
@@ -457,25 +438,6 @@ namespace sw
             utf8         arrBuffer[constant::kMaxBuffer64];
             const uint32 length = formatNumber( arrBuffer, constant::kMaxBuffer64, value, precisionOrBase );
             inoutText.append( arrBuffer, length );
-        }
-
-    private:
-        static constexpr array<uint32, constant::kMaxBuffer256> kArrCRC32Table = StringUtilCRCInternal::makeCRC32TableInternal();
-
-    public:
-        /** @brief 임의의 바이너리 버퍼에 대한 IEEE 802.3 CRC32 체크섬을 테이블 조회로 빠르게 계산합니다. */
-        static constexpr uint32 computeCRC32( const void* pData, const size_t length ) noexcept
-        {
-            if ( pData == nullptr || length == 0 )
-                return 0;
-
-            const uint8* pBytes = static_cast<const uint8*>( pData );
-            uint32       crc    = 0xFFFFFFFFu;
-            for ( size_t byteIndex = 0; byteIndex < length; ++byteIndex )
-            {
-                crc = ( crc >> 8 ) ^ kArrCRC32Table[( crc ^ pBytes[byteIndex] ) & 0xFFu];
-            }
-            return ~crc;
         }
     };
 } // namespace sw

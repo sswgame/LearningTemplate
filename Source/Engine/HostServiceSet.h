@@ -1,5 +1,5 @@
 /**
- * @file Engine/HostServices.h
+ * @file Engine/HostServiceSet.h
  * @brief 호스트(App · Server)가 엔진 **뒤에** 세우고 엔진 **앞에서** 내리는 서비스의 공용 집합과 그 의존 선언입니다.
  * @details 두 실행 파일이 종료 순서를 손으로 적어 주석으로 맞추던 것을 데이터로 바꾼다. 서비스마다 먼저 서야 하는 서비스을 이 파일 한 곳에 적고,
  *          `SubsystemCollection` 이 위상 순서(동점은 이름 순)로 세우고 역순으로 멈춘 뒤 내린다 — 언리얼에서 게임 인스턴스 서브시스템 묶음이 엔진 뒤에

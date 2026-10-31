@@ -6,6 +6,7 @@
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include <cstring>
@@ -156,7 +157,7 @@ namespace sw
         {
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
             uint8 arrCRC[Internal::kCRCSize] = {};
-            LittleEndianUtil::writeUint32( arrCRC, StringUtil::computeCRC32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
+            LittleEndianUtil::writeUint32( arrCRC, HashUtil::computeCRC32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrCRC, arrCRC + Internal::kCRCSize );
             return LocalStoreResult::Ok;
         }
@@ -216,7 +217,7 @@ namespace sw
                 if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCRCSize )
                     return LocalStoreResult::Corrupt;
                 const uint32 storedCRC = LittleEndianUtil::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
-                if ( StringUtil::computeCRC32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCRC )
+                if ( HashUtil::computeCRC32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCRC )
                     return LocalStoreResult::Corrupt;
                 pBody = pEnvelopeBytes + kHeaderSize;
                 break;

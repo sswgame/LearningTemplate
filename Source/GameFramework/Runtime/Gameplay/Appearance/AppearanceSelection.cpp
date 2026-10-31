@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/Base64Util.h"
 
@@ -603,7 +604,7 @@ namespace sw
         writer.writeBits( kVersion, AppearanceSelectionInternal::kVersionBits );
         AppearanceSelectionCodec::writeSelection( writer, selection, database );
         vector<uint8> bytes = writer.releaseBytes();
-        const uint32  crc   = StringUtil::computeCRC32( bytes.data(), bytes.size() );
+        const uint32  crc   = HashUtil::computeCRC32( bytes.data(), bytes.size() );
         for ( uint32 byteIndex = 0; byteIndex < AppearanceSelectionInternal::kChecksumBytes; ++byteIndex )
         {
             bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
@@ -627,7 +628,7 @@ namespace sw
         {
             storedCRC |= static_cast<uint32>( bytes[payloadSize + byteIndex] ) << ( byteIndex * 8 );
         }
-        if ( StringUtil::computeCRC32( bytes.data(), payloadSize ) != storedCRC )
+        if ( HashUtil::computeCRC32( bytes.data(), payloadSize ) != storedCRC )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "checksum mismatch";

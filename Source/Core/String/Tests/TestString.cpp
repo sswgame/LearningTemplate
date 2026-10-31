@@ -651,8 +651,8 @@ SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
 SW_TEST_CASE( StringTest, StringUtilCrcAndTransform )
 {
     // CRC32 체크섬 계산 검증
-    const uint32 crc1 = sw::StringUtil::computeCRC32( "123456789", 9 );
-    const uint32 crc2 = sw::StringUtil::computeCRC32( "123456789", 9 );
+    const uint32 crc1 = sw::HashUtil::computeCRC32( "123456789", 9 );
+    const uint32 crc2 = sw::HashUtil::computeCRC32( "123456789", 9 );
     SW_EXPECT_EQUAL( 0xCBF43926u, crc1 ); // 표준 IEEE 802.3 CRC32("123456789") = 0xCBF43926
     SW_EXPECT_EQUAL( crc1, crc2 );
 

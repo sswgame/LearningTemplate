@@ -5,6 +5,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
@@ -39,7 +40,7 @@ namespace sw
                 const size_t typeOffset = inoutBytes.size();
                 inoutBytes.insert( inoutBytes.end(), pType, pType + 4 );
                 inoutBytes.insert( inoutBytes.end(), dataBytes.begin(), dataBytes.end() );
-                appendUint32Be( inoutBytes, StringUtil::computeCRC32( inoutBytes.data() + typeOffset, inoutBytes.size() - typeOffset ) );
+                appendUint32Be( inoutBytes, HashUtil::computeCRC32( inoutBytes.data() + typeOffset, inoutBytes.size() - typeOffset ) );
             }
 
             static bool isSizeValid( const vector<uint8>& rgbaBytes, uint32 width, uint32 height )

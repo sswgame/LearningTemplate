@@ -324,7 +324,7 @@ namespace sw
         //    저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
         if ( plan._bVerifyCRC )
         {
-            const uint32 computedCRC = StringUtil::computeCRC32( outBytes.data(), outBytes.size() );
+            const uint32 computedCRC = HashUtil::computeCRC32( outBytes.data(), outBytes.size() );
             if ( computedCRC != plan._crc32 )
             {
                 SW_LOG_ERROR( "CRC32 checksum mismatch in pack %# (computed 0x%# vs expected 0x%#)", packPath,

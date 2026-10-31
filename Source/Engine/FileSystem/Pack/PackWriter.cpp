@@ -89,7 +89,7 @@ namespace sw
                 return;
 
             const Stopwatch stopwatch;
-            outListSlot._crc32 = StringUtil::computeCRC32( entry._bytes.data(), entry._bytes.size() );
+            outListSlot._crc32 = HashUtil::computeCRC32( entry._bytes.data(), entry._bytes.size() );
             if ( _pCodec != nullptr && entry._bytes.empty() == false )
             {
                 outListSlot._bCompressed = true;
