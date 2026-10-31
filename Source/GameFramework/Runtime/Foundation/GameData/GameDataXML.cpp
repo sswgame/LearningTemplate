@@ -134,7 +134,7 @@ namespace sw
             }
             if ( *value < minValue )
             {
-                SW_LOG_ERROR( "%#: <Key time=\"%#\" value=\"%#\"> is below %#", sourceName, *time, *value, minValue );
+                SW_LOG_ERROR_ID( "GameData.CurveKeyBelowMin", "%#: <Key time=\"%#\" value=\"%#\"> is below %#", sourceName, *time, *value, minValue );
                 bValid = false;
                 continue;
             }
@@ -153,7 +153,7 @@ namespace sw
                     key._interpolation = CurveInterpolation::Cubic;
                 else
                 {
-                    SW_LOG_ERROR( "%#: <Key> has unknown interpolation '%#'", sourceName, interpolationText );
+                    SW_LOG_ERROR_ID( "GameData.CurveInterpolationUnknown", "%#: <Key> has unknown interpolation '%#'", sourceName, interpolationText );
                     bValid = false;
                     continue;
                 }

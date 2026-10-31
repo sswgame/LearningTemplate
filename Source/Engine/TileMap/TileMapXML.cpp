@@ -9,6 +9,7 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
@@ -48,7 +49,29 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
-            static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
+            static constexpr string_view kValueListSeparators = " 
+
+                                                                "; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
+
+                                                                // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
+                                                                static constexpr const utf8 *
+                                                                kArrKnownRootChild[] = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
+            static constexpr const utf8* kArrKnownTileAttribute[]                    = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
+            static constexpr const utf8* kArrKnownWarpAttribute[]                    = { "x", "y", "tx", "ty", "map", "pair" };
+            static constexpr const utf8* kArrKnownSpawnAttribute[]                   = { "x", "y" };
+            static constexpr const utf8* kArrKnownTileLayerAttribute[]               = { "tileSet" };
+            static constexpr const utf8* kArrKnownTileLayerChild[]                   = { "palette", "cells" };
+
+            /** @brief 레이어 표가 `<t>` 속성으로 쓰는 이름인지입니다(표 하나가 정본이라 이름을 따로 적지 않는다). */
+            static bool isFlagLayerAttribute( const utf8* pName )
+            {
+                for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+                {
+                    if ( info._pXMLAttribute != nullptr && StringUtil::equals( info._pXMLAttribute, pName ) )
+                        return true;
+                }
+                return false;
+            }
 
             /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 레이어 표의 기본값입니다. 깨진 숫자는 false 입니다. */
             [[nodiscard]] static bool readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info, uint8& outFlag )
@@ -97,6 +120,7 @@ namespace sw
                 const XMLNode spawn = root.findChild( "spawn" );
                 if ( spawn.isValid() )
                 {
+                    inoutValid = XMLNameCheck::reportUnknownAttributes( spawn, kArrKnownSpawnAttribute, data._name ) && inoutValid;
                     inoutValid = spawn.readOptionalAttributeInRange( "x", 0, data._width - 1, data._spawnX ) && inoutValid;
                     inoutValid = spawn.readOptionalAttributeInRange( "y", 0, data._height - 1, data._spawnY ) && inoutValid;
                 }
@@ -156,6 +180,7 @@ namespace sw
                 for ( XMLNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count ); tileNode = tileNode.findNextSibling( "t" ), ++index )
                 {
                     const size_t elementIndex = static_cast<size_t>( index );
+                    inoutValid                = XMLNameCheck::reportUnknownAttributes( tileNode, kArrKnownTileAttribute, data._name, LogLevel::Error, &isFlagLayerAttribute ) && inoutValid;
                     for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                     {
                         inoutValid = readFlag( tileNode, info, data.getFlagLayer( info._layer )[elementIndex] ) && inoutValid;
@@ -175,6 +200,7 @@ namespace sw
             {
                 for ( XMLNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
                 {
+                    inoutValid = XMLNameCheck::reportUnknownAttributes( warpNode, kArrKnownWarpAttribute, data._name ) && inoutValid;
                     TileMapXMLData::Warp       warp{};
                     const std::optional<int32> tileX       = warpNode.readRequiredAttribute<int32>( "x" );
                     const std::optional<int32> tileY       = warpNode.readRequiredAttribute<int32>( "y" );
@@ -246,6 +272,9 @@ namespace sw
             /** @brief `<tileLayer>` 의 타일셋 경로 · 팔레트(브러시 이름) · 셀마다 팔레트 번호를 읽습니다. 셀 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류(false)입니다. */
             [[nodiscard]] static bool readTileLayer( const XMLNode& tileLayer, TileMapXMLData& data, size_t count )
             {
+                const bool bKnownAttributes = XMLNameCheck::reportUnknownAttributes( tileLayer, kArrKnownTileLayerAttribute, data._name );
+                if ( ( XMLNameCheck::reportUnknownChildren( tileLayer, kArrKnownTileLayerChild, data._name ) && bKnownAttributes ) == false )
+                    return false;
                 data._tileSetPath     = string( tileLayer.getAttributeText( "tileSet" ) );
                 const XMLNode palette = tileLayer.findChild( "palette" );
                 for ( XMLNode entry = palette.isValid() ? palette.findChild( "b" ) : XMLNode{}; entry; entry = entry.findNextSibling( "b" ) )
@@ -414,7 +443,7 @@ namespace sw
         string absPath;
         if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false ) // 낱개 파일 허용 정책은 AssetIO 한 곳이 본다
         {
-            SW_LOG_ERROR( "TileMap file not found: %#", path );
+            SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", path );
             return false;
         }
 
@@ -432,7 +461,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_ERROR( "TileMap file not found: %#", diskPath );
+            SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", diskPath );
             return false;
         }
 
@@ -459,6 +488,11 @@ namespace sw
 
         bool bValid = true;
         if ( TileMapXMLInternal::readHeader( root, *this, bValid ) == false )
+        {
+            *this = {};
+            return false;
+        }
+        if ( XMLNameCheck::reportUnknownChildren( root, TileMapXMLInternal::kArrKnownRootChild, _name ) == false )
         {
             *this = {};
             return false;

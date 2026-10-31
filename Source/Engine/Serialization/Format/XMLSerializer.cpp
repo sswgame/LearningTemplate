@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -228,7 +229,7 @@ namespace sw
 
                 ContainerReadResult skipElement( const size_t elementIndex ) override
                 {
-                    SW_LOG_WARNING( "'%#' has more elements than it can hold - element %# dropped", _propForOrphan._name.c_str(), elementIndex );
+                    SW_LOG_WARNING_ID( "Serialization.ElementDropped", "'%#' has more elements than it can hold - element %# dropped", _propForOrphan._name.c_str(), elementIndex );
                     string droppedText;
                     (void)_backend.readText( droppedText ); // 구조체 원소면 비어 있다 — 실패로 알리는 것이 목적이다
                     recordDroppedText( _pOutListOrphan, _propForOrphan, droppedText );
@@ -348,7 +349,7 @@ namespace sw
                 string fieldXML;
                 if ( backend.readCurrentNodeXML( fieldXML ) == false )
                 {
-                    SW_LOG_ERROR( "'%#' could not be read and its source text cannot be kept as an orphan - the object is not read", prop._name.c_str() );
+                    SW_LOG_ERROR_ID( "Serialization.OrphanUnkeepable", "'%#' could not be read and its source text cannot be kept as an orphan - the object is not read", prop._name.c_str() );
                     return false;
                 }
                 outListOrphan.erase( outListOrphan.begin() + static_cast<ptrdiff_t>( orphanCountBefore ), outListOrphan.end() );
@@ -934,7 +935,7 @@ namespace sw
         const string text = serialize( pInstance, typeInfo, context );
         if ( text.empty() )
         {
-            SW_LOG_ERROR( "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
+            SW_LOG_ERROR_ID( "Serialization.EmptyOutput", "Serializing %# produced no XML - %# was not written", typeInfo._name.c_str(), string{ absPath }.c_str() );
             return false;
         }
         return FileUtil::writeTextFile( absPath, text );
@@ -973,8 +974,13 @@ namespace sw
             if ( pVer != nullptr )
             {
                 uint64 ver{ 0 };
-                if ( StringUtil::parseUint64( pVer, ver, 10 ) == false )
-                    SW_LOG_WARNING( "_schemaVersion '%#' is not a number - reading as version 0", pVer );
+                // 읽지 못한 판을 0 으로 보면 옛 판 이주가 엉뚱한 문서에 돈다 — 거절한다.
+                if ( StringUtil::parseUint64( pVer, ver, 10 ) == false || ver > MathUtil::kMaxUInt32 )
+                {
+                    SW_LOG_ERROR_ID( "Serialization.SchemaVersionUnreadable", "_schemaVersion '%#' of %# is not a 32-bit unsigned number - the document is not read", pVer,
+                                     typeInfo._name.c_str() );
+                    return SoftReadResult::Rejected;
+                }
                 *pOutVersion = static_cast<uint32>( ver );
             }
         }

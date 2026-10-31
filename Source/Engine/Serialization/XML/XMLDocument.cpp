@@ -680,7 +680,7 @@ namespace sw
         const string text = saveToString();
         if ( text.empty() )
         {
-            SW_LOG_ERROR( "XML document is empty - %# was not written", string{ absPath }.c_str() );
+            SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", string{ absPath }.c_str() );
             return false;
         }
         return FileUtil::writeTextFile( absPath, text );

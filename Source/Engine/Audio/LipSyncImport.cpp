@@ -29,7 +29,7 @@ namespace sw
         vector<string> listFile;
         if ( AssetPaths::collectContentFiles( resourceRoot, "", listFile ) == false )
         {
-            SW_LOG_ERROR( "Lip sync import could not list '%#' - nothing is imported", resourceRoot );
+            SW_LOG_ERROR_ID( "LipSync.ListFailed", "Lip sync import could not list '%#' - nothing is imported", resourceRoot );
             ++outFailedCount;
             return 0;
         }
@@ -48,7 +48,7 @@ namespace sw
                                        AudioClipData::convertPcm( pcm, clip ) == false;
             if ( bDecodeFailed )
             {
-                SW_LOG_ERROR( "Lip sync import could not decode '%#'", relative.c_str() );
+                SW_LOG_ERROR_ID( "LipSync.DecodeFailed", "Lip sync import could not decode '%#'", relative.c_str() );
                 ++outFailedCount;
                 continue;
             }
@@ -60,7 +60,7 @@ namespace sw
             const std::optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
             if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )
             {
-                SW_LOG_ERROR( "Lip sync import could not write '%#'", trackPath.c_str() );
+                SW_LOG_ERROR_ID( "LipSync.WriteFailed", "Lip sync import could not write '%#'", trackPath.c_str() );
                 ++outFailedCount;
                 continue;
             }

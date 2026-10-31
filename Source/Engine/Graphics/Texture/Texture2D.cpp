@@ -40,7 +40,7 @@ namespace sw
     Texture2D::~Texture2D()
     {
         if ( getHandle() != 0 )
-            SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRHI first.", _path.c_str() );
+            SW_LOG_WARNING_ID( "Texture.DestroyedWhileLive", "Texture2D '%#' destroyed with a live GPU texture — call releaseRHI first.", _path.c_str() );
     }
 
     RHIFormat Texture2D::toRHIFormatFromDxgi( uint32 dxgiFormat )
@@ -218,7 +218,7 @@ namespace sw
         }
         if ( submit.isAccepted() == false )
         {
-            SW_LOG_ERROR( "Texture2D: submitTextureUpload was rejected for '%#'", label );
+            SW_LOG_ERROR_ID( "Texture.UploadRejected", "Texture2D: submitTextureUpload was rejected for '%#'", label );
             factory.destroyTexture( handle );
             return Texture2DUploadStep::Failed;
         }
@@ -232,7 +232,7 @@ namespace sw
         if ( bNothingInFlight )
         {
             // 장치 교체가 `forgetRHI` · `releaseRHI` 로 지웠거나 다른 디바이스의 텍스처다 — 새 디바이스에서는 `initRHI` 가 밉 전부를 다시 올린다.
-            SW_LOG_ERROR( "Texture2D: '%#' has no upload in flight on this device", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.NoUploadInFlight", "Texture2D: '%#' has no upload in flight on this device", _path.c_str() );
             _uploadTicket               = RHITransferTicket{};
             const bool bOwnsLiveTexture = pDevice != nullptr && _pDevice == pDevice && getHandle() != 0;
             if ( bOwnsLiveTexture )
@@ -249,14 +249,14 @@ namespace sw
             return Texture2DUploadStatus::Pending;
         if ( status == RHITransferStatus::Failed )
         {
-            SW_LOG_ERROR( "Texture2D: the upload of '%#' did not complete", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.UploadIncomplete", "Texture2D: the upload of '%#' did not complete", _path.c_str() );
             releaseRHI( pDevice );
             return Texture2DUploadStatus::Failed;
         }
         const RHIDescriptorIndex srv = pResource->registerBindlessTexture( getHandle() );
         if ( srv == kInvalidDescriptorIndex )
         {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
             releaseRHI( pDevice );
             return Texture2DUploadStatus::Failed;
         }
@@ -311,14 +311,14 @@ namespace sw
         if ( status == RHITransferStatus::Failed )
         {
             // 아래쪽 밉 그대로 남는다. 새 텍스처는 쓰지 않으므로 지운다(전송 중 파괴는 백엔드가 미룬다 — 계약 6).
-            SW_LOG_ERROR( "Texture2D: the top-mip upload of '%#' did not complete", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.UploadIncomplete", "Texture2D: the top-mip upload of '%#' did not complete", _path.c_str() );
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
         const RHIDescriptorIndex srv = pResource->registerBindlessTexture( upgrade._handle );
         if ( srv == kInvalidDescriptorIndex )
         {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
+            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for '%#'", _path.c_str() );
             pResource->destroyTexture( upgrade._handle );
             return Texture2DUploadStatus::Failed;
         }
@@ -337,7 +337,7 @@ namespace sw
         const uint32 fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         if ( drop._skippedBytes >= image._bytes.size() )
         {
-            SW_LOG_ERROR( "Texture2D: '%#' payload (%# bytes) is shorter than its mip chain (%# mips)", relativePath, image._bytes.size(), fileMipCount );
+            SW_LOG_ERROR_ID( "Texture.PayloadShort", "Texture2D: '%#' payload (%# bytes) is shorter than its mip chain (%# mips)", relativePath, image._bytes.size(), fileMipCount );
             return Texture2DUploadStep::Failed;
         }
         outDesc                        = RHITextureDesc{};
@@ -350,7 +350,7 @@ namespace sw
         outHandle                      = pResource->createTexture2D( outDesc );
         if ( outHandle == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
+            SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, outDesc._width, outDesc._height, outDesc._mipLevels );
             return Texture2DUploadStep::Failed;
         }
 
@@ -384,13 +384,13 @@ namespace sw
         _handle                        = pResource->createTexture2D( desc );
         if ( getHandle() == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
+            SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
             return false;
         }
         _srv = pResource->registerBindlessTexture( _handle );
         if ( _srv == kInvalidDescriptorIndex )
         {
-            SW_LOG_ERROR( "Texture2D: registerBindlessTexture failed for render target '%#'", name );
+            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for render target '%#'", name );
             pResource->destroyTexture( _handle );
             _handle = 0;
             return false;
@@ -480,7 +480,7 @@ namespace sw
         const RHITextureHandle handle    = pResource->createTexture2D( desc );
         if ( handle == 0 )
         {
-            SW_LOG_ERROR( "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
+            SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for CPU texture '%#' (%#×%#)", _path.c_str(), _width, _height );
             return Texture2DUploadStep::Failed;
         }
         RHITextureUploadDesc upload{};

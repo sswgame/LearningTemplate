@@ -93,8 +93,8 @@ namespace sw
         // 빈 이름의 철자(`None`, 대소문자 무시)는 이름 값이 될 수 없다 — 담으면 "적지 않음"과 같아진다(언리얼 `NAME_None` 과 같은 함정).
         // 그 글을 값으로 쓰는 속성(열거형 `align="none"`)은 글 그대로 읽어야 하므로, 이름으로 읽은 것을 오류로 알린다.
         if ( name.empty() )
-            SW_LOG_ERROR( "<%# %#=\"%#\">: '%#' spells the empty name, so a name cannot hold it - read this attribute as text",
-                          node.getName() != nullptr ? node.getName() : "?", pAttribute, text, text );
+            SW_LOG_ERROR_ID( "Xml.EmptyNameSpelled", "<%# %#=\"%#\">: '%#' spells the empty name, so a name cannot hold it - read this attribute as text",
+                             node.getName() != nullptr ? node.getName() : "?", pAttribute, text, text );
         return name;
     }
 
@@ -105,14 +105,14 @@ namespace sw
         {
             if ( VectorUtil::contains( listAttribute, string_view{ attribute.getName() } ) )
                 continue;
-            SW_LOG_ERROR( "%#: unknown attribute '%#'", context, attribute.getName() );
+            SW_LOG_ERROR_ID( "Xml.UnknownAttribute", "%#: unknown attribute '%#'", context, attribute.getName() );
             bKnown = false;
         }
         for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( VectorUtil::contains( listChild, string_view{ child.getName() } ) )
                 continue;
-            SW_LOG_ERROR( "%#: unknown element '%#'", context, child.getName() );
+            SW_LOG_ERROR_ID( "Xml.UnknownElement", "%#: unknown element '%#'", context, child.getName() );
             bKnown = false;
         }
         return bKnown;
@@ -147,12 +147,12 @@ namespace sw
             }
             case XMLRootStatus::NotLoaded:
             {
-                SW_LOG_WARNING( "Failed to read %#", path );
+                SW_LOG_WARNING_ID( "Xml.ReadFailed", "Failed to read %#", path );
                 return false;
             }
             case XMLRootStatus::RootMissing:
             {
-                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, outSourceName );
+                SW_LOG_WARNING_ID( "Xml.MissingRoot", "Missing <%#> root in %#", pRootName, outSourceName );
                 return false;
             }
         }
@@ -169,12 +169,12 @@ namespace sw
             }
             case XMLRootStatus::NotLoaded:
             {
-                SW_LOG_WARNING( "Failed to parse %#", sourceName );
+                SW_LOG_WARNING_ID( "Xml.ParseFailed", "Failed to parse %#", sourceName );
                 return false;
             }
             case XMLRootStatus::RootMissing:
             {
-                SW_LOG_WARNING( "Missing <%#> root in %#", pRootName, sourceName );
+                SW_LOG_WARNING_ID( "Xml.MissingRoot", "Missing <%#> root in %#", pRootName, sourceName );
                 return false;
             }
         }
@@ -186,7 +186,7 @@ namespace sw
         const utf8* pID = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
-            SW_LOG_WARNING( "%#: <%#> without an id - skipped", sourceName, node.getName() );
+            SW_LOG_WARNING_ID( "Xml.MissingID", "%#: <%#> without an id - skipped", sourceName, node.getName() );
             return nullptr;
         }
         return pID;
@@ -197,7 +197,7 @@ namespace sw
         outName = readOptionalName( node, pAttribute );
         if ( outName.empty() == false )
             return true;
-        SW_LOG_ERROR( "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
+        SW_LOG_ERROR_ID( "Xml.MissingName", "%#: <%#> needs a non-empty name attribute '%#'", sourceName, node.getName() != nullptr ? node.getName() : "?", pAttribute );
         return false;
     }
 
@@ -215,7 +215,7 @@ namespace sw
             // 빈 이름의 철자(`none`)는 이름이 될 수 없다 — 목록에 빈 이름이 조용히 들어가지 않게 오류로 알리고 넣지 않는다.
             if ( name.empty() )
             {
-                SW_LOG_ERROR( "A name list holds '%#', which spells the empty name - skipped", token );
+                SW_LOG_ERROR_ID( "Xml.EmptyNameSpelled", "A name list holds '%#', which spells the empty name - skipped", token );
                 return;
             }
             outListName.push_back( name );

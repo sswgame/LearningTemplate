@@ -1,6 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Material/MaterialXML.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -35,16 +37,17 @@ namespace sw
                 return string{ StringUtil::trim( node.getText() ) };
             }
 
-            static void parseEnumEntries( XMLNode parent, vector<MaterialEnumEntry>& outListEntry )
+            /** @brief 열거 항목을 읽습니다. 값이 부호 없는 정수가 아니면 false 입니다(0 으로 읽지 않는다 — 두 항목이 같은 값이 된다). */
+            [[nodiscard]] static bool parseEnumEntries( XMLNode parent, vector<MaterialEnumEntry>& outListEntry )
             {
                 outListEntry.clear();
                 if ( parent.isValid() == false )
-                    return;
+                    return true;
                 XMLNode list = parent.findChild( "_enumEntries" );
                 if ( list.isValid() == false )
                     list = parent.findChild( "enumEntries" );
                 if ( list.isValid() == false )
-                    return;
+                    return true;
                 for ( XMLNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     MaterialEnumEntry entry{};
@@ -53,13 +56,18 @@ namespace sw
                     if ( valueText.empty() == false )
                     {
                         uint64 val{ 0 };
-                        if ( StringUtil::parseUint64( valueText, val, 0 ) == false )
-                            SW_LOG_WARNING( "Material value '%#' is not an unsigned integer - using 0", valueText );
+                        if ( StringUtil::parseUint64( valueText, val, 0 ) == false || val > MathUtil::kMaxUInt32 )
+                        {
+                            SW_LOG_ERROR_ID( "Material.EnumValueUnreadable", "Material enum entry '%#' has value '%#', which is not a 32-bit unsigned integer", entry._name,
+                                             valueText );
+                            return false;
+                        }
                         entry._value = static_cast<uint32>( val );
                     }
                     if ( entry._name.empty() == false )
                         outListEntry.push_back( std::move( entry ) );
                 }
+                return true;
             }
 
             static void parseStringListItems( XMLNode list, vector<string>& outListItem )
@@ -160,7 +168,7 @@ namespace sw
                                        ( maxStr.empty() == false && StringUtil::parseFloat( maxStr, prop._max ) == false );
         if ( bBoundsUnreadable )
         {
-            SW_LOG_ERROR( "Material parameter '%#' has an unreadable bound (min '%#', max '%#')", prop._name, minStr, maxStr );
+            SW_LOG_ERROR_ID( "Material.BoundUnreadable", "Material parameter '%#' has an unreadable bound (min '%#', max '%#')", prop._name, minStr, maxStr );
             return false;
         }
         bool       bHDR{ false };
@@ -177,7 +185,8 @@ namespace sw
         prop._bSRGB     = bSRGB;
         prop._bHidden   = bHidden;
         prop._bAdvanced = bAdvanced;
-        MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry );
+        if ( MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry ) == false )
+            return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
         const bool bBooleanValue = prop._type == MaterialPropertyType::Bool || ( prop._type == MaterialPropertyType::Keyword && prop._shaderKeyword.empty() == false );
         bool       bUnused{ false };
@@ -215,7 +224,7 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR( "Material blend mode '%#' is unknown (Opaque, Transparent)", modeName );
+        SW_LOG_ERROR_ID( "Material.BlendModeUnknown", "Material blend mode '%#' is unknown (Opaque, Transparent)", modeName );
         return false;
     }
 
@@ -230,7 +239,7 @@ namespace sw
         int64           value{ 0 };
         if ( pInfo == nullptr || pInfo->tryParse( qualityName, value ) == false )
         {
-            SW_LOG_ERROR( "Material quality '%#' is not a quality level", qualityName );
+            SW_LOG_ERROR_ID( "Material.QualityUnknown", "Material quality '%#' is not a quality level", qualityName );
             return false;
         }
         outQuality = static_cast<MaterialQualityLevel>( value );
@@ -265,7 +274,7 @@ namespace sw
             uint64 lodVal{ 0 };
             if ( StringUtil::parseUint64( lod, lodVal, 10 ) == false )
             {
-                SW_LOG_ERROR( "Material shader LOD '%#' is not a number", lod );
+                SW_LOG_ERROR_ID( "Material.ShaderLODUnreadable", "Material shader LOD '%#' is not a number", lod );
                 return false;
             }
             outDesc._shaderLOD = static_cast<uint32>( lodVal );
@@ -365,4 +374,190 @@ namespace sw
             }
         }
     }
+<<<<<<< HEAD
+=======
+
+    bool Material::loadFromFile( const AssetID& assetID )
+    {
+        XMLDocument doc;
+        if ( doc.loadResource( assetID ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
+    bool Material::loadFromDiskFile( string_view diskPath )
+    {
+        XMLDocument doc;
+        if ( doc.loadFile( diskPath ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
+    TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
+    {
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
+            "LoadMaterialAsync",
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, Material::loadFromFileAsyncJob ),
+            MakeTaskArgs( _asyncLoadState, string( assetRelativePath ) ) );
+        handle.submit();
+        return handle;
+    }
+
+    void Material::loadFromFileAsyncJob( const TaskArgs& args )
+    {
+        shared_ptr<AsyncLoadState> state = args.get<shared_ptr<AsyncLoadState>>( 0 );
+        if ( state == nullptr )
+            return;
+
+        ScopedLock<mutex> lock{ state->_mutex };
+        if ( state->_pMaterial == nullptr )
+            return;
+        if ( state->_pMaterial->loadFromFile( AssetID{ args.get<string>( 1 ) } ) == false )
+            SW_LOG_WARNING_ID( "Material.CommandLoadFailed", "Could not load material '%#'", args.get<string>( 1 ) );
+    }
+
+    bool Material::saveToFile( const AbsolutePath& absPath ) const
+    {
+
+        XMLDocument doc;
+        if ( doc.parse( saveToString() ) == false )
+            return false;
+        return doc.saveFile( absPath.str() );
+    }
+
+    string Material::saveToString() const
+    {
+        this->syncDescFromRuntime();
+
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "MaterialDesc" );
+
+        AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
+        MaterialUtil::appendAttribute( root, "name", _desc._name );
+        MaterialUtil::appendAttribute( root, "shaderPath", _desc._shaderPath );
+        MaterialUtil::appendAttribute( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
+
+        XMLNode props = root.appendChild( "_properties" );
+
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            XMLNode item = props.appendChild( "item" );
+
+            MaterialUtil::appendAttribute( item, "name", prop._name );
+            MaterialUtil::appendAttribute( item, "type", MaterialUtil::typeToString( prop._type ) );
+            if ( prop._shaderType != MaterialPropertyType::Unknown )
+                MaterialUtil::appendAttribute( item, "shaderType", MaterialUtil::typeToString( prop._shaderType ) );
+            if ( prop._defaultValue.empty() == false )
+                MaterialUtil::appendAttribute( item, "defaultValue", prop._defaultValue );
+            if ( prop._value.empty() == false && prop._value != prop._defaultValue )
+                MaterialUtil::appendAttribute( item, "value", prop._value );
+            if ( prop._assetPath.empty() == false )
+                MaterialUtil::appendAttribute( item, "assetPath", prop._assetPath );
+            if ( prop._enumType.empty() == false )
+                MaterialUtil::appendAttribute( item, "enumType", prop._enumType );
+            if ( prop._displayName.empty() == false )
+                MaterialUtil::appendAttribute( item, "displayName", prop._displayName );
+            if ( prop._group.empty() == false )
+                MaterialUtil::appendAttribute( item, "group", prop._group );
+            if ( prop._tooltip.empty() == false )
+                MaterialUtil::appendAttribute( item, "tooltip", prop._tooltip );
+            if ( prop._shaderKeyword.empty() == false )
+                MaterialUtil::appendAttribute( item, "shaderKeyword", prop._shaderKeyword );
+            if ( prop._type == MaterialPropertyType::Range )
+            {
+                item.appendAttribute( "min", prop._min );
+                item.appendAttribute( "max", prop._max );
+            }
+            if ( prop._type == MaterialPropertyType::Color )
+            {
+                MaterialUtil::appendBoolAttribute( item, "bHdr", prop._bHDR );
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
+            }
+            if ( MaterialUtil::isTextureType( prop._type ) )
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
+            if ( prop._bHidden )
+                MaterialUtil::appendBoolAttribute( item, "bHidden", true );
+            if ( prop._bAdvanced )
+                MaterialUtil::appendBoolAttribute( item, "bAdvanced", true );
+
+            if ( prop._listEnumEntry.empty() == false )
+            {
+                XMLNode list = item.appendChild( "_enumEntries" );
+                for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
+                {
+                    XMLNode eItem = list.appendChild( "item" );
+                    MaterialUtil::appendAttribute( eItem, "name", enumEntry._name );
+                    eItem.appendAttribute( "value", enumEntry._value );
+                }
+            }
+        }
+
+        MaterialUtil::appendPermutationNode( root, _desc._permutations );
+
+        return doc.saveToString();
+    }
+
+    bool Material::loadFromXML( string_view xmlText )
+    {
+        XMLDocument doc;
+        if ( doc.parse( xmlText ) == false )
+            return false;
+
+        XMLNode root = doc.getRoot( "MaterialDesc" );
+        if ( root.isValid() == false )
+            return false;
+
+        if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
+            return false;
+
+        _desc       = MaterialDesc{};
+        _desc._name = MaterialUtil::fieldText( root, "name" );
+        setShaderPath( MaterialUtil::fieldText( root, "shaderPath" ) );
+        // 블렌드 모드는 읽을 때 푼다 — 적지 않으면 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
+        const string blendModeText = MaterialUtil::fieldText( root, "blendMode" );
+        RHIBlendMode blendMode{ RHIBlendMode::Opaque };
+        if ( blendModeText.empty() == false && MaterialUtil::parseBlendMode( blendModeText, blendMode ) == false )
+            return false;
+        _desc._blendMode = MaterialUtil::blendModeToString( blendMode );
+
+        XMLNode props = root.findChild( "_properties" );
+        if ( props.isValid() )
+        {
+            for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            {
+                MaterialProperty prop{};
+                if ( MaterialUtil::parsePropertyNode( item, prop ) == false )
+                    return false;
+                if ( prop._name.empty() == false )
+                    _desc._listProperty.push_back( std::move( prop ) );
+            }
+        }
+
+        if ( MaterialUtil::parsePermutationNode( root, _desc._permutations ) == false )
+            return false;
+
+        _blendMode = blendMode;
+        applyDescToRuntime();
+        return true;
+    }
+
+    void Material::applyDescToRuntime()
+    {
+        _data._listProperty = _desc._listProperty;
+        // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
+        // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
+        _bShaderLayoutSynced = SW_FALSE;
+        _elementStride       = 0;
+        rebuildPackedBuffer();
+    }
+
+    void Material::syncDescFromRuntime() const
+    {
+        auto self                 = const_cast<Material*>( this );
+        self->_desc._listProperty = _data._listProperty;
+        self->_desc._blendMode    = MaterialUtil::blendModeToString( _blendMode );
+        self->_desc._name         = _desc._name;
+        self->setShaderPath( _desc._shaderPath );
+    }
+>>>>>>> 03b9044fed (WIP - XML 읽기의 조용한 대신 값 없애기 · id 붙이기(작업자가 남긴 미완성 변경, 통합에서 검토))
 } // namespace sw

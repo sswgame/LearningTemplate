@@ -18,7 +18,7 @@ namespace sw
         string text;
         if ( pTypeInfo != nullptr && AssetIO::readTextAsset( assetID, text ) == false )
         {
-            SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", assetID.view(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", assetID.view(), pTypeInfo->_name.c_str() );
             return false;
         }
         return parseDesc( assetID.view(), text, pDesc, pTypeInfo );
@@ -30,7 +30,7 @@ namespace sw
         string text;
         if ( pTypeInfo != nullptr && AssetIO::readTextFile( diskPath, text ) == false )
         {
-            SW_LOG_ERROR( "XML load failed: %# (%#) - file not found", diskPath, pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR_ID( "Xml.FileNotFound", "XML load failed: %# (%#) - file not found", diskPath, pTypeInfo->_name.c_str() );
             return false;
         }
         return parseDesc( diskPath, text, pDesc, pTypeInfo );
@@ -41,7 +41,7 @@ namespace sw
         if ( pTypeInfo == nullptr )
         {
             // 리플렉션 생성물이 빠졌다는 뜻이다. 파일 탓이 아니므로 문장을 따로 둔다.
-            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", sourceName );
+            SW_LOG_ERROR_ID( "Reflection.TypeInfoMissing", "TypeInfo not found (%#) - reflection generation is missing", sourceName );
             return false;
         }
 
@@ -51,7 +51,7 @@ namespace sw
         const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
         if ( result == SoftReadResult::NotParsed )
         {
-            SW_LOG_ERROR( "XML load failed: %# (%#) - not a <%#> document", sourceName, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR_ID( "Xml.WrongRoot", "XML load failed: %# (%#) - not a <%#> document", sourceName, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
             return false;
         }
         // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
@@ -68,13 +68,13 @@ namespace sw
     {
         if ( pTypeInfo == nullptr )
         {
-            SW_LOG_ERROR( "TypeInfo not found (%#) - reflection generation is missing", absPath.str() );
+            SW_LOG_ERROR_ID( "Reflection.TypeInfoMissing", "TypeInfo not found (%#) - reflection generation is missing", absPath.str() );
             return false;
         }
 
         if ( XMLSerializer::saveFile( absPath.str(), pDesc, *pTypeInfo ) == false )
         {
-            SW_LOG_ERROR( "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
+            SW_LOG_ERROR_ID( "Xml.WriteFailed", "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
             return false;
         }
         return true;
