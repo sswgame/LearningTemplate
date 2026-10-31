@@ -175,7 +175,7 @@ namespace sw
             {
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 _accountServer.initialize( &_loginService, AccountServerConfig{} );
-                return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer, outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError );
+                return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl(), outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError );
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */

@@ -7,7 +7,7 @@
  *          - 로그인 응답 몸을 쓰지 못하면 `kInternal` 로 답하고, 저장소 작업이 이미 만든 그 세션은 로그아웃 작업으로 지운다. 응답 몸이 그 세션의 토큰을 실으므로
  *            저장소 작업 전에 쓸 수 없다.
  *          - 저장소 완료는 호스트 `tick` 이 회수한다. 탈퇴 정리와 세션 다시 읽기는 이 객체의 틱이 주기적으로 작업을 맡긴다.
- *          - `IAccountSessionControl` 을 구현한다. GM 과 제재가 계정의 세션을 끊을 수 있고, 사유 코드를 알림에 싣는다.
+ *          - `IAccountSessionControl` 을 멤버로 든다(`getSessionControl`). GM 과 제재가 계정의 세션을 끊을 수 있고, 사유 코드를 알림에 싣는다.
  *          - 서버가 여러 대일 때(호스트에 캐시와 버스가 있으면) 접속 상태(`OnlinePresence`)를 소유한다. 다른 키트는 `getPresence` 로 접근한다.
  *            다른 서버에 접속한 세션을 끊으면 버스 `account.revoke` 로 알리고, 받은 서버가 그 연결을 닫는다. 버스를 놓쳐도 세션 다시 읽기가 찾아낸다.
  */
@@ -57,7 +57,7 @@ namespace sw
      * @class AccountServer
      * @brief 계정 서비스 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API AccountServer final : public IOnlineServerService, public IAccountSessionControl
+    class SW_KIT_SERVER_API AccountServer final : public IOnlineServerService
     {
     public:
         AccountServer();
@@ -77,8 +77,10 @@ namespace sw
         void                  onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void                  onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
-        // IAccountSessionControl
-        void revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs ) override;
+        /** @brief 계정의 세션을 모두 끊습니다. @p reasonCode 는 끊김 알림에 싣습니다. `getSessionControl` 이 이 함수로 넘깁니다. */
+        void revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs );
+        /** @brief 다른 키트(운영 · 제재)에 거는 세션 끊기 창구입니다. 이 객체와 수명이 같습니다. */
+        IAccountSessionControl& getSessionControl() { return _sessionControl; }
 
         /** @brief 이 연결 계정의 현재 세션 id 입니다. 테스트와 진단에 씁니다. 없으면 0입니다. */
         uint64 findSessionID( AccountID accountID ) const;
@@ -86,6 +88,21 @@ namespace sw
         IAccountPresence* getPresence() { return &_presence; }
 
     private:
+        /** @brief 세션 끊기 창구입니다. 바인딩의 `revokeAccountSessions` 로 넘깁니다. 바인딩이 멤버로 들어 수명이 같다. */
+        class SessionControl final : public IAccountSessionControl
+        {
+        public:
+            explicit SessionControl( AccountServer& server )
+                : _server{ server }
+            {
+            }
+
+            void revokeAccountSessions( AccountID accountID, string_view reasonCode, UnixMilliseconds nowMs ) override { _server.revokeAccountSessions( accountID, reasonCode, nowMs ); }
+
+        private:
+            AccountServer& _server;
+        };
+
         struct PendingCall
         {
             NetRequestToken        _token{};
@@ -117,6 +134,7 @@ namespace sw
         vector<LoginEvent>                     _listEventScratch;
         vector<Subscription>                   _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다
         OnlinePresence                         _presence;
+        SessionControl                         _sessionControl; ///< 세션 끊기 창구(`getSessionControl`)
         AccountServerConfig                    _settings;
         LoginService*                          _pLoginService;
         uint64                                 _nextTag;

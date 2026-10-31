@@ -143,6 +143,7 @@ namespace sw
         , _listEventScratch{}
         , _listBusSubscription{}
         , _presence{}
+        , _sessionControl{ *this }
         , _settings{}
         , _pLoginService{ nullptr }
         , _nextTag{ 1 }
