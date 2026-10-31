@@ -18,8 +18,6 @@
 
 | 일 | 상태 |
 |---|---|
-| Shooter3D 체인 실패 둘 | `firelook` 은 시나리오 결함(같은 프레임에서 `<Expect>` 아래의 입력이 틱 전에 든다 — 이제 읽을 때 거절) · `crowd`(`Animation.CrowdSharedUnits` 가 서지 않음) — 작업자 조사 중 |
-| `OnlineLoadBot.localServer` | Release ctest 에서 180 초 시간 초과, 보고서 없음, 콘솔 출력 없음 — 작업자 조사 중 |
 | SOLID · 프로젝트 구성 점검 | 작업자 진행 중(아래 5 절) |
 
 ### 2. 테스트 · 시나리오 공백
@@ -30,6 +28,7 @@
 | 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지 |
 | 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
 | 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `wallTimeoutSeconds` 150 초를 넘는 시나리오가 있다(flowterrain 의 백엔드 교체 7 번이 혼자서도 19 초). 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
+| 바깥 시한 < 안쪽 대기 합 | 바깥 `timeoutFrames` 가 고정 대기와 `WaitUntil` 시한의 합보다 작은 시나리오가 45 개다(예: shooter3d cctvmonitor 1800 < 2135). 조건이 늦게 서면 crowd 처럼 덜 구체적인 "timeoutFrames reached" 로 진다 — 바깥 시한이 조건 대기 프레임을 세지 않게 하거나 읽을 때 거절(`AutomationStepValidation`) |
 | 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다 |
 | id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
