@@ -646,6 +646,10 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
 {
     using Record = AllocationObserverRecordInternal;
     static constexpr sw::MemoryAllocationObserver kObserver{ &Record::onAllocate, &Record::onFree };
+    // 센 값은 정적이다 — 회차(`--test-repeat`)마다 0 에서 시작한다
+    Record::s_allocateCount.store( 0 );
+    Record::s_freeCount.store( 0 );
+    Record::s_pLastAllocated.store( nullptr );
 
     void* pBefore = sw::Memory::allocate( Record::kProbeSize );
     SW_REQUIRE_NOT_NULL( pBefore );

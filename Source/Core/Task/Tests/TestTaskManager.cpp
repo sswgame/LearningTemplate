@@ -812,7 +812,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
 
     // 청크는 워커가 끝내지만 부모는 메인 큐에서 기다린다 — 여기서 스테이지가 끝나 있으면 워커가 부모를 집어간 것이다.
     {
-        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 200 );
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs ); // 기다림의 상한일 뿐 — 짧으면 바쁜 기계에서 흔들린다
         bool               bAllHit  = false;
         while ( bAllHit == false && deadline.isExpired() == false )
         {
