@@ -22,8 +22,9 @@ namespace sw::test
      *            순서와 상관없이 "보낸 시각 + L 이 지난 첫 `step`" 이다. 한 스레드라 같은 씨앗이면 같은 손실이다.
      *          - 스레드(`startThreads`): 엔드포인트마다 `NetEndpointThread` 가 돈다. 도는 동안 `step` · `addEndpoint` 는 부르지 않는다(단언). 소멸자가 멈춘다.
      *          - 흉내가 꺼져 있으면(기본) 패킷은 그대로 루프백에 넘어간다 — 맨 루프백과 같다.
+     *          - 키트 테스트(락스텝 · 복제 병렬)도 쓰므로 Engine.dll 에서 내보낸다(`SW_API`).
      */
-    class LoopbackCluster
+    class SW_API LoopbackCluster
     {
     public:
         /** @param seed 흉내 씨앗 — 엔드포인트 n 의 흉내는 @p seed + n 입니다. */

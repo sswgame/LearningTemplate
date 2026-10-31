@@ -42,8 +42,8 @@ namespace sw
         const string rangeError    = ConfigRangeUtil::describeRangeErrors( settings );
         if ( bPlayersValid == false || rangeError.empty() == false )
         {
-            SW_LOG_ERROR( "LockstepSession: refused to start - players %#, local player %#, settings '%#'", playerCount, localPlayer,
-                          rangeError.empty() ? "within range" : rangeError.c_str() );
+            SW_LOG_ERROR_ID( "Lockstep.RefusedToStart", "LockstepSession: refused to start - players %#, local player %#, settings '%#'", playerCount, localPlayer,
+                             rangeError.empty() ? "within range" : rangeError.c_str() );
             return false;
         }
         _pHost       = pHost;
@@ -107,7 +107,7 @@ namespace sw
             return false;
         if ( static_cast<int32>( listInput.size() ) > NetLockstepMessage::kMaxInputBytes )
         {
-            SW_LOG_ERROR( "Lockstep input of %# bytes exceeds the limit of %# bytes - not scheduled", listInput.size(), NetLockstepMessage::kMaxInputBytes );
+            SW_LOG_ERROR_ID( "Lockstep.InputTooLarge", "Lockstep input of %# bytes exceeds the limit of %# bytes - not scheduled", listInput.size(), NetLockstepMessage::kMaxInputBytes );
             return false;
         }
         const uint32 tick = _listNextInputTick[static_cast<size_t>( _localPlayer )];

@@ -47,8 +47,8 @@ namespace sw
         const bool   bCanStart     = pGame != nullptr && bPlayersValid && rangeError.empty();
         if ( bCanStart == false )
         {
-            SW_LOG_ERROR( "RollbackSession: refused to start - game %#, players %#, local player %#, settings '%#'", pGame != nullptr ? "set" : "missing", playerCount,
-                          localPlayer, rangeError.empty() ? "within range" : rangeError.c_str() );
+            SW_LOG_ERROR_ID( "Rollback.RefusedToStart", "RollbackSession: refused to start - game %#, players %#, local player %#, settings '%#'", pGame != nullptr ? "set" : "missing", playerCount,
+                             localPlayer, rangeError.empty() ? "within range" : rangeError.c_str() );
             return false;
         }
         _pHost       = pHost;
