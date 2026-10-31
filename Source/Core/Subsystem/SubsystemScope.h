@@ -109,6 +109,18 @@ namespace sw
         }
 
         /**
+         * @brief 이미 걸린 객체 @p owner 가 가진 멤버 @p member 를 인터페이스 @p TInterface 로 찾게 합니다 — 인터페이스를 상속하지 않고 멤버 어댑터로 가진 서브시스템의 자리다.
+         * @details 칸의 소유 표시는 @p owner 를 따른다(소유한 서브시스템의 멤버면 그 서브시스템과 함께 지워진다 — `destroyAll`). @p member 는 @p owner 와 수명이 같아야 한다.
+         * @return 그 인터페이스가 이미 걸려 있으면 false 입니다.
+         */
+        template <class TInterface, class TOwner>
+        [[nodiscard]] bool exposeMember( TOwner& owner, TInterface& member )
+        {
+            (void)owner;
+            return registerEntry( getSubsystemTypeHash<TInterface>(), &member, isOwnedEntry( getSubsystemTypeHash<TOwner>() ) );
+        }
+
+        /**
          * @brief 이미 걸린 객체 @p object 를 타입 @p TInterface 로 **공개**합니다 — 이 범위를 매단 부모 범위의 조회(`findInScope`)에도 보입니다.
          * @details 낮은 층이 높은 층의 구현을 받는 자리(공개 슬롯)다. 함수 칸 · 정적 포인터를 두고 높은 층이 채우게 하는 대신, 높은 층의 서브시스템이 자기 모듈 범위에서
          *          인터페이스를 공개하고 낮은 층은 그 인터페이스 타입으로 찾는다(언리얼 `IModularFeatures` 의 구현 등록과 같은 자리). @p TInterface 가 이미 같은 객체로

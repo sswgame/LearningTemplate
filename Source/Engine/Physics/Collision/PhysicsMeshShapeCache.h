@@ -5,7 +5,7 @@
  *          점과 인덱스를 받는다. 언리얼이 스태틱 메시의 렌더 정점에서 충돌(`UBodySetup` 의 볼록 · 복잡 충돌)을 만드는 것과 같은 자리다.
  *
  *          **층.** 물리(층 6)가 그래픽스의 메시 에셋 형식(`MeshAssetFormat`, 층 4)으로 `.mesh` 를 직접 읽는다. 메시를 다시 읽거나 비우면
- *          `MeshCache` 가 엔진 범위의 `IMeshDerivedCache`(이 표가 그 타입으로 걸린다)를 불러 이 표를 비운다 — 그래픽스는 물리를 모른다.
+ *          `MeshCache` 가 엔진 범위의 `IMeshDerivedCache`(이 표의 멤버가 그 타입으로 걸린다)를 불러 이 표를 비운다 — 그래픽스는 물리를 모른다.
  *
  *          **소유.** 표는 서비스 범위의 서브시스템 `PhysicsMeshShapeTable` 이 갖고(`EngineSubsystemSet`), 창구(`PhysicsMeshShapeCache`)는 서비스 표의 칸으로 찾는다.
  *          칸이 비면(엔진 없는 도구 · 테스트) 메시 셰이프를 만들지 않는다. 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다.
@@ -84,7 +84,7 @@ namespace sw
      *          **읽지 못한 경로는 영원히 믿지 않는다.** 기억한 때의 `FileUtil::getCreationEpoch` 가 지금과 같은 동안만 믿고, 바뀌었으면 다시 읽어 본다.
      *          언리얼 `UBodySetup` 의 쿠킹된 충돌 데이터를 물리 쪽이 갖는 자리.
      */
-    class SW_API PhysicsMeshShapeTable final : public ISubsystem, public IMeshDerivedCache
+    class SW_API PhysicsMeshShapeTable final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -97,8 +97,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        // IMeshDerivedCache — 메시가 다시 읽히거나 비워지면 표와 실패 기억을 비운다.
-        void onMeshesInvalidated() override { clear(); }
+        /** @brief 메시 캐시가 찾는 자리(`IMeshDerivedCache`)입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). */
+        IMeshDerivedCache& getMeshDerivedCache() { return _meshDerivedCache; }
 
         /** @brief `PhysicsMeshShapeCache::acquire` 의 본문입니다. */
         shared_ptr<const PhysicsMeshShapeData> acquire( string_view path ) SW_EXCLUDES_LOCK( _mutex );
@@ -108,6 +108,26 @@ namespace sw
         size_t getCachedCount() SW_EXCLUDES_LOCK( _mutex );
 
     private:
+        /**
+         * @class MeshDerivedCache
+         * @brief 메시가 다시 읽히거나 비워지면 표와 실패 기억을 비우는 `IMeshDerivedCache` 입니다. 표가 그 인터페이스를 상속하지 않고 이 멤버를 건다(수명은 표와 같다).
+         */
+        class MeshDerivedCache final : public IMeshDerivedCache
+        {
+        public:
+            explicit MeshDerivedCache( PhysicsMeshShapeTable& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void onMeshesInvalidated() override { _owner.clear(); }
+
+        private:
+            PhysicsMeshShapeTable& _owner;
+        };
+
+    private:
+        MeshDerivedCache                                                             _meshDerivedCache{ *this };
         mutex                                                                        _mutex;
         unordered_map<string, shared_ptr<const PhysicsMeshShapeData>> _mapPathToData SW_GUARDED_BY( _mutex );
         unordered_map<string, uint64> _mapFailedPathToEpoch                          SW_GUARDED_BY( _mutex ); ///< 읽지 못한 경로 → 그때의 만든 횟수

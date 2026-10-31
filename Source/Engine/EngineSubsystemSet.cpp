@@ -140,9 +140,9 @@ namespace sw::engine
         services.addSubsystem( sw::make_unique<StateHashHistory>() );
         // 셸 디버그 키 맵 — 호스트 루프가 프레임마다 돌리고 개발 도구 · 개발 명령이 읽는다. 맵은 처음 돌 때 만든다(기동 단계의 입력 매니저에 붙는다).
         parts._pDebugKeyActions = &services.addSubsystem( sw::make_unique<DebugKeyActions>() );
-        // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
+        // 메시 셰이프 기하 표 — 메시 캐시(기동 단계의 에셋 매니저)가 비울 때 부르므로 그보다 오래 산다. 표의 멤버를 메시 캐시가 찾는 타입(`IMeshDerivedCache`)으로도 건다.
         PhysicsMeshShapeTable& meshShapeTable = services.addSubsystem( sw::make_unique<PhysicsMeshShapeTable>() );
-        const bool             bExposed       = services.expose<IMeshDerivedCache>( meshShapeTable );
+        const bool             bExposed       = services.exposeMember<IMeshDerivedCache>( meshShapeTable, meshShapeTable.getMeshDerivedCache() );
         SW_ASSERT( bExposed ); // 받는 쪽이 둘이면 등록의 잘못이다(`IMeshDerivedCache`)
         (void)bExposed;
         {
