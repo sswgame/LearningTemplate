@@ -25,7 +25,7 @@ namespace sw
             const float64 limit = static_cast<float64>( kSequenceFrameLimit );
             if ( -limit <= frame && frame <= limit )
                 return true;
-            SW_LOG_ERROR( "Sequence '%#': %# %# is outside +-%# frames", sourceLabel, pWhat, frame, kSequenceFrameLimit );
+            SW_LOG_ERROR_ID( "Sequence.FrameOutOfRange", "Sequence '%#': %# %# is outside +-%# frames", sourceLabel, pWhat, frame, kSequenceFrameLimit );
             return false;
         }
 
@@ -134,7 +134,7 @@ namespace sw
         bValid      = isFrameWithinLimit( _cameraPrerollFrames, sourceLabel, "_cameraPrerollFrames" ) && bValid;
         if ( _frameMax <= _frameMin )
         {
-            SW_LOG_ERROR( "Sequence '%#': _frameMax %# must be after _frameMin %#", sourceLabel, _frameMax, _frameMin );
+            SW_LOG_ERROR_ID( "Sequence.FrameOrder", "Sequence '%#': _frameMax %# must be after _frameMin %#", sourceLabel, _frameMax, _frameMin );
             bValid = false;
         }
         for ( const SequenceTrackItem& item : _listItem )
