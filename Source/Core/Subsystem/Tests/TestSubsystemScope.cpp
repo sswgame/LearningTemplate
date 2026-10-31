@@ -8,7 +8,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 조회 대상 인터페이스입니다. */
+    /** @brief 멤버 부분으로 공개하는 조회 대상 인터페이스입니다(`publishPart`). */
     class IScopeProbe
     {
     public:
@@ -16,8 +16,18 @@ namespace
         virtual int32 getValue() const = 0;
     };
 
+    /**
+     * @brief 서브시스템 자체를 드러내는 조회 대상 인터페이스입니다(`expose` · `publish`).
+     * @details 서브시스템 인터페이스라 `ISubsystem` 을 기반으로 둔다(`IEditorPanelService` 와 같은 모양) — 구현이 `ISubsystem` 과 함께 다중 상속하지 않는다.
+     */
+    class IScopeProbeSubsystem : public ISubsystem
+    {
+    public:
+        virtual int32 getValue() const = 0;
+    };
+
     /** @brief 아무 일도 하지 않는 서브시스템입니다(조회만 본다). 소멸하면 @p pDestroyed 를 켭니다. */
-    class ScopeProbeSubsystem final : public ISubsystem, public IScopeProbe
+    class ScopeProbeSubsystem final : public IScopeProbeSubsystem
     {
     public:
         explicit ScopeProbeSubsystem( bool* pDestroyed )
@@ -74,10 +84,10 @@ SW_TEST_CASE( SubsystemScopeTest, FindsOwnedAndBorrowedByType )
     ScopeProbeSubsystem& probe = scope.addSubsystem( make_unique<ScopeProbeSubsystem>( nullptr ) );
     SW_EXPECT_TRUE( scope.find<ScopeProbeSubsystem>() == &probe );
     SW_EXPECT_TRUE( &scope.get<ScopeProbeSubsystem>() == &probe );
-    SW_EXPECT_TRUE( scope.find<IScopeProbe>() == nullptr ); // 드러내기 전에는 인터페이스로 찾지 못한다
-    SW_EXPECT_TRUE( scope.expose<IScopeProbe>( probe ) );
-    SW_EXPECT_EQUAL( 7, scope.find<IScopeProbe>()->getValue() );
-    SW_EXPECT_FALSE( scope.expose<IScopeProbe>( probe ) ); // 같은 인터페이스를 두 번 걸지 않는다
+    SW_EXPECT_TRUE( scope.find<IScopeProbeSubsystem>() == nullptr ); // 드러내기 전에는 인터페이스로 찾지 못한다
+    SW_EXPECT_TRUE( scope.expose<IScopeProbeSubsystem>( probe ) );
+    SW_EXPECT_EQUAL( 7, scope.find<IScopeProbeSubsystem>()->getValue() );
+    SW_EXPECT_FALSE( scope.expose<IScopeProbeSubsystem>( probe ) ); // 같은 인터페이스를 두 번 걸지 않는다
 
     ScopeCatalog catalog{ 3 };
     SW_EXPECT_TRUE( scope.bind( &catalog ) );
@@ -118,14 +128,14 @@ SW_TEST_CASE( SubsystemScopeTest, DestroyAllDropsOwnedEntriesOnly )
     bool                 bDestroyed = false;
     SubsystemScope       scope;
     ScopeProbeSubsystem& probe = scope.addSubsystem( make_unique<ScopeProbeSubsystem>( &bDestroyed ) );
-    SW_EXPECT_TRUE( scope.expose<IScopeProbe>( probe ) );
+    SW_EXPECT_TRUE( scope.expose<IScopeProbeSubsystem>( probe ) );
     ScopeCatalog catalog{};
     SW_EXPECT_TRUE( scope.bind( &catalog ) );
 
     scope.destroyAll();
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_TRUE( scope.find<ScopeProbeSubsystem>() == nullptr );
-    SW_EXPECT_TRUE( scope.find<IScopeProbe>() == nullptr ); // 드러낸 칸도 함께 사라진다(지운 객체를 가리키지 않는다)
+    SW_EXPECT_TRUE( scope.find<IScopeProbeSubsystem>() == nullptr ); // 드러낸 칸도 함께 사라진다(지운 객체를 가리키지 않는다)
     SW_EXPECT_TRUE( scope.find<ScopeCatalog>() == &catalog );
 }
 
@@ -141,9 +151,9 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
         ScopeProbeSubsystem& probe = child.addSubsystem( make_unique<ScopeProbeSubsystem>( &bDestroyed ) );
         SW_EXPECT_TRUE( &parent.mountChildScope( "ModuleA" ) == &child ); // 같은 이름은 같은 자식이다
         SW_EXPECT_TRUE( parent.find<ScopeProbeSubsystem>() == nullptr );  // 공개하기 전에는 부모가 보지 못한다
-        SW_EXPECT_TRUE( child.publish<IScopeProbe>( probe ) );
+        SW_EXPECT_TRUE( child.publish<IScopeProbeSubsystem>( probe ) );
         SW_EXPECT_TRUE( child.publish<ScopeProbeSubsystem>( probe ) ); // 제 타입은 공개 표시만 더한다
-        SW_EXPECT_EQUAL( 7, parent.find<IScopeProbe>()->getValue() );
+        SW_EXPECT_EQUAL( 7, parent.find<IScopeProbeSubsystem>()->getValue() );
         SW_EXPECT_TRUE( parent.find<ScopeProbeSubsystem>() == &probe );
         SW_EXPECT_TRUE( child.getParentScope() == &parent ); // 자식은 위로 찾는다
     }
@@ -154,7 +164,7 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
     parent.unmountChildScope( "ModuleA" );
     SW_EXPECT_TRUE( bDestroyed );
     SW_EXPECT_TRUE( parent.findChildScope( "ModuleA" ) == nullptr );
-    SW_EXPECT_TRUE( parent.find<IScopeProbe>() == nullptr );
+    SW_EXPECT_TRUE( parent.find<IScopeProbeSubsystem>() == nullptr );
 
     bool bSecondDestroyed = false;
     parent.mountChildScope( "ModuleB" ).addSubsystem( make_unique<ScopeProbeSubsystem>( &bSecondDestroyed ) );
