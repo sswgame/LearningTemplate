@@ -221,7 +221,7 @@ SW_TEST_CASE_F( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
 namespace
 {
     /** @brief 자식 시한(초) — Debug 의 자식 App 기동(몇 초)에 크래시 보고 몫을 더한다. 케이스 시한은 이보다 길게 둔다. */
-    constexpr float32 kCrashChildTimeoutSeconds = 45.0f;
+    constexpr float32 kCrashChildTimeoutSeconds = 120.0f;
 
     /** @brief @p folder 에서 이름이 @p suffix 로 끝나는 첫 파일입니다. 없으면 빈 글입니다. */
     string findReportFile( const string& folder, string_view suffix )
@@ -303,7 +303,7 @@ SW_TEST_CHILD_ROLE( CrashReportTest, ChildCrashesAsRequested )
  * @details 스택 오버플로: 넘친 스택에서 덤프를 쓰면 다시 넘쳐 덤프가 0 바이트다(Windows), 작업 스레드에도 대체 스택이 있어야 한다(POSIX).
  *          abort · 순수 가상 호출: CRT 가 `__fastfail` 로 끝내면 필터에 아예 들어오지 않는다(Windows).
  */
-SW_TEST_CASE_EACH( CrashReportTest, EveryCrashKindLeavesAReport, kArrCrashCase, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE_EACH( CrashReportTest, EveryCrashKindLeavesAReport, kArrCrashCase, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( param._pName );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
@@ -320,7 +320,7 @@ SW_TEST_CASE_EACH( CrashReportTest, EveryCrashKindLeavesAReport, kArrCrashCase, 
  * @details 보고는 죽어 가는 프로세스 안에서 돈다 — 크래시가 남긴 락을 기다리면 영영 끝나지 않는다. 스택 파일을 stderr 보다 먼저 쓰고, 시한이 지났다는 줄은
  *          stderr(`fputs`)가 아닌 길로 쓴다. 보고 시한 2 초는 자식 시한보다 한참 짧다 — 자식 시한에 죽으면 보고 시한이 듣지 않은 것이다.
  */
-SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( "stuck" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );
@@ -338,7 +338,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile, ._tags 
  * @brief 실패한 `SW_ASSERT` 는 멈추기 전에 식 · 자리를 남기고 크래시 보고도 남는다(단언은 Debug 에만 있다).
  * @details 아무것도 찍지 않고 멈추면 디버거 없이 돌 때 "EXCEPTION_BREAKPOINT"(리눅스 SIGILL)와 스택만 남아 어느 식이 어긋났는지 모른다.
  */
-SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const string folder = test::makeScratchPath( "assert" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );

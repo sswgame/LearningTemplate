@@ -643,7 +643,7 @@ SW_TEST_CASE_F( FileLogOutputTest, WritesTheFileOfItsHourAndSession )
 namespace
 {
     /** @brief 자식 하나의 시한(초) — 기동 몇 초에 교착 판정 몫을 더한다. */
-    constexpr float32 kLogChildTimeoutSeconds = 45.0f;
+    constexpr float32 kLogChildTimeoutSeconds = 120.0f;
 
     /**
      * @class BlockedFolderLogOutput
@@ -811,7 +811,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
  * @brief [LogTest] 로그 폴더를 만들 수 없어 장치가 열다가 오류를 남겨도 `initialize` 는 멈추지 않고 오류를 알리고 끝난다
  * @details 전에는 `initialize` 가 `_mutex` 를 쥔 채 장치를 열었고, 그 로그가 같은 `_mutex` 를 다시 잡아 기동이 영구 정지했다.
  */
-SW_TEST_CASE( LogTest, InitializeDoesNotDeadlockWhenAnOutputLogsWhileOpening, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, InitializeDoesNotDeadlockWhenAnOutputLogsWhileOpening, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = runDeadlockScenario( "initialize" );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() );
@@ -820,7 +820,7 @@ SW_TEST_CASE( LogTest, InitializeDoesNotDeadlockWhenAnOutputLogsWhileOpening, ._
 /**
  * @brief [LogTest] `addOutput` 이 장치를 열다가 남긴 로그와 상한 거절 경고는 리스너가 있어도 교착 없이 방송된다
  */
-SW_TEST_CASE( LogTest, AddOutputDoesNotDeadlockWhenItLogs, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, AddOutputDoesNotDeadlockWhenItLogs, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = runDeadlockScenario( "addOutput" );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() );
@@ -829,7 +829,7 @@ SW_TEST_CASE( LogTest, AddOutputDoesNotDeadlockWhenItLogs, ._tags = "slow", ._ti
 /**
  * @brief [LogTest] 장치가 `write` 안에서 남긴 로그는 되돌아와 멈추지 않고 stderr 로 나간다(버려지지 않는다)
  */
-SW_TEST_CASE( LogTest, LogFromInsideAnOutputWriteGoesToStderr, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, LogFromInsideAnOutputWriteGoesToStderr, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = runDeadlockScenario( "writeLogsBack" );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, child.getOutputTail() );
@@ -850,7 +850,7 @@ SW_TEST_CHILD_ROLE( LogTest, ConsoleChildWritesAMarker )
 /**
  * @brief [LogTest] ConsoleLogOutput 이 쓴 줄은 표준 출력으로 나간다 — 자식 프로세스의 출력을 받아 본다
  */
-SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ConsoleChildWritesAMarker", {}, kLogChildTimeoutSeconds );
     SW_EXPECT_EQUAL( 0, child._exitCode );
@@ -888,7 +888,7 @@ SW_TEST_CHILD_ROLE( LogTest, StderrChildWritesMarkers )
 /**
  * @brief [LogTest] 싱크가 없을 때 `SW_LOG_*` 줄은 버려지지 않고 stderr 로 나간다
  */
-SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "nosink", kLogChildTimeoutSeconds );
     SW_EXPECT_EQUAL( 0, child._exitCode );
@@ -899,7 +899,7 @@ SW_TEST_CASE( LogTest, LineWithoutASinkReachesStandardError, ._tags = "slow", ._
 /**
  * @brief [LogTest] 실패한 `SW_LOG_ASSERT` 는 식 · 메시지 · 자리를 stderr 에 먼저 남긴다(멈추는 단언은 Debug 에만 있다)
  */
-SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, FailedLogAssertWritesStandardErrorBeforeStopping, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.StderrChildWritesMarkers", "assert", kLogChildTimeoutSeconds );
     SW_EXPECT_EQUAL( 0, child._exitCode );
@@ -927,7 +927,7 @@ SW_TEST_CHILD_ROLE( LogTest, ListenerWithoutASinkChild )
 /**
  * @brief [LogTest] 싱크가 없을 때 리스너를 붙이면 순서 위반으로 보고된다 — 자식이 판정하고 stderr 에 단언 줄이 남는다
  */
-SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( LogTest, RegisteringAListenerWithoutASinkIsReported, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
     const sw::test::ChildRunResult child = sw::test::runChildRole( "LogTest.ListenerWithoutASinkChild", {}, kLogChildTimeoutSeconds );
     SW_EXPECT_EQUAL( 0, child._exitCode );

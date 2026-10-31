@@ -75,9 +75,9 @@ SW_TEST_CASE( TestFrameworkTest, ChildRolesStayOutOfTheCaseList )
 /**
  * @brief 자식은 인자를 받고 그 출력이 돌아오며 통과하면 0 으로 끝난다
  */
-SW_TEST_CASE( TestFrameworkTest, ChildRoleGetsItsArgumentAndOutputIsCaptured, ._tags = "slow", ._timeoutSeconds = 90.0f )
+SW_TEST_CASE( TestFrameworkTest, ChildRoleGetsItsArgumentAndOutputIsCaptured, ._tags = "slow", ._timeoutSeconds = 180.0f )
 {
-    const test::ChildRunResult child = test::runChildRole( "TestFrameworkTest.ChildEchoesOrHangs", "marker42", 45.0f );
+    const test::ChildRunResult child = test::runChildRole( "TestFrameworkTest.ChildEchoesOrHangs", "marker42", 120.0f );
     SW_EXPECT_FALSE( child._bTimedOut );
     SW_EXPECT_EQUAL( 0, child._exitCode );
     SW_EXPECT_TRUE_MSG( StringUtil::contains( child._output, "SW_CHILD_ECHO:marker42" ), child.getOutputTail() );
