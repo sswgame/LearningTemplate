@@ -348,7 +348,7 @@ namespace sw
                     }
                     case RenderPassType::UpscaleRcas:
                     {
-                        // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(createOutputPSOVariants). 엔진 PSO 는 쓰지 않는다.
+                        // Present 대상에 그리는 출력 패스다 — 포맷마다 PSO 를 만든다(collectOutputPSOJobs). 엔진 PSO 는 쓰지 않는다.
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderUpscale;
                         info._pPassDefine      = kPassFSRRcasDefine;
                         info._colorTargetCount = 1;

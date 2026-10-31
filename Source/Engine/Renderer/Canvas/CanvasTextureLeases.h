@@ -46,7 +46,7 @@ namespace sw
 
         /**
          * @brief 이번 목록의 렌더 텍스처 대상을 빌리고(위젯이 그리기 크기를 바꾸면 다시 만듭니다), 사라진 대상은 돌려줍니다.
-         * @details 처음 빌린 대상의 포맷에 셋업 PSO(@p psoCache, `FramePSOManager::createOutputPSOVariants`)가 없으면 여기서 오류로 거절한다(대상마다 한 번 — 다음 프레임에는 빌린 상태라 다시 묻지 않는다).
+         * @details 처음 빌린 대상의 포맷에 셋업 PSO(@p psoCache, `FramePSOManager::collectOutputPSOJobs`)가 없으면 여기서 오류로 거절한다(대상마다 한 번 — 다음 프레임에는 빌린 상태라 다시 묻지 않는다).
          */
         void prepareTargets( IRHIDevice& device, const CanvasFrameData& frame, const RenderPSOCache& psoCache );
         /** @brief 목록의 경로 이미지 로드를 `TextureCache` 에 맡깁니다(처음 보는 경로만 — 워커가 읽고, 다 읽기 전에는 그 이미지를 그리지 않는다). 엔진 서비스가 없으면(테스트 하네스 밖) 아무것도 하지 않습니다. */

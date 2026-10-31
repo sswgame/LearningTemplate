@@ -62,6 +62,7 @@ namespace sw
         /**
          * @brief 엔진 패스 PSO(패스 종류 표를 enum 순서로), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
          * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`SW_FATAL`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
+         *          그래픽스 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`prewarmPassShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
          */
         void createPassPSOS();
         /** @brief 소유한 저장소의 PSO · 레이아웃과 폴백 버퍼를 놓습니다. 빌린 저장소는 놓지 않습니다(소유자의 몫). 디바이스가 없으면 핸들만 잊습니다. */
@@ -146,8 +147,26 @@ namespace sw
             RHIStructuredBufferSlot _buffer;
         };
 
-        /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 셋업에서 미리 만듭니다. 하나라도 못 만들면 멈춥니다. */
-        void createOutputPSOVariants();
+        /** @brief 셋업이 만들 그래픽스 패스 PSO 하나입니다. `_outputFormat` 이 `Unknown` 이면 엔진 패스 PSO, 아니면 그 대상 포맷의 출력 패스 변형입니다. */
+        struct PassPSOJob
+        {
+            RHIPipelineStateDesc _desc{};
+            RenderPassType       _passType{ RenderPassType::Invalid };
+            RHIFormat            _outputFormat{ RHIFormat::Unknown };
+        };
+
+        /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 @p inoutListJob 에 더합니다. desc 를 정하지 못하면 멈춥니다. */
+        void collectOutputPSOJobs( vector<PassPSOJob>& inoutListJob );
+        /**
+         * @brief 패스 종류 표와 파이프라인 XML 의 패스 서술로 패스 PSO 의 desc 를 정합니다(PSO 는 만들지 않는다). 컬러 포맷을 정할 근거가 없으면 오류를 남기고 false 입니다.
+         * @param pRTVFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(출력 변형). nullptr 이면 표의 고정 포맷을 쓰고, 없으면 출력 선언 순서를 따릅니다.
+         */
+        [[nodiscard]] bool makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const;
+        /**
+         * @brief @p listJob 의 셰이더를 워커가 나눠 읽거나 컴파일해 `ShaderCache` 에 올립니다(PSO 는 만들지 않는다 — 뒤의 생성이 캐시에서 받는다).
+         * @details 셰이더 바이트코드는 디바이스를 쓰지 않아 백엔드와 상관없이 병렬로 된다. PSO 생성은 이 스레드가 차례로 한다(`createPassPSOS`).
+         */
+        void prewarmPassShaders( const vector<PassPSOJob>& listJob ) const;
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
          * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSRV` 는 bindless 레지스트리를 바꾸는데, 패스 콜백은 태스크 워커에서 병렬로 돈다.
