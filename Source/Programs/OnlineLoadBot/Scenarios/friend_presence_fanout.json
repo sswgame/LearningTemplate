@@ -1,8 +1,5 @@
 {
     "_name": "friend_presence_fanout",
-    "_botCount": 1000,
-    "_rampUpSeconds": 20,
-    "_durationSeconds": 300,
     "_seed": 11,
     "_region": "kr",
     "_listStep": [

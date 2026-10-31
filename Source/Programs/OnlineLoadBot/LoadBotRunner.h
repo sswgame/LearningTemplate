@@ -5,7 +5,7 @@
  *            `tick` 이 `pollIO` 를 돈다 — 실행기 스레드 하나.
  *          - 시계: 기본은 `MonotonicClock`(지연은 마이크로초). 테스트는 `setManualClock` 으로 바깥이 밀리초를 정한다(결정적 — 지연도 그 밀리초).
  *          - 받은 Message 프레임(알림)은 종류(첫 2 바이트)별로 센 뒤 그 봇에 넘긴다.
- *          - 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationSeconds` 가 지나면 `tick` 이 false 다.
+ *          - 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationMs` 가 지나면 `tick` 이 false 다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -32,7 +32,6 @@ namespace sw
         NetAddress   _serverAddress{};
         NetAddress   _gameAddress{};          ///< 게임 UDP 포트 — 시나리오의 `game_connect` 가 붙는다. 비어 있으면(`isValid` 거짓) 그 동작은 `game.noaddress` 오류다
         ITLSContext* _pTLSContext{ nullptr }; ///< 있으면 모든 연결이 TLS 1.3(전용 서버의 서비스 포트). 빌려 쓰며 실행기보다 오래 산다
-        int32        _botCountOverride{ 0 };  ///< 0 = 시나리오 값
     };
 } // namespace sw
 

@@ -1,8 +1,5 @@
 {
     "_name": "chat_send_p99",
-    "_botCount": 2000,
-    "_rampUpSeconds": 30,
-    "_durationSeconds": 240,
     "_seed": 7,
     "_region": "kr",
     "_listStep": [

@@ -1,0 +1,14 @@
+{
+    "_name": "smoke",
+    "_seed": 7,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "directory_status" },
+        { "_action": "chat_join", "_channel": "world.smoke" },
+        { "_action": "chat_send", "_channel": "world.smoke", "_text": "smoke {bot} #{seq}" },
+        { "_action": "chat_history", "_channel": "world.smoke", "_count": 10 },
+        { "_action": "leaderboard_top", "_board": "kills", "_count": 10 },
+        { "_action": "logout" }
+    ]
+}

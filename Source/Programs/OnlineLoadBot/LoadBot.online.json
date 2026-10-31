@@ -1,0 +1,17 @@
+{
+    "_serverKind": "game",
+    "_publicAddress": "127.0.0.1",
+    "_capacity": 100000,
+    "_ioThreadCount": 0,
+    "_requestBurstPerRemote": 1000000,
+    "_requestBurstPerAccount": 1000000,
+    "_listKit": [
+        { "_name": "account", "_listOption": [ { "_key": "attemptBurst", "_value": "1000000" } ] },
+        { "_name": "directory" },
+        { "_name": "chat", "_listOption": [ { "_key": "bannedWords", "_value": "none" } ] },
+        { "_name": "social" },
+        { "_name": "leaderboard", "_listOption": [ { "_key": "board", "_value": "kills" } ] },
+        { "_name": "matchmaking", "_listOption": [ { "_key": "mode", "_value": "solo:2x1" }, { "_key": "mode", "_value": "duo:2x2" } ] },
+        { "_name": "liveops" }
+    ]
+}

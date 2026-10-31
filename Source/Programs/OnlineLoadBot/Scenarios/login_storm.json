@@ -1,8 +1,5 @@
 {
     "_name": "login_storm",
-    "_botCount": 5000,
-    "_rampUpSeconds": 10,
-    "_durationSeconds": 120,
     "_seed": 2,
     "_region": "kr",
     "_listStep": [

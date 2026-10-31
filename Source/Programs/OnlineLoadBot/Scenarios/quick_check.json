@@ -1,8 +1,5 @@
 {
     "_name": "quick_check",
-    "_botCount": 300,
-    "_rampUpSeconds": 2,
-    "_durationSeconds": 30,
     "_seed": 3,
     "_region": "kr",
     "_listStep": [

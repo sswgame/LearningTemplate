@@ -90,8 +90,7 @@ namespace sw
 
             static bool isKnownRootKey( string_view key )
             {
-                return key == "_name" || key == "_botCount" || key == "_rampUpSeconds" || key == "_durationSeconds" || key == "_seed" || key == "_region" ||
-                       key == "_listStep";
+                return key == "_name" || key == "_seed" || key == "_region" || key == "_listStep";
             }
 
             /** @brief 첫 칸 값이 그 동작이 받는 값인지 봅니다. 허용 목록이 없거나 값이 비면(기본) 참입니다. */
@@ -259,21 +258,13 @@ namespace sw
         // 적지 않은 칸은 시나리오의 초기값이다. 정수가 아니면 거절한다.
         outScenario       = LoadBotScenario{};
         outScenario._name = root.get( "_name" ).asString();
-        const bool bRead  = root.readOptionalInto( "_botCount", outScenario._botCount ) && root.readOptionalInto( "_rampUpSeconds", outScenario._rampUpSeconds ) &&
-                           root.readOptionalInto( "_durationSeconds", outScenario._durationSeconds ) && root.readOptionalInto( "_seed", outScenario._seed );
-        if ( bRead == false )
+        if ( root.readOptionalInto( "_seed", outScenario._seed ) == false )
         {
-            outError = "_botCount, _rampUpSeconds, _durationSeconds and _seed must be integers";
+            outError = "_seed must be an integer";
             return false;
         }
         if ( root.has( "_region" ) )
             outScenario._region = root.get( "_region" ).asString();
-        const bool bInvalidScenarioTiming = outScenario._botCount <= 0 || outScenario._rampUpSeconds < 0 || outScenario._durationSeconds <= 0;
-        if ( bInvalidScenarioTiming )
-        {
-            outError = "_botCount and _durationSeconds must be positive and _rampUpSeconds not negative";
-            return false;
-        }
         return LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), outScenario._listStep, outError, 0 );
     }
 } // namespace sw

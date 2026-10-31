@@ -1,8 +1,5 @@
 {
     "_name": "chat_and_match",
-    "_botCount": 1000,
-    "_rampUpSeconds": 20,
-    "_durationSeconds": 180,
     "_seed": 1,
     "_region": "kr",
     "_listStep": [

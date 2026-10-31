@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 부하 봇 시나리오 quick_check.json 의 부하 선언 - 봇 수 · 늘리는 시간 · 길이는 이 <Load> 한 곳에서 온다(OnlineLoadBot 의 load 인자). -->
+<Scenario name="loadbot.quick_check">
+	<Load clients="300" rampUpSeconds="2" durationSeconds="30"/>
+</Scenario>

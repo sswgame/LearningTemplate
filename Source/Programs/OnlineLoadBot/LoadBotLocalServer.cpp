@@ -2,7 +2,6 @@
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/WallClock.h"
@@ -16,61 +15,32 @@ namespace sw
     {
         struct LoadBotLocalServerInternal
         {
-            static constexpr int32       kUnlimitedAttemptBurst = 1000000; ///< 봇은 한 주소에서 온다 — 주소마다 제한을 사실상 끈다
-            static constexpr uint16      kGameServerPort        = 7777;
-            static constexpr const utf8* kLoopbackAddress       = "127.0.0.1";
-            static constexpr const utf8* kDefaultBoardID        = "kills";
-            static constexpr const utf8* kArrMatchMode[]        = { "solo:2x1", "duo:2x2" };
+            static constexpr uint16      kGameServerPort = 7777;
+            static constexpr const utf8* kAccountKit     = "account";
 
-            static void addOption( OnlineServerKitEntry& outEntry, const utf8* pKey, string value )
+            /**
+             * @brief 파일에서 읽은 설정 위에 부하에 딸린 값을 얹습니다. 키트 목록 · 옵션은 파일이 정본이다(코드에 다시 적지 않는다).
+             * @return 가벼운 해시를 켜야 하는데 파일에 계정 키트가 없으면 false 와 @p outError 입니다.
+             */
+            [[nodiscard]] static bool applyLoad( const LoadBotLocalServerSettings& settings, OnlineServerConfig& inoutConfig, string& outError )
             {
-                OnlineServerOption& option = outEntry._listOption.emplace_back();
-                option._key                = pKey;
-                option._value              = std::move( value );
-            }
-
-            static OnlineServerKitEntry& addKit( OnlineServerConfig& outConfig, const utf8* pName )
-            {
-                OnlineServerKitEntry& entry = outConfig._listKit.emplace_back();
-                entry._name                 = pName;
-                return entry;
-            }
-
-            /** @brief 봇이 쓰는 키트 일곱과 옵션입니다. 전용 서버라면 운영자가 `<이름>.online.json` 에 적는 내용이다. */
-            static void fillConfig( const LoadBotLocalServerSettings& settings, OnlineServerConfig& outConfig )
-            {
-                outConfig._serverID                = static_cast<int32>( settings._serverID );
-                outConfig._region                  = settings._region;
-                outConfig._serverKind              = "game";
-                outConfig._publicAddress           = kLoopbackAddress; // 이 서버를 게임 서버로 등록한다 — 매칭 배정이 그리로 간다
-                outConfig._capacity                = settings._gameServerCapacity;
-                outConfig._maxConnections          = settings._maxConnections;
-                outConfig._ioThreadCount           = 0; // `tick` 이 전송을 돈다
-                outConfig._requestBurstPerRemote   = kUnlimitedAttemptBurst;
-                outConfig._requestBurstPerAccount  = kUnlimitedAttemptBurst;
-                outConfig._maxConnectionsPerRemote = settings._maxConnections; // 봇은 모두 루프백 한 주소에서 붙는다
-
-                OnlineServerKitEntry& account = addKit( outConfig, "account" );
-                addOption( account, "attemptBurst", sw::to_string( kUnlimitedAttemptBurst ) );
-                if ( settings._bLightPasswordHash == SW_TRUE )
-                    addOption( account, "lightPasswordHash", "1" );
-                (void)addKit( outConfig, "directory" );
-                OnlineServerKitEntry& chat = addKit( outConfig, "chat" );
-                addOption( chat, "bannedWords", "none" );
-                (void)addKit( outConfig, "social" );
-                OnlineServerKitEntry& leaderboard = addKit( outConfig, "leaderboard" );
-                if ( settings._listBoardID.empty() )
-                    addOption( leaderboard, "board", kDefaultBoardID );
-                for ( const string& boardID : settings._listBoardID )
+                inoutConfig._serverID                = static_cast<int32>( settings._serverID );
+                inoutConfig._region                  = settings._region;
+                inoutConfig._maxConnections          = settings._maxConnections;
+                inoutConfig._maxConnectionsPerRemote = settings._maxConnections; // 봇은 모두 루프백 한 주소에서 붙는다
+                if ( settings._bLightPasswordHash == SW_FALSE )
+                    return true;
+                for ( OnlineServerKitEntry& kit : inoutConfig._listKit )
                 {
-                    addOption( leaderboard, "board", boardID );
+                    if ( kit._name != kAccountKit )
+                        continue;
+                    OnlineServerOption& option = kit._listOption.emplace_back();
+                    option._key                = "lightPasswordHash";
+                    option._value              = "1";
+                    return true;
                 }
-                OnlineServerKitEntry& matchmaking = addKit( outConfig, "matchmaking" );
-                for ( const utf8* pMode : kArrMatchMode )
-                {
-                    addOption( matchmaking, "mode", pMode );
-                }
-                (void)addKit( outConfig, "liveops" );
+                outError = "--light-hash needs the account kit in the online config";
+                return false;
             }
         };
     } // namespace
@@ -92,7 +62,9 @@ namespace sw
     {
         using Internal = LoadBotLocalServerInternal;
         OnlineServerRuntimeConfig runtimeSettings;
-        Internal::fillConfig( settings, runtimeSettings._config );
+        runtimeSettings._config = settings._config;
+        if ( Internal::applyLoad( settings, runtimeSettings._config, outError ) == false )
+            return false;
         runtimeSettings._listenAddress = NetAddress::makeLoopback( settings._port );
         runtimeSettings._pTransport    = pTransport;
         runtimeSettings._gamePort      = Internal::kGameServerPort;

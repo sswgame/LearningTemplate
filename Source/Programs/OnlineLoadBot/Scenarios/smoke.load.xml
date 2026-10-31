@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CTest OnlineLoadBot.localServer 의 짧은 부하 - 봇 여덟이 한 프로세스 서버(local-server)에 붙어 로그인 · 채팅 · 순위를 한 번씩 돈다. -->
+<Scenario name="loadbot.smoke">
+	<Load clients="8" rampUpSeconds="1" durationSeconds="20"/>
+</Scenario>

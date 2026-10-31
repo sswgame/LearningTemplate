@@ -16,9 +16,8 @@ namespace sw
     {
         struct LoadBotRunnerInternal
         {
-            static constexpr int64 kMicrosecondsPerMs     = 1000;
-            static constexpr int64 kMillisecondsPerSecond = 1000;
-            static constexpr int32 kSpareConnectionCount  = 16; ///< 다시 연결하는 동안 닫히는 연결이 자리를 잡고 있다
+            static constexpr int64 kMicrosecondsPerMs    = 1000;
+            static constexpr int32 kSpareConnectionCount = 16; ///< 다시 연결하는 동안 닫히는 연결이 자리를 잡고 있다
         };
     } // namespace
 } // namespace sw
@@ -53,8 +52,11 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         _scenario = scenario;
         _settings = settings;
-        if ( settings._botCountOverride > 0 )
-            _scenario._botCount = settings._botCountOverride;
+        if ( _scenario._botCount <= 0 || _scenario._durationMs <= 0 || _scenario._rampUpMs < 0 )
+        {
+            outError = "the load (bots, ramp-up, duration) is not set - it comes from the <Load> declaration (--load)";
+            return false;
+        }
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
         transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
@@ -116,8 +118,7 @@ namespace sw
 
     int64 LoadBotRunner::computeLaunchMs( int32 botIndex ) const
     {
-        const int64 rampUpMs = static_cast<int64>( _scenario._rampUpSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;
-        return rampUpMs * botIndex / MathUtil::max( 1, _scenario._botCount );
+        return _scenario._rampUpMs * botIndex / MathUtil::max( 1, _scenario._botCount );
     }
 
     bool LoadBotRunner::update()
@@ -142,7 +143,7 @@ namespace sw
             runningCount += _listBot[static_cast<size_t>( botIndex )]->update( nowMs ) ? 1 : 0;
         }
 
-        const int64 endMs     = static_cast<int64>( _scenario._rampUpSeconds + _scenario._durationSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;
+        const int64 endMs     = _scenario._rampUpMs + _scenario._durationMs;
         const bool  bAllDone  = _launchedCount == getBotCount() && runningCount == 0;
         const bool  bTimedOut = nowMs >= kRunStart + endMs;
         return bAllDone == false && bTimedOut == false;
