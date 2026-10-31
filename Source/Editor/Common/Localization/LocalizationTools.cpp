@@ -386,6 +386,9 @@ namespace sw
                     VectorUtil::sort( listFile );
                     for ( const string& filePath : listFile )
                     {
+                        // 테스트 소스는 배포 문구가 아니다(빌드도 `/Tests/` 를 개발 전용으로 뺀다 — SW_DEV_ONLY_SOURCE_PATTERNS). 테스트가 쓰는 키가 엔진 표에 오르지 않게 한다.
+                        if ( StringUtil::contains( FileUtil::normalizeSeparators( filePath ), "/Tests/" ) )
+                            continue;
                         bool bCode{ false };
                         for ( const utf8* pExtension : kArrCodeExtension )
                         {

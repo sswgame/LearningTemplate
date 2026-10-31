@@ -771,7 +771,7 @@ namespace sw
             int64 parsedValue{ 0 };
             if ( pEnumInfo->tryParseText( flagsText, parsedValue ) == false )
             {
-                SW_LOG_WARNING_ID( "Serialization.UnknownEnumeratorName", "'%#' is not a value of enum %# - the field keeps its current value", flagsText, pEnumInfo->_fullyQualifiedName.c_str() );
+                SW_LOG_WARNING_ID( "Serialization.UnknownEnumerator", "'%#' is not a value of enum %# - the field keeps its current value", flagsText, pEnumInfo->_fullyQualifiedName.c_str() );
                 return false;
             }
             pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
