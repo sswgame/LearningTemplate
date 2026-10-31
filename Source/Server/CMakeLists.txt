@@ -10,8 +10,7 @@ if(SW_TARGET_TYPE STREQUAL "Client")
 	return()
 endif()
 
-add_executable(Server ${SERVER_SOURCES})
-sw_embedProcessManifest(Server)
+sw_addExecutable(Server ${SERVER_SOURCES})
 set_target_properties(Server PROPERTIES FOLDER "Source/Server")
 
 target_link_libraries(Server

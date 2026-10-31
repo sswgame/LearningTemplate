@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Engine/ExecutableTargets.cmake
-# @brief 실행 파일의 링크 · 배치 규칙 — 리플렉션 정적 라이브러리 통째 링크 · App/Server 의존 · 프로세스 매니페스트 · Shipping 심볼 분리
+# @brief 실행 파일의 링크 · 배치 규칙 — 리플렉션 정적 라이브러리 통째 링크 · App/Server 의존 · 실행 파일 만들기(프로세스 매니페스트) · Shipping 심볼 분리
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -91,16 +91,16 @@ function(sw_configureAppDependencies TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_embedProcessManifest — Windows 실행 파일에 프로세스 설정 매니페스트를 박는다
-#   (UTF-8 ANSI 코드 페이지 · 긴 경로; cmake/Modules/Platform/WindowsProcess.manifest 설명)
-#   .manifest 를 소스로 주면 CMake 가 링크 단계에서 CMAKE_MT 로 합쳐 넣는다. 실행 파일마다 부른다 — 앱만 켜고 테스트를
-#   빼면 테스트가 앱과 다른 코드 페이지에서 돌아 경로 인코딩 결함을 볼 수 없다.
+# sw_addExecutable — 실행 파일 하나. 모든 실행 파일은 이것으로 만든다(`add_executable` 을 직접 부르지 않는다).
+#   Windows 는 프로세스 설정 매니페스트(UTF-8 ANSI 코드 페이지 · 긴 경로; cmake/Modules/Platform/WindowsProcess.manifest 설명)를 박는다 —
+#   .manifest 를 소스로 주면 CMake 가 링크 단계에서 CMAKE_MT 로 합쳐 넣는다. 예전에는 실행 파일마다 따로 불러 부하 봇만 빠졌고,
+#   한국어 Windows 에서 봇 인자가 CP949 로 들어왔다 — 만드는 함수 하나가 매니페스트까지 붙이면 빠뜨릴 자리가 없다.
 # ------------------------------------------------------------------------------
-function(sw_embedProcessManifest TARGET_NAME)
-	if(NOT WIN32)
-		return()
+function(sw_addExecutable TARGET_NAME)
+	add_executable(${TARGET_NAME} ${ARGN})
+	if(WIN32)
+		target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/cmake/Modules/Platform/WindowsProcess.manifest")
 	endif()
-	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/cmake/Modules/Platform/WindowsProcess.manifest")
 endfunction()
 
 # sw_splitShippingDebugInfo — 리눅스 Shipping: 디버그 정보를 `Symbols/<이름>.debug` 로 떼고 실행 파일에는 `.gnu_debuglink` 만 남긴다

@@ -39,7 +39,7 @@ target_link_libraries(OnlineLoadBotCore
 sw_configurePCH(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 set_target_properties(OnlineLoadBotCore PROPERTIES FOLDER "Source/Programs")
 
-add_executable(OnlineLoadBot Main.cpp)
+sw_addExecutable(OnlineLoadBot Main.cpp)
 # ModuleManager: 호스트 범위의 모듈 라이브러리 창구(`ModuleLoaderSubsystem`) — 전용 서버(`ServerApp`)와 같은 모양으로 엔진(DedicatedServer)을 세운다.
 target_link_libraries(OnlineLoadBot PRIVATE OnlineLoadBotCore ModuleManager sw_global_options)
 target_compile_definitions(OnlineLoadBot PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"")

@@ -44,8 +44,7 @@ endif()
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
-add_executable(ReflectionParser ${PARSER_SOURCES})
-sw_embedProcessManifest(ReflectionParser)
+sw_addExecutable(ReflectionParser ${PARSER_SOURCES})
 
 # 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verifySourceIncludeRoots`).
 target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
