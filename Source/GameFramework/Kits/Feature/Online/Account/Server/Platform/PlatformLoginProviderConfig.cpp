@@ -54,85 +54,62 @@ namespace sw
         return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
-    bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderConfig>& outListSettings, string& outError )
+    bool PlatformLoginProviderFactory::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError )
     {
         using Internal = PlatformLoginProviderSettingsInternal;
-        outListSettings.clear();
-        JSONDocument document;
-        if ( document.tryParse( jsonText ) == false )
+        for ( const string& key : entry.getMemberNames() )
         {
-            outError = "platform login settings are not JSON";
+            if ( Internal::isKnownKey( key ) == false )
+            {
+                outError = "unknown provider setting '" + key + "'";
+                return false;
+            }
+        }
+        outSettings._name = Internal::readText( entry, "name", "" );
+        const string kind = Internal::readText( entry, "kind", "" );
+        if ( kind == "oidc" )
+            outSettings._kind = PlatformLoginProviderKind::Oidc;
+        else if ( kind == "profile" )
+            outSettings._kind = PlatformLoginProviderKind::AccessTokenProfile;
+        else if ( kind == "ticketQuery" )
+            outSettings._kind = PlatformLoginProviderKind::TicketQuery;
+        else if ( kind == "appleSignIn" )
+            outSettings._kind = PlatformLoginProviderKind::AppleSignIn;
+        else
+        {
+            outError = "provider '" + outSettings._name + "' has an unknown kind '" + kind + "'";
             return false;
         }
-        const JSONValue providers = document.getRoot().get( "providers" );
-        if ( providers.isArray() == false )
+        outSettings._issuer               = Internal::readText( entry, "issuer", "" );
+        outSettings._jwksURL              = Internal::readText( entry, "jwksURL", "" );
+        outSettings._profileURL           = Internal::readText( entry, "profileURL", "" );
+        outSettings._subjectPath          = Internal::readText( entry, "subjectPath", ( outSettings._kind == PlatformLoginProviderKind::Oidc || outSettings._kind == PlatformLoginProviderKind::AppleSignIn ) ? "sub" : "id" );
+        outSettings._displayNamePath      = Internal::readText( entry, "displayNamePath", "" );
+        outSettings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
+        outSettings._keyParam             = Internal::readText( entry, "keyParam", "" );
+        outSettings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
+        outSettings._resultPath           = Internal::readText( entry, "resultPath", "" );
+        outSettings._resultValue          = Internal::readText( entry, "resultValue", "" );
+        outSettings._teamID               = Internal::readText( entry, "teamID", "" );
+        outSettings._signingKeyID         = Internal::readText( entry, "signingKeyID", "" );
+        outSettings._tokenURL             = Internal::readText( entry, "tokenURL", "" );
+        outSettings._revokeURL            = Internal::readText( entry, "revokeURL", "" );
+        bool bRequireNonce                = outSettings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
+        if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
         {
-            outError = "platform login settings need a 'providers' array";
+            outError = "provider '" + outSettings._name + "' has a requireNonce that is not true or false";
             return false;
         }
-        for ( size_t index = 0; index < providers.size(); ++index )
+        outSettings._bRequireNonce = bRequireNonce ? SW_TRUE : SW_FALSE;
+        const JSONValue clientIDs  = entry.get( "clientIDs" );
+        for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
         {
-            const JSONValue entry = providers.at( index );
-            if ( entry.isObject() == false )
-            {
-                outError = "provider entry is not an object";
-                return false;
-            }
-            for ( const string& key : entry.getMemberNames() )
-            {
-                if ( Internal::isKnownKey( key ) == false )
-                {
-                    outError = "unknown provider setting '" + key + "'";
-                    return false;
-                }
-            }
-            PlatformLoginProviderConfig& settings = outListSettings.emplace_back();
-            settings._name                        = Internal::readText( entry, "name", "" );
-            const string kind                     = Internal::readText( entry, "kind", "" );
-            if ( kind == "oidc" )
-                settings._kind = PlatformLoginProviderKind::Oidc;
-            else if ( kind == "profile" )
-                settings._kind = PlatformLoginProviderKind::AccessTokenProfile;
-            else if ( kind == "ticketQuery" )
-                settings._kind = PlatformLoginProviderKind::TicketQuery;
-            else if ( kind == "appleSignIn" )
-                settings._kind = PlatformLoginProviderKind::AppleSignIn;
-            else
-            {
-                outError = "provider '" + settings._name + "' has an unknown kind '" + kind + "'";
-                return false;
-            }
-            settings._issuer               = Internal::readText( entry, "issuer", "" );
-            settings._jwksURL              = Internal::readText( entry, "jwksURL", "" );
-            settings._profileURL           = Internal::readText( entry, "profileURL", "" );
-            settings._subjectPath          = Internal::readText( entry, "subjectPath", ( settings._kind == PlatformLoginProviderKind::Oidc || settings._kind == PlatformLoginProviderKind::AppleSignIn ) ? "sub" : "id" );
-            settings._displayNamePath      = Internal::readText( entry, "displayNamePath", "" );
-            settings._ticketParam          = Internal::readText( entry, "ticketParam", "" );
-            settings._keyParam             = Internal::readText( entry, "keyParam", "" );
-            settings._keySecretEnvironment = Internal::readText( entry, "keySecretEnvironment", "" );
-            settings._resultPath           = Internal::readText( entry, "resultPath", "" );
-            settings._resultValue          = Internal::readText( entry, "resultValue", "" );
-            settings._teamID               = Internal::readText( entry, "teamID", "" );
-            settings._signingKeyID         = Internal::readText( entry, "signingKeyID", "" );
-            settings._tokenURL             = Internal::readText( entry, "tokenURL", "" );
-            settings._revokeURL            = Internal::readText( entry, "revokeURL", "" );
-            bool bRequireNonce             = settings._bRequireNonce != SW_FALSE; // 없으면 설정의 초기값이다
-            if ( entry.readOptionalInto( "requireNonce", bRequireNonce ) == false )
-            {
-                outError = "provider '" + settings._name + "' has a requireNonce that is not true or false";
-                return false;
-            }
-            settings._bRequireNonce   = bRequireNonce ? SW_TRUE : SW_FALSE;
-            const JSONValue clientIDs = entry.get( "clientIDs" );
-            for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
-            {
-                settings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );
-            }
-            if ( isValidSettings( settings ) == false )
-            {
-                outError = "provider '" + settings._name + "' is missing a required setting or has an invalid name";
-                return false;
-            }
+            outSettings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );
+        }
+        if ( isValidSettings( outSettings ) == false )
+        {
+            outError = "provider '" + outSettings._name + "' is missing a required setting or has an invalid name";
+            return false;
         }
         return true;
     }

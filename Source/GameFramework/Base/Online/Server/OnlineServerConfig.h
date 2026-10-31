@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -38,6 +39,8 @@ namespace sw
      * @class OnlineServerKitOptionField
      * @brief 키트 옵션 테이블의 한 줄입니다. 옵션 이름과 값을 읽어 넣을 필드를 둡니다. 필드의 타입이 읽는 방법을 정합니다.
      * @details 정수는 `StringUtil::parseInt`, 참거짓은 `1`, `true`, `0`, `false`, 문자열은 첫 값, 문자열 목록은 같은 키의 값 전부(적은 순서)입니다.
+     *          파일 경로(`std::optional<AbsolutePath>`)는 첫 값을 이 자리에서 절대 경로로 푼다(R5 - 상대면 프로젝트 루트 아래). 풀 수 없는 값(빈 글 · 드라이브 상대)은 오류다 -
+     *          키트가 글을 받아 저마다 다시 풀면 못 푼 경로가 "정하지 않음"으로 읽혀 다른 동작(개발 인증서 · 제공자 없음)으로 물러났다.
      *          옵션이 없으면 필드를 그대로 두므로 기본값은 필드에 미리 넣어 둡니다. 필드는 `readOptions` 동안만 빌려 씁니다.
      */
     class SW_GF_API OnlineServerKitOptionField
@@ -47,6 +50,7 @@ namespace sw
         OnlineServerKitOptionField( const utf8* pKey, bool& target );
         OnlineServerKitOptionField( const utf8* pKey, string& target );
         OnlineServerKitOptionField( const utf8* pKey, vector<string>& listTarget );
+        OnlineServerKitOptionField( const utf8* pKey, std::optional<AbsolutePath>& target );
 
         const utf8* getKey() const { return _pKey; }
 
@@ -60,6 +64,7 @@ namespace sw
             Bool,
             Text,
             TextList,
+            FilePath,
         };
 
         const utf8* _pKey;

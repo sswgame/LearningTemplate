@@ -111,70 +111,47 @@ namespace sw
         shutdown();
     }
 
-    bool PushProviderSet::readSettings( string_view jsonText, vector<PushProviderConfig>& outListSettings, string& outError )
+    bool PushProviderSet::readEntry( const JSONValue& entry, PushProviderConfig& outConfig, string& outError )
     {
-        using Internal = PushProviderSetInternal;
-        outListSettings.clear();
-        JSONDocument document;
-        if ( document.tryParse( jsonText ) == false )
+        using Internal  = PushProviderSetInternal;
+        outConfig._kind = Internal::readText( entry, "kind" );
+        const bool bFcm = outConfig._kind == Internal::kKindFcm;
+        if ( bFcm == false && outConfig._kind != Internal::kKindApns )
         {
-            outError = "push provider settings are not JSON";
+            outError = "push provider kind '" + outConfig._kind + "' is unknown (fcm, apns)";
             return false;
         }
-        const JSONValue providers = document.getRoot().get( "providers" );
-        if ( providers.isArray() == false )
+        for ( const string& key : entry.getMemberNames() )
         {
-            outError = "push provider settings need a 'providers' array";
-            return false;
+            const bool bKnown = bFcm ? VectorUtil::contains( Internal::kKeysFcm, key ) : VectorUtil::contains( Internal::kKeysApns, key );
+            if ( bKnown == false )
+            {
+                outError = "unknown " + outConfig._kind + " push provider setting '" + key + "'";
+                return false;
+            }
         }
-        for ( size_t index = 0; index < providers.size(); ++index )
+        outConfig._sendBaseURL = Internal::readText( entry, "sendURL" );
+        if ( bFcm )
         {
-            const JSONValue entry = providers.at( index );
-            if ( entry.isObject() == false )
+            outConfig._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
+            outConfig._tokenURL                  = Internal::readText( entry, "tokenURL" );
+            if ( outConfig._serviceAccountEnvironment.empty() )
             {
-                outError = "push provider entry is not an object";
+                outError = "push provider 'fcm' needs serviceAccountEnvironment";
                 return false;
             }
-            PushProviderConfig& config = outListSettings.emplace_back();
-            config._kind               = Internal::readText( entry, "kind" );
-            const bool bFcm            = config._kind == Internal::kKindFcm;
-            if ( bFcm == false && config._kind != Internal::kKindApns )
-            {
-                outError = "push provider kind '" + config._kind + "' is unknown (fcm, apns)";
-                return false;
-            }
-            for ( const string& key : entry.getMemberNames() )
-            {
-                const bool bKnown = bFcm ? VectorUtil::contains( Internal::kKeysFcm, key ) : VectorUtil::contains( Internal::kKeysApns, key );
-                if ( bKnown == false )
-                {
-                    outError = "unknown " + config._kind + " push provider setting '" + key + "'";
-                    return false;
-                }
-            }
-            config._sendBaseURL = Internal::readText( entry, "sendURL" );
-            if ( bFcm )
-            {
-                config._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
-                config._tokenURL                  = Internal::readText( entry, "tokenURL" );
-                if ( config._serviceAccountEnvironment.empty() )
-                {
-                    outError = "push provider 'fcm' needs serviceAccountEnvironment";
-                    return false;
-                }
-                continue;
-            }
-            config._keyEnvironment      = Internal::readText( entry, "keyEnvironment" );
-            config._keyID               = Internal::readText( entry, "keyId" );
-            config._teamID              = Internal::readText( entry, "teamID" );
-            config._topic               = Internal::readText( entry, "topic" );
-            const bool bKeyMissing      = config._keyEnvironment.empty() || config._keyID.empty();
-            const bool bIdentityMissing = config._teamID.empty() || config._topic.empty();
-            if ( bKeyMissing || bIdentityMissing )
-            {
-                outError = "push provider 'apns' needs keyEnvironment, keyId, teamID and topic";
-                return false;
-            }
+            return true;
+        }
+        outConfig._keyEnvironment   = Internal::readText( entry, "keyEnvironment" );
+        outConfig._keyID            = Internal::readText( entry, "keyId" );
+        outConfig._teamID           = Internal::readText( entry, "teamID" );
+        outConfig._topic            = Internal::readText( entry, "topic" );
+        const bool bKeyMissing      = outConfig._keyEnvironment.empty() || outConfig._keyID.empty();
+        const bool bIdentityMissing = outConfig._teamID.empty() || outConfig._topic.empty();
+        if ( bKeyMissing || bIdentityMissing )
+        {
+            outError = "push provider 'apns' needs keyEnvironment, keyId, teamID and topic";
+            return false;
         }
         return true;
     }

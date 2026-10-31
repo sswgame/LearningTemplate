@@ -1,9 +1,7 @@
 #include "pch.h"
 
-#include "Core/File/FileUtil.h"
-
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
+#include "GameFramework/Base/Online/Server/OnlineProviderFile.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Base/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
@@ -22,7 +20,7 @@
 //   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — Dev 만, 실제 비용을 재려면 끈다).
 //   seedTestAccounts            `이름:비밀번호` 를 쉼표로 이은 목록. 서버가 서자마자 이 계정들을 가입시켜 둔다(개발 · 두 프로세스 시나리오 `Scripts/net/NetPairRun.py` 용 — 이미 있으면 그대로 둔다).
 //                               **Dev 만** — Shipping 은 기동 실패(비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않는다). 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리다.
-//   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 형식은 `PlatformLoginProviderFactory::readSettings`). 비우면 외부 로그인이 없다.
+//   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `PlatformLoginProviderFactory::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 외부 로그인이 없다.
 //   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
 //   linkSecretKeySecretEnvironment  연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름.
 //                               탈퇴 때 연동 토큰을 철회하는 제공자(애플 로그인)를 쓰면 필수다 — 평문으로 저장하지 않는다.
@@ -60,14 +58,14 @@ namespace sw
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 using Internal [[maybe_unused]] = AccountOnlineServerKitInternal;
-                LoginServiceConfig loginSettings;
-                bool               bLightHash = false;
-                string             ticketKeyEnvironment;
-                string             providersFile;
-                string             trustFile;
-                string             linkSecretKeyEnvironment;
-                string             seedTestAccounts;
-                const bool         bOptionOk = entry.readOptions( {
+                LoginServiceConfig          loginSettings;
+                bool                        bLightHash = false;
+                string                      ticketKeyEnvironment;
+                std::optional<AbsolutePath> providersFile;
+                std::optional<AbsolutePath> trustFile;
+                string                      linkSecretKeyEnvironment;
+                string                      seedTestAccounts;
+                const bool                  bOptionOk = entry.readOptions( {
                                                               {    "ticketKeySecretEnvironment",        ticketKeyEnvironment},
                                                               {                  "attemptBurst", loginSettings._attemptBurst},
                                                               {             "lightPasswordHash",                  bLightHash},
@@ -76,7 +74,7 @@ namespace sw
                                                               {"linkSecretKeySecretEnvironment",    linkSecretKeyEnvironment},
                                                               {              "seedTestAccounts",            seedTestAccounts}
                 },
-                                                                  outError );
+                                                                           outError );
                 if ( bOptionOk == false )
                     return false;
                 if ( bLightHash )
@@ -179,28 +177,14 @@ namespace sw
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
-            [[nodiscard]] bool createPlatformProviders( const string& providersFile, const string& trustFile, const string& linkSecretKeyEnvironment, const IClock& clock, string& outError )
+            [[nodiscard]] bool createPlatformProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const string& linkSecretKeyEnvironment,
+                                                        const IClock& clock, string& outError )
             {
-                if ( providersFile.empty() )
-                {
-                    if ( trustFile.empty() == false )
-                    {
-                        outError = "platformTrustFile is set but platformProvidersFile is not";
-                        return false;
-                    }
-                    return true;
-                }
-                const string providersPath = NetSecurity::makeProjectPath( providersFile );
-                string       jsonText;
-                if ( FileUtil::readTextFile( providersPath, jsonText ) == false )
-                {
-                    outError = "cannot read the platform login providers file " + providersPath;
-                    return false;
-                }
                 vector<PlatformLoginProviderConfig> listSettings;
-                if ( PlatformLoginProviderFactory::readSettings( jsonText, listSettings, outError ) == false )
+                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "platformProvidersFile", "platformTrustFile", &PlatformLoginProviderFactory::readEntry,
+                                                                            listSettings, outError ) == false )
                     return false;
-                if ( _platformProviders.initialize( listSettings, trustFile, clock, outError ) == false )
+                if ( _platformProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
                     return false;
                 bool bNeedsSecretVault = false;
                 for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )

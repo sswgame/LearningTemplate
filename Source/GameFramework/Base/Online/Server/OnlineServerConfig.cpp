@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/ProcessRoots.h"
 
 namespace sw
 {
@@ -46,6 +47,13 @@ namespace sw
     {
     }
 
+    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, std::optional<AbsolutePath>& target )
+        : _pKey{ pKey }
+        , _pTarget{ &target }
+        , _kind{ Kind::FilePath }
+    {
+    }
+
     bool OnlineServerKitOptionField::readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const
     {
         if ( listValue.empty() )
@@ -80,6 +88,15 @@ namespace sw
                     target.push_back( *pValue );
                 }
                 return true;
+            }
+            case Kind::FilePath:
+            {
+                std::optional<AbsolutePath>& target = *static_cast<std::optional<AbsolutePath>*>( _pTarget );
+                target                              = AbsolutePath::tryResolve( first, ProcessRoots::get()._project );
+                if ( target.has_value() )
+                    return true;
+                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be a file path (absolute or relative to the project root; got '" + first + "')";
+                return false;
             }
         }
         return true;

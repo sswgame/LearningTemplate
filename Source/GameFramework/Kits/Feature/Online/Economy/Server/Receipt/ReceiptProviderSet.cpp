@@ -180,46 +180,6 @@ namespace sw
                 }
                 return true;
             }
-
-            /** @brief `providers` 배열의 항목 하나를 읽습니다 — 알려진 키만, 종류와 폴링 주기를 검사하고 종류별 설정을 읽습니다. */
-            [[nodiscard]] static bool readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
-            {
-                if ( entry.isObject() == false )
-                {
-                    outError = "receipt provider entry is not an object";
-                    return false;
-                }
-                for ( const string& key : entry.getMemberNames() )
-                {
-                    if ( VectorUtil::contains( kKnownKeys, key ) == false )
-                    {
-                        outError = "unknown receipt provider setting '" + key + "'";
-                        return false;
-                    }
-                }
-                outConfig._kind       = readText( entry, "kind" );
-                outConfig._baseURL    = readText( entry, "baseUrl" );
-                const bool bSteam     = outConfig._kind == kKindSteam;
-                const bool bGoogle    = outConfig._kind == kKindGoogle;
-                const bool bApple     = outConfig._kind == kKindApple;
-                const bool bKnownKind = bSteam || bGoogle || bApple;
-                if ( bKnownKind == false )
-                {
-                    outError = "receipt provider kind '" + outConfig._kind + "' is unknown (steam, google, apple)";
-                    return false;
-                }
-                const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
-                if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < kMinPollSeconds )
-                {
-                    outError = formatToString( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, kMinPollSeconds );
-                    return false;
-                }
-                if ( bSteam )
-                    return readSteamEntry( entry, outConfig, outError );
-                if ( bApple )
-                    return readAppleEntry( entry, outConfig, outError );
-                return readGoogleEntry( entry, outConfig, outError );
-            }
         };
     } // namespace
 } // namespace sw
@@ -236,28 +196,39 @@ namespace sw
         shutdown();
     }
 
-    bool ReceiptProviderSet::readSettings( string_view jsonText, vector<ReceiptProviderConfig>& outListSettings, string& outError )
+    bool ReceiptProviderSet::readEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
     {
-        outListSettings.clear();
-        JSONDocument document;
-        if ( document.tryParse( jsonText ) == false )
+        using Internal = ReceiptProviderSetInternal;
+        for ( const string& key : entry.getMemberNames() )
         {
-            outError = "receipt provider settings are not JSON";
-            return false;
-        }
-        const JSONValue providers = document.getRoot().get( "providers" );
-        if ( providers.isArray() == false )
-        {
-            outError = "receipt provider settings need a 'providers' array";
-            return false;
-        }
-        for ( size_t index = 0; index < providers.size(); ++index )
-        {
-            ReceiptProviderConfig& config = outListSettings.emplace_back();
-            if ( ReceiptProviderSetInternal::readEntry( providers.at( index ), config, outError ) == false )
+            if ( VectorUtil::contains( Internal::kKnownKeys, key ) == false )
+            {
+                outError = "unknown receipt provider setting '" + key + "'";
                 return false;
+            }
         }
-        return true;
+        outConfig._kind       = Internal::readText( entry, "kind" );
+        outConfig._baseURL    = Internal::readText( entry, "baseUrl" );
+        const bool bSteam     = outConfig._kind == Internal::kKindSteam;
+        const bool bGoogle    = outConfig._kind == Internal::kKindGoogle;
+        const bool bApple     = outConfig._kind == Internal::kKindApple;
+        const bool bKnownKind = bSteam || bGoogle || bApple;
+        if ( bKnownKind == false )
+        {
+            outError = "receipt provider kind '" + outConfig._kind + "' is unknown (steam, google, apple)";
+            return false;
+        }
+        const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
+        if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < Internal::kMinPollSeconds )
+        {
+            outError = formatToString( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, Internal::kMinPollSeconds );
+            return false;
+        }
+        if ( bSteam )
+            return Internal::readSteamEntry( entry, outConfig, outError );
+        if ( bApple )
+            return Internal::readAppleEntry( entry, outConfig, outError );
+        return Internal::readGoogleEntry( entry, outConfig, outError );
     }
 
     bool ReceiptProviderSet::initialize( const vector<ReceiptProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError )

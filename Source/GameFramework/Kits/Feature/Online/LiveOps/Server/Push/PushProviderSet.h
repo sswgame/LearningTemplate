@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class JSONValue;
     class OwnedHTTP2Client;
     class OwnedHTTPClient;
 
@@ -53,9 +54,9 @@ namespace sw
         PushProviderSet& operator=( const PushProviderSet& ) = delete;
 
         /**
-         * @brief `{"providers":[…]}` 를 읽습니다. 모르는 키, 모르는 종류, 빠진 필수 키는 오류입니다 — 철자가 틀린 설정이 조용히 기본값이 되지 않게 한다.
+         * @brief 제공자 파일(`OnlineProviderFile::read`)의 항목 하나를 읽습니다. 모르는 키, 모르는 종류, 빠진 필수 키는 오류입니다 — 철자가 틀린 설정이 조용히 기본값이 되지 않게 한다.
          */
-        [[nodiscard]] static bool readSettings( string_view jsonText, vector<PushProviderConfig>& outListSettings, string& outError );
+        [[nodiscard]] static bool readEntry( const JSONValue& entry, PushProviderConfig& outConfig, string& outError );
 
         /** @brief 설정마다 비밀 읽기, HTTP 클라이언트, TLS 컨텍스트, 제공자를 만듭니다. 하나라도 실패하면 만든 것을 모두 버리고 false 와 @p outError 입니다. */
         [[nodiscard]] bool initialize( const vector<PushProviderConfig>& listSettings, string_view trustFile, const IClock& clock, string& outError );
