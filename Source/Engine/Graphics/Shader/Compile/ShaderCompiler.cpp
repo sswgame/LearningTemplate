@@ -685,53 +685,7 @@ namespace sw
                 return DxcOutcome::Compiled;
             }
 
-    #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief DXC 가 출력을 못 낸 DX 타깃을 FXC 로 컴파일합니다(연 헤더를 적는 include 처리기, 타깃 매크로 없음). 성공하면 true 입니다. */
-            [[nodiscard]] static bool compileWithFxc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
-            {
-                UINT                             compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
-                Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
-                Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-                wstring                          wPath( absPathStr.begin(), absPathStr.end() );
-
-                // 표준 파일 include(`D3D_COMPILE_STANDARD_FILE_INCLUDE`)는 어느 헤더를 열었는지 알려 주지 않는다. 최신 판정이 그 목록에 기대므로 같은 루트를 도는 처리기를 쓴다.
-                vector<string> listIncludeDir;
-                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
-                    return false;
-                MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
-
-                vector<D3D_SHADER_MACRO> listMacro;
-                listMacro.reserve( desc._listDefine.size() + 1 );
-                for ( const ShaderMacroDefine& def : desc._listDefine )
-                {
-                    if ( def._name.empty() )
-                        continue;
-                    listMacro.push_back( { def._name.c_str(), def._value.c_str() } );
-                }
-                listMacro.push_back( { nullptr, nullptr } );
-
-                HRESULT hrFallback = D3DCompileFromFile(
-                    wPath.c_str(),
-                    listMacro.data(),
-                    &includeHandler,
-                    desc._entryPoint.c_str(),
-                    profile.c_str(),
-                    compileFlags,
-                    0,
-                    codeBlob.GetAddressOf(),
-                    errorBlob.GetAddressOf() );
-                if ( FAILED( hrFallback ) )
-                    return false;
-
-                const uint8* pData = static_cast<const uint8*>( codeBlob->GetBufferPointer() );
-                outResult._bytecode.assign( pData, pData + codeBlob->GetBufferSize() );
-                outResult._listIncludedFile = includeHandler.takeIncludedFiles();
-                outResult._bSuccess         = true;
-                SW_LOG_TRACE( "Target: D3D12/11 (Row-Major)" );
-                return true;
-            }
-    #endif // SW_PLATFORM_WINDOWS
-#endif     // SW_HAS_DXC_API
+#endif // SW_HAS_DXC_API
         };
     } // namespace
 } // namespace sw
@@ -849,19 +803,11 @@ namespace sw
         }
         if ( outcome == Internal::DxcOutcome::Rejected )
             return result;
-    #if defined( SW_PLATFORM_WINDOWS )
-        // FXC 는 DXBC 만 만든다. SPIR-V 타깃(Vulkan · OpenGL)에는 절대 폴백하지 않는다.
-        const bool bFxcTarget = desc._targetFormat != ShaderTargetFormat::SPIRV_Vulkan && desc._targetFormat != ShaderTargetFormat::SPIRV_OpenGL;
-        if ( bFxcTarget && Internal::compileWithFxc( desc, absPathStr, profile, result ) )
-        {
-            Internal::saveToCacheIfEnabled( cachePath, result );
-            return result;
-        }
-    #endif // SW_PLATFORM_WINDOWS
-#endif     // SW_HAS_DXC_API
+        // DXC 가 출력을 못 냈으면 실패다 - 예전에는 DX12 타깃을 FXC 로 다시 컴파일했지만 FXC 는 SM6 을 못 해 늘 실패했고, DXC 의 진짜 까닭을 FXC 의 글로 덮었다.
+#endif // SW_HAS_DXC_API
 
         if ( result._errorMessage.empty() )
-            result._errorMessage = "Failed to compile shader with DXC and D3DCompiler (hrCompile/hrLoad failed)";
+            result._errorMessage = "DXC produced no shader output (see the DXC error above)";
         SW_LOG_ERROR( "%# (Path: %#)", result._errorMessage.c_str(), desc._filePath.c_str() );
         return result;
     }
