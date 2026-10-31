@@ -443,7 +443,7 @@ namespace sw
     {
         if ( pProvider == nullptr || isValidChannelName( name ) == false )
         {
-            SW_LOG_ERROR( "StateHashHistory: channel '%#' not registered - the name must be [a-z0-9_.-] (1-32, not 'scene') and the provider must exist", name );
+            SW_LOG_ERROR_ID( "State.ChannelInvalid", "StateHashHistory: channel '%#' not registered - the name must be [a-z0-9_.-] (1-32, not 'scene') and the provider must exist", name );
             return Subscription{};
         }
         Channel* pChannel = nullptr;
@@ -453,14 +453,14 @@ namespace sw
         }
         if ( pChannel != nullptr && pChannel->_pProvider != nullptr )
         {
-            SW_LOG_ERROR( "StateHashHistory: channel '%#' is already provided by another owner - not registered", name );
+            SW_LOG_ERROR_ID( "State.ChannelTaken", "StateHashHistory: channel '%#' is already provided by another owner - not registered", name );
             return Subscription{};
         }
         if ( pChannel == nullptr )
         {
             if ( _listChannel.size() >= kMaxChannels )
             {
-                SW_LOG_ERROR( "StateHashHistory: more than %# channels - '%#' not registered", static_cast<int32>( kMaxChannels ), name );
+                SW_LOG_ERROR_ID( "State.ChannelLimit", "StateHashHistory: more than %# channels - '%#' not registered", static_cast<int32>( kMaxChannels ), name );
                 return Subscription{};
             }
             Channel& added = _listChannel.emplace_back();
