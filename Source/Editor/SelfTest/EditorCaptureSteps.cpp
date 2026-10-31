@@ -7,6 +7,7 @@
  *          예전에는 패널마다 `<Wait frames="20"/>` 를 두어 uiaudit 하나가 Debug 에서 2 분을 넘겼다(언리얼 Automation Driver · Playwright 의 자동 대기와 같은 자리).
  *          지표는 둘이다.
  *          - `maxMagentaFraction`: 마젠타 픽셀 비율 상한(적지 않으면 0). 빠진 텍스처 · 디버그 색이 UI 에 섞이면 오른다. 적은 캡처는 백엔드 분할에서도 모든 백엔드가 돈다.
+ *            비율은 쓰기 워커가 내므로 판정은 시나리오 끝(`<Pass/>`)에서 한다 - 실패 줄은 그 단계를 가리키지만 시나리오 끝에 적힌다.
  *          - `maxClippedWindows`: 내용이 창보다 큰데 스크롤바가 없어 잘린 창 수 상한. 어느 창인지는 실패 줄에 이름으로 남는다.
  *          이미지 자체(골든)는 비교하지 않는다. 글꼴 래스터와 DPI 가 기계마다 달라 같은 기계 · 같은 설정에서만 의미가 있다. 결과 파일로 사람이나 `ux-reviewer` 가 본다.
  */
@@ -136,24 +137,37 @@ namespace sw::editor
                 return runner.holdUntilReady( step, input, pCapture->findResult( pPending->_ticket, result ), kCaptureWaitFrames );
             }
 
+            /**
+             * @brief 속성 @p attributeName 의 상한을 읽습니다. 속성이 없으면 @p defaultLimit 입니다. 둘 다 비었거나 읽지 못하면(검사가 거른다) false - 보지 않는다.
+             * @param outDescription 실패 줄의 앞머리(`CaptureEditorUI <속성> <상한>`)
+             */
+            static bool readLimit( const AutomationStep& step, string_view attributeName, string_view defaultLimit, float64& outLimit, string& outDescription )
+            {
+                const string* pAttribute = step.findAttribute( attributeName );
+                const string  limitText  = pAttribute != nullptr ? *pAttribute : string( defaultLimit );
+                float32       limit{ 0.0f };
+                if ( limitText.empty() || StringUtil::parseFloat( limitText, limit ) == false )
+                    return false;
+                outLimit       = static_cast<float64>( limit );
+                outDescription = "CaptureEditorUI ";
+                outDescription.append( attributeName );
+                outDescription.append( " " );
+                outDescription.append( limitText );
+                return true;
+            }
+
             /** @brief 속성 @p attributeName 의 상한을 넘으면 실패를 남깁니다. 속성이 없으면 @p defaultLimit(비면 보지 않음)입니다. */
             static void expectAtMost( AutomationStepContext& runner, const AutomationStep& step, string_view attributeName, float64 value, string_view detail,
                                       string_view defaultLimit = {} )
             {
-                const string* pAttribute = step.findAttribute( attributeName );
-                const string  limitText  = pAttribute != nullptr ? *pAttribute : string( defaultLimit );
-                const string* pLimit     = &limitText;
-                float32       limit{ 0.0f };
-                if ( limitText.empty() || StringUtil::parseFloat( limitText, limit ) == false )
+                float64 limit = 0.0;
+                string  message;
+                if ( readLimit( step, attributeName, defaultLimit, limit, message ) == false )
                     return;
-                if ( value <= static_cast<float64>( limit ) )
+                if ( value <= limit )
                     return;
                 StringBuilder<constant::kMaxBuffer256> number;
                 number.appendFormat( "%#", value );
-                string message{ "CaptureEditorUI " };
-                message.append( attributeName );
-                message.append( " " );
-                message.append( *pLimit );
                 message.append( ", got " );
                 message.append( number.c_str() );
                 if ( detail.empty() == false )
@@ -183,7 +197,11 @@ namespace sw::editor
                     return true;
                 }
                 // 마젠타(빠진 텍스처 · 디버그 색)는 어느 화면에서든 결함이라 문턱을 적지 않으면 0 이다 — 일부러 빠진 텍스처를 보이는 캡처만 문턱을 적어 푼다.
-                expectAtMost( runner, step, "maxMagentaFraction", result._magentaFraction, {}, "0" );
+                // 비율은 쓰기 워커가 내므로 판정은 `<Pass/>` 로 미룬다(`<ExpectImage>` 와 같다) - 끝 차단 조건(아래 `isWritingCaptureFiles`)이 그때까지 쓰기를 기다린다.
+                float64 magentaLimit = 0.0;
+                string  magentaDescription;
+                if ( readLimit( step, "maxMagentaFraction", "0", magentaLimit, magentaDescription ) )
+                    runner.deferExpectAtMost( step, std::move( magentaDescription ), magentaLimit, result._pMagentaFraction );
                 expectAtMost( runner, step, "maxClippedWindows", static_cast<float64>( result._job._clippedWindowCount ), result._job._clippedWindowNames );
                 return true;
             }

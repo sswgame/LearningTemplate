@@ -359,11 +359,32 @@ namespace sw
         _listDeferredImage.push_back( DeferredImageCheck{ &step, backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown" } );
     }
 
-    void AutomationJudge::judgeDeferredImages( AutomationStepContext& context )
+    void AutomationJudge::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
+    {
+        SW_ASSERT( pValue != nullptr );
+        _listDeferredAtMost.push_back( DeferredAtMostCheck{ &step, std::move( pValue ), std::move( description ), limit } );
+    }
+
+    void AutomationJudge::judgeDeferred( AutomationStepContext& context )
     {
         for ( const DeferredImageCheck& check : _listDeferredImage )
+        {
             judgeImage( context, *check._pStep, check._pBackendTag );
+        }
         _listDeferredImage.clear();
+
+        for ( const DeferredAtMostCheck& check : _listDeferredAtMost )
+        {
+            float64                              value = 0.0;
+            const AutomationDeferredValue::State state = check._pValue->findValue( value );
+            if ( state == AutomationDeferredValue::State::Pending )
+                context.recordFailure( *check._pStep, check._description + ": the value was never measured (background work did not finish)" );
+            else if ( state == AutomationDeferredValue::State::Missing )
+                context.recordFailure( *check._pStep, check._description + ": the value could not be measured" );
+            else if ( value > check._limit )
+                context.recordFailure( *check._pStep, check._description + ", got " + AutomationStepArgsUtil::formatNumber( value ) );
+        }
+        _listDeferredAtMost.clear();
     }
 
     void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag )

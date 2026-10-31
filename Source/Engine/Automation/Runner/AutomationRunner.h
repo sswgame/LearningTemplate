@@ -116,6 +116,11 @@ namespace sw
         IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) override;
         /** @brief 단계가 시나리오를 끝냅니다. `Pass` · `Fail` · `Skip` 을 종료 코드(`Passed` · `Failed` · `Skipped`)로 번역해 `finish` 를 부릅니다. */
         void endScenario( AutomationStepEnd end, string_view reason ) override;
+        /** @brief 워커가 낼 값의 상한 판정을 `<Pass/>` 로 미룹니다(`AutomationJudge::deferExpectAtMost`). */
+        void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) override
+        {
+            _judge.deferExpectAtMost( step, std::move( description ), limit, std::move( pValue ) );
+        }
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const override { return _outputDirectory; }
         /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */

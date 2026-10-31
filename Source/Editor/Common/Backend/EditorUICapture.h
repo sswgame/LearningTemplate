@@ -8,10 +8,11 @@
  *
  *          흐름: 시나리오 단계(`CaptureEditorUI`)나 `-gv_screenshotEditor` 가 `request` → UI 스레드가 ImGui 를 닫은 뒤 `takeJob`(창 잘림 지표를 이때 측정한다) →
  *          스냅샷이 합본을 복사 → 렌더 스레드 `renderJob`(present 훅) → `finishJob`(postPresent, GPU 를 기다려 읽는다) → `findResult`.
- *          파일 쓰기(PNG 인코딩)는 그 프레임에서 빼 워커가 한다 - 그 장의 화면은 그 프레임에만 있어 읽기는 그 자리에서 하지만, 판정(마젠타 비율)은 읽은 픽셀만 본다.
- *          `finishJob` 이 쓸 목록에 넣고 다음 UI 프레임의 `takeJob` 이 워커에 넘긴다(워커 제출은 에디터 서비스 범위가 있는 UI 스레드에서만 된다). 시나리오는 끝(`<Pass/>`)에서만
- *          쓰기를 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 장마다 프레임 안에서 써 캡처 38 장 시나리오의 대부분이 쓰기였다.
- *          `-gv_screenshotEditor` 는 결과가 나오자마자 앱을 끝낼 수 있어(`-gv_screenshotQuit`) 그 프레임에서 쓴다.
+ *          그 장의 화면은 그 프레임에만 있어 GPU 읽기는 렌더 스레드가 그 자리에서 하고, 그 뒤의 CPU 일(RGBA 로 풀기 · 행 뒤집기 · 마젠타 비율 · PNG 쓰기)은 모두 워커가 한다.
+ *          `finishJob` 이 읽은 바이트를 쓸 목록에 넣고 다음 UI 프레임의 `takeJob` 이 워커에 넘긴다(워커 제출은 에디터 서비스 범위가 있는 UI 스레드에서만 된다).
+ *          마젠타 비율은 워커가 낸다(`EditorUICaptureResult::_pMagentaFraction`) - 시나리오는 그 판정을 끝(`<Pass/>`)으로 미루고(`AutomationStepContext::deferExpectAtMost`)
+ *          쓰기가 끝나기를 거기서만 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 풀기 · 비율을 렌더 스레드에서 해 캡처하는 프레임이 그만큼 늦었다.
+ *          `-gv_screenshotEditor` 의 끝 알림(`-gv_screenshotQuit` 이 앱을 끝낸다)은 워커가 파일을 쓴 뒤 우편함에 직접 한다(패킷 스크린샷과 같다).
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
  *          주의: 렌더러가 0 행을 아래쪽에 그리면(`IImGuiRendererBackend::rendersTargetRowsBottomUp`, OpenGL) 읽은 뒤 뒤집는다 — 백엔드 이름으로 가르지 않는다.
  */
@@ -21,14 +22,19 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorSubsystem.h"
+
+#include "Engine/Graphics/RHI/RHITypes.h"
 
 struct ImDrawData;
 
 namespace sw
 {
+    class AutomationDeferredValue;
     class IRHIDevice;
+    class ScreenshotRequestQueue;
 } // namespace sw
 
 namespace sw::editor
@@ -56,22 +62,29 @@ namespace sw::editor
     struct EditorUICaptureResult
     {
         EditorUICaptureJob _job{};
-        float64            _magentaFraction{ 0.0 }; ///< 마젠타(R≥230, B≥230, G≤40) 픽셀 비율. 빠진 텍스처 · 디버그 색이 UI 에 섞였는지 본다
-        uint32             _width{ 0 };
-        uint32             _height{ 0 };
-        uint8              _bCaptured{ SW_FALSE }; ///< 읽었으면 SW_TRUE(시작 인자 캡처는 파일까지 썼다). 워커의 파일 쓰기 실패는 Error 로그로 남는다
+        /**
+         * @brief 마젠타(R≥230, B≥230, G≤40) 픽셀 비율입니다. 빠진 텍스처 · 디버그 색이 UI 에 섞였는지 본다. 워커가 나중에 낸다(읽지 못했으면 nullptr).
+         * @details 엔진이 만든 값이라(`AutomationDeferredValue::create`) 판정이 편집기 모듈보다 오래 들어도 된다.
+         */
+        shared_ptr<AutomationDeferredValue> _pMagentaFraction{};
+        uint32                              _width{ 0 };
+        uint32                              _height{ 0 };
+        uint8                               _bCaptured{ SW_FALSE }; ///< GPU 에서 읽었으면 SW_TRUE. 워커의 풀기 · 쓰기 실패는 로그로 남고 마젠타 값이 빠진다
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @struct EditorUICaptureWrite @brief 읽은 캡처 한 장의 파일 쓰기입니다(렌더 스레드가 만들고 워커가 쓴다). */
+    /** @struct EditorUICaptureWrite @brief 읽은 캡처 한 장의 뒤의 일(풀기 · 뒤집기 · 마젠타 비율 · 파일 쓰기)입니다. 렌더 스레드가 만들고 워커가 한다. */
     struct EditorUICaptureWrite
     {
-        string        _path{};
-        vector<uint8> _rgbaBytes{}; ///< 빈틈없는 RGBA8(위 행부터)
-        uint32        _width{ 0 };
-        uint32        _height{ 0 };
+        EditorUICaptureJob                  _job{};
+        vector<uint8>                       _bytes{};  ///< GPU 에서 읽은 그대로의 바이트(백버퍼 포맷)
+        RHITextureMipSpan                   _layout{}; ///< `_bytes` 의 크기 · 행 간격(`_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다)
+        shared_ptr<AutomationDeferredValue> _pMagentaFraction{};
+        ScreenshotRequestQueue*             _pStartupMailbox{ nullptr }; ///< `-gv_screenshotEditor` 건이면 다 쓴 뒤 알릴 우편함(UI 스레드가 넘길 때 찾는다)
+        RHIFormat                           _format{ RHIFormat::R8G8B8A8_UNORM };
+        bool                                _bRowsBottomUp{ false }; ///< 렌더러가 0 행을 아래쪽에 그렸다(`rendersTargetRowsBottomUp`) - 풀고 뒤집는다
     };
 } // namespace sw::editor
 
@@ -107,7 +120,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief present 훅 안에서 합본 @p drawData 를 캡처 텍스처에 그립니다. 읽기는 `finishJob` 이 합니다. */
         void renderJob( IRHIDevice& device, IImGuiRendererBackend& rendererBackend, ImDrawData& drawData, const EditorUICaptureJob& job );
-        /** @brief endFrame 뒤(postPresent)에 부릅니다. 그린 캡처가 있으면 읽어 파일로 쓰고 결과를 전달합니다. */
+        /** @brief endFrame 뒤(postPresent)에 부릅니다. 그린 캡처가 있으면 GPU 에서 읽어 결과를 전달하고, 뒤의 일(풀기 · 마젠타 비율 · 쓰기)을 워커 몫으로 쌓습니다. */
         void finishJob( IRHIDevice& device );
         /** @brief 캡처 텍스처를 놓습니다. 렌더 스레드가 쉬는 동안(에디터 종료) 부릅니다. */
         void releaseRHI( IRHIDevice* pDevice );

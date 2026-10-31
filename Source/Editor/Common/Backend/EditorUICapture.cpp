@@ -9,7 +9,9 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -18,6 +20,7 @@
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 #include <cstring>
 #include <imgui.h>
@@ -126,19 +129,43 @@ namespace sw::editor
                 return static_cast<float64>( magentaCount ) / static_cast<float64>( pixelCount );
             }
 
-            /** @brief 캡처 한 장을 파일로 씁니다. 실패는 쓰는 쪽(`RenderTargetImageFile`)이 경로와 함께 Error 로 남긴다. */
-            static bool writeFile( const EditorUICaptureWrite& write )
-            {
-                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
-                return RenderTargetImageFile::writeRGBA8File( write._rgbaBytes, write._width, write._height, write._path );
-            }
-
-            /** @brief 워커 잡 본문입니다(`dispatchWrites`). 끝나면 쓰는 중인 수를 내린다. */
+            /**
+             * @brief 워커 잡 본문입니다(`dispatchWrites`). 읽은 바이트를 RGBA 로 풀고(필요하면 뒤집고) 마젠타 비율을 낸 뒤 파일로 씁니다. 끝나면 쓰는 중인 수를 내린다.
+             * @details 입력은 const 로만 읽고 결과는 제 지역 버퍼와 값 칸(`AutomationDeferredValue`)에 쓴다 - 다른 스레드의 컨테이너를 건드리지 않는다.
+             */
             static void runWriteJob( const TaskArgs& args )
             {
                 const shared_ptr<EditorUICaptureWrite> pWrite    = args.get<shared_ptr<EditorUICaptureWrite>>( 0 );
                 const shared_ptr<atomic<uint32>>       pInFlight = args.get<shared_ptr<atomic<uint32>>>( 1 );
-                (void)writeFile( *pWrite );
+                const EditorUICaptureWrite&            write     = *pWrite;
+                const string&                          path      = write._job._path;
+                vector<uint8>                          rgbaBytes;
+                bool                                   bWritten = false;
+                if ( RenderTargetImageFile::unpackRGBA8( write._bytes, write._layout, write._format, rgbaBytes ) )
+                {
+                    if ( write._bRowsBottomUp )
+                        flipRows( rgbaBytes, write._layout._width, write._layout._height );
+                    const float64 magentaFraction = computeMagentaFraction( rgbaBytes );
+                    (void)FileUtil::ensureParentDirectoryExists( path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
+                    bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
+                    if ( bWritten )
+                    {
+                        SW_LOG_INFO( "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", path.c_str(), write._layout._width, write._layout._height,
+                                     write._job._windowCount, write._job._clippedWindowCount, write._job._clippedWindowNames.c_str(), magentaFraction );
+                    }
+                    else
+                    {
+                        SW_LOG_WARNING( "Editor UI capture was not written: %#", path.c_str() );
+                    }
+                    write._pMagentaFraction->publish( magentaFraction ); // 비율은 쓰기와 무관하게 읽은 픽셀의 것이다
+                }
+                else
+                {
+                    SW_LOG_WARNING( "Editor UI capture could not be unpacked to RGBA8 (format %#): %#", static_cast<uint32>( write._format ), path.c_str() );
+                    write._pMagentaFraction->abandon();
+                }
+                if ( write._pStartupMailbox != nullptr )
+                    write._pStartupMailbox->reportCaptureFinished( static_cast<uint32>( RenderThread::CaptureKind::EditorUI ), bWritten );
                 --*pInFlight;
             }
         };
@@ -172,6 +199,13 @@ namespace sw::editor
         }
         for ( EditorUICaptureWrite& write : listWrite )
         {
+            // 시작 인자 건의 끝 알림은 워커가 다 쓴 뒤 한다 - 우편함은 서비스라 여기(UI 스레드)서 찾아 넘긴다. 에디터 컨텍스트 종료가 에디터 잡 단계를 기다리므로 우편함(엔진 범위)보다 먼저 끝난다.
+            if ( write._job._bFromStartupArgument )
+            {
+                write._pStartupMailbox = findSubsystem<ScreenshotRequestQueue>();
+                if ( write._pStartupMailbox == nullptr )
+                    SW_LOG_ERROR( "Editor UI capture '%#' cannot report its end - this host has no screenshot mailbox (no renderer)", write._job._path.c_str() );
+            }
             submitEditorBackgroundJob( "EditorUICaptureWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorUICaptureInternal::runWriteJob ),
                                        MakeTaskArgs( make_shared<EditorUICaptureWrite>( std::move( write ) ), _pWritesInFlight ) );
         }
@@ -188,7 +222,7 @@ namespace sw::editor
         if ( bGlobalDue )
         {
             _bGlobalRequested = SW_TRUE;
-            (void)request( gv_screenshotEditor ); // 결과는 finishJob 이 로그로 남긴다
+            (void)request( gv_screenshotEditor ); // 결과는 쓰기 워커(`runWriteJob`)가 로그로 남기고 우편함에 알린다
             _listQueued.back()._bFromStartupArgument = true;
         }
         if ( _listQueued.empty() )
@@ -267,36 +301,25 @@ namespace sw::editor
         result._width  = _textureWidth;
         result._height = _textureHeight;
 
+        // GPU 읽기만 이 스레드(디바이스 스레드)에서 한다. 풀기 · 뒤집기 · 마젠타 비율 · 쓰기는 워커의 일이다(`runWriteJob`).
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
-        vector<uint8>              bytes;
-        RHITextureMipSpan          layout{};
-        vector<uint8>              rgbaBytes;
-        const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture, 0, 0, bytes, layout ) &&
-                           RenderTargetImageFile::unpackRGBA8( bytes, layout, device.getBackBufferFormat(), rgbaBytes );
+        EditorUICaptureWrite       write{};
+        const bool                 bRead = pFactory != nullptr && RHITransferUtil::readbackTexture2DAndWait( *pFactory, _texture, 0, 0, write._bytes, write._layout );
         if ( bRead )
         {
-            if ( _bRenderedRowsBottomUp == SW_TRUE )
-                EditorUICaptureInternal::flipRows( rgbaBytes, layout._width, layout._height );
-            result._magentaFraction = EditorUICaptureInternal::computeMagentaFraction( rgbaBytes );
-
-            EditorUICaptureWrite write{ ._path = result._job._path, ._rgbaBytes = std::move( rgbaBytes ), ._width = layout._width, ._height = layout._height };
-            if ( result._job._bFromStartupArgument )
-                result._bCaptured = EditorUICaptureInternal::writeFile( write ) ? SW_TRUE : SW_FALSE;
-            else
-            {
-                result._bCaptured = SW_TRUE;
-                const ScopedLock<mutex> lock{ _resultMutex };
-                _listWriteReady.push_back( std::move( write ) );
-            }
-        }
-        if ( result._bCaptured == SW_TRUE )
-        {
-            SW_LOG_INFO( "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", result._job._path.c_str(), result._width, result._height,
-                         result._job._windowCount, result._job._clippedWindowCount, result._job._clippedWindowNames.c_str(), result._magentaFraction );
+            write._layout._pData     = nullptr; // `_bytes` 를 옮기면 가리킬 곳이 바뀔 수 있다 - 워커는 `_bytes` 로 읽는다
+            write._job               = result._job;
+            write._format            = device.getBackBufferFormat();
+            write._bRowsBottomUp     = _bRenderedRowsBottomUp == SW_TRUE;
+            write._pMagentaFraction  = AutomationDeferredValue::create();
+            result._pMagentaFraction = write._pMagentaFraction;
+            result._bCaptured        = SW_TRUE;
+            const ScopedLock<mutex> lock{ _resultMutex };
+            _listWriteReady.push_back( std::move( write ) );
         }
         else
         {
-            SW_LOG_WARNING( "Editor UI capture was not read or written: %#", result._job._path.c_str() );
+            SW_LOG_WARNING( "Editor UI capture was not read: %#", result._job._path.c_str() );
         }
         addResult( result );
     }
@@ -341,9 +364,9 @@ namespace sw::editor
 
     void EditorUICapture::addResult( const EditorUICaptureResult& result )
     {
-        // 성공이든 실패든 결과가 나온 순간이 끝이다 — `-gv_screenshotQuit` 이 이 결과로 앱을 끝낸다(렌더 스레드 안에서 부른다).
-        if ( result._job._bFromStartupArgument )
-            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, result._bCaptured == SW_TRUE );
+        // 읽지 못한 시작 인자 건은 여기가 끝이다 — `-gv_screenshotQuit` 이 이 알림으로 앱을 끝낸다(렌더 스레드 안에서 부른다). 읽은 건은 워커가 파일을 쓴 뒤 알린다.
+        if ( result._job._bFromStartupArgument && result._bCaptured == SW_FALSE )
+            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, false );
         const ScopedLock<mutex> lock{ _resultMutex };
         if ( _listResult.size() >= EditorUICaptureInternal::kMaxResultCount )
             _listResult.erase( _listResult.begin() );

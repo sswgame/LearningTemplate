@@ -11,6 +11,7 @@
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
 #include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -64,8 +65,10 @@ namespace sw
          *          읽을 때 거절한다(`AutomationStepValidation::validateScreenshotFiles`) - 미룬 비교가 덮어쓴 그림을 보지 않게.
          */
         void deferExpectImage( AutomationStepContext& context, const AutomationStep& step );
-        /** @brief 미룬 `<ExpectImage>` 를 차례로 판정합니다. 스크린샷이 모두 써진 뒤(`<Pass/>`) 부른다. */
-        void judgeDeferredImages( AutomationStepContext& context );
+        /** @brief 워커가 낼 값 @p pValue 가 @p limit 이하인지를 시나리오 끝(`judgeDeferred`)으로 미룹니다(`AutomationStepContext::deferExpectAtMost`). */
+        void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue );
+        /** @brief 미룬 `<ExpectImage>` 와 값 상한을 차례로 판정합니다. 스크린샷과 끝 차단 조건의 뒤의 일이 모두 끝난 뒤(`<Pass/>`) 부른다. */
+        void judgeDeferred( AutomationStepContext& context );
 
         /**
          * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
@@ -127,19 +130,29 @@ namespace sw
             const utf8*           _pBackendTag{ nullptr }; ///< 정적 글(백엔드 표)
         };
 
-        AutomationLogCapture       _logCapture;             ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
-        AutomationLogPolicy        _logPolicy;              ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
-        vector<string>             _listFailure;            ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<string>             _listUpdatedGolden;      ///< 이 실행이 쓴 골든(리소스 id)
-        vector<DeferredImageCheck> _listDeferredImage;      ///< 시나리오 끝에서 판정할 `<ExpectImage>`
-        string                     _goldenFolderID;         ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
-        string                     _goldenPrefix;           ///< 골든 파일 이름의 앞머리(시나리오 이름)
-        bool                       _bUpdateGolden{ false }; ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다
-        vector<string>             _listUnhandledLog;       ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
-        vector<string>             _listAllowedLogID;       ///< 이 실행에서 허용 항목이 맞은 로그 id
-        vector<string>             _listMetricLine;         ///< 보고에 적는 지표 값
-        vector<string>             _listRecordLine;         ///< 보고에 적는 기록 값(결정성 대조)
-        vector<WatchHistory>       _listWatch;              ///< `<ExpectVisited>` 가 보는 감시 값 이력
-        vector<RememberedValue>    _listRemembered;         ///< `<Remember>` 가 남긴 값
+        /** @brief 미룬 값 상한 하나입니다(`deferExpectAtMost`). 값은 워커가 채운다. */
+        struct DeferredAtMostCheck
+        {
+            const AutomationStep*                     _pStep{ nullptr };
+            shared_ptr<const AutomationDeferredValue> _pValue{};
+            string                                    _description{};
+            float64                                   _limit{ 0.0 };
+        };
+
+        AutomationLogCapture        _logCapture;             ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
+        AutomationLogPolicy         _logPolicy;              ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
+        vector<string>              _listFailure;            ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>              _listUpdatedGolden;      ///< 이 실행이 쓴 골든(리소스 id)
+        vector<DeferredImageCheck>  _listDeferredImage;      ///< 시나리오 끝에서 판정할 `<ExpectImage>`
+        vector<DeferredAtMostCheck> _listDeferredAtMost;     ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
+        string                      _goldenFolderID;         ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
+        string                      _goldenPrefix;           ///< 골든 파일 이름의 앞머리(시나리오 이름)
+        bool                        _bUpdateGolden{ false }; ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다
+        vector<string>              _listUnhandledLog;       ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
+        vector<string>              _listAllowedLogID;       ///< 이 실행에서 허용 항목이 맞은 로그 id
+        vector<string>              _listMetricLine;         ///< 보고에 적는 지표 값
+        vector<string>              _listRecordLine;         ///< 보고에 적는 기록 값(결정성 대조)
+        vector<WatchHistory>        _listWatch;              ///< `<ExpectVisited>` 가 보는 감시 값 이력
+        vector<RememberedValue>     _listRemembered;         ///< `<Remember>` 가 남긴 값
     };
 } // namespace sw

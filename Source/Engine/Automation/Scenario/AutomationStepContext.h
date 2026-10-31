@@ -18,6 +18,7 @@ namespace sw
     struct AutomationStep;
 
     class GameObjectManager;
+    class AutomationDeferredValue;
     class AutomationFrameStats;
     class InputManager;
     class VirtualInputScript;
@@ -67,6 +68,12 @@ namespace sw
         virtual IAutomationStepState& setHeldStepState( const AutomationStep& step, unique_ptr<IAutomationStepState> state ) = 0;
         /** @brief 시나리오를 바로 끝냅니다. 이미 끝났으면 무시합니다. */
         virtual void endScenario( AutomationStepEnd end, string_view reason ) = 0;
+        /**
+         * @brief 워커가 나중에 내는 값 @p pValue 가 @p limit 이하인지를 `<Pass/>` 에서 판정하도록 미룹니다(`<ExpectImage>` 와 같은 자리).
+         * @details 판정이 다음 단계 진행에 쓰이지 않는 값(편집기 UI 캡처의 마젠타 비율)을 위해 프레임을 붙잡지 않는다. 값을 내는 일은 끝 차단 조건(`SW_AUTOMATION_FINISH_BLOCKER`)으로
+         *          `<Pass/>` 를 미뤄야 한다 - 그때도 값이 없으면 실패다. 실패 줄은 `<@p description>, got <값>` 이다.
+         */
+        virtual void deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue ) = 0;
 
         /** @brief 이 시나리오의 산출물 폴더입니다. */
         virtual const string& getOutputDirectory() const = 0;
