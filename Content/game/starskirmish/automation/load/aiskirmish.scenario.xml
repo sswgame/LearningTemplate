@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  부하 시나리오 — AI 가 많은 씬: StarSkirmish 의 두 진영을 모두 AI 가 돌린다(일꾼 · 건물 · 군대가 시간이 지날수록 늘어 게임 스레드가 무거워진다).
+  측정 창(<Load>)이 끝내므로 <Pass/> 가 없다. 하위 폴더라 게임 체인(Scenario.starskirmish)이 줍지 않는다 — 손으로 돌린다.
+  실행: App -scenario=game/starskirmish/automation/load/aiskirmish.scenario.xml -unattended (SW_ACTIVE_GAME=StarSkirmish)
+-->
+<Scenario name="game.starskirmish.load.aiskirmish" fixedDelta="0.0166667" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
+	<Load durationSeconds="30"/>
+	<Variable name="gv_skirmishAutoPlay" value="1"/>
+</Scenario>

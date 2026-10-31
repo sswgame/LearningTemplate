@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  StarSkirmish 조작 시나리오 — 명령형 디렉터는 마우스 버튼이 아니라 액션(Skirmish.Select · Skirmish.Order)을 읽는다.
+  커서 자리만 포인터 위치(MousePosition)로 두고, 누르는 것은 마우스 버튼 슬롯(왼쪽 = 고르기, 오른쪽 = 명령)으로 낸다(패드 A · B 는 가상 커서가 마우스 버튼으로 바꾼다) — 마우스 원시 조회가 남아 있으면 아무것도 고르지 못한다.
+  실행: ctest -R Scenario.starskirmish (SW_ACTIVE_GAME=StarSkirmish) · App -scenario=game/starskirmish/automation/control.scenario.xml -unattended
+-->
+<Scenario name="game.starskirmish.control" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_skirmishAutoPlay" value="0"/>
+	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
+	<Expect watch="Skirmish.SelectedCount" equals="0"/>
+	<!-- 본진(10, 10)을 덮는 사각형 — 리그 초점 (14, 14) · 직교 높이 30 에서 화면 왼쪽 가운데 아래. 끌기는 누른 채 프레임이 지나야 한다. -->
+	<MousePosition x="0.3" y="0.45"/>
+	<Press slot="Mouse.Left"/>
+	<Wait frames="5"/>
+	<MousePosition x="0.6" y="0.85"/>
+	<Wait frames="4"/>
+	<Release slot="Mouse.Left"/>
+	<WaitUntil watch="Skirmish.SelectedCount" atLeast="1" timeoutFrames="30"/>
+	<!-- 빈 땅으로 명령 — 고른 일꾼이 그 자리로 무리 이동한다. -->
+	<MousePosition x="0.7" y="0.3"/>
+	<Wait frames="2"/>
+	<Tap slot="Mouse.Right" hold="1"/>
+	<WaitUntil watch="Skirmish.SelectedMovingCount" atLeast="1" timeoutFrames="30"/>
+	<Pass/>
+</Scenario>
