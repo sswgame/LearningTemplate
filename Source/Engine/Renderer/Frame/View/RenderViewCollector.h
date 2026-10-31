@@ -40,6 +40,8 @@ namespace sw
         static float32 computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight );
         /** @brief 렌더 텍스처 뷰의 한 프레임 예산입니다(`-gv_renderViewBudget` 뷰 수, `-gv_renderViewMegapixelBudget` 픽셀 합). */
         static RenderViewBudget getDefaultBudget();
+        /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰(화면 밖 · 가려짐 · 너무 작음) 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` 가 읽는다). */
+        static uint32 getLastHiddenViewCount();
         /**
          * @brief 추가 뷰 요청을 @p outListView 에 채웁니다(지우고 채운다).
          * @param mainViewProj 주 시점의 뷰-투영(보이는가 판정의 절두체와 화면 크기).

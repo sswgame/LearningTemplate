@@ -7,7 +7,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -36,14 +35,8 @@ namespace sw
     {
         struct RenderViewCollectorInternal
         {
-            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(감시 값 `RenderView.HiddenCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
+            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(`RenderViewCollector::getLastHiddenViewCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
             inline static atomic<uint32> _s_hiddenViewCount{ 0 };
-            [[nodiscard]] static bool    readHiddenViewCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                outValue = static_cast<float64>( _s_hiddenViewCount.load( std::memory_order_relaxed ) );
-                return true;
-            }
             /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
             static constexpr uint32 kMaxUpscaleZoom = 16;
             /// 배율이 1 인지 보는 허용 오차입니다(부동소수 저장 오차만 받는다).
@@ -157,8 +150,10 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
-    SW_AUTOMATION_WATCH( renderViewHiddenCount, "RenderView.HiddenCount", "Extra views the visibility test rested last frame (monitor off screen, behind a wall or too small)",
-                         &RenderViewCollectorInternal::readHiddenViewCount );
+    uint32 RenderViewCollector::getLastHiddenViewCount()
+    {
+        return RenderViewCollectorInternal::_s_hiddenViewCount.load( std::memory_order_relaxed );
+    }
 
     RenderViewBudget RenderViewCollector::getDefaultBudget()
     {
