@@ -3,11 +3,11 @@
 #include "Editor/Panels/Settings/Model/ModulesModel.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
-#include "Editor/Common/Config/EditorPaths.h"
 
 #include "Engine/Config/GameSelection.h"
 
@@ -21,11 +21,16 @@ namespace sw::editor
     {
         struct ModulesModelInternal
         {
-            /** @brief 돌고 있는 게임의 프로젝트 매니페스트 소스 경로입니다(게임 이름이 `Source/Games/` 의 폴더 이름이다). */
-            static string getProjectManifestPath()
+            /**
+             * @brief 돌고 있는 게임의 프로젝트 매니페스트 소스 경로입니다(게임 이름이 `Source/Games/` 의 폴더 이름이다). 프로젝트 루트 아래로 푼다.
+             * @return 게임 이름이 경로로 풀리지 않으면(빈 이름 · 드라이브 글자) 빈 값입니다.
+             */
+            static std::optional<AbsolutePath> getProjectManifestPath()
             {
                 const string gameName = GameSelection::getName();
-                return EditorPaths::resolveProjectRelativePath( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension );
+                if ( gameName.empty() )
+                    return std::nullopt;
+                return AbsolutePath::tryResolve( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension, ProcessRoots::get()._project );
             }
         };
     } // namespace
@@ -142,7 +147,13 @@ namespace sw::editor
 
     bool ModulesModel::writeProjectOverride()
     {
-        const string          path      = ModulesModelInternal::getProjectManifestPath();
+        const std::optional<AbsolutePath> manifestPath = ModulesModelInternal::getProjectManifestPath();
+        if ( manifestPath.has_value() == false )
+        {
+            SW_LOG_ERROR( "Modules: the running game '%#' does not name a project manifest path", GameSelection::getName().c_str() );
+            return false;
+        }
+        const string&         path      = manifestPath->str();
         const ModuleManifest* pManifest = _catalog.findManifest( _pendingModule );
         string                text;
         string                rewritten;

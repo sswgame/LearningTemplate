@@ -20,7 +20,7 @@
 namespace sw::editor
 {
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_editorStateDir, "",
-                             "에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor)" );
+                             "에디터 상태 폴더(Saved/Editor 대신, 절대 경로 또는 기동한 셸의 작업 폴더 기준 상대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor)" );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -72,7 +72,8 @@ namespace sw::editor
     string EditorPaths::getEditorStateDirectory()
     {
         // 자동화 실행은 빈 폴더를 쓴다 — 사용자의 레이아웃 · 테마 · 최근 씬과 무관하게 시작하고, 사용자 상태에 쓰지 않는다.
-        string stateDir = gv_editorStateDir.empty() ? EditorPathsInternal::getAutomationStateDirectory() : resolveProjectRelativePath( gv_editorStateDir );
+        // `gv_editorStateDir` 는 디스크 경로 변수라 값을 받을 때 이미 절대로 풀었다(R5) — 여기서 다시 풀지 않는다.
+        string stateDir = gv_editorStateDir.empty() ? EditorPathsInternal::getAutomationStateDirectory() : string( gv_editorStateDir );
         if ( stateDir.empty() )
         {
             stateDir = FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirSavedEditor );
@@ -92,14 +93,5 @@ namespace sw::editor
             return {};
 
         return FileUtil::joinPath( stateDir, pFileName );
-    }
-
-    string EditorPaths::resolveProjectRelativePath( string_view hostRelativePath )
-    {
-        // 반환 지점을 하나로 둔다. 어떤 경로는 지역 변수를, 어떤 경로는 다른 식을 반환하면 NRVO 가 적용되지 않는다.
-        string path = FileUtil::normalizeSeparators( hostRelativePath );
-        if ( FileUtil::isAbsolutePath( path ) == false )
-            path = FileUtil::joinPath( ProcessRoots::get()._project.str(), path );
-        return path;
     }
 } // namespace sw::editor

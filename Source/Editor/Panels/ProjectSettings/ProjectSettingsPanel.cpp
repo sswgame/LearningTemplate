@@ -115,15 +115,20 @@ namespace sw::editor
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
-        const DataPath& packRoot = editor::getSubsystem<const GameConfig>()._packRoot;
-        if ( packRoot.isSet() )
+        const DataPath& packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
+        const string    packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : string{};
+        // 팩 폴더를 못 찾았는데 빈 루트에 이어 붙이면 상대 경로가 돼 작업 폴더의 파일을 열고 쓴다 — 페이지를 만들지 않고 알린다.
+        if ( packRoot.isSet() && packFolder.empty() )
+            SW_LOG_ERROR( "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );
+        if ( packFolder.empty() == false )
         {
             unique_ptr<Page> pPackPage      = make_unique<Page>();
             pPackPage->_entry._page         = string( PackEngineSettings::StaticType()->_name.c_str() );
             pPackPage->_entry._typeName     = pPackPage->_entry._page;
             pPackPage->_entry._elementName  = PackEngineSettings::kElementName;
             pPackPage->_entry._relativePath = FileUtil::joinPath( FileUtil::joinPath( path::kContentFolder, packRoot.get() ), PackEngineSettings::kPackRelativePath );
-            pPackPage->_absolutePath        = FileUtil::joinPath( EditorPaths::findContentFolder( packRoot.get() ), PackEngineSettings::kPackRelativePath );
+            pPackPage->_entry._absolutePath = FileUtil::joinPath( packFolder, PackEngineSettings::kPackRelativePath );
+            pPackPage->_absolutePath        = pPackPage->_entry._absolutePath;
             pPackPage->_bTypeFound          = registry.findType( PackEngineSettings::StaticType()->_name ) != nullptr;
             _listPage.push_back( std::move( pPackPage ) );
         }
@@ -140,7 +145,7 @@ namespace sw::editor
         {
             unique_ptr<Page> pPage = make_unique<Page>();
             pPage->_entry          = std::move( entry );
-            pPage->_absolutePath   = EditorPaths::resolveProjectRelativePath( pPage->_entry._relativePath );
+            pPage->_absolutePath   = pPage->_entry._absolutePath;
             pPage->_bTypeFound     = registry.findType( hashed_string( pPage->_entry._typeName.c_str() ) ) != nullptr;
             _listPage.push_back( std::move( pPage ) );
         }

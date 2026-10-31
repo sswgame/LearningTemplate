@@ -32,6 +32,7 @@ namespace sw::editor
             entry._page         = string( typeName.c_str() );
             entry._typeName     = entry._page;
             entry._relativePath = std::move( relativePath );
+            entry._absolutePath = FileUtil::normalizeSeparators( resolvedPath );
             outListEntry.push_back( std::move( entry ) );
         } );
         VectorUtil::sort( outListEntry, []( const ProjectSettingsEntry& lhs, const ProjectSettingsEntry& rhs )

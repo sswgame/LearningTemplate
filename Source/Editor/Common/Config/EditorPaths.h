@@ -64,13 +64,5 @@ namespace sw::editor
          * @return 정하지 못하면 빈 문자열입니다.
          */
         static string resolveEditorStateFile( const utf8* pFileName );
-
-        /**
-         * @brief 호스트 상대 경로를 프로젝트 루트 기준 절대 경로로 만듭니다. 이미 절대 경로면 그대로 둡니다.
-         * @details 설정 파일을 다루는 곳(`EditorConfig::loadFromHost`, `saveToHost`, `EditorToolDefaults::loadFromHostPath`)이 함께 쓴다.
-         *          절대 경로인지는 `FileUtil::isAbsolutePath` 로 판정한다. 직접 판정하면 드라이브 문자 검사 같은 것을 빠뜨리기 쉽다.
-         * @return 프로젝트 루트를 찾지 못하면 구분자만 정규화한 입력을 그대로 반환합니다.
-         */
-        static string resolveProjectRelativePath( string_view hostRelativePath );
     };
 } // namespace sw::editor

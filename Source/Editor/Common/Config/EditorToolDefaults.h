@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
@@ -60,11 +61,16 @@ namespace sw::editor
         vector<string> _listHotReloadExtension{};
 
         /**
-         * @brief 프로젝트 루트 기준 Host 경로에서 에디터 시드를 로드합니다.
-         * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorToolDefaults`(Config/Editor/editortooldefaults.json)
+         * @brief 에디터 시드 파일의 절대 경로입니다 — 프로젝트 루트(`ProcessRoots::_project`) 아래 `config::kFileRuntimeEditorToolDefaults`(Config/Editor/editortooldefaults.json).
+         * @details 읽기(`loadFromHost`)와 리로드 판정(`EditorToolDefaultsReload`)이 이 하나로 같은 자리를 본다(R7).
+         */
+        [[nodiscard]] static AbsolutePath getHostPath();
+
+        /**
+         * @brief 에디터 시드를 `getHostPath()` 에서 로드합니다.
          * @return 읽었으면 true. 파일이 없거나 깨졌거나 `Required` 칸이 빠졌으면 false 이고 값은 그대로다(오류는 키 이름과 함께 로그에 남는다).
          *         대신 쓸 기본값은 없다 — 기동은 이 실패로 멈춘다.
          */
-        [[nodiscard]] bool loadFromHostPath( string_view hostRelativePath = {} );
+        [[nodiscard]] bool loadFromHost();
     };
 } // namespace sw::editor

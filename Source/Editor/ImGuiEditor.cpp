@@ -516,7 +516,7 @@ namespace sw::editor
             SW_LOG_INFO( "Editor preferences: first run - nothing changed from the defaults yet" );
         // 도구 시드는 에디터 필수 데이터다. 대신 쓸 값이 없으므로 읽지 못하면 기동을 멈춘다(이유는 로드가 키 이름과 남겼다).
         _editorToolDefaults = make_unique<EditorToolDefaults>();
-        if ( _editorToolDefaults->loadFromHostPath() == false )
+        if ( _editorToolDefaults->loadFromHost() == false )
             return SubsystemInitResult::Failed;
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;

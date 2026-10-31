@@ -18,7 +18,8 @@ namespace sw::editor
     struct ProjectSettingsEntry
     {
         string _page;         ///< 목록에 보이는 이름(리플렉션 타입 이름)
-        string _relativePath; ///< 프로젝트 루트 기준 경로(슬래시)
+        string _relativePath; ///< 프로젝트 루트 기준 경로(슬래시) - 보여 주기용
+        string _absolutePath; ///< 설정 테이블이 읽은 자리(절대, 슬래시). 창은 이것을 열고 쓴다 - 상대 경로에서 다시 풀지 않는다(R8)
         string _typeName;     ///< 리플렉션 타입 이름(`EngineConfig`)
         string _elementName;  ///< 비면 파일 전체가 설정(JSON)이다. 있으면 XML 파일 안의 그 요소 하나가 설정이다(팩 `gamesettings.xml` 의 `<Engine>`)
     };
