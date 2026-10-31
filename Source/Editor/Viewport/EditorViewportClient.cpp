@@ -24,6 +24,7 @@
 #include "Editor/Viewport/Model/EditorViewportMouseClaim.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -254,7 +255,7 @@ namespace sw::editor
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
             _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, _toolbarSettings );
             _picker.processHover( canvasPos, canvasSize, pCamera, bCanvasHovered, _gizmo.isDragging(), _toolbarSettings );
-            EditorSelectionBounds::setHoveredObjectID( _picker.getHoveredObjectID() );
+            SelectionBoundsVisualizer::setHoveredObjectID( _picker.getHoveredObjectID() );
             processContextMenu( canvasPos, canvasSize, pCamera, bCanvasHovered );
 
             {

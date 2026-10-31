@@ -20,6 +20,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridUtil.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -258,7 +259,7 @@ namespace sw::editor
         /** @brief 씬 뷰의 호버 오브젝트를 구분합니다. `-gv_editorWatchObject` 오브젝트이면 1, 없으면 0, 다른 오브젝트이면 -1 입니다. */
         [[nodiscard]] bool readHoveredObject( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const uint64 hoveredID = EditorSelectionBounds::getHoveredObjectID();
+            const uint64 hoveredID = SelectionBoundsVisualizer::getHoveredObjectID();
             if ( hoveredID == 0 )
             {
                 outValue = 0.0;
@@ -272,7 +273,7 @@ namespace sw::editor
         /** @brief 선택 상자 시각화가 지난 프레임에 그린 상자 수입니다. */
         [[nodiscard]] bool readSelectionOutlineBoxes( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            outValue = static_cast<float64>( EditorSelectionBounds::getDrawnBoxCount() );
+            outValue = static_cast<float64>( SelectionBoundsVisualizer::getDrawnBoxCount() );
             return true;
         }
 

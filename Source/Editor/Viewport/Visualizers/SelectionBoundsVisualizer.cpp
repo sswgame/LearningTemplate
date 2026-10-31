@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
+
 #include "Core/Math/AABB.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -135,17 +137,17 @@ namespace sw::editor
         };
     } // namespace
 
-    void EditorSelectionBounds::setHoveredObjectID( uint64 objectID )
+    void SelectionBoundsVisualizer::setHoveredObjectID( uint64 objectID )
     {
         SelectionBoundsVisualizerInternal::getDrawState()._hoveredObjectID = objectID;
     }
 
-    uint64 EditorSelectionBounds::getHoveredObjectID()
+    uint64 SelectionBoundsVisualizer::getHoveredObjectID()
     {
         return SelectionBoundsVisualizerInternal::getDrawState()._hoveredObjectID;
     }
 
-    uint32 EditorSelectionBounds::getDrawnBoxCount()
+    uint32 SelectionBoundsVisualizer::getDrawnBoxCount()
     {
         return SelectionBoundsVisualizerInternal::getDrawState()._drawnBoxCount;
     }
