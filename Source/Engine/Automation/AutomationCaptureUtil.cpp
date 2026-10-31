@@ -7,6 +7,7 @@
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Scene/SceneManager.h"
@@ -17,7 +18,10 @@ namespace sw
     {
         uint32 count = 0;
         if ( pManager != nullptr )
+        {
             count += static_cast<uint32>( pManager->getPrimitiveRegistry().countAssetWaiters() );
+            count += pManager->getSubsystem<SceneNavigation>().getWaitingMeshCount();
+        }
         if ( engine::areEngineServicesBound() )
             count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
         return count;

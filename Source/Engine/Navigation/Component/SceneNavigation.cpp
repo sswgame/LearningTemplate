@@ -94,6 +94,7 @@ namespace sw
     void SceneNavigation::onSceneCleared()
     {
         NavTileRebaker::waitForAllBakes( _listRuntime );
+        _waitingMeshCount = 0; // 미룬 마련은 씬과 함께 사라진다 — 남기면 자동화 사진이 영영 기다린다
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
             pAgent->_crowdAgentID   = NavigationConstant::kInvalidAgentID;
@@ -362,11 +363,14 @@ namespace sw
         const float32 reach                 = MathUtil::max( 1.0f, pType->_radius * 4.0f );
         pRuntime->_searchExtent             = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
 
-        shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
-        _waitingMeshCount                     = NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );
+        shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
+        const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );
         // 메시를 아직 읽는 중이다 — 덜 모인 기하로 굽지 않는다(쿠킹본의 입력 해시도 맞지 않는다). 실패가 아니라 다음 갱신이 다시 마련한다.
-        if ( _waitingMeshCount > 0 )
+        if ( pendingMeshCount > 0 )
+        {
+            _waitingMeshCount += pendingMeshCount;
             return nullptr;
+        }
         // 장애물은 종류의 방식(`_obstacleMode`)대로 — 다시 베이크는 덧칠 부피로 타일에 베이크하고, 캐시는 베이크하지 않고 끼운 뒤 캐시 장애물로 넣는다.
         const bool                          bObstacleCache = pType->_obstacleMode == NavObstacleMode::TileCache;
         shared_ptr<vector<NavConvexVolume>> pVolume        = make_shared<vector<NavConvexVolume>>();
@@ -566,6 +570,7 @@ namespace sw
     {
         const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false ||
                                _listLink.empty() == false;
+        _waitingMeshCount = 0; // 이번 갱신에 미룬 마련만 센다(사라진 표면 · 에이전트의 옛 기다림이 남지 않게)
         if ( bAnything == false || _pManager == nullptr )
             return;
         SW_MEMORY_SCOPE( Navigation );

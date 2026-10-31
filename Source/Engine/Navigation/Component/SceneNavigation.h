@@ -190,6 +190,11 @@ namespace sw
 
         /** @brief 베이크하는 중이거나 줄에 선 타일 수입니다. */
         uint32 getPendingTileCount() const;
+        /**
+         * @brief 기하의 메시를 아직 읽는 중이라 내비메시 마련을 미룬 메시 수입니다(0 이면 기다리는 마련이 없다).
+         * @details 자동화의 "에셋 일 0"(`AutomationCaptureUtil::countPendingAssetWork`)이 센다 — 메시가 도착한 뒤 내비메시가 서고 에이전트가 움직이기 전에 찍지 않게.
+         */
+        uint32 getWaitingMeshCount() const { return _waitingMeshCount; }
         /** @brief 베이크하는 중 · 줄에 선 타일을 모두 지금 베이크하고 끼웁니다(게임 스레드 — 테스트 · 쿠킹). */
         void flushTileBakes();
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
@@ -257,7 +262,7 @@ namespace sw
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;
-        uint32                               _waitingMeshCount; ///< 마지막으로 마련을 미룬(`NavMeshArrival::Defer`) 모으기에서 아직 읽는 중이던 메시 수. 마련하면 0 이다
+        uint32                               _waitingMeshCount; ///< 이번 갱신에 마련을 미룬(`NavMeshArrival::Defer`) 모으기들이 센, 아직 읽는 중인 메시 수. 갱신 첫머리에 0 으로 돌린다
         bool                                 _bSettingsLoaded;
         bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
 
