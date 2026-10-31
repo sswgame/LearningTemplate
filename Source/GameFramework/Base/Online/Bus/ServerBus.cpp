@@ -62,7 +62,7 @@ namespace sw
 
     void MixedBuildCodec::logEncodeFailure( const hashed_string& typeFqn, uint32 version, bool bInRange )
     {
-        SW_LOG_ERROR( "%# (version %#) is not written: %#", typeFqn.c_str(), version, bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
+        SW_LOG_ERROR_ID( "ServerBus.EncodeFailed", "%# (version %#) is not written: %#", typeFqn.c_str(), version, bInRange ? "a field has no binary handler" : "a value is out of its declared range" );
     }
 
     void ServerBusReadLog::noteRejected( const hashed_string& typeFqn, string_view topic, ServerBusReadResult result, uint32 readVersion )
@@ -71,13 +71,13 @@ namespace sw
         const uint64 key = ( static_cast<uint64>( typeFqn.getHash() ) << 32 ) ^ ( static_cast<uint64>( result ) << 24 ) ^ readVersion;
         if ( LogOnce::tryClaim( LogOnceKind::BusMessageRejected, key ) == false )
             return;
-        SW_LOG_ERROR( "Dropped a bus message on '%#' (%#, read version %#): %# - logged once per type, result and version", topic, typeFqn.c_str(), readVersion,
-                      describeReadResult( result ) );
+        SW_LOG_ERROR_ID( "ServerBus.MessageRejected", "Dropped a bus message on '%#' (%#, read version %#): %# - logged once per type, result and version", topic, typeFqn.c_str(), readVersion,
+                         describeReadResult( result ) );
     }
 
     void ServerBusReadLog::noteTooLarge( const hashed_string& typeFqn, string_view topic, int32 byteCount )
     {
-        SW_LOG_ERROR( "Bus message %# on '%#' is %# bytes, over the %# byte limit - not published", typeFqn.c_str(), topic, byteCount, IServerBusTransport::kMaxMessageSize );
+        SW_LOG_ERROR_ID( "ServerBus.MessageTooLarge", "Bus message %# on '%#' is %# bytes, over the %# byte limit - not published", typeFqn.c_str(), topic, byteCount, IServerBusTransport::kMaxMessageSize );
     }
 
     uint64 ServerBusReadLog::getRejectedCount()

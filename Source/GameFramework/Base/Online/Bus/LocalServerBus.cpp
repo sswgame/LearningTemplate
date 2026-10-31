@@ -108,7 +108,7 @@ namespace sw
         const bool bValid = isValidTopic( topic ) && 0 <= size && size <= kMaxMessageSize && ( size == 0 || pData != nullptr );
         if ( bValid == false )
         {
-            SW_LOG_WARNING( "Dropped a bus message: topic '%#' size %#", topic, size );
+            SW_LOG_WARNING_ID( "ServerBus.InvalidMessage", "Dropped a bus message: topic '%#' size %#", topic, size );
             return;
         }
         const ServerBusMessage message( vector<uint8>( pData, pData + size ), string{ topic }, _serverID, _nextSequence++ );
@@ -119,7 +119,7 @@ namespace sw
     {
         if ( isValidTopic( topic ) == false )
         {
-            SW_LOG_WARNING( "Ignored a bus subscription to an invalid topic '%#'", topic );
+            SW_LOG_WARNING_ID( "ServerBus.InvalidTopic", "Ignored a bus subscription to an invalid topic '%#'", topic );
             return;
         }
         _pHub->subscribe( _inboxID, topic );

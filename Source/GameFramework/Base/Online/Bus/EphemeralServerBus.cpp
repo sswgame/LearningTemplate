@@ -57,12 +57,12 @@ namespace sw
         const bool bValid = isValidTopic( topic ) && 0 <= size && size <= kMaxMessageSize && ( size == 0 || pData != nullptr );
         if ( bValid == false )
         {
-            SW_LOG_WARNING( "Dropped a bus message: topic '%#' size %#", topic, size );
+            SW_LOG_WARNING_ID( "ServerBus.InvalidMessage", "Dropped a bus message: topic '%#' size %#", topic, size );
             return;
         }
         if ( _pRouter == nullptr || _pRouter->getStore() == nullptr )
         {
-            SW_LOG_WARNING( "Dropped a bus message on topic '%#' - the cache router is not initialized", topic );
+            SW_LOG_WARNING_ID( "ServerBus.NoRouter", "Dropped a bus message on topic '%#' - the cache router is not initialized", topic );
             return;
         }
         vector<uint8> envelopeBytes;
@@ -79,7 +79,7 @@ namespace sw
     {
         if ( isValidTopic( topic ) == false )
         {
-            SW_LOG_WARNING( "Ignored a bus subscription to an invalid topic '%#'", topic );
+            SW_LOG_WARNING_ID( "ServerBus.InvalidTopic", "Ignored a bus subscription to an invalid topic '%#'", topic );
             return;
         }
         for ( const TopicSubscription& subscription : _listSubscription )
@@ -89,7 +89,7 @@ namespace sw
         }
         if ( _pRouter == nullptr )
         {
-            SW_LOG_WARNING( "Bus subscription to '%#' failed - no cache router is bound", topic );
+            SW_LOG_WARNING_ID( "ServerBus.NoRouter", "Bus subscription to '%#' failed - no cache router is bound", topic );
             return;
         }
         Subscription routerSubscription = _pRouter->subscribe( EphemeralServerBusInternal::makeChannel( topic ),
