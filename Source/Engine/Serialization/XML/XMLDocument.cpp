@@ -586,7 +586,7 @@ namespace sw
             StringBuilder<constant::kMaxBuffer1024> message;
             message.appendFormat( "%#:%#:%#: %#", source, line, column, result.description() );
             _lastError = message.c_str();
-            SW_LOG_ERROR( "XML parse error at %#", _lastError );
+            SW_LOG_ERROR_ID( "Xml.ParseError", "XML parse error at %#", _lastError );
             return false;
         }
 
