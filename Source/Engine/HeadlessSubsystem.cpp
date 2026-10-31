@@ -201,7 +201,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, params._newBuild );
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_DIR, params._outputDirectory );
                 // 서명 — 개인 키는 저장소 밖 파일(`-patch-sign-key`)에서만 읽는다. 키를 줬는데 읽지 못하거나 제공자가 없으면 서명 없는 패치로 대신 만들지 않고 멈춘다.
-                // 제공자는 GameFramework 가 프로세스 범위에 공개한 모듈 서브시스템이다(`OpenSSLNetSecurityProvider`).
+                // 제공자는 GameFramework 가 프로세스 범위에 공개한 모듈 서브시스템의 멤버다(`OpenSSLNetSecuritySubsystem` 이 든 `OpenSSLNetSecurityProvider`).
                 string signKeyPath;
                 (void)commandLine.getArgument( CommandLineArgument::PATCH_SIGN_KEY, signKeyPath );
                 if ( signKeyPath.empty() == false )

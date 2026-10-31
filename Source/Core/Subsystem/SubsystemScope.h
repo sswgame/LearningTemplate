@@ -135,6 +135,19 @@ namespace sw
         }
 
         /**
+         * @brief 이미 걸린 객체 @p owner 가 멤버로 든 @p part 를 타입 @p TInterface 로 **공개**합니다 — 인터페이스를 상속하지 않고 멤버 객체로 든 서브시스템이 쓴다.
+         * @details 칸의 소유 여부는 @p owner 의 칸을 따른다 — 멤버는 주인과 수명이 같아, 소유한 서브시스템의 멤버 칸은 `destroyAll` 에서 함께 지워진다.
+         * @return 같은 타입이 다른 객체로 이미 걸려 있으면 false 입니다.
+         */
+        template <class TInterface, class TOwner, class TPart>
+        [[nodiscard]] bool publishPart( TOwner& owner, TPart& part )
+        {
+            static_assert( std::is_base_of_v<TInterface, TPart>, "SubsystemScope::publishPart needs a base interface of the part" );
+            (void)owner; // 소유 여부를 정하는 타입만 쓴다
+            return publishEntry( getSubsystemTypeHash<TInterface>(), static_cast<TInterface*>( &part ), isOwnedEntry( getSubsystemTypeHash<TOwner>() ) );
+        }
+
+        /**
          * @brief 이름 @p name 의 자식 범위를 만들어 매답니다(이미 있으면 그것). 자식은 이 범위가 소유하고, 자식의 부모는 이 범위입니다.
          * @details 자식이 공개한 칸은 이 범위의 조회에 보인다. 서브시스템을 더한 뒤 초기화는 부른 쪽이 한다(`getCollection().initializeAll`).
          *          `destroyAll` · 소멸은 자식을 매단 역순으로 먼저 지운 뒤 이 범위의 서브시스템을 지운다.

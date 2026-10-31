@@ -2,7 +2,7 @@
  * @file PackPatchTrustSource.h
  * @brief 패치 목록 서명의 신뢰 설정을 기동 앞에서 만드는 자리입니다 — 엔진 설정의 공개 키와 암호 제공자를 묶습니다(`PackPatchTrust`).
  * @details 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 은 링크하지 않는다. GameFramework 가 그 제공자를 모듈 서브시스템으로 프로세스 범위에 공개하고
- *          (`SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecurityProvider, INetSecurityProvider )`), 엔진은 인터페이스 타입으로 찾는다(`engine::findSubsystem<INetSecurityProvider>()`)
+ *          (`SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider )`), 엔진은 인터페이스 타입으로 찾는다(`engine::findSubsystem<INetSecurityProvider>()`)
  *          — 함수 칸을 두고 높은 층이 채우던 길(언리얼 IModularFeatures 의 구현 등록과 같은 자리)을 범위 조회 하나로 바꿨다. 시작 마운트(`AssetManager::mountStartupPacks`)와
  *          패치 만들기(`-make-patch`)가 모두 같은 조회로 제공자를 받는다 — 게임 인스턴스가 서기 전이어도 닿는다(모듈 라이브러리는 에셋 마운트보다 먼저 올라온다).
  *          - **공개 키**는 엔진 설정(`EngineConfig::_patchTrustPublicKeyXHex` · `Y`, ES256 P-256 의 x · y 각 64 자리 16 진)이다. 둘 다 비면 서명을 요구하지 않는다(스팀처럼 스토어가

@@ -1,7 +1,7 @@
 /**
  * @file NetSecurity.h
  * @brief TLS 컨텍스트 · 개발 인증서 도우미입니다 — 상태 없는 라이브러리라 암호 제공자를 인자로 받습니다.
- * @note 제공자는 GameFramework 의 모듈 서브시스템(`OpenSSLNetSecurityProvider`, 프로세스 범위)이다 — `game::getSubsystem<INetSecurityProvider>()` 로 찾아 넘긴다.
+ * @note 제공자(`OpenSSLNetSecurityProvider`)는 GameFramework 의 모듈 서브시스템(`OpenSSLNetSecuritySubsystem`, 프로세스 범위)이 든다 — `game::getSubsystem<INetSecurityProvider>()` 로 찾아 넘긴다.
  *       OpenSSL 은 GameFramework 만 링크합니다 — 온라인을 쓰지 않는 게임의 Engine.dll 은 libssl · libcrypto 에 매이지 않는다.
  * @details 인증서 · 키는 PEM 파일 경로로 받는다(두 플랫폼 같은 길 — 전용 서버는 서버 설정 `Config/Server/<게임>.json` 의 `_tlsCertificateFile` ·
  *          `_tlsPrivateKeyFile` 이 경로를 준다). 상대 경로는 프로젝트 루트 기준이다. 경로를 비우면 **Dev 에서만** `Saved/Certificates/devserver.pem`(인증서와 키를

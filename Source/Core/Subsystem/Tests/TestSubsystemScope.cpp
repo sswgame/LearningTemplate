@@ -38,6 +38,26 @@ namespace
         bool* _pDestroyed;
     };
 
+    /** @brief 인터페이스를 상속하지 않고 멤버로 든 서브시스템입니다(`publishPart`). */
+    class ScopePartOwnerSubsystem final : public ISubsystem
+    {
+    public:
+        /** @brief 멤버로 드는 인터페이스 구현입니다. */
+        class Part final : public IScopeProbe
+        {
+        public:
+            int32 getValue() const override { return 9; }
+        };
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return "ScopePartOwner"; }
+        Part&               getPart() { return _part; }
+
+    private:
+        Part _part;
+    };
+
     /** @brief 빌려 거는 객체입니다(카탈로그 · 테스트 스택 객체 자리). */
     struct ScopeCatalog
     {
@@ -141,4 +161,19 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
     parent.destroyAll();
     SW_EXPECT_TRUE( bSecondDestroyed ); // 부모를 지우면 매단 자식도 먼저 사라진다
     SW_EXPECT_TRUE( parent.find<ScopeCatalog>() == &catalog );
+}
+
+/**
+ * @brief [SubsystemScopeTest] 소유한 서브시스템이 멤버로 든 부분을 공개하면 부모가 찾고, 자식 범위를 비우면 그 칸도 함께 사라진다
+ */
+SW_TEST_CASE( SubsystemScopeTest, PublishedPartFollowsItsOwner )
+{
+    SubsystemScope           parent;
+    SubsystemScope&          child = parent.mountChildScope( "ModuleA" );
+    ScopePartOwnerSubsystem& owner = child.addSubsystem( make_unique<ScopePartOwnerSubsystem>() );
+    SW_EXPECT_TRUE( child.publishPart<IScopeProbe>( owner, owner.getPart() ) );
+    SW_EXPECT_EQUAL( 9, parent.find<IScopeProbe>()->getValue() );
+
+    child.destroyAll();
+    SW_EXPECT_TRUE( parent.find<IScopeProbe>() == nullptr ); // 주인의 칸처럼 소유 칸이라 지운 멤버를 가리키지 않는다
 }

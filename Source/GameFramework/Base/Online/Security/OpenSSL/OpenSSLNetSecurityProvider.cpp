@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/HexUtil.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
@@ -1078,6 +1079,29 @@ namespace sw
 
 namespace sw
 {
-    // 프로세스 범위 아래 GameFramework 의 자식 범위에 서고 `INetSecurityProvider` 로 공개한다 — 엔진(팩 패치 서명)도 그 타입으로 찾는다.
-    SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecurityProvider, INetSecurityProvider );
+    /**
+     * @class OpenSSLNetSecuritySubsystem
+     * @brief OpenSSL 제공자를 멤버로 들고 `INetSecurityProvider` 로 공개하는 모듈 서브시스템입니다. 제공자는 상태가 없어 초기화 · 종료가 할 일이 없다.
+     * @details 제공자가 `ISubsystem` 을 함께 상속하지 않게 수명 짝만 여기 둔다 — 제공자는 서브시스템 없이도 쓰인다(테스트). 이름 해시가 함수 서명 글이라
+     *          익명 이름공간이 아닌 `sw` 에 둔다(`RespEphemeralStoreDriver` 와 같다).
+     */
+    class OpenSSLNetSecuritySubsystem final : public ISubsystem
+    {
+    public:
+        /** @brief 서브시스템 이름입니다. */
+        static constexpr const utf8* kSubsystemName = "NetSecurity";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 공개할 제공자입니다(`ModuleSubsystemRegistration` 이 `INetSecurityProvider` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
+        OpenSSLNetSecurityProvider& getPublishedPart() { return _provider; }
+
+    private:
+        OpenSSLNetSecurityProvider _provider;
+    };
+
+    // 프로세스 범위 아래 GameFramework 의 자식 범위에 서고 제공자를 `INetSecurityProvider` 로 공개한다 — 엔진(팩 패치 서명)도 그 타입으로 찾는다.
+    SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider );
 } // namespace sw

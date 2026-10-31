@@ -56,6 +56,7 @@ namespace sw
     /**
      * @class ModuleSubsystemRegistration
      * @brief 서브시스템 @p TSubsystem 하나의 등록입니다. 기본 생성하고 @p TPublished 타입마다 공개합니다(제 타입을 공개하려면 목록에 넣는다).
+     * @details 상속하지 않은 타입은 서브시스템이 멤버로 든 부분(`getPublishedPart()`)으로 공개한다 — 수명 짝만 맡는 서브시스템이 구현 객체를 멤버로 든다(`OpenSSLNetSecuritySubsystem`).
      */
     template <class TSubsystem, class... TPublished>
     class ModuleSubsystemRegistration final : public ModuleSubsystemRegistrar
@@ -69,16 +70,27 @@ namespace sw
         void addTo( SubsystemScope& moduleScope ) const override
         {
             TSubsystem& subsystem  = moduleScope.addSubsystem( make_unique<TSubsystem>() );
-            const bool  bPublished = ( moduleScope.template publish<TPublished>( subsystem ) && ... );
+            const bool  bPublished = ( publishOne<TPublished>( moduleScope, subsystem ) && ... );
             SW_ASSERT( bPublished ); // 한 모듈 범위에서 같은 타입을 둘이 공개하면 등록의 잘못이다
             (void)bPublished;
+        }
+
+    private:
+        /** @brief @p TOne 을 상속했으면 서브시스템을, 아니면 서브시스템이 멤버로 든 부분을 그 타입으로 공개합니다. */
+        template <class TOne>
+        [[nodiscard]] static bool publishOne( SubsystemScope& moduleScope, TSubsystem& subsystem )
+        {
+            if constexpr ( std::is_base_of_v<TOne, TSubsystem> )
+                return moduleScope.template publish<TOne>( subsystem );
+            else
+                return moduleScope.template publishPart<TOne>( subsystem, subsystem.getPublishedPart() );
         }
     };
 } // namespace sw
 
 /**
  * @brief 서브시스템 @p TSubsystem 을 이 이미지의 모듈 서브시스템으로 등록합니다. @p targetScope 는 `ModuleSubsystemScope` 의 열거자 이름, 나머지는 공개할 타입입니다.
- * @details 예: `SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecurityProvider, INetSecurityProvider );` — 프로세스 범위에 서고 `INetSecurityProvider` 로 찾힌다.
+ * @details 예: `SW_MODULE_SUBSYSTEM( Process, OpenSSLNetSecuritySubsystem, INetSecurityProvider );` — 프로세스 범위에 서고 `INetSecurityProvider` 로 찾힌다.
  *          .cpp 의 `namespace sw` 안(함수 밖)에 둔다 — 타입 이름을 그 이름공간에서 찾는다. 유니티 빌드가 여러 .cpp 를 합쳐도 겹치지 않게 변수 이름에 타입 이름을 붙인다.
  */
 #define SW_MODULE_SUBSYSTEM( targetScope, TSubsystem, ... )                                                 \

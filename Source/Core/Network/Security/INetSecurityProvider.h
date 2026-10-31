@@ -1,7 +1,7 @@
 /**
  * @file INetSecurityProvider.h
  * @brief 네트워크 암호 API — AEAD · X25519 · HKDF-SHA256 · 느린 비밀번호 해시(Argon2id) · 난수 · 메모리 위 TLS 1.3 세션 · 개발용 인증서.
- *        Core 는 이 인터페이스만 알고 구현(OpenSSL)은 GameFramework 가 줍니다(모듈 서브시스템 `OpenSSLNetSecurityProvider` — 프로세스 범위에 공개하고 이 인터페이스 타입으로 찾는다, `GameFramework/Base/Online/Security`).
+ *        Core 는 이 인터페이스만 알고 구현(OpenSSL)은 GameFramework 가 줍니다(모듈 서브시스템 `OpenSSLNetSecuritySubsystem` 이 든 `OpenSSLNetSecurityProvider` — 프로세스 범위에 공개하고 이 인터페이스 타입으로 찾는다, `GameFramework/Base/Online/Security`).
  * @details 암호를 직접 짜지 않는다. TLS 세션은 소켓을 모른다 — 엔드포인트가 받은 암호문을 넣고 평문을 꺼낸다(OpenSSL 메모리 BIO · SChannel 버퍼와 같은 모양).
  */
 #pragma once
