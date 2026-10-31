@@ -21,7 +21,8 @@ endif()
 # 구성마다 다른 구현 — 선언은 헤더 하나, 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 `sw_pickVariantSource` 가 고른다(파일 안 `#if` 를 두지 않는다).
 #   ModuleReloadDriver        : 배포는 빈 구현 — 매니페스트 · 리로드 매니저 · 개발 명령 `module.reload` · 감시 값 `Module.*` 가 없다
 #   GameModuleManagerLinkage  : 배포는 정적 링크 — 라이브러리 로드 · 리로드 콜백 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI`
-foreach(swVariantName IN ITEMS ModuleReloadDriver GameModuleManagerLinkage)
+#   HostDevTools              : 배포는 빈 구현 — 개발 도구(DevTools)를 링크하지 않는다(App · Server 가 같이 쓴다)
+foreach(swVariantName IN ITEMS ModuleReloadDriver GameModuleManagerLinkage HostDevTools)
 	if(SW_SHIPPING_BUILD)
 		sw_pickVariantSource(MODULE_HOST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}" ${swVariantName} Shipping ON)
 	else()

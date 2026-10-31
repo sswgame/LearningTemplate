@@ -463,7 +463,7 @@ namespace sw
         {
             pRenderThread->setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
             pRenderThread->setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
-            _devTools.bindRenderThreadHooks( *pRenderThread, _backendSwap );
+            AppDevTools::bindRenderThreadHooks( *pRenderThread, _backendSwap );
         }
     }
 
@@ -550,7 +550,7 @@ namespace sw
             _gameModuleManager->beginFrame();
 
             // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
-            _devTools.pollShellActions( frameTime._deltaTime, _moduleReload, _bEnableEditor == SW_TRUE );
+            AppDevTools::pollShellActions( frameTime._deltaTime, _moduleReload, _bEnableEditor == SW_TRUE );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.

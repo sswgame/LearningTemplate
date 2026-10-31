@@ -2,48 +2,43 @@
 
 #include "Server/ServerApp.h"
 
-#include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/ModuleLoaderSubsystem.h"
-
-#if !defined( SW_SHIPPING )
-    #include "DevTools/AssetReload/ContentFolderWatchService.h"
-    #include "DevTools/DevToolsHost.h"
-#endif
-
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Log/Sink/ConsoleLogOutput.h"
-#include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
-#include "Core/Process/ShutdownSignal.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Log/Sink/ConsoleLogOutput.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/NetTypes.h"
+#include "Core/Process/ShutdownSignal.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/DedicatedServer/ServerServiceManager.h"
+#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/HostServices.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
-#include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Scene/SceneStateHash.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/ProcessMetrics.h"
-#include "Engine/DedicatedServer/ServerServiceManager.h"
-#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
+
+#include "ModuleManager/GameModuleManager.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -103,8 +98,7 @@ namespace sw
     ServerApp::ServerApp()
         : _host{}
         , _pModuleImageHost{ nullptr }
-        , _pDevTools{ nullptr }
-        , _devToolsFrameSubscription{}
+        , _devTools{}
         , _engine{}
         , _gameModuleManager{ nullptr }
         , _moduleReload{}
@@ -158,18 +152,8 @@ namespace sw
             SW_MEMORY_SCOPE( EngineMisc );
             _host.addSubsystem( make_unique<ShutdownSignalSubsystem>() );
         }
-#if !defined( SW_SHIPPING )
-        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pDevTools = &_host.addSubsystem( make_unique<DevToolsHost>() );
-        }
-        _engine.setStartupExtension( _pDevTools->makeStartupExtension() );
-        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
-        const bool bFolderWatchBound = _host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
-        SW_ASSERT( bFolderWatchBound );
-        (void)bFolderWatchBound;
-#endif
+        // 개발 도구 — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(배포는 빈 구현).
+        _devTools.addToHostScope( _host, _engine );
         _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
         if ( _pModuleImageHost == nullptr )
             return false;
@@ -178,10 +162,8 @@ namespace sw
             SW_LOG_ERROR( "Engine initialization failed (dedicated server)" );
             return false;
         }
-#if !defined( SW_SHIPPING )
         // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        _devToolsFrameSubscription = _engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
-#endif
+        _devTools.attachFrameHooks( _engine );
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
         if ( _engine.isHeadless() )
             return _engine.didHeadlessTaskFail() == false;
@@ -530,7 +512,7 @@ namespace sw
             Logger::setClockNumber( LogClock::Tick, _tickCount );
             // 틱 지표 · 상태 박동 · 프레임 이력(O1) · 느린 틱 덤프 · 사용률 창(O5)은 관측이 든다.
             _observability.recordTick( tickTime, _tickCount, getServiceConnectionCount(), _droppedTickCount, ServerAppInternal::nowMonotonicMs() );
-#if !defined( SW_SHIPPING )
+            // 이력은 `-gv_stateHashHistory=N` 이 켤 때만 남는다(배포에는 그 인자가 없어 늘 꺼져 있다).
             StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
             if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() )
             {
@@ -540,7 +522,6 @@ namespace sw
                 if ( pNetSession != nullptr )
                     pNetSession->sendServerTick( _tickCount );
             }
-#endif
             _debugControl.onTickFinished();
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );
@@ -641,12 +622,10 @@ namespace sw
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
-#if !defined( SW_SHIPPING )
-        _devToolsFrameSubscription.reset(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-#endif
+        _devTools.detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
         _engine.shutdown( _host );
         _pModuleImageHost = nullptr;
-        _pDevTools        = nullptr;
+        _devTools.release();
         Logger::clearClockNumber();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();

@@ -5,13 +5,7 @@
 #include "App/RHIBackendSwitcher.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
-#include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/AssetReload/ContentFolderWatchService.h"
-#include "DevTools/DevToolsHost.h"
-
-#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
@@ -36,35 +30,6 @@ namespace sw
 
     SW_LOG_CALLER( "App" );
 
-    void AppDevTools::addToHostScope( SubsystemScope& host, Engine& engine )
-    {
-        // 개발 도구 — 엔진 기동 확장(델리게이트)으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(엔진은 무엇인지 모른다).
-        {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _pDevTools = &host.addSubsystem( make_unique<DevToolsHost>() );
-        }
-        engine.setStartupExtension( _pDevTools->makeStartupExtension() );
-        // 콘텐츠 폴더 감시 — 기능 · 게임의 데이터 다시 읽기가 범위에서 찾는다(배포에는 없다).
-        const bool bFolderWatchBound = host.bind<IContentFolderWatch>( &_pDevTools->getContentFolderWatch() );
-        SW_ASSERT( bFolderWatchBound );
-        (void)bFolderWatchBound;
-    }
-
-    void AppDevTools::attachFrameHooks( Engine& engine )
-    {
-        _frameSubscription = engine.getFrameHooks().add( _pDevTools->makeFrameHooks() );
-    }
-
-    void AppDevTools::startConsole( bool bEnableEditor )
-    {
-        _pDevTools->startConsole( bEnableEditor );
-    }
-
-    void AppDevTools::stopConsole()
-    {
-        _pDevTools->stopConsole();
-    }
-
     void AppDevTools::bindRenderThreadHooks( RenderThread& renderThread, RHIBackendSwitcher& backendSwitcher )
     {
         renderThread.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, &backendSwitcher ) ); // 개발 명령 `rhi.removeDevice <ms>`
@@ -88,8 +53,4 @@ namespace sw
         }
     }
 
-    void AppDevTools::detach()
-    {
-        _frameSubscription.reset();
-    }
 } // namespace sw
