@@ -19,7 +19,6 @@
 | 일 | 상태 |
 |---|---|
 | Shooter3D 체인 실패 둘 | `firelook`(한 프레임 클릭에 두 발) · `crowd`(`Animation.CrowdSharedUnits` 가 서지 않음) — 작업자가 Release 를 따로 지어 조사 중. 체인은 Release 의 `App -game=Shooter3D -scenario=<목록> -scenario-backends=all` |
-| 약어 일괄 변경(1dafbae0c9)의 바깥 이름 | `"OggS"` 매직이 `"OGGS"` 가 되어 모든 .ogg 가 디코드되지 않았다(고침). JSON · XML 키 · 내보내기 기호 · 깨진 낱말("PSOS")을 작업자가 전수 점검 중 |
 | 옛 단위 테스트 이식 | 작업자 진행 중 — 옛 `Test/`(커밋 `3f70e665f^`)의 Core 56 · Reflection 14 먼저, Engine 순수 함수 |
 
 ### 2. 테스트 · 시나리오 공백
@@ -29,6 +28,7 @@
 | 게임 체인을 ctest 에 | Debug(활성 게임 Empty)는 다른 게임을 짓지 않아 게임 시나리오 · 필수 데이터 · .ogg 결함을 보지 못했다(이번에 셋 다 그렇게 숨어 있었다). Release(모든 게임)에 게임마다 체인 항목을 두거나 통합 때 돌리는 스크립트로 |
 | `harvestvalley.scheduleday` | 새 일정 하루 시나리오 — 처음 돌린다(`gv_timeScale` 이 판 시계에 곱해지는지, 0 일 날씨 맑음 가정) |
 | 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄(TacticsSRPG · KartRacing 등), Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기), Reflection 값 · 인스턴스. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다. 주석이 가리키는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 는 없다 |
+| 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `editor.flowterrain` 이 `wallTimeoutSeconds` 150 초를 넘었다(백엔드 교체 7 번이 혼자서도 19 초). 혼자 돌리면 통과. 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
 | 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다(엔진 변경 + 전체 시나리오) |
 
 ### 3. 프레임 밖으로 뺄 일 (TaskManager)
