@@ -3,13 +3,11 @@
 #include "Server/ServerApp.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if !defined( SW_SHIPPING )
     #include "DevTools/AssetReload/ContentFolderWatchService.h"
     #include "DevTools/DevToolsHost.h"
-    #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -223,24 +221,16 @@ namespace sw
     bool ServerApp::loadModuleLibrarys()
     {
         SW_MEMORY_SCOPE( EngineMisc );
-#if !defined( SW_SHIPPING )
-        // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다.
-        if ( ModuleCatalogLoader::loadAndResolve( static_cast<uint8>( ModuleTarget::Server ), _moduleCatalog, _moduleResolution ) == false )
+        // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다. 리로드 구동기(App 과 같은 것)가 매니페스트를 해석하고
+        // 매니저를 만들어 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다(배포는 정적 링크라 아무것도 하지 않는다).
+        if ( _moduleReload.initialize( static_cast<uint8>( ModuleTarget::Server ), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
             return false;
-        _pModuleImageHost->setResolution( _moduleResolution );
-        // 리로드 구동기(App 과 같은 것)가 매니저를 만들고 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다.
-        _moduleReload.initialize( _host, *_pModuleImageHost );
-#endif
         _gameModuleManager = make_unique<GameModuleManager>();
         if ( _gameModuleManager->loadModuleLibrarys( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
             return false;
-#if !defined( SW_SHIPPING )
-        // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저).
-        LiveReloadManager* pLiveReloadManager = _moduleReload.getLiveReloadManager();
-        if ( pLiveReloadManager != nullptr )
-            _reloadStopsServices = pLiveReloadManager->addOnBeforeCommitBatch(
-                SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
-#endif
+        // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
+        _reloadStopsServices = _moduleReload.addOnBeforeReloadBatch(
+            SW_DELEGATE_METHOD( ModuleReloadDriver::BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
         return true;
     }
 
@@ -472,7 +462,6 @@ namespace sw
         return countDrainBlockers() == 0;
     }
 
-#if !defined( SW_SHIPPING )
     bool ServerApp::onBeforeModuleReload( [[maybe_unused]] const vector<string>& listModuleName )
     {
         if ( _serverServices != nullptr && _serverServices->isRunning() )
@@ -483,7 +472,6 @@ namespace sw
         }
         return true; // 게임 쪽 처리는 모듈 호스트가 건 배치 콜백이 이어서 한다
     }
-#endif
 
     void ServerApp::run()
     {
@@ -591,7 +579,6 @@ namespace sw
             _gameModuleManager->updateGame( deltaSeconds );
         }
         _moduleReload.update();
-#if !defined( SW_SHIPPING )
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
@@ -599,7 +586,6 @@ namespace sw
             if ( startServerServices() == false )
                 SW_LOG_ERROR( "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
-#endif
         const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
         _engine.update( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engine.endFrame();

@@ -102,10 +102,8 @@ namespace sw
         [[nodiscard]] int32 countDrainBlockers() const;
         /** @brief 드레인이 끝났는지입니다 — 기다릴 이유가 없거나(접속 0 · 기다림 0 초) 기한이 지났으면 true. */
         [[nodiscard]] bool isDrainFinished( int64 monotonicMs ) const;
-#if !defined( SW_SHIPPING )
         /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈춥니다(게임 쪽은 모듈 호스트의 배치 콜백이 뒤이어 한다). 다음 틱에 다시 시작합니다. */
         bool onBeforeModuleReload( const vector<string>& listModuleName );
-#endif
         void updateOnce( float32 deltaSeconds );
         /** @brief 콘솔 명령 한 줄(종료 낱말은 `StandardInputCommands` 가 먼저 거른다)을 이 스레드(게임 스레드)에서 처리합니다. */
         void executeCommand( string_view command );
@@ -157,7 +155,7 @@ namespace sw
         SubsystemCollection _hostServices;
 
         uint8                  _bReady                 : 1;
-        [[maybe_unused]] uint8 _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
+        uint8                  _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
         uint8                  _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
         [[maybe_unused]] uint8 _reserved               : 5;
     };

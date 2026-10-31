@@ -314,8 +314,9 @@ namespace sw
     {
         // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 GameModuleManager 가 에디터와 게임 태그를 걸어 처리한다.
         SW_MEMORY_SCOPE( EngineMisc );
-        // 모듈 매니페스트 · 핫 리로드 구동기(개발 빌드만 — 배포는 모듈을 정적으로 링크한다).
-        if ( _devTools.loadModuleCatalog( _host, *_pModuleImageHost, _moduleReload, _moduleCatalog, _moduleResolution ) == false )
+        // 모듈 매니페스트 · 핫 리로드 구동기(개발 빌드만 — 배포는 모듈을 정적으로 링크해 아무것도 하지 않는다). App 은 빌드가 담은 모든 대상을 로드한다
+        // (Game 은 클라이언트와 리슨 서버용 서버 모듈, Client 는 클라이언트). 전용 서버는 Server 실행 파일이 Server 대상으로 같은 해석을 한다.
+        if ( _moduleReload.initialize( ModuleCatalog::getBuildTargetMask(), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
             return false;
 
         _gameModuleManager = make_unique<EditorModuleManager>();

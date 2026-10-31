@@ -2,15 +2,23 @@
  * @file ModuleManager/ModuleReloadDriver.h
  * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `LiveReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 감시 값 `Module.*`)입니다.
  * @details App 과 Server 가 같은 모양으로 씁니다. 리로드를 거는 입력(단축키)은 그 입력을 아는 호스트가 정하고 여기에는 `requestReload` 로 넘깁니다.
+ *          빌드마다 다른 것은 이 선언들의 구현 파일이다 — Dev 는 `ModuleReloadDriver.cpp`, Shipping 은 `ModuleReloadDriverShipping.cpp`(모듈이 정적 링크라 리로드할 것이 없다)를
+ *          CMake 가 고른다(`sw_pickVariantSource`, `Source/ModuleManager/CMakeLists.txt`).
  */
 #pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
 {
+    struct ModuleResolution;
+
     class LiveReloadManager;
+    class ModuleCatalog;
     class ModuleLoaderSubsystem;
     class SubsystemScope;
 
@@ -31,11 +39,24 @@ namespace sw
         ModuleReloadDriver( const ModuleReloadDriver& )            = delete;
         ModuleReloadDriver& operator=( const ModuleReloadDriver& ) = delete;
 
+        /** @brief 리로드 배치의 첫 교체 직전에 불립니다(교체될 모듈 이름들). false 면 아무것도 바꾸지 않고 옛 모듈이 계속 돕니다(`LiveReloadManager::OnBeforeCommitBatchDelegate` 와 같은 꼴). */
+        using BeforeReloadBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
+
         /**
-         * @brief 매니저를 만들고 자신을 @p hostScope 에 걸며, @p moduleLibraryHost 의 씬 뒤 훅에 매니저 종료를 겁니다.
+         * @brief 모듈 매니페스트를 읽어 @p targetMask(`ModuleTarget` 비트)로 해석해 @p moduleLibraryHost 에 넘기고, 매니저를 만들어 자신을 @p hostScope 에 걸며,
+         *        @p moduleLibraryHost 의 씬 뒤 훅에 매니저 종료를 겁니다.
          * @details 모듈을 로드하는 GameModuleManager 보다 먼저 불러야 합니다. GameModuleManager 가 이 매니저로 모듈을 로드하고 리로드 콜백을 등록합니다.
+         *          App 은 `ModuleCatalog::getBuildTargetMask()`, 전용 서버는 `ModuleTarget::Server` 를 넘깁니다. 배포는 모듈을 정적으로 링크해 매니페스트가 없다 —
+         *          아무것도 하지 않고 true 다(@p outCatalog · @p outResolution 은 비어 있다).
+         * @return 매니페스트를 읽거나 해석하지 못하면 false 입니다(기동 실패).
          */
-        void initialize( SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost );
+        [[nodiscard]] bool initialize( uint8 targetMask, SubsystemScope& hostScope, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
+                                       ModuleResolution& outResolution );
+        /**
+         * @brief 리로드 배치 직전 콜백을 겁니다(전용 서버가 모듈 안의 서버 서비스를 먼저 멈춘다). 배치 콜백은 나중에 건 것이 먼저 불립니다.
+         * @return 구독입니다. 매니저가 없으면(배포, `initialize` 앞) 빈 구독이고 콜백은 불리지 않습니다.
+         */
+        [[nodiscard]] Subscription addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch );
 
         /** @brief @p pModuleName 모듈과 그것에 의존하는 모듈의 리로드를 요청합니다(단축키 · 개발 명령). 실제 교체는 `update` 가 합니다. */
         void requestReload( const utf8* pModuleName );
@@ -55,14 +76,8 @@ namespace sw
         bool isReloadPending() const;
 
     private:
-#if !defined( SW_SHIPPING )
-        unique_ptr<LiveReloadManager> _liveReloadManager;
-        /** @brief 자신을 건 호스트 범위입니다(소유하지 않는다). 씬 뒤 훅이 여기서 자신을 풉니다. */
-        SubsystemScope* _pHostScope;
-        /** @brief `queueReload` 가 예약한 리로드가 끝났다고 볼 완료 수입니다(예약 때의 완료 수 + 1). 0 이면 예약한 적이 없다. */
-        uint32 _reloadTargetCount;
-        /** @brief 모듈 라이브러리 창구에 건 "씬이 사라졌다" 훅의 구독입니다(창구가 먼저 사라지면 무효가 된다). */
-        Subscription _scenesReleasedHook;
-#endif
+        /** @brief 구성의 리로드 상태입니다(구현 파일에만 있다 — Dev 는 매니저 · 범위 · 훅, Shipping 은 비어 있다). */
+        struct State;
+        unique_ptr<State> _pState;
     };
 } // namespace sw
