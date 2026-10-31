@@ -82,7 +82,7 @@
 - **끝(2026-10-31)**: 쿠커의 `isInInactiveGamePack` 셋 → `AssetCookPath`, 백오프 둘 → `Core/Time/ExponentialBackoff`, 따옴표 낱말 나누기 둘 → `StringUtil::splitQuotedTokens`, 루프백 판정 다섯 → `NetAddress::isLoopback`, 포트 7100 셋 → `OnlineServiceHostConfig::kDefaultPort`, 게임 팩 나열 일곱 → `AssetPaths::collectGamePackDomains`, 현지화 프로젝트 모으기 둘 → `LocalizationTools::collectProjectPaths`, 저장소 루트 사본 → `ProcessRoots::_project`, 헤드리스 작업 표의 에디터 도구 인자 → `kArrEditorToolArgument`. **결정**: 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다) · `.meta` 쓰기 둘(만들기 · 옮길 때 고쳐 쓰기)은 뒤따르는 일이 달라 합치지 않는다.
 
 ### T8. `#if` → 빌드 단위 (R9 · R6)
-- `App.cpp` 의 `#if !defined(SW_SHIPPING)` 11 곳 → `IAppDevTools` 하나(Dev 구현 · Shipping 빈 구현을 CMake 가 고름). `AppAutomationHost` 두 구현 → 두 파일, 자동화 없는 빌드에서 `-scenario` 를 받으면 기동 오류(지금은 로그만 남기고 계속).
+- `App.cpp` 의 `#if !defined(SW_SHIPPING)` 11 곳 → 개발 도구 함수 선언 하나(Dev 구현 파일 · Shipping 빈 구현 파일을 CMake 가 고름 — 빌드마다 고정이라 인터페이스 · 가상 함수를 두지 않는다, `docs/agents/CppStyle.md` 의 상속 규칙). `AppAutomationHost` 두 구현 → 두 파일, 자동화 없는 빌드에서 `-scenario` 를 받으면 기동 오류(지금은 로그만 남기고 계속).
 - 키트의 개발 대체물(`LoginTicketKey` 개발 키 폴백, LiveOps 가짜 푸시, Account 가벼운 해시 · 테스트 계정, Economy 개발 검증기, NetSecurity 개발 인증서) → DevOnline 빌드 단위가 키트 등록표에 확장점으로 올린다. 키트 코드의 `#if SW_SHIPPING` 0, 값이 없으면 오류.
 - 오디오 · 접근성의 `#if` 팩토리 → RHI 와 같은 등록표. `FileWatchDispatcher` 의 플랫폼 `#if` + mtime 폴백 정리.
 
