@@ -59,13 +59,6 @@ namespace sw
          * @details 스트리밍이 바이트 안의 샘플 자리를 바로 읽으려고 씁니다. `decodeWAV` 가 같은 코드를 씁니다.
          */
         [[nodiscard]] static bool parseWAVLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize );
-        /**
-         * @brief OGG Vorbis 를 처음부터 순차로 읽는 디코더를 엽니다(스트리밍). 헤더가 틀렸거나 채널이 9 개 이상이면 nullptr 입니다. 채널은 Vorbis 순서 그대로입니다.
-         * @details 디코더는 @p pBytes 를 복사하지 않고 읽으므로 호출한 쪽이 디코더보다 오래 바이트를 지켜야 합니다. 같은 헤더 검사(`decodeOGG`)를 거칩니다.
-         */
-        static unique_ptr<IAudioStreamDecoder> openOGGStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo );
-        /** @brief OGG Vorbis 를 16 비트 정수 PCM 으로 풉니다(stb_vorbis). 3 채널 이상은 WAV 채널 순서로 옮기고 `_channelMask` 를 적습니다(PCM 의 약속). */
-        [[nodiscard]] static bool decodeOGG( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
         /** @brief 이 디코더가 확장자로 다루는 형식(`.wav`, `.ogg`)인지 반환합니다. */
         static bool isSupportedExtension( string_view path );
         /** @brief @p path 의 확장자로 디코더를 고릅니다. 다루지 않는 확장자면 false 입니다. */

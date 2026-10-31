@@ -6,6 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioVorbisDecoder.h"
+
 namespace sw
 {
     namespace
@@ -113,7 +115,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".wav" ) )
             return decodeWAV( pBytes, byteCount, outPcm );
         if ( FileUtil::hasExtension( path, ".ogg" ) )
-            return decodeOGG( pBytes, byteCount, outPcm );
+            return AudioVorbisDecoder::decode( pBytes, byteCount, outPcm );
         return false;
     }
 } // namespace sw

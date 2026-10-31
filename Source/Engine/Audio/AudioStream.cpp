@@ -7,6 +7,7 @@
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioVorbisDecoder.h"
 
 namespace sw
 {
@@ -196,7 +197,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".ogg" ) )
         {
             AudioStreamInfo                 info;
-            unique_ptr<IAudioStreamDecoder> pProbe = AudioClipDecoder::openOGGStream( inoutBytes.data(), inoutBytes.size(), info );
+            unique_ptr<IAudioStreamDecoder> pProbe = AudioVorbisDecoder::openStream( inoutBytes.data(), inoutBytes.size(), info );
             if ( pProbe == nullptr )
                 return nullptr;
             pSource->_info           = info;
@@ -253,7 +254,7 @@ namespace sw
         if ( _format == Format::Vorbis )
         {
             AudioStreamInfo                 info;
-            unique_ptr<IAudioStreamDecoder> pInner = AudioClipDecoder::openOGGStream( _pBytes->data(), _pBytes->size(), info );
+            unique_ptr<IAudioStreamDecoder> pInner = AudioVorbisDecoder::openStream( _pBytes->data(), _pBytes->size(), info );
             if ( pInner == nullptr )
                 return nullptr;
             return sw::make_unique<OwningStreamDecoder>( _pBytes, std::move( pInner ) );

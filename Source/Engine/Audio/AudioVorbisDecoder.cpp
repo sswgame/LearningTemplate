@@ -1,6 +1,6 @@
 /**
- * @file AudioVorbisDecode.cpp
- * @brief `AudioClipDecoder::decodeOGG` 입니다. stb_vorbis 구현을 이 TU 하나에만 넣습니다.
+ * @file AudioVorbisDecoder.cpp
+ * @brief `AudioVorbisDecoder` 입니다. stb_vorbis 구현을 이 TU 하나에만 넣습니다.
  * @note stb_vorbis.c 는 `L`, `C`, `R`, `CHECK`, `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 가 오염되지 않게
  *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 마세요.
  *       주의: `TRUE` 와 `FALSE` 는 stb_vorbis 가 없을 때만 정의합니다. Windows 에서는 `windows.h` 의 정의라서 지우면, 유니티 묶음의 뒤쪽 파일
@@ -8,7 +8,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioVorbisDecoder.h"
 
 #define STB_VORBIS_NO_STDIO
 #define STB_VORBIS_NO_PUSHDATA_API
@@ -221,7 +221,7 @@ namespace sw
         };
     } // namespace
 
-    unique_ptr<IAudioStreamDecoder> AudioClipDecoder::openOGGStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo )
+    unique_ptr<IAudioStreamDecoder> AudioVorbisDecoder::openStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo )
     {
         vector<uint8> listArena;
         stb_vorbis*   pVorbis = OGGOpenUtil::openWithArena( pBytes, byteCount, listArena );
@@ -241,7 +241,7 @@ namespace sw
         return sw::make_unique<OGGStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
     }
 
-    bool AudioClipDecoder::decodeOGG( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    bool AudioVorbisDecoder::decode( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
         // 디코더 메모리는 우리 버퍼 한 덩어리에서 나눠 준다(`OGGOpenUtil::openWithArena`).
         vector<uint8> listArena;
