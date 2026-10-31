@@ -32,3 +32,16 @@ SW_TEST_CASE( ScenarioFilesTest, ScreenshotFileTakenTwiceIsRejected )
     SW_EXPECT_FALSE( AutomationStepValidation::validateScreenshotFiles( scenario, error ) );
     SW_EXPECT_TRUE( error.find( "a.ppm" ) != string::npos );
 }
+
+// 입력은 그 프레임의 틱 전에 든다 - 같은 프레임에서 `<Expect>` 아래에 적힌 입력은 단언보다 먼저 돌므로 읽을 때 거절하고, 사이에 한 프레임을 두면 받는다.
+SW_TEST_CASE( ScenarioFilesTest, InputBelowJudgeInSameFrameIsRejected )
+{
+    AutomationScenario scenario;
+    string             error;
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Press slot=\"Key.D\"/><Pass/></Scenario>", "test.scenario.xml", error ) );
+    SW_EXPECT_FALSE( AutomationStepValidation::validateStepPhaseOrder( scenario, error ) );
+    SW_EXPECT_TRUE( error.find( "<Press>" ) != string::npos );
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Wait frames=\"1\"/><Press slot=\"Key.D\"/><Pass/></Scenario>",
+                                     "test.scenario.xml", error ) );
+    SW_EXPECT_TRUE( AutomationStepValidation::validateStepPhaseOrder( scenario, error ) );
+}

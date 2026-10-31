@@ -667,7 +667,8 @@ namespace sw
                 return false;
             }
         }
-        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false || AutomationStepValidation::validateScreenshotFiles( _scenario, outError ) == false )
+        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false || AutomationStepValidation::validateScreenshotFiles( _scenario, outError ) == false ||
+             AutomationStepValidation::validateStepPhaseOrder( _scenario, outError ) == false )
             return false;
         for ( const AutomationStep& step : _scenario.getSteps() )
         {

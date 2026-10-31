@@ -9,6 +9,7 @@
 	<WaitUntil watch="Farm.FarmerControllerKind" equals="0" timeoutFrames="60"/>
 	<Expect watch="Farm.FarmerX" near="6" tolerance="0.01"/>
 	<!-- D 를 반 초 — 걷는 빠르기 4 m/s 라 2 m 오른쪽. 선 뒤에 잰다. -->
+	<Wait frames="1"/>
 	<Press slot="Key.D"/>
 	<Wait frames="30"/>
 	<Release slot="Key.D"/>

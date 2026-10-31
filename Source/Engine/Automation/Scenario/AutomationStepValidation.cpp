@@ -126,6 +126,34 @@ namespace sw
         return true;
     }
 
+    bool AutomationStepValidation::validateStepPhaseOrder( const AutomationScenario& scenario, string& outError )
+    {
+        const AutomationStep* pFrameEndStep = nullptr; // 지금 프레임에 앞서 적힌 틱 뒤 단계
+        for ( const AutomationStep& step : scenario.getSteps() )
+        {
+            if ( pFrameEndStep != nullptr && pFrameEndStep->_frameIndex != step._frameIndex )
+                pFrameEndStep = nullptr;
+            const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
+            // 모르는 단계 · 실행 없이 기다리기만 하는 단계(`WaitUntil` — 읽기가 제 프레임을 혼자 준다)는 건너뛴다.
+            if ( pRegistration == nullptr || ( pRegistration->_pRun == nullptr && pRegistration->_pHold != nullptr ) )
+                continue;
+            const bool bRunsAtFrameStart = pRegistration->_pRun == nullptr || pRegistration->_bBeforeInput;
+            if ( bRunsAtFrameStart == false )
+            {
+                if ( pFrameEndStep == nullptr )
+                    pFrameEndStep = &step;
+                continue;
+            }
+            if ( pFrameEndStep != nullptr )
+            {
+                outError = step.describe() + ": runs at the start of the frame, before " + pFrameEndStep->describe() +
+                           " written above it judges the frame - put <Wait frames=\"1\"/> between them";
+                return false;
+            }
+        }
+        return true;
+    }
+
     const utf8* AutomationStepValidation::getDependencyLabel( AutomationStepDependency dependency )
     {
         switch ( dependency )

@@ -72,6 +72,12 @@ namespace sw
          *        앞 사진을 덮으면 앞 단언이 뒤 그림을 본다.
          */
         [[nodiscard]] static bool validateScreenshotFiles( const AutomationScenario& scenario, string& outError );
+        /**
+         * @brief 같은 프레임에서 씬 틱 뒤 단계(`<Expect>` 등) 아래에 적힌 프레임 시작 단계(입력 · `_bBeforeInput`)를 거절합니다.
+         * @details 프레임 시작 단계는 그 프레임의 입력 재생 · 게임 틱 전에, 틱 뒤 단계는 틱 뒤에 돈다 — 그래서 `<Expect/><Press/>` 의 단언은 적힌 순서와 달리 누른 뒤의 틱을 본다.
+         *          적은 순서가 곧 도는 순서라는 형식의 약속을 지키게, 둘 사이에 `<Wait frames="1"/>` 를 두게 한다. 이 프로세스에 등록되지 않은 단계는 모르는 것이라 건너뛴다.
+         */
+        [[nodiscard]] static bool validateStepPhaseOrder( const AutomationScenario& scenario, string& outError );
 
         /** @brief 못 본 까닭의 종류 이름입니다(보고에 적는다). */
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );

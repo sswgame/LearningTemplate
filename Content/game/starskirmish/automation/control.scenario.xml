@@ -9,6 +9,7 @@
 	<WaitUntil watch="Input.VirtualCursorEnabled" equals="1" timeoutFrames="60"/>
 	<Expect watch="Skirmish.SelectedCount" equals="0"/>
 	<!-- 본진(10, 10)을 덮는 사각형 — 리그 초점 (14, 14) · 직교 높이 30 에서 화면 왼쪽 가운데 아래. 끌기는 누른 채 프레임이 지나야 한다. -->
+	<Wait frames="1"/>
 	<MousePosition x="0.3" y="0.45"/>
 	<Press slot="Mouse.Left"/>
 	<Wait frames="5"/>

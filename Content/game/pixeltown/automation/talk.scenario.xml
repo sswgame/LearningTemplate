@@ -53,6 +53,7 @@
 	<WaitUntil watch="Town.Talking" equals="1" timeoutFrames="30"/>
 	<Expect watch="Town.ShownLines" equals="1"/>
 	<!-- 대화 중에는 걷지 않는다. -->
+	<Wait frames="1"/>
 	<Tap slot="Key.D" hold="2"/>
 	<Wait frames="19"/>
 	<Expect watch="Town.HeroTileX" equals="12"/>
@@ -61,10 +62,12 @@
 	<Tap slot="Key.Space" hold="1"/>
 	<WaitUntil watch="Town.ShownLines" equals="2" timeoutFrames="30"/>
 	<Expect watch="Town.Talking" equals="1"/>
+	<Wait frames="1"/>
 	<Tap slot="Key.Space" hold="1"/>
 	<WaitUntil watch="Town.Talking" equals="0" timeoutFrames="30"/>
 	<Expect watch="Town.FinishedTalks" equals="1"/>
 	<!-- 대화가 끝나면 다시 걷는다. -->
+	<Wait frames="1"/>
 	<Tap slot="Key.D" hold="2"/>
 	<WaitUntil watch="Town.HeroTileX" equals="13" timeoutFrames="30"/>
 	<Pass/>

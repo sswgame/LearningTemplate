@@ -11,6 +11,7 @@
 	<Expect watch="VoxelCraft.ControllerKind" equals="0"/>
 
 	<!-- 걷기: W 를 1 초 — 몸이 1 m 넘게 간다. -->
+	<Wait frames="1"/>
 	<Press slot="Key.W"/>
 	<Wait frames="60"/>
 	<Release slot="Key.W"/>
