@@ -9,7 +9,6 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"

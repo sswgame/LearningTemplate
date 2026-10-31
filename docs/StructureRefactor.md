@@ -182,3 +182,43 @@
 | 16 | 이름 | `Engine/HostServices.h`(서비스 순서 표) ↔ `Engine/Module/HostServices.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
 
 - **근본 원인(한 줄)**: 바닥 도우미가 찾기 어려운 자리(Foundation · Container · TU 전용 Internal)에 있어 호출부가 사본을 만들었고, 층 검사는 include 글만 봐서 전방 선언 칸 · 함수 포인터로 역류가 숨었다. 같은 모양이 남았을 곳은 표의 8 · 9 · 15 다.
+
+## 8. SOLID 점검 — GameFramework · Editor · App
+
+2026-11-01. 범위: `GameFramework`(Runtime · Kits · Plugin/Editor) · `Editor` · `App` · `ModuleManager` · `DevTools` · `Games`(Core · Engine 내부는 다른 작업자). 방법: `Scripts/dev/StructureAudit.py`(폴더 크기 · 모호한 이름 · 정적 전용 타입), 영역별 정독 셋(키트 · 게임 / 편집기 패널 / 호스트 · 모듈 관리). graphify 그래프는 작업 트리에 없어 쓰지 않았다.
+
+### 8.1 우선순위 표
+
+장기 이득(같은 결함이 다시 나올 자리 수 × 결함의 무게) 순이다. "끝" 은 이번에 고쳤다.
+
+| # | 문제 | 근거 | 조치 · 상태 | 상용 엔진 |
+|---|---|---|---|---|
+| 1 | 문서를 고치는 창이 문서 기반을 우회 — 편집 유실 | `AudioGraphPanel` 이 `IEditorPanel` 을 바로 상속해 Ctrl+S · 닫기 확인 · 되돌리기가 편집을 못 봤다 | **끝** — `EditorDocumentPanel`(`.audiograph.xml` 만 받음), 모델은 `takeEdit` 만 넘긴다 | 언리얼 FAssetEditorToolkit 저장 · 트랜잭션 |
+| 2 | App · Server 기동이 복사된 줄 — 이미 갈라짐 | Server 만 `IModuleStateStore` 없음, 모르는 `-gv_*` 를 조용히 버림 | **끝** — 맡김 칸은 `ModuleLoaderSubsystem::initializeHostScope` 가 소유, 서비스 세우기 · 로그 · 경고는 `HostServiceUtil::startAll` | 언리얼 FEngineLoop 하나가 게임 · 서버 대상 |
+| 3 | 이름이 내용과 다름 | `GameFramework/Base` 는 기반 층이 아니라 DLL 의 런타임 본체, `Plugin/Editor/Base`(`GF_EditorPlugin_Base`)는 아무도 기대지 않는 잎 확장 | **끝** — `GameFramework/Runtime`, `Plugin/Editor/GameplayTools`(`GF_EditorPlugin_GameplayTools`). 대상 · 내보내기 매크로 · 매니페스트 `GameFramework` 는 그대로 | 언리얼 모듈 폴더 Runtime · Editor |
+| 4 | 디렉터 넷의 자동 플레이 빙의 되돌리기 복사 | Shooter3D · VoxelCraft · AbilityArena · HarvestValley, 둘은 `findOrCreatePlayerController` 까지 손으로 | **끝** — `ControlSystem::returnPawnToPlayer` · `isPawnControlledBy` | 언리얼 GameMode `SwapPlayerControllers` |
+| 5 | `IEditorPanel` 이 패널 UI 와 문서 의미를 한 인터페이스에 | 가상 16 개 중 문서 6 개(`saveDocument` · `revertDocument` · `syncDocumentDirty` …)가 기본 구현을 가져 #1 이 컴파일됐다. 자체 저장 패널 8 개(UIPreview · InputMap · MeshModifiers · AudioEventBrowser · Catalog · ProjectSettings · DataTable · GlobalVariables)가 반쪽 문서 | 남김 — 문서 의미를 데이터 없는 `IEditorDocument` 로 떼고 패널 관리자가 그것만 저장 · 닫기 확인에 쓴다. UIPreview 는 모델이 기반의 포커스 · 기준선을 복사해 들고 있어 `EditorPreviewPanel` 로 옮길 후보 | 언리얼 SDockTab ↔ FAssetEditorToolkit 분리 |
+| 6 | 모듈 인스턴스 수명이 두 벌 | `EditorModuleManager`(App)가 `GameModuleManager` 의 before/after reload · 이미지 판정 · 실패 · API 묶기 · 인스턴스 만들기/부수기를 편집기용으로 다시 적었다 | 남김 — `ModuleInstanceSlot<TAPI>` 하나를 둘이 쓰게(상태 있는 기반 하나). 리로드 경로 전체 시나리오가 필요해 이번 묶음 밖 | 언리얼 FModuleManager 하나 |
+| 7 | App · Server 의 종료 순서 · 프레임 본문 두 벌 | App 만 `shutdownDependentsOf`, 프레임(beginFrame → fixed/update → 리로드 갱신 → 상태 해시)이 두 파일에 | 남김 — #2 와 같은 자리(`HostServiceUtil` 옆 공용 종료 · 틱 걸음). 서버 드레인과 섞여 있어 나눌 경계를 먼저 정한다 | FEngineLoop::Tick |
+| 8 | 파일 감시 넷이 나란히 | `LiveReloadManager` 의 날 감시기, `FileWatchDispatcher` 셋(설정 · 콘텐츠 폴더 · 편집기 애셋), 셰이더는 손 단축키 | 남김 — 호스트 감시 서비스 하나에 구독(DevTools). LiveReload 는 ModuleManager 라 두 단위를 함께 바꾼다 | 언리얼 DirectoryWatcher 모듈 하나 |
+| 9 | 디렉터 상태 바이트 감싸기 복사 | 8 디렉터가 readSection → 표 확인 → 새 시뮬 → readState → 남은 바이트 0 을 손으로 | 남김 — `StateArchiveUtil::readSection(archive, 기대 표, outBody)` 로 표 확인을 형식 안으로(지금 판 확인을 빼먹은 곳이 있다) | |
+| 10 | 자동화 탐침 보일러플레이트 | `findProbeDirector` + `read*` 감싸기 5 게임 + Runtime | 남김 — `findFirstComponent<T>` + 멤버 포인터 감시 매크로 | |
+| 11 | 온라인 키트 서비스 골격 복사 | LiveOps · ServerDirectory 의 다시 읽기 · 감사 쓰기 · 주기 리로드 약 150 줄씩, `makeActor` 셋 | 남김 — Runtime/Online/Service 에 "운영자가 고치는 표" 서비스 기반 | |
+| 12 | 온라인 소도우미 복사 | JSON `readText` 넷(기본값 폴백 둘), HTTP `isTransientStatus` 셋, `encodeID` 둘 | 남김 — 기본값 폴백을 지우는 일과 함께(R6) | |
+| 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | 남김 — Runtime/World/Environment · Runtime/Character/Camera · OpenWorldWestern 키트 · `VehicleWatches` 로 | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
+| 14 | Runtime 에 장르 기믹 | `Runtime/Gameplay/Gimmick/Genre/*` 약 2.2k 줄(슈터 · 플랫포머 · 레이싱 · 공포 …), C++ 사용은 `ShooterGimmicks.h` 하나 | 남김 — 장르 키트로. 씬 데이터가 타입 이름으로 부르므로 콘텐츠 참조 확인이 먼저 | |
+| 15 | 런타임 키트에 편집기 기능 | `NetSimulation` 의 `NetSimPreviewSceneSource` · `NetSimGameRegistry`(편집기 프로세스 안 플레이) | 남김 — 키트 `Editor/` 로(헤드리스 테스트가 쓰는 하네스는 남긴다) | |
+| 16 | 큰 패널 · 정적 모음(SRP) | CharacterEditorPanel 1389 줄(일 8) · ContentBrowser 1174 · UIPreview 1169 + 모델 941 · ProfilerPanel 1120(도구 6) · InputMapPanel 1015(도구 6), 정적 모음 `ModelImportUtil` 78 · `EditorThemeUtil` 54 · `EditorPlaySession` 39 · `EditorWidgets` 35 | 남김 — 탭 · 도구 단위로 파일과 모델을 나눈다(빌드 시간 항목과 함께) | |
+| 17 | 큰 인터페이스 | ModuleAPI `EditorAPI` 함수 칸 22, `IEditor` 순수 가상 16(수명 · 프레임 · 입력 · 뷰포트 · 플레이 다섯 역할) | 남김 — C-ABI 판이 바뀌므로 #6 과 함께 | |
+| 18 | 층 역류 | ModuleAPI 의 `Export/GameFrameworkAPI.h`(`SW_GF_API` · `SW_KIT_API`) — 계약 층이 위층 이름을 안다 | 남김 — 내보내기 매크로를 GameFramework 쪽 헤더로. 키트 · 게임 수백 파일의 include 가 따라간다 | |
+| 19 | 위젯 우회 | 검색 칸 `InputTextWithHint` 직접 넷, 애셋 경로 글 입력 넷(Retarget · PairedAnimation · AudioMixer) | 남김 — `EditorWidgets::drawSearchField` · `drawAssetSlot` | |
+| 20 | Core · Engine 쪽(다른 작업자) | `normalizeOr` 넷(키트) → Core 수학, `SceneNetLink` 찾기 여섯 → Engine 정적 함수, Server 명령 해석 셋 | 보고만 | |
+
+키트 사이 장르 로직 중복은 찾지 못했다(라운드 · 차례 · 카운트다운 · 게이지 · 땅 · 격자는 이미 Runtime 하나). 게임 코드가 다른 게임 · 키트가 게임을 include 하는 역류도 없다.
+
+### 8.2 결정
+
+- `GameFramework/Base` 를 `Runtime` 으로: 폴더만 바꾸고 대상 이름(`GameFramework`) · 내보내기 매크로(`SW_GF_API`) · 매니페스트는 그대로다. 언리얼 플러그인의 `Source/Runtime` · `Source/Editor` 와 같은 뜻이고 형제 `Kits/` · `Plugin/` 와 겹치지 않는다. 층을 하나 걷어 Runtime 내용을 `GameFramework/` 바로 아래 두는 안은 키트 · 플러그인과 섞여 버렸다.
+- `Plugin/Editor/Base` 를 `GameplayTools` 로: 내용이 행동 트리 · 어빌리티 · 기믹 · 일정 도구이고 다른 확장이 기대지 않는다(기반이 아니다). 형제 폴더(CharacterEditor · MeshModifiers …)처럼 내용 이름을 쓴다.
+- 자동 플레이 되돌리기는 디렉터 기반(`GameDirectorComponent`)이 아니라 조종 영역(`ControlSystem`)에 둔다 — 빙의 넘기기는 디렉터가 아니어도 쓰는 일이다. AI 조종자를 찾거나 만드는 쪽은 게임마다 달라(프리팹 · 코드) 그대로 둔다.
+- 소리 그래프는 그래프 문서 템플릿(`EditorGraphDocumentPanel<T>`)이 아니라 문서 기반을 쓴다 — 링크 표(`_listLink`)가 없고 연결이 받는 노드의 입력 목록이라 템플릿의 요구를 맞추지 못한다.
