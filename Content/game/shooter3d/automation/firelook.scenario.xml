@@ -13,6 +13,8 @@
 	<!-- 한 프레임 누름은 한 발이다 — 더 쏘지 않는지 보려면 프레임이 흘러야 한다 -->
 	<Wait frames="10"/>
 	<Expect watch="Shooter3D.ShotCount" equals="1"/>
+	<!-- 입력 단계는 그 프레임의 틱 전에 들고 Expect 는 틱 뒤에 판정한다 - 같은 프레임에 두면 아래 누름의 첫 발이 위 단언에 든다 -->
+	<Wait frames="1"/>
 	<Tap slot="Mouse.Left" hold="30"/>
 	<WaitUntil watch="Shooter3D.ShotCount" atLeast="3" timeoutFrames="50"/>
 	<Expect watch="Shooter3D.PlayerAlive" equals="1"/>
