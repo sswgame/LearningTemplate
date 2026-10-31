@@ -24,7 +24,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 namespace sw
@@ -655,7 +654,7 @@ namespace sw
                 if ( bWritten == false )
                 {
                     _bScreenshotWriteFailed = SW_TRUE;
-                    SW_LOG_WARNING( "Screenshot was not written: %#", path.c_str() );
+                    SW_LOG_ERROR( "Screenshot was not written: %#", path.c_str() ); // 요청한 촬영이 빠졌다 - 실패다(종료 코드 14)
                 }
                 if ( _bScreenshotTaken == SW_TRUE )
                     reportCaptureFinished( CaptureKind::GameView, _bScreenshotWriteFailed == SW_FALSE );
@@ -665,15 +664,12 @@ namespace sw
 
     bool RenderThread::writePresentedImage( const string& path )
     {
-        // 기본은 **Present 결과 캡처**, 곧 화면에 나간 이미지다. 캡처가 없으면 Present 가 읽는 첨부로 대체한다.
-        // 첨부 이름을 리터럴로 고정하지 않는다. 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 찍히지 않는다.
+        // **Present 결과 캡처**, 곧 화면에 나간 이미지 하나다. 캡처가 없으면 실패다 - 예전에는 Present 가 읽는 첨부 · SceneColor 로 물러나
+        // Present 패스가 한 일(톤맵 등)이 빠진 다른 그림을 골든이 보았다. 중간 단계가 필요하면 `-gv_screenshotAttachment` 로 밝혀 찍는다.
         if ( _pFrameRenderer->getCapture().dumpPresentToFile( path ) )
             return true;
-        // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다. 그 이미지에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
-        string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
-        if ( fallback.empty() )
-            fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-        return _pFrameRenderer->getCapture().dumpTransientToFile( fallback, path );
+        SW_LOG_ERROR_ID( "Screenshot.NoPresentCapture", "Screenshot '%#': this frame has no Present capture to write (name an attachment with -gv_screenshotAttachment)", path );
+        return false;
     }
 
     void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )

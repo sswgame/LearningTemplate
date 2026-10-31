@@ -74,7 +74,7 @@ namespace sw
     } // namespace
 
     // EngineConfig 로드 실패 시에도 WindowConfig::_defaultRHI(cpp 기본값)와 같은 백엔드로 기동하도록 맞춥니다.
-    // 이 플랫폼에서 쓸 수 없으면 RHI::initialize 가 getDefaultPlatformBackend() 로 폴백합니다.
+    // 이 플랫폼에서 쓸 수 없으면 RHI::initialize 가 경고(RHI.ConfiguredBackendUnavailable)를 남기고 getDefaultPlatformBackend() 로 내려간다.
     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::SW_RHI_BACKEND_DEFAULT, "Current RHI Backend" );
 
     RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
@@ -271,7 +271,13 @@ namespace sw
         if ( bCommandLineOverride )
             currentBackend = commandLineBackend;
         else if ( RHIAvailability::isAvailable( currentBackend ) == false )
-            currentBackend = getDefaultPlatformBackend();
+        {
+            // 설정 · 사용자 설정이 고른 백엔드(지난 실행의 선택일 수 있다)가 이 빌드에 없다 - 기동은 하되 말없이 바꾸지 않는다(언리얼도 지원하는 RHI 로 내려가며 로그를 남긴다).
+            const RHIBackend platformBackend = getDefaultPlatformBackend();
+            SW_LOG_WARNING_ID( "RHI.ConfiguredBackendUnavailable", "The configured RHI backend '%#' is not available in this build - starting with '%#' (pass -<backend> to require one)",
+                               getBackendTypeName( currentBackend ), getBackendTypeName( platformBackend ) );
+            currentBackend = platformBackend;
+        }
 
         if ( RHIAvailability::isAvailable( currentBackend ) == false )
         {
