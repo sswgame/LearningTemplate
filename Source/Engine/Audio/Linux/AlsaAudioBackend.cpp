@@ -256,5 +256,7 @@ namespace sw
             _impl->_pLibrary = nullptr;
         }
     }
+
+    SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
 } // namespace sw
 #endif

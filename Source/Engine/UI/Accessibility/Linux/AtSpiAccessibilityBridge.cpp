@@ -847,6 +847,8 @@ namespace sw
             return nullptr;
         return pBridge;
     }
+
+    SW_REGISTER_UI_ACCESSIBILITY_BRIDGE( "AT-SPI", &AtSpiAccessibility::createBridge ); // 리눅스 클라이언트(`SW_ENABLE_ATSPI`)의 브리지(`UIAccessibilityBridgeFactory` 가 등록표에서 고른다)
 } // namespace sw
 
 #endif

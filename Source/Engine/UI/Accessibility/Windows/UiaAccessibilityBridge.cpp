@@ -686,6 +686,8 @@ namespace sw
     {
         return make_unique<UiaAccessibilityBridgeInternal::Bridge>( ui, window );
     }
+
+    SW_REGISTER_UI_ACCESSIBILITY_BRIDGE( "UIAutomation", &UiaAccessibility::createBridge ); // Windows 클라이언트의 브리지(`UIAccessibilityBridgeFactory` 가 등록표에서 고른다)
 } // namespace sw
 #else
 namespace sw

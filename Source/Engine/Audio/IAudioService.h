@@ -59,7 +59,10 @@ namespace sw
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */
         static constexpr utf8 kDefaultMixerPath[] = "engine/audio/default.audiomixer.xml";
 
-        /** @brief 현재 플랫폼에 맞는 오디오 시스템 인스턴스를 생성합니다. */
+        /**
+         * @brief 이 빌드가 담은 플랫폼 장치 백엔드(`AudioBackendRegistrar` 로 오른 것 — Windows XAudio2 · 리눅스 ALSA)를 만듭니다.
+         * @details 등록된 백엔드가 없거나 둘 이상이면 기동을 멈춘다(장치 없는 오디오로 몰래 바꾸지 않는다). 장치를 열지 않을 쪽(전용 서버 · 테스트)은 `createNull` 을 부른다.
+         */
         static unique_ptr<IAudioService> create();
         /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 소리 요청은 받아서 버리고, 믹서와 음량 상태는 그대로 유지합니다. */
         static unique_ptr<IAudioService> createNull();
@@ -244,3 +247,40 @@ namespace sw
         bool                    _bInitialized;     /**< initialize 가 끝났는지입니다. */
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AudioBackendRegistrar
+     * @brief 플랫폼 장치 백엔드가 스스로 오르는 정적 등록자입니다(`SW_REGISTER_AUDIO_BACKEND` — RHI 백엔드의 `RHIStaticBackendRegistrar` 와 같은 모양).
+     * @details 플랫폼 백엔드 파일(`Audio/Windows/` · `Audio/Linux/`)이 그 플랫폼 클라이언트 빌드에서만 등록자를 둔다 — 고르는 쪽(`IAudioService::create`)에는 `#if` 가 없다.
+     *          정적 초기화 때 머리에 이어 붙는다(배포의 정적 링크는 Engine 을 통째로 넣는다 — `cmake/Engine/ExecutableTargets.cmake`).
+     */
+    struct SW_API AudioBackendRegistrar
+    {
+        using CreateFunction = unique_ptr<IAudioService> ( * )();
+
+        AudioBackendRegistrar( const utf8* pName, CreateFunction pCreate );
+        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
+        static const AudioBackendRegistrar* getHead();
+        /** @brief 백엔드 @p TBackend 를 만드는 함수입니다(`SW_REGISTER_AUDIO_BACKEND` 가 넘긴다). */
+        template <typename TBackend>
+        static unique_ptr<IAudioService> createBackend()
+        {
+            return make_unique<TBackend>();
+        }
+
+        const utf8*                  _pName;
+        CreateFunction               _pCreate;
+        const AudioBackendRegistrar* _pNext;
+    };
+} // namespace sw
+
+/**
+ * @brief 오디오 장치 백엔드 @p Type(`IAudioService` 파생, 기본 생성자)을 등록합니다. 그 백엔드의 `.cpp` 의 `namespace sw` 안, 익명 네임스페이스 밖에서 한 번 씁니다.
+ */
+#define SW_REGISTER_AUDIO_BACKEND( Type )                           \
+    const ::sw::AudioBackendRegistrar s_audioBackendRegistrar##Type \
+    {                                                               \
+        #Type, &::sw::AudioBackendRegistrar::createBackend<Type>    \
+    }

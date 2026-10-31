@@ -459,5 +459,7 @@ namespace sw
             _impl->_bComInitialized = SW_FALSE;
         }
     }
+
+    SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
 } // namespace sw
 #endif
