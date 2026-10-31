@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 적 AI — 판단 상태(AI.State)와 빙의(Pawn.Controller)를 단언한다. 자동 플레이를 끄고 플레이어가 가운데 서 있으면 첫 웨이브의 근접 적(Grunt)이
+  다가와(Chase) 때린다(Strike). 적 AI 오브젝트는 모두 ArenaGruntAI 로 스폰되므로 저장소가 번호를 붙인다(ArenaGruntAI, ArenaGruntAI_2, ...) —
+  target 은 만든 순서의 번호로 고른다(ArenaGruntAI[0]). 번호 없이 target="ArenaGruntAI" 라고 쓰면 여럿이라 고를 수 없다는 실패가 난다.
+  실행: ctest -R Scenario.abilityarena (SW_ACTIVE_GAME=AbilityArena) · App -scenario=game/abilityarena/automation/ai.scenario.xml -unattended
+-->
+<Scenario name="game.abilityarena.ai" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_arenaAutoPlay" value="0"/>
+	<!-- 웨이브가 서면 근접 적이 둘 이상이고, 첫 적 폰은 첫 적 AI 가 쥐었다. 플레이어 폰은 플레이어 조종자가 쥐었다. -->
+	<WaitUntil watch="Object.Exists" target="ArenaGruntAI[1]" equals="1" timeoutFrames="120"/>
+	<Expect watch="Object.Exists" target="ArenaGruntAI[0]" equals="1"/>
+	<Expect watch="Pawn.Controller" target="ArenaGrunt[0]" is="ArenaGruntAI"/>
+	<Expect watch="Pawn.Controller" target="ArenaPlayer" is="PlayerController"/>
+	<!-- 첫 근접 적이 15 초 안에 닿아 때리고, 그때까지 쫓기 → 때리기를 이 순서로 거친다. -->
+	<WaitUntil watch="AI.State" target="ArenaGruntAI[0]" is="Strike" timeoutSeconds="15"/>
+	<ExpectVisited watch="AI.State" target="ArenaGruntAI[0]" sequence="Chase, Strike"/>
+	<ExpectVisited watch="AI.State" target="ArenaGruntAI[1]" sequence="Chase"/>
+	<Record watch="AI.State" target="ArenaGruntAI[0]"/>
+	<Pass/>
+</Scenario>
