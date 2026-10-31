@@ -7,8 +7,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/PseudoLocalizer.h"
+#include "Engine/Localization/Tests/LocalizationTestUtil.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Text/RichTextParser.h"
 
@@ -120,4 +122,39 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoLocalizerKeepsTags )
     SW_EXPECT_EQUAL( 0u, parsed._problemCount );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listSpan.size() ) );
     SW_EXPECT_TRUE( parsed._plainText.empty() == false && parsed._plainText.front() == '[' );
+}
+
+/**
+ * @brief [PseudoLocalizerTest] 언어 설정으로 의사 문화권을 고르면 올린 프로젝트의 모든 원문이 변환되어 나오고, 거울 방식은 오른쪽→왼쪽 문화권이다
+ * @details 의사 문화권은 Dev 빌드의 "고를 수 있는 언어" 에 들어 있어야 한다 — 플레이어 설정(`localization.language`)의 선택지가 이 목록이다.
+ *          배포 구성은 `Tests/` 를 짓지 않으므로 "배포본에는 없다" 쪽은 여기서 보지 않는다.
+ */
+SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
+{
+    using sw::test::LocalizationTestUtil;
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    folder = domain.getFolder();
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("menu.start": { "source": "Start" }, "menu.items": { "source": "{n, plural, one {# item} other {# items}}" })" );
+
+    sw::LocalizationManager loc;
+    SW_REQUIRE_TRUE( LocalizationTestUtil::loadEngineCultures( loc ) );
+    SW_REQUIRE_TRUE( loc.mountProject( sw::test::ScopedScratchDomain::toID( LocalizationTestUtil::writeProject( folder, "en", "[]" ) ), sw::LocalizationScope::Game ) );
+
+    bool bListed{ false };
+    for ( const sw::string& language : loc.getAvailableLanguages() )
+    {
+        bListed = bListed || language == "qps_ploc";
+    }
+    SW_EXPECT_TRUE( bListed );
+
+    SW_REQUIRE_TRUE( loc.hasLanguage( "qps-ploc" ) );
+    SW_REQUIRE_TRUE( loc.setCurrentLanguage( "qps-ploc" ) );
+    const sw::string start = loc.getString( sw::hashed_string( "menu.start" ) );
+    SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( start ) );
+    SW_EXPECT_FALSE( loc.isRightToLeft() );
+    const sw::string items = loc.getFormattedString( sw::hashed_string( "menu.items" ), sw::TextArgumentList().addInteger( "n", 2 ), "menu.items" );
+    SW_EXPECT_TRUE( items.find( "2 " ) != sw::string::npos );
+
+    SW_REQUIRE_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
+    SW_EXPECT_TRUE( loc.isRightToLeft() );
 }

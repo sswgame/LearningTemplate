@@ -213,7 +213,7 @@ namespace sw
             TranslationTable translation;
             if ( translation.loadFromXMLText( text, translationPath, &error ) == false )
             {
-                SW_LOG_ERROR( "Translation table is not loaded: %#", error.c_str() );
+                SW_LOG_ERROR_ID( "Localization.TranslationNotLoaded", "Translation table is not loaded: %#", error.c_str() );
                 bAllRead = false;
                 continue;
             }
@@ -398,7 +398,7 @@ namespace sw
         string                  error;
         if ( table.parse( pData, size, &error ) == false )
         {
-            SW_LOG_WARNING( "Binary localization table is not loaded: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "Localization.BinaryTableRejected", "Binary localization table is not loaded: %#", error.c_str() );
             return false;
         }
         // 문화권 검사와 경고는 잠금 밖에서 한다(잠금은 잎 잠금, 결정 5-3).

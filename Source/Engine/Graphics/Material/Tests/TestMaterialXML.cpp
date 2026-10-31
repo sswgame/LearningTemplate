@@ -4,6 +4,11 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -61,4 +66,51 @@ SW_TEST_CASE( MaterialXMLTest, RejectsMisspelledPropertyAttribute )
     sw::MaterialProperty prop{};
     SW_EXPECT_LOG( "Xml.UnknownAttribute" );
     SW_EXPECT_FALSE( sw::MaterialXML::parsePropertyNode( doc.getRoot( "item" ), prop ) );
+}
+
+/**
+ * @brief [MaterialXMLTest] 현재 판(formatVersion=0)의 XML 을 리소스 id 로 읽는다 — 이름 · 셰이더 경로가 그대로다
+ */
+SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
+{
+    const sw::string shaderPath = sw::engine::getSubsystem<sw::EngineDefaultAssets>()._shaderForwardLit.get();
+    const sw::string current    = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDesc formatVersion="0" name="CurrentMat" shaderPath=")" +
+                               shaderPath +
+                               R"(" blendMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
+	</_properties>
+</MaterialDesc>
+)";
+
+    sw::XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( current ) );
+    const sw::XMLNode root = doc.getRoot( "MaterialDesc" );
+    SW_REQUIRE_TRUE( root.isValid() );
+    SW_EXPECT_TRUE( sw::AssetXMLFormat::isCurrentXMLVersion( sw::Material::kAssetType, root ) );
+    SW_EXPECT_EQUAL( sw::Material::kAssetType._formatVersion, sw::AssetXMLFormat::readXMLVersion( root ) );
+
+    const sw::test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "current.material" ), current ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_TRUE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "current.material" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "CurrentMat" ), material->getName() );
+    SW_EXPECT_EQUAL( shaderPath, material->getShaderPath() );
+}
+
+/**
+ * @brief [MaterialXMLTest] formatVersion 없는 옛 Material 루트는 자동 변환하지 않고 거부한다
+ */
+SW_TEST_CASE( MaterialXMLTest, AssetFormatRejectsLegacyMaterialXML )
+{
+    const sw::test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "legacy.material" ), R"(<?xml version="1.0" encoding="utf-8"?>
+<Material>
+	<_name>LegacyMat</_name>
+	<_shader>engine/shaders/forward_lit.hlsl</_shader>
+</Material>
+)" ) );
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_EXPECT_FALSE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "legacy.material" ) ) );
 }

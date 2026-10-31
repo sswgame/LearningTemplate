@@ -701,19 +701,19 @@ namespace sw
         const bool   bInvalidName = domain.empty() || domain.find_first_of( "/\\:" ) != string::npos || domain == "." || domain == "..";
         if ( bInvalidName )
         {
-            SW_LOG_ERROR( "Cannot mount disk domain '%#' - the name is one path component without ':'", domainName );
+            SW_LOG_ERROR_ID( "AssetPaths.MountNameInvalid", "Cannot mount disk domain '%#' - the name is one path component without ':'", domainName );
             return false;
         }
         const string folder = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( diskFolder ) );
         if ( FileUtil::isAbsolutePath( folder ) == false || FileUtil::isDirectory( folder ) == false )
         {
-            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountFolderMissing", "Cannot mount disk domain '%#' - '%#' is not an existing absolute folder", domainName, diskFolder );
             return false;
         }
         const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( AssetPathsInternal::getTable( *_pState )._resourceRootFolderPath ) );
         if ( root.empty() == false && FileUtil::startsWithPathComponent( FileUtil::normalizePath( folder ), FileUtil::normalizePath( root ) ) )
         {
-            SW_LOG_ERROR( "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountInsideContentRoot", "Cannot mount disk domain '%#' - '%#' is inside the content root (packs-only builds would read loose assets)", domainName, diskFolder );
             return false;
         }
         // 락 안에서는 목록만 만지고, 오류는 이미 붙은 폴더를 적어 두었다가 락을 놓은 뒤에 남긴다(락을 쥔 채 로그를 부르지 않는다 — 로그 싱크가 무엇을 하든
@@ -738,7 +738,33 @@ namespace sw
         }
         if ( bConflict )
         {
-            SW_LOG_ERROR( "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, conflictFolder );
+            SW_LOG_ERROR_ID( "AssetPaths.MountConflict", "Cannot mount disk domain '%#' at '%#' - it is already mounted at '%#'", domainName, diskFolder, conflictFolder );
+            return false;
+        }
+        clearPathCache();
+        return true;
+    }
+
+    bool AssetPaths::unmountDiskDomain( string_view domainName )
+    {
+        const string domain = FileUtil::normalizePath( domainName );
+        State&       state  = *_pState;
+        bool         bFound{ false };
+        {
+            ScopedLock<mutex> lock{ state._diskDomainMutex };
+            for ( auto it = state._listDiskDomain.begin(); it != state._listDiskDomain.end(); ++it )
+            {
+                if ( it->_domain == domain )
+                {
+                    state._listDiskDomain.erase( it );
+                    bFound = true;
+                    break;
+                }
+            }
+        }
+        if ( bFound == false )
+        {
+            SW_LOG_ERROR_ID( "AssetPaths.DomainNotMounted", "Cannot unmount disk domain '%#' - it is not mounted", domainName );
             return false;
         }
         clearPathCache();

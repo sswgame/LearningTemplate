@@ -151,6 +151,11 @@ namespace sw
          *         같은 이름을 같은 폴더에 다시 붙이면 true 입니다.
          */
         [[nodiscard]] bool mountDiskDomain( string_view domainName, string_view diskFolder );
+        /**
+         * @brief `mountDiskDomain` 으로 붙인 도메인을 뗍니다(푼 경로 캐시도 비운다). 붙인 쪽이 범위를 끝낼 때 부릅니다(테스트 픽스처 · 도구 작업).
+         * @return 그 이름이 붙어 있지 않았으면 false 입니다 — 짝이 맞지 않는 떼기는 부른 쪽의 결함이다.
+         */
+        [[nodiscard]] bool unmountDiskDomain( string_view domainName );
         /** @brief @p assetID 가 `mountDiskDomain` 으로 붙인 도메인 아래면 true 입니다. 그 id 는 팩을 보지 않고 디스크에서만 읽습니다. */
         bool isMountedDiskDomainID( string_view assetID ) const;
 

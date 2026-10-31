@@ -47,9 +47,9 @@ namespace sw
         {
             if ( FileUtil::isAbsolutePath( relativePath ) == false )
                 return false;
-            SW_LOG_ERROR( "'%#' is an OS path, not a resource id - read disk files through AssetIO::readTextFile / readBinaryFile or a loader's "
-                          "*FromDiskFile entry, or mount the folder with AssetPaths::mountDiskDomain",
-                          relativePath );
+            SW_LOG_ERROR_ID( "AssetIO.OSPathRejected", "'%#' is an OS path, not a resource id - read disk files through AssetIO::readTextFile / readBinaryFile or a loader's "
+                                                       "*FromDiskFile entry, or mount the folder with AssetPaths::mountDiskDomain",
+                             relativePath );
             return true;
         }
 

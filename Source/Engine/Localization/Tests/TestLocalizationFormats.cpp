@@ -6,9 +6,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/FileSystem/AssetID.h"
+#include "Engine/FileSystem/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/CurrencyUtil.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
+#include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Localization/Tests/LocalizationTestUtil.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Localization/TimeZoneUtil.h"
 
@@ -299,4 +303,42 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     wrongMagic[0]                = 'X';
     SW_EXPECT_FALSE( loaded.parse( wrongMagic.data(), wrongMagic.size(), &error ) );
     SW_EXPECT_TRUE( error.find( "magic" ) != sw::string::npos );
+}
+
+/**
+ * @brief [LocalizationBinaryTableTest] 매니저가 프로젝트에서 화면에 나오는 글만 베이크하고(낡은 번역 제외), 저작 파일 없이 그 바이트만으로 같은 글을 낸다
+ */
+SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringFiles )
+{
+    using sw::test::LocalizationTestUtil;
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    folder  = domain.getFolder();
+    const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
+    LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
+    const sw::string staleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Begin" ) );
+    LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
+
+    sw::LocalizationManager cooker;
+    SW_REQUIRE_TRUE( cooker.mountProject( sw::test::ScopedScratchDomain::toID( project ), sw::LocalizationScope::Game ) );
+    sw::vector<uint8> bytes;
+    SW_REQUIRE_TRUE( cooker.cookBinaryTable( "ko", bytes ) );
+    sw::vector<uint8> none;
+    SW_EXPECT_FALSE( cooker.cookBinaryTable( "fr", none ) ); // 글이 없는 문화권
+
+    sw::LocalizationManager runtime; // 프로젝트를 올리지 않은 배포본
+    SW_REQUIRE_TRUE( runtime.loadBinaryTable( bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( runtime.setCurrentLanguage( "ko" ) );
+    SW_REQUIRE_NOT_NULL( runtime.findStringByText( "ui.start" ) );
+    SW_EXPECT_EQUAL( sw::string( "시작" ), sw::string( runtime.findStringByText( "ui.start" ) ) );
+    SW_EXPECT_NULL( runtime.findStringByText( "ui.quit" ) ); // 낡은 번역은 베이크하지 않았다
+
+    // 깨진 표는 거절하고 이미 있는 글을 바꾸지 않는다
+    sw::vector<uint8> broken = bytes;
+    broken[broken.size() - 1] ^= 0xFFu;
+    SW_EXPECT_LOG( "Localization.BinaryTableRejected" );
+    SW_EXPECT_FALSE( runtime.loadBinaryTable( broken.data(), broken.size() ) );
+    SW_EXPECT_EQUAL( sw::string( "시작" ), sw::string( runtime.findStringByText( "ui.start" ) ) );
+
+    runtime.unloadLanguage( "ko" );
+    SW_EXPECT_NULL( runtime.findStringByText( "ui.start" ) );
 }
