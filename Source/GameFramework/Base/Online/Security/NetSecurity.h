@@ -31,8 +31,12 @@ namespace sw
          */
         static constexpr const utf8* kDevCertificateBundleFile = "devserver.pem";
 
-        /** @brief 설정 파일이 준 경로를 프로젝트 루트 기준으로 풉니다(`AbsolutePath::tryResolve` - 절대면 그대로, 상대면 프로젝트 아래). 빈 글 · 풀 수 없는 글(드라이브 상대)은 빈 글입니다. */
-        static string makeProjectPath( string_view path );
+        /**
+         * @brief 설정이 준 경로 @p path 를 프로젝트 루트 기준으로 풉니다(`AbsolutePath::tryResolve` - 절대면 그대로, 상대면 프로젝트 아래).
+         * @return 빈 글은 "정하지 않음"이라 @p outPath 를 비우고 true 다. 풀 수 없는 글(드라이브 상대)은 false 와 @p outError 다 - 예전처럼 빈 글로 바꾸면 "정하지 않음"으로 읽혀
+         *         개발 인증서로 물러났다.
+         */
+        [[nodiscard]] static bool resolveProjectPath( string_view path, string& outPath, string& outError );
 
         /**
          * @brief 서버 TLS 컨텍스트입니다. 실패하면 nullptr 이고 @p outError 에 까닭.

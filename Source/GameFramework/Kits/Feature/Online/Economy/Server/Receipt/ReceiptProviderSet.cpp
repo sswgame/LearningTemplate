@@ -75,7 +75,9 @@ namespace sw
                     outError = "the apple signing key environment variable '" + config._signingKeySecretEnvironment + "' is not set";
                     return nullptr;
                 }
-                const string rootPath = NetSecurity::makeProjectPath( config._rootCertificateFile );
+                string rootPath;
+                if ( NetSecurity::resolveProjectPath( config._rootCertificateFile, rootPath, outError ) == false )
+                    return nullptr;
                 if ( FileUtil::readTextFile( rootPath, settings._trustedRootsPem ) == false || settings._trustedRootsPem.empty() )
                 {
                     outError = "cannot read the apple root certificate file " + rootPath;

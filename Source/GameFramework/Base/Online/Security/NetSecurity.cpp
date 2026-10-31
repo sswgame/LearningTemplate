@@ -36,13 +36,20 @@ namespace sw
 
 namespace sw
 {
-    string NetSecurity::makeProjectPath( string_view path )
+    bool NetSecurity::resolveProjectPath( string_view path, string& outPath, string& outError )
     {
-        // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다). 해석 규칙은 `AbsolutePath::tryResolve` 하나 - 드라이브 상대(`C:foo`)는 풀지 않는다(빈 글, 읽기가 실패로 알린다).
+        // 설정 파일의 상대 경로는 프로젝트 기준이다(작업 폴더가 아니다). 해석 규칙은 `AbsolutePath::tryResolve` 하나 - 드라이브 상대(`C:foo`)는 풀지 않는다.
+        outPath.clear();
         if ( path.empty() )
-            return {};
+            return true;
         const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( path, ProcessRoots::get()._project );
-        return resolved.has_value() ? resolved->str() : string{};
+        if ( resolved.has_value() == false )
+        {
+            outError = "'" + string( path ) + "' is not a file path (absolute or relative to the project root)";
+            return false;
+        }
+        outPath = resolved->str();
+        return true;
     }
 
     bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
@@ -77,9 +84,11 @@ namespace sw
     unique_ptr<ITLSContext> NetSecurity::createServerTLSContext( INetSecurityProvider& provider, string_view certificateFile, string_view privateKeyFile,
                                                                  string_view privateKeyPassphrase, string& outError )
     {
-        using Internal         = NetSecurityInternal;
-        string certificatePath = makeProjectPath( certificateFile );
-        string privateKeyPath  = makeProjectPath( privateKeyFile );
+        using Internal = NetSecurityInternal;
+        string certificatePath;
+        string privateKeyPath;
+        if ( resolveProjectPath( certificateFile, certificatePath, outError ) == false || resolveProjectPath( privateKeyFile, privateKeyPath, outError ) == false )
+            return nullptr;
         if ( certificatePath.empty() != privateKeyPath.empty() )
         {
             outError = "the TLS certificate and private key files must be configured together";
@@ -106,7 +115,9 @@ namespace sw
         settings._role         = TLSRole::Client;
         settings._serverName   = string( serverName );
         settings._alpnProtocol = string( alpnProtocol );
-        string trustPath       = makeProjectPath( trustFile );
+        string trustPath;
+        if ( resolveProjectPath( trustFile, trustPath, outError ) == false )
+            return nullptr;
         if ( trustPath.empty() )
         {
             string privateKeyPath;
