@@ -11,6 +11,8 @@
 #include "Programs/ReflectionParser/ParserOptions.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
 
+#include "sw/config/ConfigConstants.h"
+
 SW_LOG_CALLER( "GeneratedFiles" );
 namespace sw
 {
@@ -18,8 +20,6 @@ namespace sw
     {
         struct GeneratedFilesInternal
         {
-            /** @brief 스탬프 확장자입니다 — `<.gen.cpp>.stamp`. CMake 가 ReflectBuiltins 에 쓰는 규칙과 같습니다. */
-            static constexpr const utf8* kStampSuffix = ".stamp";
             /** @brief 스탬프의 "파싱 전에 본 입력의 쓰기 시각" 줄 머리입니다 — `input <시각>`. */
             static constexpr const utf8* kStampInputTimeKey = "input";
             /** @brief 스탬프의 의존 줄 머리입니다 — `dep <시각> <경로>`. */
@@ -103,11 +103,6 @@ namespace sw
             }
 
             /**
-             * @brief 증분 판정은 앞부분만 읽습니다. 머리말(원본 경로)과 자리 표시자 표식이 모두 여기 들어옵니다.
-             */
-            static constexpr uint32 kHeadProbeBytes = 4096;
-
-            /**
              * @brief 파일의 마지막 쓰기 시각입니다. 없으면 0 입니다.
              * @details `getFileTimestamp` 는 **초 단위**라 생성 직후 같은 초에 고친 편집을 "최신" 으로 봅니다. 여기서는 파일끼리
              *          선후만 비교하므로 플랫폼 단위 그대로의 `getFileStamp` 시각을 씁니다.
@@ -119,28 +114,18 @@ namespace sw
                     return 0;
                 return stamp._writeTime;
             }
-
-            [[nodiscard]] static bool readHead( const string& path, vector<uint8>& outBytes )
-            {
-                return FileUtil::readFile( path, outBytes, 0, kHeadProbeBytes );
-            }
-
-            static string_view toView( const vector<uint8>& bytes )
-            {
-                return string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    GeneratedPaths GeneratedFileUtil::makePaths( const string& outputDir, const string& inputFile, const ParserConfig& config )
+    GeneratedPaths GeneratedFileUtil::makePaths( const string& outputDir, const string& inputFile )
     {
         GeneratedPaths paths;
-        paths._cppPath    = ParserUtil::makeGeneratedPath( outputDir, inputFile, config._emitCppExtension );
-        paths._headerPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, config._emitHeaderExtension );
-        paths._stampPath  = paths._cppPath + GeneratedFilesInternal::kStampSuffix;
+        paths._cppPath    = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
+        paths._headerPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
+        paths._stampPath  = paths._cppPath + sw::config::kExtReflectionStamp;
         return paths;
     }
 
@@ -204,19 +189,8 @@ namespace sw
         return GeneratedFilesInternal::getWriteTime( markerPath );
     }
 
-    bool GeneratedFileUtil::isPlaceholder( const string_view generatedText, const ParserConfig& config )
-    {
-        if ( generatedText.find( config._emitPlaceholderMarker ) != string_view::npos )
-            return true;
-        return generatedText.find( config._emitRegenByParserMarker ) != string_view::npos &&
-               generatedText.find( config._emitRegisterTypeMarker ) == string_view::npos &&
-               generatedText.find( config._emitRegisterEnumMarker ) == string_view::npos &&
-               generatedText.find( config._emitFlagOpsMarker ) == string_view::npos;
-    }
-
     IncrementalCheck::IncrementalCheck( const ParserOptions& options, const ParserConfig& config )
-        : _pConfig{ &config }
-        , _newestToolWriteTime{ 0 }
+        : _newestToolWriteTime{ 0 }
     {
         vector<string> listToolFile;
         listToolFile.push_back( FileUtil::getExecutablePath() );
@@ -227,7 +201,7 @@ namespace sw
             listToolFile.push_back( configFile );
         }
         const bool bTemplateDir = options._emitTemplatesDir.empty() == false && FileUtil::isDirectory( options._emitTemplatesDir );
-        const bool bListFailed  = bTemplateDir && FileUtil::collectFiles( options._emitTemplatesDir, config._emitTemplateExtension, listToolFile, false ) == false;
+        const bool bListFailed  = bTemplateDir && FileUtil::collectFiles( options._emitTemplatesDir, sw::config::kExtReflectionTemplate, listToolFile, false ) == false;
 
         for ( const string& toolFile : listToolFile )
         {
@@ -252,15 +226,7 @@ namespace sw
         if ( inputTime == 0 || stampTime < _newestToolWriteTime )
             return false;
 
-        // 시각이 최신이어도 내용이 자리 표시자면 다시 만든다(산출물이 지워져 CMake 가 구성 때 다시 심은 경우).
-        vector<uint8> cppHeadBytes;
-        vector<uint8> headerHeadBytes;
-        if ( GeneratedFilesInternal::readHead( paths._cppPath, cppHeadBytes ) == false ||
-             GeneratedFilesInternal::readHead( paths._headerPath, headerHeadBytes ) == false )
-            return false;
-        if ( GeneratedFileUtil::isPlaceholder( GeneratedFilesInternal::toView( cppHeadBytes ), *_pConfig ) ||
-             GeneratedFileUtil::isPlaceholder( GeneratedFilesInternal::toView( headerHeadBytes ), *_pConfig ) )
-            return false;
+        // 자리 표시자는 따로 알아보지 않는다 - CMake 가 자리 표시자를 심을 때 스탬프를 지우므로 위에서 "스탬프 없음" 으로 걸린다(생성 글을 읽어 추측하지 않는다).
 
         // 헤더를 **옮기기만** 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.

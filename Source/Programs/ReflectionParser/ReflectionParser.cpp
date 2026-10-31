@@ -45,7 +45,7 @@ namespace sw
             /** @brief 템플릿 디렉터리를 읽습니다. 두 모드 모두 필요합니다. */
             [[nodiscard]] static bool loadTemplates( const ParserOptions& options, ParserSession& session )
             {
-                if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, session._config._emitTemplateExtension ) )
+                if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, sw::config::kExtReflectionTemplate ) )
                     return true;
                 SW_LOG_ERROR( "Failed to load %#: %#", cli::kEmitTemplates, options._emitTemplatesDir );
                 return false;

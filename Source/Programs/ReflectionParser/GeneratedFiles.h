@@ -63,7 +63,7 @@ namespace sw
     struct GeneratedFileUtil
     {
         /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로 셋을 만듭니다. */
-        static GeneratedPaths makePaths( const string& outputDir, const string& inputFile, const ParserConfig& config );
+        static GeneratedPaths makePaths( const string& outputDir, const string& inputFile );
 
         /**
          * @brief 내용이 다를 때만 씁니다. 디렉터리가 없으면 만듭니다.
@@ -91,9 +91,6 @@ namespace sw
 
         /** @brief 파일의 마지막 쓰기 시각(플랫폼 단위 그대로)입니다. 없으면 0 입니다. 스탬프에 적는 값과 같은 단위입니다. */
         static uint64 getWriteTime( string_view path );
-
-        /** @brief CMake 가 구성 때 심어 둔 빈 자리 표시자(또는 등록이 하나도 없는 파서 산출물)인지 봅니다. */
-        static bool isPlaceholder( const string_view generatedText, const ParserConfig& config );
     };
 } // namespace sw
 
@@ -110,12 +107,11 @@ namespace sw
     public:
         IncrementalCheck( const ParserOptions& options, const ParserConfig& config );
 
-        /** @brief 스탬프가 입력 · 도구보다 새롭고, 산출물이 자리 표시자가 아니며, 머리말의 원본 경로가 지금 입력과 같으면 true */
+        /** @brief 스탬프가 있고(없으면 자리 표시자) 입력 · 도구보다 새로우며, 스탬프의 원본 경로가 지금 입력과 같으면 true */
         bool isUpToDate( const string& inputFile, const GeneratedPaths& paths ) const;
 
     private:
-        const ParserConfig* _pConfig;
-        uint64              _newestToolWriteTime;
+        uint64 _newestToolWriteTime;
         /** @brief 의존 파일의 쓰기 시각 캐시 — 같은 헤더를 입력마다 다시 측정하지 않는다(한 실행 안에서만, 한 스레드에서만 쓴다). */
         mutable unordered_map<string, uint64> _mapDependencyWriteTime;
     };

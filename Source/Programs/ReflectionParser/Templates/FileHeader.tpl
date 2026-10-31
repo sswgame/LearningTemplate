@@ -1,4 +1,4 @@
-// AUTO-GENERATED -- DO NOT EDIT
+$Banner
 // Source: $SourcePath
 
 #include "pch.h"

@@ -196,7 +196,8 @@ namespace sw
         }
 
         string out       = tpls.render( templatefile::kBuiltinFileHeader, {
-                                                                        { templatekey::kSourcePath, builtinsAbsPath }
+                                                                        {templatekey::kSourcePath,                   builtinsAbsPath},
+                                                                        {    templatekey::kBanner, sw::config::kTextReflectionBanner}
         } );
         uint32 typeCount = 0;
         for ( const ReflectBuiltinsLoaderInternal::BuiltinRow& row : listRow )

@@ -55,6 +55,13 @@ namespace sw::config
     inline constexpr const utf8* kFileTplBuiltinRegistrar = "@SW_FILE_TPL_BUILTIN_REGISTRAR@";
     /** @brief 리플렉션 대상마다 파서가 쓰는 타입 목록(`<FQN>\t<모듈>` 줄)입니다 — 콘텐츠 모듈 검사가 읽는다. */
     inline constexpr const utf8* kFileReflectedTypesList = "@SW_FILE_REFLECTED_TYPES_LIST@";
+    /** @brief 리플렉션 생성 계약(`Scripts/common/ProjectConstants.py` 한 곳) — 산출물 확장자 · 스탬프 · FlagOps 우산 · 머리 글입니다. */
+    inline constexpr const utf8* kExtReflectionGenCpp    = "@SW_EXT_REFLECTION_GEN_CPP@";
+    inline constexpr const utf8* kExtReflectionGenHeader = "@SW_EXT_REFLECTION_GEN_HEADER@";
+    inline constexpr const utf8* kExtReflectionTemplate  = "@SW_EXT_REFLECTION_TEMPLATE@";
+    inline constexpr const utf8* kExtReflectionStamp     = "@SW_EXT_REFLECTION_STAMP@";
+    inline constexpr const utf8* kFileReflectionFlagOps  = "@SW_FILE_REFLECTION_FLAG_OPS@";
+    inline constexpr const utf8* kTextReflectionBanner   = "@SW_TEXT_REFLECTION_BANNER@";
 
     // -------------------------------------------------------------------------
     // 6) 동적 모듈 타겟 이름
