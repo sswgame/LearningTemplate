@@ -3,9 +3,9 @@
  * @brief `IPhysicsScene3D` 의 Jolt 구현입니다. Jolt 헤더를 include 하므로 `Physics/Jolt` 밖에서는 보지 않습니다(`JoltPhysicsBackend::createScene` 으로만 만듭니다).
  * @details
  *  - **레이어.** 엔진 레이어 n 은 Jolt 오브젝트 레이어 2n(움직이지 않는 바디)과 2n+1(움직이는 바디)이고, 넓은 단계 레이어는 정적과 움직임 둘이다.
- *    레이어끼리의 충돌은 `CollisionLayers` 행렬 하나가 정한다. 바디 쌍의 예외는 `PhysicsPairFilter` 를 접촉 검증(`OnContactValidate`)에서 확인한다.
+ *    레이어끼리의 충돌은 `CollisionLayers` 행렬 하나가 정한다. 바디 쌍의 예외는 `PhysicsPairFilter` 를 접촉 검증(`JoltContactListener::OnContactValidate`)에서 확인한다.
  *  - **재질.** 셰이프마다 Jolt 재질(마찰, 반발)을 붙이고, 접촉이 생길 때 서브 셰이프의 재질로 섞는다(마찰은 기하 평균, 반발은 큰 쪽). 밀도는 셰이프에 베이크한다.
- *  - **이벤트.** Jolt 의 접촉 콜백은 잡 스레드에서 온다. 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣는다(결정적 순서).
+ *  - **이벤트.** Jolt 의 접촉 콜백(`JoltContactListener`)은 잡 스레드에서 온다. 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣는다(결정적 순서).
  *    충격량은 접촉이 생길 때 `EstimateCollisionResponse` 로 어림하고, 접촉이 유지되는 동안에는 그 스텝의 어림값을 쓴다.
  */
 #pragma once
@@ -132,11 +132,38 @@ namespace sw
 
 namespace sw
 {
+    class JoltPhysicsScene;
+
+    /**
+     * @class JoltContactListener
+     * @brief Jolt 의 접촉 콜백을 받아 씬에 넘기는 어댑터입니다. 씬이 하나 보관하고 자기 물리 시스템에 등록합니다(`SetContactListener`).
+     * @details 잡 스레드에서 호출된다. 씬의 쌍 필터는 읽기만 하고, 알림 목록은 씬이 `_reportMutex` 를 쥐고 붙인다.
+     */
+    class JoltContactListener final : public JPH::ContactListener
+    {
+    public:
+        explicit JoltContactListener( JoltPhysicsScene& owner );
+
+        JPH::ValidateResult OnContactValidate( const JPH::Body& bodyA, const JPH::Body& bodyB, JPH::RVec3Arg baseOffset,
+                                               const JPH::CollideShapeResult& collisionResult ) override;
+        void                OnContactAdded( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings ) override;
+        void                OnContactPersisted( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings ) override;
+        void                OnContactRemoved( const JPH::SubShapeIDPair& subShapePair ) override;
+
+    private:
+        JoltPhysicsScene& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
     class JoltJobSystem;
 
     /** @class JoltPhysicsScene @brief Jolt 로 도는 3D 물리 씬입니다. 파일 머리말 참고. */
-    class JoltPhysicsScene final : public IPhysicsScene3D, public JPH::ContactListener
+    class JoltPhysicsScene final : public IPhysicsScene3D
     {
+        friend class JoltContactListener;
+
     public:
         JoltPhysicsScene( const PhysicsSettings& settings, JoltJobSystem* pJobSystem );
         ~JoltPhysicsScene() override;
@@ -232,13 +259,6 @@ namespace sw
         uint32 overlapShape( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const PhysicsQueryFilter& filter,
                              vector<PhysicsBodyHandle>& outListBody ) const override;
 
-        // JPH::ContactListener 이며, 잡 스레드에서 호출된다.
-        JPH::ValidateResult OnContactValidate( const JPH::Body& bodyA, const JPH::Body& bodyB, JPH::RVec3Arg baseOffset,
-                                               const JPH::CollideShapeResult& collisionResult ) override;
-        void                OnContactAdded( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings ) override;
-        void                OnContactPersisted( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings ) override;
-        void                OnContactRemoved( const JPH::SubShapeIDPair& subShapePair ) override;
-
     private:
         using ShapeDescList = vector<PhysicsShapeDesc3D>;
 
@@ -301,7 +321,7 @@ namespace sw
             shared_ptr<const ShapeDescList> _pListShape;
         };
 
-        /** @brief BodyID 색인 → 엔진 핸들입니다. 콜백(`OnContactRemoved` 는 BodyID 만 준다)과 질의 결과가 씁니다. */
+        /** @brief BodyID 색인 → 엔진 핸들입니다. 콜백(`JoltContactListener::OnContactRemoved` 는 BodyID 만 준다)과 질의 결과가 씁니다. */
         struct BodyIDEntry
         {
             JPH::uint32       _bodyIDValue{ JPH::BodyID::cInvalidBodyID };
@@ -348,7 +368,12 @@ namespace sw
         void removeSoftBody( const SoftBodyRecord& record );
         /** @brief 소프트 바디마다 늘어남 구속을 선으로 냅니다(`drawDebug`). */
         void drawSoftBodies( IPhysicsDebugRenderer& renderer ) const;
+        /** @brief 바디 쌍의 접촉을 받을지 쌍 필터로 정합니다(잡 스레드, `JoltContactListener::OnContactValidate`). */
+        JPH::ValidateResult validateContact( const JPH::Body& bodyA, const JPH::Body& bodyB ) const;
+        /** @brief 접촉이 생기거나 유지될 때 재질을 섞고 알림을 붙입니다(잡 스레드, `_reportMutex`). */
         void recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings, uint8 kind );
+        /** @brief 접촉이 끝난 알림을 붙입니다(잡 스레드, `_reportMutex`). */
+        void recordContactRemoved( const JPH::SubShapeIDPair& subShapePair );
         /** @brief 알림의 결정적 순서입니다(바디 쌍, 서브 셰이프, 종류 순). */
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
         /** @brief 스텝 동안 모은 알림을 정렬해 추적기에 넣고 이벤트를 냅니다. */
@@ -360,6 +385,7 @@ namespace sw
         JoltBroadPhaseLayers                      _broadPhaseLayers;
         JoltObjectVsBroadPhaseFilter              _objectVsBroadPhaseFilter;
         JoltObjectLayerPairFilter                 _objectLayerPairFilter;
+        JoltContactListener                       _contactListener; ///< `_system` 에 등록한 접촉 콜백이다(`_system` 보다 먼저 생기고 나중에 사라진다)
         JPH::TempAllocatorImpl                    _tempAllocator;
         JPH::PhysicsSystem                        _system;
         JoltJobSystem*                            _pJobSystem;

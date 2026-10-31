@@ -101,6 +101,7 @@ namespace sw
         , _broadPhaseLayers{}
         , _objectVsBroadPhaseFilter{}
         , _objectLayerPairFilter{}
+        , _contactListener{ *this }
         , _tempAllocator{ JoltPhysicsSceneInternal::kTempAllocatorByteSize }
         , _system{}
         , _pJobSystem{ pJobSystem }
@@ -123,7 +124,7 @@ namespace sw
         _system.Init( JoltPhysicsSceneInternal::kMaxBodyCount, 0, JoltPhysicsSceneInternal::kMaxBodyPairCount, JoltPhysicsSceneInternal::kMaxContactCount,
                       _broadPhaseLayers, _objectVsBroadPhaseFilter, _objectLayerPairFilter );
         _system.SetGravity( JoltUtil::toJolt( _settings._gravity ) );
-        _system.SetContactListener( this );
+        _system.SetContactListener( &_contactListener );
 
         _listJoltMaterial.reserve( _settings._listMaterial.size() );
         for ( const PhysicsMaterialDef& material : _settings._listMaterial )
@@ -927,7 +928,33 @@ namespace sw
 
     // --- 접촉 -------------------------------------------------------------------------------------------------------------
 
-    JPH::ValidateResult JoltPhysicsScene::OnContactValidate( const JPH::Body& bodyA, const JPH::Body& bodyB, JPH::RVec3Arg, const JPH::CollideShapeResult& )
+    JoltContactListener::JoltContactListener( JoltPhysicsScene& owner )
+        : _owner{ owner }
+    {
+    }
+
+    JPH::ValidateResult JoltContactListener::OnContactValidate( const JPH::Body& bodyA, const JPH::Body& bodyB, JPH::RVec3Arg, const JPH::CollideShapeResult& )
+    {
+        return _owner.validateContact( bodyA, bodyB );
+    }
+
+    void JoltContactListener::OnContactAdded( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings )
+    {
+        _owner.recordContact( bodyA, bodyB, manifold, ioSettings, 0 );
+    }
+
+    void JoltContactListener::OnContactPersisted( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold,
+                                                  JPH::ContactSettings& ioSettings )
+    {
+        _owner.recordContact( bodyA, bodyB, manifold, ioSettings, 1 );
+    }
+
+    void JoltContactListener::OnContactRemoved( const JPH::SubShapeIDPair& subShapePair )
+    {
+        _owner.recordContactRemoved( subShapePair );
+    }
+
+    JPH::ValidateResult JoltPhysicsScene::validateContact( const JPH::Body& bodyA, const JPH::Body& bodyB ) const
     {
         if ( _pairFilter.isEmpty() )
             return JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
@@ -974,18 +1001,7 @@ namespace sw
         _listContactReport.push_back( report );
     }
 
-    void JoltPhysicsScene::OnContactAdded( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings )
-    {
-        recordContact( bodyA, bodyB, manifold, ioSettings, 0 );
-    }
-
-    void JoltPhysicsScene::OnContactPersisted( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold,
-                                               JPH::ContactSettings& ioSettings )
-    {
-        recordContact( bodyA, bodyB, manifold, ioSettings, 1 );
-    }
-
-    void JoltPhysicsScene::OnContactRemoved( const JPH::SubShapeIDPair& subShapePair )
+    void JoltPhysicsScene::recordContactRemoved( const JPH::SubShapeIDPair& subShapePair )
     {
         ContactReport report;
         report._bodyA._body = findHandle( subShapePair.GetBody1ID() );
