@@ -364,7 +364,7 @@ namespace sw
                         return false;
                     if ( isPackedFloatsInRange<T>( floats ) == false )
                     {
-                        SW_LOG_WARNING( "'%#' is out of range for a packed value - the field keeps its current value", StringUtil::trim( strView ) );
+                        SW_LOG_WARNING_ID( "Serialization.PackedValueOutOfRange", "'%#' is out of range for a packed value - the field keeps its current value", StringUtil::trim( strView ) );
                         return false;
                     }
                     *static_cast<T*>( pPtr ) = PackedValueTraits<T>::fromFloats( floats );
