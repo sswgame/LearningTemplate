@@ -30,7 +30,7 @@ namespace sw
 } // namespace sw
 ```
 
-Name the helper after **the translation unit, not the class**: unity builds merge several `.cpp` files into one TU, and an anonymous namespace hides a name only per TU (`VulkanRHIResourceFactoryPipeline.cpp` → `VulkanRHIResourceFactoryPipelineInternal`).
+Name the helper after **the translation unit, not the class**: unity builds merge several `.cpp` files into one TU, and an anonymous namespace hides a name only per TU (`D3D11RHIDevice.cpp` → `D3D11RHIDeviceInternal`).
 
 | TU-only helpers | Shape |
 | --- | --- |

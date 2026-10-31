@@ -41,6 +41,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -762,6 +764,8 @@ namespace sw
                 }
             }
         };
+
+        constexpr VkDeviceSize kDummyUboSize = 256;
     } // namespace
 
     static_assert( VulkanRHIRequiredVersion::makeAPIVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
@@ -2253,5 +2257,1043 @@ namespace sw
         scissor.offset = { 0, 0 };
         scissor.extent = { _swapChain.getExtentWidth(), _swapChain.getExtentHeight() };
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
+    }
+
+    bool VulkanRHIDevice::initializeTransfers( const RHISwapChainDesc& desc )
+    {
+        if ( desc._stagingRingBytes == 0 || desc._readbackRingBytes == 0 )
+        {
+            SW_LOG_ERROR( "The Vulkan backend needs staging ring capacities (gv_rhiStagingRingMegabytes and gv_rhiReadbackRingMegabytes must be positive)" );
+            return false;
+        }
+
+        // 작업을 다시 쓸 때 begin 이 버퍼를 리셋하므로 RESET_COMMAND_BUFFER 가 필요하다. 짧게 사는 기록이라 TRANSIENT 도 준다.
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        poolInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
+        if ( vkCreateCommandPool( _device, &poolInfo, nullptr, &_transferCommandPool ) != VK_SUCCESS )
+        {
+            _transferCommandPool = VK_NULL_HANDLE;
+            SW_LOG_ERROR( "Failed to create the Vulkan transfer command pool" );
+            return false;
+        }
+        return createStagingRing( _uploadRing, desc._stagingRingBytes, desc._stagingSoloMaxBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "upload" ) &&
+               createStagingRing( _readbackRing, desc._readbackRingBytes, desc._stagingSoloMaxBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "readback" );
+    }
+
+    void VulkanRHIDevice::shutdownTransfers()
+    {
+        // GPU 는 종료 2단계(waitIdle)에서 쉬었다. 잃은 장치면 끝나지 않은 작업이 남아 있을 수 있지만 더 기다리지 않는다(isDeviceLost 설명).
+        _transferFenceQueue.retireAll( [this]( VulkanTransferJob& job )
+        { recycleTransferJob( job ); } );
+        _transferReleaseQueue.flushAll();
+        {
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
+            for ( const VulkanTransferJob& job : _listFreeTransferJob )
+            {
+                if ( job._fence != VK_NULL_HANDLE )
+                    vkDestroyFence( _device, job._fence, nullptr );
+            }
+            _listFreeTransferJob.clear();
+        }
+        // 커맨드 버퍼는 풀과 함께 놓인다.
+        if ( _transferCommandPool != VK_NULL_HANDLE )
+        {
+            vkDestroyCommandPool( _device, _transferCommandPool, nullptr );
+            _transferCommandPool = VK_NULL_HANDLE;
+        }
+        // 가져가지 않은 읽기는 링과 함께 사라진다. 그 뒤의 가져가기 · 버리기는 업로드 티켓처럼 아무 일도 하지 않는다.
+        _readbackTable.clear();
+        destroyStagingRing( _uploadRing );
+        destroyStagingRing( _readbackRing );
+    }
+
+    bool VulkanRHIDevice::createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes, uint32 usageFlags, const utf8* pName )
+    {
+        // 구간 시작 정렬. 복사 오프셋 규칙(텍셀 블록 바이트와 4 의 배수)은 제출 함수가 구간 안에서 맞추고, 여기서는 캐시 줄 경계에서 시작하도록 넉넉히 둔다(GL 링과 같다).
+        constexpr uint64 kSpanAlignmentBytes = 256;
+        if ( createMappedStagingBuffer( capacityBytes, usageFlags, pName, ring._buffer, ring._memory, ring._pMapped ) == false )
+            return false;
+        ring._ledger.initialize( capacityBytes, kSpanAlignmentBytes, soloMaxBytes );
+        return true;
+    }
+
+    void VulkanRHIDevice::destroyStagingRing( VulkanStagingRing& ring )
+    {
+        {
+            ScopedLock<mutex> soloLock{ ring._soloMutex };
+            destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+        }
+        destroyMappedStagingBuffer( ring._buffer, ring._memory, ring._pMapped );
+        ring._ledger.shutdown();
+    }
+
+    bool VulkanRHIDevice::createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
+                                                     uint8*& outMapped )
+    {
+        outBuffer = VK_NULL_HANDLE;
+        outMemory = VK_NULL_HANDLE;
+        outMapped = nullptr;
+
+        VkBufferCreateInfo bufferInfo{};
+        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size        = capacityBytes;
+        bufferInfo.usage       = usageFlags;
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &outBuffer ) != VK_SUCCESS )
+        {
+            outBuffer = VK_NULL_HANDLE;
+            SW_LOG_ERROR( "Failed to create the Vulkan %# staging buffer (%# bytes, gv_rhiStagingRingMegabytes · gv_rhiReadbackRingMegabytes · gv_rhiStagingSingleMaxMegabytes)",
+                          pName, capacityBytes );
+            return false;
+        }
+
+        // 호스트 일관 메모리라 제출 전의 memcpy 는 flush 없이 보이고, 되읽기는 복사 뒤의 HOST 배리어와 펜스만으로 읽힌다(invalidate 가 필요 없다).
+        VkMemoryRequirements requirements{};
+        vkGetBufferMemoryRequirements( _device, outBuffer, &requirements );
+        uint32 memoryTypeIndex{ 0 };
+        void*  pMapped{ nullptr };
+        bool   bMemoryReady = findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex );
+        if ( bMemoryReady )
+        {
+            VkMemoryAllocateInfo allocInfo{};
+            allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocInfo.allocationSize  = requirements.size;
+            allocInfo.memoryTypeIndex = memoryTypeIndex;
+            bMemoryReady              = vkAllocateMemory( _device, &allocInfo, nullptr, &outMemory ) == VK_SUCCESS &&
+                           vkBindBufferMemory( _device, outBuffer, outMemory, 0 ) == VK_SUCCESS &&
+                           vkMapMemory( _device, outMemory, 0, VK_WHOLE_SIZE, 0, &pMapped ) == VK_SUCCESS && pMapped != nullptr;
+        }
+        if ( bMemoryReady == false )
+        {
+            SW_LOG_ERROR( "The Vulkan %# staging buffer (%# bytes) could not be allocated or mapped in host visible memory", pName, capacityBytes );
+            destroyMappedStagingBuffer( outBuffer, outMemory, outMapped );
+            return false;
+        }
+
+        outMapped = static_cast<uint8*>( pMapped );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( outMemory ), RHIMemoryKind::Staging, requirements.size );
+        return true;
+    }
+
+    void VulkanRHIDevice::destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped )
+    {
+        // 메모리를 놓으면 매핑도 풀린다. 장부에는 매핑까지 끝난 버퍼만 올렸다.
+        if ( pMapped != nullptr )
+            getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( rMemory ) );
+        if ( rBuffer != VK_NULL_HANDLE )
+            vkDestroyBuffer( _device, rBuffer, nullptr );
+        if ( rMemory != VK_NULL_HANDLE )
+            vkFreeMemory( _device, rMemory, nullptr );
+        rBuffer = VK_NULL_HANDLE;
+        rMemory = VK_NULL_HANDLE;
+        pMapped = nullptr;
+    }
+
+    RHISubmitResult VulkanRHIDevice::allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan )
+    {
+        RHIStagingAllocateResult result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        if ( result == RHIStagingAllocateResult::Full )
+        {
+            retireFinishedTransfers();
+            result = ring._ledger.allocate( sizeBytes, _transferSerials.getWatermark(), outSpan );
+        }
+        // 결과 옮기기 · 못 받은 구간 놓기 · 이유 로그는 세 백엔드가 같이 쓰는 한 곳이다(잃은 장치면 Full 도 Rejected, 계약 2).
+        const RHISubmitResult submitResult = RHIStagingRingUtil::settleAllocation( ring._ledger, _transferSerials, result, sizeBytes, "Vulkan", pCaller, outSpan );
+        if ( submitResult != RHISubmitResult::Accepted || outSpan._bSolo == SW_FALSE )
+            return submitResult;
+        // 장부가 단독 구간을 내줬다면 앞선 단독 구간은 이미 돌아왔다 — 남은 버퍼(아직 회수가 지우지 않은 것)를 GPU 가 더 쓰지 않는다.
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+        if ( createMappedStagingBuffer( outSpan._sizeBytes, usageFlags, "single transfer", ring._soloBuffer, ring._soloMemory, ring._pSoloMapped ) )
+            return RHISubmitResult::Accepted;
+        return RHIStagingRingUtil::rejectSoloBufferFailure( ring._ledger, outSpan, "Vulkan", pCaller );
+    }
+
+    void VulkanRHIDevice::destroyIdleSoloBuffer( VulkanStagingRing& ring )
+    {
+        ScopedLock<mutex> soloLock{ ring._soloMutex };
+        if ( ring._soloBuffer == VK_NULL_HANDLE )
+            return;
+        // 판정은 락 안에서 한다 — 밖에서 보면 그 사이 다른 스레드가 새 단독 구간을 받아 버퍼를 만들 수 있다.
+        ring._ledger.freeCompleted( _transferSerials.getWatermark() );
+        if ( ring._ledger.hasLiveSolo() )
+            return;
+        destroyMappedStagingBuffer( ring._soloBuffer, ring._soloMemory, ring._pSoloMapped );
+    }
+
+    bool VulkanRHIDevice::beginTransferJob( VulkanTransferJob& outJob )
+    {
+        outJob = VulkanTransferJob{};
+        {
+            ScopedLock<mutex> jobLock{ _transferJobMutex };
+            if ( _listFreeTransferJob.empty() == false )
+            {
+                outJob = _listFreeTransferJob.back();
+                _listFreeTransferJob.pop_back();
+            }
+        }
+
+        VkResult result{ VK_SUCCESS };
+        if ( outJob._commandBuffer == VK_NULL_HANDLE )
+        {
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.commandPool        = _transferCommandPool;
+            allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandBufferCount = 1;
+            result                       = vkAllocateCommandBuffers( _device, &allocInfo, &outJob._commandBuffer );
+            if ( result != VK_SUCCESS )
+            {
+                SW_LOG_ERROR( "Failed to allocate a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
+                return false;
+            }
+            VkFenceCreateInfo fenceInfo{};
+            fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+            result          = vkCreateFence( _device, &fenceInfo, nullptr, &outJob._fence );
+            if ( result != VK_SUCCESS )
+            {
+                vkFreeCommandBuffers( _device, _transferCommandPool, 1, &outJob._commandBuffer );
+                SW_LOG_ERROR( "Failed to create a Vulkan transfer fence (VkResult=%#)", static_cast<int32>( result ) );
+                return false;
+            }
+        }
+        else
+        {
+            // 다시 쓰는 작업의 펜스는 지난 제출에서 신호됐다(제출하지 못하고 돌아온 작업이면 신호되지 않은 채다 — 리셋은 둘 다 받는다).
+            result = vkResetFences( _device, 1, &outJob._fence );
+        }
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        if ( result == VK_SUCCESS )
+            result = vkBeginCommandBuffer( outJob._commandBuffer, &beginInfo ); // 풀이 RESET_COMMAND_BUFFER 라 지난 기록을 함께 지운다
+        if ( result == VK_SUCCESS )
+            return true;
+        SW_LOG_ERROR( "Failed to begin a Vulkan transfer command buffer (VkResult=%#)", static_cast<int32>( result ) );
+        recycleTransferJob( outJob );
+        return false;
+    }
+
+    uint64 VulkanRHIDevice::submitTransferJob( const VulkanTransferJob& job, const utf8* pWhere )
+    {
+        VkResult result = vkEndCommandBuffer( job._commandBuffer );
+        uint64   serial{ 0 };
+        if ( result == VK_SUCCESS )
+        {
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers    = &job._commandBuffer;
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            // 기록하는 사이에 장치를 잃었으면(다른 스레드의 손실 · rhi.removeDevice) 내지 않는다.
+            result = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &submitInfo, job._fence );
+            // 시리얼은 큐에 낸 직후 같은 락 안에서 매긴다 — 락 밖에서 매기면 시리얼 순서가 큐 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다(계약 5).
+            if ( result == VK_SUCCESS )
+                serial = _transferFenceQueue.enqueue( job );
+        }
+        if ( serial != 0 )
+            return serial;
+        reportQueueResult( static_cast<int32>( result ), pWhere );
+        recycleTransferJob( job );
+        return 0;
+    }
+
+    void VulkanRHIDevice::recycleTransferJob( const VulkanTransferJob& job )
+    {
+        ScopedLock<mutex> jobLock{ _transferJobMutex };
+        _listFreeTransferJob.push_back( job );
+    }
+
+    void VulkanRHIDevice::retireFinishedTransfers()
+    {
+        // 잃은 장치의 펜스는 묻지 않는다(isDeviceLost 설명). 워터마크가 멈추고 남은 티켓은 Failed 다.
+        if ( _device != VK_NULL_HANDLE && isDeviceLost() == false )
+        {
+            _transferFenceQueue.retireDone(
+                [this]( const VulkanTransferJob& job )
+            {
+                const VkResult status = vkGetFenceStatus( _device, job._fence );
+                if ( status == VK_ERROR_DEVICE_LOST )
+                    reportQueueResult( static_cast<int32>( status ), "retireFinishedTransfers: vkGetFenceStatus" );
+                return status == VK_SUCCESS;
+            },
+                [this]( VulkanTransferJob& job )
+            { recycleTransferJob( job ); } );
+        }
+        // 워터마크가 지난 전송을 기다리던 텍스처 해제를 프레임 해제 큐로 넘긴다(그 다음 프레임 펜스 뒤에 놓인다).
+        _transferReleaseQueue.tickCompleted( _transferSerials.getWatermark() );
+        // 장부가 단독 구간을 돌려받았으면 그 일회성 버퍼를 지운다(GL 과 같은 규칙, 호스트 가시 메모리를 링 하나 크기 넘게 쥐고 있지 않는다).
+        destroyIdleSoloBuffer( _uploadRing );
+        destroyIdleSoloBuffer( _readbackRing );
+    }
+
+    RHIBufferHandle VulkanRHIDevice::bindlessSourceBufferAt( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return index < _listBindlessSourceBuffer.size() ? _listBindlessSourceBuffer[index] : RHIBufferHandle{ 0 };
+    }
+
+    bool VulkanRHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        if ( space == RHIBindlessIndexSpace::Buffer )
+            return index < _listBindlessSourceBuffer.size() && _listBindlessSourceBuffer[index] != 0;
+        // 1 = 사용 중. 2(해제 대기)는 원소가 아직 옛 이미지를 가리키지만 그 이미지는 같은 펜스 뒤에 파괴된다.
+        return index < kBindlessTextureCount && index < _listTextureUsed.size() && _listTextureUsed[index] == 1;
+    }
+
+    RHIBufferHandle VulkanRHIDevice::uavSourceBufferAt( RHIDescriptorIndex index ) const
+    {
+        ScopedSharedLock<shared_mutex> lock{ _bindlessMutex };
+        return index < _listUAVSourceBuffer.size() ? _listUAVSourceBuffer[index] : RHIBufferHandle{ 0 };
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 세트 레이아웃 · 파이프라인 레이아웃 · 풀 · 세트 생성의 순서가 곧 의미라 나누지 않는다.
+    bool VulkanRHIDevice::createDescriptorResources()
+    {
+        if ( _device == VK_NULL_HANDLE )
+            return false;
+
+        namespace vk                       = shaderslot::vk;
+        namespace bindless                 = shaderslot::bindless;
+        const VkShaderStageFlags allStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+
+        // 1) 정적 샘플러 세트 s0..s7 (binding_slots.hlsli 4). set 1 binding SW_VK_SAMPLER_BINDING 의 immutable sampler 배열(0..6)
+        //    + binding SW_VK_SHADOW_SAMPLER_BINDING 의 비교 샘플러(7). DX12 의 정적 샘플러와 같은 표.
+        {
+            struct SamplerSpec
+            {
+                VkFilter             _filter;
+                VkSamplerAddressMode _address;
+                VkBool32             _bCompare;
+                float32              _anisotropy;
+            };
+            const SamplerSpec arrSpec[shaderslot::kStaticSamplerCount] = {
+                { VK_FILTER_LINEAR,          VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE, 1.0f}, // LINEAR_WRAP
+                { VK_FILTER_LINEAR,   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_FALSE, 1.0f}, // LINEAR_CLAMP
+                {VK_FILTER_NEAREST,          VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE, 1.0f}, // POINT_WRAP
+                {VK_FILTER_NEAREST,   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_FALSE, 1.0f}, // POINT_CLAMP
+                { VK_FILTER_LINEAR, VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, VK_FALSE, 1.0f}, // LINEAR_MIRROR
+                { VK_FILTER_LINEAR,          VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_FALSE, 8.0f}, // ANISO_WRAP
+                {VK_FILTER_NEAREST, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, VK_FALSE, 1.0f}, // POINT_BORDER
+                { VK_FILTER_LINEAR,   VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,  VK_TRUE, 1.0f}, // SHADOW_CMP
+            };
+            for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerCount; ++samplerIndex )
+            {
+                VkSamplerCreateInfo samplerInfo{};
+                samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+                samplerInfo.magFilter    = arrSpec[samplerIndex]._filter;
+                samplerInfo.minFilter    = arrSpec[samplerIndex]._filter;
+                samplerInfo.mipmapMode   = arrSpec[samplerIndex]._filter == VK_FILTER_LINEAR ? VK_SAMPLER_MIPMAP_MODE_LINEAR : VK_SAMPLER_MIPMAP_MODE_NEAREST;
+                samplerInfo.addressModeU = arrSpec[samplerIndex]._address;
+                samplerInfo.addressModeV = arrSpec[samplerIndex]._address;
+                samplerInfo.addressModeW = arrSpec[samplerIndex]._address;
+                // 기능이 꺼져 있으면(samplerAnisotropy 미지원) 이방성만 끈다. 세트 생성 자체가 실패하면 아무것도 못 그린다.
+                const bool bAniso            = arrSpec[samplerIndex]._anisotropy > 1.0f && _bSamplerAnisotropy != 0;
+                samplerInfo.anisotropyEnable = bAniso ? VK_TRUE : VK_FALSE;
+                samplerInfo.maxAnisotropy    = bAniso ? arrSpec[samplerIndex]._anisotropy : 1.0f;
+                samplerInfo.compareEnable    = arrSpec[samplerIndex]._bCompare;
+                samplerInfo.compareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+                samplerInfo.borderColor      = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+                samplerInfo.maxLod           = 1000.0f;
+                if ( vkCreateSampler( _device, &samplerInfo, nullptr, &_arrStaticSampler[samplerIndex] ) != VK_SUCCESS )
+                    return false;
+            }
+        }
+
+        // 2) set 0 = 슬롯 세트. binding 0..15 = b# (UBO), 16..31 = t# (SSBO), 32..47 = u# (SSBO). 모두 partially-bound 라
+        //    드로우마다 실제로 쓰인 슬롯만 쓴다(셰이더가 정적으로 참조하는 슬롯은 반드시 걸려 있어야 한다: b0/b1 은 더미로 채운다).
+        {
+            VkDescriptorSetLayoutBinding arrBinding[vk::kSlotBindingCount]{};
+            VkDescriptorBindingFlags     arrFlags[vk::kSlotBindingCount]{};
+            for ( uint32 bindingIndex = 0; bindingIndex < vk::kSlotBindingCount; ++bindingIndex )
+            {
+                arrBinding[bindingIndex].binding         = bindingIndex;
+                arrBinding[bindingIndex].descriptorType  = ( bindingIndex < vk::kTShift ) ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                arrBinding[bindingIndex].descriptorCount = 1;
+                arrBinding[bindingIndex].stageFlags      = allStages;
+                arrFlags[bindingIndex]                   = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
+            }
+            VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+            bindingFlagsInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+            bindingFlagsInfo.bindingCount  = vk::kSlotBindingCount;
+            bindingFlagsInfo.pBindingFlags = arrFlags;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.pNext        = &bindingFlagsInfo;
+            layoutInfo.bindingCount = vk::kSlotBindingCount;
+            layoutInfo.pBindings    = arrBinding;
+            if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_slotSetLayout ) != VK_SUCCESS )
+            {
+                SW_LOG_ERROR( "Failed to create the slot set layout (descriptor indexing / partially-bound unsupported?)." );
+                return false;
+            }
+        }
+
+        // 3) set 1 = 텍스처 배열(binding 0, update-after-bind) + immutable sampler 배열(binding 1) + 비교 샘플러(binding 2)
+        //    + RW 텍스처 배열(binding 3, STORAGE_IMAGE, update-after-bind).
+        {
+            constexpr uint32             kBindingCount = 4;
+            VkDescriptorSetLayoutBinding arrBinding[kBindingCount]{};
+            arrBinding[0].binding            = bindless::kVkTextureBinding;
+            arrBinding[0].descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            arrBinding[0].descriptorCount    = kBindlessTextureCount;
+            arrBinding[0].stageFlags         = allStages;
+            arrBinding[1].binding            = bindless::kVkSamplerBinding;
+            arrBinding[1].descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
+            arrBinding[1].descriptorCount    = shaderslot::kStaticSamplerArrayCount;
+            arrBinding[1].stageFlags         = allStages;
+            arrBinding[1].pImmutableSamplers = _arrStaticSampler;
+            arrBinding[2].binding            = bindless::kVkShadowSamplerBinding;
+            arrBinding[2].descriptorType     = VK_DESCRIPTOR_TYPE_SAMPLER;
+            arrBinding[2].descriptorCount    = 1;
+            arrBinding[2].stageFlags         = allStages;
+            arrBinding[2].pImmutableSamplers = &_arrStaticSampler[shaderslot::kSamplerShadowCmp];
+            arrBinding[3].binding            = bindless::kVkRwTextureBinding;
+            arrBinding[3].descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            arrBinding[3].descriptorCount    = kBindlessStorageImageCount;
+            arrBinding[3].stageFlags         = VK_SHADER_STAGE_COMPUTE_BIT;
+
+            VkDescriptorBindingFlags arrFlags[kBindingCount] = {
+                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, 0, 0,
+                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
+            VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo{};
+            bindingFlagsInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+            bindingFlagsInfo.bindingCount  = kBindingCount;
+            bindingFlagsInfo.pBindingFlags = arrFlags;
+
+            VkDescriptorSetLayoutCreateInfo layoutInfo{};
+            layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layoutInfo.pNext        = &bindingFlagsInfo;
+            layoutInfo.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+            layoutInfo.bindingCount = kBindingCount;
+            layoutInfo.pBindings    = arrBinding;
+            if ( vkCreateDescriptorSetLayout( _device, &layoutInfo, nullptr, &_textureSetLayout ) != VK_SUCCESS )
+            {
+                SW_LOG_ERROR( "Failed to create the texture array set layout (update-after-bind unsupported?)." );
+                return false;
+            }
+        }
+
+        // 4) 파이프라인 레이아웃: set 0 슬롯, set 1 텍스처 배열, 푸시 상수(setComputeRootConstants, 16 dword).
+        {
+            VkPushConstantRange pushRange{};
+            pushRange.stageFlags = allStages;
+            pushRange.offset     = 0;
+            pushRange.size       = shaderslot::kRootConstantDwords * sizeof( uint32 );
+
+            VkDescriptorSetLayout arrSetLayout[2] = { _slotSetLayout, _textureSetLayout };
+
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+            pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            pipelineLayoutInfo.setLayoutCount         = 2;
+            pipelineLayoutInfo.pSetLayouts            = arrSetLayout;
+            pipelineLayoutInfo.pushConstantRangeCount = 1;
+            pipelineLayoutInfo.pPushConstantRanges    = &pushRange;
+            if ( vkCreatePipelineLayout( _device, &pipelineLayoutInfo, nullptr, &_pipelineLayout ) != VK_SUCCESS )
+                return false;
+        }
+
+        // 5) 풀: 텍스처 세트용 하나(update-after-bind), 슬롯 세트용은 프레임 링마다 하나(beginFrame 이 통째로 리셋).
+        {
+            VkDescriptorPoolSize arrPoolSize[] = {
+                {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,           kBindlessTextureCount},
+                {               VK_DESCRIPTOR_TYPE_SAMPLER, shaderslot::kStaticSamplerCount},
+                {         VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,      kBindlessStorageImageCount},
+            };
+            VkDescriptorPoolCreateInfo poolInfo{};
+            poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+            poolInfo.maxSets       = 1;
+            poolInfo.poolSizeCount = static_cast<uint32>( sizeof( arrPoolSize ) / sizeof( arrPoolSize[0] ) );
+            poolInfo.pPoolSizes    = arrPoolSize;
+            if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
+                return false;
+            // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다.
+            getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _descriptorPool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
+        }
+        for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
+        {
+            const VkDescriptorPool pool = createSlotPool();
+            if ( pool == VK_NULL_HANDLE )
+                return false;
+            poolSet._listPool.push_back( pool );
+            poolSet._cursor = 0;
+        }
+
+        // 6) 셰이더가 정적으로 참조하지만 엔진이 안 건 b# 슬롯(픽스처의 MaterialCB 등)이 가리킬 0 채운 더미 UBO.
+        {
+            VkBufferCreateInfo bufferInfo{};
+            bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            bufferInfo.size        = kDummyUboSize;
+            bufferInfo.usage       = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+            if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_dummyUBO ) != VK_SUCCESS )
+                return false;
+            VkMemoryRequirements memoryRequirements{};
+            vkGetBufferMemoryRequirements( _device, _dummyUBO, &memoryRequirements );
+            uint32 memoryTypeIndex{ 0 };
+            if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
+                return false;
+            VkMemoryAllocateInfo allocMem{};
+            allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+            allocMem.allocationSize  = memoryRequirements.size;
+            allocMem.memoryTypeIndex = memoryTypeIndex;
+            if ( vkAllocateMemory( _device, &allocMem, nullptr, &_dummyUBOMemory ) != VK_SUCCESS )
+                return false;
+            if ( isVkSuccess( vkBindBufferMemory( _device, _dummyUBO, _dummyUBOMemory, 0 ), "vkBindBufferMemory (dummy UBO)" ) == false )
+                return false;
+            // 빈 슬롯이 읽는 값이다 — 0 으로 채우지 못하면 쓰레기를 읽으므로 초기화를 실패시킨다.
+            void* pMapped{ nullptr };
+            if ( isVkSuccess( vkMapMemory( _device, _dummyUBOMemory, 0, kDummyUboSize, 0, &pMapped ), "vkMapMemory (dummy UBO)" ) == false || pMapped == nullptr )
+                return false;
+            Memory::set( pMapped, 0, static_cast<size_t>( kDummyUboSize ) );
+            vkUnmapMemory( _device, _dummyUBOMemory );
+        }
+
+        return true;
+    }
+
+    bool VulkanRHIDevice::ensureTextureSet()
+    {
+        if ( _textureSet != VK_NULL_HANDLE )
+            return true;
+        const bool bDescriptorObjectsMissing = _device == VK_NULL_HANDLE || _descriptorPool == VK_NULL_HANDLE || _defaultSampler == VK_NULL_HANDLE || _textureSetLayout == VK_NULL_HANDLE;
+        if ( bDescriptorObjectsMissing )
+            return false;
+
+        // 1x1 더미 이미지. 안 쓰는 텍스처 원소가 유효하도록 한다.
+        VkImageCreateInfo imageInfo{};
+        imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+        imageInfo.format        = VK_FORMAT_R8G8B8A8_UNORM;
+        imageInfo.extent        = { 1, 1, 1 };
+        imageInfo.mipLevels     = 1;
+        imageInfo.arrayLayers   = 1;
+        imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage         = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        if ( vkCreateImage( _device, &imageInfo, nullptr, &_bindlessDummyImage ) != VK_SUCCESS )
+            return false;
+
+        VkMemoryRequirements memoryRequirements{};
+        vkGetImageMemoryRequirements( _device, _bindlessDummyImage, &memoryRequirements );
+        uint32 memoryTypeIndex{ 0 };
+        if ( findMemoryType( memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, memoryTypeIndex ) == false )
+        {
+            SW_LOG_ERROR( "Failed to find a device local memory type for the bindless dummy image." );
+            return false;
+        }
+
+        VkMemoryAllocateInfo allocMem{};
+        allocMem.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocMem.allocationSize  = memoryRequirements.size;
+        allocMem.memoryTypeIndex = memoryTypeIndex;
+        if ( vkAllocateMemory( _device, &allocMem, nullptr, &_bindlessDummyMemory ) != VK_SUCCESS )
+            return false;
+        if ( isVkSuccess( vkBindImageMemory( _device, _bindlessDummyImage, _bindlessDummyMemory, 0 ), "vkBindImageMemory (bindless dummy image)" ) == false )
+            return false;
+
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType                       = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image                       = _bindlessDummyImage;
+        viewInfo.viewType                    = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format                      = VK_FORMAT_R8G8B8A8_UNORM;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.layerCount = 1;
+        if ( vkCreateImageView( _device, &viewInfo, nullptr, &_bindlessDummyView ) != VK_SUCCESS )
+            return false;
+
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool     = _descriptorPool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts        = &_textureSetLayout;
+        if ( vkAllocateDescriptorSets( _device, &allocInfo, &_textureSet ) != VK_SUCCESS )
+        {
+            SW_LOG_ERROR( "Failed to allocate the texture array set." );
+            return false;
+        }
+
+        vector<VkDescriptorImageInfo> listImage( kBindlessTextureCount );
+        for ( VkDescriptorImageInfo& info : listImage )
+        {
+            info.sampler     = _defaultSampler;
+            info.imageView   = _bindlessDummyView;
+            info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+        VkWriteDescriptorSet write{};
+        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet          = _textureSet;
+        write.dstBinding      = shaderslot::bindless::kVkTextureBinding;
+        write.dstArrayElement = 0;
+        write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write.descriptorCount = kBindlessTextureCount;
+        write.pImageInfo      = listImage.data();
+        vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+        SW_LOG_INFO( "Bindless texture array ready (%# slots).", kBindlessTextureCount );
+        return true;
+    }
+
+    void VulkanRHIDevice::writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout )
+    {
+        const bool bInvalidTextureSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessTextureCount;
+        if ( bInvalidTextureSlotWrite )
+            return;
+
+        // 레이아웃은 샘플 시점에 이미지가 실제로 있을 레이아웃과 같아야 한다. 컬러는 SHADER_READ_ONLY,
+        // 깊이는 prepareTextureForShaderRead 가 옮기는 DEPTH_STENCIL_READ_ONLY (부르는 쪽이 고른다).
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.sampler     = _defaultSampler;
+        imageInfo.imageView   = view;
+        imageInfo.imageLayout = static_cast<VkImageLayout>( imageLayout );
+
+        VkWriteDescriptorSet write{};
+        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet          = _textureSet;
+        write.dstBinding      = shaderslot::bindless::kVkTextureBinding;
+        write.dstArrayElement = index;
+        write.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write.descriptorCount = 1;
+        write.pImageInfo      = &imageInfo;
+        vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+    }
+
+    void VulkanRHIDevice::writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view )
+    {
+        const bool bInvalidStorageImageSlotWrite = _textureSet == VK_NULL_HANDLE || view == VK_NULL_HANDLE || index >= kBindlessStorageImageCount;
+        if ( bInvalidStorageImageSlotWrite )
+            return;
+
+        VkDescriptorImageInfo imageInfo{};
+        imageInfo.imageView   = view;
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; // 스토리지 이미지는 GENERAL. prepareTextureForUnorderedAccess 가 맞춘다
+
+        VkWriteDescriptorSet write{};
+        write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet          = _textureSet;
+        write.dstBinding      = shaderslot::bindless::kVkRwTextureBinding;
+        write.dstArrayElement = index;
+        write.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        write.descriptorCount = 1;
+        write.pImageInfo      = &imageInfo;
+        vkUpdateDescriptorSets( _device, 1, &write, 0, nullptr );
+    }
+
+    VkDescriptorPool VulkanRHIDevice::createSlotPool()
+    {
+        // 세트 하나가 b/t/u 슬롯을 모두 걸 수 있게 잡는다. 종류별로 덜 잡으면 컴퓨트 패스가 많을 때 maxSets 전에 바닥난다.
+        VkDescriptorPoolSize arrPoolSize[] = {
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                             kSlotSetsPerPool * shaderslot::kConstantBufferSlotCount},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSlotSetsPerPool * ( shaderslot::kSRVSlotCount + shaderslot::kComputeUAVSlotCount )},
+        };
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.maxSets       = kSlotSetsPerPool;
+        poolInfo.poolSizeCount = static_cast<uint32>( sizeof( arrPoolSize ) / sizeof( arrPoolSize[0] ) );
+        poolInfo.pPoolSizes    = arrPoolSize;
+        VkDescriptorPool pool{ VK_NULL_HANDLE };
+        if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &pool ) != VK_SUCCESS )
+            return VK_NULL_HANDLE;
+        // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다. 내리는 자리는 destroyDescriptorPoolSet 하나다.
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( pool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
+        return pool;
+    }
+
+    VkDescriptorSet VulkanRHIDevice::allocateSlotSet( VulkanDescriptorPoolSet& poolSet )
+    {
+        // 락이 없다. 풀 묶음은 커맨드 버퍼 하나의 것이고, 그 버퍼는 한 스레드만 기록한다(VkDescriptorPool 은 외부 동기화 대상).
+        if ( _slotSetLayout == VK_NULL_HANDLE )
+            return VK_NULL_HANDLE;
+
+        vector<VkDescriptorPool>& listPool = poolSet._listPool;
+        uint32&                   cursor   = poolSet._cursor;
+        while ( true )
+        {
+            if ( cursor >= listPool.size() )
+            {
+                // 언리얼처럼 풀이 차면 하나 더 만든다 — 상한을 두지 않는다. 묶음은 커맨드 버퍼 하나가 한 번 기록하는 동안 쓴 세트 수만큼 자라고
+                // (바인딩이 바뀌는 드로우 · 디스패치마다 하나), 만든 풀은 묶음이 사는 동안 유지된다(리셋만 한다). 상한을 두면 넘친 드로우가
+                // 앞 세트로 조용히 그려진다. 풀을 더 만들지 못하는 것은 장치 메모리 부족이라 그릴 길이 없어 멈춘다.
+                const VkDescriptorPool pool = createSlotPool();
+                if ( pool == VK_NULL_HANDLE )
+                    SW_FATAL( "Could not create another slot set descriptor pool (%# pools x %# sets in use) - out of device memory", static_cast<uint32>( listPool.size() ), kSlotSetsPerPool );
+                listPool.push_back( pool );
+            }
+
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool     = listPool[cursor];
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts        = &_slotSetLayout;
+            VkDescriptorSet set{ VK_NULL_HANDLE };
+            const VkResult  result = vkAllocateDescriptorSets( _device, &allocInfo, &set );
+            if ( result == VK_SUCCESS )
+                return set;
+            // 풀이 찬 것(다음 풀로)만 정상 응답이다. 그 밖의 실패(장치 메모리 부족)는 세트 없이 그리면 앞 세트로 그려지므로 멈춘다.
+            if ( result != VK_ERROR_OUT_OF_POOL_MEMORY && result != VK_ERROR_FRAGMENTED_POOL )
+                requireVk( result, "vkAllocateDescriptorSets (slot set)" );
+            ++cursor; // 이 풀은 찼다. 다음 풀로
+        }
+    }
+
+    void VulkanRHIDevice::resetDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet )
+    {
+        if ( _device == VK_NULL_HANDLE )
+            return;
+        for ( VkDescriptorPool pool : poolSet._listPool )
+        {
+            if ( pool != VK_NULL_HANDLE )
+                requireVk( vkResetDescriptorPool( _device, pool, 0 ), "vkResetDescriptorPool" ); // 사양상 늘 VK_SUCCESS — 어기면 드라이버 결함이라 멈춘다
+        }
+        poolSet._cursor = 0;
+    }
+
+    void VulkanRHIDevice::destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet )
+    {
+        if ( _device != VK_NULL_HANDLE )
+        {
+            for ( VkDescriptorPool pool : poolSet._listPool )
+            {
+                if ( pool == VK_NULL_HANDLE )
+                    continue;
+                getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( pool ) );
+                vkDestroyDescriptorPool( _device, pool, nullptr );
+            }
+        }
+        poolSet._listPool.clear();
+        poolSet._cursor = 0;
+    }
+
+    void VulkanRHIDevice::transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record,
+                                                   uint32 targetLayout, uint32 aspect )
+    {
+        if ( cmd == VK_NULL_HANDLE || record._image == VK_NULL_HANDLE )
+            return;
+
+        ScopedLock<mutex> lock{ _imageLayoutMutex };
+        if ( record._layout == targetLayout )
+            return;
+
+        reportBarrierDuringRecording( "transitionTextureLayout" );
+
+        transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
+        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
+        if ( _bFrameStarted == SW_FALSE )
+        {
+            bool bKnown{ false };
+            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+            {
+                bKnown = bKnown || ( entry._cmd == cmd && entry._image == record._image );
+            }
+            if ( bKnown == false )
+                _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, record._image, record._layout } );
+        }
+        record._layout = targetLayout;
+    }
+
+    void VulkanRHIDevice::restoreDroppedFrameLayouts()
+    {
+        ScopedLock<mutex> lock{ _imageLayoutMutex };
+        if ( _listDroppedFrameLayout.empty() )
+            return;
+        // 그 사이 지워진 텍스처는 찾지 못하고 넘어간다.
+        _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
+        {
+            // 같은 이미지를 여러 리스트가 바꿨으면 가장 먼저 기록된 옛 값이 원래 값이다.
+            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+            {
+                if ( entry._image == record._image )
+                {
+                    record._layout = entry._oldLayout;
+                    break;
+                }
+            }
+        } );
+        _listDroppedFrameLayout.clear();
+    }
+
+    bool VulkanRHIDevice::transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayoutU32, uint32 newLayoutU32, uint32 aspectU32 )
+    {
+        const VkImageLayout      oldLayout           = static_cast<VkImageLayout>( oldLayoutU32 );
+        const VkImageLayout      newLayout           = static_cast<VkImageLayout>( newLayoutU32 );
+        const VkImageAspectFlags aspect              = aspectU32;
+        const bool               bNoLayoutTransition = cmd == VK_NULL_HANDLE || image == VK_NULL_HANDLE || oldLayout == newLayout;
+        if ( bNoLayoutTransition )
+            return true;
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType                       = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout                   = oldLayout;
+        barrier.newLayout                   = newLayout;
+        barrier.srcQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image                       = image;
+        barrier.subresourceRange.aspectMask = aspect;
+        // 레이아웃은 텍스처 단위로 추적하므로 모든 밉 · 면을 함께 옮긴다(면 하나만 옮기면 나머지 면이 옛 레이아웃으로 남는다).
+        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+        if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+        {
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            srcStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL )
+        {
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL )
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            srcStage              = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL )
+        {
+            // 그림자맵: 깊이 쓰기(late fragment tests) 가 끝난 뒤 프래그먼트 셰이더가 샘플한다.
+            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            srcStage              = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            dstStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+        else if ( oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL )
+        {
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStage              = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage              = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        }
+        else
+        {
+            barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            srcStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            dstStage              = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        }
+
+        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+        return true;
+    }
+
+    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const
+    {
+        return VulkanRHIRenderPassCache::createFromSpec( _device, spec );
+    }
+
+    bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
+    {
+        if ( _offscreenRenderPass != VK_NULL_HANDLE )
+            return true;
+        if ( _device == nullptr )
+            return false;
+
+        // 공용 오프스크린 렌더패스는 계약 포맷일 때만 재사용한다. 다른 포맷은 전용 RP 를 만든다.
+        const uint32 sharedFormat = static_cast<uint32>( VulkanRHIUtil::toVulkanTextureFormat( constant::kOffscreenColorFormat ) );
+        if ( vkFormat != 0 && vkFormat != sharedFormat )
+            return false;
+
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        spec.addColor( sharedFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        _offscreenRenderPass = createRenderPassFromSpec( spec );
+        return _offscreenRenderPass != VK_NULL_HANDLE;
+    }
+
+    bool VulkanRHIDevice::createOffscreenFramebuffer( VulkanTextureRecord& record )
+    {
+        if ( record._imageView == VK_NULL_HANDLE || record._bRenderTarget == SW_FALSE )
+            return false;
+
+        const bool bUseSharedPass = ( record._format == static_cast<uint32>( VK_FORMAT_R8G8B8A8_UNORM ) );
+        if ( bUseSharedPass )
+        {
+            if ( ensureOffscreenRenderPass( record._format ) == false )
+                return false;
+            record._renderPass = _offscreenRenderPass;
+        }
+        else
+        {
+            // 포맷별 전용 RP. beginRenderPass 가 전이를 먼저 걸어 두므로 COLOR_ATTACHMENT_OPTIMAL 에서 시작한다.
+            VulkanRHIRenderPassCache::RenderPassSpec spec{};
+            spec.addColor( record._format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+            record._renderPass = createRenderPassFromSpec( spec );
+            if ( record._renderPass == VK_NULL_HANDLE )
+                return false;
+        }
+
+        // 면마다 프레임버퍼 하나(면 뷰가 첨부). 면이 하나면 `_framebuffer` 하나다.
+        const uint32 sliceCount = record._listSliceView.empty() ? 1u : static_cast<uint32>( record._listSliceView.size() );
+        for ( uint32 slice = 0; slice < sliceCount; ++slice )
+        {
+            const VkImageView       attachment = record.findAttachmentView( slice );
+            VkFramebufferCreateInfo fbInfo{};
+            fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            fbInfo.renderPass      = record._renderPass;
+            fbInfo.attachmentCount = 1;
+            fbInfo.pAttachments    = &attachment;
+            fbInfo.width           = record._width;
+            fbInfo.height          = record._height;
+            fbInfo.layers          = 1;
+            VkFramebuffer framebuffer{ VK_NULL_HANDLE };
+            if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &framebuffer ) != VK_SUCCESS )
+            {
+                destroyOffscreenFramebuffer( record );
+                return false;
+            }
+            if ( slice == 0 )
+                record._framebuffer = framebuffer;
+            if ( record._listSliceView.empty() == false )
+                record._listSliceFramebuffer.push_back( framebuffer );
+        }
+        return true;
+    }
+
+    void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
+    {
+        // 즉시 파괴하면 안 된다. 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
+        // 있다(게임뷰 리사이즈가 대표적인 경로다). 즉시 파괴하면 검증 레이어가 in-use 위반을 낸다.
+        // 면별 프레임버퍼의 0 번은 `_framebuffer` 와 같다 — 한 번만 놓는다.
+        for ( size_t slice = 1; slice < record._listSliceFramebuffer.size(); ++slice )
+        {
+            enqueueFramebufferRelease( record._listSliceFramebuffer[slice], VK_NULL_HANDLE );
+        }
+        record._listSliceFramebuffer.clear();
+        enqueueFramebufferRelease( record._framebuffer,
+                                   ( record._renderPass != _offscreenRenderPass ) ? record._renderPass : VK_NULL_HANDLE );
+        record._framebuffer = VK_NULL_HANDLE;
+        record._renderPass  = VK_NULL_HANDLE;
+    }
+
+    void VulkanRHIDevice::enqueueFramebufferRelease( VkFramebuffer framebuffer, VkRenderPass ownedRenderPass )
+    {
+        if ( _device == nullptr || ( framebuffer == VK_NULL_HANDLE && ownedRenderPass == VK_NULL_HANDLE ) )
+            return;
+
+        VkDevice dev = _device;
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
+        {
+            if ( framebuffer != VK_NULL_HANDLE )
+                vkDestroyFramebuffer( dev, framebuffer, nullptr );
+            if ( ownedRenderPass != VK_NULL_HANDLE )
+                vkDestroyRenderPass( dev, ownedRenderPass, nullptr );
+        } ),
+                                         _frameFenceCounter + 1 );
+    }
+
+    VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
+    {
+        VulkanRHIRenderPassCache::PipelineKey key{};
+        const bool                            bDepthOnly = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+        key._colorCount                                  = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
+        if ( key._colorCount > kMaxColorAttachments )
+            key._colorCount = kMaxColorAttachments;
+        for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
+        {
+            VkFormat colorFmt = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[colorIndex] );
+            if ( colorFmt == VK_FORMAT_UNDEFINED )
+                colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
+            key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );
+        }
+        if ( desc._bEnableDepthTest != 0 )
+        {
+            // FrameRenderer 는 RHI D24 를 요청하지만 GPU 가 지원하지 않을 수 있다 → 디바이스가 고른 포맷을 쓴다.
+            VkFormat   depthFmt              = VulkanRHIUtil::toVulkanTextureFormat( desc._depthStencilFormat );
+            const bool bUseDeviceDepthFormat = desc._depthStencilFormat == sw::RHIFormat::D24_UNORM_S8_UINT ||
+                                               depthFmt == VK_FORMAT_D24_UNORM_S8_UINT || depthFmt == VK_FORMAT_UNDEFINED;
+            if ( bUseDeviceDepthFormat )
+                depthFmt = static_cast<VkFormat>( _depthFormat );
+            key._depthFormat = static_cast<uint32>( depthFmt );
+        }
+
+        // PSO 호환용. 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷 · 개수 · 샘플 수만 같으면 된다).
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
+        {
+            spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        }
+        if ( key._depthFormat != 0 )
+            spec.setDepth( key._depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+
+        return _renderPassCache.ensurePipelineRenderPass( _device, key, spec );
+    }
+
+    bool VulkanRHIDevice::ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key,
+                                                      VulkanRHIRenderPassCache::CompositeRecord&    outRecord )
+    {
+        // 첨부 뷰와 서술은 여기서 풀고, 조회 · 생성은 캐시가 한 임계구역에서 한다.
+        VkImageView arrFbAttachment[kMaxColorAttachments + 1]{};
+        uint32      width{ 0 };
+        uint32      height{ 0 };
+        // beginRenderPass 가 첨부를 미리 COLOR_ATTACHMENT / DEPTH_STENCIL_ATTACHMENT 로 전이해 두므로 그 레이아웃에서 시작·종료한다.
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
+        {
+            VulkanTextureRecord* pTex                    = resolveTexture( key._arrColor[colorIndex] );
+            const bool           bInvalidColorAttachment = pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex] ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE;
+            if ( bInvalidColorAttachment )
+                return false;
+            arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
+            width                       = pTex->_width;
+            height                      = pTex->_height;
+            spec.addColor( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        }
+
+        uint32 attachCount = key._colorCount;
+        if ( key._depth != 0 )
+        {
+            VulkanTextureRecord* pTex                    = resolveTexture( key._depth );
+            const bool           bInvalidDepthAttachment = pTex == nullptr || pTex->findAttachmentView( key._depthSlice ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE;
+            if ( bInvalidDepthAttachment )
+                return false;
+            arrFbAttachment[attachCount] = pTex->findAttachmentView( key._depthSlice );
+            ++attachCount;
+            if ( width == 0 )
+            {
+                width  = pTex->_width;
+                height = pTex->_height;
+            }
+            spec.setDepth( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
+                           VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+        }
+        if ( attachCount == 0 )
+            return false;
+
+        return _renderPassCache.ensureComposite( _device, key, spec, arrFbAttachment, attachCount, width, height, outRecord );
+    }
+
+    void VulkanRHIDevice::destroyCompositeFramebuffersUsing( RHITextureHandle texture )
+    {
+        if ( texture == 0 || _device == nullptr )
+            return;
+        vector<VulkanRHIRenderPassCache::CompositeRecord> listDetached;
+        _renderPassCache.detachCompositesUsing( texture, listDetached );
+        for ( const VulkanRHIRenderPassCache::CompositeRecord& record : listDetached )
+        {
+            // 실행 중인 커맨드버퍼가 아직 참조할 수 있으므로 펜스 통과 후에 파괴한다.
+            enqueueFramebufferRelease( record._framebuffer, record._renderPass );
+        }
     }
 } // namespace sw

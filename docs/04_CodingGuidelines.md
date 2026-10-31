@@ -108,12 +108,12 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 ## 5. 헬퍼 · 이름공간 — [규칙](agents/Helpers.md#helpers-util-vs-internal)
 
 ```cpp
-// VulkanRHIResourceFactoryPipeline.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)
+// D3D11RHIDevice.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)
 namespace sw
 {
     namespace                                   // 익명 이름공간은 파일에 하나, 스코프 맨 위
     {
-        struct VulkanRHIResourceFactoryPipelineInternal
+        struct D3D11RHIDeviceInternal
         {
             static constexpr uint32 kMaxStage = 5;   // 맨 상수를 익명 이름공간에 두면 다른 .cpp 와 겹칠 수 있다
             static VkShaderStageFlagBits toStage( RHIShaderStage stage );

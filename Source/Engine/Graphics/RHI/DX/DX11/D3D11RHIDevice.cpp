@@ -614,7 +614,7 @@ namespace sw
 
         {
             // 깊이 상태는 PSO 마다 만든다(createPipelineState). 장치 전역 깊이 상태는 두지 않는다 — PSO 없는 드로우를 대신 그리는 길이 된다.
-            // 정적 샘플러 세트 s9..s15. DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표다. 비교 샘플러(7)는
+            // 정적 샘플러 세트 s9..s15. DX12 루트 시그니처 정적 샘플러(D3D12RHIDevice.cpp)와 같은 표다. 비교 샘플러(7)는
             // 에뮬 경로가 깊이를 직접 비교하므로 없다.
             struct StaticSamplerSpec
             {
