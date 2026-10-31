@@ -96,12 +96,13 @@ namespace sw
             return false;
         const bool bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );
         const bool bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
-        outRGBABytes.clear();
-        outRGBABytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+        // 크기를 한 번 잡고 포인터로 쓴다 - 픽셀마다 push_back 네 번은 Debug 의 검사 반복자로 1600x900 한 장에 0.25 초였다(편집기 UI 캡처가 장마다 푼다).
+        outRGBABytes.resize( static_cast<size_t>( layout._width ) * layout._height * 4 );
+        uint8* pOut = outRGBABytes.data();
         for ( uint32 row = 0; row < layout._height; ++row )
         {
             const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
-            for ( uint32 column = 0; column < layout._width; ++column )
+            for ( uint32 column = 0; column < layout._width; ++column, pOut += 4 )
             {
                 const uint8* pPixel = pRow + static_cast<size_t>( column ) * bytesPerPixel;
                 if ( bHalf )
@@ -109,16 +110,16 @@ namespace sw
                     const uint16* pHalf = reinterpret_cast<const uint16*>( pPixel );
                     for ( uint32 channel = 0; channel < 3; ++channel )
                     {
-                        outRGBABytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
+                        pOut[channel] = FrameRendererUtil::halfToUnorm8( pHalf[channel] );
                     }
                 }
                 else
                 {
-                    outRGBABytes.push_back( bBgra ? pPixel[2] : pPixel[0] );
-                    outRGBABytes.push_back( pPixel[1] );
-                    outRGBABytes.push_back( bBgra ? pPixel[0] : pPixel[2] );
+                    pOut[0] = bBgra ? pPixel[2] : pPixel[0];
+                    pOut[1] = pPixel[1];
+                    pOut[2] = bBgra ? pPixel[0] : pPixel[2];
                 }
-                outRGBABytes.push_back( 255 );
+                pOut[3] = 255;
             }
         }
         return true;
@@ -132,18 +133,22 @@ namespace sw
             SW_LOG_ERROR( "writeImageFile: format %# cannot be written as an image.", static_cast<uint32>( format ) );
             return false;
         }
+        return writeRGBA8File( rgbaBytes, layout._width, layout._height, outFilePath );
+    }
 
+    bool RenderTargetImageFile::writeRGBA8File( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, string_view outFilePath )
+    {
         bool bWritten = false;
         if ( StringUtil::endsWith( outFilePath, ".png", true ) )
-            bWritten = ImageFileWriter::writePNGRGBA8( outFilePath, rgbaBytes, layout._width, layout._height );
+            bWritten = ImageFileWriter::writePNGRGBA8( outFilePath, rgbaBytes, width, height );
         else
-            bWritten = writePpm( outFilePath, rgbaBytes, layout._width, layout._height );
+            bWritten = writePpm( outFilePath, rgbaBytes, width, height );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "writeImageFile: could not write %#.", string( outFilePath ).c_str() );
             return false;
         }
-        SW_LOG_INFO( "Screenshot: %#×%# -> %#", layout._width, layout._height, string( outFilePath ).c_str() );
+        SW_LOG_INFO( "Screenshot: %#×%# -> %#", width, height, string( outFilePath ).c_str() );
         return true;
     }
 } // namespace sw

@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
+#include "Engine/Compression/ZlibCompressionCodec.h"
 
 namespace sw
 {
@@ -20,8 +21,8 @@ namespace sw
             static constexpr uint32 kDDSCapsTexture     = 0x1000u;
             static constexpr uint32 kDxgiR8G8B8A8Unorm  = 28;
             static constexpr uint32 kDimensionTexture2D = 3;
-            /** @brief zlib "저장" 블록 하나의 최대 길이입니다(16 비트 길이 칸). */
-            static constexpr uint32 kStoredBlockMax = 65535;
+            /** @brief PNG 의 deflate 레벨입니다 - 캡처는 자주 쓰고 크기보다 시간이 중요하다(zlib `Z_BEST_SPEED`). */
+            static constexpr int32 kPNGDeflateLevel = 1;
 
             static void appendUint32Be( vector<uint8>& inoutBytes, uint32 value )
             {
@@ -31,19 +32,14 @@ namespace sw
                 }
             }
 
-            /** @brief PNG 청크 하나(길이 · 종류 · 내용 · CRC)를 붙입니다. CRC 는 종류 + 내용에 겁니다. */
+            /** @brief PNG 청크 하나(길이 · 종류 · 내용 · CRC)를 붙입니다. CRC 는 종류 + 내용에 걸고, 붙인 자리에서 바로 센다(사본을 만들지 않는다). */
             static void appendChunk( vector<uint8>& inoutBytes, const utf8* pType, const vector<uint8>& dataBytes )
             {
                 appendUint32Be( inoutBytes, static_cast<uint32>( dataBytes.size() ) );
-                vector<uint8> typeAndDataBytes;
-                typeAndDataBytes.reserve( dataBytes.size() + 4 );
-                for ( uint32 index = 0; index < 4; ++index )
-                {
-                    typeAndDataBytes.push_back( static_cast<uint8>( pType[index] ) );
-                }
-                typeAndDataBytes.insert( typeAndDataBytes.end(), dataBytes.begin(), dataBytes.end() );
-                inoutBytes.insert( inoutBytes.end(), typeAndDataBytes.begin(), typeAndDataBytes.end() );
-                appendUint32Be( inoutBytes, StringUtil::computeCRC32( typeAndDataBytes.data(), typeAndDataBytes.size() ) );
+                const size_t typeOffset = inoutBytes.size();
+                inoutBytes.insert( inoutBytes.end(), pType, pType + 4 );
+                inoutBytes.insert( inoutBytes.end(), dataBytes.begin(), dataBytes.end() );
+                appendUint32Be( inoutBytes, StringUtil::computeCRC32( inoutBytes.data() + typeOffset, inoutBytes.size() - typeOffset ) );
             }
 
             static bool isSizeValid( const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
@@ -131,32 +127,17 @@ namespace sw
             rawBytes.insert( rawBytes.end(), pRow, pRow + rowBytes );
         }
 
-        // zlib: 머리 0x78 0x01, 저장 블록들, Adler-32.
-        vector<uint8> zlibBytes;
-        zlibBytes.reserve( rawBytes.size() + rawBytes.size() / Internal::kStoredBlockMax * 5 + 16 );
-        zlibBytes.push_back( 0x78 );
-        zlibBytes.push_back( 0x01 );
-        size_t offset = 0;
-        do
+        // IDAT 는 zlib 스트림(머리 · deflate · Adler-32)이다 - 엔진의 zlib 코덱을 속도 우선 레벨로 쓴다. 예전의 압축 없는 저장 블록은 1600x900 캡처가 5.7 MB 였고
+        // 바이트마다 Adler 를 세느라 Debug 에서 장마다 1.4 초가 들어 편집기 UI 캡처 시나리오 시간의 대부분이었다.
+        ZlibCompressionCodec codec;
+        vector<uint8>        zlibBytes( codec.compressBound( rawBytes.size() ) );
+        size_t               compressedSize{ 0 };
+        if ( codec.compress( rawBytes.data(), rawBytes.size(), zlibBytes.data(), zlibBytes.size(), compressedSize, Internal::kPNGDeflateLevel ) == false )
         {
-            const uint32 blockSize = static_cast<uint32>( rawBytes.size() - offset < Internal::kStoredBlockMax ? rawBytes.size() - offset : Internal::kStoredBlockMax );
-            const bool   bFinal    = offset + blockSize >= rawBytes.size();
-            zlibBytes.push_back( bFinal ? 1 : 0 );
-            zlibBytes.push_back( static_cast<uint8>( blockSize & 0xFFu ) );
-            zlibBytes.push_back( static_cast<uint8>( ( blockSize >> 8 ) & 0xFFu ) );
-            zlibBytes.push_back( static_cast<uint8>( ~blockSize & 0xFFu ) );
-            zlibBytes.push_back( static_cast<uint8>( ( ~blockSize >> 8 ) & 0xFFu ) );
-            zlibBytes.insert( zlibBytes.end(), rawBytes.begin() + static_cast<ptrdiff_t>( offset ), rawBytes.begin() + static_cast<ptrdiff_t>( offset + blockSize ) );
-            offset += blockSize;
-        } while ( offset < rawBytes.size() );
-        uint32 adlerA = 1;
-        uint32 adlerB = 0;
-        for ( const uint8 value : rawBytes )
-        {
-            adlerA = ( adlerA + value ) % 65521u;
-            adlerB = ( adlerB + adlerA ) % 65521u;
+            outBytes.clear(); // 코덱이 까닭을 남긴다 - 빈 결과는 쓰는 쪽이 실패로 받는다
+            return;
         }
-        Internal::appendUint32Be( zlibBytes, ( adlerB << 16 ) | adlerA );
+        zlibBytes.resize( compressedSize );
         Internal::appendChunk( outBytes, "IDAT", zlibBytes );
         Internal::appendChunk( outBytes, "IEND", vector<uint8>{} );
     }

@@ -240,14 +240,8 @@ namespace sw::editor
                 EditorUICaptureInternal::flipRows( rgbaBytes, layout._width, layout._height );
             result._magentaFraction = EditorUICaptureInternal::computeMagentaFraction( rgbaBytes );
 
-            RHITextureMipSpan rgbaLayout{};
-            rgbaLayout._width     = layout._width;
-            rgbaLayout._height    = layout._height;
-            rgbaLayout._rowBytes  = layout._width * 4u;
-            rgbaLayout._sizeBytes = rgbaLayout._rowBytes * layout._height;
-            rgbaLayout._pData     = rgbaBytes.data();
             (void)FileUtil::ensureParentDirectoryExists( result._job._path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
-            result._bWritten = RenderTargetImageFile::writeImageFile( rgbaBytes, rgbaLayout, RHIFormat::R8G8B8A8_UNORM, result._job._path ) ? SW_TRUE : SW_FALSE;
+            result._bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, layout._width, layout._height, result._job._path ) ? SW_TRUE : SW_FALSE;
         }
         if ( result._bWritten == SW_TRUE )
         {
