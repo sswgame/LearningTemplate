@@ -346,7 +346,7 @@ namespace sw
 
     void XMLNode::reportMissing( const utf8* pKind, const utf8* pName ) const
     {
-        SW_LOG_ERROR( "<%#> has no required %# '%#'", getName(), pKind, pName );
+        SW_LOG_ERROR_ID( "Xml.MissingRequired", "<%#> has no required %# '%#'", getName(), pKind, pName );
     }
 
     void XMLNode::reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const
