@@ -4,17 +4,11 @@
 
 #include "Core/Memory/Memory.h"
 
-#if !defined( SW_SHIPPING )
-    #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
-    #include "DevTools/DebugHUD/DebugHUD.h"
-#endif
-
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 
-#include "ModuleManager/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -84,72 +78,13 @@ namespace sw
         if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderThread ) == false )
             return false;
 
-#if !defined( SW_SHIPPING )
-        if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
-        {
-            // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
-            SW_LOG_ERROR( "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
-            return false;
-        }
-
-        if ( _bEnableEditor == SW_TRUE && pLiveReloadManager != nullptr )
-        {
-            BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
-            {
-                SW_MEMORY_SCOPE( Editor );
-                holdReloadSubscription( pLiveReloadManager->setOnBeforeReload(
-                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &EditorModuleManager::onBeforeEditorReload, this ) ) );
-                holdReloadSubscription( pLiveReloadManager->setOnAfterReload(
-                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &EditorModuleManager::onAfterEditorReload, this ) ) );
-                holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
-                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
-                holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
-                    config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
-                // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
-                holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
-                if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
-                {
-                    SW_LOG_ERROR( "Failed to load the Editor Module." );
-                    return false;
-                }
-
-                registerEditorExtensions( pLiveReloadManager );
-
-                if ( pLiveReloadManager->isGraphBroken() )
-                {
-                    SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
-                    return false;
-                }
-            }
-        }
-#endif
-
-        return true;
+        // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManagerDevTools*.cpp` — 배포에서 에디터를 켜 달라면 기동 오류다).
+        return registerEditorModule( pLiveReloadManager );
     }
 
     bool EditorModuleManager::isEditorReloadHeld() const
     {
         return _editorAPI.isReloadHeld != nullptr && _editorAPI.isReloadHeld();
-    }
-
-    void EditorModuleManager::registerEditorExtensions( LiveReloadManager* pLiveReloadManager )
-    {
-#if defined( SW_SHIPPING )
-        (void)pLiveReloadManager; // 배포본에는 에디터 · 확장이 없다
-#else
-        // 확장 모듈은 EditorModule 과 자기 키트에 의존한다. 의존이 바뀌면 리로드 그래프가 확장을 다시 로드한다(키트와 SWGame 의 관계와 같다).
-        // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorContext::syncExtensionRegistrations).
-        for ( const EditorExtensionModule& extension : _listEditorExtension )
-        {
-            if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
-            {
-                // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
-                SW_LOG_ERROR( "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
-                continue;
-            }
-            SW_LOG_INFO( "Editor extension module %# loaded", extension._name.c_str() );
-        }
-#endif
     }
 
     // ======================================================================
@@ -354,14 +289,6 @@ namespace sw
         return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
     }
 
-#if !defined( SW_SHIPPING )
-    void EditorModuleManager::attachEditorInstance( const EditorAPI& editorAPI, EditorHandle editor )
-    {
-        _editorAPI = editorAPI;
-        _editor    = editor;
-    }
-#endif
-
     bool EditorModuleManager::reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule )
     {
         RHI* const pRHI = getRHI();
@@ -401,11 +328,7 @@ namespace sw
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
         fillModuleServiceScope( *editorServices, false );
-#if !defined( SW_SHIPPING )
-        // 개발 도구는 엔진의 기동 확장(`DevToolsHost`)이 세워 서비스 목록의 행이 아니다 — 에디터가 찾는 것(HUD 조작 · 설정 리로드 창)을 빌려 건다(없는 호스트면 걸지 않는다).
-        (void)editorServices->bind( engine::findSubsystem<DebugHUD>() );
-        (void)editorServices->bind( engine::findSubsystem<ConfigReloadSubsystem>() );
-#endif
+        bindDevToolServices( *editorServices );
         _editorAPI.bindService( editorServices.get() );
         _editorServices = std::move( editorServices );
     }

@@ -3,6 +3,8 @@
  * @brief App 전용 모듈 호스트입니다. 공통 `GameModuleManager`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, RHI 교체 뒤 재초기화를 구현합니다.
  *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleManagerHeadless.cpp` 에 있습니다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
+ * @note 개발 · 배포가 다른 함수는 구현 파일이 둘이다 — 에디터 모듈 등록 · 개발 도구 서비스(`EditorModuleManagerDevTools.cpp` · `…DevToolsShipping.cpp`)와
+ *       헤드리스 작업(`EditorModuleManagerHeadless.cpp` · `…HeadlessShipping.cpp`)을 CMake 가 고른다(`sw_pickVariantSource`, `Source/App/CMakeLists.txt`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -100,16 +102,6 @@ namespace sw
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
         [[nodiscard]] bool bindEditorAPI( void* pLibraryModule );
-#if !defined( SW_SHIPPING )
-        /**
-         * @brief 이미 만든 에디터 인스턴스와 그 API 테이블을 호스트에 연결합니다.
-         * @details 정상 경로는 `bindEditorAPI` 다음 `createEditorInstance` 이다. 이 함수는 모듈 DLL 과 디바이스 없이 가짜 API 테이블로 호스트의 순서
-         *          (시뮬레이션 멈춤, shutdown, destroy)를 테스트하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
-         *          테스트 전용 함수라 배포본에는 없다. 배포본에서 호스트의 API 테이블을 바꿔 끼울 경로를 남기지 않기 위해서다.
-         */
-        void attachEditorInstance( const EditorAPI& editorAPI, EditorHandle editor );
-#endif
-
         /** @brief RHI 핫스왑 뒤 게임, 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 를 반환합니다. */
         [[nodiscard]] bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 
@@ -169,8 +161,14 @@ namespace sw
             vector<string> _listDependency; ///< 매니페스트의 의존(EditorModule, 키트). 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다.
         };
 
-        /** @brief 확장 모듈을 의존과 함께 리로드 그래프에 등록합니다. 하나가 실패해도 에디터는 뜹니다(그 확장만 없습니다). */
-        void registerEditorExtensions( LiveReloadManager* pLiveReloadManager );
+        /**
+         * @brief `initialize` 의 끝 — 에디터를 켰으면 에디터 모듈과 확장 모듈(의존과 함께)을 리로드 그래프에 등록합니다. 확장 하나가 실패해도 에디터는 뜹니다(그 확장만 없습니다).
+         * @details 배포 구현(`EditorModuleManagerDevToolsShipping.cpp`)에는 에디터 모듈이 없다 — 에디터를 켜 달라면(`-EnableEditor`) 오류로 false 다.
+         * @return 매니페스트가 에디터 모듈을 껐거나 등록이 실패하거나 리로드 그래프가 깨졌으면 false 입니다(기동 실패).
+         */
+        [[nodiscard]] bool registerEditorModule( LiveReloadManager* pLiveReloadManager );
+        /** @brief 에디터 모듈의 서비스 범위에 개발 도구(HUD 조작 · 설정 리로드 창)를 빌려 겁니다. 배포는 개발 도구가 없어 아무것도 걸지 않습니다. */
+        void bindDevToolServices( SubsystemScope& editorServices ) const;
 
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;

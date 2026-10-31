@@ -22,14 +22,20 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 endif()
 
 # 구성마다 다른 구현 — 선언은 헤더 하나, 구현 .cpp 를 `sw_pickVariantSource` 가 고른다(cmake/Engine/UnbuiltSources.cmake).
-#   AppDevTools        : 배포(SW_SHIPPING_BUILD)는 빈 구현(Shipping) — 개발 도구 · 매니페스트 · 핫 리로드가 없다
-#   AppAutomationHost  : 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 Off — 구동기가 없고 `-scenario` 는 기동 오류
+# 배포(SW_SHIPPING_BUILD)는 `<이름>Shipping.cpp` 를 짓는다.
+#   AppDevTools                  : 빈 구현 — 개발 도구 · 핫 리로드 단축키 · 개발 콘솔이 없다
+#   EditorModuleManagerDevTools  : 에디터 모듈 등록 · 개발 도구 서비스가 없다 — `-EnableEditor` 는 기동 오류
+#   EditorModuleManagerHeadless  : 에디터 모듈이 없다 — 헤드리스 임포트 · 로컬라이제이션 작업은 오류
+# 자동화 런타임을 뺀 구성(NOT SW_ENABLE_AUTOMATION)은 `<이름>Off.cpp` 를 짓는다.
+#   AppAutomationHost            : 구동기가 없고 `-scenario` 는 기동 오류
 set(swAppDir "${CMAKE_CURRENT_SOURCE_DIR}")
-if(SW_SHIPPING_BUILD)
-	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppDevTools Shipping ON)
-else()
-	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppDevTools Shipping OFF)
-endif()
+foreach(swVariantName IN ITEMS AppDevTools EditorModuleManagerDevTools EditorModuleManagerHeadless)
+	if(SW_SHIPPING_BUILD)
+		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping ON)
+	else()
+		sw_pickVariantSource(APP_SOURCES "${swAppDir}" ${swVariantName} Shipping OFF)
+	endif()
+endforeach()
 if(SW_ENABLE_AUTOMATION)
 	sw_pickVariantSource(APP_SOURCES "${swAppDir}" AppAutomationHost Off OFF)
 else()
