@@ -64,8 +64,6 @@ namespace sw
         {
             entry._material = Material::create();
             entry._path     = key;
-            // 씬이 쓰는 머티리얼이다 — 텍스처를 워커가 읽는 동안 로드 중 텍스처를 그린다(렌더 스레드가 기다리지 않게).
-            entry._material->setTextureLoadStart( AssetLoadStart::Async );
             getMaterialCacheStats().recordMiss();
         }
         else

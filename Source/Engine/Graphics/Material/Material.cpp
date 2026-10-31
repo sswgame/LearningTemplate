@@ -70,7 +70,6 @@ namespace sw
         , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
         , _listTextureLoad{}
-        , _textureLoadStart{ AssetLoadStart::OnCallingThread }
         , _listBorrowedTexturePath{}
         , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
@@ -189,11 +188,9 @@ namespace sw
                 continue;
             }
 
-            // 씬의 머티리얼(`MaterialCache`)은 진짜 텍스처를 워커가 읽는다 — 다 읽기 전에는 로드 중 텍스처(회색). 직접 만든 머티리얼(도구 · 테스트 · 미리보기)은 그 자리에서 읽는다
-            // (`setTextureLoadStart`). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
-            TextureHandle load = textures.request( prop._assetPath, pRHI, _textureLoadStart );
-            if ( _textureLoadStart == AssetLoadStart::OnCallingThread )
-                (void)load.wait(); // 직접 만든 머티리얼(도구 · 테스트 · 미리보기)은 초기화 직후 그리므로 업로드(완료 단계)까지 이 자리에서 — 디바이스를 쓰는 스레드다
+            // 진짜 텍스처는 늘 워커가 읽고, 다 읽기 전에는 로드 중 텍스처(회색)를 그리다가 `refreshTextureBindings` 가 바꾼다 — 언리얼 · 유니티도 스트리밍이 끝날
+            // 때까지 기본 텍스처를 그린다(초기화하는 스레드가 디스크를 기다리지 않는다). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
+            TextureHandle    load = textures.request( prop._assetPath, pRHI, AssetLoadStart::Async );
             string           borrowedPath;
             const Texture2D* pTexture = load.isReady() ? load.getBlock()->getTexture() : nullptr;
             if ( pTexture == nullptr )
