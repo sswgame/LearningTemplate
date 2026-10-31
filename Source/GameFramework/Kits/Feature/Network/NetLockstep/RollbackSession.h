@@ -80,7 +80,7 @@ namespace sw
      * @details 플레이어 번호는 서버가 0이고, 클라이언트는 연결 id + 1이다.
      *          망은 스타 토폴로지이다. 서버가 클라이언트의 메시지를 다른 클라이언트에 그대로 다시 보내며, 확인과 이점도 함께 전달된다.
      */
-    class SW_KIT_API RollbackSession : public INetMessageHandler, public IStateHashProvider
+    class SW_KIT_API RollbackSession : public INetMessageHandler
     {
     public:
         static constexpr int32 kHistorySize = 128;
@@ -94,6 +94,10 @@ namespace sw
         static_assert( 2 * ( kMaxPrediction + kMaxInputDelay ) + 1 < kFrameWindow, "unacknowledged inputs must fit one message and the receive window" );
 
         RollbackSession();
+
+        // 해시 줄 제공자(`_stateHashChannel`)가 이 객체를 참조로 든다 — 옮기면 옛 주소를 가리킨다.
+        RollbackSession( const RollbackSession& )            = delete;
+        RollbackSession& operator=( const RollbackSession& ) = delete;
 
         /**
          * @brief 세션을 시작합니다. 게임이 없거나, 플레이어 수가 1보다 작거나, 내 번호가 범위 밖이거나, 설정이 범위 밖이면 오류를 남기고 false 를 반환합니다.
@@ -119,13 +123,30 @@ namespace sw
         /**
          * @brief 확인된 프레임 시작 전의 게임 상태 바이트(`IRollbackGame::saveState`)를 접은 해시를 틱 = 그 프레임 번호로 돌려줍니다(해시 이력의 줄 `rollback`).
          * @details 예측 중인 현재 상태는 상대 입력이 오면 바뀌므로 남기지 않는다 — 확인된 프레임의 상태는 두 쪽에서 같아야 하고, 두 쪽의 이력을 프레임 번호로 견주면 처음 갈린 프레임이 나온다.
-         *          게임이 `StateHashHistory::registerChannel( "rollback", &session )` 로 등록한다. 시작 전이거나 확인된 프레임이 기록 밖이면 false 입니다.
+         *          게임이 `StateHashHistory::registerChannel( "rollback", &session.getStateHashProvider() )` 로 등록한다. 시작 전이거나 확인된 프레임이 기록 밖이면 false 입니다.
          */
-        [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override;
+        [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const;
+        /** @brief 해시 이력에 등록할 제공자입니다(`sampleStateHash` 로 넘긴다). 이 세션과 수명이 같습니다. */
+        const IStateHashProvider& getStateHashProvider() const { return _stateHashChannel; }
         /** @brief 가장 뒤처진 상대보다 앞선 프레임 수의 추정값입니다. (내 이점 − 상대 이점) / 2 의 최댓값이며, 알림을 받은 상대가 없으면 0입니다. */
         int32 computeFrameLead() const;
 
     private:
+        /** @brief 세션의 `sampleStateHash` 를 해시 이력의 제공자로 내보입니다. 세션이 멤버로 들어 수명이 같다. */
+        class StateHashChannel final : public IStateHashProvider
+        {
+        public:
+            explicit StateHashChannel( const RollbackSession& session )
+                : _session{ session }
+            {
+            }
+
+            [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override { return _session.sampleStateHash( hostTick, outSample ); }
+
+        private:
+            const RollbackSession& _session;
+        };
+
         struct FrameRecord
         {
             vector<uint8> _listState{}; ///< 이 프레임을 시작하기 전 상태
@@ -168,6 +189,7 @@ namespace sw
         int32                         _resimulatedFrameCount;
         int32                         _stallCount;
         int32                         _timeSyncWaitCount;
-        NetMessageWriter              _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
+        NetMessageWriter              _messageWriter;    ///< 보낼 메시지. 버퍼를 재사용한다
+        StateHashChannel              _stateHashChannel; ///< 해시 줄 `rollback` 의 제공자(`getStateHashProvider`)
     };
 } // namespace sw

@@ -33,6 +33,7 @@ namespace sw
         , _stallCount{ 0 }
         , _timeSyncWaitCount{ 0 }
         , _messageWriter{}
+        , _stateHashChannel{ *this }
     {
     }
 
