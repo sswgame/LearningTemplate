@@ -44,8 +44,8 @@ namespace sw
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;
 
-                // 매니페스트가 먼저이고, 개발 빌드는 런타임 리플렉션으로 폴백한다. 정책은 ShaderReflectionLibrary 한 곳에 있다.
-                if ( ShaderReflectionLibrary::getOrReflect( compileDesc, outReflection ) == false )
+                // 출처(쿠킹된 매니페스트 · 실행 중 바이트코드)는 셰이더 캐시가 기동 때 고른 공급자 하나가 정한다.
+                if ( engine::getSubsystem<ShaderCache>().getReflection( compileDesc, outReflection ) == false )
                     return false;
 
                 // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름과 숫자로 남는다(검증 에러는 안 난다).

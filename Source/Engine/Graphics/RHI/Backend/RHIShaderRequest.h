@@ -49,7 +49,7 @@ namespace sw
         /** @brief 매크로 목록("NAME" 또는 "NAME=VALUE")을 컴파일 요청의 define 에 붙입니다. 컴퓨트 PSO 가 씁니다(그래픽스는 `resolveGraphics` 가 같은 규칙으로 붙인다). */
         static void appendDefines( ShaderCompileDesc& inoutDesc, const vector<string>& listDefine );
 
-        /** @brief 엔진 서비스가 바인딩되어 있으면 ShaderCache 를, 아니면(테스트와 툴) 컴파일러를 직접 씁니다. */
+        /** @brief 셰이더 캐시에서 바이트코드를 얻습니다(출처는 캐시가 기동 때 고른 공급자 — 쿠킹본 또는 실행 중 컴파일). 컴파일러를 직접 부르지 않는다. */
         static ShaderCompileResult compile( const ShaderCompileDesc& desc );
 
         /**

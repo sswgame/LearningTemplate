@@ -270,12 +270,6 @@ namespace sw
         const string key             = ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage,
                                                                             desc._entryPoint, permutationHash, ext );
 
-        // 매니페스트는 쿠킹본이다 — 쿠킹본 정책(배포 · `-cooked-content`)만 팩에서 읽는다. 소스 정책(개발 실행)은 바이트코드를 실행 중에 얻으므로
-        // 리플렉션도 그 바이트코드에서 실행 중에 만든다(false — 호출자가 리플렉션한다). 쿠킹본과 실행 중 바이트코드를 섞으면 레이아웃과 바이트코드가 어긋난다
-        // (바인더가 슬롯을 빼먹어 DX12 가 빈 루트 디스크립터를 읽고 DEVICE_HUNG 으로 죽은 적이 있다).
-        if ( AssetIO::getContentSource() == ContentSource::Source )
-            return false;
-
         // 매니페스트는 셰이더 서브시스템이 든다 — 엔진 서비스가 없으면 멈춘다(쿠킹본 정책은 엔진 안에서만 돈다).
         ShaderReflectionManifestCache&                            manifests = engine::getSubsystem<ShaderCache>().getReflectionManifests();
         ScopedLock<mutex>                                         lock{ manifests._mutex };
@@ -296,50 +290,6 @@ namespace sw
             return false;
 
         outReflection = entryIter->second;
-        return true;
-    }
-
-    bool ShaderReflectionLibrary::getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
-    {
-        SW_MEMORY_SCOPE( Shader );
-        // 1순위: 쿠킹 시점에 쿠킹된 매니페스트. 쿠킹본 정책(배포 빌드)은 이 경로만 쓴다. DXIL 리플렉션은
-        // dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
-        if ( tryGet( desc, outReflection ) )
-            return true;
-
-        if ( AssetIO::getContentSource() == ContentSource::Cooked )
-        {
-            // 빠진 것은 파일이 아니라 (경로 · 스테이지 · 진입점 · 퍼뮤테이션) 조합이다. 쿠커가 쓰는 파일 이름 그대로
-            // 적어야 "그 셰이더는 쿠킹했는데?" 로 끝나지 않는다. define 목록까지 붙여 어느 조합인지 바로 보이게 한다.
-            const string missingKey = ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage, desc._entryPoint,
-                                                                           ShaderCooker::computePermutationHash( desc._listDefine ),
-                                                                           ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
-            string       defineList;
-            for ( const ShaderMacroDefine& define : desc._listDefine )
-            {
-                if ( defineList.empty() == false )
-                    defineList += ' ';
-                defineList += define._name;
-                defineList += '=';
-                defineList += define._value;
-            }
-            SW_LOG_ERROR( "The reflection manifest has no entry for '%#' (%#, define: %#) - the shader must be re-cooked.",
-                          desc._source.c_str(), missingKey.c_str(), defineList.c_str() );
-            return false;
-        }
-        // 2순위(소스를 읽는 실행만): 바이트코드를 얻어 그 자리에서 리플렉션한다. 셰이더를 막 고쳐 아직
-        // 쿠킹하지 않았거나, 매니페스트가 지금 소스와 맞지 않는 상태를 위한 폴백이다.
-        const ShaderCompileResult result = engine::areEngineServicesBound()
-                                             ? engine::getSubsystem<ShaderCache>().getOrCompile( desc )
-                                             : ShaderCompiler::compileHLSL( desc );
-        if ( result._bSuccess == false || result._bytecode.empty() )
-        {
-            SW_LOG_WARNING( "Runtime reflection fallback failed: '%#' (%#)", desc._source.c_str(),
-                            result._errorMessage.c_str() );
-            return false;
-        }
-
-        outReflection = ShaderReflection::reflect( result._bytecode, desc._targetFormat );
         return true;
     }
 

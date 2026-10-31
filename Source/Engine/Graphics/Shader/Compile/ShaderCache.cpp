@@ -11,9 +11,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/FileSystem/AssetIO.h"
-#include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
@@ -30,16 +31,6 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_shaderDebugCodegen, false, "실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩) — 기본은 쿠킹과 같은 최적화 코드젠" );
 
-    namespace
-    {
-        /** @brief 쿠커가 쓰는 파일 이름 그대로입니다(스템, 스테이지, 진입점, 퍼뮤테이션 해시). 규칙은 한 곳(ShaderCooker)뿐입니다. */
-        string makeBinaryFileName( const ShaderCompileDesc& desc )
-        {
-            return ShaderCooker::computeBinaryFileName( desc._source.getStemLower(), desc._stage, desc._entryPoint,
-                                                        ShaderCooker::computePermutationHash( desc._listDefine ),
-                                                        ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
-        }
-    } // namespace
 } // namespace sw
 
 namespace sw
@@ -79,7 +70,8 @@ namespace sw
     }
 
     ShaderCache::ShaderCache()
-        : _reflectionManifests{}
+        : _pProvider{}
+        , _reflectionManifests{}
         , _mapCache{}
         , _mapLoading{}
         , _mutexCache{}
@@ -94,7 +86,19 @@ namespace sw
     bool ShaderCache::initialize()
     {
         clearCache();
+        // 콘텐츠 정책은 기동 때 정해지고(에셋 매니저 - 이 서브시스템이 그 뒤에 선다) 실행 중 바뀌지 않는다 - 공급자를 한 번 고른다.
+        if ( AssetIO::getContentSource() == ContentSource::Cooked )
+            _pProvider = make_unique<CookedShaderBytecodeProvider>();
+        else
+            _pProvider = make_unique<LiveShaderBytecodeProvider>();
         return true;
+    }
+
+    span<const utf8* const> ShaderCache::getSubsystemDependencies() const
+    {
+        // 콘텐츠 정책(`AssetIO::getContentSource`)은 에셋 매니저의 초기화가 정한다.
+        static constexpr const utf8* kArrDependency[] = { AssetManager::kSubsystemName };
+        return kArrDependency;
     }
 
     void ShaderCache::shutdown()
@@ -103,6 +107,7 @@ namespace sw
         clearCache();
         // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서비스 칸을 거치지 않는다.
         _reflectionManifests.clear();
+        _pProvider.reset(); // 진행 중인 로드를 모두 기다린 뒤다
     }
 
     string ShaderCache::makeCacheKey( const ShaderCompileDesc& desc )
@@ -173,12 +178,26 @@ namespace sw
         }
     }
 
+    const IShaderBytecodeProvider& ShaderCache::getProvider() const
+    {
+        if ( _pProvider == nullptr )
+            SW_FATAL( "ShaderCache is used before initialize chose the bytecode provider (cooked or live)" );
+        return *_pProvider;
+    }
+
+    bool ShaderCache::getReflection( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
+    {
+        SW_MEMORY_SCOPE( Shader );
+        return getProvider().getReflection( *this, desc, outReflection );
+    }
+
     ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
     {
         SW_MEMORY_SCOPE( Shader );
-        string cacheKey = inCacheKey;
+        const IShaderBytecodeProvider& provider = getProvider();
+        string                         cacheKey = inCacheKey;
 
-        // 0) 인메모리 캐시 조회 — 항목을 만든 컴파일이 연 헤더까지 포함한 지문이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
+        // 0) 인메모리 캐시 조회 — 넣을 때의 지문(공급자가 센다 - 실행 중 컴파일은 소스와 연 헤더의 내용)이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
         {
             ShaderCacheEntry cachedEntry{};
             bool             bCached = false;
@@ -193,50 +212,17 @@ namespace sw
             }
             if ( bCached )
             {
-                const uint64 currentFingerprint = cachedEntry._result._sourceFile.empty() ? 0u : ShaderCooker::computeSourceFingerprint( cachedEntry._result._sourceFile, cachedEntry._result._listIncludedFile );
+                const uint64 currentFingerprint = provider.computeFingerprint( cachedEntry._result );
                 if ( currentFingerprint != 0 && currentFingerprint == cachedEntry._sourceFingerprint )
                     return cachedEntry._result;
             }
         }
 
-        // 쿠킹본 정책(배포 · `-cooked-content`)은 팩의 쿠킹본만 읽는다 — 컴파일러가 없고, 소스도 팩에 없다.
-        if ( AssetIO::getContentSource() == ContentSource::Cooked )
-        {
-            const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
-            if ( location.has_value() == false )
-            {
-                SW_LOG_ERROR( "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );
-                ShaderCompileResult failedResult{};
-                failedResult._bSuccess     = false;
-                failedResult._errorMessage = "Shader source is not inside a domain 'shaders' folder";
-                return failedResult;
-            }
-            const AssetID precookedID = location->makeFileID( makeBinaryFileName( desc ) );
-            vector<uint8> precookedBytes;
-            if ( AssetIO::readBinaryAsset( precookedID, precookedBytes ) && precookedBytes.empty() == false )
-            {
-                SW_LOG_TRACE( "Loaded cooked shader binary: %# (%zu bytes)", precookedID.c_str(), precookedBytes.size() );
-                ShaderCompileResult result{};
-                result._bytecode = std::move( precookedBytes );
-                result._bSuccess = true;
-                storeEntry( std::move( cacheKey ), desc, result );
-                return result;
-            }
-            // 빠진 것은 파일이 아니라 (경로, 스테이지, 진입점, 퍼뮤테이션) 조합이다. 찾던 이름(RHI 폴더 포함) 그대로 적는다.
-            SW_LOG_ERROR( "Precompiled shader binary not found in the cooked content: '%#' [%#] — %#", desc._source.c_str(), desc._entryPoint.c_str(), precookedID.c_str() );
-            ShaderCompileResult failedResult{};
-            failedResult._bSuccess     = false;
-            failedResult._errorMessage = "Shader binary missing in the cooked content";
-            return failedResult;
-        }
-
-        // 소스 정책(개발 실행)은 쿠킹본을 읽지 않는다 — 쿠킹본은 배포 단위라 쿠킹 스테이징(`build/<프리셋>/Cooked`)에만 있고, 개발 실행은 미리 굽지 않아도 돈다.
-        // 컴파일러가 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache`)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 `gv_shaderDebugCodegen` 이 정한다(makeLiveCompileDesc).
-        const ShaderCompileDesc liveDesc       = makeLiveCompileDesc( desc );
-        ShaderCompileResult     compiledResult = ShaderCompiler::compileHLSL( liveDesc );
-        if ( compiledResult._bSuccess )
-            storeEntry( std::move( cacheKey ), desc, compiledResult );
-        return compiledResult;
+        // 1) 공급자 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 실행 중 컴파일(셰이더 DDC 를 먼저 본다).
+        ShaderCompileResult result = provider.load( desc );
+        if ( result._bSuccess )
+            storeEntry( std::move( cacheKey ), desc, result );
+        return result;
     }
 
     void ShaderCache::clearCache()
@@ -273,7 +259,7 @@ namespace sw
     {
         // 지문은 파일을 읽는 계산이라 잠금 밖에서 한다.
         ShaderCacheEntry entry{};
-        entry._sourceFingerprint = result._sourceFile.empty() ? 0u : ShaderCooker::computeSourceFingerprint( result._sourceFile, result._listIncludedFile );
+        entry._sourceFingerprint = getProvider().computeFingerprint( result );
         entry._desc              = desc;
         entry._result            = result;
 

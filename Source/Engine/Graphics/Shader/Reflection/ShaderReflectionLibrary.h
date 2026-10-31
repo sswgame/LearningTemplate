@@ -55,25 +55,13 @@ namespace sw
         [[nodiscard]] static bool loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry );
 
         /**
-         * @brief 셰이더 하나의 리플렉션을 조회합니다.
-         * @details 매니페스트는 경로별로 한 번만 읽어 캐시합니다. 팩 파일과 낱개 파일을 가리지 않고 읽습니다.
-         * @return 매니페스트에 없거나 (개발 빌드에서) 지금 소스와 맞지 않으면 false 입니다. 부르는 쪽이 폴백(개발 빌드 한정)을 정합니다.
+         * @brief 셰이더 하나의 리플렉션을 쿠킹된 매니페스트에서 조회합니다(쿠킹본 정책의 공급자 `CookedShaderBytecodeProvider` 가 부른다 — 소스 정책은 실행 중 바이트코드에서 만든다).
+         * @details 매니페스트는 경로별로 한 번만 읽어 캐시합니다. 팩 파일과 낱개 파일을 가리지 않고 읽습니다. 리플렉션을 구하는 입구는 `ShaderCache::getReflection` 하나입니다.
+         *          주의: 한쪽(ShaderBindingLayoutCache)만 다른 출처를 쓰고 Material 이 XML 순서 패킹으로 남으면 셰이더는 24바이트 원소를 읽는데
+         *          엔진은 256바이트(상수 버퍼 크기) stride 로 업로드해, 한 배치의 두 번째 머티리얼부터 통째로 어긋납니다.
+         * @return 매니페스트에 없으면 false 입니다.
          */
         [[nodiscard]] static bool tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
-
-        /**
-         * @brief 리플렉션을 구합니다. 쿠킹본 정책은 쿠킹된 매니페스트, 소스 정책은 실행 중 리플렉션(그 실행이 얻은 바이트코드에서)입니다.
-         * @details `tryGet` 은 "쓸 수 있는 매니페스트 항목이 있는가"만 답합니다. 없거나 낡았을 때 무엇을 할지는
-         *          **정책**이고, 정책은 한 곳에만 있어야 합니다. 주의: 한쪽(ShaderBindingLayoutCache)만 폴백을 갖고
-         *          Material 이 XML 순서 패킹으로 남으면 셰이더는 24바이트 원소를 읽는데
-         *          엔진은 256바이트(상수 버퍼 크기) stride 로 업로드해, 한 배치의 두 번째 머티리얼부터 통째로
-         *          어긋납니다. 화면에는 "두 큐브가 같은 색"으로, DX11 디버그 레이어에는
-         *          "structure stride 256 vs 24"로 나옵니다.
-         *
-         *          매니페스트와 바이트코드는 같은 출처여야 한다 — 쿠킹본 정책은 둘 다 팩, 소스 정책은 둘 다 실행 중이다(섞으면 레이아웃과 바이트코드가 어긋난다).
-         * @return 리플렉션을 얻으면 true 입니다. Shipping 에서는 매니페스트에 없으면 false 입니다(런타임 컴파일 없음).
-         */
-        static bool getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
 
         /** @brief 캐시를 비웁니다(셰이더를 다시 쿠킹한 뒤, 라이브 셰이더를 편집한 뒤, 엔진 종료 때 `ShaderCache::shutdown`). 캐시 세대가 증가합니다. */
         static void clearCache();

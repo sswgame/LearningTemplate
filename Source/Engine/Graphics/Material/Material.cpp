@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -449,11 +450,12 @@ namespace sw
     bool Material::reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection )
     {
         ShaderCompileDesc desc{};
-        desc._source       = ShaderSourceID{ shaderPath };
-        desc._entryPoint   = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
-        desc._stage        = ShaderStage::Pixel;
-        desc._targetFormat = targetFormat;
-        if ( ShaderReflectionLibrary::getOrReflect( desc, outReflection ) == false )
+        desc._source             = ShaderSourceID{ shaderPath };
+        desc._entryPoint         = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
+        desc._stage              = ShaderStage::Pixel;
+        desc._targetFormat       = targetFormat;
+        ShaderCache& shaderCache = engine::getSubsystem<ShaderCache>();
+        if ( shaderCache.getReflection( desc, outReflection ) == false )
             return false;
         // 머티리얼을 정점 셰이더만 읽는 셰이더(바람에 흔드는 식생 · 파도를 옮기는 물)는 픽셀 스테이지에 스키마가 없다 — 정점 스테이지에서 찾는다.
         // 두 스테이지가 함께 읽는 셰이더는 GL(ARB_gl_spirv)이 링크를 거절하므로 스키마는 한 스테이지에만 있다.
@@ -463,7 +465,7 @@ namespace sw
             ShaderReflectionData vertexReflection{};
             vertexDesc._entryPoint = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
             vertexDesc._stage      = ShaderStage::Vertex;
-            if ( ShaderReflectionLibrary::getOrReflect( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
+            if ( shaderCache.getReflection( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
                 outReflection = std::move( vertexReflection );
         }
         return true;
