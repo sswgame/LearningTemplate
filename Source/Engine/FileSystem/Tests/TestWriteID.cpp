@@ -26,6 +26,14 @@ SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
 
+// 작업 도메인은 폴더가 아직 없어도 도메인이다(빈 트리의 첫 쓰기) — 상대 키로 거절하지 않는다.
+SW_TEST_CASE( WriteIDTest, ScratchDomainNeedsNoFolderYet )
+{
+    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
+    SW_REQUIRE_TRUE( path.has_value() );
+    SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
+}
+
 SW_TEST_CASE( WriteIDTest, MissingRelativeKeyHasNoDomain )
 {
     SW_EXPECT_LOG( "AssetPaths.WriteRelativeKeyMissing" );

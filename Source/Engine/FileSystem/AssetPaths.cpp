@@ -399,7 +399,8 @@ namespace sw
                     if ( domain.find( ':' ) == string_view::npos )
                     {
                         const string candidateDomainDir = FileUtil::joinPath( resourceRoot, domain );
-                        if ( FileUtil::isDirectory( candidateDomainDir ) )
+                        // 작업 도메인(`scratch`)은 실행이 처음 쓸 때 생기는 폴더라 아직 없어도 도메인이다 — 폴더가 있을 때만 도메인으로 보면 빈 트리(새 작업 트리 · CI)의 첫 쓰기가 상대 키로 거절됐다.
+                        if ( domain == AssetPaths::kScratchDomain || FileUtil::isDirectory( candidateDomainDir ) )
                         {
                             outRoot         = candidateDomainDir;
                             outKeyUnderRoot = string( lowerRel.substr( firstSlash + 1 ) );
