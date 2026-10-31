@@ -226,7 +226,7 @@ namespace sw
         /**
          * @brief 주 출력(게임 창, 에디터 게임 뷰)의 보기 모드를 정합니다. `-gv_viewMode` 와 테스트가 씁니다.
          * @details 보기 모드는 뷰마다 갖는 설정(`RenderViewSettings::_viewMode`)이다. 이 값은 주 출력 뷰의 설정에 들어가고,
-         *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 쓴다. 다음 프레임의 `FramePSOManager::ensureMaterialPSOS` 가 그 프레임 뷰들의 모드로
+         *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 쓴다. 다음 프레임의 `FramePSOManager::ensureMaterialPSOs` 가 그 프레임 뷰들의 모드로
          *          PSO 변형을 만들고, 드로우는 지금 그리는 뷰의 모드로 변형을 고른다. 모드를 바꾼 프레임에는 셰이더 컴파일이 한 번 끼어든다.
          */
         void setViewMode( RenderViewMode viewMode );

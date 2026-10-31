@@ -64,7 +64,7 @@ namespace sw
          * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`SW_FATAL`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
          *          그래픽스 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`prewarmPassShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
          */
-        void createPassPSOS();
+        void createPassPSOs();
         /** @brief 소유한 저장소의 PSO · 레이아웃과 폴백 버퍼를 놓습니다. 빌린 저장소는 놓지 않습니다(소유자의 몫). 디바이스가 없으면 핸들만 잊습니다. */
         void release();
         /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더의 바인딩 레이아웃을 무효화합니다. */
@@ -104,12 +104,12 @@ namespace sw
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
          * @param viewModeMask 이번 프레임에 그리는 뷰들의 보기 모드 비트 집합(`FrameRenderer::collectFrameViewModeMask`)
          */
-        void ensureMaterialPSOS( uint32 viewModeMask );
+        void ensureMaterialPSOs( uint32 viewModeMask );
         /**
          * @brief 고정한 머티리얼(`MaterialCache::pinAsset` — 프리로드 세트)의 PSO 를 **기록 시작 전에** 미리 만듭니다(계획 PreloadAndLOD P6). 주 렌더러만 부릅니다.
          * @details 아직 씬에 없는 머티리얼(다음 레벨 · 컷에 나올 것)만 이 길로 데운다 — 그 머티리얼이 씬에 들어오는 프레임에 DX12 PSO 생성 히치가 없게.
          */
-        void warmPinnedMaterialPSOS( uint32 viewModeMask );
+        void warmPinnedMaterialPSOs( uint32 viewModeMask );
         /**
          * @brief 머티리얼 변형을 빌더 스레드가 만들게 하는지 반환합니다(`-gv_psoAsync` 가 켜져 있고 백엔드가 `_bThreadSafeResourceCreation` 이면 true).
          * @details 결정적 실행(`AssetManager::isFinishingAssetWorkEachFrame`)은 빌더 스레드를 쓰지 않는다. false 이면 렌더 스레드가 같은 줄을 셋업 구간에서 직접 만든다.
@@ -192,10 +192,10 @@ namespace sw
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전) 조합을 중복 없이 모읍니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         static void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest );
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. @return 새 변형을 하나라도 만들었으면 true 입니다. */
-        [[nodiscard]] bool ensureRequestMaterialPSOS( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        [[nodiscard]] bool ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pumpMaterialPSOBuilds` 가 합칩니다).
-         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOS`)는 false 입니다.
+         * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
          * @return 이 호출에서 `Ready` · `Failed` 로 끝난 변형이 있으면 true 입니다(`Building` 으로 넘긴 것은 false).
          */
         [[nodiscard]] bool ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation, uint64 permutationHash,
@@ -209,10 +209,10 @@ namespace sw
         RenderPSOCache _cache;
         /// @brief 찾고 넣는 저장소입니다. 주 렌더러는 자기 `_cache`, 미리보기 씬 렌더러는 주 렌더러의 것입니다(`shareCacheOf`).
         RenderPSOCache* _pCache;
-        /// @brief `ensureMaterialPSOS` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
+        /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
-        /// @brief `warmPinnedMaterialPSOS` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
+        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
         vector<shared_ptr<Material>> _listPSOWarmMaterialScratch;
         vector<MaterialFallback>     _listMaterialFallback;
         /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 저장소가 소유하며 PSO 마다 하나입니다.

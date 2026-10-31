@@ -208,7 +208,7 @@ namespace sw
 
     FramePSOManager::~FramePSOManager() = default;
 
-    void FramePSOManager::createPassPSOS()
+    void FramePSOManager::createPassPSOs()
     {
         if ( _pDevice == nullptr )
             return;
@@ -757,7 +757,7 @@ namespace sw
         return RenderPSOCache::MaterialPSOEntry::ready( handle, true );
     }
 
-    void FramePSOManager::ensureMaterialPSOS( uint32 viewModeMask )
+    void FramePSOManager::ensureMaterialPSOs( uint32 viewModeMask )
     {
         SW_PROFILE_SCOPE( "RT.PSO.ensureMaterial" );
         if ( _pDevice == nullptr )
@@ -773,7 +773,7 @@ namespace sw
             return;
 
         bool bCreatedVariant{ false };
-        for ( const auto& [passType, passPSO] : _pCache->getEnginePSOS() )
+        for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
         {
             if ( passPSO == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
@@ -781,7 +781,7 @@ namespace sw
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
             for ( const MaterialPSORequest& request : listRequest )
             {
-                if ( ensureRequestMaterialPSOS( passPSO, passType, request, viewModeMask ) )
+                if ( ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask ) )
                     bCreatedVariant = true;
             }
         }
@@ -795,7 +795,7 @@ namespace sw
             ensureMaterialFallbackBuffers();
     }
 
-    void FramePSOManager::warmPinnedMaterialPSOS( uint32 viewModeMask )
+    void FramePSOManager::warmPinnedMaterialPSOs( uint32 viewModeMask )
     {
         // 줄은 하나라 주 렌더러만 부른다(`FrameRenderer::uploadSceneAndSubmitFrame`) — 미리보기 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
         const bool bNoWarm = _pDevice == nullptr || engine::areEngineServicesBound() == false;
@@ -815,7 +815,7 @@ namespace sw
             for ( const bool bAppearanceDither : { false, true } )
             {
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( *pMaterial, nullptr, bAppearanceDither );
-                for ( const auto& [passType, passPSO] : _pCache->getEnginePSOS() )
+                for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
                 {
                     const bool bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
                     const bool bSkippedPass     = passPSO == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false || bTransparentPass != bTransparentMaterial;
@@ -857,7 +857,7 @@ namespace sw
         }
     }
 
-    bool FramePSOManager::ensureRequestMaterialPSOS( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask )
+    bool FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassType passType, const MaterialPSORequest& request, uint32 viewModeMask )
     {
         const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
         // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
@@ -926,7 +926,7 @@ namespace sw
         const uint32     budgetMicroseconds       = bBuildAll ? 0u : kFrameBudgetMicroseconds;
         const uint32     readyCount               = _pCache->pumpMaterialPSOBuilds( _pDevice, usesAsyncMaterialPSOBuilder(), budgetMicroseconds );
         SW_PROFILE_COUNT( "RT.PSO.pendingBuilds", _pCache->getPendingMaterialPSOBuilds() );
-        // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOS` 의 같은 이유).
+        // 방금 합친 변형의 레이아웃은 폴백 stride 를 모으던 시점에는 없었다(`ensureMaterialPSOs` 의 같은 이유).
         if ( readyCount > 0 )
             ensureMaterialFallbackBuffers();
     }
@@ -991,7 +991,7 @@ namespace sw
                 permutationHash = pPermutation->_hash;
         }
 
-        // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOS 도 이 키를 만들지 않는다.
+        // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
         // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
         viewMode                   = getRenderViewModePipelineMode( viewMode ); // Lit 과 같은 PSO 인 모드(MarkerSlots)는 Lit 변형을 그대로 쓴다
@@ -1000,7 +1000,7 @@ namespace sw
         if ( bDefaultPassPSO )
             return passPSO;
 
-        // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOS 가 기록 전에
+        // `Ready` 가 아닌 변형(만드는 중 · 실패 · 없음)은 그리지 않는다 — 패스 PSO 로 바꿔 그리면 머티리얼 · 보기 모드가 다른 그림이 된다. ensureMaterialPSOs 가 기록 전에
         // 채우므로 동기 생성에서는 항상 `Ready` 나 `Failed` 이고(`Failed` 는 그때 오류를 남겼다), `Building` 은 빌더 스레드(U12)가 아직 못 끝낸 배치다.
         const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
         if ( pOutState != nullptr )

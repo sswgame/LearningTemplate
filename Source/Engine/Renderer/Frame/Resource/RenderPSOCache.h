@@ -108,7 +108,7 @@ namespace sw
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findEnginePSO( RenderPassType passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOS() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. */
         void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
@@ -162,7 +162,7 @@ namespace sw
         /** @brief 빌더 줄에 있거나 만드는 중인 작업 수입니다(계측). */
         [[nodiscard]] uint32 getPendingMaterialPSOBuilds() const;
         /** @brief 그 상태인 항목 수입니다(테스트 · 계측). */
-        [[nodiscard]] size_t countMaterialPSOS( MaterialPSOState state ) const;
+        [[nodiscard]] size_t countMaterialPSOs( MaterialPSOState state ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 수명

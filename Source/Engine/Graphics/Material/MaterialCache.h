@@ -96,7 +96,7 @@ namespace sw
          */
         shared_ptr<const void> pinAsset( string_view relativePath ) override;
         /**
-         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FramePSOManager::warmPinnedMaterialPSOS`).
+         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FramePSOManager::warmPinnedMaterialPSOs`).
          * @details 고정(`pinAsset`)이 줄에 넣는다. 아직 초기화하지 않은 것(셰이더 경로 · define 을 모른다)은 줄에 남고, 놓여 캐시에서 빠진 것은 버린다.
          *          씬에 이미 든 머티리얼은 렌더러가 배치마다 PSO 를 만들므로, 이 줄은 아직 씬에 없는(다음 레벨 · 컷에 나올) 머티리얼의 PSO 생성 히치를 미리 치른다.
          */

@@ -133,7 +133,7 @@ namespace sw
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
             {
                 // 여기서 조용히 나가면 t5 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
-                // 막는 것은 ensureMaterialPSOS 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
+                // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
                 SW_LOG_ERROR( "No material fallback buffer for stride %# - this draw goes out with g_SwMaterials empty.",
                               pSlot->_elementStride );
             }
@@ -402,7 +402,7 @@ namespace sw
 
         // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
-        // 캐시는 ensureMaterialPSOS 가 기록 전에 채운다. 여기서는 조회만 한다.
+        // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
         RenderPSOCache::MaterialPSOState psoState = RenderPSOCache::MaterialPSOState::Ready;
         const RHIPipelineStateHandle     batchPSO = _psoManager.psoForBatch( pso, head, drawMode, &psoState );
         // 변형이 `Ready` 가 아닌 묶음(0)은 그리지 않는다 — 앞 묶음의 PSO 로 그리면 틀린 그림이다. 실패는 만들 때 오류를 남겼고, 만드는 중이면 이번 프레임만 건너뛴다.
