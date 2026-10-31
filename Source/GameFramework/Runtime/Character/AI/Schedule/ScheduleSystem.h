@@ -261,7 +261,7 @@ namespace sw
         void setPathing( const ISchedulePathing* pPlanning, const ISchedulePathing* pFine );
         /** @brief 스마트 오브젝트 슬롯 제공자를 정합니다. 비면 카탈로그 `<Spot>` 의 기본 제공자를 씁니다. */
         void setActivityLocator( IScheduleActivityLocator* pLocator );
-        void setActivityAnimator( IScheduleActivityAnimator* pAnimator ) { _pAnimator = pAnimator; }
+        void setActivityAnimator( IScheduleActivityAnimator* pAnimator ) { _services._pAnimator = pAnimator; }
         /** @brief 플래그 조건이 읽는 플래그입니다. 리비전이 바뀌면 다음 시간 흐름에서 계획을 다시 세웁니다. */
         void setFlags( const GameFlags* pFlags );
         /** @brief 세계 태그입니다. 내용이 바뀌면 `notifyConditionsChanged` 를 부릅니다. */
@@ -407,13 +407,19 @@ namespace sw
         void  resumeNPC( int32 npcIndex );
         void  logTraceRequest();
 
+        /** @brief 빌려 쓰는 바깥 서비스입니다. 경로 둘과 자리 제공자는 비지 않는다 — 바깥이 주지 않으면 아래 기본 제공자를 가리킨다(생성자 · 설정 함수가 지킨다). */
+        struct Services
+        {
+            const ISchedulePathing*    _pPlanning;
+            const ISchedulePathing*    _pFine;
+            IScheduleActivityLocator*  _pLocator;
+            IScheduleActivityAnimator* _pAnimator{ nullptr };
+            const GameFlags*           _pFlags{ nullptr };
+            const TagContainer*        _pWorldTags{ nullptr };
+        };
+
         const ScheduleCatalog*     _pCatalog;
-        const ISchedulePathing*    _pPlanning;
-        const ISchedulePathing*    _pFine;
-        IScheduleActivityLocator*  _pLocator;
-        IScheduleActivityAnimator* _pAnimator;
-        const GameFlags*           _pFlags;
-        const TagContainer*        _pWorldTags;
+        Services                   _services;
         ScheduleSystemRegistry*    _pLiveRegistry;  ///< 생성자가 오른 살아 있는 목록(모듈 서브시스템). 없으면(게임 서비스 없는 테스트) nullptr — 소멸자가 같은 목록에서 빠진다
         ScheduleSpotLocator        _defaultLocator; ///< 카탈로그 `<Spot>` 제공자
         StraightSchedulePathing    _defaultPathing; ///< 곧은 선

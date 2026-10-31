@@ -193,12 +193,7 @@ namespace sw
 
     ScheduleSystem::ScheduleSystem()
         : _pCatalog{ nullptr }
-        , _pPlanning{ nullptr }
-        , _pFine{ nullptr }
-        , _pLocator{ nullptr }
-        , _pAnimator{ nullptr }
-        , _pFlags{ nullptr }
-        , _pWorldTags{ nullptr }
+        , _services{ &_defaultPathing, &_defaultPathing, &_defaultLocator }
         , _pLiveRegistry{ game::findSubsystem<ScheduleSystemRegistry>() }
         , _defaultLocator{}
         , _defaultPathing{}
@@ -254,13 +249,7 @@ namespace sw
             _settings._clock._listSeason.push_back( hashed_string( "Default" ) );
         _minute = absoluteMinute;
         _defaultLocator.initialize( pCatalog );
-        if ( _pLocator == nullptr )
-            _pLocator = &_defaultLocator;
-        if ( _pPlanning == nullptr )
-            _pPlanning = &_defaultPathing;
-        if ( _pFine == nullptr )
-            _pFine = _pPlanning;
-        _flagsRevision = _pFlags != nullptr ? _pFlags->getRevision() : 0;
+        _flagsRevision = _services._pFlags != nullptr ? _services._pFlags->getRevision() : 0;
         if ( _pCatalog == nullptr )
             return true;
 
@@ -296,8 +285,8 @@ namespace sw
         {
             for ( const ScheduleSegment& segment : npc._listSegment )
             {
-                if ( segment._reservationID != 0 && _pLocator != nullptr )
-                    _pLocator->release( segment._reservationID );
+                if ( segment._reservationID != 0 )
+                    _services._pLocator->release( segment._reservationID );
             }
         }
         _listNPC.clear();
@@ -314,30 +303,30 @@ namespace sw
 
     void ScheduleSystem::setPathing( const ISchedulePathing* pPlanning, const ISchedulePathing* pFine )
     {
-        _pPlanning = pPlanning != nullptr ? pPlanning : &_defaultPathing;
-        _pFine     = pFine != nullptr ? pFine : _pPlanning;
+        _services._pPlanning = pPlanning != nullptr ? pPlanning : &_defaultPathing;
+        _services._pFine     = pFine != nullptr ? pFine : _services._pPlanning;
         if ( _listNPC.empty() == false )
             _bConditionsDirty = SW_TRUE;
     }
 
     void ScheduleSystem::setActivityLocator( IScheduleActivityLocator* pLocator )
     {
-        _pLocator = pLocator != nullptr ? pLocator : &_defaultLocator;
+        _services._pLocator = pLocator != nullptr ? pLocator : &_defaultLocator;
         if ( _listNPC.empty() == false )
             _bConditionsDirty = SW_TRUE;
     }
 
     void ScheduleSystem::setFlags( const GameFlags* pFlags )
     {
-        _pFlags           = pFlags;
+        _services._pFlags = pFlags;
         _flagsRevision    = pFlags != nullptr ? pFlags->getRevision() : 0;
         _bConditionsDirty = SW_TRUE;
     }
 
     void ScheduleSystem::setWorldTags( const TagContainer* pTags )
     {
-        _pWorldTags       = pTags;
-        _bConditionsDirty = SW_TRUE;
+        _services._pWorldTags = pTags;
+        _bConditionsDirty     = SW_TRUE;
     }
 
     void ScheduleSystem::setWeather( const hashed_string& weatherID )
@@ -1024,7 +1013,7 @@ namespace sw
                 request._endMinute   = endMinute;
                 ScheduleLocation reserved;
                 uint32           reservationID = 0;
-                if ( _pLocator != nullptr && _pLocator->reserve( request, reserved, reservationID ) )
+                if ( _services._pLocator->reserve( request, reserved, reservationID ) )
                 {
                     segment._target        = reserved;
                     segment._reservationID = reservationID;
@@ -1047,7 +1036,7 @@ namespace sw
                     hop._endMinute         = MathUtil::min( endMinute, hopStart + stepMinutes );
                     hop._bLeaveEarly       = hopStart == startMinute ? SW_TRUE : SW_FALSE;
                     hop._target._area      = placeLocation._area;
-                    hop._target._position  = _pPlanning->offsetInPlane( placeLocation._position, length * ::cosf( angle ), length * ::sinf( angle ) );
+                    hop._target._position  = _services._pPlanning->offsetInPlane( placeLocation._position, length * ::cosf( angle ), length * ::sinf( angle ) );
                     outListSegment.push_back( hop );
                 }
                 return;
@@ -1075,7 +1064,7 @@ namespace sw
             }
             // 일찍 나서기는 앞 칸의 끝을 빌린다 — 앞 칸이 더 높은 우선순위(약속 · 축제)면 끝까지 있고 늦게 닿는다.
             const bool  bMayLeaveEarly = segment._bLeaveEarly != SW_FALSE && ( pPrevious == nullptr || pPrevious->_priority <= segment._priority );
-            const int32 travel         = Internal::isSamePlace( from, segment._target ) ? 0 : Internal::ceilMinutes( _pPlanning->estimateTravelMinutes( from, segment._target, def._unitsPerMinute ) );
+            const int32 travel         = Internal::isSamePlace( from, segment._target ) ? 0 : Internal::ceilMinutes( _services._pPlanning->estimateTravelMinutes( from, segment._target, def._unitsPerMinute ) );
             const int32 wanted         = bMayLeaveEarly ? segment._startMinute - travel : segment._startMinute;
             segment._departMinute      = MathUtil::max( wanted, ready );
             segment._travelMinutes     = travel;
@@ -1087,8 +1076,6 @@ namespace sw
 
     void ScheduleSystem::releaseUnused( const vector<ScheduleSegment>& listOld, const vector<ScheduleSegment>& listNew )
     {
-        if ( _pLocator == nullptr )
-            return;
         for ( const ScheduleSegment& oldSegment : listOld )
         {
             if ( oldSegment._reservationID == 0 )
@@ -1099,7 +1086,7 @@ namespace sw
                 bKept = bKept || newSegment._reservationID == oldSegment._reservationID;
             }
             if ( bKept == false )
-                _pLocator->release( oldSegment._reservationID );
+                _services._pLocator->release( oldSegment._reservationID );
         }
     }
 
@@ -1152,9 +1139,9 @@ namespace sw
         const ScheduleConditionVocabulary& vocabulary = _pCatalog->getVocabulary();
         const WorldClockSettings&          clock      = _settings._clock;
         ScheduleConditionContext           context;
-        context._pFlags       = _pFlags;
+        context._pFlags       = _services._pFlags;
         context._pNPCTags     = &_listNPC[static_cast<size_t>( npcIndex )]._tags;
-        context._pWorldTags   = _pWorldTags;
+        context._pWorldTags   = _services._pWorldTags;
         context._weather      = _weather;
         context._day          = day;
         context._dayOfSeason  = day % clock._daysPerSeason + 1;
@@ -1206,10 +1193,10 @@ namespace sw
         const ScheduleSegment&  segment = npc._listSegment[static_cast<size_t>( segmentIndex )];
         const ScheduleLocation& from    = getStartLocation( npc, segmentIndex );
         vector<float3>          listPoint;
-        _pPlanning->makeRoute( from, segment._target, listPoint );
+        _services._pPlanning->makeRoute( from, segment._target, listPoint );
         ScheduleLocation location;
         location._position = SchedulePathingUtil::computePointAlong( listPoint, fraction );
-        location._area     = _pPlanning->computeAreaAt( from, segment._target, fraction );
+        location._area     = _services._pPlanning->computeAreaAt( from, segment._target, fraction );
         return location;
     }
 
@@ -1395,7 +1382,7 @@ namespace sw
 
         const NPCRuntime& npc         = _listNPC[static_cast<size_t>( npcIndex )];
         const bool        bAnimation  = kind == ScheduleEvent::Kind::ActivityStarted || kind == ScheduleEvent::Kind::ActivityEnded;
-        const bool        bShouldPlay = _pAnimator != nullptr && npc._lod == ScheduleLOD::Near && bAnimation && pSegment != nullptr;
+        const bool        bShouldPlay = _services._pAnimator != nullptr && npc._lod == ScheduleLOD::Near && bAnimation && pSegment != nullptr;
         if ( bShouldPlay == false )
             return;
         ScheduleActivityCue cue;
@@ -1405,9 +1392,9 @@ namespace sw
         cue._npc       = getNPCID( npcIndex );
         cue._npcIndex  = npcIndex;
         if ( kind == ScheduleEvent::Kind::ActivityStarted )
-            _pAnimator->onActivityStarted( cue );
+            _services._pAnimator->onActivityStarted( cue );
         else
-            _pAnimator->onActivityEnded( cue );
+            _services._pAnimator->onActivityEnded( cue );
     }
 
     void ScheduleSystem::emitSnapped( int32 npcIndex )
@@ -1422,9 +1409,9 @@ namespace sw
 
     void ScheduleSystem::applyConditionChanges()
     {
-        const bool bFlagsChanged = _pFlags != nullptr && _pFlags->getRevision() != _flagsRevision;
+        const bool bFlagsChanged = _services._pFlags != nullptr && _services._pFlags->getRevision() != _flagsRevision;
         const bool bAll          = _bConditionsDirty != SW_FALSE || bFlagsChanged;
-        _flagsRevision           = _pFlags != nullptr ? _pFlags->getRevision() : 0;
+        _flagsRevision           = _services._pFlags != nullptr ? _services._pFlags->getRevision() : 0;
         _bConditionsDirty        = SW_FALSE;
         bool bAnyReplanned       = false;
         for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
@@ -1455,7 +1442,7 @@ namespace sw
             const uint64           key     = ScheduleHash::computeSegmentKey( segment );
             if ( key == npc._routeKey || segment._travelMinutes <= 0 )
                 continue;
-            _pFine->makeRoute( getStartLocation( npc, active ), segment._target, npc._listRoutePoint );
+            _services._pFine->makeRoute( getStartLocation( npc, active ), segment._target, npc._listRoutePoint );
             npc._routeKey = key;
         }
     }
@@ -1524,7 +1511,7 @@ namespace sw
         {
             outState._listBrokenAppointment.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
         }
-        if ( _pLocator == &_defaultLocator )
+        if ( _services._pLocator == &_defaultLocator )
             _defaultLocator.fillState( outState._listReservation );
     }
 
@@ -1552,7 +1539,7 @@ namespace sw
             if ( appointmentIndex >= 0 )
                 _listBrokenAppointment.push_back( appointmentIndex );
         }
-        if ( _pLocator == &_defaultLocator )
+        if ( _services._pLocator == &_defaultLocator )
             _defaultLocator.restoreState( state._listReservation );
 
         vector<uint8> listRestored( _listNPC.size(), SW_FALSE );
@@ -1587,7 +1574,7 @@ namespace sw
                 planNPC( npcIndex, _minute, _listNPC[static_cast<size_t>( npcIndex )]._origin );
         }
         rebuildAppointmentChecks( getDay() );
-        _flagsRevision    = _pFlags != nullptr ? _pFlags->getRevision() : 0;
+        _flagsRevision    = _services._pFlags != nullptr ? _services._pFlags->getRevision() : 0;
         _bConditionsDirty = SW_FALSE;
         _bSuppressEvents  = SW_FALSE;
         updateNearRoutes();
