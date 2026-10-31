@@ -24,6 +24,14 @@ namespace sw
             Closed
         };
 
+        /** @brief 잠금 안에서 모은 로그의 사건입니다 — 사건마다 로그 id(테스트가 `SW_EXPECT_LOG` 로 찾는다)와 수준이 정해져 있다. */
+        enum class DeferredLogKind : uint8
+        {
+            StreamClosed = 0, ///< 엔드포인트가 연결을 끊었다(`Stream.ClosedForError`, Warning)
+            TLSFailed,        ///< 핸드셰이크 실패 · 레코드 거절(`Stream.TLSFailed`, Warning)
+            FrameTooLarge     ///< 보낼 프레임이 상한을 넘어 보내지 않았다(`Stream.FrameTooLarge`, Error)
+        };
+
         struct StreamMessageEndpointInternal
         {
             static constexpr int32 kPingBodySize = 8;
@@ -67,23 +75,18 @@ namespace sw
         uint8                   _bAccepted{ SW_FALSE };
         uint8                   _bOpenAnnounced{ SW_FALSE };
         uint8                   _bReceivePaused{ SW_FALSE };
-        /** @brief 잠금 안에서 모은 로그(오류 여부, 글)입니다. `_mutex` 가 지키고 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다 — 잠금은 잎이라 쥔 채 로그를 쓰지 않는다. */
-        vector<pair<bool, string>> _listDeferredLog{};
-        atomic<bool>               _bHasDeferredLog{ false }; ///< `_listDeferredLog` 가 비지 않았다 — 잠금 없이 먼저 보아 보내기 길을 늘리지 않는다
+        /** @brief 잠금 안에서 모은 로그(사건, 글)입니다. `_mutex` 가 지키고 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다 — 잠금은 잎이라 쥔 채 로그를 쓰지 않는다. */
+        vector<pair<DeferredLogKind, string>> _listDeferredLog{};
+        atomic<bool>                          _bHasDeferredLog{ false }; ///< `_listDeferredLog` 가 비지 않았다 — 잠금 없이 먼저 보아 보내기 길을 늘리지 않는다
 
         explicit Connection( int32 maxBodySize )
             : _decoder{ maxBodySize }
         {
         }
 
-        void deferWarning( const utf8* pText )
+        void deferLog( DeferredLogKind kind, const utf8* pText )
         {
-            _listDeferredLog.emplace_back( false, string( pText ) );
-            _bHasDeferredLog.store( true, std::memory_order_release );
-        }
-        void deferError( const utf8* pText )
-        {
-            _listDeferredLog.emplace_back( true, string( pText ) );
+            _listDeferredLog.emplace_back( kind, string( pText ) );
             _bHasDeferredLog.store( true, std::memory_order_release );
         }
     };
@@ -163,7 +166,7 @@ namespace sw
             connection._errorReason = reason;
             StringBuilder<constant::kMaxBuffer256> text;
             text.appendFormat( "Closing stream %# (%#): %#", connection._remote.toString().c_str(), connection._handle.packed(), toString( reason ) );
-            connection.deferWarning( text.c_str() ); // `connection._mutex` 를 쥔 채 불린다 — 로그는 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다
+            connection.deferLog( DeferredLogKind::StreamClosed, text.c_str() ); // `connection._mutex` 를 쥔 채 불린다 — 로그는 잠금을 놓은 뒤 `flushDeferredLog` 가 쓴다
         }
         _pTransport->close( connection._handle, StreamCloseMode::Abort );
     }
@@ -172,18 +175,26 @@ namespace sw
     {
         if ( connection._bHasDeferredLog.load( std::memory_order_acquire ) == false )
             return;
-        vector<pair<bool, string>> listLog;
+        vector<pair<DeferredLogKind, string>> listLog;
         {
             ScopedLock<mutex> lock{ connection._mutex };
             listLog.swap( connection._listDeferredLog );
             connection._bHasDeferredLog.store( false, std::memory_order_release );
         }
-        for ( const pair<bool, string>& entry : listLog )
+        for ( const pair<DeferredLogKind, string>& entry : listLog )
         {
-            if ( entry.first )
-                SW_LOG_ERROR( "%#", entry.second.c_str() );
-            else
-                SW_LOG_WARNING( "%#", entry.second.c_str() );
+            switch ( entry.first )
+            {
+                case DeferredLogKind::StreamClosed:
+                    SW_LOG_WARNING_ID( "Stream.ClosedForError", "%#", entry.second.c_str() );
+                    break;
+                case DeferredLogKind::TLSFailed:
+                    SW_LOG_WARNING_ID( "Stream.TLSFailed", "%#", entry.second.c_str() );
+                    break;
+                case DeferredLogKind::FrameTooLarge:
+                    SW_LOG_ERROR_ID( "Stream.FrameTooLarge", "%#", entry.second.c_str() );
+                    break;
+            }
         }
     }
 
@@ -256,7 +267,7 @@ namespace sw
         {
             StringBuilder<constant::kMaxBuffer256> text;
             text.appendFormat( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
-            connection.deferWarning( text.c_str() );
+            connection.deferLog( DeferredLogKind::TLSFailed, text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure );
             return false;
         }
@@ -270,7 +281,7 @@ namespace sw
         {
             StringBuilder<constant::kMaxBuffer256> text;
             text.appendFormat( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
-            connection.deferWarning( text.c_str() );
+            connection.deferLog( DeferredLogKind::TLSFailed, text.c_str() );
             closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac).
             return false;
         }
@@ -414,7 +425,7 @@ namespace sw
         {
             StringBuilder<constant::kMaxBuffer256> text;
             text.appendFormat( "Stream frame of %# bytes exceeds the limit of %# bytes - not sent", bodySize, _settings->_maxFrameBodySize );
-            connection->deferError( text.c_str() );
+            connection->deferLog( DeferredLogKind::FrameTooLarge, text.c_str() );
             return StreamSendResult::QueueFull;
         }
         return writeOutgoingLocked( *connection, connection->_frameScratch );
