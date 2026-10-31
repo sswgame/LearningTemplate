@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
-#include "Engine/Automation/Runner/AutomationStageReset.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 
 #include "imgui_internal.h"
 

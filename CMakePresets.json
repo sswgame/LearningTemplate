@@ -95,6 +95,15 @@
       }
     },
     {
+      "name": "Ninja-Debug-NoAutomation",
+      "displayName": "Windows Ninja Debug - No Automation (Clang-cl)",
+      "description": "자동화 런타임을 뺀 개발 구성(SW_ENABLE_AUTOMATION=OFF) — 에디터 · 개발 도구는 있고 실행기(Automation/Runner)만 없다. 실행기 없이 지어지는지 보는 구성",
+      "inherits": "Ninja-Debug",
+      "cacheVariables": {
+        "SW_ENABLE_AUTOMATION": "OFF"
+      }
+    },
+    {
       "name": "Ninja-Debug-Server",
       "displayName": "Windows Ninja Debug - Dedicated Server (Clang-cl)",
       "description": "전용 서버 타깃(SW_TARGET_TYPE=Server) Debug — 창 · GPU · 에디터 · RHI 백엔드 없음, Server 실행 파일만. 빌드 폴더 build/Ninja-Debug-Server",
@@ -129,6 +138,10 @@
     {
       "name": "Ninja-Shipping-NoAutomation",
       "configurePreset": "Ninja-Shipping-NoAutomation"
+    },
+    {
+      "name": "Ninja-Debug-NoAutomation",
+      "configurePreset": "Ninja-Debug-NoAutomation"
     },
     {
       "name": "Ninja-Debug-Server",

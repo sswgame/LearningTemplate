@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Runner/AutomationStageReset.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"

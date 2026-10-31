@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Automation/Runner/AutomationStageReset.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"

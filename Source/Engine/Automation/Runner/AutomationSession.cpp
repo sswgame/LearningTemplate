@@ -11,7 +11,7 @@
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
-#include "Engine/Automation/Runner/AutomationStageReset.h"
+#include "Engine/Automation/Scenario/AutomationStageReset.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Foundation/EngineServices.h"
