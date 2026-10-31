@@ -88,15 +88,11 @@ namespace sw
          * @details 포맷은 항상 `constant::kBackBufferFormat` 입니다. 테스트가 **최종 화면**을 픽셀로 비교하는 유일한 경로입니다.
          */
         bool readbackPresent( vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) const;
-        /** @brief 받아 둔 Present 결과(화면에 나간 이미지)를 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)으로 씁니다. */
-        bool dumpPresentToFile( string_view outFilePath ) const;
         /**
          * @brief 주 시점의 트랜지언트 첨부를 CPU 로 읽어 옵니다(밉 0). 테스트가 백엔드 사이의 픽셀을 비교할 때 씁니다.
          * @param outFormat 첨부의 RHIFormat 입니다. 채널 순서를 해석할 때 씁니다. 깊이 첨부는 `kRHIDepthReadbackFormat` 입니다.
          */
         bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat ) const;
-        /** @brief 트랜지언트 첨부를 읽어 파일로 저장합니다. 확장자 규칙은 `dumpPresentToFile` 과 같습니다. */
-        bool dumpTransientToFile( string_view attachmentName, string_view outFilePath ) const;
         /**
          * @brief 임의의 2D 텍스처(첫 밉)를 CPU 로 읽습니다. 읽지 못했거나 크기가 0 이면 false 입니다(까닭은 로그로 남긴다).
          * @details 에디터 씬 뷰 RT 처럼 주 출력이 아닌 렌더 타깃을 저장할 때 씁니다. 파일 쓰기는 부른 쪽이 워커에 맡긴다(`RenderThread::writeRequestedScreenshot`).

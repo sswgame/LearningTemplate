@@ -81,6 +81,8 @@ namespace sw
         void expectCapture( uint32 kindBit ) { (void)_expectedCaptureMask.fetch_or( kindBit ); }
         /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다. */
         void reportCaptureFinished( uint32 kindBit, bool bWritten );
+        /** @brief 이 종류의 사진 한 장을 쓰지 못했음을 적습니다(끝은 마지막 장이 `reportCaptureFinished` 로 알린다 — 장마다 다른 워커가 쓴다). */
+        void reportCaptureFailed( uint32 kindBit ) { (void)_failedCaptureMask.fetch_or( kindBit ); }
         /**
          * @brief 요청한 종류가 모두 끝났는지 봅니다. 요청한 종류가 하나도 없거나 아직 끝나지 않았으면 false 입니다.
          * @param outBFailed 끝났을 때 쓰지 못한 종류가 하나라도 있으면 true 입니다.
