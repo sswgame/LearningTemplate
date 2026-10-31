@@ -120,6 +120,7 @@ namespace sw
         : _listShard{}
         , _peers{}
         , _router{}
+        , _engineMessageHandler{ *this }
         , _routerSubscription{}
         , _connectSecurity{}
         , _tickWriter{}
@@ -345,7 +346,7 @@ namespace sw
         else
         {
             // 엔진 영역의 서버 틱은 클라이언트만 받는다 — 키트 · 게임 영역과 겹치지 않으므로 거절되면 이 라우터를 다른 누가 엔진 영역에 썼다는 결함이다.
-            _routerSubscription = _router.registerHandler( this );
+            _routerSubscription = _router.registerHandler( &_engineMessageHandler );
             if ( _routerSubscription.isActive() == false )
             {
                 SW_LOG_ERROR( "Net session could not claim the engine message range - another handler holds it" );
@@ -534,7 +535,7 @@ namespace sw
         return true;
     }
 
-    NetHandleResult GameNetSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
+    NetHandleResult GameNetSession::handleEngineMessage( const NetMessageContext& context, BitReader& body )
     {
         if ( context._kind == GameNetSessionMessage::kShutdownNotice )
         {

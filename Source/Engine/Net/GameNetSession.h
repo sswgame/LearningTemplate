@@ -157,7 +157,7 @@ namespace sw
      *     session.shutdown();
      * @endcode
      */
-    class SW_API GameNetSession final : public ISubsystem, private INetMessageHandler
+    class SW_API GameNetSession final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "GameNetSession";
@@ -287,10 +287,28 @@ namespace sw
             uint64               _reportedByteCount{ 0 };
         };
 
-        // INetMessageHandler — 클라이언트만 엔진 영역의 서버 틱을 받는다.
-        uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
-        uint16          getMessageKindMask() const override { return static_cast<uint16>( ( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ) | ( 1u << ( GameNetSessionMessage::kShutdownNotice - NetMessageRange::kEngine ) ) ); }
-        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /**
+         * @class EngineMessageHandler
+         * @brief 엔진 영역의 처리기(`INetMessageHandler`)입니다 — 클라이언트만 엔진 영역의 서버 틱 · 종료 통지를 받는다. 세션이 그 인터페이스를 상속하지 않고 이 멤버를 라우터에 단다(수명은 세션과 같다).
+         */
+        class EngineMessageHandler final : public INetMessageHandler
+        {
+        public:
+            explicit EngineMessageHandler( GameNetSession& owner )
+                : _owner{ owner }
+            {
+            }
+
+            uint8           getMessageRangeBase() const override { return NetMessageRange::kEngine; }
+            uint16          getMessageKindMask() const override { return static_cast<uint16>( ( 1u << ( GameNetSessionMessage::kServerTick - NetMessageRange::kEngine ) ) | ( 1u << ( GameNetSessionMessage::kShutdownNotice - NetMessageRange::kEngine ) ) ); }
+            NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleEngineMessage( context, body ); }
+
+        private:
+            GameNetSession& _owner;
+        };
+
+        /** @brief 엔진 영역 메시지 하나를 처리합니다(`EngineMessageHandler::handleNetMessage`). */
+        NetHandleResult handleEngineMessage( const NetMessageContext& context, BitReader& body );
 
         /** @brief 샤드 하나의 소켓을 열고 (건 데코레이터로 감싼) 호스트를 세웁니다. 실패하면 로그를 남기고 nullptr 입니다. */
         unique_ptr<Shard> createShard( const GameNetSessionParams& params, uint16 transportPort, int32 shardIndex );
@@ -314,12 +332,13 @@ namespace sw
         GameNetTransportDecoratorDelegate _transportDecorator; ///< `setTransportDecorator` 가 건 것(없으면 비었다)
         NetEndpointShardSet               _peers;              ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
         NetMessageRouter                  _router;
-        Subscription                      _routerSubscription; ///< 클라이언트 — 이 세션을 엔진 영역 처리기로 `_router` 에 단 등록
-        GameConnectSecurity               _connectSecurity;    ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
-        NetMessageWriter                  _tickWriter;         ///< 서버 — `sendServerTick` 이 다시 쓴다
-        TaskFuture<NetConnectResult>      _connectFuture;      ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
-        vector<NetEndpointEvent>          _listEventScratch;   ///< `update` 가 다시 쓴다
-        vector<ReplicaStat>               _listReplicaStat;    ///< 복제 키트가 올린 셈(`setReplicaStats`)
+        EngineMessageHandler              _engineMessageHandler; ///< 클라이언트가 `_router` 의 엔진 영역에 다는 처리기(등록보다 먼저 선언 — 나중에 풀린다)
+        Subscription                      _routerSubscription;   ///< 클라이언트 — `_engineMessageHandler` 를 엔진 영역 처리기로 `_router` 에 단 등록
+        GameConnectSecurity               _connectSecurity;      ///< 티켓 게임 포트의 암호 제공자 · 접속 인증기 자리(`getConnectSecurity`)
+        NetMessageWriter                  _tickWriter;           ///< 서버 — `sendServerTick` 이 다시 쓴다
+        TaskFuture<NetConnectResult>      _connectFuture;        ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
+        vector<NetEndpointEvent>          _listEventScratch;     ///< `update` 가 다시 쓴다
+        vector<ReplicaStat>               _listReplicaStat;      ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                        _serverAddress;
         NetConnectCredentials             _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
         uint64                            _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
