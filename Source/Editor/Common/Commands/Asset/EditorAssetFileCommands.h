@@ -58,6 +58,11 @@ namespace sw::editor
          * @return 복사한 파일 수입니다. 이미 그 폴더에 있는 파일과 없는 파일은 건너뜁니다.
          */
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
+        /**
+         * @brief 콘솔 명령의 원본 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
+         * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일). `scene.open` · `asset.import` 가 같은 입구로 읽는다.
+         */
+        [[nodiscard]] static bool readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply );
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.

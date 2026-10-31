@@ -31,6 +31,22 @@ namespace sw
         return true;
     }
 
+    bool DevCommandRegistry::readCountArgument( string_view argument, uint32& outValue )
+    {
+        if ( argument.empty() )
+            return false;
+        uint64 value = 0;
+        for ( const utf8 ch : argument )
+        {
+            const bool bInvalidCountDigit = ch < '0' || '9' < ch || value > 1000000;
+            if ( bInvalidCountDigit )
+                return false;
+            value = value * 10 + static_cast<uint64>( ch - '0' );
+        }
+        outValue = static_cast<uint32>( value );
+        return true;
+    }
+
     DevCommandRegistry::DevCommandRegistry()
         : _mutex{}
         , _registration{ "DevCommandRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }

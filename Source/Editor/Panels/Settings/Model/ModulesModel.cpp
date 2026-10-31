@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 
 #include "Engine/Config/GameSelection.h"
 

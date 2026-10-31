@@ -6,8 +6,12 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/VectorUtil.h"
 
+#include "Editor/Common/Commands/EditorCommandTarget.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 namespace sw::editor
@@ -292,4 +296,31 @@ namespace sw::editor
             registry.registerCommand( std::move( desc ) );
         }
     }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    // 콘솔 명령 — 시나리오 · 콘솔 입력 줄이 부른다(`DevCommandRegistry`). 그 기능 옆에 둔다(언리얼 Exec 명령이 그 시스템 파일에 있는 것과 같다).
+    namespace
+    {
+        struct EditorCommandConsoleInternal
+        {
+            static bool runEditorCommand( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( listArgument.size() != 1 || pContext == nullptr )
+                    return false;
+                if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0], EditorCommandTarget::none() ) == false )
+                {
+                    outReply = "no enabled editor command '" + listArgument[0] + "'";
+                    return false;
+                }
+                outReply = "ran " + listArgument[0];
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( EditorCommand, "editor", "editor <commandID>", "Run an editor command by id (the command palette ids, e.g. scene.saveScene)",
+                    &EditorCommandConsoleInternal::runEditorCommand );
 } // namespace sw::editor

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"

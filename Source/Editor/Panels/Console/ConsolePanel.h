@@ -12,7 +12,7 @@
 
 #include "DevTools/Console/DevConsole.h"
 
-#include "Editor/Common/Commands/Dev/EditorLogCommands.h"
+#include "Editor/Common/Commands/Diagnostics/EditorLogCommands.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Console/Model/ConsoleLogRows.h"
 

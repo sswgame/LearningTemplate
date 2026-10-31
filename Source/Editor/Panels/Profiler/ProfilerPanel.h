@@ -11,7 +11,7 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Defines.h"
 
-#include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
+#include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"

@@ -8,6 +8,10 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 
+#include "Core/Console/DevCommandRegistry.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/TagID.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
@@ -25,6 +29,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -362,4 +367,68 @@ namespace sw::editor
                                &EditorSceneObjectCommandsInternal::canMoveComponentDown, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", "Remove Component", editoricon::kTrash, "Scene", Component, 900, nullptr, &EditorSceneObjectCommandsInternal::runRemoveComponent,
                                &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    // 콘솔 명령 — 시나리오 · 콘솔 입력 줄이 부른다(`DevCommandRegistry`). 그 기능 옆에 둔다(언리얼 Exec 명령이 그 시스템 파일에 있는 것과 같다).
+    namespace
+    {
+        struct EditorSceneObjectConsoleInternal
+        {
+            static bool runSelectType( const vector<string>& listArgument, string& outReply )
+            {
+                GameObjectManager* pManager               = editor::getActiveObjectManager();
+                const bool         bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr;
+                if ( bInvalidSpawnArguments )
+                    return false;
+                const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( listArgument[0] ) );
+                if ( pType == nullptr )
+                {
+                    outReply = "unknown type '" + listArgument[0] + "'";
+                    return false;
+                }
+                vector<GameObject*> listObject;
+                EditorSceneCommands::collectObjectsWithComponent( *pManager, pType, listObject );
+                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                return true;
+            }
+
+            /** @brief 고른 오브젝트마다 컴포넌트 하나를 추가하고 되돌리기를 하나씩 남깁니다. 시나리오가 테스트 컴포넌트를 추가하므로 "Add Component" 메뉴에서 숨긴 타입(`HideInMenu`)도 받습니다. */
+            static bool runAddComponent( const vector<string>& listArgument, string& outReply )
+            {
+                // 사람이 인스펙터의 "Add Component" 로 하는 일과 같다. 대상 창의 선택에 추가하고, 미리보기 창이면 기록도 그 창의 스택에 남긴다.
+                const EditorSelection* pSelection = editor::getFocusedSelection();
+                if ( listArgument.size() != 1 || pSelection == nullptr )
+                    return false;
+                vector<GameObject*> listSelected;
+                pSelection->getSelectedObjects( listSelected );
+                uint32 addedCount{ 0 };
+                for ( GameObject* pObject : listSelected )
+                {
+                    if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
+                        ++addedCount;
+                }
+                outReply = formatToString( "added %# to %# object(s)", listArgument[0], addedCount );
+                return addedCount > 0;
+            }
+
+            static bool runSelectTag( const vector<string>& listArgument, string& outReply )
+            {
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( listArgument.size() != 1 || pManager == nullptr )
+                    return false;
+                vector<GameObject*> listObject;
+                EditorSceneCommands::collectObjectsWithTag( *pManager, TagID::request( listArgument[0] ), listObject );
+                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
+                    &EditorSceneObjectConsoleInternal::runSelectType );
+    SW_DEV_COMMAND( AddComponent, "component.add", "component.add <ComponentType>", "Add a component to every selected object (hidden test types too)",
+                    &EditorSceneObjectConsoleInternal::runAddComponent );
+    SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorSceneObjectConsoleInternal::runSelectTag );
 } // namespace sw::editor

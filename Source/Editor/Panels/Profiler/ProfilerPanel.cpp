@@ -13,7 +13,7 @@
 
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
-#include "Editor/Common/Commands/Dev/EditorTracyLauncher.h"
+#include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

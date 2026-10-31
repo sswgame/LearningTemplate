@@ -2,10 +2,12 @@
 
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -171,4 +173,68 @@ namespace sw::editor
         command._listArgument.insert( command._listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
         return command;
     }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    // 콘솔 명령 — 시나리오 · 콘솔 입력 줄이 부른다(`DevCommandRegistry`). 그 기능 옆에 둔다(언리얼 Exec 명령이 그 시스템 파일에 있는 것과 같다).
+    namespace
+    {
+        struct EditorPlayConsoleInternal
+        {
+            static bool runPlay( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                EditorPlaySession::play();
+                outReply = "play";
+                return true;
+            }
+
+            static bool runSimulate( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                EditorPlaySession::simulate();
+                outReply = "simulate";
+                return true;
+            }
+
+            static bool runPause( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                EditorPlaySession::pause();
+                outReply = "pause";
+                return true;
+            }
+
+            static bool runStop( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                EditorPlaySession::stop();
+                outReply = "stop";
+                return true;
+            }
+
+            static bool runStep( const vector<string>& listArgument, string& outReply )
+            {
+                uint32     frameCount            = 1;
+                const bool bInvalidStepArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && DevCommandRegistry::readCountArgument( listArgument[0], frameCount ) == false ) || frameCount == 0;
+                if ( bInvalidStepArguments )
+                    return false;
+                EditorPlaySession::stepFrames( frameCount );
+                outReply = formatToString( "step %#", frameCount );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( Play, "play", "play", "Start (or switch to) play-in-editor", &EditorPlayConsoleInternal::runPlay );
+    SW_DEV_COMMAND( Simulate, "simulate", "simulate", "Start (or switch to) simulate - world only, no player or game input",
+                    &EditorPlayConsoleInternal::runSimulate );
+    SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorPlayConsoleInternal::runPause );
+    SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorPlayConsoleInternal::runStop );
+    SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorPlayConsoleInternal::runStep );
 } // namespace sw::editor

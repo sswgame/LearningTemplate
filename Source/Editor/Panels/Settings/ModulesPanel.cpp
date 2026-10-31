@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Settings/ModulesPanel.h"
 
-#include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

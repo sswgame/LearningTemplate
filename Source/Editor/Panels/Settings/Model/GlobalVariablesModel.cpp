@@ -8,7 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
 namespace sw::editor

@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Editor/Common/Commands/Dev/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/Scene/EditorMultiEdit.h"

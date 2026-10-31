@@ -1,9 +1,8 @@
 /**
- * @file EditorDevCommands.cpp
- * @brief 에디터가 제공하는 개발 명령입니다. 에디터 커맨드 실행, 플레이 세션, 씬 열기와 저장, 임시 에셋 열기, 선택, 디버그 그리기 데모가 있습니다.
- *        에디터 모듈과 함께 로드되고 언로드됩니다.
- * @details 임시 에셋 명령(`asset.open`, `asset.removeTemp`, 감시 값 `Editor.TempAssetExists`)은 시나리오가 저장소 리소스를 바꾸지 않고
- *          문서 패널의 저장을 테스트하는 경로다. 경로는 작업 폴더의 `Saved/Automation/` 아래만 받고, 리소스 트리는 거절한다.
+ * @file EditorAutomationAssetCommands.cpp
+ * @brief 시나리오가 저장소 리소스를 바꾸지 않고 에셋 편집 · 임포트 · 프리팹 만들기를 거치게 하는 콘솔 명령입니다(`asset.open` · `asset.import` · `prefab.create` …).
+ * @details 쓰는 자리는 작업 폴더의 `Saved/Automation/`(리소스 트리 밖)과 사본 도메인의 `scratch/import` 만 받는다 — 이 파일의 경로 검사가 그 문지기다.
+ *          예전 `EditorDevCommands.cpp`(여러 기능의 콘솔 명령을 모은 파일)에서 뗐다. 플레이 · 씬 · 선택 명령은 그 기능의 명령 파일로 갔다.
  */
 #include "pch.h"
 
@@ -44,149 +43,16 @@
 
 namespace sw::editor
 {
+    // 콘솔 명령 — 시나리오 · 콘솔 입력 줄이 부른다(`DevCommandRegistry`). 그 기능 옆에 둔다(언리얼 Exec 명령이 그 시스템 파일에 있는 것과 같다).
     namespace
     {
-        struct EditorDevCommandsInternal
+        struct EditorAutomationAssetCommandsInternal
         {
             /**
              * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain`) 아래라 자동화 쓰기 게이트가 허락하고
              *        `.gitignore` 의 `/Content/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
              */
             static constexpr const utf8* kImportTempFolder = "scratch/import";
-
-            /** @brief 낱말을 양의 정수로 읽습니다. 숫자가 아니면 false 입니다. */
-            [[nodiscard]] static bool parseCount( const string& text, uint32& outValue )
-            {
-                if ( text.empty() )
-                    return false;
-                uint64 value = 0;
-                for ( const utf8 ch : text )
-                {
-                    const bool bInvalidCountDigit = ch < '0' || '9' < ch || value > 1000000;
-                    if ( bInvalidCountDigit )
-                        return false;
-                    value = value * 10 + static_cast<uint64>( ch - '0' );
-                }
-                outValue = static_cast<uint32>( value );
-                return true;
-            }
-
-            static bool runEditorCommand( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( listArgument.size() != 1 || pContext == nullptr )
-                    return false;
-                if ( pContext->getSubsystem<EditorCommandRegistry>().execute( listArgument[0], EditorCommandTarget::none() ) == false )
-                {
-                    outReply = "no enabled editor command '" + listArgument[0] + "'";
-                    return false;
-                }
-                outReply = "ran " + listArgument[0];
-                return true;
-            }
-
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::play();
-                outReply = "play";
-                return true;
-            }
-
-            static bool runSimulate( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::simulate();
-                outReply = "simulate";
-                return true;
-            }
-
-            static bool runPause( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::pause();
-                outReply = "pause";
-                return true;
-            }
-
-            static bool runStop( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                EditorPlaySession::stop();
-                outReply = "stop";
-                return true;
-            }
-
-            static bool runStep( const vector<string>& listArgument, string& outReply )
-            {
-                uint32     frameCount            = 1;
-                const bool bInvalidStepArguments = listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], frameCount ) == false ) || frameCount == 0;
-                if ( bInvalidStepArguments )
-                    return false;
-                EditorPlaySession::stepFrames( frameCount );
-                outReply = formatToString( "step %#", frameCount );
-                return true;
-            }
-
-            /**
-             * @brief 열 파일 인자를 읽습니다 - 절대 경로면 그 디스크 파일, 아니면 리소스 id(`engine/automation/…`)의 파일이다. 둘 중 무엇인지는 글의 모양(엄격한 절대 경로인지)이 정한다.
-             * @details 예전에는 리소스로 찾아보고 없으면 작업 폴더 상대 경로로 다시 풀었다(같은 글이 작업 폴더에 따라 다른 파일).
-             */
-            [[nodiscard]] static bool readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
-            {
-                if ( AbsolutePath::isStrictAbsolute( argument ) )
-                    return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
-                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
-                if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
-                {
-                    outReply = "no resource '" + argument + "'";
-                    return false;
-                }
-                outAbsolutePath = diskPath->str();
-                return true;
-            }
-
-            static bool runSaveSceneAs( const vector<string>& listArgument, string& outReply )
-            {
-                string absolutePath;
-                if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
-                    return false;
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );         // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
-                if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
-                {
-                    outReply = "could not save the active scene to '" + absolutePath + "'";
-                    return false;
-                }
-                outReply = "saved " + absolutePath;
-                return true;
-            }
-
-            static bool runOpenScene( const vector<string>& listArgument, string& outReply )
-            {
-                string absolutePath;
-                if ( listArgument.size() != 1 || readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
-                    return false;
-                // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
-                const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
-                if ( sceneID.empty() )
-                {
-                    outReply = "'" + absolutePath + "' is outside the content root and every mounted disk domain";
-                    return false;
-                }
-                // 미저장 씬이 있어도 대화상자를 띄우는 경로(tryOpenScene)를 쓰지 않고 바로 연다. 무인 실행에서는 대화상자를 아무도 닫지 않는다.
-                if ( EditorSceneFileCommands::loadScene( sceneID ) == false )
-                {
-                    outReply = "could not open '" + absolutePath + "'";
-                    return false;
-                }
-                outReply = "opening " + absolutePath;
-                return true;
-            }
 
             /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 감시 값 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
             struct TempAssetState
@@ -342,7 +208,7 @@ namespace sw::editor
             {
                 string     sourcePath;
                 string     folderPath;
-                const bool bInvalidArguments = listArgument.size() != 2 || readSourceFileArgument( listArgument[0], sourcePath, outReply ) == false ||
+                const bool bInvalidArguments = listArgument.size() != 2 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], sourcePath, outReply ) == false ||
                                                resolveImportFolder( listArgument[1], folderPath, outReply ) == false;
                 if ( bInvalidArguments )
                     return false; // 원본이 없으면 readSourceFileArgument 가 이유를 적었다
@@ -376,43 +242,6 @@ namespace sw::editor
                 const string& path = getEditorState<TempAssetState>()._lastPath;
                 outValue           = ( path.empty() == false && FileUtil::exists( path ) ) ? 1.0 : 0.0;
                 return true;
-            }
-
-            static bool runSelectType( const vector<string>& listArgument, string& outReply )
-            {
-                GameObjectManager* pManager               = editor::getActiveObjectManager();
-                const bool         bInvalidSpawnArguments = listArgument.size() != 1 || pManager == nullptr;
-                if ( bInvalidSpawnArguments )
-                    return false;
-                const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( listArgument[0] ) );
-                if ( pType == nullptr )
-                {
-                    outReply = "unknown type '" + listArgument[0] + "'";
-                    return false;
-                }
-                vector<GameObject*> listObject;
-                EditorSceneCommands::collectObjectsWithComponent( *pManager, pType, listObject );
-                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
-                return true;
-            }
-
-            /** @brief 고른 오브젝트마다 컴포넌트 하나를 추가하고 되돌리기를 하나씩 남깁니다. 시나리오가 테스트 컴포넌트를 추가하므로 "Add Component" 메뉴에서 숨긴 타입(`HideInMenu`)도 받습니다. */
-            static bool runAddComponent( const vector<string>& listArgument, string& outReply )
-            {
-                // 사람이 인스펙터의 "Add Component" 로 하는 일과 같다. 대상 창의 선택에 추가하고, 미리보기 창이면 기록도 그 창의 스택에 남긴다.
-                const EditorSelection* pSelection = editor::getFocusedSelection();
-                if ( listArgument.size() != 1 || pSelection == nullptr )
-                    return false;
-                vector<GameObject*> listSelected;
-                pSelection->getSelectedObjects( listSelected );
-                uint32 addedCount{ 0 };
-                for ( GameObject* pObject : listSelected )
-                {
-                    if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
-                        ++addedCount;
-                }
-                outReply = formatToString( "added %# to %# object(s)", listArgument[0], addedCount );
-                return addedCount > 0;
             }
 
             /**
@@ -496,85 +325,28 @@ namespace sw::editor
                 outReply = "spawned " + string( pSpawned->getName().c_str() );
                 return true;
             }
-
-            static bool runSelectTag( const vector<string>& listArgument, string& outReply )
-            {
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                if ( listArgument.size() != 1 || pManager == nullptr )
-                    return false;
-                vector<GameObject*> listObject;
-                EditorSceneCommands::collectObjectsWithTag( *pManager, TagID::request( listArgument[0] ), listObject );
-                outReply = formatToString( "selected %#", EditorSceneCommands::selectObjects( listObject ) );
-                return true;
-            }
-
-            /**
-             * @brief 씬 뷰 카메라 앞 6 m 에 디버그 도형 네 개(상자, 화살표, 구, 글자)와 오버레이 값 하나를 둡니다. 씬 뷰 시각화와 게임 뷰 HUD 가 동작하는지 눈으로 확인할 때 씁니다.
-             */
-            static bool runDebugDrawDemo( const vector<string>& listArgument, string& outReply )
-            {
-                uint32 seconds = 10;
-                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], seconds ) == false ) )
-                    return false;
-                const CameraComponent* pCamera = EditorCamera::ensure( editor::getActiveScene() );
-                if ( pCamera == nullptr )
-                    return false;
-                DebugDrawQueue* pQueue   = &editor::getSubsystem<DebugDrawQueue>();
-                const float4x4  world    = pCamera->getWorldMatrix();
-                const float3    forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world ).normalize();
-                const float3    right    = float3::transformVector( float3{ 1.0f, 0.0f, 0.0f }, world ).normalize();
-                const float3    center   = pCamera->getWorldPosition() + forward * 6.0f;
-                const float32   duration = static_cast<float32>( seconds );
-                pQueue->drawBox( center - right * 1.5f, float3{ 0.5f, 0.5f, 0.5f }, float4{ 1.0f, 0.4f, 0.1f, 1.0f }, duration, "Demo" );
-                pQueue->drawSphere( center + right * 1.5f, 0.6f, float4{ 0.2f, 0.8f, 1.0f, 1.0f }, duration, "Demo" );
-                pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
-                pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
-                editor::getSubsystem<DebugOverlayState>().setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
-                outReply = formatToString( "debug draw demo for %# s", seconds );
-                return true;
-            }
         };
     } // namespace
 
-    SW_DEV_COMMAND( EditorCommand, "editor", "editor <commandID>", "Run an editor command by id (the command palette ids, e.g. scene.saveScene)",
-                    &EditorDevCommandsInternal::runEditorCommand );
-    SW_DEV_COMMAND( Play, "play", "play", "Start (or switch to) play-in-editor", &EditorDevCommandsInternal::runPlay );
-    SW_DEV_COMMAND( Simulate, "simulate", "simulate", "Start (or switch to) simulate - world only, no player or game input",
-                    &EditorDevCommandsInternal::runSimulate );
-    SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorDevCommandsInternal::runPause );
-    SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorDevCommandsInternal::runStop );
-    SW_DEV_COMMAND( SaveSceneAs, "scene.saveAs", "scene.saveAs <absolute path>", "Save the active scene to a file (an absolute path - scenarios use {out}/...)",
-                    &EditorDevCommandsInternal::runSaveSceneAs );
-    SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
-                    "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",
-                    &EditorDevCommandsInternal::runOpenScene );
     SW_DEV_COMMAND( OpenTempAsset, "asset.open", "asset.open <path>",
                     "Open a new document at a temp path under Saved/Automation/ in its editor panel (an old file there is removed first)",
-                    &EditorDevCommandsInternal::runOpenTempAsset );
+                    &EditorAutomationAssetCommandsInternal::runOpenTempAsset );
     SW_DEV_COMMAND( OpenScratchAsset, "asset.openScratch", "asset.openScratch <scratch/...resource id>",
                     "Open an asset of a scenario's <Scratch> copy in its editor panel by resource id (Quick Open matches by file name and can pick the original)",
-                    &EditorDevCommandsInternal::runOpenScratchAsset );
+                    &EditorAutomationAssetCommandsInternal::runOpenScratchAsset );
     SW_DEV_COMMAND( MakeTempFolder, "asset.makeTempFolder", "asset.makeTempFolder <folder>", "Create a temp folder under Saved/Automation/ (editor saves do not create missing folders)",
-                    &EditorDevCommandsInternal::runMakeTempFolder );
+                    &EditorAutomationAssetCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
-                    &EditorDevCommandsInternal::runRemoveTempAsset );
+                    &EditorAutomationAssetCommandsInternal::runRemoveTempAsset );
     SW_DEV_COMMAND( ImportAsset, "asset.import", "asset.import <source file> <scratch/import/...folder>",
                     "Import a file into a temp resource folder the way Content Browser Import does, without the file dialog",
-                    &EditorDevCommandsInternal::runImportAsset );
+                    &EditorAutomationAssetCommandsInternal::runImportAsset );
     SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <scratch/import/...folder>",
-                    "Remove a temp resource folder that asset.import filled (with its .meta files)", &EditorDevCommandsInternal::runRemoveImportFolder );
+                    "Remove a temp resource folder that asset.import filled (with its .meta files)", &EditorAutomationAssetCommandsInternal::runRemoveImportFolder );
     SW_AUTOMATION_WATCH( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",
-                         &EditorDevCommandsInternal::readTempAssetExists );
-    SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
-    SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
-                    &EditorDevCommandsInternal::runSelectType );
-    SW_DEV_COMMAND( AddComponent, "component.add", "component.add <ComponentType>", "Add a component to every selected object (hidden test types too)",
-                    &EditorDevCommandsInternal::runAddComponent );
+                         &EditorAutomationAssetCommandsInternal::readTempAssetExists );
     SW_DEV_COMMAND( CreatePrefab, "prefab.create", "prefab.create <Saved/Automation/...prefab.xml>",
-                    "Save the selected object as a temp prefab under Saved/Automation/ and link the object to it as an instance", &EditorDevCommandsInternal::runCreatePrefab );
+                    "Save the selected object as a temp prefab under Saved/Automation/ and link the object to it as an instance", &EditorAutomationAssetCommandsInternal::runCreatePrefab );
     SW_DEV_COMMAND( SpawnPrefab, "prefab.spawn", "prefab.spawn <path.prefab.xml>", "Spawn a prefab instance at the scene root and select it (one undo step)",
-                    &EditorDevCommandsInternal::runSpawnPrefab );
-    SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
-    SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the scene view camera",
-                    &EditorDevCommandsInternal::runDebugDrawDemo );
+                    &EditorAutomationAssetCommandsInternal::runSpawnPrefab );
 } // namespace sw::editor

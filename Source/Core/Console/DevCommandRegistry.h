@@ -72,6 +72,8 @@ namespace sw
          * @return 절대 경로면 구분자를 `/` 로 맞춰 @p outAbsolutePath 에 담고 true, 아니면 이유를 @p outReply 에 담고 false 입니다. 명령이 모두 같은 입구로 읽는다.
          */
         [[nodiscard]] static bool readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply );
+        /** @brief 개수 인자(프레임 수 · 초)를 읽습니다. 숫자만으로 된 1000000 이하의 값이면 true 입니다(부호 · 공백 · 소수는 받지 않는다). */
+        [[nodiscard]] static bool readCountArgument( string_view argument, uint32& outValue );
 
         /** @brief 명령을 올립니다. 이름이 비었거나 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerCommand( const DevCommandRegistration* pRegistration );

@@ -341,6 +341,20 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorAssetFileCommands::readSourceFileArgument( const string& argument, string& outAbsolutePath, string& outReply )
+    {
+        if ( AbsolutePath::isStrictAbsolute( argument ) )
+            return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
+        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
+        if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
+        {
+            outReply = "no resource '" + argument + "'";
+            return false;
+        }
+        outAbsolutePath = diskPath->str();
+        return true;
+    }
+
     uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
     {
         if ( destFolderAbs.empty() )

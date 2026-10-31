@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Dev/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/pair.h"
