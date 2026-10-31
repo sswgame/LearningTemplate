@@ -18,37 +18,37 @@
 
 | 일 | 상태 |
 |---|---|
-| 통합 검증 | T5 · T6 · T8 · T9 · TaskManager 오프로드 · GF 테스트 · 기록 대조 · 셰이더 파일 이름(`_` 구분)을 main 에 모았다. 빌드 · 단위 통과, 전체 ctest(셰이더 캐시를 지운 첫 실행) 결과를 분류한다 |
-| 컴포넌트의 편집기 기능 떼기 | 작업자 브랜치 `worktree-agent-a58a7c97e4850070b`(커밋 10, 빌드 전) — 메시 쪼개기 · PO 파일 · 커브 범위 · 자동화 등록을 편집기 · 옆 파일로. 가져와 빌드 · 테스트(편집기 DLL 의 엔진 기호 링크, 결정성 표시 configure). 남긴 것: `DialogueRunnerComponent::previewLine` · `_lastFitResult` · `UIResolutionPresetTable` · 대화 노드 표시 칸, 호출자 없는 `AIDirector::explain` |
-| 게임 골든 | 옮긴 게임 시나리오의 골든을 활성 게임을 바꿔(`SW_ACTIVE_GAME`) 뜨고 게임 체인을 돌린다 — shooter3d 31 · themepark 5 · wildwest 2 |
+| Shooter3D 체인 실패 둘 | `firelook`(한 프레임 클릭에 두 발) · `crowd`(`Animation.CrowdSharedUnits` 가 서지 않음) — 작업자가 Release 를 따로 지어 조사 중. 체인은 Release 의 `App -game=Shooter3D -scenario=<목록> -scenario-backends=all` |
+| 약어 일괄 변경(1dafbae0c9)의 바깥 이름 | `"OggS"` 매직이 `"OGGS"` 가 되어 모든 .ogg 가 디코드되지 않았다(고침). JSON · XML 키 · 내보내기 기호 · 깨진 낱말("PSOS")을 작업자가 전수 점검 중 |
+| 옛 단위 테스트 이식 | 작업자 진행 중 — 옛 `Test/`(커밋 `3f70e665f^`)의 Core 56 · Reflection 14 먼저, Engine 순수 함수 |
 
 ### 2. 테스트 · 시나리오 공백
 
 | 일 | 내용 |
 |---|---|
-| 일정의 하루 | 일정 키트가 하루를 도는 게임 시나리오(`gv_timeScale` 16 배) |
-| GameFramework · Kits 단위 테스트 | 정본 표 `PYTHONIOENCODING=utf-8 py -3 Scripts/dev/TestCoverage.py --uncovered GameFramework` 로 남은 것을 본다. CardGame · Poker 테스트는 Release + `SW_BUILD_UNUSED_KITS` 에서만 짓는다. Engine: Asset/Image(DDS) · `PackCooker` · Serialization/Serializer · Reflection |
-| 옛 단위 테스트 이식 | 옛 `Test/`(커밋 `3f70e665f^`, 약 950 파일) — 빠진 것 Core 56 · Engine 약 520 · Reflection 14. 순수 함수는 include · 위치만, 하네스(TestBench · 자식 프로세스 · 픽스처)에 기대던 것은 손으로 |
-| 나머지 고정 대기 | `Screenshot` · `EditorClick` · `DevCommand` · `EditorKey` 앞의 큰 대기(시뮬레이션 진행 · 키 누름 유지는 고정이 맞다) |
+| 게임 체인을 ctest 에 | Debug(활성 게임 Empty)는 다른 게임을 짓지 않아 게임 시나리오 · 필수 데이터 · .ogg 결함을 보지 못했다(이번에 셋 다 그렇게 숨어 있었다). Release(모든 게임)에 게임마다 체인 항목을 두거나 통합 때 돌리는 스크립트로 |
+| `harvestvalley.scheduleday` | 새 일정 하루 시나리오 — 처음 돌린다(`gv_timeScale` 이 판 시계에 곱해지는지, 0 일 날씨 맑음 가정) |
+| 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄(TacticsSRPG · KartRacing 등), Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기), Reflection 값 · 인스턴스. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다. 주석이 가리키는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 는 없다 |
+| 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다(엔진 변경 + 전체 시나리오) |
 
-### 3. 프레임 밖으로 뺄 일 (TaskManager — 조사 2026-10-31)
+### 3. 프레임 밖으로 뺄 일 (TaskManager)
 
 | 일 | 위치 |
 |---|---|
-| 요청 직후 `wait()` 해 다시 직렬이 되는 곳 — 로드 중 상태를 받아들이는 모양으로 | `Material.cpp:195` · `TextureCache.cpp:155` · `MeshCache.cpp:191` · `PrefabAsset.cpp:1169` · `SkeletalAnimatorComponent.cpp:391` · `CharacterAppearanceComponent.cpp:1109` |
-| 교체 뒤 셰이더 미리 데우기(`emplaceParallel`, PSO 생성 스레드 안전성은 백엔드마다) · 지형 재생성 | `Engine.cpp` 교체 경로, `ShaderCache` |
-| `-gv_screenshot` 파일 쓰기가 아직 렌더 스레드 | `takeCommandLineScreenshotIfDue` — 실행 중 스크린샷(`runScreenshotFileWrite`)과 같은 잡으로 |
+| 렌더 스레드의 동기 `acquire` | `CanvasTextureLeases.cpp` 렌더 타깃 · `FrameRendererViews.cpp` 렌더 텍스처 · `MaterialInstance.cpp` 텍스처 |
+| 게임 스레드의 메시 동기 `acquire` | `FoliageComponent` · `VFXComponent` · `NavGeometryCollector` · `NileDirectorComponent` · `FarmDirectorComponent` — 바운드를 그 자리에서 써서 상태 기계가 필요 |
+| 미리보기 씬의 외형 대기 | `CharacterAppearanceComponent` — 미리보기 씬이 틱을 돌게(언리얼 FPreviewScene) |
+| 직렬 셰이더 컴파일 | `findOrCreateExtensionProgramPSO` · 쿠키 아틀라스 · 입자 · 컴퓨트 PSO |
 | `DevCommand` 단계 평균 87 ms/프레임의 원인 | timeline 줄의 시나리오별 `DevCommand` |
 
-### 4. 구조 개편 10 단계 남은 것 ([StructureRefactor](StructureRefactor.md) T6 · T8 · T9 · T10)
+### 4. 구조 개편 남은 것 ([StructureRefactor](StructureRefactor.md))
 
 | 주제 | 남은 것 (2026-10-31) |
 |---|---|
-| T6 저장 파이프라인 | 게임 상태 세이브(`saveStateToFile`) · `Autosave` → `ILocalStore` 슬롯은 런타임 저장소 주인이 먼저 있어야 한다 |
-| T8 `#if` → 빌드 단위 | 같은 `#if` 모양이 남은 곳: `EditorModuleManager` · `RHIBackendSwitcher` · `ServerApp` · `GameModuleManager` · `ModuleReloadDriver`. 배포(Shipping) 빌드 확인 — 오디오 · 접근성 정적 등록이 `/WHOLEARCHIVE` 에 기댄다 |
-| T9 생성 계약 | 런타임 모듈 이름 = CMake 대상 이름 가정을 핫 리로드 시나리오로 확인. 같은 모양 후보: 전역 변수 · 데이터 종류 등록의 올리는 쪽 이름, `FixedSchemas.gen.txt` 가 생성 글을 다시 읽음 |
-| T5 셰이더 | `verifyDomain` 의 도메인 단위 `shaders/bin` 경로 잇기 하나 |
-| T10 폴백 | `EditorBakeOutputPath`(7 곳) 남은 것 확인 |
+| T8 | 배포(Shipping) 구성으로 구성 · 빌드 · 링크 확인(새 `…Shipping.cpp` 들, 정의 없는 `RHIBackendSwitcher` 시험 기호, `/WHOLEARCHIVE` 에 기댄 정적 등록). Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유 |
+| T9 | 등록자의 모듈 이름 — CMake 가 대상마다 `SW_REGISTRAR_MODULE` 을 주고 매크로가 찍는다(설계는 StructureRefactor T9). 런타임 모듈 이름 = 대상 이름 가정을 핫 리로드 시나리오로 확인. 봇 ctest `OnlineLoadBot.localServer` 는 Release 에서만 생긴다 — 돌려 본다 |
+| T6 | 에디터 사용자 외형 프리셋 · 썸네일을 슬롯으로(에디터 쪽 저장소 주인), `AccountDeviceSecret` 을 `GameLocalStore` 와 맞춤 |
+| T10 | `ShaderCooker::getSubfolderForFormat` 이 모르는 형식에 기본 폴더를 돌려준다(폴백) |
 
 ### 5. 그 뒤
 
