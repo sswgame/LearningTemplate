@@ -188,6 +188,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshCache::acquire( string_view path )
     {
+        // 기다림이 계약이다 — 호출자(내비 수집 · VFX · 폴리지 · 사본의 원본)는 메시를 그 자리에서 쓴다. 기다리지 않을 곳은 `request` 핸들을 든다.
         return requestWith( path, AssetLoadStart::OnCallingThread ).wait();
     }
 

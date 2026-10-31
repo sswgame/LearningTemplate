@@ -153,7 +153,8 @@ namespace sw
 
     Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
-        const TextureHandle         handle   = request( relativePath, pDevice, AssetLoadStart::OnCallingThread );
+        const TextureHandle handle = request( relativePath, pDevice, AssetLoadStart::OnCallingThread );
+        // 기다림이 계약이다 — `acquire` 는 포인터를 바로 돌려주는 동기 API 이고, 기다리지 않을 호출자는 `request` 핸들을 들고 뒤 프레임에 본다.
         const shared_ptr<Texture2D> pTexture = handle.wait();
         if ( pTexture == nullptr )
             return nullptr;

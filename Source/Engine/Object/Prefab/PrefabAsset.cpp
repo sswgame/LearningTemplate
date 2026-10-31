@@ -1166,6 +1166,7 @@ namespace sw
 
     shared_ptr<const PrefabAsset> PrefabCache::loadPrefab( string_view assetRelativePath )
     {
+        // 기다림이 계약이다 — 씬 · 중첩 프리팹 · 에디터 명령은 받은 자산으로 그 자리에서 객체를 짓는다. 기다리지 않을 곳은 `request` 핸들을 든다.
         return requestWith( assetRelativePath, AssetLoadStart::OnCallingThread ).wait();
     }
 

@@ -396,6 +396,7 @@ namespace sw
 
     void SkeletalAnimatorComponent::waitForAnimationAssets()
     {
+        // 결정적 실행(`gv_animationWaitForClips`)에서만 온다 — 평소에는 틱이 `finishClipLoadsIfComplete` 로 뒤 프레임에 받는다.
         for ( const ClipLoad& load : _listClipLoad )
         {
             (void)load._load.wait();

@@ -192,7 +192,7 @@ namespace sw
             // (`setTextureLoadStart`). 못 읽으면 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
             TextureHandle load = textures.request( prop._assetPath, pRHI, _textureLoadStart );
             if ( _textureLoadStart == AssetLoadStart::OnCallingThread )
-                (void)load.wait(); // 업로드(완료 단계)까지 이 자리에서 — 머티리얼은 디바이스를 쓰는 스레드에서 초기화한다
+                (void)load.wait(); // 직접 만든 머티리얼(도구 · 테스트 · 미리보기)은 초기화 직후 그리므로 업로드(완료 단계)까지 이 자리에서 — 디바이스를 쓰는 스레드다
             string           borrowedPath;
             const Texture2D* pTexture = load.isReady() ? load.getBlock()->getTexture() : nullptr;
             if ( pTexture == nullptr )

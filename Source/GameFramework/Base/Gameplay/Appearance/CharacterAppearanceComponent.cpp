@@ -1101,7 +1101,7 @@ namespace sw
                 CharacterAppearanceComponentInternal::forEachMesh( *pObject, []( MeshComponent& mesh )
                 { mesh.setVisible( false ); } );
         }
-        // 플레이하지 않는 씬(에디터 미리보기)은 틱이 돌지 않는다 — 이 자리에서 기다려 건다.
+        // 플레이하지 않는 씬(에디터 미리보기)은 틱이 돌지 않아 뒤 프레임에 받을 자리가 없다 — 이 자리에서 기다려 건다(플레이 중에는 틱이 받는다).
         if ( _bStarted == SW_FALSE )
         {
             for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
