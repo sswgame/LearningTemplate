@@ -1,7 +1,7 @@
 /**
  * @file IWindowTitleTarget.h
  * @brief 창 제목을 거는 일의 이음매입니다 — 제목 주인(`AutomationRunTitleTracker`)이 창 대신 이것을 봅니다.
- * @details `IWindow::setTitle` 은 `MainWindowSubsystem` 만 부를 수 있고(friend), 그 서브시스템이 이 인터페이스를 비공개 상속해 `getTitleTarget()` 으로만 내놓는다.
+ * @details `IWindow::setTitle` 은 `MainWindowSubsystem` 만 부를 수 있고(friend), 그 서브시스템이 이 인터페이스를 구현한 멤버를 `getTitleTarget()` 으로만 내놓는다.
  *          그래서 창 제목을 거는 길은 하나다. 테스트는 가짜 구현을 넣어 "언제 몇 번 걸었는지" 를 본다.
  */
 #pragma once

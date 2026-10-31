@@ -11,6 +11,7 @@ namespace sw
         : _window{ nullptr }
         , _baseTitle{}
         , _framePacer{}
+        , _titleTarget{ *this }
     {
     }
 

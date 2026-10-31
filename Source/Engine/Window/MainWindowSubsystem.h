@@ -24,7 +24,7 @@ namespace sw
      * @class MainWindowSubsystem
      * @brief 주 창 하나의 소유자입니다. 창을 만드는 일은 하지 않는다 — 만드는 쪽(RHI 가 창이 없을 때 만든 기본 창, App 이 직접 만든 창)이 `adopt` 로 넘긴다.
      */
-    class SW_API MainWindowSubsystem final : public ISubsystem, private IWindowTitleTarget
+    class SW_API MainWindowSubsystem final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(창을 쓰는 서브시스템이 의존 항목으로 가리킨다). */
@@ -59,20 +59,42 @@ namespace sw
          */
         void setBaseTitle( string_view title ) { _baseTitle = title; }
         /** @brief 정한 평소 창 제목입니다. 정한 적이 없으면 빈 글입니다. */
-        const string& getBaseTitle() const override { return _baseTitle; }
+        const string& getBaseTitle() const { return _baseTitle; }
         /** @brief 제목을 거는 이음매입니다(엔진의 `AutomationRunTitleTracker` 전용). 창이 없으면 nullptr 입니다. `IWindow::setTitle` 은 이 서브시스템만 부를 수 있다. */
-        IWindowTitleTarget* getTitleTarget() { return _window != nullptr ? this : nullptr; }
+        IWindowTitleTarget* getTitleTarget() { return _window != nullptr ? &_titleTarget : nullptr; }
 
         /** @brief 주 창을 도는 앱 루프의 프레임 페이싱입니다. App 루프가 프레임마다 갱신하고 감시 값 `Engine.FramePacingState` 가 읽는다. */
         FramePacer&       getFramePacer() { return _framePacer; }
         const FramePacer& getFramePacer() const { return _framePacer; }
 
     private:
-        const utf8* getCurrentTitle() const override;
-        void        applyWindowTitle( const utf8* pTitle ) override;
+        /**
+         * @class TitleTarget
+         * @brief 제목을 거는 이음매(`IWindowTitleTarget`)입니다. 서브시스템이 그 인터페이스를 상속하지 않고 이 멤버를 `getTitleTarget` 으로만 내놓는다(수명은 서브시스템과 같다).
+         */
+        class TitleTarget final : public IWindowTitleTarget
+        {
+        public:
+            explicit TitleTarget( MainWindowSubsystem& owner )
+                : _owner{ owner }
+            {
+            }
+
+            const utf8*   getCurrentTitle() const override { return _owner.getCurrentTitle(); }
+            const string& getBaseTitle() const override { return _owner.getBaseTitle(); }
+            void          applyWindowTitle( const utf8* pTitle ) override { _owner.applyWindowTitle( pTitle ); }
+
+        private:
+            MainWindowSubsystem& _owner;
+        };
+
+    private:
+        const utf8* getCurrentTitle() const;
+        void        applyWindowTitle( const utf8* pTitle );
 
         unique_ptr<IWindow> _window;
         string              _baseTitle;
         FramePacer          _framePacer;
+        TitleTarget         _titleTarget; ///< 제목을 거는 이음매(`getTitleTarget`)
     };
 } // namespace sw
