@@ -5,12 +5,15 @@
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include <glad/glad.h>
 
@@ -853,5 +856,289 @@ namespace sw
             pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return kInvalidDescriptorIndex;
+
+        ScopedOpenGLContext contextScope( _pDevice );
+        const uint32        glName = _pDevice->getGlTextureName( texture );
+        if ( glName == 0 )
+            return kInvalidDescriptorIndex;
+        // 셰이더의 텍스처 유닛은 sampler2D 로 선언돼 있다. 배열과 큐브는 바인딩할 수 없다(RHITextureDimension 참고).
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
+        {
+            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture,
+                          static_cast<uint32>( pRecord->_dimension ) );
+            return kInvalidDescriptorIndex;
+        }
+        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        if ( pRecord != nullptr && _pDevice->_transferSerials.isTextureReadyToRegister( pRecord->_lastTransferSerial.load(), texture ) == false )
+            return kInvalidDescriptorIndex;
+
+        return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
+                                      OpenGLRHIDevice::BindlessTextureRecord{ texture } );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    {
+        if ( buffer == 0 )
+            return kInvalidDescriptorIndex;
+
+        ScopedOpenGLContext contextScope( _pDevice );
+        GLuint              ubo = _pDevice->resolveGlBuffer( buffer );
+        if ( ubo == 0 )
+            return kInvalidDescriptorIndex;
+        return allocateFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree,
+                                      OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+    }
+
+    void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    {
+        ScopedOpenGLContext contextScope( _pDevice );
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다.
+        releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index,
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
+    }
+
+    void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        ScopedOpenGLContext contextScope( _pDevice );
+        releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index,
+                              OpenGLRHIDevice::BindlessTextureRecord{} );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    {
+        if ( buffer == 0 )
+            return kInvalidDescriptorIndex;
+
+        ScopedOpenGLContext contextScope( _pDevice );
+        GLuint              ssbo = _pDevice->resolveGlBuffer( buffer );
+        if ( ssbo == 0 )
+            return kInvalidDescriptorIndex;
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree,
+                                      OpenGLRHIDevice::BindlessResourceRecord{ buffer } );
+    }
+
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        if ( texture == 0 )
+            return kInvalidDescriptorIndex;
+
+        ScopedOpenGLContext contextScope( _pDevice );
+        if ( _pDevice->getGlTextureName( texture ) == 0 )
+            return kInvalidDescriptorIndex;
+        OpenGLRHIDevice::BindlessResourceRecord record{};
+        record._texture = texture;
+        return allocateFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree, record );
+    }
+
+    void OpenGLRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    {
+        ScopedOpenGLContext contextScope( _pDevice );
+        // 이중 해제는 도우미가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
+        releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUAVFree, index,
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
+    }
+
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return 0;
+
+        ScopedOpenGLContext                        contextScope( _pDevice );
+        OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
+
+        // 디스크립터 해석(진입점 기본값, define, 깊이 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
+        const ShaderCompileDesc&       vsDesc          = request._vertex;
+        const ShaderCompileDesc&       psDesc          = request._pixel;
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult{};
+        ShaderCompileResult            psResult{};
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        {
+            if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
+            {
+                SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable (glShaderBinary/glSpecializeShader null)" );
+                return 0;
+            }
+
+            GLuint vertexShader = glCreateShader( GL_VERTEX_SHADER );
+            GLuint pixelShader  = bHasPixelShader ? glCreateShader( GL_FRAGMENT_SHADER ) : 0;
+
+            glShaderBinary( 1, &vertexShader, GL_SHADER_BINARY_FORMAT_SPIR_V, vsResult._bytecode.data(), static_cast<GLsizei>( vsResult._bytecode.size() ) );
+            glSpecializeShader( vertexShader, vsDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+
+            if ( bHasPixelShader )
+            {
+                glShaderBinary( 1, &pixelShader, GL_SHADER_BINARY_FORMAT_SPIR_V, psResult._bytecode.data(), static_cast<GLsizei>( psResult._bytecode.size() ) );
+                glSpecializeShader( pixelShader, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+            }
+
+            GLint vsCompiled = GL_FALSE;
+            GLint psCompiled = GL_FALSE;
+            glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &vsCompiled );
+            if ( bHasPixelShader )
+                glGetShaderiv( pixelShader, GL_COMPILE_STATUS, &psCompiled );
+
+            if ( vsCompiled == GL_TRUE && ( bHasPixelShader == false || psCompiled == GL_TRUE ) )
+            {
+                GLuint program = glCreateProgram();
+                glAttachShader( program, vertexShader );
+                if ( bHasPixelShader )
+                    glAttachShader( program, pixelShader );
+                StringBuilder<constant::kMaxBuffer512> linkLabel;
+                linkLabel.appendFormat( "Graphics (%# / %#)", desc._vertexShaderPath, desc._pixelShaderPath );
+                if ( linkProgram( program, linkLabel.c_str() ) )
+                    record._program = program;
+            }
+            else
+            {
+                GLchar infoLog[constant::kMaxBuffer1024];
+                if ( vsCompiled != GL_TRUE )
+                {
+                    glGetShaderInfoLog( vertexShader, sizeof( infoLog ), nullptr, infoLog );
+                    SW_LOG_ERROR( "VS specialize failed (%#): %#", desc._vertexShaderPath, infoLog );
+                }
+                if ( bHasPixelShader && psCompiled != GL_TRUE )
+                {
+                    glGetShaderInfoLog( pixelShader, sizeof( infoLog ), nullptr, infoLog );
+                    SW_LOG_ERROR( "PS specialize failed (%#): %#", desc._pixelShaderPath, infoLog );
+                }
+            }
+            glDeleteShader( vertexShader );
+            if ( pixelShader != 0 )
+                glDeleteShader( pixelShader );
+        }
+
+        if ( record._program == 0 )
+            return 0;
+
+        record._topology             = desc._topology;
+        record._fillMode             = desc._fillMode;
+        record._cullMode             = desc._cullMode;
+        record._depthBias            = desc._depthBias;
+        record._slopeScaledDepthBias = desc._slopeScaledDepthBias;
+        record._bEnableDepthTest     = desc._bEnableDepthTest ? 1 : 0;
+        record._bEnableDepthWrite    = desc._bEnableDepthWrite ? 1 : 0;
+        record._bEnableBlend         = desc._bEnableBlend ? 1 : 0;
+        record._bPremultipliedAlpha  = ( desc._bPremultipliedAlpha != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        record._reserved             = 0;
+
+        return _pDevice->_pipelineStates.insert( record );
+    }
+
+    RHIPipelineStateHandle OpenGLRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return 0;
+
+        ScopedOpenGLContext                        contextScope( _pDevice );
+        OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
+
+        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_OpenGL );
+        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
+
+        if ( csResult._bSuccess )
+        {
+            if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
+            {
+                SW_LOG_ERROR( "GL_ARB_gl_spirv unavailable for compute PSO" );
+                return 0;
+            }
+
+            GLuint computeShader = glCreateShader( GL_COMPUTE_SHADER );
+
+            glShaderBinary( 1, &computeShader, GL_SHADER_BINARY_FORMAT_SPIR_V, csResult._bytecode.data(), static_cast<GLsizei>( csResult._bytecode.size() ) );
+            glSpecializeShader( computeShader, csDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+
+            GLint csCompiled = GL_FALSE;
+            glGetShaderiv( computeShader, GL_COMPILE_STATUS, &csCompiled );
+
+            if ( csCompiled == GL_TRUE )
+            {
+                GLuint program = glCreateProgram();
+                glAttachShader( program, computeShader );
+                if ( linkProgram( program, "Compute shader" ) )
+                    record._program = program;
+            }
+            else
+            {
+                GLchar infoLog[constant::kMaxBuffer1024];
+                glGetShaderInfoLog( computeShader, sizeof( infoLog ), nullptr, infoLog );
+                SW_LOG_ERROR( "Compute shader specialize/compile failed: %#", infoLog );
+            }
+            glDeleteShader( computeShader );
+        }
+        if ( record._program == 0 )
+            return 0;
+
+        return _pDevice->_pipelineStates.insert( record );
+    }
+
+    void OpenGLRHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    {
+        OpenGLRHIDevice::OpenGLPipelineStateRecord* pRecordPtr = _pDevice->_pipelineStates.get( pso );
+        if ( pRecordPtr == nullptr )
+            return;
+
+        OpenGLRHIDevice::OpenGLPipelineStateRecord& record  = *pRecordPtr;
+        const GLuint                                program = record._program;
+        const GLuint                                vao     = record._vao;
+        _pDevice->_pipelineStates.erase( pso );
+
+        if ( _pDevice->_recordingState._boundGraphicsPSO == pso )
+            _pDevice->_recordingState._boundGraphicsPSO = 0;
+        if ( _pDevice->_recordingState._boundComputePSO == pso )
+            _pDevice->_recordingState._boundComputePSO = 0;
+
+        if ( program == 0 && vao == 0 )
+            return;
+
+        auto releaseCb = [program, vao]()
+        {
+            if ( program != 0 )
+            {
+                GLuint name = program;
+                glDeleteProgram( name );
+            }
+            if ( vao != 0 )
+            {
+                GLuint name = vao;
+                glDeleteVertexArrays( 1, &name );
+            }
+        };
+        _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
+    }
+
+    RHIRenderPassHandle OpenGLRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
+    {
+        return _pDevice->_renderPassLedger.add( desc );
+    }
+
+    void OpenGLRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    {
+        _pDevice->_renderPassLedger.retire( pass );
+    }
+
+    bool OpenGLRHIResourceFactory::linkProgram( uint32 program, const utf8* pLabel )
+    {
+        glLinkProgram( program );
+
+        GLint isLinked{ 0 };
+        glGetProgramiv( program, GL_LINK_STATUS, &isLinked );
+        if ( isLinked == GL_TRUE )
+            return true;
+
+        GLchar infoLog[constant::kMaxBuffer1024];
+        glGetProgramInfoLog( program, sizeof( infoLog ), nullptr, infoLog );
+        SW_LOG_ERROR( "%# program link failed: %#", pLabel, infoLog );
+        glDeleteProgram( program );
+        return false;
     }
 } // namespace sw

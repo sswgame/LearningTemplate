@@ -10,11 +10,14 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include <vulkan/vulkan.h>
 
@@ -1064,5 +1067,533 @@ namespace sw
             return;
         }
         _pDevice->_releaseQueue.enqueueGPURelease( releaseDelegate, _pDevice->_frameFenceCounter + 1 );
+    }
+
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
+        const bool bCannotRegisterTexture = texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE || _pDevice->_defaultSampler == VK_NULL_HANDLE;
+        if ( bCannotRegisterTexture )
+            return kInvalidDescriptorIndex;
+
+        VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
+        if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
+            return kInvalidDescriptorIndex;
+        // 텍스처 배열 세트(set 1 binding 0)는 sampler2D[] 다 — 배열 · 큐브 뷰는 넣을 수 없다(RHITextureDimension 참고).
+        if ( pResolved->_dimension != RHITextureDimension::Texture2D )
+        {
+            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture,
+                          static_cast<uint32>( pResolved->_dimension ) );
+            return kInvalidDescriptorIndex;
+        }
+
+        // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다. DEPTH 단일 aspect 뷰
+        // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는
+        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 주의: 여기서 거부하면 g_ShadowMapIndex 가
+        // INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 반환해, Vulkan 만 모든 픽셀이 "완전 그림자"(x0.56) 로
+        // 어두워진다(검증 에러 없음, 큐브는 다 보인다).
+        const bool        bDepth       = pResolved->_bDepthStencil != SW_FALSE;
+        const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
+        const uint32      sampleLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+                                                                     : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        if ( sampleView == VK_NULL_HANDLE )
+            return kInvalidDescriptorIndex;
+
+        VulkanRHIDevice::VulkanTextureRecord& record = *pResolved;
+        if ( record._bindlessIndex != kInvalidDescriptorIndex )
+            return record._bindlessIndex;
+        // 끝나지 않은 업로드가 남은 텍스처는 처음 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        // 이미 등록된 텍스처의 다시 부르기는 위에서 돌아가므로, 등록 뒤 구간 갱신(글리프 아틀라스)은 막지 않는다.
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( record._lastTransferSerial.load(), texture ) == false )
+            return kInvalidDescriptorIndex;
+
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
+        if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
+        {
+            SW_LOG_ERROR( "Bindless texture table full." );
+            return kInvalidDescriptorIndex;
+        }
+
+        _pDevice->writeBindlessTextureSlot( descriptorIndex, sampleView, sampleLayout );
+        if ( descriptorIndex >= _pDevice->_listTextureUsed.size() )
+            _pDevice->_listTextureUsed.resize( descriptorIndex + 1, 0 );
+        _pDevice->_listTextureUsed[descriptorIndex] = 1;
+        record._bindlessIndex                       = descriptorIndex;
+        return descriptorIndex;
+    }
+
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
+        if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
+            return kInvalidDescriptorIndex;
+
+        // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
+        // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        return allocateFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree, buffer );
+    }
+
+    void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    {
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
+        // 넣으면 다음 registerBindlessBufferSRV 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
+        // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
+        if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
+        {
+            SW_LOG_ERROR( "Bindless buffer index %# is not owned by any buffer; ignoring the release.", index );
+            return;
+        }
+        _pDevice->_listBindlessSourceBuffer[index] = RHIBufferHandle{ 0 };
+        deferFreeBufferIndex( index, false );
+    }
+
+    void VulkanRHIResourceFactory::deferFreeBufferIndex( RHIDescriptorIndex index, bool bUAV )
+    {
+        // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
+        // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
+        VulkanRHIDevice* pDevice = _pDevice;
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
+        {
+            UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
+            ( bUAV ? pDevice->_listUAVFree : pDevice->_listBindlessFree ).push_back( index );
+        } ),
+                                                   _pDevice->_frameFenceCounter + 1 );
+    }
+
+    void VulkanRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
+        if ( index == kInvalidDescriptorIndex )
+            return;
+        // 텍스처 레코드가 자기 인덱스를 들고 있으므로(destroyTexture 가 그걸로 정리한다) 레코드 쪽도
+        // 같이 지워야 나중의 destroyTexture 가 같은 슬롯을 두 번 반납하지 않는다.
+        bool bFound = false;
+        _pDevice->_gpuTextures.forEach( [this, index, &bFound]( VulkanRHIDevice::VulkanTextureRecord& record )
+        {
+            if ( record._bindlessIndex != index )
+                return;
+            releaseTextureBindlessSlot( record );
+            bFound = true;
+        } );
+        if ( bFound == false )
+            SW_LOG_ERROR( "Bindless texture index %# is not owned by any texture; ignoring the release.", index );
+    }
+
+    void VulkanRHIResourceFactory::releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record )
+    {
+        if ( record._bindlessIndex == kInvalidDescriptorIndex )
+            return;
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = record._bindlessIndex;
+        if ( index < _pDevice->_listTextureUsed.size() && _pDevice->_listTextureUsed[index] != 0 )
+        {
+            // 원소를 더미로 되돌리는 것도, 인덱스 재사용도 GPU 펜스 뒤에 한다. update-after-bind 라도 실행 중인
+            // 커맨드버퍼가 쓰는 디스크립터를 덮어쓰는 것은 정의되지 않은 동작이고, 같은 프레임에 새 텍스처가
+            // 이 인덱스를 받으면 이전 프레임이 새 텍스처를 샘플한다. 이미지 자체도 같은 펜스 뒤에 파괴된다(destroyTexture).
+            _pDevice->_listTextureUsed[index] = 2; // 2 = 해제 대기 (등록 불가, 프리리스트에도 아직 없음)
+            VulkanRHIDevice* pDevice          = _pDevice;
+            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+            {
+                UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
+                pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
+                releaseFreeListIndex( pDevice->_listTextureUsed, pDevice->_listTextureFree, index, uint8{ 0 } );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
+        }
+        record._bindlessIndex = kInvalidDescriptorIndex;
+    }
+
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
+        if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
+            return kInvalidDescriptorIndex;
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, buffer );
+        if ( index >= _pDevice->_listUAVSourceTexture.size() )
+            _pDevice->_listUAVSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
+        _pDevice->_listUAVSourceTexture[index] = RHITextureHandle{ 0 };
+        return index;
+    }
+
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
+        if ( texture == 0 || _pDevice->_textureSet == VK_NULL_HANDLE )
+            return kInvalidDescriptorIndex;
+        VulkanRHIDevice::VulkanTextureRecord* pResolved                 = _pDevice->resolveTexture( texture );
+        const bool                            bTextureNotStorageCapable = pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE || pResolved->_bDepthStencil != SW_FALSE;
+        if ( bTextureNotStorageCapable )
+            return kInvalidDescriptorIndex;
+
+        // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, RHIBufferHandle{ 0 } );
+        if ( index >= _pDevice->kBindlessStorageImageCount )
+        {
+            SW_LOG_ERROR( "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
+            releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, index, RHIBufferHandle{ 0 } );
+            return kInvalidDescriptorIndex;
+        }
+        if ( index >= _pDevice->_listUAVSourceTexture.size() )
+            _pDevice->_listUAVSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
+        _pDevice->_listUAVSourceTexture[index] = texture;
+        _pDevice->writeBindlessStorageImageSlot( index, pResolved->_imageView );
+        return index;
+    }
+
+    void VulkanRHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    {
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
+        UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
+        const bool               bBuffer  = index < _pDevice->_listUAVSourceBuffer.size() && _pDevice->_listUAVSourceBuffer[index] != 0;
+        const bool               bTexture = index < _pDevice->_listUAVSourceTexture.size() && _pDevice->_listUAVSourceTexture[index] != 0;
+        if ( bBuffer == false && bTexture == false )
+            return;
+        if ( bBuffer )
+            _pDevice->_listUAVSourceBuffer[index] = RHIBufferHandle{ 0 };
+        if ( bTexture )
+            _pDevice->_listUAVSourceTexture[index] = RHITextureHandle{ 0 };
+        deferFreeBufferIndex( index, true );
+    }
+
+    // 길이 유지(긴 함수 정리 기준): 파이프라인 상태 서술을 단계 순서로 채운 뒤 만드는 선형 목록이라 나누지 않는다.
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    {
+        // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
+        if ( desc._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
+        {
+            SW_LOG_ERROR( "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
+            return 0;
+        }
+        // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        // 백엔드가 desc 를 직접 읽으면 define(SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT)을 빠뜨려도 조용히 어긋난다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
+        const ShaderCompileDesc&       vsDesc          = request._vertex;
+        const ShaderCompileDesc&       psDesc          = request._pixel;
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult{};
+        ShaderCompileResult            psResult{};
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false )
+        {
+            SW_LOG_WARNING( "createPipelineState: shader compile failed (vs=%# ps=%#)",
+                            vsResult._bSuccess, psResult._bSuccess );
+            return 0;
+        }
+
+        if ( _pDevice->_pipelineLayout == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: pipeline layout is null" );
+            return 0;
+        }
+
+        VkShaderModuleCreateInfo vsInfo{};
+        vsInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        vsInfo.codeSize = vsResult._bytecode.size();
+        vsInfo.pCode    = reinterpret_cast<const uint32*>( vsResult._bytecode.data() );
+        // 모듈을 못 만들면 PSO 도 만들지 않는다(핸들 0). 결과를 보지 않으면 빈 모듈로 파이프라인을 만들려다 검증 오류 · 드라이버 크래시가 된다.
+        VkShaderModule vertShaderModule{ VK_NULL_HANDLE };
+        if ( vkCreateShaderModule( _pDevice->_device, &vsInfo, nullptr, &vertShaderModule ) != VK_SUCCESS || vertShaderModule == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the vertex shader '%#'", desc._vertexShaderPath );
+            return 0;
+        }
+
+        VkShaderModule fragShaderModule{ VK_NULL_HANDLE };
+        if ( bHasPixelShader )
+        {
+            VkShaderModuleCreateInfo psInfo{};
+            psInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            psInfo.codeSize = psResult._bytecode.size();
+            psInfo.pCode    = reinterpret_cast<const uint32*>( psResult._bytecode.data() );
+            if ( vkCreateShaderModule( _pDevice->_device, &psInfo, nullptr, &fragShaderModule ) != VK_SUCCESS || fragShaderModule == VK_NULL_HANDLE )
+            {
+                vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
+                SW_LOG_ERROR( "createPipelineState: vkCreateShaderModule failed for the pixel shader '%#'", desc._pixelShaderPath );
+                return 0;
+            }
+        }
+
+        VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+        vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+        vertShaderStageInfo.module = vertShaderModule;
+        // 컴파일에 쓴 진입점과 같은 이름이어야 한다. "VSMain" 으로 박으면 파이프라인 XML 이 다른 진입점을 쓰는 순간
+        // Vulkan 만 파이프라인 생성에 실패한다(desc 는 이 함수가 끝날 때까지 살아 있다).
+        vertShaderStageInfo.pName = vsDesc._entryPoint.c_str();
+
+        VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+        if ( bHasPixelShader )
+        {
+            fragShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            fragShaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+            fragShaderStageInfo.module = fragShaderModule;
+            fragShaderStageInfo.pName  = psDesc._entryPoint.c_str();
+        }
+
+        VkPipelineShaderStageCreateInfo arrShaderStage[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+        VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+        vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+        // 바인딩 0 = 메시 정점(정점 스텝), 바인딩 1 = 인스턴스 슬롯 스트림(인스턴스 스텝, uint 하나).
+        VkVertexInputBindingDescription arrBindingDescription[2]{};
+        arrBindingDescription[0].binding   = 0;
+        arrBindingDescription[0].stride    = static_cast<uint32>( sizeof( RHIVertex ) );
+        arrBindingDescription[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        arrBindingDescription[1].binding   = constant::kInstanceSlotStreamSlot;
+        arrBindingDescription[1].stride    = constant::kInstanceSlotStreamStride;
+        arrBindingDescription[1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
+        // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다.
+        const uint32                      consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
+        VkVertexInputAttributeDescription arrAttributeDescription[constant::kVertexAttributeCount]{};
+        uint32                            attributeCount{ 0 };
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
+                continue;
+            const RHIVertexAttribute&          attribute   = constant::arrVertexAttribute[attributeIndex];
+            VkVertexInputAttributeDescription& description = arrAttributeDescription[attributeCount++];
+            description.binding                            = attribute._inputSlot;
+            description.location                           = attribute._location;
+            description.format                             = ( attribute._bUint != SW_FALSE )   ? VK_FORMAT_R32_UINT
+                                                           : ( attribute._componentCount == 4 ) ? VK_FORMAT_R32G32B32A32_SFLOAT
+                                                           : ( attribute._componentCount == 2 ) ? VK_FORMAT_R32G32_SFLOAT
+                                                                                                : VK_FORMAT_R32G32B32_SFLOAT;
+            description.offset                             = attribute._byteOffset;
+        }
+
+        vertexInputInfo.vertexBindingDescriptionCount   = 2;
+        vertexInputInfo.pVertexBindingDescriptions      = arrBindingDescription;
+        vertexInputInfo.vertexAttributeDescriptionCount = attributeCount;
+        vertexInputInfo.pVertexAttributeDescriptions    = arrAttributeDescription;
+
+        VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+        inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+        VkPipelineViewportStateCreateInfo viewportState{};
+        viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportState.viewportCount = 1;
+        viewportState.scissorCount  = 1;
+
+        VkPipelineRasterizationStateCreateInfo rasterizer{};
+        rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable        = VK_FALSE;
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;
+        // 기능을 못 켠 디바이스에서 LINE 을 요청하면 솔리드로 바꾸지 않고 거절한다 — 다른 그림이 와이어프레임으로 통과하면 안 된다.
+        // 렌더러는 능력(RHICapabilities::_bWireframeFill)을 보고 와이어프레임 보기 모드를 받지 않으므로 여기 닿으면 결함이다.
+        const bool bUseWireframe = desc._fillMode == RHIFillMode::Wireframe;
+        rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth     = 1.0f;
+        rasterizer.cullMode      = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace     = VK_FRONT_FACE_CLOCKWISE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias). LINE 다각형 모드에도 걸린다.
+        rasterizer.depthBiasEnable         = ( desc._depthBias != 0 || desc._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
+        rasterizer.depthBiasConstantFactor = static_cast<float32>( desc._depthBias );
+        rasterizer.depthBiasSlopeFactor    = desc._slopeScaledDepthBias;
+
+        VkPipelineMultisampleStateCreateInfo multisampling{};
+        multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisampling.sampleShadingEnable  = VK_FALSE;
+        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+        const uint32 numRT      = request._numRenderTargets;
+        const uint32 blendCount = ( numRT > kMaxColorAttachments ) ? kMaxColorAttachments : numRT;
+
+        VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
+        for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
+        {
+            arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+                                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            arrColorBlendAttachment[blendIndex].blendEnable         = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
+            arrColorBlendAttachment[blendIndex].srcColorBlendFactor = ( desc._bPremultipliedAlpha != SW_FALSE ) ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
+            arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            arrColorBlendAttachment[blendIndex].colorBlendOp        = VK_BLEND_OP_ADD;
+            arrColorBlendAttachment[blendIndex].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            arrColorBlendAttachment[blendIndex].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            arrColorBlendAttachment[blendIndex].alphaBlendOp        = VK_BLEND_OP_ADD;
+        }
+
+        VkPipelineColorBlendStateCreateInfo colorBlending{};
+        colorBlending.sType           = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlending.logicOpEnable   = VK_FALSE;
+        colorBlending.attachmentCount = blendCount;
+        colorBlending.pAttachments    = blendCount > 0 ? arrColorBlendAttachment : nullptr;
+
+        VkRenderPass pipelineRp = _pDevice->ensurePipelineRenderPass( desc );
+        if ( pipelineRp == VK_NULL_HANDLE )
+            pipelineRp = _pDevice->_renderPass;
+
+        VkPipelineDepthStencilStateCreateInfo depthStencil{};
+        depthStencil.sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable  = desc._bEnableDepthTest ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = ( depthStencil.depthTestEnable != VK_FALSE && desc._bEnableDepthWrite ) ? VK_TRUE : VK_FALSE;
+        // LessEqual — 네 백엔드가 같다. Less 로 두면 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 **모두 탈락**하고,
+        // 같은 깊이의 겹친 면은 백엔드마다 먼저 그린 것 · 나중 그린 것이 갈린다.
+        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depthStencil.depthBoundsTestEnable = VK_FALSE;
+        depthStencil.stencilTestEnable     = VK_FALSE;
+
+        vector<VkDynamicState>           listDynamicState = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+        VkPipelineDynamicStateCreateInfo dynamicState{};
+        dynamicState.sType             = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicState.dynamicStateCount = static_cast<uint32>( listDynamicState.size() );
+        dynamicState.pDynamicStates    = listDynamicState.data();
+
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount          = bHasPixelShader ? 2 : 1;
+        pipelineInfo.pStages             = arrShaderStage;
+        pipelineInfo.pVertexInputState   = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState      = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState   = &multisampling;
+        pipelineInfo.pDepthStencilState  = &depthStencil;
+        pipelineInfo.pColorBlendState    = &colorBlending;
+        pipelineInfo.pDynamicState       = &dynamicState;
+        pipelineInfo.layout              = _pDevice->_pipelineLayout;
+        pipelineInfo.renderPass          = pipelineRp;
+        pipelineInfo.subpass             = 0;
+        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+
+        VkPipeline     newPipeline{ VK_NULL_HANDLE };
+        const VkResult createResult = vkCreateGraphicsPipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline );
+
+        vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
+        if ( fragShaderModule != VK_NULL_HANDLE )
+            vkDestroyShaderModule( _pDevice->_device, fragShaderModule, nullptr );
+
+        // 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 파이프라인을 등록해 두면 드로우가 다른 것으로 대신 그려진다.
+        if ( createResult != VK_SUCCESS || newPipeline == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createPipelineState: vkCreateGraphicsPipelines failed (%#) '%#'", static_cast<int32>( createResult ), desc._vertexShaderPath );
+            return 0;
+        }
+
+        VulkanRHIDevice::VulkanPipelineStateRecord record{};
+        record._pipeline = newPipeline;
+        return _pDevice->_pipelineStates.insert( record );
+    }
+
+    RHIPipelineStateHandle VulkanRHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    {
+        const ShaderCompileDesc csDesc   = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::SPIRV_Vulkan );
+        ShaderCompileResult     csResult = RHIShaderRequest::compile( csDesc );
+
+        if ( csResult._bSuccess == false )
+        {
+            SW_LOG_ERROR( "createComputePipelineState: shader compile failed '%#'", shaderPath );
+            return 0;
+        }
+
+        VkShaderModuleCreateInfo csInfo{};
+        csInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        csInfo.codeSize = csResult._bytecode.size();
+        csInfo.pCode    = reinterpret_cast<const uint32*>( csResult._bytecode.data() );
+        // 핸들을 초기화하고 결과를 검사한다. 실패를 그냥 쓰면 쓰레기 값을 파이프라인 생성과 vkDestroyShaderModule 에 넘긴다.
+        VkShaderModule compShaderModule{ VK_NULL_HANDLE };
+        if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
+             compShaderModule == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createComputePipelineState: vkCreateShaderModule failed" );
+            return 0;
+        }
+
+        VkPipelineShaderStageCreateInfo compShaderStageInfo{};
+        compShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        compShaderStageInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+        compShaderStageInfo.module = compShaderModule;
+        compShaderStageInfo.pName  = csDesc._entryPoint.c_str();
+
+        VkComputePipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineInfo.layout = _pDevice->_pipelineLayout;
+        pipelineInfo.stage  = compShaderStageInfo;
+
+        VkPipeline newPipeline{ VK_NULL_HANDLE };
+        if ( vkCreateComputePipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline ) != VK_SUCCESS )
+            newPipeline = VK_NULL_HANDLE;
+
+        vkDestroyShaderModule( _pDevice->_device, compShaderModule, nullptr );
+        if ( newPipeline == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createComputePipelineState: vkCreateComputePipelines failed '%#'", shaderPath );
+            return 0;
+        }
+
+        VulkanRHIDevice::VulkanPipelineStateRecord record{};
+        record._pipeline = newPipeline;
+        return _pDevice->_pipelineStates.insert( record );
+    }
+
+    void VulkanRHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    {
+        VulkanRHIDevice::VulkanPipelineStateRecord record{};
+        if ( _pDevice->_pipelineStates.take( pso, record ) == false )
+            return;
+        if ( record._pipeline != VK_NULL_HANDLE )
+        {
+            VkDevice   dev  = _pDevice->_device;
+            VkPipeline pipe = record._pipeline;
+            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
+            {
+                vkDestroyPipeline( dev, pipe, nullptr );
+            } ),
+                                                       _pDevice->_frameFenceCounter + 1 );
+        }
+        if ( _pDevice->_recordingState._activeGraphicsPSO == pso )
+            _pDevice->_recordingState._activeGraphicsPSO = 0;
+    }
+
+    RHIRenderPassHandle VulkanRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
+    {
+
+        if ( desc._listColorAttachment.empty() && desc._bHasDepthStencil == SW_FALSE )
+        {
+            SW_LOG_ERROR( "createRenderPass requires color or depth attachments." );
+            return 0;
+        }
+
+        VulkanRHIRenderPassCache::RenderPassSpec spec{};
+        const uint32                             colorCount =
+            desc._listColorAttachment.size() > kMaxColorAttachments
+                                            ? kMaxColorAttachments
+                                            : static_cast<uint32>( desc._listColorAttachment.size() );
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            const RHIRenderPassAttachment& attachment = desc._listColorAttachment[colorIndex];
+            spec.addColor( static_cast<uint32>( VulkanRHIDeviceInternal::toVulkanTextureFormat( attachment._format ) ), VulkanRHIDeviceInternal::toVulkanLoadOp( attachment._loadOp ),
+                           ( attachment._loadOp == RHIRenderPassLoadOp::Clear ) ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+            spec._arrColorStoreOp[colorIndex] = VulkanRHIDeviceInternal::toVulkanStoreOp( attachment._storeOp );
+        }
+        if ( desc._bHasDepthStencil != SW_FALSE )
+            spec.setDepth( _pDevice->_depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+
+        if ( spec._colorCount == 0 && spec._depthFormat == 0 )
+            return _pDevice->_renderPassCache.addRenderPassRecord( _pDevice->_renderPass, false ); // 스왑체인 RP 별칭. 소유하지 않는다
+
+        VkRenderPass created = _pDevice->createRenderPassFromSpec( spec );
+        if ( created == VK_NULL_HANDLE )
+        {
+            SW_LOG_ERROR( "createRenderPass(desc) failed" );
+            return 0;
+        }
+
+        return _pDevice->_renderPassCache.addRenderPassRecord( created, true );
+    }
+
+    void VulkanRHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    {
+        _pDevice->_renderPassCache.destroyRenderPassRecord( _pDevice->_device, pass, _pDevice->_renderPass );
     }
 } // namespace sw

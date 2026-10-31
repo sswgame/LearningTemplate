@@ -3,15 +3,18 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSize.h"
+#include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
@@ -1082,6 +1085,461 @@ namespace sw
             return;
         }
         _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
+    }
+
+    D3D12RHIResourceFactory::BindlessHandleSet D3D12RHIResourceFactory::bindlessHandlesAt( RHIDescriptorIndex index ) const
+    {
+        BindlessHandleSet handle{};
+        handle._cpu = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
+        handle._cpu.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
+        handle._offline = _pDevice->offlineDescriptorAt( index );
+        return handle;
+    }
+
+    RHIDescriptorIndex D3D12RHIResourceFactory::acquireBindlessIndex( UniqueLock<shared_mutex>& lock )
+    {
+        (void)lock;
+        // 잠금은 부르는 쪽의 것이다(선언의 SW_REQUIRES_LOCK). 인덱스를 집는 것과 그 자리에 뷰를 만드는 것이 한 임계 구역이어야 한다.
+
+        // 반납된 슬롯이 있으면 그것부터 쓴다(펜스 뒤에 회수된 것들이다). 새 인덱스는 레지스트리 크기가 아니라 힙 카운터다 —
+        // SRV/CBV 와 UAV 가 레지스트리 둘에 나뉘어도 힙 인덱스 공간은 하나라서다.
+        RHIDescriptorIndex reused{ kInvalidDescriptorIndex };
+        if ( tryPopFreeListIndex( _pDevice->_listFreeBindless, reused ) )
+            return reused;
+
+        if ( _pDevice->_allocatedDescriptorsCount >= D3D12RHIDevice::kBindlessDescriptorCapacity )
+        {
+            SW_LOG_ERROR( "Shader visible descriptor heap overflow! Max: %#", D3D12RHIDevice::kBindlessDescriptorCapacity );
+            return kInvalidDescriptorIndex;
+        }
+        return _pDevice->_allocatedDescriptorsCount++;
+    }
+
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTexture( RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessTexture" );
+        if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+
+        auto* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr )
+            return kInvalidDescriptorIndex;
+        // 끝나지 않은 업로드가 남은 텍스처는 등록하지 않는다(소비자는 pollTransfer 가 Complete 를 준 뒤에 등록한다 — IRHIResourceFactory 전송 계약 머리말).
+        if ( _pDevice->_transferSerials.isTextureReadyToRegister( _pDevice->findTextureTransferSerial( texture ), texture ) == false )
+            return kInvalidDescriptorIndex;
+        // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
+        {
+            ScopedLock<mutex> stateLock{ _pDevice->_resourceStateMutex };
+            const auto        it = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( it != _pDevice->_mapOffscreenTexture.end() && it->second._dimension != RHITextureDimension::Texture2D )
+            {
+                SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
+                              texture, static_cast<uint32>( it->second._dimension ) );
+                return kInvalidDescriptorIndex;
+            }
+        }
+
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+        srvDesc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MostDetailedMip     = 0;
+        srvDesc.Texture2D.MipLevels           = pResource->GetDesc().MipLevels;
+        srvDesc.Texture2D.PlaneSlice          = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+        const DXGI_FORMAT resourceFormat = pResource->GetDesc().Format;
+        if ( resourceFormat == DXGI_FORMAT_R24G8_TYPELESS || resourceFormat == DXGI_FORMAT_D24_UNORM_S8_UINT )
+            srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        else
+            srvDesc.Format = resourceFormat;
+
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+
+        _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
+        _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
+
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, 0, texture );
+        return index;
+    }
+
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSRV( RHIBufferHandle buffer )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferSRV" );
+        if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+
+        auto* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
+            return kInvalidDescriptorIndex;
+
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+
+        // 구조버퍼면 StructuredBuffer SRV 다(셰이더의 StructuredBuffer<T> name[] 이 이 힙 인덱스로 읽는다).
+        // 그 밖(상수 버퍼 링)이면 CBV 다.
+        const auto strideIt = _pDevice->_mapStructuredStride.find( buffer );
+        if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
+        {
+            const UINT                      stride = strideIt->second;
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+            srvDesc.ViewDimension              = D3D12_SRV_DIMENSION_BUFFER;
+            srvDesc.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Format                     = DXGI_FORMAT_UNKNOWN;
+            srvDesc.Buffer.FirstElement        = 0;
+            srvDesc.Buffer.NumElements         = static_cast<UINT>( pResource->GetDesc().Width ) / stride;
+            srvDesc.Buffer.StructureByteStride = stride;
+            srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
+            // 온라인 힙과 오프라인 힙에 각각 한 번씩.
+            _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
+            _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
+
+            writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
+            return index;
+        }
+
+        D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc{};
+        cbvDesc.BufferLocation = pResource->GetGPUVirtualAddress();
+
+        // 상수버퍼 맵 조회는 위에서 쥔 배타 락(`lock`) 안이다. 그 맵은 같은 `_bindlessMutex` 가 지킨다.
+        const auto sizeIt = _pDevice->_mapCbAlignedSize.find( buffer );
+        if ( sizeIt != _pDevice->_mapCbAlignedSize.end() )
+        {
+            cbvDesc.BufferLocation += static_cast<UINT64>( _pDevice->_frameRing.currentIndex() ) * sizeIt->second;
+            cbvDesc.SizeInBytes = sizeIt->second;
+        }
+        else
+        {
+            // 링이 아닌 버퍼: CBV 크기는 256 바이트로 정렬돼야 하고 리소스 폭을 넘으면 안 된다.
+            const UINT width = static_cast<UINT>( pResource->GetDesc().Width );
+            // 256 은 CBV 크기 정렬(D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)이다. 텍스처 행 정렬
+            // (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)도 256 이지만 이름만 같은 별개 값이라 그 상수를 쓰지 않는다.
+            const UINT aligned  = MathUtil::align( width, 256u );
+            cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
+            if ( cbvDesc.SizeInBytes == 0 )
+            {
+                // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
+                // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
+                _pDevice->_listFreeBindless.push_back( index );
+                return kInvalidDescriptorIndex;
+            }
+        }
+
+        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._cpu );
+        _pDevice->_device->CreateConstantBufferView( &cbvDesc, handle._offline );
+
+        writeBindlessRecord( BindlessRegistry::ShaderResource, index, pResource, handle, buffer, 0 );
+        return index;
+    }
+
+    void D3D12RHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
+    {
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessResource" );
+        releaseBindlessSlot( index );
+    }
+
+    void D3D12RHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
+    {
+        // DX12 는 텍스처와 버퍼가 같은 셰이더 가시 힙을 나눠 쓰므로 인덱스 공간이 하나다.
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessTexture" );
+        releaseBindlessSlot( index );
+    }
+
+    void D3D12RHIResourceFactory::releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index )
+    {
+        const bool bUAV = ( registry == BindlessRegistry::UnorderedAccess );
+
+        UniqueLock<shared_mutex>                        lock{ _pDevice->_bindlessMutex };
+        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry = bUAV ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        if ( index >= listRegistry.size() )
+            return;
+
+        D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
+        // 이미 빈 슬롯을 다시 프리리스트에 넣으면 같은 인덱스가 두 리소스에 발급된다.
+        const bool bSlotAlreadyFree = record._resource == nullptr && record._buffer == 0 && record._texture == 0;
+        if ( bSlotAlreadyFree )
+        {
+            SW_LOG_ERROR( "%# index %# is already free; ignoring the duplicate release.",
+                          bUAV ? "Bindless UAV" : "Bindless", index );
+            return;
+        }
+
+        record._resource = nullptr;
+        record._buffer   = 0;
+        record._texture  = 0;
+        deferFreeBindlessIndex( index ); // 힙 인덱스 공간이 하나라 프리리스트도 하나다
+    }
+
+    void D3D12RHIResourceFactory::writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource,
+                                                       const BindlessHandleSet& handle, RHIBufferHandle buffer, RHITextureHandle texture )
+    {
+        vector<D3D12RHIDevice::BindlessResourceRecord>& listRegistry =
+            ( registry == BindlessRegistry::UnorderedAccess ) ? _pDevice->_listRegisteredUAV : _pDevice->_listRegisteredBindless;
+        if ( index >= listRegistry.size() )
+            listRegistry.resize( index + 1 );
+
+        D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
+        record                                         = { pResource, handle._cpu, handle._offline };
+        record._buffer                                 = buffer;
+        record._texture                                = texture;
+    }
+
+    void D3D12RHIResourceFactory::releaseBindlessSlot( RHIDescriptorIndex index )
+    {
+        releaseBindlessRecord( BindlessRegistry::ShaderResource, index );
+    }
+
+    void D3D12RHIResourceFactory::deferFreeBindlessIndex( RHIDescriptorIndex index )
+    {
+        // 인덱스는 GPU 가 이 프레임까지의 커맨드를 다 읽은 뒤에야 재사용한다(언리얼의 지연 디스크립터 해제와 같다).
+        // 즉시 프리리스트에 넣으면 같은 프레임에 등록된 새 리소스가 그 자리를 받아, 아직 실행 중인 리스트가 새 리소스를 읽는다.
+        D3D12RHIDevice* pDevice = _pDevice;
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+        {
+            UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
+            pDevice->_listFreeBindless.push_back( index );
+        } ),
+                                                   _pDevice->_fenceValue );
+    }
+
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUAV( RHIBufferHandle buffer )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessBufferUAV" );
+        if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+
+        ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr || pResource->GetDesc().Width < 4 )
+            return kInvalidDescriptorIndex;
+
+        // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간**을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
+        // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다
+        // (UAV 목록 안의 순번을 돌려주면 안 된다).
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+
+        // 구조버퍼면 StructuredBuffer UAV, 아니면 RAW UAV(RWByteAddressBuffer: R32_TYPELESS + RAW, stride 0)다.
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+        uavDesc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+        uavDesc.Buffer.FirstElement = 0;
+        const auto strideIt         = _pDevice->_mapStructuredStride.find( buffer );
+        if ( strideIt != _pDevice->_mapStructuredStride.end() && strideIt->second > 0 )
+        {
+            uavDesc.Format                     = DXGI_FORMAT_UNKNOWN;
+            uavDesc.Buffer.NumElements         = static_cast<UINT>( pResource->GetDesc().Width ) / strideIt->second;
+            uavDesc.Buffer.StructureByteStride = strideIt->second;
+            uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_NONE;
+        }
+        else
+        {
+            uavDesc.Format                     = DXGI_FORMAT_R32_TYPELESS;
+            uavDesc.Buffer.NumElements         = static_cast<UINT>( pResource->GetDesc().Width / 4 );
+            uavDesc.Buffer.StructureByteStride = 0;
+            uavDesc.Buffer.Flags               = D3D12_BUFFER_UAV_FLAG_RAW;
+        }
+        _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
+        _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
+
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, buffer, 0 );
+        return index;
+    }
+
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessTextureUAV( RHITextureHandle texture )
+    {
+        _pDevice->requireRegistryMutableNow( "registerBindlessTextureUAV" );
+        if ( texture == 0 || _pDevice->_cbvHeap == nullptr )
+            return kInvalidDescriptorIndex;
+        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( pResource == nullptr || ( pResource->GetDesc().Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ) == 0 )
+            return kInvalidDescriptorIndex;
+
+        // 텍스처 UAV 도 같은 힙 인덱스 공간이다. 셰이더가 RWTexture2D g_SwBindlessRWTex2D[] (u0 space1) 을 이 인덱스로 고른다.
+        UniqueLock<shared_mutex> lock{ _pDevice->_bindlessMutex };
+        const RHIDescriptorIndex index = acquireBindlessIndex( lock );
+        if ( index == kInvalidDescriptorIndex )
+            return kInvalidDescriptorIndex;
+
+        const BindlessHandleSet handle = bindlessHandlesAt( index );
+
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+        uavDesc.Format               = pResource->GetDesc().Format;
+        uavDesc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
+        uavDesc.Texture2D.MipSlice   = 0;
+        uavDesc.Texture2D.PlaneSlice = 0;
+        _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._cpu );
+        _pDevice->_device->CreateUnorderedAccessView( pResource, nullptr, &uavDesc, handle._offline );
+
+        writeBindlessRecord( BindlessRegistry::UnorderedAccess, index, pResource, handle, 0, texture );
+        return index;
+    }
+
+    void D3D12RHIResourceFactory::unregisterBindlessUAV( RHIDescriptorIndex index )
+    {
+        _pDevice->requireRegistryMutableNow( "unregisterBindlessUAV" );
+        releaseBindlessRecord( BindlessRegistry::UnorderedAccess, index );
+    }
+
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
+    {
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
+
+        // 디스크립터 해석(진입점 기본값, define, 뎁스 전용 판정, RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
+        const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXIL_D3D12 );
+        const bool                     bHasPixelShader = request._bHasPixelShader != SW_FALSE;
+        ShaderCompileResult            vsResult{};
+        ShaderCompileResult            psResult{};
+        if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
+        {
+            // 입력 레이아웃은 **공용 테이블**(constant::arrVertexAttribute)에서 만든다.
+            D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            {
+                const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
+                arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
+                arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
+                arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
+                arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
+                arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA
+                                                                                                               : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
+            }
+
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
+            psoDesc.InputLayout    = { arrInputElement, constant::kVertexAttributeCount };
+            psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
+            psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
+            if ( bHasPixelShader )
+                psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
+            // 다른 백엔드와 같이 desc._fillMode 를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
+            psoDesc.RasterizerState.FillMode = ( desc._fillMode == RHIFillMode::Wireframe )
+                                                 ? D3D12_FILL_MODE_WIREFRAME
+                                                 : D3D12_FILL_MODE_SOLID;
+            psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
+                                                 ? D3D12_CULL_MODE_FRONT
+                                                 : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
+            // 가까운 · 먼 평면에서 자른다 — DX11(DepthClipEnable) · Vulkan(depthClampEnable 끔) · GL(GL_DEPTH_CLAMP 끔)과 같다. 0 으로 두면 DX12 만 평면 밖 기하를 깊이 1 로 눌러 그린다
+            // (psoDesc{} 의 기본값이 FALSE 다). 시야 거리 설정(gv_viewDistanceScale)이 먼 평면을 당겨도 DX12 에서만 먼 기하가 남았다(useroptions distance 0.307, 나머지 0.665).
+            psoDesc.RasterizerState.DepthClipEnable = TRUE;
+            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias).
+            psoDesc.RasterizerState.DepthBias            = desc._depthBias;
+            psoDesc.RasterizerState.SlopeScaledDepthBias = desc._slopeScaledDepthBias;
+            psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
+            psoDesc.PrimitiveTopologyType                = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
+            psoDesc.NumRenderTargets = request._numRenderTargets;
+            if ( psoDesc.NumRenderTargets > 8 )
+                psoDesc.NumRenderTargets = 8;
+            for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )
+            {
+                auto& rtBlend                 = psoDesc.BlendState.RenderTarget[rtvIndex];
+                rtBlend.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormat( desc._arrRTVFormat[rtvIndex] );
+                if ( desc._bEnableBlend != 0 )
+                {
+                    rtBlend.BlendEnable    = TRUE;
+                    rtBlend.SrcBlend       = ( desc._bPremultipliedAlpha != SW_FALSE ) ? D3D12_BLEND_ONE : D3D12_BLEND_SRC_ALPHA;
+                    rtBlend.DestBlend      = D3D12_BLEND_INV_SRC_ALPHA;
+                    rtBlend.BlendOp        = D3D12_BLEND_OP_ADD;
+                    rtBlend.SrcBlendAlpha  = D3D12_BLEND_ONE;
+                    rtBlend.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
+                    rtBlend.BlendOpAlpha   = D3D12_BLEND_OP_ADD;
+                }
+            }
+            if ( desc._bEnableDepthTest != 0 )
+            {
+                psoDesc.DepthStencilState.DepthEnable    = TRUE;
+                psoDesc.DepthStencilState.DepthWriteMask = ( desc._bEnableDepthWrite != 0 )
+                                                             ? D3D12_DEPTH_WRITE_MASK_ALL
+                                                             : D3D12_DEPTH_WRITE_MASK_ZERO;
+                psoDesc.DepthStencilState.DepthFunc      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+                psoDesc.DSVFormat                        = toDxgiFormat( desc._depthStencilFormat );
+            }
+            else
+            {
+                psoDesc.DepthStencilState.DepthEnable    = FALSE;
+                psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+                psoDesc.DSVFormat                        = DXGI_FORMAT_UNKNOWN;
+            }
+            psoDesc.SampleDesc.Count = 1;
+
+            // 실패를 조용히 삼키지 않는다. PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다. 루트 시그니처와 셰이더가 맞지 않으면
+            // 그렇게 숨는다. 디버그 레이어 메시지를 바로 비워 원인이 같은 줄에 나오게 한다.
+            const HRESULT hrPSO = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            if ( FAILED( hrPSO ) )
+            {
+                SW_LOG_ERROR( "CreateGraphicsPipelineState failed (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
+                _pDevice->flushDebugMessages( "CreateGraphicsPipelineState" );
+            }
+        }
+
+        // 컴파일 · 생성에 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 레코드를 등록하면 부르는 쪽은 PSO 가
+        // 있는 줄 알고 그리다가 드로우 계약(PSO 없는 드로우는 멈춤)에 걸린다 — 0 이면 렌더러가 그 패스를 건너뛴다.
+        if ( pso == nullptr )
+            return 0;
+        return _pDevice->_pipelineStates.insert( { pso } );
+    }
+
+    RHIPipelineStateHandle D3D12RHIResourceFactory::createComputePipelineState( string_view shaderPath, string_view entryPoint, const vector<string>& listDefine )
+    {
+        Microsoft::WRL::ComPtr<ID3D12PipelineState> pso;
+        if ( shaderPath.empty() == false )
+        {
+            const ShaderCompileDesc csDesc = RHIShaderRequest::resolveCompute( shaderPath, entryPoint, listDefine, ShaderTargetFormat::DXIL_D3D12 );
+            ShaderCompileResult     res    = RHIShaderRequest::compile( csDesc );
+            if ( res._bSuccess )
+            {
+                D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc{};
+                psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
+                psoDesc.CS             = { res._bytecode.data(), res._bytecode.size() };
+
+                const HRESULT hr = _pDevice->_device->CreateComputePipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+                if ( FAILED( hr ) )
+                {
+                    SW_LOG_ERROR( "CreateComputePipelineState failed hr=0x%#", static_cast<uint32>( hr ) );
+                    _pDevice->flushDebugMessages( "CreateComputePipelineState" );
+                    return 0;
+                }
+            }
+            else
+                return 0;
+        }
+        if ( pso == nullptr ) // 셰이더 경로가 비었다 — 빈 레코드를 등록하지 않는다
+            return 0;
+        return _pDevice->_pipelineStates.insert( { pso } );
+    }
+
+    void D3D12RHIResourceFactory::destroyPipelineState( RHIPipelineStateHandle pso )
+    {
+        if ( pso == 0 )
+            return;
+        D3D12RHIDevice::D3D12PipelineStateRecord record{};
+        if ( _pDevice->_pipelineStates.take( pso, record ) == false )
+            return;
+        if ( _pDevice->_frameStreamState._activeGraphicsPSO == pso )
+            _pDevice->_frameStreamState._activeGraphicsPSO = 0;
+        _pDevice->_releaseQueue.enqueueGPUKeepAlive( record._pso, _pDevice->_fenceValue );
+    }
+
+    RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )
+    {
+        return _pDevice->_renderPassLedger.add( desc );
+    }
+
+    void D3D12RHIResourceFactory::destroyRenderPass( RHIRenderPassHandle pass )
+    {
+        _pDevice->_renderPassLedger.retire( pass );
     }
 } // namespace sw
 #endif
