@@ -60,6 +60,8 @@ namespace sw
         , _readbackSolo{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _timestampProvider{ *this }
+        , _contextThreadBinding{ *this }
         , _computeRootConstantUbo{ 0 }
         , _stagingRingBuffer{ 0 }
         , _readbackRingBuffer{ 0 }
@@ -72,8 +74,8 @@ namespace sw
         , _reservedFlags{ 0 }
     {
         _resourceImpl          = sw::make_unique<OpenGLRHIResourceFactory>( this );
-        _pTimestampProvider    = this;
-        _pContextThreadBinding = this;
+        _pTimestampProvider    = &_timestampProvider;
+        _pContextThreadBinding = &_contextThreadBinding;
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()

@@ -73,8 +73,10 @@ namespace sw
     /**
      * @class OpenGLRHIDevice
      * @brief OpenGL 4.6 그래픽스와 컴퓨트 디바이스 구현입니다(SSBO, UBO 바인딩).
+     * @details 선택 능력(타임스탬프 · 컨텍스트 스레드 바인딩)은 상속하지 않는다. 디바이스가 가진 어댑터 멤버가 구현해 이 디바이스로 넘기고,
+     *          `findTimestampProvider` · `findContextThreadBinding` 이 그 멤버를 준다(언리얼 RHI 도 선택 기능을 디바이스의 기반 클래스로 늘리지 않는다).
      */
-    class OpenGLRHIDevice : public IRHIDevice, public IRHITimestampProvider, public IRHIContextThreadBinding
+    class OpenGLRHIDevice : public IRHIDevice
     {
         friend class OpenGLRHICommandContext;
 
@@ -105,11 +107,11 @@ namespace sw
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
-        uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
-        bool               isGPUClockReadCheap() const override { return true; }
+        void               setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
+        uint32             getTimestampSlotCount() const;
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
+        bool               isGPUClockReadCheap() const { return true; }
         /**
          * @brief 커맨드 리스트가 부르는 기록 지점입니다. GL 은 커맨드 버퍼가 없어 그 자리에서 발행합니다.
          * @details 그래서 락이 없다. GL 호출은 컨텍스트를 가진 한 스레드에서만 나간다.
@@ -179,11 +181,11 @@ namespace sw
          * @details 렌더 워커와 자원 생성 가드(ScopedOpenGLContext)가 같은 규칙을 쓴다. 한 번만 시도하면 자원 생성 가드가 잡은 짧은 순간에 렌더 스레드가
          *          `[Error]` 를 남기고 그 프레임의 GL 호출을 모두 잃는다.
          */
-        [[nodiscard]] bool bindGraphicsContext() override;
+        [[nodiscard]] bool bindGraphicsContext();
         /** @brief 이 스레드에 이미 우리 컨텍스트가 current 인지 묻습니다. ScopedOpenGLContext 가 남의 바인딩을 해제하지 않게 하는 근거입니다. */
         bool isGraphicsContextCurrent() const;
         /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
-        void unbindGraphicsContext() override;
+        void unbindGraphicsContext();
 
         /** @brief 커맨드 리스트를 만듭니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
@@ -206,6 +208,41 @@ namespace sw
         void* getNativeCommandQueue() const override { return nullptr; }
 
     private:
+        /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
+        class TimestampProvider final : public IRHITimestampProvider
+        {
+        public:
+            explicit TimestampProvider( OpenGLRHIDevice& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void               setTimestampEnabled( bool bEnabled ) override { _owner.setTimestampEnabled( bEnabled ); }
+            uint32             getTimestampSlotCount() const override { return _owner.getTimestampSlotCount(); }
+            [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
+            [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
+            bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+
+        private:
+            OpenGLRHIDevice& _owner;
+        };
+
+        /** @brief 컨텍스트 스레드 바인딩 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
+        class ContextThreadBinding final : public IRHIContextThreadBinding
+        {
+        public:
+            explicit ContextThreadBinding( OpenGLRHIDevice& owner )
+                : _owner{ owner }
+            {
+            }
+
+            [[nodiscard]] bool bindGraphicsContext() override { return _owner.bindGraphicsContext(); }
+            void               unbindGraphicsContext() override { _owner.unbindGraphicsContext(); }
+
+        private:
+            OpenGLRHIDevice& _owner;
+        };
+
         /** @brief makeCurrent 를 한 번 시도하고, 성공하면 가진 스레드와 시각을 기록합니다. */
         [[nodiscard]] bool tryMakeCurrentAndRecordOwner();
         /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
@@ -496,6 +533,10 @@ namespace sw
 
         sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;
+        /// @brief `IRHIDevice::_pTimestampProvider` 가 가리키는 능력 객체입니다.
+        TimestampProvider _timestampProvider;
+        /// @brief `IRHIDevice::_pContextThreadBinding` 이 가리키는 능력 객체입니다.
+        ContextThreadBinding _contextThreadBinding;
 
         // 8바이트보다 작은 필드는 끝에 모은다. 큰 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint32 _computeRootConstantUbo;
