@@ -53,7 +53,7 @@ namespace sw::internal
             std::memcpy( pBuffer + capacity - sizeof( LowLevelReportInternal::kTruncatedSuffix ), LowLevelReportInternal::kTruncatedSuffix, sizeof( LowLevelReportInternal::kTruncatedSuffix ) );
     }
 
-    void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
+    void reportLowLevel( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept
     {
         // Error 는 보고자가 있어도 먼저 동기로 쓴다 — 비동기 로거의 큐는 크래시 직전 메시지를 잃는다(SW_ASSERT 가 멈추기 전에 쓰는 것과 같다).
         const bool bWarning = level == LowLevelReportLevel::Warning;
@@ -61,7 +61,7 @@ namespace sw::internal
             LowLevelReportInternal::writeStderr( LowLevelReportLevel::Error, pFile, line, pMessage ); // Fatal 도 stderr 에는 Error 로 쓴다
 
         const LowLevelReporterFunc pfnReporter = s_pfnLowLevelReporter.load( std::memory_order_acquire );
-        const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage );
+        const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage, pID );
         // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
         if ( bReported == false && bWarning )
             LowLevelReportInternal::writeStderr( level, pFile, line, pMessage );
@@ -71,7 +71,7 @@ namespace sw::internal
     {
         utf8 arrText[LowLevelReportInternal::kAssertTextCapacity];
         std::snprintf( arrText, sizeof( arrText ), "ASSERT failed\nExpression : %s\nMessage    : %s\nFileName   : %s\nLine       : %d", pExpression, pMessage, pFile, line );
-        reportLowLevel( LowLevelReportLevel::Error, pFile, line, arrText );
+        reportLowLevel( LowLevelReportLevel::Error, pFile, line, arrText, SW_ASSERT_LOG_ID );
     }
 } // namespace sw::internal
 
@@ -201,7 +201,7 @@ namespace sw::internal
         if ( tryCaptureAssert() )
         {
             // 단언 가로채기를 건 테스트(`ScopedAssertCapture`)만 멈추지 않고 개수를 센다 — 가로채기는 Debug 에만 있다
-            reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText );
+            reportLowLevel( LowLevelReportLevel::Error, __FILE__, static_cast<int32>( __LINE__ ), arrText, SW_ASSERT_LOG_ID );
             return;
         }
 #endif

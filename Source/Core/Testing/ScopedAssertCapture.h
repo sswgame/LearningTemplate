@@ -4,6 +4,8 @@
  * @details Debug 의 단언은 디버거에서 멈추므로 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 가드 안에서는 단언이 세어지기만 하고 코드는 그 뒤로
  *          이어진다(배포본과 같은 길). 창구는 `Core/Foundation/Macros.h` 의 단언 가로채기(Debug 에만 있다)다 — 유니티 `LogAssert.Expect` 와 같은 역할.
  *          단언은 Debug 에만 있으므로 다른 구성에서 `getCount()` 는 늘 0 이다. 수를 보는 단언은 `kAssertsAreActive` 로 가른다.
+ *          `SW_LOG_ASSERT` · `SW_LOW_LEVEL_ASSERT` 는 모든 구성에서 Error 로그(id `SW_ASSERT_LOG_ID`)도 남기므로 케이스는 `SW_EXPECT_LOG( SW_ASSERT_LOG_ID )` 로 적는다
+ *          (`SW_ASSERT` 는 로그를 남기지 않는다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
