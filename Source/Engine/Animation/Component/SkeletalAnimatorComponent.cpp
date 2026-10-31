@@ -102,7 +102,12 @@ namespace sw
         inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
     }
 
-    const IAnimationPlayable* SkeletalAnimatorBinding::findPlayable( const hashed_string& name ) const
+    SkeletalAnimatorClipSource::SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    const IAnimationPlayable* SkeletalAnimatorClipSource::findPlayable( const hashed_string& name ) const
     {
         // 블렌드 스페이스 노드는 그 상태를, 보통 노드(또는 그래프 밖 이름)는 같은 이름의 클립을 낸다.
         for ( const unique_ptr<SkeletalBlendSpaceState>& state : _owner._listBlendSpace )
@@ -193,6 +198,7 @@ namespace sw
         , _syncGroup{}
         , _syncWeight{ 1.0f }
         , _binding{ *this }
+        , _clipSource{ *this }
         , _graph{}
         , _graphPlayer{}
         , _parameters{}
@@ -245,7 +251,7 @@ namespace sw
         , _bDeferredPlayLoop{ SW_TRUE }
         , _reserved{ 0 }
     {
-        _graphPlayer.setPlayableSource( &_binding );
+        _graphPlayer.setPlayableSource( &_clipSource );
     }
 
     SkeletalAnimatorComponent::~SkeletalAnimatorComponent()
@@ -1038,7 +1044,7 @@ namespace sw
         const SkeletalBlendSpaceState* pState = findBlendSpaceState( &playable );
         if ( pState == nullptr )
         {
-            // 이 애니메이터가 상태 기계에 주는 재생할 것은 블렌드 스페이스 상태가 아니면 클립뿐이다(`SkeletalAnimatorBinding::findPlayable`).
+            // 이 애니메이터가 상태 기계에 주는 재생할 것은 블렌드 스페이스 상태가 아니면 클립뿐이다(`SkeletalAnimatorClipSource::findPlayable`).
             sampleClipIntoPose( static_cast<const AnimationClip&>( playable ), time, skeleton, inoutPose, pBoneMask );
             return;
         }

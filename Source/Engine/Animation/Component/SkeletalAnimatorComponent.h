@@ -97,10 +97,11 @@ namespace sw
 {
     /**
      * @class SkeletalAnimatorBinding
-     * @brief 애니메이터가 유닛과 상태 기계에 노출하는 인터페이스 구현입니다(단계 작업, 클립 해석). 컴포넌트가 하나 보관하고 그대로 넘깁니다.
+     * @brief 애니메이터가 유닛에 노출하는 단계 작업 구현입니다. 컴포넌트가 하나 보관하고 그대로 넘깁니다.
      * @details 리플렉션 컴포넌트는 기반 클래스 하나만 둔다(타입 정보와 `castTo` 가 단일 상속을 가정한다). 그래서 인터페이스는 이 작은 객체가 구현한다.
+     *          상태 기계의 클립 해석은 따로 `SkeletalAnimatorClipSource` 가 맡는다(역할 하나에 객체 하나 - 인터페이스를 덧붙이지 않는다).
      */
-    class SW_API SkeletalAnimatorBinding final : public IAnimationPhaseTask, public IAnimationPlayableSource
+    class SW_API SkeletalAnimatorBinding final : public IAnimationPhaseTask
     {
     public:
         explicit SkeletalAnimatorBinding( SkeletalAnimatorComponent& owner );
@@ -114,11 +115,28 @@ namespace sw
         void                            onAnimationUnitDetached( SkeletalMeshComponent& unit ) override;
         bool                            describeSharedPose( AnimationSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimationClip> findSharedPoseClip( const AnimationClip* pClip ) const override;
-        const IAnimationPlayable*       findPlayable( const hashed_string& name ) const override;
         void                            collectDebugState( AnimationDebugState& inoutState ) const override;
 
     private:
         SkeletalAnimatorComponent& _owner;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SkeletalAnimatorClipSource
+     * @brief 상태 기계(`AnimationGraphPlayer`)가 상태 이름을 재생 항목으로 해석할 때 애니메이터의 블렌드 스페이스 상태나 클립을 그 이름으로 맞춰 줍니다.
+     * @details 컴포넌트가 하나 보관하고 상태 기계에 빌려준다(스프라이트 애니메이터의 `SpriteAnimatorClipSource` 와 같은 방식이다).
+     */
+    class SW_API SkeletalAnimatorClipSource final : public IAnimationPlayableSource
+    {
+    public:
+        explicit SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner );
+        const IAnimationPlayable* findPlayable( const hashed_string& name ) const override;
+
+    private:
+        const SkeletalAnimatorComponent& _owner;
     };
 } // namespace sw
 
@@ -140,6 +158,7 @@ namespace sw
     class SW_API SkeletalAnimatorComponent : public Component
     {
         friend class SkeletalAnimatorBinding;
+        friend class SkeletalAnimatorClipSource;
 
     public:
         REFLECT_BODY();
@@ -251,7 +270,7 @@ namespace sw
          * @details 시간, 상태 기계, 알림, 루트 모션, 커브는 나눠도 이 애니메이터가 계속 처리한다(시간 단계). 나누는 것은 포즈뿐이다.
          */
         bool describeSharedPose( AnimationSharedPoseRequest& outRequest ) const;
-        /** @brief 유닛과 상태 기계에 노출하는 인터페이스 구현을 반환합니다. */
+        /** @brief 유닛에 노출하는 단계 작업 구현을 반환합니다. */
         SkeletalAnimatorBinding& getBinding() { return _binding; }
 
     private:
@@ -400,11 +419,12 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding _binding;
-        Subscription            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        AnimationGraphAsset     _graph;
-        AnimationGraphPlayer    _graphPlayer;
-        AnimationParameterSet   _parameters;
+        SkeletalAnimatorBinding    _binding;
+        SkeletalAnimatorClipSource _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
+        Subscription               _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        AnimationGraphAsset        _graph;
+        AnimationGraphPlayer       _graphPlayer;
+        AnimationParameterSet      _parameters;
         /** @brief 시작 때 요청한 클립 하나입니다. */
         struct ClipLoad
         {
