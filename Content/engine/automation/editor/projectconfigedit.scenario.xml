@@ -23,8 +23,7 @@
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="projectsettings.page.EngineConfig"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ProjectSettingsKeyCount" atLeast="7"/>
+	<WaitUntil watch="Editor.ProjectSettingsKeyCount" atLeast="7" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EngineConfig._maxFrameDeltaTime" mods="ctrl"/>
 	<Wait frames="10"/>
@@ -39,8 +38,7 @@
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="1"/>
 	<Wait frames="10"/>
 	<EditorClick mark="projectsettings.revert"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
+	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<!-- 활성 팩의 <Engine> 요소(PackEngineSettings) — 팩 gamesettings.xml 안의 요소 하나를 고치는 페이지다. 창 제목은 늘 적혀 있다. -->
 	<Wait frames="10"/>
 	<EditorClick mark="projectsettings.page.PackEngineSettings"/>

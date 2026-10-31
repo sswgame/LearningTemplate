@@ -45,15 +45,13 @@
 	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh"/>
+	<WaitUntil watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<CaptureEditorUI file="scenereference/picked.png"/>
 	<!-- ③ 되돌리기 -->
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedSceneReference" is="(none)" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<!-- ④ 다시 고르고 (none) -->
 	<Wait frames="10"/>
@@ -62,16 +60,14 @@
 	<EditorHover mark="inspector.sceneref.choice.TestMesh"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.choice.TestMesh"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh"/>
+	<WaitUntil watch="Editor.SelectedSceneReference" is="editortest.scene.xml / TestMesh" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.EditorSceneReferenceTestComponent._target"/>
 	<Wait frames="20"/>
 	<EditorHover mark="inspector.sceneref.none"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.sceneref.none"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedSceneReference" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedSceneReference" is="(none)" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

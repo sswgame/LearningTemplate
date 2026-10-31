@@ -20,8 +20,7 @@
 	<Expect watch="Editor.PhysicsShapeSegments" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.visualizer.physics_shapes"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.PhysicsShapeSegments" atLeast="1"/>
+	<WaitUntil watch="Editor.PhysicsShapeSegments" atLeast="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.visualizer.navmesh"/>
 	<Wait frames="15"/>

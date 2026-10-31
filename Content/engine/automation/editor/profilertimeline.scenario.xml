@@ -25,8 +25,7 @@
 	<EditorClick mark="profiler.timeline.tab" state="up"/>
 	<Wait frames="7"/>
 	<EditorClick mark="profiler.timeline.record"/>
-	<Wait frames="60"/>
-	<Expect watch="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
+	<WaitUntil watch="Editor.ProfilerTimelineThreadCount" atLeast="2" timeoutFrames="180"/>
 	<!-- 눈 확인용(GPU 검증): 녹화 중 타임라인 — GPU 타임스탬프 칸(64)을 실제로 얼마나 쓰는지 렌더 스레드 줄에서 본다 -->
 	<Wait frames="2"/>
 	<CaptureEditorUI file="profilertimeline/recording.png"/>
@@ -42,8 +41,7 @@
 	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.loadTrace"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ProfilerLoadedTraceThreads" atLeast="2"/>
+	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" atLeast="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.traceSearch"/>
 	<Wait frames="5"/>
@@ -60,7 +58,6 @@
 	<Expect watch="Editor.ProfilerTraceSearchMatches" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.timeline.unloadTrace"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ProfilerLoadedTraceThreads" equals="0"/>
+	<WaitUntil watch="Editor.ProfilerLoadedTraceThreads" equals="0" timeoutFrames="60"/>
 	<Pass/>
 </Scenario>

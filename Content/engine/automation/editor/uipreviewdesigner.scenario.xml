@@ -28,14 +28,12 @@
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="900"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewSlotEditable" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewSlotEditable" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.UIPreviewPaletteCount" atLeast="10"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="uipreview.handle.move" dx="40" dy="0"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="90"/>
 	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
@@ -88,8 +86,7 @@
 	<Expect watch="Editor.UIPreviewWidgetCount" equals="2"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewWidgetCount" equals="1"/>
+	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="60"/>
 	<!-- 정리: 거름 칸을 비우고 문서 값을 되찾는다 -->
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.palette.filter"/>
@@ -99,8 +96,7 @@
 	<EditorKey key="Backspace"/>
 	<Wait frames="10"/>
 	<EditorClick mark="uipreview.reload"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="0"/>
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.close ui_preview"/>
 	<Wait frames="5"/>

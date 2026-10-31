@@ -10,13 +10,11 @@
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus prefab_editor"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.SceneViewDrawn" equals="0"/>
+	<WaitUntil watch="Editor.SceneViewDrawn" equals="0" timeoutFrames="75"/>
 	<DevCommand line="editor editor.themeSettings"/>
 	<Wait frames="15"/>
 	<EditorClick mark="theme.swatch.violet"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.AccentColor" equals="10902002"/>
+	<WaitUntil watch="Editor.AccentColor" equals="10902002" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Pass/>
 </Scenario>

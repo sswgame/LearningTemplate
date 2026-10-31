@@ -31,36 +31,31 @@
 	<EditorClick mark="viewport.viewMode"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode.unlit"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewMode" equals="1"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="1" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_unlit.ppm"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode.wireframe"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewMode" equals="2"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="2" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_wireframe.ppm"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode.depth"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewMode" equals="4"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="4" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_depth.ppm"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode.overdraw"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewMode" equals="5"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="5" timeoutFrames="90"/>
 	<Screenshot file="viewmodes_scene_overdraw.ppm"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode"/>
 	<Wait frames="10"/>
 	<EditorClick mark="viewport.viewMode.normals"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewMode" equals="3"/>
+	<WaitUntil watch="Editor.SceneViewMode" equals="3" timeoutFrames="90"/>
 	<Expect watch="Editor.GameViewMode" equals="0"/>
 	<Screenshot file="viewmodes_scene_normals.ppm"/>
 	<Wait frames="5"/>

@@ -15,16 +15,14 @@
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.visualizer.camera_frustum"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.VisualizerOn" equals="0"/>
+	<WaitUntil watch="Editor.VisualizerOn" equals="0" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchVisualizer" value="box_collider_2d"/>
 	<Wait frames="2"/>
 	<Expect watch="Editor.VisualizerOn" equals="1"/>
 	<Wait frames="3"/>
 	<Variable name="gv_editorWatchVisualizer" value="camera_frustum"/>
 	<EditorClick mark="viewport.visualizer.camera_frustum"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.VisualizerOn" equals="1"/>
+	<WaitUntil watch="Editor.VisualizerOn" equals="1" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

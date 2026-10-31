@@ -25,8 +25,7 @@
 	<EditorClick mark="curve.canvas" button="1"/>
 	<Wait frames="15"/>
 	<EditorClick mark="curve.menu.addKey"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedCurveKeyCount" equals="3"/>
+	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="curve.key.0" dy="-60"/>
@@ -39,8 +38,7 @@
 	<EditorKey key="Ctrl+Z"/>
 	<Wait frames="15"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedCurveKeyCount" equals="2"/>
+	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>

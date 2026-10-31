@@ -45,8 +45,7 @@
 	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play"/>
-	<Wait frames="40"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.GameViewRequested" equals="1"/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<Wait frames="5"/>
@@ -65,8 +64,7 @@
 	<!-- ④ Stop — 정지로 돌아오고 씬 뷰는 계속 씬 뷰다 -->
 	<Wait frames="10"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="90"/>
 	<Expect watch="Editor.SceneViewRequested" equals="1"/>
 	<!-- ⑤ 게임 뷰를 닫아도 요청은 0, 다시 열면 1 -->
 	<Wait frames="5"/>

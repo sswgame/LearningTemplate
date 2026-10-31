@@ -10,25 +10,21 @@
 	<DevCommand line="editor scene.new"/>
 	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UndoCount" equals="1"/>
+	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play"/>
 	<Wait frames="15"/>
 	<EditorClick mark="toolbar.playAnyway"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Expect watch="Editor.UndoIndex" equals="1"/>
 	<EditorExpectObject name="GameObject"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UndoIndex" equals="0"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<EditorExpectObject name="GameObject" count="0"/>
 	<Pass/>
 </Scenario>

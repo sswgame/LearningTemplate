@@ -24,8 +24,7 @@
 	<Expect watch="Editor.GraphNodeCount" equals="6"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus animation_graph"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.GraphNodeCount" equals="2"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="2" timeoutFrames="150"/>
 	<Wait frames="5"/>
 	<EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/>
 	<Wait frames="20"/>

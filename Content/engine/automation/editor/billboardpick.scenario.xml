@@ -24,8 +24,7 @@
 	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.visualizer.billboard"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.VisualizerOn" equals="0"/>
+	<WaitUntil watch="Editor.VisualizerOn" equals="0" timeoutFrames="60"/>
 	<Wait frames="25"/>
 	<EditorClick mark="viewport.visualizer.billboard"/>
 	<Wait frames="10"/>

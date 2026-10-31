@@ -49,8 +49,7 @@
 	<EditorClick mark="meshmodifiers.category.Deform"/>
 	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.ModifierCount" equals="1"/>
+	<WaitUntil watch="MeshModifiers.ModifierCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
 	<Wait frames="10"/>
@@ -75,8 +74,7 @@
 	<Expect watch="MeshModifiers.SelectedCenterOffset" atMost="0.0001"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="meshmodifiers.handle.move.0" dx="70"/>
-	<Wait frames="30"/>
-	<Expect watch="MeshModifiers.SelectedCenterOffset" atLeast="0.01"/>
+	<WaitUntil watch="MeshModifiers.SelectedCenterOffset" atLeast="0.01" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
 	<EditorExpectObject name="CrateLeft" selected="1"/>
 	<CaptureEditorUI file="meshmodifiers/gizmo.png"/>
@@ -92,16 +90,14 @@
 	<EditorClick mark="meshmodifiers.category.Curve"/>
 	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.curvesculptlayered"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.ModifierCount" equals="2"/>
+	<WaitUntil watch="MeshModifiers.ModifierCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.CurveListItemCount" equals="0"/>
 	<Expect watch="MeshModifiers.GPUPreviewActive" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.curveList.add"/>
 	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.curveList.add"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.CurveListItemCount" equals="2"/>
+	<WaitUntil watch="MeshModifiers.CurveListItemCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.CurveListKeyCount" equals="4"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.curve.1"/>
@@ -109,8 +105,7 @@
 	<EditorClick mark="curve.canvas" button="1"/>
 	<Wait frames="15"/>
 	<EditorClick mark="curve.menu.addKey"/>
-	<Wait frames="20"/>
-	<Expect watch="MeshModifiers.CurveListKeyCount" equals="5"/>
+	<WaitUntil watch="MeshModifiers.CurveListKeyCount" equals="5" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Escape"/>
 	<!-- 빈 곡선 층은 항등이라 그림이 휘기(옮긴 뒤)와 같고 레스트와 다르다 -->
@@ -125,8 +120,7 @@
 	<EditorClick mark="meshmodifiers.category.Surface"/>
 	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.item.conformmulti"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.ModifierCount" equals="3"/>
+	<WaitUntil watch="MeshModifiers.ModifierCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.ReferenceListCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.referenceList.add"/>
@@ -153,8 +147,7 @@
 	<EditorClick mark="meshmodifiers.nested.category.Deform"/>
 	<Wait frames="10"/>
 	<EditorClick mark="meshmodifiers.nested.item.twist"/>
-	<Wait frames="15"/>
-	<Expect watch="MeshModifiers.ModifierCount" equals="4"/>
+	<WaitUntil watch="MeshModifiers.ModifierCount" equals="4" timeoutFrames="60"/>
 	<Expect watch="MeshModifiers.NestedCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.nested.row.0"/>

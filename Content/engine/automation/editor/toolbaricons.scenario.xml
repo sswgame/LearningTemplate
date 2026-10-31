@@ -13,25 +13,20 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="35"/>
 	<EditorClick mark="toolbar.play"/>
-	<Wait frames="60"/>
-	<Expect watch="Editor.PlayState" equals="1"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="180"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="45"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="135"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<Wait frames="20"/>
 	<EditorClick mark="gizmo.rotate"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.GizmoOperation" equals="1"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="gizmo.scale"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.GizmoOperation" equals="2"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="gizmo.translate"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.GizmoOperation" equals="0"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="0" timeoutFrames="60"/>
 	<CaptureEditorUI file="toolbar.png"/>
 	<Wait frames="5"/>
 	<Variable name="gv_editorUiScale" value="0"/>

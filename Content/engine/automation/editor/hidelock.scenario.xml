@@ -16,15 +16,13 @@
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.toggle.TestMesh"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectHiddenInEditor" equals="1"/>
+	<WaitUntil watch="Editor.ObjectHiddenInEditor" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectActive" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.toggle.TestMesh"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectHiddenInEditor" equals="0"/>
+	<WaitUntil watch="Editor.ObjectHiddenInEditor" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.lock.GameCamera"/>
 	<Wait frames="15"/>

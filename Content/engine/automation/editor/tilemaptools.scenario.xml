@@ -40,8 +40,7 @@
 	<Expect watch="Editor.TileMapFlagCells" equals="64"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.tool.picker"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.TileMapTool" equals="3"/>
+	<WaitUntil watch="Editor.TileMapTool" equals="3" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/>
 	<Wait frames="15"/>

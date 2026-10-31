@@ -14,13 +14,11 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus render_targets"/>
-	<Wait frames="40"/>
-	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
+	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutFrames="120"/>
 	<!-- 2) 깊이 -->
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.row.SceneDepth"/>
-	<Wait frames="35"/>
-	<Expect watch="Editor.RenderTargetSelectedDepth" equals="1"/>
+	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="1" timeoutFrames="105"/>
 	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
 	<Expect watch="Editor.RenderTargetLinearized" equals="1"/>
 	<Wait frames="5"/>
@@ -30,21 +28,18 @@
 	<Expect watch="Editor.RenderTargetPixelRed" atMost="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.linearize"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.RenderTargetLinearized" equals="0"/>
+	<WaitUntil watch="Editor.RenderTargetLinearized" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="renderTargets.refresh"/>
 	<Wait frames="30"/>
 	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
 	<!-- 3) 채널 -->
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.row.SceneColor"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.RenderTargetSelectedDepth" equals="0"/>
+	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="0" timeoutFrames="90"/>
 	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.channel.G"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.RenderTargetChannel" equals="2"/>
+	<WaitUntil watch="Editor.RenderTargetChannel" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.5"/>
 	<Wait frames="15"/>

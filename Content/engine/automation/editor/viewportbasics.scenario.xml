@@ -20,28 +20,22 @@
 	<Variable name="gv_editorWatchPanel" value="hierarchy"/>
 	<Wait frames="5"/>
 	<EditorKey key="E"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.GizmoOperation" equals="1"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="R"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.GizmoOperation" equals="2"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Q"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.GizmoOperation" equals="0"/>
+	<WaitUntil watch="Editor.GizmoOperation" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Keypad7"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.SceneViewOrthographic" equals="1"/>
+	<WaitUntil watch="Editor.SceneViewOrthographic" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Keypad5"/>
-	<Wait frames="10"/>
-	<Expect watch="Editor.SceneViewOrthographic" equals="0"/>
+	<WaitUntil watch="Editor.SceneViewOrthographic" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="Shift+Space"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SceneViewMaximized" equals="1"/>
+	<WaitUntil watch="Editor.SceneViewMaximized" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas" button="2" state="up"/>

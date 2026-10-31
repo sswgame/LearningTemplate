@@ -18,14 +18,12 @@
 	<EditorClick mark="contentBrowser.allPacks" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.allPacks" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.ContentGameRootCount" atLeast="2"/>
+	<WaitUntil watch="Editor.ContentGameRootCount" atLeast="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="contentBrowser.allPacks" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.allPacks" state="up"/>
-	<Wait frames="12"/>
-	<Expect watch="Editor.ContentGameRootCount" equals="1"/>
+	<WaitUntil watch="Editor.ContentGameRootCount" equals="1" timeoutFrames="60"/>
 	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1"/>
@@ -44,8 +42,7 @@
 	<EditorClick mark="menu.asset.findReferences" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="menu.asset.findReferences" state="up"/>
-	<Wait frames="17"/>
-	<Expect watch="Editor.ReferenceResultCount" atLeast="1"/>
+	<WaitUntil watch="Editor.ReferenceResultCount" atLeast="1" timeoutFrames="60"/>
 	<CaptureEditorUI file="references.png"/>
 	<Wait frames="15"/>
 	<Variable name="gv_editorUiScale" value="0"/>

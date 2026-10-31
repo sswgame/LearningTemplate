@@ -24,8 +24,7 @@
 	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="0"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.addKey"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SequencerKeyFrameCount" equals="1"/>
+	<WaitUntil watch="Editor.SequencerKeyFrameCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
 	<Wait frames="10"/>

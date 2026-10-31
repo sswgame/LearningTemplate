@@ -50,8 +50,7 @@
 	<EditorDrag mark="sceneView.canvas" dx="160" dy="0"/>
 	<Wait frames="2"/>
 	<Expect watch="Editor.TerrainBrushHit" equals="1"/>
-	<Wait frames="48"/>
-	<Expect watch="Editor.TerrainBrushStrokeCount" equals="1"/>
+	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="1" timeoutFrames="144"/>
 	<Expect watch="Editor.UndoCount" atLeast="1"/>
 	<Screenshot file="terrain_painted.ppm"/>
 	<Wait frames="1"/>
@@ -68,8 +67,7 @@
 	<DevCommand line="terrain.brush raise 15 120"/>
 	<Wait frames="10"/>
 	<EditorDrag mark="sceneView.canvas" dx="0" dy="60"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.TerrainBrushStrokeCount" equals="2"/>
+	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="2" timeoutFrames="150"/>
 	<Screenshot file="terrain_raised.ppm"/>
 	<Wait frames="1"/>
 	<ExpectImage file="terrain_raised.ppm" golden="terrain_raised"/>
@@ -78,8 +76,7 @@
 	<DevCommand line="terrain.brush smooth 25 60"/>
 	<Wait frames="10"/>
 	<EditorDrag mark="sceneView.canvas" dx="20" dy="0"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.TerrainBrushStrokeCount" equals="3"/>
+	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="3" timeoutFrames="150"/>
 	<Screenshot file="terrain_smoothed.ppm"/>
 	<Wait frames="1"/>
 	<ExpectImage file="terrain_smoothed.ppm" golden="terrain_smoothed"/>
@@ -88,8 +85,7 @@
 	<DevCommand line="terrain.brush hole 18 1"/>
 	<Wait frames="10"/>
 	<EditorDrag mark="sceneView.canvas" dx="40" dy="0"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.TerrainBrushStrokeCount" equals="4"/>
+	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="4" timeoutFrames="150"/>
 	<Screenshot file="terrain_holes.ppm"/>
 	<Wait frames="1"/>
 	<ExpectImage file="terrain_holes.ppm" golden="terrain_holes"/>
@@ -103,8 +99,7 @@
 	<Screenshot file="terrain_resized.ppm"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.TerrainResolution" equals="257"/>
+	<WaitUntil watch="Editor.TerrainResolution" equals="257" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

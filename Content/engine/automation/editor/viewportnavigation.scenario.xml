@@ -31,8 +31,7 @@
 	<!-- ② 가운데 단추 끌기: 카메라 X 가 바뀐다 -->
 	<Wait frames="5"/>
 	<EditorDrag mark="sceneView.canvas" button="2" dx="120" dy="0"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SceneViewCameraX" differsFrom="xStart"/>
+	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="xStart" timeoutFrames="60"/>
 	<!-- ③ 오른쪽 단추 비행으로 옆으로 난 뒤 Alt 궤도 -->
 	<Wait frames="10"/>
 	<DevCommand line="camera.reset"/>

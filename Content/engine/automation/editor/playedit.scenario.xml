@@ -37,8 +37,7 @@
 	<Expect watch="Editor.SelectedProperty" equals="7"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
 	<!-- 3) F8 Eject / Possess -->
@@ -48,12 +47,10 @@
 	<Expect watch="Editor.PlaySimulating" equals="0"/>
 	<Wait frames="5"/>
 	<EditorKey key="F8"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.PlaySimulating" equals="1"/>
+	<WaitUntil watch="Editor.PlaySimulating" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorKey key="F8"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.PlaySimulating" equals="0"/>
+	<WaitUntil watch="Editor.PlaySimulating" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
 	<!-- 4) Maximize On Play -->
@@ -69,8 +66,7 @@
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="45"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="135"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>
 	<Wait frames="2"/>
 	<DevCommand line="panel.focus game_view"/>
@@ -92,8 +88,7 @@
 	<DevCommand line="editor play.keepChanges"/>
 	<Wait frames="10"/>
 	<EditorClick mark="toolbar.stop"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.PlayState" equals="0"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="7"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>

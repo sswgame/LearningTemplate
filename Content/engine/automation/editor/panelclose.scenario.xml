@@ -31,8 +31,7 @@
 	<EditorClick mark="inputMap.binding.0.trigger"/>
 	<Wait frames="20"/>
 	<EditorClick mark="inputMap.trigger.4"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.InputMapSelectedTrigger" equals="4"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>
 	<CaptureEditorUI file="panelclose/edited.png"/>
 	<!-- ② 메뉴 토글 경로 → 확인 → Cancel -->

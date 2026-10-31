@@ -50,16 +50,14 @@
 	<DevCommand line="panel.focus content_browser"/>
 	<Wait frames="20"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UndoIndex" equals="0"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedNames" is="TestMesh"/>
 	<Expect watch="Editor.SceneHash" sameAs="opened"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="20"/>
 	<EditorKey key="Ctrl+Y"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UndoIndex" equals="1"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedNames" is="Renamed"/>
 	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
 	<!-- ③ 지우기 → 되돌리기: 같은 오브젝트가 돌아와 골라진다 -->

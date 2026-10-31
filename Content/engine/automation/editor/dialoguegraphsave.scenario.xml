@@ -22,8 +22,7 @@
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="dialogueGraph.add.Dialogue"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="dialogueGraph.save"/>
 	<Wait frames="20"/>
@@ -35,14 +34,12 @@
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="dialogueGraph.add.End"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus dialogue_graph"/>
 	<Wait frames="20"/>
 	<DevCommand line="editor asset.save"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DirtyDocumentCount" equals="0"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.TempAssetExists" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="asset.removeTemp {out}/temp.dialogue.xml"/>

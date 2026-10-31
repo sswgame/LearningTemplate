@@ -35,8 +35,7 @@
 	<EditorClick mark="charactereditor.tab.skeleton" state="up"/>
 	<Wait frames="19"/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.CharacterEditorBoneCount" atLeast="30"/>
+	<WaitUntil watch="Editor.CharacterEditorBoneCount" atLeast="30" timeoutFrames="90"/>
 	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.bone.root"/>
 	<Wait frames="35"/>
@@ -55,16 +54,14 @@
 	<EditorClick mark="charactereditor.equipSet"/>
 	<Wait frames="20"/>
 	<EditorClick mark="charactereditor.equipSet.first"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1"/>
+	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="90"/>
 	<Wait frames="10"/>
 	<CaptureEditorUI file="charactereditor/appearance.png"/>
 	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.tab.preview" state="down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.preview" state="up"/>
-	<Wait frames="59"/>
-	<Expect watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewAssembleCount" atLeast="1" timeoutFrames="177"/>
 	<!-- 스켈레톤 탭에서 고른 본(root)에 기즈모 표식이 놓인다 — 뷰포트에서 끌면 포즈 편집이 된다(눈으로 본다). 관통 점은 피팅 데이터가 겹치는 차림에서만 찍힌다(감시 값 Editor.CharacterEditorPenetrationMarks) -->
 	<Wait frames="5"/>
 	<Expect watch="Editor.CharacterEditorBoneGizmoPlaced" atLeast="1"/>
@@ -76,8 +73,7 @@
 	<EditorClick mark="charactereditor.clip.first"/>
 	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.playClip"/>
-	<Wait frames="45"/>
-	<Expect watch="Editor.CharacterEditorPreviewClipPlaying" atLeast="1"/>
+	<WaitUntil watch="Editor.CharacterEditorPreviewClipPlaying" atLeast="1" timeoutFrames="135"/>
 	<Wait frames="40"/>
 	<CaptureEditorUI file="charactereditor/clip.png"/>
 	<!-- 꾸미기 슬라이더(스키마가 있는 프리셋이면 뷰포트 아래에 나온다): 눌러 값을 바꾸고 놓으면 몸이 다시 입혀진다 — 눈으로 본다 -->

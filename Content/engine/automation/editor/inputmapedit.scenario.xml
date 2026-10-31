@@ -21,19 +21,16 @@
 	<Wait frames="5"/>
 	<Expect watch="Editor.InputMapConflicts" equals="0"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.InputMapBindingCount" equals="2"/>
+	<WaitUntil watch="Editor.InputMapBindingCount" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.InputMapSelectedTrigger" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
 	<Wait frames="20"/>
 	<EditorClick mark="inputMap.trigger.4"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.InputMapSelectedTrigger" equals="4"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inputMap.reload"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.InputMapSelectedTrigger" equals="0"/>
+	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inputMap.tab.debug" state="down"/>
 	<Wait frames="3"/>

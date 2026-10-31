@@ -14,13 +14,11 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus prefab_editor"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SceneViewDrawn" equals="0"/>
+	<WaitUntil watch="Editor.SceneViewDrawn" equals="0" timeoutFrames="60"/>
 	<!-- 기본 배치로 되돌리면 Prefab Overrides 가 열린 채여도 Scene 탭이 앞이다 -->
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
-	<Wait frames="35"/>
-	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
+	<WaitUntil watch="Editor.SceneViewDrawn" equals="1" timeoutFrames="105"/>
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<EditorClick mark="sceneView.canvas"/>

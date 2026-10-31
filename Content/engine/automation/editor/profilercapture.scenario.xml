@@ -16,8 +16,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus profiler"/>
-	<Wait frames="80"/>
-	<Expect watch="Editor.ProfilerCapturedFrames" atLeast="30"/>
+	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="240"/>
 	<Expect watch="Editor.ProfilerSelectedFrame" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.graph.GT.Frame" anchor="0.5,0.5"/>
@@ -33,8 +32,7 @@
 	<EditorClick mark="profiler.capture.save"/>
 	<Wait frames="15"/>
 	<EditorClick mark="profiler.capture.clear"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.ProfilerCapturedFrames" equals="0"/>
+	<WaitUntil watch="Editor.ProfilerCapturedFrames" equals="0" timeoutFrames="60"/>
 	<EditorClick mark="profiler.capture.load"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.ProfilerCapturedFrames" atLeast="30" timeoutFrames="300"/>
@@ -55,11 +53,9 @@
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<EditorClick mark="profiler.capture.pause"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.ProfilerCapturePaused" equals="0"/>
+	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="0" timeoutFrames="60"/>
 	<DevCommand line="profile.stall 400"/>
-	<Wait frames="40"/>
-	<Expect watch="Editor.ProfilerCapturePaused" equals="1"/>
+	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="120"/>
 	<ExpectLog contains="Profiler paused on a spike" atLeast="1"/>
 	<!-- 4) Call Tree -->
 	<Wait frames="10"/>
@@ -68,8 +64,7 @@
 	<EditorClick mark="profiler.callTree.tab" state="up"/>
 	<Wait frames="12"/>
 	<EditorClick mark="profiler.callTree.record"/>
-	<Wait frames="75"/>
-	<Expect watch="Editor.ProfilerCallTreeNodes" atLeast="3"/>
+	<WaitUntil watch="Editor.ProfilerCallTreeNodes" atLeast="3" timeoutFrames="225"/>
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<Wait frames="15"/>

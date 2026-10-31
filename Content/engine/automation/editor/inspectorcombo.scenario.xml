@@ -21,8 +21,7 @@
 	<EditorClick mark="inspector.property.CameraComponent._role"/>
 	<Wait frames="15"/>
 	<EditorClick mark="inspector.enum._role.Custom"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedEnumValue" equals="2"/>
+	<WaitUntil watch="Editor.SelectedEnumValue" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>

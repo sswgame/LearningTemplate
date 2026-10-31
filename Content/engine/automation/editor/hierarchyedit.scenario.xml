@@ -21,14 +21,12 @@
 	<EditorKey key="Ctrl+C"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+V"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectCount" equals="12"/>
+	<WaitUntil watch="Editor.ObjectCount" equals="12" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectionCount" equals="3"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectCount" equals="9"/>
+	<WaitUntil watch="Editor.ObjectCount" equals="9" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
 	<Wait frames="15"/>

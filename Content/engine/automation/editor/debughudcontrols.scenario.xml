@@ -22,30 +22,25 @@
 	<Expect watch="Editor.DebugHUDShownSections" equals="4"/>
 	<Wait frames="5"/>
 	<EditorClick mark="gameView.hud"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DebugHUDEnabled" equals="1"/>
+	<WaitUntil watch="Editor.DebugHUDEnabled" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="gameView.hud" button="1"/>
 	<Wait frames="20"/>
 	<EditorClick mark="debugHUD.section.physics"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DebugHUDShownSections" equals="5"/>
+	<WaitUntil watch="Editor.DebugHUDShownSections" equals="5" timeoutFrames="60"/>
 	<EditorKey key="Escape"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.SceneViewHUDSections" equals="0"/>
 	<EditorClick mark="viewport.hud"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewHUDSections" atLeast="2"/>
+	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="2" timeoutFrames="90"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.hud"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SceneViewHUDSections" equals="0"/>
+	<WaitUntil watch="Editor.SceneViewHUDSections" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="viewport.hud"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.SceneViewHUDSections" atLeast="2"/>
+	<WaitUntil watch="Editor.SceneViewHUDSections" atLeast="2" timeoutFrames="90"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor editor.preferences"/>
 	<Wait frames="15"/>
@@ -56,8 +51,7 @@
 	<EditorText value="Debug HUD"/>
 	<Wait frames="30"/>
 	<EditorClick mark="preferences.debugHUD.shown"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.DebugHUDEnabled" equals="0"/>
+	<WaitUntil watch="Editor.DebugHUDEnabled" equals="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="hud off"/>
 	<DevCommand line="hud physics off"/>

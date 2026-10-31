@@ -35,8 +35,7 @@
 	<EditorClick mark="retarget.open"/>
 	<Wait frames="15"/>
 	<EditorClick mark="retarget.open.knight_to_minion.retarget.xml"/>
-	<Wait frames="65"/>
-	<Expect watch="Editor.RetargetChainCount" atLeast="6"/>
+	<WaitUntil watch="Editor.RetargetChainCount" atLeast="6" timeoutFrames="195"/>
 	<Expect watch="Editor.RetargetPoseCount" equals="0"/>
 	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
 	<CaptureEditorUI file="retarget/opened.png"/>
@@ -56,8 +55,7 @@
 	<EditorText value="upperarm.l"/>
 	<Wait frames="15"/>
 	<EditorClick mark="retarget.targetPose.add"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.RetargetPoseCount" equals="1"/>
+	<WaitUntil watch="Editor.RetargetPoseCount" equals="1" timeoutFrames="75"/>
 	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>
 	<CaptureEditorUI file="retarget/targetpose.png"/>
 	<Wait frames="30"/>

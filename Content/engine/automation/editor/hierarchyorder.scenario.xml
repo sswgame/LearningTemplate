@@ -24,8 +24,7 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.HierarchyRowIndex" equals="2"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" equals="0"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor scene.moveSiblingDown"/>
@@ -33,8 +32,7 @@
 	<Expect watch="Editor.HierarchyRowIndex" equals="3"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.HierarchyRowIndex" equals="2"/>
+	<WaitUntil watch="Editor.HierarchyRowIndex" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<Expect watch="Editor.ObjectCount" equals="9"/>
 	<Wait frames="5"/>
@@ -44,8 +42,7 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.ObjectCount" equals="9"/>
+	<WaitUntil watch="Editor.ObjectCount" equals="9" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

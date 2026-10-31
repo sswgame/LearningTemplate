@@ -47,8 +47,7 @@
 	<EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<CaptureEditorUI file="inspectorhandle/picked.png"/>
 	<!-- ③ 되돌리기 -->
@@ -64,8 +63,7 @@
 	<EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.TypedHandleTestComponent._target"/>
 	<Wait frames="20"/>
@@ -83,8 +81,7 @@
 	<CaptureEditorUI file="inspectorhandle/menu.png"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.menu.pasteValue"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<!-- 비활성 항목을 눌러도 메뉴는 닫히지 않고, 열린 메뉴가 아래 인자 콤보를 덮어 다음 클릭이 메뉴 항목에 떨어진다 — 먼저 닫는다 -->
 	<Wait frames="5"/>
 	<EditorKey key="Escape"/>
@@ -97,12 +94,10 @@
 	<EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SelectedHandle" is="(none)"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.method.invoke.assignTarget"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0"/>
+	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="75"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

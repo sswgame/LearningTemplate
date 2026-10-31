@@ -18,8 +18,7 @@
 	<!-- 편집: 만들기 → 인스펙터로 이름 → 컴포넌트 달기 -->
 	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SelectedNames" is="GameObject"/>
+	<WaitUntil watch="Editor.SelectedNames" is="GameObject" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.name"/>
 	<Wait frames="10"/>

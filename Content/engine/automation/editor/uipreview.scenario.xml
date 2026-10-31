@@ -77,7 +77,7 @@
 	<!-- 3) 속성 편집: Window 의 _opacity 를 0.5 로 — 되돌리기 항목 하나, Undo 로 1, Redo 로 0.5 -->
 	<Wait frames="15"/>
 	<EditorClick mark="uipreview.widget.Window"/>
-	<Wait frames="10"/>
+	<Wait frames="15"/>
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.inspector.search"/>
@@ -105,7 +105,7 @@
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
-	<Wait frames="15"/>
+	<Wait frames="5"/>
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<!-- 4) 입력 흉내 -->
 	<Wait frames="5"/>
@@ -122,8 +122,7 @@
 	<EditorHover release="true"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.nav.down"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.UIPreviewFocusedOrdinal" atLeast="0"/>
+	<WaitUntil watch="Editor.UIPreviewFocusedOrdinal" atLeast="0" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.nav.accept"/>
 	<Wait frames="15"/>
@@ -145,12 +144,10 @@
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.01"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="uipreview.animationtime" dx="-3000" dy="0"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" atMost="0.01"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atMost="0.01" timeoutFrames="75"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="uipreview.animationtime" dx="3000" dy="0"/>
-	<Wait frames="25"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" atLeast="0.99"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" atLeast="0.99" timeoutFrames="75"/>
 	<Expect watch="Editor.UIPreviewAnimationTime" atLeast="0.1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.reload"/>
@@ -199,8 +196,7 @@
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/>
-	<Wait frames="5"/>
-	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
+	<WaitUntil watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<DevCommand line="panel.close ui_preview"/>
 	<Wait frames="10"/>

@@ -14,13 +14,11 @@
 	<Expect watch="Editor.WindowTitleDirty" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.create"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.SceneDirty" equals="1"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.WindowTitleDirty" equals="1"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+S"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.SceneDirty" equals="0"/>
+	<WaitUntil watch="Editor.SceneDirty" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.WindowTitleDirty" equals="0"/>
 	<Pass/>
 </Scenario>

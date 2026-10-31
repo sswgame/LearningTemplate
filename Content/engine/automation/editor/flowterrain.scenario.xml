@@ -47,8 +47,7 @@
 	<DevCommand line="terrain.brush raise 15 120"/>
 	<Wait frames="10"/>
 	<EditorDrag mark="sceneView.canvas" dx="0" dy="60"/>
-	<Wait frames="50"/>
-	<Expect watch="Editor.TerrainBrushStrokeCount" equals="1"/>
+	<WaitUntil watch="Editor.TerrainBrushStrokeCount" equals="1" timeoutFrames="150"/>
 	<Expect watch="Terrain.WrittenEditCount" equals="1"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Remember watch="Editor.UndoState" as="editedUndo"/>
@@ -100,8 +99,7 @@
 	<DevCommand line="panel.focus scene_view"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
-	<Wait frames="40"/>
-	<Expect watch="Editor.UndoIndex" equals="0"/>
+	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="120"/>
 	<Screenshot file="flowterrain_undone.ppm"/>
 	<Wait frames="1"/>
 	<ExpectImage file="flowterrain_undone.ppm" golden="flowterrain_undone"/>

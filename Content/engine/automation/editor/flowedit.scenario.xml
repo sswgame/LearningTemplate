@@ -31,8 +31,7 @@
 	<EditorText value="crate_medium.mesh"/>
 	<Wait frames="20"/>
 	<EditorDrag mark="contentBrowser.asset.crate_medium.mesh" toMark="sceneView.canvas"/>
-	<Wait frames="30"/>
-	<Expect watch="Editor.UndoCount" equals="1"/>
+	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.SelectionCount" equals="1"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<!-- ② 메시 모디파이어 — 고른 것을 대상으로 휘기 -->

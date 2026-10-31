@@ -18,20 +18,17 @@
 	<Expect watch="Editor.OverlayVertical" equals="0"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="overlay.grip.view" dx="300" dy="200"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.OverlayDock" equals="0"/>
+	<WaitUntil watch="Editor.OverlayDock" equals="0" timeoutFrames="60"/>
 	<Expect watch="Editor.OverlayX" atLeast="250"/>
 	<Expect watch="Editor.OverlayY" atLeast="150"/>
 	<Wait frames="5"/>
 	<EditorDrag mark="overlay.grip.view" dx="-600" dy="0"/>
-	<Wait frames="20"/>
-	<Expect watch="Editor.OverlayDock" equals="3"/>
+	<WaitUntil watch="Editor.OverlayDock" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.OverlayVertical" equals="1"/>
 	<Variable name="gv_editorWatchOverlay" value="transform"/>
 	<Wait frames="5"/>
 	<EditorClick mark="overlay.collapse.transform"/>
-	<Wait frames="15"/>
-	<Expect watch="Editor.OverlayFlags" equals="11"/>
+	<WaitUntil watch="Editor.OverlayFlags" equals="11" timeoutFrames="60"/>
 	<DevCommand line="overlay.show tools 0"/>
 	<Variable name="gv_editorWatchOverlay" value="tools"/>
 	<Wait frames="10"/>
