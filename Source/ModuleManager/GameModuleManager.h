@@ -18,6 +18,7 @@
 #include "Engine/Renderer/Frame/View/RenderView.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
+#include "ModuleAPI/Service/IModuleCompiler.h"
 
 namespace sw
 {
@@ -27,7 +28,6 @@ namespace sw
     class IWindow;
     class LiveReloadManager;
     class ModuleCatalog;
-    class ModuleCompiler;
     class RenderThread;
     class RHI;
     class SceneManager;
@@ -157,8 +157,8 @@ namespace sw
 
         /** @brief 이번 프레임의 모듈 상태를 반환합니다. beginFrame 뒤에만 유효합니다. */
         const ModuleFrameState& getFrameState() const { return _frameState; }
-        /** @brief ModuleCompiler 인스턴스를 반환합니다. 에디터 모듈의 서비스 범위에 건다(`fillModuleServiceScope`). */
-        ModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
+        /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleServiceScope`). */
+        IModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
         // 3) LiveReload 콜백. LiveReloadManager 의 델리게이트가 부른다
         /** @brief 게임 모듈을 언로드하기 직전에 불립니다. 상태를 보존하고 인스턴스를 해제합니다. */
@@ -295,7 +295,7 @@ namespace sw
         void restoreGameState();
 
     private:
-        unique_ptr<ModuleCompiler> _moduleCompiler;
+        unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`GameModuleManagerLinkage.cpp`)가 만든다 — 구현(`LiveReload/ModuleCompiler`)은 배포가 짓지 않는다
 
         GameAPI    _gameAPI;
         GameHandle _game;

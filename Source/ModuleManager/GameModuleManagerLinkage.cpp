@@ -11,7 +11,7 @@
 
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/LiveReload/LiveReloadManager.h"
-#include "ModuleManager/ModuleCompiler.h"
+#include "ModuleManager/LiveReload/ModuleCompiler.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"

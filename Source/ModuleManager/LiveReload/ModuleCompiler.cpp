@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleCompiler.h"
+#include "ModuleManager/LiveReload/ModuleCompiler.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
@@ -64,11 +64,9 @@ namespace sw
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
         _buildTimer.resetTimer();
         _buildTimer.startTimer();
-#if !defined( SW_SHIPPING )
         // 빌드가 쓰는 모듈을 하나씩 올리지 않게 감시를 멈춘다 — 끝나면 `runBuildThread` 가 결과를 넘긴다.
         if ( _pLiveReloadManager != nullptr )
             _pLiveReloadManager->notifyBuildStarted();
-#endif
 
         _workerThread = sw::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
@@ -237,13 +235,8 @@ namespace sw
 
     void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& targetName )
     {
-#if !defined( SW_SHIPPING )
         // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `LiveReloadManager::update` 가 처리한다.
         if ( _pLiveReloadManager != nullptr )
             _pLiveReloadManager->notifyBuildFinished( bSucceeded, targetName );
-#else
-        (void)bSucceeded;
-        (void)targetName;
-#endif
     }
 } // namespace sw

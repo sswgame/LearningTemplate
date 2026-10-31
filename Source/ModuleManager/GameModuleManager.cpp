@@ -21,7 +21,6 @@
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
-#include "ModuleManager/ModuleCompiler.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -96,11 +95,7 @@ namespace sw
 
     void GameModuleManager::shutdown()
     {
-        if ( _moduleCompiler != nullptr )
-        {
-            _moduleCompiler->shutdown();
-            _moduleCompiler.reset();
-        }
+        _moduleCompiler.reset(); // 소멸이 도는 빌드를 취소하고 빌드 스레드를 기다린다
 
         // 호스트 모듈과 게임을 한 번의 비우기로 언로드한다. 따로 언로드하면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
         // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.

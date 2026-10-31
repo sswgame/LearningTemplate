@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/ModuleCompiler.h
+ * @file ModuleManager/LiveReload/ModuleCompiler.h
  * @brief 에디터 안에서 C++ 모듈을 백그라운드로 비동기 컴파일하는 구현입니다(App 계층).
  */
 #pragma once
@@ -89,15 +89,14 @@ namespace sw
         void notifyBuildFinished( bool bSucceeded, const string& targetName );
 
     private:
-        /// @brief 빌드가 끝나면 리로드를 걸 대상입니다. Shipping 에는 핫 리로드가 없어 아무도 읽지 않지만,
-        ///        소유자(GameModuleManager)가 빌드 구성에 따라 달라지지 않도록 필드 자체는 그대로 둡니다.
-        [[maybe_unused]] LiveReloadManager* _pLiveReloadManager;
-        unique_ptr<Process>                 _pCurrentProcess;
-        sw::thread                          _workerThread;
-        GameTimer                           _buildTimer;
-        string _targetName                  SW_GUARDED_BY( _mutex );
-        mutable mutex                       _mutex;
-        atomic<BuildState>                  _buildState;
+        /// @brief 빌드가 끝나면 리로드를 걸 대상입니다(없으면 빌드만 한다). 이 파일은 `LiveReload/` 라 배포가 짓지 않는다.
+        LiveReloadManager*  _pLiveReloadManager;
+        unique_ptr<Process> _pCurrentProcess;
+        sw::thread          _workerThread;
+        GameTimer           _buildTimer;
+        string _targetName  SW_GUARDED_BY( _mutex );
+        mutable mutex       _mutex;
+        atomic<BuildState>  _buildState;
         /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는지 여부입니다(핫 리로드로는 해결할 수 없습니다).
         atomic<uint8>   _bBlockedByLoadedBinary;
         atomic<int32>   _lastExitCode;
