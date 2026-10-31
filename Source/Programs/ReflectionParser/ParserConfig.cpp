@@ -412,10 +412,6 @@ namespace sw
             vector<string> listMerged = ParserConfigInternal::loadArgsFromDocument( defaultsDoc, kPlatformParserKey );
             ParserConfigInternal::appendUnique( listMerged, ParserConfigInternal::loadArgsFromDocument( localDoc, kPlatformParserKey ) );
             _listBaseArg = std::move( listMerged );
-
-#if !defined( SW_PLATFORM_WINDOWS )
-            ParserConfigInternal::eraseMsvcCompatArgs( _listBaseArg, *this );
-#endif
         }
 
         BLOCK( "Load paths / clang_flags / emit / parsing / tuning" )
@@ -428,6 +424,11 @@ namespace sw
             if ( ParserConfigInternal::hasRequiredValues( *this, defaultsPath ) == false )
                 return false;
         }
+
+#if !defined( SW_PLATFORM_WINDOWS )
+        // clang_flags 를 읽고 검사한 뒤에 지운다 — 앞에서 지우면 빈 접두사(`_flagFmsCompatVersionPrefix`)가 모든 인자와 맞아 목록이 통째로 빈다.
+        ParserConfigInternal::eraseMsvcCompatArgs( _listBaseArg, *this );
+#endif
 
         BLOCK( "Load force_include" )
         {
