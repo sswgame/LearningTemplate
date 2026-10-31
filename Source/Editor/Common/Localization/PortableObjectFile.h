@@ -14,12 +14,15 @@
  * @endcode
  *          머리 항목(msgid "")에 `Language`, `X-Localization-Project`, `X-Message-Format: ICU` 를 적는다. 복수형은 gettext 의 msgid_plural 이 아니라
  *          텍스트 안의 ICU `{n, plural, …}` 이다.
+ *          번역 내보내기 · 들이기(`LocalizationTools`)만 쓰는 저작 형식이라 에디터에 둔다 — 런타임은 구운 문자열 테이블만 읽는다(언리얼도 PO 는 Localization Dashboard 쪽이다).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Editor/Common/EditorExports.h"
 
 namespace sw
 {
@@ -43,7 +46,7 @@ namespace sw
      * @class PortableObjectFile
      * @brief PO 파일 하나를 읽고 씁니다(UTF-8, msgid_plural 없음).
      */
-    class SW_API PortableObjectFile
+    class SW_EDITOR_API PortableObjectFile
     {
     public:
         static constexpr const utf8* kExtension  = ".po";

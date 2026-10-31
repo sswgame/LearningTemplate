@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Localization/PortableObjectFile.h"
+#include "Editor/Common/Localization/PortableObjectFile.h"
 
 #include "Core/Container/StringUtil.h"
 

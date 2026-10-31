@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Localization/PortableObjectFile.h"
+#include "Editor/Common/Localization/PortableObjectFile.h"
 
 // PortableObjectFileTest — 번역가와 주고받는 PO 파일(외부 도구가 고친 글을 다시 읽는다): 쓰고 읽은 항목이 같고(이스케이프 · 여러 줄 · 주석 · fuzzy),
 // 외부 도구가 쓰는 이어진 따옴표 줄을 잇고, 틀린 줄은 줄 번호와 함께 거절한다(nogpu).

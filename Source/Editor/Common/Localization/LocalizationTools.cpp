@@ -13,6 +13,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Localization/PortableObjectFile.h"
 #include "Editor/Common/Localization/TranslationMemory.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -23,7 +24,6 @@
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationDocuments.h"
-#include "Engine/Localization/PortableObjectFile.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
