@@ -212,6 +212,11 @@ namespace sw
             SW_LOG_ERROR_ID( "DDS.CorruptHeader", "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DDSFormat::kHeaderSize );
             return false;
         }
+        if ( pHeader->_width == 0 || pHeader->_height == 0 )
+        {
+            SW_LOG_ERROR_ID( "DDS.CorruptHeader", "DDS header has an empty size (%# x %#).", pHeader->_width, pHeader->_height );
+            return false;
+        }
 
         image._width    = pHeader->_width;
         image._height   = pHeader->_height;

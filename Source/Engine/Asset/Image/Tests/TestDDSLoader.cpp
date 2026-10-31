@@ -186,6 +186,10 @@ SW_TEST_CASE( DDSLoaderTest, MalformedBuffersFailAndClearTheOutput )
     badHeaderSize[4]            = 100; // 머리 크기 124 → 100
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( badHeaderSize.data(), badHeaderSize.size(), image ) );
 
+    vector<uint8> zeroWidth = makeLegacyDDS( makeFourCc( FourCcUtil::make( "DXT1" ) ), 8 );
+    zeroWidth[16]           = 0; // 너비(머리 다섯째 칸, 값 4)를 0 으로
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( zeroWidth.data(), zeroWidth.size(), image ) );
+
     const vector<uint8> truncatedDx10 = makeLegacyDDS( makeFourCc( DDSFormat::kDx10FourCc ), 0 );
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( truncatedDx10.data(), truncatedDx10.size(), image ) );
 
