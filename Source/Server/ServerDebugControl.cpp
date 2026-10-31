@@ -2,18 +2,17 @@
 
 #include "Server/ServerDebugControl.h"
 
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
+#include "DevTools/Console/DevConsole.h"
+
 #include "Engine/Observability/DebugChannel.h"
 
-#if SW_DEV_COMMANDS_ENABLED
-    #include "DevTools/Console/DevConsole.h"
-#endif
+// 개발 빌드의 구현이다 — 배포는 `ServerDebugControlShipping.cpp`(빈 몸통)를 CMake 가 고른다(`Source/Server/CMakeLists.txt`).
 
 namespace sw
 {
@@ -41,18 +40,12 @@ namespace sw
         };
     } // namespace
 
-#if SW_DEV_COMMANDS_ENABLED
     struct ServerDebugControl::DevParts
     {
         DevConsole                   _console;
         unique_ptr<IStreamTransport> _transport; ///< 디버그 채널의 스트림 전송(채널을 종료한 뒤 지운다)
         unique_ptr<DebugChannel>     _channel;   ///< 읽기 중심의 원격 개발 명령 채널(`gv_debugChannelPort` 가 0 이 아닐 때만)
     };
-#else
-    struct ServerDebugControl::DevParts
-    {
-    };
-#endif
 
     ServerDebugControl::ServerDebugControl( const ServerTickCountDelegate& tickCount )
         : _tickCount{ tickCount }
@@ -64,23 +57,17 @@ namespace sw
 
     const utf8* ServerDebugControl::getHelpSuffix()
     {
-#if SW_DEV_COMMANDS_ENABLED
         return " (Dev: pause | resume | step [N], dev commands and gv_* variables too)";
-#else
-        return "";
-#endif
     }
 
     void ServerDebugControl::startConsole()
     {
-#if SW_DEV_COMMANDS_ENABLED
         _pDev = make_unique<DevParts>();
         if ( gv_serverStartPaused )
         {
             _bPaused = true;
             SW_LOG_INFO( "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount() );
         }
-#endif
     }
 
     void ServerDebugControl::stopConsole()
@@ -91,7 +78,6 @@ namespace sw
 
     bool ServerDebugControl::startChannel()
     {
-#if SW_DEV_COMMANDS_ENABLED
         if ( gv_debugChannelPort <= 0 )
             return true;
         if ( _pDev == nullptr )
@@ -134,42 +120,35 @@ namespace sw
             _pDev->_transport.reset();
             return false;
         }
-#endif
         return true;
     }
 
     void ServerDebugControl::stopChannel()
     {
-#if SW_DEV_COMMANDS_ENABLED
         if ( _pDev == nullptr )
             return;
         if ( _pDev->_channel != nullptr )
             _pDev->_channel->shutdown();
         _pDev->_channel.reset();
         _pDev->_transport.reset();
-#endif
     }
 
     void ServerDebugControl::pump()
     {
-#if SW_DEV_COMMANDS_ENABLED
         if ( _pDev != nullptr && _pDev->_channel != nullptr )
             (void)_pDev->_channel->pump();
-#endif
     }
 
     bool ServerDebugControl::executeCommand( string_view command )
     {
         if ( executePauseCommand( command ) )
             return true;
-#if SW_DEV_COMMANDS_ENABLED
         // Dev 는 개발 콘솔과 같은 명령(개발 명령과 gv_* 전역 변수)을 받는다. Shipping 서버는 ServerApp 의 네 가지만 받는다.
         if ( _pDev != nullptr )
         {
             (void)_pDev->_console.submit( command ); // 응답과 실패는 DevConsole 이 로그에 남긴다
             return true;
         }
-#endif
         return false;
     }
 
@@ -181,7 +160,6 @@ namespace sw
 
     bool ServerDebugControl::executePauseCommand( string_view command )
     {
-#if SW_DEV_COMMANDS_ENABLED
         if ( command == "pause" )
         {
             _bPaused          = true;
@@ -212,9 +190,5 @@ namespace sw
         _bPaused          = true; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
         _pendingStepCount = static_cast<uint32>( stepCount );
         return true;
-#else
-        (void)command;
-        return false;
-#endif
     }
 } // namespace sw
