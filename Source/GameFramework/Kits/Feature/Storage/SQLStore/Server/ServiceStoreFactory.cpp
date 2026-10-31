@@ -26,11 +26,18 @@ namespace sw
      * @brief 저장 키트의 저장소 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `IServiceStoreDriver` 로 공개된다.
      * @details "memory" 저장소의 데이터(같은 프로세스의 저장소끼리 나눠 쓴다)를 값으로 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 저장소는 이 데이터를
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
+     *          `IServiceStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class SQLServiceStoreDriver final : public ISubsystem, public IServiceStoreDriver
+    class SQLServiceStoreDriver final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "SQLServiceStoreDriver";
+
+        SQLServiceStoreDriver()
+            : _memoryDatabase{}
+            , _driver{ *this }
+        {
+        }
 
         // ISubsystem — 세울 것이 없다(드라이버 레지스트리는 드라이버 `.cpp` 의 등록 객체가 올린다).
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
@@ -43,7 +50,7 @@ namespace sw
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
         unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
-                                                      string& outError ) override
+                                                      string& outError )
         {
             if ( driverName == kMemoryStoreDriverName )
                 return make_unique<MemoryServiceStore>( &_memoryDatabase );
@@ -57,8 +64,31 @@ namespace sw
             return store;
         }
 
+        /** @brief 공개할 저장소 드라이버입니다(`ModuleSubsystemRegistration` 이 `IServiceStoreDriver` 로 공개한다). 이 서브시스템과 수명이 같습니다. */
+        IServiceStoreDriver& getPublishedPart() { return _driver; }
+
     private:
+        /** @brief 저장소 드라이버 능력입니다. 서브시스템의 같은 이름 함수로 넘깁니다(수명은 서브시스템과 같다). */
+        class Driver final : public IServiceStoreDriver
+        {
+        public:
+            explicit Driver( SQLServiceStoreDriver& owner )
+                : _owner{ owner }
+            {
+            }
+
+            unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
+                                                          string& outError ) override
+            {
+                return _owner.createServiceStore( driverName, connection, secret, workerCount, nowMs, outError );
+            }
+
+        private:
+            SQLServiceStoreDriver& _owner;
+        };
+
         MemoryServiceDatabase _memoryDatabase; ///< "memory" 저장소의 데이터 — 같은 프로세스의 저장소끼리 나눠 쓴다
+        Driver                _driver;         ///< `IServiceStoreDriver` 로 공개되는 부분
     };
 
     // 키트가 실리면 엔진 범위 아래 키트의 자식 범위에 서고, 내려가면 함께 걷힌다. PostgreSQL 드라이버는 드라이버 `.cpp` 의 등록 객체가 올린다.

@@ -2,7 +2,7 @@
  * @file IOnlineStoreDriver.h
  * @brief 서버 조립이 서버 설정의 저장소와 캐시 항목(드라이버 이름)으로 실제 드라이버를 만드는 인터페이스 둘입니다.
  * @details - 드라이버(SQLite, PostgreSQL, RESP)는 저장 키트(`GF_Server_SQLStore`, `GF_Server_CacheStore`)에 있고, 기반은 키트를 모릅니다.
- *            그래서 저장 키트가 이 인터페이스를 구현한 모듈 서브시스템을 두고(`SW_MODULE_SUBSYSTEM( Engine, …, IServiceStoreDriver )`), 서버 조립은 그 타입으로 찾습니다
+ *            그래서 저장 키트가 이 인터페이스의 구현을 멤버로 든 모듈 서브시스템을 두고(`SW_MODULE_SUBSYSTEM( Engine, …, IServiceStoreDriver )`), 서버 조립은 그 타입으로 찾습니다
  *            (`game::findSubsystem<IServiceStoreDriver>()`). 키트가 실리면 키트의 자식 범위에 서고 내려가면 범위째 사라져 "실렸는데 묶지 않았다" 나
  *            "풀지 않아 언로드된 함수를 부른다" 가 생기지 않습니다. 예전에는 기반의 원자 함수 칸 둘(`OnlineStoreDriverTable`)에 키트의 정적 객체가 묶었다.
  *          - `memory` 드라이버는 드라이버와 상관없이 서버 조립이 직접 만듭니다(그 런타임 안에서만 나눠 쓰는 메모리 구현).
@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @class IServiceStoreDriver
-     * @brief 저장소 드라이버입니다(저장 키트 `GF_Server_SQLStore` 의 모듈 서브시스템이 구현한다).
+     * @brief 저장소 드라이버입니다(저장 키트 `GF_Server_SQLStore` 의 모듈 서브시스템이 멤버로 들고 공개한다).
      */
     class IServiceStoreDriver
     {
