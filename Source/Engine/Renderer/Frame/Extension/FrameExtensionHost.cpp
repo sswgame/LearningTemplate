@@ -265,10 +265,29 @@ namespace sw
         {
             pMesh = it->second;
         }
+        else if ( MeshAssetFormat::isMeshAssetPath( meshID.view() ) )
+        {
+            // 철자는 `MeshComponent::_meshID` 와 같다 — `.mesh` 경로는 워커가 읽고, 다 읽을 때까지 그 요소는 그리지 않는다(렌더 스레드가 디스크를 기다리지 않게 —
+            // 언리얼 · 유니티도 메시 스트리밍이 끝나기 전 프레임은 그 드로를 빼거나 낮은 LOD 로 둔다). 메시 캐시는 약한 참조라 렌더러가 쥔다.
+            auto loadIt = _mapMeshLoad.find( meshID );
+            if ( loadIt == _mapMeshLoad.end() )
+                loadIt = _mapMeshLoad.insert_or_assign( meshID, MeshCache::request( meshID.view() ) ).first;
+            const MeshHandle& load = loadIt->second;
+            if ( load.isLoading() )
+                return nullptr;
+            pMesh = load.get();
+            _mapMeshLoad.erase( loadIt );
+            if ( pMesh == nullptr )
+            {
+                logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );
+                return nullptr;
+            }
+            _mapMesh.insert_or_assign( meshID, pMesh );
+        }
         else
         {
-            // 철자는 `MeshComponent::_meshID` 와 같다 — `.mesh` 경로면 메시 캐시, 아니면 내장 도형 이름이다. 둘 다 약한 참조 캐시라 렌더러가 쥔다.
-            pMesh = MeshAssetFormat::isMeshAssetPath( meshID.view() ) ? MeshCache::acquire( meshID.view() ) : MeshUtil::acquirePrimitive( meshID.view() );
+            // 내장 도형은 메모리에서 바로 만든다(디스크가 없다).
+            pMesh = MeshUtil::acquirePrimitive( meshID.view() );
             if ( pMesh == nullptr )
             {
                 logFailureOnce( string( "mesh:" ) + string( meshID.view() ), "draw element mesh could not be loaded - the element is not drawn", meshID.view() );

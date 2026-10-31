@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 
@@ -62,7 +63,11 @@ namespace sw
         /** @brief 모듈 구간의 끝입니다. 모듈이 넣은 패스 콜백 · 요소를 모두 놓습니다(람다의 소멸 코드가 모듈에 있어 모듈 구간 안에서 놓아야 한다). */
         void releaseFrame();
         /** @brief 요소 메시 표를 비웁니다(GPU 정점 버퍼는 디바이스의 것이다 — 다음 프레임의 셋업이 다시 읽고 올린다). */
-        void releaseMeshes() { _mapMesh.clear(); }
+        void releaseMeshes()
+        {
+            _mapMesh.clear();
+            _mapMeshLoad.clear();
+        }
         /** @brief 이 뷰의 풀에 이번 프레임에 요청된 모듈 임시 텍스처를 만듭니다(이미 있으면 그대로). */
         void allocateTextures( FrameViewTarget& view ) const;
         /** @brief 지금 선언을 그래프에 묶었다고 적습니다(`FramePassExecutor::bindPassCallbacks`). */
@@ -72,13 +77,13 @@ namespace sw
         const vector<ExtensionFramePass>& getPasses() const { return _listPass; }
         /** @brief 이번 프레임에 프록시들이 낸 요소입니다. */
         const vector<ExtensionDrawElement>& getDrawElements() const { return _listDrawElement; }
-        /** @brief 셋업이 읽고 올린 요소 메시입니다. 없으면(읽지 못했다 — 셋업이 이유를 남겼다) nullptr 입니다. 기록 중에는 이 표를 읽기만 합니다. */
+        /** @brief 셋업이 읽고 올린 요소 메시입니다. 없으면(아직 읽는 중이거나, 읽지 못했다 — 셋업이 이유를 남겼다) nullptr 입니다. 기록 중에는 이 표를 읽기만 합니다. */
         const Mesh* findMesh( const hashed_string& meshID ) const;
         /** @brief 모듈 패스 · 요소의 오류를 키마다 한 번만 남깁니다(그리는 길은 프레임마다 돌아 같은 줄이 쌓이지 않게). */
         static void logFailureOnce( string_view key, const char* pReason, string_view detail );
 
     private:
-        /** @brief 요소가 쓰는 메시를 찾거나 읽고 GPU 에 올립니다. 기록 전에만 부릅니다. 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
+        /** @brief 요소가 쓰는 메시를 찾거나 읽기를 맡기고 GPU 에 올립니다. 기록 전에만 부릅니다. 아직 읽는 중이면 nullptr(그 요소는 이번 프레임 건너뛴다), 얻지 못하면 nullptr 입니다(이름마다 한 번 오류를 남겼다). */
         Mesh* resolveMesh( const hashed_string& meshID );
 
     private:
@@ -92,6 +97,8 @@ namespace sw
         vector<ExtensionDrawElement> _listDrawElement;
         /// @brief 요소가 쓰는 메시를 쥐는 표입니다(`MeshUtil::acquirePrimitive` · `MeshCache` 는 약한 참조라 렌더러 쪽이 쥔다). 기록 전(셋업)에만 바꾼다.
         unordered_map<hashed_string, shared_ptr<Mesh>> _mapMesh;
+        /// @brief 워커가 아직 읽는 `.mesh` 요소 메시입니다(`MeshCache::request`). 준비되면 `_mapMesh` 로 옮긴다. 기록 전(셋업)에만 바꾼다.
+        unordered_map<hashed_string, MeshHandle> _mapMeshLoad;
         /// @brief 이번 프레임 모듈 패스 선언의 해시(0 = 없음)와 그래프에 묶인 선언의 해시입니다. 다르면 그래프를 다시 묶는다. 프레임 끝에 0 으로 돌린다.
         uint64 _frameSignature{ 0 };
         uint64 _boundSignature{ 0 };

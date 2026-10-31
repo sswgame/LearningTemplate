@@ -84,9 +84,10 @@ namespace sw
             }
             if ( bKnown || bServices == false )
                 continue;
+            // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 방출기를 그리지 않는다(`drawBatches` 는 텍스처 없는 방출기를 건너뛴다).
             PathTexture& added = _listTexture.emplace_back();
             added._path        = batch._texturePath;
-            added._pTexture    = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().acquire( batch._texturePath.view(), &device );
+            added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( batch._texturePath.view(), &device, AssetLoadStart::Async );
         }
 
         // 2) 입자 — CPU 방출기들을 이어 한 버퍼에 담는다(같은 프레임에 버퍼를 두 번 갱신하지 않는다). GPU 방출기는 자기 렌더 입력 버퍼를 읽는다.
@@ -199,16 +200,7 @@ namespace sw
 
     void VFXParticleRenderer::release( IRHIDevice* pDevice )
     {
-        if ( _listTexture.empty() == false && engine::areEngineServicesBound() )
-        {
-            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            for ( const PathTexture& texture : _listTexture )
-            {
-                if ( texture._pTexture != nullptr )
-                    textures.release( texture._path.view(), pDevice );
-            }
-        }
-        _listTexture.clear();
+        _listTexture.clear(); // 입자 텍스처의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         _particleBuffer.release( pDevice );
         _gpuSimulation.release( pDevice );
         _listBatchBase.clear();
@@ -219,8 +211,10 @@ namespace sw
     {
         for ( const PathTexture& texture : _listTexture )
         {
-            if ( texture._path == path )
-                return texture._pTexture != nullptr && texture._pTexture->isRHIValid() ? texture._pTexture->getSRV() : kInvalidDescriptorIndex;
+            if ( texture._path != path )
+                continue;
+            const Texture2D* pTexture = texture._load.isReady() ? texture._load.getBlock()->getTexture() : nullptr;
+            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
         }
         return kInvalidDescriptorIndex;
     }

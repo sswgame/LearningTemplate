@@ -19,6 +19,7 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/VFX/VFXParticle.h"
 
@@ -75,14 +76,14 @@ namespace sw
         uint32 getUploadedParticleCount() const { return _uploadedParticleCount; }
 
     private:
-        /** @brief 경로로 빌린 입자 텍스처 하나입니다(텍스처는 `TextureCache` 가 소유하며 `release` 가 돌려줍니다). */
+        /** @brief 경로로 빌린 입자 텍스처 하나입니다(텍스처는 `TextureCache` 가 소유하고, 핸들이 참조를 쥐었다가 놓을 때 돌려줍니다). */
         struct PathTexture
         {
             hashed_string _path{};
-            Texture2D*    _pTexture{ nullptr }; ///< 읽지 못했으면 nullptr(캐시가 이유를 남겼으므로 다시 묻지 않는다)
+            TextureHandle _load{}; ///< 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
         };
 
-        /** @brief 경로의 텍스처 SRV 입니다. 빌리지 못했거나 읽지 못했으면 kInvalidDescriptorIndex 입니다. */
+        /** @brief 경로의 텍스처 SRV 입니다. 빌리지 못했거나 아직 읽는 중이거나 읽지 못했으면 kInvalidDescriptorIndex 입니다. */
         RHIDescriptorIndex findTextureSRV( const hashed_string& path ) const;
 
         vector<GPUParticle>     _listUploadScratch; ///< 모든 방출기의 입자를 이어 붙인 사본

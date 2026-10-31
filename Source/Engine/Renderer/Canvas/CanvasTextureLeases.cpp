@@ -94,9 +94,10 @@ namespace sw
                 }
                 if ( bKnown )
                     continue;
+                // 렌더 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 다 읽기 전 프레임은 그 이미지를 빼고 그린다(언리얼 Slate 의 브러시도 텍스처가 스트리밍되는 동안 비어 있다).
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._pTexture    = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().acquire( path.view(), &device );
+                added._load        = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path.view(), &device, AssetLoadStart::Async );
             }
         }
     }
@@ -110,24 +111,17 @@ namespace sw
     {
         for ( const PathTexture& pathTexture : _listPathTexture )
         {
-            if ( pathTexture._path == path )
-                return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRHIValid() ? pathTexture._pTexture->getSRV() : kInvalidDescriptorIndex;
+            if ( pathTexture._path != path )
+                continue;
+            const Texture2D* pTexture = pathTexture._load.isReady() ? pathTexture._load.getBlock()->getTexture() : nullptr;
+            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getSRV() : kInvalidDescriptorIndex;
         }
         return kInvalidDescriptorIndex;
     }
 
     void CanvasTextureLeases::release( IRHIDevice* pDevice )
     {
-        if ( _listPathTexture.empty() == false && engine::areEngineServicesBound() )
-        {
-            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            for ( const PathTexture& pathTexture : _listPathTexture )
-            {
-                if ( pathTexture._pTexture != nullptr )
-                    textures.release( pathTexture._path.view(), pDevice );
-            }
-        }
-        _listPathTexture.clear();
+        _listPathTexture.clear(); // 경로 이미지의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
         if ( engine::areEngineServicesBound() )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
