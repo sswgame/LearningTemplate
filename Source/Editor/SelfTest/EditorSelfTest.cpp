@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Runner/AutomationStageReset.h"
 #include "Engine/Foundation/QuitRequest.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
@@ -67,6 +68,17 @@ namespace sw::editor
 
             /** @brief 지금 에디터 범위의 세션입니다. 에디터 컨텍스트가 없으면 nullptr 입니다. */
             static EditorSelfTestSession* findSession() { return editor::findSubsystem<EditorSelfTestSession>(); }
+
+            /**
+             * @brief 시나리오 체인의 다음 단계 앞에서 끝난 실행의 결과를 비웁니다(새 프로세스처럼). 도는 실행과 명령줄 소비 표시는 두다 - 비우면 `-gv_editorSelfTest` 가 다시 돈다.
+             * @details 앞 단계(`selftests`)의 결과가 남아 Test Runner 를 다루는 단계(`testrunner`)가 통과 수 0 에서 시작하지 못했다.
+             */
+            static void resetFinishedRun()
+            {
+                EditorSelfTestSession* pSession = findSession(); // 선택: 편집기를 켜지 않은 체인에는 없다
+                if ( pSession != nullptr && pSession->_run._bActive == false )
+                    pSession->_run = RunState{};
+            }
 
             /** @brief 글자열 @p text 가 `*` 를 포함한 패턴 @p pattern 하나에 맞는지 봅니다. */
             static bool matchesGlob( string_view text, string_view pattern )
@@ -284,3 +296,8 @@ namespace sw::editor
         editor::getSubsystem<QuitRequest>().request( static_cast<int32>( state._failedCount > 0 ? ProcessExitCode::Failed : ProcessExitCode::Passed ) );
     }
 } // namespace sw::editor
+
+namespace sw
+{
+    SW_AUTOMATION_STAGE_RESET( editorSelfTestResults, "editor self test results", &editor::EditorSelfTestInternal::resetFinishedRun );
+} // namespace sw

@@ -73,11 +73,11 @@ namespace sw::editor
         EditorPanelVisibility  _pendingLayoutVisibility;
         float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기다. 0 이면 다음 프레임이 저장된 크기에서 시작한다
         float32                _lastDockspaceHeight; ///< 위와 같다(세로)
-        uint8                  _frontTabFrameCount;  ///< 기본 배치 뒤에 Scene 탭을 앞으로 가져오려고 포커스를 준 프레임 수
+        uint8                  _frontTabFrameCount;  ///< 기본 배치 뒤에 영역마다의 앞 탭(Scene · Output Log)을 앞으로 가져오려고 포커스를 준 프레임 수
         uint8                  _bLayoutPending          : 1;
         uint8                  _bApplied                : 1;
         uint8                  _bResetDefault           : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 만든다(Reset Default Layout)
-        uint8                  _bFrontTabPending        : 1; ///< 기본 배치를 만들었고 Scene 탭이 아직 선택되지 않았다(`updateDefaultTabSelection`)
+        uint8                  _bFrontTabPending        : 1; ///< 기본 배치를 만들었고 영역마다의 앞 탭이 아직 선택되지 않았다(`updateDefaultTabSelection`)
         uint8                  _bPanelOverrideRequested : 1; ///< 셸이 요청한 레이아웃 덮어쓰기(`setPanelOverrideRequested`)
         [[maybe_unused]] uint8 _reserved                : 3;
     };

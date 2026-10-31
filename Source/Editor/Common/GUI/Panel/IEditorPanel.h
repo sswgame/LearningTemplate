@@ -31,6 +31,7 @@ namespace sw::editor
         Center,
         CenterFront, ///< 가운데 영역의 앞 탭(Scene). 한 패널만 쓴다
         Bottom,
+        BottomFront, ///< 아래 영역의 앞 탭(Output Log). 한 패널만 쓴다 - 정하지 않으면 직전에 포커스를 받은 탭이 남아 배치 초기화가 새 프로세스와 달랐다
     };
 
     /**

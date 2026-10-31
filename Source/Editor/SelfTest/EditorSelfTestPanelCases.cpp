@@ -143,7 +143,9 @@ namespace sw::editor
                         {
                             if ( hasPhaseTimedOut( probe, stepIndex ) )
                             {
-                                (void)context.expect( false, "the self test folder listing never arrived (is the content browser drawn?)" );
+                                (void)context.expect( false, formatToString( "the self test folder listing never arrived (entries %#, refresh pending %#, folder %#)", pPanel->getEntryCount(),
+                                                                             pPanel->isFolderRefreshPending(), probe._folderAbs )
+                                                                 .c_str() );
                                 enterPhase( probe, kPhaseCleanup, stepIndex );
                             }
                             return EditorSelfTestStep::Continue;

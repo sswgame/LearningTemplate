@@ -38,7 +38,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8*    getPanelTitle() const override { return "Output Log"; }
-        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::Bottom; }
+        EditorDockSlot getDefaultDockSlot() const override { return EditorDockSlot::BottomFront; }
         /** @brief 필터, 레벨 토글, 로그 목록을 그립니다. */
         void drawContent() override;
         /** @brief 지우기, 필터, 레벨 토글 툴바를 그립니다. */

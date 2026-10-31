@@ -84,21 +84,28 @@ namespace sw::editor
                     case EditorDockSlot::CenterFront:
                         return nodes._center;
                     case EditorDockSlot::Bottom:
+                    case EditorDockSlot::BottomFront:
                         return nodes._bottom;
                 }
                 return 0;
             }
 
-            /** @brief 가운데 영역의 앞 탭(`EditorDockSlot::CenterFront`)을 밝힌 패널의 창 제목입니다. 없으면 nullptr 입니다. */
-            static const utf8* findFrontTabTitle()
+            /**
+             * @brief 영역마다의 앞 탭(`EditorDockSlot::BottomFront` · `CenterFront`)을 밝힌 패널의 창 제목입니다. 가운데(Scene)가 마지막이다 - 같은 프레임에 포커스를
+             *        준 마지막 창이 키보드 포커스를 가지므로, 기본 배치는 예전처럼 씬 뷰가 입력을 받는다.
+             */
+            static vector<const utf8*> collectFrontTabTitles()
             {
-                for ( const EditorPanelEntry& entry : editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().getPanels() )
+                vector<const utf8*> listTitle;
+                for ( const EditorDockSlot frontSlot : { EditorDockSlot::BottomFront, EditorDockSlot::CenterFront } )
                 {
-                    const bool bFrontTab = entry._pInstance != nullptr && entry._pInstance->getDefaultDockSlot() == EditorDockSlot::CenterFront;
-                    if ( bFrontTab )
-                        return entry._title.c_str();
+                    for ( const EditorPanelEntry& entry : editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().getPanels() )
+                    {
+                        if ( entry._pInstance != nullptr && entry._pInstance->getDefaultDockSlot() == frontSlot )
+                            listTitle.push_back( entry._title.c_str() );
+                    }
                 }
-                return nullptr;
+                return listTitle;
             }
         };
     } // namespace
@@ -407,27 +414,32 @@ namespace sw::editor
         if ( _bFrontTabPending == SW_FALSE )
             return;
 
-        // 숨은 탭의 창도 Active 다. Begin 은 호출되고 내용만 건너뛴다. 닫힌 패널의 창은 Active 가 아니므로 고를 탭이 없다.
-        const utf8*  pFrontTabTitle       = EditorDockLayoutInternal::findFrontTabTitle();
-        ImGuiWindow* pWindow              = pFrontTabTitle != nullptr ? ImGui::FindWindowByName( pFrontTabTitle ) : nullptr;
-        const bool   bFrontTabUnavailable = pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames;
-        if ( bFrontTabUnavailable )
+        if ( _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames )
         {
             _bFrontTabPending = SW_FALSE;
             return;
         }
-
-        // DockTabIsVisible 는 이번 프레임의 Begin 이 정한 값이다. 도킹된 창이 탭 막대에서 선택되어 보이면 참이다. 같은 프레임에 뒤에서 처음 나타난
-        // 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀌므로, 두 프레임 동안 포커스를 주고 나서 확인한다.
-        constexpr uint32 kMinFocusFrames  = 2;
-        const bool       bFrontTabSettled = pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames;
-        if ( bFrontTabSettled )
+        // 영역마다 앞 탭을 고른다. 숨은 탭의 창도 Active 다(Begin 은 호출되고 내용만 건너뛴다). 닫힌 패널의 창은 Active 가 아니므로 고를 탭이 없어 건너뛴다.
+        // DockTabIsVisible 는 이번 프레임의 Begin 이 정한 값이다. 같은 프레임에 뒤에서 처음 나타난 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀌므로,
+        // 두 프레임 동안 포커스를 주고 나서 확인한다.
+        constexpr uint32 kMinFocusFrames = 2;
+        bool             bAllSettled     = true;
+        for ( const utf8* pTitle : EditorDockLayoutInternal::collectFrontTabTitles() )
+        {
+            ImGuiWindow* pWindow = ImGui::FindWindowByName( pTitle );
+            if ( pWindow == nullptr || pWindow->Active == false )
+                continue;
+            if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
+                continue;
+            bAllSettled = false;
+            ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 선택한다
+        }
+        if ( bAllSettled && _frontTabFrameCount >= kMinFocusFrames )
         {
             _bFrontTabPending = SW_FALSE;
             return;
         }
         ++_frontTabFrameCount;
-        ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 선택한다
     }
 
     void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceID )
