@@ -19,7 +19,8 @@
 	<Wait frames="5"/>
 	<EditorClick mark="renderTargets.row.SceneDepth"/>
 	<WaitUntil watch="Editor.RenderTargetSelectedDepth" equals="1" timeoutFrames="105"/>
-	<Expect watch="Editor.RenderTargetSnapshotReady" equals="1"/>
+	<!-- 고른 타깃의 스냅샷은 고른 뒤에 다시 읽는다 - 고름이 먼저 서고 스냅샷이 뒤에 선다 -->
+	<WaitUntil watch="Editor.RenderTargetSnapshotReady" equals="1" timeoutFrames="120"/>
 	<Expect watch="Editor.RenderTargetLinearized" equals="1"/>
 	<Wait frames="5"/>
 	<EditorHover mark="renderTargets.preview" anchor="0.5,0.6"/>

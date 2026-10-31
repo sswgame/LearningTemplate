@@ -34,8 +34,9 @@
 	<Wait frames="5"/>
 	<EditorDrag mark="uipreview.handle.move" dx="40" dy="0"/>
 	<WaitUntil watch="Editor.UIPreviewSelectedOffsetMinX" atLeast="20" timeoutFrames="90"/>
-	<Expect watch="Editor.UIPreviewDirty" equals="1"/>
-	<Expect watch="Editor.UndoCount" equals="1"/>
+	<!-- 끄는 동안 자리가 먼저 바뀌고, 고침 · 되돌리기 기록은 끌기를 놓을 때 선다 -->
+	<WaitUntil watch="Editor.UIPreviewDirty" equals="1" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<DevCommand line="editor edit.undo"/>
 	<Wait frames="15"/>
