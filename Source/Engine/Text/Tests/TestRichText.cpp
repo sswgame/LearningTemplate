@@ -1,9 +1,11 @@
-// RichTextTest — BBCode 꼴 리치 텍스트(굵게 · 기울임 · 색 · 크기 · [[) 파싱(nogpu). 배치의 구간 경계 · 액션 글리프는 가짜 글꼴 · 입력 하네스가 없어 아직 보지 않는다.
+// RichTextTest — BBCode 꼴 리치 텍스트(굵게 · 기울임 · 색 · 크기 · [[) 파싱과 배치의 구간 경계(가짜 래스터라이저, nogpu). 액션 글리프는 입력 층이라 `Input/Map/Tests` 에 있다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Text/RichTextParser.h"
+#include "Engine/Text/Tests/FakeFontRasterizer.h"
+#include "Engine/Text/TextLayout.h"
 
 /** @brief [RichTextTest] 포갠 태그 — "a[b]b[color=#ff0000]c[/color][/b]d" 는 평문 "abcd", 구간 b(굵게) · c(굵게 + 빨강) */
 SW_TEST_CASE( RichTextTest, ParsesNestedTags )
@@ -71,4 +73,35 @@ SW_TEST_CASE( RichTextTest, NamedColorSizeAndItalic )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( result._listSpan[2]._colorToken ) );
     SW_EXPECT_TRUE( sw::RichTextParser::hasSameTags( "[b]Start[/b]", "[b]시작[/b]" ) );
     SW_EXPECT_FALSE( sw::RichTextParser::hasSameTags( "[b]Start[/b]", "시작" ) );
+}
+
+/** @brief [RichTextTest] 배치는 구간 경계에서 런을 끊는다 — 굵게는 가짜 굵게, 색은 글리프 색, 크기 배율은 글리프 크기 · 펜 진행 · 줄 높이에 든다 */
+SW_TEST_CASE( RichTextTest, LayoutSplitsRunsAtSpanBoundaries )
+{
+    sw::test::FakeFontServiceFixture fixture;
+    sw::FontCatalogDesc              catalog{};
+    catalog._defaultFamily = "Latin";
+    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
+    sw::TextLayoutEngine layout( *fixture._fontService );
+
+    sw::RichTextParseResult parsed{};
+    sw::RichTextParser::parse( "a[b]b[/b][color=#00ff00]c[/color][size=2]d[/size]", parsed );
+    SW_EXPECT_EQUAL( sw::string( "abcd" ), parsed._plainText );
+    sw::TextLayoutStyle style{};
+    style._fontSize = 10.0f;
+    sw::TextLayoutResult result{};
+    layout.layout( parsed._plainText, style, 0.0f, result, &parsed._listSpan );
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( result._listGlyph.size() ) );
+    SW_EXPECT_EQUAL( SW_FALSE, result._listGlyph[0]._bFauxBold );
+    SW_EXPECT_EQUAL( SW_TRUE, result._listGlyph[1]._bFauxBold );
+    SW_EXPECT_EQUAL( 0xFFFFFFFFu, result._listGlyph[1]._colorRGBA );
+    SW_EXPECT_EQUAL( 0x00FF00FFu, result._listGlyph[2]._colorRGBA );
+    SW_EXPECT_NEAR( 20.0f, result._listGlyph[3]._fontSize, 1e-5f );
+    SW_EXPECT_NEAR( 15.0f, result._listGlyph[3]._origin._x, 1e-4f ); // a · b · c 가 5 씩
+    SW_EXPECT_EQUAL( 3u, result._listGlyph[3]._cluster );            // 클러스터는 평문 기준
+    SW_EXPECT_NEAR( 25.0f, result._size._x, 1e-4f );                 // d 는 크기 20 이라 10
+    SW_EXPECT_NEAR( 20.0f, result._listLine[0]._height, 1e-4f );     // 가장 큰 글자가 줄 높이를 정한다
+    const sw::float2 measured = layout.measure( parsed._plainText, style, 0.0f, &parsed._listSpan );
+    SW_EXPECT_NEAR( result._size._x, measured._x, 1e-4f );
 }

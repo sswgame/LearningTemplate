@@ -67,6 +67,8 @@ namespace sw
          * @details 고르는 것은 빌드 구성이다 — 실행 중에 라이브러리가 없다고 다른 셰이퍼로 물러나는 길은 없다(구성이 패키지를 못 찾으면 구성이 선다).
          */
         static unique_ptr<ITextShaper> createDefault();
+        /** @brief 단순 셰이퍼(cmap + 커닝)를 만듭니다. 폰트 바이트가 없는 래스터라이저(테스트의 가짜)가 `createShaper` 로 낸다 — HarfBuzz 는 바이트가 있어야 셰이핑한다. */
+        static unique_ptr<ITextShaper> createSimple();
 
         ITextShaper()          = default;
         virtual ~ITextShaper() = default;

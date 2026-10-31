@@ -270,7 +270,8 @@ namespace sw
             }
         }
         if ( markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
-            SW_LOG_WARNING( "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)", codepoint );
+            SW_LOG_WARNING_ID( "Text.GlyphMissing", "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)",
+                               codepoint );
         return chain._arrFace[0];
     }
 

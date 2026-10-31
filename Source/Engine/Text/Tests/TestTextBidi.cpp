@@ -1,5 +1,5 @@
 // TextBidiTest — 양방향 수준 해석과 눈에 보이는 순서(UAX #9: 강한 문자 · 숫자 · 중립 · 덮어쓰기 · 괄호 거울). 연결형이 없는 히브리어로 본다(nogpu).
-// 배치(`TextLayoutEngine`)가 줄마다 뒤집고 괄호를 거울 글리프로 그리는지는 가짜 글꼴 하네스(옛 FakeFontRasterizer)가 없어 아직 보지 않는다.
+// 배치(`TextLayoutEngine`)가 줄마다 뒤집고 괄호를 거울 글리프로 그리는지는 가짜 래스터라이저로 본다 — 글자 0.5 em · 공백 0.25 em, 크기 10 이면 글자 5 · 공백 2.5.
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
@@ -7,8 +7,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Localization/PseudoLocalizer.h"
+#include "Engine/Text/Tests/FakeFontRasterizer.h"
 #include "Engine/Text/TextBidi.h"
 #include "Engine/Text/TextItemizer.h"
+#include "Engine/Text/TextLayout.h"
 
 namespace
 {
@@ -32,6 +34,23 @@ namespace
                 sw::StringUtil::appendUTF8( visual, listCodepoint[logical] );
         }
         return visual;
+    }
+
+    /** @brief 모든 코드 포인트를 가진 가족 하나의 글꼴 시스템을 시작합니다. */
+    [[nodiscard]] bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
+    {
+        sw::FontCatalogDesc catalog{};
+        catalog._defaultFamily = "All";
+        sw::test::FakeFontServiceFixture::addFamily( catalog, "All", "test/fonts/all.ttf" );
+        return fixture.initialize( catalog );
+    }
+
+    sw::TextLayoutStyle makeRightToLeftStyle()
+    {
+        sw::TextLayoutStyle style{};
+        style._fontSize           = 10.0f;
+        style._paragraphDirection = sw::TextDirection::RightToLeft;
+        return style;
     }
 } // namespace
 
@@ -94,4 +113,57 @@ SW_TEST_CASE( TextBidiTest, RightToLeftOverrideReversesPseudoText )
     sw::StringUtil::appendUTF8( overridden, sw::PseudoLocalizer::kPopDirectionalFormat );
     overridden += " x";
     SW_EXPECT_EQUAL( sw::string( "cbA x" ), makeVisualText( overridden, sw::TextDirection::LeftToRight ) );
+}
+
+/** @brief [TextBidiTest] RTL 문단의 괄호는 배치에서 거울 글리프로 그린다 — "(שלום)" 의 눈에 보이는 첫 글리프는 논리 끝 ')' 를 거울한 '(' 이다 */
+SW_TEST_CASE( TextBidiTest, MirroredBracketsInRtlLayout )
+{
+    sw::test::FakeFontServiceFixture fixture;
+    SW_REQUIRE_TRUE( initializeAllCoverage( fixture ) );
+    sw::TextLayoutEngine layout{ *fixture._fontService };
+    sw::TextLayoutResult result{};
+    layout.layout( "(\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D)", makeRightToLeftStyle(), 0.0f, result );
+    SW_REQUIRE_EQUAL( 6u, static_cast<uint32>( result._listGlyph.size() ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( '(' ), result._listGlyph[0]._glyphIndex );
+    SW_EXPECT_EQUAL( 9u, result._listGlyph[0]._cluster ); // 논리 끝의 ')' 를 거울로
+    SW_EXPECT_EQUAL( 0x05DDu, result._listGlyph[1]._glyphIndex );
+    SW_EXPECT_EQUAL( static_cast<uint32>( ')' ), result._listGlyph[5]._glyphIndex );
+    SW_EXPECT_NEAR( 0.0f, result._listGlyph[0]._origin._x, 1e-4f );
+    SW_EXPECT_NEAR( 25.0f, result._listGlyph[5]._origin._x, 1e-4f );
+}
+
+/**
+ * @brief [TextBidiTest] 줄을 나눈 뒤 줄마다 뒤집는다 — RTL 문단 "אב גד" 를 너비 12 에: 첫 줄 "אב" 가 눈에 "בא"(끝 공백은 왼쪽 밖), 둘째 줄 "גד" 가 "דג",
+ *        Start 정렬은 오른쪽이라 둘 다 2 만큼 민다
+ */
+SW_TEST_CASE( TextBidiTest, LineBreakThenReorder )
+{
+    sw::test::FakeFontServiceFixture fixture;
+    SW_REQUIRE_TRUE( initializeAllCoverage( fixture ) );
+    sw::TextLayoutEngine layout{ *fixture._fontService };
+    sw::TextLayoutResult result{};
+    layout.layout( "\xD7\x90\xD7\x91 \xD7\x92\xD7\x93", makeRightToLeftStyle(), 12.0f, result ); // אב גד
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( result._listLine.size() ) );
+    SW_REQUIRE_EQUAL( 5u, static_cast<uint32>( result._listGlyph.size() ) );
+    SW_EXPECT_NEAR( 10.0f, result._listLine[0]._width, 1e-4f );
+
+    // 첫 줄: 끝 공백(문단 수준)이 맨 왼쪽 · 너비 밖, 그다음 ב · א.
+    SW_EXPECT_EQUAL( static_cast<uint32>( ' ' ), result._listGlyph[0]._glyphIndex );
+    SW_EXPECT_NEAR( -0.5f, result._listGlyph[0]._origin._x, 1e-4f );
+    SW_EXPECT_EQUAL( 0x05D1u, result._listGlyph[1]._glyphIndex );
+    SW_EXPECT_NEAR( 2.0f, result._listGlyph[1]._origin._x, 1e-4f );
+    SW_EXPECT_EQUAL( 0x05D0u, result._listGlyph[2]._glyphIndex );
+    SW_EXPECT_NEAR( 7.0f, result._listGlyph[2]._origin._x, 1e-4f );
+    // 둘째 줄: ד · ג — 문단 전체를 먼저 뒤집었다면 ג ד 가 첫 줄에 왔을 것이다.
+    SW_EXPECT_EQUAL( 0x05D3u, result._listGlyph[3]._glyphIndex );
+    SW_EXPECT_NEAR( 2.0f, result._listGlyph[3]._origin._x, 1e-4f );
+    SW_EXPECT_EQUAL( 0x05D2u, result._listGlyph[4]._glyphIndex );
+    SW_EXPECT_NEAR( 7.0f, result._listGlyph[4]._origin._x, 1e-4f );
+
+    // End 정렬은 RTL 문단에서 왼쪽이다.
+    sw::TextLayoutStyle endStyle = makeRightToLeftStyle();
+    endStyle._alignment          = sw::TextAlignment::End;
+    layout.layout( "\xD7\x90\xD7\x91 \xD7\x92\xD7\x93", endStyle, 12.0f, result );
+    SW_REQUIRE_EQUAL( 5u, static_cast<uint32>( result._listGlyph.size() ) );
+    SW_EXPECT_NEAR( 0.0f, result._listGlyph[3]._origin._x, 1e-4f );
 }

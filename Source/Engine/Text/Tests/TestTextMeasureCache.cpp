@@ -1,11 +1,13 @@
 // TextMeasureCache — 두 세대 교대: 상한 근처에서 전체를 비우지 않고, 자주 쓰는 항목이 남고, 항목 수가 세대 용량의 두 배를 넘지 않는다. 계측 칸에 센 값이 맞고,
-// 해시가 부딪힌 다른 글은 적중이 아니다(nogpu). `TextLayoutEngine::measure` 가 이 캐시를 쓰는지는 가짜 글꼴 하네스가 없어 아직 보지 않는다.
+// 해시가 부딪힌 다른 글은 적중이 아니다. `TextLayoutEngine::measure` 가 이 캐시를 쓰는지는 가짜 래스터라이저로 본다(nogpu).
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Text/Tests/FakeFontRasterizer.h"
+#include "Engine/Text/TextLayout.h"
 #include "Engine/Text/TextMeasureCache.h"
 
 namespace
@@ -188,4 +190,38 @@ SW_TEST_CASE( TextMeasureCacheTest, CollidingHashWithDifferentTextIsAMiss )
     const sw::float2* pBeta = cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "beta", 7 ) );
     SW_REQUIRE_NOT_NULL( pBeta );
     SW_EXPECT_EQUAL( sizeB._x, pBeta->_x );
+}
+
+/**
+ * @brief [TextMeasureCacheTest] 측정 캐시가 상한(세대 용량)을 막 넘겨도 `TextLayoutEngine::measure` 는 앞 세대의 글을 다시 재지 않는다
+ * @details 서로 다른 글 용량 + 1 개를 재면 세대가 한 번 교대한다. 옛 구현이면 그 순간 전부 비워져 첫 글을 다시 재면 실패(miss)지만, 두 세대면 이전에서 적중한다.
+ */
+SW_TEST_CASE( TextMeasureCacheTest, MeasureDoesNotRecomputeEarlierTextWhenTheCacheFills )
+{
+    constexpr uint32 kTextCount = 4097; // TextLayout.cpp 의 세대 용량 4096 + 1
+
+    sw::test::FakeFontServiceFixture fonts;
+    sw::TextLayoutEngine             layout{ *fonts._fontService };
+    sw::FontCatalogDesc              catalog{};
+    catalog._defaultFamily = "Latin";
+    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    SW_REQUIRE_TRUE( fonts.initialize( catalog ) );
+
+    sw::TextLayoutStyle style{};
+    style._fontSize = 10.0f;
+
+    const sw::CacheStatsSnapshot before = TextMeasureCacheTestInternal::readSnapshot( "TextMeasure" );
+    for ( uint32 index = 0; index < kTextCount; ++index )
+    {
+        const sw::string text = "w" + sw::to_string( index );
+        (void)layout.measure( text, style, 0.0f );
+    }
+    const sw::CacheStatsSnapshot filled = TextMeasureCacheTestInternal::readSnapshot( "TextMeasure" );
+    SW_EXPECT_EQUAL( before._missCount + kTextCount, filled._missCount );
+    SW_EXPECT_EQUAL( before._itemCount + static_cast<int64>( kTextCount ), filled._itemCount ); // 비우지 않았다 — 앞 세대가 그대로 있다
+
+    (void)layout.measure( "w0", style, 0.0f ); // 앞 세대의 첫 글
+    const sw::CacheStatsSnapshot again = TextMeasureCacheTestInternal::readSnapshot( "TextMeasure" );
+    SW_EXPECT_EQUAL( filled._hitCount + 1, again._hitCount );
+    SW_EXPECT_EQUAL( filled._missCount, again._missCount ); // 다시 재지 않았다
 }
