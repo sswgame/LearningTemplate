@@ -261,7 +261,7 @@ namespace sw
 
         if ( command._executable.empty() )
         {
-            SW_LOG_ERROR( "Process launch needs an executable" );
+            SW_LOG_ERROR_ID( "Process.NoExecutable", "Process launch needs an executable" );
             return false;
         }
 
@@ -269,7 +269,7 @@ namespace sw
         vector<utf16> listEnvironmentBlock;
         if ( options._listEnvironment.empty() == false && Internal::makeEnvironmentBlock( options._listEnvironment, listEnvironmentBlock ) == false )
         {
-            SW_LOG_ERROR( "Process launch got an environment entry with an empty name or '=' in the name" );
+            SW_LOG_ERROR_ID( "Process.InvalidEnvironmentName", "Process launch got an environment entry with an empty name or '=' in the name" );
             return false;
         }
 
@@ -324,7 +324,7 @@ namespace sw
         if ( bCreated == FALSE )
         {
             pipes.closeAll();
-            SW_LOG_ERROR( "Failed to launch command: %#", cmdStr.c_str() );
+            SW_LOG_ERROR_ID( "Process.LaunchFailed", "Failed to launch command: %#", cmdStr.c_str() );
             return false;
         }
 
@@ -342,12 +342,12 @@ namespace sw
     {
         if ( command._executable.empty() )
         {
-            SW_LOG_ERROR( "Detached process launch needs an executable" );
+            SW_LOG_ERROR_ID( "Process.NoExecutable", "Detached process launch needs an executable" );
             return false;
         }
         if ( options._listEnvironment.empty() == false )
         {
-            SW_LOG_ERROR( "Detached process launch does not take environment overrides - use Process::launch" );
+            SW_LOG_ERROR_ID( "Process.DetachedEnvironment", "Detached process launch does not take environment overrides - use Process::launch" );
             return false;
         }
         const string  cmdStr      = command.toCommandLine();

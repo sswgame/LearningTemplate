@@ -371,7 +371,7 @@ namespace sw
         // 로거가 비동기일 수 있으므로 stderr 로도 직접 내보내 크래시 직전의 기록을 확실히 남긴다.
         std::fputs( builder.c_str(), stderr );
         std::fflush( stderr );
-        SW_LOG_ERROR( "%#", builder.c_str() );
+        SW_LOG_ERROR_ID( "Crash.Report", "%#", builder.c_str() );
         // 로그는 작업 스레드가 비동기로 쓴다. 이대로 프로세스가 끝나면 큐에 남은 줄(크래시 직전의 경고 · 방금 쓴 리포트)과 파일 버퍼가 사라진다.
         // 언리얼이 크래시 때 GLog->Panic 으로 동기 비우기를 하는 것과 같은 역할이다.
         Logger::flushGlobalForCrash();

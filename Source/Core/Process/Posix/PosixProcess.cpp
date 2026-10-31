@@ -87,7 +87,7 @@ namespace sw
             {
                 if ( entry._name.empty() || entry._name.find( '=' ) != string::npos )
                 {
-                    SW_LOG_ERROR( "Process launch got an environment entry with an empty name or '=' in the name" );
+                    SW_LOG_ERROR_ID( "Process.InvalidEnvironmentName", "Process launch got an environment entry with an empty name or '=' in the name" );
                     return false;
                 }
             }
@@ -141,7 +141,7 @@ namespace sw
             outImage._listArgumentPointer.clear();
             if ( command._executable.empty() )
             {
-                SW_LOG_ERROR( "Process launch needs an executable" );
+                SW_LOG_ERROR_ID( "Process.NoExecutable", "Process launch needs an executable" );
                 return false;
             }
             outImage._path.clear();
@@ -172,7 +172,7 @@ namespace sw
                 }
                 if ( outImage._path.empty() )
                 {
-                    SW_LOG_ERROR( "Executable '%#' was not found in PATH", command._executable );
+                    SW_LOG_ERROR_ID( "Process.LaunchFailed", "Executable '%#' was not found in PATH", command._executable );
                     return false;
                 }
             }
@@ -368,7 +368,7 @@ namespace sw
     {
         if ( options._listEnvironment.empty() == false )
         {
-            SW_LOG_ERROR( "Detached process launch does not take environment overrides - use Process::launch" );
+            SW_LOG_ERROR_ID( "Process.DetachedEnvironment", "Detached process launch does not take environment overrides - use Process::launch" );
             return false;
         }
         PosixExecImage image;
