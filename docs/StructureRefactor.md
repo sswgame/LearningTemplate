@@ -157,3 +157,28 @@
 - 셰이더 include 기록 형식이 바뀌면 `Bin/Saved` 셰이더 캐시가 한 번 모두 무효(Debug 재컴파일이 길다). `ContentHash::computeFile` 은 디스크 경로 · 시각 캐시라 리소스 경로 지문용 캐시를 함께 설계한다.
 - Linux 전용 대소문자 처리는 Windows 빌드가 짓지 않는다 — 도메인 루트 조회 한 곳으로 모은 뒤 WSL 빌드로 확인.
 - `{out}` 을 쓰는 에디터 시나리오 약 15 개는 명령 · 칸 종류가 바뀌면 함께 고친다.
+
+## 7. SOLID 점검 — Core · Engine (2026-11-01)
+
+근거: `Scripts/dev/StructureAudit.py`, 정적 함수 이름 겹침 스크립트(Core · Engine `.cpp` 의 `static` 함수 이름이 두 파일 이상), 층 표(`CoreLayers.toml` · `EngineLayers.toml`)와 실제 include · 전방 선언 대조, 큰 파일 읽기. graphify 는 이 질문(중복 · 층)에 범위를 좁혀 주지 못해 쓰지 않았다. 이름이 같아도 하는 일이 다른 것(`appendFloat` 넷 중 셋, `isSpace` 둘, `isNameChar` 둘, `makePerpendicular` 둘, `isLive` 둘, `toTicks` 둘)은 표에서 뺐다.
+
+| 순위 | 종류 | 문제 | 고친 모양 | 상태 |
+|---|---|---|---|---|
+| 1 | 층 역류(DIP) | `SceneEngineServices`(5 층)가 `PhysicsSystem*` · `IAudioService*`(6 층)를 칸으로 들었다 — 층 검사는 include 만 봐서 전방 선언으로 우회됐다 | 칸을 지우고 기능 씬 서비스가 묶음의 엔진 범위에서 타입으로 찾는다(`locateSubsystem<T>`, `WidgetComponent` 가 쓰던 방식 하나로 — 언리얼 `UWorld::GetSubsystem<T>`) | 끝 |
+| 2 | 같은 일 둘(R8) | JSON 문자열 이스케이프 넷(`JSONWriter` · `JSONDocument::escapeString`(nlohmann, 잘못된 UTF-8 이면 예외) · 로그 싱크(잘못된 UTF-8 을 그대로 흘림) · 테스트 실행기(탭 · 제어 문자를 그대로 — 깨진 JSON)) | Core `JSONStringUtil` 하나(조각 함수로 받아 `JSONWriter` 고정 버퍼도 할당 없음). `JSONDocument::escapeString` 삭제 | 끝 |
+| 3 | 같은 일 둘(R8) | XML 이스케이프 둘(`XMLWriter` · `XMLDocument::escapeString` — `'` 는 바꾸고 탭 · 줄바꿈 · 잘못된 UTF-8 은 그대로) | `XMLWriter::appendEscaped`(정적) 하나, `unescapeString` 이 짝인 문자 참조(`&#9;`)를 읽는다(전엔 에디터 카탈로그 왕복이 깨질 모양) | 끝 |
+| 4 | 같은 일 둘(R8) | 16진 글자표 넷(`HexUtil` · `HexDigitUtil` · `StringUtil::escapeInvalidUTF8` · `JSONWriter`), `CookRecord` 의 `Fmt` 손 hex | 글자 ↔ 니블은 `HexDigitUtil`(티어 0) 하나, `HexUtil` 은 그 위 편의만. `HexUtil::tryReadDigit` 삭제 | 끝 |
+| 5 | 같은 일 둘(R8) | `to_chars` 감싸기 다섯 · `to_string` 몸체 둘(실패하면 `formatstring` 폴백) | `StringUtil::appendNumber` 하나 | 끝 |
+| 6 | 같은 일 둘(R8) | 소켓 주소 변환 셋(`PlatformSocketUtil` · IOCP · epoll), 초 → 나노초 식 아홉 | `NativeSocketAddress`(소켓 구현 파일 전용 헤더), `MonotonicClock::secondsToNanoseconds` | 끝(Linux 는 문법만 — Windows 빌드가 epoll 을 짓지 않는다) |
+| 7 | 같은 일 둘(R8) | 내비 `toFloat3` 둘(Core `float3( const float32* )` 있음), Rig `computeAngleBetween`(= `quaternion::getAngleBetween`), Telemetry `countLines` 둘 | Core 함수로, `StringUtil::countChar` | 끝 |
+| 8 | 층 역류 | `IAssetCache` 리로드 함수가 `IRHIDevice*`(2 층 → 4 층)를 받는다 — 디바이스를 안 쓰는 캐시도 받는다 | 남김: 일부러 고른 모양이다(캐시가 디바이스를 들고 있으면 백엔드 교체 뒤 죽은 포인터 — 머리말). 바꾸면 리로드 문맥 형식(`AssetReloadContext`)을 그래픽 층이 채우는 확장점으로 | 남김 |
+| 9 | 층 역류 | `ReflectionTypes::_addComponent`(1 층이 `Component*` · `GameObject*` 를 안다), `FixedLayout` 의 `friend class NetMessageChannel`(1 층 → 6 층) | 남김: 리플렉션 등록 매크로 전체가 닿는다 — 불투명 생성자(`void* (*)( void* )`) + Object 층 부속 표로 따로 한 단계 | 다음 |
+| 10 | 한 층 두 모델 | 바이트 스트림 둘: Engine `BinaryStreamWriter/Reader`(호스트 순서 memcpy, varint) · Core `ByteWriter/Reader`(리틀 엔디언, 넘침 검사). `RawAnimationCodec` 도 호스트 순서 | 남김: 호출 72 곳 · 저장 형식(헤더 구조체 통째 memcpy)이 닿는다. 모양: Core `ByteWriter` 에 varint · 문자열을 더하고 Engine 쪽을 지운다(지원 플랫폼이 모두 리틀 엔디언이라 바이트는 같다 — `static_assert` 로 못 박고 옮긴다) | 다음 |
+| 11 | 게이트 없음 | Core 티어(`CoreLayers.toml`)는 낮은/높은 둘로만 지어 티어 사이 역류를 빌드가 막지 않는다(지금 위반 0, 같은 티어 다른 폴더 include 3) | 남김: Engine 처럼 티어마다 부분을 지으면 pch 가 11 벌이다. 낮은/높은 두 부분에 위 티어 헤더 `#error` 껍데기만 놓는 것이 싼 첫걸음 | 다음 |
+| 12 | ISP | `INavMesh`(순수 가상 ~23 — 굽기 · 링크 · 장애물 · 질의 · 군중 · 디버그), `IProfilerBackend`(12 — CPU · 메모리 · GPU) | 남김: 구현이 하나씩이라 지금 비용은 없다. 두 번째 구현(내비 백엔드)이 올 때 Physics 처럼 질의 · 편집 · 디버그로 가른다 | 남김 |
+| 13 | OCP | `BindingKind`(10 종) switch 가 7 파일 · case 82(글리프 · 리맵 직렬화 · 평가 · 직렬화 · 자동화 · UI · 녹화), 도형 → 삼각형이 디버그 그리기 · 내비 지오메트리에 각자 | 남김: 종류 정보 표(`kArrBindingKindInfo`)가 이미 일부를 흡수했다 — 나머지를 종류별 함수 표로 옮기는 단계, 도형 삼각화는 `PhysicsShapeMesh` 하나 | 다음 |
+| 14 | SRP(파일) | `TaskManager.cpp` 1540 · `NetEndpoint.cpp` 1337 · `StringUtil.cpp` 1297 · `MemoryProfiler.cpp` 1009 줄 — 절 머리글로 이미 나뉘어 있다 | 남김: 같은 클래스의 파일 나누기라 동작 이득이 없다(병렬 그룹 · 대기 · 워커, 핸드셰이크 · 수신, 인코딩 · 파싱, 누수 창 순으로 나눌 수 있다) | 남김 |
+| 15 | 같은 일 둘 | float3 성분별 곱 손글씨 9 곳 + `Pose`·`RigPoseBuffer` 의 `multiply` · `divide`(0 분모 대체가 1 · lhs 로 다르다), Wayland xdg 리스너 둘, CRC32 가 `StringUtil` 에(Hash 가 아니라), MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 — 성분별 곱은 Core `float3::multiply`, 나눗셈 대체값은 뜻이 달라 이름을 가른다 | 다음 |
+| 16 | 이름 | `Engine/HostServices.h`(서비스 순서 표) ↔ `Engine/Module/HostServices.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
+
+- **근본 원인(한 줄)**: 바닥 도우미가 찾기 어려운 자리(Foundation · Container · TU 전용 Internal)에 있어 호출부가 사본을 만들었고, 층 검사는 include 글만 봐서 전방 선언 칸 · 함수 포인터로 역류가 숨었다. 같은 모양이 남았을 곳은 표의 8 · 9 · 15 다.
