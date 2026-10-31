@@ -27,12 +27,6 @@
 
 #include "sw/config/ConfigConstants.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
-#elif defined( SW_PLATFORM_LINUX )
-    #include "DevTools/FileWatch/Linux/LinuxFileWatcher.h"
-#endif
-
 namespace sw
 {
     namespace
@@ -102,15 +96,7 @@ namespace sw
         : _mapModule{}
         , _dependencyGraph{}
         , _listSharedModule{}
-        , _fileWatcher{
-#if defined( SW_PLATFORM_WINDOWS )
-              make_unique<WindowsFileWatcher>()
-#elif defined( SW_PLATFORM_LINUX )
-              make_unique<LinuxFileWatcher>()
-#else
-              nullptr
-#endif
-          }
+        , _fileWatcher{ IFileWatcher::createNative() }
         , _buildStampPath{}
         , _seenBuildStamp{}
         , _buildMutex{}

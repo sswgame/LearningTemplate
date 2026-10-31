@@ -4,16 +4,14 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Container/string.h"
-    #include "Core/Container/vector.h"
-    #include "Core/File/FileUtil.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Memory/Memory.h"
-    #include "Core/Container/StringUtil.h"
 
 SW_LOG_CALLER( "WindowsFileWatcher" );
 namespace sw
@@ -38,6 +36,11 @@ namespace sw
             }
         }
     } // namespace
+
+    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    {
+        return make_unique<WindowsFileWatcher>();
+    }
 
     WindowsFileWatcher::WindowsFileWatcher()
         : _hDirectory{ nullptr }
@@ -222,5 +225,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-#endif // SW_PLATFORM_WINDOWS

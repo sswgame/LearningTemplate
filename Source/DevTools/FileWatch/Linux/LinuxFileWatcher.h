@@ -15,8 +15,6 @@
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
 
-#if defined( SW_PLATFORM_LINUX )
-
 namespace sw
 {
     enum class MemoryTag : uint8;
@@ -70,5 +68,3 @@ namespace sw
         bool               _bRecursive;
     };
 } // namespace sw
-
-#endif // SW_PLATFORM_LINUX

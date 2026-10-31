@@ -1,6 +1,8 @@
 /**
  * @file IFileWatcher.h
  * @brief 디렉터리 변경 감시 인터페이스입니다. 구현은 플랫폼별 헤더(Windows · Linux)에 있습니다.
+ * @details 이 플랫폼의 구현을 만드는 `createNative` 는 플랫폼 폴더의 .cpp 가 정의하고 CMake 가 고른다(`sw_filterPlatformSources` — `FileWatch/Windows` · `FileWatch/Linux`).
+ *          고르는 쪽에 플랫폼 `#if` 가 없고, 구현이 없는 플랫폼은 링크가 실패한다(mtime 폴링으로 대신하지 않는다).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -9,6 +11,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "DevTools/DevToolsAPI.h"
 
@@ -64,6 +67,9 @@ namespace sw
     class SW_DEVTOOLS_API IFileWatcher
     {
     public:
+        /** @brief 이 플랫폼의 OS 감시자(Windows ReadDirectoryChangesW · Linux inotify)를 만듭니다. 감시는 `startWatching` 이 시작합니다. 파일 머리말 참고. */
+        [[nodiscard]] static unique_ptr<IFileWatcher> createNative();
+
         /** @brief 가상 소멸자입니다. 감시를 멈추고 워커 스레드를 조인하는 일은 구현 클래스가 합니다. */
         virtual ~IFileWatcher() = default;
 

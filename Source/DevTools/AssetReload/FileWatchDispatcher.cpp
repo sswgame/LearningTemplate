@@ -10,63 +10,6 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "DevTools/FileWatch/Windows/WindowsFileWatcher.h"
-#elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/PlatformOSHeaders.h"
-    #include "DevTools/FileWatch/Linux/LinuxFileWatcher.h"
-#endif
-
-namespace sw
-{
-    namespace
-    {
-        void pollFileChange( unordered_map<string, uint64>& mapPollMtime, vector<FileChangeEvent>& outListEvent, const vector<string>& listExtension, const string& filePath )
-        {
-            if ( FileUtil::exists( filePath ) == false )
-                return;
-
-            const string filename           = FileUtil::getFileNamePart( filePath );
-            bool         isExtensionAllowed = listExtension.empty();
-            if ( isExtensionAllowed == false )
-            {
-                for ( const string& allowed : listExtension )
-                {
-                    if ( FileUtil::hasExtension( filename, allowed ) )
-                    {
-                        isExtensionAllowed = true;
-                        break;
-                    }
-                }
-            }
-            if ( isExtensionAllowed == false )
-                return;
-
-            uint64 mtime = 0;
-            if ( FileUtil::tryGetFileTimestamp( filePath, mtime ) == false )
-                return; // 그 사이 지워졌다
-
-            const string                                  normalized = FileUtil::normalizePath( filePath );
-            const unordered_map<string, uint64>::iterator it         = mapPollMtime.find( normalized );
-            if ( it == mapPollMtime.end() )
-            {
-                mapPollMtime.emplace( normalized, mtime );
-                return;
-            }
-
-            if ( it->second != mtime )
-            {
-                it->second = mtime;
-                FileChangeEvent changeEvent{};
-                changeEvent._action    = FileWatcherAction::Modified;
-                changeEvent._directory = FileUtil::normalizePath( FileUtil::getDirectoryPart( filePath ) );
-                changeEvent._filename  = filename;
-                outListEvent.push_back( std::move( changeEvent ) );
-            }
-        }
-    } // namespace
-} // namespace sw
-
 namespace sw
 {
     SW_LOG_CALLER( "FileWatchDispatcher" );
@@ -80,13 +23,7 @@ namespace sw
 
     bool FileWatchDispatcher::initialize( string_view watchRootPath )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        _fileWatcher = make_unique<WindowsFileWatcher>();
-#elif defined( SW_PLATFORM_LINUX )
-        _fileWatcher = make_unique<LinuxFileWatcher>();
-#endif
-
-#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
+        _fileWatcher          = IFileWatcher::createNative();
         const string rootPath = watchRootPath.empty() ? engine::getSubsystem<AssetPaths>().getRootFolderPath() : string( watchRootPath );
         // 네이티브 감시를 걸지 못하면 mtime 폴링으로 몰래 바꾸지 않고 실패로 돌려준다 — 부른 쪽이 핫 리로드를 끈 채로 둔다.
         // 루트가 없는 것은 팩만 실린 실행의 정상 상태라 경고이고, 있는 루트를 걸지 못한 것은 오류다.
@@ -102,10 +39,6 @@ namespace sw
             _fileWatcher.reset();
             return false;
         }
-#else
-        _bUseMtimePoll = true;
-        SW_LOG_INFO( "FileWatchDispatcher: Using mtime poll fallback (no native file watcher)." );
-#endif
         _lastDrainTimestamp = FileUtil::getCurrentFileTimestamp();
         return true;
     }
@@ -113,8 +46,6 @@ namespace sw
     void FileWatchDispatcher::shutdown()
     {
         _listWatch.clear();
-        _mapPollMtime.clear();
-        _bUseMtimePoll = false;
         if ( _fileWatcher )
         {
             _fileWatcher->stopWatching();
@@ -130,21 +61,16 @@ namespace sw
         const uint64 sinceTimestamp = _lastDrainTimestamp;
         _lastDrainTimestamp         = FileUtil::getCurrentFileTimestamp();
 
-        if ( _fileWatcher )
-        {
-            const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
-            if ( poll._bWatchLost )
-            {
-                // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 해제하고, 마지막 리스캔은 아래에서 처리한다.
-                SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
-                _fileWatcher->stopWatching();
-                _fileWatcher.reset();
-            }
-        }
-        else if ( _bUseMtimePoll )
-            pollMtimeFallback( listEvent );
-        else
+        if ( _fileWatcher == nullptr )
             return;
+        const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
+        if ( poll._bWatchLost )
+        {
+            // 워커가 이유를 이미 오류로 남겼다. 다시 걸어도 같은 실패가 되풀이되므로 감시를 해제하고, 마지막 리스캔은 아래에서 처리한다.
+            SW_LOG_ERROR( "FileWatchDispatcher: file watching stopped - changes under the watch root are no longer reloaded" );
+            _fileWatcher->stopWatching();
+            _fileWatcher.reset();
+        }
 
         if ( listEvent.empty() )
             return;
@@ -163,7 +89,7 @@ namespace sw
     {
         WatchEntry entry{};
         entry._id = _watchIDAllocator.allocate();
-        // mtime 폴링 · 네이티브 감시자에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
+        // 리스캔(`expandRescanEvents`)의 폴더 훑기에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
         entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
         // 맞춰 볼 때 쓰는 형태로 **여기서 한 번** 만들어 둔다.
         entry._normalizedPrefix = FileUtil::normalizePath( entry._pathPrefix );
@@ -317,29 +243,6 @@ namespace sw
             }
         }
         SW_LOG_INFO( "A burst of file changes made the watcher drop individual notifications - recovered %# by diffing the watch tree.", found );
-    }
-
-    void FileWatchDispatcher::pollMtimeFallback( vector<FileChangeEvent>& outListEvent )
-    {
-        for ( const WatchEntry& entry : _listWatch )
-        {
-            // 파일 하나를 지켜보면 그 파일을, 폴더면 그 아래 파일을 본다. 예전에는 `exists` 로 갈라 폴더도 파일 분기로 가서 폴더 아래 분기에 닿지 못했다.
-            if ( FileUtil::isRegularFile( entry._pathPrefix ) )
-            {
-                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, entry._pathPrefix );
-                continue;
-            }
-            if ( FileUtil::isDirectory( entry._pathPrefix ) == false )
-                continue;
-
-            vector<string> listFile;
-            if ( FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true ) == false )
-                SW_LOG_WARNING( "Watch tree '%#' could not be listed completely - changes in the part left out are not polled", entry._pathPrefix );
-            for ( const string& filePath : listFile )
-            {
-                pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
-            }
-        }
     }
 
     bool FileWatchDispatcher::isExtensionAllowed( const WatchEntry& entry, string_view filename ) const

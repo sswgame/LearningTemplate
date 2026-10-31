@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -26,7 +25,7 @@ namespace sw
     /**
      * @class FileWatchDispatcher
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.
-     * @note Windows 는 ReadDirectoryChangesW, Linux 는 inotify, 그 밖의 플랫폼은 mtime 폴링으로 대신합니다.
+     * @note 감시자는 이 플랫폼의 OS 감시자 하나다(`IFileWatcher::createNative` — Windows ReadDirectoryChangesW, Linux inotify). mtime 폴링으로 대신하지 않는다.
      */
     class SW_DEVTOOLS_API FileWatchDispatcher
     {
@@ -39,7 +38,7 @@ namespace sw
         /**
          * @brief 초기화합니다. 네이티브 감시자는 @p watchRootPath 아래를 감시하며, 비우면 리소스 루트를 감시합니다.
          * @details 감시(`registerWatch`)의 접두사가 이 루트 아래에 있어야 이벤트가 온다. 다른 루트(`Config/`)를 보려면 디스패처를 하나 더 둔다.
-         *          Windows · Linux 에서 네이티브 감시를 걸지 못하면 mtime 폴링으로 바꾸지 않고 false 를 돌려준다.
+         *          네이티브 감시를 걸지 못하면 mtime 폴링으로 바꾸지 않고 false 를 돌려준다.
          */
         [[nodiscard]] bool initialize( string_view watchRootPath = {} );
         /** @brief 종료합니다. */
@@ -94,19 +93,15 @@ namespace sw
          * @param sinceTimestamp 이 시각(파일 시계, 초) 이후에 mtime 이 바뀐 파일만 냅니다. 직전에 큐를 비운 시각입니다.
          */
         void expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp );
-        /** @brief mtime 폴백으로 변경을 모읍니다. */
-        void pollMtimeFallback( vector<FileChangeEvent>& outListEvent );
         /** @brief 감시 구독 @p id 가 풀렸습니다. 그 감시를 뺍니다. */
         void releaseSubscription( uint64 id );
         /** @brief 파일 확장자가 감시 허용 목록에 있으면 true 입니다. */
         bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
-        unique_ptr<IFileWatcher>      _fileWatcher;
-        vector<WatchEntry>            _listWatch;
-        IDAllocator<uint64>           _watchIDAllocator;
-        unordered_map<string, uint64> _mapPollMtime;
-        uint64                        _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
-        bool                          _bUseMtimePoll{ false };
+        unique_ptr<IFileWatcher> _fileWatcher;
+        vector<WatchEntry>       _listWatch;
+        IDAllocator<uint64>      _watchIDAllocator;
+        uint64                   _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
 
     private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

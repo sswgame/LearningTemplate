@@ -13,8 +13,6 @@
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/FileWatch/IFileWatcher.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-
 // Windows.h 전체를 헤더에 넣지 않도록 HANDLE 만 전방 선언한다.
 using HANDLE = void*;
 
@@ -59,5 +57,3 @@ namespace sw
     };
 
 } // namespace sw
-
-#endif // SW_PLATFORM_WINDOWS

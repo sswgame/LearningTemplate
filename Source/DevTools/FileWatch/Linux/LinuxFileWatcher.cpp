@@ -14,8 +14,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
 
-#if defined( SW_PLATFORM_LINUX )
-
 namespace sw
 {
     namespace
@@ -29,6 +27,11 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "LinuxFileWatcher" );
+
+    unique_ptr<IFileWatcher> IFileWatcher::createNative()
+    {
+        return make_unique<LinuxFileWatcher>();
+    }
 
     LinuxFileWatcher::LinuxFileWatcher()
         : _workerThread{}
@@ -324,5 +327,3 @@ namespace sw
         pushChange( action, _directoryPath, bUnderRoot ? string_view{ relative } : name );
     }
 } // namespace sw
-
-#endif // SW_PLATFORM_LINUX
