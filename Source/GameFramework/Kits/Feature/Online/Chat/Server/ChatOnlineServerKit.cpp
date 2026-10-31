@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/ProcessRoots.h"
+
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/GroupChannelMembership.h"
 #include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
@@ -101,7 +103,16 @@ namespace sw
                                         outError ) == false )
                     return false;
                 if ( bannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
-                    _settings._bannedWordsPath = bannedWords;
+                {
+                    // 상대 경로는 프로젝트 루트 기준이다 - 입력 경계에서 한 번 푼다(R5, 예전에는 작업 폴더 기준으로 열었다).
+                    const std::optional<AbsolutePath> bannedWordsPath = AbsolutePath::tryResolve( bannedWords, ProcessRoots::get()._project );
+                    if ( bannedWordsPath.has_value() == false )
+                    {
+                        outError = "chat option bannedWords '" + bannedWords + "' is not a file path (or 'none')";
+                        return false;
+                    }
+                    _settings._bannedWordsPath = bannedWordsPath->str();
+                }
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
                 return registerServerService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
             }

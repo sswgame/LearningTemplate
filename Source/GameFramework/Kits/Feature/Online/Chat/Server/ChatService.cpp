@@ -322,8 +322,12 @@ namespace sw
         _serverTopic  = ChatProtocol::makeServerTopic( dependencies._serverID );
         _spamGuard.initialize( settings._spam );
         _reportGuard.initialize( settings._reportBurst, settings._reportRefillIntervalMs, static_cast<size_t>( settings._spam._maxTrackedAccount ) );
+        // 금칙어 파일을 고른 서버가 그것을 못 읽으면 서지 않는다 - 예전에는 경고만 남기고 거르지 않은 채 열렸다(fail-open). 거르지 않으려면 옵션을 'none' 으로 밝힌다.
         if ( settings._bannedWordsPath.empty() == false && _wordFilter.loadFile( settings._bannedWordsPath, settings._filterMode ) == false )
-            SW_LOG_WARNING( "ChatService: banned word file '%#' not found - chat is not filtered", settings._bannedWordsPath );
+        {
+            SW_LOG_ERROR( "ChatService: banned word file '%#' could not be read - the chat service does not start (set bannedWords to 'none' to run unfiltered)", settings._bannedWordsPath );
+            return false;
+        }
         if ( dependencies._pBus != nullptr )
         {
             _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                          // 다른 서버가 보낸 귓속말을 받는다
