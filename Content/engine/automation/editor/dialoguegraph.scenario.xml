@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — Dialogue Graph 를 처음 열 때 캔버스가 패널을 다 덮는지 화면으로 본다(패널 점검 D21).
-  CaptureEditorUI 는 에디터 UI 전체(패널 + 플로팅 창)를 찍는다 — {out}/ 의 PNG 를 사람이(또는 에이전트가) 본다.
+  패널이 열리고(Editor.PanelOpen) 캔버스가 기본 문서의 노드 다섯을 그렸는지(Editor.GraphNodeCount — graphaddnode 와 같은 시작 상태)
+  판정한 뒤, CaptureEditorUI 가 에디터 UI 전체(패널 + 플로팅 창)를 찍는다 — 마젠타(빠진 텍스처 · 디버그 색) 문턱 0 을 적어
+  백엔드를 나눠 돌 때도 모든 백엔드에서 화소를 판정하고,
+  {out}/ 의 PNG 는 사람이(또는 에이전트가) 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/dialoguegraph.scenario.xml -unattended
 -->
 <Scenario name="editor.dialoguegraph" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<Wait frames="40"/>
+	<Variable name="gv_editorWatchPanel" value="dialogue_graph"/>
 	<DevCommand line="panel.focus dialogue_graph"/>
-	<Wait frames="40"/>
-	<CaptureEditorUI file="open.png"/>
+	<WaitUntil watch="Editor.GraphNodeCount" equals="5" timeoutFrames="150"/>
+	<Expect watch="Editor.PanelOpen" equals="1"/>
+	<CaptureEditorUI file="open.png" maxMagentaFraction="0"/>
 	<Wait frames="10"/>
 	<Pass/>
 </Scenario>
