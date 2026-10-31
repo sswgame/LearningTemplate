@@ -46,10 +46,26 @@ namespace sw::test
         [[nodiscard]] const string& getFolder() const { return _folder; }
         /** @brief 도메인 폴더 아래 @p relativePath 의 디스크 경로입니다. */
         [[nodiscard]] string makeDiskPath( string_view relativePath ) const { return FileUtil::joinPath( _folder, relativePath ); }
+        /** @brief 도메인 폴더 아래 @p relativePath 폴더를 만들고 그 디스크 경로를 돌려줍니다(못 만들면 케이스 실패). */
+        [[nodiscard]] string makeDiskFolder( string_view relativePath ) const
+        {
+            const string folder = makeDiskPath( relativePath );
+            if ( FileUtil::ensureDirectoryExists( folder ) == false )
+                reportFailure( __FILE__, __LINE__, "could not create " + folder );
+            return folder;
+        }
         /** @brief 도메인 폴더 아래 @p relativePath 의 리소스 id(`testproject/<relativePath>`)입니다. */
         [[nodiscard]] static AssetID makeID( string_view relativePath ) { return AssetID{ string( kDomain ) + "/" + string( relativePath ) }; }
         /** @brief 도메인 폴더 아래 디스크 경로 @p diskPath 의 리소스 id 입니다(밖이면 빈 id). */
-        [[nodiscard]] static AssetID toID( string_view diskPath ) { return AssetID{ engine::getSubsystem<AssetPaths>().toAssetID( diskPath ) }; }
+        [[nodiscard]] static AssetID toID( string_view diskPath ) { return AssetID{ toIDText( diskPath ) }; }
+        /** @brief `toID` 의 글입니다(경로 글을 받는 컴포넌트 칸 — 클립 폴더 · 그래프 경로 — 에 넣는다). 밖이면 케이스 실패이고 빈 글입니다. */
+        [[nodiscard]] static string toIDText( string_view diskPath )
+        {
+            string id = engine::getSubsystem<AssetPaths>().toAssetID( diskPath );
+            if ( id.empty() )
+                reportFailure( __FILE__, __LINE__, "not under a mounted domain: " + string( diskPath ) );
+            return id;
+        }
 
     private:
         string _folder;
