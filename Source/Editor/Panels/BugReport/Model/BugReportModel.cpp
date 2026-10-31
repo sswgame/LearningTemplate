@@ -82,15 +82,9 @@ namespace sw::editor
         }
     }
 
-    string BugReportModel::makeAbsolutePath( const BugReportRow& row )
-    {
-        string absolutePath;
-        return FileUtil::makeAbsolutePath( row._directory, absolutePath ) ? absolutePath : row._directory;
-    }
-
     void BugReportModel::showInFileExplorer( const BugReportRow& row )
     {
-        (void)EditorAssetFileCommands::showInFileExplorer( makeAbsolutePath( row ) );
+        (void)EditorAssetFileCommands::showInFileExplorer( row._directory );
     }
 
     void BugReportModel::goTo( const BugReportRow& row )

@@ -14,7 +14,7 @@ namespace sw::editor
     /** @brief 지난 BugReport 폴더 한 줄입니다. */
     struct BugReportRow
     {
-        string _directory; ///< 폴더 경로(작업 폴더 기준)
+        string _directory; ///< 폴더의 절대 경로(`ProcessRoots::_saved` 아래 - 목록을 만들 때 이미 절대다)
         string _name;      ///< 폴더 이름(`yyyyMMdd-HHmmss`)
         string _note;      ///< info.txt 의 메모. 읽지 못하면 비어 있다
     };
@@ -46,8 +46,6 @@ namespace sw::editor
         static void showInFileExplorer( const BugReportRow& row );
         /** @brief 폴더 줄 @p row 가 남긴 자리(씬 · 카메라)로 돌아갑니다. 결과는 로그에 남습니다. */
         static void goTo( const BugReportRow& row );
-        /** @brief @p row 의 절대 경로입니다. 바꾸지 못하면 그대로 돌려줍니다. */
-        static string makeAbsolutePath( const BugReportRow& row );
 
     private:
         vector<BugReportRow> _listRow;

@@ -35,12 +35,14 @@ namespace sw::editor
 #endif
     }
 
-    bool EditorTracyLauncher::findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath )
+    bool EditorTracyLauncher::findViewerPath( string_view configuredPath, const AbsolutePath& projectRoot, string& outPath )
     {
         outPath.clear();
-        if ( configuredPath.empty() )
+        // 상대 → 절대는 한 규칙(R5)이다 - 루트가 없거나 풀리지 않는 글을 받은 그대로 작업 폴더 기준으로 찾지 않는다.
+        const std::optional<AbsolutePath> resolved = AbsolutePath::tryResolve( configuredPath, projectRoot );
+        if ( resolved.has_value() == false )
             return false;
-        const string place = ( FileUtil::isAbsolutePath( configuredPath ) || projectRoot.empty() ) ? string( configuredPath ) : FileUtil::joinPath( projectRoot, configuredPath );
+        const string& place = resolved->str();
         // 폴더를 가리키면 그 안의 실행 파일, 파일을 가리키면 그대로. 폴더를 먼저 본다 — `exists` 는 폴더에도 true 다.
         if ( FileUtil::isDirectory( place ) )
         {
@@ -71,7 +73,7 @@ namespace sw::editor
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         string viewerPath;
-        if ( findViewerPath( gv_tracyViewerPath, ProcessRoots::get()._project.str(), viewerPath ) == false )
+        if ( findViewerPath( gv_tracyViewerPath, ProcessRoots::get()._project, viewerPath ) == false )
         {
             SW_LOG_WARNING( "Tracy viewer not found at gv_tracyViewerPath '%#' — download the 0.14.1 Windows release and put %# there (or point gv_tracyViewerPath at it)",
                             string( gv_tracyViewerPath ).c_str(), getViewerFileName() );

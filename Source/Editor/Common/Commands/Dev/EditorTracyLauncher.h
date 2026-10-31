@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
 namespace sw::editor
@@ -39,9 +40,9 @@ namespace sw::editor
         /**
          * @brief 설정한 경로 @p configuredPath(파일이거나 그 파일이 있는 폴더)에서 뷰어 실행 파일을 찾습니다. 상대 경로면 @p projectRoot 기준입니다.
          * @details 경로의 원본은 설정(`gv_tracyViewerPath`, 기본 `Tools/Tracy`) 하나다. 그 경로에 없으면 다른 경로를 더 뒤지지 않는다.
-         * @return 있는 파일을 찾았으면 true 입니다. @p configuredPath 가 비면 false 입니다.
+         * @return 있는 파일을 찾았으면 true 입니다. @p configuredPath 가 비거나 경로로 풀리지 않으면(`C:foo` 같은 드라이브 상대) false 입니다.
          */
-        [[nodiscard]] static bool findViewerPath( string_view configuredPath, string_view projectRoot, string& outPath );
+        [[nodiscard]] static bool findViewerPath( string_view configuredPath, const AbsolutePath& projectRoot, string& outPath );
 
         /** @brief 뷰어를 localhost 의 @p port 에 붙여 띄우는 명령입니다(실행 파일은 이 OS 의 구분자로). */
         static ProcessCommand makeViewerCommand( string_view viewerPath, uint16 port );

@@ -31,7 +31,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "ShowInExplorer" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCopy ) );
         if ( ImGui::SmallButton( editoricon::kCopy ) )
-            ImGui::SetClipboardText( BugReportModel::makeAbsolutePath( row ).c_str() );
+            ImGui::SetClipboardText( row._directory.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "CopyPath" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCamera ) );
         if ( ImGui::SmallButton( editoricon::kCamera ) )
