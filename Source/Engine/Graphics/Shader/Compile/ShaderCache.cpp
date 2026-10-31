@@ -40,6 +40,15 @@ namespace sw
                                                         ShaderCooker::getExtensionForFormat( desc._targetFormat ) );
         }
 
+        /** @brief 소스의 절대 경로입니다(지문용 — 컴파일러와 같은 해석기 `ShaderSourceResolver`). 못 풀면 빈 글이며 지문이 0 이라 맞지 않는다. */
+        string findSourcePath( const ShaderSourceID& source )
+        {
+            const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
+            string                                    error;
+            const std::optional<ShaderCompileInput>   input = resolver.has_value() ? resolver->resolve( source, error ) : std::nullopt;
+            return input.has_value() ? input->_source.str() : string{};
+        }
+
         /** @brief 디스크 파일이 있고 비어 있지 않으면 그 바이트를 읽어 true 입니다(로컬 라이브 수정 캐시). */
         [[nodiscard]] bool readNonEmptyFile( const string& path, vector<uint8>& outBytes )
         {
@@ -60,9 +69,9 @@ namespace sw
         //
         // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
         // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
-        const string_view                 rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._source.str() );
-        const uint64                      sourceHash = sourceFile.has_value() ? ShaderCooker::computeSourceFingerprint( sourceFile->str(), vector<string>{} ) : 0u;
+        const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
+        const string      sourcePath = findSourcePath( desc._source );
+        const uint64      sourceHash = sourcePath.empty() == false ? ShaderCooker::computeSourceFingerprint( sourcePath, vector<string>{} ) : 0u;
 
         StringBuilder<constant::kMaxBuffer64> sb;
         sb.appendFormat( "%#", Fmt( sourceHash, Format( 16, Format::Padding::Zero ).hex() ) );
@@ -243,9 +252,8 @@ namespace sw
     ShaderCompileResult ShaderCache::loadOrCompile( const ShaderCompileDesc& desc, const string& inCacheKey )
     {
         SW_MEMORY_SCOPE( Shader );
-        string                            cacheKey   = inCacheKey;
-        const std::optional<AbsolutePath> sourceFile = ShaderCompiler::findSourceFile( desc._source.str() );
-        const string                      absPath    = sourceFile.has_value() ? sourceFile->str() : string{};
+        string       cacheKey = inCacheKey;
+        const string absPath  = findSourcePath( desc._source );
 
         // 0) 인메모리 캐시 조회 — 항목을 만든 컴파일이 연 헤더까지 포함한 지문이 지금도 같아야 맞다. 파일을 읽는 계산이라 잠금 밖에서 한다(항목을 복사해 나온다).
         if ( absPath.empty() == false )

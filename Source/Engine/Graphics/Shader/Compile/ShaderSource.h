@@ -1,14 +1,16 @@
 /**
  * @file ShaderSource.h
- * @brief 셰이더 소스의 신원(`ShaderSourceID` — 리소스 경로)과 그 소스의 쿠킹된 바이너리 자리(`ShaderBinaryLocation`)입니다.
+ * @brief 셰이더 소스의 신원(`ShaderSourceID` — 리소스 경로), 그 소스의 쿠킹된 바이너리 자리(`ShaderBinaryLocation`), 소스와 include 를 디스크로 푸는 해석기(`ShaderSourceResolver` · `ShaderIncludeResolver`)입니다.
  * @details 예전에는 컴파일 요청의 경로 칸에 런타임은 리소스 id, 쿠커는 절대 경로를 넣고, "소스 → `shaders/bin/<rhi>`" 규칙을 세 곳(셰이더 캐시 · 리플렉션 매니페스트 · 쿠커)이
  *          글자 `shaders/` 를 찾아 따로 셈했다(`myshaders/` 같은 폴더에서 셋이 다른 답을 냈다). 이제 소스는 늘 리소스 경로이고, 바이너리 자리는 순수 함수 하나가 정한다.
  *          상용 엔진: 언리얼 가상 셰이더 경로(`/Engine/Private/…`)와 `AddShaderSourceDirectoryMapping`.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/FileSystem/AssetID.h"
 
@@ -16,6 +18,7 @@
 
 namespace sw
 {
+    class AssetPaths;
     enum class ShaderTargetFormat : uint8;
 
     /**
@@ -71,5 +74,79 @@ namespace sw
         [[nodiscard]] static std::optional<ShaderBinaryLocation> make( const ShaderSourceID& source, ShaderTargetFormat format );
         /** @brief 폴더 안 파일 @p fileName 의 리소스 id 입니다. */
         [[nodiscard]] AssetID makeFileID( string_view fileName ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct ShaderCompileInput
+     * @brief 해석이 끝난 컴파일 입력입니다 — 주 소스, 그 소스가 든 `shaders` 폴더, include 검색 순서(모두 절대 경로).
+     * @details 컴파일러(DXC · FXC) · 쿠킹 계획 · 셰이더 캐시 지문이 이 값 하나를 쓴다. 예전에는 셋이 경로 글을 받아 저마다 "절대 경로면 그 파일, 아니면 리소스 id" 로 다시 풀었다.
+     */
+    struct ShaderCompileInput
+    {
+        AbsolutePath         _source;          ///< 주 소스 파일(`.hlsl`)
+        AbsolutePath         _shadersFolder;   ///< 소스가 든 도메인의 `shaders` 폴더 — 쿠킹 스탬프 키 · 가림 검사의 기준
+        vector<AbsolutePath> _listIncludeRoot; ///< `#include` 검색 순서: 소스 폴더 → include 루트 도메인(engine · common)의 `shaders`
+    };
+
+    /**
+     * @struct ShaderIncludeRootDomain
+     * @brief include 루트 도메인 하나입니다(`engine` → `Content/engine/shaders`). 디스크 자리는 리소스 경로 해석(`AssetPaths::toDiskPath`)이 정한다 — 붙인 디스크 도메인도 같은 규칙이다.
+     */
+    struct ShaderIncludeRootDomain
+    {
+        string       _domain;        ///< 도메인 이름(스탬프 헤더 키의 `<도메인>:` 앞부분)
+        AbsolutePath _shadersFolder; ///< 그 도메인의 `shaders` 폴더
+    };
+
+    /**
+     * @class ShaderIncludeResolver
+     * @brief `#include` 를 푸는 규칙 하나입니다. DXC include 처리기 · FXC include 처리기 · 쿠킹 스탬프 · 가림 검사가 같은 루트 목록을 함께 씁니다.
+     * @details 예전에는 include 루트를 셋이 따로 풀었다 — 컴파일러는 리소스 경로로, 스탬프 · 가림 검사는 "리소스 루트/<도메인>/shaders" 로 이어 붙여 붙인 디스크 도메인의 헤더가 스탬프에 안 보였다.
+     *          값 형식이라 병렬 컴파일 · 쿠킹에서 함께 읽어도 된다(읽기 전용).
+     */
+    class SW_API ShaderIncludeResolver
+    {
+    public:
+        explicit ShaderIncludeResolver( vector<ShaderIncludeRootDomain> listRootDomain );
+
+        /** @brief include 루트 도메인입니다(검색 순서 — engine, common). */
+        [[nodiscard]] const vector<ShaderIncludeRootDomain>& getRootDomains() const { return _listRootDomain; }
+        /** @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다. */
+        [[nodiscard]] std::optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes ) const;
+        /**
+         * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
+         */
+        [[nodiscard]] std::optional<AbsolutePath> readInclude( string_view candidatePath, vector<uint8>& outBytes ) const;
+
+    private:
+        vector<ShaderIncludeRootDomain> _listRootDomain;
+    };
+
+    /**
+     * @class ShaderSourceResolver
+     * @brief `ShaderSourceID` 를 컴파일 입력(`ShaderCompileInput`)으로 푸는 해석기 하나입니다. include 규칙(`ShaderIncludeResolver`)을 품는다.
+     * @details 리소스 경로 해석(`AssetPaths`)만 쓴다 — 작업 폴더 · 절대 경로 추측이 없다. 컴파일 · 쿠킹 계획 · 셰이더 캐시 · `--verify-shaders` 가 같은 해석기를 만든다.
+     */
+    class SW_API ShaderSourceResolver
+    {
+    public:
+        /** @brief @p assetPaths 의 우선순위 설정에서 include 루트 도메인(engine · common)의 `shaders` 폴더를 풉니다. 설정에 없거나 폴더가 없으면 오류를 남기고 빈 값입니다. */
+        [[nodiscard]] static std::optional<ShaderSourceResolver> make( const AssetPaths& assetPaths );
+
+        /** @brief include 규칙입니다. */
+        [[nodiscard]] const ShaderIncludeResolver& getIncludeResolver() const { return _includeResolver; }
+        /** @brief @p source 를 풉니다. `shaders` 칸이 없거나 파일이 없거나 소스가 자기 `shaders` 폴더 밖으로 풀리면 @p outError 에 까닭을 담고 빈 값입니다. */
+        [[nodiscard]] std::optional<ShaderCompileInput> resolve( const ShaderSourceID& source, string& outError ) const;
+        /** @brief 도메인 @p domain 의 `shaders` 폴더입니다(있는 폴더만). */
+        [[nodiscard]] std::optional<AbsolutePath> findDomainShadersFolder( string_view domain ) const;
+
+    private:
+        ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );
+
+        const AssetPaths*     _pAssetPaths;
+        ShaderIncludeResolver _includeResolver;
     };
 } // namespace sw

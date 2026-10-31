@@ -109,7 +109,7 @@ namespace sw
             static bool verifyShaderFolder( string_view cookedDir, string_view shaderFolder )
             {
                 vector<string> listProblem;
-                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>().getRootFolderPath(), cookedDir, shaderFolder, listProblem );
+                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, shaderFolder, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR( "[%#] %#", shaderFolder, problem );

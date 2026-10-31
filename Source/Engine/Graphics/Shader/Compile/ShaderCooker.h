@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    class AssetPaths;
+
     /**
      * @struct ShaderCookResult
      * @brief 셰이더 하나를 컴파일하고 쿠킹한 결과입니다.
@@ -132,23 +134,18 @@ namespace sw
         // `Renderer/Cook/ShaderCookDriver` 에 있다. 여기는 셰이더 하나를 쿠킹하는 법과 이름 짓기, 최신 판정만 둔다.
 
         /**
-         * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시와, 소스마다 컴파일이 연 헤더(와 그 내용 해시)로 다시 씁니다(쿠킹이 끝난 뒤). 다른 include 루트 도메인(`collectIncludeRootDomains`)은 @p resourceRoot 아래에서 @p listPriority 로 찾습니다.
+         * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시와, 소스마다 컴파일이 연 헤더(와 그 내용 해시)로 다시 씁니다(쿠킹이 끝난 뒤). 다른 include 루트 도메인의 자리는 @p resolver 가 정합니다(컴파일러와 같은 규칙).
          * @param pFailedSource 이번 쿠킹에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 스탬프에서 빠져 다음 쿠킹이 다시 시도합니다.
          *                      실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 기록하면 그 셰이더가 영영 최신으로 판정되기 때문입니다.
          * @param mapIncludedFile 소스(정규화한 절대 경로)마다 그 소스의 산출물을 만든 컴파일이 연 헤더(절대 경로)입니다. 포맷 · 퍼뮤테이션 전부의 합집합이며
          *                        이번에 다시 컴파일하지 않은 요청의 몫은 `isCookedOutputCurrent` 가 돌려준 목록으로 채운다. 여기 없는 소스는 헤더에 기대지 않는 것으로 적히므로,
          *                        컴파일한 소스를 빼먹으면 그 소스의 헤더 변경이 낡음으로 잡히지 않는다.
-         * @return 스탬프를 썼으면 true 입니다. 도메인 설정이 틀렸거나 가려진 헤더가 있거나 헤더를 읽지 못하거나 shaders 폴더 밖이거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
-         * @details 루트와 우선순위를 전역(`AssetPaths`)에서 읽지 않고 받는다. 테스트는 임시 트리의 루트와 **자기 우선순위**를 넘겨
-         *          실제 `Content/` 도, 같은 프로세스의 앞선 케이스가 바꿔 둔 전역 우선순위도 보지 않는다(우선순위가 비면 스탬프를 쓰지 않아 판정이 흔들린다).
-         *          스탬프를 쓰면 @p stampCache 를 비운다(다음 판정이 새 스탬프를 읽는다).
+         * @return 스탬프를 썼으면 true 입니다. 가려진 헤더가 있거나 헤더를 읽지 못하거나 include 루트 밖이거나 파일을 쓰지 못했으면 false 이며, 호출자(쿠킹)는 그것을 실패로 센다 — 스탬프 없이 "성공" 으로 끝나면 다음 판정이 그제야 낡았다고 알린다.
+         * @details 스탬프를 쓰면 @p stampCache 를 비운다(다음 판정이 새 스탬프를 읽는다).
          */
-        [[nodiscard]] static bool writeCookStamp( string_view resourceRoot, const vector<string>& listPriority, string_view sourceShadersDir, string_view binDirectory,
+        [[nodiscard]] static bool writeCookStamp( const ShaderIncludeResolver& resolver, string_view sourceShadersDir, string_view binDirectory,
                                                   const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
                                                   ShaderCookStampCache& stampCache );
-
-        /** @brief @p absShaderPath 가 든 소스 폴더(`…/shaders`)입니다. `shaders` 폴더 밖이면 빈 글입니다. 스탬프 키 · 쿠킹 출력의 기준이다. */
-        static string findShadersDirectory( string_view absShaderPath );
 
         /**
          * @brief @p binDirectory 의 셰이더 바이너리(`.dxil` · `.dxbc` · `.spv`) 중 파일 이름이 @p uniqueKeepFileName 에 없는 것을 지웁니다. 스탬프 · 매니페스트 같은 다른 파일은 건드리지 않습니다.
@@ -246,27 +243,27 @@ namespace sw
         [[nodiscard]] static bool collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain );
 
         /**
-         * @brief @p absShaderPath 가 속한 도메인의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
-         * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다.
-         *          도메인 밖의 파일(임시 폴더의 소스)은 검사할 것이 없어 true 입니다. 컴파일(`ShaderCompiler`)과 `verifyCookedShaders` 가 부른다.
-         * @return 문제가 없으면 true 입니다. 설정이 잘못됐을 때도 false 입니다(오류를 남김).
+         * @brief 소스 도메인의 `shaders` 폴더 @p shadersFolder 의 헤더가 include 루트(engine · common)의 헤더와 같은 상대 경로를 가지면 그 쌍을 @p outListProblem 에 적습니다.
+         * @details include 검색은 자기 폴더가 먼저라 같은 이름의 헤더가 엔진 헤더를 조용히 가린다. 가림은 고르지 않고 오류로 멈춘다. 컴파일(`ShaderCompiler`)과 `verifyCookedShaders` 가 부른다.
+         * @return 문제가 없으면 true 입니다. 헤더 목록을 다 얻지 못했을 때도 false 입니다.
          */
-        [[nodiscard]] static bool findShadowedHeaders( string_view resourceRoot, const vector<string>& listPriority, string_view absShaderPath, vector<string>& outListProblem );
+        [[nodiscard]] static bool findShadowedHeaders( const ShaderIncludeResolver& resolver, const AbsolutePath& shadersFolder, vector<string>& outListProblem );
 
         /**
          * @brief 쿠킹된 산출물이 지금 소스에서 나온 것인지 `bin/<rhi>/cook.stamp` 의 내용 해시로 확인합니다.
          * @param binDirectory 스탬프가 있는 폴더(`<쿠킹 스테이징>/<domain>/shaders/bin/<rhi>`)입니다.
          * @param absShaderPath 원본 `.hlsl` 의 절대 경로입니다.
+         * @param sourceShadersDir 원본이 든 `shaders` 폴더(`ShaderCompileInput::_shadersFolder`)입니다 — 스탬프 키의 기준이다.
          * @param stampCache 이 쿠킹의 스탬프 읽기 캐시입니다(폴더마다 한 번 읽는다).
          * @param pOutListIncludedFile 최신이면 그 소스의 스탬프에 적힌 헤더(절대 경로)를 담습니다(선택). 최신이 아니면 비웁니다. 컴파일을 건너뛴 요청의 몫을 `writeCookStamp` 에 넘길 때 씁니다.
          * @details 최신이려면 소스 해시가 같고 **스탬프에 적힌 이 소스의 헤더가 모두 지금도 같은 내용**이어야 한다. 이 소스가 열지 않은 헤더는 보지 않는다.
          *          헤더가 없어졌거나 읽지 못하면 낡음이다. 옛 판의 스탬프도 낡음이다.
          */
-        static bool isCookedOutputCurrent( string_view resourceRoot, const vector<string>& listPriority, string_view binDirectory, string_view absShaderPath,
+        static bool isCookedOutputCurrent( const ShaderIncludeResolver& resolver, string_view binDirectory, string_view absShaderPath, string_view sourceShadersDir,
                                            ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile = nullptr );
 
         /**
-         * @brief 도메인(`engine` · `common` · `game/<팩>`)마다 쿠킹 스테이징(@p cookedDir)의 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
+         * @brief 도메인(`engine` · `common` · `game/<팩>` — @p assetPaths 의 리소스 루트와 우선순위로 찾는다)마다 쿠킹 스테이징(@p cookedDir)의 @p shaderFolder 바이너리가 지금 소스에서 나온 것인지 보고 문제를 @p outListProblem 에 더합니다.
          * @details 판정은 스탬프를 쓰는 쪽(`writeCookStamp`)과 같은 수집 규칙 · 같은 해시다 — 규칙이 한 언어에만 있으므로 "두 언어가 같은 규칙인가" 를 볼 게이트가 없다.
          *          보는 것: 바이너리 폴더 · 스탬프 · 스탬프 판 · 도구 지문(스탬프의 `kToolchainKey` 줄), 스탬프에 빠진 · 바뀐 · 남은 소스, 소스마다 스탬프에 적힌 헤더가 지금도 같은지,
          *          바이너리가 하나라도 있는지, 리플렉션 매니페스트가 있는지와 매니페스트에 없는 바이너리(쿠커 레시피가 늘었는데 다시 베이크하지 않은 것). 소스가 없는 도메인은 건너뛴다.
@@ -274,9 +271,7 @@ namespace sw
          *          이 판정이 못 잡는다 — `findShadowedHeaders` 가 같은 이름을 오류로 막아 두므로 거기서 걸린다.
          *          `App --verify-shaders`(커밋 훅 · 배포 빌드)와 `ShaderCookStampTest` 가 부릅니다.
          */
-        static void verifyCookedShaders( string_view resourceRoot, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem );
-        /** @brief `verifyCookedShaders` 의 본체 — 도메인 발견의 기준인 우선순위 설정을 직접 받습니다(위 판은 `AssetPaths::getSearchPriority()` 를 넘긴다). */
-        static void verifyCookedShaders( string_view resourceRoot, const vector<string>& listPriority, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem );
+        static void verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, string_view shaderFolder, vector<string>& outListProblem );
 
         /**
          * @brief 파일 내용 해시 캐시(`ContentHash`)를 버려, 다음 조회가 다시 읽게 합니다(스탬프 읽기 캐시는 쿠킹마다의 값 `ShaderCookStampCache` 다).

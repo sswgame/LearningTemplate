@@ -211,10 +211,5 @@ namespace sw
          *          함수 정적의 소멸 순서에서 내리면 로더 잠금 아래 FreeLibrary 가 된다.
          */
         [[nodiscard]] static void* findDXCCreateInstance();
-        /**
-         * @brief 셰이더 소스 경로를 있는 디스크 파일로 풉니다 - 절대 경로(쿠커)면 그 파일, 아니면 리소스 id(런타임 · 검색 순서로 이긴 낱개 파일)입니다. 없으면 빈 값입니다.
-         * @details 컴파일 · 쿠킹 계획 · 셰이더 캐시 지문이 함께 쓰는 규칙 하나다(예전에는 세 곳이 따로 셈했고 캐시는 절대 경로를 리소스로만 풀었다).
-         */
-        [[nodiscard]] static std::optional<AbsolutePath> findSourceFile( string_view shaderPath );
     };
 } // namespace sw

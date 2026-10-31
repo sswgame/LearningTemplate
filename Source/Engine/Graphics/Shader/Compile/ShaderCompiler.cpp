@@ -40,27 +40,6 @@ namespace sw
     {
         struct ShaderCompilerInternal
         {
-            /** @brief 셰이더 #include 검색 디렉터리(engine/shaders, common/shaders, 소스 폴더)를 모읍니다. */
-            [[nodiscard]] static bool collectShaderIncludeDirs( const string& shaderAbsPath, vector<string>& outListDir )
-            {
-                outListDir.clear();
-                const string shaderDir = FileUtil::getDirectoryPart( shaderAbsPath );
-                if ( shaderDir.empty() == false )
-                    outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
-
-                // 쿠킹 스탬프도 같은 도메인의 헤더를 본다(`ShaderCooker::collectIncludeRootDomains`). 도메인 종류는 우선순위 설정에서 온다.
-                vector<string> listDomain;
-                if ( ShaderCooker::collectIncludeRootDomains( engine::getSubsystem<AssetPaths>().getSearchPriority(), listDomain ) == false )
-                    return false;
-                for ( const string& domain : listDomain )
-                {
-                    const std::optional<AbsolutePath> domainShaders = engine::getSubsystem<AssetPaths>().toDiskPath( FileUtil::joinPath( domain, "shaders" ) );
-                    if ( domainShaders.has_value() && FileUtil::isDirectory( domainShaders->str() ) )
-                        outListDir.push_back( domainShaders->str() );
-                }
-                return true;
-            }
-
             /** @brief 컴파일러가 연 파일 목록을 정렬하고 중복을 없앱니다(`ShaderCompileResult::_listIncludedFile` 의 규칙). */
             [[nodiscard]] static vector<string> sortUniqueIncludedFile( vector<string> listFile )
             {
@@ -70,14 +49,15 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
             /**
-             * @brief 여러 루트를 도는 ID3DInclude 입니다(common/shaders → engine/shaders/binding.hlsli 등). 연 파일을 적어 둡니다.
+             * @brief FXC 의 `#include` 를 include 규칙(`ShaderIncludeResolver`)으로 푸는 ID3DInclude 입니다. 연 파일을 적어 둡니다.
              * @details 기록은 이 객체 안이다 — 컴파일 호출마다 하나를 만들어 쓰므로 병렬 컴파일에서도 서로 섞이지 않는다(전역 · static 기록 금지).
              */
-            class MultiRootD3DInclude final : public ID3DInclude
+            class ResolverD3DInclude final : public ID3DInclude
             {
             public:
-                explicit MultiRootD3DInclude( vector<string> listRoot )
-                    : _listRoot{ std::move( listRoot ) }
+                ResolverD3DInclude( const ShaderIncludeResolver& resolver, const ShaderCompileInput& input )
+                    : _resolver{ resolver }
+                    , _input{ input }
                     , _listIncludedFile{}
                 {
                 }
@@ -95,26 +75,19 @@ namespace sw
                     if ( bInvalidIncludeArguments )
                         return E_FAIL;
 
-                    for ( const string& root : _listRoot )
-                    {
-                        const string candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root, pFileName ) );
-                        if ( FileUtil::isRegularFile( candidate ) == false )
-                            continue;
+                    vector<uint8>                     bytes;
+                    const std::optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes );
+                    if ( found.has_value() == false || bytes.empty() )
+                        return E_FAIL;
 
-                        vector<uint8> bytes;
-                        if ( FileUtil::readFile( candidate, bytes ) == false || bytes.empty() )
-                            continue;
-
-                        uint8* pHeap = static_cast<uint8*>( Memory::allocate( bytes.size() ) );
-                        if ( pHeap == nullptr )
-                            return E_OUTOFMEMORY;
-                        Memory::copy( pHeap, bytes.data(), bytes.size() );
-                        *ppData = pHeap;
-                        *pBytes = static_cast<UINT>( bytes.size() );
-                        _listIncludedFile.push_back( candidate ); // 읽은 파일만 적는다(찾지 못한 후보나 못 읽은 것은 컴파일 결과에 닿지 않았다)
-                        return S_OK;
-                    }
-                    return E_FAIL;
+                    uint8* pHeap = static_cast<uint8*>( Memory::allocate( bytes.size() ) );
+                    if ( pHeap == nullptr )
+                        return E_OUTOFMEMORY;
+                    Memory::copy( pHeap, bytes.data(), bytes.size() );
+                    *ppData = pHeap;
+                    *pBytes = static_cast<UINT>( bytes.size() );
+                    _listIncludedFile.push_back( found->str() ); // 읽은 파일만 적는다(찾지 못한 후보나 못 읽은 것은 컴파일 결과에 닿지 않았다)
+                    return S_OK;
                 }
 
                 STDMETHOD( Close )
@@ -126,8 +99,9 @@ namespace sw
                 }
 
             private:
-                vector<string> _listRoot;
-                vector<string> _listIncludedFile;
+                const ShaderIncludeResolver& _resolver;
+                const ShaderCompileInput&    _input;
+                vector<string>               _listIncludedFile;
             };
 #endif
 
@@ -229,7 +203,7 @@ namespace sw
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "ShaderCompileCache" ) );
             }
 
-            static string computeCachePath( const ShaderCompileDesc& desc, const string& absPathStr )
+            static string computeCachePath( const ShaderCompileDesc& desc, const ShaderCompileInput& input )
             {
                 const string cacheDir = getShaderCacheDirectory();
                 if ( cacheDir.empty() )
@@ -237,7 +211,7 @@ namespace sw
 
                 // 못 읽으면 내용 없이 해시한다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;
-                (void)FileUtil::readFile( absPathStr, sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
+                (void)FileUtil::readFile( input._source.str(), sourceBytes ); // 못 읽으면 내용 없이 해시한다(위 설명)
 
                 uint64 hash = HashUtil::computeStringHash64( desc._source.str(), false );
                 hash        = HashUtil::computeStringHash64( desc._entryPoint, false, hash );
@@ -296,7 +270,8 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
             /** @brief FXC 로 DXBC(D3D11, 행 우선)를 컴파일합니다. 실패하면 오류 글을 담고 false 입니다. */
-            [[nodiscard]] static bool compileDxbc( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
+            [[nodiscard]] static bool compileDxbc( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
+                                                   ShaderCompileResult& outResult )
             {
                 UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
                 if ( desc._bDebugCodegen != SW_FALSE )
@@ -304,7 +279,7 @@ namespace sw
 
                 Microsoft::WRL::ComPtr<ID3DBlob> codeBlob;
                 Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
-                wstring                          wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
+                const wstring                    wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
 
                 vector<D3D_SHADER_MACRO> listMacro;
                 listMacro.reserve( desc._listDefine.size() + 3 );
@@ -319,13 +294,7 @@ namespace sw
                 }
                 listMacro.push_back( { nullptr, nullptr } );
 
-                vector<string> listIncludeDir;
-                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
-                {
-                    outResult._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
-                    return false;
-                }
-                MultiRootD3DInclude includeHandler( std::move( listIncludeDir ) );
+                ResolverD3DInclude includeHandler( resolver, input );
 
                 HRESULT hr = D3DCompileFromFile(
                     wPath.c_str(),
@@ -367,17 +336,18 @@ namespace sw
             };
 
             /**
-             * @brief include 파일을 `FileUtil` 로 읽어 DXC 에 넘기고 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
+             * @brief DXC 가 고른 include 후보를 include 규칙(`ShaderIncludeResolver::readInclude`)으로 읽어 넘기고 `LoadSource` 가 연 파일을 적는 `IDxcIncludeHandler` 입니다.
              * @details DXC 기본 처리기(`CreateDefaultIncludeHandler`)는 자기 파일 API 로 디스크를 읽는다 - 엔진 파일 입구(경로 · 진단 · 디스크 흉내)를 건너뛰므로 쓰지 않는다.
              * @details 컴파일 호출마다 하나를 만든다. 기록은 이 객체 안이고 전역 · static 이 아니라서 컴파일을 병렬로 돌려도 섞이지 않는다.
              *          전이 include 도 DXC 가 이 처리기를 거쳐 읽으므로 모두 잡힌다. 참조 수로 사는 COM 객체다 — `make_unique(...).release()` 로 만들어
-             *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다.
+             *          `Attach` 로 소유권을 `DxcComPtr` 에 넘기고, 마지막 `Release()` 가 푼다. 기록은 소유자가 살아 있는 동안 읽는다. 해석기는 컴파일 호출보다 오래 산다.
              */
             class RecordingDXCInclude final : public IDxcIncludeHandler
             {
             public:
-                explicit RecordingDXCInclude( DxcComPtr<IDxcUtils> pUtils )
+                RecordingDXCInclude( DxcComPtr<IDxcUtils> pUtils, const ShaderIncludeResolver& resolver )
                     : _pUtils{ std::move( pUtils ) }
+                    , _resolver{ resolver }
                     , _listIncludedFile{}
                     , _refCount{ 1 }
                 {
@@ -396,18 +366,16 @@ namespace sw
                         return E_FAIL;
                     *ppIncludeSource = nullptr;
                     // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
-                    const string path = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
-                    if ( FileUtil::isRegularFile( path ) == false )
-                        return E_FAIL;
-                    vector<uint8> bytes;
-                    if ( FileUtil::readFile( path, bytes ) == false )
+                    vector<uint8>                     bytes;
+                    const std::optional<AbsolutePath> found = _resolver.readInclude( StringUtil::utf16ToUTF8( pFilename ), bytes );
+                    if ( found.has_value() == false )
                         return E_FAIL;
                     DxcComPtr<IDxcBlobEncoding> blob;
                     const HRESULT               hr = _pUtils->CreateBlob( bytes.data(), static_cast<UINT32>( bytes.size() ), DXC_CP_UTF8, dxcAddressOf( blob ) );
                     if ( FAILED( hr ) )
                         return hr;
                     *ppIncludeSource = blob.Detach();
-                    _listIncludedFile.push_back( path ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
+                    _listIncludedFile.push_back( found->str() ); // DXC 가 찾아 읽은 이름이다(후보를 못 찾은 호출은 적지 않는다)
                     return S_OK;
                 }
 
@@ -435,9 +403,10 @@ namespace sw
                 }
 
             private:
-                DxcComPtr<IDxcUtils> _pUtils;
-                vector<string>       _listIncludedFile;
-                atomic<uint32>       _refCount;
+                DxcComPtr<IDxcUtils>         _pUtils;
+                const ShaderIncludeResolver& _resolver;
+                vector<string>               _listIncludedFile;
+                atomic<uint32>               _refCount;
             };
 
             /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
@@ -540,7 +509,8 @@ namespace sw
              * @brief DXC 로 DXIL · SPIR-V 를 컴파일합니다. 성공하면 바이트코드(OpenGL 이면 내장 변수를 바꾼 것)를 담습니다.
              * @details 생성 · 소스 읽기 · 인자 · 컴파일 · 결과 읽기의 순서가 곧 의미이고 인자 글의 수명이 이 함수 안이라 더 나누지 않는다.
              */
-            static DxcOutcome compileDXC( const ShaderCompileDesc& desc, const string& absPathStr, const string& profile, ShaderCompileResult& outResult )
+            static DxcOutcome compileDXC( const ShaderCompileDesc& desc, const ShaderIncludeResolver& resolver, const ShaderCompileInput& input, const string& profile,
+                                          ShaderCompileResult& outResult )
             {
                 DxcCreateInstanceProc fnDXCCreateInstance = reinterpret_cast<DxcCreateInstanceProc>( ShaderCompiler::findDXCCreateInstance() );
                 if ( fnDXCCreateInstance == nullptr )
@@ -571,14 +541,14 @@ namespace sw
                     return DxcOutcome::NoOutput;
 
                 // 소유권은 includeHandler 로 넘기고, 기록은 pIncludeRecorder 로 읽는다(둘 다 이 호출 안에서만 산다).
-                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( utils ).release();
+                RecordingDXCInclude*          pIncludeRecorder = make_unique<RecordingDXCInclude>( utils, resolver ).release();
                 DxcComPtr<IDxcIncludeHandler> includeHandler;
                 includeHandler.Attach( pIncludeRecorder );
 
                 // 소스는 엔진 파일 입구로 읽는다(DXC `LoadFile` 은 자기 파일 API 다). 실패 로그는 readFile 이 남긴다.
-                const wstring wPath = StringUtil::utf8ToUTF16( absPathStr.c_str() );
+                const wstring wPath = StringUtil::utf8ToUTF16( input._source.c_str() );
                 vector<uint8> sourceBytes;
-                if ( FileUtil::readFile( absPathStr, sourceBytes ) == false )
+                if ( FileUtil::readFile( input._source.str(), sourceBytes ) == false )
                     return DxcOutcome::NoOutput;
 
                 wstring wEntryPoint = StringUtil::utf8ToUTF16( desc._entryPoint.c_str() );
@@ -596,15 +566,9 @@ namespace sw
                 listArgument.push_back( wProfile.c_str() );
                 listArgument.push_back( L"-Zpr" );
 
-                vector<string>  listIncludeDir;
                 vector<wstring> listIncludeDirW;
-                if ( collectShaderIncludeDirs( absPathStr, listIncludeDir ) == false )
-                {
-                    outResult._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
-                    return DxcOutcome::Rejected;
-                }
-                listIncludeDirW.reserve( listIncludeDir.size() );
-                for ( const string& dir : listIncludeDir )
+                listIncludeDirW.reserve( input._listIncludeRoot.size() );
+                for ( const AbsolutePath& dir : input._listIncludeRoot )
                 {
                     listIncludeDirW.push_back( StringUtil::utf8ToUTF16( dir.c_str() ) );
                     listArgument.push_back( L"-I" );
@@ -705,13 +669,6 @@ namespace sw
         }
     }
 
-    std::optional<AbsolutePath> ShaderCompiler::findSourceFile( string_view shaderPath )
-    {
-        // 절대 경로(쿠커)이거나 리소스 id(런타임)다 - 글의 모양으로 가른다. 작업 폴더에 같은 이름 파일이 있는지로 먼저 추측하지 않는다(그 파일을 컴파일할 수 있었다).
-        const std::optional<AbsolutePath> found = AbsolutePath::isStrictAbsolute( shaderPath ) ? AbsolutePath::tryMake( shaderPath ) : engine::getSubsystem<AssetPaths>().findLooseFile( shaderPath );
-        return found.has_value() && FileUtil::isRegularFile( found->str() ) ? found : std::nullopt;
-    }
-
     void* ShaderCompiler::findDXCCreateInstance()
     {
 #if defined( SW_HAS_DXC_API )
@@ -732,30 +689,35 @@ namespace sw
         result._bSuccess = false;
         result._bytecode.reserve( 4096 );
 
-        const std::optional<AbsolutePath> sourceFile = findSourceFile( desc._source.str() );
-        const string                      absPathStr = sourceFile.has_value() ? sourceFile->str() : string{};
-        if ( absPathStr.empty() )
+        // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
+        const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
+        if ( resolver.has_value() == false )
         {
-            result._errorMessage = "Shader source file not found: " + desc._source.str();
-            // 부르는 쪽이 존재 여부를 먼저 검사하는 것이 정상이다. 없는 파일은 ERROR 가 아니라 조용히 실패한다.
+            result._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
+            return result;
+        }
+        const std::optional<ShaderCompileInput> input = resolver->resolve( desc._source, result._errorMessage );
+        if ( input.has_value() == false )
+        {
+            SW_LOG_ERROR( "%#", result._errorMessage );
             return result;
         }
 
         // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
         vector<string> listShadowed;
-        if ( ShaderCooker::findShadowedHeaders( engine::getSubsystem<AssetPaths>().getRootFolderPath(), engine::getSubsystem<AssetPaths>().getSearchPriority(), absPathStr, listShadowed ) == false )
+        if ( ShaderCooker::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {
                 result._errorMessage += problem + "\n";
             }
             if ( result._errorMessage.empty() )
-                result._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
+                result._errorMessage = "Shader headers could not be checked for shadowing (see the error above).";
             SW_LOG_ERROR( "%#", result._errorMessage );
             return result;
         }
 
-        const string cachePath = Internal::computeCachePath( desc, absPathStr );
+        const string cachePath = Internal::computeCachePath( desc, *input );
         if ( cachePath.empty() == false ) // 의존 기록이 없으면(없는 항목 · 쓰는 중) 읽기 한 번이 "없음" 으로 답한다
         {
             // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
@@ -777,7 +739,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         if ( desc._targetFormat == ShaderTargetFormat::DXBC_D3D11 )
         {
-            if ( Internal::compileDxbc( desc, absPathStr, profile, result ) )
+            if ( Internal::compileDxbc( desc, resolver->getIncludeResolver(), *input, profile, result ) )
                 Internal::saveToCacheIfEnabled( cachePath, result );
             return result;
         }
@@ -795,7 +757,7 @@ namespace sw
 #endif // SW_PLATFORM_WINDOWS
 
 #if defined( SW_HAS_DXC_API )
-        const Internal::DxcOutcome outcome = Internal::compileDXC( desc, absPathStr, profile, result );
+        const Internal::DxcOutcome outcome = Internal::compileDXC( desc, resolver->getIncludeResolver(), *input, profile, result );
         if ( outcome == Internal::DxcOutcome::Compiled )
         {
             Internal::saveToCacheIfEnabled( cachePath, result );
