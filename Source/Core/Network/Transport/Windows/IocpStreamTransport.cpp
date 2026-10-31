@@ -9,6 +9,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 #include "Core/Time/MonotonicClock.h"
@@ -64,19 +65,6 @@ namespace sw
             static constexpr int32     kLoopWaitMilli            = 100;
             static constexpr int64     kSweepIntervalNanoseconds = 100 * constant::kNanosecondsPerMillisecond;
             static constexpr DWORD     kAcceptAddressBytes       = sizeof( sockaddr_in ) + 16;
-
-            static int64 toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * constant::kNanosecondsPerSecond ); }
-
-            static NetAddress makeNetAddress( const sockaddr_in& native ) { return NetAddress{ ntohl( native.sin_addr.s_addr ), ntohs( native.sin_port ) }; }
-
-            static sockaddr_in makeNativeAddress( const NetAddress& address )
-            {
-                sockaddr_in native{};
-                native.sin_family      = AF_INET;
-                native.sin_port        = htons( address._port );
-                native.sin_addr.s_addr = htonl( address._ipv4 );
-                return native;
-            }
 
             /** @brief 확장 함수(AcceptEx, ConnectEx)를 얻습니다. 함수 포인터 변수에 바로 받으므로 객체와 함수 포인터 사이의 캐스트가 없습니다. */
             template <typename TFunction>
@@ -199,7 +187,7 @@ namespace sw
             connection._remote                  = remote;
             connection._socket                  = socket;
             connection._lastReceiveNanoseconds  = MonotonicClock::nowNanoseconds();
-            connection._deadlineNanoseconds     = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings->_connectTimeoutSeconds );
+            connection._deadlineNanoseconds     = connection._lastReceiveNanoseconds + MonotonicClock::secondsToNanoseconds( _settings->_connectTimeoutSeconds );
             connection._pendingOperationCount   = 1; // 여는 쪽이 참조를 하나 잡는다. 열림 콜백(수락)이나 ConnectEx(연결)가 끝나면 놓는다.
             connection._closeReason             = StreamCloseReason::None;
             connection._state                   = state;
@@ -379,7 +367,7 @@ namespace sw
                     {
                         connection._state               = IocpConnectionState::Closing;
                         connection._closeReason         = StreamCloseReason::RemoteClose;
-                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings->_closeLingerSeconds );
+                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_closeLingerSeconds );
                     }
                     if ( connection._bSendPosted == SW_FALSE )
                         postSendLocked( connection ); // 큐가 비었으면 FIN 을 보내고 닫는다.
@@ -511,7 +499,7 @@ namespace sw
                 {
                     Internal::setNoDelay( accepted, _settings->_bTCPNoDelay == SW_TRUE );
                     IocpConnection*              pConnection = nullptr;
-                    const NetAddress             address     = Internal::makeNetAddress( remote );
+                    const NetAddress             address     = NativeSocketAddress::fromNative( remote );
                     const StreamConnectionHandle handle      = allocateConnection( accepted, address, true, IocpConnectionState::Open, pConnection );
                     _acceptedCount.fetch_add( 1, std::memory_order_relaxed );
                     _pHandler->onStreamOpened( handle, address, true ); // 받기는 열림 뒤에 건다. 열림이 항상 첫 콜백이어야 하기 때문이다.
@@ -560,7 +548,7 @@ namespace sw
                     listConnection.push_back( connection.get() );
                 }
             }
-            const int64 idleNanoseconds = Internal::toNanoseconds( _settings->_idleTimeoutSeconds );
+            const int64 idleNanoseconds = MonotonicClock::secondsToNanoseconds( _settings->_idleTimeoutSeconds );
             for ( IocpConnection* pConnection : listConnection )
             {
                 ScopedLock<mutex> lock{ pConnection->_mutex };
@@ -757,7 +745,7 @@ namespace sw
             return false;
         const BOOL exclusive = TRUE; // 다른 프로세스가 같은 포트를 가로채지 못하게 한다.
         (void)setsockopt( listenSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<const utf8*>( &exclusive ), sizeof( exclusive ) );
-        sockaddr_in local     = IocpStreamTransportInternal::makeNativeAddress( bindAddress );
+        sockaddr_in local     = NativeSocketAddress::toNative( bindAddress );
         int32       length    = sizeof( local );
         const bool  bListened = bind( listenSocket, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) == 0 &&
                                ::listen( listenSocket, state._settings->_listenBacklog ) == 0 &&
@@ -793,7 +781,7 @@ namespace sw
         const SOCKET socket = IocpStreamTransportInternal::openStreamSocket();
         if ( socket == INVALID_SOCKET )
             return StreamConnectionHandle{};
-        const sockaddr_in any = IocpStreamTransportInternal::makeNativeAddress( NetAddress{ 0, 0 } );
+        const sockaddr_in any = NativeSocketAddress::toNative( NetAddress{ 0, 0 } );
         if ( bind( socket, reinterpret_cast<const sockaddr*>( &any ), sizeof( any ) ) != 0 ||
              CreateIoCompletionPort( reinterpret_cast<HANDLE>( socket ), state._completionPort, IocpStreamTransportInternal::kSocketKey, 0 ) == nullptr )
         {
@@ -812,7 +800,7 @@ namespace sw
         IocpOperation&               operation = pConnection->_receiveOperation;
         std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
         operation._kind            = IocpOperationKind::Connect;
-        const sockaddr_in native   = IocpStreamTransportInternal::makeNativeAddress( remote );
+        const sockaddr_in native   = NativeSocketAddress::toNative( remote );
         const BOOL        bStarted = pConnectEx != nullptr &&
                               pConnectEx( socket, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ), nullptr, 0, nullptr, &operation._overlapped ) == TRUE;
         if ( bStarted == FALSE && ( pConnectEx == nullptr || WSAGetLastError() != ERROR_IO_PENDING ) )
@@ -856,7 +844,7 @@ namespace sw
             return;
         pConnection->_state               = IocpConnectionState::Closing;
         pConnection->_closeReason         = StreamCloseReason::LocalClose;
-        pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + IocpStreamTransportInternal::toNanoseconds( _state->_settings->_closeLingerSeconds );
+        pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _state->_settings->_closeLingerSeconds );
         pConnection->_bReceivePaused      = SW_FALSE; // 상대의 FIN 을 받아야 끝난다.
         _state->postReceiveLocked( *pConnection );
         _state->postSendLocked( *pConnection );

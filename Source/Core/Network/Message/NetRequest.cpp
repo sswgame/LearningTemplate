@@ -129,7 +129,7 @@ namespace sw
         pending._onResponse          = std::move( onResponse );
         pending._handle              = handle;
         pending._method              = method;
-        pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( options._timeoutSeconds * constant::kNanosecondsPerSecond );
+        pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( options._timeoutSeconds );
         NetRequestStatus failure     = NetRequestStatus::Ok;
         uint64           requestID   = 0;
         {
@@ -512,7 +512,7 @@ namespace sw
                 entry._body.assign( pBody, pBody + bodySize );
                 entry._bInProgress       = SW_FALSE;
                 entry._bDone             = SW_TRUE;
-                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( _settings->_idempotencyTTLSeconds * constant::kNanosecondsPerSecond );
+                entry._expireNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_idempotencyTTLSeconds );
                 listWaiter.swap( entry._listWaiter );
                 _listExpiry.emplace_back( inFlight._scope, entry._expireNanoseconds );
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );

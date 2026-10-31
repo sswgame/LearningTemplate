@@ -827,7 +827,7 @@ namespace sw
         }
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
-        session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * constant::kNanosecondsPerSecond ) : 0;
+        session._longRecordingEndNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( seconds ) : 0;
         session._longRecordingPath        = string( path );
         session._longRecordingProcessName = string( processName );
         session._bLongRecordingActive.store( true, std::memory_order_release );
@@ -926,7 +926,7 @@ namespace sw
                 SW_LOG_WARNING( "Slow tick %# us - trace not saved: %#", tickMicro, reply );
             }
             // 저장 자체가 이 틱을 늦췄다 — 쿨다운은 저장이 끝난 뒤부터 센다.
-            capture._slowCooldownEndNanos = MonotonicClock::nowNanoseconds() + static_cast<int64>( kSlowFrameCooldownSeconds * constant::kNanosecondsPerSecond );
+            capture._slowCooldownEndNanos = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( kSlowFrameCooldownSeconds );
             return;
         }
 

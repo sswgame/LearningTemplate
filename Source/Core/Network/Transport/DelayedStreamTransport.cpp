@@ -14,7 +14,7 @@ namespace sw
 {
     DelayedStreamTransport::DelayedStreamTransport( unique_ptr<IStreamTransport> pInner, float64 sendDelaySeconds )
         : _pInner{ std::move( pInner ) }
-        , _delayNanoseconds{ sendDelaySeconds > 0.0 ? static_cast<int64>( sendDelaySeconds * static_cast<float64>( constant::kNanosecondsPerSecond ) ) : 0 }
+        , _delayNanoseconds{ sendDelaySeconds > 0.0 ? MonotonicClock::secondsToNanoseconds( sendDelaySeconds ) : 0 }
         , _mutex{}
         , _listItem{}
         , _stop{}

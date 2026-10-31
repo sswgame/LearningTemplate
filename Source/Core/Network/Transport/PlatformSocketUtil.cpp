@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Network/Transport/NativeSocketAddress.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>
@@ -37,15 +38,6 @@ namespace sw
             static bool                   isWouldBlock() { return errno == EAGAIN || errno == EWOULDBLOCK; }
 #endif
             static NativeSocket toNative( uint64 socketHandle ) { return static_cast<NativeSocket>( socketHandle ); }
-
-            static sockaddr_in makeAddress( const NetAddress& address )
-            {
-                sockaddr_in native{};
-                native.sin_family      = AF_INET;
-                native.sin_port        = htons( address._port );
-                native.sin_addr.s_addr = htonl( address._ipv4 );
-                return native;
-            }
         };
     } // namespace
 } // namespace sw
@@ -138,7 +130,7 @@ namespace sw
 
     bool PlatformSocketUtil::sendTo( uint64 socketHandle, const NetAddress& to, const uint8* pData, int32 size )
     {
-        const sockaddr_in native = PlatformSocketUtilInternal::makeAddress( to );
+        const sockaddr_in native = NativeSocketAddress::toNative( to );
         const auto        sent   = sendto( PlatformSocketUtilInternal::toNative( socketHandle ), reinterpret_cast<const utf8*>( pData ), size, 0,
                                            reinterpret_cast<const sockaddr*>( &native ), sizeof( native ) );
         return sent == size;
@@ -152,9 +144,8 @@ namespace sw
                                                                       bufferSize, 0, reinterpret_cast<sockaddr*>( &from ), &length );
         if ( received < 0 )
             return PlatformSocketUtilInternal::isWouldBlock() ? SocketReceiveResult::WouldBlock : SocketReceiveResult::Error;
-        outFrom._ipv4 = ntohl( from.sin_addr.s_addr );
-        outFrom._port = ntohs( from.sin_port );
-        outSize       = static_cast<int32>( received );
+        outFrom = NativeSocketAddress::fromNative( from );
+        outSize = static_cast<int32>( received );
         return SocketReceiveResult::Received;
     }
 
@@ -175,7 +166,7 @@ namespace sw
         mmsghdr     arrMessage[kMaxBatch]{};
         for ( int32 index = 0; index < batchCount; ++index )
         {
-            arrAddress[index]                     = PlatformSocketUtilInternal::makeAddress( pViews[index]._to );
+            arrAddress[index]                     = NativeSocketAddress::toNative( pViews[index]._to );
             arrVector[index].iov_base             = const_cast<uint8*>( pViews[index]._pData );
             arrVector[index].iov_len              = static_cast<size_t>( pViews[index]._size );
             arrMessage[index].msg_hdr.msg_name    = &arrAddress[index];
@@ -228,9 +219,8 @@ namespace sw
             return 0;
         for ( int32 index = 0; index < received; ++index )
         {
-            pEntries[index]._from._ipv4 = ntohl( arrAddress[index].sin_addr.s_addr );
-            pEntries[index]._from._port = ntohs( arrAddress[index].sin_port );
-            pEntries[index]._size       = static_cast<int32>( arrMessage[index].msg_len );
+            pEntries[index]._from = NativeSocketAddress::fromNative( arrAddress[index] );
+            pEntries[index]._size = static_cast<int32>( arrMessage[index].msg_len );
         }
         return received;
 #endif

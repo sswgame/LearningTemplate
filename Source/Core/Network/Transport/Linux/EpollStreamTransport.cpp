@@ -10,6 +10,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -52,16 +53,6 @@ namespace sw
             static constexpr uint64 kListenTag                = ~0ull;      ///< epoll 데이터. 리슨 소켓이다(연결은 핸들 packed 값이며, 세대가 0xFFFFFFFF 에 닿기 전에는 겹치지 않는다).
             static constexpr uint64 kWakeTag                  = ~0ull - 1u; ///< epoll 데이터. eventfd 이다.
 
-            static int64       toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * constant::kNanosecondsPerSecond ); }
-            static NetAddress  makeNetAddress( const sockaddr_in& native ) { return NetAddress{ ntohl( native.sin_addr.s_addr ), ntohs( native.sin_port ) }; }
-            static sockaddr_in makeNativeAddress( const NetAddress& address )
-            {
-                sockaddr_in native{};
-                native.sin_family      = AF_INET;
-                native.sin_port        = htons( address._port );
-                native.sin_addr.s_addr = htonl( address._ipv4 );
-                return native;
-            }
             static void setNoDelay( int32 fd, bool bTCPNoDelay )
             {
                 const int32 value = bTCPNoDelay ? 1 : 0;
@@ -188,7 +179,7 @@ namespace sw
             connection._fd                     = fd;
             connection._loopIndex              = static_cast<int32>( _nextLoop.fetch_add( 1, std::memory_order_relaxed ) % static_cast<uint32>( _loopCount ) );
             connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
-            connection._deadlineNanoseconds    = connection._lastReceiveNanoseconds + Internal::toNanoseconds( _settings->_connectTimeoutSeconds );
+            connection._deadlineNanoseconds    = connection._lastReceiveNanoseconds + MonotonicClock::secondsToNanoseconds( _settings->_connectTimeoutSeconds );
             connection._closeReason            = StreamCloseReason::None;
             connection._state                  = state;
             connection._bAccepted              = bAccepted ? SW_TRUE : SW_FALSE;
@@ -354,7 +345,7 @@ namespace sw
                     {
                         connection._state               = EpollConnectionState::Closing;
                         connection._closeReason         = StreamCloseReason::RemoteClose;
-                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::toNanoseconds( _settings->_closeLingerSeconds );
+                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_closeLingerSeconds );
                     }
                     (void)flushLocked( connection );
                     return;
@@ -494,7 +485,7 @@ namespace sw
                 }
                 Internal::setNoDelay( fd, _settings->_bTCPNoDelay == SW_TRUE );
                 EpollConnection*             pConnection = nullptr;
-                const NetAddress             address     = Internal::makeNetAddress( remote );
+                const NetAddress             address     = NativeSocketAddress::fromNative( remote );
                 const StreamConnectionHandle handle      = allocateConnection( fd, address, true, EpollConnectionState::Open, pConnection );
                 _acceptedCount.fetch_add( 1, std::memory_order_relaxed );
                 _pHandler->onStreamOpened( handle, address, true ); // 등록 전이다. 열림이 첫 콜백이어야 한다.
@@ -519,7 +510,7 @@ namespace sw
                         listIndex.push_back( index );
                 }
             }
-            const int64 idleNanoseconds = Internal::toNanoseconds( _settings->_idleTimeoutSeconds );
+            const int64 idleNanoseconds = MonotonicClock::secondsToNanoseconds( _settings->_idleTimeoutSeconds );
             const bool  bStopping       = _stop.isStopRequested();
             for ( const uint32 index : listIndex )
             {
@@ -742,7 +733,7 @@ namespace sw
             return false;
         const int32 reuse = 1; // TIME_WAIT 에 남은 이전 서버의 포트를 바로 다시 연다(SO_REUSEPORT 가 아니므로 다른 프로세스와 포트를 나누지 않는다).
         (void)setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
-        sockaddr_in local              = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
+        sockaddr_in local              = NativeSocketAddress::toNative( bindAddress );
         socklen_t   length             = sizeof( local );
         const bool  bListenSetupFailed = bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings->_listenBacklog ) != 0 ||
                                         getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0;
@@ -781,7 +772,7 @@ namespace sw
             return StreamConnectionHandle{};
         EpollConnection*             pConnection = nullptr;
         const StreamConnectionHandle handle      = state.allocateConnection( fd, remote, false, EpollConnectionState::Connecting, pConnection );
-        const sockaddr_in            native      = EpollStreamTransportInternal::makeNativeAddress( remote );
+        const sockaddr_in            native      = NativeSocketAddress::toNative( remote );
         const int32                  result      = ::connect( fd, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ) );
         {
             ScopedLock<mutex> lock{ pConnection->_mutex };
@@ -835,7 +826,7 @@ namespace sw
             {
                 pConnection->_state               = EpollConnectionState::Closing;
                 pConnection->_closeReason         = StreamCloseReason::LocalClose;
-                pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + EpollStreamTransportInternal::toNanoseconds( _state->_settings->_closeLingerSeconds );
+                pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _state->_settings->_closeLingerSeconds );
                 pConnection->_bReceivePaused      = SW_FALSE;
                 pConnection->_bReadPending        = SW_TRUE; // 상대의 FIN 을 읽어야 끝난다.
             }

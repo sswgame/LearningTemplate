@@ -36,6 +36,8 @@ namespace sw
         }
         /** @brief 지금 시각(마이크로초)입니다. */
         static int64 nowMicroseconds() noexcept { return nowNanoseconds() / constant::kNanosecondsPerMicrosecond; }
+        /** @brief 설정 · 시한의 초(@p seconds)를 이 시계의 나노초 폭으로 바꿉니다(소수 아래는 버린다). 변환식을 호출부마다 두지 않는다. */
+        static constexpr int64 secondsToNanoseconds( float64 seconds ) noexcept { return static_cast<int64>( seconds * static_cast<float64>( constant::kNanosecondsPerSecond ) ); }
         /**
          * @brief `nowNanoseconds()` 기준 @p deadlineNanoseconds 까지 이 스레드를 재웁니다(이미 지났으면 바로 돌아온다). 고정 틱 루프의 잠자기입니다.
          * @details Windows 는 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION` — 없으면 `Sleep` 밀리초)로 1 ms 해상도 한계를 피하고,

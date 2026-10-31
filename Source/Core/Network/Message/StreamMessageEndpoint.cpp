@@ -521,7 +521,7 @@ namespace sw
         if ( _settings->_pingIntervalSeconds > 0.0 )
         {
             const int64 now      = MonotonicClock::nowNanoseconds();
-            const int64 interval = static_cast<int64>( _settings->_pingIntervalSeconds * constant::kNanosecondsPerSecond );
+            const int64 interval = MonotonicClock::secondsToNanoseconds( _settings->_pingIntervalSeconds );
             uint8       arrBody[StreamMessageEndpointInternal::kPingBodySize];
             for ( auto& [packed, lastPingNanoseconds] : _mapLastPingTime )
             {
