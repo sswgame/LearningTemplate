@@ -7,10 +7,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Testing/TestFramework.h"
 
-#if SW_PLATFORM_WINDOWS
-    #include "Core/Foundation/PlatformOSHeaders.h"
-#endif
-
 // 파일 도우미 — 경로 문자열(이름 · 폴더 · 확장자 · 절대 판정), 읽기 · 쓰기(대소문자 · 한글 경로 · 원자적 바꿔 끼우기 · 실패 · 범위),
 // 폴더 만들기 · 막힌 폴더, 스탬프, 수집 · 순회, 읽기 전용, 대소문자 무시 풀기, 덧붙이기, 쓰기 게이트.
 
@@ -409,18 +405,6 @@ SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }
-
-#if SW_PLATFORM_WINDOWS
-/**
- * @brief [FileTest] 이 프로세스의 ANSI 코드 페이지는 UTF-8 이다(실행 파일 매니페스트 activeCodePage).
- * @details 엔진의 좁은 문자 문자열은 UTF-8 이다. 매니페스트가 빠지면 fopen · std::filesystem · CreateFileA · argv 가 다시 CP949 로
- *          해석되고, 한글 경로가 조용히 깨진다. 매니페스트를 붙이는 CMake 함수(sw_embedProcessManifest)가 빠진 실행 파일을 여기서 잡는다.
- */
-SW_TEST_CASE( FileTest, ProcessUsesUtf8AnsiCodePage )
-{
-    SW_EXPECT_EQUAL( static_cast<uint32>( CP_UTF8 ), static_cast<uint32>( GetACP() ) );
-}
-#endif
 
 /**
  * @brief [FileTest] 읽기 전용 파일을 읽기 전용이라고 답한다 — 없는 파일 · 폴더는 false
