@@ -326,7 +326,7 @@ namespace sw
                  */
                 ContainerReadResult rejectElement( const JSONValue& element ) const
                 {
-                    SW_LOG_WARNING( "'%#' has an owned-pointer element that is not a single-key type object - element dropped", _propForOrphan._name.c_str() );
+                    SW_LOG_WARNING_ID( "Serialization.MalformedOwnedPointerElement", "'%#' has an owned-pointer element that is not a single-key type object - element dropped", _propForOrphan._name.c_str() );
                     if ( _pOutListOrphan == nullptr )
                         return ContainerReadResult::FieldFailed;
                     SchemaOrphanValue orphan;

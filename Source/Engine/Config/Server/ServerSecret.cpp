@@ -18,7 +18,7 @@ namespace sw
         if ( ProcessEnvironment::tryRead( environmentName, outSecret ) == false )
         {
             // 값이 아니라 변수 이름만 적는다 — 비밀이 로그 파일 · 수집기에 남지 않게.
-            SW_LOG_ERROR( "Server secret environment variable '%#' is not set", string{ environmentName }.c_str() );
+            SW_LOG_ERROR_ID( "Server.SecretNotSet", "Server secret environment variable '%#' is not set", string{ environmentName }.c_str() );
             return false;
         }
         return true;
