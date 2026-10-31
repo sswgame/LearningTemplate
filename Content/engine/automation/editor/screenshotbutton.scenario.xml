@@ -9,11 +9,13 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<DevCommand line="panel.focus game_view"/>
+	<Wait frames="20"/>
 	<EditorClick mark="gameView.screenshot"/>
 	<Wait frames="40"/>
 	<ExpectLog contains="Screenshot saved: " count="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus scene_view"/>
+	<Wait frames="20"/>
 	<EditorClick mark="sceneView.screenshot"/>
 	<Wait frames="40"/>
 	<ExpectLog contains="Screenshot saved: " count="2"/>

@@ -36,11 +36,13 @@
 	<!-- ② 메시 모디파이어 — 고른 것을 대상으로 휘기 -->
 	<Wait frames="5"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
+	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
 	<EditorClick mark="meshmodifiers.add"/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
 	<EditorClick mark="meshmodifiers.item.bend"/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorText value="80"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
@@ -52,7 +54,9 @@
 	<!-- ③ 인스펙터로 이름 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus inspector"/>
+	<Wait frames="10"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="PlacedCrate"/>

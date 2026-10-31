@@ -8,6 +8,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="30"/>
 	<DevCommand line="editor scene.new"/>
+	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>

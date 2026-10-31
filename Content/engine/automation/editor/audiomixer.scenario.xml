@@ -11,7 +11,9 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="40"/>
 	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
 	<EditorText value="Audio Mixer"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus audiomixer"/>

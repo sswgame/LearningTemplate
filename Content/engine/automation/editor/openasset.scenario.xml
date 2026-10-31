@@ -9,9 +9,12 @@
 	<Variable name="gv_editorWatchPanel" value="tile_map"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
+	<Wait frames="20"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="twod.tilemap"/>
 	<!-- 파일 목록(일 스레드)이 오기 전에 Enter 를 눌러도 목록이 오는 대로 연다 — 패널이 열릴 때까지 WaitUntil 로 기다린다 -->
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1"/>
@@ -20,7 +23,9 @@
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="twod.tilemap"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1"/>

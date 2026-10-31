@@ -20,19 +20,24 @@
 	<EditorClick mark="hierarchy.selectedRow" button="1"/>
 	<EditorClick mark="menu.scene.object.addComponent"/>
 	<EditorClick mark="hierarchy.addComponent.search"/>
+	<Wait frames="10"/>
 	<EditorText value="PointLight"/>
 	<EditorClick mark="hierarchy.addComponent.PointLightComponent"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="GameObject" component="PointLightComponent"/>
 	<!-- 3) 인스펙터에서 값 고치기 — 이름 칸을 눌러 전부 고르고 새 이름 + Enter -->
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
+	<Wait frames="10"/>
 	<EditorText value="Lamp"/>
+	<Wait frames="10"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" component="PointLightComponent"/>
 	<Expect watch="Editor.SceneDirty" equals="1"/>
 	<!-- 4) 되돌리기(단축키) · 다시 실행(커맨드) -->
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Lamp" count="0"/>

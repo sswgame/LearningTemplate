@@ -21,6 +21,7 @@
 	<!-- 레이어 더하기 -->
 	<Wait frames="5"/>
 	<EditorClick mark="tileMap.dataLayer.name"/>
+	<Wait frames="10"/>
 	<EditorText value="Cost"/>
 	<EditorClick mark="tileMap.dataLayer.add"/>
 	<WaitUntil watch="Editor.TileMapDataLayers" equals="1" timeoutFrames="60"/>

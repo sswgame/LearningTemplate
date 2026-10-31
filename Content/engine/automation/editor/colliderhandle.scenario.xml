@@ -11,6 +11,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
 	<Wait frames="15"/>
 	<DevCommand line="component.add RigidBodyComponent"/>
@@ -24,6 +25,7 @@
 	<EditorDrag mark="collider.handle.0.x+" dx="60" dy="0"/>
 	<WaitUntil watch="Editor.ColliderHandleCommitCount" equals="1" timeoutFrames="150"/>
 	<Expect watch="Editor.UndoCount" atLeast="1"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.ColliderHalfExtentX" near="0.5" tolerance="0.001" timeoutFrames="60"/>
 	<Wait frames="10"/>

@@ -21,8 +21,10 @@
 	<Wait frames="5"/>
 	<DevCommand line="panel.close prefab_editor"/>
 	<!-- ① 오브젝트에 컴포넌트를 단다 -->
+	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Prober"/>
@@ -46,6 +48,7 @@
 	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
 	<CaptureEditorUI file="inspectorhandle/picked.png"/>
 	<!-- ③ 되돌리기 -->
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>

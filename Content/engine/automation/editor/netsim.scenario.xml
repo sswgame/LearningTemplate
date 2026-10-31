@@ -15,6 +15,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus multiplayer"/>
+	<Wait frames="20"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="multiplayer.tab.inprocess" state="up"/>

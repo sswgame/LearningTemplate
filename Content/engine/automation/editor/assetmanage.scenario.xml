@@ -35,7 +35,9 @@
 	<EditorClick mark="contentBrowser.asset.probe.material" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.probe.material" state="up"/>
+	<Wait frames="12"/>
 	<EditorKey key="F2"/>
+	<Wait frames="15"/>
 	<EditorText value="probe_renamed"/>
 	<!-- 새 머티리얼을 만든 변경을 색인이 따라오기 전에 이름을 바꾸면 거절된다(아무것도 안 옮김) — 느린 백엔드(GL)에서 일어났다 -->
 	<Wait frames="7"/>
@@ -56,7 +58,9 @@
 	<EditorClick mark="contentBrowser.asset.probe_renamed.material" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.probe_renamed.material" state="up"/>
+	<Wait frames="12"/>
 	<EditorKey key="F2"/>
+	<Wait frames="15"/>
 	<EditorText value="probe"/>
 	<!-- 첫 이름 바꾸기가 남긴 파일 변경 알림이 느린 백엔드(GL)에서 뒤늦게 닿아 색인이 다시 낡을 수 있다 — 낡은 색인에서는 이름 바꾸기가 거절된다(아무것도 안 옮김) -->
 	<Wait frames="7"/>
@@ -72,6 +76,7 @@
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="up"/>
+	<Wait frames="12"/>
 	<EditorKey key="Delete"/>
 	<EditorClick mark="contentBrowser.delete.confirm" state="down"/>
 	<Wait frames="3"/>

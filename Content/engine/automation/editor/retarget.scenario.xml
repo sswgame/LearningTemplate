@@ -14,12 +14,16 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="40"/>
 	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
 	<EditorText value="Retarget Profile"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus charactereditor.retarget"/>
 	<!-- 새 프로필: 없는 경로 → 빈 문서 -->
+	<Wait frames="25"/>
 	<EditorClick mark="retarget.newPath"/>
+	<Wait frames="10"/>
 	<EditorText value="scratch/import/scenario_new.retarget.xml"/>
 	<EditorClick mark="retarget.new"/>
 	<Wait frames="45"/>
@@ -43,6 +47,7 @@
 	<Wait frames="5"/>
 	<EditorClick mark="retarget.section.Chains"/>
 	<EditorClick mark="retarget.targetPose.newBone"/>
+	<Wait frames="10"/>
 	<EditorText value="upperarm.l"/>
 	<EditorClick mark="retarget.targetPose.add"/>
 	<WaitUntil watch="Editor.RetargetPoseCount" equals="1" timeoutFrames="75"/>

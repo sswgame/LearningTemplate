@@ -39,6 +39,7 @@
 	<!-- ② 편집 -->
 	<EditorClick mark="prefabwindow.child.TestProp"/>
 	<EditorClick mark="inspector.property.SpriteComponent._boundsRadius" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="2"/>

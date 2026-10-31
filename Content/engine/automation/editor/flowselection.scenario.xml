@@ -32,6 +32,7 @@
 	<!-- ② 인스펙터로 이름 → 다른 창에 포커스를 두고 되돌리기 · 다시 실행 -->
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Renamed"/>
@@ -57,11 +58,13 @@
 	<Expect watch="Editor.SceneHash" sameAs="renamed"/>
 	<!-- ③ 지우기 → 되돌리기: 같은 오브젝트가 돌아와 골라진다 -->
 	<EditorClick mark="hierarchy.row.Renamed"/>
+	<Wait frames="10"/>
 	<EditorKey key="Delete"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="Renamed" count="0"/>
 	<Expect watch="Editor.SelectedNames" is="(none)"/>
 	<Expect watch="Editor.UndoIndex" equals="2"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+Z"/>
 	<Wait frames="20"/>
 	<EditorExpectObject name="Renamed" selected="1"/>

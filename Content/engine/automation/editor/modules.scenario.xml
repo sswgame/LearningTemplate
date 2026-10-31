@@ -10,6 +10,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus modules"/>
+	<Wait frames="15"/>
 	<EditorClick mark="modules.search"/>
 	<Wait frames="5"/>
 	<EditorText value="ThemePark"/>

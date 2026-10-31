@@ -28,7 +28,9 @@
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
 	<Wait frames="30"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -53,8 +55,11 @@
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
 	<!-- ③ 교체 뒤 같은 문서를 다시 열고 창을 앞으로 가져온다. 새 렌더러가 서서 프레임이 다시 오르고 타깃이 그려진다 -->
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -81,8 +86,11 @@
 	<Expect watch="RHI.SwapFailedCount" equals="0"/>
 	<Expect watch="Module.BindingsOk" equals="1"/>
 	<Expect watch="Module.GraphBroken" equals="0"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>

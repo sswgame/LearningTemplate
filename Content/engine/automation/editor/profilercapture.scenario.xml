@@ -42,6 +42,7 @@
 	<Wait frames="5"/>
 	<EditorClick mark="profiler.capture.pauseOnSpike"/>
 	<EditorClick mark="profiler.capture.spikeMs" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="250"/>

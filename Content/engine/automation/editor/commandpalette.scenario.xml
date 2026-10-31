@@ -7,7 +7,9 @@
 <Scenario name="editor.commandpalette" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
 	<Wait frames="60"/>
 	<EditorKey key="Ctrl+Shift+P"/>
+	<Wait frames="15"/>
 	<EditorText value="Self Test Ping"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="20"/>
 	<ExpectLog contains="Self-test registration command ran" count="1"/>

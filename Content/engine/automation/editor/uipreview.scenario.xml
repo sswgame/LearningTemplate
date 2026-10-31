@@ -20,7 +20,9 @@
 	<!-- 1) 에셋 열기: 기본 문서(pause)가 아닌 문서를 열어 작업공간 포커스가 패널에 전해지는지 본다 -->
 	<Wait frames="35"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="confirm_unsaved.ui.xml"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" atLeast="11" timeoutFrames="900"/>
@@ -28,7 +30,9 @@
 	<Expect watch="Editor.UIPreviewWidgetCount" atMost="11"/>
 	<Wait frames="5"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="pause.ui.xml"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<!-- pause 는 위젯 16 개, 앞 문서(confirm_unsaved)는 11 개다 — 글 감시 값만 기다리면 앞 문서의 글로 지나가 버린다 -->
 	<Wait frames="5"/>
@@ -71,8 +75,10 @@
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/>
 	<Wait frames="5"/>
 	<EditorClick mark="uipreview.inspector.search"/>
+	<Wait frames="10"/>
 	<EditorText value="opacity"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="0.5"/>
@@ -143,6 +149,7 @@
 	<Wait frames="10"/>
 	<EditorClick mark="uipreview.widget.Card"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="0.5"/>
@@ -158,6 +165,7 @@
 	<Wait frames="5"/>
 	<Expect watch="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="1"/>

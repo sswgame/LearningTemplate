@@ -11,6 +11,7 @@
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
+	<Wait frames="35"/>
 	<EditorClick mark="toolbar.play"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="180"/>
 	<Wait frames="5"/>

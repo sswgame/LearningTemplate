@@ -34,6 +34,7 @@
 	<DevCommand line="camera.reset"/>
 	<Wait frames="5"/>
 	<DevCommand line="camera.set 0 70 -100 35 0"/>
+	<Wait frames="15"/>
 	<EditorClick mark="viewport.visualizer.terrainbrush"/>
 	<Wait frames="1"/>
 	<WaitUntil watch="Editor.TerrainBrushToolActive" equals="1" timeoutFrames="60"/>

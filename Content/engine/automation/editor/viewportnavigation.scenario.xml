@@ -15,6 +15,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="10"/>
 	<DevCommand line="camera.reset"/>
+	<Wait frames="10"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<Wait frames="10"/>
 	<Expect watch="Editor.SceneViewOrthographic" equals="0"/>
@@ -33,6 +34,7 @@
 	<!-- ③ 오른쪽 단추 비행으로 옆으로 난 뒤 Alt 궤도 -->
 	<Wait frames="10"/>
 	<DevCommand line="camera.reset"/>
+	<Wait frames="10"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.5,0.5"/>
 	<Wait frames="5"/>
 	<Remember watch="Editor.SceneViewCameraX" as="xBeforeFly"/>

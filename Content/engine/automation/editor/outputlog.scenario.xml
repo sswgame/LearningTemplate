@@ -12,8 +12,10 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="20"/>
 	<DevCommand line="panel.focus console"/>
+	<Wait frames="15"/>
 	<EditorClick mark="console.level.info"/>
 	<EditorClick mark="console.filter"/>
+	<Wait frames="10"/>
 	<EditorText value="outputlog-collapse-probe"/>
 	<Wait frames="10"/>
 	<DevCommand line="log.repeat 10 warning outputlog-collapse-probe"/>

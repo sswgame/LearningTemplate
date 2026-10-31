@@ -44,7 +44,9 @@
 	<DevCommand line="editor editor.preferences"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus preferences"/>
+	<Wait frames="20"/>
 	<EditorClick mark="preferences.search"/>
+	<Wait frames="10"/>
 	<EditorText value="Debug HUD"/>
 	<EditorClick mark="preferences.debugHUD.shown"/>
 	<WaitUntil watch="Editor.DebugHUDEnabled" equals="0" timeoutFrames="60"/>

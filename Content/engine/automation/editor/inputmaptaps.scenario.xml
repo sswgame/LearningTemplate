@@ -13,11 +13,13 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="15"/>
 	<DevCommand line="panel.focus input_map"/>
+	<Wait frames="40"/>
 	<EditorClick mark="inputMap.filter"/>
 	<Wait frames="5"/>
 	<EditorText value="Confirm"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<Wait frames="15"/>
 	<EditorKey key="DownArrow"/>
 	<Wait frames="3"/>
 	<EditorKey key="DownArrow"/>

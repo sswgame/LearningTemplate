@@ -18,8 +18,10 @@
 	<Wait frames="5"/>
 	<DevCommand line="layout.reset"/>
 	<!-- ① 안쪽 프리팹 lamp -->
+	<Wait frames="20"/>
 	<EditorClick mark="hierarchy.create"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Lamp"/>
@@ -35,6 +37,7 @@
 	<!-- ② 바깥 프리팹 post — Lamp 를 자식으로 둔다 -->
 	<EditorClick mark="hierarchy.create"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="Post"/>
@@ -51,12 +54,14 @@
 	<DevCommand line="prefab.spawn {out}/lamp.prefab.xml"/>
 	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="LampTop"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
 	<EditorClick mark="inspector.property.PointLightComponent._radius" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="7"/>

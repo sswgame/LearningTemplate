@@ -41,6 +41,7 @@
 	<!-- ① 대상 고르기 · 휘기 더하기 · 각 넣기 -->
 	<Wait frames="8"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
+	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.useSelection"/>
 	<EditorClick mark="meshmodifiers.add"/>
 	<EditorClick mark="meshmodifiers.category.Deform"/>
@@ -48,6 +49,7 @@
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="meshmodifiers.param.Angle" mods="ctrl"/>
+	<Wait frames="10"/>
 	<EditorText value="80"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
@@ -79,6 +81,7 @@
 	<!-- ③ 곡선 목록: 항목 둘 → 둘째 항목 곡선 편집기에서 키 하나 더하기. 곡선 층도 GPU 변형 프로그램이 그려(MeshModifierGPUProgram 의 curvesculptlayered) GPU 미리보기가 그대로다 -->
 	<Wait frames="10"/>
 	<DevCommand line="panel.focus meshmodifiers.stack"/>
+	<Wait frames="15"/>
 	<EditorClick mark="meshmodifiers.add"/>
 	<EditorClick mark="meshmodifiers.category.Curve"/>
 	<EditorClick mark="meshmodifiers.item.curvesculptlayered"/>

@@ -15,7 +15,9 @@
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewred.material"/>
 	<Wait frames="30"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewred.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
@@ -27,7 +29,9 @@
 	<Variable name="gv_editorWatchAsset" value="engine/automation/editor/materialpreview/previewblue.material"/>
 	<Wait frames="2"/>
 	<EditorKey key="Ctrl+P"/>
+	<Wait frames="15"/>
 	<EditorText value="previewblue.material"/>
+	<Wait frames="15"/>
 	<EditorKey key="Enter"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Editor.MaterialDocumentIsWatchAsset" equals="1" timeoutFrames="600"/>
