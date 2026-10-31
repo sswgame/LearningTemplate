@@ -153,8 +153,10 @@ namespace sw
     /**
      * @class VulkanRHIDevice
      * @brief Vulkan 1.3 그래픽스와 컴퓨트 디바이스 구현입니다(Descriptor Indexing, bindless).
+     * @details 선택 능력(타임스탬프)은 상속하지 않는다. 디바이스가 가진 어댑터 멤버가 구현해 이 디바이스로 넘기고,
+     *          `findTimestampProvider` 가 그 멤버를 준다(언리얼 RHI 도 선택 기능을 디바이스의 기반 클래스로 늘리지 않는다).
      */
-    class VulkanRHIDevice : public IRHIDevice, public IRHITimestampProvider
+    class VulkanRHIDevice : public IRHIDevice
     {
         friend class VulkanRHICommandContext;
         friend class VulkanRHICommandList;
@@ -211,11 +213,11 @@ namespace sw
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
-        uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
-        bool               isGPUClockReadCheap() const override { return false; }
+        void               setTimestampEnabled( bool bEnabled ) { _bTimestampEnabled.store( bEnabled ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
+        uint32             getTimestampSlotCount() const;
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame );
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos );
+        bool               isGPUClockReadCheap() const { return false; }
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const
@@ -234,6 +236,25 @@ namespace sw
         void* getNativeContext() const override { return currentCommandBuffer(); }
 
     private:
+        /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
+        class TimestampProvider final : public IRHITimestampProvider
+        {
+        public:
+            explicit TimestampProvider( VulkanRHIDevice& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void               setTimestampEnabled( bool bEnabled ) override { _owner.setTimestampEnabled( bEnabled ); }
+            uint32             getTimestampSlotCount() const override { return _owner.getTimestampSlotCount(); }
+            [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
+            [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
+            bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+
+        private:
+            VulkanRHIDevice& _owner;
+        };
+
         /** @brief 쿼리 풀을 한 번만 만듭니다. */
         void ensureTimestampPool();
         /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
@@ -866,6 +887,8 @@ namespace sw
 
         sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
         sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;
+        /// @brief `IRHIDevice::_pTimestampProvider` 가 가리키는 능력 객체입니다.
+        TimestampProvider _timestampProvider;
 
         /// @brief 제출 순서에 마지막으로 들어간 패스 이름입니다(디바이스 손실 로그용). `_submittedMarkerMutex` 가 지킵니다.
         fixed_string<constant::kMaxBuffer64> _lastSubmittedEventMarker SW_GUARDED_BY( _submittedMarkerMutex );

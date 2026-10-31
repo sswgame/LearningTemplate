@@ -131,11 +131,12 @@ namespace sw
         , _listFreeTransferJob{}
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _timestampProvider{ *this }
         , _lastSubmittedEventMarker{}
         , _submittedMarkerMutex{}
     {
         _resourceImpl       = sw::make_unique<VulkanRHIResourceFactory>( this );
-        _pTimestampProvider = this;
+        _pTimestampProvider = &_timestampProvider;
     }
 
     VulkanRHIDevice::~VulkanRHIDevice()
