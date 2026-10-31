@@ -1,17 +1,13 @@
-/**
- * @file JoltPhysicsSceneVehicle.cpp
- * @brief `JoltPhysicsScene` 의 바퀴 차입니다. `VehicleConstraint` 와 `WheeledVehicleController`(엔진, 자동 변속, 디퍼렌셜), 원기둥 쓸기 바퀴 충돌을 씁니다.
- * @details 차는 구속이면서 스텝 리스너다(바퀴 충돌과 서스펜션은 스텝 앞에서 푼다). 만들 때 둘 다 넣고 지울 때 둘 다 뺀다. 차체 바디를 지우면
- *          그 차도 지운다(`destroyJointsOf`). 같은 입력과 같은 스텝이면 같은 결과가 나온다(같은 실행 안에서의 Jolt 결정성).
- */
 #include "pch.h"
 
+#include "Engine/Physics/Jolt/JoltVehicleSet.h"
+
+#include "Core/Container/vector.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Physics/Jolt/JoltPhysicsScene.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"
 
-#include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Vehicle/WheeledVehicleController.h>
 
@@ -21,23 +17,17 @@ namespace sw
 
     namespace
     {
-        struct JoltPhysicsSceneVehicleInternal
+        struct JoltVehicleSetInternal
         {
             /** @brief 바퀴 충돌 원기둥의 볼록 반지름 비율입니다(Jolt 권장값). */
             static constexpr float32 kCylinderConvexRadiusFraction = 0.1f;
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
-    PhysicsVehicleHandle JoltPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
+    PhysicsVehicleHandle JoltVehicleSet::create( PhysicsBodyHandle chassis, const JPH::BodyID& chassisBodyID, JPH::ObjectLayer testerLayer, const PhysicsWheeledVehicleDesc& desc )
     {
-        using Internal                               = JoltPhysicsSceneVehicleInternal;
-        const BodyRecord* pChassis                   = findBody( chassis );
-        const bool        bHasDrivenAxle             = desc._listDrivenAxle.size() >= 2 && ( desc._listDrivenAxle.size() % 2 ) == 0;
-        const bool        bInvalidVehicleDescription = pChassis == nullptr || pChassis->_type != PhysicsBodyType::Dynamic || desc._listWheel.empty() || bHasDrivenAxle == false;
-        if ( bInvalidVehicleDescription )
+        const bool bHasDrivenAxle = desc._listDrivenAxle.size() >= 2 && ( desc._listDrivenAxle.size() % 2 ) == 0;
+        if ( desc._listWheel.empty() || bHasDrivenAxle == false )
         {
             SW_LOG_ERROR( "Wheeled vehicle needs a dynamic chassis body, wheels and driven axle pairs" );
             return PhysicsVehicleHandle{};
@@ -93,22 +83,23 @@ namespace sw
         }
         settings.mController = pController;
 
-        VehicleRecord record;
+        Record record;
         {
-            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pChassis->_bodyID );
+            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), chassisBodyID );
             if ( lock.Succeeded() == false )
                 return PhysicsVehicleHandle{};
             record._pConstraint = JoltUtil::createObject<JPH::VehicleConstraint>( lock.GetBody(), settings );
         }
-        record._pTester = JoltUtil::createObject<JPH::VehicleCollisionTesterCastCylinder>( JoltLayerUtil::makeObjectLayer( pChassis->_layer, true ), Internal::kCylinderConvexRadiusFraction );
+        record._pTester = JoltUtil::createObject<JPH::VehicleCollisionTesterCastCylinder>( testerLayer, JoltVehicleSetInternal::kCylinderConvexRadiusFraction );
         record._pConstraint->SetVehicleCollisionTester( record._pTester );
-        record._chassis = chassis;
+        record._chassis       = chassis;
+        record._chassisBodyID = chassisBodyID;
         _system.AddConstraint( record._pConstraint );
         _system.AddStepListener( record._pConstraint );
         return PhysicsVehicleHandle::fromSlot( _vehicles.insert( std::move( record ) ) );
     }
 
-    void JoltPhysicsScene::removeVehicleConstraint( VehicleRecord& record )
+    void JoltVehicleSet::remove( Record& record )
     {
         if ( record._pConstraint == nullptr )
             return;
@@ -117,50 +108,46 @@ namespace sw
         record._pConstraint = nullptr;
     }
 
-    void JoltPhysicsScene::destroyVehicle( PhysicsVehicleHandle vehicle )
+    PhysicsBodyHandle JoltVehicleSet::destroy( PhysicsVehicleHandle vehicle )
     {
-        VehicleRecord record;
+        Record record;
         if ( _vehicles.take( vehicle.getSlot(), record ) == false )
-            return;
-        removeVehicleConstraint( record );
-        wakeBody( record._chassis );
+            return PhysicsBodyHandle{};
+        remove( record );
+        return record._chassis;
     }
 
-    bool JoltPhysicsScene::isVehicleValid( PhysicsVehicleHandle vehicle ) const
+    bool JoltVehicleSet::isValid( PhysicsVehicleHandle vehicle ) const
     {
         return _vehicles.get( vehicle.getSlot() ) != nullptr;
     }
 
-    void JoltPhysicsScene::setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake )
+    PhysicsBodyHandle JoltVehicleSet::setInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake )
     {
-        VehicleRecord* pRecord = _vehicles.get( vehicle.getSlot() );
+        Record* pRecord = _vehicles.get( vehicle.getSlot() );
         if ( pRecord == nullptr || pRecord->_pConstraint == nullptr )
-            return;
+            return PhysicsBodyHandle{};
         JPH::WheeledVehicleController* pController = static_cast<JPH::WheeledVehicleController*>( pRecord->_pConstraint->GetController() );
         // 엔진은 요 0 에서 앞 +Z, 오른쪽 +X(왼손)다. Jolt 의 오른쪽 조향(+1)은 오른손 좌표의 오른쪽(위 +Y, 앞 +Z 에서 -X)이라 부호를 바꿔서 넘긴다.
         pController->SetDriverInput( MathUtil::clamp( forward, -1.0f, 1.0f ), -MathUtil::clamp( right, -1.0f, 1.0f ), MathUtil::clamp( brake, 0.0f, 1.0f ),
                                      MathUtil::clamp( handBrake, 0.0f, 1.0f ) );
-        // 입력이 있으면 자는 차체를 깨운다(자는 바디에는 구속이 돌지 않는다).
         const bool bHasInput = forward != 0.0f || right != 0.0f || brake != 0.0f || handBrake != 0.0f;
-        if ( bHasInput )
-            wakeBody( pRecord->_chassis );
+        return bHasInput ? pRecord->_chassis : PhysicsBodyHandle{};
     }
 
-    bool JoltPhysicsScene::getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const
+    bool JoltVehicleSet::getState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const
     {
-        outState                     = PhysicsVehicleState{};
-        const VehicleRecord* pRecord = _vehicles.get( vehicle.getSlot() );
-        const BodyRecord*    pBody   = pRecord != nullptr ? findBody( pRecord->_chassis ) : nullptr;
-        if ( pBody == nullptr || pRecord->_pConstraint == nullptr )
+        outState              = PhysicsVehicleState{};
+        const Record* pRecord = _vehicles.get( vehicle.getSlot() );
+        if ( pRecord == nullptr || pRecord->_pConstraint == nullptr )
             return false;
         {
-            JPH::BodyLockRead lock( _system.GetBodyLockInterface(), pBody->_bodyID );
-            if ( lock.Succeeded() )
-            {
-                const JPH::Body& body    = lock.GetBody();
-                const JPH::Vec3  forward = body.GetRotation() * JPH::Vec3::sAxisZ();
-                outState._forwardSpeed   = body.GetLinearVelocity().Dot( forward );
-            }
+            JPH::BodyLockRead lock( _system.GetBodyLockInterface(), pRecord->_chassisBodyID );
+            if ( lock.Succeeded() == false )
+                return false;
+            const JPH::Body& body    = lock.GetBody();
+            const JPH::Vec3  forward = body.GetRotation() * JPH::Vec3::sAxisZ();
+            outState._forwardSpeed   = body.GetLinearVelocity().Dot( forward );
         }
         const JPH::WheeledVehicleController* pController = static_cast<const JPH::WheeledVehicleController*>( pRecord->_pConstraint->GetController() );
         outState._engineRpm                              = pController->GetEngine().GetCurrentRPM();
@@ -171,12 +158,39 @@ namespace sw
             outState._groundedWheelCount += listWheel[wheelIndex]->HasContact() ? 1u : 0u;
             if ( wheelIndex >= kPhysicsMaxWheelPoseCount )
                 continue;
-            // 바퀴 로컬 변환은 차체 기준이다. 바퀴 축은 X(바퀴 오른쪽), 위는 Y 로 만들었다(`createWheeledVehicle` 의 `mWheelUp` · `mWheelForward`).
+            // 바퀴 로컬 변환은 차체 기준이다. 바퀴 축은 X(바퀴 오른쪽), 위는 Y 로 만들었다(`create` 의 `mWheelUp` · `mWheelForward`).
             const JPH::Mat44 wheelTransform              = pRecord->_pConstraint->GetWheelLocalTransform( wheelIndex, JPH::Vec3::sAxisX(), JPH::Vec3::sAxisY() );
             outState._arrWheelPose[wheelIndex]._position = JoltUtil::toEngine( wheelTransform.GetTranslation() );
             outState._arrWheelPose[wheelIndex]._rotation = JoltUtil::toEngine( wheelTransform.GetQuaternion() );
             outState._wheelCount                         = wheelIndex + 1;
         }
         return true;
+    }
+
+    void JoltVehicleSet::destroyAttachedTo( span<const PhysicsBodyHandle> listBody )
+    {
+        vector<PhysicsVehicleHandle> listDoomed;
+        _vehicles.forEachHandle( [&]( SlotHandle slot, const Record& record )
+        {
+            for ( const PhysicsBodyHandle& body : listBody )
+            {
+                if ( record._chassis == body )
+                {
+                    listDoomed.push_back( PhysicsVehicleHandle::fromSlot( slot ) );
+                    return;
+                }
+            }
+        } );
+        for ( const PhysicsVehicleHandle& vehicle : listDoomed )
+        {
+            (void)destroy( vehicle ); // 차체도 지워지므로 깨우지 않는다
+        }
+    }
+
+    void JoltVehicleSet::clear()
+    {
+        _vehicles.forEach( [this]( Record& record )
+        { remove( record ); } );
+        _vehicles.clear();
     }
 } // namespace sw

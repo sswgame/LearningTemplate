@@ -10,7 +10,10 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Physics/Collision/CollisionLayers.h"
+
 #include <Jolt/Jolt.h>
+#include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Math/Vec3.h>
 
@@ -52,5 +55,16 @@ namespace sw
             else
                 T::operator delete( pObject );
         }
+    };
+
+    /** @brief 엔진 레이어와 Jolt 레이어 사이의 변환입니다. */
+    struct JoltLayerUtil
+    {
+        static constexpr JPH::uint kBroadPhaseLayerCount = 2;
+        static constexpr JPH::uint kObjectLayerCount     = CollisionLayers::kLayerCount * 2;
+
+        static JPH::ObjectLayer makeObjectLayer( uint8 layer, bool bMoving ) { return static_cast<JPH::ObjectLayer>( layer * 2u + ( bMoving ? 1u : 0u ) ); }
+        static uint8            getLayer( JPH::ObjectLayer objectLayer ) { return static_cast<uint8>( objectLayer / 2u ); }
+        static bool             isMoving( JPH::ObjectLayer objectLayer ) { return ( objectLayer & 1u ) != 0; }
     };
 } // namespace sw

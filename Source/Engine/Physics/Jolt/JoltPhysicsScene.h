@@ -21,6 +21,9 @@
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/Collision/PhysicsPairFilter.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Jolt/JoltSoftBodySet.h"
+#include "Engine/Physics/Jolt/JoltUtil.h"
+#include "Engine/Physics/Jolt/JoltVehicleSet.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 #include <Jolt/Jolt.h>
@@ -36,22 +39,6 @@
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
-#include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
-#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
-
-namespace sw
-{
-    /** @brief 엔진 레이어와 Jolt 레이어 사이의 변환입니다. */
-    struct JoltLayerUtil
-    {
-        static constexpr JPH::uint kBroadPhaseLayerCount = 2;
-        static constexpr JPH::uint kObjectLayerCount     = CollisionLayers::kLayerCount * 2;
-
-        static JPH::ObjectLayer makeObjectLayer( uint8 layer, bool bMoving ) { return static_cast<JPH::ObjectLayer>( layer * 2u + ( bMoving ? 1u : 0u ) ); }
-        static uint8            getLayer( JPH::ObjectLayer objectLayer ) { return static_cast<uint8>( objectLayer / 2u ); }
-        static bool             isMoving( JPH::ObjectLayer objectLayer ) { return ( objectLayer & 1u ) != 0; }
-    };
-} // namespace sw
 
 namespace sw
 {
@@ -294,27 +281,6 @@ namespace sw
             PhysicsBodyHandle               _innerBody{}; ///< 속 바디의 엔진 핸들이다(없으면 무효). 사용자 값은 캐릭터의 것이다.
         };
 
-        /** @brief 바퀴 차 하나입니다. 구속(스텝 리스너이기도 합니다)과 바퀴 충돌 테스터, 차체 바디를 담습니다. */
-        struct VehicleRecord
-        {
-            JPH::Ref<JPH::VehicleConstraint>      _pConstraint;
-            JPH::Ref<JPH::VehicleCollisionTester> _pTester;
-            PhysicsBodyHandle                     _chassis{};
-        };
-
-        /**
-         * @brief 소프트 바디 하나입니다. 접촉 이벤트 · 질의 결과의 바디 표(`_listBodyIDEntry`)에는 들지 않습니다(강체 이벤트를 내지 않는다).
-         * @details Jolt 는 정점을 질량 중심 기준으로 든다. 몸 자리를 고정해(`mUpdatePosition` 끔) 질량 중심 변환이 만든 때 그대로이고, 고정 정점은
-         *          그 변환의 역으로 로컬 위치를 만든다.
-         */
-        struct SoftBodyRecord
-        {
-            JPH::BodyID    _bodyID{};
-            vector<uint32> _listPinnedVertex;    ///< 고정 정점 인덱스(서술자 순서)
-            vector<float3> _listPinnedRestLocal; ///< 고정 정점의 서술자 로컬 위치(`_listPinnedVertex` 와 같은 순서)
-            uint32         _jointCount{ 0 };     ///< 스킨 구속이 기대하는 뼈 수(`_listInverseBind` 의 수 — 0 이면 스킨 구속이 없다)
-        };
-
         struct ShapeRecord
         {
             JPH::RefConst<JPH::Shape>       _pShape;
@@ -362,12 +328,6 @@ namespace sw
         void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
         /** @brief 바디들에 붙은 관절과 바퀴 차를 지웁니다(바디를 지우기 전에 호출합니다). */
         void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
-        /** @brief 구속을 시스템에서 제거합니다(구속과 스텝 리스너 모두). */
-        void removeVehicleConstraint( VehicleRecord& record );
-        /** @brief 소프트 바디를 시스템에서 빼고 지웁니다(`destroySoftBody` 와 소멸자가 함께 쓴다). */
-        void removeSoftBody( const SoftBodyRecord& record );
-        /** @brief 소프트 바디마다 늘어남 구속을 선으로 냅니다(`drawDebug`). */
-        void drawSoftBodies( IPhysicsDebugRenderer& renderer ) const;
         /** @brief 바디 쌍의 접촉을 받을지 쌍 필터로 정합니다(잡 스레드, `JoltContactListener::OnContactValidate`). */
         JPH::ValidateResult validateContact( const JPH::Body& bodyA, const JPH::Body& bodyB ) const;
         /** @brief 접촉이 생기거나 유지될 때 재질을 섞고 알림을 붙입니다(잡 스레드, `_reportMutex`). */
@@ -393,8 +353,8 @@ namespace sw
         SlotHandleTable<BodyRecord>               _bodies;
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;
-        SlotHandleTable<VehicleRecord>            _vehicles;
-        SlotHandleTable<SoftBodyRecord>           _softBodies;
+        JoltVehicleSet                            _vehicles;   ///< 바퀴 차(`_system` 뒤에 선언 — 먼저 사라진다)
+        JoltSoftBodySet                           _softBodies; ///< 소프트 바디(`_system` · `_tempAllocator` 뒤에 선언)
         SlotHandleTable<ShapeRecord>              _shapes;
         vector<BodyIDEntry>                       _listBodyIDEntry;
         PhysicsPairFilter                         _pairFilter;

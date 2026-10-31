@@ -1,21 +1,13 @@
-/**
- * @file JoltPhysicsSceneSoftBody.cpp
- * @brief `JoltPhysicsScene` 의 소프트 바디(천 · 헤어 카드)입니다. `SoftBodySharedSettings` 에 정점 · 면을 넣고 늘어남 · 비틀림 · 굽힘 구속을 만듭니다.
- * @details 정점은 씬 스텝(`PhysicsSystem::Update`)이 강체와 함께 푼다. 고정 정점은 역질량 0 이라 구속이 움직이지 않고, `setSoftBodyPinnedTransform`
- *          이 위치를 직접 쓴다(Jolt 의 키네마틱 정점 방식). 몸 자리는 만든 때 그대로 둔다(`mUpdatePosition` 끔) — 정점이 질량 중심 기준이라
- *          몸이 정점을 따라 옮겨 다니면 고정 정점의 로컬 위치를 매번 다시 맞춰야 한다. 천이 멀리 가지 않는 쓰임(옷 · 깃발 · 커튼)이라 넓은 단계 상자가
- *          커지는 값은 작다.
- *          굽힘 구속은 거리형(`EBendType::Distance`, 공유 변 맞은편 두 정점 사이 거리)이다. 이면각형(`Dihedral`)은 쓰지 않는다 — 두 삼각형이 180° 로
- *          접혀 법선이 반대가 되면 각도 부호(`(n2 × n1) · e`)가 반올림 잡음으로 정해져 보정이 반복마다 뒤집히고, 바닥에 떨어져 접히는 천이
- *          수만 m 로 발산했다(Windows 에서 떨어뜨리는 자세 24 가지 중 4 가지, 리눅스 CI 는 기본 자세에서). 거리형은 접혀도 특이점이 없다.
- */
 #include "pch.h"
 
-#include "Engine/Physics/Jolt/JoltPhysicsScene.h"
+#include "Engine/Physics/Jolt/JoltSoftBodySet.h"
+
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Physics/Jolt/JoltUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
-#include <Jolt/Jolt.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/SoftBody/SoftBodyCreationSettings.h>
 #include <Jolt/Physics/SoftBody/SoftBodyMotionProperties.h>
@@ -29,7 +21,7 @@ namespace sw
     {
         static_assert( PhysicsSoftBodySkinnedVertex::kMaxWeightCount == JPH::SoftBodySharedSettings::Skinned::cMaxSkinWeights, "skin weight count follows Jolt" );
 
-        struct JoltPhysicsSceneSoftBodyInternal
+        struct JoltSoftBodySetInternal
         {
             /** @brief 엔진 행렬(행-벡터, 이동은 4 행)을 Jolt 행렬(열-벡터, 이동은 4 열)로 옮깁니다 — 엔진의 행이 Jolt 의 열이다. */
             static JPH::Mat44 toJoltMatrix( const float4x4& matrix )
@@ -174,13 +166,10 @@ namespace sw
             }
         };
     } // namespace
-} // namespace sw
 
-namespace sw
-{
-    PhysicsSoftBodyHandle JoltPhysicsScene::createSoftBody( const PhysicsSoftBodyDesc& desc )
+    PhysicsSoftBodyHandle JoltSoftBodySet::create( const PhysicsSoftBodyDesc& desc )
     {
-        using Internal = JoltPhysicsSceneSoftBodyInternal;
+        using Internal = JoltSoftBodySetInternal;
         if ( Internal::validateDesc( desc ) == false )
             return PhysicsSoftBodyHandle{};
         JPH::Ref<JPH::SoftBodySharedSettings> pShared = Internal::makeSharedSettings( desc );
@@ -201,7 +190,7 @@ namespace sw
             return PhysicsSoftBodyHandle{};
         }
 
-        SoftBodyRecord record;
+        Record record;
         record._bodyID           = bodyID;
         record._listPinnedVertex = desc._listPinnedVertex;
         record._listPinnedRestLocal.reserve( desc._listPinnedVertex.size() );
@@ -213,30 +202,30 @@ namespace sw
         return PhysicsSoftBodyHandle::fromSlot( _softBodies.insert( std::move( record ) ) );
     }
 
-    void JoltPhysicsScene::removeSoftBody( const SoftBodyRecord& record )
+    void JoltSoftBodySet::remove( const Record& record )
     {
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         bodyInterface.RemoveBody( record._bodyID );
         bodyInterface.DestroyBody( record._bodyID );
     }
 
-    void JoltPhysicsScene::destroySoftBody( PhysicsSoftBodyHandle softBody )
+    void JoltSoftBodySet::destroy( PhysicsSoftBodyHandle softBody )
     {
-        SoftBodyRecord record;
+        Record record;
         if ( _softBodies.take( softBody.getSlot(), record ) == false )
             return;
-        removeSoftBody( record );
+        remove( record );
     }
 
-    bool JoltPhysicsScene::isSoftBodyValid( PhysicsSoftBodyHandle softBody ) const
+    bool JoltSoftBodySet::isValid( PhysicsSoftBodyHandle softBody ) const
     {
         return _softBodies.get( softBody.getSlot() ) != nullptr;
     }
 
-    bool JoltPhysicsScene::getSoftBodyVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const
+    bool JoltSoftBodySet::getVertices( PhysicsSoftBodyHandle softBody, vector<float3>& outListPosition ) const
     {
         outListPosition.clear();
-        const SoftBodyRecord* pRecord = _softBodies.get( softBody.getSlot() );
+        const Record* pRecord = _softBodies.get( softBody.getSlot() );
         if ( pRecord == nullptr )
             return false;
         JPH::BodyLockRead lock( _system.GetBodyLockInterface(), pRecord->_bodyID );
@@ -253,9 +242,9 @@ namespace sw
         return true;
     }
 
-    void JoltPhysicsScene::setSoftBodyPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation )
+    void JoltSoftBodySet::setPinnedTransform( PhysicsSoftBodyHandle softBody, const float3& position, const quaternion& rotation )
     {
-        const SoftBodyRecord* pRecord = _softBodies.get( softBody.getSlot() );
+        const Record* pRecord = _softBodies.get( softBody.getSlot() );
         if ( pRecord == nullptr || pRecord->_listPinnedVertex.empty() )
             return;
         {
@@ -278,9 +267,9 @@ namespace sw
         _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 
-    void JoltPhysicsScene::setSoftBodySkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll )
+    void JoltSoftBodySet::setSkinningPose( PhysicsSoftBodyHandle softBody, const vector<float4x4>& listJointWorld, bool bHardSkinAll )
     {
-        const SoftBodyRecord* pRecord = _softBodies.get( softBody.getSlot() );
+        const Record* pRecord = _softBodies.get( softBody.getSlot() );
         if ( pRecord == nullptr )
             return;
         if ( pRecord->_jointCount == 0 || listJointWorld.size() != pRecord->_jointCount )
@@ -301,17 +290,17 @@ namespace sw
             listJoint.reserve( listJointWorld.size() );
             for ( const float4x4& jointWorld : listJointWorld )
             {
-                listJoint.push_back( worldToBody * JoltPhysicsSceneSoftBodyInternal::toJoltMatrix( jointWorld ) );
+                listJoint.push_back( worldToBody * JoltSoftBodySetInternal::toJoltMatrix( jointWorld ) );
             }
             pMotion->SkinVertices( centerOfMass, listJoint.data(), static_cast<JPH::uint>( listJoint.size() ), bHardSkinAll, _tempAllocator );
         }
         _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 
-    void JoltPhysicsScene::drawSoftBodies( IPhysicsDebugRenderer& renderer ) const
+    void JoltSoftBodySet::drawDebug( IPhysicsDebugRenderer& renderer ) const
     {
         const float4 color{ 0.3f, 0.9f, 0.9f, 1.0f };
-        _softBodies.forEachHandle( [&]( SlotHandle, const SoftBodyRecord& record )
+        _softBodies.forEachHandle( [&]( SlotHandle, const Record& record )
         {
             JPH::BodyLockRead lock( _system.GetBodyLockInterface(), record._bodyID );
             if ( lock.Succeeded() == false )
@@ -326,5 +315,12 @@ namespace sw
                 renderer.drawLine( JoltUtil::toEngine( from ), JoltUtil::toEngine( to ), color );
             }
         } );
+    }
+
+    void JoltSoftBodySet::clear()
+    {
+        _softBodies.forEach( [this]( Record& record )
+        { remove( record ); } );
+        _softBodies.clear();
     }
 } // namespace sw

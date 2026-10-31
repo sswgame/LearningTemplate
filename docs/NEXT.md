@@ -14,11 +14,25 @@
 
 ## 남은 일
 
+### 0. 사용자가 시킨 일 — 빠짐없이 (2026-11-01)
+
+에이전트 없이 직접 한다. 이름만 보지 말고 내용을 읽고 판단한다. 빌드 통과는 판단 기준이 아니라 마지막 확인이다.
+
+1. 크기만 줄이려 한 클래스를 여러 cpp 로 쪼갠 것을 모두 고친다 — 떼어 낼 책임이면 클래스로, 아니면 한 파일로(아래 1 절 목록).
+2. cpp 와 헤더 짝이 맞지 않는 파일을 모두 확인해, 꼭 그래야 하는 경우(플랫폼별 구현 · 스스로 등록) 외에는 고친다.
+3. 이름 꼬리 · 빈 짝 · 파일 이름 스위치가 남았는지 다시 훑는다(`*DevCommands` 는 에디터 명령 모듈 하나만 남음 — 이름 · 폴더도 정리).
+4. 통합 대기 브랜치 둘(아래 1 절)은 내용을 읽고 받아들일 것만 가져온다. 끝난 worktree 는 지운다.
+5. 위가 끝나면 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 절의 "남김" 줄 포함.
+6. 확인한 상태(Debug 빌드 · 단위 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
+7. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
+
 ### 1. 진행 중 (2026-10-31)
 
 | 일 | 상태 |
 |---|---|
-| SOLID · 프로젝트 구성 점검 | 작업자 진행 중(아래 5 절) |
+| 크기만 줄이려 쪼갠 클래스(전면 구조 정리) | 에이전트 없이 직접 내용을 읽고 고친다(메모리 `no-agents`). 떼어 낸 부분이 자기 상태 · 책임을 가지면 별도 클래스, 아니면 본 파일로 합친다. 대상: Jolt/Box2D 씬(질의 · 차량 · 연체), FramePassExecutor(Passes · Compute · Draw · Extension · Occlusion · NanCheck), FrameRenderer(Views · Resources · Transients · Constants · ScenePreview), D3D11/D3D12/Vulkan/GL RHIDevice · ResourceFactory 분할, RTSWorld · HorrorMatch · MechArenaWorld · ScheduleSystem · AbilityComponent · StressTestScene, InputMap(Evaluate · Serialization), ModelImportUtil · MaterialUtil · Material(XML), AudioEngine(Events), FileUtil(FileSystem), GameObjectManager(Tick), ShaderCooker(CookStamp), DestructionState/Damage, FramePostProcess. 찾는 법: scratchpad `scatter.py`(멤버 정의가 여러 cpp 에 흩어진 클래스) · `pairs2.py`(같은 이름 헤더 없는 cpp). 플랫폼별 구현(Windows/Posix/X11 …)과 스스로 등록하는 파일은 정상 |
+| 통합 대기 브랜치 | `worktree-agent-a553e85cb60a845aa`(SOLID GF/Editor/App — GameFramework/Base → Runtime 이름 바꾸기 983 파일 포함), `tests-integration`(하네스 · 단위 테스트 이식, 하위 브랜치 6 개 병합본). 내용을 직접 읽고 받아들일 것만 가져온다 |
+| SOLID 점검 남은 표 | StructureRefactor 7 절(Core · Engine 과 GF · Editor · App 두 표)의 "남김" 줄 — IEditorPanel 분리, 모듈 수명 두 벌(EditorModuleManager · GameModuleManager), App · Server 프레임 · 종료 두 벌, 파일 감시 4 개, BinaryStream · ByteStream 두 모델 등 |
 
 ### 2. 테스트 · 시나리오 공백
 

@@ -55,10 +55,7 @@ namespace sw
                     code                          = bHasParent ? pCulture->_parentCode : CultureTable::makeParentCode( code );
                 }
             }
-        };
 
-        struct LocalizationManagerInternal
-        {
             /** @brief 두 리소스 id 가 같은 파일인지 확인합니다(구분자 · 대소문자 무시). */
             static bool isSamePath( string_view lhs, string_view rhs )
             {
