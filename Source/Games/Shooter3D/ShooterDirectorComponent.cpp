@@ -24,7 +24,6 @@
 
 #include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Character/Control/ControlSystem.h"
-#include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -541,14 +540,8 @@ namespace sw
             return;
         }
         // 끄면 플레이어 조종자에게 돌려주고 AI 를 정리한다. 이미 다른 조종자(플레이어)가 조종하고 있으면 그대로 둔다.
-        const ShooterAutoAimControllerComponent* pAI = pAIObject != nullptr ? pAIObject->getComponent<ShooterAutoAimControllerComponent>() : nullptr;
-        if ( pPawn->isPossessed() == false || ( pAI != nullptr && pAI->getPawn() == pPawn->getHandle() ) )
-        {
-            PlayerControllerComponent* pPlayer = ControlSystem::findOrCreatePlayerController( manager, 0 );
-            if ( pPlayer != nullptr )
-                pPlayer->possess( *pPawn );
+        if ( ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoPlayController ) )
             SW_LOG_INFO( "[Shooter] the player took the body back" );
-        }
         if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }

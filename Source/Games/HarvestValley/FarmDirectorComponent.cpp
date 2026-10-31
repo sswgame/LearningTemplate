@@ -16,12 +16,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Character/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
+#include "GameFramework/Base/Character/Control/ControlSystem.h"
 #include "GameFramework/Base/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -511,11 +510,9 @@ namespace sw
 
     bool FarmDirectorComponent::isFarmerDrivenByAI() const
     {
-        GameObjectManager*   pManager    = getObjectManager();
-        const PawnComponent* pPawn       = findFarmerPawn();
-        const GameObject*    pAutoFarmer = pManager != nullptr ? pManager->resolveGameObject( _autoFarmerObject ) : nullptr;
-        const Component*     pController = pPawn != nullptr && pManager != nullptr ? pManager->resolveComponent( pPawn->getController() ) : nullptr;
-        return pController != nullptr && pAutoFarmer != nullptr && pController->getOwner() == pAutoFarmer;
+        const GameObjectManager* pManager = getObjectManager();
+        const PawnComponent*     pPawn    = findFarmerPawn();
+        return pManager != nullptr && pPawn != nullptr && ControlSystem::isPawnControlledBy( *pManager, *pPawn, _autoFarmerObject );
     }
 
     const utf8* FarmDirectorComponent::getButtonName( FarmButton button )
@@ -550,23 +547,8 @@ namespace sw
                 pAI->possess( *pPawn );
             return;
         }
-        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다. 씬에 없으면 스폰한다(조종 시스템이 자동 빙의로 스폰하는 것과 같다).
-        PlayerControllerComponent* pPlayer = nullptr;
-        for ( PlayerControllerComponent* pCandidate : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
-        {
-            if ( pCandidate != nullptr && pCandidate->getPlayerIndex() == 0 )
-            {
-                pPlayer = pCandidate;
-                break;
-            }
-        }
-        if ( pPlayer == nullptr )
-        {
-            GameObject* pObject = manager.createGameObject( hashed_string( "PlayerController" ) );
-            pPlayer             = pObject != nullptr ? pObject->addComponent<PlayerControllerComponent>() : nullptr;
-        }
-        if ( pPlayer != nullptr && pPlayer->getPawn() != pPawn->getHandle() )
-            pPlayer->possess( *pPawn );
+        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다(씬에 없으면 만든다).
+        (void)ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoFarmerObject );
     }
 
     void FarmDirectorComponent::spawnField( GameObjectManager& manager )

@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -49,6 +50,14 @@ namespace sw
          * @details 오브젝트를 만들기 때문에 게임 스레드의 틱 밖에서 불러야 한다. 자동 빙의나 자동 플레이를 끌 때 플레이어에게 폰을 돌려주는 곳이 쓴다.
          */
         static PlayerControllerComponent* findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex );
+        /** @brief @p pawn 을 지금 @p controllerObject 위의 조종자가 쥐고 있으면 true 입니다. 디렉터가 자동 플레이 AI 가 폰을 가졌는지 묻는다. */
+        static bool isPawnControlledBy( const GameObjectManager& manager, const PawnComponent& pawn, GameObjectHandle controllerObject );
+        /**
+         * @brief 자동 플레이를 끌 때 폰을 플레이어 0 의 조종자에게 돌려줍니다. 폰이 빈 채이거나 @p autoPlayObject 의 조종자가 쥐었을 때만 옮기며 그때 true 입니다.
+         * @details 다른 조종자(컷신 등)가 쥔 폰은 그대로 둔다. 게임 스레드의 틱 밖에서 부른다(조종자를 만들 수 있다). 언리얼 GameMode 의 `SwapPlayerControllers` 자리 —
+         *          디렉터 넷이 같은 되돌리기를 저마다 적던 것을 한 곳으로 모았다.
+         */
+        static bool returnPawnToPlayer( GameObjectManager& manager, PawnComponent& pawn, GameObjectHandle autoPlayObject );
         /** @brief 폰과 조종자가 하나도 등록되어 있지 않으면 시스템을 뗍니다. */
         static void releaseIfUnused( GameObjectManager& manager );
 

@@ -111,6 +111,23 @@ namespace sw
         return pPlayer;
     }
 
+    bool ControlSystem::isPawnControlledBy( const GameObjectManager& manager, const PawnComponent& pawn, GameObjectHandle controllerObject )
+    {
+        const GameObject*          pObject     = manager.resolveGameObject( controllerObject );
+        const ControllerComponent* pController = pObject != nullptr ? manager.resolveComponent( pawn.getController() ) : nullptr;
+        return pController != nullptr && pController->getOwner() == pObject;
+    }
+
+    bool ControlSystem::returnPawnToPlayer( GameObjectManager& manager, PawnComponent& pawn, GameObjectHandle autoPlayObject )
+    {
+        if ( pawn.isPossessed() && isPawnControlledBy( manager, pawn, autoPlayObject ) == false )
+            return false;
+        PlayerControllerComponent* pPlayer = findOrCreatePlayerController( manager, 0 );
+        if ( pPlayer != nullptr && pPlayer->getPawn() != pawn.getHandle() )
+            pPlayer->possess( pawn );
+        return true;
+    }
+
     InputManager* ControlSystem::findInputManager() const
     {
         return _pInputOverride != nullptr ? _pInputOverride : game::findSubsystem<InputManager>();

@@ -13,11 +13,10 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Character/Control/ControlSystem.h"
 #include "GameFramework/Base/Character/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Base/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -341,11 +340,9 @@ namespace sw
 
     bool ArenaDirectorComponent::isPlayerDrivenByAI() const
     {
-        GameObjectManager*   pManager    = getObjectManager();
-        const PawnComponent* pPlayerPawn = findPlayerPawn();
-        const GameObject*    pAutoBattle = pManager != nullptr ? pManager->resolveGameObject( _autoBattleObject ) : nullptr;
-        const Component*     pController = pPlayerPawn != nullptr && pManager != nullptr ? pManager->resolveComponent( pPlayerPawn->getController() ) : nullptr;
-        return pController != nullptr && pAutoBattle != nullptr && pController->getOwner() == pAutoBattle;
+        const GameObjectManager* pManager    = getObjectManager();
+        const PawnComponent*     pPlayerPawn = findPlayerPawn();
+        return pManager != nullptr && pPlayerPawn != nullptr && ControlSystem::isPawnControlledBy( *pManager, *pPlayerPawn, _autoBattleObject );
     }
 
     PawnComponent* ArenaDirectorComponent::findPlayerPawn() const
@@ -551,23 +548,8 @@ namespace sw
                 pAI->possess( *pPawn );
             return;
         }
-        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다. 씬에 없으면 스폰한다(조종 시스템이 자동 빙의로 스폰하는 것과 같다).
-        PlayerControllerComponent* pPlayer = nullptr;
-        for ( PlayerControllerComponent* pCandidate : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
-        {
-            if ( pCandidate != nullptr && pCandidate->getPlayerIndex() == 0 )
-            {
-                pPlayer = pCandidate;
-                break;
-            }
-        }
-        if ( pPlayer == nullptr )
-        {
-            GameObject* pObject = manager.createGameObject( hashed_string( "PlayerController" ) );
-            pPlayer             = pObject != nullptr ? pObject->addComponent<PlayerControllerComponent>() : nullptr;
-        }
-        if ( pPlayer != nullptr && pPlayer->getPawn() != pPawn->getHandle() )
-            pPlayer->possess( *pPawn );
+        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다(씬에 없으면 만든다).
+        (void)ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoBattleObject );
     }
 
     void ArenaDirectorComponent::spawnProjectile( const ProjectileRequest& request )
