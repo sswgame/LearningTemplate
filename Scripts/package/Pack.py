@@ -13,7 +13,7 @@
 | `Client` | `Ninja-Shipping` | `App.exe` | 없음 |
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
-스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL 과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
+스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL(쿠킹 전용 셰이더 컴파일러는 뺀다)과 그 타깃의 실행 파일, `THIRD_PARTY_NOTICES.txt`, 그리고 `Packs/` 가운데 공용 팩과 그 게임의 팩만 베낀다
 (`Bin/Packs` 에는 모든 게임의 팩이 구워져 있다 — 이름은 `listPackNameOfGame` 이 게임 프리셋의 `_packRoot` 로 정한다). 쿠킹은 그 타깃의 실행 파일이
 `--cook-all` 로 한다(엔진의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
@@ -49,6 +49,9 @@ kMapTargetExecutable: dict[str, str] = {"Client": "App.exe" if sys.platform == "
                                         "Server": "Server.exe" if sys.platform == "win32" else "Server"}
 #: 실행 파일 옆에 두는 공유 라이브러리 확장자.
 kListLibrarySuffix: tuple[str, ...] = (".dll",) if sys.platform == "win32" else (".so",)
+#: 쿠킹에만 쓰는 공유 라이브러리(파일 이름의 `lib` 를 뗀 줄기) — 셰이더 컴파일러(DXC). 빌드가 Bin 에 두는 것은 App 이 쿠커라서이고(`sw_deployRuntimeDependencies`),
+#: 배포 App 은 미리 쿠킹한 셰이더만 읽어 패키지에는 넣지 않는다. 폴더로 가르지 않는 이유: dxcompiler 가 dxil 을 이름으로 다시 찾아 실행 파일 폴더 밖에 두면 서명하지 못한다.
+kListCookOnlyLibraryStem: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
 #: Bin 에서 베끼는 폴더 · 파일.
 kPackFolderName = "Packs"
 kNoticeFileName = "THIRD_PARTY_NOTICES.txt"
@@ -102,14 +105,19 @@ def makeStagingDir(outputRoot: Path, game: str, target: str) -> Path:
     return outputRoot / f"{game}-{target}"
 
 
+def isCookOnlyLibrary(path: Path) -> bool:
+    """쿠킹에만 쓰는 공유 라이브러리(`kListCookOnlyLibraryStem`)면 True 입니다."""
+    return path.stem.lower().removeprefix("lib") in kListCookOnlyLibraryStem
+
+
 def selectStagedEntries(binDir: Path, target: str) -> list[Path]:
-    """스테이징이 베끼는 Bin 의 항목입니다(그 타깃의 실행 파일, 맨 위 공유 라이브러리, 서드파티 고지). 팩은 `selectStagedPacks` 가 고른다."""
+    """스테이징이 베끼는 Bin 의 항목입니다(그 타깃의 실행 파일, 쿠킹 전용을 뺀 맨 위 공유 라이브러리, 서드파티 고지). 팩은 `selectStagedPacks` 가 고른다."""
     listEntry: list[Path] = []
     executable = binDir / kMapTargetExecutable[target]
     if executable.is_file():
         listEntry.append(executable)
     for path in sorted(binDir.iterdir()):
-        if path.is_file() and path.suffix.lower() in kListLibrarySuffix:
+        if path.is_file() and path.suffix.lower() in kListLibrarySuffix and isCookOnlyLibrary(path) is False:
             listEntry.append(path)
     notice = binDir / kNoticeFileName
     if notice.exists():
@@ -202,9 +210,12 @@ def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagi
 
 
 def verifyPackage(request: PackageRequest, stagingDir: Path) -> None:
-    """실행 파일이 있고, 서버 패키지에 클라이언트 실행 파일이 들지 않았는지 본다."""
+    """실행 파일이 있고, 서버 패키지에 클라이언트 실행 파일이, 패키지에 쿠킹 전용 라이브러리가 들지 않았는지 본다."""
     if (stagingDir / kMapTargetExecutable[request.target]).is_file() is False:
         raise PackageError(f"{kMapTargetExecutable[request.target]} is missing from the package")
+    listLeaked = [path.name for path in stagingDir.rglob("*") if path.is_file() and isCookOnlyLibrary(path)]
+    if listLeaked:
+        raise PackageError(f"cook-only libraries leaked into the package: {', '.join(listLeaked)}")
     otherTarget = "Client" if request.target == "Server" else "Server"
     if (stagingDir / kMapTargetExecutable[otherTarget]).exists():
         raise PackageError(f"{kMapTargetExecutable[otherTarget]} leaked into the {request.target} package")

@@ -73,14 +73,12 @@ sw_splitShippingDebugInfo(App)
 
 # ------------------------------------------------------------------------------
 # 2) 런타임 DLL 복사: DXC, Vulkan 검증 레이어(+mimalloc)
-#    구성마다 실제로 쓰는 것만 배포한다 — 무조건 복사하면 Shipping 산출물에
-#    셰이더 컴파일러와 검증 레이어가 따라 들어간다.
+#    구성마다 실제로 쓰는 것만 Bin 에 둔다.
 # ------------------------------------------------------------------------------
 
-# DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일과 DXIL 리플렉션에 쓰이는데, 배포 빌드는 둘 다
-# 하지 않는다. 셰이더는 미리 쿠킹하고(ShaderCache), 바인딩 리플렉션도 쿠킹할 때 쿠킹해 둔
-# 매니페스트를 읽는다(ShaderReflectionLibrary). 상용 엔진이 셰이더 컴파일러를 배포하지 않는
-# 것과 같은 구조다.
+# DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹에 쓰인다. 배포 App 은 런타임에 컴파일하지 않지만
+# (셰이더는 미리 쿠킹 — ShaderCache, 바인딩 리플렉션도 쿠킹해 둔 매니페스트 — ShaderReflectionLibrary) 빌드의 쿠커라 Bin 에는 둔다.
+# 배포 패키지에는 넣지 않는다(`Scripts/package/Pack.py` 스테이징이 뺀다) — 상용 엔진이 셰이더 컴파일러를 배포하지 않는 것과 같다.
 # Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켜므로 Debug 구성에만, Tracy 클라이언트는 개발 빌드 · Windows 에만
 # (Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다) — 고르기는 sw_deployRuntimeDependencies 가 한다.
 sw_deployRuntimeDependencies(App)

@@ -271,15 +271,13 @@ function(sw_keepImportLibraryIfUnchanged TARGET_NAME)
 	)
 endfunction()
 
-# 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만(무조건 복사하면 배포 산출물에 셰이더 컴파일러 · 검증 레이어가 따라 들어간다).
-#   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(테스트 — TestBin 이라 배포물과 섞이지 않는다)
+# 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만.
+#   DXC        : 모든 구성. 개발 빌드는 런타임 HLSL 컴파일 · DXIL 리플렉션에, 배포 빌드는 App 이 쿠커(`CookAssets` · `Pack.py` 의 `--cook-all`)라 셰이더 쿠킹에 쓴다.
+#                배포 패키지에는 들지 않는다 — 스테이징(`Scripts/package/Pack.py` 의 kListCookOnlyLibraryStem)이 뺀다(언리얼도 셰이더 컴파일러는 쿠커 쪽에만 둔다).
 #   검증 레이어 : sw_vulkan_validation 인 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다. 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 function(sw_deployRuntimeDependencies TARGET_NAME)
-	cmake_parse_arguments(ARG "ALWAYS_DXC" "" "" ${ARGN})
-	if(ARG_ALWAYS_DXC OR NOT SW_SHIPPING_BUILD)
-		sw_copyDXCDLLs(${TARGET_NAME})
-	endif()
+	sw_copyDxcDlls(${TARGET_NAME})
 	if(sw_vulkan_validation)
 		sw_copyVulkanValidationRuntime(${TARGET_NAME})
 	endif()
