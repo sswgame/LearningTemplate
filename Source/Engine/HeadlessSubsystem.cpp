@@ -521,33 +521,15 @@ namespace sw
              */
             [[nodiscard]] static bool enterEditorToolTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
-                bool   bGatherText = false;
-                bool   bCheckText  = false;
-                bool   bExportPo   = false;
-                string importPoPath;
-                commandLine.getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
-                commandLine.getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
-                commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
-                commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-                const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
-
-                bool bImportTextures     = false;
-                bool bCheckTextures      = false;
-                bool bImportModels       = false;
-                bool bCheckModels        = false;
-                bool bImportHeightfields = false;
-                bool bCheckHeightfields  = false;
-                commandLine.getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
-                commandLine.getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-                commandLine.getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
-                commandLine.getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-                commandLine.getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
-                commandLine.getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
-                const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
-                if ( bAnyLocalization == false && bAnyImport == false )
+                bool bAnyEditorTool = false;
+                for ( const CommandLineArgument argument : kArrEditorToolArgument )
+                {
+                    bAnyEditorTool = bAnyEditorTool || commandLine.isArgumentProvided( argument );
+                }
+                if ( bAnyEditorTool == false )
                     return false;
                 inoutState.enterHeadless();
-                SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
+                SW_LOG_INFO( "Starting Headless (editor tools: localization or asset import/check)..." );
                 return true;
             }
         };

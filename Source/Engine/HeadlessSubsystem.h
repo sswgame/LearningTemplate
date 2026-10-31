@@ -7,12 +7,31 @@
  *          역방향 의존으로 적는다.
  */
 #pragma once
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
+    /**
+     * @brief 에디터 모듈이 하는 헤드리스 작업(현지화 도구 · 원본 임포트 · 대조)의 인자입니다. 엔진은 이것이 하나라도 적혔으면 창 · RHI 없이 세우고,
+     *        App 의 작업 표(`AppHeadlessTasks`)가 모듈을 올려 부른다. 새 에디터 도구 작업은 인자를 여기와 그 표에 함께 더한다.
+     * @details 예전에는 엔진이 같은 인자를 한 줄씩 따로 다시 읽었다(작업 표 둘이 어긋나면 헤드리스로 서지 않거나 창을 띄웠다).
+     */
+    inline constexpr CommandLineArgument kArrEditorToolArgument[] = {
+        CommandLineArgument::GATHER_TEXT,
+        CommandLineArgument::CHECK_TEXT,
+        CommandLineArgument::EXPORT_PO,
+        CommandLineArgument::IMPORT_PO,
+        CommandLineArgument::IMPORT_TEXTURES,
+        CommandLineArgument::CHECK_TEXTURES,
+        CommandLineArgument::IMPORT_MODELS,
+        CommandLineArgument::CHECK_MODELS,
+        CommandLineArgument::IMPORT_HEIGHTFIELDS,
+        CommandLineArgument::CHECK_HEIGHTFIELDS,
+    };
+
     /** @brief 헤드리스 작업의 결과입니다(호스트 소유). */
     struct HeadlessTaskState
     {

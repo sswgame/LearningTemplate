@@ -83,7 +83,7 @@ namespace sw
                 return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
             }
 
-            /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. */
+            /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. 에디터 모듈의 작업이면 인자를 `kArrEditorToolArgument` 에도 더한다(엔진이 헤드리스로 서는 판정). */
             static constexpr AppHeadlessTasks::TaskFunction kArrHeadlessTask[] = {
                 &runCrashReporter,
                 &runLocalizationTools,
