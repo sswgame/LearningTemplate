@@ -103,10 +103,10 @@ namespace sw
         _pDevice = nullptr;
     }
 
-    bool ReflectionProbeBaker::captureFace( Scene& scene, uint32 size, vector<float3>& outListPixel, string* pOutError )
+    bool ReflectionProbeBaker::captureFace( Scene& scene, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
-        outListPixel.clear();
+        outFace._bytes.clear();
         bool bRendered = true;
         for ( uint32 frameIndex = 0; frameIndex < Internal::kWarmupFrameCount && bRendered; ++frameIndex )
         {
@@ -115,10 +115,9 @@ namespace sw
             _pDevice->endFrame( false, false );
             _pDevice->waitIdle( RHIWaitIdleReason::Capture );
         }
-        vector<uint8>     bytes;
         RHITextureMipSpan layout{};
         RHIFormat         format{ RHIFormat::R8G8B8A8_UNORM };
-        if ( bRendered == false || _renderer->getCapture().readbackTransient( Internal::kCaptureAttachment, bytes, layout, format ) == false )
+        if ( bRendered == false || _renderer->getCapture().readbackTransient( Internal::kCaptureAttachment, outFace._bytes, layout, format ) == false )
         {
             Internal::setError( pOutError, "the capture renderer could not draw or read LitColor" );
             return false;
@@ -129,24 +128,48 @@ namespace sw
             Internal::setError( pOutError, "LitColor is not an RGBA16F target of the capture size - the deferred pipeline changed" );
             return false;
         }
-        outListPixel.resize( static_cast<size_t>( size ) * size );
-        for ( uint32 row = 0; row < size; ++row )
-        {
-            for ( uint32 column = 0; column < size; ++column )
-            {
-                uint16 arrHalf[4]{};
-                Memory::copy( arrHalf, bytes.data() + static_cast<size_t>( row ) * layout._rowBytes + static_cast<size_t>( column ) * sizeof( arrHalf ), sizeof( arrHalf ) );
-                outListPixel[static_cast<size_t>( row ) * size + column] =
-                    float3{ Internal::decodeHalf( arrHalf[0] ), Internal::decodeHalf( arrHalf[1] ), Internal::decodeHalf( arrHalf[2] ) };
-            }
-        }
+        // 풀기(half → float)는 여기서 하지 않는다 - GPU 가 없어도 되는 CPU 일이라 워커가 접기 · 거르기와 함께 한다(`makeProbeData`).
+        outFace._rowBytes = layout._rowBytes;
+        outFace._size     = size;
         return true;
     }
 
-    bool ReflectionProbeBaker::bakeProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeAsset& outData, string* pOutError )
+    bool ReflectionProbeBaker::makeProbeData( const ReflectionProbeCapture& capture, ReflectionProbeAsset& outData, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
         outData.clear();
+        ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
+        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount; ++faceIndex )
+        {
+            const ReflectionProbeFaceCapture& source = capture._arrFace[faceIndex];
+            ReflectionProbeFace&              face   = arrFace[faceIndex];
+            const size_t                      size   = source._size;
+            face._size                               = source._size;
+            face._viewProj                           = source._viewProj;
+            face._forward                            = source._forward;
+            if ( source._bytes.size() < size * source._rowBytes )
+            {
+                Internal::setError( pOutError, "a captured face is shorter than its layout" );
+                return false;
+            }
+            face._listPixel.resize( size * size );
+            for ( size_t row = 0; row < size; ++row )
+            {
+                for ( size_t column = 0; column < size; ++column )
+                {
+                    uint16 arrHalf[4]{};
+                    Memory::copy( arrHalf, source._bytes.data() + row * source._rowBytes + column * sizeof( arrHalf ), sizeof( arrHalf ) );
+                    face._listPixel[row * size + column] = float3{ Internal::decodeHalf( arrHalf[0] ), Internal::decodeHalf( arrHalf[1] ), Internal::decodeHalf( arrHalf[2] ) };
+                }
+            }
+        }
+        return ReflectionProbeFilter::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData, pOutError );
+    }
+
+    bool ReflectionProbeBaker::captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture, string* pOutError )
+    {
+        using Internal         = ReflectionProbeBakerInternal;
+        outCapture             = ReflectionProbeCapture{};
         const bool bCannotBake = _renderer == nullptr || _pDevice == nullptr || scene.getObjectManager() == nullptr;
         if ( bCannotBake )
         {
@@ -173,33 +196,32 @@ namespace sw
         scene.setActiveGameCamera( pCamera );
         _renderer->setOutputSizeOverride( faceSize, faceSize );
 
-        ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-        bool                bCaptured = true;
+        outCapture._capturePosition = capturePosition;
+        outCapture._resolution      = probe.getResolution();
+        outCapture._sampleCount     = probe.getBakeSampleCount();
+        bool bCaptured              = true;
         for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount && bCaptured; ++faceIndex )
         {
             const Internal::FaceBasis& basis = Internal::kArrFaceBasis[faceIndex];
             pCamera->setLocalPosition( capturePosition );
             pCamera->lookAt( capturePosition + basis._forward, basis._up );
             manager.flushSceneTransforms();
-            ReflectionProbeFace& face = arrFace[faceIndex];
-            face._size                = faceSize;
-            face._viewProj            = pCamera->getViewProjectionMatrix( 1.0f );
-            face._forward             = pCamera->getCameraForward();
-            bCaptured                 = captureFace( scene, faceSize, face._listPixel, pOutError );
+            ReflectionProbeFaceCapture& face = outCapture._arrFace[faceIndex];
+            face._viewProj                   = pCamera->getViewProjectionMatrix( 1.0f );
+            face._forward                    = pCamera->getCameraForward();
+            bCaptured                        = captureFace( scene, faceSize, face, pOutError );
         }
         // 카메라를 지우면 직접 고른 카메라가 풀린다(클래스 설명).
         manager.destroyObject( pCameraObject );
-        if ( bCaptured == false )
-            return false;
-        return ReflectionProbeFilter::makeFromFaces( capturePosition, arrFace, probe.getResolution(), Internal::kLevelCount, probe.getBakeSampleCount(), outData, pOutError );
+        return bCaptured;
     }
 
-    bool ReflectionProbeBaker::bakeProbes( IRHIDevice& device, RenderThread* pRenderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
-                                           vector<ReflectionProbeAsset>& outListData, string* pOutError )
+    bool ReflectionProbeBaker::captureProbes( IRHIDevice& device, RenderThread* pRenderThread, Scene& scene, const vector<ReflectionProbeComponent*>& listProbe,
+                                              vector<ReflectionProbeCapture>& outListCapture, string* pOutError )
     {
         using Internal = ReflectionProbeBakerInternal;
-        outListData.clear();
-        outListData.resize( listProbe.size() );
+        outListCapture.clear();
+        outListCapture.resize( listProbe.size() );
         // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL, DX11)는 이 스레드가 잡는다(PortraitBatchUtil 과 같은 길).
         if ( pRenderThread != nullptr )
             pRenderThread->waitIdle( RHIWaitIdleReason::Capture );
@@ -216,7 +238,7 @@ namespace sw
         for ( size_t probeIndex = 0; probeIndex < listProbe.size() && bAllBaked; ++probeIndex )
         {
             const ReflectionProbeComponent* pProbe = listProbe[probeIndex];
-            if ( pProbe == nullptr || baker.bakeProbe( scene, *pProbe, outListData[probeIndex], pOutError ) == false )
+            if ( pProbe == nullptr || baker.captureProbe( scene, *pProbe, outListCapture[probeIndex], pOutError ) == false )
                 bAllBaked = false;
         }
         baker.shutdown();

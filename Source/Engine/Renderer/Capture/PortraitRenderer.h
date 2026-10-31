@@ -30,6 +30,15 @@ namespace sw
         float32 _padding{ 1.15f };     ///< 경계 구 반지름에 곱하는 여백
         float4  _backgroundColor{ 0.10f, 0.11f, 0.13f, 1.0f };
     };
+
+    /** @brief GPU 에서 읽은 초상화 한 장입니다(계약 포맷 RGBA8, 행 사이에 빈틈이 있을 수 있다). RGBA 로 옮기기는 `PortraitRenderer::makeRGBA8` 이 한다. */
+    struct PortraitCapture
+    {
+        vector<uint8> _bytes{};
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
+        uint32        _rowBytes{ 0 }; ///< 한 행의 바이트(너비 × 4 보다 클 수 있다)
+    };
 } // namespace sw
 
 namespace sw
@@ -62,10 +71,14 @@ namespace sw
         void               shutdown();
 
         /**
-         * @brief 프리팹 한 장을 그려 @p outRGBABytes(행 사이에 빈틈 없는 RGBA8, 위 행부터)에 담습니다. 프리팹을 못 읽거나 그릴 메시가 없으면 false 입니다.
+         * @brief 프리팹 한 장을 그려 GPU 에서 읽은 그대로 @p outCapture 에 담습니다(GPU 일만 - 옮기기는 `makeRGBA8`). 프리팹을 못 읽거나 그릴 메시가 없으면 false 입니다.
          * @details 카메라는 대상의 경계 구(메시마다 로컬 경계 상자를 월드로 옮긴 것을 모두 덮는 구)를 시야각에 맞춰 물러납니다. 대상 크기가 달라도 같은 화면 비율입니다.
          */
-        [[nodiscard]] bool renderPrefab( const PortraitRequest& request, vector<uint8>& outRGBABytes );
+        [[nodiscard]] bool renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture );
+        /**
+         * @brief 읽은 한 장을 행 사이에 빈틈 없는 RGBA8(위 행부터, 알파 255)로 옮깁니다. GPU · 씬을 쓰지 않아 아무 스레드에서 불러도 된다(워커 - `PortraitBatchUtil`).
+         */
+        static void makeRGBA8( const PortraitCapture& capture, vector<uint8>& outRGBABytes );
 
     private:
         IRHIDevice*               _pDevice;

@@ -37,10 +37,6 @@
 
 | 일 | 위치 |
 |---|---|
-| 편집기 UI 캡처의 풀기 · 뒤집기 · 마젠타 세기를 쓰기 워커로, 판정은 `<Pass/>` 로 미루기 | `EditorUICapture::finishJob` |
-| 개발 명령 · 명령줄 스크린샷 쓰기를 워커로(패킷 경로와 같은 길) | `RenderThread::writeRequestedScreenshot` |
-| `netplay.stop` 의 자식 종료 대기 · 트레이스 병합을 백그라운드 잡으로, 시나리오는 `<WaitUntil>` | `EditorNetPlaySession.cpp:498` |
-| 반사 프로브 굽기 · 초상화의 half→float 풀기와 저장을 워커로 | `ReflectionProbeBaker.cpp:110` · `PortraitRenderer.cpp:170` |
 | 요청 직후 `wait()` 해 다시 직렬이 되는 곳 — 로드 중 상태를 받아들이는 모양으로 | `Material.cpp:195` · `TextureCache.cpp:155` · `MeshCache.cpp:191` · `PrefabAsset.cpp:1169` · `SkeletalAnimatorComponent.cpp:391` · `CharacterAppearanceComponent.cpp:1109` |
 | 교체 뒤 셰이더 미리 데우기(`emplaceParallel`, PSO 생성 스레드 안전성은 백엔드마다) · 지형 재생성 | `Engine.cpp` 교체 경로, `ShaderCache` |
 | `DevCommand` 단계 평균 87 ms/프레임의 원인 | timeline 줄의 시나리오별 `DevCommand` |

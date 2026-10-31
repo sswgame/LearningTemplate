@@ -2,10 +2,9 @@
 
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 
-#include "Core/Time/MonotonicClock.h"
-
 #include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
+#include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -62,37 +61,12 @@ namespace sw::editor
                 return pObject != nullptr ? pObject->getComponent<ReflectionProbeComponent>() : nullptr;
             }
 
-            /** @brief 베이크한 데이터 하나를 파일로 쓰고 프로브에 넘깁니다. 실패하면 이유를 @p outError 에 적습니다. */
-            static bool storeProbe( const Scene& scene, ReflectionProbeComponent& probe, ReflectionProbeAsset&& data, string& outError )
+            /** @brief "could not write <경로>" 입니다. */
+            static string makeWriteError( const string& assetPath )
             {
-                const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
-                if ( sceneAssetID.empty() )
-                {
-                    outError = "the scene has never been saved - save it before baking reflection probes";
-                    return false;
-                }
-                const string assetPath = probe.getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, probe.getOwner()->getName().view(), ReflectionProbeAsset::kExtension ) : string{};
-                if ( assetPath.empty() )
-                {
-                    outError = "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the probe needs a named owner";
-                    return false;
-                }
-                const std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-                if ( dataPath.has_value() == false || data.saveToFile( *dataPath ) == false )
-                {
-                    utf8 arrMessage[constant::kMaxBuffer512];
-                    formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", assetPath.c_str() );
-                    outError = arrMessage;
-                    return false;
-                }
-                const uint32 resolution = data._resolution;
-                if ( probe.adoptProbeData( std::move( data ), assetPath ) == false )
-                {
-                    outError = "the baked reflection does not fit the probe";
-                    return false;
-                }
-                SW_LOG_INFO( "Baked reflection probe '%#' (%#x%# octahedral)", assetPath.c_str(), resolution, resolution );
-                return true;
+                utf8 arrMessage[constant::kMaxBuffer512];
+                formatstring( arrMessage, constant::kMaxBuffer512, "could not write %#", assetPath.c_str() );
+                return string{ arrMessage };
             }
 
             static void runFrame( EditorContext& /*context*/ )
@@ -131,6 +105,66 @@ namespace sw::editor
         };
     } // namespace
 
+    /** @brief 접기 · 쓰기 잡의 입력입니다. UI 스레드가 만든다 - 워커는 찍은 면(읽기만)과 경로 사본만 본다. */
+    struct EditorReflectionProbeFilterInput
+    {
+        shared_ptr<const ReflectionProbeCapture> _pCapture{};
+        std::optional<AbsolutePath>              _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
+        string                                   _assetPath{};
+        uint64                                   _objectID{ 0 };
+    };
+
+    /** @brief 접기 · 쓰기 잡의 결과입니다. */
+    struct EditorReflectionProbeFilterResult
+    {
+        ReflectionProbeAsset _data{};
+        string               _error{};
+        string               _assetPath{};
+        uint64               _objectID{ 0 };
+        bool                 _bSucceeded{ false };
+    };
+
+    /**
+     * @class EditorReflectionProbeFilterJob
+     * @brief 찍은 면을 풀고(half → float) 접고 거르고 `.reflprobe` 로 쓰는 에디터 백그라운드 잡입니다. 프로브에 넘기기(컴포넌트)는 결과를 받은 UI 스레드가 한다.
+     */
+    class EditorReflectionProbeFilterJob final : public EditorBackgroundTask<EditorReflectionProbeFilterInput, EditorReflectionProbeFilterResult>
+    {
+    public:
+        /** @brief 잡을 냅니다(UI 스레드). */
+        void request( EditorReflectionProbeFilterInput input )
+        {
+            const uint32 generation = beginRequest( std::move( input ) );
+            submitEditorBackgroundJob( "EditorReflectionProbeFilter", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReflectionProbeFilterJob::runJob ),
+                                       MakeTaskArgs( _pState, generation ) );
+        }
+
+    private:
+        static void runJob( const TaskArgs& args )
+        {
+            const shared_ptr<State>          pState     = args.get<shared_ptr<State>>( 0 );
+            const uint32                     generation = args.get<uint32>( 1 );
+            EditorReflectionProbeFilterInput input;
+            if ( readInput( pState, generation, input ) == false )
+                return;
+            EditorReflectionProbeFilterResult result;
+            result._assetPath  = input._assetPath;
+            result._objectID   = input._objectID;
+            result._bSucceeded = ReflectionProbeBaker::makeProbeData( *input._pCapture, result._data, &result._error );
+            if ( result._bSucceeded && result._data._listTexel.empty() )
+            {
+                result._bSucceeded = false;
+                result._error      = "the baker produced no reflection data";
+            }
+            if ( result._bSucceeded && ( input._dataPath.has_value() == false || result._data.saveToFile( *input._dataPath ) == false ) )
+            {
+                result._bSucceeded = false;
+                result._error      = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
+            }
+            publish( pState, generation, std::move( result ) );
+        }
+    };
+
     SW_EDITOR_SUBSYSTEM( EditorReflectionProbeBakeSession, 9110 );
     SW_EDITOR_FRAME_STEP( ReflectionProbeBake, "reflectionProbeBake", EditorFrameStepOrder::kCommands + 21, &EditorReflectionProbeBakeSessionInternal::runFrame );
 
@@ -144,12 +178,15 @@ namespace sw::editor
     EditorReflectionProbeBakeSession::EditorReflectionProbeBakeSession()
         : _listObjectID{}
         , _lastError{}
+        , _pFilterJob{ make_unique<EditorReflectionProbeFilterJob>() }
         , _run{}
         , _nextProbeIndex{ 0 }
         , _bakedCount{ 0 }
         , _bDeferFirstSlice{ false }
     {
     }
+
+    EditorReflectionProbeBakeSession::~EditorReflectionProbeBakeSession() = default; // 잡의 상태는 shared_ptr 라 도는 워커가 있어도 이 객체보다 오래 산다
 
     void EditorReflectionProbeBakeSession::start()
     {
@@ -163,6 +200,12 @@ namespace sw::editor
         }
         if ( _run.isRunning() )
             return; // 이미 도는 중 - 명령이 꺼져 있어야 하는 경우라 조용히 둔다
+        // 취소한 베이크의 접기 · 쓰기가 아직 돈다 - 같은 파일을 겹쳐 쓰지 않게 끝난 뒤에 받는다.
+        if ( _pFilterJob->isPending() )
+        {
+            SW_LOG_WARNING( "Reflection probe bake refused: the previous bake is still writing a probe - try again in a moment" );
+            return;
+        }
         vector<ReflectionProbeComponent*> listProbe;
         EditorReflectionProbeBakeSessionInternal::collectProbes( *pManager, listProbe );
         _listObjectID.clear();
@@ -198,29 +241,55 @@ namespace sw::editor
             cancel( pStopReason );
             return;
         }
-        // 시작한 프레임에는 굽지 않는다 — 프로브 하나가 프레임을 멈추게 하므로, 상태줄이 "0/N" 을 한 번 그린 뒤에 첫 프로브를 굽는다.
+        // 시작한 프레임에는 굽지 않는다 — 찍기가 프레임을 멈추게 하므로, 상태줄이 "0/N" 을 한 번 그린 뒤에 첫 프로브를 찍는다.
         if ( _bDeferFirstSlice )
         {
             _bDeferFirstSlice = false;
             return;
         }
-        Scene*          pScene = editor::getActiveScene(); // 멈출 이유가 없으면 활성 씬이 있다
-        const Stopwatch stopwatch;
-        // 프로브 하나가 예산을 넘길 수 있다 — 첫 프로브는 늘 굽고, 남은 예산이 있을 때만 다음 프로브로 간다.
-        while ( _run.isRunning() && stopwatch.getElapsedMilliseconds() < EditorBakeRunState::kFrameBudgetMilliseconds )
+        // 앞 프로브의 접기 · 쓰기(워커)가 끝났으면 넘기고, 아직이면 이 프레임은 기다린다 - 잡은 한 번에 하나다.
+        EditorReflectionProbeFilterResult result;
+        const EditorTaskPoll              poll = _pFilterJob->take( result );
+        if ( poll == EditorTaskPoll::Running )
+            return;
+        if ( poll == EditorTaskPoll::Ready )
+            adoptResult( result );
+        if ( _nextProbeIndex >= _listObjectID.size() )
         {
-            if ( _nextProbeIndex >= _listObjectID.size() )
-            {
-                finish( false );
-                return;
-            }
-            bakeNextProbe( *pScene );
+            finish( false );
+            return;
         }
+        // 찍기(GPU)는 프레임마다 하나다. 그 프로브의 접기는 다음 프레임들에 워커가 한다.
+        captureNextProbe( *editor::getActiveScene() ); // 멈출 이유가 없으면 활성 씬이 있다
     }
 
-    void EditorReflectionProbeBakeSession::bakeNextProbe( Scene& scene )
+    void EditorReflectionProbeBakeSession::adoptResult( EditorReflectionProbeFilterResult& result )
     {
-        ReflectionProbeComponent* pProbe = EditorReflectionProbeBakeSessionInternal::findProbe( _listObjectID[_nextProbeIndex] );
+        if ( result._bSucceeded == false )
+        {
+            reportFailure( result._error );
+            return;
+        }
+        ReflectionProbeComponent* pProbe = EditorReflectionProbeBakeSessionInternal::findProbe( result._objectID );
+        if ( pProbe == nullptr )
+        {
+            reportFailure( "a reflection probe was removed before its bake finished" );
+            return;
+        }
+        const uint32 resolution = result._data._resolution;
+        if ( pProbe->adoptProbeData( std::move( result._data ), result._assetPath ) == false )
+        {
+            reportFailure( "the baked reflection does not fit the probe" );
+            return;
+        }
+        SW_LOG_INFO( "Baked reflection probe '%#' (%#x%# octahedral)", result._assetPath.c_str(), resolution, resolution );
+        ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
+    }
+
+    void EditorReflectionProbeBakeSession::captureNextProbe( Scene& scene )
+    {
+        const uint64              objectID = _listObjectID[_nextProbeIndex];
+        ReflectionProbeComponent* pProbe   = EditorReflectionProbeBakeSessionInternal::findProbe( objectID );
         ++_nextProbeIndex;
         if ( pProbe == nullptr )
         {
@@ -233,31 +302,45 @@ namespace sw::editor
             reportFailure( "no graphics device" );
             return;
         }
-        // 프로브 하나씩 굽는다 — 굽기마다 렌더 스레드를 비우고 이 스레드가 컨텍스트를 잡았다 놓으므로 프레임 사이에 컨텍스트를 쥐고 있지 않는다.
-        // 선택 조회(②): 렌더 스레드 없이 동기로 굽는 구성이 있어 `bakeProbes` 가 nullptr 렌더 스레드를 받는다.
+        // 쓸 경로는 찍기 전에 정한다 - 씬 · 서비스는 이 스레드에서만 본다(워커는 경로 사본을 받는다). 저장 안 한 씬이면 찍지 않는다.
+        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
+        if ( sceneAssetID.empty() )
+        {
+            reportFailure( "the scene has never been saved - save it before baking reflection probes" );
+            return;
+        }
+        const string assetPath = pProbe->getOwner() != nullptr ? makeSceneBakeAssetPath( sceneAssetID, pProbe->getOwner()->getName().view(), ReflectionProbeAsset::kExtension ) : string{};
+        if ( assetPath.empty() )
+        {
+            reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the probe needs a named owner" );
+            return;
+        }
+        std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        if ( dataPath.has_value() == false )
+        {
+            reportFailure( EditorReflectionProbeBakeSessionInternal::makeWriteError( assetPath ) );
+            return;
+        }
+        // 프로브 하나씩 찍는다 — 찍기마다 렌더 스레드를 비우고 이 스레드가 컨텍스트를 잡았다 놓으므로 프레임 사이에 컨텍스트를 쥐고 있지 않는다.
+        // 선택 조회(②): 렌더 스레드 없이 동기로 굽는 구성이 있어 `captureProbes` 가 nullptr 렌더 스레드를 받는다.
         RenderThreadSubsystem*            pRenderThreadSubsystem = editor::findSubsystem<RenderThreadSubsystem>();
         vector<ReflectionProbeComponent*> listProbe;
         listProbe.push_back( pProbe );
-        vector<ReflectionProbeAsset> listData;
-        string                       error;
-        const bool                   bBaked = ReflectionProbeBaker::bakeProbes( *pDevice, pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr, scene,
-                                                                                listProbe, listData, &error );
-        if ( bBaked == false )
+        vector<ReflectionProbeCapture> listCapture;
+        string                         error;
+        const bool                     bCaptured = ReflectionProbeBaker::captureProbes( *pDevice, pRenderThreadSubsystem != nullptr ? pRenderThreadSubsystem->findRenderThread() : nullptr, scene,
+                                                                                        listProbe, listCapture, &error );
+        if ( bCaptured == false || listCapture.empty() )
         {
-            reportFailure( error );
+            reportFailure( bCaptured ? string( "the baker captured nothing" ) : error );
             return;
         }
-        if ( listData.empty() || listData[0]._listTexel.empty() )
-        {
-            reportFailure( "the baker produced no reflection data" );
-            return;
-        }
-        if ( EditorReflectionProbeBakeSessionInternal::storeProbe( scene, *pProbe, std::move( listData[0] ), error ) == false )
-        {
-            reportFailure( error );
-            return;
-        }
-        ++_bakedCount; // 씬 dirty 는 잠금을 푼 뒤 `finish` 가 표시한다(잠긴 동안의 표시는 잠금을 지나친 편집으로 센다)
+        EditorReflectionProbeFilterInput input;
+        input._pCapture  = make_shared<const ReflectionProbeCapture>( std::move( listCapture[0] ) );
+        input._dataPath  = std::move( dataPath );
+        input._assetPath = assetPath;
+        input._objectID  = objectID;
+        _pFilterJob->request( std::move( input ) );
     }
 
     void EditorReflectionProbeBakeSession::reportFailure( const string& error )
