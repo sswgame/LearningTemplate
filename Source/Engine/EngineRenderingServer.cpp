@@ -10,6 +10,21 @@ namespace sw
         // 서버에는 주 창이 없어 이 콜백을 걸지 않는다.
     }
 
+    void Engine::bindRendererParts( [[maybe_unused]] const engine::StartupParts& parts )
+    {
+        // 렌더러 단계가 없다 — RHI · 프레임 렌더러 · 패킷 빌더는 nullptr 로 남는다.
+    }
+
+    void Engine::bindRendererAfterStartup( [[maybe_unused]] const engine::StartupParts& parts )
+    {
+        // 창 · RHI · 렌더 스레드가 없다 — 엔진 루프는 nullptr 를 보고 건너뛴다.
+    }
+
+    void Engine::requestQuitAfterCaptures()
+    {
+        // 찍을 사진이 없다.
+    }
+
     void Engine::drainRenderThreadPackets()
     {
         // 렌더 스레드가 없다 — 비울 패킷이 없다.

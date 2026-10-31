@@ -226,10 +226,8 @@ namespace sw
         /** @brief 오브젝트, 대기 목록, 시작 대기열을 모두 비우고 풀을 해제합니다. 다른 단위(계층, 레지스트리, 물리)는 매니저가 비웁니다. */
         void clear();
 
-#if !defined( SW_SHIPPING )
         /** @brief 모듈을 언로드하기 전에, 그 모듈이 정의한 컴포넌트 타입의 살아 있는 인스턴스를 모두 지웁니다(`GameObjectManager::destroyComponentsOfModule`). */
         uint32 destroyComponentsOfModule( string_view moduleName );
-#endif
 
         /**
          * @brief 타입별 컴포넌트 항목(풀과 버킷)을 얻거나 만듭니다. 타입이 없거나 FQN 이 비었으면 nullptr 입니다.

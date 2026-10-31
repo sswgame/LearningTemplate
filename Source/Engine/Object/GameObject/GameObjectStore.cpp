@@ -601,7 +601,6 @@ namespace sw
         // 틱 항목은 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 이미 더티로 표시했다. 병합 자체는 멤버십을 바꾸지 않는다.
     }
 
-#if !defined( SW_SHIPPING )
     uint32 GameObjectStore::destroyComponentsOfModule( string_view moduleName )
     {
         SW_ASSERT( _pStructuralChangeBuffer->isFrozen() == false );
@@ -641,7 +640,6 @@ namespace sw
             SW_LOG_INFO( "Destroyed %# live component(s) of module '%#' before unload.", count, moduleName );
         return count;
     }
-#endif
 
     uint64 GameObjectStore::allocateID()
     {

@@ -26,6 +26,11 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Asset/AssetLoadProfiler.h"
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetStreamingQueue.h"
+#include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
@@ -36,6 +41,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/ContentRootSubsystem.h"
@@ -43,6 +49,8 @@
 #include "Engine/CoreServices/DiagnosticsSubsystem.h"
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 #include "Engine/EngineSubsystemSet.h"
+#include "Engine/FileSystem/AssetIO.h"
+#include "Engine/FileSystem/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -66,6 +74,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -75,32 +84,10 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
-
-// 렌더러 헤더는 클라이언트 코드에서만 읽는다 — 내보낸(SW_ENGINE_API) 클래스의 인라인 멤버는 include 한 번역 단위마다 만들어지고, 렌더러 폴더를
-// 짓지 않는 Server 타깃에서는 그 멤버가 부르는 정의가 없어 링크가 진다(cmake/Engine/BuildLayout.cmake `SW_UNBUILT_ENGINE_FOLDERS`).
-#if defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Renderer/Cook/ShaderCookDriver.h"
-    #include "Engine/Renderer/Frame/FrameRenderer.h"
-    #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
-    #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
-    #include "Engine/Renderer/RHISubsystem.h"
-    #include "Engine/Renderer/RenderThread.h"
-    #include "Engine/Renderer/ScreenshotRequestQueue.h"
-    #include "Engine/Renderer/RenderThreadSubsystem.h"
-#endif
-#include "Engine/Asset/AssetDatabase.h"
-#include "Engine/Asset/AssetLoadProfiler.h"
-#include "Engine/Asset/AssetManager.h"
-#include "Engine/Asset/AssetStreamingQueue.h"
-#include "Engine/Asset/Cache/CacheStatsUtil.h"
-#include "Engine/FileSystem/Pack/PackManager.h"
-#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
-
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Navigation/SceneNavigationCooker.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
@@ -108,7 +95,6 @@
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
-#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
@@ -166,8 +152,6 @@ namespace sw
         , _pFrameRenderer{ nullptr }
         , _pPacketBuilder{ nullptr }
         , _pRenderThread{ nullptr }
-#if !defined( SW_SHIPPING )
-#endif
     {
     }
 
@@ -273,11 +257,7 @@ namespace sw
             _pSceneManager              = startupParts._pSceneManager;
             _pFontService               = startupParts._pFontService;
             _pUISystem                  = startupParts._pUISystem;
-#if defined( SW_WITH_CLIENT_CODE )
-            _pRHISubsystem  = startupParts._pRHI;
-            _pFrameRenderer = &startupParts._pFrameRendererSubsystem->getFrameRenderer();
-            _pPacketBuilder = &startupParts._pFrameRendererSubsystem->getPacketBuilder();
-#endif
+            bindRendererParts( startupParts );
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
         if ( const utf8* pMissing = engine::bindEngineServices( _startup ) )
@@ -292,15 +272,7 @@ namespace sw
         _startup.getCollection().setInitClock( &MonotonicClock::nowNanoseconds );
         const bool bStarted = _startup.getCollection().initializeAll( hostMask );
         // 서지 않은 것(전용 서버 · 헤드리스 · 실패)은 nullptr 다. 실패의 이유는 App 이 종료 코드를 고를 때 읽는다.
-#if defined( SW_WITH_CLIENT_CODE )
-        _pRHI          = _pRHISubsystem->findRHI();
-        _rhiInitResult = _pRHISubsystem->getInitResult();
-        _pRenderThread = startupParts._pRenderThread->findRenderThread();
-        // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
-        const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
-        if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
-            _mainWindowResizeSubscription = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &Engine::onMainWindowResize, this ) );
-#endif
+        bindRendererAfterStartup( startupParts );
         // Server 타깃 — 렌더 단계가 없다. RHI · 렌더 스레드 · 패킷 빌더는 nullptr 로 남고, 아래 루프는 그것을 보고 건너뛴다.
         if ( bStarted == false )
         {
@@ -389,7 +361,8 @@ namespace sw
         if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
             pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
-        _startup.getCollection().shutdownAll();
+        // 범위째 내린다 — 모듈 서브시스템의 자식 범위(배포는 정적 링크한 모듈이 여기 남아 있다)가 기동 단계보다 먼저 내려간다.
+        _startup.shutdownAll();
         // 디버그 키 액션 맵은 입력 매니저를 가리킨다 — 매니저가 소멸하기(Input 의 해제 자리) 전에 놓는다(호스트 루프가 처음 돌릴 때 만든다).
         // 기동이 서비스 범위 전에 멈췄으면(크래시 보고 프로세스 · 코어 실패) 맵이 없다.
         if ( _pDebugKeyActions != nullptr )
@@ -676,11 +649,7 @@ namespace sw
                 requestQuit( observerExitCode );
         }
         // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
-#if defined( SW_WITH_CLIENT_CODE )
-        const int32 captureExitCode = RenderThread::getCaptureExitCode();
-        if ( captureExitCode != RenderThread::kNoCaptureExitCode )
-            requestQuit( captureExitCode );
-#endif
+        requestQuitAfterCaptures();
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).

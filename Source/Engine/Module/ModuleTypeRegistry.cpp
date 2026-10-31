@@ -242,7 +242,6 @@ namespace sw
                 pVariables->setEnumTextParser( GlobalVariableEnumTextParser{} );
         }
 
-#if !defined( SW_SHIPPING )
         void unregisterModuleTypes( string_view moduleName )
         {
             getModuleHeadCache().erase( string{ moduleName } );
@@ -270,6 +269,5 @@ namespace sw
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
             (void)getSubsystem<AssetDataKindRegistry>().unregisterModuleKinds( moduleName );
         }
-#endif
     } // namespace engine
 } // namespace sw

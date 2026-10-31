@@ -125,17 +125,14 @@ namespace sw
          * @details 타입 등록 해제가 그 모듈의 살아 있는 컴포넌트를 지웁니다. 그 소멸자는 모듈 코드라 서비스가 아직 붙어 있는 동안이어야 합니다.
          */
         template <typename TAPI>
-        static void destroyInstance( TAPI& inoutAPI, void*& pInOutHandle, bool bReleaseAPITable, [[maybe_unused]] const utf8* pModuleName )
+        static void destroyInstance( TAPI& inoutAPI, void*& pInOutHandle, bool bReleaseAPITable, const utf8* pModuleName )
         {
             if ( pInOutHandle != nullptr && inoutAPI.shutdown != nullptr )
                 inoutAPI.shutdown( pInOutHandle );
             if ( pInOutHandle != nullptr && inoutAPI.destroy != nullptr )
                 inoutAPI.destroy( pInOutHandle );
-            // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 그 코드가 없다).
-#if !defined( SW_SHIPPING )
             if ( bReleaseAPITable )
                 engine::unregisterModuleTypes( pModuleName );
-#endif
             if ( inoutAPI.bindService != nullptr )
                 inoutAPI.bindService( nullptr );
             pInOutHandle = nullptr;

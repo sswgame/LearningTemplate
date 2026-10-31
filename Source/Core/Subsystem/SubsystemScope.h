@@ -198,6 +198,12 @@ namespace sw
         SubsystemCollection&       getCollection() { return _collection; }
         const SubsystemCollection& getCollection() const { return _collection; }
 
+        /**
+         * @brief 매단 자식 범위를 매단 역순으로 지운 뒤, 소유한 서브시스템을 모두 종료합니다(소멸은 `destroyAll`).
+         * @details 자식 서브시스템은 이 범위의 서브시스템에 기댄다(모듈의 데이터 캐시가 에셋 매니저에 올라 있다) — 소멸뿐 아니라 종료도 자식이 먼저다.
+         *          컬렉션만 종료하면 자식이 아직 등록을 쥔 채 부모가 내려간다(배포의 `Asset cache '…' is still registered`).
+         */
+        void shutdownAll();
         /** @brief 매단 자식 범위를 매단 역순으로 지운 뒤, 소유한 서브시스템을 모두 종료 · 소멸하고 그 조회 칸을 지웁니다. 빌려 건 객체는 남습니다. */
         void destroyAll();
 
@@ -224,6 +230,8 @@ namespace sw
             unique_ptr<SubsystemScope> _scope; ///< 자식 범위
         };
 
+        /** @brief 매단 자식 범위를 매단 역순으로 지웁니다(`shutdownAll` · `destroyAll` 의 첫 단계). */
+        void destroyMountedScopes();
         /** @brief 칸을 더합니다. 이 범위의 칸에 같은 타입이 이미 있으면 false 입니다. */
         [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned );
         /** @brief 칸을 공개합니다. 같은 객체로 이미 걸렸으면 표시만 더하고, 다른 객체로 걸렸으면 false 입니다. */

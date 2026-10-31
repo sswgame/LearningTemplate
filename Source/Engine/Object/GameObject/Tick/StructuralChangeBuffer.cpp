@@ -93,7 +93,6 @@ namespace sw
         }
     }
 
-#if !defined( SW_SHIPPING )
     void StructuralChangeBuffer::drainUntilEmpty( GameObjectManager& manager )
     {
         // 서로 다시 미루는 고리를 끊는 상한이다. 정상이면 한두 번에 빈다.
@@ -109,7 +108,6 @@ namespace sw
         SW_LOG_ERROR( "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxDrainPass );
         clear();
     }
-#endif
 
     void StructuralChangeBuffer::clear()
     {

@@ -6,6 +6,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Engine.h"
+#include "Engine/EngineSubsystemSet.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -14,13 +15,17 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Renderer/RenderThreadSubsystem.h"
 #include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 
 // 엔진 루프의 렌더러 몫(창 크기 · 렌더 스레드 · 렌더 패킷 · 백엔드 교체)이다. 렌더러를 짓는 타깃(Game · Client)의 구현이고, 전용 서버(SW_TARGET_TYPE=Server —
 // `Renderer/` 를 짓지 않는다)는 `EngineRenderingServer.cpp` 를 CMake 가 고른다(`Source/Engine/CMakeLists.txt`). 파일 안 `SW_WITH_CLIENT_CODE` 분기 대신 빌드 단위로 가른다.
@@ -37,6 +42,31 @@ namespace sw
         if ( _pRenderThread != nullptr )
             _pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
         _pRHI->getDevice().resize( width, height );
+    }
+
+    void Engine::bindRendererParts( const engine::StartupParts& parts )
+    {
+        _pRHISubsystem  = parts._pRHI;
+        _pFrameRenderer = &parts._pFrameRendererSubsystem->getFrameRenderer();
+        _pPacketBuilder = &parts._pFrameRendererSubsystem->getPacketBuilder();
+    }
+
+    void Engine::bindRendererAfterStartup( const engine::StartupParts& parts )
+    {
+        _pRHI          = _pRHISubsystem->findRHI();
+        _rhiInitResult = _pRHISubsystem->getInitResult();
+        _pRenderThread = parts._pRenderThread->findRenderThread();
+        // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
+        const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
+        if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
+            _mainWindowResizeSubscription = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &Engine::onMainWindowResize, this ) );
+    }
+
+    void Engine::requestQuitAfterCaptures()
+    {
+        const int32 captureExitCode = RenderThread::getCaptureExitCode();
+        if ( captureExitCode != RenderThread::kNoCaptureExitCode )
+            requestQuit( captureExitCode );
     }
 
     void Engine::drainRenderThreadPackets()

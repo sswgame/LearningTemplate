@@ -86,14 +86,12 @@ namespace sw
          */
         void drain( GameObjectManager& manager );
 
-#if !defined( SW_SHIPPING )
         /**
          * @brief 두 큐가 빌 때까지 `drain` 을 되풀이합니다(모듈 언로드 직전, 틱 밖).
          * @details `drain` 은 큐를 한 번 맞바꿔 돌므로 그 안의 콜백 · BeginPlay 가 다시 미룬 일은 남습니다. 모듈이 내려간 뒤 남은 람다가
          *          돌면 없는 코드로 뛰므로 여기서 끝까지 비웁니다. 상한에 닿으면(서로 다시 미루는 고리) 오류를 남기고 호출 없이 버립니다.
          */
         void drainUntilEmpty( GameObjectManager& manager );
-#endif
 
         /** @brief 쌓인 일을 실행하지 않고 버립니다(매니저 clear). */
         void clear();

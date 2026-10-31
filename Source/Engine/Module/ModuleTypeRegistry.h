@@ -67,15 +67,12 @@ namespace sw
         /** @brief `bindGlobalVariableEnumNames` 가 건 파서를 뗍니다. TypeRegistry 를 놓기 전에 부릅니다. */
         SW_API void unbindGlobalVariableEnumNames();
 
-#if !defined( SW_SHIPPING )
-        // 모듈을 **내리는** 쪽은 Dev 에만 있다. Shipping 은 모듈을 정적 링크해 프로세스가 끝날 때까지 그대로 있으므로
-        // 등록 해제가 할 일이 없다. 그래서 코드도 두지 않는다. 등록(registerModuleTypes)은 Shipping 도 쓴다.
         /**
          * @brief DLL 언로드 직전: 구독자에게 알리고(`TypeRegistry::subscribeModuleUnloading`), 모듈의 등록자를 떼고(`ModuleObjectRegistrar::detach`),
          *        해당 모듈 타입의 살아 있는 컴포넌트를 지우고, 모듈 서브시스템의 자식 범위를 걷고(`ModuleRegistrationHost::unmountModule`),
          *        리플렉션 타입(생성 함수 포함) · 전역 변수를 정리합니다.
+         * @details 레지스트리 연산이라 구성과 무관하게 있다(배포도 게임 인스턴스를 내릴 때 같은 길로 부른다 — 정적 링크라 그 이름으로 오른 것이 없으면 할 일이 없다).
          */
         SW_API void unregisterModuleTypes( string_view moduleName );
-#endif
     } // namespace engine
 } // namespace sw

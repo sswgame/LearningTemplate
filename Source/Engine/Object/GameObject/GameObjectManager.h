@@ -511,7 +511,6 @@ namespace sw
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
         void mergePendingAdds() { _store.mergePendingAdds(); }
 
-#if !defined( SW_SHIPPING )
         /**
          * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
          * @details 팩토리 · 타입 · 전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 삽니다. 인스턴스가 남으면
@@ -527,7 +526,6 @@ namespace sw
                 _structuralChangeBuffer.drainUntilEmpty( *this );
             return _store.destroyComponentsOfModule( moduleName );
         }
-#endif
 
         /**
          * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.

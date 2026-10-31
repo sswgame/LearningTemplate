@@ -19,9 +19,15 @@ namespace sw
         destroyAll();
     }
 
-    void SubsystemScope::destroyAll()
+    void SubsystemScope::shutdownAll()
     {
-        // 매단 자식을 먼저 지운다 — 자식 서브시스템은 이 범위를 부모로 찾으므로, 이 범위의 서브시스템보다 먼저 내려가야 한다. 매단 역순이다.
+        destroyMountedScopes();
+        _collection.shutdownAll();
+    }
+
+    void SubsystemScope::destroyMountedScopes()
+    {
+        // 자식 서브시스템은 이 범위를 부모로 찾으므로, 이 범위의 서브시스템보다 먼저 내려가야 한다. 매단 역순이다.
         while ( _listMounted.empty() == false )
         {
             unique_ptr<SubsystemScope> child = std::move( _listMounted.back()._scope );
@@ -29,6 +35,11 @@ namespace sw
             child.reset();
         }
         _listMounted.shrink_to_fit();
+    }
+
+    void SubsystemScope::destroyAll()
+    {
+        destroyMountedScopes();
         // 조회 칸을 먼저 지운다 — 소멸자가 같은 범위를 조회해도 지워지는 서브시스템을 돌려주지 않는다.
         VectorUtil::removeIf( _listEntry, []( const Entry& entry )
         { return entry._bOwned; } );

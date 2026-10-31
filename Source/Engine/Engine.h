@@ -186,6 +186,12 @@ namespace sw
         void onMainWindowResize( uint32 width, uint32 height );
         /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(렌더 스레드가 없으면 할 일이 없다). */
         void drainRenderThreadPackets();
+        /** @brief 기동 단계를 구성한 직후 렌더러 몫의 서브시스템(RHI 단계 · 프레임 렌더러 · 패킷 빌더)을 잡아 둡니다. 전용 서버는 할 일이 없습니다. */
+        void bindRendererParts( const engine::StartupParts& parts );
+        /** @brief 기동 단계가 돈 뒤 RHI · 렌더 스레드 · 주 창 크기 구독을 잡습니다(서지 않은 것은 nullptr). 전용 서버는 할 일이 없습니다. */
+        void bindRendererAfterStartup( const engine::StartupParts& parts );
+        /** @brief `-gv_screenshotQuit` 의 사진을 모두 찍었으면 그 결과로 종료를 요청합니다(프레임 끝). 전용 서버는 찍을 사진이 없습니다. */
+        void requestQuitAfterCaptures();
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
