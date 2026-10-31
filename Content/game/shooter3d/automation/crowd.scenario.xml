@@ -5,9 +5,11 @@
   프로파일 카운터 GT.Animation.crowdSharedUnits · crowdSoloUnits 와 같은 값이다. 쫓는 동안(걷기 반복 클립)에는 나눈 수가 적 수만큼이고, 칼을 휘두르는 순간에는 혼자로 내려간다.
   사진은 골든과 견준다 — 골든을 뜰 때 볼 것: 적의 무기 · 방패(소켓 부품)가 손을 따라가고 몸과 같은 위상으로 도는지, 섞기 묶음이 끝나고 들어간 클립의 묶음으로 갈 때 위상이 튀지 않는지.
   나눈 수는 프레임마다 흔들린다(맞은 적 · 휘두르는 적은 그 프레임에 혼자로 내려간다) — 그래서 WaitUntil 이 선 뒤 같은 값을 다시 단언하거나 기록하지 않는다.
+  timeoutFrames 는 조건 대기 프레임도 센다 — 고정 대기(300 + 245)와 WaitUntil 셋의 시한(60 초 = 3600 프레임씩)을 다 담아야 안쪽 시한이 판정한다
+  (혼자 수가 0 이 되기까지 자동 플레이의 맞음 반응 · 휘두름 때문에 40 초 남짓 걸린다 — 3000 이면 그 대기 중에 바깥 시한이 먼저 끝났다).
   실행: App -scenario=game/shooter3d/automation/crowd.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
-<Scenario name="game.shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+<Scenario name="game.shooter3d.crowd" fixedDelta="0.0166667" timeoutFrames="11400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Variable name="gv_shooterAutoPlay" value="1"/>
 	<!-- 적이 몰려올 시간(시뮬레이션) -->
 	<Wait frames="300"/>
