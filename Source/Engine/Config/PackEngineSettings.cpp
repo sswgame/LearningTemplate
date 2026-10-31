@@ -40,7 +40,7 @@ namespace sw
         const XMLNode element = root.isValid() ? root.findChild( kElementName ) : XMLNode{};
         if ( element.isValid() == false )
         {
-            SW_LOG_ERROR( "%#: <%#><%#> is missing - the pack names its window title and engine settings there", label.c_str(), kRootElementName, kElementName );
+            SW_LOG_ERROR_ID( "PackSettings.ElementMissing", "%#: <%#><%#> is missing - the pack names its window title and engine settings there", label.c_str(), kRootElementName, kElementName );
             return false;
         }
         // 먼저 비운다 — 다른 팩을 읽은 값이 이 팩에 없는 칸으로 남지 않게.
@@ -62,7 +62,7 @@ namespace sw
             const bool      bSkipHost = bNotSet || engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() );
             if ( bSkipHost || AssetIO::hasAsset( AssetID{ pValue->get() } ) )
                 continue;
-            SW_LOG_ERROR( "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );
+            SW_LOG_ERROR_ID( "PackSettings.FileMissing", "%#: <%# %#> points to '%#', which does not exist", label.c_str(), kElementName, prop._name.c_str(), pValue->c_str() );
             bComplete = false;
         }
 #endif

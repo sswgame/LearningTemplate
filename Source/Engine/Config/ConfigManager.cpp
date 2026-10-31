@@ -160,7 +160,7 @@ namespace sw
         collectMissingRequired( document.getRoot(), typeInfo, string(), listMissing );
         for ( const string& missingPath : listMissing )
         {
-            SW_LOG_ERROR( "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
@@ -187,7 +187,7 @@ namespace sw
         collectMissingRequiredXML( document.getRoot(), typeInfo, string(), listMissing );
         for ( const string& missingPath : listMissing )
         {
-            SW_LOG_ERROR( "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
         }
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
