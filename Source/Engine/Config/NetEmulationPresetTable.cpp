@@ -39,9 +39,19 @@ namespace sw
 
     bool NetEmulationPresetTable::loadFromAsset( const AssetID& assetID )
     {
-        const string_view path = assetID.view();
         _listPreset.clear();
-        bool bOk = ReflectedXMLFile::loadDesc( assetID, *this );
+        return finishLoad( assetID.view(), ReflectedXMLFile::loadDesc( assetID, *this ) );
+    }
+
+    bool NetEmulationPresetTable::loadFromDiskFile( string_view diskPath )
+    {
+        _listPreset.clear();
+        return finishLoad( diskPath, ReflectedXMLFile::loadDescFromDiskFile( diskPath, *this ) );
+    }
+
+    bool NetEmulationPresetTable::finishLoad( string_view path, bool bRead )
+    {
+        bool bOk = bRead;
         if ( bOk && _listPreset.empty() )
         {
             SW_LOG_ERROR_ID( "Net.PresetTableEmpty", "%#: no presets in <_listPreset>", path );
