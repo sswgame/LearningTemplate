@@ -18,6 +18,7 @@
 	<EditorClick mark="toolbar.stop"/>
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="135"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
+	<Wait frames="20"/>
 	<EditorClick mark="gizmo.rotate"/>
 	<WaitUntil watch="Editor.GizmoOperation" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>

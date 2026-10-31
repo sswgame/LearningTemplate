@@ -14,6 +14,7 @@
 	<EditorClick mark="modules.search"/>
 	<Wait frames="5"/>
 	<EditorText value="ThemePark"/>
+	<Wait frames="10"/>
 	<EditorClick mark="modules.toggle.GF_ThemePark"/>
 	<WaitUntil watch="Editor.ModulePreviewNewlyInactive" equals="2" timeoutFrames="60"/>
 	<Wait frames="5"/>

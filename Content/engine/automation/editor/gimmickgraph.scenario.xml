@@ -23,20 +23,26 @@
 	<!-- 노드 둘 -->
 	<Wait frames="5"/>
 	<EditorClick mark="gimmick.addnode"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.kind.Signal"/>
 	<Wait frames="20"/>
 	<ExpectLog contains="Gimmick graph Add Gimmick Node" count="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="gimmick.addnode"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.kind.Not"/>
 	<Wait frames="20"/>
 	<ExpectLog contains="Gimmick graph Add Gimmick Node" count="2"/>
 	<!-- 배선: 폼의 From · To 를 고르고 Connect -->
 	<Wait frames="5"/>
 	<EditorClick mark="gimmick.wire.from"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.wire.from.signal_1.Active"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.wire.to"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.wire.to.not_1.In"/>
+	<Wait frames="15"/>
 	<EditorClick mark="gimmick.wire.connect"/>
 	<Wait frames="20"/>
 	<ExpectLog contains="Gimmick graph Add Gimmick Wire" count="1"/>

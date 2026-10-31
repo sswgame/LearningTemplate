@@ -20,7 +20,9 @@
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inspector.curve._curve"/>
+	<Wait frames="20"/>
 	<EditorClick mark="curve.canvas" button="1"/>
+	<Wait frames="15"/>
 	<EditorClick mark="curve.menu.addKey"/>
 	<WaitUntil watch="Editor.SelectedCurveKeyCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.UndoCount" equals="2"/>

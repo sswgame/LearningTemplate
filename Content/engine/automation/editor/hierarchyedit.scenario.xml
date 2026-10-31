@@ -12,6 +12,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.row.TestSprite" mods="shift"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.ObjectCount" equals="9"/>

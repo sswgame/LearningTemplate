@@ -38,6 +38,7 @@
 	<CaptureEditorUI file="prefabwindow/open.png"/>
 	<!-- ② 편집 -->
 	<EditorClick mark="prefabwindow.child.TestProp"/>
+	<Wait frames="15"/>
 	<EditorClick mark="inspector.property.SpriteComponent._boundsRadius" mods="ctrl"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
@@ -60,6 +61,7 @@
 	<!-- ④ X → Don't Save -->
 	<Wait frames="5"/>
 	<EditorClick mark="panel.close.Prefab Window"/>
+	<Wait frames="20"/>
 	<EditorClick mark="unsaved.discard"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutFrames="60"/>
 	<!-- ⑤ 다시 열면 깨끗하고 X 가 묻지 않는다 -->

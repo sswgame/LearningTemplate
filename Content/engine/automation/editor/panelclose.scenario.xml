@@ -24,8 +24,11 @@
 	<EditorClick mark="inputMap.filter"/>
 	<Wait frames="5"/>
 	<EditorText value="Confirm"/>
+	<Wait frames="10"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
+	<Wait frames="20"/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<Wait frames="20"/>
 	<EditorClick mark="inputMap.trigger.4"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelDirty" equals="1"/>

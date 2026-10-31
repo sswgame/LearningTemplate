@@ -18,10 +18,13 @@
 	<EditorExpectObject name="GameObject" selected="1"/>
 	<!-- 2) 컴포넌트 붙이기 — 선택한 줄을 오른쪽 클릭 → Add Component → 검색 → 항목 -->
 	<EditorClick mark="hierarchy.selectedRow" button="1"/>
+	<Wait frames="10"/>
 	<EditorClick mark="menu.scene.object.addComponent"/>
+	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.addComponent.search"/>
 	<Wait frames="10"/>
 	<EditorText value="PointLight"/>
+	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.addComponent.PointLightComponent"/>
 	<Wait frames="15"/>
 	<EditorExpectObject name="GameObject" component="PointLightComponent"/>

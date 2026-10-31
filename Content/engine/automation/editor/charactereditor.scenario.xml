@@ -31,6 +31,7 @@
 	<EditorClick mark="charactereditor.tab.skeleton" state="down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.skeleton" state="up"/>
+	<Wait frames="19"/>
 	<EditorClick mark="charactereditor.loadSkeleton"/>
 	<WaitUntil watch="Editor.CharacterEditorBoneCount" atLeast="30" timeoutFrames="90"/>
 	<Wait frames="5"/>
@@ -40,10 +41,15 @@
 	<EditorClick mark="charactereditor.tab.appearance" state="down"/>
 	<Wait frames="1"/>
 	<EditorClick mark="charactereditor.tab.appearance" state="up"/>
+	<Wait frames="19"/>
 	<EditorClick mark="charactereditor.loadData"/>
+	<Wait frames="15"/>
 	<EditorClick mark="charactereditor.basePreset"/>
+	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.basePreset.first"/>
+	<Wait frames="15"/>
 	<EditorClick mark="charactereditor.equipSet"/>
+	<Wait frames="20"/>
 	<EditorClick mark="charactereditor.equipSet.first"/>
 	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="90"/>
 	<Wait frames="10"/>
@@ -59,7 +65,9 @@
 	<CaptureEditorUI file="charactereditor/preview.png"/>
 	<Wait frames="5"/>
 	<EditorClick mark="charactereditor.clip"/>
+	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.clip.first"/>
+	<Wait frames="10"/>
 	<EditorClick mark="charactereditor.playClip"/>
 	<WaitUntil watch="Editor.CharacterEditorPreviewClipPlaying" atLeast="1" timeoutFrames="135"/>
 	<Wait frames="40"/>

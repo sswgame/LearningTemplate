@@ -26,6 +26,7 @@
 	<EditorClick mark="contentBrowser.add" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.add" state="up"/>
+	<Wait frames="12"/>
 	<EditorClick mark="contentBrowser.add.material" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.add.material" state="up"/>
@@ -78,6 +79,7 @@
 	<EditorClick mark="contentBrowser.asset.new_material.material" state="up"/>
 	<Wait frames="12"/>
 	<EditorKey key="Delete"/>
+	<Wait frames="15"/>
 	<EditorClick mark="contentBrowser.delete.confirm" state="down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.delete.confirm" state="up"/>

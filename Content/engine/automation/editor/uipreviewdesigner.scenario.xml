@@ -58,6 +58,7 @@
 	<EditorClick mark="uipreview.palette.filter"/>
 	<Wait frames="10"/>
 	<EditorText value="TextWidget"/>
+	<Wait frames="15"/>
 	<EditorDrag mark="uipreview.palette.TextWidget" toMark="uipreview.row.0"/>
 	<Wait frames="25"/>
 	<WaitUntil watch="Editor.UIPreviewWidgetCount" equals="2" timeoutFrames="180"/>
@@ -86,6 +87,7 @@
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorKey key="Backspace"/>
+	<Wait frames="10"/>
 	<EditorClick mark="uipreview.reload"/>
 	<WaitUntil watch="Editor.UIPreviewDirty" equals="0" timeoutFrames="75"/>
 	<Wait frames="5"/>

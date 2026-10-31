@@ -25,6 +25,7 @@
 	<Expect watch="Editor.InputMapSelectedTrigger" equals="0"/>
 	<Wait frames="5"/>
 	<EditorClick mark="inputMap.binding.0.trigger"/>
+	<Wait frames="20"/>
 	<EditorClick mark="inputMap.trigger.4"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="4" timeoutFrames="60"/>
 	<Wait frames="5"/>

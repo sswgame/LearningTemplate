@@ -23,6 +23,7 @@
 	<!-- ① 오브젝트에 컴포넌트를 단다 -->
 	<Wait frames="15"/>
 	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
 	<EditorClick mark="inspector.name"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
@@ -54,12 +55,14 @@
 	<Expect watch="Editor.UndoIndex" sameAs="undoBefore"/>
 	<!-- ④ 다시 고르고 (none) -->
 	<EditorClick mark="inspector.property.TypedHandleTestComponent._target"/>
+	<Wait frames="20"/>
 	<EditorHover mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.choice.TestMesh / MeshComponent#0"/>
 	<WaitUntil watch="Editor.SelectedHandle" is="TestMesh / MeshComponent#0" timeoutFrames="60"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.property.TypedHandleTestComponent._target"/>
+	<Wait frames="20"/>
 	<EditorHover mark="inspector.handle.none"/>
 	<Wait frames="10"/>
 	<EditorClick mark="inspector.handle.none"/>

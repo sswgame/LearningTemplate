@@ -21,6 +21,7 @@
 	<EditorHover release="true"/>
 	<Wait frames="5"/>
 	<EditorClick mark="hierarchy.row.TestMesh"/>
+	<Wait frames="15"/>
 	<EditorHover mark="sceneView.canvas" anchor="0.551,0.756"/>
 	<Wait frames="15"/>
 	<Expect watch="Editor.HoveredObject" equals="0"/>

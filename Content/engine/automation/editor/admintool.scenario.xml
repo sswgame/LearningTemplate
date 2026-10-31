@@ -40,6 +40,7 @@
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="ticket-42"/>
+	<Wait frames="15"/>
 	<EditorClick mark="admin.grant"/>
 	<Wait frames="15"/>
 	<ExpectLog contains="Admin command AdjustAsset: Ok" count="1"/>
@@ -51,6 +52,7 @@
 	<EditorKey key="Ctrl+A"/>
 	<Wait frames="5"/>
 	<EditorText value="1000"/>
+	<Wait frames="15"/>
 	<EditorClick mark="admin.revoke"/>
 	<Wait frames="15"/>
 	<ExpectLog contains="Admin command AdjustAsset: InsufficientFunds" count="1"/>

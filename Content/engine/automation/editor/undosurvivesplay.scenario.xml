@@ -13,6 +13,7 @@
 	<WaitUntil watch="Editor.UndoCount" equals="1" timeoutFrames="60"/>
 	<Wait frames="5"/>
 	<EditorClick mark="toolbar.play"/>
+	<Wait frames="15"/>
 	<EditorClick mark="toolbar.playAnyway"/>
 	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
 	<Wait frames="5"/>

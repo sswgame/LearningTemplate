@@ -12,6 +12,7 @@
 	<DevCommand line="layout.reset"/>
 	<Wait frames="25"/>
 	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<Wait frames="10"/>
 	<EditorClick mark="hierarchy.row.TestGameCamera" mods="ctrl"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="2" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchProperty" value="CameraComponent._priority"/>

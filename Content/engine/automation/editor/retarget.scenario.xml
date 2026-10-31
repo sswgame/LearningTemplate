@@ -25,12 +25,14 @@
 	<EditorClick mark="retarget.newPath"/>
 	<Wait frames="10"/>
 	<EditorText value="scratch/import/scenario_new.retarget.xml"/>
+	<Wait frames="15"/>
 	<EditorClick mark="retarget.new"/>
 	<Wait frames="45"/>
 	<Expect watch="Editor.RetargetChainCount" equals="0"/>
 	<CaptureEditorUI file="retarget/new.png"/>
 	<!-- 기존 프로필 열기 -->
 	<EditorClick mark="retarget.open"/>
+	<Wait frames="15"/>
 	<EditorClick mark="retarget.open.knight_to_minion.retarget.xml"/>
 	<WaitUntil watch="Editor.RetargetChainCount" atLeast="6" timeoutFrames="195"/>
 	<Expect watch="Editor.RetargetPoseCount" equals="0"/>
@@ -46,9 +48,11 @@
 	<EditorClick mark="retarget.section.Options"/>
 	<Wait frames="5"/>
 	<EditorClick mark="retarget.section.Chains"/>
+	<Wait frames="10"/>
 	<EditorClick mark="retarget.targetPose.newBone"/>
 	<Wait frames="10"/>
 	<EditorText value="upperarm.l"/>
+	<Wait frames="15"/>
 	<EditorClick mark="retarget.targetPose.add"/>
 	<WaitUntil watch="Editor.RetargetPoseCount" equals="1" timeoutFrames="75"/>
 	<Expect watch="Editor.RetargetPreviewSegments" atLeast="20"/>

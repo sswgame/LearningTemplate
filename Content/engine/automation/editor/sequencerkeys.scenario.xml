@@ -42,6 +42,7 @@
 	<EditorText value="100"/>
 	<Wait frames="5"/>
 	<EditorKey key="Enter"/>
+	<Wait frames="20"/>
 	<EditorClick mark="sequencer.channel.0" mods="ctrl"/>
 	<Wait frames="10"/>
 	<EditorKey key="Ctrl+A"/>
