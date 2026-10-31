@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MeadowVillage 목표 마커 — 부탁(quest meadow_request)을 받으면 목표 자리(OrchardSite 의 QuestObjectiveMarkerComponent)에 화면 마커가 뜨고,
+  과수원이 서서 부탁이 끝나면 사라지는지 본다. day.scenario 와 같은 흐름(날 단위로 시계를 감는다)에서 마커 가시성(UI.MarkerVisible)의 이력이 0 → 1 → 0 인지,
+  부탁 상태의 이력이 NotStarted → Active → Completed 인지 단언한다. 마커는 UI 갱신이 놓으므로 프레임마다 읽어 이력으로 본다.
+  시작의 10 프레임은 부탁 전에 마커가 뜨지 않는 것을 보는 자리라 고정 대기다.
+  실행: ctest -R Scenario.meadowvillage (SW_ACTIVE_GAME=MeadowVillage) · App -scenario=game/meadowvillage/automation/questmarker.scenario.xml -unattended
+-->
+<Scenario name="game.meadowvillage.questmarker" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" input="exclusive">
+	<Variable name="gv_meadowAutoPlay" value="0"/>
+	<Wait frames="10"/>
+	<Expect watch="Quest.Status" target="meadow_request" is="NotStarted"/>
+	<Expect watch="Object.Exists" target="OrchardSite" equals="1"/>
+	<Expect watch="UI.MarkerVisible" target="OrchardSite" equals="0"/>
+	<Wait frames="1"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<Wait frames="2"/>
+	<AdvanceGameTime hours="24"/>
+	<WaitUntil watch="Quest.Status" target="meadow_request" is="Completed" timeoutFrames="30"/>
+	<WaitUntil watch="UI.MarkerVisible" target="OrchardSite" equals="0" timeoutFrames="30"/>
+	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
+	<ExpectVisited watch="UI.MarkerVisible" target="OrchardSite" sequence="0, 1, 0"/>
+	<Pass/>
+</Scenario>
