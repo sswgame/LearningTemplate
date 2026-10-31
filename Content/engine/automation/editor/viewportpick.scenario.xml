@@ -2,13 +2,22 @@
 <!--
   에디터 시나리오 — 씬 뷰를 눌러도 화면을 그리는 에디터 카메라가 골라지지 않는다. 에디터 카메라는 씬 오브젝트라
   기본 반지름 구가 레이 시작점을 감싸 늘 가장 가까웠다(panel-audit D1).
+  테스트 씬(editortest)의 큐브(TestMesh)를 눌러 바로 그 큐브가 골라지는지 본다 — "에디터 카메라가 아니다"만으로는
+  아무것도 안 골라져도 통과했다. 큐브 자리(1920x1080 · 배율 1 · 기본 배치에서 캔버스 0.5,0.68)는 viewporthover 와 같다.
   실행: App -EnableEditor -scenario=engine/automation/editor/viewportpick.scenario.xml -unattended
 -->
 <Scenario name="editor.viewportpick" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
-	<Wait frames="60"/>
-	<EditorClick mark="sceneView.canvas"/>
-	<Wait frames="15"/>
+	<Wait frames="20"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<Wait frames="25"/>
+	<Expect watch="Editor.SelectionCount" equals="0"/>
+	<EditorClick mark="sceneView.canvas" anchor="0.5,0.68"/>
+	<WaitUntil watch="Editor.SelectedNames" is="TestMesh" timeoutFrames="60"/>
 	<Expect watch="Editor.SelectedIsEditorCamera" equals="0"/>
 	<Wait frames="5"/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>
