@@ -57,7 +57,7 @@ namespace sw
             static_assert( kContains<T>, "the type is not in this kit's OnlineMessageTypes - add it there so its schema hash joins the online schema hash" );
             if ( FixedLayout::write( message, outWriter ) )
                 return true;
-            SW_LOG_ERROR( "Online message '%#' has a value outside its declared range and was not written", typeFqn<T>().c_str() );
+            SW_LOG_ERROR_ID( "OnlineProtocol.MessageOutOfRange", "Online message '%#' has a value outside its declared range and was not written", typeFqn<T>().c_str() );
             return false;
         }
 

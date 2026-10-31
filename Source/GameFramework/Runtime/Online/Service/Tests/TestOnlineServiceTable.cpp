@@ -1,7 +1,13 @@
 #include "pch.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Fixed/FixedLayout.h"
+
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineReplyUtil.h"
@@ -130,6 +136,25 @@ SW_TEST_CASE( OnlineServiceTableTest, NameOrderHashSeesOrderAndListBoundaries )
     SW_EXPECT_NOT_EQUAL( OnlineProtocolEntry::computeNameOrderHash( { "ab", "c" }, {} ), OnlineProtocolEntry::computeNameOrderHash( { "a", "bc" }, {} ) );
     SW_EXPECT_NOT_EQUAL( OnlineProtocolEntry::computeNameOrderHash( { "a" }, {} ), OnlineProtocolEntry::computeNameOrderHash( {}, { "a" } ) );
     SW_EXPECT_NOT_EQUAL( OnlineProtocolEntry::computeNameOrderHash( {}, {} ), OnlineProtocolEntry::computeNameOrderHash( { "a" }, {} ) );
+}
+
+/**
+ * @brief [OnlineServiceTableTest] 메시지 타입 목록의 해시는 타입마다의 스키마 해시를 목록 순서대로 섞은 값이고, 타입이나 순서가 다르면 달라진다
+ * @details 키트는 이 목록 하나로 메시지를 쓰고 읽으며 같은 목록이 등록 항목에 섞이므로, 와이어에 오르는 타입의 배치가 바뀌면 온라인 스키마 해시가 바뀐다.
+ */
+SW_TEST_CASE( OnlineServiceTableTest, MessageTypesHashFollowsTheTypesAndTheirOrder )
+{
+    using Balance      = sw::OnlineMessageTypes<sw::LedgerBalance>;
+    using Attachment   = sw::OnlineMessageTypes<sw::ServiceMailAttachment>;
+    using Both         = sw::OnlineMessageTypes<sw::LedgerBalance, sw::ServiceMailAttachment>;
+    using BothReversed = sw::OnlineMessageTypes<sw::ServiceMailAttachment, sw::LedgerBalance>;
+    SW_EXPECT_EQUAL( sw::HashUtil::combine( 0, sw::FixedLayout::getSchemaHash<sw::LedgerBalance>() ), Balance::computeSchemaHash() );
+    SW_EXPECT_NOT_EQUAL( Balance::computeSchemaHash(), Attachment::computeSchemaHash() ); // 필드가 같아도 타입 이름이 정규 문자열에 들어간다
+    SW_EXPECT_NOT_EQUAL( Both::computeSchemaHash(), BothReversed::computeSchemaHash() );
+    SW_EXPECT_EQUAL( uint64( 0 ), sw::OnlineMessageTypes<>::computeSchemaHash() );
+    SW_EXPECT_TRUE( Both::kContains<sw::LedgerBalance> );
+    SW_EXPECT_FALSE( Both::kContains<sw::AccountIdentity> );
+    SW_EXPECT_EQUAL( sw::OnlineProtocolRegistry::computeSchemaHash(), sw::OnlineProtocolRegistry::computeSchemaHash() );
 }
 
 /**

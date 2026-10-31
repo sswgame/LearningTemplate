@@ -333,14 +333,14 @@ namespace sw
         const uint16 range = pService->getMethodRange();
         if ( OnlineMethodRange::getRangeBase( range ) != range || range == OnlineMethodRange::kHost )
         {
-            SW_LOG_ERROR( "Online service range %# is not a range base (a multiple of 0x100 above the host range)", static_cast<uint32>( range ) );
+            SW_LOG_ERROR_ID( "OnlineHost.RangeNotABase", "Online service range %# is not a range base (a multiple of 0x100 above the host range)", static_cast<uint32>( range ) );
             return false;
         }
         for ( const IOnlineServerService* pExisting : _listService )
         {
             if ( pExisting->getMethodRange() == range )
             {
-                SW_LOG_ERROR( "Online service range %# is already taken - two kits claim one method range", static_cast<uint32>( range ) );
+                SW_LOG_ERROR_ID( "OnlineHost.RangeTaken", "Online service range %# is already taken - two kits claim one method range", static_cast<uint32>( range ) );
                 return false;
             }
         }
@@ -349,7 +349,7 @@ namespace sw
             string exposureError;
             if ( OnlineServiceHostInternal::checkExposure( *pService, _listenerTransport->hasAdminListener(), exposureError ) == false )
             {
-                SW_LOG_ERROR( "%#", exposureError );
+                SW_LOG_ERROR_ID( "OnlineHost.ExposureRefused", "%#", exposureError );
                 return false;
             }
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
@@ -491,7 +491,7 @@ namespace sw
         }
         if ( pService == nullptr )
         {
-            SW_LOG_ERROR( "OnlineServiceHost: subscribeServerBus('%#') got a null service", topic );
+            SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeNullService", "OnlineServiceHost: subscribeServerBus('%#') got a null service", topic );
             return Subscription{};
         }
         bool bTopicOpen = false;
@@ -500,7 +500,7 @@ namespace sw
             if ( subscription._topic == topic && subscription._pService == pService )
             {
                 // 두 구독이 한 항목을 나눠 가지면 먼저 풀린 쪽이 다른 쪽의 구독까지 끊는다 — 처음 받은 구독을 쥔다.
-                SW_LOG_ERROR( "OnlineServiceHost: the service already subscribes '%#' - keep the first Subscription", topic );
+                SW_LOG_ERROR_ID( "OnlineHost.BusSubscribeTwice", "OnlineServiceHost: the service already subscribes '%#' - keep the first Subscription", topic );
                 return Subscription{};
             }
             bTopicOpen = bTopicOpen || subscription._topic == topic;

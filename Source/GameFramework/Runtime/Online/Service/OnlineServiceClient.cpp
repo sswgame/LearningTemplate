@@ -411,7 +411,7 @@ namespace sw
             _serverTimeMs     = reader.readVarInt();
             if ( reader.hasOverflowed() )
             {
-                SW_LOG_ERROR( "Online service Hello answer is malformed - the handshake failed" );
+                SW_LOG_ERROR_ID( "OnlineClient.HelloMalformed", "Online service Hello answer is malformed - the handshake failed" );
                 stopAfterHello( OnlineClientState::HandshakeFailed, OnlineError::kInvalidRequest );
                 return;
             }
@@ -429,7 +429,7 @@ namespace sw
         const bool bTransient = response._status == NetRequestStatus::DeadlineExceeded || response._status == NetRequestStatus::Overloaded;
         if ( bTransient )
         {
-            SW_LOG_WARNING( "Online service Hello got no answer (%#) - reconnecting after a backoff", toString( response._status ) );
+            SW_LOG_WARNING_ID( "OnlineClient.HelloNoAnswer", "Online service Hello got no answer (%#) - reconnecting after a backoff", toString( response._status ) );
             if ( _connection.isValid() )
                 _pEndpoint->close( _connection, StreamCloseMode::Graceful );
             return;
@@ -440,13 +440,13 @@ namespace sw
         if ( bMismatch )
         {
             const uint64 serverHash = LittleEndianUtil::readUint64( response._pBody + 2 );
-            SW_LOG_WARNING( "Online schema hash %# differs from the server's %# - an update is required", _schemaHash, serverHash );
+            SW_LOG_WARNING_ID( "OnlineClient.SchemaMismatch", "Online schema hash %# differs from the server's %# - an update is required", _schemaHash, serverHash );
             stopAfterHello( OnlineClientState::VersionMismatch, OnlineError::kVersionMismatch );
             return;
         }
         // 그 밖의 답(다른 오류 코드, 서버 해시가 없는 거절, 모르는 메서드)은 같은 빌드에서 나오지 않는다. 기다리지 않고 멈춘다.
-        SW_LOG_ERROR( "Online service Hello was refused (%#, error %#, %# bytes) - the handshake failed", toString( response._status ), static_cast<uint32>( errorCode ),
-                      response._bodySize );
+        SW_LOG_ERROR_ID( "OnlineClient.HelloRefused", "Online service Hello was refused (%#, error %#, %# bytes) - the handshake failed", toString( response._status ), static_cast<uint32>( errorCode ),
+                         response._bodySize );
         stopAfterHello( OnlineClientState::HandshakeFailed, OnlineError::kInvalidRequest );
     }
 

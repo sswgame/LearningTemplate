@@ -247,7 +247,7 @@ namespace sw
         const bool bRejectedChange = isValidKey( key ) == false || RemoteConfigInternal::isValidValue( value ) == false || ServiceAuditLog::isValidEntry( audit ) == false;
         if ( bRejectedChange )
         {
-            SW_LOG_WARNING( "Rejected remote config change '%#' — invalid key, value or audit entry", key );
+            SW_LOG_WARNING_ID( "RemoteConfig.ChangeRejected", "Rejected remote config change '%#' — invalid key, value or audit entry", key );
             _lastSetResult = ServiceStoreResult::Invalid;
             return;
         }
@@ -447,7 +447,7 @@ namespace sw
         {
             if ( bCancelled )
                 return; // 저장소가 종료 중이라 취소된 첫 읽기다 — 고장이 아니므로 경고하지 않는다. 이전 값을 그대로 둔다
-            SW_LOG_WARNING( "Remote config reload failed — keeping the previous values" );
+            SW_LOG_WARNING_ID( "RemoteConfig.ReloadFailed", "Remote config reload failed — keeping the previous values" );
             return;
         }
         _mapEntry.swap( inoutMapEntry );

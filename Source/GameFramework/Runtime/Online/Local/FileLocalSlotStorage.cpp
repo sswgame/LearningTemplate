@@ -31,7 +31,7 @@ namespace sw
         for ( const string& tempPath : listTempPath )
         {
             if ( FileUtil::tryRemoveFile( tempPath ) )
-                SW_LOG_WARNING( "Removed a leftover local store temp file (an interrupted write): %#", tempPath.c_str() );
+                SW_LOG_WARNING_ID( "LocalStore.LeftoverTempRemoved", "Removed a leftover local store temp file (an interrupted write): %#", tempPath.c_str() );
         }
     }
 

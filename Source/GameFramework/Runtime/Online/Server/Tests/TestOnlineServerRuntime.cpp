@@ -1,0 +1,284 @@
+#include "pch.h"
+
+#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
+
+#include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+
+#include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+
+// OnlineServerRuntimeTest — 온라인 서비스 서버 조립: 키트를 이름 의존 순서로 세우고(설정 순서 · 이름 순서와 상관없이) 반대로 내린다, 앞 키트가 지역 범위에 건 인터페이스를
+// 뒤 키트가 받는다, 모르는 키트 · 빠진 필수 키트 · 초기화와 시작 실패는 기동을 멈추고 만든 것을 되돌린다, 상태 검사(online_services)(nogpu).
+
+using namespace sw;
+
+namespace
+{
+    /** @brief 키트가 남기는 사건 줄입니다. 픽스처가 케이스 앞뒤로 비운다(케이스 순서는 섞인다). */
+    vector<string>& getKitEventLog()
+    {
+        static vector<string> s_listLine;
+        return s_listLine;
+    }
+
+    void addKitEvent( const utf8* pName, const utf8* pEvent )
+    {
+        string line{ pName };
+        line += ':';
+        line += pEvent;
+        getKitEventLog().push_back( std::move( line ) );
+    }
+
+    /** @brief 가짜 계정 디렉터리 — 앞 키트가 문맥에 내놓는 인터페이스 역할입니다. */
+    class TestDirectory final : public IAccountDirectory
+    {
+    public:
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
+        {
+            outIdentity._accountID = accountID;
+            return true;
+        }
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
+        {
+            outIdentity._displayName = string( displayName );
+            return false;
+        }
+        bool isAccountOnline( AccountID accountID ) const override { return accountID != kInvalidAccountID; }
+    };
+
+    /** @brief 신원을 내놓는 키트입니다. */
+    class ProviderTestKit final : public IOnlineServerKit
+    {
+    public:
+        static constexpr const utf8* kName = "test.provider";
+
+        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        {
+            addKitEvent( kName, context._pHost != nullptr && context._pStore != nullptr ? "init" : "init-without-base" );
+            return exposeInterface<IAccountDirectory>( context, entry, _directory, outError );
+        }
+        bool start( OnlineServerKitContext& context, string& outError ) override
+        {
+            (void)outError;
+            addKitEvent( kName, context._pRouter != nullptr ? "start" : "start-without-router" );
+            return true;
+        }
+        void stop() override { addKitEvent( kName, "stop" ); }
+        void shutdown() override { addKitEvent( kName, "shutdown" ); }
+
+    private:
+        TestDirectory _directory;
+    };
+
+    /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다(필수 의존). 옵션 `fail=init` · `fail=start` 이면 그 단계에 실패합니다. */
+    class ConsumerTestKit final : public IOnlineServerKit
+    {
+    public:
+        static constexpr const utf8* kName = "test.consumer";
+
+        [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+        {
+            (void)context;
+            string failStage;
+            if ( entry.readOptions( {
+                                        { "fail", failStage }
+            },
+                                    outError ) == false )
+                return false;
+            if ( failStage == "init" )
+            {
+                outError = "test init failure";
+                return false;
+            }
+            _bFailStart = failStage == "start";
+            addKitEvent( kName, "init" );
+            return true;
+        }
+        bool start( OnlineServerKitContext& context, string& outError ) override
+        {
+            if ( _bFailStart )
+            {
+                outError = "test start failure";
+                return false;
+            }
+            addKitEvent( kName, context._kits.get<IAccountDirectory>().isAccountOnline( 7 ) ? "start" : "start-without-directory" );
+            return true;
+        }
+        void stop() override { addKitEvent( kName, isStarted() ? "stop" : "stop-unstarted" ); }
+        void shutdown() override { addKitEvent( kName, "shutdown" ); }
+
+        span<const utf8* const> getRequiredKits() const override
+        {
+            static constexpr const utf8* kArrKit[] = { ProviderTestKit::kName };
+            return kArrKit;
+        }
+
+    private:
+        bool _bFailStart{ false };
+    };
+
+    /** @brief 케이스마다 두 테스트 키트를 레지스트리에 올리고 사건 줄을 비웁니다. 소멸자가 둘 다 되돌립니다. */
+    struct OnlineServerRuntimeTest
+    {
+        OnlineServerRuntimeTest() { getKitEventLog().clear(); }
+        ~OnlineServerRuntimeTest() { getKitEventLog().clear(); }
+
+        /** @brief 런타임 설정입니다. 전송은 루프백, TLS 는 끈다. */
+        OnlineServerRuntimeConfig makeSettings( std::initializer_list<const utf8*> listKitName )
+        {
+            OnlineServerRuntimeConfig settings;
+            settings._bTLS                  = SW_FALSE;
+            settings._pClock                = &_clock;
+            settings._pTransport            = _transport.get();
+            settings._config._ioThreadCount = 0;
+            for ( const utf8* pName : listKitName )
+            {
+                OnlineServerKitEntry& entry = settings._config._listKit.emplace_back();
+                entry._name                 = pName;
+            }
+            return settings;
+        }
+
+        static void addOption( OnlineServerKitEntry& entry, const utf8* pKey, const utf8* pValue )
+        {
+            OnlineServerOption& option = entry._listOption.emplace_back();
+            option._key                = pKey;
+            option._value              = pValue;
+        }
+
+        const OnlineServerKitRegistrar<ConsumerTestKit> _consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> _provider{ ProviderTestKit::kName };
+        SystemMonotonicClock                            _clock{};
+        LoopbackStreamNetwork                           _network{};
+        unique_ptr<IStreamTransport>                    _transport{ _network.createTransport() };
+    };
+} // namespace
+
+/** @brief [OnlineServerRuntimeTest] 설정에 거꾸로 적고 이름 순으로도 소비자가 앞이지만 필수 의존이 내놓는 키트를 먼저 세우고, 내릴 때는 반대 순서다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, KitsStartInOrderShareInterfacesAndStopInReverse )
+{
+    ServiceHealthRegistry     health;
+    OnlineServerRuntimeConfig settings = makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
+    settings._pHealthRegistry          = &health;
+    settings._listenAddress            = NetAddress::makeLoopback( 7451 );
+    {
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_REQUIRE_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
+        SW_EXPECT_EQUAL( runtime.getListenPort(), uint16( 7451 ) );
+        vector<string> listKitName;
+        runtime.collectKitNames( listKitName );
+        SW_REQUIRE_EQUAL( listKitName.size(), size_t( 2 ) );
+        SW_EXPECT_EQUAL( listKitName[0], string( ProviderTestKit::kName ) );
+        SW_EXPECT_TRUE( runtime.getContext()._pBus != nullptr && runtime.getContext()._pRouter != nullptr );
+        health.markTick( 10 );
+        SW_EXPECT_TRUE( health.isReady( 10 ) ); // 조립이 끝나면 online_services 검사가 Ok
+        runtime.update( UnixMilliseconds{ 1100 } );
+        runtime.shutdown();
+        SW_EXPECT_FALSE( health.isReady( 10 ) ); // 내리면 다시 Failing
+    }
+    const vector<string>& listLine = getKitEventLog();
+    SW_REQUIRE_EQUAL( listLine.size(), size_t( 8 ) );
+    SW_EXPECT_EQUAL( listLine[0], string( "test.provider:init" ) );
+    SW_EXPECT_EQUAL( listLine[1], string( "test.consumer:init" ) );
+    SW_EXPECT_EQUAL( listLine[2], string( "test.provider:start" ) );
+    SW_EXPECT_EQUAL( listLine[3], string( "test.consumer:start" ) );
+    SW_EXPECT_EQUAL( listLine[4], string( "test.consumer:stop" ) );
+    SW_EXPECT_EQUAL( listLine[5], string( "test.provider:stop" ) );
+    SW_EXPECT_EQUAL( listLine[6], string( "test.consumer:shutdown" ) ); // 저장소를 내리고 남은 완료를 돌린 뒤
+    SW_EXPECT_EQUAL( listLine[7], string( "test.provider:shutdown" ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 필수 인터페이스를 내놓을 키트가 설정에 없으면 기동 오류다(빈 칸으로 돌지 않는다) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
+{
+    {
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_EXPECT_FALSE( runtime.initialize( makeSettings( { ConsumerTestKit::kName } ), UnixMilliseconds{ 1000 }, error ) );
+        SW_EXPECT_TRUE( error.find( "needs kit 'test.provider'" ) != string::npos );
+        runtime.shutdown();
+    }
+    SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 초기화에 실패한 키트는 스스로 되돌리므로 종료를 받지 않고, 먼저 선 키트만 역순으로 내린다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown )
+{
+    {
+        OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        addOption( settings._config._listKit[1], "fail", "init" );
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
+        SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test init failure" ) != string::npos );
+        runtime.shutdown();
+    }
+    const vector<string>& listLine = getKitEventLog();
+    SW_REQUIRE_EQUAL( listLine.size(), size_t( 3 ) );
+    SW_EXPECT_EQUAL( listLine[0], string( "test.provider:init" ) );
+    SW_EXPECT_EQUAL( listLine[1], string( "test.provider:stop" ) );
+    SW_EXPECT_EQUAL( listLine[2], string( "test.provider:shutdown" ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 빌드에 없는 키트 이름은 기동 오류이고 반쯤 만든 것도 내린다(두 번 불러도 된다) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, UnknownKitStopsStartup )
+{
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_EXPECT_FALSE( runtime.initialize( makeSettings( { ProviderTestKit::kName, "test.missing" } ), UnixMilliseconds{ 1000 }, error ) );
+    SW_EXPECT_TRUE( error.find( "test.missing" ) != string::npos && error.find( "not in this build" ) != string::npos );
+    runtime.shutdown();
+    runtime.shutdown();
+    SW_EXPECT_FALSE( runtime.isInitialized() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 시작에 실패한 키트도 (초기화에 성공했으므로) stop · shutdown 을 받되 isStarted 는 false 이고, 먼저 선 키트는 반대 순서로 내린다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
+{
+    {
+        OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        addOption( settings._config._listKit[1], "fail", "start" );
+        settings._listenAddress = NetAddress::makeLoopback( 7452 );
+        OnlineServerRuntime runtime;
+        string              error;
+        SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
+        SW_EXPECT_TRUE( error.find( "test.consumer" ) != string::npos && error.find( "test start failure" ) != string::npos );
+        runtime.shutdown();
+    }
+    const vector<string>& listLine = getKitEventLog();
+    SW_REQUIRE_EQUAL( listLine.size(), size_t( 7 ) );
+    SW_EXPECT_EQUAL( listLine[2], string( "test.provider:start" ) );
+    SW_EXPECT_EQUAL( listLine[3], string( "test.consumer:stop-unstarted" ) );
+    SW_EXPECT_EQUAL( listLine[4], string( "test.provider:stop" ) );
+    SW_EXPECT_EQUAL( listLine[5], string( "test.consumer:shutdown" ) );
+    SW_EXPECT_EQUAL( listLine[6], string( "test.provider:shutdown" ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 단조 시계가 없으면 아무것도 만들지 않고 기동 오류다(폴백 시계는 없다) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingClockStopsStartup )
+{
+    OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName } );
+    settings._pClock                   = nullptr;
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
+    SW_EXPECT_TRUE( error.find( "_pClock" ) != string::npos );
+    SW_EXPECT_FALSE( runtime.isInitialized() );
+    SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 키트 목록이 비면 빌드의 키트를 모두 띄우지 않고 기동 오류다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyKitListStopsStartup )
+{
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_EXPECT_FALSE( runtime.initialize( makeSettings( {} ), UnixMilliseconds{ 1000 }, error ) );
+    SW_EXPECT_TRUE( error.find( "lists no kits" ) != string::npos );
+    runtime.shutdown();
+    SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
