@@ -138,12 +138,35 @@ namespace sw::test
         }
     }
 
+    /**
+     * @brief 두 값이 같은지 봅니다. 부호가 다른 정수끼리는 값으로 견준다(C++20 `std::cmp_equal` 과 같다) — `SW_TRUE`(int) 와 부호 없는 비트필드처럼 섞인 비교가
+     *        `==` 의 부호 변환(-1 == 0xFFFFFFFF)으로 잘못 통과하지 않고 경고도 내지 않는다.
+     */
+    template <typename TExpected, typename TActual>
+    constexpr bool areValuesEqual( const TExpected& expected, const TActual& actual )
+    {
+        using TLhs = std::decay_t<TExpected>;
+        using TRhs = std::decay_t<TActual>;
+        if constexpr ( std::is_integral_v<TLhs> && std::is_integral_v<TRhs> && std::is_same_v<TLhs, bool> == false && std::is_same_v<TRhs, bool> == false &&
+                       std::is_signed_v<TLhs> != std::is_signed_v<TRhs> )
+        {
+            if constexpr ( std::is_signed_v<TLhs> )
+                return expected >= 0 && static_cast<std::make_unsigned_t<TLhs>>( expected ) == actual;
+            else
+                return actual >= 0 && expected == static_cast<std::make_unsigned_t<TRhs>>( actual );
+        }
+        else
+        {
+            return expected == actual;
+        }
+    }
+
     /** @brief `SW_EXPECT_EQUAL` 의 본체입니다. */
     template <typename TExpected, typename TActual>
     bool checkEqual( const TExpected& expected, const TActual& actual, const utf8* pExpression, const utf8* pFile, int32 line )
     {
         countAssertion();
-        if ( expected == actual )
+        if ( areValuesEqual( expected, actual ) )
             return true;
         const string expectedText = describeValue( expected );
         const string actualText   = describeValue( actual );

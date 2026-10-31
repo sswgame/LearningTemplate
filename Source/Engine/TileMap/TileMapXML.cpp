@@ -49,18 +49,15 @@ namespace sw
                 return textLayerCount <= 1;
             }
 
-            static constexpr string_view kValueListSeparators = " 
+            static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
 
-                                                                "; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
-
-                                                                // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
-                                                                static constexpr const utf8 *
-                                                                kArrKnownRootChild[] = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
-            static constexpr const utf8* kArrKnownTileAttribute[]                    = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
-            static constexpr const utf8* kArrKnownWarpAttribute[]                    = { "x", "y", "tx", "ty", "map", "pair" };
-            static constexpr const utf8* kArrKnownSpawnAttribute[]                   = { "x", "y" };
-            static constexpr const utf8* kArrKnownTileLayerAttribute[]               = { "tileSet" };
-            static constexpr const utf8* kArrKnownTileLayerChild[]                   = { "palette", "cells" };
+            // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
+            static constexpr const utf8* kArrKnownRootChild[]          = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
+            static constexpr const utf8* kArrKnownTileAttribute[]      = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
+            static constexpr const utf8* kArrKnownWarpAttribute[]      = { "x", "y", "tx", "ty", "map", "pair" };
+            static constexpr const utf8* kArrKnownSpawnAttribute[]     = { "x", "y" };
+            static constexpr const utf8* kArrKnownTileLayerAttribute[] = { "tileSet" };
+            static constexpr const utf8* kArrKnownTileLayerChild[]     = { "palette", "cells" };
 
             /** @brief 레이어 표가 `<t>` 속성으로 쓰는 이름인지입니다(표 하나가 정본이라 이름을 따로 적지 않는다). */
             static bool isFlagLayerAttribute( const utf8* pName )

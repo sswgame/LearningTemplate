@@ -915,7 +915,7 @@ namespace sw
         reloaded._scope = scope;
         if ( readProject( AssetID{ projectPath }, reloaded ) == false )
         {
-            SW_LOG_ERROR( "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
+            SW_LOG_ERROR_ID( "Localization.ReloadFailed", "Localization project '%#' is not reloaded - keeping the previous text", projectPath.c_str() );
             return ReloadOutcome::Failed;
         }
         string language;

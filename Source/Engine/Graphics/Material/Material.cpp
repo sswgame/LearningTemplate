@@ -1080,7 +1080,7 @@ namespace sw
         if ( state->_pMaterial == nullptr )
             return;
         if ( state->_pMaterial->loadFromFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
+            SW_LOG_WARNING_ID( "Material.CommandLoadFailed", "Could not load material '%#'", args.get<string>( 1 ) );
     }
 
     bool Material::saveToFile( const AbsolutePath& absPath ) const
