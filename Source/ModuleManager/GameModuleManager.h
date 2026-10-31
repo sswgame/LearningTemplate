@@ -4,6 +4,8 @@
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화는 App 전용 `EditorModuleManager`(Source/App)가 이 클래스 위에 구현합니다. 의존은 그쪽에서 여기로 한 방향입니다.
+ * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 구현 파일이 둘이다 — `GameModuleManagerLinkage.cpp`(개발) ·
+ *       `GameModuleManagerLinkageShipping.cpp`(배포)를 CMake 가 고른다(`sw_pickVariantSource`, `Source/ModuleManager/CMakeLists.txt`). 나머지는 `GameModuleManager.cpp` 하나다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -19,6 +21,7 @@
 
 namespace sw
 {
+    struct ModuleAPISymbols;
     struct ModuleResolution;
 
     class IWindow;
@@ -213,14 +216,6 @@ namespace sw
         // 4) 모듈 바인딩
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI` 를, 개발 구성은 DLL 심볼을 씁니다. */
         [[nodiscard]] bool bindGameAPI( void* pLibraryModule );
-#if !defined( SW_SHIPPING )
-        /**
-         * @brief 이미 만든 게임 인스턴스와 그 API 테이블을 호스트에 연결합니다.
-         * @details 모듈 DLL 과 디바이스 없이 가짜 API 테이블로 게임을 종료하는 순서(상태 저장, shutdown, destroy)를 테스트하려고 둔다.
-         *          테스트 전용 함수라 배포본에는 없다. 배포본에서 호스트의 API 테이블을 바꿔 끼울 경로를 남기지 않기 위해서다.
-         */
-        void attachGameInstance( const GameAPI& gameAPI, GameHandle game );
-#endif
 
     protected:
         /**
@@ -264,6 +259,16 @@ namespace sw
         virtual void onRenderWorkersDrained() {}
 
     private:
+        /** @brief 게임 모듈 라이브러리의 ABI · API 표 심볼 이름입니다(리로드 전 검사 `isGameLibraryUsable` 와 개발 구성의 바인딩이 같이 쓴다). */
+        static const ModuleAPISymbols& getModuleSymbols();
+        /**
+         * @brief `initializeGame` 의 끝 — 게임 인스턴스를 세웁니다. 개발은 모듈 컴파일러와 리로드 매니저의 비우기 · "리로드 직후" 콜백을 걸고 그 콜백을 한 번 돌리며,
+         *        배포는 정적 링크 테이블로 바로 세운다(`GameModuleManagerLinkage*.cpp`).
+         * @return 개발 구성에서 리로드 매니저가 게임 인스턴스를 세우지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool startGameInstance();
+        /** @brief `_gameAPI` 를 채웁니다. 개발은 @p pLibraryModule 의 심볼(ABI 대조 포함), 배포는 정적 `exportGameAPI` 다(`GameModuleManagerLinkage*.cpp`). */
+        [[nodiscard]] bool exportGameAPITable( void* pLibraryModule );
         /** @brief 호스트 서비스 범위를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 겁니다). */
         void rebindGameService();
         /** @brief 게임 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */
