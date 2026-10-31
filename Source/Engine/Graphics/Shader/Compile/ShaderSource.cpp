@@ -7,6 +7,7 @@
 
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 
 namespace sw
@@ -104,7 +105,7 @@ namespace sw
     std::optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths )
     {
         vector<string> listDomain;
-        if ( ShaderCooker::collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
+        if ( ShaderCookStamp::collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
             return std::nullopt; // 오류는 위 함수가 남겼다
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )

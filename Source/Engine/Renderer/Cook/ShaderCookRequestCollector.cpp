@@ -1,5 +1,5 @@
 /**
- * @file ShaderCookRequest.cpp
+ * @file ShaderCookRequestCollector.cpp
  * @brief **무엇을 쿠킹할지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 목록을 만듭니다.
  * @details 쿠킹하는 일(`Shader/Compile/ShaderCooker.cpp`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
  *          저쪽 입력은 요청 하나입니다. 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 에서
@@ -7,6 +7,8 @@
  *          런타임과 같은 자리를 봐야 합니다. 그 대조가 이 파일의 일입니다.
  */
 #include "pch.h"
+
+#include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -17,7 +19,6 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -27,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        struct ShaderCookRequestInternal
+        struct ShaderCookRequestCollectorInternal
         {
             static void appendRequestUnique( vector<ShaderCookRequest>& outListRequest,
                                              string_view                shaderPath,
@@ -439,8 +440,8 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderCooker" );
 
-    bool ShaderCookDriver::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
+    bool ShaderCookRequestCollector::collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
     {
-        return ShaderCookRequestInternal::collectAllRequests( rootDir, outListRequest );
+        return ShaderCookRequestCollectorInternal::collectAllRequests( rootDir, outListRequest );
     }
 } // namespace sw

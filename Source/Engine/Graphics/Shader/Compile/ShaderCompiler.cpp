@@ -18,6 +18,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/SPIRVConstants.h"
 
@@ -231,9 +232,9 @@ namespace sw
                 // 이 캐시가 옛 바이트를 그대로 돌려줬고, ShaderCache 는 그것을 "새로 컴파일한 것" 으로 알고 라이브 캐시에
                 // 다시 써서 GL 이 set 10 짜리 옛 SPIR-V 를 계속 썼다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는 컴파일하고 나서야 알아서
                 // (키는 컴파일 전에 필요하다), 컴파일할 때 연 헤더와 그 내용 해시를 캐시 파일 옆의 의존 기록에 적고 맞출 때 그 기록이 지금 헤더와 같은지 본다
-                // (`ShaderCooker::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
+                // (`ShaderCookStamp::readIncludeRecord`). 전역 헤더 해시를 키에 섞으면 헤더 하나에 모든 셰이더의 캐시가 무효가 된다.
                 // 도구 지문은 키에 섞는다 — DXC 나 옵션을 바꾸면 옛 바이트를 돌려주면 안 된다.
-                hash = HashUtil::computeStringHash64( to_string( ShaderCooker::getToolchainFingerprint() ), false, hash );
+                hash = HashUtil::computeStringHash64( to_string( ShaderCookStamp::getToolchainFingerprint() ), false, hash );
                 // 디버그 코드젠 여부도 키다. 같은 소스라도 바이트코드가 다르다.
                 // string_view 로 넘긴다. 리터럴을 그대로 주면 (pStr, length, bIgnoreCase) 오버로드에 묶여 length=0 · seed 무시로
                 // 키가 상수가 된다(실제로 그래서 모든 셰이더가 한 파일을 공유했다).
@@ -253,7 +254,7 @@ namespace sw
                 const bool bDiskCacheWritable = cachePath.empty() == false && result._bytecode.empty() == false;
                 if ( bDiskCacheWritable == false )
                     return;
-                const string recordPath = cachePath + ShaderCooker::kIncludeRecordSuffix;
+                const string recordPath = cachePath + ShaderCookStamp::kIncludeRecordSuffix;
                 if ( FileUtil::removeFile( recordPath ) == false ) // 없으면 성공이다 - 묻고 지우기를 따로 하지 않는다
                 {
                     SW_LOG_WARNING( "Could not replace the shader cache record '%#' - the cache entry is skipped", recordPath );
@@ -264,7 +265,7 @@ namespace sw
                     SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
                     return;
                 }
-                if ( ShaderCooker::writeIncludeRecord( recordPath, result._listIncludedFile ) == false )
+                if ( ShaderCookStamp::writeIncludeRecord( recordPath, result._listIncludedFile ) == false )
                     SW_LOG_WARNING( "Could not write the shader cache record '%#'", recordPath );
             }
 
@@ -705,7 +706,7 @@ namespace sw
 
         // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 캐시 적중보다 먼저, 오류로 멈춘다.
         vector<string> listShadowed;
-        if ( ShaderCooker::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
+        if ( ShaderCookStamp::findShadowedHeaders( resolver->getIncludeResolver(), input->_shadersFolder, listShadowed ) == false )
         {
             for ( const string& problem : listShadowed )
             {
@@ -724,7 +725,7 @@ namespace sw
             // 의존 기록이 없거나 연 헤더 중 하나라도 달라졌으면 맞은 것이 아니다 — 그 셰이더만 다시 컴파일한다(다른 헤더를 쓰는 셰이더의 캐시는 그대로다).
             vector<string> listIncludedFile;
             vector<uint8>  cachedBytes;
-            const bool     bRecordCurrent = ShaderCooker::readIncludeRecord( cachePath + ShaderCooker::kIncludeRecordSuffix, listIncludedFile );
+            const bool     bRecordCurrent = ShaderCookStamp::readIncludeRecord( cachePath + ShaderCookStamp::kIncludeRecordSuffix, listIncludedFile );
             const bool     bBytesRead     = bRecordCurrent && FileUtil::readFile( cachePath, cachedBytes );
             if ( bBytesRead && cachedBytes.empty() == false )
             {

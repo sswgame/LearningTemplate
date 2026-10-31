@@ -7,7 +7,7 @@
  *
  *          **쿠킹은 "깨끗하다" 를 거짓으로 답하지 않는다**(`ShaderCookSummary::isClean` 이 `App --cook-shaders` 의 종료 코드를 정한다).
  *          소스가 없거나 `shaders` 폴더 밖인 요청 · 읽지 못한 바이너리 · 쓰지 못한 매니페스트와 스탬프 · 지우지 못한 옛 바이너리는 모두 실패로 센다. 조용히 건너뛰는 갈래를 두면 요청이 어긋난 채 종료 코드 0 이 된다.
- *          **요청이 만들지 않는 바이너리는 쿠커가 지운다**(`ShaderCooker::removeUnlistedBinaries`). 이 쿠킹은 요청을 모두 훑어 매니페스트를 새로 쓰므로 매니페스트 밖의 바이너리는 옛 퍼뮤테이션 해시나 사라진 셰이더의 것이다.
+ *          **요청이 만들지 않는 바이너리는 쿠커가 지운다**(`ShaderCookStamp::removeUnlistedBinaries`). 이 쿠킹은 요청을 모두 훑어 매니페스트를 새로 쓰므로 매니페스트 밖의 바이너리는 옛 퍼뮤테이션 해시나 사라진 셰이더의 것이다.
  *          예전에는 손으로 지워야 했고, 그렇지 않으면 `--verify-shaders` 가 "매니페스트에 없는 바이너리" 로 졌다.
  *
  *          **컴파일 · 리플렉션은 병렬이고 합치기는 직렬이다.** 요청 × 포맷 작업은 계획(직렬) → 컴파일 · 리플렉션(병렬, 작업마다 자기 결과 칸에만 쓴다) → 합치기(직렬, 요청 순서)로 돈다.
@@ -31,9 +31,11 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
+#include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
 
 namespace sw
 {
@@ -58,7 +60,7 @@ namespace sw
                 unordered_map<string, unordered_set<string>> _mapFailedSourceByDir;
                 /**
                  * @brief RHI 폴더마다 소스(정규화한 절대 경로)가 연 헤더(절대 경로)의 합집합입니다. 컴파일한 작업은 컴파일 결과의 목록을, 최신이라 건너뛴 작업은 스탬프에 적힌 목록을 낸다.
-                 *        스탬프가 소스별 "연 헤더" 로 적는다(`ShaderCooker::writeCookStamp`). 합치는 단계(직렬)만 쓴다.
+                 *        스탬프가 소스별 "연 헤더" 로 적는다(`ShaderCookStamp::writeCookStamp`). 합치는 단계(직렬)만 쓴다.
                  */
                 unordered_map<string, unordered_map<string, unordered_set<string>>> _mapIncludedByDir;
                 /**
@@ -137,8 +139,8 @@ namespace sw
                     // **파일 시간이 아니라 내용 해시로 판정한다.** `git pull` 은 소스의 mtime 을 체크아웃 시각으로 덮어써
                     // "산출물이 더 새것" 이 거꾸로 나올 수 있다. 낡은 바이너리는 한 백엔드만 다른 이미지를 내 백엔드 버그처럼 보인다.
                     const bool bUpToDate = ( _bForceAll == false ) && FileUtil::exists( task._outPath ) &&
-                                           ShaderCooker::isCookedOutputCurrent( _pState->_resolver->getIncludeResolver(), task._outDir, task._normPath, task._shadersDir, _pState->_stampCache,
-                                                                                &outResult._listIncludedFile );
+                                           ShaderCookStamp::isCookedOutputCurrent( _pState->_resolver->getIncludeResolver(), task._outDir, task._normPath, task._shadersDir, _pState->_stampCache,
+                                                                                   &outResult._listIncludedFile );
                     if ( bUpToDate == false )
                     {
                         outResult._listIncludedFile.clear();
@@ -330,7 +332,7 @@ namespace sw
                         uniqueKeepFileName.insert( entry.first );
                     }
                     uint32     removedCount{ 0 };
-                    const bool bAllRemoved = ShaderCooker::removeUnlistedBinaries( manifestPair.first, uniqueKeepFileName, removedCount );
+                    const bool bAllRemoved = ShaderCookStamp::removeUnlistedBinaries( manifestPair.first, uniqueKeepFileName, removedCount );
                     ioState._summary._removedCount += removedCount;
                     if ( bAllRemoved == false )
                         ++ioState._summary._failedCount;
@@ -345,9 +347,9 @@ namespace sw
                         }
                     }
                     const string& sourceShadersDir = ioState._mapSourceShadersDirByOutDir[manifestPair.first];
-                    if ( ShaderCooker::writeCookStamp( ioState._resolver->getIncludeResolver(), sourceShadersDir, manifestPair.first,
-                                                       ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile,
-                                                       ioState._stampCache ) == false )
+                    if ( ShaderCookStamp::writeCookStamp( ioState._resolver->getIncludeResolver(), sourceShadersDir, manifestPair.first,
+                                                          ( failedIt != ioState._mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr, mapIncludedFile,
+                                                          ioState._stampCache ) == false )
                     {
                         SW_LOG_ERROR( "Shader cook stamp could not be written: %#", manifestPair.first );
                         ++ioState._summary._failedCount;
@@ -377,7 +379,7 @@ namespace sw
 
         // 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
         vector<ShaderCookRequest> listRequest;
-        if ( collectAllRequests( rootDir, listRequest ) == false )
+        if ( ShaderCookRequestCollector::collectAllRequests( rootDir, listRequest ) == false )
         {
             SW_LOG_ERROR( "Shader cook requests could not be collected - engine default assets are missing or incomplete" );
             ShaderCookSummary nothingCooked{};

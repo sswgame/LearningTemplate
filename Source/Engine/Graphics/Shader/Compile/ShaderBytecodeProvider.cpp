@@ -4,6 +4,7 @@
 
 #include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -96,7 +97,7 @@ namespace sw
 
     uint64 LiveShaderBytecodeProvider::computeFingerprint( const ShaderCompileResult& result ) const
     {
-        return result._sourceFile.empty() ? 0u : ShaderCooker::computeSourceFingerprint( result._sourceFile, result._listIncludedFile );
+        return result._sourceFile.empty() ? 0u : ShaderCookStamp::computeSourceFingerprint( result._sourceFile, result._listIncludedFile );
     }
 
     bool LiveShaderBytecodeProvider::getReflection( ShaderCache& cache, const ShaderCompileDesc& desc, ShaderReflectionData& outReflection ) const

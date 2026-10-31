@@ -11,6 +11,8 @@
  */
 #include "pch.h"
 
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
+
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -80,7 +82,7 @@ namespace sw
             /**
              * @brief 쿠킹 스탬프 헤더입니다. **버전을 올리면 스탬프가 모두 불일치가 되어 한 번 전부 다시 쿠킹합니다.**
              * @details 5판: 소스(`.hlsl`)마다 컴파일이 연 헤더와 그 내용 해시를 적는다(4판은 모든 `.hlsli` 를 줄마다 적었다). 옛 판은 읽지 않고 낡음으로 본다.
-             *          판정은 소스 내용 해시, 소스별 헤더 해시, 도구 지문 줄(키 `kToolchainKey`, `ShaderCooker::getToolchainFingerprint`)이다.
+             *          판정은 소스 내용 해시, 소스별 헤더 해시, 도구 지문 줄(키 `kToolchainKey`, `ShaderCookStamp::getToolchainFingerprint`)이다.
              */
             static constexpr string_view kCookStampHeader{ "SWCOOK 5" };
 
@@ -90,7 +92,7 @@ namespace sw
             /** @brief 의존 줄에서 소스 키와 헤더 키 사이의 구분자입니다(`<해시> <소스 키>?<헤더 키>`). 경로에 쓸 수 없는 글자라 키와 섞이지 않는다. */
             static constexpr utf8 kDependencySeparator{ '?' };
 
-            /** @brief 컴파일 캐시 옆 의존 기록의 첫 줄입니다(`ShaderCooker::writeIncludeRecord`). */
+            /** @brief 컴파일 캐시 옆 의존 기록의 첫 줄입니다(`ShaderCookStamp::writeIncludeRecord`). */
             static constexpr string_view kIncludeRecordHeader{ "SWDEPS 1" };
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 맞지 않으면 0이며 불일치로 처리합니다. */
@@ -128,7 +130,7 @@ namespace sw
 
             /**
              * @brief 스탬프가 볼 소스를 모읍니다 — 자기 도메인(@p shadersDir)의 `.hlsl` 입니다(`/bin/` 아래는 뺀다).
-             * @details 헤더(`.hlsli`)는 줄로 적지 않는다. 소스마다 컴파일이 연 헤더가 그 소스의 의존 줄로 적힌다. 판정(`ShaderCooker::verifyCookedShaders`)도 이 함수를 쓴다 — 규칙이 한 곳이다.
+             * @details 헤더(`.hlsli`)는 줄로 적지 않는다. 소스마다 컴파일이 연 헤더가 그 소스의 의존 줄로 적힌다. 판정(`ShaderCookStamp::verifyCookedShaders`)도 이 함수를 쓴다 — 규칙이 한 곳이다.
              * @return 폴더가 없으면 빈 목록으로 true, 순회가 도중에 멈췄으면(빠진 소스를 최신으로 스탬프 찍는다) false 입니다.
              */
             [[nodiscard]] static bool collectStampedSources( const string& shadersDir, vector<StampedSource>& outListSource )
@@ -222,14 +224,14 @@ namespace sw
                 return cache._mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
             }
 
-            /** @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
+            /** @brief 도구 지문을 구합니다(`ShaderCookStamp::getToolchainFingerprint` 의 본체). 상수와 엔진 define 만으로 정해져 OS · 파일과 무관하다. */
             static uint64 computeToolchainFingerprint()
             {
                 static const uint64 s_fingerprint = []
                 {
                     // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
                     constexpr uint32 kVulkanTargetVersion = constant::kVulkanRequiredMajor * 1000 + constant::kVulkanRequiredMinor;
-                    uint64           hash                 = ShaderCooker::makeToolchainFingerprint( ShaderCooker::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCooker::kCompilerVersion );
+                    uint64           hash                 = ShaderCookStamp::makeToolchainFingerprint( ShaderCookStamp::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCookStamp::kCompilerVersion );
                     // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다.
                     vector<ShaderMacroDefine> listDefine;
                     ShaderCompiler::appendEngineDefines( listDefine );
@@ -599,7 +601,7 @@ namespace sw
                 }
             }
 
-            /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCooker::verifyCookedShaders` 의 본체). */
+            /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCookStamp::verifyCookedShaders` 의 본체). */
             static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, ShaderTargetFormat format, vector<string>& outListProblem )
             {
                 const string_view                 shaderFolder  = ShaderCooker::getSubfolderForFormat( format ); // 문제 글의 이름표 - 자리는 아래 `ShaderBinaryLocation` 이 정한다
@@ -652,7 +654,7 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderCooker" );
 
-    bool ShaderCooker::collectShaderDomains( string_view resourceRoot, const vector<string>& listPriority, vector<string>& outListDomain )
+    bool ShaderCookStamp::collectShaderDomains( string_view resourceRoot, const vector<string>& listPriority, vector<string>& outListDomain )
     {
         outListDomain.clear();
         if ( ShaderCookStampInternal::validatePriority( listPriority ) == false )
@@ -679,7 +681,7 @@ namespace sw
         return true;
     }
 
-    bool ShaderCooker::collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
+    bool ShaderCookStamp::collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
     {
         outListDomain.clear();
         if ( ShaderCookStampInternal::validatePriority( listPriority ) == false )
@@ -689,19 +691,19 @@ namespace sw
         return true;
     }
 
-    bool ShaderCooker::findShadowedHeaders( const ShaderIncludeResolver& resolver, const AbsolutePath& shadersFolder, vector<string>& outListProblem )
+    bool ShaderCookStamp::findShadowedHeaders( const ShaderIncludeResolver& resolver, const AbsolutePath& shadersFolder, vector<string>& outListProblem )
     {
         return ShaderCookStampInternal::findShadowedInDir( resolver, shadersFolder.str(), outListProblem );
     }
 
-    bool ShaderCooker::writeCookStamp( const ShaderIncludeResolver& resolver, string_view sourceShadersDir, string_view binDirectory,
-                                       const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
-                                       ShaderCookStampCache& stampCache )
+    bool ShaderCookStamp::writeCookStamp( const ShaderIncludeResolver& resolver, string_view sourceShadersDir, string_view binDirectory,
+                                          const unordered_set<string>* pFailedSource, const unordered_map<string, vector<string>>& mapIncludedFile,
+                                          ShaderCookStampCache& stampCache )
     {
         return ShaderCookStampInternal::writeCookStamp( resolver, sourceShadersDir, binDirectory, pFailedSource, mapIncludedFile, stampCache.getState() );
     }
 
-    bool ShaderCooker::removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount )
+    bool ShaderCookStamp::removeUnlistedBinaries( string_view binDirectory, const unordered_set<string>& uniqueKeepFileName, uint32& outRemovedCount )
     {
         outRemovedCount = 0;
         vector<string> listFile;
@@ -725,13 +727,13 @@ namespace sw
         return bAllRemoved;
     }
 
-    void ShaderCooker::invalidateSharedHeaderCache()
+    void ShaderCookStamp::invalidateSharedHeaderCache()
     {
         // 내용 해시는 파일 시각으로 스스로 낡음을 알지만, 수동 리로드는 "전부 다시 본다" 는 약속이라 버린다. 스탬프 읽기 캐시는 쿠킹마다의 값이라 여기서 버릴 것이 없다.
         ContentHash::clearCache();
     }
 
-    uint64 ShaderCooker::computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile )
+    uint64 ShaderCookStamp::computeSourceFingerprint( string_view absShaderPath, const vector<string>& listIncludedFile )
     {
         const uint64 sourceHash = ContentHash::computeFile( absShaderPath );
         if ( sourceHash == 0 )
@@ -752,7 +754,7 @@ namespace sw
         return HashUtil::computeStringHash64( to_string( getToolchainFingerprint() ), false, headerPart );
     }
 
-    bool ShaderCooker::writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile )
+    bool ShaderCookStamp::writeIncludeRecord( string_view recordPath, const vector<string>& listIncludedFile )
     {
         string text{ ShaderCookStampInternal::kIncludeRecordHeader };
         text += '\n';
@@ -772,7 +774,7 @@ namespace sw
         return FileUtil::writeTextFile( recordPath, text );
     }
 
-    bool ShaderCooker::readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile )
+    bool ShaderCookStamp::readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile )
     {
         outListIncludedFile.clear();
         string text;
@@ -803,20 +805,20 @@ namespace sw
         return true;
     }
 
-    uint64 ShaderCooker::makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion )
+    uint64 ShaderCookStamp::makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion )
     {
         uint64 hash = HashUtil::computeStringHash64( to_string( compileOptionsRevision ), false );
         hash        = HashUtil::computeStringHash64( to_string( vulkanTargetVersion ), false, hash );
         return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }
 
-    uint64 ShaderCooker::getToolchainFingerprint()
+    uint64 ShaderCookStamp::getToolchainFingerprint()
     {
         return ShaderCookStampInternal::computeToolchainFingerprint();
     }
 
-    bool ShaderCooker::isCookedOutputCurrent( const ShaderIncludeResolver& resolver, string_view binDirectory, string_view absShaderPath, string_view sourceShadersDir,
-                                              ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile )
+    bool ShaderCookStamp::isCookedOutputCurrent( const ShaderIncludeResolver& resolver, string_view binDirectory, string_view absShaderPath, string_view sourceShadersDir,
+                                                 ShaderCookStampCache& stampCache, vector<string>* pOutListIncludedFile )
     {
         using Internal = ShaderCookStampInternal;
         if ( pOutListIncludedFile != nullptr )
@@ -866,7 +868,7 @@ namespace sw
         return true;
     }
 
-    void ShaderCooker::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, vector<string>& outListProblem )
+    void ShaderCookStamp::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, vector<string>& outListProblem )
     {
         const string& resourceRoot = assetPaths.getRootFolderPath();
         if ( resourceRoot.empty() || cookedDir.empty() )

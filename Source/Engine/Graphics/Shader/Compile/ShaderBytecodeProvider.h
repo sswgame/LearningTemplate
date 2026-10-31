@@ -50,7 +50,7 @@ namespace sw
     /**
      * @class LiveShaderBytecodeProvider
      * @brief 소스 정책(개발 실행)입니다. 바이트코드는 실행 중 컴파일(컴파일러가 셰이더 DDC 를 먼저 본다), 리플렉션은 그 바이트코드에서 만든다 — 쿠킹본을 읽지 않는다.
-     * @details 메모리 캐시 지문은 소스와 그 컴파일이 연 헤더의 내용이다(`ShaderCooker::computeSourceFingerprint`) — 파일을 고치면 다음 요청이 다시 컴파일한다.
+     * @details 메모리 캐시 지문은 소스와 그 컴파일이 연 헤더의 내용이다(`ShaderCookStamp::computeSourceFingerprint`) — 파일을 고치면 다음 요청이 다시 컴파일한다.
      */
     class LiveShaderBytecodeProvider final : public IShaderBytecodeProvider
     {

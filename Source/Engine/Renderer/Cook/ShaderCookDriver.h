@@ -1,6 +1,6 @@
 /**
  * @file ShaderCookDriver.h
- * @brief 오프라인 셰이더 쿠킹의 **정책**입니다. 무엇을 쿠킹할지 모으고(요청), 그것을 모두 쿠킹합니다.
+ * @brief 오프라인 셰이더 쿠킹의 일괄 실행입니다. 요청(`ShaderCookRequestCollector` 가 모은다)을 모두 쿠킹하고 매니페스트 · 스탬프를 씁니다.
  * @details 언리얼에서 "어떤 셰이더를 컴파일하는가"를 정하는 것은 머티리얼, 버텍스 팩토리, 렌더러이고,
  *          ShaderCore 는 셰이더 하나를 컴파일할 뿐입니다. 이 저장소도 같은 구조입니다: 셰이더 하나를 쿠킹하는 법과 이름 짓기, 최신
  *          판정(`Shader/Compile/ShaderCooker`)은 메커니즘이고, 파이프라인 XML 과 패스 종류(`FrameRendererUtil`)를
@@ -71,14 +71,5 @@ namespace sw
                                                const vector<ShaderCookRequest>& listRequest,
                                                ShaderTargetFormat               targetFormat = ShaderTargetFormat::Count,
                                                bool                             bForceAll    = false );
-
-        /**
-         * @brief 이 리소스 트리가 쿠킹해야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).
-         * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 이 매니페스트 미스로
-         *          떨어집니다. 그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 코드
-         *          (`RenderPassTypeInfo` 테이블, `selectRenderPassShader`, `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.
-         * @return 엔진 기본 에셋(`EngineDefaultAssets`)을 읽지 못하면 false 입니다. 엔진 셰이더 경로가 그 데이터에만 있기 때문입니다.
-         */
-        [[nodiscard]] static bool collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest );
     };
 } // namespace sw

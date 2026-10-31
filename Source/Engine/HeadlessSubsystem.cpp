@@ -33,6 +33,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationDocuments.h"
@@ -108,7 +109,7 @@ namespace sw
             static bool verifyShaderTarget( string_view cookedDir, ShaderTargetFormat format )
             {
                 vector<string> listProblem;
-                ShaderCooker::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
+                ShaderCookStamp::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR( "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
@@ -126,7 +127,7 @@ namespace sw
                 const ShaderTargetFormat shaderTarget = resolveShaderTarget( commandLine );
 #if defined( SW_WITH_CLIENT_CODE )
                 const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders( cookedDir );
-                ShaderCooker::invalidateSharedHeaderCache();
+                ShaderCookStamp::invalidateSharedHeaderCache();
                 if ( summary.isClean() == false || verifyShaderTarget( cookedDir, shaderTarget ) == false )
                 {
                     SW_LOG_ERROR( "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
