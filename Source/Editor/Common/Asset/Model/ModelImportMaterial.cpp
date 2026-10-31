@@ -4,20 +4,20 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/Asset/Model/ModelImportMaterial.h"
+
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/Model/ModelImportGeometry.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 #include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
-#include "Engine/Asset/AssetMeta.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -27,8 +27,8 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ModelImporter" );
 
-    bool ModelImportUtil::readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
-                                             vector<string>& outListIgnored )
+    bool ModelImportMaterial::readToonMaterials( const cgltf_data& data, string_view sourcePath, vector<ToonMaterialDesc>& outListToon,
+                                                 vector<string>& outListIgnored )
     {
         outListToon.clear();
         if ( data.json == nullptr || data.json_size == 0 )
@@ -82,7 +82,7 @@ namespace sw::editor
         return true;
     }
 
-    VrmFirstPersonMode ModelImportUtil::findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh )
+    VrmFirstPersonMode ModelImportMaterial::findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh )
     {
         if ( pMesh == nullptr )
             return VrmFirstPersonMode::Auto;
@@ -96,12 +96,12 @@ namespace sw::editor
         return VrmFirstPersonMode::Auto;
     }
 
-    bool ModelImportUtil::triangleTouchesHead( const MergedMesh& body, const vector<uint8>& listHeadBone, size_t triangle )
+    bool ModelImportMaterial::triangleTouchesHead( const ModelImportUtil::MergedMesh& body, const vector<uint8>& listHeadBone, size_t triangle )
     {
         for ( uint32 corner = 0; corner < 3; ++corner )
         {
-            const ImportVertex& vertex = body._listVertex[body._listIndex[triangle * 3 + corner]];
-            for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
+            const ModelImportUtil::ImportVertex& vertex = body._listVertex[body._listIndex[triangle * 3 + corner]];
+            for ( uint32 influence = 0; influence < ModelImportUtil::kInfluenceCount; ++influence )
             {
                 const uint32 joint          = vertex._arrJoint[influence];
                 const bool   bHeadInfluence = vertex._arrWeight[influence] > 0.0f && joint < listHeadBone.size() && listHeadBone[joint] == SW_TRUE;
@@ -112,7 +112,7 @@ namespace sw::editor
         return false;
     }
 
-    void ModelImportUtil::populateMaterialSections( MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult )
+    void ModelImportMaterial::populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<ToonMaterialDesc>& listToon, ModelImportResult& inoutResult )
     {
         // 1인칭 본(머리) 아래 본 — Auto 메시는 이 본에 가중치가 있는 꼭짓점을 가진 삼각형을 3인칭 전용으로 나눈다(UniVRM 과 같다).
         const Skeleton& skeleton = inoutResult._skeleton;
@@ -187,7 +187,7 @@ namespace sw::editor
             {
                 ++end;
             }
-            optimizeTriangleRange( inoutBody, begin, end );
+            ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, end );
             const uint32               materialIndex = key / kVisibilityCount;
             const MeshPersonVisibility visibility    = static_cast<MeshPersonVisibility>( key % kVisibilityCount );
             ModelImportSection         section{};
@@ -195,8 +195,8 @@ namespace sw::editor
             auto stemIt       = mapMaterialStem.find( materialIndex );
             if ( stemIt == mapMaterialStem.end() )
             {
-                const string baseStem = makeFileStem( section._material._name );
-                stemIt                = mapMaterialStem.emplace( materialIndex, makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
+                const string baseStem = ModelImportUtil::makeFileStem( section._material._name );
+                stemIt                = mapMaterialStem.emplace( materialIndex, ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
             }
             section._fileStem         = stemIt->second;
             section._sectionName      = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
@@ -208,10 +208,10 @@ namespace sw::editor
         }
         // 구간 없는 꼬리(머티리얼 없는 삼각형)도 순서만 최적화한다.
         if ( begin < triangleCount )
-            optimizeTriangleRange( inoutBody, begin, triangleCount );
+            ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, triangleCount );
     }
 
-    bool ModelImportUtil::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
         vector<uint8> listUsed( data.textures_count, SW_FALSE );
         for ( const ModelImportSection& section : inoutResult._listSection )
@@ -230,8 +230,8 @@ namespace sw::editor
         for ( cgltf_size imageIndex = 0; imageIndex < data.images_count; ++imageIndex )
         {
             const cgltf_image& image    = data.images[imageIndex];
-            const string       baseName = ( image.name != nullptr && image.name[0] != '\0' ) ? makeFileStem( image.name ) : "image" + to_string( static_cast<uint64>( imageIndex ) );
-            listImageStem[imageIndex]   = makeNumberedStem( baseName, mapStemUse[baseName]++ );
+            const string       baseName = ( image.name != nullptr && image.name[0] != '\0' ) ? ModelImportUtil::makeFileStem( image.name ) : "image" + to_string( static_cast<uint64>( imageIndex ) );
+            listImageStem[imageIndex]   = ModelImportUtil::makeNumberedStem( baseName, mapStemUse[baseName]++ );
         }
 
         inoutResult._listTexture.assign( data.textures_count, ModelImportTexture{} );
@@ -267,7 +267,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
     {
         if ( result._listSection.empty() )
             return true;
@@ -308,7 +308,7 @@ namespace sw::editor
                 continue;
             listWrittenStem.push_back( section._fileStem );
             const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath, pDefaultAssets->_toonMaterialTemplate );
-            const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
+            const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" );
             const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
             if ( bWritten == false )
             {
@@ -317,7 +317,7 @@ namespace sw::editor
             }
             // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
             // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-            if ( writeImportedMeta( assetPaths, materialPath ) == false )
+            if ( ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                 return false;
@@ -336,45 +336,15 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath )
-    {
-        const string assetID = assetPaths.toAssetID( assetPath );
-        AssetMeta    meta;
-        meta._guid       = makeImportedGUID( assetID );
-        meta._sourcePath = assetID;
-        meta._bImported  = true;
-        return FileUtil::writeTextFile( assetPath + path::kMetaExtension, meta.toXML() );
-    }
-
-    string ModelImportUtil::makeImportedGUID( string_view assetID )
-    {
-        const uint64 high = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false );
-        const uint64 low  = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false, high ^ HashUtil::kGoldenRatio64 );
-        // 8-4-4-4-12 글자 16 진. 셋째 그룹 첫 글자는 버전 4, 넷째 그룹 첫 글자는 변형(8..b)이다.
-        const auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
-        { HexUtil::appendUint64( inoutText, value, digitCount ); };
-        string text;
-        appendHex( text, high >> 32, 8 );
-        text += '-';
-        appendHex( text, ( high >> 16 ) & 0xFFFFu, 4 );
-        text += "-4";
-        appendHex( text, high & 0x0FFFu, 3 );
-        text += '-';
-        appendHex( text, 0x8000u | ( ( low >> 48 ) & 0x3FFFu ), 4 );
-        text += '-';
-        appendHex( text, low & 0xFFFFFFFFFFFFull, 12 );
-        return text;
-    }
-
-    string ModelImportUtil::makeRawTextureFolder( string_view sourcePath )
+    string ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )
     {
         const string normalized = FileUtil::normalizeSeparators( sourcePath );
-        const string marker     = "/" + string( kRawModelFolder ) + "/";
+        const string marker     = "/" + string( ModelImportUtil::kRawModelFolder ) + "/";
         const size_t at         = normalized.find( marker );
         if ( at == string::npos )
             return {};
         const string domain   = normalized.substr( 0, at );
         const string relative = FileUtil::removeExtension( normalized.substr( at + marker.size() ) );
-        return domain + "/" + string( kRawTextureFolder ) + "/" + relative;
+        return domain + "/" + string( ModelImportUtil::kRawTextureFolder ) + "/" + relative;
     }
 } // namespace sw::editor

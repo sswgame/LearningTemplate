@@ -5,6 +5,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/Asset/Model/ModelImportVrm.h"
+
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -63,7 +65,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void ModelImportUtil::populateVrmGltfNames( const cgltf_data& data, VrmGltfNames& outNames )
+    void ModelImportVrm::populateVrmGltfNames( const cgltf_data& data, VrmGltfNames& outNames )
     {
         outNames = VrmGltfNames{};
         outNames._listNodeName.reserve( data.nodes_count );
@@ -72,7 +74,7 @@ namespace sw::editor
         for ( cgltf_size nodeIndex = 0; nodeIndex < data.nodes_count; ++nodeIndex )
         {
             const cgltf_node& node = data.nodes[nodeIndex];
-            outNames._listNodeName.push_back( makeNodeName( data, node ) );
+            outNames._listNodeName.push_back( ModelImportUtil::makeNodeName( data, node ) );
             outNames._listNodeMesh.push_back( node.mesh != nullptr ? static_cast<int32>( node.mesh - data.meshes ) : -1 );
             for ( cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex )
             {
@@ -90,12 +92,12 @@ namespace sw::editor
             const cgltf_size targetCount = mesh.primitives_count > 0 ? mesh.primitives[0].targets_count : 0;
             for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
-                outNames._listMeshMorphName[meshIndex].push_back( string( makeMorphTargetName( &mesh, targetIndex ).c_str() ) );
+                outNames._listMeshMorphName[meshIndex].push_back( string( ModelImportUtil::makeMorphTargetName( &mesh, targetIndex ).c_str() ) );
             }
         }
     }
 
-    bool ModelImportUtil::readVrmAvatar( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportVrm::readVrmAvatar( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
         inoutResult._avatar = VrmAvatarDef{};
         inoutResult._listIgnoredAvatarKey.clear();
@@ -131,7 +133,7 @@ namespace sw::editor
         return true;
     }
 
-    void ModelImportUtil::warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath )
+    void ModelImportVrm::warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() || result._bSkinned == SW_FALSE )
@@ -159,7 +161,7 @@ namespace sw::editor
             SW_LOG_WARNING( "VRM '%#': avatar names nodes that are not skin joints (%# bones): %#", sourcePath, listMissing.size(), Internal::joinNames( listMissing ).c_str() );
     }
 
-    bool ModelImportUtil::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._avatar.isEmpty() )
@@ -203,7 +205,7 @@ namespace sw::editor
         return true;
     }
 
-    vector<MeshSection> ModelImportUtil::makeMeshSections( const vector<ModelImportSection>& listSection )
+    vector<MeshSection> ModelImportVrm::makeMeshSections( const vector<ModelImportSection>& listSection )
     {
         vector<MeshSection> listMeshSection;
         listMeshSection.reserve( listSection.size() );
@@ -214,7 +216,7 @@ namespace sw::editor
         return listMeshSection;
     }
 
-    bool ModelImportUtil::writeCharacterPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
+    bool ModelImportVrm::writeCharacterPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem )
     {
         using Internal = ModelImportVrmInternal;
         if ( result._listSection.empty() || result._bSkinned == SW_FALSE )
@@ -222,7 +224,7 @@ namespace sw::editor
         auto resourceOf = [&]( string_view extension )
         { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
         auto materialOf = [&]( const ModelImportSection& section )
-        { return assetPaths.toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" ) ); };
+        { return assetPaths.toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" ) ); };
         const string meshID       = assetPaths.toAssetID( meshPath );
         const string skeletonPath = resourceOf( Skeleton::kExtension );
 
@@ -258,7 +260,7 @@ namespace sw::editor
             Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
 
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && writeImportedMeta( assetPaths, prefabPath );
+        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && ModelImportUtil::writeImportedMeta( assetPaths, prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR( "Failed to write character prefab %#", prefabPath.c_str() );
@@ -268,7 +270,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::containsVrmExtension( const vector<uint8>& bytes )
+    bool ModelImportVrm::containsVrmExtension( const vector<uint8>& bytes )
     {
         const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
         return StringUtil::contains( text, "\"VRM\"" ) || StringUtil::contains( text, "VRMC_vrm" );

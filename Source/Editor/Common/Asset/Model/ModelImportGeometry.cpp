@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/Asset/Model/ModelImportGeometry.h"
+
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -38,15 +40,15 @@ namespace sw::editor
             /** @brief JSON 자리를 찾습니다. GLB 인데 첫 청크가 JSON 이 아니거나 범위를 벗어나면 false 입니다(고치지 않고 cgltf 가 알리게 한다). */
             [[nodiscard]] static bool findJSONSpan( const vector<uint8>& bytes, GltfJSONSpan& outSpan )
             {
-                outSpan._bGlb       = bytes.size() >= ModelImportUtil::kGlbHeaderSize + ModelImportUtil::kGlbChunkHeaderSize && LittleEndianUtil::readUint32( bytes.data() ) == ModelImportUtil::kGlbMagic;
+                outSpan._bGlb       = bytes.size() >= ModelImportGeometry::kGlbHeaderSize + ModelImportGeometry::kGlbChunkHeaderSize && LittleEndianUtil::readUint32( bytes.data() ) == ModelImportGeometry::kGlbMagic;
                 outSpan._jsonOffset = 0;
                 outSpan._jsonSize   = bytes.size();
                 if ( outSpan._bGlb == false )
                     return true;
-                if ( LittleEndianUtil::readUint32( bytes.data() + ModelImportUtil::kGlbHeaderSize + 4 ) != ModelImportUtil::kGlbJSONChunkType )
+                if ( LittleEndianUtil::readUint32( bytes.data() + ModelImportGeometry::kGlbHeaderSize + 4 ) != ModelImportGeometry::kGlbJSONChunkType )
                     return false;
-                outSpan._jsonOffset = ModelImportUtil::kGlbHeaderSize + ModelImportUtil::kGlbChunkHeaderSize;
-                outSpan._jsonSize   = LittleEndianUtil::readUint32( bytes.data() + ModelImportUtil::kGlbHeaderSize );
+                outSpan._jsonOffset = ModelImportGeometry::kGlbHeaderSize + ModelImportGeometry::kGlbChunkHeaderSize;
+                outSpan._jsonSize   = LittleEndianUtil::readUint32( bytes.data() + ModelImportGeometry::kGlbHeaderSize );
                 return outSpan._jsonOffset + outSpan._jsonSize <= bytes.size();
             }
 
@@ -129,11 +131,11 @@ namespace sw::editor
                 const size_t tailOffset     = span._jsonOffset + span._jsonSize;
                 const size_t totalSize      = span._jsonOffset + paddedJSONSize + ( bytes.size() - tailOffset );
                 rewrittenBytes.reserve( totalSize );
-                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportUtil::kGlbMagic );
+                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportGeometry::kGlbMagic );
                 LittleEndianUtil::appendUint32( rewrittenBytes, LittleEndianUtil::readUint32( bytes.data() + 4 ) );
                 LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( totalSize ) );
                 LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( paddedJSONSize ) );
-                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportUtil::kGlbJSONChunkType );
+                LittleEndianUtil::appendUint32( rewrittenBytes, ModelImportGeometry::kGlbJSONChunkType );
                 rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
                 rewrittenBytes.resize( span._jsonOffset + paddedJSONSize, static_cast<uint8>( ' ' ) );
                 rewrittenBytes.insert( rewrittenBytes.end(), bytes.begin() + static_cast<ptrdiff_t>( tailOffset ), bytes.end() );
@@ -147,40 +149,14 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ModelImporter" );
 
-    bool ModelImportUtil::isSourceModel( string_view path )
-    {
-        return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } );
-    }
-
-    void* ModelImportUtil::allocate( void* pUser, cgltf_size size )
-    {
-        (void)pUser;
-        return Memory::allocate( size );
-    }
-
-    void ModelImportUtil::free( void* pUser, void* pAddress )
-    {
-        (void)pUser;
-        if ( pAddress != nullptr )
-            Memory::free( pAddress );
-    }
-
-    cgltf_options ModelImportUtil::makeOptions()
-    {
-        cgltf_options options{};
-        options.memory.alloc_func = &ModelImportUtil::allocate;
-        options.memory.free_func  = &ModelImportUtil::free;
-        return options;
-    }
-
-    float3 ModelImportUtil::transformPoint( const float32 ( &arrMatrix )[16], const float3& point )
+    float3 ModelImportGeometry::transformPoint( const float32 ( &arrMatrix )[16], const float3& point )
     {
         return float3{ arrMatrix[0] * point._x + arrMatrix[4] * point._y + arrMatrix[8] * point._z + arrMatrix[12],
                        arrMatrix[1] * point._x + arrMatrix[5] * point._y + arrMatrix[9] * point._z + arrMatrix[13],
                        arrMatrix[2] * point._x + arrMatrix[6] * point._y + arrMatrix[10] * point._z + arrMatrix[14] };
     }
 
-    float32 ModelImportUtil::computeDeterminant3( const float32 ( &arrMatrix )[16] )
+    float32 ModelImportGeometry::computeDeterminant3( const float32 ( &arrMatrix )[16] )
     {
         const float3 column0{ arrMatrix[0], arrMatrix[1], arrMatrix[2] };
         const float3 column1{ arrMatrix[4], arrMatrix[5], arrMatrix[6] };
@@ -188,7 +164,7 @@ namespace sw::editor
         return column0.dot( column1.cross( column2 ) );
     }
 
-    float3 ModelImportUtil::transformNormal( const float32 ( &arrMatrix )[16], const float3& normal )
+    float3 ModelImportGeometry::transformNormal( const float32 ( &arrMatrix )[16], const float3& normal )
     {
         const float3  column0{ arrMatrix[0], arrMatrix[1], arrMatrix[2] };
         const float3  column1{ arrMatrix[4], arrMatrix[5], arrMatrix[6] };
@@ -201,28 +177,20 @@ namespace sw::editor
         return normalizeOrZero( transformed );
     }
 
-    float3 ModelImportUtil::transformDirection( const float32 ( &arrMatrix )[16], const float3& direction )
+    float3 ModelImportGeometry::transformDirection( const float32 ( &arrMatrix )[16], const float3& direction )
     {
         return float3{ arrMatrix[0] * direction._x + arrMatrix[4] * direction._y + arrMatrix[8] * direction._z,
                        arrMatrix[1] * direction._x + arrMatrix[5] * direction._y + arrMatrix[9] * direction._z,
                        arrMatrix[2] * direction._x + arrMatrix[6] * direction._y + arrMatrix[10] * direction._z };
     }
 
-    hashed_string ModelImportUtil::makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex )
-    {
-        const bool bHasMorphTargetName = pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr;
-        if ( bHasMorphTargetName )
-            return hashed_string( pMesh->target_names[targetIndex] );
-        return hashed_string( formatToString( "target%#", static_cast<uint64>( targetIndex ) ) );
-    }
-
-    bool ModelImportUtil::appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
-                                              cgltf_size vertexCount, MergedMesh& inoutMesh )
+    bool ModelImportGeometry::appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                                  cgltf_size vertexCount, ModelImportUtil::MergedMesh& inoutMesh )
     {
         const size_t totalCount = inoutMesh._listVertex.size();
         for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
         {
-            const hashed_string         name    = makeMorphTargetName( pSourceMesh, targetIndex );
+            const hashed_string         name    = ModelImportUtil::makeMorphTargetName( pSourceMesh, targetIndex );
             const std::optional<size_t> found   = VectorUtil::findIndex( inoutMesh._listMorphName, name );
             const size_t                indexOf = found.has_value() ? *found : inoutMesh._listMorphName.size();
             if ( found.has_value() == false )
@@ -253,9 +221,9 @@ namespace sw::editor
             for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
             {
                 if ( listPositionValue.empty() == false )
-                    listPosition[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ &listPositionValue[vertexIndex * 3] } ) );
+                    listPosition[baseVertex + vertexIndex] = ModelImportUtil::convertToEngineSpace( transformDirection( arrWorld, float3{ &listPositionValue[vertexIndex * 3] } ) );
                 if ( listNormalValue.empty() == false )
-                    listNormal[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ &listNormalValue[vertexIndex * 3] } ) );
+                    listNormal[baseVertex + vertexIndex] = ModelImportUtil::convertToEngineSpace( transformDirection( arrWorld, float3{ &listNormalValue[vertexIndex * 3] } ) );
             }
         }
         // 이 프리미티브에 없는 타깃도 정점 수를 맞춘다(차이 0).
@@ -267,79 +235,18 @@ namespace sw::editor
         return true;
     }
 
-    float3 ModelImportUtil::normalizeOrZero( const float3& value )
+    float3 ModelImportGeometry::normalizeOrZero( const float3& value )
     {
         const float32 length = value.getLength();
         return length > MathUtil::kEpsilon ? value * ( 1.0f / length ) : float3{};
     }
 
-    float3 ModelImportUtil::convertToEngineSpace( const float3& value )
-    {
-        return float3{ -value._x, value._y, value._z };
-    }
-
-    quaternion ModelImportUtil::convertRotationToEngineSpace( const quaternion& value )
-    {
-        return quaternion{ value._x, -value._y, -value._z, value._w };
-    }
-
-    float4x4 ModelImportUtil::convertMatrixToEngineSpace( const float32 ( &arrColumnMajor )[16] )
-    {
-        float4x4 matrix{ arrColumnMajor };
-        matrix._12 = -matrix._12;
-        matrix._13 = -matrix._13;
-        matrix._14 = -matrix._14;
-        matrix._21 = -matrix._21;
-        matrix._31 = -matrix._31;
-        matrix._41 = -matrix._41;
-        return matrix;
-    }
-
-    BoneTransform ModelImportUtil::convertTransformToEngineSpace( const BoneTransform& value )
-    {
-        BoneTransform result{};
-        result._translation = convertToEngineSpace( value._translation );
-        result._rotation    = convertRotationToEngineSpace( value._rotation );
-        result._scale       = value._scale;
-        return result;
-    }
-
-    bool ModelImportUtil::readFloats( const cgltf_accessor* pAccessor, cgltf_size index, float32* pOutValue, cgltf_size count )
-    {
-        return pAccessor != nullptr && cgltf_accessor_read_float( pAccessor, index, pOutValue, count ) != 0;
-    }
-
-    bool ModelImportUtil::unpackFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, vector<float32>& outListValue )
-    {
-        outListValue.clear();
-        if ( pAccessor == nullptr )
-        {
-            SW_LOG_ERROR( "glTF accessor is missing" );
-            return false;
-        }
-        if ( cgltf_num_components( pAccessor->type ) != componentCount )
-        {
-            SW_LOG_ERROR( "glTF accessor has %# components per element, expected %#", static_cast<uint32>( cgltf_num_components( pAccessor->type ) ),
-                          static_cast<uint32>( componentCount ) );
-            return false;
-        }
-        const cgltf_size floatCount = pAccessor->count * componentCount;
-        outListValue.resize( floatCount );
-        if ( floatCount > 0 && cgltf_accessor_unpack_floats( pAccessor, outListValue.data(), floatCount ) != floatCount )
-        {
-            SW_LOG_ERROR( "glTF accessor (%# elements) could not be read", static_cast<uint32>( pAccessor->count ) );
-            outListValue.clear();
-            return false;
-        }
-        return true;
-    }
-
-    bool ModelImportUtil::unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue )
+    bool ModelImportGeometry::unpackOptionalFloats( const cgltf_accessor* pAccessor, cgltf_size componentCount, cgltf_size elementCount, vector<float32>& outListValue )
     {
         outListValue.clear();
         if ( pAccessor == nullptr )
             return true; // 원본이 적지 않은 선택 속성이다 — 부르는 쪽이 그 뜻(노멀 계산 · 흰색 · 차이 0)을 정한다
-        if ( unpackFloats( pAccessor, componentCount, outListValue ) == false )
+        if ( ModelImportUtil::unpackFloats( pAccessor, componentCount, outListValue ) == false )
             return false;
         if ( pAccessor->count < elementCount )
         {
@@ -350,7 +257,7 @@ namespace sw::editor
         return true;
     }
 
-    ModelImportUtil::PrimitiveAccessors ModelImportUtil::findPrimitiveAccessors( const cgltf_primitive& primitive )
+    ModelImportGeometry::PrimitiveAccessors ModelImportGeometry::findPrimitiveAccessors( const cgltf_primitive& primitive )
     {
         PrimitiveAccessors accessors{};
         for ( cgltf_size attributeIndex = 0; attributeIndex < primitive.attributes_count; ++attributeIndex )
@@ -372,7 +279,7 @@ namespace sw::editor
         return accessors;
     }
 
-    float4 ModelImportUtil::readPrimitiveBaseColor( const cgltf_primitive& primitive, MergedMesh& inoutMesh )
+    float4 ModelImportGeometry::readPrimitiveBaseColor( const cgltf_primitive& primitive, ModelImportUtil::MergedMesh& inoutMesh )
     {
         float4 baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
         if ( primitive.material != nullptr && primitive.material->has_pbr_metallic_roughness != 0 )
@@ -391,8 +298,8 @@ namespace sw::editor
         return baseColor;
     }
 
-    bool ModelImportUtil::appendPrimitiveVertices( const cgltf_primitive& primitive, const PrimitiveAccessors& accessors, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
-                                                   MergedMesh& inoutMesh )
+    bool ModelImportGeometry::appendPrimitiveVertices( const cgltf_primitive& primitive, const PrimitiveAccessors& accessors, const float32 ( &arrWorld )[16], const ModelImportUtil::SkinBinding* pSkin,
+                                                       ModelImportUtil::MergedMesh& inoutMesh )
     {
         // 정점 속성은 접근자 단위로 통째로 읽는다 — 정점 하나씩 읽다 실패한 칸을 0 · 흰색으로 남기지 않는다(못 읽으면 임포트가 실패한다).
         const cgltf_size vertexCount = accessors._pPosition->count;
@@ -403,23 +310,23 @@ namespace sw::editor
         vector<float32>  listWeight;
         const cgltf_size colorComponentCount = accessors._pColor != nullptr ? cgltf_num_components( accessors._pColor->type ) : 0;
         const bool       bSkinnedPrimitive   = pSkin != nullptr && accessors._pJoint != nullptr && accessors._pWeight != nullptr;
-        const bool       bAttributesRead     = unpackFloats( accessors._pPosition, 3, listPosition ) && unpackOptionalFloats( accessors._pNormal, 3, vertexCount, listNormal ) &&
+        const bool       bAttributesRead     = ModelImportUtil::unpackFloats( accessors._pPosition, 3, listPosition ) && unpackOptionalFloats( accessors._pNormal, 3, vertexCount, listNormal ) &&
                                      unpackOptionalFloats( accessors._pUv, 2, vertexCount, listUv ) &&
                                      unpackOptionalFloats( accessors._pColor, colorComponentCount, vertexCount, listColor ) &&
-                                     ( bSkinnedPrimitive == false || unpackOptionalFloats( accessors._pWeight, kInfluenceCount, vertexCount, listWeight ) );
+                                     ( bSkinnedPrimitive == false || unpackOptionalFloats( accessors._pWeight, ModelImportUtil::kInfluenceCount, vertexCount, listWeight ) );
         if ( bAttributesRead == false )
             return false;
 
         const float4 baseColor = readPrimitiveBaseColor( primitive, inoutMesh );
         for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
         {
-            ImportVertex vertex;
-            vertex._position = convertToEngineSpace( transformPoint( arrWorld, float3{ &listPosition[vertexIndex * 3] } ) );
+            ModelImportUtil::ImportVertex vertex;
+            vertex._position = ModelImportUtil::convertToEngineSpace( transformPoint( arrWorld, float3{ &listPosition[vertexIndex * 3] } ) );
 
             // 노멀이 없는 원본은 아래에서 면 노멀로 채운다(`_bHasNormal`).
             if ( listNormal.empty() == false )
             {
-                vertex._normal     = convertToEngineSpace( transformNormal( arrWorld, float3{ &listNormal[vertexIndex * 3] } ) );
+                vertex._normal     = ModelImportUtil::convertToEngineSpace( transformNormal( arrWorld, float3{ &listNormal[vertexIndex * 3] } ) );
                 vertex._bHasNormal = vertex._normal.getLength() > MathUtil::kEpsilon;
             }
 
@@ -436,7 +343,7 @@ namespace sw::editor
 
             if ( bSkinnedPrimitive )
             {
-                if ( readSkinInfluence( *pSkin, accessors._pJoint, &listWeight[vertexIndex * kInfluenceCount], vertexIndex, vertex ) == false )
+                if ( readSkinInfluence( *pSkin, accessors._pJoint, &listWeight[vertexIndex * ModelImportUtil::kInfluenceCount], vertexIndex, vertex ) == false )
                     return false;
             }
             else if ( pSkin != nullptr )
@@ -448,8 +355,8 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
-                                           MergedMesh& inoutMesh )
+    bool ModelImportGeometry::appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const ModelImportUtil::SkinBinding* pSkin,
+                                               ModelImportUtil::MergedMesh& inoutMesh )
     {
         if ( primitive.type != cgltf_primitive_type_triangles )
         {
@@ -475,8 +382,8 @@ namespace sw::editor
         return true;
     }
 
-    void ModelImportUtil::appendPrimitiveTriangles( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
-                                                    cgltf_size vertexCount, MergedMesh& inoutMesh )
+    void ModelImportGeometry::appendPrimitiveTriangles( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                                        cgltf_size vertexCount, ModelImportUtil::MergedMesh& inoutMesh )
     {
         const cgltf_size indexCount   = primitive.indices != nullptr ? primitive.indices->count : vertexCount;
         const bool       bSwapWinding = computeDeterminant3( arrWorld ) >= 0.0f;
@@ -500,17 +407,17 @@ namespace sw::editor
         }
     }
 
-    bool ModelImportUtil::readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex )
+    bool ModelImportGeometry::readSkinInfluence( const ModelImportUtil::SkinBinding& skin, const cgltf_accessor* pJoint, const float32* pWeight, cgltf_size vertexIndex, ModelImportUtil::ImportVertex& inoutVertex )
     {
         // 관절 번호는 정수 접근자라 정점마다 읽는다. 못 읽으면 가중치 0 으로 두지 않고 임포트가 실패한다.
-        cgltf_uint arrJoint[kInfluenceCount]{};
-        if ( cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, kInfluenceCount ) == 0 )
+        cgltf_uint arrJoint[ModelImportUtil::kInfluenceCount]{};
+        if ( cgltf_accessor_read_uint( pJoint, vertexIndex, arrJoint, ModelImportUtil::kInfluenceCount ) == 0 )
         {
             SW_LOG_ERROR( "glTF JOINTS_0 of vertex %# could not be read", static_cast<uint32>( vertexIndex ) );
             return false;
         }
         float32 weightSum = 0.0f;
-        for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
+        for ( uint32 influence = 0; influence < ModelImportUtil::kInfluenceCount; ++influence )
         {
             const bool bValid                 = arrJoint[influence] < skin._listJointToBone.size() && skin._listJointToBone[arrJoint[influence]] >= 0;
             inoutVertex._arrJoint[influence]  = bValid ? static_cast<uint16>( skin._listJointToBone[arrJoint[influence]] ) : 0u;
@@ -521,7 +428,7 @@ namespace sw::editor
         {
             inoutVertex._arrJoint[0]  = skin._rigidBone;
             inoutVertex._arrWeight[0] = 1.0f;
-            for ( uint32 influence = 1; influence < kInfluenceCount; ++influence )
+            for ( uint32 influence = 1; influence < ModelImportUtil::kInfluenceCount; ++influence )
             {
                 inoutVertex._arrWeight[influence] = 0.0f;
             }
@@ -534,7 +441,7 @@ namespace sw::editor
         return true;
     }
 
-    uint32 ModelImportUtil::promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
+    uint32 ModelImportGeometry::promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
     {
         using Internal = ModelImportGeometryInternal;
         Internal::GltfJSONSpan span{};
@@ -561,12 +468,12 @@ namespace sw::editor
         return promotedCount;
     }
 
-    void ModelImportUtil::applyRule( const ModelImportRule& rule, MergedMesh& inoutMesh )
+    void ModelImportGeometry::applyRule( const ModelImportRule& rule, ModelImportUtil::MergedMesh& inoutMesh )
     {
-        const float3 translation = convertToEngineSpace( float3{ rule._arrTranslation } );
+        const float3 translation = ModelImportUtil::convertToEngineSpace( float3{ rule._arrTranslation } );
         if ( translation.getLength() > 0.0f )
         {
-            for ( ImportVertex& vertex : inoutMesh._listVertex )
+            for ( ModelImportUtil::ImportVertex& vertex : inoutMesh._listVertex )
             {
                 vertex._position = vertex._position + translation;
             }
@@ -585,13 +492,13 @@ namespace sw::editor
         }
         const float32 offsetY = recenter == ModelRecenter::BottomCenter ? -minimum._y : 0.0f;
         const float3  offset{ -( minimum._x + maximum._x ) * 0.5f, offsetY, -( minimum._z + maximum._z ) * 0.5f };
-        for ( ImportVertex& vertex : inoutMesh._listVertex )
+        for ( ModelImportUtil::ImportVertex& vertex : inoutMesh._listVertex )
         {
             vertex._position = vertex._position + offset;
         }
     }
 
-    bool ModelImportUtil::appendNode( const cgltf_node& node, MergedMesh& inoutMesh )
+    bool ModelImportGeometry::appendNode( const cgltf_node& node, ModelImportUtil::MergedMesh& inoutMesh )
     {
         if ( node.mesh != nullptr )
         {
@@ -611,7 +518,7 @@ namespace sw::editor
         return true;
     }
 
-    void ModelImportUtil::collectSceneRoots( const cgltf_data& data, vector<const cgltf_node*>& outListRoot )
+    void ModelImportGeometry::collectSceneRoots( const cgltf_data& data, vector<const cgltf_node*>& outListRoot )
     {
         outListRoot.clear();
         const cgltf_scene* pScene = data.scene != nullptr ? data.scene : ( data.scenes_count > 0 ? &data.scenes[0] : nullptr );
@@ -631,7 +538,7 @@ namespace sw::editor
         }
     }
 
-    RHIVertex ModelImportUtil::makeRHIVertex( const ImportVertex& source, const float3& faceNormal )
+    RHIVertex ModelImportGeometry::makeRHIVertex( const ModelImportUtil::ImportVertex& source, const float3& faceNormal )
     {
         const float3 normal = source._bHasNormal ? source._normal : faceNormal;
         RHIVertex    vertex{};
@@ -650,10 +557,10 @@ namespace sw::editor
         return vertex;
     }
 
-    MeshSkinVertex ModelImportUtil::makeSkinVertex( const ImportVertex& source )
+    MeshSkinVertex ModelImportGeometry::makeSkinVertex( const ModelImportUtil::ImportVertex& source )
     {
         MeshSkinVertex skin{};
-        for ( uint32 influence = 0; influence < kInfluenceCount; ++influence )
+        for ( uint32 influence = 0; influence < ModelImportUtil::kInfluenceCount; ++influence )
         {
             skin._arrJoint[influence]  = source._arrJoint[influence];
             skin._arrWeight[influence] = source._arrWeight[influence];
@@ -661,7 +568,7 @@ namespace sw::editor
         return skin;
     }
 
-    void ModelImportUtil::optimizeTriangleRange( MergedMesh& inoutMesh, size_t begin, size_t end )
+    void ModelImportGeometry::optimizeTriangleRange( ModelImportUtil::MergedMesh& inoutMesh, size_t begin, size_t end )
     {
         if ( end <= begin || inoutMesh._listVertex.empty() )
             return;
@@ -669,17 +576,17 @@ namespace sw::editor
         const size_t indexCount  = ( end - begin ) * 3;
         const size_t vertexCount = inoutMesh._listVertex.size();
         meshopt_optimizeVertexCache( pIndex, pIndex, indexCount, vertexCount );
-        meshopt_optimizeOverdraw( pIndex, pIndex, indexCount, &inoutMesh._listVertex[0]._position._x, vertexCount, sizeof( ImportVertex ), kOverdrawThreshold );
+        meshopt_optimizeOverdraw( pIndex, pIndex, indexCount, &inoutMesh._listVertex[0]._position._x, vertexCount, sizeof( ModelImportUtil::ImportVertex ), kOverdrawThreshold );
     }
 
-    void ModelImportUtil::expandTriangles( MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
+    void ModelImportGeometry::expandTriangles( ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
     {
         // 메시 전체를 한 묶음으로 최적화한다 — 구간이 있는 메시는 묶음마다 최적화하고 순서를 지켜 펼친다(populateMaterialSections · expandTrianglesInOrder).
         optimizeTriangleRange( inoutMesh, 0, inoutMesh._listIndex.size() / 3 );
         expandTrianglesInOrder( inoutMesh, skinBoneCount, outData );
     }
 
-    void ModelImportUtil::expandTrianglesInOrder( const MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
+    void ModelImportGeometry::expandTrianglesInOrder( const ModelImportUtil::MergedMesh& inoutMesh, uint32 skinBoneCount, MeshAssetData& outData )
     {
         outData = MeshAssetData{};
         if ( inoutMesh._listIndex.empty() )
@@ -691,10 +598,10 @@ namespace sw::editor
             outData._listSkinVertex.reserve( listIndex.size() );
         for ( size_t triangleStart = 0; triangleStart + 2 < listIndex.size(); triangleStart += 3 )
         {
-            const ImportVertex* arrCorner[3] = { &inoutMesh._listVertex[listIndex[triangleStart]], &inoutMesh._listVertex[listIndex[triangleStart + 1]],
-                                                 &inoutMesh._listVertex[listIndex[triangleStart + 2]] };
-            const float3        faceNormal   = normalizeOrZero( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) );
-            for ( const ImportVertex* pCorner : arrCorner )
+            const ModelImportUtil::ImportVertex* arrCorner[3] = { &inoutMesh._listVertex[listIndex[triangleStart]], &inoutMesh._listVertex[listIndex[triangleStart + 1]],
+                                                                  &inoutMesh._listVertex[listIndex[triangleStart + 2]] };
+            const float3                         faceNormal   = normalizeOrZero( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) );
+            for ( const ModelImportUtil::ImportVertex* pCorner : arrCorner )
             {
                 outData._listVertex.push_back( makeRHIVertex( *pCorner, faceNormal ) );
                 if ( skinBoneCount > 0 )
@@ -721,7 +628,7 @@ namespace sw::editor
         }
     }
 
-    bool ModelImportUtil::makeLODLevels( const MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, uint32 skinBoneCount, vector<MeshLODLevel>& outListLevel )
+    bool ModelImportGeometry::makeLODLevels( const ModelImportUtil::MergedMesh& mesh, const ModelImportRule& rule, string_view sourcePath, uint32 skinBoneCount, vector<MeshLODLevel>& outListLevel )
     {
         outListLevel.clear();
         if ( rule._listLOD.empty() )
@@ -733,12 +640,12 @@ namespace sw::editor
             const ModelImportLODRule& lodRule          = rule._listLOD[lodIndex];
             const size_t              targetIndexCount = MathUtil::max( static_cast<size_t>( static_cast<float32>( sourceIndexCount / 3 ) * lodRule._triangleRatio ), size_t( 1 ) ) * 3;
             // 펼치기는 인덱스 메시를 받는다 — 정점은 원본 그대로, 인덱스만 단순화한 것으로 바꾼다(단순화는 정점을 옮기지 않고 고른다).
-            MergedMesh simplified{};
+            ModelImportUtil::MergedMesh simplified{};
             simplified._listVertex = mesh._listVertex;
             simplified._listIndex.resize( sourceIndexCount );
             float32      resultError = 0.0f;
             const size_t indexCount  = meshopt_simplify( simplified._listIndex.data(), mesh._listIndex.data(), sourceIndexCount, &mesh._listVertex[0]._position._x, vertexCount,
-                                                         sizeof( ImportVertex ), targetIndexCount, lodRule._maxError, 0, &resultError );
+                                                         sizeof( ModelImportUtil::ImportVertex ), targetIndexCount, lodRule._maxError, 0, &resultError );
             const bool   bReduced    = 0 < indexCount && indexCount < sourceIndexCount;
             if ( bReduced == false )
             {

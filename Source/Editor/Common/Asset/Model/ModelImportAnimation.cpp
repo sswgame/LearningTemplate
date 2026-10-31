@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/Asset/Model/ModelImportAnimation.h"
+
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -23,38 +25,7 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ModelImporter" );
 
-    string ModelImportUtil::makeNodeName( const cgltf_data& data, const cgltf_node& node )
-    {
-        if ( node.name != nullptr && node.name[0] != '\0' )
-            return string( node.name );
-        return formatToString( "node%#", static_cast<uint64>( &node - data.nodes ) );
-    }
-
-    string ModelImportUtil::makeFileStem( string_view name )
-    {
-        string stem;
-        stem.reserve( name.size() );
-        for ( const utf8 character : name )
-        {
-            const utf8 lower    = StringUtil::toLowerChar( character );
-            const bool bAllowed = ( 'a' <= lower && lower <= 'z' ) || ( '0' <= lower && lower <= '9' ) || lower == '_' || lower == '-' || lower == '.';
-            stem += bAllowed ? lower : '_';
-        }
-        return stem.empty() ? string( "unnamed" ) : stem;
-    }
-
-    string ModelImportUtil::makeNumberedStem( const string& baseStem, uint32 useCount )
-    {
-        string stem = baseStem;
-        if ( useCount > 0 )
-        {
-            stem += "_";
-            stem += to_string( useCount ).c_str();
-        }
-        return stem;
-    }
-
-    BoneTransform ModelImportUtil::readNodeLocal( const cgltf_node& node )
+    BoneTransform ModelImportAnimation::readNodeLocal( const cgltf_node& node )
     {
         BoneTransform transform{};
         if ( node.has_matrix != 0 )
@@ -73,7 +44,7 @@ namespace sw::editor
         return transform;
     }
 
-    const cgltf_node* ModelImportUtil::findJointAncestor( const cgltf_node& node, const unordered_map<const cgltf_node*, int32>& mapJointBone )
+    const cgltf_node* ModelImportAnimation::findJointAncestor( const cgltf_node& node, const unordered_map<const cgltf_node*, int32>& mapJointBone )
     {
         for ( const cgltf_node* pParent = node.parent; pParent != nullptr; pParent = pParent->parent )
         {
@@ -83,7 +54,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    const cgltf_node* ModelImportUtil::findJointAncestorBySlot( const cgltf_node& node, const unordered_map<const cgltf_node*, uint32>& mapJointSlot )
+    const cgltf_node* ModelImportAnimation::findJointAncestorBySlot( const cgltf_node& node, const unordered_map<const cgltf_node*, uint32>& mapJointSlot )
     {
         for ( const cgltf_node* pParent = node.parent; pParent != nullptr; pParent = pParent->parent )
         {
@@ -93,7 +64,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    bool ModelImportUtil::readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel )
+    bool ModelImportAnimation::readChannel( const cgltf_animation_sampler& sampler, uint32 componentCount, ChannelData& outChannel )
     {
         outChannel                 = ChannelData{};
         outChannel._componentCount = componentCount;
@@ -101,10 +72,10 @@ namespace sw::editor
         if ( sampler.input == nullptr || sampler.output == nullptr )
             return true; // 샘플러가 가리키는 접근자가 없는 채널은 키가 없다(레스트 값을 쓴다)
         // 접근자 하나를 통째로 읽는다 — 키 하나씩 읽다 실패한 키를 0 으로 남기지 않는다.
-        return unpackFloats( sampler.input, 1, outChannel._listTime ) && unpackFloats( sampler.output, componentCount, outChannel._listValue );
+        return ModelImportUtil::unpackFloats( sampler.input, 1, outChannel._listTime ) && ModelImportUtil::unpackFloats( sampler.output, componentCount, outChannel._listValue );
     }
 
-    bool ModelImportUtil::evaluateChannel( const ChannelData& channel, float32 time, bool bRotation, float32* pOutValue )
+    bool ModelImportAnimation::evaluateChannel( const ChannelData& channel, float32 time, bool bRotation, float32* pOutValue )
     {
         const size_t keyCount = channel._listTime.size();
         const uint32 width    = channel._componentCount;
@@ -167,7 +138,7 @@ namespace sw::editor
         return true;
     }
 
-    BoneTransform ModelImportUtil::sampleJoint( const JointChannels& channels, const BoneTransform& rest, float32 time )
+    BoneTransform ModelImportAnimation::sampleJoint( const JointChannels& channels, const BoneTransform& rest, float32 time )
     {
         BoneTransform sample = rest;
         float32       arrValue[4]{};
@@ -180,14 +151,14 @@ namespace sw::editor
         return sample;
     }
 
-    float32 ModelImportUtil::findLastTime( const ChannelData& channel )
+    float32 ModelImportAnimation::findLastTime( const ChannelData& channel )
     {
         return channel._listTime.empty() ? 0.0f : channel._listTime.back();
     }
 
-    bool ModelImportUtil::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                             const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
-                                             AnimationRawClip& outRawClip )
+    bool ModelImportAnimation::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
+                                                  const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                                  AnimationRawClip& outRawClip )
     {
         const uint32          boneCount = skeleton.getBoneCount();
         vector<JointChannels> listChannel( boneCount );
@@ -229,7 +200,7 @@ namespace sw::editor
             const float32 time = intervalCount > 0 ? duration * static_cast<float32>( sampleIndex ) / static_cast<float32>( intervalCount ) : 0.0f;
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
             {
-                BoneTransform sample = convertTransformToEngineSpace( sampleJoint( listChannel[boneIndex], listRest[boneIndex], time ) );
+                BoneTransform sample = ModelImportUtil::convertTransformToEngineSpace( sampleJoint( listChannel[boneIndex], listRest[boneIndex], time ) );
                 if ( listRootParent[boneIndex] != float4x4::Identity )
                     sample = BoneTransform::makeFromMatrix( sample.toMatrix() * listRootParent[boneIndex] );
                 outRawClip._listSample[static_cast<size_t>( sampleIndex ) * boneCount + boneIndex] = sample;
@@ -238,7 +209,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration )
+    bool ModelImportAnimation::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve, float32& outDuration )
     {
         outListCurve.clear();
         float32& duration = outDuration;
@@ -258,7 +229,7 @@ namespace sw::editor
             data._componentCount = static_cast<uint32>( targetCount );
             data._interpolation  = channel.sampler->interpolation;
             // 접근자 하나를 통째로 읽는다 — 키 하나씩 읽다 실패한 키를 0 으로 남기지 않는다.
-            if ( unpackFloats( channel.sampler->input, 1, data._listTime ) == false || unpackFloats( channel.sampler->output, 1, data._listValue ) == false )
+            if ( ModelImportUtil::unpackFloats( channel.sampler->input, 1, data._listTime ) == false || ModelImportUtil::unpackFloats( channel.sampler->output, 1, data._listValue ) == false )
                 return false;
             const float32 lastTime = findLastTime( data );
             duration               = MathUtil::max( duration, lastTime );
@@ -276,7 +247,7 @@ namespace sw::editor
             vector<float32> listValue( targetCount );
             for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
-                const hashed_string name       = makeMorphTargetName( &mesh, targetIndex );
+                const hashed_string name       = ModelImportUtil::makeMorphTargetName( &mesh, targetIndex );
                 const bool          bDuplicate = VectorUtil::containsIf( outListCurve, [&name]( const AnimationClipCurve& curve )
                          { return curve._name == name; } );
                 if ( bDuplicate )
@@ -294,7 +265,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportUtil::readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
+    bool ModelImportAnimation::readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra )
     {
         outMapExtra.clear();
         const string clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
