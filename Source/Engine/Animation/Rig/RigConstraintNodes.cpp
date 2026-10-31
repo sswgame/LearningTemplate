@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Engine/Animation/Rig/RigConstraintNodes.h"
+
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
-#include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -502,7 +503,7 @@ namespace sw
 
 namespace sw
 {
-    void RigNodeLibrary::registerConstraintNodes( RigNodeRegistry& registry )
+    void RigConstraintNodes::registerNodes( RigNodeRegistry& registry )
     {
         registry.registerNode( "CopyTransform", &RigConstraintNodesFactory::createCopyTransform );
         registry.registerNode( "Position", &RigConstraintNodesFactory::createPosition );

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Animation/Rig/RigSecondaryNodes.h"
+
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -7,7 +9,6 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
-#include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -382,17 +383,9 @@ namespace sw
 
 namespace sw
 {
-    void RigNodeLibrary::registerSecondaryNodes( RigNodeRegistry& registry )
+    void RigSecondaryNodes::registerNodes( RigNodeRegistry& registry )
     {
         registry.registerNode( "SpringChain", &RigSecondaryNodesFactory::createSpringChain );
         registry.registerNode( "PoseDriver", &RigSecondaryNodesFactory::createPoseDriver );
-    }
-
-    bool RigNodeLibrary::registerEngineNodes( RigNodeRegistry& registry )
-    {
-        registerIKNodes( registry );
-        registerConstraintNodes( registry );
-        registerSecondaryNodes( registry );
-        return true;
     }
 } // namespace sw

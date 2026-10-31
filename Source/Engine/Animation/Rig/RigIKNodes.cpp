@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Animation/Rig/RigIKNodes.h"
+
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -7,7 +9,6 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
-#include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -875,7 +876,7 @@ namespace sw
 
 namespace sw
 {
-    void RigNodeLibrary::registerIKNodes( RigNodeRegistry& registry )
+    void RigIKNodes::registerNodes( RigNodeRegistry& registry )
     {
         registry.registerNode( "TwoBoneIK", &RigIKNodesFactory::createTwoBone );
         registry.registerNode( "FABRIKChain", &RigIKNodesFactory::createFABRIK );
