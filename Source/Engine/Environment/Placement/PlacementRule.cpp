@@ -2,9 +2,10 @@
 
 #include "Engine/Environment/Placement/PlacementRule.h"
 
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+
+#include "Engine/Foundation/EngineParallel.h"
 
 namespace sw
 {
@@ -25,36 +26,78 @@ namespace sw
                 kLaneYaw,
             };
 
-            /** @brief 최소 거리 격자의 셀 키입니다. 셀 크기가 최소 거리 / √2 라 셀 하나에 점이 많아야 하나입니다. */
-            static int64 makeCellKey( int32 cellU, int32 cellV )
+            /**
+             * @brief 최소 거리 다트 던지기의 격자입니다. 영역을 덮는 조밀 배열(셀마다 연결 목록 머리)이라 셀 하나를 찾는 일이 배열 한 칸이다 - 예전의 `unordered_map` 은
+             *        Debug 에서 풀 레이어(후보 약 6 만) 한 번 정리에 0.26 초였다. 셀 크기는 최소 거리 / √2 이되 셀 수가 상한을 넘으면 키운다(한 셀에 점이 여럿이 된다 -
+             *        그래서 목록이다). 최소 거리 안의 점을 모두 정확한 거리로 보므로 받아들이고 버리는 판정은 셀 크기와 무관하다.
+             */
+            struct PoissonGrid
             {
-                // 음수 셀(-1 등)을 부호 있는 채로 밀면 정의되지 않은 동작이다. 부호 없는 32 비트로 바꿔서 민다(값은 같다).
-                return static_cast<int64>( ( static_cast<uint64>( static_cast<uint32>( cellU ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cellV ) ) );
-            }
+                static constexpr uint32 kMaxCellCount = 4u * 1024u * 1024u; ///< 16 MB(int32) - 후보 상한(`kMaxCandidateCount`)과 같은 규모
 
-            /** @brief @p position 에서 @p minDistance 안에 이미 놓인 점이 있으면 true 를 반환합니다. 셀 반경 2 까지 봅니다. */
-            static bool isTooClose( const unordered_map<int64, int32>& mapCellToPoint, const vector<float2>& listPoint, const float2& position,
-                                    float32 cellSize, float32 minDistance )
-            {
-                const int32   cellU             = static_cast<int32>( MathUtil::floor( position._x / cellSize ) );
-                const int32   cellV             = static_cast<int32>( MathUtil::floor( position._y / cellSize ) );
-                const float32 minDistanceSquare = minDistance * minDistance;
-                for ( int32 offsetV = -2; offsetV <= 2; ++offsetV )
+                float2         _origin{};
+                float32        _cellSize{ 1.0f };
+                float32        _minDistanceSquare{ 0.0f };
+                int32          _cellCountU{ 1 };
+                int32          _cellCountV{ 1 };
+                int32          _reach{ 2 };
+                vector<int32>  _listHead; ///< 셀마다 마지막에 놓인 점(-1 이면 비었다)
+                vector<int32>  _listNext; ///< 점마다 같은 셀의 앞 점
+                vector<float2> _listPoint;
+
+                void init( const PlacementRegion& region, float32 minDistance )
                 {
-                    for ( int32 offsetU = -2; offsetU <= 2; ++offsetU )
-                    {
-                        const auto iter = mapCellToPoint.find( makeCellKey( cellU + offsetU, cellV + offsetV ) );
-                        if ( iter == mapCellToPoint.end() )
-                            continue;
-                        const float2& other  = listPoint[static_cast<size_t>( iter->second )];
-                        const float32 deltaU = other._x - position._x;
-                        const float32 deltaV = other._y - position._y;
-                        if ( deltaU * deltaU + deltaV * deltaV < minDistanceSquare )
-                            return true;
-                    }
+                    const float32 width  = MathUtil::max( region._max._x - region._min._x, 0.0f );
+                    const float32 height = MathUtil::max( region._max._y - region._min._y, 0.0f );
+                    _origin              = region._min;
+                    _cellSize            = MathUtil::max( minDistance * MathUtil::kInvSqrt2,
+                                                          MathUtil::sqrt( width * height / static_cast<float32>( kMaxCellCount ) ) );
+                    _minDistanceSquare   = minDistance * minDistance;
+                    _cellCountU          = MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( width / _cellSize ) ) );
+                    _cellCountV          = MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( height / _cellSize ) ) );
+                    _reach               = static_cast<int32>( MathUtil::ceil( minDistance / _cellSize ) );
+                    _listHead.assign( static_cast<size_t>( _cellCountU ) * static_cast<size_t>( _cellCountV ), -1 );
                 }
-                return false;
-            }
+
+                [[nodiscard]] int32 cellU( float32 x ) const { return MathUtil::clamp( static_cast<int32>( MathUtil::floor( ( x - _origin._x ) / _cellSize ) ), 0, _cellCountU - 1 ); }
+                [[nodiscard]] int32 cellV( float32 y ) const { return MathUtil::clamp( static_cast<int32>( MathUtil::floor( ( y - _origin._y ) / _cellSize ) ), 0, _cellCountV - 1 ); }
+
+                /** @brief @p position 에서 최소 거리 안에 이미 놓인 점이 있으면 true 입니다. */
+                [[nodiscard]] bool isTooClose( const float2& position ) const
+                {
+                    const int32   centerU = cellU( position._x );
+                    const int32   centerV = cellV( position._y );
+                    const int32   minV    = MathUtil::max( centerV - _reach, 0 );
+                    const int32   maxV    = MathUtil::min( centerV + _reach, _cellCountV - 1 );
+                    const int32   minU    = MathUtil::max( centerU - _reach, 0 );
+                    const int32   maxU    = MathUtil::min( centerU + _reach, _cellCountU - 1 );
+                    const int32*  pHead   = _listHead.data();
+                    const int32*  pNext   = _listNext.data();
+                    const float2* pPoint  = _listPoint.data();
+                    for ( int32 v = minV; v <= maxV; ++v )
+                    {
+                        for ( int32 u = minU; u <= maxU; ++u )
+                        {
+                            for ( int32 index = pHead[static_cast<size_t>( v ) * static_cast<size_t>( _cellCountU ) + static_cast<size_t>( u )]; index >= 0; index = pNext[index] )
+                            {
+                                const float32 deltaU = pPoint[index]._x - position._x;
+                                const float32 deltaV = pPoint[index]._y - position._y;
+                                if ( deltaU * deltaU + deltaV * deltaV < _minDistanceSquare )
+                                    return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+
+                void add( const float2& position )
+                {
+                    const size_t cell = static_cast<size_t>( cellV( position._y ) ) * static_cast<size_t>( _cellCountU ) + static_cast<size_t>( cellU( position._x ) );
+                    _listNext.push_back( _listHead[cell] );
+                    _listHead[cell] = static_cast<int32>( _listPoint.size() );
+                    _listPoint.push_back( position );
+                }
+            };
 
             /** @brief 밀도 × 면적의 후보 수입니다. 영역이 비었거나 밀도가 0 이면 0 이고, 상한을 넘으면 잘라 @p outClamped 를 켭니다. */
             static uint32 computeCandidateCount( const PlacementRule& rule, const PlacementRegion& region, bool& outClamped )
@@ -105,6 +148,28 @@ namespace sw
                 outCandidate._height  = sample._height;
                 outCandidate._bPassed = SW_TRUE;
             }
+
+            /** @brief 후보 구간 하나를 판정합니다(`sampleCandidates` · `resampleCandidates` 가 `runParallelByCost` 로 나눈다). `_pDirtyArea` 가 있으면 그 안의 후보만. */
+            struct SampleJob
+            {
+                const PlacementRule*              _pRule{ nullptr };
+                const PlacementRegion*            _pRegion{ nullptr };
+                const IPlacementSurface*          _pSurface{ nullptr };
+                const vector<PlacementExclusion>* _pExclusion{ nullptr };
+                PlacementCandidate*               _pOut{ nullptr };
+                const PlacementRegion*            _pDirtyArea{ nullptr };
+
+                void runRange( uint32 start, uint32 end )
+                {
+                    for ( uint32 candidateIndex = start; candidateIndex < end; ++candidateIndex )
+                    {
+                        const float2 position = computeCandidatePosition( *_pRule, *_pRegion, candidateIndex );
+                        if ( _pDirtyArea != nullptr && _pDirtyArea->contains( position ) == false )
+                            continue;
+                        evaluateCandidate( *_pRule, _pSurface, *_pExclusion, position, candidateIndex, _pOut[candidateIndex] );
+                    }
+                }
+            };
         };
     } // namespace
 } // namespace sw
@@ -205,11 +270,10 @@ namespace sw
         if ( bClamped )
             SW_LOG_WARNING( "Placement asks for more than %# candidates (density %# over the region) - clamped", kMaxCandidateCount, rule._density );
         outListCandidate.resize( candidateCount );
-        for ( uint32 candidateIndex = 0; candidateIndex < candidateCount; ++candidateIndex )
-        {
-            const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
-            Internal::evaluateCandidate( rule, pSurface, listExclusion, position, candidateIndex, outListCandidate[candidateIndex] );
-        }
+        // 후보마다 독립이다(위치는 (시드, 번호) 해시, 판정은 읽기 전용 표면 · 제외 영역) - 구간으로 나눠 워커에 돌린다. 풀 레이어(후보 약 6 만)가 Debug 에서 0.2 초였다.
+        // 결과 칸은 부르는 스레드에서 원시 포인터로 집는다(워커가 목록에 쓰기 접근을 하지 않게 - 경합 감지기는 다른 칸이어도 쓰기로 본다).
+        Internal::SampleJob job{ &rule, &region, pSurface, &listExclusion, outListCandidate.data(), nullptr };
+        engine::runParallelByCost( candidateCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::SampleJob::runRange, &job ) );
     }
 
     bool PlacementScatter::resampleCandidates( const PlacementRule& rule, const PlacementRegion& region, const IPlacementSurface* pSurface,
@@ -221,12 +285,8 @@ namespace sw
         const uint32 candidateCount = Internal::computeCandidateCount( rule, region, bClamped );
         if ( inoutListCandidate.size() != candidateCount )
             return false;
-        for ( uint32 candidateIndex = 0; candidateIndex < candidateCount; ++candidateIndex )
-        {
-            const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
-            if ( dirtyArea.contains( position ) )
-                Internal::evaluateCandidate( rule, pSurface, listExclusion, position, candidateIndex, inoutListCandidate[candidateIndex] );
-        }
+        Internal::SampleJob job{ &rule, &region, pSurface, &listExclusion, inoutListCandidate.data(), &dirtyArea };
+        engine::runParallelByCost( candidateCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &Internal::SampleJob::runRange, &job ) );
         return true;
     }
 
@@ -236,11 +296,10 @@ namespace sw
         using Internal = PlacementRuleInternal;
         outListInstance.clear();
 
-        // 최소 거리 격자: 셀 = 최소 거리 / √2 라 셀 하나에 점이 많아야 하나다. 셀 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
-        const bool                  bPoisson = rule._minDistance > 0.0f;
-        const float32               cellSize = bPoisson ? rule._minDistance * MathUtil::kInvSqrt2 : 1.0f;
-        unordered_map<int64, int32> mapCellToPoint;
-        vector<float2>              listPoint;
+        const bool            bPoisson = rule._minDistance > 0.0f;
+        Internal::PoissonGrid grid;
+        if ( bPoisson )
+            grid.init( region, rule._minDistance );
 
         const float32 scaleMin       = MathUtil::min( rule._scaleMin, rule._scaleMax );
         const float32 scaleMax       = MathUtil::max( rule._scaleMin, rule._scaleMax );
@@ -251,7 +310,7 @@ namespace sw
             if ( candidate._bPassed == SW_FALSE )
                 continue;
             const float2 position = Internal::computeCandidatePosition( rule, region, candidateIndex );
-            if ( bPoisson && Internal::isTooClose( mapCellToPoint, listPoint, position, cellSize, rule._minDistance ) )
+            if ( bPoisson && grid.isTooClose( position ) )
                 continue;
 
             const int32 entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneEntry ) ) );
@@ -259,12 +318,7 @@ namespace sw
                 return; // 비중 합이 0 이면 놓을 것이 없다.
 
             if ( bPoisson )
-            {
-                const int32 cellU = static_cast<int32>( MathUtil::floor( position._x / cellSize ) );
-                const int32 cellV = static_cast<int32>( MathUtil::floor( position._y / cellSize ) );
-                mapCellToPoint.emplace( Internal::makeCellKey( cellU, cellV ), static_cast<int32>( listPoint.size() ) );
-                listPoint.push_back( position );
-            }
+                grid.add( position );
 
             PlacementInstance instance;
             instance._planePosition = position;

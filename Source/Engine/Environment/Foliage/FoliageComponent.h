@@ -162,10 +162,13 @@ namespace sw
         /** @brief 지형 편집 뒤의 다시 계산입니다. 들고 있는 후보 판정을 쓸 수 있으면 편집 사각형 안만 다시 판정하고, 아니면 `rebuildFoliage` 로 통째로 계산합니다. 틱 밖에서만 부른다. */
         void refreshFromTerrainEdits();
         /**
-         * @brief 레이어 @p layerIndex 의 배치를 계산합니다. 지형 위면 후보 판정을 `_listLayerCandidate` 에 들고, @p pDirtyArea 가 있으면 그 안의 후보만 다시 판정합니다.
+         * @brief 레이어 @p layerIndex 의 배치를 계산합니다. 지형 위면 후보 판정을 @p pCandidates(그 레이어의 `_listLayerCandidate` 칸)에 들고, @p pDirtyArea 가 있으면 그 안의 후보만 다시 판정합니다.
          * @param pTerrain 표면 지형입니다. nullptr 이면 오너 높이의 평면이고 후보 판정을 들지 않습니다.
          */
-        void computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<PlacementInstance>& outListInstance );
+        void computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<PlacementCandidate>* pCandidates,
+                                    vector<PlacementInstance>& outListInstance );
+        /** @brief 레이어마다 `computeLayerInstances` 를 워커에 나눠 돌리고 모두 끝날 때까지 기다립니다(레이어끼리 독립이다). 결과는 레이어 순서다. */
+        void computeAllLayerInstances( const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<vector<PlacementInstance>>& outListLayerInstance );
         /** @brief 레이어 @p layerIndex 의 배치를 셀로 나눠, 내용이 바뀐 셀만 배치를 새로 만들고 없어진 셀은 놓습니다. */
         void applyLayerInstances( uint32 layerIndex, const vector<PlacementInstance>& listInstance );
         /** @brief 셀 하나(@p listIndex 의 인스턴스들, 모두 메시 @p mesh)의 배치를 만들어 레지스트리에 더합니다. 바운드는 인스턴스 위치 상자에 메시 반지름 × 최대 크기를 더한 구입니다. */
@@ -201,6 +204,7 @@ namespace sw
         uint32                                  _seenSplatRevision;          ///< 지난 틱에 본 스플랫 세대
         uint8                                   _bBuiltOnTerrain        : 1; ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
         uint8                                   _bTerrainRefreshPending : 1; ///< 지형 편집 뒤 다시 계산을 틱 뒤로 걸어 두었다(같은 편집으로 두 번 걸지 않는다)
+        uint8                                   _bBuildPending          : 1; ///< 로드 워커에서 읽혀 짓지 않았다 - 시작(`onBeginPlay`)이 게임 스레드에서 짓는다
         [[maybe_unused]] uint8                  _reserved               : 6;
     };
 } // namespace sw

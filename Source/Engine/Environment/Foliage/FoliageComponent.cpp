@@ -7,6 +7,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -149,6 +150,7 @@ namespace sw
         , _seenSplatRevision{ 0 }
         , _bBuiltOnTerrain{ SW_FALSE }
         , _bTerrainRefreshPending{ SW_FALSE }
+        , _bBuildPending{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -178,6 +180,15 @@ namespace sw
     void FoliageComponent::onPostLoad()
     {
         SceneComponent::onPostLoad();
+        // 짓기는 게임 스레드에서만 한다 - 머티리얼 인스턴스와 프리미티브 레지스트리를 만진다. 비동기 씬 로드는 이 함수를 워커에서 부르고(`Component::onPostLoad`),
+        // 예전에는 거기서 지어 공유 머티리얼을 다른 스레드가 쓰는 중에 읽다 경합 감지로 죽었다. 워커면 표시만 하고 시작(`onBeginPlay`)이 짓는다 - 지형이 뒤에 생기는
+        // 로드 순서에서 평면 위에 한 번, 지형 위에 다시 짓던 두 번도 한 번이 된다.
+        const TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
+        if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false )
+        {
+            _bBuildPending = SW_TRUE;
+            return;
+        }
         rebuildFoliage();
     }
 
@@ -187,7 +198,7 @@ namespace sw
         // 로드 순서상 지형이 뒤에 생성되면 처음 계산은 평면 위에서 했다. 모두 생성된 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에 한다.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
+        if ( pManager == nullptr || ( _bBuiltOnTerrain == SW_TRUE && _bBuildPending == SW_FALSE ) )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, []( FoliageComponent& foliage )
         { foliage.rebuildFoliage(); } );
@@ -288,11 +299,11 @@ namespace sw
         _lastRebuiltBatchCount  = 0;
         if ( bEdited == false )
             return;
-        vector<PlacementInstance> listInstance;
+        vector<vector<PlacementInstance>> listLayerInstance;
+        computeAllLayerInstances( pTerrain, &dirtyArea, listLayerInstance );
         for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
-            computeLayerInstances( layerIndex, pTerrain, &dirtyArea, listInstance );
-            applyLayerInstances( layerIndex, listInstance );
+            applyLayerInstances( layerIndex, listLayerInstance[layerIndex] );
         }
         SW_LOG_INFO( "Foliage: refreshed %# of %# cell batches after a terrain edit (%# instances, %# us)", _lastRebuiltBatchCount, static_cast<uint32>( _listCell.size() ),
                      _instanceCount, stopwatch.getElapsedMicroseconds() );
@@ -366,6 +377,7 @@ namespace sw
 
     void FoliageComponent::rebuildFoliage()
     {
+        _bBuildPending = SW_FALSE;
         releaseCells();
         _listLayerCandidate.clear();
         _lastRebuiltBatchCount = 0;
@@ -388,26 +400,70 @@ namespace sw
         // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다).
         _listLayerMaterial.clear();
         _listLayerMaterial.reserve( _listLayer.size() );
-        vector<PlacementInstance> listInstance;
-        for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        for ( const FoliageLayer& layer : _listLayer )
         {
-            const FoliageLayer& layer = _listLayer[layerIndex];
             _listLayerMaterial.push_back( sw::make_unique<EnvironmentMaterial>() );
             EnvironmentMaterial& material = *_listLayerMaterial.back();
             // 칸이 비면 엔진 기본 풀 · 나무 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
             const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath;
             (void)material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
             material.setVector( hashed_string( "_tint" ), layer._tint );
-
-            computeLayerInstances( layerIndex, pTerrain, nullptr, listInstance );
-            applyLayerInstances( layerIndex, listInstance );
+        }
+        vector<vector<PlacementInstance>> listLayerInstance;
+        computeAllLayerInstances( pTerrain, nullptr, listLayerInstance );
+        for ( uint32 layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
+        {
+            applyLayerInstances( layerIndex, listLayerInstance[layerIndex] );
         }
         SW_LOG_INFO( "Foliage: %# instances in %# cell batches across %# layers (%# us, %#)", _instanceCount, static_cast<uint32>( _listCell.size() ),
                      static_cast<uint32>( _listLayer.size() ), stopwatch.getElapsedMicroseconds(), _bBuiltOnTerrain == SW_TRUE ? "on terrain" : "flat" );
     }
 
+    void FoliageComponent::computeAllLayerInstances( const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<vector<PlacementInstance>>& outListLayerInstance )
+    {
+        // 레이어 계산(후보 뽑기 · 정리)은 읽기 전용 입력(규칙 · 영역 · 높이맵 · 제외 영역)과 그 레이어의 후보 목록만 쓴다 - 레이어끼리 독립이라 워커에 나눈다.
+        // 적용(셀 · 배치 · 레지스트리)은 부르는 쪽이 게임 스레드에서 차례로 한다. 레이어 다섯이면 한 번 짓기가 0.8 초 → 가장 큰 레이어 하나의 시간이 된다.
+        struct LayerJob
+        {
+            FoliageComponent*           _pSelf{ nullptr };
+            const TerrainComponent*     _pTerrain{ nullptr };
+            const PlacementRegion*      _pDirtyArea{ nullptr };
+            vector<PlacementInstance>*  _pOut{ nullptr };
+            vector<PlacementCandidate>* _pCandidates{ nullptr }; ///< 이 레이어의 후보 목록 - 바깥 목록은 부르는 스레드에서 미리 집는다(워커가 바깥 목록에 쓰기 접근을 하지 않게)
+            uint32                      _layerIndex{ 0 };
+            void                        run() { _pSelf->computeLayerInstances( _layerIndex, _pTerrain, _pDirtyArea, _pCandidates, *_pOut ); }
+        };
+        const uint32 layerCount = static_cast<uint32>( _listLayer.size() );
+        outListLayerInstance.clear();
+        outListLayerInstance.resize( layerCount );
+        vector<LayerJob> listJob( layerCount );
+        for ( uint32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+            listJob[layerIndex] = LayerJob{ this, pTerrain, pDirtyArea, &outListLayerInstance[layerIndex], pTerrain != nullptr ? &_listLayerCandidate[layerIndex] : nullptr, layerIndex };
+        // 평면 경로(지형 없음)는 레이어마다 오너 트랜스폼 · 씬을 읽어(늦게 갱신하는 캐시일 수 있다) 차례로 돈다 - 가볍다.
+        TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 차례로 돈다
+        if ( pTaskManager == nullptr || layerCount < 2 || pTerrain == nullptr )
+        {
+            for ( LayerJob& job : listJob )
+                job.run();
+            return;
+        }
+        TaskStageHandle stage = pTaskManager->createStage( "FoliageLayers" );
+        for ( LayerJob& job : listJob )
+        {
+            TaskHandle handle = pTaskManager->emplaceTask( "FoliageLayer", SW_DELEGATE_METHOD( TaskDelegate, &LayerJob::run, &job ) );
+            if ( handle.isValid() == false )
+            {
+                job.run(); // 작업을 넣지 못했다(풀이 바닥났거나 종료 중) - 여기서 돈다
+                continue;
+            }
+            stage.addTask( handle );
+            pTaskManager->submit( handle );
+        }
+        pTaskManager->waitStage( stage );
+    }
+
     void FoliageComponent::computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea,
-                                                  vector<PlacementInstance>& outListInstance )
+                                                  vector<PlacementCandidate>* pCandidates, vector<PlacementInstance>& outListInstance )
     {
         if ( pTerrain == nullptr )
         {
@@ -418,7 +474,7 @@ namespace sw
         const vector<float32> listMeshWeight = FoliageComponentInternal::makeMeshWeights( layer );
         // 들고 있는 판정이 이 규칙 · 영역의 것이 아니면(후보 수가 다르다) 처음부터 판정한다.
         const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
-        vector<PlacementCandidate>&   listCandidate = _listLayerCandidate[layerIndex];
+        vector<PlacementCandidate>&   listCandidate = *pCandidates; // 지형 위면 부르는 쪽이 이 레이어의 목록을 넘긴다
         const bool                    bResampled    = pDirtyArea != nullptr &&
                                 PlacementScatter::resampleCandidates( layer._rule, _builtRegion, &surface, _listExclusion, *pDirtyArea, listCandidate );
         if ( bResampled == false )

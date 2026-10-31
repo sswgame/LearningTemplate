@@ -760,6 +760,9 @@ namespace sw
         const uint32 heldFrameCount = _run._holdFrameCount;
         if ( holdUntilReady( step, input, bReady, timeoutFrames ) == AutomationStepHold::Hold )
             return true;
+        // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
+        if ( bReady && heldFrameCount == 0 )
+            SW_LOG_INFO( "[Scenario] %# was already true", step.describe().c_str() );
         if ( bReady == false )
             recordFailure( step, formatToString( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message ) );
         return false;
