@@ -219,7 +219,7 @@ namespace sw
             const ConfigReadResult result    = loadOptionalConfig<T>( source );
             if ( result == ConfigReadResult::Missing )
             {
-                SW_LOG_ERROR( "Required config %# was not found at '%#' (relative paths are under the project root)", pTypeName, source.getPath().c_str() );
+                SW_LOG_ERROR_ID( "Config.RequiredMissing", "Required config %# was not found at '%#' (relative paths are under the project root)", pTypeName, source.getPath().c_str() );
                 return nullptr;
             }
             if ( result == ConfigReadResult::Invalid )
@@ -343,7 +343,7 @@ namespace sw
             unique_ptr<T> reloaded = make_unique<T>();
             if ( readConfigJSON( *reloaded, jsonStr, resolvedPath.c_str() ) == false )
             {
-                SW_LOG_WARNING( "Config reload: %# is not valid - keeping the previous values", resolvedPath.c_str() );
+                SW_LOG_WARNING_ID( "Config.ReloadInvalid", "Config reload: %# is not valid - keeping the previous values", resolvedPath.c_str() );
                 return false;
             }
             *pExisting = std::move( *reloaded );

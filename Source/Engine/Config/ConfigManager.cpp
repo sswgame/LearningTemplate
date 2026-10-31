@@ -143,7 +143,7 @@ namespace sw
         JSONDocument document;
         if ( document.parse( jsonStr ) == false || document.getRoot().isObject() == false )
         {
-            SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
+            SW_LOG_ERROR_ID( "Config.NotJSONObject", "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
