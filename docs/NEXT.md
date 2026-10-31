@@ -18,41 +18,40 @@
 
 | 일 | 상태 |
 |---|---|
-| Shooter3D 체인 실패 둘 | `firelook`(한 프레임 클릭에 두 발) · `crowd`(`Animation.CrowdSharedUnits` 가 서지 않음) — 작업자가 Release 를 따로 지어 조사 중. 체인은 Release 의 `App -game=Shooter3D -scenario=<목록> -scenario-backends=all` |
-| 옛 단위 테스트 이식 | 작업자 진행 중 — 옛 `Test/`(커밋 `3f70e665f^`)의 Core 56 · Reflection 14 먼저, Engine 순수 함수 |
+| Shooter3D 체인 실패 둘 | `firelook` 은 시나리오 결함(같은 프레임에서 `<Expect>` 아래의 입력이 틱 전에 든다 — 이제 읽을 때 거절) · `crowd`(`Animation.CrowdSharedUnits` 가 서지 않음) — 작업자 조사 중 |
+| `OnlineLoadBot.localServer` | Release ctest 에서 180 초 시간 초과, 보고서 없음, 콘솔 출력 없음 — 작업자 조사 중 |
+| SOLID · 프로젝트 구성 점검 | 작업자 진행 중(아래 5 절) |
 
 ### 2. 테스트 · 시나리오 공백
 
 | 일 | 내용 |
 |---|---|
-| 게임 체인을 ctest 에 | Debug(활성 게임 Empty)는 다른 게임을 짓지 않아 게임 시나리오 · 필수 데이터 · .ogg 결함을 보지 못했다(이번에 셋 다 그렇게 숨어 있었다). Release(모든 게임)에 게임마다 체인 항목을 두거나 통합 때 돌리는 스크립트로 |
-| `harvestvalley.scheduleday` | 새 일정 하루 시나리오 — 처음 돌린다(`gv_timeScale` 이 판 시계에 곱해지는지, 0 일 날씨 맑음 가정) |
-| 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄(TacticsSRPG · KartRacing 등), Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기), Reflection 값 · 인스턴스. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다. 주석이 가리키는 `EditorTexturePipelineTest.DDSFormatFileMatchesTheLoaderTables` 는 없다 |
-| 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `editor.flowterrain` 이 `wallTimeoutSeconds` 150 초를 넘었다(백엔드 교체 7 번이 혼자서도 19 초). 혼자 돌리면 통과. 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
-| 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다(엔진 변경 + 전체 시나리오) |
+| 통합 검증은 두 구성 | Debug(`ctest`) 와 Release(`ctest` — 지어진 게임마다 `Scenario.<팩>` 체인)를 모두 돈다. 배포 구성은 `py -3 -m Scripts shipping-check` |
+| 흔들리는 게임 골든 | killcam(dx11 · gl 28 %) · cape(dx12 · gl 약 2 %) · bodyviews(약 1.7 %)가 한 번씩 졌다 — 외형 · 에셋이 늦게 도착한 순간을 찍는 흔들림으로 보인다. 찍기 전 자리 잡기가 외형 로드를 세는지 |
+| 남은 단위 테스트 | Online `OnlineServiceHost` · `OnlineServiceClient` · `OnlineServerRuntime` · Local · Config · Audit, Kits 의 `none` 줄, Serializer(SerializerUtil · SchemaMigrate · DataPath 처리기). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), LoopbackCluster(네트워크), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서. `DDSLoader` 는 픽셀 바이트 수를 형식 크기와 견주지 않는다 |
+| 벽시계 한도와 부하 | 다른 빌드가 CPU 를 쓰는 동안 `wallTimeoutSeconds` 150 초를 넘는 시나리오가 있다(flowterrain 의 백엔드 교체 7 번이 혼자서도 19 초). 통합 ctest 는 빌드 없이 돌리고, 교체 시간을 줄이거나 한도를 교체 수에 맞춘다 |
+| 편집기 UI 자리 잡기 대기 | `EditorClick` 앞 고정 대기 262 곳 — 입력 단계가 "대상 표시 사각형이 두 프레임 같을 때까지" 붙잡게 하면 한꺼번에 지울 수 있다 |
+| id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
 ### 3. 프레임 밖으로 뺄 일 (TaskManager)
 
 | 일 | 위치 |
 |---|---|
-| 렌더 스레드의 동기 `acquire` | `CanvasTextureLeases.cpp` 렌더 타깃 · `FrameRendererViews.cpp` 렌더 텍스처 · `MaterialInstance.cpp` 텍스처 |
-| 게임 스레드의 메시 동기 `acquire` | `FoliageComponent` · `VFXComponent` · `NavGeometryCollector` · `NileDirectorComponent` · `FarmDirectorComponent` — 바운드를 그 자리에서 써서 상태 기계가 필요 |
 | 미리보기 씬의 외형 대기 | `CharacterAppearanceComponent` — 미리보기 씬이 틱을 돌게(언리얼 FPreviewScene) |
-| 직렬 셰이더 컴파일 | `findOrCreateExtensionProgramPSO` · 쿠키 아틀라스 · 입자 · 컴퓨트 PSO |
 | `DevCommand` 단계 평균 87 ms/프레임의 원인 | timeline 줄의 시나리오별 `DevCommand` |
 
 ### 4. 구조 개편 남은 것 ([StructureRefactor](StructureRefactor.md))
 
 | 주제 | 남은 것 (2026-10-31) |
 |---|---|
-| T8 | 배포(Shipping) 구성으로 구성 · 빌드 · 링크 확인(새 `…Shipping.cpp` 들, 정의 없는 `RHIBackendSwitcher` 시험 기호, `/WHOLEARCHIVE` 에 기댄 정적 등록). Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유 |
-| T9 | 등록자의 모듈 이름 — CMake 가 대상마다 `SW_REGISTRAR_MODULE` 을 주고 매크로가 찍는다(설계는 StructureRefactor T9). 런타임 모듈 이름 = 대상 이름 가정을 핫 리로드 시나리오로 확인. 봇 ctest `OnlineLoadBot.localServer` 는 Release 에서만 생긴다 — 돌려 본다 |
+| T8 | Engine 의 `SW_SHIPPING` 약 120 곳(Reflection 메타 · RHI 검증 · Config), `ModuleCompiler` 소유, `Engine.cpp` 의 `SW_WITH_CLIENT_CODE` 셋, 배포의 모듈 해제(`unregisterModuleTypes`) 없음 → `ElementRuleTable` · `InteractionCatalog` 캐시가 남았다는 경고 둘. Dev + 자동화 끔 구성은 Editor 가 실행기를 include 해 깨질 것 |
+| T9 | 등록자의 모듈 이름 — CMake 가 대상마다 `SW_REGISTRAR_MODULE` 을 주고 매크로가 찍는다(설계는 StructureRefactor T9). 런타임 모듈 이름 = 대상 이름 가정을 핫 리로드 시나리오로 확인 |
 | T6 | 에디터 사용자 외형 프리셋 · 썸네일을 슬롯으로(에디터 쪽 저장소 주인), `AccountDeviceSecret` 을 `GameLocalStore` 와 맞춤 |
 | T10 | `ShaderCooker::getSubfolderForFormat` 이 모르는 형식에 기본 폴더를 돌려준다(폴백) |
+| 옛 형식 호환 | 약어 변경으로 `packSHA256` · `buildID` 와 리플렉션 멤버 이름(`_meshID` 등)이 바뀌어 이미 배포된 패치 매니페스트 · 크래시 요약 · 세이브는 읽지 못한다 — 호환이 필요해지면 이주 |
 
 ### 5. 그 뒤
 
-- SOLID · 프로젝트 구성 점검과 구조 리팩토링(중복 제거 · 일원화 · 레이어 구분 · 최적화) — 사용자 요청 2026-10-31.
 - Linux 실제 빌드 · 테스트(X11 · Wayland · ALSA · epoll 은 Windows 가 짓지 않는다 — CI 후보).
 - `GameFramework/Base` · `Plugin/Editor/Base` 이름(모듈 이름 · 매니페스트가 따라간다).
 
