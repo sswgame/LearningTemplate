@@ -101,6 +101,15 @@ namespace sw
                                                                ::sw::HashUtil::computeStringHash64( ( name ).data(), ( name ).size(), false ) ) ) ) \
             SW_LOG_ERROR( __VA_ARGS__ );                                                                                                            \
     } while ( 0 )
+/**
+ * @brief id 가 붙은 `SW_LOG_ERROR_ONCE` 입니다. 테스트 · 시나리오는 id 로만 기대 로그를 적으므로(`SW_EXPECT_LOG` · `<ExpectLog id>`) 한 번만 남기는 줄도 id 가 있어야 적을 수 있다.
+ */
+#define SW_LOG_ERROR_ONCE_ID( id, ... )                                                                                                         \
+    do                                                                                                                                          \
+    {                                                                                                                                           \
+        if ( ::sw::LogOnce::tryClaim( ::sw::LogOnceKind::CallSite, ::sw::LogOnce::makeSiteKey( __FILE__, sizeof( __FILE__ ) - 1, __LINE__ ) ) ) \
+            SW_LOG_ERROR_ID( id, __VA_ARGS__ );                                                                                                 \
+    } while ( 0 )
 /** @brief `SW_LOG_ERROR_ONCE` 의 Warning 판입니다. */
 #define SW_LOG_WARNING_ONCE( ... )                                                                                                              \
     do                                                                                                                                          \

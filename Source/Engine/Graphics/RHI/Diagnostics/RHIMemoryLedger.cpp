@@ -141,8 +141,8 @@ namespace sw
         const auto                        entryIt      = mapIDToEntry.find( key._id );
         if ( entryIt != mapIDToEntry.end() )
         {
-            SW_LOG_WARNING( "GPU memory key %# (space %#) recorded twice without a free - replacing the old %# bytes", key._id, spaceIndex,
-                            entryIt->second._bytes );
+            SW_LOG_WARNING_ID( "RHI.MemoryKeyRecordedTwice", "GPU memory key %# (space %#) recorded twice without a free - replacing the old %# bytes", key._id, spaceIndex,
+                               entryIt->second._bytes );
             subtractLocked( entryIt->second );
             mapIDToEntry.erase( entryIt );
         }

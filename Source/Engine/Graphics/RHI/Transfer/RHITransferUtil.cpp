@@ -53,7 +53,7 @@ namespace sw
 
     void RHITransferUtil::reportTimeout( uint32 timeoutMilliseconds )
     {
-        SW_LOG_ERROR( "The GPU transfer did not finish within %# ms.", timeoutMilliseconds );
+        SW_LOG_ERROR_ID( "RHI.TransferTimedOut", "The GPU transfer did not finish within %# ms.", timeoutMilliseconds );
     }
 
     void RHITransferUtil::backoff( uint32 iteration )

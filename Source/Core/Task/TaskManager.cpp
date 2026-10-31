@@ -483,7 +483,7 @@ namespace sw
     {
         if ( _bInitialized == false || _bStop.load( std::memory_order_relaxed ) )
         {
-            SW_LOG_WARNING( "Cannot emplace task '%#' while TaskManager is not initialized or stopping.", name );
+            SW_LOG_WARNING_ID( "Task.EmplaceRefused", "Cannot emplace task '%#' while TaskManager is not initialized or stopping.", name );
             return nullptr;
         }
 

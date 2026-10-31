@@ -138,7 +138,7 @@ namespace sw
         // 핸들의 뜻은 백엔드마다 다르다 — 호출처가 캐스트할 백엔드가 아니면 한 칸도 쓰지 않는다.
         if ( getBackendType() != expectedBackend )
         {
-            SW_LOG_ERROR( "Native handle query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            SW_LOG_ERROR_ID( "RHI.NativeQueryWrongBackend", "Native handle query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
             return false;
         }
 
@@ -146,8 +146,8 @@ namespace sw
         const bool bSameLayout = ( inoutHandles._version == kRHINativeHandlesVersion ) && ( inoutHandles._byteSize == sizeof( RHINativeHandles ) );
         if ( bSameLayout == false )
         {
-            SW_LOG_ERROR( "Native handle query rejected: the caller was built with RHINativeHandles v%# (%# bytes), the engine with v%# (%# bytes) - rebuild that module",
-                          inoutHandles._version, inoutHandles._byteSize, kRHINativeHandlesVersion, static_cast<uint32>( sizeof( RHINativeHandles ) ) );
+            SW_LOG_ERROR_ID( "RHI.NativeHandlesLayoutMismatch", "Native handle query rejected: the caller was built with RHINativeHandles v%# (%# bytes), the engine with v%# (%# bytes) - rebuild that module",
+                             inoutHandles._version, inoutHandles._byteSize, kRHINativeHandlesVersion, static_cast<uint32>( sizeof( RHINativeHandles ) ) );
             return false;
         }
 
@@ -163,7 +163,7 @@ namespace sw
     {
         if ( getBackendType() != expectedBackend )
         {
-            SW_LOG_ERROR( "Native texture query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            SW_LOG_ERROR_ID( "RHI.NativeQueryWrongBackend", "Native texture query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
             return nullptr;
         }
         return getNativeTexturePointer( texture );
@@ -181,7 +181,7 @@ namespace sw
         SW_ASSERT( visitor.isBound() );
         if ( getBackendType() != expectedBackend )
         {
-            SW_LOG_ERROR( "Native context query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
+            SW_LOG_ERROR_ID( "RHI.NativeQueryWrongBackend", "Native context query rejected: the caller expects RHIBackend %#, the device is %#", static_cast<uint32>( expectedBackend ), getBackendName() );
             return false;
         }
         withNativeContextInternal( visitor );

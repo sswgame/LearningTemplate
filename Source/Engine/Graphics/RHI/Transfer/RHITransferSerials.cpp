@@ -57,18 +57,18 @@ namespace sw
     {
         if ( ticket.isValid() == false )
         {
-            SW_LOG_ERROR( "pollTransfer: the ticket is invalid (serial 0): the submit was not accepted" );
+            SW_LOG_ERROR_ID( "RHI.TransferTicketInvalid", "pollTransfer: the ticket is invalid (serial 0): the submit was not accepted" );
             return RHITransferStatus::Failed;
         }
         if ( ticket._deviceGeneration != _generation )
         {
-            SW_LOG_ERROR( "pollTransfer: the ticket %# is from device generation %# but this device is generation %# (the backend was replaced)", ticket._serial,
-                          ticket._deviceGeneration, _generation );
+            SW_LOG_ERROR_ID( "RHI.TransferTicketInvalid", "pollTransfer: the ticket %# is from device generation %# but this device is generation %# (the backend was replaced)", ticket._serial,
+                             ticket._deviceGeneration, _generation );
             return RHITransferStatus::Failed;
         }
         if ( ticket._serial > getLastIssued() )
         {
-            SW_LOG_ERROR( "pollTransfer: the ticket %# was never issued (last issued %#)", ticket._serial, getLastIssued() );
+            SW_LOG_ERROR_ID( "RHI.TransferTicketInvalid", "pollTransfer: the ticket %# was never issued (last issued %#)", ticket._serial, getLastIssued() );
             return RHITransferStatus::Failed;
         }
         if ( isComplete( ticket._serial ) )
@@ -82,8 +82,8 @@ namespace sw
     {
         if ( lastTransferSerial == 0 || isComplete( lastTransferSerial ) )
             return true;
-        SW_LOG_ERROR( "registerBindlessTexture: texture %# has an unfinished transfer (serial %#, watermark %#): register only after pollTransfer returns Complete", texture,
-                      lastTransferSerial, getWatermark() );
+        SW_LOG_ERROR_ID( "RHI.RegisterBeforeTransferDone", "registerBindlessTexture: texture %# has an unfinished transfer (serial %#, watermark %#): register only after pollTransfer returns Complete", texture,
+                         lastTransferSerial, getWatermark() );
         return false;
     }
 } // namespace sw

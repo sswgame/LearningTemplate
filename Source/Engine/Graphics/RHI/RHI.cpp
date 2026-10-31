@@ -181,14 +181,14 @@ namespace sw
         const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
         if ( bytesPerPixel == 0 )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: format %# is compressed, depth or unknown", static_cast<uint32>( format ) );
+            SW_LOG_ERROR_ID( "RHI.RegionUploadRejected", "submitTextureRegionUpload: format %# is compressed, depth or unknown", static_cast<uint32>( format ) );
             return false;
         }
         const bool bInvalidUploadRegion = desc._mip >= mipLevels || desc._arraySlice >= arraySize || desc._width == 0 || desc._height == 0;
         if ( bInvalidUploadRegion )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: mip %# of %#, slice %# of %#, or an empty %#x%# region", desc._mip, mipLevels, desc._arraySlice, arraySize,
-                          desc._width, desc._height );
+            SW_LOG_ERROR_ID( "RHI.RegionUploadRejected", "submitTextureRegionUpload: mip %# of %#, slice %# of %#, or an empty %#x%# region", desc._mip, mipLevels, desc._arraySlice, arraySize,
+                             desc._width, desc._height );
             return false;
         }
         const uint32 mipWidth  = ( textureWidth >> desc._mip ) > 0 ? ( textureWidth >> desc._mip ) : 1u;
@@ -198,15 +198,15 @@ namespace sw
         const bool bInsideY = desc._y < mipHeight && desc._height <= mipHeight - desc._y;
         if ( bInsideX == false || bInsideY == false )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: region (%#,%# %#x%#) is outside the %#x%# mip %#", desc._x, desc._y, desc._width, desc._height, mipWidth,
-                          mipHeight, desc._mip );
+            SW_LOG_ERROR_ID( "RHI.RegionUploadRejected", "submitTextureRegionUpload: region (%#,%# %#x%#) is outside the %#x%# mip %#", desc._x, desc._y, desc._width, desc._height, mipWidth,
+                             mipHeight, desc._mip );
             return false;
         }
         outRowBytes                = desc._width * bytesPerPixel;
         const uint64 requiredBytes = static_cast<uint64>( outRowBytes ) * desc._height;
         if ( desc._pData == nullptr || desc._sizeBytes < requiredBytes )
         {
-            SW_LOG_ERROR( "submitTextureRegionUpload: %# bytes for %# rows of %# bytes", desc._sizeBytes, desc._height, outRowBytes );
+            SW_LOG_ERROR_ID( "RHI.RegionUploadRejected", "submitTextureRegionUpload: %# bytes for %# rows of %# bytes", desc._sizeBytes, desc._height, outRowBytes );
             return false;
         }
         return true;
