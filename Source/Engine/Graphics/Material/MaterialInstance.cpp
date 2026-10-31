@@ -11,7 +11,9 @@
 #include "Engine/FileSystem/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -69,7 +71,7 @@ namespace sw
                 const bool                 bIsVector  = shaderType == MaterialPropertyType::Float2 || shaderType == MaterialPropertyType::Float3 || shaderType == MaterialPropertyType::Float4;
                 if ( ( bScalar && bIsVector ) || ( bScalar == false && bIsScalar ) )
                 {
-                    SW_LOG_ERROR_ID( "Material.ParameterShapeMismatch", "Material parameter '%#' is %# and cannot take a %# value", pProp->_name, MaterialUtil::typeToString( shaderType ),
+                    SW_LOG_ERROR_ID( "Material.ParameterShapeMismatch", "Material parameter '%#' is %# and cannot take a %# value", pProp->_name, MaterialPacking::typeToString( shaderType ),
                                      bScalar ? "scalar" : "vector" );
                     return false;
                 }
@@ -209,20 +211,20 @@ namespace sw
         XMLDocument doc;
         XMLNode     root = doc.appendRoot( "MaterialInstanceDesc" );
         AssetXMLFormat::writeXMLVersion( root, kAssetType._formatVersion );
-        MaterialUtil::appendAttribute( root, "name", _desc._name );
+        MaterialXML::appendAttribute( root, "name", _desc._name );
         if ( _desc._parentPath.empty() == false )
-            MaterialUtil::appendAttribute( root, "parentPath", _desc._parentPath );
+            MaterialXML::appendAttribute( root, "parentPath", _desc._parentPath );
         if ( _desc._quality.empty() == false )
-            MaterialUtil::appendAttribute( root, "quality", _desc._quality );
+            MaterialXML::appendAttribute( root, "quality", _desc._quality );
 
         XMLNode overrides = root.appendChild( "_overrides" );
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
         {
             XMLNode item = overrides.appendChild( "item" );
-            MaterialUtil::appendAttribute( item, "name", overrideItem._name );
-            MaterialUtil::appendAttribute( item, "value", overrideItem._value );
+            MaterialXML::appendAttribute( item, "name", overrideItem._name );
+            MaterialXML::appendAttribute( item, "value", overrideItem._value );
             if ( overrideItem._assetPath.empty() == false )
-                MaterialUtil::appendAttribute( item, "assetPath", overrideItem._assetPath );
+                MaterialXML::appendAttribute( item, "assetPath", overrideItem._assetPath );
         }
 
         if ( _desc._listKeyword.empty() == false )
@@ -231,8 +233,8 @@ namespace sw
             for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
             {
                 XMLNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttribute( item, "name", keywordItem._name );
-                MaterialUtil::appendBoolAttribute( item, "bEnabled", keywordItem._bEnabled );
+                MaterialXML::appendAttribute( item, "name", keywordItem._name );
+                MaterialXML::appendBoolAttribute( item, "bEnabled", keywordItem._bEnabled );
             }
         }
         if ( _desc._listMultiCompile.empty() == false )
@@ -241,8 +243,8 @@ namespace sw
             for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
             {
                 XMLNode item = list.appendChild( "item" );
-                MaterialUtil::appendAttribute( item, "name", multiCompileItem._name );
-                MaterialUtil::appendAttribute( item, "selected", multiCompileItem._selected );
+                MaterialXML::appendAttribute( item, "name", multiCompileItem._name );
+                MaterialXML::appendAttribute( item, "selected", multiCompileItem._selected );
             }
         }
 
@@ -447,7 +449,7 @@ namespace sw
         _listMultiCompileOverride.clear();
         _qualityOverride = MaterialQualityLevel::Count;
         _bDefinesDirty   = SW_TRUE;
-        MaterialUtil::bumpPermutationGeneration();
+        MaterialPermutation::bumpPermutationGeneration();
         _bGPUDirty = SW_TRUE;
     }
 
@@ -456,7 +458,7 @@ namespace sw
         ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
         _bDefinesDirty = SW_TRUE;
-        MaterialUtil::bumpPermutationGeneration();
+        MaterialPermutation::bumpPermutationGeneration();
         _bGPUDirty = SW_TRUE;
     }
 
@@ -465,7 +467,7 @@ namespace sw
         ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
         _bDefinesDirty = SW_TRUE;
-        MaterialUtil::bumpPermutationGeneration();
+        MaterialPermutation::bumpPermutationGeneration();
         _bGPUDirty = SW_TRUE;
     }
 
@@ -474,7 +476,7 @@ namespace sw
         ScopedLock<mutex> lock{ _overrideMutex };
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
-        MaterialUtil::bumpPermutationGeneration();
+        MaterialPermutation::bumpPermutationGeneration();
         _bGPUDirty = SW_TRUE;
     }
 
@@ -538,7 +540,7 @@ namespace sw
         {
             _qualityOverride = level;
             _bDefinesDirty   = SW_TRUE;
-            MaterialUtil::bumpPermutationGeneration();
+            MaterialPermutation::bumpPermutationGeneration();
             _bGPUDirty = SW_TRUE;
         }
     }
@@ -548,7 +550,7 @@ namespace sw
         ScopedLock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
         _bDefinesDirty = SW_TRUE;
-        MaterialUtil::bumpPermutationGeneration();
+        MaterialPermutation::bumpPermutationGeneration();
         _bGPUDirty = SW_TRUE;
     }
 
@@ -616,7 +618,7 @@ namespace sw
             {
                 VectorUtil::removeIf( _listCachedDefine, []( string_view defineStr )
                 { return StringUtil::startsWith( defineStr, "MATERIAL_QUALITY" ); } );
-                MaterialUtil::appendQualityDefines( _qualityOverride, _listCachedDefine );
+                MaterialPermutation::appendQualityDefines( _qualityOverride, _listCachedDefine );
             }
 
             for ( const auto& [name, selected] : _listMultiCompileOverride )
@@ -634,7 +636,7 @@ namespace sw
                         break;
                     }
                 }
-                MaterialUtil::appendUniqueDefine( _listCachedDefine, selected );
+                MaterialPermutation::appendUniqueDefine( _listCachedDefine, selected );
             }
 
             for ( const auto& [keyword, enabled] : _listKeywordOverride )
@@ -644,11 +646,11 @@ namespace sw
                     continue;
                 VectorUtil::removeValue( _listCachedDefine, string( pKey ) );
                 if ( enabled )
-                    MaterialUtil::appendUniqueDefine( _listCachedDefine, pKey );
+                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, pKey );
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
+            _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
             _bDefinesDirty         = SW_FALSE;
         }
     }
@@ -742,7 +744,7 @@ namespace sw
             self->_desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
         }
         if ( _qualityOverride != MaterialQualityLevel::Count )
-            self->_desc._quality = MaterialUtil::qualityToString( _qualityOverride );
+            self->_desc._quality = MaterialXML::qualityToString( _qualityOverride );
         else
             self->_desc._quality.clear();
         if ( _pParentMaterial != nullptr )
@@ -763,9 +765,9 @@ namespace sw
             return false;
 
         _desc             = MaterialInstanceDesc{};
-        _desc._name       = MaterialUtil::fieldText( root, "name" );
-        _desc._parentPath = MaterialUtil::fieldText( root, "parentPath" );
-        _desc._quality    = MaterialUtil::fieldText( root, "quality" );
+        _desc._name       = MaterialXML::fieldText( root, "name" );
+        _desc._parentPath = MaterialXML::fieldText( root, "parentPath" );
+        _desc._quality    = MaterialXML::fieldText( root, "quality" );
 
         XMLNode overrides = root.findChild( "_overrides" );
         if ( overrides.isValid() )
@@ -773,9 +775,9 @@ namespace sw
             for ( XMLNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::Override overrideItem{};
-                overrideItem._name      = MaterialUtil::fieldText( item, "name" );
-                overrideItem._value     = MaterialUtil::fieldText( item, "value" );
-                overrideItem._assetPath = MaterialUtil::fieldText( item, "assetPath" );
+                overrideItem._name      = MaterialXML::fieldText( item, "name" );
+                overrideItem._value     = MaterialXML::fieldText( item, "value" );
+                overrideItem._assetPath = MaterialXML::fieldText( item, "assetPath" );
                 if ( overrideItem._name.empty() == false )
                     _desc._listOverride.push_back( std::move( overrideItem ) );
             }
@@ -786,9 +788,9 @@ namespace sw
             for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::KeywordOverride keywordItem{};
-                keywordItem._name = MaterialUtil::fieldText( item, "name" );
+                keywordItem._name = MaterialXML::fieldText( item, "name" );
                 bool bEnabled{ false };
-                if ( MaterialUtil::parseOptionalBoolField( item, "bEnabled", true, bEnabled ) == false )
+                if ( MaterialXML::parseOptionalBoolField( item, "bEnabled", true, bEnabled ) == false )
                     return false;
                 keywordItem._bEnabled = bEnabled;
                 if ( keywordItem._name.empty() == false )
@@ -801,8 +803,8 @@ namespace sw
             for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
-                multiCompileItem._name     = MaterialUtil::fieldText( item, "name" );
-                multiCompileItem._selected = MaterialUtil::fieldText( item, "selected" );
+                multiCompileItem._name     = MaterialXML::fieldText( item, "name" );
+                multiCompileItem._selected = MaterialXML::fieldText( item, "selected" );
                 if ( multiCompileItem._name.empty() == false )
                     _desc._listMultiCompile.push_back( std::move( multiCompileItem ) );
             }
@@ -832,7 +834,7 @@ namespace sw
         {
             MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, hashed_string( multiCompileItem._name.c_str() ), multiCompileItem._selected );
         }
-        if ( _desc._quality.empty() == false && MaterialUtil::parseQuality( _desc._quality, _qualityOverride ) == false )
+        if ( _desc._quality.empty() == false && MaterialXML::parseQuality( _desc._quality, _qualityOverride ) == false )
             return false;
         _bGPUDirty = SW_TRUE;
         return true;

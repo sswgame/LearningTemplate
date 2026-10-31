@@ -5,12 +5,16 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Task/TaskManager.h"
 
+#include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -22,6 +26,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -169,7 +174,7 @@ namespace sw
         _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isTextureType( prop._type ) == false )
+            if ( MaterialPacking::isTextureType( prop._type ) == false )
                 continue;
             if ( prop._assetPath.empty() )
             {
@@ -242,7 +247,7 @@ namespace sw
             const bool bOrdinalOutOfRange = ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSRV.size();
             if ( bOrdinalOutOfRange )
                 break;
-            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
+            if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
                 continue;
             resolveArrivedTexture( textures, ordinal );
             const string&            boundPath = _listBorrowedTexturePath[ordinal].empty() ? _listAcquiredTexturePath[ordinal] : _listBorrowedTexturePath[ordinal];
@@ -301,7 +306,7 @@ namespace sw
     {
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isTextureType( prop._type ) && prop._assetPath.empty() == false )
+            if ( MaterialPacking::isTextureType( prop._type ) && prop._assetPath.empty() == false )
                 outListPath.push_back( prop._assetPath );
         }
     }
@@ -326,7 +331,7 @@ namespace sw
         _listMaterialTextureName.clear();
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
+            if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath.empty() )
                 continue;
             // _value 도 비운다. setTextureParameter 가 인덱스를 문자열로도 남기므로, 그대로 두면
             // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 복원한다.
@@ -556,11 +561,11 @@ namespace sw
             prop._name       = var._name;
             prop._offset     = var._offset;
             prop._size       = var._size;
-            prop._shaderType = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
+            prop._shaderType = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
             prop._type       = prop._shaderType;
-            // 텍스처 인덱스 필드(이름 규칙 — MaterialUtil::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
+            // 텍스처 인덱스 필드(이름 규칙 — MaterialPacking::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
             // 0 은 Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처 속성은 붙은 것이 없으면 kInvalidDescriptorIndex 를 넣는다.
-            if ( MaterialUtil::isTextureIndexMember( var._name, var._type, var._size ) )
+            if ( MaterialPacking::isTextureIndexMember( var._name, var._type, var._size ) )
                 prop._type = MaterialPropertyType::Texture2D;
             _data._listProperty.push_back( prop );
         }
@@ -591,7 +596,7 @@ namespace sw
             // 키워드 · UI 전용 필드는 머티리얼 원소의 멤버가 아니다.
             // 텍스처는 멤버다(`uint ...Map` — 인덱스 · 서수). 다른 프로퍼티처럼 리플렉션 오프셋을 받는다 — 건너뛰면 XML 순서로 쌓은 자리에
             // 남아, XML 순서가 셰이더 구조체와 다른 머티리얼(toon)에서 인덱스가 남의 칸에 들어가고 제 칸은 0(첫 실제 텍스처)이 된다.
-            if ( MaterialUtil::isNonBufferType( prop._type ) )
+            if ( MaterialPacking::isNonBufferType( prop._type ) )
                 continue;
 
             const ShaderVariableInfo* pVar = nullptr;
@@ -611,20 +616,20 @@ namespace sw
                 continue;
             }
             const ShaderVariableInfo&  var       = *pVar;
-            const MaterialPropertyType reflected = MaterialUtil::shaderTypeFromReflectionName( var._type, var._size );
+            const MaterialPropertyType reflected = MaterialPacking::shaderTypeFromReflectionName( var._type, var._size );
             if ( prop._shaderType == MaterialPropertyType::Unknown )
                 prop._shaderType = reflected;
-            else if ( MaterialUtil::packedSizeOf( prop._shaderType ) != 0 && MaterialUtil::packedSizeOf( prop._shaderType ) != var._size )
+            else if ( MaterialPacking::packedSizeOf( prop._shaderType ) != 0 && MaterialPacking::packedSizeOf( prop._shaderType ) != var._size )
             {
                 // 기본 셰이더 타입으로 바꿨을 때 크기가 리플렉션과 맞으면 그 타입으로 바꾼다
-                if ( MaterialUtil::packedSizeOf( MaterialUtil::defaultShaderTypeFor( prop._type ) ) == var._size )
-                    prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+                if ( MaterialPacking::packedSizeOf( MaterialPacking::defaultShaderTypeFor( prop._type ) ) == var._size )
+                    prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
                 else if ( reflected != MaterialPropertyType::Unknown )
                     prop._shaderType = reflected;
                 else
                 {
                     SW_LOG_ERROR( "Material '%#' property '%#' size mismatch (shaderType %# bytes vs shader %#, %#)",
-                                  _desc._name.c_str(), prop._name.c_str(), MaterialUtil::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
+                                  _desc._name.c_str(), prop._name.c_str(), MaterialPacking::packedSizeOf( prop._shaderType ), var._size, _desc._shaderPath.c_str() );
                     bAllPacked = false;
                 }
             }
@@ -657,13 +662,13 @@ namespace sw
         uint32 maxEnd = minimumByteSize;
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isNonBufferType( prop._type ) == false )
+            if ( MaterialPacking::isNonBufferType( prop._type ) == false )
                 maxEnd = MathUtil::max( maxEnd, prop._offset + prop._size );
         }
         _data._bytes.assign( maxEnd, 0 );
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
+            MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes );
         }
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
@@ -677,7 +682,7 @@ namespace sw
 
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isNonBufferType( prop._type ) )
+            if ( MaterialPacking::isNonBufferType( prop._type ) )
             {
                 prop._offset = 0;
                 prop._size   = 0;
@@ -685,7 +690,7 @@ namespace sw
             }
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
 
             // 이 순회는 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을 채우는 것까지다. 오프셋 패킹은 아래 두 번째 순회가 한다.
         }
@@ -693,7 +698,7 @@ namespace sw
         bool anyExplicitOffset{ false };
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isNonBufferType( prop._type ) == false && prop._offset != 0 )
+            if ( MaterialPacking::isNonBufferType( prop._type ) == false && prop._offset != 0 )
             {
                 anyExplicitOffset = true;
                 break;
@@ -707,13 +712,13 @@ namespace sw
         uint32 maxEnd{ 0 };
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::isNonBufferType( prop._type ) )
+            if ( MaterialPacking::isNonBufferType( prop._type ) )
                 continue;
 
             if ( prop._shaderType == MaterialPropertyType::Unknown )
-                prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+                prop._shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
 
-            uint32 packSize = MaterialUtil::packedSizeOf( prop._shaderType );
+            uint32 packSize = MaterialPacking::packedSizeOf( prop._shaderType );
             if ( prop._size != 0 )
                 packSize = prop._size;
             if ( packSize == 0 )
@@ -722,7 +727,7 @@ namespace sw
 
             if ( useSequential )
             {
-                currentOffset = MaterialUtil::alignOffset( currentOffset, packSize );
+                currentOffset = MaterialPacking::alignOffset( currentOffset, packSize );
                 prop._offset  = currentOffset;
                 currentOffset += packSize;
             }
@@ -734,7 +739,7 @@ namespace sw
         bool bAllPacked{ true };
         for ( MaterialProperty& prop : _data._listProperty )
         {
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
+            if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 bAllPacked = false;
         }
 
@@ -762,13 +767,13 @@ namespace sw
             return false;
         MaterialProperty prop = *pSrc;
         prop._value           = value;
-        return MaterialUtil::packPropertyIntoBuffer( prop, inoutBuffer );
+        return MaterialPacking::packPropertyIntoBuffer( prop, inoutBuffer );
     }
 
     bool Material::packTextureIntoBuffer( hashed_string name, RHIDescriptorIndex descIdx, vector<uint8>& inoutBuffer ) const
     {
         const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr || MaterialUtil::isNonBufferType( pProp->_type ) )
+        if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
             return false;
 
         const uint32 packSize = pProp->_size != 0 ? pProp->_size : 4u;
@@ -786,7 +791,7 @@ namespace sw
             return false;
 
         const MaterialProperty* pProp = findProperty( name );
-        if ( pProp == nullptr || MaterialUtil::isNonBufferType( pProp->_type ) )
+        if ( pProp == nullptr || MaterialPacking::isNonBufferType( pProp->_type ) )
             return false;
 
         const uint32 copySize = MathUtil::min( pProp->_size != 0 ? pProp->_size : byteSize, byteSize );
@@ -805,7 +810,7 @@ namespace sw
         // 쓰지 못한 글(모르는 enum 이름 등)은 프로퍼티 값으로도 남기지 않는다 — 버퍼와 저장되는 값이 어긋나지 않게.
         string previousValue = std::move( prop->_value );
         prop->_value         = value;
-        if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._bytes ) == false )
+        if ( MaterialPacking::packPropertyIntoBuffer( *prop, _data._bytes ) == false )
         {
             prop->_value = std::move( previousValue );
             return false;
@@ -826,11 +831,11 @@ namespace sw
         {
             if ( hashed_string( prop._name.c_str() ) != name )
                 continue;
-            if ( MaterialUtil::isTextureType( prop._type ) == false && prop._shaderType != MaterialPropertyType::Uint )
+            if ( MaterialPacking::isTextureType( prop._type ) == false && prop._shaderType != MaterialPropertyType::Uint )
                 return false;
             prop._textureIndex = descIdx;
             prop._value        = to_string( descIdx );
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
+            if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
             uploadConstantBytes( pRHI );
@@ -846,7 +851,7 @@ namespace sw
         {
             _desc._permutations._quality = level;
             _bDefinesDirty               = SW_TRUE;
-            MaterialUtil::bumpPermutationGeneration();
+            MaterialPermutation::bumpPermutationGeneration();
         }
     }
 
@@ -860,7 +865,7 @@ namespace sw
                 {
                     ss._bEnabled   = bEnabled;
                     _bDefinesDirty = SW_TRUE;
-                    MaterialUtil::bumpPermutationGeneration();
+                    MaterialPermutation::bumpPermutationGeneration();
                 }
                 return;
             }
@@ -883,7 +888,7 @@ namespace sw
                 {
                     mc._selected   = string( selectedOption );
                     _bDefinesDirty = SW_TRUE;
-                    MaterialUtil::bumpPermutationGeneration();
+                    MaterialPermutation::bumpPermutationGeneration();
                 }
                 return;
             }
@@ -900,7 +905,7 @@ namespace sw
     void Material::setBlendMode( RHIBlendMode mode )
     {
         _blendMode       = mode;
-        _desc._blendMode = MaterialUtil::blendModeToString( mode );
+        _desc._blendMode = MaterialXML::blendModeToString( mode );
     }
 
     bool Material::setScalarParameter( IRHIDevice* pRHI, hashed_string name, float32 value )
@@ -910,7 +915,7 @@ namespace sw
             if ( hashed_string( prop._name.c_str() ) != name )
                 continue;
             prop._value = to_string( value );
-            if ( MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes ) == false )
+            if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
             uploadConstantBytes( pRHI );
@@ -943,7 +948,7 @@ namespace sw
     {
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( prop._name == name && MaterialUtil::isNonBufferType( prop._type ) == false )
+            if ( prop._name == name && MaterialPacking::isNonBufferType( prop._type ) == false )
                 return _data._bytes.data() + prop._offset;
         }
         return nullptr;
@@ -958,28 +963,28 @@ namespace sw
 
             for ( const string& defineStr : permutationDesc._listAlwaysDefine )
             {
-                MaterialUtil::appendUniqueDefine( _listCachedDefine, defineStr );
+                MaterialPermutation::appendUniqueDefine( _listCachedDefine, defineStr );
             }
 
-            MaterialUtil::appendQualityDefines( permutationDesc._quality, _listCachedDefine );
-            MaterialUtil::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
-            MaterialUtil::appendUsageDefines( permutationDesc._usage, _listCachedDefine );
+            MaterialPermutation::appendQualityDefines( permutationDesc._quality, _listCachedDefine );
+            MaterialPermutation::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
+            MaterialPermutation::appendUsageDefines( permutationDesc._usage, _listCachedDefine );
 
             for ( const MaterialStaticSwitch& entry : permutationDesc._listStaticSwitch )
             {
                 if ( entry._bEnabled != 0 )
                 {
                     if ( entry._keyword.empty() == false )
-                        MaterialUtil::appendUniqueDefine( _listCachedDefine, entry._keyword );
+                        MaterialPermutation::appendUniqueDefine( _listCachedDefine, entry._keyword );
                 }
                 else if ( entry._keywordOff.empty() == false )
-                    MaterialUtil::appendUniqueDefine( _listCachedDefine, entry._keywordOff );
+                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, entry._keywordOff );
             }
 
             for ( const MaterialMultiCompile& mc : permutationDesc._listMultiCompile )
             {
                 if ( mc._selected.empty() == false )
-                    MaterialUtil::appendUniqueDefine( _listCachedDefine, mc._selected );
+                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, mc._selected );
             }
 
             for ( const MaterialProperty& prop : _data._listProperty )
@@ -989,12 +994,12 @@ namespace sw
                 if ( prop._shaderKeyword.empty() )
                     continue;
                 bool bKeywordOn{ false };
-                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
-                    MaterialUtil::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
+                if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanKeywordUnreadable", bKeywordOn ) && bKeywordOn ) // 읽지 못한 값은 parseBoolToken 이 오류로 남긴다(로드가 이미 거부한다)
+                    MaterialPermutation::appendUniqueDefine( _listCachedDefine, prop._shaderKeyword );
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash = MaterialUtil::hashDefines( _listCachedDefine );
+            _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
             _bDefinesDirty         = SW_FALSE;
         }
         return _listCachedDefine;
@@ -1039,4 +1044,186 @@ namespace sw
         return false;
     }
 
+    bool Material::loadFromFile( const AssetID& assetID )
+    {
+        XMLDocument doc;
+        if ( doc.loadResource( assetID ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
+    bool Material::loadFromDiskFile( string_view diskPath )
+    {
+        XMLDocument doc;
+        if ( doc.loadFile( diskPath ) == false )
+            return false;
+        return loadFromXML( doc.saveToString() );
+    }
+
+    TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
+    {
+        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
+            "LoadMaterialAsync",
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, Material::loadFromFileAsyncJob ),
+            MakeTaskArgs( _asyncLoadState, string( assetRelativePath ) ) );
+        handle.submit();
+        return handle;
+    }
+
+    void Material::loadFromFileAsyncJob( const TaskArgs& args )
+    {
+        shared_ptr<AsyncLoadState> state = args.get<shared_ptr<AsyncLoadState>>( 0 );
+        if ( state == nullptr )
+            return;
+
+        ScopedLock<mutex> lock{ state->_mutex };
+        if ( state->_pMaterial == nullptr )
+            return;
+        if ( state->_pMaterial->loadFromFile( AssetID{ args.get<string>( 1 ) } ) == false )
+            SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
+    }
+
+    bool Material::saveToFile( const AbsolutePath& absPath ) const
+    {
+
+        XMLDocument doc;
+        if ( doc.parse( saveToString() ) == false )
+            return false;
+        return doc.saveFile( absPath.str() );
+    }
+
+    string Material::saveToString() const
+    {
+        this->syncDescFromRuntime();
+
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "MaterialDesc" );
+
+        AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
+        MaterialXML::appendAttribute( root, "name", _desc._name );
+        MaterialXML::appendAttribute( root, "shaderPath", _desc._shaderPath );
+        MaterialXML::appendAttribute( root, "blendMode", MaterialXML::blendModeToString( _blendMode ) );
+
+        XMLNode props = root.appendChild( "_properties" );
+
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            XMLNode item = props.appendChild( "item" );
+
+            MaterialXML::appendAttribute( item, "name", prop._name );
+            MaterialXML::appendAttribute( item, "type", MaterialPacking::typeToString( prop._type ) );
+            if ( prop._shaderType != MaterialPropertyType::Unknown )
+                MaterialXML::appendAttribute( item, "shaderType", MaterialPacking::typeToString( prop._shaderType ) );
+            if ( prop._defaultValue.empty() == false )
+                MaterialXML::appendAttribute( item, "defaultValue", prop._defaultValue );
+            if ( prop._value.empty() == false && prop._value != prop._defaultValue )
+                MaterialXML::appendAttribute( item, "value", prop._value );
+            if ( prop._assetPath.empty() == false )
+                MaterialXML::appendAttribute( item, "assetPath", prop._assetPath );
+            if ( prop._enumType.empty() == false )
+                MaterialXML::appendAttribute( item, "enumType", prop._enumType );
+            if ( prop._displayName.empty() == false )
+                MaterialXML::appendAttribute( item, "displayName", prop._displayName );
+            if ( prop._group.empty() == false )
+                MaterialXML::appendAttribute( item, "group", prop._group );
+            if ( prop._tooltip.empty() == false )
+                MaterialXML::appendAttribute( item, "tooltip", prop._tooltip );
+            if ( prop._shaderKeyword.empty() == false )
+                MaterialXML::appendAttribute( item, "shaderKeyword", prop._shaderKeyword );
+            if ( prop._type == MaterialPropertyType::Range )
+            {
+                item.appendAttribute( "min", prop._min );
+                item.appendAttribute( "max", prop._max );
+            }
+            if ( prop._type == MaterialPropertyType::Color )
+            {
+                MaterialXML::appendBoolAttribute( item, "bHdr", prop._bHDR );
+                MaterialXML::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
+            }
+            if ( MaterialPacking::isTextureType( prop._type ) )
+                MaterialXML::appendBoolAttribute( item, "bSrgb", prop._bSRGB );
+            if ( prop._bHidden )
+                MaterialXML::appendBoolAttribute( item, "bHidden", true );
+            if ( prop._bAdvanced )
+                MaterialXML::appendBoolAttribute( item, "bAdvanced", true );
+
+            if ( prop._listEnumEntry.empty() == false )
+            {
+                XMLNode list = item.appendChild( "_enumEntries" );
+                for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
+                {
+                    XMLNode eItem = list.appendChild( "item" );
+                    MaterialXML::appendAttribute( eItem, "name", enumEntry._name );
+                    eItem.appendAttribute( "value", enumEntry._value );
+                }
+            }
+        }
+
+        MaterialXML::appendPermutationNode( root, _desc._permutations );
+
+        return doc.saveToString();
+    }
+
+    bool Material::loadFromXML( string_view xmlText )
+    {
+        XMLDocument doc;
+        if ( doc.parse( xmlText ) == false )
+            return false;
+
+        XMLNode root = doc.getRoot( "MaterialDesc" );
+        if ( root.isValid() == false )
+            return false;
+
+        if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
+            return false;
+
+        _desc       = MaterialDesc{};
+        _desc._name = MaterialXML::fieldText( root, "name" );
+        setShaderPath( MaterialXML::fieldText( root, "shaderPath" ) );
+        // 블렌드 모드는 읽을 때 푼다 — 적지 않으면 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
+        const string blendModeText = MaterialXML::fieldText( root, "blendMode" );
+        RHIBlendMode blendMode{ RHIBlendMode::Opaque };
+        if ( blendModeText.empty() == false && MaterialXML::parseBlendMode( blendModeText, blendMode ) == false )
+            return false;
+        _desc._blendMode = MaterialXML::blendModeToString( blendMode );
+
+        XMLNode props = root.findChild( "_properties" );
+        if ( props.isValid() )
+        {
+            for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            {
+                MaterialProperty prop{};
+                if ( MaterialXML::parsePropertyNode( item, prop ) == false )
+                    return false;
+                if ( prop._name.empty() == false )
+                    _desc._listProperty.push_back( std::move( prop ) );
+            }
+        }
+
+        if ( MaterialXML::parsePermutationNode( root, _desc._permutations ) == false )
+            return false;
+
+        _blendMode = blendMode;
+        applyDescToRuntime();
+        return true;
+    }
+
+    void Material::applyDescToRuntime()
+    {
+        _data._listProperty = _desc._listProperty;
+        // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
+        // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
+        _bShaderLayoutSynced = SW_FALSE;
+        _elementStride       = 0;
+        rebuildPackedBuffer();
+    }
+
+    void Material::syncDescFromRuntime() const
+    {
+        auto self                 = const_cast<Material*>( this );
+        self->_desc._listProperty = _data._listProperty;
+        self->_desc._blendMode    = MaterialXML::blendModeToString( _blendMode );
+        self->_desc._name         = _desc._name;
+        self->setShaderPath( _desc._shaderPath );
+    }
 } // namespace sw

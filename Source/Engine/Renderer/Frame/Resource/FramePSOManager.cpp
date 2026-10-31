@@ -16,7 +16,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -498,7 +498,7 @@ namespace sw
                 continue;
             }
 
-            vector<uint8> bytes         = MaterialUtil::makeFallbackElement( pSlot->_listElementMember, pSlot->_elementStride );
+            vector<uint8> bytes         = MaterialPacking::makeFallbackElement( pSlot->_listElementMember, pSlot->_elementStride );
             uint32        fallbackIndex = static_cast<uint32>( _listMaterialFallback.size() );
             for ( uint32 index = 0; index < static_cast<uint32>( _listMaterialFallback.size() ); ++index )
             {

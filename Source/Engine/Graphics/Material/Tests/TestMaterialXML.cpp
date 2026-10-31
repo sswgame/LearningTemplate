@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 // MaterialXMLTest — 저장소의 실제 .material 을 읽어 프로퍼티 깃발(bSrgb · bHdr)이 데이터대로인지(nogpu).
@@ -24,7 +24,7 @@ namespace
         for ( sw::XMLNode item = doc.getRoot( "MaterialDesc" ).findChild( "_properties" ).findChild( "item" ); item; item = item.findNextSibling( "item" ) )
         {
             sw::MaterialProperty prop{};
-            if ( sw::MaterialUtil::parsePropertyNode( item, prop ) == false )
+            if ( sw::MaterialXML::parsePropertyNode( item, prop ) == false )
                 return false;
             if ( prop._name == pName )
             {
@@ -60,5 +60,5 @@ SW_TEST_CASE( MaterialXMLTest, RejectsMisspelledPropertyAttribute )
     SW_REQUIRE_TRUE( doc.parse( "<item name=\"_albedoMap\" type=\"Texture2D\" bSRGB=\"0\"/>" ) );
     sw::MaterialProperty prop{};
     SW_EXPECT_LOG( "Xml.UnknownAttribute" );
-    SW_EXPECT_FALSE( sw::MaterialUtil::parsePropertyNode( doc.getRoot( "item" ), prop ) );
+    SW_EXPECT_FALSE( sw::MaterialXML::parsePropertyNode( doc.getRoot( "item" ), prop ) );
 }

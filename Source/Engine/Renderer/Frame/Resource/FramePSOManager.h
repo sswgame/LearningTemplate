@@ -153,7 +153,7 @@ namespace sw
          * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
          * @details DX12 에서 아무것도 바인딩하지 않은 t5 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로 나가지 않도록 항상 유효한 버퍼를 바인딩한다
          *          (언리얼의 기본 머티리얼 · RDG 더미 버퍼 `CreateStructuredDesc( sizeof( FElement ), 1 )`). 원소 하나를 모든 셰이더에 공용으로 걸면 셰이더의 `MaterialData`
-         *          stride 와 어긋나 DX11 디버그 레이어가 드로우마다 경고를 낸다. 원소는 0 이지만 텍스처 인덱스 필드만 `kInvalidDescriptorIndex` 다(`MaterialUtil::makeFallbackElement`).
+         *          stride 와 어긋나 DX11 디버그 레이어가 드로우마다 경고를 낸다. 원소는 0 이지만 텍스처 인덱스 필드만 `kInvalidDescriptorIndex` 다(`MaterialPacking::makeFallbackElement`).
          */
         struct MaterialFallback
         {

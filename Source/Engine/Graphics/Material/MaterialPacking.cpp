@@ -1,12 +1,13 @@
 #include "pch.h"
 
+#include "Engine/Graphics/Material/MaterialPacking.h"
+
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -204,7 +205,7 @@ namespace sw
 
             [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
             {
-                const uint32 need                  = MaterialUtil::packedSizeOf( shaderType );
+                const uint32 need                  = MaterialPacking::packedSizeOf( shaderType );
                 const bool   bInvalidPackArguments = need == 0 || packSize < need || pDst == nullptr;
                 if ( bInvalidPackArguments )
                     return false;
@@ -265,7 +266,7 @@ namespace sw
             [[nodiscard]] static bool packBool( const MaterialProperty& prop, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
             {
                 bool bValue{ false };
-                if ( MaterialUtil::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bValue ) == false )
+                if ( MaterialPacking::parseBoolToken( prop._value, prop._name, "Material.BooleanValueUnreadable", bValue ) == false )
                     return false;
                 const uint32 boolVal = bValue ? 1u : 0u;
                 if ( shaderType == MaterialPropertyType::Float || shaderType == MaterialPropertyType::Range )
@@ -352,7 +353,7 @@ namespace sw
 
 namespace sw
 {
-    MaterialPropertyType MaterialUtil::stringToType( string_view str, uint32& outSize )
+    MaterialPropertyType MaterialPacking::stringToType( string_view str, uint32& outSize )
     {
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
@@ -366,7 +367,7 @@ namespace sw
         return MaterialPropertyType::Unknown;
     }
 
-    const utf8* MaterialUtil::typeToString( MaterialPropertyType type )
+    const utf8* MaterialPacking::typeToString( MaterialPropertyType type )
     {
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
@@ -376,10 +377,10 @@ namespace sw
         return "Unknown";
     }
 
-    uint32 MaterialUtil::packedSizeOf( MaterialPropertyType type )
+    uint32 MaterialPacking::packedSizeOf( MaterialPropertyType type )
     {
         uint32 size{ 0 };
-        MaterialUtil::stringToType( MaterialUtil::typeToString( type ), size );
+        MaterialPacking::stringToType( MaterialPacking::typeToString( type ), size );
         // 알려진 enum 값이면 표에서 처음 맞는 항목의 크기를 쓴다
         for ( const MaterialPackingInternal::PropertyTypeDesc& desc : MaterialPackingInternal::s_PropertyTypes )
         {
@@ -389,17 +390,17 @@ namespace sw
         return size;
     }
 
-    bool MaterialUtil::isTextureType( MaterialPropertyType type )
+    bool MaterialPacking::isTextureType( MaterialPropertyType type )
     {
         return type == MaterialPropertyType::Texture2D || type == MaterialPropertyType::TextureCube || type == MaterialPropertyType::Texture3D || type == MaterialPropertyType::Texture2DArray;
     }
 
-    bool MaterialUtil::isNonBufferType( MaterialPropertyType type )
+    bool MaterialPacking::isNonBufferType( MaterialPropertyType type )
     {
         return type == MaterialPropertyType::Keyword;
     }
 
-    MaterialPropertyType MaterialUtil::defaultShaderTypeFor( MaterialPropertyType cpuType )
+    MaterialPropertyType MaterialPacking::defaultShaderTypeFor( MaterialPropertyType cpuType )
     {
         switch ( cpuType )
         {
@@ -437,13 +438,13 @@ namespace sw
         return cpuType;
     }
 
-    MaterialPropertyType MaterialUtil::shaderTypeFromReflectionName( string_view typeName, uint32 byteSize )
+    MaterialPropertyType MaterialPacking::shaderTypeFromReflectionName( string_view typeName, uint32 byteSize )
     {
         if ( typeName.empty() == false )
         {
             uint32                     ignored{ 0 };
-            const MaterialPropertyType reflectedType       = MaterialUtil::stringToType( typeName, ignored );
-            const bool                 bPlainReflectedType = reflectedType != MaterialPropertyType::Unknown && MaterialUtil::isNonBufferType( reflectedType ) == false && MaterialUtil::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool;
+            const MaterialPropertyType reflectedType       = MaterialPacking::stringToType( typeName, ignored );
+            const bool                 bPlainReflectedType = reflectedType != MaterialPropertyType::Unknown && MaterialPacking::isNonBufferType( reflectedType ) == false && MaterialPacking::isTextureType( reflectedType ) == false && reflectedType != MaterialPropertyType::Enum && reflectedType != MaterialPropertyType::BitFlag && reflectedType != MaterialPropertyType::Range && reflectedType != MaterialPropertyType::Color && reflectedType != MaterialPropertyType::ChannelMask && reflectedType != MaterialPropertyType::Bool;
             if ( bPlainReflectedType )
                 return reflectedType;
             // HLSL 의 bool 은 보통 "Bool" 로 보고된다
@@ -463,7 +464,7 @@ namespace sw
         return MaterialPropertyType::Unknown;
     }
 
-    uint32 MaterialUtil::alignOffset( uint32 offset, uint32 typeSize )
+    uint32 MaterialPacking::alignOffset( uint32 offset, uint32 typeSize )
     {
         uint32 align = 4;
         if ( 4 < typeSize && typeSize <= 16 )
@@ -473,13 +474,13 @@ namespace sw
         return MathUtil::align( offset, align );
     }
 
-    bool MaterialUtil::isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize )
+    bool MaterialPacking::isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize )
     {
         return shaderTypeFromReflectionName( reflectedType, byteSize ) == MaterialPropertyType::Uint &&
                StringUtil::endsWith( memberName, string_view{ kTextureIndexMemberSuffix } );
     }
 
-    vector<uint8> MaterialUtil::makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride )
+    vector<uint8> MaterialPacking::makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride )
     {
         vector<uint8> bytes( stride, 0 );
         const uint32  noTexture = kInvalidDescriptorIndex;
@@ -493,7 +494,7 @@ namespace sw
         return bytes;
     }
 
-    bool MaterialUtil::parseBoolToken( string_view token, string_view name, const utf8* pID, bool& outValue )
+    bool MaterialPacking::parseBoolToken( string_view token, string_view name, const utf8* pID, bool& outValue )
     {
         bool value{ false };
         if ( StringUtil::trim( token ).empty() || StringUtil::tryParseBool( token, value ) == false )
@@ -505,9 +506,9 @@ namespace sw
         return true;
     }
 
-    bool MaterialUtil::packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
+    bool MaterialPacking::packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer )
     {
-        if ( MaterialUtil::isNonBufferType( prop._type ) )
+        if ( MaterialPacking::isNonBufferType( prop._type ) )
         {
             prop._size = 0;
             return true;
@@ -515,10 +516,10 @@ namespace sw
 
         MaterialPropertyType shaderType = prop._shaderType;
         if ( shaderType == MaterialPropertyType::Unknown )
-            shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
+            shaderType = MaterialPacking::defaultShaderTypeFor( prop._type );
         prop._shaderType = shaderType;
 
-        uint32 packSize = MaterialUtil::packedSizeOf( shaderType );
+        uint32 packSize = MaterialPacking::packedSizeOf( shaderType );
         if ( packSize == 0 )
             packSize = 4;
         if ( prop._size == 0 )

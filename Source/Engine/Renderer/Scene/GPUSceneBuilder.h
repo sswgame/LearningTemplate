@@ -291,7 +291,7 @@ namespace sw
         /** @brief 스킨 팔레트를 `_snapshot` 으로 옮깁니다(`populateFromScene` 이 매 프레임 부릅니다). */
         GPUSkinPaletteCollector _skinPaletteCollector;
         /**
-         * @brief 마지막 수집 때 본 퍼뮤테이션 세대입니다(`MaterialUtil::getPermutationGeneration`).
+         * @brief 마지막 수집 때 본 퍼뮤테이션 세대입니다(`MaterialPermutation::getPermutationGeneration`).
          * @details 정지한 씬에서 머티리얼의 정적 스위치나 키워드를 바꾸면 프리미티브는 하나도 더러워지지
          *          않는다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않는다.
          */

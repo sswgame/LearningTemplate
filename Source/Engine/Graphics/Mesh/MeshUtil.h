@@ -4,7 +4,7 @@
  *
  * [왜 Mesh 가 아닌가]
  * `Mesh` 가 책임지는 것은 **정점 버퍼와 그 수명**입니다. 어떤 기하를 만들지는 다른 일이고, 도형이
- * 늘어날 때마다 리소스 클래스가 커질 이유가 없습니다. `MaterialUtil` 이 `Material` 옆에 따로 있는 것과
+ * 늘어날 때마다 리소스 클래스가 커질 이유가 없습니다. `MaterialPacking` · `MaterialXML` 이 `Material` 옆에 따로 있는 것과
  * 같은 이유입니다.
  */
 #pragma once
