@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
@@ -192,7 +193,7 @@ namespace sw
         // 함께 지은 게임 팩(`Bin/Games/<게임>/`, `SW_GAMES`)을 고르면(`GameSelection`) 그 매니페스트가 `Modules/` 의 프로젝트를 대신한다 — 켜짐 표가 게임별이다.
         // 고르지 않은 게임(활성 게임 포함)의 매니페스트는 그 게임만 닿는 키트를 빼는 데만 쓴다.
         vector<ModuleManifest> listGamePackProject;
-        if ( ModuleCatalogLoaderInternal::readManifestFolder( FileUtil::joinPath( FileUtil::getBinaryDirectory(), config::kDirBinGames ), true, listGamePackProject ) == false )
+        if ( ModuleCatalogLoaderInternal::readManifestFolder( FileUtil::joinPath( ProcessRoots::get()._binary.str(), config::kDirBinGames ), true, listGamePackProject ) == false )
             return false;
         const size_t projectIndex = ModuleCatalogLoaderInternal::findIndex( listManifest, config::kTargetGameModule );
         string       movedModule;
@@ -200,7 +201,7 @@ namespace sw
         if ( ModuleLibraryUtil::getModuleSubdirectory( movedModule, movedDirectory ) && projectIndex != ModuleCatalogLoaderInternal::kNotFound )
         {
             const string selectedPath =
-                FileUtil::normalizePath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension ) );
+                FileUtil::normalizePath( FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), movedModule + ModuleCatalog::kManifestExtension ) );
             bool bFound = false;
             for ( ModuleManifest& project : listGamePackProject )
             {

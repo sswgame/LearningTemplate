@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/Process.h"
@@ -106,14 +107,10 @@ namespace sw
 
     string ModuleCompiler::findBuildDirectory() const
     {
-        string       resultDir = FileUtil::getBinaryDirectory();
-        const string parentDir = FileUtil::getDirectoryPart( resultDir ); // Bin 의 상위 폴더
-
-        if ( FileUtil::exists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||
-             FileUtil::exists( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) ) )
-            resultDir = parentDir;
-
-        return resultDir;
+        // 빌드 트리는 바이너리 폴더(Bin)의 부모다. 없으면(패키지 · 복사한 바이너리) 빈 글 - 예전에는 Bin 으로 물러나 `cmake --build` 가 엉뚱한 이유로 실패했다.
+        const string parentDir  = FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ProcessRoots::get()._binary.str() ) );
+        const bool   bBuildTree = FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "build.ninja" ) ) || FileUtil::isRegularFile( FileUtil::joinPath( parentDir, "CMakeCache.txt" ) );
+        return bBuildTree ? parentDir : string{};
     }
 
     void ModuleCompiler::failBeforeBuild( const string& targetName )
@@ -200,7 +197,7 @@ namespace sw
         const string buildDir = findBuildDirectory();
         if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
         {
-            SW_LOG_ERROR( "Failed to find build directory for compilation!" );
+            SW_LOG_ERROR( "No CMake build tree (build.ninja / CMakeCache.txt) next to the binary folder '%#' - this build cannot compile modules", ProcessRoots::get()._binary.str() );
             failBeforeBuild( targetName );
             return;
         }

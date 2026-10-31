@@ -7,6 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -72,7 +73,7 @@ namespace sw
             {
                 static const bool s_bAdded = []()
                 {
-                    const string binaryDir = FileUtil::toNativeSeparators( FileUtil::getBinaryDirectory() );
+                    const string binaryDir = FileUtil::toNativeSeparators( ProcessRoots::get()._binary.str() );
                     const string moduleDir = FileUtil::toNativeSeparators( ModuleLibraryUtil::getModuleDirectory() );
                     for ( const string& directory : { binaryDir, moduleDir } )
                     {
@@ -126,12 +127,12 @@ namespace sw
         const string besideLibrary = getDebugSymbolPath( libraryPath );
         string_view  fileName;
         FileUtil::getFileNamePart( besideLibrary, fileName );
-        string symbolDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder );
+        string symbolDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), kSymbolFolder );
         // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
         const ModuleSubdirectory& moved = s_moduleSubdirectory;
         if ( moved._arrDirectory[0] != '\0' )
         {
-            const string movedDirectory = FileUtil::joinPath( FileUtil::getBinaryDirectory(), moved._arrDirectory );
+            const string movedDirectory = FileUtil::joinPath( ProcessRoots::get()._binary.str(), moved._arrDirectory );
             if ( FileUtil::pathsEqualNormalized( FileUtil::getDirectoryPart( libraryPath ), movedDirectory ) )
                 symbolDirectory = FileUtil::joinPath( symbolDirectory, moved._arrDirectory );
         }
@@ -143,7 +144,7 @@ namespace sw
 
     string ModuleLibraryUtil::getModuleDirectory()
     {
-        return FileUtil::joinPath( FileUtil::getBinaryDirectory(), kModuleFolder );
+        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), kModuleFolder );
     }
 
     void ModuleLibraryUtil::setModuleSubdirectory( string_view baseName, string_view binRelativeDirectory )
@@ -177,11 +178,11 @@ namespace sw
         // 옮긴 모듈은 그 폴더에만 있다 — 없으면 그 경로를 돌려 부르는 쪽이 "없다" 를 알리게 한다(활성 게임의 `Bin/Modules` 사본으로 넘어가지 않는다).
         const string_view movedDirectory = ModuleLibraryUtilInternal::findModuleSubdirectory( baseName );
         if ( movedDirectory.empty() == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), movedDirectory ), fileName );
+            return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), movedDirectory ), fileName );
         string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
         if ( FileUtil::exists( modulePath ) == false )
         {
-            const string binaryPath = FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );
+            const string binaryPath = FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
             if ( FileUtil::exists( binaryPath ) )
                 modulePath = binaryPath;
         }

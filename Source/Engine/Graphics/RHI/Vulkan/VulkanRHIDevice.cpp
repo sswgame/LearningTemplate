@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
@@ -177,7 +178,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             if ( _bEnableValidationLayers == SW_TRUE )
             {
-                string execDir       = FileUtil::getBinaryDirectory();
+                string execDir       = ProcessRoots::get()._binary.str();
                 bool   bLayerPathSet = true;
                 if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {

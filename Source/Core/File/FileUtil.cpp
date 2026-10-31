@@ -504,29 +504,12 @@ namespace sw
         return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
-    string FileUtil::getBinaryDirectory()
-    {
-        // 키트 DLL 을 링크하는 실행 파일(테스트 `TestBin`, 개발 도구 `ToolBin` — OnlineLoadBot)은 그 DLL 사본과 함께 따로 나오고 작업 폴더는 `Bin` 이다.
-        static constexpr string_view kTestBinaryFolder = "TestBin";
-        static constexpr string_view kToolBinaryFolder = "ToolBin";
-        static constexpr string_view kBinaryFolder     = "Bin";
-        string                       binaryDir         = getDirectoryPart( getExecutablePath() );
-        string_view                  folderName;
-        getFileNamePart( binaryDir, folderName );
-        if ( folderName == kTestBinaryFolder || folderName == kToolBinaryFolder )
-        {
-            const string siblingBinary = joinPath( getDirectoryPart( binaryDir ), kBinaryFolder );
-            if ( isDirectory( siblingBinary ) )
-                binaryDir = siblingBinary;
-        }
-        return binaryDir;
-    }
-
     string FileUtil::getExecutablePath()
     {
+        // 실행 파일 경로를 못 얻으면 어느 루트도 정할 수 없다 - 빈 글로 물러나지 않고 멈춘다(예전에는 빈 글을 받은 쪽마다 따로 실패했다).
         string executablePath;
-        if ( PlatformFileSystem::getExecutablePath( executablePath ) == false )
-            return string{};
+        if ( PlatformFileSystem::getExecutablePath( executablePath ) == false || executablePath.empty() )
+            SW_FATAL( "The executable path could not be queried from the OS" );
         return executablePath;
     }
 

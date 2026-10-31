@@ -199,7 +199,7 @@ namespace sw::editor
 #else
         const string fileName = pBaseName;
 #endif
-        return FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );
+        return FileUtil::joinPath( ProcessRoots::get()._binary.str(), fileName );
     }
 
     void EditorNetPlaySession::readChildOutput( ChildProcess* pChild )

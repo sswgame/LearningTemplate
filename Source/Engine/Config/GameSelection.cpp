@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
@@ -78,7 +79,7 @@ namespace sw
         else
         {
             const string packDirectory = FileUtil::joinPath( config::kDirBinGames, name );
-            const string libraryPath   = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), packDirectory ),
+            const string libraryPath   = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._binary.str(), packDirectory ),
                                                              ModuleLibraryUtil::formatSharedLibraryName( config::kTargetGameModule ) );
             if ( FileUtil::exists( libraryPath ) == false )
             {

@@ -17,7 +17,7 @@ namespace sw
      */
     struct SW_API ProcessRoots
     {
-        AbsolutePath _binary;      ///< 엔진 바이너리 폴더(`Bin` - 테스트 · 도구 실행 파일도 형제 `Bin`, `FileUtil::getBinaryDirectory`)
+        AbsolutePath _binary;      ///< 엔진 바이너리 폴더(`Bin` - 테스트 · 도구 실행 파일(`TestBin` · `ToolBin`)도 형제 `Bin`, 없으면 기동 오류)
         AbsolutePath _project;     ///< 프로젝트 루트 - 바이너리 폴더에서 위로 올라가 `Content` 가 있는 첫 폴더. 없으면(패키지 - `Packs` 만 있다) 바이너리 폴더
         AbsolutePath _content;     ///< 리소스 도메인 루트(`<프로젝트>/Content`) - 패키지에는 없는 폴더다(읽는 쪽이 있는지 본다)
         AbsolutePath _packs;       ///< 구운 팩 폴더(`<바이너리>/Packs`)

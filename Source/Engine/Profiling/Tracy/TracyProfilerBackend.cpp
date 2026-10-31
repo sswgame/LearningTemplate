@@ -10,6 +10,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -126,7 +127,7 @@ namespace sw
                 if ( ProcessEnvironment::tryRead( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
                     (void)ProcessEnvironment::trySet( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
                 // 엔진 DLL 과 같은 폴더(`Bin`)에 빌드가 둔다. 없으면(Tracy 를 끈 배포) 빈 표다 - 선택 구성 요소라 로드 실패 경고를 내지 않게 먼저 묻는다.
-                const string                      clientText = FileUtil::joinPath( FileUtil::getBinaryDirectory(), "TracyClient.dll" );
+                const string                      clientText = FileUtil::joinPath( ProcessRoots::get()._binary.str(), "TracyClient.dll" );
                 const std::optional<AbsolutePath> clientPath = AbsolutePath::tryMake( clientText );
                 if ( clientPath.has_value() == false || FileUtil::isRegularFile( clientText ) == false )
                     return api;
