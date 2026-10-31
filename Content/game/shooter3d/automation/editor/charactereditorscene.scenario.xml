@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 에디터 흐름 시나리오 — 캐릭터 편집 창에서 만든 외형을 데이터 프리셋으로 내보내고 씬의 캐릭터가 그 id 로 입는다(언리얼 · 유니티의 프리셋 에셋).
+  ① 창의 외형 탭에서 데이터를 읽고 기준 프리셋 첫째 · 장비 세트 첫째(Knight)를 입힌다.
+  ② "Export data preset" 으로 임시 리소스 폴더(scratch/import/ — .gitignore 가 무시, 처음과 끝에 지운다)에 EditorKnight.appearance.xml 을 쓴다.
+     게임 데이터 폴더(game/shooter3d/data/appearance/presets/)는 건드리지 않는다. 내보내기는 실행 중인 게임의 외형 데이터에도 올린다.
+  ③ 오브젝트에 스켈레탈 메시 · 외형 컴포넌트를 달고 인스펙터로 프리셋을 EditorKnight 로 적는다.
+  ④ 플레이하면 그 프리셋으로 조립한다 — 머리 칸에 세트의 투구(helmet_knight)가 있다(기준 프리셋에는 없다).
+  편집기 단계라 게임 체인이 아니라 편집기 체인(Scenario.editor — 활성 게임의 automation/editor/ 도 줍는다)이 돈다. 화소를 판정하지 않아 백엔드 하나에서만 돌고(-scenario-backend-split),
+  그래서 고정 이름의 내보내기 폴더가 다른 프로세스와 겹치지 않는다. UI 클릭 사이의 고정 대기는 다른 편집기 시나리오처럼 창이 그려질 프레임이다.
+  실행: App -EnableEditor -scenario=game/shooter3d/automation/editor/charactereditorscene.scenario.xml -unattended
+-->
+<Scenario name="game.shooter3d.charactereditorscene" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<Wait frames="1"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<Wait frames="4"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Wait frames="5"/>
+	<DevCommand line="layout.reset"/>
+	<DevCommand line="asset.removeImportFolder scratch/import/shooter3d.charactereditorscene"/>
+
+	<!-- ① 창 — 외형 탭, 데이터, 기준 프리셋, 세트 -->
+	<Wait frames="20"/>
+	<DevCommand line="panel.focus charactereditor.main"/>
+	<Wait frames="30"/>
+	<EditorClick mark="charactereditor.tab.appearance" state="down"/>
+	<Wait frames="1"/>
+	<EditorClick mark="charactereditor.tab.appearance" state="up"/>
+	<Wait frames="19"/>
+	<EditorClick mark="charactereditor.loadData"/>
+	<Wait frames="15"/>
+	<EditorClick mark="charactereditor.basePreset"/>
+	<Wait frames="10"/>
+	<EditorClick mark="charactereditor.basePreset.first"/>
+	<Wait frames="15"/>
+	<EditorClick mark="charactereditor.equipSet"/>
+	<Wait frames="20"/>
+	<EditorClick mark="charactereditor.equipSet.first"/>
+	<WaitUntil watch="Editor.CharacterEditorEquippedSlotCount" atLeast="1" timeoutFrames="25"/>
+
+	<!-- ② 데이터 프리셋으로 내보내기 -->
+	<Wait frames="5"/>
+	<EditorClick mark="charactereditor.exportFolder"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="scratch/import/shooter3d.charactereditorscene"/>
+	<Wait frames="10"/>
+	<EditorClick mark="charactereditor.exportID"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="EditorKnight"/>
+	<Wait frames="10"/>
+	<EditorClick mark="charactereditor.exportPreset"/>
+	<WaitUntil watch="Editor.CharacterEditorExportCount" equals="1" timeoutFrames="20"/>
+	<ExpectLog contains="Exported appearance preset 'EditorKnight' to 'scratch/import/shooter3d.charactereditorscene" count="1"/>
+	<CaptureEditorUI file="export.png"/>
+	<Wait frames="10"/>
+	<DevCommand line="panel.close charactereditor.main"/>
+
+	<!-- ③ 씬의 캐릭터 — 외형 컴포넌트가 내보낸 id 를 가리킨다 -->
+	<Wait frames="20"/>
+	<EditorClick mark="hierarchy.create"/>
+	<Wait frames="15"/>
+	<EditorClick mark="inspector.name"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="Dummy"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<Wait frames="15"/>
+	<DevCommand line="component.add CharacterAppearanceComponent"/>
+	<Wait frames="10"/>
+	<DevCommand line="component.add SkeletalMeshComponent"/>
+	<Wait frames="20"/>
+	<EditorClick mark="inspector.property.CharacterAppearanceComponent._presetID"/>
+	<Wait frames="10"/>
+	<EditorKey key="Ctrl+A"/>
+	<Wait frames="5"/>
+	<EditorText value="EditorKnight"/>
+	<Wait frames="5"/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Object.Property" target="Dummy" key="CharacterAppearanceComponent._presetID" is="EditorKnight" timeoutFrames="20"/>
+
+	<!-- ④ 플레이 — 조립 결과 -->
+	<Wait frames="10"/>
+	<DevCommand line="play"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<WaitUntil watch="Appearance.Preset" target="Dummy" is="EditorKnight" timeoutFrames="40"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Dummy" key="Head" is="helmet_knight" timeoutFrames="40"/>
+	<CaptureEditorUI file="play.png"/>
+	<Wait frames="10"/>
+	<DevCommand line="stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Wait frames="9"/>
+	<DevCommand line="asset.removeImportFolder scratch/import/shooter3d.charactereditorscene"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

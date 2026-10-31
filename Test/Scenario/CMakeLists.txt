@@ -8,7 +8,8 @@
 #        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드는 그 백엔드만 건너뛴다.
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<게임>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
-#          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 줍지 않는다 — 손으로 돌린다.
+#          하위 폴더(예: `rhiswap/` — 네 백엔드가 모두 있어야 한다)는 조건이 붙은 시나리오라 체인이 줍지 않는다 — 손으로 돌린다.
+#          게임의 하위 폴더 셋은 따로 항목이 된다: `desktop/`(혼자 도는 데스크톱 시나리오), `sequence/`(두 번 기동 쌍), `editor/`(편집기 체인).
 #          항목이 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) — `ctest -j` 의 다른 항목(단위 테스트)과 겹쳐도 GPU 자식이 늘지 않는다.
 #          다른 게임의 시나리오는 그 게임이 활성일 때(구성의 SW_ACTIVE_GAME) 올라온다 — App 은 활성 게임 하나만 싣는다.
 # ==============================================================================
@@ -61,12 +62,43 @@ if(listScenario)
 	message(STATUS "[Scenario] ${testName}: ${stageCount} scenario(s)")
 endif()
 
+# 데스크톱 시나리오 — 활성 게임의 `automation/desktop/` 바로 아래. OS 전역 상태(커서 클립 · 전경)를 쓰거나 프로세스를 끝내므로 체인에 넣지 못하고(백엔드 넷이 동시에 돈다)
+# 하나씩 기본 백엔드 한 프로세스로 혼자 돈다(RUN_SERIAL — 다른 항목의 창이 전경을 빼앗지 않게). 언리얼 Gauntlet 이 데스크톱 테스트를 따로 도는 것과 같다.
+file(GLOB listDesktopScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/game/${swActiveGamePack}/automation/desktop/*.scenario.xml")
+foreach(desktopPath IN LISTS listDesktopScenario)
+	get_filename_component(desktopName "${desktopPath}" NAME)
+	string(REGEX REPLACE "\\.scenario\\.xml$" "" desktopName "${desktopName}")
+	sw_readScenarioLaunch("${desktopPath}" listDesktopLaunch)
+	set(desktopTestName Scenario.${swActiveGamePack}.desktop.${desktopName})
+	add_test(NAME ${desktopTestName}
+		COMMAND $<TARGET_FILE:App> -scenario=${desktopPath} -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/${desktopTestName}.log ${listDesktopLaunch}
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(${desktopTestName} PROPERTIES LABELS hostgpu TIMEOUT 300 RUN_SERIAL TRUE SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+endforeach()
+
+# 두 번 기동 쌍 — 활성 게임의 `automation/sequence/<묶음>.1` · `.2`. 빈 폴더의 사용자 설정 파일로 .1 을 돌려 남기고 같은 파일로 .2 를 띄워 남았는지 본다
+# (편집기 상태 쌍과 같은 실행기 — 프로세스를 다시 띄우는 것 자체가 검사 대상이다). 설정 파일을 같이 쓰므로 기본 백엔드 하나다.
+file(GLOB listSequenceFirst RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/game/${swActiveGamePack}/automation/sequence/*.1.scenario.xml")
+foreach(firstPath IN LISTS listSequenceFirst)
+	string(REGEX REPLACE "\\.1\\.scenario\\.xml$" "" pairPath "${firstPath}")
+	get_filename_component(pairName "${pairPath}" NAME)
+	set(sequenceTestName Scenario.${swActiveGamePack}.sequence.${pairName})
+	set(sequenceStateDir "${CMAKE_BINARY_DIR}/Testing/StateDir/${swActiveGamePack}.${pairName}")
+	add_test(NAME ${sequenceTestName}
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pairPath} -DSTATE_DIR=${sequenceStateDir} "-DSTATE_ARG=-gv_userSettingsFile=${sequenceStateDir}/usersettings.json"
+			-DLOG_NAME=${sequenceTestName} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(${sequenceTestName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
+endforeach()
+
 # 편집기 시나리오 — `Content/engine/automation/editor/` 바로 아래 `*.scenario.xml` 을 편집기를 켠 체인 하나(`Scenario.editor`)로 돌린다. 하위 폴더 `statedir/`
 # (두 프로세스가 같은 상태 폴더를 이어 쓰는 쌍)는 아래에서 쌍마다 항목 하나로 돈다. 게임 체인처럼 백엔드마다 자식 App 하나가
 # 동시에 돌고(`-scenario-backends=all`) 저마다 제 백엔드 골든(씬 · 게임 뷰)과 견준다 — 편집기 상태 폴더가 프로세스마다라 자식끼리 겹치지 않는다.
 # 그린 화소를 판정하지 않는 시나리오(UI 로직 · 문턱 없는 캡처)는 백엔드를 돌아가며 하나에서만 돈다(`-scenario-backend-split`) — 전부 네 번 돌면 백엔드당 약 1000 초였다. 모듈 리로드(이름 `*modulereload`)는 맨 뒤에 둔다(게임 체인의 모듈 리로드와 같은 까닭 — 코드 이미지를 갈아 끼운 것이 다른 단계에 닿지 않게).
 if(TARGET EditorModule)
-	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml")
+	# 활성 게임의 편집기 시나리오(`game/<게임>/automation/editor/`)도 같은 체인에 든다 — 그 게임의 데이터를 편집기로 다루는 흐름이다.
+	file(GLOB listEditorScenario RELATIVE "${swScenarioRoot}" CONFIGURE_DEPENDS "${swScenarioRoot}/engine/automation/editor/*.scenario.xml"
+		"${swScenarioRoot}/game/${swActiveGamePack}/automation/editor/*.scenario.xml")
 	list(SORT listEditorScenario)
 	set(listEditorReloadScenario "${listEditorScenario}")
 	list(FILTER listEditorReloadScenario INCLUDE REGEX "modulereload\\.scenario\\.xml$")
@@ -91,7 +123,7 @@ if(TARGET EditorModule)
 		get_filename_component(pairName "${pairPath}" NAME)
 		add_test(NAME Scenario.editor.statedir.${pairName}
 			COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> -DPAIR=${pairPath} -DSTATE_DIR=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}
-				-DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
+				"-DSTATE_ARG=-gv_editorStateDir=${CMAKE_BINARY_DIR}/Testing/StateDir/${pairName}" -DEDITOR=ON -DLOG_NAME=Scenario.editor.statedir.${pairName} -DLOG_DIR=${CMAKE_BINARY_DIR}/Testing/Logs -DSKIP_CODE=${SW_EXIT_CODE_Skipped} -P ${CMAKE_CURRENT_SOURCE_DIR}/RunStateDirPair.cmake
 			WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 		set_tests_properties(Scenario.editor.statedir.${pairName} PROPERTIES LABELS hostgpu TIMEOUT 600 SKIP_RETURN_CODE ${SW_EXIT_CODE_Skipped})
 	endforeach()

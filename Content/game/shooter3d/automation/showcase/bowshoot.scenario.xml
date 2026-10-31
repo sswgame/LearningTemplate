@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  활 쇼케이스 — 궁수(앵커) · 활 · 메긴 화살이 페어드 애니메이션 하나(common/data/anim/bow_shoot.pairedanim.xml)로 돈다.
+  궁수의 PairedAnimationComponent(_bStartOnPlay)가 플레이 첫 틱 뒤에 세션을 시작하고, 활 · 화살 역할은 외형 부품(아이템 bow_long)의 프리팹이 데이터로 든다.
+  0.6 초의 공유 알림 ReleaseArrow 가 활의 알림 표에서 투사체 프리팹(common/prefabs/props/arrow_projectile.prefab.xml)을 시위 본 자리에 스폰한다.
+  하위 폴더라 게임 체인이 줍지 않는다. 사진 둘은 애니메이션의 정해진 시각에 찍으므로 고정 대기다.
+  실행: App -scenario=game/shooter3d/automation/showcase/bowshoot.scenario.xml -unattended -gv_firstScene=game/shooter3d/maps/bowshowcase.scene.xml
+-->
+<Scenario name="game.shooter3d.bowshoot" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/bowshowcase.scene.xml"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Archer" key="MainHand" is="bow_long" timeoutFrames="5"/>
+	<WaitUntil watch="PairedAnimation.SessionState" target="Archer" equals="1" timeoutFrames="60"/>
+	<!-- 놓는 시각(0.6 초) 앞 — 시위를 당긴 자세. -->
+	<Wait seconds="0.4"/>
+	<Screenshot file="draw.ppm"/>
+	<!-- 놓은 뒤 — 투사체가 스폰됐다. -->
+	<Wait seconds="0.4"/>
+	<Expect watch="Object.Exists" target="ArrowProjectile" equals="1"/>
+	<Screenshot file="release.ppm"/>
+	<!-- 앵커 클립(1.07 초)이 끝나면 세션이 끝나고 시스템이 거둔다 — 감시 값은 세션이 없을 때의 Idle(0)이다. -->
+	<WaitUntil watch="PairedAnimation.SessionState" target="Archer" equals="0" timeoutSeconds="0.5"/>
+	<ExpectImage file="draw.ppm" golden="draw"/>
+	<ExpectImage file="release.ppm" golden="release"/>
+	<Pass/>
+</Scenario>

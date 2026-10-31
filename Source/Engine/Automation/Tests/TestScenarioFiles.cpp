@@ -17,6 +17,9 @@ SW_TEST_CASE( ScenarioFilesTest, AllScenariosParseResolveAndValidate )
     SW_EXPECT_TRUE( test::checkScenarioFolder( "engine/automation", pModuleLoader ) );
     (void)test::checkScenarioFolder( "engine/automation/rhiswap", pModuleLoader ); // 조건이 붙은 시나리오(네 백엔드) — 없어도 된다
     (void)test::checkScenarioFolder( gameFolder, pModuleLoader );                  // 시나리오가 없는 게임도 있다
+    (void)test::checkScenarioFolder( gameFolder + "/desktop", pModuleLoader );     // 혼자 도는 데스크톱 시나리오(Test/Scenario 가 따로 등록한다)
+    (void)test::checkScenarioFolder( gameFolder + "/sequence", pModuleLoader );    // 두 번 기동 쌍
+    (void)test::checkScenarioFolder( gameFolder + "/showcase", pModuleLoader );    // 따로 띄우는 쇼케이스 씬
 }
 
 // `<ExpectImage>` 는 시나리오 끝에서 판정한다 - 같은 파일을 두 번 찍으면 앞 단언이 뒤 그림을 보므로 읽을 때 거절한다.
