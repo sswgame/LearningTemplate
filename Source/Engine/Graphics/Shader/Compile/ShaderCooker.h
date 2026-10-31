@@ -280,10 +280,10 @@ namespace sw
          */
         static void invalidateSharedHeaderCache();
 
-        /** @brief 타깃 포맷의 바이너리 서브폴더 이름(쿠킹 테이블의 `shader_folder`)입니다. 모르는 포맷은 기본 백엔드의 폴더를 반환합니다. */
+        /** @brief 타깃 포맷의 바이너리 서브폴더 이름(쿠킹 테이블의 `shader_folder`)입니다. 모르는 값(`Count` · 범위 밖)은 `SW_FATAL` 입니다. */
         static string_view getSubfolderForFormat( ShaderTargetFormat format );
 
-        /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. */
+        /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. 모르는 값은 `SW_FATAL` 입니다. */
         static string_view getExtensionForFormat( ShaderTargetFormat format );
 
         /** @brief 쿠킹 테이블의 셰이더 폴더 이름(`dx11`, `dx12`, `vulkan`, `opengl`)으로 ShaderTargetFormat 을 역으로 구합니다. 모르면 Count 입니다. */

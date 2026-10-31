@@ -36,11 +36,10 @@ namespace sw
             {
                 string_view        _folder;
                 ShaderTargetFormat _format;
-                bool               _bDefault; ///< 테이블의 기본 백엔드인가
             };
 
             static constexpr BackendFolder kArrBackendFolder[] = {
-#define SW_SHADER_COOKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { ShaderFolder, ShaderTargetFormat::ShaderTarget, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
+#define SW_SHADER_COOKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { ShaderFolder, ShaderTargetFormat::ShaderTarget },
                 SW_RHI_BACKEND_TABLE( SW_SHADER_COOKER_BACKEND_ROW )
 #undef SW_SHADER_COOKER_BACKEND_ROW
             };
@@ -53,7 +52,25 @@ namespace sw
                 const string stem     = FileUtil::removeExtension( fileName );
                 return StringUtil::toLower( stem.c_str() );
             }
+
+            /** @brief 모든 형식이 표에 한 번씩 있는지 - 수만 맞고 한 형식이 두 번이면 다른 형식의 폴더를 찾지 못한다. */
+            static constexpr bool coversEveryFormat()
+            {
+                for ( size_t formatIndex = 0; formatIndex < std::size( kArrBackendFolder ); ++formatIndex )
+                {
+                    size_t matchCount = 0;
+                    for ( const BackendFolder& row : kArrBackendFolder )
+                    {
+                        if ( static_cast<size_t>( row._format ) == formatIndex )
+                            ++matchCount;
+                    }
+                    if ( matchCount != 1 )
+                        return false;
+                }
+                return true;
+            }
         };
+
     } // namespace
 } // namespace sw
 
@@ -146,18 +163,14 @@ namespace sw
 
     string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )
     {
-        string_view folder;
+        static_assert( ShaderCookerInternal::coversEveryFormat(), "Config/Engine/CookContract.json needs exactly one rhi_backends row per ShaderTargetFormat" );
+        // 표는 모든 형식을 한 번씩 담는다(위 검사) — 못 찾는 값은 `Count` 이거나 범위 밖이라 기본 백엔드 폴더로 물러나지 않고 멈춘다.
         for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {
             if ( row._format == format )
-            {
-                folder = row._folder;
-                return folder;
-            }
-            if ( row._bDefault )
-                folder = row._folder;
+                return row._folder;
         }
-        return folder;
+        SW_FATAL( "ShaderCooker::getSubfolderForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
@@ -176,7 +189,7 @@ namespace sw
             case ShaderTargetFormat::Count:
                 break;
         }
-        return ".bin";
+        SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );
     }
 
     ShaderTargetFormat ShaderCooker::getFormatForSubfolder( string_view subfolder )
