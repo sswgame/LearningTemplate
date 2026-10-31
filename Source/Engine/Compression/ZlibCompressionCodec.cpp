@@ -176,7 +176,7 @@ namespace sw
                                                                           static_cast<const Bytef*>( pSrc ), srcSize, level );
         if ( result != Z_OK )
         {
-            SW_LOG_ERROR( "zlib deflate failed (code %#, src %# bytes)", result, static_cast<uint64>( srcSize ) );
+            SW_LOG_ERROR_ID( "Compression.ZlibDeflateFailed", "zlib deflate failed (code %#, src %# bytes)", result, static_cast<uint64>( srcSize ) );
             return false;
         }
 
@@ -207,8 +207,8 @@ namespace sw
                                                                           static_cast<const Bytef*>( pSrc ), srcSize );
         if ( result != Z_OK )
         {
-            SW_LOG_ERROR( "zlib inflate failed (code %#, src %# -> dst %# bytes)",
-                          result, static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
+            SW_LOG_ERROR_ID( "Compression.ZlibInflateFailed", "zlib inflate failed (code %#, src %# -> dst %# bytes)",
+                             result, static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
             return false;
         }
 
