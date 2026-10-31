@@ -26,9 +26,9 @@ namespace sw
 
     /**
      * @class ModuleRegistrationHost
-     * @brief 모듈 서브시스템의 자식 범위를 매달고 떼는 서브시스템이자, 매단 자식이 공개한 칸의 조회 창구입니다. 스레드: 모듈을 올리고 내리는 스레드만 부른다.
+     * @brief 모듈 서브시스템의 자식 범위를 매달고 떼는 서브시스템이고, 매단 자식이 공개한 칸의 조회 창구(`getMountedLocator`)를 가집니다. 스레드: 모듈을 올리고 내리는 스레드만 부른다.
      */
-    class SW_API ModuleRegistrationHost final : public ISubsystem, public ISubsystemLocator
+    class SW_API ModuleRegistrationHost final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */
@@ -65,13 +65,34 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        // ISubsystemLocator — 매단 자식이 공개한 칸만 본다(프로세스 범위의 자식이 먼저).
-        void*                    findInScope( uint64 typeHash ) const override;
-        const ISubsystemLocator* getParentScope() const override { return nullptr; }
+        /** @brief 매단 자식이 공개한 칸만 보는 조회 창구입니다(모듈 범위의 부모 — `GameModuleManager::fillModuleServiceScope`). 수명은 이 서브시스템과 같다. */
+        const ISubsystemLocator& getMountedLocator() const { return _mountedLocator; }
+
+    private:
+        /**
+         * @class MountedLocator
+         * @brief 매단 자식이 공개한 칸만 보는 `ISubsystemLocator` 입니다(상위 범위 없음). 호스트가 그 인터페이스를 상속하지 않고 이 멤버를 내놓는다.
+         */
+        class MountedLocator final : public ISubsystemLocator
+        {
+        public:
+            explicit MountedLocator( const ModuleRegistrationHost& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void*                    findInScope( uint64 typeHash ) const override { return _owner.findInMounted( typeHash ); }
+            const ISubsystemLocator* getParentScope() const override { return nullptr; }
+
+        private:
+            const ModuleRegistrationHost& _owner;
+        };
 
     private:
         /** @brief @p scope 의 범위입니다. */
         SubsystemScope& resolveScope( uint8 scope ) const;
+        /** @brief 매단 자식이 공개한 칸에서 @p typeHash 를 찾습니다(프로세스 범위의 자식이 먼저). 없으면 nullptr 입니다. */
+        void* findInMounted( uint64 typeHash ) const;
 
     private:
         SubsystemScope*                                       _pProcessScope;     ///< 프로세스 범위(엔진보다 오래 산다)
@@ -79,5 +100,6 @@ namespace sw
         SubsystemHostMask                                     _hostMask;          ///< 자식 서브시스템을 세울 호스트 종류
         unordered_map<string, HeadRecord>                     _mapHead;           ///< 모듈 이름 → 마지막으로 걷은 등록자 머리
         unordered_map<string, vector<ModuleObjectRegistrar*>> _mapAttachedObject; ///< 모듈 이름 → 붙인 모듈 객체 등록자
+        MountedLocator                                        _mountedLocator;    ///< 매단 자식이 공개한 칸의 조회 창구
     };
 } // namespace sw

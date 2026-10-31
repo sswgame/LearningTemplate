@@ -21,6 +21,7 @@ namespace sw
         , _hostMask{ hostMask }
         , _mapHead{}
         , _mapAttachedObject{}
+        , _mountedLocator{ *this }
     {
     }
 
@@ -78,7 +79,7 @@ namespace sw
         _pProcessScope->unmountChildScope( moduleName );
     }
 
-    void* ModuleRegistrationHost::findInScope( uint64 typeHash ) const
+    void* ModuleRegistrationHost::findInMounted( uint64 typeHash ) const
     {
         void* const pFound = _pProcessScope->findInMounted( typeHash );
         return pFound != nullptr ? pFound : _pEngineScope->findInMounted( typeHash );
