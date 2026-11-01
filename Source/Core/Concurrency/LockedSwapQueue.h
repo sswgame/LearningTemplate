@@ -27,6 +27,11 @@ namespace sw
             ScopedLock<mutex> lock{ _mutex };
             _listPending.reserve( count );
         }
+        void push( const T& item )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listPending.push_back( item );
+        }
         void push( T&& item )
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -58,7 +63,7 @@ namespace sw
             outList.swap( _listPending );
             return outList.empty() == false;
         }
-        bool isEmpty()
+        bool isEmpty() const
         {
             ScopedLock<mutex> lock{ _mutex };
             return _listPending.empty();
@@ -71,6 +76,6 @@ namespace sw
 
     private:
         vector<T> _listPending SW_GUARDED_BY( _mutex );
-        mutex                  _mutex;
+        mutable mutex          _mutex;
     };
 } // namespace sw

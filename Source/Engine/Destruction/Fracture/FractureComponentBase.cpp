@@ -596,9 +596,8 @@ namespace sw
         , _state{}
         , _eventLog{}
         , _listEventGroupPose{}
-        , _pendingMutex{}
         , _networkSync{}
-        , _listPendingDamage{}
+        , _pendingDamage{}
         , _listLeafStaticBody{}
         , _listRuntime{}
         , _listPiecePose{}
@@ -655,8 +654,7 @@ namespace sw
         FracturePendingDamage pending;
         pending._kind  = FracturePendingDamage::Kind::Mesh;
         pending._event = event;
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( pending );
+        _pendingDamage.push( pending );
     }
 
     void FractureComponentBase::applyPointDamageAtWorld( const float3& worldPoint, const float3& worldDirection, float32 strain, float32 impulse, PhysicsBodyHandle hitBody )
@@ -669,8 +667,7 @@ namespace sw
         pending._event._strain  = strain;
         pending._event._impulse = impulse;
         pending._event._kind    = DestructionDamageKind::Point;
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( pending );
+        _pendingDamage.push( pending );
     }
 
     void FractureComponentBase::applyDamage( const DestructionDamageEvent& event, const FractureGroupPose& groupPose )
@@ -680,8 +677,7 @@ namespace sw
         pending._event         = event;
         pending._groupPose     = groupPose;
         pending._bHasGroupPose = SW_TRUE;
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( pending );
+        _pendingDamage.push( pending );
     }
 
     void FractureComponentBase::applyRadialDamageAtWorld( const float3& worldCenter, float32 radius, float32 strain, float32 impulse )
@@ -693,8 +689,7 @@ namespace sw
         pending._event._strain  = strain;
         pending._event._impulse = impulse;
         pending._event._kind    = DestructionDamageKind::Radial;
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( pending );
+        _pendingDamage.push( pending );
     }
 
     bool FractureComponentBase::applyRaycastDamage( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 strain,
@@ -740,8 +735,7 @@ namespace sw
         pending._event          = DestructionDamageUtil::makeImpactEvent( _profile, float3{}, float3{}, collision._impulse );
         if ( pending._event._strain <= 0.0f )
             return;
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( pending );
+        _pendingDamage.push( pending );
     }
 
     // --- 물리 프레임 -------------------------------------------------------------------------------------------------------------
@@ -932,11 +926,7 @@ namespace sw
     void FractureComponentBase::processPendingEvents( ScenePhysics& physics )
     {
         vector<FracturePendingDamage> listPending;
-        {
-            ScopedLock<mutex> lock{ _pendingMutex };
-            listPending.swap( _listPendingDamage );
-        }
-        if ( listPending.empty() )
+        if ( _pendingDamage.takeAll( listPending ) == false )
             return;
         Stopwatch                      stopwatch;
         vector<DestructionDamageEvent> listEvent;
@@ -1617,8 +1607,7 @@ namespace sw
 
     bool FractureComponentBase::hasPendingDamage() const
     {
-        ScopedLock<mutex> lock{ _pendingMutex };
-        return _listPendingDamage.empty() == false;
+        return _pendingDamage.isEmpty() == false;
     }
 
     void FractureComponentBase::collectGroupPoses( vector<FractureGroupPose>& outListPose ) const
@@ -1666,8 +1655,7 @@ namespace sw
         FracturePendingDamage pending;
         pending._kind = FracturePendingDamage::Kind::Snapshot;
         pending._snapshotBytes.assign( pData, pData + size );
-        ScopedLock<mutex> lock{ _pendingMutex };
-        _listPendingDamage.push_back( std::move( pending ) );
+        _pendingDamage.push( std::move( pending ) );
     }
 
     void FractureComponentBase::driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation )
