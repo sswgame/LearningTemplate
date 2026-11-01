@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  메시 벤치의 스캔 소품 모드 — -gv_stressTestScanProps=1 이면 격자가 원시 도형 대신 Poly Haven 스캔 소품 8 종(data/benchscene.xml 의 _listScanProp,
+  수천 ~ 6 만 삼각형 · 2k 알베도 · 노멀 · ORM)을 각자의 PBR 머티리얼(pbr_lit.hlsl)로 그린다. 사진을 골든과 견준다.
+  골든을 뜰 때 볼 것: 소품마다 텍스처 색이 있고(흰 기본 머티리얼이 아니다) 노멀맵 요철이 빛을 받는다. 시간 구동 회전 · 흔들림은 끈다(Animate 0).
+  실행: App -game=Empty -scenario=game/empty/automation/scanprops.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.scanprops" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_stressTestMeshes" value="64"/>
+	<Launch variable="gv_stressTestScanProps" value="1"/>
+	<Launch variable="gv_stressTestAnimate" value="0"/>
+	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<Wait frames="60"/>
+	<Screenshot file="empty/scanprops.ppm"/>
+	<Wait frames="10"/>
+	<ExpectImage file="empty/scanprops.ppm" golden="scanprops"/>
+	<Pass/>
+</Scenario>

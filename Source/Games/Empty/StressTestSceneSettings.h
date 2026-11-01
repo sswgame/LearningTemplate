@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
@@ -15,6 +16,20 @@
 
 namespace sw
 {
+    /**
+     * @struct StressTestScanProp
+     * @brief 메시 벤치가 `-gv_stressTestScanProps=1` 일 때 원시 도형 대신 그리는 스캔 소품 하나(메시와 그 PBR 머티리얼)입니다.
+     */
+    REFLECT()
+    struct StressTestScanProp
+    {
+        REFLECT_BODY();
+        PROPERTY( AssetPath, Tooltip = "Imported scan mesh" )
+        string _mesh{};
+        PROPERTY( AssetPath, Tooltip = "Its PBR material (written by the model import next to the mesh)" )
+        string _material{};
+    };
+
     /**
      * @struct StressTestSceneSettings
      * @brief `StressTestScene` 이 읽는 리플렉션 설정입니다(`ReflectedXMLFile::loadDesc`).
@@ -53,6 +68,8 @@ namespace sw
         string _faceExpression{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the transparent cubes" )
         string _glassMaterial{};
+        PROPERTY( Category = "Assets", Tooltip = "Scanned props the mesh bench draws with -gv_stressTestScanProps=1 (one batch each)" )
+        vector<StressTestScanProp> _listScanProp{};
         PROPERTY( Category = "Assets", Tooltip = "Animator state of the rig knights" )
         string _rigAimState{};
         PROPERTY( Category = "Assets" )

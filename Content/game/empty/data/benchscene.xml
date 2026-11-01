@@ -104,4 +104,15 @@
                     _nameplateHeight="1.2"
                     _nameplateFillColor="0.2,0.85,0.3,1"
                     _nameplateBackgroundColor="0.1,0.1,0.1,0.8"
-                    _hangulTextWidth="900" />
+                    _hangulTextWidth="900">
+	<_listScanProp>
+		<StressTestScanProp _mesh="common/models/polyhaven/barrel_03.mesh" _material="common/models/polyhaven/barrel_03/materials/barrel_03.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/concrete_road_barrier.mesh" _material="common/models/polyhaven/concrete_road_barrier/materials/concrete_road_barrier.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/industrial_pastic_container.mesh" _material="common/models/polyhaven/industrial_pastic_container/materials/industrial_pastic_container.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/metal_jerrycan.mesh" _material="common/models/polyhaven/metal_jerrycan/materials/metal_jerrycan.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/old_military_crate.mesh" _material="common/models/polyhaven/old_military_crate/materials/military_crate_m_01.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/power_box_01.mesh" _material="common/models/polyhaven/power_box_01/materials/power_box_01.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/propane_tank.mesh" _material="common/models/polyhaven/propane_tank/materials/propane_tank.material" />
+		<StressTestScanProp _mesh="common/models/polyhaven/wooden_crate_01.mesh" _material="common/models/polyhaven/wooden_crate_01/materials/wooden_crate_01.material" />
+	</_listScanProp>
+</StressTestSceneSettings>

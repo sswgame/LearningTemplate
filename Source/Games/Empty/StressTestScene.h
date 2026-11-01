@@ -83,6 +83,8 @@ namespace sw
         static Scene* ensureBenchScene();
         /** @brief 메시 종류(도형을 섞은 같은 기하의 사본) @p variantCount 개를 `_listMeshVariant` 에 만듭니다. 도형을 만들지 못하면 false 입니다. */
         [[nodiscard]] bool createMeshVariants( uint32 variantCount, uint32 shapeCount );
+        /** @brief 설정의 스캔 소품을 메시 종류로 둡니다(종류마다 자기 PBR 머티리얼). 하나라도 읽지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool createScanPropVariants();
         /** @brief 투명 큐브가 돌려 쓸 머티리얼 인스턴스 3 개를 만듭니다(유리 머티리얼을 읽지 못하면 비어 있는 채로 둡니다). */
         void createTransparentMaterials( vector<shared_ptr<MaterialInstance>>& outList );
         /** @brief `-gv_stressTestInstanced=1`: 씬 컴포넌트 없이 메시 종류마다 인스턴스 배치 하나로 큐브 격자를 채웁니다. */
@@ -225,8 +227,17 @@ namespace sw
          */
         vector<shared_ptr<MeshInstanceBatch>> _listInstanceBatch;
         uint32                                _instanceCubeCount;
+        /**
+         * @struct MeshVariant
+         * @brief 메시 종류 하나입니다. 머티리얼 경로가 비면 씬 기본 머티리얼(원시 도형), 있으면 그 머티리얼(스캔 소품 — 컴포넌트가 머티리얼 캐시로 확보)로 그린다.
+         */
+        struct MeshVariant
+        {
+            shared_ptr<Mesh> _mesh;
+            string           _materialPath;
+        };
         /** @brief 벤치가 섞어 쓰는 메시 종류입니다. 큐브 i 는 i % 종류 수를 쓰며, 재스폰이 같은 종류를 다시 씁니다. */
-        vector<shared_ptr<Mesh>> _listMeshVariant;
+        vector<MeshVariant> _listMeshVariant;
         /** @brief 재스폰이 다음에 교체할 큐브 위치입니다(라운드 로빈). */
         uint32 _churnCursor;
         /// @brief 프레임마다 다시 채우는 배치 쓰기 목록입니다. 큐브마다 세터를 부르지 않습니다(update 주석 참고).

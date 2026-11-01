@@ -18,6 +18,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
+#include "Engine/FileSystem/AssetIO.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -310,6 +311,14 @@ namespace sw
      * @note 기본값이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**입니다. 켠 상태의 검증은
      *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 이미지가 실제로 달라지는지로 확인합니다.
      */
+    /**
+     * @brief `-gv_stressTestScanProps=1`: 메시 벤치가 원시 도형 대신 스캔 소품(설정 `_listScanProp` — Poly Haven, 수천 ~ 6 만 삼각형 · 2k PBR 텍스처)을 그립니다.
+     * @details 원시 도형은 삼각형이 수십 개에 텍스처가 없어 실제 게임의 정점 · 텍스처 대역폭 · 노멀맵 셰이딩 부하를 재지 못한다. 종류 수 = 소품 수이고
+     *          (`-gv_stressTestMeshVariants` · `-gv_stressTestMeshShapes` 는 무시), 종류마다 자기 머티리얼이라 배치도 소품 수다.
+     * @note 기본값 0 은 원시 도형 측정 · 스크린샷을 그대로 둔다. GPU 모프는 원시 도형에만 건다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestScanProps, 0, "메시 벤치가 원시 도형 대신 스캔 소품을 그립니다 (0=원시 도형)" );
+
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
 
     /**
@@ -545,6 +554,29 @@ namespace sw
             // GPU 모프는 옵트인입니다. 유니티의 vertexBufferTarget 옵트인에 해당합니다. 켠 메시만 풀에 들어갑니다.
             if ( gv_stressTestMeshMorph != 0 )
                 variant->setGPUMorphEnabled( true );
+            _listMeshVariant.push_back( MeshVariant{ std::move( variant ), string{} } );
+        }
+        return true;
+    }
+
+    bool StressTestScene::createScanPropVariants()
+    {
+        _listMeshVariant.clear();
+        if ( _settings._listScanProp.empty() )
+        {
+            SW_LOG_ERROR( "[Bench] -gv_stressTestScanProps=1 but the bench settings list no scan props (_listScanProp)." );
+            return false;
+        }
+        for ( const StressTestScanProp& prop : _settings._listScanProp )
+        {
+            // 머티리얼은 컴포넌트가 경로로 캐시에서 확보해야 GPU 자원이 만들어진다(`MaterialCache::requestInitialize`) — 직접 읽은 Material 은 그려지지 않는다.
+            MeshVariant variant{ MeshCache::acquire( prop._mesh ), prop._material };
+            if ( variant._mesh == nullptr || AssetIO::hasAsset( AssetID{ prop._material.c_str() } ) == false )
+            {
+                SW_LOG_ERROR( "[Bench] Failed to read scan prop %# (material %#) - run App --import-models.", prop._mesh.c_str(), prop._material.c_str() );
+                _listMeshVariant.clear();
+                return false;
+            }
             _listMeshVariant.push_back( std::move( variant ) );
         }
         return true;
@@ -591,7 +623,7 @@ namespace sw
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
             const uint32 entryCount = ( meshCount - variantIndex + meshVariantCount - 1 ) / meshVariantCount;
-            _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( _listMeshVariant[variantIndex], pSceneMaterial, nullptr, entryCount, MeshInstanceWriter::CPU ) );
+            _listInstanceBatch.push_back( sw::make_shared<MeshInstanceBatch>( _listMeshVariant[variantIndex]._mesh, pSceneMaterial, nullptr, entryCount, MeshInstanceWriter::CPU ) );
         }
         for ( uint32 index = 0; index < meshCount; ++index )
         {
@@ -628,9 +660,10 @@ namespace sw
             // 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라집니다. 그래야 배치와 드로우 경로가
             // 실제 부하를 받습니다(전부 같은 인스턴스면 drawInstanced 한 번으로 끝납니다).
             // 기본 측정과 부하 형태가 다르므로 옵트인으로 둡니다.
-            if ( bPerCubeMaterial && pSceneMaterial != nullptr )
+            Material* pCubeMaterial = pMesh->getMaterial(); // 원시 도형은 씬 기본, 스캔 소품은 자기 머티리얼(spawnCube)
+            if ( bPerCubeMaterial && pCubeMaterial != nullptr )
             {
-                shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
+                shared_ptr<MaterialInstance> instance = MaterialInstance::create( pCubeMaterial );
                 instance->setVectorParameter( hashed_string( kMaterialColorParameter ), makeBenchColor( index ) );
                 _listChurnInstance.push_back( instance );
                 pMesh->setMaterialInstance( std::move( instance ) );
@@ -676,10 +709,22 @@ namespace sw
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_stressTestMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
-        // 도형을 몇 종 섞을지 정합니다. 1 이면 큐브만 씁니다(기존 측정과 스크린샷을 유지합니다).
+        // 도형을 몇 종 섞을지 정합니다. 1 이면 큐브만 씁니다(기존 측정과 스크린샷을 유지합니다). 스캔 소품이면 종류 = 소품이다.
         const uint32 shapeCount = static_cast<uint32>(
             MathUtil::clamp( gv_stressTestMeshShapes, 1, static_cast<int32>( SW_COUNT_OF( kArrBenchShape ) ) ) );
-        if ( createMeshVariants( meshVariantCount, shapeCount ) == false )
+        if ( gv_stressTestScanProps != 0 )
+        {
+            // 인스턴스 배치는 머티리얼 포인터 하나를 받는다 — 소품 머티리얼을 캐시에서 쥐고 놓는 수명은 컴포넌트 경로에만 있다.
+            if ( gv_stressTestInstanced != 0 )
+            {
+                SW_LOG_ERROR( "[Bench] -gv_stressTestScanProps=1 draws through mesh components - it cannot be combined with -gv_stressTestInstanced=1." );
+                return;
+            }
+            if ( createScanPropVariants() == false )
+                return;
+            meshVariantCount = MathUtil::min( static_cast<uint32>( _listMeshVariant.size() ), meshCount );
+        }
+        else if ( createMeshVariants( meshVariantCount, shapeCount ) == false )
             return;
 
         // 정사각에 가까운 격자로 흩어 놓습니다. 전부 같은 메시와 머티리얼이라 배치가 하나로 합쳐지는데,
@@ -1044,13 +1089,16 @@ namespace sw
         if ( pMesh == nullptr )
             return nullptr;
 
-        const uint32 col = index % side;
-        const uint32 row = index / side;
-        pMesh->setMesh( _listMeshVariant[index % static_cast<uint32>( _listMeshVariant.size() )] );
+        const uint32       col     = index % side;
+        const uint32       row     = index / side;
+        const MeshVariant& variant = _listMeshVariant[index % static_cast<uint32>( _listMeshVariant.size() )];
+        pMesh->setMesh( variant._mesh );
         // 기본 머티리얼은 씬 **로드** 경로(bindSceneMeshDefaults)에서만 붙습니다.
         // createScene 으로 직접 만든 씬은 그 단계를 거치지 않으므로 여기서 붙여 줍니다.
-        // 붙이지 않으면 배치는 만들어져도 화면에는 아무것도 나오지 않습니다.
-        if ( pSceneMaterial != nullptr )
+        // 붙이지 않으면 배치는 만들어져도 화면에는 아무것도 나오지 않습니다. 스캔 소품은 자기 머티리얼 경로입니다.
+        if ( variant._materialPath.empty() == false )
+            pMesh->setMaterialPath( variant._materialPath );
+        else if ( pSceneMaterial != nullptr )
             pMesh->setMaterial( pSceneMaterial );
         // 격자를 원점 기준으로 X/Z 양쪽에 펼칩니다. 카메라를 정면에서 뒤로 빼면 전부 화면에 들어옵니다.
         const float3 position{ origin + static_cast<float32>( col ) * _settings._cubeSpacing, 0.0f, origin + static_cast<float32>( row ) * _settings._cubeSpacing };
