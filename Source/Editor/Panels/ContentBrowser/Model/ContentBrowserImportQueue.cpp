@@ -11,8 +11,7 @@
 namespace sw::editor
 {
     ContentBrowserImportQueue::ContentBrowserImportQueue()
-        : _mutex{}
-        , _listPendingPath{}
+        : _pendingPath{}
     {
     }
 
@@ -32,17 +31,12 @@ namespace sw::editor
 
     void ContentBrowserImportQueue::onDialogResult( const vector<string>& listPath )
     {
-        ScopedLock<mutex> lock{ _mutex };
-        _listPendingPath.insert( _listPendingPath.end(), listPath.begin(), listPath.end() );
+        _pendingPath.pushRange( listPath );
     }
 
     bool ContentBrowserImportQueue::takePending( vector<string>& outListPath )
     {
         outListPath.clear();
-        ScopedLock<mutex> lock{ _mutex };
-        if ( _listPendingPath.empty() )
-            return false;
-        outListPath.swap( _listPendingPath );
-        return true;
+        return _pendingPath.takeAll( outListPath );
     }
 } // namespace sw::editor

@@ -9,11 +9,10 @@
 namespace sw
 {
     DeferredDelegateQueue::DeferredDelegateQueue()
-        : _mutex{}
-        , _listPending{}
+        : _pending{}
         , _listProcessing{}
     {
-        _listPending.reserve( 128 );
+        _pending.reserve( 128 );
         _listProcessing.reserve( 128 );
     }
 
@@ -21,19 +20,14 @@ namespace sw
     {
         if ( callback.isBound() == false )
             return;
-        ScopedLock<mutex> lock{ _mutex };
-        _listPending.push_back( std::move( callback ) );
+        _pending.push( std::move( callback ) );
     }
 
     void DeferredDelegateQueue::drain()
     {
         _drainThread.assumeHeld(); // drain 은 한 스레드(게임 스레드)만 부른다
-        {
-            ScopedLock<mutex> lock{ _mutex };
-            if ( _listPending.empty() )
-                return;
-            _listProcessing.swap( _listPending );
-        }
+        if ( _pending.takeAll( _listProcessing ) == false )
+            return;
         for ( Callback& callback : _listProcessing )
         {
             if ( callback.isBound() )
@@ -44,14 +38,12 @@ namespace sw
 
     bool DeferredDelegateQueue::isEmpty()
     {
-        ScopedLock<mutex> lock{ _mutex };
-        return _listPending.empty();
+        return _pending.isEmpty();
     }
 
     void DeferredDelegateQueue::clear()
     {
         // 처리 목록은 건드리지 않는다. 비우기 밖에서는 늘 비어 있고, 비우는 중(콜백이 씬을 비우는 경우)이면 지금 도는 목록이다.
-        ScopedLock<mutex> lock{ _mutex };
-        _listPending.clear();
+        _pending.clear();
     }
 } // namespace sw

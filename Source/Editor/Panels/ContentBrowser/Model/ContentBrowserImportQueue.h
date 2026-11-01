@@ -3,7 +3,7 @@
  * @brief 콘텐츠 브라우저의 임포트 대기열입니다. 파일 대화상자가 고른 경로를 백그라운드 스레드에서 받아 두었다가 메인 스레드에 넘깁니다.
  */
 #pragma once
-#include "Core/Concurrency/mutex.h"
+#include "Core/Concurrency/LockedSwapQueue.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -34,7 +34,6 @@ namespace sw::editor
         bool takePending( vector<string>& outListPath );
 
     private:
-        mutex                           _mutex;
-        vector<string> _listPendingPath SW_GUARDED_BY( _mutex );
+        LockedSwapQueue<string> _pendingPath;
     };
 } // namespace sw::editor

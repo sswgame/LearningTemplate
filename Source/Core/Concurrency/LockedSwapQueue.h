@@ -21,6 +21,12 @@ namespace sw
     class LockedSwapQueue
     {
     public:
+        /** @brief 쌓는 쪽 저장소를 미리 잡습니다(프레임마다 할당하지 않게). */
+        void reserve( size_t count )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listPending.reserve( count );
+        }
         void push( T&& item )
         {
             ScopedLock<mutex> lock{ _mutex };
@@ -38,12 +44,24 @@ namespace sw
             _listPending.push_back( std::move( item ) );
             return result;
         }
-        /** @brief 쌓인 것을 비어 있는 @p outList 와 맞바꿉니다. @p outList 가 비어 있지 않으면 어서션입니다(그 항목을 잃는다). */
-        void takeAll( vector<T>& outList )
+        /** @brief 여럿을 한 번의 잠금으로 쌓습니다(복사). */
+        void pushRange( const vector<T>& listItem )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listPending.insert( _listPending.end(), listItem.begin(), listItem.end() );
+        }
+        /** @brief 쌓인 것을 비어 있는 @p outList 와 맞바꿉니다. 받은 것이 있으면 true 입니다. @p outList 가 비어 있지 않으면 어서션입니다(그 항목을 잃는다). */
+        bool takeAll( vector<T>& outList )
         {
             SW_ASSERT( outList.empty() && "takeAll swaps storage - drain the previous batch first" );
             ScopedLock<mutex> lock{ _mutex };
             outList.swap( _listPending );
+            return outList.empty() == false;
+        }
+        bool isEmpty()
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return _listPending.empty();
         }
         void clear()
         {
