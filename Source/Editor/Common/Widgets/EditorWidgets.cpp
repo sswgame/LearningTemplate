@@ -246,7 +246,7 @@ namespace sw::editor
     void EditorWidgets::drawToolbarSeparator()
     {
         ImGui::SameLine();
-        ImGui::TextDisabled( "|" );
+        ImGui::SeparatorEx( ImGuiSeparatorFlags_Vertical );
         ImGui::SameLine();
     }
 
@@ -261,14 +261,15 @@ namespace sw::editor
 
     bool EditorWidgets::drawIconToggle( const utf8* pID, const utf8* pIcon, bool bActive, const utf8* pTooltip )
     {
+        // 툴바 아이콘은 상자 없이 둔다(언리얼 · 유니티 뷰포트 툴바) — 켜진 것만 중립 단계 바탕이 깔린다.
         const float32 side = ImGui::GetFrameHeight();
-        if ( bActive )
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorThemeUtil::getToggleActiveColor() ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, bActive ? EditorColorUtil::toImVec4( EditorThemeUtil::getToggleActiveColor() ) : ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( pIcon, ImVec2{ side, side } );
         ImGui::PopID();
-        if ( bActive )
-            ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
         drawTooltip( pTooltip );
         return bPressed;
     }
@@ -276,10 +277,15 @@ namespace sw::editor
     bool EditorWidgets::drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                               const utf8* pTooltipOff )
     {
+        // 아이콘 자체가 상태를 보이므로 상자 없이 그린다.
         const float32 side = ImGui::GetFrameHeight();
+        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( bOn ? pIconOn : pIconOff, ImVec2{ side, side } );
         ImGui::PopID();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
             ImGui::SetTooltip( "%s", bOn ? pTooltipOn : pTooltipOff );
         return bPressed;
@@ -289,15 +295,11 @@ namespace sw::editor
                                            const utf8* pTooltipOff )
     {
         const bool bDefault = bOn == bDefaultOn;
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
         if ( bDefault )
             EditorThemeUtil::pushTextColor( EditorThemeUtil::getTextMutedColor() );
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         const bool bPressed = drawToggleIconButton( pID, bOn, pIconOn, pIconOff, pTooltipOn, pTooltipOff );
-        ImGui::PopStyleVar();
         if ( bDefault )
             EditorThemeUtil::popTextColor();
-        ImGui::PopStyleColor();
         return bPressed;
     }
 

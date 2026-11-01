@@ -38,20 +38,20 @@ namespace sw::editor
     {
         struct ConsolePanelInternal
         {
-            static Color colorForLevel( LogLevel level )
+            // 테마 토큰에서 고른다 — 고정 밝은 회색은 라이트 테마에서 바탕에 묻혔다. 신호색은 오류 · 경고에만.
+            static const Color& colorForLevel( LogLevel level )
             {
                 switch ( level )
                 {
                     case LogLevel::Error:
-                        return Color{ 1.0f, 0.4f, 0.4f, 1.0f };
+                        return EditorThemeUtil::getErrorColor();
                     case LogLevel::Warning:
-                        return Color{ 1.0f, 0.8f, 0.4f, 1.0f };
-                    case LogLevel::Info:
-                        return Color{ 0.8f, 0.8f, 0.8f, 1.0f };
+                        return EditorThemeUtil::getWarningColor();
                     case LogLevel::Trace:
-                        return Color{ 0.6f, 0.6f, 0.6f, 1.0f };
+                        return EditorThemeUtil::getTextMutedColor();
+                    case LogLevel::Info:
                     case LogLevel::Count:
-                        return Color{ 1.0f, 1.0f, 1.0f, 1.0f };
+                        return EditorThemeUtil::getTextColor();
                 }
             }
 
@@ -548,7 +548,7 @@ namespace sw::editor
         }
         ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
         ImGui::SameLine( 0.0f, 0.0f );
-        EditorThemeUtil::pushTextColor( EditorThemeUtil::getInfoColor() );
+        EditorThemeUtil::pushTextColor( EditorThemeUtil::getTextMutedColor() ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
         if ( entry._caller.empty() )
             ImGui::Text( " [%s]", entry._tag.c_str() );
         else
