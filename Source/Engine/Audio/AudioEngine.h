@@ -34,6 +34,7 @@
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/AudioVoice.h"
+#include "Engine/Audio/AudioVoicePool.h"
 
 namespace sw
 {
@@ -337,37 +338,6 @@ namespace sw
             bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다.
         };
 
-        /** @brief 보이스 슬롯 하나입니다. */
-        struct VoiceSlot
-        {
-            AudioVoice       _voice{};
-            hashed_string    _clipPath{};
-            hashed_string    _busName{};
-            hashed_string    _attenuationName{};
-            AudioPlayingID   _playingID{ 0 };
-            AudioEmitterID   _emitterID{ 0 };
-            float32          _volume{ 1.0f }; ///< 기본 볼륨(선형)
-            float32          _pan{ 0.0f };
-            float32          _pitchRatio{ 1.0f };
-            float32          _fadeInSeconds{ 0.0f };
-            float32          _audibility{ 0.0f }; ///< 이번 블록 목표 게인(버스 페이더는 넣지 않는다)
-            float32          _distance{ 0.0f };
-            uint32           _busIndex{ 0 };
-            int32            _attenuationIndex{ -1 }; ///< 감쇠 테이블 번호다(-1 = 2D).
-            int32            _instanceIndex{ -1 };    ///< 이벤트 인스턴스(-1 = 클립 재생)
-            int32            _priority{ 50 };
-            int32            _musicSegment{ -1 }; ///< 음악 레이어의 구간이다(-1 = 음악 아님).
-            int32            _musicLayer{ -1 };   ///< 음악 레이어 번호다.
-            float32          _musicGain{ 1.0f };  ///< 파라미터로 페이드하는 레이어 게인이다.
-            uint64           _startFrame{ 0 };    ///< 음악에서 소리가 시작할 렌더 프레임이다. 클립이 늦게 와도 박을 지킨다.
-            AudioVirtualMode _virtualMode{ AudioVirtualMode::Virtualize };
-            bool             _bLoop{ false };
-            bool             _bInUse{ false };
-            bool             _bWaitingForClip{ false }; ///< 클립 디코드를 기다린다
-            bool             _bPausedRequest{ false };  ///< 클립을 기다리는 동안 들어온 일시정지 요청이다.
-            bool             _bVirtual{ false };        ///< 이번 블록에 섞지 않는다
-        };
-
         // AudioEngine.cpp: 명령, 보이스, 렌더
         /** @brief 쌓인 명령을 꺼내 적용합니다. */
         void applyCommands();
@@ -381,20 +351,16 @@ namespace sw
         void adoptMixer( shared_ptr<AudioMixer> pMixer );
         /** @brief 블록 하나를 렌더해 `_blockOutput`(평면)에 둡니다. */
         void renderBlock();
-        /** @brief 빈 보이스 슬롯을 잡습니다. 없으면 nullptr 를 반환합니다. */
-        VoiceSlot* allocateVoice();
-        /** @brief 보이스 슬롯을 반환합니다. */
-        void freeVoice( VoiceSlot& slot );
         /** @brief 재생 id 나 에미터의 보이스를 멈춥니다. @p fadeSeconds 가 음수면 이벤트의 값을 씁니다. */
         void stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds );
         /** @brief 클립을 기다리는 슬롯에 클립이 도착했으면 시작합니다. 디코드에 실패한 클립의 슬롯은 반환합니다. */
-        void startWaitingVoice( VoiceSlot& slot );
+        void startWaitingVoice( AudioVoiceSlot& slot );
         /** @brief 버스 이름을 현재 그래프의 번호로 찾습니다. 없으면 sfx 를, 그것도 없으면 master 를 씁니다. */
         uint32 resolveBusIndex( const hashed_string& bus ) const;
         /** @brief 에미터의 가림 값이 이번 블록 동안 목표값을 따라가게 합니다. */
         void updateEmitters();
         /** @brief 보이스 하나의 이번 블록 목표(볼륨, 팬, 피치, 로우패스, 들림)를 정합니다. */
-        void updateVoiceTargets( VoiceSlot& slot );
+        void updateVoiceTargets( AudioVoiceSlot& slot );
         /** @brief 삭제를 요청받은 에미터 중에서 보이스가 남지 않은 것을 지웁니다. */
         void sweepRemovedEmitters();
         /** @brief 게임 스레드가 읽을 상태를 게시합니다. */
@@ -431,8 +397,6 @@ namespace sw
         void updateParameters();
         /** @brief 이 에미터에서 본 파라미터 값을 반환합니다. 에미터 값, 전역 값, 0 순서로 찾습니다. */
         float32 findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const;
-        /** @brief 실제로 섞을 보이스를 고르고(우선순위와 들림), 나머지는 가상이나 정지 상태로 둡니다. */
-        void selectRealVoices();
         /** @brief 인스턴스의 들림과 거리를 모으고, 보이스가 없는 인스턴스를 비웁니다. */
         void updateInstances();
         /** @brief 빈 인스턴스 슬롯을 잡습니다. */
@@ -446,7 +410,7 @@ namespace sw
         void               freeMusicVoices( AudioPlayingID playingID, int32 segment ) override;
         void               stepMusicLayerGains( AudioPlayingID playingID, float32 maxStep, const AudioMusicPlayer& player ) override;
         /** @brief 슬롯이 재생 @p playingID 의 구간 @p segment(`AudioMusicPlayer::kAnySegment` 면 모두) 음악 보이스인지 봅니다. */
-        static bool isMusicVoice( const VoiceSlot& slot, AudioPlayingID playingID, int32 segment );
+        static bool isMusicVoice( const AudioVoiceSlot& slot, AudioPlayingID playingID, int32 segment );
 
     private:
         using LibraryMap   = unordered_map<hashed_string, shared_ptr<const AudioEventLibrary>, hashed_string::HashFunc>;
@@ -465,8 +429,7 @@ namespace sw
         atomic<uint64>                                   _nextPlayingID;                 /**< 다음 재생 id 입니다. */
         // 오디오 스레드
         shared_ptr<AudioMixer>                       _pMixer;                         /**< 지금 그래프입니다. */
-        vector<VoiceSlot>                            _listVoice;                      /**< 보이스 슬롯입니다. */
-        vector<uint32>                               _listVoiceOrder;                 /**< 보이스를 고르는 작업 목록입니다. */
+        AudioVoicePool                               _voicePool;                      /**< 보이스 슬롯과 가상화 정책입니다. */
         vector<EventInstance>                        _listInstance;                   /**< 이벤트 인스턴스 슬롯입니다. */
         AudioBlockBuffer                             _blockOutput;                    /**< 마지막 블록의 출력입니다(평면). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */

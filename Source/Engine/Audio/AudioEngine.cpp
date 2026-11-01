@@ -42,8 +42,7 @@ namespace sw
         , _libraryGeneration{ 1 }
         , _nextPlayingID{ 1 }
         , _pMixer{ nullptr }
-        , _listVoice{}
-        , _listVoiceOrder{}
+        , _voicePool{}
         , _listInstance{}
         , _blockOutput{}
         , _listAttenuation{}
@@ -86,9 +85,7 @@ namespace sw
             ScopedLock<mutex> lock{ _libraryMutex };
             _pGameMixerDesc = std::move( pGameMixerDesc );
         }
-        _listVoice.clear();
-        _listVoice.resize( mixerDesc._maxVoiceCount );
-        _listVoiceOrder.reserve( mixerDesc._maxVoiceCount );
+        _voicePool.reset( mixerDesc._maxVoiceCount );
         _listInstance.clear();
         _listInstance.resize( mixerDesc._maxVoiceCount );
         _blockOutput.allocate( layout );
@@ -106,7 +103,7 @@ namespace sw
             return;
         _commandQueue.clear();
         _listApplyingCommand.clear();
-        _listVoice.clear();
+        _voicePool.clear();
         _listInstance.clear();
         _snapshotMixer.clearSnapshots();
         _mapLibrary.clear();
@@ -166,14 +163,14 @@ namespace sw
         _pMixer = std::move( pMixer );
         _snapshotMixer.adoptMixer( *_pMixer ); // 버스 사용자 상태 다시 적용, 스냅샷 설명자 다시 찾기
         // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse )
                 slot._busIndex = resolveBusIndex( slot._busName );
         }
-        if ( _listVoice.size() < _pMixer->getDesc()._maxVoiceCount )
+        if ( _voicePool.getCount() < _pMixer->getDesc()._maxVoiceCount )
         {
-            _listVoice.resize( _pMixer->getDesc()._maxVoiceCount );
+            _voicePool.growTo( _pMixer->getDesc()._maxVoiceCount );
             _listInstance.resize( _pMixer->getDesc()._maxVoiceCount );
         }
         rebuildAttenuationTable();
@@ -702,8 +699,8 @@ namespace sw
 
     void AudioEngine::applyPlayClip( const Command& command )
     {
-        _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
-        VoiceSlot* pSlot  = allocateVoice();
+        _appliedPlayingID     = MathUtil::max( _appliedPlayingID, command._playingID );
+        AudioVoiceSlot* pSlot = _voicePool.allocate();
         if ( pSlot == nullptr )
         {
             SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
@@ -771,7 +768,7 @@ namespace sw
             }
             case CommandType::SetPaused:
             {
-                for ( VoiceSlot& slot : _listVoice )
+                for ( AudioVoiceSlot& slot : _voicePool )
                 {
                     if ( slot._bInUse == false || slot._playingID != command._playingID )
                         continue;
@@ -888,37 +885,14 @@ namespace sw
         }
     }
 
-    AudioEngine::VoiceSlot* AudioEngine::allocateVoice()
-    {
-        for ( VoiceSlot& slot : _listVoice )
-        {
-            if ( slot._bInUse == false )
-            {
-                slot         = VoiceSlot{};
-                slot._bInUse = true;
-                return &slot;
-            }
-        }
-        return nullptr;
-    }
-
-    void AudioEngine::freeVoice( VoiceSlot& slot )
-    {
-        slot._voice.reset();
-        slot._bInUse          = false;
-        slot._bWaitingForClip = false;
-        slot._playingID       = 0;
-        slot._instanceIndex   = -1;
-    }
-
-    bool AudioEngine::isMusicVoice( const VoiceSlot& slot, AudioPlayingID playingID, int32 segment )
+    bool AudioEngine::isMusicVoice( const AudioVoiceSlot& slot, AudioPlayingID playingID, int32 segment )
     {
         return slot._bInUse && slot._playingID == playingID && ( segment == AudioMusicPlayer::kAnySegment || slot._musicSegment == segment );
     }
 
     bool AudioEngine::startMusicVoice( const AudioMusicVoiceRequest& request )
     {
-        VoiceSlot* pSlot = allocateVoice();
+        AudioVoiceSlot* pSlot = _voicePool.allocate();
         if ( pSlot == nullptr )
             return false;
         pSlot->_playingID       = request._playingID;
@@ -940,12 +914,12 @@ namespace sw
 
     void AudioEngine::fadeMusicVoices( AudioPlayingID playingID, int32 segment, uint32 fadeFrames, uint32 delayFrames )
     {
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( isMusicVoice( slot, playingID, segment ) == false )
                 continue;
             if ( slot._bWaitingForClip )
-                freeVoice( slot );
+                AudioVoicePool::free( slot );
             else
                 slot._voice.setFade( 0.0f, fadeFrames, delayFrames, true );
         }
@@ -953,16 +927,16 @@ namespace sw
 
     void AudioEngine::freeMusicVoices( AudioPlayingID playingID, int32 segment )
     {
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( isMusicVoice( slot, playingID, segment ) )
-                freeVoice( slot );
+                AudioVoicePool::free( slot );
         }
     }
 
     void AudioEngine::stepMusicLayerGains( AudioPlayingID playingID, float32 maxStep, const AudioMusicPlayer& player )
     {
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             const bool bLayeredMusicVoice = isMusicVoice( slot, playingID, AudioMusicPlayer::kAnySegment ) && slot._musicSegment >= 0 && slot._musicLayer >= 0;
             if ( bLayeredMusicVoice == false )
@@ -975,7 +949,7 @@ namespace sw
 
     void AudioEngine::stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds )
     {
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse == false )
                 continue;
@@ -991,19 +965,19 @@ namespace sw
             const uint32 fadeFrames            = static_cast<uint32>( seconds * static_cast<float32>( audio::kSampleRate ) );
             const bool   bStopVoiceImmediately = slot._bWaitingForClip || fadeFrames == 0 || slot._bVirtual;
             if ( bStopVoiceImmediately )
-                freeVoice( slot );
+                AudioVoicePool::free( slot );
             else
                 slot._voice.setFade( 0.0f, fadeFrames, 0, true );
         }
     }
 
-    void AudioEngine::startWaitingVoice( VoiceSlot& slot )
+    void AudioEngine::startWaitingVoice( AudioVoiceSlot& slot )
     {
         // 엔트리가 없으면 캐시를 비운 뒤다(`clear`) — 요청이 사라졌으니 실패와 같이 보이스를 놓는다.
         const std::optional<AssetLoadState> state = _clipStore.findLoadState( slot._clipPath );
         if ( state.has_value() == false || *state == AssetLoadState::Failed )
         {
-            freeVoice( slot );
+            AudioVoicePool::free( slot );
             return;
         }
         shared_ptr<const AudioClipData> pClip = _clipStore.findClip( slot._clipPath );
@@ -1018,7 +992,7 @@ namespace sw
                 if ( _mapParameter.find( parameterName ) == _mapParameter.end() )
                 {
                     SW_LOG_ERROR( "Audio graph '%#' reads game parameter '%#', which no loaded event library declares", slot._clipPath.c_str(), parameterName.c_str() );
-                    freeVoice( slot );
+                    AudioVoicePool::free( slot );
                     return;
                 }
             }
@@ -1072,7 +1046,7 @@ namespace sw
         }
     }
 
-    void AudioEngine::updateVoiceTargets( VoiceSlot& slot )
+    void AudioEngine::updateVoiceTargets( AudioVoiceSlot& slot )
     {
         float32           volume    = slot._volume * slot._musicGain;
         AudioPanDirection direction = AudioPanDirection::makeStereoPan( slot._pan );
@@ -1174,7 +1148,7 @@ namespace sw
         AudioMixer& mixer = *_pMixer;
         mixer.beginBlock( audio::kBlockFrameCount );
 
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse == false )
                 continue;
@@ -1186,11 +1160,11 @@ namespace sw
             }
             updateVoiceTargets( slot );
         }
-        selectRealVoices();
+        _voicePool.selectRealVoices( AudioMath::dbToLinear( _pMixer->getDesc()._inaudibleDb ), _pMixer->getDesc()._maxRealVoiceCount );
 
         uint32 realCount    = 0;
         uint32 virtualCount = 0;
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse == false || slot._bWaitingForClip )
                 continue;
@@ -1205,7 +1179,7 @@ namespace sw
                 ++realCount;
             }
             if ( slot._voice.isFinished() )
-                freeVoice( slot );
+                AudioVoicePool::free( slot );
         }
         updateInstances();
         sweepRemovedEmitters();
@@ -1233,7 +1207,7 @@ namespace sw
             bool bInUse = false;
             if ( it->second._bRemoved )
             {
-                for ( const VoiceSlot& slot : _listVoice )
+                for ( const AudioVoiceSlot& slot : _voicePool )
                 {
                     bInUse = bInUse || ( slot._bInUse && slot._emitterID == it->first );
                 }
@@ -1272,7 +1246,7 @@ namespace sw
         _published.publish( stats, _musicPlayer.makeStatus( _renderedFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
         {
             uint32 voiceCount = 0;
-            for ( const VoiceSlot& slot : _listVoice )
+            for ( const AudioVoiceSlot& slot : _voicePool )
             {
                 if ( slot._bInUse == false )
                     continue;
@@ -1315,7 +1289,7 @@ namespace sw
                 status._bStopping      = instance._bStopping;
                 bool    bUnknownEnd    = false;
                 float32 remaining      = 0.0f;
-                for ( const VoiceSlot& slot : _listVoice )
+                for ( const AudioVoiceSlot& slot : _voicePool )
                 {
                     if ( slot._bInUse == false || slot._playingID != instance._playingID )
                         continue;
@@ -1403,7 +1377,7 @@ namespace sw
                 _listAttenuation.push_back( attenuation );
             }
         }
-        for ( VoiceSlot& slot : _listVoice )
+        for ( AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse )
                 slot._attenuationIndex = resolveAttenuationIndex( slot._attenuationName );
@@ -1599,7 +1573,7 @@ namespace sw
         for ( uint32 pickIndex = 0; pickIndex < pickCount; ++pickIndex )
         {
             const AudioClipEntry& clip  = event._listClip[firstClip + pickIndex];
-            VoiceSlot*            pSlot = allocateVoice();
+            AudioVoiceSlot*       pSlot = _voicePool.allocate();
             if ( pSlot == nullptr )
             {
                 SW_LOG_WARNING( "Voice pool exhausted - dropped event '%#'", event._name.c_str() );
@@ -1661,65 +1635,6 @@ namespace sw
         return getParameterValue( name );
     }
 
-    void AudioEngine::selectRealVoices()
-    {
-        const AudioMixerDesc& desc      = _pMixer->getDesc();
-        const float32         inaudible = AudioMath::dbToLinear( desc._inaudibleDb );
-        uint32                keepCount = 0;
-        _listVoiceOrder.clear();
-        for ( uint32 voiceIndex = 0; voiceIndex < _listVoice.size(); ++voiceIndex )
-        {
-            VoiceSlot& slot = _listVoice[voiceIndex];
-            if ( slot._bInUse == false || slot._bWaitingForClip )
-                continue;
-            slot._bVirtual = false;
-            if ( slot._voice.isPaused() )
-                continue;
-            if ( slot._virtualMode == AudioVirtualMode::KeepReal )
-            {
-                ++keepCount;
-                continue;
-            }
-            if ( slot._audibility < inaudible )
-            {
-                // 들리지 않는다. 가상(시간만 흐름)으로 두거나, 짧은 원샷이면 멈춘다.
-                if ( slot._virtualMode == AudioVirtualMode::Stop )
-                    freeVoice( slot );
-                else
-                    slot._bVirtual = true;
-                continue;
-            }
-            _listVoiceOrder.push_back( voiceIndex );
-        }
-
-        const uint32 budget = desc._maxRealVoiceCount > keepCount ? desc._maxRealVoiceCount - keepCount : 0u;
-        if ( _listVoiceOrder.size() <= budget )
-            return;
-
-        // 우선순위 → 들림 → 먼저 낸 것 순서로 앞의 budget 개만 섞는다.
-        VectorUtil::sort( _listVoiceOrder, [this]( uint32 lhsIndex, uint32 rhsIndex )
-        {
-            const VoiceSlot& lhs = _listVoice[lhsIndex];
-            const VoiceSlot& rhs = _listVoice[rhsIndex];
-            if ( lhs._priority != rhs._priority )
-                return lhs._priority > rhs._priority;
-            if ( lhs._audibility != rhs._audibility )
-                return lhs._audibility > rhs._audibility;
-            return lhs._playingID < rhs._playingID;
-        } );
-        for ( size_t orderIndex = budget; orderIndex < _listVoiceOrder.size(); ++orderIndex )
-        {
-            VoiceSlot& slot = _listVoice[_listVoiceOrder[orderIndex]];
-            if ( slot._virtualMode == AudioVirtualMode::Stop )
-            {
-                // 들리는 원샷을 뺏을 때는 한 블록 동안 줄여서 끊는다(클릭 없음). 이 블록은 그대로 섞는다.
-                slot._voice.setFade( 0.0f, audio::kBlockFrameCount, 0, true );
-                continue;
-            }
-            slot._bVirtual = true;
-        }
-    }
-
     void AudioEngine::updateInstances()
     {
         for ( EventInstance& instance : _listInstance )
@@ -1727,7 +1642,7 @@ namespace sw
             instance._audibility = -1.0f;
             instance._distance   = MathUtil::kMaxFloat;
         }
-        for ( const VoiceSlot& slot : _listVoice )
+        for ( const AudioVoiceSlot& slot : _voicePool )
         {
             if ( slot._bInUse == false || slot._instanceIndex < 0 )
                 continue;
