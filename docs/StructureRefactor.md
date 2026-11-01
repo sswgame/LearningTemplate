@@ -251,6 +251,10 @@
   | `Mesh` | 게임 스레드 · 워커(`GPUUploadQueue::flush`) 또는 렌더 스레드(GL · 큐 끔 · 큐 없는 캡처 · 동적 메시) | 만드는 쪽은 스냅샷마다 하나(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`) | 끝 |
   | 캡처 · 미리보기 하위 렌더러 | 렌더 스레드만(`executeOffscreenPacket`) | 렌더 스레드 명령 | 끝 |
   | 씬 → 패킷 채우기 | 게임 스레드, 씬마다 `RenderPacketSceneCollector` 하나 | 한 벌 | 끝 |
+  | 컴포넌트 훅(`onRegister` · `onPostLoad`) | 게임 스레드만 — 비동기 로드 워커는 생성 · 직렬화만, 씬을 짓는 배치가 훅을 배치 끝으로 미루고 비동기 로드는 `adoptScene` 까지 쥔다 | 형식(`GameObjectManager::beginDeferredRegistration` · `Component::dispatchRegister`) | 끝 |
+- **로드 스레드 판단 기준**(언리얼 비동기 로딩: 로딩 스레드 Serialize, 게임 스레드 PostLoad · OnRegister / 유니티 Awake 도 메인 스레드): 워커가 짓는 동안 부르는 코드는 엔진 장부(트랜스폼 계층 ·
+  타입 버킷)뿐이고, 컴포넌트가 쓰는 훅은 게임 스레드에서 돈다 — 훅을 쓰는 쪽(게임 모듈 포함)이 스레드를 생각하지 않게 한다. 예전 모양(워커가 훅까지)은 컴포넌트가 데이터뿐이던
+  2026-08 의 비동기 로드에 2026-09 등록제 훅이 더해지며 다시 보지 않은 것이다(의도된 근거 없음). 받는 프레임의 등록 비용은 `endDeferredRegistration` 한 곳에서 나눌 수 있다.
 - **GPU 자원 판단 기준**(언리얼 · 유니티 · Godot 비교): GPU 자원은 렌더 쪽이 소유하고 만들고 지우는 길은 하나다. 게임 스레드가 쥐는 모양은 데이터가 바뀌는지로 고른다.
   게임 스레드가 GPU 자원이 생긴 뒤에도 값을 바꾼다 → **렌더 프록시**(렌더 쪽 사본, `Material` / `MaterialRenderProxy` = 언리얼 `FMaterialRenderProxy`).
   바꾸지 않는다(바뀌면 새 객체) → **한 번 만들기**(만드는 쪽 하나, `Mesh` = 언리얼 `FStaticMeshRenderData` + `BeginInitResource`).
