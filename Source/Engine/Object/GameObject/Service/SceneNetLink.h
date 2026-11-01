@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    class Component;
     class GameObjectManager;
     class INetPeers;
     class NetMessageRouter;
@@ -63,6 +64,9 @@ namespace sw
         [[nodiscard]] bool bind( const NetLinkValue& value );
         /** @brief 링크를 비웁니다(월드가 혼자 도는 월드로 돌아간다). */
         void unbind() { _value = NetLinkValue{}; }
+
+        /** @brief @p component 가 사는 월드의 넷 링크입니다. 소유자나 월드가 없으면 nullptr 입니다(전역 세션을 찾지 않는다 — 링크는 월드의 성질이다). */
+        static const SceneNetLink* findFor( const Component& component );
 
         /** @brief 올라 있으면 true 입니다. 거짓이면 이 월드는 네트워크가 없습니다. */
         [[nodiscard]] bool isBound() const { return _value.isComplete(); }

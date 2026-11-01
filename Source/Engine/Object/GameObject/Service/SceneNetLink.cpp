@@ -2,6 +2,8 @@
 
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
@@ -23,5 +25,12 @@ namespace sw
         }
         _value = value;
         return true;
+    }
+
+    const SceneNetLink* SceneNetLink::findFor( const Component& component )
+    {
+        const GameObject*  pOwner   = component.getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        return pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
     }
 } // namespace sw

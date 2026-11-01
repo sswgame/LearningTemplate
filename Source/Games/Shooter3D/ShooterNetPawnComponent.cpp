@@ -295,9 +295,7 @@ namespace sw
 
     const SceneNetLink* ShooterNetPawnComponent::findLink() const
     {
-        const GameObject*  pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        return pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        return SceneNetLink::findFor( *this );
     }
 
     const vector<ShooterArenaBox>* ShooterNetPawnComponent::findArenaBoxes() const

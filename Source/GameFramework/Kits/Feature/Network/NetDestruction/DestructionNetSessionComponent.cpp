@@ -47,7 +47,7 @@ namespace sw
         // 넷 링크는 이 컴포넌트의 월드(오브젝트 매니저)에 올라 있다 - 전역 세션을 찾지 않는다(`SceneNetLink`). 링크가 비면 혼자 하는 게임이다.
         GameObject*         pOwner     = getOwner();
         GameObjectManager*  pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneNetLink* pLink      = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        const SceneNetLink* pLink      = SceneNetLink::findFor( *this );
         const bool          bNoSession = pLink == nullptr || pLink->isBound() == false;
         if ( bNoSession )
             return; // 혼자 하는 게임 - 복제할 상대가 없다
@@ -99,9 +99,7 @@ namespace sw
     {
         // 복제 표(프로파일러의 `replicas=`)는 전역 세션의 것이다 - 이 월드의 링크가 전역 세션의 창구일 때만 올린다(가상 서버 하니스의 월드는 올리지 않는다).
         GameNetSession*     pNetSession  = game::findSubsystem<GameNetSession>();
-        GameObject*         pOwner       = getOwner();
-        GameObjectManager*  pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const SceneNetLink* pLink        = pManager != nullptr ? &pManager->getSubsystem<SceneNetLink>() : nullptr;
+        const SceneNetLink* pLink        = SceneNetLink::findFor( *this );
         const bool          bGlobalWorld = pNetSession != nullptr && pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &pNetSession->getPeers();
         if ( bGlobalWorld == false )
             return;
