@@ -17,6 +17,7 @@ namespace sw
 {
     class Material;
     class MaterialInstance;
+    struct MaterialPSOWarmEntry;
 
     /**
      * @class GPUMaterialRegistry
@@ -37,6 +38,8 @@ namespace sw
          *          둘이 다르면 미리 만든 PSO 의 키가 실제 배치의 키와 어긋나 다시 만든다.
          */
         static GPUShaderPermutation makeShaderPermutation( const Material& material, const MaterialInstance* pInstance, bool bAppearanceDither );
+        /** @brief 게임 스레드가 고정 머티리얼에서 읽어 둔 값(`MaterialPSOWarmEntry`)으로 같은 퍼뮤테이션을 만듭니다(렌더 스레드의 PSO 미리 만들기). */
+        static GPUShaderPermutation makeShaderPermutation( const MaterialPSOWarmEntry& entry, bool bAppearanceDither );
 
         /**
          * @brief 그룹 목록, 원소 테이블, 퍼뮤테이션 테이블을 통째로 비웁니다. 그룹 기준이 바뀌었을 때 부릅니다.
@@ -67,8 +70,22 @@ namespace sw
                                  const vector<uint32>& listBatchElementIndex );
         /** @brief 오래 쓰이지 않은 머티리얼 원소를 회수해 프리리스트로 돌립니다. 인덱스는 옮기지 않습니다. */
         void freeUnusedMaterialElements( GPUSceneSnapshot& inoutSnapshot );
+        /**
+         * @brief 모든 원소의 (프록시, 사본)을 지금 값으로 맞춥니다. 배치 구성을 그대로 둔 프레임에도 매 빌드 부릅니다(값만 바뀐 머티리얼이 있다).
+         * @details 바뀌지 않은 머티리얼은 세대 비교 한 번으로 같은 사본을 돌려준다(`Material::getRenderBinding`). 렌더 스레드는 사본이 바뀐 원소만 올린다.
+         */
+        void refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot );
 
     private:
+        /** @brief (셰이더 경로 해시, define 해시)의 퍼뮤테이션 해시입니다. 머티리얼에서 묻는 길과 미리 만들기 값의 길이 같은 식을 쓴다. */
+        static uint64 combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither );
+
+        /** @brief 원소의 게임 쪽 소유입니다. 스냅샷(패킷)에는 싣지 않는다 — 렌더 스레드가 Material 을 보지 않게. */
+        struct MaterialElementOwner
+        {
+            shared_ptr<Material>         _material;
+            shared_ptr<MaterialInstance> _instance;
+        };
         /**
          * @brief 머티리얼 그룹의 원소 인덱스 테이블입니다. `GPUSceneSnapshot::_listMaterialGroup` 과 같은 인덱스로 나란히 둡니다.
          * @details 스냅샷의 그룹에는 RT 가 읽는 것(경로, 원소)만 남기고 테이블은 여기 둡니다. 프레임마다 패킷으로 복사되지 않습니다.
@@ -78,6 +95,8 @@ namespace sw
             unordered_map<GPUMaterialElementKey, uint32, GPUMaterialElementKeyHash> _mapEntryToIndex;
             /// @brief 원소별로 마지막으로 쓰인 빌드 번호입니다. 오래 쓰이지 않은 원소를 회수하는 기준입니다.
             vector<uint64> _listEntryLastUsedBuild;
+            /// @brief 원소별 게임 쪽 소유입니다(`_listEntry` 와 같은 인덱스). 회수하면 비운다.
+            vector<MaterialElementOwner> _listEntryOwner;
             /// @brief 회수된 원소 슬롯입니다. **인덱스를 옮기지 않고** 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
             vector<uint32> _listFreeEntry;
             /// @brief 직전 조회 결과입니다. 배치 안의 인스턴스는 정렬되어 있어 대부분 같은 원소를 연속으로 조회합니다.

@@ -24,34 +24,26 @@ namespace sw
     {
         struct GPUSceneInternal
         {
-            static void applyInstanceCbsVal( IRHIDevice* pDevice, vector_reference<GPUMeshBatch> listBatch )
+            /**
+             * @brief 배치마다 머리 원소의 프록시에 사본을 올리고(바뀐 것만), 그 상수 버퍼 인덱스와 텍스처 슬롯을 배치에 덧씁니다.
+             * @details 머티리얼의 GPU 자원은 렌더 스레드만 만든다 — 게임 스레드는 불변 사본만 실어 보낸다(`MaterialRenderProxy`). 원소 업로드(g_SwMaterials)는
+             *          사본의 바이트를 직접 읽으므로 원소마다 상수 버퍼를 만들지 않는다. 상수 버퍼는 배치가 고르는 머리 원소의 것뿐이다.
+             */
+            static void bindBatchMaterialResources( IRHIDevice* pDevice, vector_reference<GPUMeshBatch> listBatch, const vector<GPUMaterialGroup>& listGroup )
             {
                 for ( GPUMeshBatch& batch : listBatch )
                 {
-                    if ( batch._materialInstance == nullptr )
+                    const bool bHasElement = batch._materialGroup < listGroup.size() && batch._materialIndex < listGroup[batch._materialGroup]._listEntry.size();
+                    if ( bHasElement == false )
                         continue;
-                    if ( batch._materialInstance->updateRHI( pDevice ) == false )
+                    const MaterialRenderBinding& binding = listGroup[batch._materialGroup]._listEntry[batch._materialIndex]._binding;
+                    if ( binding.isValid() == false )
                         continue;
-                    batch._materialCb = batch._materialInstance->getDescriptorIndex();
-                    // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처를 얹는다(렌더 스레드가 빌린 것이라 여기서).
-                    batch._materialInstance->collectTextureSlotSRVs( batch._arrMaterialTexSRV, shaderslot::kMaterialTextureCount );
-                }
-            }
-
-            /**
-             * @brief 머티리얼 원소 표의 인스턴스를 올립니다(합친 배치의 인스턴스).
-             * @details 네이티브 bindless 에서는 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 원소 표(`_listEntry`)에만 있다.
-             *          주의: 여기를 돌지 않으면 그 인스턴스들의 바이트가 만들어지지 않아 원소 업로드가 부모 바이트로 폴백하고,
-             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라진다**. updateRHI 는 바뀐 것이 없으면 곧바로 돌아온다.
-             */
-            static void applyElementInstancesVal( IRHIDevice* pDevice, vector<GPUMaterialGroup>& listGroup )
-            {
-                for ( GPUMaterialGroup& group : listGroup )
-                {
-                    for ( GPUMaterialElement& element : group._listEntry )
+                    batch._materialCb = binding._proxy->sync( pDevice, binding._data );
+                    // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처는 사본이 이미 얹었다.
+                    for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )
                     {
-                        if ( element._instance != nullptr )
-                            (void)element._instance->updateRHI( pDevice );
+                        batch._arrMaterialTexSRV[slot] = binding._data->_arrTextureSRV[slot];
                     }
                 }
             }
@@ -121,11 +113,10 @@ namespace sw
         if ( bNothingToUploadScene )
             return false;
 
-        // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRHI), 메시를 GPU 에 올린다(정점 풀, 풀 밖이면 initRHI).
+        // RT 에서만 하는 두 가지: 머티리얼 사본을 프록시의 상수 버퍼에 올리고, 메시를 GPU 에 올린다(정점 풀, 풀 밖이면 initRHI).
         {
-            SW_PROFILE_SCOPE( "RT.GPUScene.applyInstanceCbs" );
-            GPUSceneInternal::applyInstanceCbsVal( pDevice, _snapshot.getMutableBatches() );
-            GPUSceneInternal::applyElementInstancesVal( pDevice, _snapshot._listMaterialGroup );
+            SW_PROFILE_SCOPE( "RT.GPUScene.bindMaterials" );
+            GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getMutableBatches(), _snapshot._listMaterialGroup );
         }
         updateVertexPool( pDevice );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
@@ -528,25 +519,19 @@ namespace sw
         std::swap( _snapshot, snapshot );
     }
 
-    uint32 GPUScene::computeMaterialGroupStride( IRHIDevice* pDevice, const GPUMaterialGroup& group )
+    uint32 GPUScene::computeMaterialGroupStride( const GPUMaterialGroup& group )
     {
-        // 원소 stride 는 셰이더 리플렉션이 준 구조버퍼 원소 크기다(Material::getElementStride, 백엔드의 리플렉션 값).
+        // 원소 stride 는 셰이더 리플렉션이 준 구조버퍼 원소 크기다(게임 스레드가 맞춘 `Material::getElementStride` 를 사본이 싣는다).
         // 같은 셰이더의 머티리얼은 같은 stride 를 가진다. 다르면 가장 큰 것을 쓴다.
         uint32 stride{ 0 };
-        for ( const auto& entry : group._listEntry )
+        for ( const GPUMaterialElement& entry : group._listEntry )
         {
-            Material* pMaterial = entry._material.get();
-            if ( pMaterial == nullptr )
+            // 레이아웃 오류(오류는 게임 스레드가 남겼다)면 바이트가 비어 stride 에 끼지 않고 원소는 복사되지 않는다. 레거시 MaterialCB 는 stride 0 이지만 바이트가 있다.
+            const MaterialRenderData* pData = entry._binding._data.get();
+            if ( pData == nullptr || pData->_bytes.empty() )
                 continue;
-            // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
-            // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRHI 가 이미 맞췄다).
-            // 실패(오류는 이미 남았다)하면 바이트가 비어 stride 에 끼지 않고 원소는 복사되지 않는다. 레거시 MaterialCB 는 stride 0 으로 false 지만 바이트가 있다.
-            if ( pMaterial->ensureShaderLayout( pDevice->getBackendType() ) == false && pMaterial->getBuffer().empty() )
-                continue;
-            uint32 entryStride = pMaterial->getElementStride();
-            if ( entryStride == 0 )
-                entryStride = static_cast<uint32>( pMaterial->getBuffer().size() );
-            stride = MathUtil::max( stride, entryStride );
+            const uint32 entryStride = ( pData->_elementStride != 0 ) ? pData->_elementStride : static_cast<uint32>( pData->_bytes.size() );
+            stride                   = MathUtil::max( stride, entryStride );
         }
         return stride;
     }
@@ -555,7 +540,7 @@ namespace sw
     {
         // stride 는 셰이더가 선언한 원소 크기 그대로다. DX11 은 SRV 의 구조 stride 가 셰이더 선언(24 등)과 다르면 디버그 레이어가
         // 오류로 잡고, 네 백엔드가 DX 패킹(-fvk-use-dx-layout)으로 같은 stride 를 쓴다. 16 정렬로 키우면 DX11 이 "32 vs 24" 를 낸다.
-        const uint32 stride = computeMaterialGroupStride( pDevice, group );
+        const uint32 stride = computeMaterialGroupStride( group );
         if ( stride == 0 )
             return;
 
@@ -564,11 +549,10 @@ namespace sw
         _listMaterialScratch.assign( needBytes, 0 );
         for ( uint32 element = 0; element < elementCount; ++element )
         {
-            const Material*         pMaterial = group._listEntry[element]._material.get();
-            const MaterialInstance* pInstance = group._listEntry[element]._instance.get();
-            if ( pMaterial == nullptr )
+            const MaterialRenderData* pData = group._listEntry[element]._binding._data.get();
+            if ( pData == nullptr )
                 continue;
-            const vector<uint8>& bytes = ( pInstance != nullptr && pInstance->getBuffer().empty() == false ) ? pInstance->getBuffer() : pMaterial->getBuffer();
+            const vector<uint8>& bytes = pData->_bytes;
             const uint32         copy  = MathUtil::min( stride, static_cast<uint32>( bytes.size() ) );
             if ( copy > 0 )
                 Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );

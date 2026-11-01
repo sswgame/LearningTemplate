@@ -64,9 +64,9 @@ namespace sw
         : _assetPath{}
         , _desc{}
         , _data{}
-        , _constantBuffer{ 0 }
-        , _constantBufferBytes{ 0 }
-        , _descriptorIndex{ kInvalidDescriptorIndex }
+        , _renderProxy{ MaterialRenderProxy::create() }
+        , _renderData{}
+        , _renderDataGeneration{ 0 }
         , _elementStride{ 0 }
         , _bufferGeneration{ 0 }
         , _shaderLayoutCacheGeneration{ 0 }
@@ -108,14 +108,14 @@ namespace sw
         if ( pRHI == nullptr )
             return false;
 
-        // 결과가 정해지기 전에는 그릴 수 없다. 어느 실패 경로로 나가든 마지막 값은 아래 `finishGPUState` 가 정한다.
-        setGPUState( MaterialGPUState::Pending );
-        struct GPUStateFinish
+        // 결과가 정해지기 전에는 그릴 수 없다. 어느 실패 경로로 나가든 마지막 값은 아래 `finishInitState` 가 정한다.
+        setInitState( MaterialInitState::Pending );
+        struct InitStateFinish
         {
             Material& _material;
             bool      _bSucceeded{ false };
-            ~GPUStateFinish() { _material.setGPUState( _bSucceeded ? MaterialGPUState::Ready : MaterialGPUState::Failed ); }
-        } finishGPUState{ *this };
+            ~InitStateFinish() { _material.setInitState( _bSucceeded ? MaterialInitState::Ready : MaterialInitState::Failed ); }
+        } finishInitState{ *this };
 
         _pRHIDevice = pRHI;
         _assetPath  = assetRelativePath;
@@ -135,34 +135,20 @@ namespace sw
         _data._bytes.resize( bufferSize, 0 );
         ++_bufferGeneration; // 크기를 256 정렬로 맞췄다
 
-        _constantBuffer = pRHI->getResourceFactory()->createConstantBuffer( bufferSize );
-        if ( _constantBuffer == 0 )
-        {
-            SW_LOG_ERROR( "Failed to create Constant Buffer!" );
-            return false;
-        }
-        _constantBufferBytes = bufferSize;
-
-        pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
-        _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSRV( _constantBuffer );
-
-        // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
         if ( resolveTextureAssets( pRHI ) == false )
         {
-            releaseRHI( pRHI ); // 반쯤 올린 상태(CB 만 있음)를 "올라갔다"(`isRHIValid`)로 남기지 않는다
+            releaseRHI( pRHI ); // 반쯤 빌린 텍스처를 남기지 않는다
             return false;
         }
 
-        // 셰이더 레이아웃도 초기화하는 스레드(게임 스레드)에서 맞춘다 — 렌더 스레드의 첫 사용(`GPUScene` · 인스턴스 `updateRHI`)이 맞추면
-        // 게임 스레드가 읽는 속성 목록을 렌더 스레드가 고치게 된다. 결과(레거시 MaterialCB 는 stride 0)는 그 사용처가 다시 묻는다.
+        // 셰이더 레이아웃도 여기(게임 스레드)서 맞춘다. 결과(레거시 MaterialCB 는 stride 0)는 사본(`getRenderBinding`)이 실어 간다.
         (void)ensureShaderLayout( pRHI->getBackendType() );
 
-        SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
+        SW_LOG_INFO( "Initialized '%#' (%# bytes)", _desc._name.c_str(), _data._bytes.size() );
         loadScope.setBytes( _data._bytes.size() );
-        if ( _descriptorIndex != kInvalidDescriptorIndex )
-            loadScope.setSucceeded();
-        finishGPUState._bSucceeded = _descriptorIndex != kInvalidDescriptorIndex;
-        return finishGPUState._bSucceeded;
+        loadScope.setSucceeded();
+        finishInitState._bSucceeded = true;
+        return true;
     }
 
     bool Material::resolveTextureAssets( IRHIDevice* pRHI )
@@ -225,7 +211,7 @@ namespace sw
             _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             _listMaterialTextureSRV.push_back( pTexture->getSRV() );
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
-            setTextureParameter( pRHI, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSRV() : ordinal );
+            setTextureParameter( hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSRV() : ordinal );
         }
         return true;
     }
@@ -261,7 +247,9 @@ namespace sw
             {
                 _listMaterialTextureSRV[ordinal] = srv;
                 if ( bNativeBindless )
-                    setTextureParameter( _pRHIDevice, hashed_string( prop._name.c_str() ), srv );
+                    setTextureParameter( hashed_string( prop._name.c_str() ), srv );
+                else
+                    ++_bufferGeneration; // 슬롯 바인딩 백엔드는 슬롯 목록만 바뀐다 — 렌더 사본이 그 목록을 싣는다
                 bChanged = true;
             }
             ++ordinal;
@@ -333,6 +321,7 @@ namespace sw
         _listBorrowedTexturePath.clear();
         _listMaterialTextureSRV.clear();
         _listMaterialTextureName.clear();
+        ++_bufferGeneration; // 슬롯 목록이 비었다 — 놓은 텍스처의 SRV 를 렌더 사본에 남기지 않는다
         for ( MaterialProperty& prop : _data._listProperty )
         {
             if ( MaterialPacking::isTextureType( prop._type ) == false || prop._assetPath.empty() )
@@ -346,8 +335,8 @@ namespace sw
 
     bool Material::initRHI( IRHIDevice* pDevice )
     {
-        // 통보 순서는 정해져 있지 않다. 이미 올라가 있으면 그대로 둔다.
-        if ( isRHIValid() )
+        // 통보 순서는 정해져 있지 않다. 이미 초기화되어 있으면 그대로 둔다.
+        if ( getInitState() == MaterialInitState::Ready )
             return true;
         // 한 번도 initialize 되지 않은 머티리얼이다. 복원할 내용 자체가 없다.
         if ( pDevice == nullptr || _assetPath.empty() )
@@ -367,13 +356,9 @@ namespace sw
         // 목록에 **덧붙여** `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
         // t16..t31 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
         releaseTextureAssets( nullptr );
-
-        // 디바이스가 이미 없다. GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 를 부르면 해제 후 사용이다).
-        _constantBuffer      = 0;
-        _constantBufferBytes = 0;
-        _descriptorIndex     = kInvalidDescriptorIndex;
-        _pRHIDevice          = nullptr;
-        setGPUState( MaterialGPUState::NotRequested );
+        // 상수 버퍼는 프록시의 것이다 — 프록시가 같은 통보를 받는다.
+        _pRHIDevice = nullptr;
+        setInitState( MaterialInitState::NotRequested );
     }
 
     void Material::releaseRHI( IRHIDevice* pRHI )
@@ -384,43 +369,32 @@ namespace sw
             return;
 
         releaseTextureAssets( pRHI );
-        if ( pRHI != nullptr )
-        {
-            // 마지막 소유를 게임 스레드가 놓을 수 있다(GPUScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
-            if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRHI->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
-            if ( _constantBuffer != 0 )
-                pRHI->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
-        }
-        _constantBuffer      = 0;
-        _constantBufferBytes = 0;
-        _descriptorIndex     = kInvalidDescriptorIndex;
-        _pRHIDevice          = nullptr;
-        setGPUState( MaterialGPUState::NotRequested );
+        // 상수 버퍼는 프록시의 것이다 — 프록시가 같은 통보를 받는다.
+        _pRHIDevice = nullptr;
+        setInitState( MaterialInitState::NotRequested );
     }
 
-    void Material::uploadConstantBytes( IRHIDevice* pRHI )
+    MaterialRenderBinding Material::getRenderBinding()
     {
-        if ( pRHI == nullptr || _constantBuffer == 0 )
-            return;
-        const uint32 byteSize = static_cast<uint32>( _data._bytes.size() );
-        if ( byteSize > _constantBufferBytes )
+        // 사본을 만들기 전에 레이아웃을 셰이더에 맞춘다 — 다시 로드(`loadFromXML`, 에디터 미리보기)는 XML 순서로 다시 쌓고, 셰이더 리플렉션 캐시가 비면(핫 리로드)
+        // 맞춘 값이 낡는다. 맞춰져 있으면 비교만 한다. 디바이스가 없는(초기화 전) 머티리얼은 그리지 않으므로(`MaterialInitState`) 맞출 백엔드가 없다.
+        if ( _pRHIDevice != nullptr )
+            (void)ensureShaderLayout( _pRHIDevice->getBackendType() ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
+        (void)refreshTextureBindings();                                // 다시 올리거나 비동기 로드가 끝난 텍스처의 새 SRV(캐시 세대가 그대로면 비교만)
+        if ( _renderData == nullptr || _renderDataGeneration != _bufferGeneration )
         {
-            // 쓰던 버퍼 · 뷰는 렌더 스레드가 아직 읽을 수 있다 — 반환은 디바이스가 그 프레임 뒤로 미룬다(releaseRHI 와 같다).
-            if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRHI->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
-            pRHI->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
-            _descriptorIndex     = kInvalidDescriptorIndex;
-            _constantBuffer      = pRHI->getResourceFactory()->createConstantBuffer( byteSize );
-            _constantBufferBytes = _constantBuffer != 0 ? byteSize : 0;
-            if ( _constantBuffer == 0 )
+            shared_ptr<MaterialRenderData> data = sw::make_shared<MaterialRenderData>();
+            data->_bytes                        = _data._bytes;
+            data->_elementStride                = _elementStride;
+            const size_t slotCount              = MathUtil::min( _listMaterialTextureSRV.size(), static_cast<size_t>( shaderslot::kMaterialTextureCount ) );
+            for ( size_t slot = 0; slot < slotCount; ++slot )
             {
-                SW_LOG_ERROR( "Material '%#': could not grow the constant buffer to %# bytes", _desc._name.c_str(), byteSize );
-                return;
+                data->_arrTextureSRV[slot] = _listMaterialTextureSRV[slot];
             }
-            _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSRV( _constantBuffer );
+            _renderData           = std::move( data );
+            _renderDataGeneration = _bufferGeneration;
         }
-        pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), byteSize );
+        return MaterialRenderBinding{ _renderProxy, _renderData };
     }
 
     bool Material::ensureShaderLayout( RHIBackend backend )
@@ -542,8 +516,8 @@ namespace sw
         const bool bAllPacked = matchPropertiesToSchema( *pSchemaCb );
         packPropertiesIntoBytes( pSchemaCb->_totalSize );
         _desc._listProperty = _data._listProperty;
-        // 불일치는 오류다 — 일부만 맞춘 바이트(적지 않은 칸의 0 = Vulkan 의 첫 실제 텍스처)를 올리지 않는다. 바이트가 비면 GPUScene 은 건너뛰고
-        // 인스턴스는 updateRHI 가 false 를 돌려준다.
+        // 불일치는 오류다 — 일부만 맞춘 바이트(적지 않은 칸의 0 = Vulkan 의 첫 실제 텍스처)를 올리지 않는다. 바이트가 비면 렌더 사본도 비어
+        // 렌더 스레드가 그 원소와 상수 버퍼를 건너뛴다(인스턴스 사본도 부모 바이트에서 만든다).
         if ( bAllPacked == false )
             discardBytesAfterLayoutError();
         return bAllPacked;
@@ -755,12 +729,12 @@ namespace sw
         return bAllPacked;
     }
 
-    bool Material::resetParameterToDefault( IRHIDevice* pRHI, hashed_string name )
+    bool Material::resetParameterToDefault( hashed_string name )
     {
         MaterialProperty* prop = findProperty( name );
         if ( prop == nullptr )
             return false;
-        return setParameter( pRHI, name, prop->_defaultValue );
+        return setParameter( name, prop->_defaultValue );
     }
 
     bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
@@ -805,7 +779,7 @@ namespace sw
         return true;
     }
 
-    bool Material::setParameter( IRHIDevice* pRHI, hashed_string name, string_view value )
+    bool Material::setParameter( hashed_string name, string_view value )
     {
         MaterialProperty* prop = findProperty( name );
         if ( prop == nullptr )
@@ -819,7 +793,6 @@ namespace sw
             return false;
         }
         ++_bufferGeneration;
-        uploadConstantBytes( pRHI );
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
@@ -828,7 +801,7 @@ namespace sw
         return true;
     }
 
-    bool Material::setTextureParameter( IRHIDevice* pRHI, hashed_string name, RHIDescriptorIndex descIdx )
+    bool Material::setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx )
     {
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -841,7 +814,6 @@ namespace sw
             if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
-            uploadConstantBytes( pRHI );
             _desc._listProperty = _data._listProperty;
             return true;
         }
@@ -911,7 +883,7 @@ namespace sw
         _desc._blendMode = MaterialXML::blendModeToString( mode );
     }
 
-    bool Material::setScalarParameter( IRHIDevice* pRHI, hashed_string name, float32 value )
+    bool Material::setScalarParameter( hashed_string name, float32 value )
     {
         for ( MaterialProperty& prop : _data._listProperty )
         {
@@ -921,7 +893,6 @@ namespace sw
             if ( MaterialPacking::packPropertyIntoBuffer( prop, _data._bytes ) == false )
                 return false;
             ++_bufferGeneration;
-            uploadConstantBytes( pRHI );
             return true;
         }
         return false;

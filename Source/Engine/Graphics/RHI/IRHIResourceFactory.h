@@ -51,7 +51,7 @@ namespace sw
          *          복사하므로, 넘기면 프레임 슬롯 밖(또는 버퍼 밖)까지 쓴다. GL 만 `glBufferSubData`
          *          가 `GL_INVALID_VALUE` 로 막아 준다. 즉 **한 백엔드에서만 조용히 안전하다.**
          *          버퍼가 작아졌다면 갱신하지 말고 **다시 만들어야 한다**
-         *          (`MaterialInstance::updateRHI` 는 셰이더를 다시 컴파일해 레이아웃이 커지는 경우를
+         *          (`MaterialRenderProxy::sync` 는 셰이더를 다시 컴파일해 레이아웃이 커지는 경우를
          *          그렇게 처리한다).
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;

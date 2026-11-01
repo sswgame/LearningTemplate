@@ -166,7 +166,7 @@ namespace sw
         /**
          * @brief 텍스처의 SRV 가 바뀌었을 수 있는 횟수입니다(`reload` · `resizeRenderTarget` 이 다시 올렸거나, 비동기 로드의 업로드가 끝났다).
          * @details 다시 업로드하면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙고, 비동기 로드가 끝나면 로드 중 텍스처 대신 읽을 SRV 가 생깁니다. 머티리얼은 resolve 때
-         *          받은 인덱스를 보관하므로, 이 값이 바뀌면 다시 받습니다(`Material::refreshTextureBindings`, `GPUSceneBuilder` 가 부릅니다).
+         *          받은 인덱스를 보관하므로, 이 값이 바뀌면 다시 받습니다(`Material::refreshTextureBindings`, 렌더 사본을 만들기 전에 `Material::getRenderBinding` 이 부릅니다).
          */
         uint32 getReloadGeneration() const;
         /**

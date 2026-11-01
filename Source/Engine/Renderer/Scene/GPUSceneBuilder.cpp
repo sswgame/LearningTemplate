@@ -81,20 +81,6 @@ namespace sw
                 return ( determinant < 0.0f ) ? SW_TRUE : SW_FALSE;
             }
 
-            /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사합니다(렌더 스레드는 Material* 를 따라갈 수 없습니다). */
-            static void fillMaterialTextureSRVs( GPUMeshBatch& batch, const Material* pMaterial )
-            {
-                if ( pMaterial == nullptr )
-                    return;
-                const vector<RHIDescriptorIndex>& listSRV = pMaterial->getMaterialTextureSRVs();
-                const uint32                      count   = MathUtil::min( static_cast<uint32>( listSRV.size() ),
-                                                                           shaderslot::kMaterialTextureCount );
-                for ( uint32 texIndex = 0; texIndex < count; ++texIndex )
-                {
-                    batch._arrMaterialTexSRV[texIndex] = listSRV[texIndex];
-                }
-            }
-
             /**
              * @brief 원시 포인터로 받은 머티리얼의 소유권을 빌립니다.
              * @details Material 은 create() 로만 생성되므로(패스키 생성자) 언제나 shared_ptr 이 소유하고 있다.
@@ -402,10 +388,8 @@ namespace sw
             pMaterial = candidate._instance->getParent();
         if ( pMaterial == nullptr )
             pMaterial = pScene->getMaterial();
-        // GPU 상태가 `Ready` 가 아닌 머티리얼(올리는 중 · 실패)은 그리지 않는다. 렌더 스레드가 상수 버퍼와 bindless 인덱스를 올린 뒤에야 배치가 생긴다
-        // (올리는 동안 렌더 스레드가 머티리얼 내용을 쓰므로 상태를 보기 전에는 그 머티리얼의 다른 값을 읽지 않는다). `Failed` 의 오류는 올린 쪽
-        // (`MaterialCache::initializePending`)이 한 번 남겼다.
-        if ( pMaterial != nullptr && pMaterial->getGPUState() != MaterialGPUState::Ready )
+        // 초기화가 끝나지 않은 머티리얼(줄에 있음 · 실패)은 그리지 않는다. `Failed` 의 오류는 초기화한 쪽(`MaterialCache::initializePending`)이 한 번 남겼다.
+        if ( pMaterial != nullptr && pMaterial->getInitState() != MaterialInitState::Ready )
         {
             _notReadySkipped._count.fetch_add( 1u, std::memory_order_relaxed );
             return false;
@@ -508,6 +492,8 @@ namespace sw
 
         // 메시 쪽은 "바뀐 것 없음" · "후보 없음" 으로 일찍 끝나는 길이 여럿이다. 입자는 단계마다 움직이므로 그 뒤에 따로, 매 프레임 모은다.
         populateMeshesFromScene( pScene, cameraPos );
+        // 배치 구성을 그대로 둔 프레임(위 일찍 끝나는 길)에도 머티리얼 값은 바뀔 수 있다(에디터 편집 · 매 틱 넣는 인스턴스 값). 사본은 매 빌드 맞춘다.
+        _materialRegistry.refreshMaterialBindings( _snapshot );
         const GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
         if ( pObjects != nullptr )
             populateParticleBatches( *pObjects, cameraPos );
@@ -541,9 +527,7 @@ namespace sw
             invalidateBuildCache();
         }
 
-        // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 처리한다. 바뀐 머티리얼이 있으면 그 세대가 오른다.
-        refreshReloadedTextures();
-        resyncShaderLayouts();
+        // 셰이더 레이아웃과 다시 올린 텍스처의 SRV 는 머티리얼이 사본을 만들 때 맞춘다(`Material::getRenderBinding` — 매 빌드 `refreshMaterialBindings`).
         _skinPaletteCollector.collect( pObjects->getSubsystem<AnimationSystem>(), _snapshot );
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
@@ -938,42 +922,6 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
             _materialRegistry.freeUnusedMaterialElements( _snapshot );
         }
-    }
-
-    void GPUSceneBuilder::resyncShaderLayouts()
-    {
-        const uint32 generation = ShaderReflectionLibrary::getCacheGeneration();
-        if ( generation == _lastShaderReflectionGeneration )
-            return;
-        _lastShaderReflectionGeneration = generation;
-        const size_t candidateCount     = MathUtil::min( _lastCandidateCount, _listBuiltCandidate.size() );
-        for ( size_t index = 0; index < candidateCount; ++index )
-        {
-            Material* pMaterial = _listBuiltCandidate[index]._material.get();
-            if ( pMaterial != nullptr && pMaterial->getGPUState() == MaterialGPUState::Ready )
-                (void)pMaterial->ensureShaderLayout( _shaderLayoutBackend ); // 실패 오류는 맞추는 쪽이 남긴다
-        }
-    }
-
-    void GPUSceneBuilder::refreshReloadedTextures()
-    {
-        if ( engine::areEngineServicesBound() == false )
-            return;
-        const uint32 generation = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getReloadGeneration();
-        if ( generation == _lastTextureReloadGeneration )
-            return;
-        _lastTextureReloadGeneration = generation;
-
-        bool         bChanged{ false };
-        const size_t candidateCount = MathUtil::min( _lastCandidateCount, _listBuiltCandidate.size() );
-        for ( size_t index = 0; index < candidateCount; ++index )
-        {
-            Material* pMaterial = _listBuiltCandidate[index]._material.get();
-            if ( pMaterial != nullptr && pMaterial->refreshTextureBindings() )
-                bChanged = true;
-        }
-        if ( bChanged )
-            MaterialPermutation::bumpPermutationGeneration();
     }
 
     void GPUSceneBuilder::publishInstances()
@@ -1563,13 +1511,9 @@ namespace sw
             {
                 if ( entryIndex == _listScratchOpaqueEntry.size() || ( _listScratchOpaqueEntry[entryIndex]._key == _listScratchOpaqueEntry[batchStart]._key ) == false )
                 {
-                    // 키의 포인터는 정체성이고 소유권은 배치 머리 후보의 것을 빌린다. 합치기가 켜지면 키의 인스턴스는
-                    // nullptr 이라 배치에는 인스턴스를 싣지 않는다. 원소 테이블(_listEntry)이 인스턴스마다 소유권을 가진다.
-                    // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼(키의 대표)이 소유한다.
-                    const SortKey&       key           = _listScratchOpaqueEntry[batchStart]._key;
-                    const DrawCandidate& headCandidate = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx];
-                    emitBatch( _listScratchOpaqueIdx.data(), batchStart, entryIndex, RHIBlendMode::Opaque,
-                               GPUSceneBuilderInternal::shareMaterial( key._pMaterial ), ( key._pInstance != nullptr ) ? headCandidate._instance : nullptr );
+                    // 키의 머티리얼(합치기 대표)이 그룹을 정한다. 상수 버퍼와 텍스처 슬롯은 배치 머리 원소의 것이다(원소 테이블이 인스턴스마다 소유를 가진다).
+                    const SortKey& key = _listScratchOpaqueEntry[batchStart]._key;
+                    emitBatch( _listScratchOpaqueIdx.data(), batchStart, entryIndex, RHIBlendMode::Opaque, key._pMaterial );
                     batchStart = entryIndex;
                 }
             }
@@ -1613,8 +1557,7 @@ namespace sw
                 if ( bEnd || bKeyChange )
                 {
                     // 투명은 머리 후보의 머티리얼과 인스턴스를 그대로 싣는다. 정렬이 깊이순이라 합치기 대표를 쓰지 않는다.
-                    emitBatch( _listScratchTransparentIdx.data(), batchStart, entryIndex, RHIBlendMode::Transparent, pBatchHead->_material,
-                               pBatchHead->_instance );
+                    emitBatch( _listScratchTransparentIdx.data(), batchStart, entryIndex, RHIBlendMode::Transparent, pBatchHead->_material.get() );
                     batchStart = entryIndex;
                     if ( bEnd == false )
                         pBatchHead = &_listScratchCandidate[_listScratchTransparentIdx[batchStart]];
@@ -1640,8 +1583,7 @@ namespace sw
         _listBuiltTransparentIdx = _listScratchTransparentIdx;
     }
 
-    void GPUSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
-                                     const shared_ptr<MaterialInstance>& instance )
+    void GPUSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const Material* pGroupMaterial )
     {
         const DrawCandidate& headCandidate = _listScratchCandidate[pSrcIdx[begin]];
 
@@ -1654,19 +1596,12 @@ namespace sw
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
         // LOD 그룹이 없는 배치의 가시 구간은 인스턴스 구간과 같은 길이다(구간 시작만 앞 배치들의 가시 구간 끝에서 이어진다).
-        batch._visibleBase      = _snapshot.getNextVisibleBase();
-        batch._visibleCapacity  = batch._instanceCount;
-        batch._blendMode        = blendMode;
-        batch._bReverseCulling  = headCandidate._bReverseCulling;
-        batch._material         = material;
-        batch._materialInstance = instance;
-        if ( instance != nullptr )
-            batch._materialCb = instance->getDescriptorIndex();
-        else
-            batch._materialCb = ( material != nullptr ) ? material->getDescriptorIndex() : kInvalidDescriptorIndex;
-        // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
-        GPUSceneBuilderInternal::fillMaterialTextureSRVs( batch, material.get() );
-        batch._materialGroup = _materialRegistry.materialGroupFor( material.get(), _snapshot );
+        batch._visibleBase     = _snapshot.getNextVisibleBase();
+        batch._visibleCapacity = batch._instanceCount;
+        batch._blendMode       = blendMode;
+        batch._bReverseCulling = headCandidate._bReverseCulling;
+        // 상수 버퍼(`_materialCb`)와 텍스처 슬롯은 렌더 스레드가 머리 원소(`_materialIndex`)의 프록시 · 사본으로 채운다(`GPUScene::upload`).
+        batch._materialGroup = _materialRegistry.materialGroupFor( pGroupMaterial, _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
         // 잘못된 셰이더로 그려진다. 한 배치의 구성원은 모두 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.

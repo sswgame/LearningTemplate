@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -19,11 +20,26 @@ namespace sw
             return 0;
         // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모의 것을 이미 포함한다.
         const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
-        uint64       hash       = pMaterial->getShaderPathHash();
-        hash                    = HashUtil::combine( hash, defineHash );
+        return combinePermutationHash( pMaterial->getShaderPathHash(), defineHash, bAppearanceDither );
+    }
+
+    uint64 GPUMaterialRegistry::combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither )
+    {
+        uint64 hash = HashUtil::combine( shaderPathHash, defineHash );
         if ( bAppearanceDither )
             hash = HashUtil::combine( hash, hashed_string( kAppearanceDitherDefine ).getHash() );
         return hash;
+    }
+
+    GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const MaterialPSOWarmEntry& entry, bool bAppearanceDither )
+    {
+        GPUShaderPermutation permutation{};
+        permutation._shaderPath = entry._shaderPath;
+        permutation._listDefine = entry._listDefine;
+        if ( bAppearanceDither )
+            permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 머티리얼에서 만드는 길(아래)과 같은 자리에 붙인다
+        permutation._hash = combinePermutationHash( entry._shaderPathHash, entry._permutationHash, bAppearanceDither );
+        return permutation;
     }
 
     GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const Material& material, const MaterialInstance* pInstance, bool bAppearanceDither )
@@ -118,10 +134,13 @@ namespace sw
         }
         else
         {
-            // 회수된 슬롯을 먼저 재사용한다. 새 슬롯만 늘리면 버퍼가 단조 증가한다.
-            elementIndex = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ material, instance } );
+            // 회수된 슬롯을 먼저 재사용한다. 새 슬롯만 늘리면 버퍼가 단조 증가한다. 사본은 이번 빌드의 `refreshMaterialBindings` 가 채운다.
+            elementIndex = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ key, MaterialRenderBinding{} } );
             if ( elementIndex >= state._listEntryLastUsedBuild.size() )
                 state._listEntryLastUsedBuild.resize( elementIndex + 1 );
+            if ( elementIndex >= state._listEntryOwner.size() )
+                state._listEntryOwner.resize( elementIndex + 1 );
+            state._listEntryOwner[elementIndex] = MaterialElementOwner{ material, instance }; // 소유가 키(생포인터)를 살려 둔다 — 회수 전에는 키가 가리키는 것이 사라지지 않는다
             state._mapEntryToIndex.emplace( key, elementIndex );
         }
         state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
@@ -167,18 +186,37 @@ namespace sw
             MaterialGroupState& state = _listMaterialGroupState[groupIndex];
             for ( uint32 index = 0; index < group._listEntry.size(); ++index )
             {
-                if ( group._listEntry[index]._material == nullptr )
+                if ( group._listEntry[index]._key._pMaterial == nullptr )
                     continue;
                 if ( index < state._listEntryLastUsedBuild.size() && state._listEntryLastUsedBuild[index] >= staleBefore )
                     continue;
 
-                const GPUMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
-                state._mapEntryToIndex.erase( key );
+                state._mapEntryToIndex.erase( group._listEntry[index]._key );
                 // 슬롯은 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 기록된 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
                 group._listEntry[index] = GPUMaterialElement{};
+                if ( index < state._listEntryOwner.size() )
+                    state._listEntryOwner[index] = MaterialElementOwner{};
                 state._listFreeEntry.push_back( index );
                 state._bHasLast = SW_FALSE;
+            }
+        }
+    }
+
+    void GPUMaterialRegistry::refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot )
+    {
+        const size_t groupCount = MathUtil::min( inoutSnapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
+        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
+        {
+            GPUMaterialGroup&         group      = inoutSnapshot._listMaterialGroup[groupIndex];
+            const MaterialGroupState& state      = _listMaterialGroupState[groupIndex];
+            const size_t              entryCount = MathUtil::min( group._listEntry.size(), state._listEntryOwner.size() );
+            for ( size_t index = 0; index < entryCount; ++index )
+            {
+                const MaterialElementOwner& owner = state._listEntryOwner[index];
+                if ( owner._material == nullptr )
+                    continue;
+                group._listEntry[index]._binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
             }
         }
     }

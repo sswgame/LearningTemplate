@@ -15,6 +15,7 @@
 
 #include "Engine/FileSystem/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -30,11 +31,11 @@ namespace sw
     struct ShaderReflectionData;
 
     /**
-     * @brief 머티리얼 GPU 자원의 준비 상태입니다. 반쯤 초기화된 상태를 구분 못 하는 `isRHIValid` 대신, 그릴 수 있는지는 이것으로 판단합니다.
-     * @details `NotRequested` → (`requestInitialize`) `Pending` → (렌더 스레드를 비운 게임 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
-     *          패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않습니다.
+     * @brief 머티리얼 초기화(파일 읽기, 텍스처 요청, 셰이더 레이아웃 맞추기)의 상태입니다. 그릴 수 있는지는 이것으로 판단합니다.
+     * @details `NotRequested` → (`requestInitialize`) `Pending` → (게임 스레드의 `initializePending`) `Ready` | `Failed`. 디바이스가 사라지면 `NotRequested` 로 돌아갑니다.
+     *          패킷 빌더는 `Ready` 가 아닌 머티리얼의 배치를 만들지 않습니다. 상수 버퍼는 여기에 없다 — 렌더 스레드의 `MaterialRenderProxy` 가 첫 프레임에 만든다.
      */
-    enum class MaterialGPUState : uint8
+    enum class MaterialInitState : uint8
     {
         NotRequested,
         Pending,
@@ -44,8 +45,12 @@ namespace sw
 
     class IRHIDevice;
 
-    /// @brief 셰이더 퍼뮤테이션과 패킹 CB 를 가진 머티리얼 에셋입니다.
+    /// @brief 셰이더 퍼뮤테이션과 패킹한 머티리얼 바이트를 가진 머티리얼 에셋입니다. 게임 스레드 객체입니다.
     /*
+     * 스레드 규칙(언리얼 `UMaterial` / `FMaterialRenderProxy` 분리): 이 객체는 게임 스레드만 고치고 읽는다. 렌더 스레드는 이 객체를 보지 않고,
+     * 값이 바뀔 때마다 만드는 불변 사본(`MaterialRenderData`)과 렌더 쪽 객체(`MaterialRenderProxy`)만 스냅샷으로 받는다(`getRenderBinding`).
+     * 예전에는 한 객체가 속성 목록과 상수 버퍼를 함께 가져, 렌더 스레드의 초기화가 게임 스레드가 읽는 속성 목록을 고쳤다(데이터 경합).
+     *
      * enable_shared_from_this 인 이유는 렌더 패킷(GPUScene 스냅샷)이 이 객체의 **소유권을 함께 싣기** 위해서다.
      * 렌더 스레드는 씬을 못 보고 패킷만 받는데, 게임 스레드가 오브젝트를 지우거나 인스턴스를 바꾼 뒤에도
      * 큐에 남은 패킷(링 깊이만큼)이 이 머티리얼을 역참조한다. 소유권이 패킷을 따라가면 그 구간이 사라진다.
@@ -94,20 +99,25 @@ namespace sw
         /** @brief 이동 대입을 금지합니다. */
         Material& operator=( Material&& ) = delete;
 
-        /** @brief 머티리얼 에셋을 로드하고 GPU 자원(상수 버퍼, 텍스처)을 올립니다. */
+        /** @brief 머티리얼 에셋을 로드하고 텍스처를 요청하고 셰이더 레이아웃을 맞춥니다(게임 스레드). 상수 버퍼는 렌더 스레드의 프록시가 만든다. */
         [[nodiscard]] bool initialize( IRHIDevice* pRHI, const AssetID& assetID );
-        /** @brief (RHIRenderResource) 살아 있는 디바이스에 GPU 자원을 반환합니다. */
+        /** @brief (RHIRenderResource) 빌린 텍스처를 살아 있는 디바이스의 캐시에 돌려줍니다. */
         void releaseRHI( IRHIDevice* pRHI ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 텍스처 참조만 놓습니다. */
         void forgetRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 새 디바이스에 상수 버퍼와 텍스처를 다시 올립니다. */
+        /** @brief (RHIRenderResource) 새 디바이스로 다시 초기화합니다(텍스처를 새로 빌린다). */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
-        /** @brief GPU 자원이 올라가 있으면 true 입니다. 캐시가 따로 세지 않고 이 값을 봅니다. */
-        bool isRHIValid() const { return _constantBuffer != 0; }
-        /** @brief GPU 준비 상태입니다(어느 스레드에서나 읽습니다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
-        MaterialGPUState getGPUState() const { return static_cast<MaterialGPUState>( _gpuState.load( std::memory_order_acquire ) ); }
-        /** @brief 준비 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
-        void setGPUState( MaterialGPUState state ) { _gpuState.store( static_cast<uint8>( state ), std::memory_order_release ); }
+        /** @brief 초기화 상태입니다(캐시의 줄이 잠금 아래에서 읽으므로 원자다). 그릴 수 있는 것은 `Ready` 뿐입니다. */
+        MaterialInitState getInitState() const { return static_cast<MaterialInitState>( _initState.load( std::memory_order_acquire ) ); }
+        /** @brief 초기화 상태를 정합니다. 초기화 결과는 `initialize` 가, 요청은 `MaterialCache::requestInitialize` 가 씁니다. */
+        void setInitState( MaterialInitState state ) { _initState.store( static_cast<uint8>( state ), std::memory_order_release ); }
+        /**
+         * @brief 렌더 스레드에 건널 (프록시, 지금 값의 불변 사본)입니다(게임 스레드). 값(바이트, stride, 텍스처 슬롯)이 바뀐 뒤 처음 부를 때만 사본을 새로 만든다.
+         * @details 장면 빌더가 프레임마다 배치 · 원소에 싣는다(`GPUMaterialRegistry::refreshMaterialBindings`). 사본은 불변이라 렌더 스레드가 잠금 없이 읽는다.
+         */
+        MaterialRenderBinding getRenderBinding();
+        /** @brief 텍스처를 빌린 디바이스입니다(초기화 전이면 nullptr). 인스턴스가 덮어쓴 텍스처를 같은 디바이스로 요청한다. */
+        IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
@@ -136,8 +146,8 @@ namespace sw
         [[nodiscard]] static bool reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection );
         /**
          * @brief @p backend 의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
-         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. 맞추는 일(속성 목록을 고친다)은 게임 스레드가 한다 — 초기화(`initialize`)와
-         *          셰이더 리플렉션이 바뀐 뒤의 스냅샷 빌드(`GPUSceneBuilder`). 렌더 스레드의 GPUScene · 인스턴스(`MaterialInstance::updateRHI`)는 이미 맞춰진 것을 확인만 한다.
+         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. 게임 스레드만 부른다 — 초기화(`initialize`)와 렌더 사본을 만들기 직전
+         *          (`getRenderBinding`, 다시 로드 · 셰이더 핫 리로드 뒤). 렌더 스레드는 맞춘 결과를 사본(`MaterialRenderData`)으로만 받는다.
          * @return 원소 stride 를 얻었고 동기화가 성공했으면(`syncPropertiesFromReflection`) true 입니다.
          */
         [[nodiscard]] bool ensureShaderLayout( RHIBackend backend );
@@ -155,8 +165,8 @@ namespace sw
          * @param minimumByteSize 셰이더가 선언한 크기입니다. 프로퍼티가 그 밖으로 나가면 그만큼 늘리고, 끝은 256 으로 정렬합니다.
          */
         void packPropertiesIntoBytes( uint32 minimumByteSize );
-        /** @brief 한 프로퍼티를 `_defaultValue` 로 되돌리고 CB 를 다시 올립니다. */
-        bool resetParameterToDefault( IRHIDevice* pRHI, hashed_string name );
+        /** @brief 한 프로퍼티를 `_defaultValue` 로 되돌립니다. */
+        bool resetParameterToDefault( hashed_string name );
         /**
          * @brief 이 머티리얼 레이아웃으로 외부 버퍼에 값을 패킹합니다.
          * @details MaterialInstance 가 마스터를 건드리지 않고 오버라이드 CB 를 만들 때 쓴다.
@@ -173,10 +183,10 @@ namespace sw
          */
         bool packRawDataIntoBuffer( hashed_string name, const void* pData, uint32 byteSize, vector<uint8>& inoutBuffer ) const;
 
-        /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. */
-        bool setParameter( IRHIDevice* pRHI, hashed_string name, string_view value );
+        /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. 렌더 스레드는 다음 스냅샷의 사본으로 받는다. */
+        bool setParameter( hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 설정합니다. */
-        bool setTextureParameter( IRHIDevice* pRHI, hashed_string name, RHIDescriptorIndex descIdx );
+        bool setTextureParameter( hashed_string name, RHIDescriptorIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
          * @details initialize 끝에서 부른다(CB 가 있어야 인덱스가 GPU 에 올라간다). releaseRHI 와 forgetRHI 가 releaseTextureAssets 로 되돌린다.
@@ -192,7 +202,7 @@ namespace sw
          * @details 로드 중인 텍스처 자리는 로드 중 텍스처(`EngineDefaultAssets::_loadingTexture`)를 샘플하다가, 준비되면 진짜로, 실패하면 누락 텍스처(마젠타)로 바꾼다.
          * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처와 새 SRV 인덱스를 올리고 옛 인덱스는 반환한다. resolve 때 받은
          *          인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11, GL)에 그대로 가지고 있으면 **반환한 슬롯**을 읽는다. 캐시의 reload
-         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 싸다(`GPUSceneBuilder` 는 세대가 바뀐 빌드에서만 부른다).
+         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 싸다(`getRenderBinding` 이 사본을 만들기 전에 부른다).
          * @return 인덱스가 하나라도 바뀌었으면 true 입니다.
          */
         bool refreshTextureBindings();
@@ -223,7 +233,7 @@ namespace sw
         /** @brief 블렌드 모드를 설정합니다. */
         void setBlendMode( RHIBlendMode mode );
         /** @brief float32 파라미터를 설정합니다. */
-        bool setScalarParameter( IRHIDevice* pRHI, hashed_string name, float32 value );
+        bool setScalarParameter( hashed_string name, float32 value );
 
         /** @brief 디스크립터를 반환합니다. */
         const MaterialDesc& getDesc() const { return _desc; }
@@ -238,8 +248,8 @@ namespace sw
         /** @brief 패킹된 상수 버퍼를 반환합니다. */
         const vector<uint8>& getBuffer() const { return _data._bytes; }
         /**
-         * @brief `getBuffer()` 의 바이트가 바뀔 때마다 오르는 세대입니다(값, 레이아웃, 크기).
-         * @details 인스턴스는 부모 바이트의 복사본을 가지고 있어, 이 값이 바뀌면 다시 복사한다(`MaterialInstance::updateRHI`).
+         * @brief 렌더 값이 바뀔 때마다 오르는 세대입니다(바이트의 값 · 레이아웃 · 크기, 텍스처 슬롯).
+         * @details 인스턴스는 부모 바이트의 복사본을 가지고 있어, 이 값이 바뀌면 다시 복사한다(`MaterialInstance::getRenderBinding`). 렌더 사본도 이 값으로 낡았는지 본다.
          */
         uint32 getBufferGeneration() const { return _bufferGeneration; }
         /** @brief 이름으로 프로퍼티를 찾습니다. */
@@ -270,10 +280,6 @@ namespace sw
         uint64 getShaderPathHash() const;
         /** @brief 머티리얼 이름을 반환합니다. */
         const string& getName() const { return _desc._name; }
-        /** @brief bindless 디스크립터 인덱스를 반환합니다. */
-        RHIDescriptorIndex getDescriptorIndex() const { return _descriptorIndex; }
-        /** @brief 상수 버퍼 핸들을 반환합니다. */
-        RHIBufferHandle getConstantBuffer() const { return _constantBuffer; }
         /**
          * @brief GPUScene 머티리얼 데이터 버퍼(g_SwMaterials)의 원소 stride 입니다. 셰이더 리플렉션의 구조 버퍼 원소 크기입니다.
          * @details 0 이면 셰이더가 SW_MATERIAL_BEGIN/END 를 쓰지 않는다(레거시 MaterialCB). 백엔드마다 다를 수 있다.
@@ -291,12 +297,6 @@ namespace sw
         [[nodiscard]] bool matchPropertiesToSchema( const ShaderBufferInfo& schema );
         /** @brief 레이아웃 오류 뒤 바이트와 stride 를 비운다 — 틀린 바이트(적지 않은 칸의 0)가 GPU 에 올라가지 않게 한다. */
         void discardBytesAfterLayoutError();
-        /**
-         * @brief `_data._bytes` 를 상수 버퍼에 올립니다. 바이트가 버퍼보다 커졌으면(레이아웃 맞추기가 셰이더 스키마 크기로 늘렸다) 버퍼와 bindless 뷰를 다시 만든다.
-         * @details 버퍼는 처음에 .material 순서로 쌓은 크기로 만들고, 셰이더 레이아웃을 맞추면 스키마 크기로 커질 수 있다 — 올리는 곳마다 바이트 크기를 그대로
-         *          넘겼더니 작은 버퍼 뒤를 썼다(GL 은 GL_INVALID_VALUE 로 알렸다). 올리기는 이 함수 하나로만 한다.
-         */
-        void uploadConstantBytes( IRHIDevice* pRHI );
 
         /// @brief 비동기 파일 로드가 머티리얼이 아직 살아 있는지 확인하는 상태입니다. 소멸자가 포인터를 끊습니다.
         struct AsyncLoadState
@@ -315,26 +315,26 @@ namespace sw
         static void loadFromFileAsyncJob( const TaskArgs& args );
 
         /** @brief initialize 가 받은 에셋 경로입니다. 디바이스가 바뀌면 이 경로만으로 스스로 복원합니다. */
-        string                     _assetPath;
-        MaterialDesc               _desc;
-        MaterialData               _data;
-        atomic<uint8>              _gpuState{ static_cast<uint8>( MaterialGPUState::NotRequested ) }; /**< `MaterialGPUState`. 게임 스레드가 읽고 렌더 스레드가 쓴다. */
-        RHIBufferHandle            _constantBuffer;
-        uint32                     _constantBufferBytes; /**< `_constantBuffer` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(`uploadConstantBytes`). */
-        RHIDescriptorIndex         _descriptorIndex;
-        uint32                     _elementStride;               /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
-        uint32                     _bufferGeneration;            /**< `_data._bytes` 가 바뀔 때마다 오른다. 인스턴스가 복사본이 낡았는지 확인한다. */
-        uint32                     _shaderLayoutCacheGeneration; /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
-        RHIBackend                 _shaderLayoutBackend;         /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
-        IRHIDevice*                _pRHIDevice;
-        uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
-        vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
-        vector<TextureHandle>      _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
-        vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
-        vector<RHIDescriptorIndex> _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
-        vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
-        RHIBlendMode               _blendMode;
-        shared_ptr<AsyncLoadState> _asyncLoadState;
+        string                               _assetPath;
+        MaterialDesc                         _desc;
+        MaterialData                         _data;
+        atomic<uint8>                        _initState{ static_cast<uint8>( MaterialInitState::NotRequested ) }; /**< `MaterialInitState`. 캐시의 줄이 잠금 아래에서 읽는다. */
+        shared_ptr<MaterialRenderProxy>      _renderProxy;                                                        /**< 렌더 스레드 쪽 객체(상수 버퍼). 렌더 스레드만 고친다. */
+        shared_ptr<const MaterialRenderData> _renderData;                                                         /**< 마지막으로 만든 불변 사본(`getRenderBinding`). */
+        uint32                               _renderDataGeneration;                                               /**< `_renderData` 를 만들 때의 `_bufferGeneration`. */
+        uint32                               _elementStride;                                                      /**< g_SwMaterials 원소 stride(리플렉션). 0이면 구조 버퍼 머티리얼이 아니다. */
+        uint32                               _bufferGeneration;                                                   /**< 렌더 값(바이트, stride, 텍스처 슬롯)이 바뀔 때마다 오른다. 인스턴스 복사본과 렌더 사본이 낡았는지 확인한다. */
+        uint32                               _shaderLayoutCacheGeneration;                                        /**< 레이아웃을 맞출 때의 ShaderReflectionLibrary 캐시 세대 */
+        RHIBackend                           _shaderLayoutBackend;                                                /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 의미가 있다. */
+        IRHIDevice*                          _pRHIDevice;
+        uint32                               _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
+        vector<string>                       _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다.
+        vector<TextureHandle>                _listTextureLoad;         ///< 위와 같은 순서의 텍스처 로드(`TextureCache::request`). 준비되면 참조를 쥐고, 실패하면 놓는다
+        vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
+        vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
+        vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
+        RHIBlendMode                         _blendMode;
+        shared_ptr<AsyncLoadState>           _asyncLoadState;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

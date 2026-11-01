@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -120,7 +121,8 @@ namespace sw
         uint32 _lodLevelCount{ 0 };
         /// @brief 그룹의 낮은 단계(1 이상) 배치에만 있는 값으로, 이 단계로 넘어가는 화면 크기 임계값입니다(`MeshLOD::_screenSize`).
         float32 _lodScreenSize{ 0.0f };
-        uint32  _materialIndex{ 0 };
+        /** @brief 배치 머리 인스턴스의 머티리얼 원소(`_materialGroup` 그룹의 `_listEntry` 인덱스)입니다. RT 가 이 원소의 (프록시, 사본)으로 `_materialCb` 와 텍스처 슬롯을 채운다. */
+        uint32 _materialIndex{ 0 };
         /**
          * @brief 모프 풀에서 이 배치 메시의 시작 오프셋(정점 단위)입니다. 0xFFFFFFFF 이면 모프를 하지 않습니다.
          * @details RT 가 `GPUScene::assignMorphBases` 로 채운다. GT 는 GPU 풀을 모른다(스냅샷 소유 규칙). upload 가 이 값을
@@ -144,14 +146,12 @@ namespace sw
          * @details 거울 변환은 삼각형 감김 방향을 뒤집는다. 컬 모드를 그대로 두면 카메라 쪽 면이 잘리고 안쪽 면이 보인다. 컬 모드는 PSO 의 상태라
          *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
          */
-        uint8              _bReverseCulling{ SW_FALSE };
-        RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
+        uint8 _bReverseCulling{ SW_FALSE };
         /**
-         * @brief 배치가 쓰는 부모 머티리얼입니다. 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자입니다.
-         * @details **소유권을 함께 싣는다.** 렌더 스레드는 이 배치가 든 패킷을 다 쓸 때까지 이 머티리얼을 역참조하므로,
-         *          게임 스레드가 먼저 놓아도 살아 있어야 한다. 소유권이 패킷을 따라가므로 수명을 따로 지키는 큐가 필요 없다.
+         * @brief 배치 머리 원소(`_materialIndex`)의 머티리얼 상수 버퍼 bindless 인덱스입니다. RT 가 받은 사본에 덧쓴다(`GPUScene::upload`).
+         * @details 게임 스레드는 상수 버퍼를 모른다 — 버퍼는 렌더 스레드의 `MaterialRenderProxy` 가 만든다(언리얼 `FMaterialRenderProxy`).
          */
-        shared_ptr<Material> _material;
+        RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`_listMaterialGroup`). 없으면 kInvalidMaterialGroup 입니다. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
@@ -172,7 +172,7 @@ namespace sw
         /**
          * @brief 머티리얼 텍스처의 백엔드 SRV 인덱스(서수 순서)입니다. 네이티브 bindless 가 아닌 백엔드에서만 씁니다.
          * @details DX11 과 GL 은 셰이더가 전역 인덱스를 해석하지 못해서 엔진이 t16..t31 에 직접 바인딩해야 한다.
-         *          렌더 스레드는 씬을 볼 수 없으므로(Material* 를 따라갈 수 없다) 값으로 실어 보낸다.
+         *          RT 가 머리 원소의 사본(`MaterialRenderData::_arrTextureSRV`)에서 받은 사본에 덧쓴다.
          * @note 초기값은 칸마다 적는다 — 빠진 칸은 0(유효한 SRV 번호)이 되어 다른 텍스처를 건다. 칸 수가 바뀌면 아래 static_assert 가 먼저 멈춘다.
          */
         RHIDescriptorIndex _arrMaterialTexSRV[shaderslot::kMaterialTextureCount] = {
@@ -181,8 +181,6 @@ namespace sw
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex,
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
         static_assert( shaderslot::kMaterialTextureCount == 16, "_arrMaterialTexSRV 의 초기값을 칸 수만큼 적는다" );
-        /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRHI 합니다. 이 shared_ptr 이 수명을 잡고 있어 패킷이 살아 있는 동안 유지됩니다. */
-        shared_ptr<MaterialInstance> _materialInstance;
 
         /**
          * @brief 이 배치가 그릴 인스턴스 칸을 가질 수 있으면 true 입니다(가시 구간이 비지 않았다).
@@ -239,14 +237,15 @@ namespace sw
 {
     /**
      * @struct GPUMaterialElement
-     * @brief 머티리얼 데이터 원소 하나입니다. (머티리얼, 인스턴스) 쌍의 **소유권**을 가집니다.
-     * @details 키(`GPUMaterialElementKey`)는 정체성이라 생포인터이고, 원소는 렌더 스레드가 `getBuffer()` 로 읽으므로
-     *          소유권을 가진다. 인스턴스가 없으면 머티리얼 자신이 원소다.
+     * @brief 머티리얼 데이터 원소 하나입니다. (머티리얼, 인스턴스) 쌍의 정체성과 렌더 쪽 (프록시, 사본)입니다.
+     * @details 키는 정체성이라 생포인터이고 역참조하지 않는다. 렌더 스레드가 읽는 것은 `_binding` 뿐이다 — Material 객체는 패킷에 실리지 않는다.
+     *          게임 쪽 소유(사본을 새로 만들 대상)는 레지스트리가 가진다(`GPUMaterialRegistry::refreshMaterialBindings`). 인스턴스가 없으면 머티리얼 자신이 원소다.
+     *          `_key._pMaterial` 이 nullptr 이면 회수된 빈 슬롯이다.
      */
     struct GPUMaterialElement
     {
-        shared_ptr<Material>         _material;
-        shared_ptr<MaterialInstance> _instance;
+        GPUMaterialElementKey _key;
+        MaterialRenderBinding _binding;
     };
 } // namespace sw
 
@@ -425,7 +424,8 @@ namespace sw
      * @brief 게임 스레드가 만들어 렌더 패킷에 실어 렌더 스레드로 **옮기는 모든 데이터**입니다.
      *
      * @details 소유 규칙이 이 타입에 적혀 있다.
-     *          - 렌더 스레드가 역참조하는 CPU 객체(메시, 머티리얼, 인스턴스)는 **shared_ptr 로 소유권을 함께 싣는다.**
+     *          - 머티리얼 · 인스턴스는 싣지 않는다. 렌더 쪽 객체와 불변 사본(`MaterialRenderBinding`)만 싣는다(게임 스레드 객체를 렌더 스레드가 읽지 않는다).
+     *          - 렌더 스레드가 역참조하는 CPU 객체(메시, 머티리얼 프록시 · 사본)는 **shared_ptr 로 소유권을 함께 싣는다.**
      *            패킷이 살아 있는 동안(렌더 큐 깊이만큼) 게임 스레드가 놓아도 살아 있다. 생포인터는 정렬 키 같은
      *            **정체성**에만 쓰고 스레드를 넘어 역참조하지 않는다.
      *          - RT 가 upload() 에서 만드는 `GPUScene` 의 값(인스턴스와 간접 인자 버퍼, 간접 개수, 컬 뷰)은 여기 없다.

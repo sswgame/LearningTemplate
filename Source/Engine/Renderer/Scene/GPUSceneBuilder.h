@@ -114,8 +114,6 @@ namespace sw
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
-        /** @brief 머티리얼 레이아웃을 맞출 셰이더 백엔드입니다(`resyncShaderLayouts`). 디바이스를 단 쪽(`RenderPacketSceneCollector::initialize`)이 정한다. */
-        void setShaderLayoutBackend( RHIBackend backend ) { _shaderLayoutBackend = backend; }
         /**
          * @brief GPU 인스턴스 LOD(컬링 컴퓨트가 인스턴스마다 LOD 단계를 고른다)를 쓸 수 있는지 정합니다. 렌더가 디바이스 능력(`RHICapabilities::_bGPUCulling`)으로 정한다.
          * @details 능력이 없는 백엔드(DX11)는 꺼 두고 CPU 단계 선택(`MeshLODSystem`)이 그대로 맡는다 — 선언된 능력 분기이지 폴백이 아니다(배치 구성이 달라진다).
@@ -278,17 +276,6 @@ namespace sw
         [[nodiscard]] bool swapSingleInstanceBatchMeshes();
         /** @brief 재구축 판단 캐시를 무효로 만듭니다. */
         void invalidateBuildCache();
-        /**
-         * @brief 텍스처가 다시 업로드되었으면(`TextureCache::getReloadGeneration`) 지난 빌드의 머티리얼이 새 SRV 인덱스를 받게 합니다.
-         * @details 슬롯 바인딩 백엔드(DX11, GL)의 배치는 SRV 를 값으로 가지고 있으므로(`GPUMeshBatch::_arrMaterialTexSRV`) 바뀐 머티리얼이 있으면
-         *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 한다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 처리한다.
-         */
-        void refreshReloadedTextures();
-        /**
-         * @brief 셰이더 리플렉션이 바뀌었으면(셰이더 핫 리로드) 지난 빌드의 머티리얼 레이아웃을 게임 스레드에서 다시 맞춥니다.
-         * @details 렌더 스레드의 첫 사용이 맞추면 게임 스레드가 읽는 속성 목록을 렌더 스레드가 고친다. 새 머티리얼은 초기화(`Material::initialize`)가 맞췄다.
-         */
-        void resyncShaderLayouts();
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCPUSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 테이블과 머티리얼 그룹은 여기서 계속 자랍니다. */
         GPUSceneSnapshot _snapshot;
@@ -452,7 +439,7 @@ namespace sw
          *          그리는 어긋난 상태가 만들어진다. 블렌드 모드는 후보의 머티리얼에서 읽고, 머티리얼이 없으면 `fallbackBlendMode`
          *          (메시 쪽 값)를 쓴다. 머티리얼이 없는 디버그 메시와 픽스처 메시가 그 경우다.
          */
-        /** @return 후보의 머티리얼이 GPU 에 올라가지 않았으면(`MaterialGPUState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
+        /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
         [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
         /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 0). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
@@ -476,10 +463,9 @@ namespace sw
          * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(populateBatches 안에서 부릅니다).
          * @details 불투명과 투명이 **같은 함수**를 쓴다. 따로 두면 한쪽에 넣은 수정(역매핑, 회전 수, 머티리얼 원소)이
          *          다른 쪽에 반영되지 않는다. 다른 점은 인자로 받는다.
-         *          배치가 실을 머티리얼과 인스턴스(불투명은 합치기 대표, 투명은 머리 후보의 것)와 블렌드 모드가 그것이다.
+         *          머티리얼 그룹을 정할 머티리얼(불투명은 합치기 대표, 투명은 머리 후보의 것)과 블렌드 모드가 그것이다.
          */
-        void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
-                        const shared_ptr<MaterialInstance>& instance );
+        void emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const Material* pGroupMaterial );
         /**
          * @brief LOD 그룹의 낮은 단계 배치를 머리 배치(@p head) 바로 뒤에 붙입니다(`emitBatch` 가 머리를 붙인 직후에 부른다).
          * @details 단계 배치는 머리와 같은 머티리얼 · 메시이고 정점 구간만 단계의 것이다. 인스턴스 구간은 비고(`_instanceCount` 0, 시작은 지금의 인스턴스 끝) 가시 구간은
@@ -535,8 +521,8 @@ namespace sw
         /** @brief 마지막 수집이 만든 후보 수입니다. 부분 수집이 이 슬롯 수를 그대로 이어받습니다. */
         size_t _lastCandidateCount{ 0 };
         /**
-         * @brief 마지막 수집에서 GPU 준비가 안 된(`MaterialGPUState` 가 `Ready` 가 아닌) 머티리얼 때문에 후보에서 뺀 프리미티브 수입니다(워커가 더하므로 원자).
-         * @details 0 이 아니면 다음 프레임은 더티 신호가 없어도 전체 수집을 다시 합니다. 렌더 스레드가 머티리얼을 올리는 것은 씬에 아무 신호도 남기지 않기 때문입니다.
+         * @brief 마지막 수집에서 초기화가 안 된(`MaterialInitState` 가 `Ready` 가 아닌) 머티리얼 때문에 후보에서 뺀 프리미티브 수입니다(워커가 더하므로 원자).
+         * @details 0 이 아니면 다음 프레임은 더티 신호가 없어도 전체 수집을 다시 합니다. 머티리얼 초기화는 씬에 아무 신호도 남기지 않기 때문입니다.
          *          이동 가능하게 두려고 값을 감싼 형식입니다.
          */
         struct NotReadyCounter
@@ -666,11 +652,6 @@ namespace sw
         vector<uint32> _listBuiltTransparentIdx;
         // 투명 꼬리를 자르는 위치(불투명 인스턴스 수 · 원소 항목 수)는 따로 들지 않는다. 경계는 스냅샷의 불투명 배치 수 하나이고
         // 나머지는 그 배치에서 끌어낸다(`GPUSceneSnapshot::getOpaqueInstanceCount`, `BatchElementTable::truncateToBatches`).
-        /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 값이 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
-        uint32 _lastTextureReloadGeneration{ 0 };
-        /// @brief 마지막으로 본 `ShaderReflectionLibrary::getCacheGeneration()` 입니다. 값이 다르면 지난 빌드의 머티리얼 레이아웃을 이 스레드에서 다시 맞춘다.
-        uint32     _lastShaderReflectionGeneration{ 0 };
-        RHIBackend _shaderLayoutBackend{}; ///< `setShaderLayoutBackend` 가 정한다
 
         /**
          * @class BatchElementTable

@@ -14,6 +14,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
@@ -236,8 +237,8 @@ namespace sw
         /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다. 중복이 없고, 프레임마다 다시 채웁니다.
         vector<MaterialPSORequest> _listOpaquePSORequestScratch;
         vector<MaterialPSORequest> _listTransparentPSORequestScratch;
-        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 머티리얼입니다. 프레임마다 비운다(저장소만 재사용한다).
-        vector<shared_ptr<Material>> _listPSOWarmMaterialScratch;
+        /// @brief `warmPinnedMaterialPSOs` 가 줄에서 꺼낸 미리 만들기 값입니다(게임 스레드가 머티리얼에서 읽었다). 프레임마다 비운다(저장소만 재사용한다).
+        vector<MaterialPSOWarmEntry> _listPSOWarmEntryScratch;
         vector<MaterialFallback>     _listMaterialFallback;
         /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 저장소가 소유하며 PSO 마다 하나입니다.
         unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;

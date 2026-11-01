@@ -3,6 +3,7 @@
  * @brief 경로를 키로 Material 소유권을 관리합니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -16,6 +17,20 @@ namespace sw
 {
     class IRHIDevice;
     class Material;
+
+    /**
+     * @struct MaterialPSOWarmEntry
+     * @brief 고정한 머티리얼 하나의 PSO 를 미리 만들 값입니다(셰이더 경로 · define · 해시 · 투명 여부). 게임 스레드가 머티리얼에서 읽어 만든다.
+     * @details 렌더 스레드(`FramePSOManager::warmPinnedMaterialPSOs`)는 Material 을 보지 않는다 — 정의 캐시는 게임 스레드가 고치는 값이라 렌더 스레드가 읽으면 경합이다.
+     */
+    struct MaterialPSOWarmEntry
+    {
+        string         _shaderPath;
+        vector<string> _listDefine;
+        uint64         _shaderPathHash{ 0 };  ///< `Material::getShaderPathHash`
+        uint64         _permutationHash{ 0 }; ///< `Material::getPermutationHash`(define 해시)
+        bool           _bTransparent{ false };
+    };
 
     /**
      * @class MaterialCache
@@ -65,20 +80,15 @@ namespace sw
          */
         void requestInitialize( string_view relativePath );
         /**
-         * @brief 표시된 머티리얼 중 아직 GPU 에 없는 것을 @p pDevice 로 최대 @p maxCount 개 초기화합니다(파일을 읽고 버퍼를 만듭니다). 디바이스가 없으면 표시를 그대로 둡니다.
-         * @details 프레임 경로의 호출자는 렌더 스레드를 비운 게임 스레드(`Engine::submitRenderPacket`)이고 `kMaxInitsPerFrame` 로 상한을 둡니다(`GPUState` 가 `Ready` 가 된
-         *          머티리얼부터 패킷 빌더가 그립니다 — RHI 비동기 업로드 U10). 상한을 넘은 키는 줄에 남아 다음 프레임에 이어집니다. 다른 스레드가 초기화하는 중이면 그 프레임은 넘깁니다.
+         * @brief 표시된 머티리얼 중 아직 초기화하지 않은 것을 @p pDevice 로 최대 @p maxCount 개 초기화합니다(파일 읽기 · 텍스처 요청 · 레이아웃). 디바이스가 없으면 표시를 그대로 둡니다.
+         * @details 게임 스레드가 부른다(`Engine::submitRenderPacket` — 머티리얼은 게임 스레드 객체다). GPU 자원은 만들지 않으므로 렌더 스레드를 기다리지 않는다 — 상수 버퍼는
+         *          렌더 스레드의 프록시가 첫 프레임에 만든다(`MaterialRenderProxy`). `kMaxInitsPerFrame` 로 상한을 두고(`InitState` 가 `Ready` 가 된 머티리얼부터 패킷 빌더가
+         *          그립니다), 상한을 넘은 키는 줄에 남아 다음 프레임에 이어집니다. 초기화를 마친 고정 머티리얼은 PSO 미리 만들기 값(`MaterialPSOWarmEntry`)으로 옮긴다.
          *          스튜디오 · 베이커처럼 프레임 없이 한 번에 올리는 호출처는 기본값(전부)을 씁니다.
          */
         void initializePending( IRHIDevice* pDevice, uint32 maxCount = 0xFFFFFFFFu );
-        /** @brief 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 그동안 렌더 스레드가 쉬므로(파일 읽기 포함) 작게 둡니다. */
+        /** @brief 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 게임 스레드의 파일 읽기라 작게 둡니다. */
         static constexpr uint32 kMaxInitsPerFrame = 4;
-        /**
-         * @brief 다음 `initializePending` 이 초기화할 머티리얼이 있으면 true 입니다(잠그지 않습니다).
-         * @details 초기화는 bindless 테이블에 등록합니다. 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안에는 테이블을 바꿀 수 없으므로
-         *          (`IRHIDevice::setParallelRecording`), 부르는 쪽은 이것이 true 인 프레임에만 렌더 스레드를 기다립니다.
-         */
-        bool hasPendingInitialize() const;
         /** @brief 지금 보관 중인 항목 수입니다. */
         size_t getCachedCount() const override;
         /**
@@ -96,13 +106,16 @@ namespace sw
          */
         shared_ptr<const void> pinAsset( string_view relativePath ) override;
         /**
-         * @brief 고정한 머티리얼 가운데 GPU 초기화를 마친 것을 PSO 미리 만들기 줄에서 꺼냅니다(렌더 스레드, 기록 전 — `FramePSOManager::warmPinnedMaterialPSOs`).
-         * @details 고정(`pinAsset`)이 줄에 넣는다. 아직 초기화하지 않은 것(셰이더 경로 · define 을 모른다)은 줄에 남고, 놓여 캐시에서 빠진 것은 버린다.
+         * @brief 고정한 머티리얼 가운데 초기화를 마친 것의 PSO 미리 만들기 값을 꺼냅니다(렌더 스레드, 기록 전 — `FramePSOManager::warmPinnedMaterialPSOs`).
+         * @details 고정(`pinAsset`)이 줄에 넣고, 게임 스레드의 `initializePending` 이 초기화를 마친 것을 값으로 옮긴다(초기화 전이면 셰이더 경로 · define 을 모른다).
          *          씬에 이미 든 머티리얼은 렌더러가 배치마다 PSO 를 만들므로, 이 줄은 아직 씬에 없는(다음 레벨 · 컷에 나올) 머티리얼의 PSO 생성 히치를 미리 치른다.
          */
-        void takePSOWarmMaterials( vector<shared_ptr<Material>>& outListMaterial );
+        void takePSOWarmEntries( vector<MaterialPSOWarmEntry>& outListEntry );
 
     private:
+        /** @brief 초기화를 마친 고정 머티리얼의 PSO 미리 만들기 값을 만들어 렌더 스레드가 꺼낼 줄로 옮깁니다(게임 스레드, `initializePending`). */
+        void promoteReadyPSOWarmKeys();
+
         struct Impl;
         unique_ptr<Impl> _impl;
     };

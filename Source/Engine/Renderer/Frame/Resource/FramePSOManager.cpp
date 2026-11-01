@@ -882,20 +882,20 @@ namespace sw
         const bool bNoWarm = _pDevice == nullptr || engine::areEngineServicesBound() == false;
         if ( bNoWarm )
             return;
-        vector<shared_ptr<Material>>& listMaterial = _listPSOWarmMaterialScratch;
-        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().takePSOWarmMaterials( listMaterial );
-        if ( listMaterial.empty() )
+        vector<MaterialPSOWarmEntry>& listEntry = _listPSOWarmEntryScratch;
+        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().takePSOWarmEntries( listEntry );
+        if ( listEntry.empty() )
             return;
         SW_PROFILE_SCOPE( "RT.PSO.warmPinned" );
         // 씬 배치와 같은 키로 만든다(`GPUMaterialRegistry::makeShaderPermutation`) — 그 머티리얼이 씬에 들어오는 프레임에는 이미 캐시에 있다.
         // 비동기로 읽혀 나타나는 메시는 등장 디더 변형으로 먼저 그려지므로 그 변형도 만든다. 거울 배치(컬 반전)는 드물어 그 프레임에 만든다.
         bool bCreatedVariant{ false };
-        for ( const shared_ptr<Material>& pMaterial : listMaterial )
+        for ( const MaterialPSOWarmEntry& entry : listEntry )
         {
-            const bool bTransparentMaterial = pMaterial->getBlendMode() == RHIBlendMode::Transparent;
+            const bool bTransparentMaterial = entry._bTransparent;
             for ( const bool bAppearanceDither : { false, true } )
             {
-                const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( *pMaterial, nullptr, bAppearanceDither );
+                const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
                 for ( const auto& [passType, passPSO] : _pCache->getEnginePSOs() )
                 {
                     const bool bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
@@ -912,7 +912,7 @@ namespace sw
                 }
             }
         }
-        listMaterial.clear(); // 소유를 오래 쥐지 않는다 — 고정을 놓으면 머티리얼이 사라질 수 있어야 한다
+        listEntry.clear();
         if ( bCreatedVariant )
             ensureMaterialFallbackBuffers();
     }

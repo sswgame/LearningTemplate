@@ -37,10 +37,12 @@ namespace sw
         };
 
         unordered_map<string, Entry> _mapEntry;
-        vector<string>               _listPendingKey; ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
-        vector<string>               _listPSOWarmKey; ///< 고정(`pinAsset`)이 넣은, PSO 를 미리 만들 경로(`_mutex` 아래)
-        atomic<uint32>               _pendingCount;   ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
-        atomic<uint32>               _psoWarmCount;   ///< `_listPSOWarmKey` 의 크기. 0 이면 `takePSOWarmMaterials` 가 잠그지 않는다(매 프레임 불린다)
+        vector<string>               _listPendingKey;    ///< `requestInitialize` 가 등록한, GPU 자원을 초기화할 경로(`_mutex` 아래)
+        vector<string>               _listPSOWarmKey;    ///< 고정(`pinAsset`)이 넣은, 초기화를 기다리는 PSO 미리 만들기 경로(`_mutex` 아래)
+        vector<MaterialPSOWarmEntry> _listPSOWarmEntry;  ///< 초기화를 마쳐 렌더 스레드가 꺼내 갈 PSO 미리 만들기 값(`_mutex` 아래)
+        atomic<uint32>               _pendingCount;      ///< `_listPendingKey` 의 크기. 0 이면 `initializePending` 이 잠그지 않는다(매 프레임 불린다)
+        atomic<uint32>               _psoWarmCount;      ///< `_listPSOWarmKey` 의 크기. 0 이면 `initializePending` 이 줄을 보지 않는다
+        atomic<uint32>               _psoWarmEntryCount; ///< `_listPSOWarmEntry` 의 크기. 0 이면 `takePSOWarmEntries` 가 잠그지 않는다(매 프레임 불린다)
         shared_mutex                 _mutex;
         /// @brief 디바이스로 머티리얼을 초기화하는 구간(`DeviceInitScope`)을 지금 쥔 스레드입니다. 비어 있으면 아무도 안 쥐었습니다.
         atomic<std::thread::id> _initOwner;
@@ -50,8 +52,10 @@ namespace sw
             : _mapEntry{}
             , _listPendingKey{}
             , _listPSOWarmKey{}
+            , _listPSOWarmEntry{}
             , _pendingCount{ 0 }
             , _psoWarmCount{ 0 }
+            , _psoWarmEntryCount{ 0 }
             , _mutex{}
             , _initOwner{ std::thread::id{} }
             , _initDepth{ 0 }
@@ -60,7 +64,7 @@ namespace sw
 
         /**
          * @brief 디바이스로 머티리얼을 초기화하는 구간을 한 스레드가 쥐게 합니다. 다른 스레드가 쥐고 있으면 오류를 남기고 멈춥니다(모든 구성).
-         * @details 초기화는 `_mutex` 밖에서 한다(GL 은 렌더 스레드의 프레임 끝을 기다리는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
+         * @details 초기화는 `_mutex` 밖에서 한다(텍스처 요청이 GL 컨텍스트를 기다릴 수 있는데 렌더 스레드가 `_mutex` 를 잡는다). 그래서 같은 머티리얼을 두 스레드가
          *          동시에 초기화하는 것을 막던 것이 이 구간뿐이다. 호출처는 모두 게임 스레드(`Scene::initialize` · 엔진 프레임의 `initializePending` · 에디터 `reload`)이고
          *          비용은 원자 비교 한 번이라 Release 에서도 확인한다. 같은 스레드의 중첩은 허용한다.
          */
@@ -152,12 +156,12 @@ namespace sw
         }
         ++entry._refCount;
 
-        // GPU 자원이 초기화됐는지는 머티리얼에게 묻는다. 캐시가 따로 기록하면 디바이스가 죽었을 때 그 기록이 틀려진다.
-        if ( pDevice == nullptr || entry._material->isRHIValid() )
+        // 초기화됐는지는 머티리얼에게 묻는다. 캐시가 따로 기록하면 디바이스가 죽었을 때 그 기록이 틀려진다.
+        if ( pDevice == nullptr || entry._material->getInitState() == MaterialInitState::Ready )
             return entry._material.get();
 
-        // 초기화(파일 읽기 · 버퍼 생성 · 등록)는 잠금 밖에서 한다. GL 은 이 일이 렌더 스레드의 프레임 끝까지 기다리는데, 렌더 스레드는 프레임 안에서
-        // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다(`initializePending` 과 같다).
+        // 초기화(파일 읽기 · 텍스처 요청)는 잠금 밖에서 한다. 텍스처 요청이 GL 컨텍스트를 기다릴 수 있는데, 렌더 스레드는 프레임 안에서
+        // `takePSOWarmEntries` 로 이 잠금을 잡는다. 소유를 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다(`initializePending` 과 같다).
         // 같은 머티리얼을 두 스레드가 동시에 초기화하는 것은 `DeviceInitScope` 가 오류로 멈춘다.
         const shared_ptr<Material> material = entry._material;
         lock.unlock();
@@ -225,9 +229,9 @@ namespace sw
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
         const auto               it = _impl->_mapEntry.find( key );
         // 이미 올라갔거나(`Ready`) 올리려다 실패했거나(`Failed`, 핫 리로드만 다시 시도한다) 줄에 든(`Pending`) 것은 다시 넣지 않는다.
-        if ( it == _impl->_mapEntry.end() || it->second._material->getGPUState() != MaterialGPUState::NotRequested )
+        if ( it == _impl->_mapEntry.end() || it->second._material->getInitState() != MaterialInitState::NotRequested )
             return;
-        it->second._material->setGPUState( MaterialGPUState::Pending );
+        it->second._material->setInitState( MaterialInitState::Pending );
         _impl->_listPendingKey.push_back( key );
         _impl->_pendingCount.store( static_cast<uint32>( _impl->_listPendingKey.size() ), std::memory_order_release );
     }
@@ -235,8 +239,10 @@ namespace sw
     void MaterialCache::initializePending( IRHIDevice* pDevice, uint32 maxCount )
     {
         SW_MEMORY_SCOPE( Material );
-        const bool bNoPendingMaterials = pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0;
-        if ( bNoPendingMaterials )
+        if ( pDevice == nullptr || _impl == nullptr )
+            return;
+        promoteReadyPSOWarmKeys(); // 지난 프레임까지 초기화를 마친 고정 머티리얼(`acquire` 가 바로 초기화한 것 포함)
+        if ( _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
             return;
 
         // 호출처는 모두 게임 스레드다(엔진 프레임 · 초상 스튜디오 · 프로브 베이커) — 다른 스레드가 쥐었으면 구간이 오류로 멈춘다.
@@ -250,7 +256,7 @@ namespace sw
         }
 
         // 초기화하는 동안(파일 읽기와 버퍼 생성)에는 잠그지 않는다. 소유권을 하나 빌려 그 사이 참조가 0 이 되어도 머티리얼이 살아 있게 한다.
-        // 프레임당 상한을 넘는 키는 줄 앞에 되돌려 다음 프레임이 이어 한다(렌더 스레드가 한 프레임에 파일을 여럿 읽지 않게 한다).
+        // 프레임당 상한을 넘는 키는 줄 앞에 되돌려 다음 프레임이 이어 한다(게임 스레드가 한 프레임에 파일을 여럿 읽지 않게 한다).
         size_t processed = 0;
         for ( ; processed < listKey.size() && processed < maxCount; ++processed )
         {
@@ -263,7 +269,7 @@ namespace sw
                     continue; // 그 사이에 해제됐다
                 material = it->second._material;
             }
-            if ( material->getGPUState() == MaterialGPUState::Ready )
+            if ( material->getInitState() == MaterialInitState::Ready )
                 continue;
             // 실패는 `Material::initialize` 가 `Failed` 로 남긴다 — 오류는 여기서 한 번만 낸다(패킷 빌더는 그 머티리얼을 건너뛴다).
             if ( material->initialize( pDevice, AssetID{ key } ) == false )
@@ -277,9 +283,36 @@ namespace sw
         }
     }
 
-    bool MaterialCache::hasPendingInitialize() const
+    void MaterialCache::promoteReadyPSOWarmKeys()
     {
-        return _impl != nullptr && _impl->_pendingCount.load( std::memory_order_acquire ) != 0;
+        if ( _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
+            return;
+        UniqueLock<shared_mutex> lock{ _impl->_mutex };
+        size_t                   keyIndex = 0;
+        while ( keyIndex < _impl->_listPSOWarmKey.size() )
+        {
+            const auto              it    = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
+            const MaterialInitState state = it != _impl->_mapEntry.end() ? it->second._material->getInitState() : MaterialInitState::Failed;
+            if ( state == MaterialInitState::NotRequested || state == MaterialInitState::Pending )
+            {
+                ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
+                continue;
+            }
+            if ( state == MaterialInitState::Ready ) // 실패(`Failed`)한 것과 캐시에서 빠진 것은 버린다
+            {
+                const Material&      material = *it->second._material;
+                MaterialPSOWarmEntry entry{};
+                entry._shaderPath      = material.getShaderPath();
+                entry._listDefine      = material.getCachedShaderDefines();
+                entry._shaderPathHash  = material.getShaderPathHash();
+                entry._permutationHash = material.getPermutationHash();
+                entry._bTransparent    = material.getBlendMode() == RHIBlendMode::Transparent;
+                _impl->_listPSOWarmEntry.push_back( std::move( entry ) );
+            }
+            VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
+        }
+        _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+        _impl->_psoWarmEntryCount.store( static_cast<uint32>( _impl->_listPSOWarmEntry.size() ), std::memory_order_release );
     }
 
     bool MaterialCache::isCached( string_view relativePath ) const
@@ -310,27 +343,14 @@ namespace sw
         return shared_ptr<const void>( pMaterial, MaterialCachePinRelease{ this, key } );
     }
 
-    void MaterialCache::takePSOWarmMaterials( vector<shared_ptr<Material>>& outListMaterial )
+    void MaterialCache::takePSOWarmEntries( vector<MaterialPSOWarmEntry>& outListEntry )
     {
-        outListMaterial.clear();
-        if ( _impl == nullptr || _impl->_psoWarmCount.load( std::memory_order_acquire ) == 0 )
+        outListEntry.clear();
+        if ( _impl == nullptr || _impl->_psoWarmEntryCount.load( std::memory_order_acquire ) == 0 )
             return;
         UniqueLock<shared_mutex> lock{ _impl->_mutex };
-        size_t                   keyIndex = 0;
-        while ( keyIndex < _impl->_listPSOWarmKey.size() )
-        {
-            const auto             it    = _impl->_mapEntry.find( _impl->_listPSOWarmKey[keyIndex] );
-            const MaterialGPUState state = it != _impl->_mapEntry.end() ? it->second._material->getGPUState() : MaterialGPUState::Failed;
-            if ( state == MaterialGPUState::NotRequested || state == MaterialGPUState::Pending )
-            {
-                ++keyIndex; // 아직 초기화 전이다 — 셰이더를 모른다
-                continue;
-            }
-            if ( state == MaterialGPUState::Ready )
-                outListMaterial.push_back( it->second._material ); // 실패(`Failed`)한 것과 캐시에서 빠진 것은 버린다
-            VectorUtil::removeAtSwap( _impl->_listPSOWarmKey, keyIndex );
-        }
-        _impl->_psoWarmCount.store( static_cast<uint32>( _impl->_listPSOWarmKey.size() ), std::memory_order_release );
+        outListEntry.swap( _impl->_listPSOWarmEntry );
+        _impl->_psoWarmEntryCount.store( 0, std::memory_order_release );
     }
 
     /**
@@ -351,7 +371,9 @@ namespace sw
             UniqueLock<shared_mutex> lock{ _impl->_mutex };
             _impl->_mapEntry.clear();
             _impl->_listPSOWarmKey.clear();
+            _impl->_listPSOWarmEntry.clear();
             _impl->_psoWarmCount.store( 0, std::memory_order_release );
+            _impl->_psoWarmEntryCount.store( 0, std::memory_order_release );
             getMaterialCacheStats().recordClear();
         }
     }
@@ -372,7 +394,7 @@ namespace sw
         const string key{ FileUtil::normalizePath( relativePath ) };
 
         // 대기와 초기화는 잠금 밖에서 한다. `waitIdle` 은 렌더 스레드가 받은 일을 끝내길 기다리는데 렌더 스레드는 프레임 안에서
-        // `takePSOWarmMaterials` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
+        // `takePSOWarmEntries` 로 이 잠금을 잡는다. 잠금을 쥔 채 기다리면 서로 영영 기다린다. 소유를 하나 빌려 그 사이 항목이 지워져도 머티리얼이 살아 있게 한다.
         shared_ptr<Material> material;
         {
             ScopedSharedLock<shared_mutex> lock{ _impl->_mutex };
@@ -385,12 +407,10 @@ namespace sw
             return;
 
         const Impl::DeviceInitScope initScope{ *_impl };
-        if ( material->isRHIValid() )
+        if ( material->getInitState() == MaterialInitState::Ready )
         {
-            // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고
-            // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
-            // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
-            // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
+            // 이전 프레임(들)이 GPU 에서 이 Material 이 빌린 텍스처를 아직 읽고 있을 수 있다. 다시 로드는 텍스처를 놓고 새로 빌리므로(참조가 0 이 되면
+            // 캐시가 텍스처와 그 bindless 인덱스를 돌려준다) 그 프레임이 끝나기를 기다린다. 상수 버퍼는 프록시의 것이라 다시 로드와 무관하다.
             pDevice->waitIdle( RHIWaitIdleReason::HotReload );
             material->releaseRHI( pDevice );
         }
