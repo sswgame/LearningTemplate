@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
+#include "Editor/Common/Commands/EditorCommandText.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
@@ -232,29 +233,18 @@ namespace sw::editor
 {
     /**
      * @struct EditorCommandRegistration
-     * @brief 확장 모듈이나 EditorModule 의 임의의 파일이 커맨드 하나를 추가하는 등록 항목입니다.
-     * @details 커맨드 테이블(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)과 같은 값을 가지며, 커맨드 레지스트리는 테이블과 등록 항목을 합쳐 메뉴, 단축키, 팔레트를 만든다.
-     *          id 는 테이블의 id 와도 겹치면 안 된다(`validate`). 문자열은 리터럴이어야 한다. 메뉴 경로는 이미 있는 메뉴(`"MainMenu/File"` 등)이거나
-     *          새 한 단계 메뉴(`"MainMenu/ThemePark"`)이다. 메뉴끼리는 가장 작은 순서값으로 정렬되므로 확장은 9000번대를 쓴다.
+     * @brief 확장 모듈이나 EditorModule 의 임의의 파일이 커맨드 하나의 동작을 추가하는 등록 항목입니다.
+     * @details 코드는 id 와 동작만 든다. 라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴는 그 모듈의 표시 파일(`*.commands.xml`, `SW_EDITOR_COMMAND_TEXT`)이 id 로 정한다.
+     *          id 는 명령 표(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)의 id 와도 겹치면 안 된다(`validate`). 문자열은 리터럴이어야 한다.
      */
     struct EditorCommandRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "command";
 
-        const utf8*             _pLabel;
-        const utf8*             _pIconName; ///< 아이콘 이름(`SW_EDITORICON_NAME`). nullptr 이면 아이콘이 없다
-        const utf8*             _pCategory;
-        const utf8*             _pTooltip;
-        const utf8*             _pDetail;
-        const utf8*             _pInputAction;     ///< 에디터 입력 맵의 액션 이름. nullptr 이면 단축키가 없다(`EditorCommandDesc::_inputAction`)
-        EditorCommandActionFn   _pfnAction;        ///< 대상을 받는 동작(등록 줄이 인자 없는 함수를 `EditorCommandTargetUtil::toAction` 으로 맞춘다)
-        EditorCommandEnabledFn  _pfnEnabled;       ///< nullptr 이면 늘 켜져 있다
-        EditorCommandEdit       _edit;             ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
-        const utf8*             _pMenuPath;        ///< nullptr 이면 메뉴에 나오지 않는다(팔레트와 단축키만 쓴다)
-        EditorCommandTargetKind _contextMenuKind;  ///< 놓일 맥락 메뉴(필수 — `None` 이면 맥락 메뉴에 없다)
-        int32                   _contextMenuOrder; ///< 맥락 메뉴 안 순서
-        EditorCommandActionFn   _pfnSubmenu;       ///< nullptr 이 아니면 맥락 메뉴의 하위 메뉴를 그린다(`EditorCommandDesc::_submenu`)
-        bool                    _bPaletteVisible;  ///< 팔레트에 나오는지. 대상이 있어야 뜻이 있는 맥락 메뉴 전용 명령은 false
+        EditorCommandActionFn  _pfnAction;  ///< 대상을 받는 동작(등록 줄이 인자 없는 함수를 `EditorCommandTargetUtil::toAction` 으로 맞춘다)
+        EditorCommandEnabledFn _pfnEnabled; ///< nullptr 이면 늘 켜져 있다
+        EditorCommandEdit      _edit;       ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
+        EditorCommandActionFn  _pfnSubmenu; ///< nullptr 이 아니면 맥락 메뉴의 하위 메뉴를 그린다(`EditorCommandDesc::_submenu`)
     };
 } // namespace sw::editor
 
@@ -267,34 +257,26 @@ namespace sw::editor
     struct SW_EDITOR_API EditorCommandTableUtil
     {
         /**
-         * @brief 등록 항목을 모두 @p registry 에 추가합니다. 모듈을 내릴 때는 그 줄이 먼저 목록에서 빠지므로 남은 줄만 들어간다.
+         * @brief 등록 항목을 모두 @p registry 에 추가합니다. 표시 · 배치는 @p texts 가 id 로 채운다(줄이 없는 명령은 오류를 남기고 넣지 않는다).
+         *        모듈을 내릴 때는 그 줄이 먼저 목록에서 빠지므로 남은 줄만 들어간다.
          */
-        static void appendRegistrations( EditorCommandRegistry& registry );
+        static void appendRegistrations( EditorCommandRegistry& registry, EditorCommandTextSet& texts );
     };
 } // namespace sw::editor
 
 /**
- * @brief 커맨드 하나를 그 커맨드의 .cpp 에서 등록합니다. @p menuOrder 는 메뉴 안 순서이며 테이블의 `_menuOrder` 와 같은 뜻입니다. 백의 자리가 바뀌면 구분선이 들어갑니다.
- *        @p pInputAction 은 에디터 입력 맵의 액션 이름(단축키가 없으면 nullptr)이고, 키 조합은 그 맵(`editor.input.xml`, 확장은 `SW_EDITOR_INPUT_MAP` 로 더한 파일)이 정한다.
- *        @p contextMenu 는 놓일 맥락 메뉴(`EditorCommandTargetKind` 열거자 이름, 없으면 `None`)이고 @p contextMenuOrder 는 그 안 순서다.
- * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", SW_EDITORICON_NAME( "Refresh" ), "ThemePark", "배치 파일을 다시 읽습니다",
- *                          "Reload rides.xml", "themepark.reloadLayout", &reloadLayout, nullptr, NoScene, "MainMenu/ThemePark", None, 0 ); @endcode
+ * @brief 커맨드 하나의 동작을 그 커맨드의 .cpp 에서 등록합니다. 표시 · 배치(라벨 · 아이콘 · 메뉴 · 단축키 액션 · 맥락 메뉴)는 그 모듈의 `*.commands.xml` 줄이 정한다.
+ * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", &reloadLayout, nullptr, NoScene ); @endcode
  */
-#define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, pInputAction, pfnAction, pfnEnabled, edit, pMenuPath, contextMenu, \
-                           contextMenuOrder )                                                                                                                    \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail,                \
-                        pInputAction, ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(),                                                              \
-                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit, pMenuPath,                        \
-                        ::sw::editor::EditorCommandTargetKind::contextMenu, contextMenuOrder, nullptr, true )
+#define SW_EDITOR_COMMAND( name, pID, pfnAction, pfnEnabled, edit )                                                                                        \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 }, ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(), \
+                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit, nullptr )
 
 /**
- * @brief 맥락 메뉴에만 나오는 커맨드(대상이 있어야 뜻이 있다 — 메인 메뉴 · 팔레트에 없음)를 등록합니다. @p pfnAction · @p pfnEnabled 는 대상(`EditorCommandTarget`)을 받습니다.
- *        @p pfnSubmenu 가 nullptr 이 아니면 그 항목은 하위 메뉴이고 그 함수가 안을 그립니다(그때 @p pfnAction 은 nullptr).
- * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", "Rename", SW_EDITORICON_NAME( "Edit" ), "Scene", GameObject, 120, "hierarchy.rename",
- *                                  &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
+ * @brief 맥락 메뉴에서 쓰는 커맨드(대상을 받는다)의 동작을 등록합니다. @p pfnSubmenu 가 nullptr 이 아니면 그 항목은 하위 메뉴이고 그 함수가 안을 그립니다(그때 @p pfnAction 은 nullptr).
+ * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
  */
-#define SW_EDITOR_CONTEXT_COMMAND( name, pID, pLabel, pIcon, pCategory, contextMenu, contextMenuOrder, pInputAction, pfnAction, pfnEnabled, edit, pfnSubmenu ) \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 }, pLabel, pIcon, pCategory, nullptr, nullptr, pInputAction,         \
-                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(), ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(),          \
-                        ::sw::editor::EditorCommandEdit::edit, nullptr, ::sw::editor::EditorCommandTargetKind::contextMenu, contextMenuOrder,                  \
-                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>(), false )
+#define SW_EDITOR_CONTEXT_COMMAND( name, pID, pfnAction, pfnEnabled, edit, pfnSubmenu )                                                                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, 0 }, ::sw::editor::EditorCommandTargetUtil::toAction<pfnAction>(), \
+                        ::sw::editor::EditorCommandTargetUtil::toEnabled<pfnEnabled>(), ::sw::editor::EditorCommandEdit::edit,                             \
+                        ::sw::editor::EditorCommandTargetUtil::toAction<pfnSubmenu>() )

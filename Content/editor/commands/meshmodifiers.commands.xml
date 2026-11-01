@@ -1,0 +1,6 @@
+<!-- 에디터 명령의 표시 · 배치(meshmodifiers) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
+<EditorCommandTextTable>
+	<_listCommand>
+		<EditorCommandText _id="meshmodifiers.openPanel" _label="Mesh Modifiers" _icon="Cube" _category="Mesh" _tooltip="메시 모디파이어 스택 패널을 엽니다" _detail="Open the mesh modifier stack panel" _inputAction="" _menuPath="" _menuOrder="9110" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
+	</_listCommand>
+</EditorCommandTextTable>

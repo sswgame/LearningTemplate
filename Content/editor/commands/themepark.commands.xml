@@ -1,0 +1,8 @@
+<!-- 에디터 명령의 표시 · 배치(themepark) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
+<EditorCommandTextTable>
+	<_listCommand>
+		<EditorCommandText _id="themepark.openLayoutPanel" _label="Park Layout" _icon="Map" _category="ThemePark" _tooltip="놀이기구 배치 패널을 엽니다" _detail="Open the park layout panel" _inputAction="" _menuPath="" _menuOrder="9100" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
+		<EditorCommandText _id="themepark.nearestRide.object" _label="Nearest Park Ride" _icon="" _category="ThemePark" _tooltip="" _detail="" _inputAction="" _menuPath="" _menuOrder="0" _contextMenu="GameObject" _contextMenuOrder="9100" _bPaletteVisible="false" />
+		<EditorCommandText _id="themepark.nearestRide.viewport" _label="Nearest Park Ride" _icon="" _category="ThemePark" _tooltip="" _detail="" _inputAction="" _menuPath="" _menuOrder="0" _contextMenu="Viewport" _contextMenuOrder="9100" _bPaletteVisible="false" />
+	</_listCommand>
+</EditorCommandTextTable>

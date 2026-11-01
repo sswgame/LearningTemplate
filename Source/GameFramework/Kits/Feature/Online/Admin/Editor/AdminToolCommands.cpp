@@ -23,6 +23,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", 9200, "GM Tool", SW_EDITORICON_NAME( "Settings" ), "Admin", "GM 도구 패널을 엽니다", "Open the GM tool panel", nullptr,
-                       &openAdminToolPanel, nullptr, NoScene, nullptr, None, 0 );
+    SW_EDITOR_COMMAND( AdminToolOpen, "admin.openToolPanel", &openAdminToolPanel, nullptr, NoScene );
+
+    SW_EDITOR_COMMAND_TEXT( OnlineAdmin, "onlineadmin.commands", "editor/commands/onlineadmin.commands.xml" ); // 이 모듈 명령의 표시 · 배치
 } // namespace sw::editor

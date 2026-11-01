@@ -366,8 +366,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( ProjectSettingsPanel, ProjectSettingsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );
-    SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", 2220, "Project Settings...", SW_EDITORICON_NAME( "Settings" ), "Editor", "프로젝트 설정 창을 엽니다",
-                       "Open project settings", nullptr, &ProjectSettingsPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Edit", None, 0 );
+    SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", &ProjectSettingsPanelInternal::openPanel, nullptr, NoScene );
 
     SW_AUTOMATION_WATCH( editorProjectSettingsPageCount, "Editor.ProjectSettingsPageCount", "Settings files the Project Settings window lists",
                          &ProjectSettingsPanelInternal::readPageCount );

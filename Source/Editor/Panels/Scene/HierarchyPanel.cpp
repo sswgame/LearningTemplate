@@ -510,21 +510,13 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );
-    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", 2420, "Move Up in Hierarchy", SW_EDITORICON_NAME( "GameObject" ), "Scene", "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다",
-                       "Move the selected object up among its siblings", nullptr, &HierarchyPanelInternal::runMoveUp, nullptr, Scene, "MainMenu/Edit", None, 0 );
-    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", 2421, "Move Down in Hierarchy", SW_EDITORICON_NAME( "GameObject" ), "Scene",
-                       "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", nullptr, &HierarchyPanelInternal::runMoveDown, nullptr, Scene,
-                       "MainMenu/Edit", None, 0 );
-    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", SW_EDITORICON_NAME( "Folder" ), "Scene",
-                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", nullptr, &HierarchyCommands::createFolder, nullptr, Scene,
-                       "MainMenu/Edit", None, 0 );
+    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", &HierarchyPanelInternal::runMoveUp, nullptr, Scene );
+    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", &HierarchyPanelInternal::runMoveDown, nullptr, Scene );
+    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", &HierarchyCommands::createFolder, nullptr, Scene );
     // 계층 창이 그리는 오브젝트 메뉴 항목(하위 메뉴 · 이름 바꾸기) — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5).
-    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", "Rename", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 330, "scene.object.rename",
-                               &HierarchyPanelInternal::requestRename, &HierarchyPanelInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", "Add Component", SW_EDITORICON_NAME( "Plus" ), "Scene", GameObject, 400, nullptr, nullptr,
-                               &HierarchyPanelInternal::hasSingleTargetObject, Scene, &HierarchyPanelInternal::drawAddComponentSubmenu );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", "Select All With", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 410, nullptr, nullptr,
-                               &HierarchyPanelInternal::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", &HierarchyPanelInternal::requestRename, &HierarchyPanelInternal::hasSingleTargetObject, Scene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", nullptr, &HierarchyPanelInternal::hasSingleTargetObject, Scene, &HierarchyPanelInternal::drawAddComponentSubmenu );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", nullptr, &HierarchyPanelInternal::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
     SW_AUTOMATION_WATCH( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorWatchHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
                          &HierarchyPanelInternal::readProbedRowIndex );
     SW_AUTOMATION_WATCH( editorHierarchyRowRebuildCount, "Editor.HierarchyRowRebuildCount",

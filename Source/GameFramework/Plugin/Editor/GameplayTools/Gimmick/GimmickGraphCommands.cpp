@@ -23,6 +23,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", 9300, "Gimmick Graph", SW_EDITORICON_NAME( "Settings" ), "Gimmick", "기믹 회로 그래프 창을 엽니다", "Open the gimmick graph panel", nullptr,
-                       &openGimmickGraphPanel, nullptr, NoScene, nullptr, None, 0 );
+    SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", &openGimmickGraphPanel, nullptr, NoScene );
+
+    SW_EDITOR_COMMAND_TEXT( GameplayTools, "gameplaytools.commands", "editor/commands/gameplaytools.commands.xml" ); // 이 모듈 명령의 표시 · 배치
 } // namespace sw::editor

@@ -27,7 +27,5 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", 3310, "Bake Light Probes", SW_EDITORICON_NAME( "LightGlobal" ), "Lighting",
-                       "선택한(없으면 모든) 라이트 프로브 볼륨의 간접광을 베이크합니다(씬 옆 .probes)", "Bake the selected (or every) light probe volume of the active scene", nullptr,
-                       &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, Scene, "MainMenu/Build", None, 0 );
+    SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, Scene );
 } // namespace sw::editor

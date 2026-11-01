@@ -322,28 +322,17 @@ namespace sw::editor
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );
     // 에셋 맥락 메뉴 · 단축키(R4 — 메뉴 · 키 · 팔레트가 같은 명령). 순서 칸: 100 탐색기 · 경로, 200 참조, 300 버전 관리, 900 파일 편집.
-    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", "Show in Explorer", SW_EDITORICON_NAME( "FolderOpen" ), "Asset", Asset, 100, nullptr,
-                               &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", "Copy Relative Path", nullptr, "Asset", Asset, 110, nullptr,
-                               &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", "Copy Absolute Path", nullptr, "Asset", Asset, 120, nullptr,
-                               &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", "Find References", nullptr, "Asset", Asset, 200, nullptr,
-                               &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", "Show Dependencies", nullptr, "Asset", Asset, 210, nullptr,
-                               &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", "Check Out (Lock)", SW_EDITORICON_NAME( "Lock" ), "Asset", Asset, 300, nullptr, &ContentBrowserPanelInternal::lockAsset,
-                               &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", "Release Lock", SW_EDITORICON_NAME( "Unlock" ), "Asset", Asset, 310, nullptr, &ContentBrowserPanelInternal::unlockAsset,
-                               &ContentBrowserPanelInternal::canUnlock, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetRefreshSourceControl, "asset.refreshSourceControl", "Refresh Source Control", nullptr, "Asset", Asset, 320, nullptr,
-                               &ContentBrowserPanelInternal::refreshSourceControl, &ContentBrowserPanelInternal::canRefreshSourceControl, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetRename, "asset.rename", "Rename", nullptr, "Asset", Asset, 900, "asset.rename", &ContentBrowserPanelInternal::renameAsset,
-                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetDuplicate, "asset.duplicate", "Duplicate", nullptr, "Asset", Asset, 910, "asset.duplicate", &ContentBrowserPanelInternal::duplicateAsset,
-                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", "Delete...", SW_EDITORICON_NAME( "Trash" ), "Asset", Asset, 920, "asset.delete", &ContentBrowserPanelInternal::deleteAsset,
-                               &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetCopyAbsolutePath, "asset.copyAbsolutePath", &ContentBrowserPanelInternal::copyAbsolutePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetFindReferences, "asset.findReferences", &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", &ContentBrowserPanelInternal::lockAsset, &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", &ContentBrowserPanelInternal::unlockAsset, &ContentBrowserPanelInternal::canUnlock, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetRefreshSourceControl, "asset.refreshSourceControl", &ContentBrowserPanelInternal::refreshSourceControl, &ContentBrowserPanelInternal::canRefreshSourceControl, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetRename, "asset.rename", &ContentBrowserPanelInternal::renameAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetDuplicate, "asset.duplicate", &ContentBrowserPanelInternal::duplicateAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", &ContentBrowserPanelInternal::deleteAsset, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                                   const AssetEntry& entry )

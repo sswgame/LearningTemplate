@@ -26,7 +26,7 @@ namespace sw::editor
     } // namespace
 
     // [doc:command-register]
-    SW_EDITOR_COMMAND( ParkLayoutOpen, "themepark.openLayoutPanel", 9100, "Park Layout", SW_EDITORICON_NAME( "Map" ), "ThemePark", "놀이기구 배치 패널을 엽니다",
-                       "Open the park layout panel", nullptr, &openParkLayoutPanel, nullptr, NoScene, nullptr, None, 0 );
+    SW_EDITOR_COMMAND( ParkLayoutOpen, "themepark.openLayoutPanel", &openParkLayoutPanel, nullptr, NoScene );
+    SW_EDITOR_COMMAND_TEXT( ThemePark, "themepark.commands", "editor/commands/themepark.commands.xml" ); // 이 모듈 명령의 표시 · 배치
     // [/doc:command-register]
 } // namespace sw::editor

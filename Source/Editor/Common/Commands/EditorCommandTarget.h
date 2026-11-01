@@ -9,12 +9,15 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /**
      * @enum EditorCommandTargetKind
      * @brief 명령이 받는 대상의 종류입니다. 맥락 메뉴의 종류이기도 하다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(EditorUX 10-3 R5).
      */
+    ENUM()
     enum class EditorCommandTargetKind : uint8
     {
         None = 0,   ///< 대상 없음(전역 명령 · 메뉴바 · 팔레트)

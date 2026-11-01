@@ -377,22 +377,13 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // 3) 기본 커맨드 테이블. 커맨드를 추가하려면 여기에 한 줄을 더한다
             // ------------------------------------------------------------------------------
-            /** @brief 테이블의 항목 하나입니다. 문자열은 모두 리터럴이므로 수명을 신경 쓰지 않아도 됩니다. */
+            /** @brief 테이블의 항목 하나입니다. 동작만 든다 — 표시 · 배치는 `editor/commands/editor.commands.xml` 의 같은 id 줄이다. */
             struct CommandRow
             {
                 const utf8* _pID;
-                const utf8* _pLabel;
-                const utf8* _pIconName; ///< 아이콘 이름(`SW_EDITORICON_NAME`)
-                const utf8* _pCategory;
-                const utf8* _pTooltip;
-                const utf8* _pDetail;
-                const utf8* _pInputAction; ///< 에디터 입력 맵(`editor.input.xml`)의 액션 이름. nullptr 이면 단축키가 없다
                 void ( *_pAction )();
                 bool ( *_pEnabled )();
                 EditorCommandEdit _edit; ///< 씬을 바꾸는지(필수 — `EditorCommandEdit`)
-                bool              _bPaletteVisible;
-                const utf8*       _pMenuPath; ///< nullptr 이면 어느 메뉴에도 나오지 않는다(`EditorCommandDesc::_menuPath`)
-                int32             _menuOrder; ///< 메뉴 안 순서. 백의 자리가 바뀌면 구분선이 들어가고, 메뉴끼리의 순서도 이 값으로 정한다
             };
 
             /**
@@ -401,41 +392,35 @@ namespace sw::editor
              *          Exit 는 단축키를 적지 않는다 — Alt+F4 는 OS 가 창 닫기로 먼저 가로채는 조합이라 입력 맵이 처리하지 않는다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
-                {                     "scene.new",                     "New Scene",       SW_EDITORICON_NAME( "File" ),     "Scene",                                     "새로운 빈 씬을 생성합니다",           "Replace the active scene with an empty one",                     nullptr,                                  &commandNewScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1100},
-                {                    "scene.open",                 "Open Scene...", SW_EDITORICON_NAME( "FolderOpen" ),     "Scene",                  "디스크에서 기존 씬 파일(.scene.xml)을 엽니다",                          "Open a .scene.xml from disk",                "scene.open",                                 &commandOpenScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1110},
-                {                    "asset.save",                          "Save",       SW_EDITORICON_NAME( "Save" ),     "Scene",                  "현재 포커스된 에셋 또는 활성 씬을 저장합니다",          "Save the focused asset, or the active scene",                "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1120},
-                {               "scene.saveScene",                    "Save Scene",       SW_EDITORICON_NAME( "Save" ),     "Scene",                        "현재 활성화된 씬을 디스크에 저장합니다", "Write the active scene, or prompt Save As if unsaved",                     nullptr, &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1130},
-                {              "editor.quickOpen",                 "Quick Open...",     SW_EDITORICON_NAME( "Search" ),    "Editor",                   "에셋, 씬, 스크립트를 빠르게 검색하여 엽니다",              "Fuzzy-search assets, scenes and scripts",          "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1200},
-                {         "editor.commandPalette",            "Command Palette...",   SW_EDITORICON_NAME( "Terminal" ),    "Editor",                     "에디터 명령 및 액션을 검색하여 실행합니다",                       "Search and run editor commands",     "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr, EditorCommandEdit::NoScene, false,             "MainMenu/File", 1210},
-                {                   "editor.exit",                          "Exit",       SW_EDITORICON_NAME( "Exit" ),      "File",                                           "에디터를 종료합니다",   "Close the editor after unsaved-change confirmation",                     nullptr,             &EditorSceneFileCommands::requestExit,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/File", 1300},
-
-                {                     "edit.undo",                          "Undo",       SW_EDITORICON_NAME( "Undo" ),      "Edit",                                 "마지막 편집 작업을 되돌립니다",                                   "Undo the last edit",                 "edit.undo",                                      &commandUndo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2100},
-                {                     "edit.redo",                          "Redo",       SW_EDITORICON_NAME( "Redo" ),      "Edit",                            "되돌린 편집 작업을 다시 실행합니다",                            "Redo the last undone edit",                 "edit.redo",                                      &commandRedo,                    nullptr,   EditorCommandEdit::Scene,  true,             "MainMenu/Edit", 2110},
-                {          "editor.themeSettings",      "Theme & Look and Feel...",    SW_EDITORICON_NAME( "Palette" ),    "Editor", "에디터 테마 프리셋, 액센트 색상 및 모서리 라운딩을 설정합니다",                       "Open the theme settings dialog",                     nullptr,                   &EditorMenuBar::openThemeDialog,                    nullptr, EditorCommandEdit::NoScene,  true,             "MainMenu/Edit", 2200},
-
-                {             "build.compileGame",         "Compile Game (SWGame)",     SW_EDITORICON_NAME( "Hammer" ),     "Build",       "게임 모듈(SWGame)을 라이브 코딩으로 즉시 재컴파일합니다",                      "Recompile and hot-reload SWGame",         "build.compileGame",                               &commandCompileGame,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3100},
-                {           "build.compileEditor", "Compile Editor (EditorModule)",     SW_EDITORICON_NAME( "Wrench" ),     "Build",    "에디터 모듈(EditorModule)을 라이브 코딩으로 재컴파일합니다",                               "Recompile EditorModule",                     nullptr,                             &commandCompileEditor,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3110},
-                {              "build.compileAll",           "Compile All Modules",   SW_EDITORICON_NAME( "BuildAll" ),     "Build",               "엔진 및 모든 게임/에디터 모듈을 전체 빌드합니다",                    "Build the engine and every module",          "build.compileAll",                                &commandCompileAll,            &isCompilerIdle, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3120},
-                {                  "build.cancel",                  "Cancel Build",     SW_EDITORICON_NAME( "Cancel" ),     "Build",                       "현재 진행 중인 컴파일 작업을 취소합니다",                           "Cancel the running compile",                     nullptr,                               &commandCancelBuild,            &isCompilerBusy, EditorCommandEdit::NoScene,  true,            "MainMenu/Build", 3200},
-
-                {                    "play.start",                          "Play",       SW_EDITORICON_NAME( "Play" ),      "Play",                                                              "",                                 "Start play-in-editor",                     nullptr,                                      &commandPlay,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-                {           "viewport.screenshot",                    "Screenshot",     SW_EDITORICON_NAME( "Camera" ),  "Viewport",         "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다", "Save the focused view as PNG under Saved/Screenshots",       "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-                {     "viewport.renderDocCapture",             "RenderDoc Capture",        SW_EDITORICON_NAME( "Bug" ),  "Viewport",     "다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)",                "Capture the next frame with RenderDoc", "viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-
-                {"clipboard.pasteComponentValues",        "Paste Component Values",       SW_EDITORICON_NAME( "Copy" ), "Clipboard",                                                              "",  "Overwrite the selected component from the clipboard",                     nullptr,                      &commandPasteComponentValues,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                { "clipboard.pasteComponentAsNew",        "Paste Component As New",       SW_EDITORICON_NAME( "Plus" ), "Clipboard",                                                              "",      "Add the copied component to the selected object",                     nullptr,                       &commandPasteComponentAsNew,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                {          "preset.loadComponent",         "Load Component Preset", SW_EDITORICON_NAME( "FolderOpen" ),    "Preset",                                                              "",        "Apply a .preset.xml to the selected component",                     nullptr,                       &commandLoadComponentPreset,                    nullptr,   EditorCommandEdit::Scene,  true,                     nullptr,    0},
-                {          "preset.saveComponent",         "Save Component Preset",       SW_EDITORICON_NAME( "Save" ),    "Preset",                                                              "",        "Write the selected component to a preset file",                     nullptr,                       &commandSaveComponentPreset,                    nullptr, EditorCommandEdit::NoScene,  true,                     nullptr,    0},
-
-                {        "transform.snapToGround",          "Snap to Ground (Y=0)",     SW_EDITORICON_NAME( "Magnet" ), "Transform",                                                              "",          "Snap selected objects onto the ground plane",                     nullptr,    &EditorTransformCommands::snapSelectedToGround,              &hasSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  100},
-                {              "transform.alignX",              "Align X (Center)",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                          "Align selected objects on X",                     nullptr,                       &commandAlign<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  200},
-                {              "transform.alignY",              "Align Y (Center)",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                          "Align selected objects on Y",                     nullptr,                       &commandAlign<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  210},
-                {              "transform.alignZ",              "Align Z (Center)",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                          "Align selected objects on Z",                     nullptr,                       &commandAlign<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  220},
-                {         "transform.distributeX",           "Distribute X Evenly",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                   "Evenly space selected objects on X",                     nullptr,                  &commandDistribute<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  300},
-                {         "transform.distributeY",           "Distribute Y Evenly",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                   "Evenly space selected objects on Y",                     nullptr,                  &commandDistribute<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  310},
-                {         "transform.distributeZ",           "Distribute Z Evenly",      SW_EDITORICON_NAME( "Align" ), "Transform",                                                              "",                   "Evenly space selected objects on Z",                     nullptr,                  &commandDistribute<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene,  true, commandmenu::kViewportAlign,  320},
-
-                {         "prefab.applyOverrides",               "Apply Overrides",     SW_EDITORICON_NAME( "Prefab" ),    "Prefab",                                                              "", "Write instance overrides back to the prefab template",                     nullptr,                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected,   EditorCommandEdit::Scene,  true,                     nullptr,    0}
+                {                     "scene.new",                                  &commandNewScene,                    nullptr, EditorCommandEdit::NoScene},
+                {                    "scene.open",                                 &commandOpenScene,                    nullptr, EditorCommandEdit::NoScene},
+                {                    "asset.save",      &EditorSceneFileCommands::saveFocusedOrScene,                    nullptr, EditorCommandEdit::NoScene},
+                {               "scene.saveScene", &EditorSceneFileCommands::saveActiveSceneOrPrompt,                    nullptr, EditorCommandEdit::NoScene},
+                {              "editor.quickOpen",                       &QuickLauncherPopup::toggle,                    nullptr, EditorCommandEdit::NoScene},
+                {         "editor.commandPalette",                      &CommandPalettePopup::toggle,                    nullptr, EditorCommandEdit::NoScene},
+                {                   "editor.exit",             &EditorSceneFileCommands::requestExit,                    nullptr, EditorCommandEdit::NoScene},
+                {                     "edit.undo",                                      &commandUndo,                    nullptr,   EditorCommandEdit::Scene},
+                {                     "edit.redo",                                      &commandRedo,                    nullptr,   EditorCommandEdit::Scene},
+                {          "editor.themeSettings",                   &EditorMenuBar::openThemeDialog,                    nullptr, EditorCommandEdit::NoScene},
+                {             "build.compileGame",                               &commandCompileGame,            &isCompilerIdle, EditorCommandEdit::NoScene},
+                {           "build.compileEditor",                             &commandCompileEditor,            &isCompilerIdle, EditorCommandEdit::NoScene},
+                {              "build.compileAll",                                &commandCompileAll,            &isCompilerIdle, EditorCommandEdit::NoScene},
+                {                  "build.cancel",                               &commandCancelBuild,            &isCompilerBusy, EditorCommandEdit::NoScene},
+                {                    "play.start",                                      &commandPlay,                    nullptr, EditorCommandEdit::NoScene},
+                {           "viewport.screenshot",     &EditorScreenshotCommands::captureFocusedView,                    nullptr, EditorCommandEdit::NoScene},
+                {     "viewport.renderDocCapture",                          &commandRenderDocCapture,      &isRenderDocAvailable, EditorCommandEdit::NoScene},
+                {"clipboard.pasteComponentValues",                      &commandPasteComponentValues,                    nullptr,   EditorCommandEdit::Scene},
+                { "clipboard.pasteComponentAsNew",                       &commandPasteComponentAsNew,                    nullptr,   EditorCommandEdit::Scene},
+                {          "preset.loadComponent",                       &commandLoadComponentPreset,                    nullptr,   EditorCommandEdit::Scene},
+                {          "preset.saveComponent",                       &commandSaveComponentPreset,                    nullptr, EditorCommandEdit::NoScene},
+                {        "transform.snapToGround",    &EditorTransformCommands::snapSelectedToGround,              &hasSelection,   EditorCommandEdit::Scene},
+                {              "transform.alignX",                       &commandAlign<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {              "transform.alignY",                       &commandAlign<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {              "transform.alignZ",                       &commandAlign<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {         "transform.distributeX",                  &commandDistribute<AlignAxis::X>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {         "transform.distributeY",                  &commandDistribute<AlignAxis::Y>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {         "transform.distributeZ",                  &commandDistribute<AlignAxis::Z>,         &hasMultiSelection,   EditorCommandEdit::Scene},
+                {         "prefab.applyOverrides",                      &commandApplyPrefabOverrides, &hasPrefabInstanceSelected,   EditorCommandEdit::Scene},
             };
 
             // ------------------------------------------------------------------------------
@@ -508,19 +493,15 @@ namespace sw::editor
         EditorCommandGUIInternal::GUIState& guiState = getEditorState<EditorCommandGUIInternal::GUIState>();
         guiState._syncedGeneration                   = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
 
+        // 표시 · 배치는 모듈마다 등록한 표시 파일이 정한다 — 다시 만들 때마다 읽는다(모듈 적재 · 해제로 파일 목록이 바뀐다).
+        EditorCommandTextSet texts;
+        texts.loadRegistered();
         for ( const EditorCommandGUIInternal::CommandRow& row : EditorCommandGUIInternal::_s_arrCommandRow )
         {
             EditorCommandDesc desc{};
-            desc._id              = row._pID;
-            desc._label           = row._pLabel;
-            desc._iconName        = row._pIconName;
-            desc._category        = row._pCategory;
-            desc._tooltip         = row._pTooltip;
-            desc._detail          = row._pDetail;
-            desc._inputAction     = row._pInputAction != nullptr ? row._pInputAction : "";
-            desc._bPaletteVisible = row._bPaletteVisible;
-            desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
-            desc._menuOrder       = row._menuOrder;
+            desc._id = row._pID;
+            if ( texts.apply( desc ) == false )
+                continue;
             // 표의 명령은 모두 전역 명령이라 대상을 받지 않는다 — 대상을 버리고 부른다.
             if ( row._pAction != nullptr )
                 desc._action = [pfnAction = row._pAction]( const EditorCommandTarget& /*target*/ )
@@ -533,7 +514,8 @@ namespace sw::editor
             registry.registerCommand( std::move( desc ) );
         }
         // 확장 모듈과 다른 파일의 등록 항목(SW_EDITOR_COMMAND)을 테이블과 같은 레지스트리에 합친다.
-        EditorCommandTableUtil::appendRegistrations( registry );
+        EditorCommandTableUtil::appendRegistrations( registry, texts );
+        texts.reportUnused();
 
         string report;
         if ( registry.validate( report ) == false )

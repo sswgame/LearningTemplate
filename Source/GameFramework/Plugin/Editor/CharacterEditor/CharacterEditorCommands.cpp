@@ -34,9 +34,8 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_COMMAND( CharacterEditorOpen, "charactereditor.openPanel", 9120, "Character Editor", SW_EDITORICON_NAME( "Skeleton" ), "Character", "캐릭터 편집 패널을 엽니다",
-                       "Open the character editor panel", nullptr, &CharacterEditorCommandsInternal::openCharacterEditorPanel, nullptr, NoScene, nullptr, None, 0 );
-    SW_EDITOR_COMMAND( PairedAnimationOpen, "charactereditor.openPairedAnimation", 9121, "Paired Animation", SW_EDITORICON_NAME( "Skeleton" ), "Character",
-                       "페어드 애니메이션 편집 창을 엽니다", "Open the paired animation editor (roles on one clock, alignment offsets, shared notifies)", nullptr,
-                       &CharacterEditorCommandsInternal::openPairedAnimationPanel, nullptr, NoScene, nullptr, None, 0 );
+    SW_EDITOR_COMMAND( CharacterEditorOpen, "charactereditor.openPanel", &CharacterEditorCommandsInternal::openCharacterEditorPanel, nullptr, NoScene );
+
+    SW_EDITOR_COMMAND_TEXT( CharacterEditor, "charactereditor.commands", "editor/commands/charactereditor.commands.xml" ); // 이 모듈 명령의 표시 · 배치
+    SW_EDITOR_COMMAND( PairedAnimationOpen, "charactereditor.openPairedAnimation", &CharacterEditorCommandsInternal::openPairedAnimationPanel, nullptr, NoScene );
 } // namespace sw::editor

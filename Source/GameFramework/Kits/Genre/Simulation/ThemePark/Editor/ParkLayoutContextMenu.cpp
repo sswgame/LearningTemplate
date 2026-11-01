@@ -86,8 +86,6 @@ namespace sw::editor
     } // namespace
 
     // 오브젝트 메뉴(계층 창 · 씬 뷰의 오브젝트 위)와 뷰포트 메뉴(씬 뷰 빈 곳). 순서 9100 — 코어 항목 아래 구분선 뒤다.
-    SW_EDITOR_CONTEXT_COMMAND( ParkNearestRideObject, "themepark.nearestRide.object", "Nearest Park Ride", nullptr, "ThemePark", GameObject, 9100, nullptr,
-                               &ParkLayoutContextMenuInternal::logNearestRide, &ParkLayoutContextMenuInternal::isNearestRideEnabled, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ParkNearestRideViewport, "themepark.nearestRide.viewport", "Nearest Park Ride", nullptr, "ThemePark", Viewport, 9100, nullptr,
-                               &ParkLayoutContextMenuInternal::logNearestRide, &ParkLayoutContextMenuInternal::isNearestRideEnabled, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ParkNearestRideObject, "themepark.nearestRide.object", &ParkLayoutContextMenuInternal::logNearestRide, &ParkLayoutContextMenuInternal::isNearestRideEnabled, NoScene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ParkNearestRideViewport, "themepark.nearestRide.viewport", &ParkLayoutContextMenuInternal::logNearestRide, &ParkLayoutContextMenuInternal::isNearestRideEnabled, NoScene, nullptr );
 } // namespace sw::editor

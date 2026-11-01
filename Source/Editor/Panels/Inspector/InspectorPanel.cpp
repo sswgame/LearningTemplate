@@ -94,8 +94,7 @@ namespace sw::editor
 {
     SW_EDITOR_PANEL( InspectorPanel, InspectorPanel::kPanelID, EditorPanelCategory::Core, 200 );
     // 컴포넌트 메뉴의 Presets 하위 메뉴(나머지 항목은 `EditorSceneObjectCommands.cpp`).
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPresets, "inspector.component.presets", "Presets", nullptr, "Scene", Component, 400, nullptr, nullptr,
-                               &InspectorPanelInternal::canShowPresets, NoScene, &InspectorPanelInternal::drawPresetsSubmenu );
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPresets, "inspector.component.presets", nullptr, &InspectorPanelInternal::canShowPresets, NoScene, &InspectorPanelInternal::drawPresetsSubmenu );
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}
