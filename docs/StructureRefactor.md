@@ -178,7 +178,7 @@
 | 12 | ISP | `INavMesh`(순수 가상 ~23 — 굽기 · 링크 · 장애물 · 질의 · 군중 · 디버그), `IProfilerBackend`(12 — CPU · 메모리 · GPU) | 남김: 구현이 하나씩이라 지금 비용은 없다. 두 번째 구현(내비 백엔드)이 올 때 Physics 처럼 질의 · 편집 · 디버그로 가른다 | 남김 |
 | 13 | OCP | `BindingKind`(10 종) switch 가 7 파일 · case 82(글리프 · 리맵 직렬화 · 평가 · 직렬화 · 자동화 · UI · 녹화), 도형 → 삼각형이 디버그 그리기 · 내비 지오메트리에 각자 | 남김: 종류 정보 표(`kArrBindingKindInfo`)가 이미 일부를 흡수했다 — 나머지를 종류별 함수 표로 옮기는 단계, 도형 삼각화는 `PhysicsShapeMesh` 하나 | 다음 |
 | 14 | SRP(파일) | `TaskManager.cpp` 1540 · `NetEndpoint.cpp` 1337 · `StringUtil.cpp` 1297 · `MemoryProfiler.cpp` 1009 줄 — 절 머리글로 이미 나뉘어 있다 | 남김: 같은 클래스의 파일 나누기라 동작 이득이 없다(병렬 그룹 · 대기 · 워커, 핸드셰이크 · 수신, 인코딩 · 파싱, 누수 창 순으로 나눌 수 있다) | 남김 |
-| 15 | 같은 일 둘 | float3 성분별 곱 손글씨 9 곳 + `Pose`·`RigPoseBuffer` 의 `multiply` · `divide`(0 분모 대체가 1 · lhs 로 다르다), Wayland xdg 리스너 둘, MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 — 성분별 곱은 Core `float3::multiply`, 나눗셈 대체값은 뜻이 달라 이름을 가른다 | 다음 | CRC32 는 `HashUtil::computeCRC32` 로 옮겼다(2026-11-01).
+| 15 | 같은 일 둘 | Wayland xdg 리스너 둘, MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 | 다음 | float3 성분별 곱 12 곳은 `float3::multiply`, 나눗셈 둘은 뜻대로 `Pose::computeScaleRatio` · `RigPoseBuffer::removeParentScale`, CRC32 는 `HashUtil::computeCRC32`(2026-11-01).
 | 16 | 이름 | `Engine/HostServiceSet.h`(서비스 순서 표) ↔ `Engine/Module/HostServices.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
 
 - **근본 원인(한 줄)**: 바닥 도우미가 찾기 어려운 자리(Foundation · Container · TU 전용 Internal)에 있어 호출부가 사본을 만들었고, 층 검사는 include 글만 봐서 전방 선언 칸 · 함수 포인터로 역류가 숨었다. 같은 모양이 남았을 곳은 표의 8 · 9 · 15 다.
@@ -201,8 +201,8 @@
 | 6 | 모듈 인스턴스 수명이 두 벌 | `EditorModuleManager`(App)가 `GameModuleManager` 의 before/after reload · 이미지 판정 · 실패 · API 묶기 · 인스턴스 만들기/부수기를 편집기용으로 다시 적었다 | 남김 — `ModuleInstanceSlot<TAPI>` 하나를 둘이 쓰게(상태 있는 기반 하나). 리로드 경로 전체 시나리오가 필요해 이번 묶음 밖 | 언리얼 FModuleManager 하나 |
 | 7 | App · Server 의 종료 순서 · 프레임 본문 두 벌 | App 만 `shutdownDependentsOf`, 프레임(beginFrame → fixed/update → 리로드 갱신 → 상태 해시)이 두 파일에 | 남김 — #2 와 같은 자리(`HostServiceUtil` 옆 공용 종료 · 틱 걸음). 서버 드레인과 섞여 있어 나눌 경계를 먼저 정한다 | FEngineLoop::Tick |
 | 8 | 파일 감시 넷이 나란히 | `LiveReloadManager` 의 날 감시기, `FileWatchDispatcher` 셋(설정 · 콘텐츠 폴더 · 편집기 애셋), 셰이더는 손 단축키 | 남김 — 호스트 감시 서비스 하나에 구독(DevTools). LiveReload 는 ModuleManager 라 두 단위를 함께 바꾼다 | 언리얼 DirectoryWatcher 모듈 하나 |
-| 9 | 디렉터 상태 바이트 감싸기 복사 | 8 디렉터가 readSection → 표 확인 → 새 시뮬 → readState → 남은 바이트 0 을 손으로 | 남김 — `StateArchiveUtil::readSection(archive, 기대 표, outBody)` 로 표 확인을 형식 안으로(지금 판 확인을 빼먹은 곳이 있다) | |
-| 10 | 자동화 탐침 보일러플레이트 | `findProbeDirector` + `read*` 감싸기 5 게임 + Runtime | 남김 — `findFirstComponent<T>` + 멤버 포인터 감시 매크로 | |
+| 9 | 디렉터 상태 바이트 감싸기 복사 | 5 디렉터가 readSection → 표 · 버전 확인을 손으로(FrontierCity 는 버전을 안 봤다) | **끝** — `StateArchiveUtil::readExpectedSection`(표로 갈라 읽는 `SessionStateComponent` 만 `readSection`) | |
+| 10 | 자동화 탐침 보일러플레이트 | `findProbeDirector` + `read*` 감싸기 4 게임 | **끝** — `SW_AUTOMATION_COMPONENT_WATCH`(`AutomationComponentWatch::findFirst<T>` · `read<T, 읽기>`), 읽기 함수는 디렉터 참조만 받는다 | |
 | 11 | 온라인 키트 서비스 골격 복사 | LiveOps · ServerDirectory 의 다시 읽기 · 감사 쓰기 · 주기 리로드 약 150 줄씩, `makeActor` 셋 | 남김 — Runtime/Online/Service 에 "운영자가 고치는 표" 서비스 기반 | |
 | 12 | 온라인 소도우미 복사 | JSON `readText` 넷(기본값 폴백 둘), HTTP `isTransientStatus` 셋, `encodeID` 둘 | 남김 — 기본값 폴백을 지우는 일과 함께(R6) | |
 | 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | 남김 — Runtime/World/Environment · Runtime/Character/Camera · OpenWorldWestern 키트 · `VehicleWatches` 로 | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
@@ -222,3 +222,14 @@
 - `Plugin/Editor/Base` 를 `GameplayTools` 로: 내용이 행동 트리 · 어빌리티 · 기믹 · 일정 도구이고 다른 확장이 기대지 않는다(기반이 아니다). 형제 폴더(CharacterEditor · MeshModifiers …)처럼 내용 이름을 쓴다.
 - 자동 플레이 되돌리기는 디렉터 기반(`GameDirectorComponent`)이 아니라 조종 영역(`ControlSystem`)에 둔다 — 빙의 넘기기는 디렉터가 아니어도 쓰는 일이다. AI 조종자를 찾거나 만드는 쪽은 게임마다 달라(프리팹 · 코드) 그대로 둔다.
 - 소리 그래프는 그래프 문서 템플릿(`EditorGraphDocumentPanel<T>`)이 아니라 문서 기반을 쓴다 — 링크 표(`_listLink`)가 없고 연결이 받는 노드의 입력 목록이라 템플릿의 요구를 맞추지 못한다.
+
+### 8.3 큰 클래스의 상태 묶음 (2026-11-01)
+
+크기만 보고 cpp 를 나눈 것은 모두 합쳤고(같은 클래스는 한 파일), 제 상태와 규칙이 있는 묶음만 클래스로 뗐다.
+
+- RTSWorld → `RTSVision`(팀 시야 · 다시 칠하기 타이머) · `RTSUnitBuckets`(이웃 버킷) · 내비 `FlowFieldCache`(목적지별 흐름장 공유 — 다른 키트도 쓴다). 유닛 슬롯은 그대로다: Core `SlotHandleTable` 은 잠금 · 원자값 동시 표이고, 여기는 슬롯 순서 · LIFO 빈 칸이 결정적 결과와 저장 바이트에 들어간다. 옮기기 전후 같은 동작은 `RTSWorldTest`(공개 조회 요약 고정값)가 묶는다.
+- InputMap → `InputTriggerRules`(바인딩 상태 · 문턱 · 홀드 · 탭 · 연타 · 끌기 · 반복 · 펄스 판정 — 언리얼 `UInputTrigger` 자리, 장치 · 레이어를 모른다) · `InputBinding.h`(스키마 형식). 맵은 장치 읽기와 액션 합산만 한다.
+- AudioEngine 명령 큐 → Core `LockedSwapQueue`(잠금과 목록을 한 형식에 — 목록을 잠금 없이 만지는 모양을 쓸 수 없다). 재생 id 는 큐에 넣는 잠금 안에서(`pushStamped`). 보이스 풀은 남김(NEXT 1 절).
+- ScheduleSystem 빌린 서비스 → `Services` 묶음 하나. 경로 · 자리 제공자는 생성자부터 기본 제공자를 가리켜 null 이 없다.
+- 에디터 콘솔 명령 모음(`EditorDevCommands.cpp`) → 기능의 명령 파일 옆(언리얼 Exec 명령이 그 시스템에 있는 것과 같다). 남은 진단 도구 폴더는 `Commands/Diagnostics/` — `/Dev/` 는 빌드 규칙에서 "배포가 짓지 않는 단위" 라는 뜻이다.
+- cpp · 헤더 짝: 짝 없는 cpp 는 스스로 등록(탭 · 서버 서비스 · 데이터 종류 · 자동화 단계 · 명령), 플랫폼 · 라이브러리 · 형식별 구현, 모듈 진입점만 남았다. 하나만 include 하던 pimpl 헤더(`MaterialCacheImpl.h` · `TextureCacheImpl.h`)는 cpp 안으로, 빈 cpp(`TypedHandleTestComponent.cpp`)는 지웠다.

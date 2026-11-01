@@ -18,19 +18,18 @@
 
 에이전트 없이 직접 한다. 이름만 보지 말고 내용을 읽고 판단한다. 빌드 통과는 판단 기준이 아니라 마지막 확인이다.
 
-1. 크기만 줄이려 한 클래스를 여러 cpp 로 쪼갠 것을 모두 고친다 — 떼어 낼 책임이면 클래스로, 아니면 한 파일로(아래 1 절 목록).
-2. cpp 와 헤더 짝이 맞지 않는 파일을 모두 확인해, 꼭 그래야 하는 경우(플랫폼별 구현 · 스스로 등록) 외에는 고친다.
-3. 이름 꼬리 · 빈 짝 · 파일 이름 스위치가 남았는지 다시 훑는다(`*DevCommands` 는 에디터 명령 모듈 하나만 남음 — 이름 · 폴더도 정리).
-5. 위가 끝나면 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 절의 "남김" 줄 포함.
-6. 확인한 상태(Debug 빌드 · 단위 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
-7. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
+1. 코드 전체를 다시 훑어 SOLID · 프로젝트 구성(층 · 책임 · 의존 방향 · 폴더)을 전면적으로 고친다 — StructureRefactor 7 · 8 절의 "남김" · "다음" 줄 포함(아래 1 절).
+2. 확인한 상태(Debug 빌드 · 단위 · ctest, Release 빌드 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
+3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 
-### 1. 진행 중 (2026-10-31)
+### 1. 진행 중 (2026-11-01)
 
 | 일 | 상태 |
 |---|---|
-| 큰 클래스를 "공유 상태 + 시스템" 으로 | 크기 분할 파일은 모두 합쳤다(`scatter.py` 결과 남은 것은 플랫폼 · 형식별 구현뿐). 이제 합친 큰 클래스에서 **제 상태 묶음이 있는 것**을 떼어 낸다 — 결정적 시뮬레이션은 `writeState` · `readState` · 상태 해시가 같은 바이트를 내는지 단위 테스트로 묶고 옮긴다. RTSWorld(2 천 줄): 팀 시야(`_listTeamVisibility` · `_visionTimer` · `updateVision` · `getVisibility` · `isVisibleTo` → `RTSVision`), 이웃 버킷(`_listBucketHead/Next` · `_bucketTopology` · `rebuildBuckets` · `computeBucketIndex` → `RTSUnitBuckets`), 흐름장 캐시(`_listFlowField` · `acquire/releaseFlowField` → 내비 쪽 `FlowFieldCache`, 다른 키트도 쓸 수 있다), 유닛 슬롯(`_listUnit` · `_listGeneration` · `_listFreeSlot` → Core 슬롯 맵이 있으면 그것). AudioEngine: 명령 큐 · 오디오 스레드(`_listPendingCommand` · `_listApplyingCommand` · `_commandMutex` · `_audioThread`)와 보이스 풀(`_listVoice` · 가상화)을 각자 클래스로. InputMap(3 천 줄): 동작 평가 상태(`_listBindingState` · 탭 · 홀드 · 반복)와 레이어 스택 · 정의 읽기를 나누기. ScheduleSystem: 빌린 서비스 포인터 아홉(`_pPlanning` · `_pFine` · `_pLocator` …)을 묶음 하나로. HorrorMatch · MechArenaWorld 는 판 하나의 시뮬레이션이라 지금 모양을 기본으로 보고, 같은 도우미(`_listVitalityScratch` 와 판 타이머)가 Runtime 에 있는지만 본다. FrameRenderer · FramePassExecutor 는 이미 부품(노출 · 업스케일 · 안개 · 프리패스 · NaN 검사 · 뷰 자원)을 드는 조정자라 그대로 |
-| SOLID 점검 남은 표 | StructureRefactor 7 절(Core · Engine 과 GF · Editor · App 두 표)의 "남김" 줄 — IEditorPanel 분리, 모듈 수명 두 벌(EditorModuleManager · GameModuleManager), App · Server 프레임 · 종료 두 벌, 파일 감시 4 개, BinaryStream · ByteStream 두 모델 등 |
+| 큰 클래스의 상태 묶음 | AudioEngine 보이스 풀(`_listVoice` · 가상화 · `selectRealVoices`)만 남았다 — 슬롯이 인스턴스 · 버스 · 감쇠 번호를 엔진 표로 들고 있어 풀을 떼면 역참조가 생긴다. 뗄 때는 슬롯 표 + 고르기 정책을 `AudioVoicePool` 로, 번호 풀이는 엔진이 넘기는 문맥으로. `LockedSwapQueue`(Core) 와 같은 "잠금 + 목록" 모양이 TextureCache · GameObjectStore · DeferredDelegateQueue · RenderExtensionRegistry · ContentBrowserImportQueue · LoopbackStreamTransport · Fracture 둘에 손으로 남았다 — 같은 큐로 옮긴다 |
+| SOLID 남은 표 | StructureRefactor 7 절 8 · 9 · 10 · 11 · 12 · 13 · 15(일부) · 16, 8 절 5 ~ 8 · 10 ~ 19. 8 절 19(검색 칸)는 `drawSearchField` 가 Enter 판정을 못 주고, 지우기 단추가 마지막 항목이라 자체 시험 표시(`EditorSelfTestMarks::note`)가 단추에 붙는다 — 위젯이 Enter 결과와 표시 자리를 함께 주게 바꾼 뒤 옮긴다 |
+| 키트 테스트의 구성 | Debug 는 `SW_GAMES` 가 비어 활성 게임(Empty)이 싣지 않는 키트를 짓지도 · 테스트하지도 않는다 — 키트를 고친 묶음은 Release(`UnitTests.<게임>` · `Scenario.<팩>`)가 확인한다. 테스트 폴더가 있는 키트를 싣지 않는 게임(AbilityArena · NileCity …)은 항목이 없다 |
+| 파일을 옮기면 문구 표 | `SW_LOCKEY` 가 든 파일을 옮기면 `App --gather-text` 를 다시 돌려 `Content/**/localization/*.strings.xml` 의 출처 경로를 커밋한다(아니면 ToolCheckText 가 진다) |
 
 ### 2. 테스트 · 시나리오 공백
 
