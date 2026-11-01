@@ -180,7 +180,7 @@
 | 13 | OCP | `BindingKind`(10 종) switch 가 3 파일 · case 66(평가 · 리맵 직렬화 · 글리프), 자동화 · UI · 녹화에 몇 개 | 남김: switch 는 모두 `-Werror=switch`(+`covered-switch-default`) 아래라 종류를 늘리면 빠진 자리가 컴파일 오류다 — 함수 표로 바꿔도 얻는 검사가 없다. 도형 삼각화는 `PhysicsShapeMesh` 하나로 | 남김 |
 | 14 | SRP(파일) | `TaskManager.cpp` 1540 · `NetEndpoint.cpp` 1337 · `StringUtil.cpp` 1297 · `MemoryProfiler.cpp` 1009 줄 — 절 머리글로 이미 나뉘어 있다 | 남김: 같은 클래스의 파일 나누기라 동작 이득이 없다(병렬 그룹 · 대기 · 워커, 핸드셰이크 · 수신, 인코딩 · 파싱, 누수 창 순으로 나눌 수 있다) | 남김 |
 | 15 | 같은 일 둘 | Wayland xdg 리스너 둘, MemoryTag 이름표가 `Diagnostics`(enum 은 `Memory`) | 남김: 작은 것들 | 다음 | float3 성분별 곱 12 곳은 `float3::multiply`, 나눗셈 둘은 뜻대로 `Pose::computeScaleRatio` · `RigPoseBuffer::removeParentScale`, CRC32 는 `HashUtil::computeCRC32`(2026-11-01).
-| 16 | 이름 | `Engine/HostServiceSet.h`(서비스 순서 표) ↔ `Engine/Module/HostInterfaces.h`(호스트 창구) 같은 파일 이름, `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
+| 16 | 이름 | (끝 2026-11-01: 호스트 창구 헤더를 `Engine/Module/HostInterfaces.h` 로 — 서비스 순서 표 `Engine/HostServiceSet.h` 와 겹쳤다) `Engine/FileSystem`(리소스 id · 팩 · 쿠킹 읽기) ↔ `Core/File`, 관측 넷(`Profiling` · `Observability` · `Telemetry` · Core `Diagnostics`) | 남김: 이름 바꾸기는 include 수백 줄이 닿는다 — 통합 뒤 한 번에 | 다음 |
 
 - **근본 원인(한 줄)**: 바닥 도우미가 찾기 어려운 자리(Foundation · Container · TU 전용 Internal)에 있어 호출부가 사본을 만들었고, 층 검사는 include 글만 봐서 전방 선언 칸 · 함수 포인터로 역류가 숨었다. 같은 모양이 남았을 곳은 표의 8 · 9 · 15 다.
 
