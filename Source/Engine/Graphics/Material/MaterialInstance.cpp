@@ -269,7 +269,7 @@ namespace sw
 
         // 부모 레이아웃을 **먼저** 셰이더에 맞춘다. 복사한 뒤에 맞추면 첫 프레임의 인스턴스가 XML 순서 바이트를 들고 있다.
         // 실패하면 부모 바이트가 비어 아래 `_bytes.empty()` 가 false 를 돌려준다(오류는 부모가 이미 남겼다). 레거시 MaterialCB 도 false 지만 바이트가 있다.
-        const bool bParentLayoutOk = _pParentMaterial->ensureShaderLayout( pRHI );
+        const bool bParentLayoutOk = _pParentMaterial->ensureShaderLayout( pRHI->getBackendType() );
         if ( bParentLayoutOk == false && _pParentMaterial->getBuffer().empty() )
             return false;
         // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 인스턴스가 더러워질 때만 다시 복사하면 오버라이드가

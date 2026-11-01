@@ -57,6 +57,7 @@ namespace sw
         // GPU 인스턴스 LOD 는 컬링 컴퓨트가 단계를 고르므로 GPU 컬링 능력이 있는 백엔드만이다(DX11 은 CPU 단계 선택이 남는다).
         _bGPUInstanceLODCapable = device.getCapabilities()._bGPUCulling != SW_FALSE;
         _gpuSceneBuilder->setMergeBatchesAcrossMaterials( bMergeBatchesAcrossMaterials );
+        _gpuSceneBuilder->setShaderLayoutBackend( device.getBackendType() );
         return bMergeBatchesAcrossMaterials;
     }
 

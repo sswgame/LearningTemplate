@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -542,6 +543,7 @@ namespace sw
 
         // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 처리한다. 바뀐 머티리얼이 있으면 그 세대가 오른다.
         refreshReloadedTextures();
+        resyncShaderLayouts();
         _skinPaletteCollector.collect( pObjects->getSubsystem<AnimationSystem>(), _snapshot );
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
@@ -935,6 +937,21 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
             _materialRegistry.freeUnusedMaterialElements( _snapshot );
+        }
+    }
+
+    void GPUSceneBuilder::resyncShaderLayouts()
+    {
+        const uint32 generation = ShaderReflectionLibrary::getCacheGeneration();
+        if ( generation == _lastShaderReflectionGeneration )
+            return;
+        _lastShaderReflectionGeneration = generation;
+        const size_t candidateCount     = MathUtil::min( _lastCandidateCount, _listBuiltCandidate.size() );
+        for ( size_t index = 0; index < candidateCount; ++index )
+        {
+            Material* pMaterial = _listBuiltCandidate[index]._material.get();
+            if ( pMaterial != nullptr && pMaterial->getGPUState() == MaterialGPUState::Ready )
+                (void)pMaterial->ensureShaderLayout( _shaderLayoutBackend ); // 실패 오류는 맞추는 쪽이 남긴다
         }
     }
 

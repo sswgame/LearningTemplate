@@ -155,7 +155,7 @@ namespace sw
 
         // 셰이더 레이아웃도 초기화하는 스레드(게임 스레드)에서 맞춘다 — 렌더 스레드의 첫 사용(`GPUScene` · 인스턴스 `updateRHI`)이 맞추면
         // 게임 스레드가 읽는 속성 목록을 렌더 스레드가 고치게 된다. 결과(레거시 MaterialCB 는 stride 0)는 그 사용처가 다시 묻는다.
-        (void)ensureShaderLayout( pRHI );
+        (void)ensureShaderLayout( pRHI->getBackendType() );
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
         loadScope.setBytes( _data._bytes.size() );
@@ -423,7 +423,7 @@ namespace sw
         pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), byteSize );
     }
 
-    bool Material::ensureShaderLayout( IRHIDevice* pDevice )
+    bool Material::ensureShaderLayout( RHIBackend backend )
     {
         // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 MaterialData 원소 레이아웃**이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
@@ -431,9 +431,8 @@ namespace sw
         //
         // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.
-        if ( pDevice == nullptr || _desc._shaderPath.empty() )
+        if ( _desc._shaderPath.empty() )
             return false;
-        const RHIBackend backend = pDevice->getBackendType();
         if ( isShaderLayoutSynced( backend ) )
             return _elementStride != 0;
         _bShaderLayoutSynced         = SW_TRUE;
@@ -441,7 +440,7 @@ namespace sw
         _shaderLayoutCacheGeneration = ShaderReflectionLibrary::getCacheGeneration();
 
         ShaderReflectionData reflection{};
-        if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( pDevice->getBackendType() ), reflection ) == false )
+        if ( reflectMaterialSchema( _desc._shaderPath, RHI::getShaderTargetFormat( backend ), reflection ) == false )
         {
             SW_LOG_ERROR( "Shader reflection for material '%#' not found ('%#') - clearing the bytes and not uploading.", _desc._name.c_str(), _desc._shaderPath.c_str() );
             discardBytesAfterLayoutError();

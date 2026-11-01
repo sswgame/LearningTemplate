@@ -135,12 +135,12 @@ namespace sw
         /** @brief 셰이더의 머티리얼 스키마가 든 리플렉션을 구합니다(픽셀 스테이지, 없으면 정점 스테이지). 얻지 못하면 false 입니다. `ensureShaderLayout` 과 로드 검증이 함께 씁니다. */
         [[nodiscard]] static bool reflectMaterialSchema( const string& shaderPath, ShaderTargetFormat targetFormat, ShaderReflectionData& outReflection );
         /**
-         * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
-         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. GPUScene 과 인스턴스(`MaterialInstance::updateRHI`)가 바이트를
-         *          읽기 전에 부른다. 레이아웃의 기준은 셰이더다.
+         * @brief @p backend 의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
+         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않는다. 맞추는 일(속성 목록을 고친다)은 게임 스레드가 한다 — 초기화(`initialize`)와
+         *          셰이더 리플렉션이 바뀐 뒤의 스냅샷 빌드(`GPUSceneBuilder`). 렌더 스레드의 GPUScene · 인스턴스(`MaterialInstance::updateRHI`)는 이미 맞춰진 것을 확인만 한다.
          * @return 원소 stride 를 얻었고 동기화가 성공했으면(`syncPropertiesFromReflection`) true 입니다.
          */
-        [[nodiscard]] bool ensureShaderLayout( IRHIDevice* pDevice );
+        [[nodiscard]] bool ensureShaderLayout( RHIBackend backend );
         /**
          * @brief 프로퍼티 오프셋과 stride 가 지금 이 백엔드의 셰이더 레이아웃에 맞춰져 있는지 나타냅니다.
          * @details 다시 로드하면(`loadFromXML`, 에셋 핫 리로드, 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가

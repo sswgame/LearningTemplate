@@ -13,6 +13,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Scene/GPUInstanceRing.h"
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
@@ -113,6 +114,8 @@ namespace sw
          *          디바이스 caps(supportsNativeBindlessSampling)로 값을 정한다. 값이 바뀌면 다음 populateFromScene 이 다시 묶는다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
+        /** @brief 머티리얼 레이아웃을 맞출 셰이더 백엔드입니다(`resyncShaderLayouts`). 디바이스를 단 쪽(`RenderPacketSceneCollector::initialize`)이 정한다. */
+        void setShaderLayoutBackend( RHIBackend backend ) { _shaderLayoutBackend = backend; }
         /**
          * @brief GPU 인스턴스 LOD(컬링 컴퓨트가 인스턴스마다 LOD 단계를 고른다)를 쓸 수 있는지 정합니다. 렌더가 디바이스 능력(`RHICapabilities::_bGPUCulling`)으로 정한다.
          * @details 능력이 없는 백엔드(DX11)는 꺼 두고 CPU 단계 선택(`MeshLODSystem`)이 그대로 맡는다 — 선언된 능력 분기이지 폴백이 아니다(배치 구성이 달라진다).
@@ -281,6 +284,11 @@ namespace sw
          *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 한다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 처리한다.
          */
         void refreshReloadedTextures();
+        /**
+         * @brief 셰이더 리플렉션이 바뀌었으면(셰이더 핫 리로드) 지난 빌드의 머티리얼 레이아웃을 게임 스레드에서 다시 맞춥니다.
+         * @details 렌더 스레드의 첫 사용이 맞추면 게임 스레드가 읽는 속성 목록을 렌더 스레드가 고친다. 새 머티리얼은 초기화(`Material::initialize`)가 맞췄다.
+         */
+        void resyncShaderLayouts();
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCPUSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 테이블과 머티리얼 그룹은 여기서 계속 자랍니다. */
         GPUSceneSnapshot _snapshot;
@@ -660,6 +668,9 @@ namespace sw
         // 나머지는 그 배치에서 끌어낸다(`GPUSceneSnapshot::getOpaqueInstanceCount`, `BatchElementTable::truncateToBatches`).
         /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 값이 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
         uint32 _lastTextureReloadGeneration{ 0 };
+        /// @brief 마지막으로 본 `ShaderReflectionLibrary::getCacheGeneration()` 입니다. 값이 다르면 지난 빌드의 머티리얼 레이아웃을 이 스레드에서 다시 맞춘다.
+        uint32     _lastShaderReflectionGeneration{ 0 };
+        RHIBackend _shaderLayoutBackend{}; ///< `setShaderLayoutBackend` 가 정한다
 
         /**
          * @class BatchElementTable
