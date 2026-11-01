@@ -416,7 +416,9 @@ namespace sw::editor
                     }
                 }
 
-                // 원본이 사라진 줄. 임포트된 결과는 다른 것이 참조할 수 있어 지우지 않는다 — 줄만 지운다.
+                // 원본이 사라진 줄 — 그 결과(파일과 같은 이름의 옆 폴더)도 지운다. 결과는 생성물이라 깨끗한 클론에는 없다. 남겨 두면 지운 원본을 아직 가리키는 코드 · 데이터가
+                // 이 PC 에서만 그려져 숨는다(2026-11-02 — 지운 원본의 `nilecity/models/tree_large.mesh` 를 C++ 표가 계속 읽었다). 옆 폴더 아래에 남은 원본의 자리가 있으면
+                // (`x.glb` 를 지웠는데 `x/y.glb` 는 있다) 옆 폴더는 두고 결과 파일만 지운다.
                 for ( const auto& [relativePath, entry] : mapStamped )
                 {
                     if ( mapCurrent.find( relativePath ) != mapCurrent.end() )
@@ -425,12 +427,33 @@ namespace sw::editor
                     if ( FileUtil::exists( sourcePath ) )
                         continue; // 원본은 있다 — 위에서 어긋남 · 실패로 이미 보고했다
                     if ( mode == AssetImportMode::CheckOnly )
+                    {
                         inoutSummary._listProblem.push_back( sourcePath.substr( rootDir.size() + 1 ) + ": 원본이 없는데 스탬프에 남아 있습니다" );
+                        continue;
+                    }
+                    removeOrphanedResult( importer.makeImportedPath( sourcePath ), listFile, inoutSummary );
                 }
 
                 if ( mode == AssetImportMode::CheckOnly )
                     return;
                 writeStampIfChanged( stampPath, importer.getStampHeader(), mapCurrent, inoutSummary );
+            }
+
+            /** @brief 원본이 사라진 결과 파일과 옆 폴더를 지웁니다. 옆 폴더 아래에 남은 원본의 결과 자리가 있으면 옆 폴더는 둡니다. 못 지우면 문제로 남깁니다. */
+            static void removeOrphanedResult( const string& importedPath, const vector<SourceFile>& listLiveFile, AssetImportSummary& inoutSummary )
+            {
+                const string footprint = makeFootprintKey( importedPath );
+                if ( footprint.empty() )
+                    return;
+                if ( FileUtil::removeFile( importedPath ) == false )
+                    inoutSummary._listProblem.push_back( importedPath + ": 원본이 사라진 결과를 지우지 못했습니다" );
+                const string sideFolder     = FileUtil::removeExtension( importedPath );
+                const string footprintSlash = footprint + "/";
+                const bool   bShared        = VectorUtil::containsIf( listLiveFile, [&footprintSlash]( const SourceFile& file )
+                         { return StringUtil::startsWith( makeFootprintKey( file._importedPath ), footprintSlash ); } );
+                if ( bShared == false && FileUtil::isDirectory( sideFolder ) && FileUtil::removeDirectory( sideFolder ) == false )
+                    inoutSummary._listProblem.push_back( sideFolder + ": 원본이 사라진 결과의 옆 폴더를 지우지 못했습니다" );
+                SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath );
             }
 
             /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
