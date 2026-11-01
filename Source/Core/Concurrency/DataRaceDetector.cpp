@@ -3,6 +3,7 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 
 #if defined( SW_DEBUG )
+    #include <cstdio>
     #include <functional>
     #include <thread>
 #endif
@@ -129,8 +130,13 @@ namespace sw
         const uint32                 readers = state & kCountMask;
         const uint32                 writers = ( state >> kWriterBitShift ) & kCountMask;
         const DataRaceReportFunction pReport = s_pReportFunction.load( std::memory_order_acquire );
+        // 보고 스택은 지금(늦게 들어온) 스레드 것뿐이다 — 먼저 들어와 있던 스레드(주인)를 id 로 함께 적어 상대를 찾을 수 있게 한다.
+        // id 는 GL 컨텍스트 로그 · 크래시 보고와 같은 `std::hash<std::thread::id>` 값이라 렌더 스레드 등과 맞춰 볼 수 있다.
+        char arrMessage[256]{};
+        (void)std::snprintf( arrMessage, sizeof( arrMessage ), "%s (this thread %llu, already inside: thread %llu)", pMessage,
+                             static_cast<unsigned long long>( currentThreadID() ), static_cast<unsigned long long>( _ownerThreadID.load( std::memory_order_relaxed ) ) );
         if ( pReport != nullptr )
-            pReport( pMessage, this, readers, writers );
+            pReport( arrMessage, this, readers, writers );
 
         SW_DEBUG_BREAK();
     }

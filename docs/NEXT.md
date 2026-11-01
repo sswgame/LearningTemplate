@@ -32,6 +32,9 @@
    - `Saved/Test/<pid>/` 단위 테스트 쓰기 폴더가 실행마다 남아 수백 개다 — 끝나면 지우거나 한 폴더를 다시 쓴다.
 6. GL 백엔드의 자원 생성을 렌더 스레드로 넘긴다(언리얼 GL RHI 처럼 GL 호출을 한 스레드에) — 지금은 게임 스레드가 컨텍스트를 빌려 만들고, 렌더 스레드가 오래 쥐면 생성이 버려졌다
    (Debug gl 단계 재설정에서 262 ms → 기본 머티리얼 상수 버퍼 실패). 시한을 교착 규모(5 초)로 올려 증상은 막았다.
+7. 데이터 경합 한 번(Debug gl, editor.flowterrain, 2026-11-01): 씬을 읽다 `WaterBodyComponent::onRegister` → `writeMaterialValues` → `MaterialInstance::setVectorParameter` 가
+   `Material::findProperty`(속성 목록 읽기)에 들어갔을 때 다른 스레드가 같은 Material 에 쓰고 있었다. 쓴 쪽 스택은 남지 않았다 — 보고에 상대 스레드 id 를 더했으니
+   다시 나면 GL 로그의 렌더 스레드 id 와 맞춰 쓴 쪽을 찾고, Material 속성 목록을 렌더 스레드가 고치는지(초기화 · 핫 리로드) 본다.
 
 ### 1. 진행 중 (2026-11-01)
 

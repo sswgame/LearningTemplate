@@ -81,20 +81,17 @@ namespace
         return scan;
     }
 
-    /** @brief 테마 폴더의 토큰 벌을 모두 읽습니다. */
+    /** @brief 토큰 벌을 모두 읽습니다 — 에디터가 쓰는 길(`EditorThemeTokens` 의 폴더 찾기 · 읽기)과 같다. 프로젝트 루트로 경로를 지으면 Release 의 콘텐츠 탑재와 어긋났다. */
     vector<EditorThemeConfig> loadAllThemes()
     {
-        const string   folder = FileUtil::joinPath( ProcessRoots::get()._project.str(), "Content/editor/theme" );
-        vector<string> listFile;
-        SW_ASSERT( FileUtil::collectFiles( folder, "", listFile, false ) );
+        vector<string> listName;
+        EditorThemeTokens::listThemeNames( listName );
         vector<EditorThemeConfig> listTheme;
-        for ( const string& filePath : listFile )
+        for ( const string& name : listName )
         {
-            if ( StringUtil::endsWith( filePath, EditorThemeTokens::kExtension, true ) == false )
-                continue;
             EditorThemeConfig config{};
             string            error;
-            SW_EXPECT_TRUE_MSG( EditorThemeTokens::loadThemeFile( filePath, config, error ), error.c_str() );
+            SW_EXPECT_TRUE_MSG( EditorThemeTokens::loadTheme( name, config, error ), error.c_str() );
             listTheme.push_back( std::move( config ) );
         }
         return listTheme;
