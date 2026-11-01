@@ -53,12 +53,6 @@
 | 벽시계 한도와 부하 | 그물은 이제 조건 대기의 제 시한을 덮는다(`computeWallLimitSeconds`). 남은 것: 백엔드 교체가 많은 시나리오(flowterrain 의 교체 7 번이 혼자서도 19 초)의 교체 시간 자체를 줄인다 |
 | id 없는 경고 · 오류 | 테스트가 밟는 경로마다 `SW_LOG_*_ID` 를 붙였지만 다른 로더에 더 남았다 — 같은 모양 |
 
-### 3. 프레임 밖으로 뺄 일 (TaskManager)
-
-| 일 | 위치 |
-|---|---|
-| `DevCommand` 단계 평균 87 ms/프레임의 원인 | timeline 줄의 시나리오별 `DevCommand` |
-
 ### 4. 구조 개편 남은 것 ([StructureRefactor](StructureRefactor.md))
 
 | 주제 | 남은 것 (2026-10-31) |
