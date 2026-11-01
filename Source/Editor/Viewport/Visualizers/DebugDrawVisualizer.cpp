@@ -86,7 +86,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, editoricon::kBug, "Dbg", "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다", true,
+    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, SW_EDITORICON_NAME( "Bug" ), "Dbg", "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다", true,
                           &DebugDrawVisualizerInternal::draw );
 } // namespace sw::editor
 

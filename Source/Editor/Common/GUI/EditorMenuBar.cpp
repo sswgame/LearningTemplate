@@ -115,7 +115,7 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Reset Default Layout" ) ) )
+            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), "Reset Default Layout" ) ) )
                 dockLayout.requestResetDefault();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ResetLayout" ) );
             drawNamedLayoutMenu( dockLayout );
@@ -222,14 +222,14 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( kCompilingButton ) );
                 ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( kCompilingButtonHovered ) );
                 fixed_string<constant::buffer::kMax64> label;
-                formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", editoricon::kSpinner, Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
+                formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", SW_EDITORICON( "Spinner" ), Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
                     pCompiler->cancel();
                 ImGui::PopStyleColor( 2 );
             }
             else
             {
-                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( editoricon::kHammer, "Compile" ) ) )
+                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Hammer" ), "Compile" ) ) )
                     pCompiler->compileModule( "SWGame" );
 
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CompileGame" ) );
@@ -238,24 +238,24 @@ namespace sw::editor
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( editoricon::kSpinner, "Compiling..." ) );
+                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Spinner" ), "Compiling..." ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildCompiling" ) );
             }
             else if ( state == BuildState::Success )
             {
                 EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Success" ) );
-                ImGui::Text( "%s  Built (%.1fs)", editoricon::kSuccess, static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                ImGui::Text( "%s  Built (%.1fs)", SW_EDITORICON( "Success" ), static_cast<float64>( pCompiler->getLastDurationSec() ) );
                 EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildSucceeded" ) );
             }
             else if ( state == BuildState::Failed )
             {
-                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( editoricon::kError, "Build Failed" ) );
+                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Error" ), "Build Failed" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildFailed" ) );
             }
             else
             {
-                ImGui::TextDisabled( "%s  Ready", editoricon::kCheck );
+                ImGui::TextDisabled( "%s  Ready", SW_EDITORICON( "Check" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildReady" ) );
             }
 

@@ -1,0 +1,26 @@
+<!-- 컴포넌트 아이콘 표(EditorComponentIconTable). 메타(Icon= · IconColor=)가 없는 컴포넌트가 리플렉션 Category 로 여기서 맞는다.
+     _icon 은 아이콘 표(editor/fonts/sweditoricons.glyphs.xml)의 이름, _color 는 테마 색 키 Component.<이름>(Content/editor/theme/*.tokens.json)이다. -->
+<EditorComponentIconTable _defaultIcon="Component" _objectIcon="GameObject" _neutralColor="Neutral">
+	<_listCategory>
+		<EditorComponentCategoryIcon _category="Camera" _icon="Camera" _color="Camera" />
+		<EditorComponentCategoryIcon _category="Audio" _icon="Audio" _color="Audio" />
+		<EditorComponentCategoryIcon _category="Physics" _icon="Physics" _color="Physics" />
+		<EditorComponentCategoryIcon _category="Physics 2D" _icon="Physics" _color="Physics" />
+		<EditorComponentCategoryIcon _category="Navigation" _icon="Navigation" _color="Navigation" />
+		<EditorComponentCategoryIcon _category="Character" _icon="Character" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Animation" _icon="Animation" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Animation 2D" _icon="Animation" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Animation 3D" _icon="Animation" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Rendering 3D" _icon="Cube" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Rendering 2D" _icon="Sprite" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="UI" _icon="Widget" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Layout" _icon="Widget" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Control" _icon="Controller" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Environment" _icon="Globe" _color="Environment" />
+		<EditorComponentCategoryIcon _category="Vehicle" _icon="Vehicle" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Interaction" _icon="Trigger" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Gimmick" _icon="Trigger" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Cinematics" _icon="Sequence" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Gameplay" _icon="Ability" _color="Neutral" />
+	</_listCategory>
+</EditorComponentIconTable>

@@ -152,6 +152,6 @@ namespace sw::editor
         return SelectionBoundsVisualizerInternal::getDrawState()._drawnBoxCount;
     }
 
-    SW_EDITOR_VISUALIZER( SelectionBounds, "selection_bounds", 40, editoricon::kCube, "Sel", "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다", true,
+    SW_EDITOR_VISUALIZER( SelectionBounds, "selection_bounds", 40, SW_EDITORICON_NAME( "Cube" ), "Sel", "고른 오브젝트의 경계 상자를 강조색 선으로 표시합니다", true,
                           &SelectionBoundsVisualizerInternal::draw );
 } // namespace sw::editor

@@ -10,7 +10,7 @@
 
 namespace sw::editor
 {
-    SW_EDITOR_VISUALIZER( TerrainBrush, "terrainbrush", 140, editoricon::kHeightfield, "Terrain",
+    SW_EDITOR_VISUALIZER( TerrainBrush, "terrainbrush", 140, SW_EDITORICON_NAME( "Heightfield" ), "Terrain",
                           "Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)", false,
                           &TerrainBrushTool::process );
 } // namespace sw::editor

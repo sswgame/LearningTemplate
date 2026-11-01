@@ -26,15 +26,15 @@ namespace sw::editor
 
     void BugReportPanel::drawRowActions( const BugReportRow& row )
     {
-        if ( ImGui::SmallButton( editoricon::kFolderOpen ) )
+        if ( ImGui::SmallButton( SW_EDITORICON_NAME( "FolderOpen" ) ) )
             BugReportModel::showInFileExplorer( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "ShowInExplorer" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCopy ) );
-        if ( ImGui::SmallButton( editoricon::kCopy ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON_NAME( "Copy" ) ) );
+        if ( ImGui::SmallButton( SW_EDITORICON_NAME( "Copy" ) ) )
             ImGui::SetClipboardText( row._directory.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "CopyPath" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kCamera ) );
-        if ( ImGui::SmallButton( editoricon::kCamera ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON_NAME( "Camera" ) ) );
+        if ( ImGui::SmallButton( SW_EDITORICON_NAME( "Camera" ) ) )
             BugReportModel::goTo( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "GoTo" ) );
     }
@@ -47,12 +47,12 @@ namespace sw::editor
         EditorSelfTestMarks::note( "bugReport.note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBug, "Collect Now" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Bug" ), "Collect Now" ) ) )
             (void)_model.captureNow(); // 결과는 알림으로 알린다
         EditorSelfTestMarks::note( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Refresh" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Refresh" ), "Refresh" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Refresh" ), "Refresh" ) ) )
             _model.markDirty();
 
         ImGui::Separator();

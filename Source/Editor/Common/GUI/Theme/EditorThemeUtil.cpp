@@ -287,14 +287,17 @@ namespace sw::editor
             }
 
             /** @brief 종류 등록의 아이콘입니다. 종류가 없으면 일반 파일 아이콘입니다. */
-            static const utf8* getIconOf( const EditorAssetTypeRegistration* pRegistration ) { return pRegistration != nullptr ? pRegistration->_pIcon : editoricon::kFile; }
+            static const utf8* getIconOf( const EditorAssetTypeRegistration* pRegistration )
+            {
+                return pRegistration != nullptr ? EditorIconUtil::findGlyphByName( pRegistration->_pIconName ) : SW_EDITORICON( "File" );
+            }
 
-            /** @brief 종류 등록의 색입니다. 종류가 없으면 흐린 글자 색이고, 액센트 종류는 테마 액센트 색입니다. */
+            /** @brief 종류 등록의 테마 색(키는 등록 줄이 든다)입니다. 종류가 없으면 흐린 글자 색입니다. */
             static Color getColorOf( const EditorAssetTypeRegistration* pRegistration )
             {
                 if ( pRegistration == nullptr )
                     return SW_THEMECOLOR( "Base", "TextMuted" );
-                return pRegistration->_bAccentColor ? SW_THEMECOLOR( "Base", "Accent" ) : pRegistration->_color;
+                return findColor( hashed_string{ pRegistration->_pColorKey } );
             }
         };
     } // namespace
@@ -415,6 +418,34 @@ namespace sw::editor
         return Color::lerp( SW_THEMECOLOR( "Base", "Accent" ), SW_THEMECOLOR( "Base", "Text" ), EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
     }
 
+    const utf8* EditorIconUtil::findGlyph( const hashed_string& name )
+    {
+        EditorTheme&                theme = getSubsystem<EditorTheme>();
+        const EditorIconGlyphTable& table = theme.getIconTable();
+        if ( const utf8* pGlyph = table.findGlyph( name ) )
+            return pGlyph;
+        static const hashed_string s_missingName{ EditorIconGlyphTable::kMissingIconName };
+        const utf8* const          pMissing = table.findGlyph( s_missingName );
+        if ( theme.markMissingKey( name ) )
+        {
+            if ( pMissing == nullptr )
+                SW_LOG_ERROR_ID( "EditorIcon.TableNotLoaded", "Editor icon '%#' was asked for before the icon table was read (EditorFontSetup) - a static table must hold the name, not the glyph", name.c_str() );
+            else
+                SW_LOG_ERROR_ID( "EditorIcon.UnknownName", "Editor icon '%#' is not in the icon table (editor/fonts/sweditoricons.glyphs.xml)", name.c_str() );
+        }
+        return pMissing != nullptr ? pMissing : "?";
+    }
+
+    const utf8* EditorIconUtil::findGlyphByName( const utf8* pName )
+    {
+        return pName != nullptr ? findGlyph( hashed_string{ pName } ) : nullptr;
+    }
+
+    bool EditorIconUtil::hasIcon( string_view name )
+    {
+        return getSubsystem<EditorTheme>().getIconTable().findGlyph( hashed_string{ name } ) != nullptr;
+    }
+
     const Color& EditorThemeUtil::findColor( const hashed_string& key )
     {
         static constexpr Color kMissingColor{ 1.0f, 0.0f, 1.0f, 1.0f };
@@ -514,7 +545,7 @@ namespace sw::editor
             return;
 
         EditorChrome::setNextWindowExtentFirstUse( EditorTextExtent::ofText( 61.0f, 20.0f ) );
-        if ( ImGui::Begin( makeIconLabel( editoricon::kPalette, "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
+        if ( ImGui::Begin( makeIconLabel( SW_EDITORICON( "Palette" ), "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
@@ -600,7 +631,7 @@ namespace sw::editor
             ImGui::Separator();
 
             // 5) 덮어쓴 강조색 · 둥글기를 버리고 토큰 값으로 되돌린다.
-            if ( ImGui::Button( makeIconLabel( editoricon::kUndo, "Reset to Theme Defaults" ) ) )
+            if ( ImGui::Button( makeIconLabel( SW_EDITORICON( "Undo" ), "Reset to Theme Defaults" ) ) )
             {
                 (void)applyThemeByName( editorConfig._name ); // 목록에 있는 벌이다(콤보가 고른 것)
                 saveToConfig();
@@ -618,7 +649,7 @@ namespace sw::editor
 
     const utf8* EditorThemeUtil::getFolderIcon( bool bOpened )
     {
-        return bOpened ? editoricon::kFolderOpen : editoricon::kFolder;
+        return bOpened ? SW_EDITORICON( "FolderOpen" ) : SW_EDITORICON( "Folder" );
     }
 
     const utf8* EditorThemeUtil::getAssetTypeIcon( const EditorAssetType& kind )
@@ -634,7 +665,7 @@ namespace sw::editor
     const utf8* EditorThemeUtil::getAssetIconForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
-            return editoricon::kFolder;
+            return SW_EDITORICON( "Folder" );
         return EditorThemeInternal::getIconOf( EditorAssetTypeRegistry::findKindInfoForPath( path ) );
     }
 

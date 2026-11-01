@@ -127,7 +127,7 @@ namespace sw::editor
         nextItem( bVertical );
         {
             const bool b2D = settings._bIs2DMode;
-            if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, editoricon::kSprite, editoricon::kCube,
+            if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, SW_EDITORICON( "Sprite" ), SW_EDITORICON( "Cube" ),
                                                       SW_LOCKEY( "EdCommon", "View2D" ),
                                                       SW_LOCKEY( "EdCommon", "View3D" ) ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
@@ -143,16 +143,16 @@ namespace sw::editor
     void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 에 해당). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
-        if ( EditorWidgets::drawIconToggle( "##hud", editoricon::kChart, settings._bShowHUD,
+        if ( EditorWidgets::drawIconToggle( "##hud", SW_EDITORICON( "Chart" ), settings._bShowHUD,
                                             SW_LOCKEY( "EdCommon", "ViewportHUD" ) ) )
             settings._bShowHUD = ( settings._bShowHUD == false );
         EditorSelfTestMarks::note( "viewport.hud" );
         EditorDebugHUDControls::drawSectionPopupOnRightClick( "##sceneHUDSections" );
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
+        if ( EditorWidgets::drawIconToggle( "##grid", SW_EDITORICON( "Grid" ), settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
             settings._bShowGrid = ( settings._bShowGrid == false );
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##cube", editoricon::kAxes, settings._bShowOrientationCube,
+        if ( EditorWidgets::drawIconToggle( "##cube", SW_EDITORICON( "Axes" ), settings._bShowOrientationCube,
                                             SW_LOCKEY( "EdCommon", "ViewportOrientationCube" ) ) )
             settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
 
@@ -166,20 +166,20 @@ namespace sw::editor
             ImGui::PushID( visualizer._pID );
             fixed_string<constant::buffer::kMax256> tooltip;
             formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
-            const bool bPressed = visualizer._pIcon != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", visualizer._pIcon, bOn, tooltip.c_str() )
-                                                               : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
+            const bool bPressed = visualizer._pIconName != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconUtil::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
+                                                                   : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
             EditorSelfTestMarks::note( mark.c_str() );
-            if ( visualizer._pIcon == nullptr )
+            if ( visualizer._pIconName == nullptr )
                 EditorWidgets::drawTooltip( tooltip.c_str() );
             ImGui::PopID();
         }
 
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##surfaceSnap", editoricon::kMagnet, settings._bSurfaceSnap,
+        if ( EditorWidgets::drawIconToggle( "##surfaceSnap", SW_EDITORICON( "Magnet" ), settings._bSurfaceSnap,
                                             SW_LOCKEY( "EdCommon", "SurfaceSnap" ) ) )
             settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
     }
@@ -187,7 +187,7 @@ namespace sw::editor
     void EditorViewportToolbar::drawToolsBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         const float32 side = ImGui::GetFrameHeight();
-        if ( ImGui::Button( editoricon::kBookmark, ImVec2{ side, side } ) )
+        if ( ImGui::Button( SW_EDITORICON( "Bookmark" ), ImVec2{ side, side } ) )
             EditorInputGUI::openPopup( "##ViewportBookmarksPopup" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraBookmarks" ) );
 
@@ -225,7 +225,7 @@ namespace sw::editor
         const bool bCanAlign = editor::getMainSceneSelection().getSelectedObjectCount() >= 2;
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
-        if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )
+        if ( ImGui::Button( SW_EDITORICON( "Align" ), ImVec2{ side, side } ) )
             EditorInputGUI::openPopup( "##ViewportAlignPopup" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "AlignSelected" ) );

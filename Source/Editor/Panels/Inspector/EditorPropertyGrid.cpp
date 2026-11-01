@@ -242,7 +242,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( pFieldTooltip );
         ImGui::SameLine();
         // 켜져 있으면 강조색으로 그려 거른 상태임을 알린다. 꺼진 줄 모르고 프로퍼티가 사라졌다고 여기지 않게 한다.
-        if ( EditorWidgets::drawToggleIconButton( "##inspectorViewOptions", _bShowModifiedOnly, editoricon::kFilter, editoricon::kFilter,
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorViewOptions", _bShowModifiedOnly, SW_EDITORICON( "Filter" ), SW_EDITORICON( "Filter" ),
                                                   SW_LOCKEY( "EditorInspector", "ViewOptions" ), SW_LOCKEY( "EditorInspector", "ViewOptions" ) ) )
             EditorInputGUI::openPopup( "InspectorViewOptions" );
         EditorSelfTestMarks::note( "inspector.viewOptions" );
@@ -479,7 +479,7 @@ namespace sw::editor
         const bool    bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
         if ( bFavorite )
         {
-            ImGui::TextUnformatted( editoricon::kStar );
+            ImGui::TextUnformatted( SW_EDITORICON( "Star" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
             ImGui::SameLine();
         }
@@ -495,8 +495,8 @@ namespace sw::editor
         // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
         if ( EditorDefaultObjects::isDefaultValue( prop, instance, defaultInstance ) == false )
         {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( editoricon::kRefresh ) );
-            if ( ImGui::SmallButton( editoricon::kRefresh ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON( "Refresh" ) ) );
+            if ( ImGui::SmallButton( SW_EDITORICON( "Refresh" ) ) )
                 resetPropertyToDefault( instance, prop, defaultInstance );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
             fixed_string<constant::buffer::kMax128> resetMark;

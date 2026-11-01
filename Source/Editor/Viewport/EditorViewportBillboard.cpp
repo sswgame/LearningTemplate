@@ -211,6 +211,6 @@ namespace sw::editor
         return 0;
     }
 
-    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, editoricon::kLightPoint, "Icons", "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다", true,
+    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, SW_EDITORICON_NAME( "LightPoint" ), "Icons", "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다", true,
                           &EditorViewportBillboardInternal::draw );
 } // namespace sw::editor

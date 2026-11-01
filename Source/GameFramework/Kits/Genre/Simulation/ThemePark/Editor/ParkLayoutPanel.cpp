@@ -32,7 +32,7 @@ namespace sw::editor
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         ParkLayoutPreview& preview = *pPreview;
         bool               bForce  = false;
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reload" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Reload" ) ) )
             bForce = true;
         EditorSelfTestMarks::note( "themepark.layout.reload" );
         // [/doc:panel-draw]

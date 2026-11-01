@@ -252,7 +252,7 @@ namespace sw::editor
         ImGui::TextUnformatted( _selectedEvent.c_str() );
         ImGui::TextDisabled( "%s", _selectedLibrary.c_str() );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
             (void)engine.postEvent( _selectedEvent, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
         EditorSelfTestMarks::note( "audioevents.postEvent" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) );
@@ -412,7 +412,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioEventBrowserPanel, AudioEventBrowserPanel::kPanelID, EditorPanelCategory::Tool, 2101 );
-    SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", 2231, "Audio Events", editoricon::kSettings, "Audio",
+    SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", 2231, "Audio Events", SW_EDITORICON_NAME( "Settings" ), "Audio",
                        "오디오 이벤트 창을 엽니다(이벤트 속성 · 재생 중 인스턴스 · 보이스 프로파일러)", "Open the audio event browser", nullptr, &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene,
                        "MainMenu/Window", None, 0 );
 } // namespace sw::editor

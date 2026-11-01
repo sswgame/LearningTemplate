@@ -129,7 +129,7 @@ namespace sw::editor
         /** @brief 폴더용 테마 색을 반환합니다. */
         static Color getFolderColor();
 
-        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(editoricon::kFolderOpen / kFolder). */
+        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(SW_EDITORICON( "FolderOpen" ) / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
         /** @brief 종류의 에디터 아이콘을 반환합니다. 애셋 종류 등록을 따릅니다. 알 수 없음이면 일반 파일 아이콘입니다. */

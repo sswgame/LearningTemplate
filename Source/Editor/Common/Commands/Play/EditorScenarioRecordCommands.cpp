@@ -113,7 +113,7 @@ namespace sw::editor
 
     SW_EDITOR_FRAME_STEP( ScenarioRecord, "scenarioRecord", EditorFrameStepOrder::kCommands - 50, &EditorScenarioRecordCommandsInternal::runFrame );
 
-    SW_EDITOR_COMMAND( ToggleScenarioRecord, "automation.toggleScenarioRecord", 2910, "Record Scenario (Start/Stop)", editoricon::kCamera, "Editor",
+    SW_EDITOR_COMMAND( ToggleScenarioRecord, "automation.toggleScenarioRecord", 2910, "Record Scenario (Start/Stop)", SW_EDITORICON_NAME( "Camera" ), "Editor",
                        "실행 중 입력을 Saved/Automation/Recorded/recorded.scenario.xml 로 녹화합니다. 한 번 더 누르면 멈추고 씁니다",
                        "Record input into a scenario file", nullptr, &EditorScenarioRecordCommandsInternal::runToggle, nullptr, NoScene, "MainMenu/Edit", None, 0 );
 } // namespace sw::editor

@@ -38,6 +38,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Mesh, MeshAssetFormat::kAssetType._name.data(), 1200, "Mesh", "Meshes", nullptr, editoricon::kCube, { 0.55f, 0.80f, 0.80f, 1.0f }, false, true, true, kArrMeshRule,
+    SW_EDITOR_ASSET_TYPE( Mesh, MeshAssetFormat::kAssetType._name.data(), 1200, "Mesh", "Meshes", nullptr, SW_EDITORICON_NAME( "Cube" ), SW_THEMECOLOR_KEY( "Asset", "Mesh" ), true, true, kArrMeshRule,
                           SW_COUNT_OF( kArrMeshRule ), nullptr, &s_meshActions );
 } // namespace sw::editor

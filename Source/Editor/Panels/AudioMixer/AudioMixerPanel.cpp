@@ -124,9 +124,9 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Post Event" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Post Event" ) ) );
         ImGui::BeginDisabled( listEventName.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Post Event" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Post Event" ) ) )
             _model.postSelectedEvent( engine );
         EditorSelfTestMarks::note( "audiomixer.postEvent" );
         ImGui::EndDisabled();
@@ -136,9 +136,9 @@ namespace sw::editor
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)EditorWidgets::drawAssetPathField( "##AudioMixerClip", _clipPath, "audio/sample.wav", ".wav,.ogg", "audiomixer.clipPath" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play Clip" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), "Play Clip" ) ) )
             (void)audio.play( AssetID{ _clipPath.c_str() } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
         EditorSelfTestMarks::note( "audiomixer.playClip" );
         ImGui::EndDisabled();
@@ -227,7 +227,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioMixerPanel, AudioMixerPanel::kPanelID, EditorPanelCategory::Tool, 2100 );
-    SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", editoricon::kSettings, "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer", nullptr, &AudioMixerPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window", None, 0 );
+    SW_EDITOR_COMMAND( AudioMixerOpen, "window.audioMixer", 2230, "Audio Mixer", SW_EDITORICON_NAME( "Settings" ), "Audio", "오디오 믹서 창을 엽니다(버스 미터 · 음소거 · 솔로 · 볼륨)", "Open the audio mixer", nullptr, &AudioMixerPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Window", None, 0 );
 
     SW_AUTOMATION_WATCH( editorAudioMixerBusCount, "Editor.AudioMixerBusCount", "Mixer buses the Audio Mixer window lists", &AudioMixerPanelInternal::readBusCount );
     SW_AUTOMATION_WATCH( editorAudioMixerMutedCount, "Editor.AudioMixerMutedCount", "Mixer buses that are muted", &AudioMixerPanelInternal::readMutedCount );

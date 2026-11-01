@@ -23,6 +23,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( MeshModifiersOpen, "meshmodifiers.openPanel", 9110, "Mesh Modifiers", editoricon::kCube, "Mesh", "메시 모디파이어 스택 패널을 엽니다",
+    SW_EDITOR_COMMAND( MeshModifiersOpen, "meshmodifiers.openPanel", 9110, "Mesh Modifiers", SW_EDITORICON_NAME( "Cube" ), "Mesh", "메시 모디파이어 스택 패널을 엽니다",
                        "Open the mesh modifier stack panel", nullptr, &openMeshModifiersPanel, nullptr, NoScene, nullptr, None, 0 );
 } // namespace sw::editor

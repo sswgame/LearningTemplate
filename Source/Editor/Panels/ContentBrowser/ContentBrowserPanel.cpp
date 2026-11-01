@@ -322,7 +322,7 @@ namespace sw::editor
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );
     // 에셋 맥락 메뉴 · 단축키(R4 — 메뉴 · 키 · 팔레트가 같은 명령). 순서 칸: 100 탐색기 · 경로, 200 참조, 300 버전 관리, 900 파일 편집.
-    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", "Show in Explorer", editoricon::kFolderOpen, "Asset", Asset, 100, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( AssetShowInExplorer, "asset.showInExplorer", "Show in Explorer", SW_EDITORICON_NAME( "FolderOpen" ), "Asset", Asset, 100, nullptr,
                                &ContentBrowserPanelInternal::showInExplorer, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetCopyRelativePath, "asset.copyRelativePath", "Copy Relative Path", nullptr, "Asset", Asset, 110, nullptr,
                                &ContentBrowserPanelInternal::copyRelativePath, &ContentBrowserPanelInternal::hasTarget, NoScene, nullptr );
@@ -332,9 +332,9 @@ namespace sw::editor
                                &ContentBrowserPanelInternal::findReferences, &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetShowDependencies, "asset.showDependencies", "Show Dependencies", nullptr, "Asset", Asset, 210, nullptr,
                                &ContentBrowserPanelInternal::showDependencies, &ContentBrowserPanelInternal::hasTextAssetTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", "Check Out (Lock)", editoricon::kLock, "Asset", Asset, 300, nullptr, &ContentBrowserPanelInternal::lockAsset,
+    SW_EDITOR_CONTEXT_COMMAND( AssetLock, "asset.lock", "Check Out (Lock)", SW_EDITORICON_NAME( "Lock" ), "Asset", Asset, 300, nullptr, &ContentBrowserPanelInternal::lockAsset,
                                &ContentBrowserPanelInternal::canLock, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", "Release Lock", editoricon::kUnlock, "Asset", Asset, 310, nullptr, &ContentBrowserPanelInternal::unlockAsset,
+    SW_EDITOR_CONTEXT_COMMAND( AssetUnlock, "asset.unlock", "Release Lock", SW_EDITORICON_NAME( "Unlock" ), "Asset", Asset, 310, nullptr, &ContentBrowserPanelInternal::unlockAsset,
                                &ContentBrowserPanelInternal::canUnlock, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetRefreshSourceControl, "asset.refreshSourceControl", "Refresh Source Control", nullptr, "Asset", Asset, 320, nullptr,
                                &ContentBrowserPanelInternal::refreshSourceControl, &ContentBrowserPanelInternal::canRefreshSourceControl, NoScene, nullptr );
@@ -342,7 +342,7 @@ namespace sw::editor
                                &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( AssetDuplicate, "asset.duplicate", "Duplicate", nullptr, "Asset", Asset, 910, "asset.duplicate", &ContentBrowserPanelInternal::duplicateAsset,
                                &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", "Delete...", editoricon::kTrash, "Asset", Asset, 920, "asset.delete", &ContentBrowserPanelInternal::deleteAsset,
+    SW_EDITOR_CONTEXT_COMMAND( AssetDelete, "asset.delete", "Delete...", SW_EDITORICON_NAME( "Trash" ), "Asset", Asset, 920, "asset.delete", &ContentBrowserPanelInternal::deleteAsset,
                                &ContentBrowserPanelInternal::hasFileTarget, NoScene, nullptr );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
@@ -457,8 +457,8 @@ namespace sw::editor
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
         const bool   bLocked  = ContentBrowserModel::isLocked( entry );
         const ImU32  color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
-        const ImVec2 textSize = ImGui::CalcTextSize( editoricon::kLock );
-        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
+        const ImVec2 textSize = ImGui::CalcTextSize( SW_EDITORICON( "Lock" ) );
+        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, SW_EDITORICON( "Lock" ) );
         if ( ImGui::IsItemHovered() )
             ImGui::SetTooltip( "%s", statusText.c_str() );
     }
@@ -518,7 +518,7 @@ namespace sw::editor
         {
             const uint32 referrerCount = referenceIndex.countReferrerFiles( editor::getSubsystem<AssetPaths>().toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
-                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", SW_EDITORICON( "Warning" ), referrerCount );
             else
                 ImGui::TextDisabled( "No text asset names it." );
         }
@@ -609,7 +609,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##cb_add" ) == false )
             return;
-        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kFolder, "New Folder" ) ) )
+        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Folder" ), "New Folder" ) ) )
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
@@ -762,8 +762,8 @@ namespace sw::editor
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), "Add" ) ) )
             EditorInputGUI::openPopup( "##cb_add" );
         EditorSelfTestMarks::note( "contentBrowser.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
@@ -1013,7 +1013,7 @@ namespace sw::editor
             if ( bIsLast )
             {
                 const Color accentColor = SW_THEMECOLOR( "Base", "Accent" );
-                ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", editoricon::kFolderOpen );
+                ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", SW_EDITORICON( "FolderOpen" ) );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( crumb._label.c_str() );
             }
@@ -1132,7 +1132,7 @@ namespace sw::editor
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
                     const string statusText   = ContentBrowserModel::describeSourceControlStatus( entry );
-                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + editoricon::kLock );
+                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + SW_EDITORICON( "Lock" ) );
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();

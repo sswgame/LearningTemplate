@@ -10,6 +10,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
+#include "Editor/Common/GUI/Theme/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -253,9 +254,9 @@ namespace sw::editor
     void EditorCommandRegistry::formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::buffer::kMax128>& outLabel )
     {
         outLabel.clear();
-        if ( desc._icon.empty() == false )
+        if ( desc._iconName.empty() == false )
         {
-            outLabel.append( desc._icon.c_str() );
+            outLabel.append( EditorIconUtil::findGlyphByName( desc._iconName.c_str() ) );
             outLabel.append( "  " );
         }
         outLabel.append( desc._label.c_str() );
@@ -274,7 +275,7 @@ namespace sw::editor
             EditorCommandDesc                desc{};
             desc._id              = row._pID;
             desc._label           = row._pLabel != nullptr ? row._pLabel : "";
-            desc._icon            = row._pIcon != nullptr ? row._pIcon : "";
+            desc._iconName        = row._pIconName != nullptr ? row._pIconName : "";
             desc._category        = row._pCategory != nullptr ? row._pCategory : "";
             desc._tooltip         = row._pTooltip != nullptr ? row._pTooltip : "";
             desc._detail          = row._pDetail != nullptr ? row._pDetail : "";

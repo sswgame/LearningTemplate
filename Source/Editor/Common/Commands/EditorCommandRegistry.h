@@ -108,7 +108,7 @@ namespace sw::editor
     {
         string _id;       ///< "scene.save" 처럼 점으로 구분한 고유 id
         string _label;    ///< 메뉴와 팔레트에 보이는 이름
-        string _icon;     ///< 메뉴 라벨 앞에 붙는 아이콘 글리프. 비어도 된다
+        string _iconName; ///< 메뉴 라벨 앞에 붙는 아이콘 이름(아이콘 표 — 그릴 때 찾는다). 비어도 된다
         string _category; ///< 팔레트 그룹 이름
         string _tooltip;  ///< 메뉴 항목 툴팁(한국어)
         string _detail;   ///< 팔레트 오른쪽 설명(영어)
@@ -242,7 +242,7 @@ namespace sw::editor
         static constexpr const utf8* kKindName = "command";
 
         const utf8*             _pLabel;
-        const utf8*             _pIcon;
+        const utf8*             _pIconName; ///< 아이콘 이름(`SW_EDITORICON_NAME`). nullptr 이면 아이콘이 없다
         const utf8*             _pCategory;
         const utf8*             _pTooltip;
         const utf8*             _pDetail;
@@ -277,7 +277,7 @@ namespace sw::editor
  * @brief 커맨드 하나를 그 커맨드의 .cpp 에서 등록합니다. @p menuOrder 는 메뉴 안 순서이며 테이블의 `_menuOrder` 와 같은 뜻입니다. 백의 자리가 바뀌면 구분선이 들어갑니다.
  *        @p pInputAction 은 에디터 입력 맵의 액션 이름(단축키가 없으면 nullptr)이고, 키 조합은 그 맵(`editor.input.xml`, 확장은 `SW_EDITOR_INPUT_MAP` 로 더한 파일)이 정한다.
  *        @p contextMenu 는 놓일 맥락 메뉴(`EditorCommandTargetKind` 열거자 이름, 없으면 `None`)이고 @p contextMenuOrder 는 그 안 순서다.
- * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", editoricon::kRefresh, "ThemePark", "배치 파일을 다시 읽습니다",
+ * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", SW_EDITORICON_NAME( "Refresh" ), "ThemePark", "배치 파일을 다시 읽습니다",
  *                          "Reload rides.xml", "themepark.reloadLayout", &reloadLayout, nullptr, NoScene, "MainMenu/ThemePark", None, 0 ); @endcode
  */
 #define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, pInputAction, pfnAction, pfnEnabled, edit, pMenuPath, contextMenu, \
@@ -290,7 +290,7 @@ namespace sw::editor
 /**
  * @brief 맥락 메뉴에만 나오는 커맨드(대상이 있어야 뜻이 있다 — 메인 메뉴 · 팔레트에 없음)를 등록합니다. @p pfnAction · @p pfnEnabled 는 대상(`EditorCommandTarget`)을 받습니다.
  *        @p pfnSubmenu 가 nullptr 이 아니면 그 항목은 하위 메뉴이고 그 함수가 안을 그립니다(그때 @p pfnAction 은 nullptr).
- * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", "Rename", editoricon::kEdit, "Scene", GameObject, 120, "hierarchy.rename",
+ * @code SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.renameObject", "Rename", SW_EDITORICON_NAME( "Edit" ), "Scene", GameObject, 120, "hierarchy.rename",
  *                                  &renameTarget, &isSingleTarget, NoScene, nullptr ); @endcode
  */
 #define SW_EDITOR_CONTEXT_COMMAND( name, pID, pLabel, pIcon, pCategory, contextMenu, contextMenuOrder, pInputAction, pfnAction, pfnEnabled, edit, pfnSubmenu ) \

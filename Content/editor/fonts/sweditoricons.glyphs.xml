@@ -1,0 +1,112 @@
+<!-- 에디터 아이콘 글꼴(editor/fonts/sweditoricons.ttf)의 이름 → 코드포인트 표(EditorIconTable). 글꼴을 바꾸면 이 표를 바꾼다.
+     코드는 이름으로만 찾는다(SW_EDITORICON). 이름 · 코드포인트는 겹치지 않고 Missing 이 있어야 한다. _listExtraCodepoint 는 ImGuiNotify 가 쓰는 글자다. -->
+<EditorIconGlyphTable>
+	<_listIcon>
+		<EditorIconGlyph _name="File" _codepoint="U+E000" />
+		<EditorIconGlyph _name="Folder" _codepoint="U+E001" />
+		<EditorIconGlyph _name="FolderOpen" _codepoint="U+E002" />
+		<EditorIconGlyph _name="Save" _codepoint="U+E003" />
+		<EditorIconGlyph _name="Undo" _codepoint="U+E004" />
+		<EditorIconGlyph _name="Redo" _codepoint="U+E005" />
+		<EditorIconGlyph _name="Search" _codepoint="U+E006" />
+		<EditorIconGlyph _name="Terminal" _codepoint="U+E007" />
+		<EditorIconGlyph _name="Exit" _codepoint="U+E008" />
+		<EditorIconGlyph _name="Settings" _codepoint="U+E009" />
+		<EditorIconGlyph _name="Palette" _codepoint="U+E00A" />
+		<EditorIconGlyph _name="Layout" _codepoint="U+E00B" />
+		<EditorIconGlyph _name="Table" _codepoint="U+E00C" />
+		<EditorIconGlyph _name="Hammer" _codepoint="U+E00D" />
+		<EditorIconGlyph _name="Wrench" _codepoint="U+E00E" />
+		<EditorIconGlyph _name="BuildAll" _codepoint="U+E00F" />
+		<EditorIconGlyph _name="Cancel" _codepoint="U+E010" />
+		<EditorIconGlyph _name="Spinner" _codepoint="U+E011" />
+		<EditorIconGlyph _name="Check" _codepoint="U+E012" />
+		<EditorIconGlyph _name="Close" _codepoint="U+E013" />
+		<EditorIconGlyph _name="Success" _codepoint="U+E014" />
+		<EditorIconGlyph _name="Warning" _codepoint="U+E015" />
+		<EditorIconGlyph _name="Error" _codepoint="U+E016" />
+		<EditorIconGlyph _name="Info" _codepoint="U+E017" />
+		<EditorIconGlyph _name="Lock" _codepoint="U+E018" />
+		<EditorIconGlyph _name="Unlock" _codepoint="U+E019" />
+		<EditorIconGlyph _name="Plus" _codepoint="U+E01A" />
+		<EditorIconGlyph _name="Minus" _codepoint="U+E01B" />
+		<EditorIconGlyph _name="Trash" _codepoint="U+E01C" />
+		<EditorIconGlyph _name="Copy" _codepoint="U+E01D" />
+		<EditorIconGlyph _name="Refresh" _codepoint="U+E01E" />
+		<EditorIconGlyph _name="Filter" _codepoint="U+E01F" />
+		<EditorIconGlyph _name="Star" _codepoint="U+E020" />
+		<EditorIconGlyph _name="Link" _codepoint="U+E021" />
+		<EditorIconGlyph _name="Eye" _codepoint="U+E022" />
+		<EditorIconGlyph _name="EyeSlash" _codepoint="U+E023" />
+		<EditorIconGlyph _name="Play" _codepoint="U+E024" />
+		<EditorIconGlyph _name="Pause" _codepoint="U+E025" />
+		<EditorIconGlyph _name="Stop" _codepoint="U+E026" />
+		<EditorIconGlyph _name="StepForward" _codepoint="U+E027" />
+		<EditorIconGlyph _name="Translate" _codepoint="U+E028" />
+		<EditorIconGlyph _name="Rotate" _codepoint="U+E029" />
+		<EditorIconGlyph _name="Scale" _codepoint="U+E02A" />
+		<EditorIconGlyph _name="Globe" _codepoint="U+E02B" />
+		<EditorIconGlyph _name="Axes" _codepoint="U+E02C" />
+		<EditorIconGlyph _name="Magnet" _codepoint="U+E02D" />
+		<EditorIconGlyph _name="Grid" _codepoint="U+E02E" />
+		<EditorIconGlyph _name="Bookmark" _codepoint="U+E02F" />
+		<EditorIconGlyph _name="Align" _codepoint="U+E030" />
+		<EditorIconGlyph _name="Chart" _codepoint="U+E031" />
+		<EditorIconGlyph _name="Camera" _codepoint="U+E032" />
+		<EditorIconGlyph _name="Cube" _codepoint="U+E033" />
+		<EditorIconGlyph _name="Scene" _codepoint="U+E034" />
+		<EditorIconGlyph _name="Prefab" _codepoint="U+E035" />
+		<EditorIconGlyph _name="Texture" _codepoint="U+E036" />
+		<EditorIconGlyph _name="Shader" _codepoint="U+E037" />
+		<EditorIconGlyph _name="Material" _codepoint="U+E038" />
+		<EditorIconGlyph _name="Audio" _codepoint="U+E039" />
+		<EditorIconGlyph _name="AnimationGraph" _codepoint="U+E03A" />
+		<EditorIconGlyph _name="Dialogue" _codepoint="U+E03B" />
+		<EditorIconGlyph _name="Sprite" _codepoint="U+E03C" />
+		<EditorIconGlyph _name="TileMap" _codepoint="U+E03D" />
+		<EditorIconGlyph _name="Sequence" _codepoint="U+E03E" />
+		<EditorIconGlyph _name="Skeleton" _codepoint="U+E03F" />
+		<EditorIconGlyph _name="AnimationClip" _codepoint="U+E040" />
+		<EditorIconGlyph _name="Rig" _codepoint="U+E041" />
+		<EditorIconGlyph _name="Heightfield" _codepoint="U+E042" />
+		<EditorIconGlyph _name="Fracture" _codepoint="U+E043" />
+		<EditorIconGlyph _name="Widget" _codepoint="U+E044" />
+		<EditorIconGlyph _name="Font" _codepoint="U+E045" />
+		<EditorIconGlyph _name="GameObject" _codepoint="U+E046" />
+		<EditorIconGlyph _name="Component" _codepoint="U+E047" />
+		<EditorIconGlyph _name="LightPoint" _codepoint="U+E048" />
+		<EditorIconGlyph _name="LightDirectional" _codepoint="U+E049" />
+		<EditorIconGlyph _name="LightSpot" _codepoint="U+E04A" />
+		<EditorIconGlyph _name="LightGlobal" _codepoint="U+E04B" />
+		<EditorIconGlyph _name="AudioEmitter" _codepoint="U+E04C" />
+		<EditorIconGlyph _name="AudioListener" _codepoint="U+E04D" />
+		<EditorIconGlyph _name="AudioZone" _codepoint="U+E04E" />
+		<EditorIconGlyph _name="Physics" _codepoint="U+E04F" />
+		<EditorIconGlyph _name="Collider" _codepoint="U+E050" />
+		<EditorIconGlyph _name="Character" _codepoint="U+E051" />
+		<EditorIconGlyph _name="Animation" _codepoint="U+E052" />
+		<EditorIconGlyph _name="Controller" _codepoint="U+E053" />
+		<EditorIconGlyph _name="AI" _codepoint="U+E054" />
+		<EditorIconGlyph _name="Navigation" _codepoint="U+E055" />
+		<EditorIconGlyph _name="Trigger" _codepoint="U+E056" />
+		<EditorIconGlyph _name="SpawnPoint" _codepoint="U+E057" />
+		<EditorIconGlyph _name="Spline" _codepoint="U+E058" />
+		<EditorIconGlyph _name="Water" _codepoint="U+E059" />
+		<EditorIconGlyph _name="Foliage" _codepoint="U+E05A" />
+		<EditorIconGlyph _name="Wind" _codepoint="U+E05B" />
+		<EditorIconGlyph _name="Health" _codepoint="U+E05C" />
+		<EditorIconGlyph _name="Ability" _codepoint="U+E05D" />
+		<EditorIconGlyph _name="Vehicle" _codepoint="U+E05E" />
+		<EditorIconGlyph _name="Tag" _codepoint="U+E05F" />
+		<EditorIconGlyph _name="Missing" _codepoint="U+E060" />
+		<EditorIconGlyph _name="Bug" _codepoint="U+E061" />
+		<EditorIconGlyph _name="Map" _codepoint="U+E062" />
+	</_listIcon>
+	<_listExtraCodepoint>
+		<item>U+F00D</item>
+		<item>U+F058</item>
+		<item>U+F05A</item>
+		<item>U+F06A</item>
+		<item>U+F071</item>
+	</_listExtraCodepoint>
+</EditorIconGlyphTable>

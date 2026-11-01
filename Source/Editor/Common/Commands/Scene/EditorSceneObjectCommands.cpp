@@ -323,49 +323,49 @@ namespace sw::editor
     }
 
     // 오브젝트 메뉴(계층 창의 행 · 빈 곳, 씬 뷰에서 오브젝트 위). 100 단위가 바뀌는 자리에 구분선이 들어간다.
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCreate, "scene.object.create", "Create GameObject", editoricon::kGameObject, "Scene", GameObject, 100, nullptr, &EditorSceneObjectCommandsInternal::runCreate, nullptr, Scene,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCreate, "scene.object.create", "Create GameObject", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 100, nullptr, &EditorSceneObjectCommandsInternal::runCreate, nullptr, Scene,
                                nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateChild, "scene.object.createChild", "Create Child GameObject", editoricon::kGameObject, "Scene", GameObject, 110, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateChild, "scene.object.createChild", "Create Child GameObject", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 110, nullptr,
                                &EditorSceneObjectCommandsInternal::runCreateChild, &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolder, "scene.object.createFolder", "Create Folder", editoricon::kFolder, "Scene", GameObject, 120, nullptr, &EditorSceneObjectCommandsInternal::runCreateFolder,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolder, "scene.object.createFolder", "Create Folder", SW_EDITORICON_NAME( "Folder" ), "Scene", GameObject, 120, nullptr, &EditorSceneObjectCommandsInternal::runCreateFolder,
                                nullptr, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolderInside, "scene.object.createFolderInside", "Create Folder Inside", editoricon::kFolder, "Scene", GameObject, 130, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCreateFolderInside, "scene.object.createFolderInside", "Create Folder Inside", SW_EDITORICON_NAME( "Folder" ), "Scene", GameObject, 130, nullptr,
                                &EditorSceneObjectCommandsInternal::runCreateFolderInside, &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectMoveUp, "scene.object.moveUp", "Move Up", editoricon::kGameObject, "Scene", GameObject, 200, nullptr, &EditorSceneObjectCommandsInternal::runMoveUp,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectMoveUp, "scene.object.moveUp", "Move Up", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 200, nullptr, &EditorSceneObjectCommandsInternal::runMoveUp,
                                &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectMoveDown, "scene.object.moveDown", "Move Down", editoricon::kGameObject, "Scene", GameObject, 210, nullptr, &EditorSceneObjectCommandsInternal::runMoveDown,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectMoveDown, "scene.object.moveDown", "Move Down", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 210, nullptr, &EditorSceneObjectCommandsInternal::runMoveDown,
                                &EditorSceneObjectCommandsInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectDuplicate, "scene.duplicate", "Duplicate", editoricon::kCopy, "Scene", GameObject, 300, "scene.duplicate", &EditorSceneObjectCommandsInternal::runDuplicate,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectDuplicate, "scene.duplicate", "Duplicate", SW_EDITORICON_NAME( "Copy" ), "Scene", GameObject, 300, "scene.duplicate", &EditorSceneObjectCommandsInternal::runDuplicate,
                                &EditorSceneObjectCommands::hasTargetObjects, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectCopy, "scene.copy", "Copy", editoricon::kCopy, "Scene", GameObject, 310, "scene.copy", &EditorSceneObjectCommandsInternal::runCopy, &EditorSceneObjectCommands::hasTargetObjects,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectCopy, "scene.copy", "Copy", SW_EDITORICON_NAME( "Copy" ), "Scene", GameObject, 310, "scene.copy", &EditorSceneObjectCommandsInternal::runCopy, &EditorSceneObjectCommands::hasTargetObjects,
                                NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectPaste, "scene.paste", "Paste", editoricon::kPlus, "Scene", GameObject, 320, "scene.paste", &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectUnparent, "scene.object.unparent", "Unparent", editoricon::kGameObject, "Scene", GameObject, 500, nullptr, &EditorSceneObjectCommandsInternal::runUnparent,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectPaste, "scene.paste", "Paste", SW_EDITORICON_NAME( "Plus" ), "Scene", GameObject, 320, "scene.paste", &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene, nullptr );
+    SW_EDITOR_CONTEXT_COMMAND( ObjectUnparent, "scene.object.unparent", "Unparent", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 500, nullptr, &EditorSceneObjectCommandsInternal::runUnparent,
                                &EditorSceneObjectCommandsInternal::hasParentedTarget, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectDestroy, "scene.delete", "Delete", editoricon::kTrash, "Scene", GameObject, 900, "scene.delete", &EditorSceneObjectCommandsInternal::runDestroy,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectDestroy, "scene.delete", "Delete", SW_EDITORICON_NAME( "Trash" ), "Scene", GameObject, 900, "scene.delete", &EditorSceneObjectCommandsInternal::runDestroy,
                                &EditorSceneObjectCommands::hasTargetObjects, Scene, nullptr );
 
     // 씬 뷰의 빈 곳 메뉴(R6 — 코어 항목은 확장이 없어도 열린다).
-    SW_EDITOR_CONTEXT_COMMAND( ViewportCreateHere, "scene.viewport.createHere", "Create Empty Here", editoricon::kGameObject, "Scene", Viewport, 100, nullptr, &EditorSceneObjectCommandsInternal::runCreateHere,
+    SW_EDITOR_CONTEXT_COMMAND( ViewportCreateHere, "scene.viewport.createHere", "Create Empty Here", SW_EDITORICON_NAME( "GameObject" ), "Scene", Viewport, 100, nullptr, &EditorSceneObjectCommandsInternal::runCreateHere,
                                nullptr, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ViewportPaste, "scene.viewport.paste", "Paste", editoricon::kPlus, "Scene", Viewport, 110, nullptr, &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene,
+    SW_EDITOR_CONTEXT_COMMAND( ViewportPaste, "scene.viewport.paste", "Paste", SW_EDITORICON_NAME( "Plus" ), "Scene", Viewport, 110, nullptr, &EditorSceneObjectCommandsInternal::runPaste, &EditorSceneObjectCommandsInternal::canPaste, Scene,
                                nullptr );
 
     // 컴포넌트 메뉴 — 계층 창의 컴포넌트 행 · 인스펙터의 메인 카드 · 미리보기 카드가 같은 메뉴다. 프리셋 하위 메뉴(400)는 인스펙터 파일에 있다.
     // 지우기 · 옮기기는 플레이 중에도 된다(사본을 바로 바꾸고 Stop 이 되돌린다 — 인스펙터 편집 규칙). 그래서 편집 칸이 NoScene 이다.
-    SW_EDITOR_CONTEXT_COMMAND( ComponentSelectOwner, "scene.component.selectOwner", "Select Owner GameObject", editoricon::kGameObject, "Scene", Component, 100, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ComponentSelectOwner, "scene.component.selectOwner", "Select Owner GameObject", SW_EDITORICON_NAME( "GameObject" ), "Scene", Component, 100, nullptr,
                                &EditorSceneObjectCommandsInternal::runSelectOwner, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentCopy, "scene.component.copy", "Copy Component", editoricon::kCopy, "Scene", Component, 200, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ComponentCopy, "scene.component.copy", "Copy Component", SW_EDITORICON_NAME( "Copy" ), "Scene", Component, 200, nullptr,
                                &EditorSceneObjectCommandsInternal::runCopyComponent, &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteValues, "scene.component.pasteValues", "Paste Component Values", editoricon::kPlus, "Scene", Component, 210, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteValues, "scene.component.pasteValues", "Paste Component Values", SW_EDITORICON_NAME( "Plus" ), "Scene", Component, 210, nullptr,
                                &EditorSceneObjectCommandsInternal::runPasteComponentValues, &EditorSceneObjectCommandsInternal::canPasteComponentValues, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteAsNew, "scene.component.pasteAsNew", "Paste as New Component", editoricon::kPlus, "Scene", Component, 220, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ComponentPasteAsNew, "scene.component.pasteAsNew", "Paste as New Component", SW_EDITORICON_NAME( "Plus" ), "Scene", Component, 220, nullptr,
                                &EditorSceneObjectCommandsInternal::runPasteComponentAsNew, &EditorSceneObjectCommandsInternal::canPasteComponentAsNew, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ComponentMoveUp, "scene.component.moveUp", "Move Up", nullptr, "Scene", Component, 300, nullptr, &EditorSceneObjectCommandsInternal::runMoveComponentUp,
                                &EditorSceneObjectCommandsInternal::canMoveComponentUp, NoScene, nullptr );
     SW_EDITOR_CONTEXT_COMMAND( ComponentMoveDown, "scene.component.moveDown", "Move Down", nullptr, "Scene", Component, 310, nullptr, &EditorSceneObjectCommandsInternal::runMoveComponentDown,
                                &EditorSceneObjectCommandsInternal::canMoveComponentDown, NoScene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", "Remove Component", editoricon::kTrash, "Scene", Component, 900, nullptr, &EditorSceneObjectCommandsInternal::runRemoveComponent,
+    SW_EDITOR_CONTEXT_COMMAND( ComponentRemove, "scene.component.remove", "Remove Component", SW_EDITORICON_NAME( "Trash" ), "Scene", Component, 900, nullptr, &EditorSceneObjectCommandsInternal::runRemoveComponent,
                                &EditorSceneObjectCommandsInternal::hasTargetComponent, NoScene, nullptr );
 } // namespace sw::editor
 

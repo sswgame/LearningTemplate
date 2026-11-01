@@ -51,6 +51,6 @@ namespace sw::editor
         const EditorAssetMatchRule kArrMaterialRule[] = { EditorAssetMatchRule::engineType( Material::kAssetType, { "Material" } ) };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Material, Material::kAssetType._name.data(), 500, "Material", "Materials", "Material", editoricon::kMaterial, { 0.80f, 0.45f, 0.95f, 1.0f }, false, true, true,
+    SW_EDITOR_ASSET_TYPE( Material, Material::kAssetType._name.data(), 500, "Material", "Materials", "Material", SW_EDITORICON_NAME( "Material" ), SW_THEMECOLOR_KEY( "Asset", "Material" ), true, true,
                           kArrMaterialRule, SW_COUNT_OF( kArrMaterialRule ), &kMaterialTemplate, &s_materialActions );
 } // namespace sw::editor

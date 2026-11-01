@@ -424,7 +424,7 @@ namespace sw::editor
         drawTagFilterPopup();
 
         ImGui::SameLine();
-        if ( ImGui::Button( editoricon::kSettings, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
+        if ( ImGui::Button( SW_EDITORICON_NAME( "Settings" ), ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
             EditorInputGUI::openPopup( "##ConsoleOptions" );
         EditorSelfTestMarks::note( "console.options" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Options" ) );

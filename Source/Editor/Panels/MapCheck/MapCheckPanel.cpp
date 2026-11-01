@@ -117,7 +117,7 @@ namespace sw::editor
                                                              : counts._warningCount > 0 ? SW_THEMECOLOR( "Signal", "Warning" )
                                                                                         : SW_THEMECOLOR( "Base", "TextMuted" );
                 fixed_string<constant::buffer::kMax64> label;
-                formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", editoricon::kWarning, counts._errorCount + counts._warningCount );
+                formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", SW_EDITORICON( "Warning" ), counts._errorCount + counts._warningCount );
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
                 ImGui::PopStyleColor();
@@ -210,7 +210,7 @@ namespace sw::editor
     {
         syncRows();
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Check Map" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Refresh" ), "Check Map" ) ) )
             (void)validateActiveScene(); // 검사한 수는 로그에 남는다
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
@@ -270,7 +270,7 @@ namespace sw::editor
             ImGui::TableSetColumnIndex( 0 );
             const bool  bError = issue._severity == ValidationSeverity::Error;
             const Color color  = bError ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Signal", "Warning" );
-            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? editoricon::kError : editoricon::kWarning );
+            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITORICON_NAME( "Error" ) : SW_EDITORICON_NAME( "Warning" ) );
 
             ImGui::TableSetColumnIndex( 1 );
             const bool bSelected = pObject != nullptr && pObject == pPrimary;

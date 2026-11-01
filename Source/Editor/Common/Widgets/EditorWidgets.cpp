@@ -346,13 +346,13 @@ namespace sw::editor
         struct GizmoButton
         {
             const utf8* _pID;
-            const utf8* _pIcon;
+            const utf8* _pIconName;
             const utf8* _pMarkSuffix;
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
-            {"##gizmoTranslate", editoricon::kTranslate, ".translate"},
-            {   "##gizmoRotate",    editoricon::kRotate,    ".rotate"},
-            {    "##gizmoScale",     editoricon::kScale,     ".scale"},
+            {"##gizmoTranslate", SW_EDITORICON_NAME( "Translate" ), ".translate"},
+            {   "##gizmoRotate",         SW_EDITORICON( "Rotate" ),    ".rotate"},
+            {    "##gizmoScale",          SW_EDITORICON( "Scale" ),     ".scale"},
         };
         // 툴팁은 지금 문화권의 글이라 상수 테이블에 넣지 않고 그릴 때 찾는다.
         const utf8* const arrTooltip[] = {
@@ -364,7 +364,7 @@ namespace sw::editor
         for ( int32 index = 0; index < 3; ++index )
         {
             const GizmoButton& button = kArrGizmoButton[index];
-            if ( drawIconToggle( button._pID, button._pIcon, operation == index, arrTooltip[index] ) )
+            if ( drawIconToggle( button._pID, EditorIconUtil::findGlyphByName( button._pIconName ), operation == index, arrTooltip[index] ) )
                 editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
             EditorSelfTestMarks::note( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
             if ( bVertical == false )
@@ -372,7 +372,7 @@ namespace sw::editor
         }
 
         const bool bLocalSpace = editorContext.getSubsystem<EditorWorkspace>().isGizmoLocalSpace();
-        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe,
+        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, SW_EDITORICON( "Axes" ), SW_EDITORICON( "Globe" ),
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
             editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
@@ -554,7 +554,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             // 글자 "X" 대신 닫기 아이콘을 상자 없이(아이콘 토글과 같은 모양) 둔다.
-            if ( drawToggleIconButton( "##clear", true, editoricon::kClose, editoricon::kClose, SW_LOCKEY( "EdCommon", "SearchClear" ), SW_LOCKEY( "EdCommon", "SearchClear" ) ) &&
+            if ( drawToggleIconButton( "##clear", true, SW_EDITORICON( "Close" ), SW_EDITORICON( "Close" ), SW_LOCKEY( "EdCommon", "SearchClear" ), SW_LOCKEY( "EdCommon", "SearchClear" ) ) &&
                  pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';

@@ -96,7 +96,7 @@ namespace sw::editor
         target._pType     = pSelected->_pfnGetType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &PreferencesPanel::onPropertyEdited, this );
         _grid.drawProperties( target, nullptr, _listHidden ); // 고른 섹션은 왼쪽 목록이 보인다 — 같은 이름을 머리글로 다시 쓰지 않는다
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset Section" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Reset Section" ) ) )
             _model.resetSelectedSection();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetSection" ) );
         ImGui::EndChild();
@@ -120,6 +120,6 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( PreferencesPanel, PreferencesPanel::kPanelID, EditorPanelCategory::Tool, 2000 );
-    SW_EDITOR_COMMAND( EditorPreferences, "editor.preferences", 2210, "Preferences...", editoricon::kSettings, "Editor", "에디터 환경설정 창을 엽니다",
+    SW_EDITOR_COMMAND( EditorPreferences, "editor.preferences", 2210, "Preferences...", SW_EDITORICON_NAME( "Settings" ), "Editor", "에디터 환경설정 창을 엽니다",
                        "Open editor preferences", nullptr, &PreferencesPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Edit", None, 0 );
 } // namespace sw::editor

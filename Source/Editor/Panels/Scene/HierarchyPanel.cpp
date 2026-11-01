@@ -301,7 +301,7 @@ namespace sw::editor
             {
                 // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
                 const bool bVisible = pObj->isRenderHidden() == false;
-                if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
+                if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, SW_EDITORICON( "Eye" ), SW_EDITORICON( "EyeSlash" ), SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
                                                        SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
@@ -310,7 +310,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
                 const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
-                if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
+                if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, SW_EDITORICON( "Lock" ), SW_EDITORICON( "Unlock" ), SW_LOCKEY( "EditorScene", "LockedInViewport" ),
                                                        SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
                     pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
@@ -335,7 +335,7 @@ namespace sw::editor
                 }
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
-                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? editoricon::kFolder : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
+                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITORICON( "Folder" ) : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 if ( badgeStr.empty() == false )
                     formatstring( outLabel.data(), outLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
                 else
@@ -510,20 +510,20 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( HierarchyPanel, HierarchyPanel::kPanelID, EditorPanelCategory::Core, 100 );
-    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", 2420, "Move Up in Hierarchy", editoricon::kGameObject, "Scene", "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다",
+    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", 2420, "Move Up in Hierarchy", SW_EDITORICON_NAME( "GameObject" ), "Scene", "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다",
                        "Move the selected object up among its siblings", nullptr, &HierarchyPanelInternal::runMoveUp, nullptr, Scene, "MainMenu/Edit", None, 0 );
-    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", 2421, "Move Down in Hierarchy", editoricon::kGameObject, "Scene",
+    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", 2421, "Move Down in Hierarchy", SW_EDITORICON_NAME( "GameObject" ), "Scene",
                        "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", nullptr, &HierarchyPanelInternal::runMoveDown, nullptr, Scene,
                        "MainMenu/Edit", None, 0 );
-    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", editoricon::kFolder, "Scene",
+    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", SW_EDITORICON_NAME( "Folder" ), "Scene",
                        "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", nullptr, &HierarchyCommands::createFolder, nullptr, Scene,
                        "MainMenu/Edit", None, 0 );
     // 계층 창이 그리는 오브젝트 메뉴 항목(하위 메뉴 · 이름 바꾸기) — 같은 종류(GameObject)의 메뉴라 씬 뷰에서 열어도 나온다(R5).
-    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", "Rename", editoricon::kGameObject, "Scene", GameObject, 330, "scene.object.rename",
+    SW_EDITOR_CONTEXT_COMMAND( ObjectRename, "scene.object.rename", "Rename", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 330, "scene.object.rename",
                                &HierarchyPanelInternal::requestRename, &HierarchyPanelInternal::hasSingleTargetObject, Scene, nullptr );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", "Add Component", editoricon::kPlus, "Scene", GameObject, 400, nullptr, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectAddComponent, "scene.object.addComponent", "Add Component", SW_EDITORICON_NAME( "Plus" ), "Scene", GameObject, 400, nullptr, nullptr,
                                &HierarchyPanelInternal::hasSingleTargetObject, Scene, &HierarchyPanelInternal::drawAddComponentSubmenu );
-    SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", "Select All With", editoricon::kGameObject, "Scene", GameObject, 410, nullptr, nullptr,
+    SW_EDITOR_CONTEXT_COMMAND( ObjectSelectAllWith, "scene.object.selectAllWith", "Select All With", SW_EDITORICON_NAME( "GameObject" ), "Scene", GameObject, 410, nullptr, nullptr,
                                &HierarchyPanelInternal::hasSingleTargetObject, NoScene, &HierarchyPanelInternal::drawSelectSameSubmenu );
     SW_AUTOMATION_WATCH( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorWatchHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
                          &HierarchyPanelInternal::readProbedRowIndex );

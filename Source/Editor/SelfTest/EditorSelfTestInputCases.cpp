@@ -395,7 +395,7 @@ namespace sw::editor
                 {
                     const float32 width     = mark._max._x - mark._min._x;
                     const float32 height    = mark._max._y - mark._min._y;
-                    const float32 iconWidth = ImGui::CalcTextSize( editoricon::kEyeSlash ).x;
+                    const float32 iconWidth = ImGui::CalcTextSize( SW_EDITORICON( "EyeSlash" ) ).x;
                     string        what{ "the visibility toggle (" };
                     what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
                     (void)context.expect( width >= iconWidth, what.c_str() );

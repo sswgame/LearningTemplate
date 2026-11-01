@@ -147,7 +147,7 @@ namespace sw::editor
     void EditorViewportOverlays::drawOverlaysMenu()
     {
         ensureLoaded();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Overlays" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), "Overlays" ) ) )
             EditorInputGUI::openPopup( "##ViewportOverlaysMenu" );
         EditorSelfTestMarks::note( "sceneView.overlays" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlaysMenu" ) );

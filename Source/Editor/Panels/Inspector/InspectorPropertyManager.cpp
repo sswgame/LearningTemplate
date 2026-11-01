@@ -149,7 +149,7 @@ namespace sw::editor
 
                 // 선택 팝업이다(언리얼의 에셋 피커, 유니티의 Object Picker). 프로퍼티의 FileFilter 에 맞는 리소스만 보여 주고 검색으로 거른다.
                 EditorChrome::sameLineIfFits( kButtonWidth );
-                if ( ImGui::Button( editoricon::kSearch, ImVec2( kButtonWidth, 0 ) ) )
+                if ( ImGui::Button( SW_EDITORICON( "Search" ), ImVec2( kButtonWidth, 0 ) ) )
                 {
                     AssetPickerState& picker = getAssetPickerState();
                     picker._listEntry.clear();
@@ -192,7 +192,7 @@ namespace sw::editor
                 // 콘텐츠 브라우저에서 보기. 언리얼의 Browse to Asset 에 해당한다
                 EditorChrome::sameLineIfFits( kButtonWidth );
                 ImGui::BeginDisabled( currentPath.empty() );
-                if ( ImGui::Button( editoricon::kFolderOpen, ImVec2( kButtonWidth, 0 ) ) )
+                if ( ImGui::Button( SW_EDITORICON( "FolderOpen" ), ImVec2( kButtonWidth, 0 ) ) )
                     revealInContentBrowser( currentPath );
                 ImGui::EndDisabled();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ShowInContentBrowser" ) );

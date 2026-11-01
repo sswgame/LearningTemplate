@@ -1136,16 +1136,16 @@ namespace sw::editor
         EditorSelfTestMarks::note( "meshmodifiers.playPreviewTime" );
 
         ImGui::BeginDisabled( session.canUndo() == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kUndo, SW_LOCKEY( "EdMeshModifiers", "Undo" ) ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdMeshModifiers", "Undo" ) ) ) )
             (void)session.undo(); // 버튼이 켜져 있으면 기록이 있다
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRedo, SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Redo" ), SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) );
         ImGui::BeginDisabled( session.canRedo() == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRedo, SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Redo" ), SW_LOCKEY( "EdMeshModifiers", "Redo" ) ) ) )
             (void)session.redo(); // 버튼이 켜져 있으면 기록이 있다
         ImGui::EndDisabled();
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kSave, SW_LOCKEY( "EdMeshModifiers", "SaveStack" ) ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Save" ), SW_LOCKEY( "EdMeshModifiers", "SaveStack" ) ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다(`saveDocument` → `saveSidecar`) — 실패는 saveSidecar 가 알린다
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "ReloadStack" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ReloadStack" ) ) )

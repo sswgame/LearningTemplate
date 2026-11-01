@@ -57,6 +57,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Audio, AudioClipData::kAssetType._name.data(), 600, "Audio", "Audio", nullptr, editoricon::kAudio, { 0.95f, 0.85f, 0.25f, 1.0f }, false, true, true, kArrAudioRule,
+    SW_EDITOR_ASSET_TYPE( Audio, AudioClipData::kAssetType._name.data(), 600, "Audio", "Audio", nullptr, SW_EDITORICON_NAME( "Audio" ), SW_THEMECOLOR_KEY( "Asset", "Audio" ), true, true, kArrAudioRule,
                           SW_COUNT_OF( kArrAudioRule ), nullptr, &s_audioActions );
 } // namespace sw::editor

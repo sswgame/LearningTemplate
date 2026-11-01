@@ -34,8 +34,12 @@ namespace sw::editor
 
         /** @brief 에디터 팩(`constant::path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";
-        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`EditorIconGlyphs.h` 와 짝). */
+        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`kIconGlyphTable` 과 짝). */
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
+        /** @brief 아이콘 폰트의 이름 → 코드포인트 표입니다(`EditorIconGlyphTable`). */
+        static constexpr const utf8* kIconGlyphTable = "editor/fonts/sweditoricons.glyphs.xml";
+        /** @brief 컴포넌트 아이콘 표입니다(`EditorComponentIconTable` — Category → 아이콘 · 색 이름). */
+        static constexpr const utf8* kComponentIconTable = "editor/data/componenticons.xml";
 
         /**
          * @brief 리소스 폴더 id(`game/empty/maps` · `editor/theme`)의 디스크 폴더를 반환합니다. 폴더가 없으면 빈 문자열입니다.

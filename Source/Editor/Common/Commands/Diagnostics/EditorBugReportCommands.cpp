@@ -30,7 +30,7 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_COMMAND( ReportBug, "help.reportBug", 2900, "Report Bug (BugReport)", editoricon::kBug, "Editor",
+    SW_EDITOR_COMMAND( ReportBug, "help.reportBug", 2900, "Report Bug (BugReport)", SW_EDITORICON_NAME( "Bug" ), "Editor",
                        "스크린샷 · 로그 · 씬 사본 · 카메라 자리 · 재현 명령을 Saved/BugReports/<시각>/ 에 모읍니다(bugreport.goto 로 그 자리에 돌아간다)",
                        "Collect a bug report folder", "help.reportBug",
                        &runReportBug, nullptr, NoScene, "MainMenu/Edit", None, 0 );

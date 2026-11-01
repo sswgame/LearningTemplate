@@ -52,13 +52,13 @@ namespace sw::editor
 
         if ( EditorChrome::beginToolbar( "##SceneViewToolbar" ) )
         {
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##SceneViewScreenshot" ) ) )
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Camera" ), "##SceneViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureSceneView();
             EditorSelfTestMarks::note( "sceneView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SceneViewScreenshot" ) );
             EditorWidgets::drawToolbarSeparator();
 
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBug, "Debug Draw" ) ) ) // 예전 "Dbg Cat" — 줄임말이 무엇을 거르는지 말하지 않았다
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Bug" ), "Debug Draw" ) ) ) // 예전 "Dbg Cat" — 줄임말이 무엇을 거르는지 말하지 않았다
                 EditorInputGUI::openPopup( "##DebugDrawCategories" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "DebugDrawCategories" ) );
             drawDebugCategoryPopup();

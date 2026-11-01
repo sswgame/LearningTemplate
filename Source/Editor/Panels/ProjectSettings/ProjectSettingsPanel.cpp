@@ -269,7 +269,7 @@ namespace sw::editor
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
 
         ImGui::BeginDisabled( page._bDirty == false || document.isLoadFailed() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kSave, "Save" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
             if ( savePage( page, bApplied ) )
@@ -284,9 +284,9 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.save" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kUndo, "Revert" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), "Revert" ) ) );
         ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kUndo, "Revert" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), "Revert" ) ) )
         {
             (void)document.revert(); // 결과는 아래 칩과 오류 줄이 보인다
             page._bDirty = false;
@@ -295,8 +295,8 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.revert" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset to Default" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reset to Default" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Reset to Default" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), "Reset to Default" ) ) )
         {
             document.resetToDefault();
             page._bDirty = document.isModified();
@@ -366,7 +366,7 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( ProjectSettingsPanel, ProjectSettingsPanel::kPanelID, EditorPanelCategory::Tool, 2010 );
-    SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", 2220, "Project Settings...", editoricon::kSettings, "Editor", "프로젝트 설정 창을 엽니다",
+    SW_EDITOR_COMMAND( ProjectSettingsOpen, "editor.projectSettings", 2220, "Project Settings...", SW_EDITORICON_NAME( "Settings" ), "Editor", "프로젝트 설정 창을 엽니다",
                        "Open project settings", nullptr, &ProjectSettingsPanelInternal::openPanel, nullptr, NoScene, "MainMenu/Edit", None, 0 );
 
     SW_AUTOMATION_WATCH( editorProjectSettingsPageCount, "Editor.ProjectSettingsPageCount", "Settings files the Project Settings window lists",

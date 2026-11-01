@@ -160,6 +160,12 @@ namespace sw::editor
         const bool bFontMissing = basePath.empty() || monoPath.empty() || koreanPath.empty() || iconPath.empty();
         if ( bFontMissing )
             return false;
+        // 아이콘 이름 → 코드포인트(글꼴과 짝)와 컴포넌트 아이콘 표는 데이터다 — 못 읽으면 아이콘이 모두 Missing 이므로 멈춘다(이유는 표 읽기가 남긴다).
+        EditorTheme&          theme     = getSubsystem<EditorTheme>();
+        EditorIconGlyphTable& iconTable = theme.getIconTable();
+        if ( iconTable.loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
+             theme.getComponentIconTable().loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
+            return false;
         EditorFontSetupInternal::FontState& fontState = EditorFontSetupInternal::state();
         if ( EditorFontSetupInternal::readEmRatio( basePath, fontState._baseEmRatio ) == false ||
              EditorFontSetupInternal::readEmRatio( monoPath, fontState._monoEmRatio ) == false )
@@ -198,13 +204,13 @@ namespace sw::editor
         auto mergeIcons = [&]( float32 size )
         {
             // ImWchar 가 16 비트일 때만 헤더의 범위 배열을 그대로 넘길 수 있다(IMGUI_USE_WCHAR32 를 켜면 이 단언이 알려 준다).
-            static_assert( sizeof( ImWchar ) == sizeof( editoricon::kArrGlyphRange[0] ), "editor icon glyph range must match ImWchar" );
+            static_assert( sizeof( ImWchar ) == sizeof( uint16 ), "editor icon glyph range must match ImWchar" ); // 범위 배열은 표가 들고 아틀라스보다 오래 산다
             const float32 iconFontSize = size * iconScale;
             ImFontConfig  iconConfig{};
             iconConfig.MergeMode        = true;
             iconConfig.PixelSnapH       = true;
             iconConfig.GlyphMinAdvanceX = iconFontSize;
-            io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig, reinterpret_cast<const ImWchar*>( editoricon::kArrGlyphRange ) );
+            io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig, reinterpret_cast<const ImWchar*>( iconTable.getGlyphRanges().data() ) );
         };
         mergeIcons( baseSize );
 

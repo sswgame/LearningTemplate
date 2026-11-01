@@ -194,13 +194,13 @@ namespace sw::editor
             ImGui::SameLine();
             // 디버그 드로우 겹치기(서버 디버깅 S6) — 이 에디터의 게임 뷰와, 멀티 프로세스 재생이 띄운 자식 프로세스(클라이언트의 권위 고스트) 모두에 같은 값을 건다.
             const bool bDebugDrawShown = DebugDrawCanvasUtil::isGameViewOverlayEnabled();
-            if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", editoricon::kBug, bDebugDrawShown,
+            if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", SW_EDITORICON_NAME( "Bug" ), bDebugDrawShown,
                                                 "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
                 GameViewModel::setDebugDrawShown( bDebugDrawShown == false );
             EditorSelfTestMarks::note( "gameView.debugDraw" );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Camera" ), "##GameViewScreenshot" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON_NAME( "Camera" ), "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
             EditorSelfTestMarks::note( "gameView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewScreenshot" ) );

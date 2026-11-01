@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorSubsystem.h"
@@ -68,6 +70,12 @@ namespace sw::editor
 
         EditorThemeConfig&       getConfig() { return _config; }
         const EditorThemeConfig& getConfig() const { return _config; }
+        /** @brief 아이콘 글꼴의 이름 → 코드포인트 표입니다(`EditorFontSetup` 이 글꼴을 세울 때 읽는다, 찾기는 `EditorIconUtil`). */
+        EditorIconGlyphTable&       getIconTable() { return _iconTable; }
+        const EditorIconGlyphTable& getIconTable() const { return _iconTable; }
+        /** @brief 컴포넌트 아이콘 표입니다(아이콘 표와 함께 읽는다, 찾기는 `EditorComponentIcon`). */
+        EditorComponentIconTable&       getComponentIconTable() { return _componentIconTable; }
+        const EditorComponentIconTable& getComponentIconTable() const { return _componentIconTable; }
         /** @brief 폴더에서 읽어 둔 토큰 벌입니다(`EditorThemeUtil` 이 처음 쓸 때 채운다). */
         vector<EditorThemeConfig>& getAvailable() { return _listAvailable; }
 
@@ -104,6 +112,8 @@ namespace sw::editor
 
     private:
         vector<hashed_string>     _listMissingKey{};
+        EditorIconGlyphTable      _iconTable{};
+        EditorComponentIconTable  _componentIconTable{};
         EditorThemeConfig         _config{};
         vector<EditorThemeConfig> _listAvailable{};
         float32                   _dpiScale{ 1.0f };

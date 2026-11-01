@@ -35,7 +35,7 @@ namespace sw::editor
         DebugHUD*  pHUD   = findEditorDebugHUDControlsTarget();
         const bool bShown = pHUD != nullptr && pHUD->isShown();
         ImGui::BeginDisabled( pHUD == nullptr );
-        if ( EditorWidgets::drawIconToggle( "##debugHUD", editoricon::kChart, bShown,
+        if ( EditorWidgets::drawIconToggle( "##debugHUD", SW_EDITORICON_NAME( "Chart" ), bShown,
                                             "Debug HUD in the game view (Ctrl+F3) - right click for sections. It shows while playing" ) &&
              pHUD != nullptr )
             pHUD->setShown( bShown == false );

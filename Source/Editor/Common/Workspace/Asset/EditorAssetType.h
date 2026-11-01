@@ -200,9 +200,8 @@ namespace sw::editor
         const utf8*                    _pDisplayName;      ///< 단수 이름. 퀵 런처 분류와 배지에 쓴다
         const utf8*                    _pBrowserLabel;     ///< 콘텐츠 브라우저 필터와 리소스 카탈로그의 라벨
         const utf8*                    _pPanelTitle;       ///< 전용 도구 패널 제목. nullptr 이면 패널이 없다
-        const utf8*                    _pIcon;             ///< 에디터 아이콘 글리프(editoricon::k…, UTF-8)
-        Color                          _color;             ///< 목록과 배지의 색. `_bAccentColor` 이면 쓰지 않는다
-        bool                           _bAccentColor;      ///< 고정 색 대신 테마 액센트 색을 쓴다
+        const utf8*                    _pIconName;         ///< 에디터 아이콘 이름(`SW_EDITORICON_NAME`) — 그릴 때 아이콘 표에서 찾는다
+        const utf8*                    _pColorKey;         ///< 목록과 배지의 테마 색 키(`SW_THEMECOLOR_KEY( "Asset", … )`, 액센트 종류는 `Base.Accent`)
         bool                           _bOtherExcluded;    ///< 브라우저 "Other" 필터에서 뺄지 정한다
         bool                           _bImportable;       ///< 임포트 대화상자의 확장자 목록에 넣을지 정한다
         const EditorAssetMatchRule*    _pRule;             ///< 판정 규칙. 하나 이상이어야 한다(없으면 어떤 경로에도 맞지 않는다)
@@ -219,7 +218,7 @@ namespace sw::editor
  * @brief 애셋 종류 하나를 등록합니다. 종류의 파일(보통 `Editor/AssetActions/<종류>AssetTypeActions.cpp`, 플러그인은 그 모듈 파일)에 한 줄 둡니다.
  * @param name 파일 안에서 유일한 식별자 조각
  * @param pID 종류의 id. 엔진 포맷이 있으면 `X::kAssetType._name.data()`, 없으면 `EditorAssetTypeIDs::k…`
- * @details 나머지 인자는 `EditorAssetTypeRegistration` 의 필드 순서다(표시 이름 · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · 액센트 · Other 제외 · 임포트 · 규칙 표 · 규칙 수 · 새 에셋 틀 · 동작).
+ * @details 나머지 인자는 `EditorAssetTypeRegistration` 의 필드 순서다(표시 이름 · 브라우저 라벨 · 패널 제목 · 아이콘 이름 · 색 키 · Other 제외 · 임포트 · 규칙 표 · 규칙 수 · 새 에셋 틀 · 동작).
  */
 #define SW_EDITOR_ASSET_TYPE( name, pID, order, ... ) SW_EDITOR_REGISTER( ::sw::editor::EditorAssetTypeRegistration, AssetType_##name, { pID, order }, __VA_ARGS__ )
 

@@ -189,8 +189,8 @@ namespace sw::editor
                 constexpr uint32 kNotifySuccessCodepoint = 0xF058;
                 ImFont*          pFont                   = ImGui::GetFont();
                 ImFontBaked*     pBaked                  = pFont != nullptr ? pFont->GetFontBaked( ImGui::GetFontSize() ) : nullptr;
-                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( editoricon::kSave ) ), "editor icon font glyph kSave is missing" );
-                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( editoricon::kMissing ) ), "editor icon font glyph kMissing is missing" );
+                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( SW_EDITORICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
+                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( SW_EDITORICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
                 (void)context.expect( hasGlyph( pBaked, kNotifySuccessCodepoint ), "notification glyph U+F058 is missing from the editor icon font" );
                 return EditorSelfTestStep::Done;
             }
