@@ -9,6 +9,7 @@
 
 namespace sw
 {
+    struct UserSettingCategoryDef;
     struct UserSettingDef;
 
     class UserSettingsManager;
@@ -28,6 +29,9 @@ namespace sw::editor
 
         UserSettingsPanel();
         ~UserSettingsPanel() override = default;
+
+        /** @brief 카테고리 탭에 보이는 이름입니다(스키마 `text` 현지화 키, 없으면 id). 자체 테스트가 탭을 이 이름으로 찾는다. */
+        [[nodiscard]] static const utf8* getCategoryLabel( const UserSettingCategoryDef& category );
 
         const utf8* getPanelTitle() const override { return "User Settings"; }
         void        drawContent() override;

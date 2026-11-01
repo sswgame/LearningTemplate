@@ -162,8 +162,13 @@ namespace sw
         /** @brief 백엔드 이름 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
 
-        /** @brief 컨텍스트를 기다리다 포기하는 시간입니다. 렌더 워커는 프레임 끝마다 놓으므로 한 프레임이면 충분합니다. */
-        static constexpr uint32 kContextAcquireTimeoutMs = 250;
+        /**
+         * @brief 컨텍스트를 기다리다 포기하는 시간입니다. 교착(놓지 않는 스레드)을 알아보는 시한이지 프레임 예산이 아니다.
+         * @details 예전 250 ms 는 "렌더 워커가 프레임 끝마다 놓으니 한 프레임이면 된다" 였는데, Debug 의 무거운 프레임(셰이더 컴파일 · 단계 재설정)은 262 ms 를 쥐었고
+         *          그 사이 게임 스레드의 자원 생성(머티리얼 상수 버퍼)이 버려져 기본 머티리얼이 없는 씬이 됐다. 포기는 GL 호출을 잃는 일이라 교착 규모(5 초)로 둔다.
+         *          언리얼 GL RHI 는 모든 GL 호출을 한 스레드로 넘겨 이 경합이 없다 — 자원 생성을 렌더 스레드로 넘기는 것이 근본 해법이다.
+         */
+        static constexpr uint32 kContextAcquireTimeoutMs = 5000;
 
         /**
          * @brief 컨텍스트를 이 스레드로 가져옵니다. 다른 스레드가 가지고 있으면 놓을 때까지 기다립니다.

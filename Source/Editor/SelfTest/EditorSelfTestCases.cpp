@@ -709,7 +709,9 @@ namespace sw::editor
                         continue;
                     for ( ImGuiTabItem& tab : pTabBar->Tabs )
                     {
-                        if ( string_view{ ImGui::TabBarGetTabName( pTabBar, &tab ) } != pTabName )
+                        // 보이는 이름만 견준다 — `Display###display` 처럼 id 를 붙인 탭은 이름표 뒤에 `##` 부분이 붙어 저장된다.
+                        const utf8* pName = ImGui::TabBarGetTabName( pTabBar, &tab );
+                        if ( string_view( pName, static_cast<size_t>( ImGui::FindRenderedTextEnd( pName ) - pName ) ) != pTabName )
                             continue;
                         ImGui::TabBarQueueFocus( pTabBar, &tab );
                         return true;
@@ -900,7 +902,7 @@ namespace sw::editor
                 }
                 if ( ( stepIndex % 2 ) == 1 )
                 {
-                    (void)context.expect( queueTabFocus( listCategory[categoryIndex]._id.c_str() ), "a user settings category tab is missing" );
+                    (void)context.expect( queueTabFocus( UserSettingsPanel::getCategoryLabel( listCategory[categoryIndex] ) ), "a user settings category tab is missing" );
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( findActiveTable( "Setting", "Value", 2 ) != nullptr, "a user settings tab did not draw its table" );

@@ -61,7 +61,7 @@ namespace sw::editor
         {
             const UserSettingCategoryDef& category = listCategory[categoryIndex];
             // 이름은 게임 옵션 메뉴와 같은 데이터(스키마의 `text` 현지화 키)다 — 예전에는 id(`display`)를 그대로 보였다. id 는 탭 ID 로 남는다.
-            const string tabLabel = string( UserSettingsPanelInternal::resolveText( category._textKey, category._id ) ) + "###" + category._id.c_str();
+            const string tabLabel = string( getCategoryLabel( category ) ) + "###" + category._id.c_str();
             if ( ImGui::BeginTabItem( tabLabel.c_str() ) == false )
                 continue;
             _selectedCategory = categoryIndex;
@@ -127,6 +127,11 @@ namespace sw::editor
             if ( ImGui::Button( "Revert Now" ) )
                 settings.update( settings.getConfirmSecondsLeft() );
         }
+    }
+
+    const utf8* UserSettingsPanel::getCategoryLabel( const UserSettingCategoryDef& category )
+    {
+        return UserSettingsPanelInternal::resolveText( category._textKey, category._id );
     }
 
     void UserSettingsPanel::drawSettingRow( UserSettingsManager& settings, const UserSettingDef& def )
