@@ -4,13 +4,53 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
-#include "Engine/UI/Style/UITheme.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @struct UIThemeDesc @brief 테마 하나입니다. 모든 화면의 문서 시트 앞에 적용할 시트들을 가집니다. */
+    REFLECT()
+    struct SW_API UIThemeDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( DisplayName = "Name" )
+        hashed_string _name{};
+        PROPERTY( DisplayName = "Style Sheets", AssetType = "UIStyleSheet" )
+        vector<string> _listStyleSheet{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct UIThemeCatalog
+     * @brief 선택할 수 있는 테마들과 기본 테마입니다(언리얼 Slate 스타일 세트, Godot Theme 에 해당). `UIThemeController::setTheme` 이 이름으로 고릅니다.
+     */
+    REFLECT()
+    struct SW_API UIThemeCatalog
+    {
+        REFLECT_BODY();
+
+        PROPERTY( DisplayName = "Default Theme" )
+        hashed_string _defaultTheme{};
+        PROPERTY( DisplayName = "Themes" )
+        vector<UIThemeDesc> _listTheme{};
+
+        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 이름의 테마입니다. 없으면 nullptr 입니다. */
+        const UIThemeDesc* findTheme( const hashed_string& name ) const;
+    };
+} // namespace sw
 
 namespace sw
 {

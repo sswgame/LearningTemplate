@@ -16,12 +16,51 @@
  *          칸이 생겨, 게임 모듈이 인스턴스화한 세터가 엔진이 채운 칸을 보지 못합니다.
  */
 #pragma once
+#include "Core/Concurrency/LockedSwapQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Object/GameObject/Tick/DeferredDelegateQueue.h"
+namespace sw
+{
+    /**
+     * @class DeferredDelegateQueue
+     * @brief 병렬 틱이 미룬 일을 담았다가 틱 뒤 게임 스레드에서 넣은 순서대로 실행합니다.
+     * @details 넣기는 아무 스레드나 합니다(잠금 하나). 비우기는 한 스레드만 합니다. 비울 때 대기 목록을 처리 목록과 **맞바꾼 뒤**
+     *          잠금 밖에서 실행하므로, 실행 중에 새로 넣은 일은 **다음** 비우기로 갑니다 — 한 번의 비우기가 끝없이 늘어나지 않습니다.
+     *          두 목록은 용량을 들고 있어 프레임마다 할당하지 않습니다.
+     */
+    class SW_API DeferredDelegateQueue
+    {
+    public:
+        using Callback = Delegate<void()>;
+
+        /** @brief 두 목록의 용량을 조금 잡아 두고 만듭니다. */
+        DeferredDelegateQueue();
+
+        DeferredDelegateQueue( const DeferredDelegateQueue& )            = delete;
+        DeferredDelegateQueue& operator=( const DeferredDelegateQueue& ) = delete;
+
+        /** @brief 일을 넣습니다. 묶이지 않은 델리게이트는 버립니다. 아무 스레드에서나 부를 수 있습니다. */
+        void push( Callback callback );
+
+        /** @brief 지금까지 넣은 일을 넣은 순서대로 실행하고 비웁니다. 실행 중에 넣은 일은 다음 비우기로 갑니다. 한 스레드만 부릅니다. */
+        void drain();
+
+        /** @brief 넣은 일이 없는지 봅니다(잠금 아래). 비우는 중인 목록은 보지 않습니다. */
+        bool isEmpty();
+
+        /** @brief 실행하지 않고 전부 버립니다. */
+        void clear();
+
+    private:
+        LockedSwapQueue<Callback>        _pending;                      ///< 넣은 일(잠금 아래)
+        ThreadRole                       _drainThread;                  ///< 비우는 스레드 역할 — 꺼내 온 목록은 drain 을 도는 스레드만 만진다(잠금이 아니라 분석용 능력)
+        vector<Callback> _listProcessing SW_GUARDED_BY( _drainThread ); ///< 비우는 중인 일(비우는 스레드만)
+    };
+} // namespace sw
 
 namespace sw
 {

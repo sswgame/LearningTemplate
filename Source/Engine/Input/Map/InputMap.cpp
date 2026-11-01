@@ -3,6 +3,7 @@
 #include "Engine/Input/Map/InputMap.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
@@ -33,6 +34,28 @@
  *  - InputAccessibilitySettings: 감도 · 축 반전 · 데드존 · 토글 액션(맵이 들고, 맵을 다시 읽어도 남는다).
  *  - InputRemapSerializer: 플레이어 리매핑 파일(`<UserBindings>`)의 쓰기 · 읽기. 두 XML 형식이 함께 쓰는 칸 읽기는 InputMapXMLUtil.
  */
+
+// InputAccessibilitySettings
+namespace sw
+{
+    void InputAccessibilitySettings::setToggleAction( const hashed_string& action, bool bToggle )
+    {
+        if ( action.empty() )
+            return;
+        if ( bToggle == false )
+        {
+            (void)VectorUtil::removeFirst( _listToggleAction, action ); // 없으면 지울 것이 없다
+            return;
+        }
+        if ( VectorUtil::contains( _listToggleAction, action ) == false )
+            _listToggleAction.push_back( action );
+    }
+
+    bool InputAccessibilitySettings::isToggleAction( const hashed_string& action ) const
+    {
+        return VectorUtil::contains( _listToggleAction, action );
+    }
+} // namespace sw
 
 namespace sw
 {

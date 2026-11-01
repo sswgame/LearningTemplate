@@ -2,13 +2,16 @@
 
 #include "Engine/UI/Style/UIThemeController.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
@@ -16,6 +19,29 @@
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
+
+// UITheme
+namespace sw
+{
+    bool UIThemeCatalog::loadFromAsset( const AssetID& assetID )
+    {
+        const string_view assetPath = assetID.view();
+        if ( XMLSerializer::loadFile( assetID, this, *StaticType() ) == false )
+        {
+            SW_LOG_ERROR_ID( "UITheme.UIThemeCatalogCould", "[UI] UI theme catalog could not be read or holds unknown keys: %#", assetPath );
+            return false;
+        }
+        return true;
+    }
+
+    const UIThemeDesc* UIThemeCatalog::findTheme( const hashed_string& name ) const
+    {
+        return VectorUtil::findBy<&UIThemeDesc::_name>( _listTheme, name );
+    }
+
+    /** @brief UI 테마 카탈로그 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_RESOURCE_DATA_KIND( UIThemes, "uithemes", nullptr, nullptr, "uithemes.xml", &AssetDataKindUtil::loadCatalog<UIThemeCatalog> );
+} // namespace sw
 
 namespace sw
 {
